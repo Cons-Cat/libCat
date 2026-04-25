@@ -14,26 +14,26 @@ namespace cat {
 
 // TODO: Support `__sanitizer_annotate_contiguous_container`.
 
-template <typename T, is_allocator allocator_type>
+template <typename T, is_allocator Allocator>
 class [[gsl::Owner]]
-vec : public collection_interface<vec<T, allocator_type>, T>,
+vec : public collection_interface<vec<T, Allocator>, T>,
       public random_access_iterable_interface<T> {
-   template <typename U, is_allocator allocator, typename... Us>
+   template <typename U, is_allocator A, typename... Us>
       requires(sizeof...(Us) > 0u)
    friend constexpr auto
-   make_vec(allocator&, Us&&...) -> maybe<vec<U, allocator>>;
+   make_vec(A&, Us&&...) -> maybe<vec<U, A>>;
 
-   template <typename U, is_allocator allocator>
+   template <typename U, is_allocator A>
    friend constexpr auto
-   make_vec(allocator&) -> vec<U, allocator>;
+   make_vec(A&) -> vec<U, A>;
 
-   template <typename U, is_allocator allocator>
+   template <typename U, is_allocator A>
    friend constexpr auto
-   make_vec_reserved(allocator&, idx) -> maybe<vec<U, allocator>>;
+   make_vec_reserved(A&, idx) -> maybe<vec<U, A>>;
 
-   template <typename U, is_allocator allocator>
+   template <typename U, is_allocator A>
    friend constexpr auto
-   make_vec_filled(allocator&, idx, U const&) -> maybe<vec<U, allocator>>;
+   make_vec_filled(A&, idx, U const&) -> maybe<vec<U, A>>;
 
  public:
    constexpr vec() = delete ("`cat::vec` cannot be created without an "
@@ -76,7 +76,7 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
  protected:
    // Being `protected:` permits derived classes and friends to call these.
 
-   constexpr vec(allocator_type& allocator [[clang::lifetimebound]])
+   constexpr vec(Allocator& allocator [[clang::lifetimebound]])
        : m_p_data(nullptr),
          m_current_size(0),
          m_current_capacity(0),
@@ -234,12 +234,12 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    }
 
    // Deep-copy the contents of this `vec`.
-   template <is_allocator new_allocator_type>
+   template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(new_allocator_type& allocator
-         [[clang::lifetimebound]]) const& -> maybe<vec<T, new_allocator_type>> {
-      vec<T, new_allocator_type> new_vector =
+   clone(NewAllocator& allocator
+         [[clang::lifetimebound]]) const& -> maybe<vec<T, NewAllocator>> {
+      vec<T, NewAllocator> new_vector =
          prop(make_vec_reserved<T>(allocator, m_current_capacity));
       new_vector.m_current_size = m_current_size;
       relocate(this->begin(), this->end(), new_vector.begin());
@@ -268,12 +268,11 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    T* m_p_data;
    idx m_current_size;
    idx m_current_capacity;
-   allocator_type& m_allocator;
+   Allocator& m_allocator;
 };
 
 // TODO: Implement this factory function when I implement
 // `std::initializer_list`.
-//
 
 // These factory functions require access to the `protected` constructor, which
 // is marked `[[deprecated]]`.
@@ -291,43 +290,42 @@ initialize_vec(auto& vec, auto&& current, auto&&... next) {
 }
 }
 
-template <typename T, is_allocator allocator_type, typename... Us>
+template <typename T, is_allocator Allocator, typename... Us>
    requires(sizeof...(Us) > 0u)
 [[nodiscard]]
 constexpr auto
-make_vec(allocator_type& allocator [[clang::lifetimebound]], Us&&... values)
-   -> maybe<vec<T, allocator_type>> {
-   vec<T, allocator_type> new_vector(allocator);
+make_vec(Allocator& allocator [[clang::lifetimebound]], Us&&... arguments)
+   -> maybe<vec<T, Allocator>> {
+   vec<T, Allocator> new_vector(allocator);
    prop(new_vector.reserve(sizeof...(Us)));
    new_vector.m_current_size = sizeof...(Us);
-   detail::initialize_vec<0u>(new_vector, fwd(values)...);
+   detail::initialize_vec<0u>(new_vector, fwd(arguments)...);
    return new_vector;
 }
 
-template <typename T, is_allocator allocator_type>
+template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_vec(allocator_type& allocator [[clang::lifetimebound]])
-   -> vec<T, allocator_type> {
-   return vec<T, allocator_type>(allocator);
+make_vec(Allocator& allocator [[clang::lifetimebound]]) -> vec<T, Allocator> {
+   return vec<T, Allocator>(allocator);
 }
 
-template <typename T, is_allocator allocator_type>
+template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_vec_reserved(allocator_type& allocator [[clang::lifetimebound]],
-                  idx capacity) -> maybe<vec<T, allocator_type>> {
-   vec<T, allocator_type> new_vector(allocator);
+make_vec_reserved(Allocator& allocator [[clang::lifetimebound]], idx capacity)
+   -> maybe<vec<T, Allocator>> {
+   vec<T, Allocator> new_vector(allocator);
    prop(new_vector.reserve(capacity));
    return new_vector;
 }
 
-template <typename T, is_allocator allocator_type>
+template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_vec_filled(allocator_type& allocator [[clang::lifetimebound]], idx count,
-                T const& value) -> maybe<vec<T, allocator_type>> {
-   vec<T, allocator_type> new_vector(allocator);
+make_vec_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
+                T const& value) -> maybe<vec<T, Allocator>> {
+   vec<T, Allocator> new_vector(allocator);
    prop(new_vector.reserve(count));
    new_vector.m_current_size = count;
    // TODO: Call a vectorized fill memory function.

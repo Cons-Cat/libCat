@@ -585,46 +585,46 @@ class [[nodiscard]] scaredy {
    }
 
    // Member access syntax pattern matching for `cat::match()`.
-   template <typename... patterns>
-      requires(is_specialization<patterns, detail::pattern_invocable> && ...)
+   template <typename... Patterns>
+      requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
-   match(patterns&&... pattern_args) {
-      detail::match_patterns (*this)(fwd(pattern_args)...);
+   match(Patterns&&... patterns) {
+      detail::match_patterns (*this)(fwd(patterns)...);
    }
 
    // If this non-`const`-qualified `scaredy` holds a value, transform it
-   // by a function. Otherwise, propagate the error value.
-   template <is_invocable<value_type> F>
+   // with a callback. Otherwise, propagate the error value.
+   template <is_invocable<value_type> Callback>
    [[nodiscard]]
    constexpr auto
-   transform(this auto&& self, F&& invocable) {
+   transform(this auto&& self, Callback&& callback) {
       using this_type = scaredy<T, error_types...>;
       if (self.has_value()) {
-         return this_type(fwd(invocable)(fwd(self).value()));
+         return this_type(fwd(callback)(fwd(self).value()));
       }
       return this_type(fwd(self).m_storage);
    }
 
-   template <is_invocable<value_type> F>
+   template <is_invocable<value_type> Callback>
    [[nodiscard]]
    constexpr auto
-   and_then(this auto&& self, F&& invocable) {
+   and_then(this auto&& self, Callback&& callback) {
       using this_type = scaredy<T, error_types...>;
-      return self.has_value() ? fwd(invocable)(fwd(self).value())
+      return self.has_value() ? fwd(callback)(fwd(self).value())
                               : this_type(fwd(self).m_storage);
    }
 
-   template <is_invocable F>
+   template <is_invocable Callback>
    constexpr auto
-   or_else(this auto&& self, F&& invocable) {
-      using U = decltype(invocable());
+   or_else(this auto&& self, Callback&& callback) {
+      using U = decltype(callback());
       static_assert(is_void<U> || is_specialization<U, scaredy>);
 
       if (!self.has_value()) {
          if constexpr (is_void<U>) {
-            fwd(invocable)();
+            fwd(callback)();
          } else {
-            return fwd(invocable)();
+            return fwd(callback)();
          }
       }
 

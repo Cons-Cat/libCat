@@ -61,8 +61,8 @@ class source_location {
 
 namespace cat {
 
-template <typename char_type, bool null_terminated>
-   requires(sizeof(char_type) == 1)
+template <typename CharT, bool null_terminated>
+   requires(sizeof(CharT) == 1)
 class basic_str_span;
 
 using str_view = basic_str_span<char const, false>;

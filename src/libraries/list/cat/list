@@ -55,45 +55,41 @@ struct slist_storage {
 
 }  // namespace detail
 
-template <typename T, is_allocator allocator_type, bool is_doubly_linked>
+template <typename T, is_allocator Allocator, bool is_doubly_linked>
 class basic_list
-    : public collection_interface<
-         basic_list<T, allocator_type, is_doubly_linked>, T>,
-      public iterable_interface<basic_list<T, allocator_type, is_doubly_linked>,
+    : public collection_interface<basic_list<T, Allocator, is_doubly_linked>,
+                                  T>,
+      public iterable_interface<basic_list<T, Allocator, is_doubly_linked>,
                                 detail::list_iterator, T, is_doubly_linked> {
    friend detail::list_iterator<T, is_doubly_linked>;
 
    // Doubly-linked list factory functions:
-   template <typename U, is_allocator allocator>
+   template <typename U, is_allocator A>
    friend auto
-   make_list(allocator&) -> maybe<basic_list<U, allocator, true>>;
+   make_list(A&) -> maybe<basic_list<U, A, true>>;
 
-   template <typename U, is_allocator allocator, is_convertible<U> Arg,
+   template <typename U, is_allocator A, is_convertible<U> Arg,
              is_convertible<U>... Args>
    friend auto
-   make_list(allocator&, Arg&&, Args&&...)
-      -> maybe<basic_list<U, allocator, true>>;
+   make_list(A&, Arg&&, Args&&...) -> maybe<basic_list<U, A, true>>;
 
-   template <typename U, is_allocator allocator>
+   template <typename U, is_allocator A>
    friend auto
-   make_list_filled(allocator&, idx, U const&)
-      -> maybe<basic_list<U, allocator, true>>;
+   make_list_filled(A&, idx, U const&) -> maybe<basic_list<U, A, true>>;
 
    // Singly-linked list factory functions:
-   template <typename U, is_allocator allocator>
+   template <typename U, is_allocator A>
    friend auto
-   make_slist(allocator&) -> maybe<basic_list<U, allocator, false>>;
+   make_slist(A&) -> maybe<basic_list<U, A, false>>;
 
-   template <typename U, is_allocator allocator, is_convertible<U> Arg,
+   template <typename U, is_allocator A, is_convertible<U> Arg,
              is_convertible<U>... Args>
    friend auto
-   make_slist(allocator&, Arg&&, Args&&...)
-      -> maybe<basic_list<U, allocator, false>>;
+   make_slist(A&, Arg&&, Args&&...) -> maybe<basic_list<U, A, false>>;
 
-   template <typename U, is_allocator allocator>
+   template <typename U, is_allocator A>
    friend auto
-   make_slist_filled(allocator&, idx, U const&)
-      -> maybe<basic_list<U, allocator, false>>;
+   make_slist_filled(A&, idx, U const&) -> maybe<basic_list<U, A, false>>;
 
    // TODO: Implement `slist_storage`.
    using storage_type = conditional<is_doubly_linked, detail::list_storage<T>,
@@ -142,7 +138,7 @@ class basic_list
  protected:
    // Being `protected:` permits derived classes and friends to call these.
 
-   constexpr basic_list(allocator_type& allocator [[clang::lifetimebound]])
+   constexpr basic_list(Allocator& allocator [[clang::lifetimebound]])
        : m_allocator(allocator) {
    }
 
@@ -283,7 +279,7 @@ class basic_list
    clone(new_allocator_type& allocator)
       -> maybe<basic_list<T, new_allocator_type, is_doubly_linked>> {
       basic_list new_list =
-         basic_list<T, allocator_type, is_doubly_linked>(allocator);
+         basic_list<T, Allocator, is_doubly_linked>(allocator);
       cat::span<node_type> new_nodes =
          prop(allocator.template alloc_multi<node_type>(m_size));
 
@@ -554,14 +550,14 @@ class basic_list
  private:
    storage_type m_storage;
    idx m_size = 0;
-   allocator_type& m_allocator;
+   Allocator& m_allocator;
 };
 
-template <typename T, is_allocator allocator>
-using list = basic_list<T, allocator, true>;
+template <typename T, is_allocator Allocator>
+using list = basic_list<T, Allocator, true>;
 
-template <typename T, is_allocator allocator>
-using slist = basic_list<T, allocator, false>;
+template <typename T, is_allocator Allocator>
+using slist = basic_list<T, Allocator, false>;
 
 namespace detail {
 
@@ -705,21 +701,21 @@ initialize_slist_filled(span<T> list_nodes, T* p_previous,
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 // Make an empty `list`.
-template <typename T, is_allocator allocator_type>
+template <typename T, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_list(allocator_type& allocator) -> maybe<list<T, allocator_type>> {
-   return list<T, allocator_type>(allocator);
+make_list(Allocator& allocator) -> maybe<list<T, Allocator>> {
+   return list<T, Allocator>(allocator);
 }
 
 // Make a `list` initialized by a pack.
-template <typename T, is_allocator allocator_type, is_convertible<T> U,
+template <typename T, is_allocator Allocator, is_convertible<T> U,
           is_convertible<T>... Args>
 [[nodiscard]]
 auto
-make_list(allocator_type& allocator, U&& value, Args&&... remaining)
-   -> maybe<list<T, allocator_type>> {
-   list<T, allocator_type> new_list(allocator);
+make_list(Allocator& allocator, U&& value, Args&&... remaining)
+   -> maybe<list<T, Allocator>> {
+   list<T, Allocator> new_list(allocator);
    using node = detail::list_node<T>;
 
    if constexpr (sizeof...(Args) > 0) {
@@ -748,21 +744,21 @@ make_list(allocator_type& allocator, U&& value, Args&&... remaining)
 }
 
 // Make a `list` initialized by a pack.
-template <is_allocator allocator_type, typename... Args>
+template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 auto
-make_list(allocator_type& allocator, Args&&... values) {
+make_list(Allocator& allocator, Args&&... arguments) {
    using common = common_type<Args...>;
-   return make_list<common>(allocator, static_cast<common>(fwd(values))...);
+   return make_list<common>(allocator, static_cast<common>(fwd(arguments))...);
 }
 
 // Make a `list` initialized to `value`.
-template <typename T, is_allocator allocator_type>
+template <typename T, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_list_filled(allocator_type& allocator, idx count, T const& value)
-   -> maybe<list<T, allocator_type>> {
-   list<T, allocator_type> new_list(allocator);
+make_list_filled(Allocator& allocator, idx count, T const& value)
+   -> maybe<list<T, Allocator>> {
+   list<T, Allocator> new_list(allocator);
 
    using node = detail::list_node<T>;
    cat::span<node> nodes = prop(allocator.template alloc_multi<node>(count));
@@ -777,21 +773,21 @@ make_list_filled(allocator_type& allocator, idx count, T const& value)
 }
 
 // Make an empty `slist`.
-template <typename T, is_allocator allocator_type>
+template <typename T, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_slist(allocator_type& allocator) -> maybe<slist<T, allocator_type>> {
-   return slist<T, allocator_type>(allocator);
+make_slist(Allocator& allocator) -> maybe<slist<T, Allocator>> {
+   return slist<T, Allocator>(allocator);
 }
 
 // Make a `slist` initialized by a pack.
-template <typename T, is_allocator allocator_type, is_convertible<T> U,
+template <typename T, is_allocator Allocator, is_convertible<T> U,
           is_convertible<T>... Args>
 [[nodiscard]]
 auto
-make_slist(allocator_type& allocator, U&& value, Args&&... remaining)
-   -> maybe<slist<T, allocator_type>> {
-   slist<T, allocator_type> new_slist(allocator);
+make_slist(Allocator& allocator, U&& value, Args&&... remaining)
+   -> maybe<slist<T, Allocator>> {
+   slist<T, Allocator> new_slist(allocator);
    using node = detail::slist_node<T>;
 
    if constexpr (sizeof...(Args) > 0) {
@@ -818,21 +814,21 @@ make_slist(allocator_type& allocator, U&& value, Args&&... remaining)
 }
 
 // Make an `slist` initialized by a pack.
-template <is_allocator allocator_type, typename... Args>
+template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 auto
-make_slist(allocator_type& allocator, Args&&... values) {
+make_slist(Allocator& allocator, Args&&... arguments) {
    using common = common_type<Args...>;
-   return make_slist<common>(allocator, static_cast<common>(fwd(values))...);
+   return make_slist<common>(allocator, static_cast<common>(fwd(arguments))...);
 }
 
 // Make an `slist` initialized to `value`.
-template <typename T, is_allocator allocator_type>
+template <typename T, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_slist_filled(allocator_type& allocator, idx count, T const& value)
-   -> maybe<slist<T, allocator_type>> {
-   slist<T, allocator_type> new_slist(allocator);
+make_slist_filled(Allocator& allocator, idx count, T const& value)
+   -> maybe<slist<T, Allocator>> {
+   slist<T, Allocator> new_slist(allocator);
 
    using node = detail::slist_node<T>;
    cat::span<node> nodes = prop(allocator.template alloc_multi<node>(count));

@@ -699,11 +699,11 @@ floor_log5_pow2_minus_log5_3(int e) noexcept {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 namespace div {
-// Replace n by floor(n / 10^N).
-// Returns true if and only if n is divisible by 10^N.
-// Precondition: n <= 10^(N+1)
+// Replace n by floor(n / 10^index).
+// Returns true if and only if n is divisible by 10^index.
+// Precondition: n <= 10^(index+1)
 // !!It takes an in-out parameter!!
-template <int N>
+template <int index>
 struct divide_by_pow10_info;
 
 template <>
@@ -718,14 +718,14 @@ struct divide_by_pow10_info<2> {
    static constexpr int shift_amount = 16;
 };
 
-template <int N>
+template <int index>
 constexpr bool
 check_divisibility_and_divide_by_pow10(uint4::raw_type& n) noexcept {
    // Make sure the computation for max_n does not overflow.
-   static_assert(N + 1 <= log::floor_log10_pow2(31));
-   // assert(n <= compute_power<N + 1>(uint4::raw_type(10)));
+   static_assert(index + 1 <= log::floor_log10_pow2(31));
+   // assert(n <= compute_power<index + 1>(uint4::raw_type(10)));
 
-   using info = divide_by_pow10_info<N>;
+   using info = divide_by_pow10_info<index>;
    n *= info::magic_number;
 
    constexpr auto mask =
@@ -736,44 +736,44 @@ check_divisibility_and_divide_by_pow10(uint4::raw_type& n) noexcept {
    return result;
 }
 
-// Compute floor(n / 10^N) for small n and N.
-// Precondition: n <= 10^(N+1)
-template <int N>
+// Compute floor(n / 10^index) for small n and index.
+// Precondition: n <= 10^(index+1)
+template <int index>
 constexpr uint4::raw_type
 small_division_by_pow10(uint4::raw_type n) noexcept {
    // Make sure the computation for max_n does not overflow.
-   static_assert(N + 1 <= log::floor_log10_pow2(31));
-   // assert(n <= compute_power<N + 1>(uint4::raw_type(10)));
+   static_assert(index + 1 <= log::floor_log10_pow2(31));
+   // assert(n <= compute_power<index + 1>(uint4::raw_type(10)));
 
-   return (n * divide_by_pow10_info<N>::magic_number)
-          >> divide_by_pow10_info<N>::shift_amount;
+   return (n * divide_by_pow10_info<index>::magic_number)
+          >> divide_by_pow10_info<index>::shift_amount;
 }
 
-// Compute floor(n / 10^N) for small N.
+// Compute floor(n / 10^index) for small index.
 // Precondition: n <= n_max
-template <int N, class UInt, UInt n_max>
+template <int index, class UInt, UInt n_max>
 constexpr UInt
 divide_by_pow10(UInt n) noexcept {
-   static_assert(N >= 0);
+   static_assert(index >= 0);
 
    // Specialize for 32-bit division by 100.
    // Compiler is supposed to generate the identical code for just
    // writing "n / 100", but for some reason MSVC generates an
    // inefficient code (mul + mov for no apparent reason, instead of
    // single imul), so we does this manually.
-   if constexpr (cat::is_same<UInt, uint4::raw_type> && N == 2) {
+   if constexpr (cat::is_same<UInt, uint4::raw_type> && index == 2) {
       return uint4::raw_type(wuint::umul64(n, uint4::raw_type(1'374'389'535))
                              >> 37);
    }
    // Specialize for 64-bit division by 1000.
    // Ensure that the correctness condition is met.
-   if constexpr (cat::is_same<UInt, uint8::raw_type> && N == 3
+   if constexpr (cat::is_same<UInt, uint8::raw_type> && index == 3
                  && n_max <= uint8::raw_type(15'534'100'272'597'517'998ull)) {
       return wuint::umul128_upper64(
                 n, uint8::raw_type(2'361'183'241'434'822'607ull))
              >> 7;
    } else {
-      constexpr auto divisor = compute_power<N>(UInt(10));
+      constexpr auto divisor = compute_power<index>(UInt(10));
       return n / divisor;
    }
 }

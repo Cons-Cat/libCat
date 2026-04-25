@@ -24,7 +24,7 @@
 // members exist.
 
 namespace cat {
-template <typename... in_types>
+template <typename... Types>
 struct tuple;
 
 namespace detail {
@@ -47,7 +47,7 @@ struct subscript_const_rv_return<T, false> {
 // their position in a paremeter pack to guarantee their uniqueness. This is
 // required to support `tuple`s with non-uniquely-typed elements.
 // e.g. `tuple<int, int>`
-template <idx in_index, typename T>
+template <idx index, typename T>
 struct tuple_element {
    using element = T;
 
@@ -75,46 +75,46 @@ struct tuple_element {
       return storage == other.storage;
    }
 
-   // `operator[]` lives here on each `tuple_element<in_index, T>` instead of on
+   // `operator[]` lives here on each `tuple_element<index, T>` instead of on
    // `tuple` so every slot supplies its own overload with Clang `enable_if`
-   // tying that overload to one `in_index`. For a compile-time `idx`, overload
+   // tying that overload to one `index`. For a compile-time `idx`, overload
    // resolution leaves exactly one viable `[]` and that overload returns this
    // slot's `T` with the right value category. A single `tuple::operator[]`
    // cannot express that per-index overload set across heterogeneous `T...`.
    // `tuple` still exposes subscript by inheriting every base `[]` through
    // `type_map`'s `using types::operator[]...`, which `tuple::get` uses as
-   // `fwd(self)[in_index]`.
+   // `fwd(self)[subscript]`.
    constexpr T&
-   operator[](idx index) & [[clang::lifetimebound]]
-   __attribute__((enable_if(index == in_index,
+   operator[](idx subscript) & [[clang::lifetimebound]]
+   __attribute__((enable_if(subscript == index,
                             "Index in `cat::tuple` is out of bounds!"))) {
       return this->storage;
    }
 
    constexpr T const&
-   operator[](idx index) const& [[clang::lifetimebound]]
-   __attribute__((enable_if(index == in_index,
+   operator[](idx subscript) const& [[clang::lifetimebound]]
+   __attribute__((enable_if(subscript == index,
                             "Index in `cat::tuple` is out of bounds!"))) {
       return this->storage;
    }
 
    constexpr maybe<T&>
-   at(idx index) & [[clang::lifetimebound]]
-   __attribute__((enable_if(index == in_index,
+   at(idx subscript) & [[clang::lifetimebound]]
+   __attribute__((enable_if(subscript == index,
                             "Index in `cat::tuple` is out of bounds!"))) {
       return this->storage;
    }
 
    constexpr maybe<T const&>
-   at(idx index) const& [[clang::lifetimebound]]
-   __attribute__((enable_if(index == in_index,
+   at(idx subscript) const& [[clang::lifetimebound]]
+   __attribute__((enable_if(subscript == index,
                             "Index in `cat::tuple` is out of bounds!"))) {
       return this->storage;
    }
 
    constexpr T&&
-   operator[](idx index) && [[clang::lifetimebound]]
-   __attribute__((enable_if(index == in_index,
+   operator[](idx subscript) && [[clang::lifetimebound]]
+   __attribute__((enable_if(subscript == index,
                             "index in `cat::tuple` is out of bounds!"))) {
       if constexpr (is_reference<T>) {
          return this->storage;
@@ -124,8 +124,8 @@ struct tuple_element {
    }
 
    constexpr typename subscript_const_rv_return<T>::type
-   operator[](idx index) const&& [[clang::lifetimebound]]
-   __attribute__((enable_if(index == in_index,
+   operator[](idx subscript) const&& [[clang::lifetimebound]]
+   __attribute__((enable_if(subscript == index,
                             "index in `cat::tuple` is out of bounds!"))) {
       if constexpr (is_reference<T>) {
          return this->storage;
@@ -177,81 +177,81 @@ struct tuple_storage {};
 
 // Map a list of indices to a list of types.
 // TODO: Use `idx` rather than `iword`.
-template <idx... indices, typename... in_types>
-struct tuple_storage<index_list_type<indices...>, in_types...> {
-   using type = type_map<tuple_element<indices, in_types>...>;
+template <idx... indices, typename... Types>
+struct tuple_storage<index_list_type<indices...>, Types...> {
+   using type = type_map<tuple_element<indices, Types>...>;
 };
 
-template <typename T>
+template <typename>
 struct is_tuple_impl : false_trait {};
 
-template <typename... in_types>
-struct is_tuple_impl<tuple<in_types...>> : true_trait {};
+template <typename... Types>
+struct is_tuple_impl<tuple<Types...>> : true_trait {};
 
-template <typename self_type, typename callback_type, idx... indices>
+template <typename Self, typename Callback, idx... indices>
 constexpr auto
-tuple_any_impl(self_type&& self, callback_type&& callback,
-               index_list_type<indices...>) -> bool {
+tuple_any_impl(Self&& self, Callback&& callback, index_list_type<indices...>)
+   -> bool {
    return (static_cast<bool>(fwd(callback)(fwd(self).template get<indices>()))
            || ...);
 }
 
-template <typename self_type, typename callback_type, idx... indices>
+template <typename Self, typename Callback, idx... indices>
 constexpr auto
-tuple_all_impl(self_type&& self, callback_type&& callback,
-               index_list_type<indices...>) -> bool {
+tuple_all_impl(Self&& self, Callback&& callback, index_list_type<indices...>)
+   -> bool {
    return (static_cast<bool>(fwd(callback)(fwd(self).template get<indices>()))
            && ...);
 }
 
-template <typename self_type, typename callback_type, idx... indices>
+template <typename Self, typename Callback, idx... indices>
 constexpr auto
-tuple_transform_impl(self_type&& self, callback_type&& callback,
+tuple_transform_impl(Self&& self, Callback&& callback,
                      index_list_type<indices...>) {
    return tuple<decltype(fwd(callback)(fwd(self).template get<indices>()))...>{
       fwd(callback)(fwd(self).template get<indices>())...};
 }
 
-template <typename self_type, typename callback_type, idx... indices>
+template <typename Self, typename Callback, idx... indices>
 constexpr void
-tuple_for_each_impl(self_type&& self, callback_type&& callback,
+tuple_for_each_impl(Self&& self, Callback&& callback,
                     index_list_type<indices...>) {
    (fwd(callback)(fwd(self).template get<indices>()), ...);
 }
 
-template <typename self_type, typename... value_types, idx... indices>
+template <typename Self, typename... Arguments, idx... indices>
 constexpr void
-tuple_assign_impl(self_type&& self, index_list_type<indices...>,
-                  value_types&&... values) {
-   ((fwd(self).template get<indices>() = fwd(values)), ...);
+tuple_assign_impl(Self&& self, index_list_type<indices...>,
+                  Arguments&&... arguments) {
+   ((fwd(self).template get<indices>() = fwd(arguments)), ...);
 }
 
-template <typename callback_type, typename tuple_type, idx... indices>
+template <typename Callback, typename Tuple, idx... indices>
 constexpr auto
-tuple_apply_impl(callback_type&& callback, tuple_type&& tuple,
+tuple_apply_impl(Callback&& callback, Tuple&& tuple,
                  index_list_type<indices...>)
    -> decltype(fwd(callback)(fwd(tuple).template get<indices>()...)) {
    return fwd(callback)(fwd(tuple).template get<indices>()...);
 }
 
-template <typename self_type, typename subscript_type, idx... indices>
+template <typename Self, typename Subscript, idx... indices>
 constexpr auto
-tuple_at(self_type&& self, idx index, index_list_type<indices...>)
-   -> maybe<subscript_type> {
-   using self_decl = remove_cvref<self_type>;
+tuple_at(Self&& self, idx index, index_list_type<indices...>)
+   -> maybe<Subscript> {
+   using self_decl = remove_cvref<Self>;
    if (!(index < self_decl::types::size)) {
-      return maybe<subscript_type>{nullopt};
+      return maybe<Subscript>{nullopt};
    }
-   using pointee = remove_reference<subscript_type>;
+   using pointee = remove_reference<Subscript>;
    add_pointer<pointee> p = nullptr;
    (void)((index == idx{indices}
            && (p = &fwd(self).template get<indices>(), true))
           || ...);
    cat::assert(p);
-   if constexpr (is_lvalue_reference<subscript_type>) {
+   if constexpr (is_lvalue_reference<Subscript>) {
       return {*p};
-   } else if constexpr (is_rvalue_reference<subscript_type>) {
-      return {static_cast<subscript_type>(move(*p))};
+   } else if constexpr (is_rvalue_reference<Subscript>) {
+      return {static_cast<Subscript>(move(*p))};
    } else {
       return {*p};
    }
@@ -259,13 +259,13 @@ tuple_at(self_type&& self, idx index, index_list_type<indices...>)
 
 }  // namespace detail
 
-template <typename... in_types>
-struct tuple : detail::tuple_storage<index_sequence_over_types<in_types...>,
-                                     in_types...>::type {
-   using types = type_list<in_types...>;
+template <typename... Types>
+struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
+                                     Types...>::type {
+   using types = type_list<Types...>;
    using storage_map =
-      detail::tuple_storage<index_sequence_over_types<in_types...>,
-                            in_types...>::type;
+      detail::tuple_storage<index_sequence_over_types<Types...>,
+                            Types...>::type;
    using storage_map::at;
 
    constexpr auto
@@ -286,11 +286,11 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<in_types...>,
    }
 
    // Get a non-`const` reference to the N'th stored variable.
-   template <idx in_index>
-      requires(in_index < types::size)
+   template <idx index>
+      requires(index < types::size)
    constexpr auto
    get(this auto&& self) -> decltype(auto) {
-      return fwd(self)[in_index];
+      return fwd(self)[index];
    }
 
    // `at(index)` yields `nullopt` when index is out of range.
@@ -347,36 +347,36 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<in_types...>,
       return fwd(self).template get<4u>();
    }
 
-   template <typename callback_type>
+   template <typename Callback>
    [[nodiscard]]
    constexpr auto
-   any_of(this auto&& self, callback_type&& callback) -> bool {
+   any_of(this auto&& self, Callback&& callback) -> bool {
       return detail::tuple_any_impl(fwd(self), fwd(callback),
                                     make_index_sequence<types::size>{});
    }
 
-   template <typename callback_type>
+   template <typename Callback>
    [[nodiscard]]
    constexpr auto
-   all_of(this auto&& self, callback_type&& callback) -> bool {
+   all_of(this auto&& self, Callback&& callback) -> bool {
       return detail::tuple_all_impl(fwd(self), fwd(callback),
                                     make_index_sequence<types::size>{});
    }
 
-   template <typename callback_type>
+   template <typename Callback>
    [[nodiscard]]
    constexpr auto
-   transform(this auto&& self, callback_type&& callback) {
+   transform(this auto&& self, Callback&& callback) {
       return detail::tuple_transform_impl(fwd(self), fwd(callback),
                                           make_index_sequence<types::size>{});
    }
 
-   template <typename... value_types>
-      requires(sizeof...(value_types) == types::size.raw)
+   template <typename... Arguments>
+      requires(sizeof...(Arguments) == types::size.raw)
    constexpr void
-   assign(this auto&& self, value_types&&... values) {
+   assign(this auto&& self, Arguments&&... arguments) {
       detail::tuple_assign_impl(fwd(self), make_index_sequence<types::size>{},
-                                fwd(values)...);
+                                fwd(arguments)...);
    }
 };
 
@@ -384,29 +384,29 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<in_types...>,
 // provide. The `tuple<...>` value holds that type list, unlike `tie` (only
 // lvalue ref aliases to existing names), `make_tuple` (decay into owned
 // values), or `forward_as_tuple` (forwarding-reference `T&&` slot types)
-template <typename... types>
-tuple(types...) -> tuple<types...>;
+template <typename... Types>
+tuple(Types...) -> tuple<Types...>;
 
-template <typename tuple_type>
-concept is_tuple = detail::is_tuple_impl<decay<tuple_type>>::value;
+template <typename Tuple>
+concept is_tuple = detail::is_tuple_impl<decay<Tuple>>::value;
 
 // Analogous to the proposed `std::aggr::get` in the P2141 paper
-template <idx in_index, typename tuple_type>
-   requires(is_tuple<tuple_type>)
+template <idx index, typename Tuple>
+   requires(is_tuple<Tuple>)
 [[nodiscard]]
 constexpr auto
-get(tuple_type&& tuple) -> decltype(auto) {
-   return fwd(tuple).template get<in_index>();
+get(Tuple&& tuple) -> decltype(auto) {
+   return fwd(tuple).template get<index>();
 }
 
 // `tuple<types&...>`: only lvalue references, each element aliases an existing
 // name so the tuple is a view for write-back, unlike `make_tuple` (owning
 // decays) or `forward_as_tuple` (forwarding `T&&` in the type) or `tuple{...}`
 // (general element types, not a ref-only view)
-template <typename... types>
+template <typename... Arguments>
 [[nodiscard]]
 constexpr auto
-tie(types&... references) -> tuple<types&...> {
+tie(Arguments&... references) -> tuple<Arguments&...> {
    return {references...};
 }
 
@@ -415,30 +415,30 @@ tie(types&... references) -> tuple<types&...> {
 // xvalue, or prvalue kind. `tie` is lvalue references only, `make_tuple`
 // decays, a plain `tuple{ a }` stores the type list from the inits, not a
 // forwarding ref bundle
-template <typename... types>
+template <typename... Arguments>
 [[nodiscard]]
 constexpr auto
-forward_as_tuple(types&&... values) -> tuple<types&&...> {
-   return {fwd(values)...};
+forward_as_tuple(Arguments&&... arguments) -> tuple<Arguments&&...> {
+   return {fwd(arguments)...};
 }
 
 // `tuple<decay<types>...>`: `decay` each element into owned by-value members,
 // the common “tuple of values” for heterogeneous sources, where `tie` and
 // `forward_as_tuple` would keep ref kinds and `tuple{ a }` would use exact init
 // types and CTAD instead of this decay
-template <typename... types>
+template <typename... Arguments>
 [[nodiscard]]
 constexpr auto
-make_tuple(types&&... values) -> tuple<decay<types>...> {
-   return {fwd(values)...};
+make_tuple(Arguments&&... arguments) -> tuple<decay<Arguments>...> {
+   return {fwd(arguments)...};
 }
 
-template <typename callback_type, typename tuple_type>
-   requires(is_tuple<tuple_type>)
+template <typename Callback, typename Tuple>
+   requires(is_tuple<Tuple>)
 [[nodiscard]]
 constexpr auto
-apply(callback_type&& callback, tuple_type&& tuple) {
-   using tuple_decay = decay<tuple_type>;
+apply(Callback&& callback, Tuple&& tuple) {
+   using tuple_decay = decay<Tuple>;
    return detail::tuple_apply_impl(
       fwd(callback), fwd(tuple),
       make_index_sequence<tuple_decay::types::size>{});
@@ -452,31 +452,29 @@ namespace cat {
 constexpr auto
 tuple_cat() -> tuple<>;
 
-template <typename tuple_type>
-   requires(is_tuple<tuple_type>)
+template <typename Tuple>
+   requires(is_tuple<Tuple>)
 constexpr auto
-tuple_cat(tuple_type&& tuple);
+tuple_cat(Tuple&& tuple);
 
-template <typename left_tuple_type, typename right_tuple_type,
-          typename... remaining_tuples>
-   requires(is_tuple<left_tuple_type> && is_tuple<right_tuple_type>
-            && (is_tuple<remaining_tuples> && ...))
+template <typename LeftTuple, typename RightTuple, typename... Remaining>
+   requires(is_tuple<LeftTuple> && is_tuple<RightTuple>
+            && (is_tuple<Remaining> && ...))
 constexpr auto
-tuple_cat(left_tuple_type&& left, right_tuple_type&& right,
-          remaining_tuples&&... remaining);
+tuple_cat(LeftTuple&& left, RightTuple&& right, Remaining&&... remaining);
 }  // namespace cat
 
 // Implement tuple protocol for `cat::tuple`.
 namespace std {
 
-template <typename... in_types>
-struct tuple_size<::cat::tuple<in_types...>>
-    : ::cat::constant<sizeof...(in_types)> {};
+template <typename... Types>
+struct tuple_size<::cat::tuple<Types...>> : ::cat::constant<sizeof...(Types)> {
+};
 
-template <__SIZE_TYPE__ in_index, typename... in_types>
-struct tuple_element<in_index, ::cat::tuple<in_types...>> {
-   using type = typename ::cat::type_list<in_types...>::template get<::cat::idx(
-      in_index)>;
+template <__SIZE_TYPE__ index, typename... Types>
+struct tuple_element<index, ::cat::tuple<Types...>> {
+   using type =
+      typename ::cat::type_list<Types...>::template get<::cat::idx(index)>;
 };
 
 }  // namespace std

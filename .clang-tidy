@@ -59,9 +59,13 @@ CheckOptions:
   - { key: readability-identifier-naming.PrivateMemberPrefix,               value: m_ }
   - { key: readability-identifier-naming.PrivateMemberIgnoredRegexp,        value: '_' }
   - { key: readability-identifier-length.IgnoredParameterNames,             value: '[tuxy]' }
-  - { key: readability-identifier-naming.TemplateParameterIgnoredRegexp,    value: '[A-Z]' }
-  - { key: readability-identifier-naming.TypeAliasIgnoredRegexp,            value: '.*[A-Z].*|[a-z0-9_]_$' }
-  - { key: readability-identifier-naming.TypedefIgnoredRegexp,              value: '.*[A-Z].*|[a-z0-9_]_$' }
+  - { key: readability-identifier-naming.TypeTemplateParameterCase,         value: CamelCase }
+  - { key: readability-identifier-naming.ValueTemplateParameterCase,       value: lower_case }
+  - { key: readability-identifier-naming.TemplateTemplateParameterCase,   value: CamelCase }
+  # Type aliases (`using x =`, `typedef`) must be snake_case. Single-letter
+  # uppercase aliases such as `using T =` stay exempt.
+  - { key: readability-identifier-naming.TypeAliasIgnoredRegexp,            value: '^[A-Z]$' }
+  - { key: readability-identifier-naming.TypedefIgnoredRegexp,              value: '^[A-Z]$' }
   - { key: performance-unnecessary-value-param.AllowedTypes,                value: basic_str_span;span;io_vector }
   - { key: modernize-avoid-c-arrays.AllowStringArrays,                      value: 'true' }
   - { key: cppcoreguidelines-avoid-non-const-global-variables.AllowThreadLocal, value: 'true' }

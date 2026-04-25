@@ -17,20 +17,20 @@ min(T value) -> T;
 // Implicit output type `min()`.
 
 // Implicit output type `max()`.
-template <typename T, typename U, typename... remaining>
+template <typename T, typename U, typename... Remaining>
    requires(is_implicitly_convertible<U, T>)
 constexpr auto
-min(T value_1, U value_2, remaining... remaining_args) -> T;
+min(T value_1, U value_2, Remaining... remaining_args) -> T;
 
 template <typename T>
 constexpr auto
 max(T value) -> T;
 
 // Implicit output type `max()`.
-template <typename T, typename U, typename... remaining>
+template <typename T, typename U, typename... Remaining>
    requires(is_implicitly_convertible<U, T>)
 constexpr auto
-max(T value_1, U value_2, remaining... remaining_args) -> T;
+max(T value_1, U value_2, Remaining... remaining_args) -> T;
 
 template <typename... types>
 class type_list {

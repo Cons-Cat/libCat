@@ -4,10 +4,10 @@
 
 #include <cat/linux>
 
-template <typename... Args, cat::is_invocable<Args...> F>
+template <typename... Args, cat::is_invocable<Args...> Callback>
 auto
 nix::process::spawn(cat::is_allocator auto& allocator,
-                    cat::idx const initial_stack_size, F&& function,
+                    cat::idx const initial_stack_size, Callback&& callback,
                     Args&&... arguments) -> scaredy_nix<void> {
    // Allocate a stack for this thread.
    // TODO: This stack memory should not be owned by the `process`, to
@@ -26,22 +26,22 @@ nix::process::spawn(cat::is_allocator auto& allocator,
 
    cat::byte* p_stack_bottom = memory.data();
 
-   if constexpr (sizeof...(arguments) == 0
-                 && (__is_pointer(F)
-                     || __is_function(__remove_reference_t(F)))) {
-      // If there are no arguments, and `function` is a pointer, it can be
+   if constexpr (sizeof...(Args) == 0
+                 && (__is_pointer(Callback)
+                     || __is_function(__remove_reference_t(Callback)))) {
+      // If there are no arguments, and `callback` is a pointer, it can be
       // called almost directly.
       return this->spawn_impl(p_stack_bottom, initial_stack_size,
-                              reinterpret_cast<void*>(function), nullptr);
+                              reinterpret_cast<void*>(callback), nullptr);
    } else {
-      // If there are arguments, `function` must be wrapped in a lambda that has
+      // If there are arguments, `callback` must be wrapped in a lambda that has
       // tuple storage.
-      static cat::tuple tuple_args{fwd(function), fwd(arguments)...};
+      static cat::tuple tuple_args{fwd(callback), fwd(arguments)...};
 
       // Unary `+` converts this lambda to function pointer.
       static auto* p_entry =
          +[] [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
-          (cat::tuple<F, Args...> * p_arguments) {
+          (cat::tuple<Callback, Args...> * p_arguments) {
              auto&& [fn, ... pack_args] = *p_arguments;
              fwd(fn)(fwd(pack_args)...);
           };

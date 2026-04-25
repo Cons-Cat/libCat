@@ -70,12 +70,12 @@ namespace detail {
 struct pattern {};
 
 // TODO: This should not be in `detail::`.
-// TODO: Can this invocable be type erased?
-template <typename function>
+// TODO: Can this callback be type erased?
+template <typename Callback>
 struct pattern_invocable {
    // This isn't needed in C++20, but it prevents a clangd false
    // diagnostic.
-   pattern_invocable(function&& input) : invocable(fwd(input)) {
+   pattern_invocable(Callback&& input) : callback(fwd(input)) {
    }
 
    // TODO: Add a `.when()` predicate.
@@ -83,36 +83,36 @@ struct pattern_invocable {
    template <typename T>
    constexpr auto
    operator()(T&& matching) -> decltype(auto) {
-      return this->invocable(fwd(matching));
+      return this->callback(fwd(matching));
    }
 
-   function invocable;
+   Callback callback;
 };
 
-template <typename... types>
+template <typename... Types>
 struct one_of_types : pattern {
    constexpr one_of_types() = default;
 
    // TODO: Add a `.when()` predicate.
 
-   template <typename function>
+   template <typename Callback>
    constexpr auto
-   then_do(function&& invocable) {
+   then_do(Callback&& callback) {
       return pattern_invocable{[&](auto& matching) -> bool {
          using unqualified_matching =
             remove_const<remove_reference<decltype(matching)>>;
          if constexpr (has_member_is_type<unqualified_matching>) {
             // If `matching` currently holds one of `types`, then invoke
-            // `invocable`.
-            if (((matching.template is<types>()) || ...)) {
-               fwd(invocable)();
+            // `callback`.
+            if (((matching.template is<Types>()) || ...)) {
+               fwd(callback)();
                return true;
             }
          } else {
             // If there is no `.is()` method for `matching`, fall back
             // to a trivial `is_same` check.
-            if ((is_same<unqualified_matching, types> || ...)) {
-               fwd(invocable)();
+            if ((is_same<unqualified_matching, Types> || ...)) {
+               fwd(callback)();
                return true;
             }
          }
@@ -128,23 +128,23 @@ struct is_a_value_type : pattern {
 
    // TODO: Add a `.when()` predicate.
 
-   template <typename function>
+   template <typename Callback>
    constexpr auto
-   then_do(function&& invocable) {
+   then_do(Callback&& callback) {
       return pattern_invocable{[&](auto& matching) -> bool {
          using unqualified_matching = remove_cvref<decltype(matching)>;
          if constexpr (has_member_is_value<unqualified_matching>) {
             // If `matching` currently holds a value equivalent to
-            // `this->value`, then invoke `invocable`.
+            // `this->value`, then invoke `callback`.
             if (matching.is(this->value)) {
-               fwd(invocable)();
+               fwd(callback)();
                return true;
             }
          } else {
             // If there is no `.is()` method for `matching`, fall back
             // to a trivial `==` check.
             if (static_cast<unqualified_matching>(matching) == value) {
-               fwd(invocable)();
+               fwd(callback)();
                return true;
             }
          }
@@ -156,10 +156,10 @@ struct is_a_value_type : pattern {
 };
 }  // namespace detail
 
-template <typename... types>
+template <typename... Types>
 constexpr auto
-one_of() -> detail::one_of_types<types...> {
-   return detail::one_of_types<types...>{};
+one_of() -> detail::one_of_types<Types...> {
+   return detail::one_of_types<Types...>{};
 }
 
 // TODO: `one_of()` overload taking values instead of types.
@@ -193,27 +193,27 @@ struct match_patterns {
    }
 
    // Call every pattern in order.
-   template <typename U, typename... remaining>
-      requires(sizeof...(remaining) > 0)
+   template <typename U, typename... Remaining>
+      requires(sizeof...(Remaining) > 0)
    constexpr void
-   call_pattern(U&& pattern, remaining&&... remaining_args) {
+   call_pattern(U&& pattern, Remaining&&... remaining) {
       if (fwd(pattern)(this->matching)) {
          // Short circuit the remaining patterns if this one returns
          // true.
          return;
       }
-      return call_pattern(fwd(remaining_args)...);
+      return call_pattern(fwd(remaining)...);
    }
 
    // Every pattern must be either an `is_a` or `one_of`.
-   template <typename... patterns>
-      requires(is_specialization<patterns, detail::pattern_invocable> && ...)
+   template <typename... Patterns>
+      requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
-   operator()(patterns&&... pattern_args) {
-      // Recurse through `pattern_args` in order. Invoke the call operator
+   operator()(Patterns&&... patterns) {
+      // Recurse through `patterns` in order. Invoke the call operator
       // on each of them with `this->matching` as an argument. When one
       // pattern holds true, invoke its invocable and stop recursing.
-      this->call_pattern(fwd(pattern_args)...);
+      this->call_pattern(fwd(patterns)...);
    }
 
    T& matching;

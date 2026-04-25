@@ -2,7 +2,7 @@
 #pragma once
 
 // Chunk iterator over scalar buffers as `simd<Lane, fixed_size_abi<Lane,
-// Width>>`. Implemented with `iterator_interface`, parallel to
+// width>>`. Implemented with `iterator_interface`, parallel to
 // `cat::reverse_proxy_iterator`.
 
 #include <cat/arithmetic>
@@ -15,9 +15,9 @@ namespace cat {
 template <typename T>
 concept vectorizable_element = is_trivially_copyable<T> && (sizeof(T) <= 32u);
 
-template <typename Lane, idx Width>
+template <typename Lane, idx width>
 struct as_vectorized_chunk_reference {
-   using value_type = simd<Lane, fixed_size_abi<Lane, Width>>;
+   using value_type = simd<Lane, fixed_size_abi<Lane, width>>;
    using raw_pointer = raw_arithmetic_type<Lane>*;
 
    raw_pointer p_data = nullptr;
@@ -37,19 +37,19 @@ struct as_vectorized_chunk_reference {
    }
 };
 
-template <typename Lane, idx Width, bool IsConst>
+template <typename Lane, idx width, bool is_const>
 class as_vectorized_iterator
     : public proxy_iterator_interface<
-         random_access_iterator_tag, simd<Lane, fixed_size_abi<Lane, Width>>,
-         conditional<IsConst, simd<Lane, fixed_size_abi<Lane, Width>>,
-                     as_vectorized_chunk_reference<Lane, Width>>> {
-   using self_type = as_vectorized_iterator<Lane, Width, IsConst>;
+         random_access_iterator_tag, simd<Lane, fixed_size_abi<Lane, width>>,
+         conditional<is_const, simd<Lane, fixed_size_abi<Lane, width>>,
+                     as_vectorized_chunk_reference<Lane, width>>> {
+   using self_type = as_vectorized_iterator<Lane, width, is_const>;
 
  public:
-   using value_type = simd<Lane, fixed_size_abi<Lane, Width>>;
+   using value_type = simd<Lane, fixed_size_abi<Lane, width>>;
    using raw_pointer_element = raw_arithmetic_type<Lane>;
    using storage_pointer =
-      conditional<IsConst, raw_pointer_element const*, raw_pointer_element*>;
+      conditional<is_const, raw_pointer_element const*, raw_pointer_element*>;
 
    storage_pointer p = nullptr;
 
@@ -63,25 +63,25 @@ class as_vectorized_iterator
    [[nodiscard]]
    static constexpr auto
    size() -> idx {
-      return Width;
+      return width;
    }
 
    constexpr void
    advance(iword offset) {
-      p += static_cast<decltype(p - p)>(offset * iword(Width.raw));
+      p += static_cast<decltype(p - p)>(offset * iword(width.raw));
    }
 
    [[nodiscard]]
    constexpr auto
    distance_to(self_type const& other) const -> iword {
       return iword((other.p - p)
-                   / static_cast<decltype(other.p - p)>(Width.raw));
+                   / static_cast<decltype(other.p - p)>(width.raw));
    }
 
    [[nodiscard]]
    constexpr auto
-   dereference() -> as_vectorized_chunk_reference<Lane, Width>
-      requires(!IsConst)
+   dereference() -> as_vectorized_chunk_reference<Lane, width>
+      requires(!is_const)
    {
       return {p};
    }
@@ -89,34 +89,34 @@ class as_vectorized_iterator
    [[nodiscard]]
    constexpr auto
    dereference() const {
-      if constexpr (IsConst) {
+      if constexpr (is_const) {
          value_type chunk{};
          chunk.load(p);
          return chunk;
       } else {
-         return as_vectorized_chunk_reference<Lane, Width>{p};
+         return as_vectorized_chunk_reference<Lane, width>{p};
       }
    }
 };
 
-template <typename Lane, idx Width>
+template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
-as_vectorized(raw_arithmetic_type<Lane> const* ptr)
-   -> as_vectorized_iterator<Lane, Width, true>
+as_vectorized(raw_arithmetic_type<Lane> const* p_lane)
+   -> as_vectorized_iterator<Lane, width, true>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {
-   return as_vectorized_iterator<Lane, Width, true>(ptr);
+   return as_vectorized_iterator<Lane, width, true>(p_lane);
 }
 
-template <typename Lane, idx Width>
+template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
-as_vectorized(raw_arithmetic_type<Lane>* ptr)
-   -> as_vectorized_iterator<Lane, Width, false>
+as_vectorized(raw_arithmetic_type<Lane>* p_lane)
+   -> as_vectorized_iterator<Lane, width, false>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {
-   return as_vectorized_iterator<Lane, Width, false>(ptr);
+   return as_vectorized_iterator<Lane, width, false>(p_lane);
 }
 
 }  // namespace cat

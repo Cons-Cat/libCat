@@ -23,11 +23,11 @@
 
 namespace cat {
 
-template <typename T, typename in_abi>
-   requires(is_same<typename in_abi::scalar_type, T>)
+template <typename T, typename Abi>
+   requires(is_same<typename Abi::scalar_type, T>)
 class simd;
 
-template <typename T, typename in_abi>
+template <typename T, typename Abi>
 class simd_mask;
 
 namespace detail {

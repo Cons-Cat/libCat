@@ -94,7 +94,7 @@ array : public collection_interface<array<T, length>, T>,
    }
 
  private:
-   T m_data[length]; // NOLINT We need a raw array to implement this.
+   T m_data[length];  // NOLINT We need a raw array to implement this.
 };
 
 // Construct an `array<int, 3>` as: `array a = {0, 1, 2};`
@@ -130,28 +130,28 @@ make_array_filled(T const& value) -> array<T, length> {
 }
 
 // Analogous to the proposed `std::aggr::get` in the P2141 paper
-template <idx in_index, typename T, idx length>
-   requires(in_index < length)
+template <idx index, typename T, idx length>
+   requires(index < length)
 [[nodiscard]]
 constexpr auto
 get(array<T, length>& a) noexcept -> T& {
-   return a[in_index];
+   return a[index];
 }
 
-template <idx in_index, typename T, idx length>
-   requires(in_index < length)
+template <idx index, typename T, idx length>
+   requires(index < length)
 [[nodiscard]]
 constexpr auto
 get(array<T, length> const& a) noexcept -> T const& {
-   return a[in_index];
+   return a[index];
 }
 
-template <idx in_index, typename T, idx length>
-   requires(in_index < length)
+template <idx index, typename T, idx length>
+   requires(index < length)
 [[nodiscard]]
 constexpr auto
 get(array<T, length>&& a) noexcept -> T&& {
-   return cat::move(a[in_index]);
+   return cat::move(a[index]);
 }
 
 }  // namespace cat
@@ -167,23 +167,23 @@ template <typename T, ::cat::idx length>
 struct tuple_size<::cat::array<T, length> const>
     : tuple_size<::cat::array<T, length>> {};
 
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
-struct tuple_element<in_index, ::cat::array<T, length>> {
+template <__SIZE_TYPE__ index, typename T, ::cat::idx length>
+struct tuple_element<index, ::cat::array<T, length>> {
    using type = T;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
-struct tuple_element<in_index, ::cat::array<T, length> const> {
+template <__SIZE_TYPE__ index, typename T, ::cat::idx length>
+struct tuple_element<index, ::cat::array<T, length> const> {
    using type = T const;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
-struct tuple_element<in_index, ::cat::array<T, length> volatile> {
+template <__SIZE_TYPE__ index, typename T, ::cat::idx length>
+struct tuple_element<index, ::cat::array<T, length> volatile> {
    using type = T volatile;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
-struct tuple_element<in_index, ::cat::array<T, length> const volatile> {
+template <__SIZE_TYPE__ index, typename T, ::cat::idx length>
+struct tuple_element<index, ::cat::array<T, length> const volatile> {
    using type = T const volatile;
 };
 

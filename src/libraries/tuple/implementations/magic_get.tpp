@@ -9,16 +9,16 @@ namespace cat {
 namespace detail {
 
 // "Magic get" for aggregates.
-template <idx in_index, typename T>
+template <idx index, typename T>
    requires(__builtin_structured_binding_size(remove_cvref<T>) > 0
-            && (in_index < __builtin_structured_binding_size(remove_cvref<T>)))
+            && (index < __builtin_structured_binding_size(remove_cvref<T>)))
 [[nodiscard, gnu::always_inline]]
 constexpr auto
 get_aggregate_lvalue(T& t) -> decltype(auto) {
    // Compared to Boost.pfr or the magic_get library, this is extremely simple.
    // We just destructure into a pack, and then index that pack.
    auto& [... members] = t;
-   return (members...[in_index]);
+   return (members...[index]);
 }
 
 // True when a member `get` is callable like `cat::tuple::get` (used with
@@ -75,38 +75,38 @@ struct tuple_size
     : constant<__builtin_structured_binding_size(remove_cvref<T>)> {};
 
 // Analogous to the proposed `std::aggr::get` in the P2141 paper
-template <idx in_index, typename S>
+template <idx index, typename S>
    requires(has_aggregate_get<remove_cvref<S>>
-            && in_index
+            && index
                   < __builtin_structured_binding_size(::cat::remove_cvref<S>))
 [[nodiscard]]
 constexpr auto
 get(S& t) noexcept -> decltype(auto) {
-   return ::cat::detail::get_aggregate_lvalue<in_index>(t);
+   return ::cat::detail::get_aggregate_lvalue<index>(t);
 }
 
-template <idx in_index, typename S>
+template <idx index, typename S>
    requires(has_aggregate_get<remove_cvref<S>>
-            && in_index
+            && index
                   < __builtin_structured_binding_size(::cat::remove_cvref<S>))
 [[nodiscard]]
 constexpr auto
 get(S const& t) noexcept -> decltype(auto) {
-   return ::cat::detail::get_aggregate_lvalue<in_index>(t);
+   return ::cat::detail::get_aggregate_lvalue<index>(t);
 }
 
 // `S&&` with `is_rvalue_reference`: true prvalue or xvalue aggregate so we
 // can bind the pack and move the selected element out
-template <idx in_index, typename S>
+template <idx index, typename S>
    requires(is_rvalue_reference<S &&> && has_aggregate_get<remove_cvref<S>>
-            && in_index
+            && index
                   < __builtin_structured_binding_size(::cat::remove_cvref<S>))
 [[nodiscard]]
 constexpr auto
 get(S&& t) noexcept
-   -> decltype(cat::move(::cat::detail::get_aggregate_lvalue<in_index>(
+   -> decltype(cat::move(::cat::detail::get_aggregate_lvalue<index>(
       static_cast<remove_reference<S>&>(t)))) {
-   return cat::move(::cat::detail::get_aggregate_lvalue<in_index>(
+   return cat::move(::cat::detail::get_aggregate_lvalue<index>(
       static_cast<remove_reference<S>&>(t)));
 }
 
@@ -116,18 +116,18 @@ namespace cat::detail {
 
 // `make_index_sequence` over `cat::idx` to `cat::get` for
 // `aggregate_apply_impl`
-template <idx in_index, typename aggregate_type>
-   requires(has_aggregate_get<remove_cvref<aggregate_type>>)
+template <idx index, typename Aggregate>
+   requires(has_aggregate_get<remove_cvref<Aggregate>>)
 [[nodiscard, gnu::always_inline]]
 constexpr auto
-aggregate_get(aggregate_type&& t) -> decltype(auto) {
-   return ::cat::get<in_index>(fwd(t));
+aggregate_get(Aggregate&& t) -> decltype(auto) {
+   return ::cat::get<index>(fwd(t));
 }
 
-template <typename callback_type, typename aggregate_type, idx... indices>
+template <typename Callback, typename Aggregate, idx... indices>
 [[nodiscard, gnu::always_inline]]
 constexpr auto
-aggregate_apply_impl(callback_type&& callback, aggregate_type&& t,
+aggregate_apply_impl(Callback&& callback, Aggregate&& t,
                      index_list_type<indices...>)
    -> decltype(fwd(callback)(aggregate_get<indices>(fwd(t))...)) {
    return fwd(callback)(aggregate_get<indices>(fwd(t))...);
@@ -139,15 +139,15 @@ namespace cat {
 
 // `apply` for `has_aggregate_get` types, separate overload from
 // `is_tuple<>`-based `apply` in the main `tuple` header
-template <typename callback_type, typename aggregate_type>
-   requires(has_aggregate_get<remove_cvref<aggregate_type>>)
+template <typename Callback, typename Aggregate>
+   requires(has_aggregate_get<remove_cvref<Aggregate>>)
 [[nodiscard]]
 constexpr auto
-apply(callback_type&& callback, aggregate_type&& t) {
+apply(Callback&& callback, Aggregate&& t) {
    return detail::aggregate_apply_impl(
       fwd(callback), fwd(t),
-      make_index_sequence<static_cast<idx>(__builtin_structured_binding_size(
-         ::cat::remove_cvref<aggregate_type>))>{});
+      make_index_sequence<static_cast<idx>(
+         __builtin_structured_binding_size(::cat::remove_cvref<Aggregate>))>{});
 }
 
 }  // namespace cat

@@ -14,13 +14,13 @@ template <idx bits_count>
 class [[clang::trivial_abi]]
 bitset : public bitwise_interface<bitset<bits_count>> {
  private:
-   template <idx, is_unsigned_integral... types>
+   template <idx, is_unsigned_integral... Arguments>
    // TODO: Clang had a regression which broke template equivalence here.
    // Re-enable this constraint when possible.
 
-   // requires((sizeof(types...[0]) == sizeof(types)) && ...)
+   // requires((sizeof(arguments...[0]) == sizeof(arguments)) && ...)
    friend constexpr auto
-   make_bitset(types... values);
+   make_bitset(Arguments... arguments);
 
    // Store the smallest number of bytes needed for `bits_count`. If that is 8
    // bytes or fewer, use that many bytes. If it is larger, use an array of
@@ -558,20 +558,20 @@ bitset : public bitwise_interface<bitset<bits_count>> {
 template <__SIZE_TYPE__ bits_count>
 bitset(char const (&bitstring)[bits_count]) -> bitset<idx(bits_count - 1u)>;
 
-template <idx bits_count, is_unsigned_integral... types>
+template <idx bits_count, is_unsigned_integral... Arguments>
 // Ensure that all `types` are the same size. E.g., `uint4` and `unsigned` are
 // compatible here.
-// requires((sizeof(types...[0]) == sizeof(types)) && ...)
+// requires((sizeof(Arguments...[0]) == sizeof(Arguments)) && ...)
 [[nodiscard]]
 constexpr auto
-make_bitset(types... values) {
+make_bitset(Arguments... arguments) {
    // TODO: Assert that the input fits in `bits_count`.
-   static_assert(sizeof...(types) == bitset<bits_count>::array_type::size(),
-                 "The values passed into this bitset do not fit within the "
+   static_assert(sizeof...(Arguments) == bitset<bits_count>::array_type::size(),
+                 "The arguments passed into this bitset do not fit within the "
                  "`bits_count` alloted.");
 
    bitset<bits_count> new_bitset;
-   new_bitset.m_data = {values...};
+   new_bitset.m_data = {arguments...};
    return new_bitset;
 }
 

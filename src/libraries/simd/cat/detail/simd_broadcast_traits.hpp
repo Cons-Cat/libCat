@@ -38,8 +38,8 @@ simd_broadcast_really_convertible_to() -> bool {
       return false;
    }
 
-   using ToRaw = simd_broadcast_lane_raw<ToLane>;
-   if constexpr (!is_arithmetic<ToRaw>) {
+   using to_raw = simd_broadcast_lane_raw<ToLane>;
+   if constexpr (!is_arithmetic<to_raw>) {
       return false;
    }
 
@@ -50,26 +50,26 @@ simd_broadcast_really_convertible_to() -> bool {
    // constructor `simd(bool)` rather than relying on some other conversion.
    if constexpr (is_bool<unqualified>) {
       auto ok = [](From x) -> bool {
-         ToRaw const y = static_cast<ToRaw>(x);
+         to_raw const y = static_cast<to_raw>(x);
          return static_cast<unqualified>(y) == static_cast<unqualified>(x);
       };
       return ok(static_cast<From>(false)) && ok(static_cast<From>(true));
    }
 
-   if constexpr (is_same<unqualified, ToRaw>) {
+   if constexpr (is_same<unqualified, to_raw>) {
       return true;
    }
 
    auto roundtrip_ok = [](From x) -> bool {
-      ToRaw y = static_cast<ToRaw>(x);
+      to_raw y = static_cast<to_raw>(x);
       return static_cast<From>(y) == x;
    };
 
    if constexpr (is_integral<unqualified>) {
-      if constexpr (is_floating_point<ToRaw>) {
+      if constexpr (is_floating_point<to_raw>) {
          auto endpoint_ok = [](From x) -> bool {
             long double const lx = static_cast<long double>(x);
-            ToRaw const y = static_cast<ToRaw>(lx);
+            to_raw const y = static_cast<to_raw>(lx);
             return lx == static_cast<long double>(y);
          };
          return endpoint_ok(limits<unqualified>::max())
@@ -90,8 +90,8 @@ template <typename From, typename ToLane>
 // Clang needs this to use it in `[[assume]]`.
 consteval auto
 has_simd_broadcast_consteval_value(From f) -> bool {
-   using ToR = simd_broadcast_lane_raw<ToLane>;
-   ToR const tr = static_cast<ToR>(f);
+   using to_raw = simd_broadcast_lane_raw<ToLane>;
+   to_raw const tr = static_cast<to_raw>(f);
    return static_cast<long double>(f) == static_cast<long double>(tr);
 }
 

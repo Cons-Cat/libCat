@@ -44,38 +44,38 @@
 
 namespace cat {
 struct iterator_interface_access {
-   template <typename D>
+   template <typename Derived>
    static constexpr auto
-   base(D& d) -> decltype(d.base_reference())
-      requires requires { d.base_reference(); }
+   base(Derived& derived) -> decltype(derived.base_reference())
+      requires requires { derived.base_reference(); }
    {
-      return d.base_reference();
+      return derived.base_reference();
    }
 
-   template <typename D>
+   template <typename Derived>
    static constexpr auto
-   base(D const& d) -> decltype(d.base_reference())
-      requires requires { d.base_reference(); }
+   base(Derived const& derived) -> decltype(derived.base_reference())
+      requires requires { derived.base_reference(); }
    {
-      return d.base_reference();
+      return derived.base_reference();
    }
 };
 
-template <typename reference_type>
-using proxy_iterator_pointer = proxy_arrow_result<remove_cvref<reference_type>>;
+template <typename Reference>
+using proxy_iterator_pointer = proxy_arrow_result<remove_cvref<Reference>>;
 
 namespace detail {
-template <typename iterator>
-concept has_increment = requires(iterator it) { it.increment(); };
+template <typename Iterator>
+concept has_increment = requires(Iterator it) { it.increment(); };
 
-template <typename iterator>
-concept has_decrement = requires(iterator it) { it.decrement(); };
+template <typename Iterator>
+concept has_decrement = requires(Iterator it) { it.decrement(); };
 
-template <typename iterator>
-concept has_distance_to = requires(iterator it) { it.distance_to(it); };
+template <typename Iterator>
+concept has_distance_to = requires(Iterator it) { it.distance_to(it); };
 
-template <typename iterator>
-concept has_equal_to = requires(iterator it) {
+template <typename Iterator>
+concept has_equal_to = requires(Iterator it) {
                           { it.equal_to(it) } -> is_convertible<bool>;
                        };
 
@@ -92,9 +92,9 @@ struct infer_difference_trait {
 
 // If `iterator` provides `.distance_to()`, infer `difference_type` from
 // that.
-template <detail::has_distance_to iterator>
-struct infer_difference_trait<iterator> {
-   static iterator const& it;
+template <detail::has_distance_to Iterator>
+struct infer_difference_trait<Iterator> {
+   static Iterator const& it;
    using type = decltype(it.distance_to(it));
 };
 
@@ -103,28 +103,28 @@ struct infer_difference_trait<T> {
    using type = iword;
 };
 
-template <typename iterator>
+template <typename Iterator>
 concept has_advance =
-   requires(iterator it, infer_difference_trait<iterator>::type offset) {
+   requires(Iterator it, infer_difference_trait<Iterator>::type offset) {
       it.advance(offset);
    };
 
-template <typename iterator>
-concept has_random_access = has_advance<iterator> && has_distance_to<iterator>;
+template <typename Iterator>
+concept has_random_access = has_advance<Iterator> && has_distance_to<Iterator>;
 
-template <typename iterator>
+template <typename Iterator>
 concept has_bidirectional =
-   has_random_access<iterator> || has_decrement<iterator>;
+   has_random_access<Iterator> || has_decrement<Iterator>;
 
-template <typename argument, typename iterator>
+template <typename Argument, typename Iterator>
 concept is_difference_type =
-   is_convertible<argument, typename infer_difference_trait<iterator>::type>;
+   is_convertible<Argument, typename infer_difference_trait<Iterator>::type>;
 
 // Matches C++20 `movable` except the `swappable` clause. `move_constructible`
 // and `assignable_from<T&, T>` subsume libCat iterator use cases.
-template <typename iterator>
+template <typename Iterator>
 concept is_iterator_movable =
-   is_move_constructible<iterator> && is_assignable<iterator&, iterator>;
+   is_move_constructible<Iterator> && is_assignable<Iterator&, Iterator>;
 
 template <typename T>
 concept is_signed_integer_like = is_signed<T> && is_integral<T>;
@@ -142,8 +142,8 @@ concept is_iterator_regular =
    is_equality_comparable<T> && is_iterator_semiregular<T>;
 }  // namespace detail
 
-template <typename iterator>
-using infer_difference_type = detail::infer_difference_trait<iterator>::type;
+template <typename Iterator>
+using infer_difference_type = detail::infer_difference_trait<Iterator>::type;
 
 template <typename T>
 using iterator_difference_type =
@@ -229,17 +229,17 @@ using iter_value_t = typename detail::iter_value_trait<I>::type;
 // `element_type` supplies `value_type`, `reference_type`, `pointer_type`, and
 // `difference` default from it. Override them when `reference` or `pointer` are
 // proxy types.
-template <typename iterator_concept_tag, typename element_type,
-          typename reference_type = element_type&,
-          typename pointer_type = element_type*, typename difference = iword>
+template <typename IteratorConceptTag, typename Element,
+          typename Reference = Element&, typename Pointer = Element*,
+          typename Difference = iword>
 class iterator_interface : public iterator_interface_base {
  public:
-   using iterator_concept = iterator_concept_tag;
+   using iterator_concept = IteratorConceptTag;
    using value_type =
-      conditional<is_void<element_type>, void, remove_const<element_type>>;
-   using reference = reference_type;
-   using pointer = pointer_type;
-   using difference_type = difference;
+      conditional<is_void<Element>, void, remove_const<Element>>;
+   using reference = Reference;
+   using pointer = Pointer;
+   using difference_type = Difference;
    using const_value_type =
       conditional<is_void<value_type>, void, add_const<value_type>>;
    using const_reference =
@@ -354,23 +354,23 @@ class iterator_interface : public iterator_interface_base {
    }
 };
 
-template <typename iterator_concept_tag, typename element_type,
-          typename reference_type = element_type, typename difference = iword>
+template <typename IteratorConceptTag, typename Element,
+          typename Reference = Element, typename Difference = iword>
 using proxy_iterator_interface =
-   iterator_interface<iterator_concept_tag, element_type, reference_type,
-                      proxy_iterator_pointer<reference_type>, difference>;
+   iterator_interface<IteratorConceptTag, Element, Reference,
+                      proxy_iterator_pointer<Reference>, Difference>;
 
-template <typename iterator_type>
+template <typename Iterator>
 using infer_iterator_pointer =
-   conditional<is_lvalue_reference<typename iterator_type::reference>,
-               add_pointer<remove_reference<typename iterator_type::reference>>,
-               proxy_iterator_pointer<typename iterator_type::reference>>;
+   conditional<is_lvalue_reference<typename Iterator::reference>,
+               add_pointer<remove_reference<typename Iterator::reference>>,
+               proxy_iterator_pointer<typename Iterator::reference>>;
 
-template <typename D>
-   requires(is_base_of<iterator_interface_base, remove_cvref<D>>)
+template <typename Derived>
+   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
-operator==(D const& left, D const& right) -> bool {
-   using iter = remove_cvref<D>;
+operator==(Derived const& left, Derived const& right) -> bool {
+   using iter = remove_cvref<Derived>;
    if constexpr (detail::has_equal_to<iter>) {
       return left.equal_to(right);
    } else if constexpr (detail::has_distance_to<iter>) {
@@ -381,23 +381,23 @@ operator==(D const& left, D const& right) -> bool {
    }
 }
 
-template <typename D>
-   requires(is_base_of<iterator_interface_base, remove_cvref<D>>
-            && detail::has_distance_to<remove_cvref<D>>)
+template <typename Derived>
+   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>
+            && detail::has_distance_to<remove_cvref<Derived>>)
 constexpr auto
-operator<=>(D const& left, D const& right) {
-   using iter = remove_cvref<D>;
+operator<=>(Derived const& left, Derived const& right) {
+   using iter = remove_cvref<Derived>;
    using diff = infer_difference_type<iter>;
    return (left - right) <=> static_cast<diff>(0);
 }
 
-template <typename D>
-   requires(is_base_of<iterator_interface_base, remove_cvref<D>>)
+template <typename Derived>
+   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
-operator+(D const& left, auto offset) -> remove_cvref<D>
-   requires(detail::is_difference_type<decltype(offset), remove_cvref<D>>)
+operator+(Derived const& left, auto offset) -> remove_cvref<Derived>
+   requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
 {
-   using iter = remove_cvref<D>;
+   using iter = remove_cvref<Derived>;
    iter new_iterator = left;
    if constexpr (detail::has_advance<iter>) {
       new_iterator.advance(static_cast<typename iter::difference_type>(offset));
@@ -409,13 +409,13 @@ operator+(D const& left, auto offset) -> remove_cvref<D>
    return new_iterator;
 }
 
-template <typename D>
-   requires(is_base_of<iterator_interface_base, remove_cvref<D>>)
+template <typename Derived>
+   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
-operator+(auto offset, D const& right) -> remove_cvref<D>
-   requires(detail::is_difference_type<decltype(offset), remove_cvref<D>>)
+operator+(auto offset, Derived const& right) -> remove_cvref<Derived>
+   requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
 {
-   using iter = remove_cvref<D>;
+   using iter = remove_cvref<Derived>;
    iter new_iterator = right;
    if constexpr (detail::has_advance<iter>) {
       new_iterator.advance(static_cast<typename iter::difference_type>(offset));
@@ -427,13 +427,13 @@ operator+(auto offset, D const& right) -> remove_cvref<D>
    return new_iterator;
 }
 
-template <typename D>
-   requires(is_base_of<iterator_interface_base, remove_cvref<D>>)
+template <typename Derived>
+   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
-operator-(D const& left, auto offset) -> remove_cvref<D>
-   requires(detail::is_difference_type<decltype(offset), remove_cvref<D>>)
+operator-(Derived const& left, auto offset) -> remove_cvref<Derived>
+   requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
 {
-   using iter = remove_cvref<D>;
+   using iter = remove_cvref<Derived>;
    iter new_iterator = left;
    if constexpr (detail::has_advance<iter>) {
       new_iterator.advance(
@@ -446,13 +446,13 @@ operator-(D const& left, auto offset) -> remove_cvref<D>
    return new_iterator;
 }
 
-template <typename D>
-   requires(is_base_of<iterator_interface_base, remove_cvref<D>>)
+template <typename Derived>
+   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
-operator-=(D& left, auto offset) -> remove_cvref<D>&
-   requires(detail::is_difference_type<decltype(offset), remove_cvref<D>>)
+operator-=(Derived& left, auto offset) -> remove_cvref<Derived>&
+   requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
 {
-   using iter = remove_cvref<D>;
+   using iter = remove_cvref<Derived>;
    if constexpr (detail::has_advance<iter>) {
       left.advance(-static_cast<typename iter::difference_type>(offset));
    } else {
@@ -463,38 +463,37 @@ operator-=(D& left, auto offset) -> remove_cvref<D>&
    return left;
 }
 
-template <typename D>
-   requires(is_base_of<iterator_interface_base, remove_cvref<D>>
-            && detail::has_distance_to<remove_cvref<D>>)
+template <typename Derived>
+   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>
+            && detail::has_distance_to<remove_cvref<Derived>>)
 constexpr auto
-operator-(D const& left, D const& right)
-   -> infer_difference_type<remove_cvref<D>> {
+operator-(Derived const& left, Derived const& right)
+   -> infer_difference_type<remove_cvref<Derived>> {
    return right.distance_to(left);
 }
 
-template <typename iterator_type>
+template <typename Iterator>
 class reverse_proxy_iterator
-    : public iterator_interface<random_access_iterator_tag,
-                                typename iterator_type::value_type,
-                                typename iterator_type::reference,
-                                infer_iterator_pointer<iterator_type>,
-                                infer_difference_type<iterator_type>> {
+    : public iterator_interface<
+         random_access_iterator_tag, typename Iterator::value_type,
+         typename Iterator::reference, infer_iterator_pointer<Iterator>,
+         infer_difference_type<Iterator>> {
  private:
-   using self_type = reverse_proxy_iterator<iterator_type>;
+   using self_type = reverse_proxy_iterator<Iterator>;
 
  public:
-   using value_type = iterator_type::value_type;
-   using const_value_type = iterator_type::const_value_type;
-   using reference = iterator_type::reference;
-   using const_reference = iterator_type::const_reference;
+   using value_type = Iterator::value_type;
+   using const_value_type = Iterator::const_value_type;
+   using reference = Iterator::reference;
+   using const_reference = Iterator::const_reference;
 
-   constexpr reverse_proxy_iterator(iterator_type const& other)
+   constexpr reverse_proxy_iterator(Iterator const& other)
        : m_internal_iterator(other) {
    }
 
    // Forward any constructor to the `internal_iterator`.
-   template <typename... argument_types>
-   constexpr reverse_proxy_iterator(argument_types&&... arguments)
+   template <typename... Args>
+   constexpr reverse_proxy_iterator(Args&&... arguments)
        : m_internal_iterator(fwd(arguments)...) {
    }
 
@@ -510,7 +509,7 @@ class reverse_proxy_iterator
 
    constexpr void
    advance(iword offset)
-      requires(detail::has_advance<iterator_type>)
+      requires(detail::has_advance<Iterator>)
    {
       m_internal_iterator.advance(-offset);
    }
@@ -527,19 +526,19 @@ class reverse_proxy_iterator
 
    constexpr auto
    distance_to(self_type const& other) const
-      requires(detail::has_distance_to<iterator_type>)
+      requires(detail::has_distance_to<Iterator>)
    {
       // Reverse the polarity of `distance_to()`.
       return -m_internal_iterator.distance_to(other.m_internal_iterator);
    }
 
  private:
-   iterator_type m_internal_iterator;
+   Iterator m_internal_iterator;
 };
 
-template <template <typename, auto...> typename iterator_type, typename T,
+template <template <typename, auto...> typename Iterator, typename T,
           auto... args>
-using const_proxy_iterator = iterator_type<T const, args...>;
+using const_proxy_iterator = Iterator<T const, args...>;
 
 // TODO: More iterable related `concept`s.
 template <typename T>
@@ -652,149 +651,147 @@ concept is_forward_iterator =
        || (detail::iter_has_forward_capacity_tag<T>
            && !detail::iter_is_pure_input_interface_iterator<T>));
 
-template <typename outputter, typename value_type>
+template <typename Outputter, typename Value>
 concept is_indirectly_writable =
-   requires(outputter&& output_iterator, value_type&& value) {
+   requires(Outputter&& output_iterator, Value&& value) {
       *output_iterator = fwd(value);
       *fwd(output_iterator) = fwd(value);
-      const_cast<iterator_reference<outputter> const&&>(*output_iterator) =
+      const_cast<iterator_reference<Outputter> const&&>(*output_iterator) =
          fwd(value);
-      const_cast<iterator_reference<outputter> const&&>(*fwd(output_iterator)) =
+      const_cast<iterator_reference<Outputter> const&&>(*fwd(output_iterator)) =
          fwd(value);
    };
 
-template <typename outputter, typename value_type>
+template <typename Outputter, typename Value>
 concept is_output_iterator =
-   is_input_or_output_iterator<outputter>
-   && is_indirectly_writable<outputter, value_type>
-   && requires(outputter iterator, value_type&& value) {
-         *iterator++ = fwd(value);
-      };
+   is_input_or_output_iterator<Outputter>
+   && is_indirectly_writable<Outputter, Value>
+   && requires(Outputter iterator, Value&& value) { *iterator++ = fwd(value); };
 
 // With a similar syntax to `as_const()`, this wrapper takes an iterable
 // container and inverts its iterator's forwards and backwards movement.
-template <is_bidi_iterable T>
-struct as_reverse : T {
-   constexpr as_reverse(T& base) : T(base) {
+template <is_bidi_iterable Collection>
+struct as_reverse : Collection {
+   constexpr as_reverse(Collection& base) : Collection(base) {
    }
 
-   constexpr as_reverse(T&& base)
+   constexpr as_reverse(Collection&& base)
       requires(is_rvalue_reference<decltype(base)>)
-       : T(move(base)) {
+       : Collection(move(base)) {
    }
 
    constexpr auto
    begin() {
-      return static_cast<T*>(this)->rbegin();
+      return static_cast<Collection*>(this)->rbegin();
    }
 
    constexpr auto
    end() {
-      return static_cast<T*>(this)->rend();
+      return static_cast<Collection*>(this)->rend();
    }
 
    constexpr auto
    begin() const {
-      return static_cast<T*>(this)->rbegin();
+      return static_cast<Collection*>(this)->rbegin();
    }
 
    constexpr auto
    end() const {
-      return static_cast<T*>(this)->rend();
+      return static_cast<Collection*>(this)->rend();
    }
 
    constexpr auto
    cbegin() const {
-      return static_cast<T*>(this)->crbegin();
+      return static_cast<Collection*>(this)->crbegin();
    }
 
    constexpr auto
    cend() const {
-      return static_cast<T*>(this)->crend();
+      return static_cast<Collection*>(this)->crend();
    }
 
    constexpr auto
    rbegin() {
-      return static_cast<T*>(this)->begin();
+      return static_cast<Collection*>(this)->begin();
    }
 
    constexpr auto
    rend() {
-      return static_cast<T*>(this)->end();
+      return static_cast<Collection*>(this)->end();
    }
 
    constexpr auto
    rbegin() const {
-      return static_cast<T*>(this)->cbegin();
+      return static_cast<Collection*>(this)->cbegin();
    }
 
    constexpr auto
    rend() const {
-      return static_cast<T*>(this)->cend();
+      return static_cast<Collection*>(this)->cend();
    }
 
    constexpr auto
    crbegin() const {
-      return static_cast<T*>(this)->cbegin();
+      return static_cast<Collection*>(this)->cbegin();
    }
 
    constexpr auto
    crend() const {
-      return static_cast<T*>(this)->cend();
+      return static_cast<Collection*>(this)->cend();
    }
 };
 
 // With a similar syntax to `as_const()`, this wrapper takes an iterable
 // container, makes its iterator `const`, and inverts its forwards and backwards
 // movement.
-template <is_bidi_iterable T>
-struct as_const_reverse : T {
-   constexpr as_const_reverse(T& base) : T(base) {
+template <is_bidi_iterable Collection>
+struct as_const_reverse : Collection {
+   constexpr as_const_reverse(Collection& base) : Collection(base) {
    }
 
-   constexpr as_const_reverse(T&& base)
+   constexpr as_const_reverse(Collection&& base)
       requires(is_rvalue_reference<decltype(base)>)
-       : T(move(base)) {
+       : Collection(move(base)) {
    }
 
    constexpr auto
    begin() const {
-      return static_cast<T const*>(this)->rbegin();
+      return static_cast<Collection const*>(this)->rbegin();
    }
 
    constexpr auto
    end() const {
-      return static_cast<T const*>(this)->rend();
+      return static_cast<Collection const*>(this)->rend();
    }
 
    constexpr auto
    cbegin() const {
-      return static_cast<T const*>(this)->crbegin();
+      return static_cast<Collection const*>(this)->crbegin();
    }
 
    constexpr auto
    cend() const {
-      return static_cast<T const*>(this)->crend();
+      return static_cast<Collection const*>(this)->crend();
    }
 
    constexpr auto
    rbegin() const {
-      return static_cast<T const*>(this)->cbegin();
+      return static_cast<Collection const*>(this)->cbegin();
    }
 
    constexpr auto
    rend() const {
-      return static_cast<T const*>(this)->cend();
+      return static_cast<Collection const*>(this)->cend();
    }
 
    constexpr auto
    crbegin() const {
-      return static_cast<T const*>(this)->cbegin();
+      return static_cast<Collection const*>(this)->cbegin();
    }
 
    constexpr auto
    crend() const {
-      return static_cast<T const*>(this)->cend();
+      return static_cast<Collection const*>(this)->cend();
    }
 };
 

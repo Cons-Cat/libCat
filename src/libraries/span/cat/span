@@ -4,8 +4,9 @@
 
 // `cat::span` is primarily based upon `std::span`. It is a non-owning view over
 // a contiguous sequence of `T`, parameterized by an element type and an
-// optional constant `Extent`. When `Extent == dynamic_extent`, its length is
-// stored alongside the pointer. Otherwise, length is encoded in the type.
+// optional constant `fixed_extent`. When `fixed_extent == dynamic_extent`, its
+// length is stored alongside the pointer. Otherwise, length is encoded in the
+// type.
 //
 // The interface is additionally informed by the following papers:
 //
@@ -29,6 +30,8 @@
 // `[[gsl::Pointer(T)]]` so it participates in Clang's lifetime analysis.
 // It matches the ABI of `nix::io_vector` for trivial syscall compatibility.
 
+#include <detail/initializer_list.hpp>
+
 #include <cat/bit>
 #include <cat/collection>
 #include <cat/compare>
@@ -36,21 +39,19 @@
 #include <cat/memory>
 #include <cat/meta>
 
-#include <detail/initializer_list.hpp>
-
 namespace cat {
 
 inline constexpr idx dynamic_extent = idx(-1);
 
-template <typename T, idx Extent>
+template <typename T, idx fixed_extent>
 class [[clang::trivial_abi, gsl::Pointer(T)]]
 span
     // It is not possible to make this an aggregate class while using CRTP
     // classes.
-    : public collection_interface<span<T, Extent>, T>,
+    : public collection_interface<span<T, fixed_extent>, T>,
       public random_access_iterable_interface<T> {
  public:
-   static constexpr idx extent = Extent;
+   static constexpr idx extent = fixed_extent;
 
    // `element_type` is the only span-specific typedef; everything else
    // (`value_type`, `reference`, `const_reference`, `pointer`,
@@ -59,21 +60,21 @@ span
    using element_type = T;
 
    constexpr span() = default;
-   constexpr span(span<T, Extent> const&) = default;
-   constexpr span(span<T, Extent>&&) = default;
+   constexpr span(span<T, fixed_extent> const&) = default;
+   constexpr span(span<T, fixed_extent>&&) = default;
 
    // Construct a `span` as `{address, length}`.
    constexpr span(T* p_in_data [[clang::lifetimebound]], idx in_length)
        : m_p_data(p_in_data), m_size(in_length) {
-      if constexpr (Extent != dynamic_extent) {
-         assert(in_length == Extent);
+      if constexpr (fixed_extent != dynamic_extent) {
+         assert(in_length == fixed_extent);
       }
    }
 
    // Construct an empty `span` with `nullptr`.
    constexpr span(decltype(nullptr)) : m_p_data(nullptr), m_size(0) {
-      if constexpr (Extent != dynamic_extent) {
-         assert(Extent == 0u);
+      if constexpr (fixed_extent != dynamic_extent) {
+         assert(fixed_extent == 0u);
       }
    }
 
@@ -82,13 +83,13 @@ span
       requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
    constexpr span(initializer_list<InitListValueType> initializers)
        : m_p_data(initializers.begin()), m_size(initializers.size()) {
-      if constexpr (Extent != dynamic_extent) {
-         assert(initializers.size() == Extent);
+      if constexpr (fixed_extent != dynamic_extent) {
+         assert(initializers.size() == fixed_extent);
       }
    }
 
    template <__SIZE_TYPE__ length>
-      requires(Extent == dynamic_extent || length == Extent)
+      requires(fixed_extent == dynamic_extent || length == fixed_extent)
    constexpr span(identity<T> (&array)[length])
        : m_p_data(array), m_size(length) {
    }
@@ -99,20 +100,20 @@ span
    constexpr span(U& collection [[clang::lifetimebound]])
       requires(is_convertible<typename U::value_type (*)[], T (*)[]>)
        : m_p_data(collection.data()), m_size(collection.size()) {
-      if constexpr (Extent != dynamic_extent) {
-         assert(collection.size() == Extent);
+      if constexpr (fixed_extent != dynamic_extent) {
+         assert(collection.size() == fixed_extent);
       }
    }
 
-   template <typename U, idx OtherExtent>
-      requires((Extent == dynamic_extent || OtherExtent == dynamic_extent
-                || Extent == OtherExtent)
+   template <typename U, idx other_extent>
+      requires((fixed_extent == dynamic_extent || other_extent == dynamic_extent
+                || fixed_extent == other_extent)
                && is_convertible<U (*)[], T (*)[]>)
-   constexpr span(span<U, OtherExtent> const& other [[clang::lifetimebound]]
+   constexpr span(span<U, other_extent> const& other [[clang::lifetimebound]]
                   )
        : m_p_data(other.data()), m_size(other.size()) {
-      if constexpr (Extent != dynamic_extent) {
-         assert(other.size() == Extent);
+      if constexpr (fixed_extent != dynamic_extent) {
+         assert(other.size() == fixed_extent);
       }
    }
 
@@ -122,18 +123,18 @@ span
               "immediately dangle.");
 
    constexpr auto
-   operator=(span<T, Extent> const&) -> span<T, Extent>& = default;
+   operator=(span<T, fixed_extent> const&) -> span<T, fixed_extent>& = default;
    constexpr auto
-   operator=(span<T, Extent>&&) -> span<T, Extent>& = default;
+   operator=(span<T, fixed_extent>&&) -> span<T, fixed_extent>& = default;
 
    // Construct a span from a static `initializer_list`.
    template <typename InitListValueType>
       requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
    constexpr auto
    operator=(initializer_list<InitListValueType> initializers)
-      -> span<T, Extent>& {
-      if constexpr (Extent != dynamic_extent) {
-         assert(initializers.size() == Extent);
+      -> span<T, fixed_extent>& {
+      if constexpr (fixed_extent != dynamic_extent) {
+         assert(initializers.size() == fixed_extent);
       }
       m_p_data = initializers.begin();
       m_size = initializers.size();
@@ -144,11 +145,11 @@ span
    // is managed by the deduction guides below.
    template <is_random_access U>
    auto
-   operator=(U& collection [[clang::lifetimebound]]) -> span<T, Extent>&
+   operator=(U& collection [[clang::lifetimebound]]) -> span<T, fixed_extent>&
       requires(is_convertible<typename U::value_type (*)[], T (*)[]>)
    {
-      if constexpr (Extent != dynamic_extent) {
-         assert(collection.size() == Extent);
+      if constexpr (fixed_extent != dynamic_extent) {
+         assert(collection.size() == fixed_extent);
       }
       m_p_data = collection.data();
       m_size = collection.size();
@@ -179,10 +180,10 @@ span
    [[nodiscard]]
    constexpr auto
    size() const -> idx {
-      if constexpr (Extent == dynamic_extent) {
+      if constexpr (fixed_extent == dynamic_extent) {
          return m_size;
       } else {
-         return Extent;
+         return fixed_extent;
       }
    }
 
@@ -237,59 +238,60 @@ span
    }
 
    // Compile-time `first<N>()` returns a fixed-extent subview of the first
-   // `Count` elements. Mirrors `std::span::first<Count>()`.
-   template <idx Count>
-      requires(Extent == dynamic_extent || Count <= Extent)
+   // `count` elements. Mirrors `std::span::first<count>()`.
+   template <idx count>
+      requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   first() const -> span<T, Count> {
-      if constexpr (Extent == dynamic_extent) {
-         assert(Count <= size());
+   first() const -> span<T, count> {
+      if constexpr (fixed_extent == dynamic_extent) {
+         assert(count <= size());
       }
-      return span<T, Count>(m_p_data, Count);
+      return span<T, count>(m_p_data, count);
    }
 
    // Compile-time `last<N>()` returns a fixed-extent subview of the last
-   // `Count` elements. Mirrors `std::span::last<Count>()`.
-   template <idx Count>
-      requires(Extent == dynamic_extent || Count <= Extent)
+   // `count` elements. Mirrors `std::span::last<count>()`.
+   template <idx count>
+      requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   last() const -> span<T, Count> {
-      if constexpr (Extent == dynamic_extent) {
-         assert(Count <= size());
+   last() const -> span<T, count> {
+      if constexpr (fixed_extent == dynamic_extent) {
+         assert(count <= size());
       }
-      return span<T, Count>(m_p_data + (size().raw - Count.raw), Count);
+      return span<T, count>(m_p_data + (size().raw - count.raw), count);
    }
 
-   // Compile-time `subspan<Offset, Count>()`. Mirrors `std::span`'s template
-   // overload: `Count` is a count of elements. When `Count` is omitted on a
-   // fixed-extent span the result extent is `Extent - Offset`.
-   template <idx Offset, idx Count = dynamic_extent>
-      requires(Extent == dynamic_extent
-               || (Offset <= Extent
-                   && (Count == dynamic_extent || Count <= Extent - Offset)))
+   // Compile-time `subspan<offset, count>()`. Mirrors `std::span`'s template
+   // overload: `count` is a count of elements. When `count` is omitted on a
+   // fixed-extent span the result extent is `fixed_extent - offset`.
+   template <idx offset, idx count = dynamic_extent>
+      requires(fixed_extent == dynamic_extent
+               || (offset <= fixed_extent
+                   && (count == dynamic_extent
+                       || count <= fixed_extent - offset)))
    [[nodiscard]]
    constexpr auto
    subspan() const {
       constexpr idx result_extent = []() consteval {
-         if constexpr (Count != dynamic_extent) {
-            return Count;
-         } else if constexpr (Extent != dynamic_extent) {
-            return idx(Extent.raw - Offset.raw);
+         if constexpr (count != dynamic_extent) {
+            return count;
+         } else if constexpr (fixed_extent != dynamic_extent) {
+            return idx(fixed_extent.raw - offset.raw);
          } else {
             return dynamic_extent;
          }
       }();
-      if constexpr (Extent == dynamic_extent) {
-         assert(Offset <= size());
-         if constexpr (Count != dynamic_extent) {
-            assert(Count <= size() - Offset);
+      if constexpr (fixed_extent == dynamic_extent) {
+         assert(offset <= size());
+         if constexpr (count != dynamic_extent) {
+            assert(count <= size() - offset);
          }
       }
       idx const result_size =
-         (Count != dynamic_extent) ? Count : idx(size() - Offset);
-      return span<T, result_extent>(m_p_data + Offset.raw, result_size);
+         (count != dynamic_extent) ? count : idx(size() - offset);
+      return span<T, result_extent>(m_p_data + offset.raw, result_size);
    }
 
    template <is_random_access R>
@@ -338,12 +340,13 @@ span(T const&) -> span<typename T::value_type const>;
 // not `constexpr` because Clang forbids `bit_cast` to a pointer type during
 // constant evaluation, and even a constexpr `byte*` could not be read from
 // in a constant expression.
-template <typename T, idx Extent>
+template <typename T, idx fixed_extent>
 [[nodiscard]]
 auto
-as_bytes(span<T, Extent> source) noexcept {
-   constexpr idx result_extent =
-      (Extent == dynamic_extent) ? dynamic_extent : Extent * sizeof(T);
+as_bytes(span<T, fixed_extent> source) noexcept {
+   constexpr idx result_extent = (fixed_extent == dynamic_extent)
+                                    ? dynamic_extent
+                                    : fixed_extent * sizeof(T);
    return span<cat::byte const, result_extent>(
       __builtin_bit_cast(cat::byte const*, source.data()), source.size_bytes());
 }
@@ -351,13 +354,14 @@ as_bytes(span<T, Extent> source) noexcept {
 // Reinterpret a non-`const` `cat::span` as a writable view of its underlying
 // bytes. Mirrors `std::as_writable_bytes`. Disabled when `T` is `const`. Uses
 // `__builtin_bit_cast` for the same reasons as `as_bytes`.
-template <typename T, idx Extent>
+template <typename T, idx fixed_extent>
    requires(!is_const<T>)
 [[nodiscard]]
 auto
-as_writable_bytes(span<T, Extent> source) noexcept {
-   constexpr idx result_extent =
-      (Extent == dynamic_extent) ? dynamic_extent : Extent * sizeof(T);
+as_writable_bytes(span<T, fixed_extent> source) noexcept {
+   constexpr idx result_extent = (fixed_extent == dynamic_extent)
+                                    ? dynamic_extent
+                                    : fixed_extent * sizeof(T);
    return span<cat::byte, result_extent>(
       __builtin_bit_cast(cat::byte*, source.data()), source.size_bytes());
 }
@@ -380,58 +384,59 @@ using maybe_span = maybe<compact<span<T>,
                                  // Default to a null span.
                                  span<T>(nullptr)>>;
 
-template <idx in_index, typename T, idx Extent>
-   requires(Extent != dynamic_extent && in_index < Extent)
+template <idx index, typename T, idx fixed_extent>
+   requires(fixed_extent != dynamic_extent && index < fixed_extent)
 [[nodiscard]]
 constexpr auto
-get(span<T, Extent> s) -> T& {
-   return s[in_index];
+get(span<T, fixed_extent> s) -> T& {
+   return s[index];
 }
 
 }  // namespace cat
 
 namespace std {
 
-template <typename T, ::cat::idx Extent>
-   requires(Extent != ::cat::dynamic_extent)
-struct tuple_size<::cat::span<T, Extent>> : ::cat::constant<Extent.raw> {};
+template <typename T, ::cat::idx fixed_extent>
+   requires(fixed_extent != ::cat::dynamic_extent)
+struct tuple_size<::cat::span<T, fixed_extent>>
+    : ::cat::constant<fixed_extent.raw> {};
 
-template <typename T, ::cat::idx Extent>
-   requires(Extent != ::cat::dynamic_extent)
-struct tuple_size<::cat::span<T, Extent> const>
-    : tuple_size<::cat::span<T, Extent>> {};
+template <typename T, ::cat::idx fixed_extent>
+   requires(fixed_extent != ::cat::dynamic_extent)
+struct tuple_size<::cat::span<T, fixed_extent> const>
+    : tuple_size<::cat::span<T, fixed_extent>> {};
 
-template <typename T, ::cat::idx Extent>
-   requires(Extent != ::cat::dynamic_extent)
-struct tuple_size<::cat::span<T, Extent> volatile>
-    : tuple_size<::cat::span<T, Extent>> {};
+template <typename T, ::cat::idx fixed_extent>
+   requires(fixed_extent != ::cat::dynamic_extent)
+struct tuple_size<::cat::span<T, fixed_extent> volatile>
+    : tuple_size<::cat::span<T, fixed_extent>> {};
 
-template <typename T, ::cat::idx Extent>
-   requires(Extent != ::cat::dynamic_extent)
-struct tuple_size<::cat::span<T, Extent> const volatile>
-    : tuple_size<::cat::span<T, Extent>> {};
+template <typename T, ::cat::idx fixed_extent>
+   requires(fixed_extent != ::cat::dynamic_extent)
+struct tuple_size<::cat::span<T, fixed_extent> const volatile>
+    : tuple_size<::cat::span<T, fixed_extent>> {};
 
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx Extent>
-   requires(Extent != ::cat::dynamic_extent && in_index < Extent)
-struct tuple_element<in_index, ::cat::span<T, Extent>> {
+template <__SIZE_TYPE__ index, typename T, ::cat::idx fixed_extent>
+   requires(fixed_extent != ::cat::dynamic_extent && index < fixed_extent)
+struct tuple_element<index, ::cat::span<T, fixed_extent>> {
    using type = T&;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx Extent>
-   requires(Extent != ::cat::dynamic_extent && in_index < Extent)
-struct tuple_element<in_index, ::cat::span<T, Extent> const> {
+template <__SIZE_TYPE__ index, typename T, ::cat::idx fixed_extent>
+   requires(fixed_extent != ::cat::dynamic_extent && index < fixed_extent)
+struct tuple_element<index, ::cat::span<T, fixed_extent> const> {
    using type = T&;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx Extent>
-   requires(Extent != ::cat::dynamic_extent && in_index < Extent)
-struct tuple_element<in_index, ::cat::span<T, Extent> volatile> {
+template <__SIZE_TYPE__ index, typename T, ::cat::idx fixed_extent>
+   requires(fixed_extent != ::cat::dynamic_extent && index < fixed_extent)
+struct tuple_element<index, ::cat::span<T, fixed_extent> volatile> {
    using type = T&;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx Extent>
-   requires(Extent != ::cat::dynamic_extent && in_index < Extent)
-struct tuple_element<in_index, ::cat::span<T, Extent> const volatile> {
+template <__SIZE_TYPE__ index, typename T, ::cat::idx fixed_extent>
+   requires(fixed_extent != ::cat::dynamic_extent && index < fixed_extent)
+struct tuple_element<index, ::cat::span<T, fixed_extent> const volatile> {
    using type = T&;
 };
 

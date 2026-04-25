@@ -144,20 +144,21 @@ test(simd_broadcast_traits) {
 }
 
 test(simd_lane_iterator) {
-   using V = int4x4;
-   using It = V::iterator;
-   static_assert(cat::is_same<typename It::iterator_concept,
+   using Simd = int4x4;
+   using lane_iter = Simd::iterator;
+   static_assert(cat::is_same<typename lane_iter::iterator_concept,
                               cat::random_access_iterator_tag>);
-   static_assert(cat::is_same<typename It::reference, typename It::value_type>);
-   static_assert(cat::is_same<typename It::pointer,
-                              cat::proxy_arrow_result<typename It::value_type>>);
+   static_assert(
+      cat::is_same<typename lane_iter::reference, typename lane_iter::value_type>);
+   static_assert(cat::is_same<typename lane_iter::pointer,
+                              cat::proxy_arrow_result<typename lane_iter::value_type>>);
 
-   V v = {10, 20, 30, 40};
+   Simd v = {10, 20, 30, 40};
    auto b = v.begin();
    cat::verify(b.lane_index() == 0u);
    cat::verify(*b == v[0u]);
 
-   V const& cv = v;
+   Simd const& cv = v;
    cat::verify(*cv.begin() == v[0u]);
 
    auto p_post = b++;
@@ -170,7 +171,7 @@ test(simd_lane_iterator) {
 
    cat::verify(b[iword(1)] == v[2u]);
 
-   auto end_it = v.begin() + iword(V::size());
+   auto end_it = v.begin() + iword(Simd::size());
    cat::verify(b != cat::default_sentinel);
    cat::verify(end_it == cat::default_sentinel);
    cat::verify(cat::default_sentinel == end_it);
@@ -180,8 +181,8 @@ test(simd_lane_iterator) {
    auto c = v.begin();
    cat::verify(iword(1) + c == c + iword(1));
 
-   It it0 = v.begin();
-   It it3 = it0 + iword(3);
+   lane_iter it0 = v.begin();
+   lane_iter it3 = it0 + iword(3);
    cat::verify(*it3 == v[3u]);
    cat::verify((it3 <=> it0) > 0);
    cat::verify(iword(it3 - it0) == iword(3));
@@ -198,19 +199,19 @@ test(simd_lane_iterator) {
 }
 
 test(simd_size_data_and_mask_size_data) {
-   using Vi = cat::simd<int, cat::fixed_size_abi<int, 4u>>;
-   Vi vi = {10, 20, 30, 40};
-   cat::verify(Vi::size() == 4u);
+   using int_vec = cat::simd<int, cat::fixed_size_abi<int, 4u>>;
+   int_vec vi = {10, 20, 30, 40};
+   cat::verify(int_vec::size() == 4u);
    cat::verify(vi.size() == 4u);
    cat::verify(vi.data() != nullptr);
    vi.set_lane(0u, 99);
    cat::verify(vi[0u] == 99);
 
-   using Mi = Vi::mask_type;
-   Mi mi;
+   using int_vec_mask = int_vec::mask_type;
+   int_vec_mask mi;
    bool const pattern[] = {true, false, true, false};
    mi.load(pattern);
-   cat::verify(Mi::size() == 4u);
+   cat::verify(int_vec_mask::size() == 4u);
    cat::verify(mi.size() == 4u);
    cat::verify(mi.data() != nullptr);
 }
@@ -350,11 +351,11 @@ test(simd_abi_compatible_alias) {
 }
 
 test(simdu) {
-   using IdxAbi = cat::native_abi<cat::idx>;
-   using idxv = cat::simd<cat::idx, IdxAbi>;
+   using idx_abi = cat::native_abi<cat::idx>;
+   using idxv = cat::simd<cat::idx, idx_abi>;
    static_assert(cat::is_simd<idxv>);
-   constexpr idx lane_count = IdxAbi::lanes;
-   static_assert(lane_count.raw * sizeof(cat::idx) == IdxAbi::size.raw);
+   constexpr idx lane_count = idx_abi::lanes;
+   static_assert(lane_count.raw * sizeof(cat::idx) == idx_abi::size.raw);
 
    idxv const ramp = cat::iota<idxv>(0u);
    for (idx i = 0u; i < lane_count; ++i) {
@@ -391,41 +392,41 @@ test(simdu) {
 }
 
 test(simd_uintptr_intptr) {
-   using UPtr = cat::uintptr<void>;
-   using UAbi = cat::native_abi<UPtr>;
-   using upv = cat::simd<UPtr, UAbi>;
+   using u_ptr = cat::uintptr<void>;
+   using u_abi = cat::native_abi<u_ptr>;
+   using upv = cat::simd<u_ptr, u_abi>;
    static_assert(cat::is_simd<upv>);
-   constexpr idx ulanes = UAbi::lanes;
-   static_assert(ulanes.raw * sizeof(UPtr) == UAbi::size.raw);
+   constexpr idx ulanes = u_abi::lanes;
+   static_assert(ulanes.raw * sizeof(u_ptr) == u_abi::size.raw);
 
-   upv const uramp = cat::iota<upv>(UPtr{});
+   upv const uramp = cat::iota<upv>(u_ptr{});
    for (idx i = 0u; i < ulanes; ++i) {
       cat::verify(uramp[i].raw == i.raw);
    }
 
    upv const usplat = cat::make_simd_filled<upv>(42_uz);
-   cat::verify(usplat == UPtr(42_uz));
+   cat::verify(usplat == u_ptr(42_uz));
    for (idx i = 0u; i < ulanes; ++i) {
       cat::verify((uramp + usplat)[i].raw == i.raw + 42_uz);
    }
 
    cat::verify(uramp.equal_lanes(uramp).all_of());
 
-   using IPtr = cat::intptr<void>;
-   using IAbi = cat::native_abi<IPtr>;
-   using ipv = cat::simd<IPtr, IAbi>;
+   using i_ptr = cat::intptr<void>;
+   using i_abi = cat::native_abi<i_ptr>;
+   using ipv = cat::simd<i_ptr, i_abi>;
    static_assert(cat::is_simd<ipv>);
-   constexpr idx ilanes = IAbi::lanes;
+   constexpr idx ilanes = i_abi::lanes;
 
-   ipv const iramp = cat::iota<ipv>(IPtr{});
+   ipv const iramp = cat::iota<ipv>(i_ptr{});
    for (idx i = 0u; i < ilanes; ++i) {
-      cat::verify(iramp[i].raw == static_cast<IPtr::raw_type>(i.raw));
+      cat::verify(iramp[i].raw == static_cast<i_ptr::raw_type>(i.raw));
    }
 
    ipv const isplat = cat::make_simd_filled<ipv>(11);
-   cat::verify(isplat == IPtr(11));
+   cat::verify(isplat == i_ptr(11));
    if (ilanes > 1u) {
-      cat::verify((iramp + isplat)[1u].raw == static_cast<IPtr::raw_type>(1 + 11));
+      cat::verify((iramp + isplat)[1u].raw == static_cast<i_ptr::raw_type>(1 + 11));
    }
 }
 
@@ -483,8 +484,8 @@ test(simd_resize_insert_extract) {
    cat::verify(mk_slice[0]);
    cat::verify(!mk_slice[1]);
 
-   using M2 = cat::fixed_size_simd_mask<int4, 2u>;
-   M2 const pair_true = {true, true};
+   using pair_mask = cat::fixed_size_simd_mask<int4, 2u>;
+   pair_mask const pair_true = {true, true};
    M const all_false = {false, false, false, false};
    M const blended = cat::simd_insert<1u>(all_false, pair_true);
    cat::verify(!blended[0] && blended[1] && blended[2] && !blended[3]);
@@ -553,8 +554,8 @@ test(simd_mask_pattern_and_if_else_builder) {
    cat::verify(r[2] == 103);
    cat::verify(r[3] == 0);
 
-   using Mf = float4x4::mask_type;
-   Mf mf{5u};
+   using float_mask = float4x4::mask_type;
+   float_mask mf{5u};
    cat::verify(mf.to_uword() == 5_uz);
    float4x4 fv = {1_f4, 2_f4, 3_f4, 4_f4};
    float4x4 fr =
@@ -1135,15 +1136,15 @@ test(simd_mask_ctors_fill) {
    g.fill(true);
    cat::verify(g.all_of());
 
-   using Mf = float4x4::mask_type;
-   Mf af{};
-   Mf bf = cat::make_simd_mask_filled<Mf>(true);
+   using float_mask = float4x4::mask_type;
+   float_mask af{};
+   float_mask bf = cat::make_simd_mask_filled<float_mask>(true);
    cat::verify(bf.all_of());
-   Mf df{true, false, true, false};
+   float_mask df{true, false, true, false};
    cat::verify(df[0] && !df[1] && df[2] && !df[3]);
-   Mf ff = cat::make_simd_mask_filled<Mf>(true);
+   float_mask ff = cat::make_simd_mask_filled<float_mask>(true);
    cat::verify(ff.all_of());
-   Mf gf{};
+   float_mask gf{};
    gf.fill(false);
    cat::verify(gf.none_of());
 }
@@ -1169,14 +1170,14 @@ test(simd_mask_bitwise_ops) {
    u ^= b;
    cat::verify(!u[0]);
 
-   using Mf = float4x4::mask_type;
-   Mf a2{true, true, false, false};
-   Mf b2{true, false, true, false};
-   Mf c2 = a2 & b2;
+   using float_mask = float4x4::mask_type;
+   float_mask a2{true, true, false, false};
+   float_mask b2{true, false, true, false};
+   float_mask c2 = a2 & b2;
    cat::verify(c2[0] && !c2[1] && !c2[2]);
-   Mf o2 = a2 | b2;
+   float_mask o2 = a2 | b2;
    cat::verify(o2[0] && o2[1] && o2[2]);
-   Mf x2 = a2 ^ b2;
+   float_mask x2 = a2 ^ b2;
    cat::verify(!x2[0] && x2[1] && x2[2]);
 }
 
@@ -1189,12 +1190,12 @@ test(simd_mask_compare_eq_ne) {
    M ne = a != b;
    cat::verify(!ne[0] && ne[1] && ne[2] && !ne[3]);
 
-   using Mf = float4x4::mask_type;
-   Mf af{true, false, true, false};
-   Mf bf{true, true, false, false};
-   Mf eqf = af == bf;
+   using float_mask = float4x4::mask_type;
+   float_mask af{true, false, true, false};
+   float_mask bf{true, true, false, false};
+   float_mask eqf = af == bf;
    cat::verify(eqf[0] && !eqf[1] && !eqf[2] && eqf[3]);
-   Mf nef = af != bf;
+   float_mask nef = af != bf;
    cat::verify(!nef[0] && nef[1] && nef[2] && !nef[3]);
 }
 
@@ -1260,8 +1261,8 @@ test(simd_mask_to_bit_pattern) {
    auto const zb = b.to_bitset();
    cat::verify(!zb[0u] && !zb[3u]);
 
-   using Mf = float4x4::mask_type;
-   Mf fa{5u};
+   using float_mask = float4x4::mask_type;
+   float_mask fa{5u};
    cat::verify(fa.to_uword() == 5_uz);
    auto const fbs = fa.to_bitset();
    cat::verify(fbs[0u] && !fbs[1u] && fbs[2u]);
@@ -1276,12 +1277,12 @@ test(simd_mask_load_and_loaded_from_bool_buffer) {
    M const c = cat::make_simd_mask_loaded<M>(lane_bools);
    cat::verify(c[0] && !c[1] && c[2] && !c[3]);
 
-   using Mf = float4x4::mask_type;
+   using float_mask = float4x4::mask_type;
    bool const float_lane_bools[] = {true, false, true, false};
-   Mf fb{};
+   float_mask fb{};
    fb.load(float_lane_bools);
    cat::verify(fb[0] && !fb[1] && fb[2] && !fb[3]);
-   Mf const fc = cat::make_simd_mask_loaded<Mf>(float_lane_bools);
+   float_mask const fc = cat::make_simd_mask_loaded<float_mask>(float_lane_bools);
    cat::verify(fc[0] && !fc[1] && fc[2] && !fc[3]);
 
    M const pass = cat::make_simd_mask_filled<M>(false);
@@ -1308,8 +1309,8 @@ test(simd_mask_set_lane) {
    m.set_lane(2u, true);
    cat::verify(m[0] && !m[1] && m[2] && !m[3]);
 
-   using Mf = float4x4::mask_type;
-   Mf mf{};
+   using float_mask = float4x4::mask_type;
+   float_mask mf{};
    mf.set_lane(0u, true);
    mf.set_lane(2u, true);
    cat::verify(mf[0] && !mf[1] && mf[2] && !mf[3]);
@@ -1334,10 +1335,10 @@ test(simd_all_any_none_of) {
    cat::verify(cat::simd_mask_any_of(m));
    cat::verify(cat::simd_mask_none_of(f));
 
-   using Mf = float4x4::mask_type;
-   Mf tf = cat::make_simd_mask_filled<Mf>(true);
-   Mf ff = cat::make_simd_mask_filled<Mf>(false);
-   Mf mf2{true, false, false, false};
+   using float_mask = float4x4::mask_type;
+   float_mask tf = cat::make_simd_mask_filled<float_mask>(true);
+   float_mask ff = cat::make_simd_mask_filled<float_mask>(false);
+   float_mask mf2{true, false, false, false};
    cat::verify(tf.all_of());
    cat::verify(ff.none_of());
    cat::verify(mf2.any_of());
@@ -2059,7 +2060,7 @@ test(simd_swap_lanes) {
    cat::verify(i[0] == 100 && j[0] == saved_i[0]);
 
    using M = int4x4::mask_type;
-   using Mf = float4x4::mask_type;
+   using float_mask = float4x4::mask_type;
    bool const ab[] = {true, false, true, false};
    bool const cd[] = {false, true, false, true};
    M m1 = cat::make_simd_mask_loaded<M>(ab);
@@ -2072,8 +2073,8 @@ test(simd_swap_lanes) {
 
    bool const fab[] = {true, true, false, false};
    bool const fcd[] = {false, false, true, true};
-   Mf mf1 = cat::make_simd_mask_loaded<Mf>(fab);
-   Mf mf2 = cat::make_simd_mask_loaded<Mf>(fcd);
+   float_mask mf1 = cat::make_simd_mask_loaded<float_mask>(fab);
+   float_mask mf2 = cat::make_simd_mask_loaded<float_mask>(fcd);
    bool const saved_mf1_2 = mf1[2];
    cat::swap(mf1, mf2);
    cat::verify(mf1[2] != saved_mf1_2);
@@ -2087,12 +2088,12 @@ test(simd_vc_style_bool_masks_and_lane_types) {
    static_assert(cat::is_same<std::tuple_element_t<0u, float4x4::mask_type>,
                               float4x4::mask_type::lane_scalar>);
 
-   using Mi = int4x4::mask_type;
-   using Mf = float4x4::mask_type;
+   using int4_mask = int4x4::mask_type;
+   using float_mask = float4x4::mask_type;
    bool const lane_bools[] = {true, false, false, true};
-   Mi m = cat::make_simd_mask_loaded<Mi>(lane_bools);
+   int4_mask m = cat::make_simd_mask_loaded<int4_mask>(lane_bools);
    cat::verify(m[0] && !m[1] && !m[2] && m[3]);
-   Mf mf = cat::make_simd_mask_loaded<Mf>(lane_bools);
+   float_mask mf = cat::make_simd_mask_loaded<float_mask>(lane_bools);
    cat::verify(mf[0] && !mf[1]);
 }
 
@@ -2131,8 +2132,8 @@ test(simd_as_vectorized_over_vec_float_data) {
 // TODO: Claude is too dumb to write this. Do it yourself.
 #if 0
 test(simd_list_iterator_vectorization_float) {
-   // Mirrors Vc `list_iterator_vectorization` (float `std::list` block). `LIV`
-   // models `simdize<L::iterator>`; `e` is ++list.end() because `cat::list`
+   // Mirrors Vc `list_iterator_vectorization` (float `std::list` block).
+   // `list_iter` models `simdize<L::iterator>`; `e` is ++list.end() because `cat::list`
    // keeps the last node as `end()` and advancing past the tail matches a
    // simdized past-end iterator.
    cat::page_allocator pager;
@@ -2148,9 +2149,9 @@ test(simd_list_iterator_vectorization_float) {
       list.push_back(float_lane(static_cast<float>(i.raw))).verify();
    }
 
-   using LIV = float_v_list_iter;
-   LIV b = list.begin();
-   LIV const e = simd_float_v_list_end(list);
+   using list_iter = float_v_list_iter;
+   list_iter b = list.begin();
+   list_iter const e = simd_float_v_list_end(list);
 
    float4x4 reference =
       float4x4(float_lane(static_cast<float>(list.size().raw)))
