@@ -2,46 +2,118 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::span` is primarily based upon `std::span`. It is a non-owning view over
+// a contiguous sequence of `T`, parameterized by an element type and an
+// optional constant `Extent`. When `Extent == dynamic_extent`, its length is
+// stored alongside the pointer. Otherwise, length is encoded in the type.
+//
+// The interface is additionally informed by the following papers:
+//
+// P4190R0   Implement an `initializer_list` constructor, constrained so
+//           that only spans of `const` element type may bind a brace-init.
+//
+// P3786R2   Tuple protocol for fixed-extent spans. Adds `cat::get` and the
+//           `std::tuple_size` / `std::tuple_element` specializations so
+//           structured bindings work on `span<T, N>` when `N !=
+//           dynamic_extent`.
+//
+// Comparison operators (`==` and `<=>`) follow Barry Revzin's `span_ext`
+// design.
+// https://brevzin.github.io/c++/2020/03/30/span-comparisons/
+// Both compare against any `is_random_access` range with a matching element
+// type. Three-way ordering uses a "synth three way" fallback so element types
+// that only model `<` (without a native `<=>`) still order lexicographically.
+// The implementations live out-of-line in `implementations/span.tpp`.
+//
+// `cat::span` is `[[clang::trivial_abi]]` so it passes in registers, and
+// `[[gsl::Pointer(T)]]` so it participates in Clang's lifetime analysis.
+// It matches the ABI of `nix::io_vector` for trivial syscall compatibility.
+
+#include <cat/bit>
 #include <cat/collection>
+#include <cat/compare>
 #include <cat/math>
 #include <cat/memory>
 #include <cat/meta>
 
-// TODO: Add tests.
+#include <detail/initializer_list.hpp>
 
 namespace cat {
 
-// A `span` is represents an array of `T` with runtime-known length. It stores
-// an address and a length. It is random-access iterable.
-template <typename T>
-class [[gsl::Pointer(T)]] span
-    : public collection_interface<span<T>, T>,
+inline constexpr idx dynamic_extent = idx(-1);
+
+template <typename T, idx Extent>
+class [[clang::trivial_abi, gsl::Pointer(T)]]
+span
+    // It is not possible to make this an aggregate class while using CRTP
+    // classes.
+    : public collection_interface<span<T, Extent>, T>,
       public random_access_iterable_interface<T> {
  public:
+   static constexpr idx extent = Extent;
+
+   // `element_type` is the only span-specific typedef; everything else
+   // (`value_type`, `reference`, `const_reference`, `pointer`,
+   // `const_pointer`, `size_type`, `difference_type`, and the iterator
+   // family) comes from `collection_interface` / `iterable_interface`.
+   using element_type = T;
+
    constexpr span() = default;
-   constexpr span(span<T> const&) = default;
-   constexpr span(span<T>&&) = default;
+   constexpr span(span<T, Extent> const&) = default;
+   constexpr span(span<T, Extent>&&) = default;
 
    // Construct a `span` as `{address, length}`.
    constexpr span(T* p_in_data [[clang::lifetimebound]], idx in_length)
        : m_p_data(p_in_data), m_size(in_length) {
+      if constexpr (Extent != dynamic_extent) {
+         assert(in_length == Extent);
+      }
    }
 
    // Construct an empty `span` with `nullptr`.
    constexpr span(decltype(nullptr)) : m_p_data(nullptr), m_size(0) {
+      if constexpr (Extent != dynamic_extent) {
+         assert(Extent == 0u);
+      }
    }
 
    // Construct a span from a static `initializer_list`.
-   constexpr span(initializer_list<T> initializers)
-      requires(is_const<T>)
+   template <typename InitListValueType>
+      requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
+   constexpr span(initializer_list<InitListValueType> initializers)
        : m_p_data(initializers.begin()), m_size(initializers.size()) {
+      if constexpr (Extent != dynamic_extent) {
+         assert(initializers.size() == Extent);
+      }
+   }
+
+   template <__SIZE_TYPE__ length>
+      requires(Extent == dynamic_extent || length == Extent)
+   constexpr span(identity<T> (&array)[length])
+       : m_p_data(array), m_size(length) {
    }
 
    // Implicitly convert a contiguous container into a span. Const-correctness
    // is managed by the deduction guides below.
    template <is_random_access U>
    constexpr span(U& collection [[clang::lifetimebound]])
+      requires(is_convertible<typename U::value_type (*)[], T (*)[]>)
        : m_p_data(collection.data()), m_size(collection.size()) {
+      if constexpr (Extent != dynamic_extent) {
+         assert(collection.size() == Extent);
+      }
+   }
+
+   template <typename U, idx OtherExtent>
+      requires((Extent == dynamic_extent || OtherExtent == dynamic_extent
+                || Extent == OtherExtent)
+               && is_convertible<U (*)[], T (*)[]>)
+   constexpr span(span<U, OtherExtent> const& other [[clang::lifetimebound]]
+                  )
+       : m_p_data(other.data()), m_size(other.size()) {
+      if constexpr (Extent != dynamic_extent) {
+         assert(other.size() == Extent);
+      }
    }
 
    template <typename U>
@@ -50,15 +122,19 @@ class [[gsl::Pointer(T)]] span
               "immediately dangle.");
 
    constexpr auto
-   operator=(span<T> const&) -> span<T>& = default;
+   operator=(span<T, Extent> const&) -> span<T, Extent>& = default;
    constexpr auto
-   operator=(span<T>&&) -> span<T>& = default;
+   operator=(span<T, Extent>&&) -> span<T, Extent>& = default;
 
    // Construct a span from a static `initializer_list`.
+   template <typename InitListValueType>
+      requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
    constexpr auto
-   operator=(initializer_list<T> initializers) -> span&
-      requires(is_const<T>)
-   {
+   operator=(initializer_list<InitListValueType> initializers)
+      -> span<T, Extent>& {
+      if constexpr (Extent != dynamic_extent) {
+         assert(initializers.size() == Extent);
+      }
       m_p_data = initializers.begin();
       m_size = initializers.size();
       return *this;
@@ -68,7 +144,12 @@ class [[gsl::Pointer(T)]] span
    // is managed by the deduction guides below.
    template <is_random_access U>
    auto
-   operator=(U& collection [[clang::lifetimebound]]) -> span& {
+   operator=(U& collection [[clang::lifetimebound]]) -> span<T, Extent>&
+      requires(is_convertible<typename U::value_type (*)[], T (*)[]>)
+   {
+      if constexpr (Extent != dynamic_extent) {
+         assert(collection.size() == Extent);
+      }
       m_p_data = collection.data();
       m_size = collection.size();
       return *this;
@@ -98,8 +179,135 @@ class [[gsl::Pointer(T)]] span
    [[nodiscard]]
    constexpr auto
    size() const -> idx {
-      return m_size;
+      if constexpr (Extent == dynamic_extent) {
+         return m_size;
+      } else {
+         return Extent;
+      }
    }
+
+   // Get the size of the `span` in bytes.
+   [[nodiscard]]
+   constexpr auto
+   size_bytes() const -> idx {
+      return size() * sizeof(T);
+   }
+
+   // `cat::span` overrides the runtime subview trio inherited from
+   // `collection_interface` because the inherited `subspan` takes
+   // `(start, end)` (libCat convention) whereas `std::span` takes
+   // `(offset, count)`. To keep `first(count)`, `last(count)`, and
+   // `subspan(...)` consistent with each other and with `std::span`, all
+   // three are re-implemented here in terms of the new `subspan` shape.
+
+   // Runtime `first(count)`. Returns the first `count` elements as a
+   // dynamic-extent span. Mirrors `std::span::first(size_type)`.
+   [[nodiscard]]
+   constexpr auto
+   first(idx count) const -> span<T> {
+      return subspan(0u, count);
+   }
+
+   // Runtime `last(count)`. Returns the last `count` elements as a
+   // dynamic-extent span. Mirrors `std::span::last(size_type)`.
+   [[nodiscard]]
+   constexpr auto
+   last(idx count) const -> span<T> {
+      if !consteval {
+         assert(count <= size());
+      }
+      return subspan(idx(size() - count), count);
+   }
+
+   // Runtime `subspan(offset, count)`. Matches `std::span`: `count` is a
+   // count of elements (not an end index). When `count` is `dynamic_extent`
+   // the resulting span extends to the end of this one.
+   [[nodiscard]]
+   constexpr auto
+   subspan(idx offset, idx count = dynamic_extent) const -> span<T> {
+      if !consteval {
+         assert(offset <= size());
+         if (count != dynamic_extent) {
+            assert(count <= size() - offset);
+         }
+      }
+      idx const result_size =
+         (count != dynamic_extent) ? count : idx(size() - offset);
+      return span<T>(m_p_data + offset.raw, result_size);
+   }
+
+   // Compile-time `first<N>()` returns a fixed-extent subview of the first
+   // `Count` elements. Mirrors `std::span::first<Count>()`.
+   template <idx Count>
+      requires(Extent == dynamic_extent || Count <= Extent)
+   [[nodiscard]]
+   constexpr auto
+   first() const -> span<T, Count> {
+      if constexpr (Extent == dynamic_extent) {
+         assert(Count <= size());
+      }
+      return span<T, Count>(m_p_data, Count);
+   }
+
+   // Compile-time `last<N>()` returns a fixed-extent subview of the last
+   // `Count` elements. Mirrors `std::span::last<Count>()`.
+   template <idx Count>
+      requires(Extent == dynamic_extent || Count <= Extent)
+   [[nodiscard]]
+   constexpr auto
+   last() const -> span<T, Count> {
+      if constexpr (Extent == dynamic_extent) {
+         assert(Count <= size());
+      }
+      return span<T, Count>(m_p_data + (size().raw - Count.raw), Count);
+   }
+
+   // Compile-time `subspan<Offset, Count>()`. Mirrors `std::span`'s template
+   // overload: `Count` is a count of elements. When `Count` is omitted on a
+   // fixed-extent span the result extent is `Extent - Offset`.
+   template <idx Offset, idx Count = dynamic_extent>
+      requires(Extent == dynamic_extent
+               || (Offset <= Extent
+                   && (Count == dynamic_extent || Count <= Extent - Offset)))
+   [[nodiscard]]
+   constexpr auto
+   subspan() const {
+      constexpr idx result_extent = []() consteval {
+         if constexpr (Count != dynamic_extent) {
+            return Count;
+         } else if constexpr (Extent != dynamic_extent) {
+            return idx(Extent.raw - Offset.raw);
+         } else {
+            return dynamic_extent;
+         }
+      }();
+      if constexpr (Extent == dynamic_extent) {
+         assert(Offset <= size());
+         if constexpr (Count != dynamic_extent) {
+            assert(Count <= size() - Offset);
+         }
+      }
+      idx const result_size =
+         (Count != dynamic_extent) ? Count : idx(size() - Offset);
+      return span<T, result_extent>(m_p_data + Offset.raw, result_size);
+   }
+
+   template <is_random_access R>
+      requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+               && is_equality_comparable<remove_cv<T>>)
+   [[nodiscard]]
+   constexpr auto
+   operator==(R const& rhs) const -> bool;
+
+   template <is_random_access R>
+      requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+               && requires(remove_cv<T> const& left, remove_cv<T> const& right) {
+                     { left < right } -> is_convertible<bool>;
+                     { right < left } -> is_convertible<bool>;
+                  })
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(R const& rhs) const;
 
    // These data members should be `public` so that this is a structural type.
 
@@ -113,6 +321,9 @@ class [[gsl::Pointer(T)]] span
 template <typename T>
 span(initializer_list<T>) -> span<T const>;
 
+template <typename T, __SIZE_TYPE__ length>
+span(T (&)[length]) -> span<T, length>;
+
 // Deduce the `value_type` of containers.
 template <typename T>
 span(T&) -> span<typename T::value_type>;
@@ -120,6 +331,36 @@ span(T&) -> span<typename T::value_type>;
 // Deduce the `value_type` of containers.
 template <typename T>
 span(T const&) -> span<typename T::value_type const>;
+
+// Reinterpret a `cat::span` as a read-only view of its underlying bytes.
+// Mirrors `std::as_bytes`. Uses `__builtin_bit_cast`, the same primitive
+// `cat::uintptr` and `cat::byte` use, in place of `reinterpret_cast`. Still
+// not `constexpr` because Clang forbids `bit_cast` to a pointer type during
+// constant evaluation, and even a constexpr `byte*` could not be read from
+// in a constant expression.
+template <typename T, idx Extent>
+[[nodiscard]]
+auto
+as_bytes(span<T, Extent> source) noexcept {
+   constexpr idx result_extent =
+      (Extent == dynamic_extent) ? dynamic_extent : Extent * sizeof(T);
+   return span<cat::byte const, result_extent>(
+      __builtin_bit_cast(cat::byte const*, source.data()), source.size_bytes());
+}
+
+// Reinterpret a non-`const` `cat::span` as a writable view of its underlying
+// bytes. Mirrors `std::as_writable_bytes`. Disabled when `T` is `const`. Uses
+// `__builtin_bit_cast` for the same reasons as `as_bytes`.
+template <typename T, idx Extent>
+   requires(!is_const<T>)
+[[nodiscard]]
+auto
+as_writable_bytes(span<T, Extent> source) noexcept {
+   constexpr idx result_extent =
+      (Extent == dynamic_extent) ? dynamic_extent : Extent * sizeof(T);
+   return span<cat::byte, result_extent>(
+      __builtin_bit_cast(cat::byte*, source.data()), source.size_bytes());
+}
 
 // Create a span between two addresses.
 template <typename T>
@@ -139,7 +380,62 @@ using maybe_span = maybe<compact<span<T>,
                                  // Default to a null span.
                                  span<T>(nullptr)>>;
 
+template <idx in_index, typename T, idx Extent>
+   requires(Extent != dynamic_extent && in_index < Extent)
+[[nodiscard]]
+constexpr auto
+get(span<T, Extent> s) -> T& {
+   return s[in_index];
+}
+
 }  // namespace cat
+
+namespace std {
+
+template <typename T, ::cat::idx Extent>
+   requires(Extent != ::cat::dynamic_extent)
+struct tuple_size<::cat::span<T, Extent>> : ::cat::constant<Extent.raw> {};
+
+template <typename T, ::cat::idx Extent>
+   requires(Extent != ::cat::dynamic_extent)
+struct tuple_size<::cat::span<T, Extent> const>
+    : tuple_size<::cat::span<T, Extent>> {};
+
+template <typename T, ::cat::idx Extent>
+   requires(Extent != ::cat::dynamic_extent)
+struct tuple_size<::cat::span<T, Extent> volatile>
+    : tuple_size<::cat::span<T, Extent>> {};
+
+template <typename T, ::cat::idx Extent>
+   requires(Extent != ::cat::dynamic_extent)
+struct tuple_size<::cat::span<T, Extent> const volatile>
+    : tuple_size<::cat::span<T, Extent>> {};
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx Extent>
+   requires(Extent != ::cat::dynamic_extent && in_index < Extent)
+struct tuple_element<in_index, ::cat::span<T, Extent>> {
+   using type = T&;
+};
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx Extent>
+   requires(Extent != ::cat::dynamic_extent && in_index < Extent)
+struct tuple_element<in_index, ::cat::span<T, Extent> const> {
+   using type = T&;
+};
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx Extent>
+   requires(Extent != ::cat::dynamic_extent && in_index < Extent)
+struct tuple_element<in_index, ::cat::span<T, Extent> volatile> {
+   using type = T&;
+};
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx Extent>
+   requires(Extent != ::cat::dynamic_extent && in_index < Extent)
+struct tuple_element<in_index, ::cat::span<T, Extent> const volatile> {
+   using type = T&;
+};
+
+}  // namespace std
 
 // We implement these functions here instead of in `cat::memory` because they
 // have circular dependencies.
@@ -148,8 +444,7 @@ namespace cat {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_pointer_in_range(T const* p_pointer, span<T const> const range) noexcept
-   -> bool {
+is_pointer_in_range(T const* p_pointer, span<T const> const range) -> bool {
    static_assert(!is_function<T>,
                  "`is_pointer_in_range` does not accept function types.");
 
@@ -197,3 +492,5 @@ copy_memory_backward(span<T const> const source, span<T> destination) {
 }
 
 }  // namespace cat
+
+#include "../implementations/span.tpp"

@@ -203,6 +203,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_avx2_unary_full.hpp
   ${CATLIB}/socket/cat/socket
   ${CATLIB}/span/cat/span
+  ${CATLIB}/span/implementations/span.tpp
   ${CATLIB}/string/cat/string
   ${CATLIB}/thread/cat/thread
   ${CATLIB}/tui/cat/tui

@@ -2,7 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include "detail/initializer_list.hpp"
 #include <cat/algorithm>
 #include <cat/iterator>
 #include <cat/math>
@@ -12,7 +11,7 @@ namespace cat {
 
 // Forward declarations for containers and algorithms needed by
 // `collection_interface`.
-template <typename T>
+template <typename T, idx Extent>
 class span;
 
 template <typename T>
@@ -145,8 +144,11 @@ template <typename container,
           auto... args>
 class iterable_interface {
  public:
-   using value_type = T;
-   using const_value_type = T const;
+   // `value_type` is the canonical (cv-unqualified) element type. `reference`
+   // and `const_reference` preserve `T`'s const-ness on the mutable side and
+   // force `const` on the const side, mirroring `std::span` / `std::vector`.
+   using value_type = remove_cv<T>;
+   using const_value_type = remove_cv<T> const;
    using reference = T&;
    using const_reference = T const&;
 
@@ -273,10 +275,17 @@ class collection_interface {
       && detail::is_bounded_collection<derived_type>;
 
  public:
-   using value_type = T;
-   using const_value_type = T const;
+   // `value_type` is the canonical (cv-unqualified) element type. `reference`
+   // and `const_reference` preserve `T`'s const-ness on the mutable side and
+   // force `const` on the const side, mirroring `std::span` / `std::vector`.
+   using value_type = remove_cv<T>;
+   using const_value_type = remove_cv<T> const;
    using reference = T&;
    using const_reference = T const&;
+   using pointer = T*;
+   using const_pointer = T const*;
+   using size_type = idx;
+   using difference_type = iword;
 
    // If `.size()` is not, provided and `.capacity()` is, generate
    // `.size()`.
