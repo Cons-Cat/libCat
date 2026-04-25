@@ -78,6 +78,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pointer_in_range.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_span.cpp
   )
 
   add_executable(unit_tests unit_tests.cpp)

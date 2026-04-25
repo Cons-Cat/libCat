@@ -14,14 +14,14 @@ namespace cat {
 constexpr void
 copy_memory(void const* p_source, void* p_destination, idx bytes);
 
-template <typename T>
+template <typename T, idx Extent = idx(-1)>
 class span;
 
 // This is implemented in `<cat/span>`.
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_pointer_in_range(T const* p_pointer, span<T const> range) noexcept -> bool;
+is_pointer_in_range(T const* p_pointer, span<T const> range) -> bool;
 
 [[nodiscard]]
 constexpr auto

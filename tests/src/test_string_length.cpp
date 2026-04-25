@@ -32,7 +32,7 @@ test(string_length) {
    // Test `string`s.
    cat::str_view string_1 = p_string_1;
    cat::verify(string_1.size() == len_1);
-   cat::verify(string_1.subspan(1, 4).size() == 3);
+   cat::verify(string_1.subspan(1, 3).size() == 3);
    cat::verify(string_1.first(4).size() == 4);
    cat::verify(string_1.last(3).size() == 3);
    cat::verify(cat::str_view("Hello!").size() == len_1);
