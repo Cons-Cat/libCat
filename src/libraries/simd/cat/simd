@@ -1130,15 +1130,13 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    data() -> T* {
-      // It's tricky to take the address of vector lanes, so we use `this`.
-      return __builtin_bit_cast(T*, this);
+      return __builtin_bit_cast(T*, &raw);
    }
 
    [[nodiscard]]
    constexpr auto
    data() const -> T* {
-      // It's tricky to take the address of vector lanes, so we use `this`.
-      return __builtin_bit_cast(T const*, this);
+      return __builtin_bit_cast(T const*, &raw);
    }
 
    raw_type raw;
@@ -1747,13 +1745,13 @@ class alignas(in_abi::alignment.raw) simd_mask {
    [[nodiscard]]
    constexpr auto
    data() -> lane_scalar* {
-      return reinterpret_cast<lane_scalar*>(__builtin_addressof(raw));
+      return __builtin_bit_cast(lane_scalar*, &raw);
    }
 
    [[nodiscard]]
    constexpr auto
    data() const -> lane_scalar const* {
-      return reinterpret_cast<lane_scalar const*>(__builtin_addressof(raw));
+      return __builtin_bit_cast(lane_scalar const*, &raw);
    }
 
    raw_type raw;
@@ -1964,64 +1962,29 @@ simd_unequal_lanes(simd<T, Abi> const& a, simd<T, Abi> const& b)
    return a.unequal_lanes(b);
 }
 
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-inline auto
-get(simd<T, Abi>& v) -> T& {
-   static_assert(I < simd<T, Abi>::abi_type::lanes.raw);
-   return *(reinterpret_cast<T*>(__builtin_addressof(v.raw)) + idx(I).raw);
-}
+// `cat::simd` is tricky to support structured bindings, because the following
+// pattern cannot be directly prevented:
+//   cat::get<0>(ints) = 1;
+//
+// This is a major footgun, so structured bindings are disabled for now.
+// `std::simd` doesn't support it either.
+//
+// // Analogous to the proposed `std::aggr::get` in the P2141 paper
+// template <idx index, typename T, typename Abi>
+//    requires(index < simd<T, Abi>::abi_type::lanes)
+// [[nodiscard]]
+// constexpr auto
+// get(simd<T, Abi> const& v) -> T {
+//    return v[index];
+// }
 
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(simd<T, Abi> const& v) -> T {
-   static_assert(I < simd<T, Abi>::abi_type::lanes.raw);
-   return v[idx(I)];
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(simd<T, Abi>&& v) -> T {
-   static_assert(I < simd<T, Abi>::abi_type::lanes.raw);
-   return static_cast<T&&>(static_cast<simd<T, Abi>&&>(v)[idx(I)]);
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(simd<T, Abi> const&& v) -> T {
-   static_assert(I < simd<T, Abi>::abi_type::lanes.raw);
-   return get<I>(static_cast<simd<T, Abi> const&>(v));
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-inline auto
-get(simd_mask<T, Abi>& m) -> typename simd_mask<T, Abi>::lane_scalar& {
-   using M = simd_mask<T, Abi>;
-   static_assert(I < M::abi_type::lanes.raw);
-   return (reinterpret_cast<typename M::lane_scalar*>(
-      __builtin_addressof(m.raw)))[idx(I).raw];
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(simd_mask<T, Abi> const& m) -> typename simd_mask<T, Abi>::lane_scalar {
-   using M = simd_mask<T, Abi>;
-   static_assert(I < M::abi_type::lanes.raw);
-   return m.raw[static_cast<unsigned>(idx(I).raw)];
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(simd_mask<T, Abi>&& m) -> typename simd_mask<T, Abi>::lane_scalar {
-   using M = simd_mask<T, Abi>;
-   static_assert(I < M::abi_type::lanes.raw);
-   return static_cast<M&&>(m).raw[static_cast<unsigned>(idx(I).raw)];
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(simd_mask<T, Abi> const&& m) -> typename simd_mask<T, Abi>::lane_scalar {
-   return get<I>(static_cast<simd_mask<T, Abi> const&>(m));
-}
+// template <idx index, typename T, typename Abi>
+//    requires(index < simd_mask<T, Abi>::abi_type::lanes)
+// [[nodiscard]]
+// constexpr auto
+// get(simd_mask<T, Abi> const& m) -> typename simd_mask<T, Abi>::lane_scalar {
+//    return m[index];
+// }
 
 template <typename T, idx lanes>
 using fixed_size_simd = simd<T, fixed_size_abi<T, lanes>>;
@@ -2448,58 +2411,6 @@ template <__SIZE_TYPE__ in_index, typename T, typename Abi>
 struct tuple_element<in_index, ::cat::simd_mask<T, Abi> const volatile> {
    using type = typename ::cat::simd_mask<T, Abi>::lane_scalar const volatile;
 };
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-inline auto
-get(::cat::simd<T, Abi>& v) -> T& {
-   return ::cat::get<I>(v);
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(::cat::simd<T, Abi> const& v) -> T {
-   return ::cat::get<I>(v);
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(::cat::simd<T, Abi>&& v) -> T {
-   return ::cat::get<I>(static_cast<::cat::simd<T, Abi>&&>(v));
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(::cat::simd<T, Abi> const&& v) -> T {
-   return ::cat::get<I>(static_cast<::cat::simd<T, Abi> const&&>(v));
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-inline auto
-get(::cat::simd_mask<T, Abi>& m) ->
-   typename ::cat::simd_mask<T, Abi>::lane_scalar& {
-   return ::cat::get<I>(m);
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(::cat::simd_mask<T, Abi> const& m) ->
-   typename ::cat::simd_mask<T, Abi>::lane_scalar {
-   return ::cat::get<I>(m);
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(::cat::simd_mask<T, Abi>&& m) ->
-   typename ::cat::simd_mask<T, Abi>::lane_scalar {
-   return ::cat::get<I>(static_cast<::cat::simd_mask<T, Abi>&&>(m));
-}
-
-template <__SIZE_TYPE__ I, typename T, typename Abi>
-constexpr auto
-get(::cat::simd_mask<T, Abi> const&& m) ->
-   typename ::cat::simd_mask<T, Abi>::lane_scalar {
-   return ::cat::get<I>(static_cast<::cat::simd_mask<T, Abi> const&&>(m));
-}
 
 }  // namespace std
 

@@ -223,6 +223,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bit/implementations/align_up.tpp
   ${CATLIB}/bit/implementations/align_down.tpp
   ${CATLIB}/tuple/implementations/tuple_cat.tpp
+  ${CATLIB}/tuple/implementations/magic_get.tpp
   ${CATLIB}/enum/cat/enum
   PARENT_SCOPE
 )

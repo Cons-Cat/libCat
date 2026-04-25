@@ -107,7 +107,7 @@ test(simd) {
    float4x4 f2{0_f4, 1_f4, 2_f4, 3_f4};
    f1 += f2;
    auto fsum = f1 + f2;
-   (void)fsum;
+   auto _ = fsum;
 
    float4x4 const broadcast_from_int(1);
    cat::verify(broadcast_from_int == 1_f4);
@@ -2237,34 +2237,36 @@ test(simd_if_else_builder_vs_factory) {
    cat::verify(fr[3] == ffactory[3]);
 }
 
-test(simd_tuple_protocol) {
-   static_assert(std::tuple_size_v<int4x4> == 4);
-   static_assert(cat::is_same<std::tuple_element_t<0u, int4x4>, cat::int4>);
+// This feature is disabled for now.
+// test(simd_tuple_protocol) {
+//    static_assert(std::tuple_size_v<int4x4> == 4);
+//    static_assert(cat::is_same<std::tuple_element_t<0u, int4x4>, cat::int4>);
 
-   using mask4 = int4x4::mask_type;
-   static_assert(std::tuple_size_v<mask4> == 4);
-   static_assert(
-      cat::is_same<std::tuple_element_t<0u, mask4>, mask4::lane_scalar>);
+//    using mask4 = int4x4::mask_type;
+//    static_assert(std::tuple_size_v<mask4> == 4);
+//    static_assert(
+//       cat::is_same<std::tuple_element_t<0u, mask4>, mask4::lane_scalar>);
 
-   int4x4 v = {10, 20, 30, 40};
-   cat::verify(std::get<0u>(v) == 10);
-   std::get<1u>(v) = 99;
-   cat::verify(v[1u] == 99);
+//    int4x4 v = {10, 20, 30, 40};
+//    cat::verify(cat::get<0u>(v) == 10);
+//    v.set_lane(1u, 99);
+//    cat::verify(v[1u] == 99);
+//    cat::get<1>(v) = 99;
 
-   auto const [a0, a1, a2, a3] = v;
-   cat::verify(a0 == 10);
-   cat::verify(a3 == 40);
+//    auto const [a0, a1, a2, a3] = v;
+//    cat::verify(a0 == 10);
+//    cat::verify(a3 == 40);
 
-   mask4 m{};
-   m.fill(true);
-   cat::verify(std::get<0u>(m) != 0u);
-   std::get<2u>(m) = 0u;
-   cat::verify(!m[2u]);
-   cat::verify(m[0u]);
+//    mask4 m{};
+//    m.fill(true);
+//    m.set_lane(2u, false);
+//    cat::verify(cat::get<0u>(m) != 0u);
+//    cat::verify(!m[2u]);
+//    cat::verify(m[0u]);
 
-   auto const [b0, b1, b2, b3] = m;
-   cat::verify(b0 != 0u && b1 != 0u && b2 == 0u && b3 != 0u);
-}
+//    auto const [b0, b1, b2, b3] = m;
+//    cat::verify(b0 != 0u && b1 != 0u && b2 == 0u && b3 != 0u);
+// }
 
 test(simd_iota) {
    int4x4 const from_iota_free = cat::iota<int4x4>(10);
