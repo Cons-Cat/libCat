@@ -8,3 +8,7 @@ Testing/
 CMakeFiles/
 .gdb_history
 .dir-locals-*.el
+*.ii
+*.o
+*.s
+*.bc
