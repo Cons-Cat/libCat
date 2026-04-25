@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/collection>
+#include <cat/math>
 #include <cat/memory>
 #include <cat/meta>
 
@@ -143,6 +144,32 @@ using maybe_span = maybe<compact<span<T>,
 // We implement these functions here instead of in `cat::memory` because they
 // have circular dependencies.
 namespace cat {
+
+template <typename T>
+[[nodiscard]]
+constexpr auto
+is_pointer_in_range(T const* p_pointer, span<T const> const range) noexcept
+   -> bool {
+   static_assert(!is_function<T>,
+                 "`is_pointer_in_range` does not accept function types.");
+
+   if consteval {
+      for (T const& entry : range) {
+         if (p_pointer == __builtin_addressof(entry)) {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   if (range.size() == 0u) {
+      return false;
+   }
+
+   T const* const p_begin = range.data();
+   T const* const p_end = p_begin + range.size();
+   return !less<>{}(p_pointer, p_begin) && less<>{}(p_pointer, p_end);
+}
 
 template <typename T>
 [[nodiscard]]
