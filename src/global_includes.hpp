@@ -26,10 +26,10 @@ class deferrer_callback {
 inline constinit struct {
    template <typename F>
    auto
-   operator<<(F&& callback) -> deferrer_callback<F> {
+   operator<<(F&& callback) const -> deferrer_callback<F> {
       return deferrer_callback<F>(callback);
    }
-} deferrer [[maybe_unused]];
+} const deferrer [[maybe_unused]];
 }  // namespace cat::detail
 
 // `defer` is a macro that instantiates a scoped object which executes some
