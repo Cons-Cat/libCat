@@ -20,18 +20,18 @@ inline constexpr bool is_reference_wrapper =
 
 template <typename C, typename Pointed, typename T1, typename... Args>
 constexpr auto
-invoke_member_function(Pointed C::* f, T1&& t1, Args&&... args)
+invoke_member_function(Pointed C::* f, T1&& t1, Args&&... arguments)
    -> decltype(auto) {
    if constexpr (is_function<Pointed>) {
       if constexpr (is_base_of<C, decay<T1>>) {
-         return (fwd(t1).*f)(fwd(args)...);
+         return (fwd(t1).*f)(fwd(arguments)...);
       } else if constexpr (is_reference_wrapper<decay<T1>>) {
-         return (t1.get().*f)(fwd(args)...);
+         return (t1.get().*f)(fwd(arguments)...);
       } else {
-         return ((*fwd(t1)).*f)(fwd(args)...);
+         return ((*fwd(t1)).*f)(fwd(arguments)...);
       }
    } else {
-      static_assert(is_object<Pointed> && sizeof...(args) == 0);
+      static_assert(is_object<Pointed> && sizeof...(arguments) == 0);
       if constexpr (is_base_of<C, decay<T1>>) {
          return fwd(t1).*f;
       } else if constexpr (is_reference_wrapper<decay<T1>>) {
@@ -44,9 +44,10 @@ invoke_member_function(Pointed C::* f, T1&& t1, Args&&... args)
 
 template <typename T>
 struct invoke_impl_trait {
-   template <typename invocable_type, typename... Args>
+   template <typename Callback, typename... Args>
    static auto
-   call(invocable_type&& f, Args&&... args) -> decltype(fwd(f)(fwd(args)...));
+   call(Callback&& f, Args&&... arguments)
+      -> decltype(fwd(f)(fwd(arguments)...));
 };
 
 template <typename B, typename MT>
@@ -69,62 +70,62 @@ struct invoke_impl_trait<MT B::*> {
    template <typename T, typename... Args, typename MT1>
       requires(is_function<MT1>)
    static auto
-   call(MT1 B::* pmf, T&& t, Args&&... args)
-      -> decltype((invoke_impl_trait::get(fwd(t)).*pmf)(fwd(args)...));
+   call(MT1 B::* pmf, T&& t, Args&&... arguments)
+      -> decltype((invoke_impl_trait::get(fwd(t)).*pmf)(fwd(arguments)...));
 
    template <typename T>
    static auto
    call(MT B::* pmd, T&& t) -> decltype(invoke_impl_trait::get(fwd(t)).*pmd);
 };
 
-template <typename invocable_type, typename... Args,
-          typename Fd = decay<invocable_type>::type>
+template <typename Callback, typename... Args,
+          typename DecayedCallback = decay<Callback>::type>
 auto
-invoke_detail(invocable_type&& f, Args&&... args)
-   -> decltype(invoke_impl_trait<Fd>::call(fwd(f), fwd(args)...));
+invoke_detail(Callback&& f, Args&&... arguments)
+   -> decltype(invoke_impl_trait<DecayedCallback>::call(fwd(f),
+                                                        fwd(arguments)...));
 
-template <typename always_void_type, typename, typename...>
+template <typename AlwaysVoid, typename, typename...>
 struct invoke_result_trait {};
 
-template <typename invocable_type, typename... Args>
+template <typename Callback, typename... Args>
 struct invoke_result_trait<decltype(void(detail::invoke_detail(
-                              declval<invocable_type>(), declval<Args>()...))),
-                           invocable_type, Args...> {
-   using type = decltype(detail::invoke_detail(declval<invocable_type>(),
-                                               declval<Args>()...));
+                              declval<Callback>(), declval<Args>()...))),
+                           Callback, Args...> {
+   using type =
+      decltype(detail::invoke_detail(declval<Callback>(), declval<Args>()...));
 };
 }  // namespace detail
 
-template <typename invocable_type, typename... Args>
-struct invoke_result
-    : detail::invoke_result_trait<void, invocable_type, Args...> {};
+template <typename Callback, typename... Args>
+struct invoke_result : detail::invoke_result_trait<void, Callback, Args...> {};
 
-template <typename invocable_type, typename... Args>
-// requires is_invocable<invocable_type, Args...>
+template <typename Callback, typename... Args>
+// requires is_invocable<Callback, Args...>
 constexpr auto
-invoke(invocable_type&& callable, Args&&... arguments)
-   -> invoke_result<invocable_type, Args...>
-// noexcept(is_nothrow_invocable<invocable_type, Args...>)
+invoke(Callback&& callback, Args&&... arguments)
+   -> invoke_result<Callback, Args...>
+// noexcept(is_nothrow_invocable<Callback, Args...>)
 {
-   if constexpr (is_member_pointer<decay<invocable_type>>) {
+   if constexpr (is_member_pointer<decay<Callback>>) {
       // Member functions must be special-cased.
-      return detail::invoke_member_function(callable, fwd(arguments)...);
+      return detail::invoke_member_function(callback, fwd(arguments)...);
    } else {
-      // Invoke the callable with a call operator.
-      return fwd(callable)(fwd(arguments)...);
+      // Invoke the callback with a call operator.
+      return fwd(callback)(fwd(arguments)...);
    }
 }
 
-template <typename return_type, typename invocable_type, typename... Args>
-// requires is_invocable_r<return_type, invocable_type, Args...>
+template <typename ReturnT, typename Callback, typename... Args>
+// requires is_invocable_r<return_type, Callback, Args...>
 constexpr auto
-invoke_r(invocable_type&& f, Args&&... args) -> return_type
-// noexcept(is_nothrow_invocable_r<return_type, invocable_type, Args...>)
+invoke_r(Callback&& callback, Args&&... arguments) -> ReturnT
+// noexcept(is_nothrow_invocable_r<return_type, Callback, Args...>)
 {
-   if constexpr (is_void<return_type>) {
-      invoke(fwd(f), fwd(args)...);
+   if constexpr (is_void<ReturnT>) {
+      invoke(fwd(callback), fwd(arguments)...);
    } else {
-      return invoke(fwd(f), fwd(args)...);
+      return invoke(fwd(callback), fwd(arguments)...);
    }
 }
 

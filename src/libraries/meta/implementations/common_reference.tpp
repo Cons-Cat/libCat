@@ -129,11 +129,11 @@ struct common_reference_trait<T> {
 template <typename T, typename U>
 struct common_reference_trait<T, U> : common_reference_sub_bullet_1<T, U> {};
 
-template <typename T, typename U, typename V, typename... remaining>
+template <typename T, typename U, typename V, typename... Remaining>
    requires(requires { typename common_reference_trait<T, U>; })
-struct common_reference_trait<T, U, V, remaining...>
+struct common_reference_trait<T, U, V, Remaining...>
     : common_reference_trait<typename common_reference_trait<T, U>::type, V,
-                             remaining...> {};
+                             Remaining...> {};
 }  // namespace detail
 
 template <typename... types>

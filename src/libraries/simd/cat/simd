@@ -71,9 +71,9 @@ class bitset;
 
 namespace detail {
 
-// Memory alignment for `simd<T, fixed_size_abi<T, N>>` follows the same idea
-// as `std::simd`. An implementation-defined power of two no larger than the
-// object and not exceeding the native SIMD alignment from `target_abi`
+// Memory alignment for `simd<T, fixed_size_abi<T, index>>` follows the same
+// idea as `std::simd`. An implementation-defined power of two no larger than
+// the object and not exceeding the native SIMD alignment from `target_abi`
 // Effectively, short vectors are 16-byte aligned, and long vectors are 32-byte
 // aligned.
 [[nodiscard]]
@@ -203,8 +203,8 @@ struct scalar_abi {
 };
 
 namespace simd_abi {
-template <typename T, idx N>
-using fixed_size = fixed_size_abi<T, N>;
+template <typename T, idx index>
+using fixed_size = fixed_size_abi<T, index>;
 template <typename T>
 using native = native_abi<T>;
 template <typename T>
@@ -231,7 +231,7 @@ native_cast(simd_mask<T, abi_type> mask) {
    return static_cast<simd_mask<T, typename native_abi<T>::target_abi>>(mask);
 }
 
-template <typename V>
+template <typename Simd>
 inline constexpr bool is_cat_simd = false;
 
 template <typename T, typename Abi>
@@ -257,8 +257,8 @@ using simd_unary_signed_integer_from_element_t =
 
 }  // namespace detail
 
-template <typename V>
-concept is_simd = detail::is_cat_simd<V>;
+template <typename Simd>
+concept is_simd = detail::is_cat_simd<Simd>;
 
 template <typename M>
 concept is_simd_mask = detail::is_cat_simd_mask<M>;
@@ -442,9 +442,10 @@ class alignas(in_abi::alignment.raw) simd {
    // Construct from a variadic argument list.
    template <typename... Us>
       requires(sizeof...(Us) > 1u && sizeof...(Us) == in_abi::lanes.raw)
-   [[gnu::nodebug]] constexpr simd(Us&&... values)
+   [[gnu::nodebug]] constexpr simd(Us&&... arguments)
        // Clang requires curly braces here.
-       : raw(raw_type{simd_lane_to_storage(static_cast<T>(fwd(values)))...}) {
+       : raw(
+            raw_type{simd_lane_to_storage(static_cast<T>(fwd(arguments)))...}) {
    }
 
    // Construct from a constant list, such as `value_list` or
@@ -1257,13 +1258,13 @@ class alignas(in_abi::alignment.raw) simd_mask {
       "lane, use `make_simd_mask_filled`.");
 
    // Construct from a variadic argument list (one bool per logical lane).
-   template <typename... bools>
-   constexpr simd_mask(bools&&... values)
-      requires(sizeof...(values) > 1
-               && sizeof...(values) == abi_type::lanes.raw)
+   template <typename... Bools>
+   constexpr simd_mask(Bools&&... arguments)
+      requires(sizeof...(arguments) > 1
+               && sizeof...(arguments) == abi_type::lanes.raw)
    {
       this->raw = raw_type{};
-      bool const lane_vals[] = {static_cast<bool>(fwd(values))...};
+      bool const lane_vals[] = {static_cast<bool>(fwd(arguments))...};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          this->set_lane(i, lane_vals[i.raw]);
       }
@@ -1271,12 +1272,12 @@ class alignas(in_abi::alignment.raw) simd_mask {
 
    // Construct from a constant list, such as `value_list` or
    // `integer_sequence`.
-   template <bool... bools>
-   constexpr simd_mask(value_type_list<bool, bools...> const)
-      requires(sizeof...(bools) == abi_type::lanes.raw)
+   template <bool... lane_bools>
+   constexpr simd_mask(value_type_list<bool, lane_bools...> const)
+      requires(sizeof...(lane_bools) == abi_type::lanes.raw)
    {
       this->raw = raw_type{};
-      bool const lane_vals[] = {bools...};
+      bool const lane_vals[] = {lane_bools...};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          this->set_lane(i, lane_vals[i.raw]);
       }
@@ -1782,12 +1783,12 @@ simd(simd_mask<T, Abi>)
 namespace detail {
 
 struct simd_reduce_add_impl {
-   template <typename V>
+   template <typename Simd>
    [[nodiscard]]
    constexpr auto
-   operator()(V const& v) const -> decltype(v.reduce_add())
-      requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_bool<typename V::scalar_type>)
+   operator()(Simd const& v) const -> decltype(v.reduce_add())
+      requires(is_simd<Simd> && is_integral<typename Simd::scalar_type>
+               && !is_bool<typename Simd::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_add();
@@ -1795,12 +1796,12 @@ struct simd_reduce_add_impl {
 };
 
 struct simd_reduce_mul_impl {
-   template <typename V>
+   template <typename Simd>
    [[nodiscard]]
    constexpr auto
-   operator()(V const& v) const -> decltype(v.reduce_mul())
-      requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_bool<typename V::scalar_type>)
+   operator()(Simd const& v) const -> decltype(v.reduce_mul())
+      requires(is_simd<Simd> && is_integral<typename Simd::scalar_type>
+               && !is_bool<typename Simd::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_mul();
@@ -1808,12 +1809,12 @@ struct simd_reduce_mul_impl {
 };
 
 struct simd_reduce_and_impl {
-   template <typename V>
+   template <typename Simd>
    [[nodiscard]]
    constexpr auto
-   operator()(V const& v) const -> decltype(v.reduce_and())
-      requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_bool<typename V::scalar_type>)
+   operator()(Simd const& v) const -> decltype(v.reduce_and())
+      requires(is_simd<Simd> && is_integral<typename Simd::scalar_type>
+               && !is_bool<typename Simd::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_and();
@@ -1821,12 +1822,12 @@ struct simd_reduce_and_impl {
 };
 
 struct simd_reduce_or_impl {
-   template <typename V>
+   template <typename Simd>
    [[nodiscard]]
    constexpr auto
-   operator()(V const& v) const -> decltype(v.reduce_or())
-      requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_bool<typename V::scalar_type>)
+   operator()(Simd const& v) const -> decltype(v.reduce_or())
+      requires(is_simd<Simd> && is_integral<typename Simd::scalar_type>
+               && !is_bool<typename Simd::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_or();
@@ -1834,12 +1835,12 @@ struct simd_reduce_or_impl {
 };
 
 struct simd_reduce_xor_impl {
-   template <typename V>
+   template <typename Simd>
    [[nodiscard]]
    constexpr auto
-   operator()(V const& v) const -> decltype(v.reduce_xor())
-      requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_bool<typename V::scalar_type>)
+   operator()(Simd const& v) const -> decltype(v.reduce_xor())
+      requires(is_simd<Simd> && is_integral<typename Simd::scalar_type>
+               && !is_bool<typename Simd::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_xor();
@@ -1847,12 +1848,12 @@ struct simd_reduce_xor_impl {
 };
 
 struct simd_reduce_max_impl {
-   template <typename V>
+   template <typename Simd>
    [[nodiscard]]
    constexpr auto
-   operator()(V const& v) const -> decltype(v.reduce_max())
-      requires(is_simd<V> && is_arithmetic<typename V::scalar_type>
-               && !is_bool<typename V::scalar_type>)
+   operator()(Simd const& v) const -> decltype(v.reduce_max())
+      requires(is_simd<Simd> && is_arithmetic<typename Simd::scalar_type>
+               && !is_bool<typename Simd::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_max();
@@ -1860,12 +1861,12 @@ struct simd_reduce_max_impl {
 };
 
 struct simd_reduce_min_impl {
-   template <typename V>
+   template <typename Simd>
    [[nodiscard]]
    constexpr auto
-   operator()(V const& v) const -> decltype(v.reduce_min())
-      requires(is_simd<V> && is_arithmetic<typename V::scalar_type>
-               && !is_bool<typename V::scalar_type>)
+   operator()(Simd const& v) const -> decltype(v.reduce_min())
+      requires(is_simd<Simd> && is_arithmetic<typename Simd::scalar_type>
+               && !is_bool<typename Simd::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_min();
@@ -2032,7 +2033,7 @@ using scalar_unaligned_simd_mask =
 
 namespace detail {
 
-template <typename T, typename V>
+template <typename T, typename Simd>
 struct rebind_simd_impl;
 
 template <typename T, typename U, typename Abi>
@@ -2045,28 +2046,28 @@ struct rebind_simd_impl<T, simd_mask<U, Abi>> {
    using type = simd_mask<T, typename Abi::template make_abi_type<T>>;
 };
 
-template <idx N, typename V>
+template <idx index, typename Simd>
 struct resize_simd_impl;
 
-template <idx N, typename U, typename Abi>
-struct resize_simd_impl<N, simd<U, Abi>> {
-   using type = simd<U, fixed_size_abi<U, N>>;
+template <idx index, typename U, typename Abi>
+struct resize_simd_impl<index, simd<U, Abi>> {
+   using type = simd<U, fixed_size_abi<U, index>>;
 };
 
-template <idx N, typename U, typename Abi>
-struct resize_simd_impl<N, simd_mask<U, Abi>> {
-   using type = simd_mask<U, fixed_size_abi<U, N>>;
+template <idx index, typename U, typename Abi>
+struct resize_simd_impl<index, simd_mask<U, Abi>> {
+   using type = simd_mask<U, fixed_size_abi<U, index>>;
 };
 
 }  // namespace detail
 
 // Element or width sugar for `simd` / `simd_mask` (see
 // https://en.cppreference.com/w/cpp/experimental/simd/rebind_simd).
-template <typename T, typename V>
-using rebind_simd = typename detail::rebind_simd_impl<T, V>::type;
+template <typename T, typename Simd>
+using rebind_simd = typename detail::rebind_simd_impl<T, Simd>::type;
 
-template <idx N, typename V>
-using resize_simd = typename detail::resize_simd_impl<N, V>::type;
+template <idx index, typename Simd>
+using resize_simd = typename detail::resize_simd_impl<index, Simd>::type;
 
 // P3983R1 array-like object representation query for `simd<T, Abi>`.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p3983r1.html
@@ -2172,10 +2173,10 @@ simd_all_of(simd_mask<T, native_abi<T>> mask) -> bool {
    return simd_all_of(detail::native_cast(mask));
 }
 
-template <is_simd V>
+template <is_simd Simd>
 constexpr void
-swap(V& left, V& right) {
-   V tmp = left;
+swap(Simd& left, Simd& right) {
+   Simd tmp = left;
    left = right;
    right = tmp;
 }
@@ -2372,43 +2373,43 @@ template <typename T, typename Abi>
 struct tuple_size<::cat::simd_mask<T, Abi> const volatile>
     : tuple_size<::cat::simd_mask<T, Abi>> {};
 
-template <__SIZE_TYPE__ in_index, typename T, typename Abi>
-struct tuple_element<in_index, ::cat::simd<T, Abi>> {
+template <__SIZE_TYPE__ index, typename T, typename Abi>
+struct tuple_element<index, ::cat::simd<T, Abi>> {
    using type = T;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, typename Abi>
-struct tuple_element<in_index, ::cat::simd_mask<T, Abi>> {
+template <__SIZE_TYPE__ index, typename T, typename Abi>
+struct tuple_element<index, ::cat::simd_mask<T, Abi>> {
    using type = typename ::cat::simd_mask<T, Abi>::lane_scalar;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, typename Abi>
-struct tuple_element<in_index, ::cat::simd<T, Abi> const> {
+template <__SIZE_TYPE__ index, typename T, typename Abi>
+struct tuple_element<index, ::cat::simd<T, Abi> const> {
    using type = T;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, typename Abi>
-struct tuple_element<in_index, ::cat::simd<T, Abi> volatile> {
+template <__SIZE_TYPE__ index, typename T, typename Abi>
+struct tuple_element<index, ::cat::simd<T, Abi> volatile> {
    using type = T volatile;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, typename Abi>
-struct tuple_element<in_index, ::cat::simd<T, Abi> const volatile> {
+template <__SIZE_TYPE__ index, typename T, typename Abi>
+struct tuple_element<index, ::cat::simd<T, Abi> const volatile> {
    using type = T const volatile;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, typename Abi>
-struct tuple_element<in_index, ::cat::simd_mask<T, Abi> const> {
+template <__SIZE_TYPE__ index, typename T, typename Abi>
+struct tuple_element<index, ::cat::simd_mask<T, Abi> const> {
    using type = typename ::cat::simd_mask<T, Abi>::lane_scalar;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, typename Abi>
-struct tuple_element<in_index, ::cat::simd_mask<T, Abi> volatile> {
+template <__SIZE_TYPE__ index, typename T, typename Abi>
+struct tuple_element<index, ::cat::simd_mask<T, Abi> volatile> {
    using type = typename ::cat::simd_mask<T, Abi>::lane_scalar volatile;
 };
 
-template <__SIZE_TYPE__ in_index, typename T, typename Abi>
-struct tuple_element<in_index, ::cat::simd_mask<T, Abi> const volatile> {
+template <__SIZE_TYPE__ index, typename T, typename Abi>
+struct tuple_element<index, ::cat::simd_mask<T, Abi> const volatile> {
    using type = typename ::cat::simd_mask<T, Abi>::lane_scalar const volatile;
 };
 

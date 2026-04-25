@@ -8,12 +8,12 @@
 namespace cat {
 
 // Forward declarations. Element type parameter before ABI tag.
-template <typename T, typename abi_type>
-   requires(is_same<typename abi_type::scalar_type, T>)
-class alignas(abi_type::alignment.raw) simd;
+template <typename T, typename Abi>
+   requires(is_same<typename Abi::scalar_type, T>)
+class alignas(Abi::alignment.raw) simd;
 
-template <typename T, typename abi_type>
-class alignas(abi_type::alignment.raw) simd_mask;
+template <typename T, typename Abi>
+class alignas(Abi::alignment.raw) simd_mask;
 
 namespace simd_abi {
 template <typename AbiTag, typename ElementT>

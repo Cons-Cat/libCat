@@ -11,7 +11,7 @@ namespace cat {
 
 // Forward declarations for containers and algorithms needed by
 // `collection_interface`.
-template <typename T, idx Extent>
+template <typename T, idx fixed_extent>
 class span;
 
 template <typename T>
@@ -139,9 +139,8 @@ collection_iterator(idx, T const*) -> collection_iterator<T const>;
 
 }  // namespace detail
 
-template <typename container,
-          template <typename, auto...> typename iterator_type, typename T,
-          auto... args>
+template <typename Container, template <typename, auto...> typename Iterator,
+          typename T, auto... args>
 class iterable_interface {
  public:
    // `value_type` is the canonical (cv-unqualified) element type. `reference`
@@ -152,8 +151,8 @@ class iterable_interface {
    using reference = T&;
    using const_reference = T const&;
 
-   using iterator = iterator_type<T, args...>;
-   using const_iterator = const_proxy_iterator<iterator_type, T, args...>;
+   using iterator = Iterator<T, args...>;
+   using const_iterator = const_proxy_iterator<Iterator, T, args...>;
    using reverse_iterator = reverse_proxy_iterator<iterator>;
    using const_reverse_iterator = reverse_proxy_iterator<const_iterator>;
 
@@ -265,14 +264,14 @@ class random_access_iterable_interface
    }
 };
 
-template <typename derived_type, typename T>
+template <typename Derived, typename T>
 class collection_interface {
  protected:
    // `is_array_like` at the top of this class instead of the bottom prevents
    // clangd false-positive diagnostics.
    static constexpr bool is_array_like =
-      detail::is_contiguous_collection<derived_type>
-      && detail::is_bounded_collection<derived_type>;
+      detail::is_contiguous_collection<Derived>
+      && detail::is_bounded_collection<Derived>;
 
  public:
    // `value_type` is the canonical (cv-unqualified) element type. `reference`
@@ -291,9 +290,8 @@ class collection_interface {
    // `.size()`.
    [[nodiscard]]
    constexpr auto
-   size(this derived_type const& self) -> idx
-      requires(detail::has_capacity<derived_type>
-               && !detail::has_size<derived_type>)
+   size(this Derived const& self) -> idx
+      requires(detail::has_capacity<Derived> && !detail::has_size<Derived>)
    {
       return self.capacity();
    }
@@ -302,8 +300,8 @@ class collection_interface {
    // `.capacity()`.
    [[nodiscard]]
    constexpr auto
-   capacity(this derived_type const& self) -> idx
-      requires(detail::has_size<derived_type>)
+   capacity(this Derived const& self) -> idx
+      requires(detail::has_size<Derived>)
    {
       return self.size();
    }
@@ -312,8 +310,8 @@ class collection_interface {
    // collection.
    [[nodiscard]]
    constexpr auto
-   is_empty(this derived_type const& self) -> bool
-      requires(detail::has_size<derived_type>)
+   is_empty(this Derived const& self) -> bool
+      requires(detail::has_size<Derived>)
    {
       return self.size() == 0;
    }
@@ -322,8 +320,8 @@ class collection_interface {
    // collection.
    [[nodiscard]]
    constexpr auto
-   is_full(this derived_type const& self) -> bool
-      requires(detail::has_size<derived_type>)
+   is_full(this Derived const& self) -> bool
+      requires(detail::has_size<Derived>)
    {
       return self.size() == self.capacity();
    }
@@ -343,7 +341,7 @@ class collection_interface {
    // Index into this collection with bounds-checking.
    [[nodiscard]]
    constexpr auto
-   at(this derived_type const& self [[clang::lifetimebound]], idx index)
+   at(this Derived const& self [[clang::lifetimebound]], idx index)
       -> maybe<T&> {
       // `unconst()` allows `.at()` to be safely called in a `const` context.
       return unconst(self).at(index);
@@ -360,7 +358,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   front(this derived_type const& self) -> T const& {
+   front(this Derived const& self) -> T const& {
       cat::assert(self.size() > 0);
       return unconst(self).front();
    }
@@ -376,7 +374,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   back(this derived_type const& self) -> T const& {
+   back(this Derived const& self) -> T const& {
       cat::assert(self.size() > 0);
       return unconst(self).back();
    }
@@ -396,7 +394,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   subspan(this derived_type const& self, idx start_index, idx end_index)
+   subspan(this Derived const& self, idx start_index, idx end_index)
       -> span<T const>
       requires(is_array_like)
    {
@@ -418,7 +416,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   first(this derived_type const& self, idx count) -> span<T const>
+   first(this Derived const& self, idx count) -> span<T const>
       requires(is_array_like)
    {
       return self.subspan(0u, count);
@@ -434,7 +432,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   last(this derived_type const& self, idx count) -> span<T const>
+   last(this Derived const& self, idx count) -> span<T const>
       requires(is_array_like)
    {
       return self.subspan(idx(self.size() - count), self.size());
@@ -455,7 +453,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator[](this derived_type const& self [[clang::lifetimebound]], idx index)
+   operator[](this Derived const& self [[clang::lifetimebound]], idx index)
       -> T const&
       requires(is_array_like)
    {

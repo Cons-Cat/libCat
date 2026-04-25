@@ -20,15 +20,15 @@ min(T value) -> T {
 }
 
 // Implicit output type `min()`.
-template <typename T, typename U, typename... remaining>
+template <typename T, typename U, typename... Remaining>
    requires(is_implicitly_convertible<U, T>)
 [[nodiscard]]
 constexpr auto
-min(T value_1, U value_2, remaining... remaining_args) -> T {
+min(T value_1, U value_2, Remaining... remaining) -> T {
    // Recurse through the list of variadic arguments, discarding the larger
    // element each time.
-   return (value_1 < value_2) ? min(value_1, remaining_args...)
-                              : min(value_2, remaining_args...);
+   return (value_1 < value_2) ? min(value_1, remaining...)
+                              : min(value_2, remaining...);
 }
 
 // TODO: These should have different names and be in `<cat/algorithms>`.
@@ -68,15 +68,15 @@ max(T value) -> T {
 }
 
 // Implicit output type `max()`.
-template <typename T, typename U, typename... remaining>
+template <typename T, typename U, typename... Remaining>
    requires(is_implicitly_convertible<U, T>)
 [[nodiscard]]
 constexpr auto
-max(T value_1, U value_2, remaining... remaining_args) -> T {
+max(T value_1, U value_2, Remaining... remaining) -> T {
    // Recurse through the list of variadic arguments, discarding the larger
    // element each time.
-   return (value_1 > value_2) ? max(value_1, remaining_args...)
-                              : max(value_2, remaining_args...);
+   return (value_1 > value_2) ? max(value_1, remaining...)
+                              : max(value_2, remaining...);
 }
 
 // TODO: If an `iterable` has `<` and `>` operators, this has unclear intent.

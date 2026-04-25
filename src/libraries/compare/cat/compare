@@ -476,14 +476,14 @@ inline constexpr int comparison_category_strength<weak_ordering> = 2;
 template <>
 inline constexpr int comparison_category_strength<strong_ordering> = 3;
 
-template <typename T, typename U, typename... remaining>
+template <typename T, typename U, typename... Remaining>
 struct weakest_comparison_category {
    using weaker = cat::conditional<(comparison_category_strength<T>
                                     <= comparison_category_strength<U>),
                                    T, U>;
 
    using type =
-      cat::conditional<(sizeof...(remaining) > 0) && (!cat::is_void<U>),
+      cat::conditional<(sizeof...(Remaining) > 0) && (!cat::is_void<U>),
                        // Recurse through `weakest_comparison_category`
                        // to find the strongest type in this list.
                        weakest_comparison_category<
@@ -495,9 +495,9 @@ struct weakest_comparison_category {
                           // not short-circuited by `conditional`, and
                           // there must be at least two template
                           // arguments.
-                          remaining..., void>,
+                          Remaining..., void>,
                        // The base case, when there are no types left in
-                       // `remaining`, is the weaker of `T` and `U`.
+                       // `Remaining`, is the weaker of `T` and `U`.
                        weaker>;
 };
 }  // namespace detail

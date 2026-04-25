@@ -4933,8 +4933,8 @@ test(arithmetic_idx_operations_traits_and_word_conversions) {
 // inside a `static_assert` is a hard error if `T`'s constructor is disabled
 // via `enable_if`, so the SFINAE check must be hidden behind a concept.
 namespace semantics_helpers {
-template <typename T, auto V>
-concept can_brace_init = requires { T{V}; };
+template <typename T, auto value>
+concept can_brace_init = requires { T{value}; };
 
 template <typename L, typename R>
 concept can_plus_assign = requires(L lhs, R rhs) { lhs += rhs; };
@@ -5609,11 +5609,11 @@ namespace {
 // `promoted_type` picks the wider operand's storage shape and tags it with
 // the LHS's overflow policy.
 
-template <typename left, typename right>
+template <typename Left, typename Right>
 consteval auto
 expected_promoted_arithmetic() {
-   using L = cat::remove_constref<left>;
-   using R = cat::remove_constref<right>;
+   using L = cat::remove_constref<Left>;
+   using R = cat::remove_constref<Right>;
    constexpr cat::overflow_policies policy = cat::detail::overflow_policy_of<L>;
 
    if constexpr (policy != cat::overflow_policies::undefined) {
@@ -5627,9 +5627,9 @@ expected_promoted_arithmetic() {
    }
 }
 
-template <typename left, typename right>
+template <typename Left, typename Right>
 using expected_promoted_type =
-   decltype(expected_promoted_arithmetic<left, right>());
+   decltype(expected_promoted_arithmetic<Left, Right>());
 
 template <typename L, typename R>
 concept has_promoted_type =

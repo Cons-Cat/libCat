@@ -2,15 +2,17 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/allocator>
+
 // member `free` / `cfree` definitions for `allocator_interface`
 
 namespace cat {
 
-template <typename derived_type>
+template <typename Derived>
 // Invalidate any memory handle, invoking its data's destructor.
 template <mem T>
 constexpr void
-allocator_interface<derived_type>::free(T const& handle) {
+allocator_interface<Derived>::free(T const& handle) {
    using allocation_type = T::allocation_type const;
 
    // If this is not a small-size optimized handle:
@@ -39,14 +41,14 @@ allocator_interface<derived_type>::free(T const& handle) {
    // released when the handle is destroyed, so this call is a no-op.
 }
 
-template <typename derived_type>
+template <typename Derived>
 // TODO: This needs unit tests.
 // Invalidate a pointer handle to a `T`, and call its destructor.
 template <typename T>
 constexpr void
-allocator_interface<derived_type>::free(T* p_memory) {
-   if constexpr (detail::has_max_allocation_bytes<derived_type>) {
-      static_assert(sizeof(T) <= derived_type::max_allocation_bytes,
+allocator_interface<Derived>::free(T* p_memory) {
+   if constexpr (detail::has_max_allocation_bytes<Derived>) {
+      static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
    }
 
@@ -62,15 +64,15 @@ allocator_interface<derived_type>::free(T* p_memory) {
    }
 }
 
-template <typename derived_type>
+template <typename Derived>
 // Invalidate a pointer handle to an array of `T`, and call its destructors.
 template <typename T>
 constexpr void
-allocator_interface<derived_type>::free_multi(T* p_memory, idx count) {
-   if constexpr (detail::has_max_allocation_bytes<derived_type>) {
-      static_assert(sizeof(T) <= derived_type::max_allocation_bytes,
+allocator_interface<Derived>::free_multi(T* p_memory, idx count) {
+   if constexpr (detail::has_max_allocation_bytes<Derived>) {
+      static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
-      assert((count * sizeof(T)) <= derived_type::max_allocation_bytes,
+      assert((count * sizeof(T)) <= Derived::max_allocation_bytes,
              "This allocation is too large for this allocator!");
    }
 
@@ -91,10 +93,10 @@ allocator_interface<derived_type>::free_multi(T* p_memory, idx count) {
    }
 }
 
-template <typename derived_type>
+template <typename Derived>
 template <mem T>
 constexpr void
-allocator_interface<derived_type>::cfree(T& handle) {
+allocator_interface<Derived>::cfree(T& handle) {
    using allocation_type = T::allocation_type const;
 
    if (!handle.is_inline()) {
@@ -121,12 +123,12 @@ allocator_interface<derived_type>::cfree(T& handle) {
    }
 }
 
-template <typename derived_type>
+template <typename Derived>
 template <typename T>
 constexpr void
-allocator_interface<derived_type>::cfree(T* p_memory) {
-   if constexpr (detail::has_max_allocation_bytes<derived_type>) {
-      static_assert(sizeof(T) <= derived_type::max_allocation_bytes,
+allocator_interface<Derived>::cfree(T* p_memory) {
+   if constexpr (detail::has_max_allocation_bytes<Derived>) {
+      static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
    }
 
@@ -146,14 +148,14 @@ allocator_interface<derived_type>::cfree(T* p_memory) {
    }
 }
 
-template <typename derived_type>
+template <typename Derived>
 template <typename T>
 constexpr void
-allocator_interface<derived_type>::cfree_multi(T* p_memory, idx count) {
-   if constexpr (detail::has_max_allocation_bytes<derived_type>) {
-      static_assert(sizeof(T) <= derived_type::max_allocation_bytes,
+allocator_interface<Derived>::cfree_multi(T* p_memory, idx count) {
+   if constexpr (detail::has_max_allocation_bytes<Derived>) {
+      static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
-      assert((count * sizeof(T)) <= derived_type::max_allocation_bytes,
+      assert((count * sizeof(T)) <= Derived::max_allocation_bytes,
              "This allocation is too large for this allocator!");
    }
 
@@ -178,17 +180,17 @@ allocator_interface<derived_type>::cfree_multi(T* p_memory, idx count) {
    }
 }
 
-template <typename derived_type>
+template <typename Derived>
 template <typename T>
 constexpr void
-allocator_interface<derived_type>::free(span<T> handle) {
+allocator_interface<Derived>::free(span<T> handle) {
    this->free_multi(handle.data(), handle.size());
 }
 
-template <typename derived_type>
+template <typename Derived>
 template <typename T>
 constexpr void
-allocator_interface<derived_type>::cfree(span<T> handle) {
+allocator_interface<Derived>::cfree(span<T> handle) {
    this->cfree_multi(handle.data(), handle.size());
 }
 

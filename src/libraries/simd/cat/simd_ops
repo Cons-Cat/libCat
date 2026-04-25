@@ -32,15 +32,16 @@
 
 namespace cat {
 
-template <typename V>
-concept is_simd_integral = is_simd<V> && is_integral<typename V::scalar_type>;
+template <typename Simd>
+concept is_simd_integral =
+   is_simd<Simd> && is_integral<typename Simd::scalar_type>;
 
-template <typename V>
+template <typename Simd>
 concept vec_floating_point =
-   is_simd<V> && is_floating_point<typename V::scalar_type>;
+   is_simd<Simd> && is_floating_point<typename Simd::scalar_type>;
 
-template <typename V, typename T>
-concept is_simd_of = is_simd<V> && is_same<typename V::scalar_type, T>;
+template <typename Simd, typename T>
+concept is_simd_of = is_simd<Simd> && is_same<typename Simd::scalar_type, T>;
 
 // EVE-style elementwise functors: `fn(input...)` unmasked, `fn[mask](input...)`
 // applies per lane where the mask is true. Inactive lanes keep the first simd
@@ -605,15 +606,15 @@ template <typename Mask>
 struct simd_iota_blend_masked_impl {
    Mask mask;
 
-   template <is_simd V>
+   template <is_simd Simd>
    [[nodiscard]]
    constexpr auto
-   operator()(V passthrough, V::scalar_type start) const -> V {
-      using T = typename V::scalar_type;
+   operator()(Simd passthrough, Simd::scalar_type start) const -> Simd {
+      using T = typename Simd::scalar_type;
       T const base = static_cast<T>(start);
-      V result = passthrough;
+      Simd result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
-      for (idx i = 0u; i < V::abi_type::lanes; ++i) {
+      for (idx i = 0u; i < Simd::abi_type::lanes; ++i) {
          if (mask[i]) {
             result.set_lane(i, static_cast<T>(base + static_cast<T>(i)));
          }
@@ -648,26 +649,27 @@ struct simd_load_from_blend_masked_impl {
 // Same EVE-style split as `simd_elementwise_interface` (`simd_sqrt`, ...):
 // unmasked `operator()` and `operator[]` returning a lane-masked helper.
 // Load factories take `memory_lane const*` (`invoke` / `bind_masked`)
-// instead of `simd` input / `invoke_full` / `invoke_lanewise`. `V` is repeated
-// on the base so signatures do not depend on `Derived` while it is incomplete.
-template <typename Derived, is_simd V>
+// instead of `simd` input / `invoke_full` / `invoke_lanewise`. `Simd` is
+// repeated on the base so signatures do not depend on `Derived` while it is
+// incomplete.
+template <typename Derived, is_simd Simd>
 class simd_elementwise_factory_interface {
    friend Derived;
 
  public:
-   using simd_vector = V;
+   using simd_vector = Simd;
 
    [[nodiscard]]
    constexpr auto
-   operator()(typename V::memory_lane const* source) const -> decltype(auto) {
+   operator()(typename Simd::memory_lane const* source) const
+      -> decltype(auto) {
       return static_cast<Derived const*>(this)->invoke(source);
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](
-      simd_mask<typename V::scalar_type, typename V::abi_type> lane_mask) const
-      -> decltype(auto) {
+   operator[](simd_mask<typename Simd::scalar_type, typename Simd::abi_type>
+                 lane_mask) const -> decltype(auto) {
       return static_cast<Derived const*>(this)->bind_masked(lane_mask);
    }
 
@@ -677,138 +679,145 @@ class simd_elementwise_factory_interface {
 
 // Builds a vector by loading from memory (gather-style transfer into lane
 // registers).
-template <is_simd V>
+template <is_simd Simd>
 struct make_simd_loaded_aligned_impl
-    : simd_elementwise_factory_interface<make_simd_loaded_aligned_impl<V>, V> {
-   using simd_vector = V;
+    : simd_elementwise_factory_interface<make_simd_loaded_aligned_impl<Simd>,
+                                         Simd> {
+   using simd_vector = Simd;
 
    constexpr make_simd_loaded_aligned_impl() = default;
 
    [[nodiscard]]
    constexpr auto
-   invoke(typename V::memory_lane const* source) const -> maybe<V> {
-      if (!is_aligned(unconst(source), V::abi_type::alignment)) {
-         return maybe<V>{};
+   invoke(typename Simd::memory_lane const* source) const -> maybe<Simd> {
+      if (!is_aligned(unconst(source), Simd::abi_type::alignment)) {
+         return maybe<Simd>{};
       }
-      V result{};
+      Simd result{};
       result.load_aligned(source);
       return result;
    }
 
    [[nodiscard]]
    constexpr auto
-   bind_masked(simd_mask<typename V::scalar_type, typename V::abi_type> mask)
-      const -> simd_load_aligned_blend_masked_impl<
-         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+   bind_masked(
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
+      -> simd_load_aligned_blend_masked_impl<
+         simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {mask};
    }
 };
 
 // Builds a vector by loading from memory (gather-style transfer into lane
 // registers).
-template <is_simd V>
+template <is_simd Simd>
 struct make_simd_loaded_unaligned_impl
-    : simd_elementwise_factory_interface<make_simd_loaded_unaligned_impl<V>,
-                                         V> {
-   using simd_vector = V;
+    : simd_elementwise_factory_interface<make_simd_loaded_unaligned_impl<Simd>,
+                                         Simd> {
+   using simd_vector = Simd;
 
    constexpr make_simd_loaded_unaligned_impl() = default;
 
    [[nodiscard, gnu::no_sanitize_address]]
    constexpr auto
-   invoke(typename V::memory_lane const* source) const -> V {
-      V result{};
+   invoke(typename Simd::memory_lane const* source) const -> Simd {
+      Simd result{};
       result.load_unaligned(source);
       return result;
    }
 
    [[nodiscard]]
    constexpr auto
-   bind_masked(simd_mask<typename V::scalar_type, typename V::abi_type> mask)
-      const -> simd_load_blend_masked_impl<
-         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+   bind_masked(
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
+      -> simd_load_blend_masked_impl<
+         simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {mask};
    }
 };
 
 // Builds a vector by loading from memory (gather-style transfer into lane
 // registers).
-template <is_simd V>
+template <is_simd Simd>
 struct make_simd_loaded_impl
-    : simd_elementwise_factory_interface<make_simd_loaded_impl<V>, V> {
-   using simd_vector = V;
+    : simd_elementwise_factory_interface<make_simd_loaded_impl<Simd>, Simd> {
+   using simd_vector = Simd;
 
    constexpr make_simd_loaded_impl() = default;
 
    [[nodiscard]]
    constexpr auto
-   invoke(typename V::memory_lane const* source) const -> V {
-      V result{};
+   invoke(typename Simd::memory_lane const* source) const -> Simd {
+      Simd result{};
       result.load(source);
       return result;
    }
 
    [[nodiscard]]
    constexpr auto
-   bind_masked(simd_mask<typename V::scalar_type, typename V::abi_type> mask)
-      const -> simd_load_blend_masked_impl<
-         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+   bind_masked(
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
+      -> simd_load_blend_masked_impl<
+         simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {mask};
    }
 };
 
 // Partial contiguous load from memory into lanes (gather-style transfer).
-template <is_simd V>
+template <is_simd Simd>
 struct make_simd_partial_loaded_impl {
    [[nodiscard]]
    constexpr auto
-   operator()(typename V::memory_lane const* source, idx count) const -> V {
-      V result{};
+   operator()(typename Simd::memory_lane const* source, idx count) const
+      -> Simd {
+      Simd result{};
       result.partial_load(source, count);
       return result;
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<typename V::scalar_type, typename V::abi_type> mask)
-      const -> simd_partial_load_blend_masked_impl<
-         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+   operator[](
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
+      -> simd_partial_load_blend_masked_impl<
+         simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {mask};
    }
 };
 
-template <is_simd V>
+template <is_simd Simd>
 struct make_simd_filled_impl {
    template <typename U>
-      requires(is_convertible<U, typename V::scalar_type>)
+      requires(is_convertible<U, typename Simd::scalar_type>)
    [[nodiscard]]
    constexpr auto
-   operator()(U value) const -> V {
-      V result{};
+   operator()(U value) const -> Simd {
+      Simd result{};
       result.fill(value);
       return result;
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<typename V::scalar_type, typename V::abi_type> mask)
-      const -> simd_fill_blend_masked_impl<
-         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+   operator[](
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
+      -> simd_fill_blend_masked_impl<
+         simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {mask};
    }
 };
 
-template <is_simd V>
+template <is_simd Simd>
 struct simd_iota_impl {
    [[nodiscard]]
    constexpr auto
-   operator()(V::scalar_type start) const -> V {
+   operator()(Simd::scalar_type start) const -> Simd {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-      using T = typename V::scalar_type;
+      using T = typename Simd::scalar_type;
       T const base = static_cast<T>(start);
-      V result{};
+      Simd result{};
 #pragma clang loop vectorize(enable)
-      for (idx i = 0u; i < V::abi_type::lanes; ++i) {
+      for (idx i = 0u; i < Simd::abi_type::lanes; ++i) {
          result.set_lane(i, static_cast<T>(base + static_cast<T>(i.raw)));
       }
       return result;
@@ -816,8 +825,8 @@ struct simd_iota_impl {
 
    [[nodiscard]]
    constexpr auto
-   operator[](V::mask_type lane_mask) const -> simd_iota_blend_masked_impl<
-      simd_mask<typename V::scalar_type, typename V::abi_type>> {
+   operator[](Simd::mask_type lane_mask) const -> simd_iota_blend_masked_impl<
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {lane_mask};
    }
 };
@@ -2234,9 +2243,9 @@ struct make_simd_mask_from_count_impl {
       // Same lane rule as the standard `basic_simd_mask::n_elements(count)`
       // (P3440).
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3440r0.html
-      using Abi = typename Simd::abi_type;
+      using abi = typename Simd::abi_type;
       typename Simd::mask_type lane_mask{};
-      for (idx i = 0u; i < Abi::lanes; ++i) {
+      for (idx i = 0u; i < abi::lanes; ++i) {
          lane_mask.set_lane(i, i < active_lanes);
       }
       return lane_mask;
@@ -3020,22 +3029,22 @@ simd_ldexp_lane(T x, IntT y) -> T {
 }
 
 // Mask-free lane ramp only. Blended updates use
-// `simd_iota<V>[lane_blend_mask](passthrough, start)`.
-template <typename V, typename U>
+// `simd_iota<Simd>[lane_blend_mask](passthrough, start)`.
+template <typename Simd, typename U>
 [[nodiscard]]
 constexpr auto
-iota(U start) -> V {
-   return detail::simd_iota_impl<V>{}(start);
+iota(U start) -> Simd {
+   return detail::simd_iota_impl<Simd>{}(start);
 }
 
 // Broadcasts `value` to every lane with no lane blend mask. Blended fills use
-// `simd_filled<V>[lane_blend_mask](passthrough, value)`.
-template <is_simd V, typename U>
-   requires(is_convertible<U, typename V::scalar_type>)
+// `simd_filled<Simd>[lane_blend_mask](passthrough, value)`.
+template <is_simd Simd, typename U>
+   requires(is_convertible<U, typename Simd::scalar_type>)
 [[nodiscard]]
 constexpr auto
-make_simd_filled(U value) -> V {
-   return detail::make_simd_filled_impl<V>{}(static_cast<U&&>(value));
+make_simd_filled(U value) -> Simd {
+   return detail::make_simd_filled_impl<Simd>{}(static_cast<U&&>(value));
 }
 
 template <is_simd_mask M>
@@ -3049,31 +3058,32 @@ make_simd_mask_filled(bool value) -> M {
 // `simd_*` functor above.
 
 // Gather-style loads into a new `simd` from a contiguous buffer.
-template <is_simd V>
-inline constexpr detail::make_simd_loaded_aligned_impl<V>
+template <is_simd Simd>
+inline constexpr detail::make_simd_loaded_aligned_impl<Simd>
    make_simd_loaded_aligned{};
 
-template <is_simd V>
-inline constexpr detail::make_simd_loaded_unaligned_impl<V>
+template <is_simd Simd>
+inline constexpr detail::make_simd_loaded_unaligned_impl<Simd>
    make_simd_loaded_unaligned{};
 
-template <is_simd V>
-inline constexpr detail::make_simd_loaded_impl<V> make_simd_loaded{};
+template <is_simd Simd>
+inline constexpr detail::make_simd_loaded_impl<Simd> make_simd_loaded{};
 
 // Partial gather-style load from a contiguous prefix of `source`.
-template <is_simd V>
-inline constexpr detail::make_simd_partial_loaded_impl<V>
+template <is_simd Simd>
+inline constexpr detail::make_simd_partial_loaded_impl<Simd>
    make_simd_partial_loaded{};
 
-// Lane blend `simd_filled<V>[lane_blend_mask](passthrough, value)`. Mask-free
-// broadcast `make_simd_filled<V>(value)` is the free function above.
-template <is_simd V>
-inline constexpr detail::make_simd_filled_impl<V> simd_filled{};
+// Lane blend `simd_filled<Simd>[lane_blend_mask](passthrough, value)`.
+// Mask-free broadcast `make_simd_filled<Simd>(value)` is the free function
+// above.
+template <is_simd Simd>
+inline constexpr detail::make_simd_filled_impl<Simd> simd_filled{};
 
-// Lane blend `simd_iota<V>[lane_blend_mask](passthrough, start)`. Mask-free
-// lane ramp `iota<V>(start)` is the free function above.
-template <is_simd V>
-inline constexpr detail::simd_iota_impl<V> simd_iota{};
+// Lane blend `simd_iota<Simd>[lane_blend_mask](passthrough, start)`. Mask-free
+// lane ramp `iota<Simd>(start)` is the free function above.
+template <is_simd Simd>
+inline constexpr detail::simd_iota_impl<Simd> simd_iota{};
 
 // Lane blend `simd_mask_filled<M>[lane_blend_mask](passthrough, bit)`.
 // Mask-free broadcast `make_simd_mask_filled<M>(bit)` is the free function

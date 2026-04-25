@@ -8,31 +8,31 @@
 namespace cat {
 
 namespace detail {
-template <typename tuple_type, idx... indices>
+template <typename Tuple, idx... indices>
 constexpr auto
-forward_tuple_impl(tuple_type&& input_tuple, index_list_type<indices...>) {
-   using tuple_decay = decay<tuple_type>;
+forward_tuple_impl(Tuple&& input_tuple, index_list_type<indices...>) {
+   using tuple_decay = decay<Tuple>;
    using tuple_types = typename tuple_decay::types;
    return cat::tuple<typename tuple_types::template get<indices>...>{
       fwd(input_tuple).template get<indices>()...};
 }
 
-template <typename tuple_type>
+template <typename Tuple>
 constexpr auto
-forward_tuple(tuple_type&& input_tuple) {
-   using tuple_decay = decay<tuple_type>;
+forward_tuple(Tuple&& input_tuple) {
+   using tuple_decay = decay<Tuple>;
    return forward_tuple_impl(fwd(input_tuple),
                              make_index_sequence<tuple_decay::types::size>{});
 }
 
-template <typename left_tuple_type, typename right_tuple_type,
-          idx... left_index, idx... right_index>
+template <typename LeftTuple, typename RightTuple, idx... left_index,
+          idx... right_index>
 constexpr auto
-tuple_cat_two_impl(left_tuple_type&& left, right_tuple_type&& right,
+tuple_cat_two_impl(LeftTuple&& left, RightTuple&& right,
                    index_list_type<left_index...>,
                    index_list_type<right_index...>) {
-   using left_decay = decay<left_tuple_type>;
-   using right_decay = decay<right_tuple_type>;
+   using left_decay = decay<LeftTuple>;
+   using right_decay = decay<RightTuple>;
    using left_types = typename left_decay::types;
    using right_types = typename right_decay::types;
    return tuple<typename left_types::template get<left_index>...,
@@ -41,11 +41,11 @@ tuple_cat_two_impl(left_tuple_type&& left, right_tuple_type&& right,
       fwd(right).template get<right_index>()...};
 }
 
-template <typename left_tuple_type, typename right_tuple_type>
+template <typename LeftTuple, typename RightTuple>
 constexpr auto
-tuple_cat_two(left_tuple_type&& left, right_tuple_type&& right) {
-   using left_decay = decay<left_tuple_type>;
-   using right_decay = decay<right_tuple_type>;
+tuple_cat_two(LeftTuple&& left, RightTuple&& right) {
+   using left_decay = decay<LeftTuple>;
+   using right_decay = decay<RightTuple>;
    return tuple_cat_two_impl(fwd(left), fwd(right),
                              make_index_sequence<left_decay::types::size>{},
                              make_index_sequence<right_decay::types::size>{});
@@ -57,22 +57,20 @@ tuple_cat() -> tuple<> {
    return {};
 }
 
-template <typename tuple_type>
-   requires(is_tuple<tuple_type>)
+template <typename Tuple>
+   requires(is_tuple<Tuple>)
 constexpr auto
-tuple_cat(tuple_type&& tuple) {
+tuple_cat(Tuple&& tuple) {
    return detail::forward_tuple(fwd(tuple));
 }
 
-template <typename left_tuple_type, typename right_tuple_type,
-          typename... remaining_tuples>
-   requires(is_tuple<left_tuple_type> && is_tuple<right_tuple_type>
-            && (is_tuple<remaining_tuples> && ...))
+template <typename LeftTuple, typename RightTuple, typename... Remaining>
+   requires(is_tuple<LeftTuple> && is_tuple<RightTuple>
+            && (is_tuple<Remaining> && ...))
 constexpr auto
-tuple_cat(left_tuple_type&& left, right_tuple_type&& right,
-          remaining_tuples&&... remaining) {
+tuple_cat(LeftTuple&& left, RightTuple&& right, Remaining&&... remaining) {
    auto combined = detail::tuple_cat_two(fwd(left), fwd(right));
-   if constexpr (sizeof...(remaining_tuples) == 0) {
+   if constexpr (sizeof...(Remaining) == 0) {
       return combined;
    } else {
       return tuple_cat(move(combined), fwd(remaining)...);

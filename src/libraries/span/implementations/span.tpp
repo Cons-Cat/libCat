@@ -6,12 +6,12 @@
 
 namespace cat {
 
-template <typename T, idx Extent>
+template <typename T, idx fixed_extent>
 template <is_random_access R>
    requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
             && is_equality_comparable<remove_cv<T>>)
 constexpr auto
-span<T, Extent>::operator==(R const& rhs) const -> bool {
+span<T, fixed_extent>::operator==(R const& rhs) const -> bool {
    // TODO: Replace this with a generic container equality algorithm.
    if (this->size() != rhs.size()) {
       return false;
@@ -25,7 +25,7 @@ span<T, Extent>::operator==(R const& rhs) const -> bool {
    return true;
 }
 
-template <typename T, idx Extent>
+template <typename T, idx fixed_extent>
 template <is_random_access R>
    requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
             && requires(remove_cv<T> const& left, remove_cv<T> const& right) {
@@ -33,7 +33,7 @@ template <is_random_access R>
                   { right < left } -> is_convertible<bool>;
                })
 constexpr auto
-span<T, Extent>::operator<=>(R const& rhs) const {
+span<T, fixed_extent>::operator<=>(R const& rhs) const {
    // TODO: Replace this with a generic container ordering algorithm.
    auto synth_three_way = []<typename U>(U const& left, U const& right) {
       if constexpr (is_threeway_comparable<U>) {
@@ -50,9 +50,8 @@ span<T, Extent>::operator<=>(R const& rhs) const {
    };
 
    using element_type = remove_cv<T>;
-   using category_type = decltype(
-      synth_three_way(declval<element_type const&>(),
-                      declval<element_type const&>()));
+   using category_type = decltype(synth_three_way(
+      declval<element_type const&>(), declval<element_type const&>()));
 
    idx i = 0u;
    idx const lhs_size = this->size();

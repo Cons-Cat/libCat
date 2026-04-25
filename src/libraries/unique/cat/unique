@@ -56,7 +56,7 @@ class unique {
    // Forward any possible constructor into `storage`.
    template <typename... Args>
       requires(sizeof...(Args) > 1)
-   unique(Args&&... args) : storage(fwd(args)...) {
+   unique(Args&&... arguments) : storage(fwd(arguments)...) {
    }
 
    // Allow move-assignment.
@@ -148,7 +148,7 @@ class unique_weak {
    };
 
    template <typename... Args>
-   unique_weak(Args&&... args) : storage(fwd(args)...) {
+   unique_weak(Args&&... arguments) : storage(fwd(arguments)...) {
    }
 
    // Allow move-assignment.

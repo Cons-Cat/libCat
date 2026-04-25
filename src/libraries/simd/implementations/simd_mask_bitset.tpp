@@ -82,16 +82,16 @@ simd_to_bitset(simd_mask<T, Abi> mask) -> bitset<Abi::lanes> {
    if constexpr (requires {
                     detail::simd_abi::mask_to_bitset<T, Abi>::invoke(mask);
                  }) {
-      using Hook = detail::simd_abi::mask_to_bitset<T, Abi>;
+      using hook = detail::simd_abi::mask_to_bitset<T, Abi>;
       using mask_lane_bits =
-         decltype(Hook::invoke(declval<simd_mask<T, Abi>>()));
+         decltype(hook::invoke(declval<simd_mask<T, Abi>>()));
 
       static_assert(
          Abi::lanes <= sizeof(mask_lane_bits) * 8u,
          "`mask_to_bitset::invoke` for this ABI returns a type with fewer bits "
          "than there are lanes in `simd_mask` for this ABI.");
 
-      auto const pattern = detail::simd_abi::invoke<mask_lane_bits, Hook>(mask);
+      auto const pattern = detail::simd_abi::invoke<mask_lane_bits, hook>(mask);
       bitset<Abi::lanes> out{};
       for (idx i = 0u; i < Abi::lanes; ++i) {
          // TODO: `pattern >> i` should work when `i` is an `idx` right-hand

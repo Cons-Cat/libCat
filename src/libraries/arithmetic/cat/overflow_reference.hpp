@@ -357,7 +357,7 @@ class overflow_reference
    }
 
    // `-=`. The `arithmetic_interface`-provided friend `operator-=` only
-   // fires when `subtract_by` returns `derived_type`, which is never true
+   // fires when `subtract_by` returns `Derived`, which is never true
    // for `overflow_reference` (it always returns the underlying `arithmetic`).
    // We mirror the `+=` family with a dedicated member that writes the
    // result back through the wrapped storage. SFINAE intentionally rejects
@@ -508,19 +508,19 @@ class overflow_reference
       return view().add(operand);
    }
 
-   template <is_unsigned_integral T_int>
+   template <is_unsigned_integral U>
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(T_int other) const -> detail::promoted_type<wrapper_type, T_int> {
+   add(U other) const -> detail::promoted_type<wrapper_type, U> {
       return view().add(other);
    }
 
-   template <is_signed_integral T_int>
+   template <is_signed_integral U>
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(T_int other) const
+   add(U other) const
       -> arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy> {
       return view().add(other);
    }
@@ -557,12 +557,12 @@ class overflow_reference
       return view().subtract_by(operand);
    }
 
-   template <is_integral T_int>
-      requires(!is_same<remove_cvref<T_int>, index<overflow_policy>>
+   template <is_integral U>
+      requires(!is_same<remove_cvref<U>, index<overflow_policy>>
                && detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(T_int other) const
+   subtract_by(U other) const
       -> arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy> {
       return view().subtract_by(other);
    }
@@ -633,11 +633,11 @@ class overflow_reference
       return view().multiply(operand);
    }
 
-   template <is_integral T_int>
+   template <is_integral U>
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(T_int other) const -> index<overflow_policy> {
+   multiply(U other) const -> index<overflow_policy> {
       return view().multiply(other);
    }
 
@@ -665,11 +665,11 @@ class overflow_reference
       return view().divide_by(operand);
    }
 
-   template <is_integral T_int>
+   template <is_integral U>
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(T_int other) const {
+   divide_by(U other) const {
       return view().divide_by(other);
    }
 
@@ -698,11 +698,11 @@ class overflow_reference
       return view().divide_into(operand);
    }
 
-   template <is_integral T_int>
+   template <is_integral U>
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(T_int other) const {
+   divide_into(U other) const {
       return view().divide_into(other);
    }
 
@@ -741,11 +741,11 @@ class overflow_reference
       return view().modulo_by(operand);
    }
 
-   template <is_integral T_int>
+   template <is_integral U>
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(T_int other) const -> index<overflow_policy> {
+   modulo_by(U other) const -> index<overflow_policy> {
       return view().modulo_by(other);
    }
 
@@ -764,11 +764,11 @@ class overflow_reference
       return view().modulo_into(operand);
    }
 
-   template <is_integral T_int>
+   template <is_integral U>
       requires(detail::is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(T_int operand) const -> index<overflow_policy> {
+   modulo_into(U operand) const -> index<overflow_policy> {
       return view().modulo_into(operand);
    }
 

@@ -108,12 +108,12 @@ struct monotype_storage {
 };
 
 // `in_sentinel` should be either a `T` or an error type for `scaredy`s.
-template <typename T, auto predicate, auto in_sentinel>
-   requires(!predicate(static_cast<T>(in_sentinel)))
+template <typename T, auto predicate, auto sentinel>
+   requires(!predicate(static_cast<T>(sentinel)))
 struct compact {
    using type = T;
    static constexpr auto predicate_function = predicate;
-   static constexpr T sentinel_value = in_sentinel;
+   static constexpr T sentinel_value = sentinel;
    // `compact`s can only be instantiated at compile-time.
    consteval compact() = default;
 };
@@ -178,8 +178,8 @@ inline constexpr __SIZE_TYPE__ tuple_size_v = tuple_size<T>::value;
 template <__SIZE_TYPE__, typename>
 struct tuple_element;
 
-template <__SIZE_TYPE__ in_index, typename T>
-using tuple_element_t = tuple_element<in_index, T>::type;
+template <__SIZE_TYPE__ index, typename T>
+using tuple_element_t = tuple_element<index, T>::type;
 
 // TODO: Does this actually have to be in `std::`?
 enum class align_val_t : __SIZE_TYPE__ {

@@ -48,7 +48,7 @@
 //
 // `fill_masked<T, Abi>` implements lane-blended scalar fill. Broadcast into lanes
 // selected by `lane_mask`, and keep `passthrough` elsewhere
-// (`simd_filled<V>[lane_mask](passthrough, value)` in `simd_ops`). `simd_ops`
+// (`simd_filled<Simd>[lane_mask](passthrough, value)` in `simd_ops`). `simd_ops`
 // selects it when
 // `has_simd_abi_fill_masked<T, Abi>` holds. The primary template has no
 // `invoke` until a target supplies one (for example AVX-512 `vblendm*` or mask
@@ -59,8 +59,8 @@ namespace cat::detail::simd_abi {
 template <typename Expected, typename Hook, typename... Args>
 [[nodiscard]]
 constexpr auto
-invoke(Args&&... args) -> Expected {
-   auto const result = Hook::invoke(static_cast<Args&&>(args)...);
+invoke(Args&&... arguments) -> Expected {
+   auto const result = Hook::invoke(static_cast<Args&&>(arguments)...);
    static_assert(
       is_same<Expected, remove_cvref<decltype(result)>>,
       "simd_abi specialization: Hook::invoke must return exactly the type "
@@ -211,13 +211,13 @@ struct op_duplicate_odd {};
 
 struct op_reverse_blocks {};
 
-template <typename OpTag, typename V>
+template <typename OpTag, typename Simd>
 struct widen_pair {};
 
-template <typename OpTag, typename V>
+template <typename OpTag, typename Simd>
 struct same_width {};
 
-template <typename OpTag, typename V>
+template <typename OpTag, typename Simd>
 struct reverse_blocks_layout {};
 
 }  // namespace cat::detail::simd_abi

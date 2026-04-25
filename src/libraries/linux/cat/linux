@@ -1497,10 +1497,10 @@ struct process {
                                          | cat::to_underlying(extra));
    }
 
-   template <typename... Args, cat::is_invocable<Args...> F>
+   template <typename... Args, cat::is_invocable<Args...> Callback>
    auto
    spawn(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
-         F&& function, Args&&... arguments) -> scaredy_nix<void>;
+         Callback&& callback, Args&&... arguments) -> scaredy_nix<void>;
 
    [[nodiscard]]
    auto
