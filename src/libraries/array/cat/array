@@ -7,6 +7,8 @@
 #include <cat/compare>
 #include <cat/memory>
 
+#include "cat/arithmetic"
+
 // #include <cat/initializer_list>
 
 namespace cat {
@@ -130,9 +132,35 @@ make_array_filled(T const& value) -> array<T, length> {
    return array;
 }
 
+// Analogous to the proposed `std::aggr::get` in the P2141 paper
+template <idx in_index, typename T, idx length>
+   requires(in_index < length)
+[[nodiscard]]
+constexpr auto
+get(array<T, length>& a) noexcept -> T& {
+   return a[in_index];
+}
+
+template <idx in_index, typename T, idx length>
+   requires(in_index < length)
+[[nodiscard]]
+constexpr auto
+get(array<T, length> const& a) noexcept -> T const& {
+   return a[in_index];
+}
+
+template <idx in_index, typename T, idx length>
+   requires(in_index < length)
+[[nodiscard]]
+constexpr auto
+get(array<T, length>&& a) noexcept -> T&& {
+   return cat::move(a[in_index]);
+}
+
 }  // namespace cat
 
-// Implement tuple protocol for `cat::array`.
+// Tuple protocol: `std::tuple_size` / `tuple_element` for generic code, index
+// access via `cat::get`
 namespace std {
 
 template <typename T, ::cat::idx length>
@@ -161,29 +189,5 @@ template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
 struct tuple_element<in_index, ::cat::array<T, length> const volatile> {
    using type = T const volatile;
 };
-
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
-   requires(in_index < length.raw)
-[[nodiscard]]
-constexpr auto
-get(::cat::array<T, length>& a) noexcept -> T& {
-   return a[::cat::idx{in_index}];
-}
-
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
-   requires(in_index < length.raw)
-[[nodiscard]]
-constexpr auto
-get(::cat::array<T, length> const& a) noexcept -> T const& {
-   return a[::cat::idx{in_index}];
-}
-
-template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
-   requires(in_index < length.raw)
-[[nodiscard]]
-constexpr auto
-get(::cat::array<T, length>&& a) noexcept -> T&& {
-   return mov(a[::cat::idx{in_index}]);
-}
 
 }  // namespace std

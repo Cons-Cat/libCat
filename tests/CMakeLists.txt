@@ -62,6 +62,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_set_memory.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_magic_get.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vec.cpp
     # TODO: This container needs a lot of work.

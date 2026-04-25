@@ -3,6 +3,21 @@
 
 #include "../unit_tests.hpp"
 
+// Not a P2141 magic-aggregate: tuple-like `std` hooks + `cat::get` and member
+// `get` for structured bindings
+test(tuple_structured_bindings_with_get) {
+   cat::tuple<int, bool> t{4, true};
+   static_assert(!cat::has_aggregate_get<decltype(t)>);
+   cat::verify(t.first() == 4);
+   cat::verify(t.template get<0u>() == 4);
+   cat::verify(cat::get<0u>(t) == 4);
+   cat::verify(cat::get<1u>(t) == true);
+   auto& [ti, tb] = t;
+   cat::verify(ti == 4 && tb);
+   ti = 9;
+   cat::verify(t.first() == 9);
+}
+
 struct tup_non_trivial {
    tup_non_trivial(int) {}
 

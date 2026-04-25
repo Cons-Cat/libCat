@@ -390,6 +390,7 @@ tuple(types...) -> tuple<types...>;
 template <typename tuple_type>
 concept is_tuple = detail::is_tuple_impl<decay<tuple_type>>::value;
 
+// Analogous to the proposed `std::aggr::get` in the P2141 paper
 template <idx in_index, typename tuple_type>
    requires(is_tuple<tuple_type>)
 [[nodiscard]]
@@ -444,6 +445,8 @@ apply(callback_type&& callback, tuple_type&& tuple) {
 }
 
 }  // namespace cat
+
+#include "implementations/magic_get.tpp"
 
 namespace cat {
 constexpr auto

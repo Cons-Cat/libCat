@@ -22,8 +22,8 @@ test(array_structured_bindings) {
       static_assert(std::tuple_size_v<cat::array<int, 3>> == 3);
       static_assert(cat::is_same<
                     std::tuple_element_t<1, cat::array<int, 3>>, int>);
-      static_assert(std::get<0>(constexpr_array) == 1);
-      static_assert(std::get<2>(constexpr_array) == 3);
+      static_assert(cat::get<0>(constexpr_array) == 1);
+      static_assert(cat::get<2>(constexpr_array) == 3);
    }();
 
    cat::array<int4, 3u> bound_array = {1_i4, 2_i4, 3_i4};
@@ -44,6 +44,17 @@ test(array_structured_bindings) {
    auto& [ref_a, ref_b, ref_c] = mutable_array;
    ref_a = 7_i4;
    cat::verify(mutable_array[0] == 7_i4 && ref_b == 5_i4 && ref_c == 6_i4);
+
+   // Two-element `cat::get` + structured binding (shorter `cat::array` than
+   // above)
+   {
+      cat::array<int, 2u> pair_array{1, 2};
+      cat::verify(cat::get<0>(pair_array) == 1);
+      auto& [e0, e1] = pair_array;
+      cat::verify(e0 == 1 && e1 == 2);
+      e0 = 0;
+      cat::verify(pair_array[0u] == 0);
+   }
 }
 
 test(array_traits) {
