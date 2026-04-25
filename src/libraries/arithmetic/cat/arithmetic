@@ -8,8 +8,9 @@
 #include <cat/limits>
 #include <cat/meta>
 
-// `arithmetic` and `arithmetic_ptr` are containers for numeric data types which
-// prevents unsafe implicit type casts.
+// `cat::arithmetic`, `cat::index`, and `cat::arithmetic_ptr` are containers for
+// numeric data types which both prevent unsound implicit type conversions and
+// make safe comparisons between different arithmetic types.
 //
 // All of their conversion operators, is_arithmetic operators and constructors
 // are generic with constraints. Because these methods are constrained, it
@@ -21,15 +22,38 @@
 // own size" guarantee that an unwanted overload cannot be resolved.
 // This solution is concise, because any constraint broadly applies to all
 // possible type conversions.
-
+//
+// There are attribute `enable_if` overloads that relax these constraints for
+// compile-time known sound conversions.
+//
+// There are also attribute `enable_if` overloads that relax these constraints.
+//
+// `cat::arithmetic` is an abstraction over fundamental integer and
+// floating-point arithmetic types.
+//
+// `cat::index` is a 63-bit unsigned integer type that is used to index arrays
+// and containers. This type is recommended for the iterator of `for` loops and
+// the parameter of indexing functions or quantities of memory.
+//
+// It is roughly analogous to `std::size_t`, however because it
+// is 63-bit, it may safely convert to both 64-bit signed and unsigned integers.
+// Subtracting from a `cat::index` will cast to `cat::iword`, thereby teaching
+// the type system that this subtraction will never underflow. When the
+// difference is compile-time known to be positive, this is relaxed and a
+// `cat::index` is returned instead. This is important for expressions involving
+// literals used within subscripting.
+//
+// All `for` loops in libCat use either `cat::index` or `cat::iword` as its
+// iterator integer.
+//
+// `cat::arithmetic_ptr` is a pointer type that is used to store pointers to
+// arithmetic types. It is essentially a type-safe `std::intptr_t` or
+// `std::uintptr_t` that may only reinterpret-cast back to the pointer type that
+// it originates from.
 #define ssizeof(argument) cat::make_signed(sizeof(argument))
 
 namespace cat {
 
-// `maybe` is forward-declared here so other headers that include
-// `<cat/arithmetic>` (for example `<cat/simd_ops>`, `<cat/collection>`, and
-// `<cat/span>`) can name `maybe<T>` in declarations without pulling in the
-// full `<cat/maybe>` (which would be a circular include from this file).
 template <typename T>
 class maybe;
 

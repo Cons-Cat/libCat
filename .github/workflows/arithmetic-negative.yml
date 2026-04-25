@@ -1,0 +1,82 @@
+name: Arithmetic negative-compile
+
+# `CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON` runs `-fsyntax-only` probes from
+# `cmake/cat_arithmetic_negative.cmake` at **configure** time (no
+# `cmake --build` / `ninja` required). A failed check means an ill-formed
+# pattern compiled or a must-accept probe failed. No CTest, no `libcat` link.
+#
+# Triggers only when arithmetic or this file changes.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/libraries/arithmetic/**'
+      - 'cmake/cat_arithmetic_negative.cmake'
+      - 'cmake/cat_arithmetic_neg_cases.cmake'
+      - 'cmake/cat_arithmetic_neg_matrix.cmake'
+      - 'cmake/arithmetic_neg_deconst.hpp'
+      - '.github/workflows/arithmetic-negative.yml'
+      - '.github/actions/setup-toolchain/**'
+  pull_request:
+    paths:
+      - 'src/libraries/arithmetic/**'
+      - 'cmake/cat_arithmetic_negative.cmake'
+      - 'cmake/cat_arithmetic_neg_cases.cmake'
+      - 'cmake/cat_arithmetic_neg_matrix.cmake'
+      - 'cmake/arithmetic_neg_deconst.hpp'
+      - '.github/workflows/arithmetic-negative.yml'
+      - '.github/actions/setup-toolchain/**'
+
+jobs:
+  arithmetic-negative:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-toolchain
+
+      - name: Configure (negative -fsyntax-only probes)
+        # Probes run inside `cmake` (see STATUS lines). Sanitizers off, shared
+        # off, no need to `cmake --build`.
+        run: |
+          set -euxo pipefail
+          cmake -S . -B build-arith-negative -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCAT_USE_SANITIZERS=OFF \
+            -DCAT_BUILD_SHARED=OFF \
+            -DCAT_BUILD_UNIT_TESTS=OFF \
+            -DCAT_BUILD_ALL_EXAMPLES=OFF \
+            -DCAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON
+
+      - name: Per-probe compiler output (excerpt; full file is an artifact)
+        if: always()
+        run: |
+          set -euxo pipefail
+          f=build-arith-negative/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log
+          if test -f "$f"; then
+            echo "First 80 lines of $f (one block per -fsyntax-only probe):"
+            head -n 80 "$f"
+            echo "…"
+            wc -l "$f" || true
+          else
+            echo "No $f (configure may have failed before the log was written). Check the configure step log."
+          fi
+
+      - name: Upload compile_diagnostics.log
+        if: always() && (success() || failure())
+        uses: actions/upload-artifact@v4
+        with:
+          name: arithmetic-negative-compile_diagnostics
+          path: build-arith-negative/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log
+          if-no-files-found: ignore
+
+      - name: List generated probe TUs
+        run: |
+          d=build-arith-negative/CMakeFiles/cat_arithmetic_neg
+          test -d "$d"
+          echo "Probe count (expect match for CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS line above):"
+          find "$d" -maxdepth 1 -name '*.cpp' -print | sort | wc -l
+          ls -1 "$d" 2>/dev/null | head -5
+          echo "…(full tree under the build dir, configure-only, no .o from this job)"

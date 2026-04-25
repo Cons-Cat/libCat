@@ -2,9 +2,9 @@ name: Setup libCat toolchain
 description: >
   Restore (or install + cache) the apt.llvm.org Clang 23 toolchain libCat
   needs in CI: clang / clang++, lld, llvm-ar / llvm-ranlib, llvm-symbolizer,
-  and clang-format. lldb-23, clangd-23, and clang-tidy-23 are purged
-  before the cache save since libCat does not invoke them, which roughly
-  halves the cached payload. Version-suffixed `/usr/bin/*-23` symlinks
+  clang-format, and `clang-tidy-23` (so `cmake/tidy.cmake` matches
+  `clang++-23`). lldb-23 and clangd-23 are purged before the cache save.
+  Version-suffixed `/usr/bin/*-23` symlinks
   are recreated after install or restore so a cache hit looks
   indistinguishable from a fresh `llvm.sh 23` run, which matters because
   `cmake/llvm_archivers.cmake` and `cmake/format.cmake` look up
@@ -21,7 +21,7 @@ runs:
         path: /usr/lib/llvm-23
         # Bump `-vN` whenever the install / purge set changes (new
         # tool, dropped purge, different LLVM major).
-        key: llvm-23-ubuntu-24.04-v1
+        key: llvm-23-ubuntu-24.04-v2
 
     - name: Install Clang 23 from apt.llvm.org (cache miss)
       if: steps.cache-llvm.outputs.cache-hit != 'true'
@@ -41,14 +41,20 @@ runs:
         # `cmake/llvm_archivers.cmake` for the LTO bitcode index)
         # ship in `llvm-23`. `clang-format-23` is what
         # `cmake/format.cmake` invokes for `cat-format-check`.
-        sudo apt-get install -y llvm-23 clang-format-23
+        # `clang-tidy-23` stays on the image: `include(cmake/tidy.cmake)` in
+        # the root `CMakeLists.txt` must find a 23-series `clang-tidy`
+        # matching the compiler, even for jobs that never run `cat-tidy`.
+        # `run-clang-tidy-23` lives in `clang-tools-23` on Debian / Ubuntu
+        # (used by `cmake/tidy.cmake`).
+        sudo apt-get install -y llvm-23 clang-format-23 \
+          clang-tidy-23 clang-tools-23
 
         # `libclang-rt-23-dev` is intentionally NOT purged.
         # `CMakeLists.txt` resolves `libclang_rt.asan-x86_64.so`
         # from clang's resource dir for `-shared-libasan`.
         sudo apt-get remove --purge -y \
           lldb-23 liblldb-23 python3-lldb-23 \
-          clangd-23 clang-tidy-23 \
+          clangd-23 \
           || true
 
         # `actions/cache` saves with a non-sudo `tar`, which would
@@ -69,7 +75,8 @@ runs:
         for tool in \
           clang clang++ clang-cpp clang-format \
           lld ld.lld \
-          llvm-ar llvm-ranlib llvm-symbolizer
+          llvm-ar llvm-ranlib llvm-symbolizer \
+          clang-tidy run-clang-tidy
         do
           src="/usr/lib/llvm-23/bin/${tool}"
           if [ -x "${src}" ]; then
@@ -102,3 +109,5 @@ runs:
         command -v llvm-ar-23
         command -v llvm-ranlib-23
         command -v clang-format-23
+        command -v clang-tidy-23
+        command -v run-clang-tidy-23
