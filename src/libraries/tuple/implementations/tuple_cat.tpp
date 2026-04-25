@@ -8,56 +8,74 @@
 namespace cat {
 
 namespace detail {
-template <typename... outer_tuple_elements>
+template <typename tuple_type, idx... indices>
 constexpr auto
-get_outer_type_list(type_map<outer_tuple_elements...>) {
-   return (type_list_filled<decay<outer_tuple_elements>,
-                            idx(sizeof...(outer_tuple_elements))>{}
-           + ...);
+forward_tuple_impl(tuple_type&& input_tuple, index_list_type<indices...>) {
+   using tuple_decay = decay<tuple_type>;
+   using tuple_types = typename tuple_decay::types;
+   return cat::tuple<typename tuple_types::template get<indices>...>{
+      fwd(input_tuple).template get<indices>()...};
 }
 
-template <typename... inner_tuple_elements>
+template <typename tuple_type>
 constexpr auto
-get_inner_type_list(type_map<inner_tuple_elements...>) {
-   // Make a `type_list` from every `tuple_element`, and concatenate the
-   // lists together.
-   return (type_list<decay<inner_tuple_elements>>{} + ...);
+forward_tuple(tuple_type&& input_tuple) {
+   using tuple_decay = decay<tuple_type>;
+   return forward_tuple_impl(fwd(input_tuple),
+                             make_index_sequence<tuple_decay::types::size>{});
 }
 
-// This takes a forwarding tuple as a parameter. The forwarding tuple only
-// contains references, so it should just be taken by value.
-template <typename outer_tuple, typename... outer_tuple_elements,
-          typename... inner_tuple_elements>
+template <typename left_tuple_type, typename right_tuple_type,
+          idx... left_index, idx... right_index>
 constexpr auto
-tuple_cat_detail(outer_tuple&& tuple, type_list<outer_tuple_elements...>,
-                 type_list<inner_tuple_elements...>)
-   -> cat::tuple<typename inner_tuple_elements::element...> {
-   return {// For every tuple passed in through `outer_tuple`, move the n'th
-           // tuple's element storage into a new `tuple` at the same index.
-           move(tuple.template Identity<outer_tuple_elements>::storage)
-              .template Identity<inner_tuple_elements>::storage...};
+tuple_cat_two_impl(left_tuple_type&& left, right_tuple_type&& right,
+                   index_list_type<left_index...>,
+                   index_list_type<right_index...>) {
+   using left_decay = decay<left_tuple_type>;
+   using right_decay = decay<right_tuple_type>;
+   using left_types = typename left_decay::types;
+   using right_types = typename right_decay::types;
+   return tuple<typename left_types::template get<left_index>...,
+                typename right_types::template get<right_index>...>{
+      fwd(left).template get<left_index>()...,
+      fwd(right).template get<right_index>()...};
+}
+
+template <typename left_tuple_type, typename right_tuple_type>
+constexpr auto
+tuple_cat_two(left_tuple_type&& left, right_tuple_type&& right) {
+   using left_decay = decay<left_tuple_type>;
+   using right_decay = decay<right_tuple_type>;
+   return tuple_cat_two_impl(fwd(left), fwd(right),
+                             make_index_sequence<left_decay::types::size>{},
+                             make_index_sequence<right_decay::types::size>{});
 }
 }  // namespace detail
 
-template <typename... types>
 constexpr auto
-tuple_cat(types&&... tuples) {
-   if constexpr (sizeof...(types) == 0) {
-      return tuple<>{};
-   } else {
-      // Create a `tuple` out of all the argument tuples.
-      using outer_tuple = tuple<decay<types>...>;
-      using outer_tuple_type_map = outer_tuple::Map;
-
-      // Get the `type_list` from the inner and outer tuples.
-      constexpr type_list outer_elements_list =
-         detail::get_outer_type_list(outer_tuple_type_map());
-      constexpr type_list inner_elements_list =
-         detail::get_inner_type_list(outer_tuple_type_map());
-
-      return detail::tuple_cat_detail(outer_tuple(move(tuples)...),
-                                      outer_elements_list, inner_elements_list);
-   }
+tuple_cat() -> tuple<> {
+   return {};
 }
 
+template <typename tuple_type>
+   requires(is_tuple<tuple_type>)
+constexpr auto
+tuple_cat(tuple_type&& tuple) {
+   return detail::forward_tuple(fwd(tuple));
+}
+
+template <typename left_tuple_type, typename right_tuple_type,
+          typename... remaining_tuples>
+   requires(is_tuple<left_tuple_type> && is_tuple<right_tuple_type>
+            && (is_tuple<remaining_tuples> && ...))
+constexpr auto
+tuple_cat(left_tuple_type&& left, right_tuple_type&& right,
+          remaining_tuples&&... remaining) {
+   auto combined = detail::tuple_cat_two(fwd(left), fwd(right));
+   if constexpr (sizeof...(remaining_tuples) == 0) {
+      return combined;
+   } else {
+      return tuple_cat(move(combined), fwd(remaining)...);
+   }
+}
 }  // namespace cat
