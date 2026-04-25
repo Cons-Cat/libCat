@@ -77,6 +77,7 @@ if(CAT_BUILD_UNIT_TESTS)
     # Intel SDE pinned to `-skl`.
     ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_pointer_in_range.cpp
   )
 
   add_executable(unit_tests unit_tests.cpp)

@@ -17,6 +17,12 @@ copy_memory(void const* p_source, void* p_destination, idx bytes);
 template <typename T>
 class span;
 
+// This is implemented in `<cat/span>`.
+template <typename T>
+[[nodiscard]]
+constexpr auto
+is_pointer_in_range(T const* p_pointer, span<T const> range) noexcept -> bool;
+
 [[nodiscard]]
 constexpr auto
 is_memory_overlapping(void const* p_first, idx first_bytes,
