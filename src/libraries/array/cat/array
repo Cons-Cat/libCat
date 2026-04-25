@@ -94,7 +94,7 @@ array : public collection_interface<array<T, length>, T>,
    }
 
  private:
-   T m_data[length]; // NOLINT We need a raw array to implement this.
+   T m_data[length];  // NOLINT We need a raw array to implement this.
 };
 
 // Construct an `array<int, 3>` as: `array a = {0, 1, 2};`

@@ -50,9 +50,8 @@ span<T, Extent>::operator<=>(R const& rhs) const {
    };
 
    using element_type = remove_cv<T>;
-   using category_type = decltype(
-      synth_three_way(declval<element_type const&>(),
-                      declval<element_type const&>()));
+   using category_type = decltype(synth_three_way(
+      declval<element_type const&>(), declval<element_type const&>()));
 
    idx i = 0u;
    idx const lhs_size = this->size();

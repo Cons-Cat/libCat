@@ -29,14 +29,14 @@
 // `[[gsl::Pointer(T)]]` so it participates in Clang's lifetime analysis.
 // It matches the ABI of `nix::io_vector` for trivial syscall compatibility.
 
+#include <detail/initializer_list.hpp>
+
 #include <cat/bit>
 #include <cat/collection>
 #include <cat/compare>
 #include <cat/math>
 #include <cat/memory>
 #include <cat/meta>
-
-#include <detail/initializer_list.hpp>
 
 namespace cat {
 
