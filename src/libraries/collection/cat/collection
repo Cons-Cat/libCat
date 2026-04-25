@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include "detail/initializer_list.hpp"
 #include <cat/algorithm>
 #include <cat/iterator>
 #include <cat/math>

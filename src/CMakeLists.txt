@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 # Per-library subdirs on the include path. Hoisted (and re-exposed to parent
 # scope) so `cat_install.cmake`'s `install(DIRECTORY)` uses the same list.
 set(CAT_INCLUDE_SUBDIRS
-  meta compare limits runtime cpuid sanitizer arithmetic initializer_list
+  meta compare limits runtime cpuid sanitizer arithmetic
   simd algorithm debug variant scaredy maybe match notype unique collection
   array span list string tui format memory allocator utility functional file
   linux thread atomic socket x11 bit bitset iterator math type_list tuple
@@ -157,6 +157,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bit/cat/bit
   ${CATLIB}/bitset/cat/bitset
   ${CATLIB}/collection/cat/collection
+  ${CATLIB}/collection/detail/initializer_list.hpp
   ${CATLIB}/compare/cat/compare
   ${CATLIB}/debug/cat/debug
   ${CATLIB}/file/cat/file
