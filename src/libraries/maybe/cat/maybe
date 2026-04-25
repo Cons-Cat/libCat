@@ -2,6 +2,72 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::maybe` is analogous to `std::optional`, used for failure handling
+// throughout libCat. It wraps either a value of type `T` or no value. It
+// supports a fully monadic API, is iterable as a range, and supports opt-in
+// programmable niche-value optimization.
+//
+// `cat::maybe<void>` represents an optional unit value. It is effectively a
+// monadic abstraction over returning `bool`.
+//
+// `cat::maybe<T&>` represents an optional reference with rebinding assignment.
+//
+// `cat::compact` is a hook to niche-value optimization. It takes a value type
+// and a predicate function. The predicate evaluates true when the `maybe` holds
+// a value, otherwise false. This design deliberately encodes the optimization
+// in the `maybe`'s type, not the value's type, which is maximally flexible and
+// ergonomic.
+//
+// The `cat::maybe` interface is informed by the following papers:
+//
+// P0798R8   Monadic operations for `std::optional`. `transform`, `and_then`,
+//           and `or_else` chain computations.
+//
+// P2988R12  `std::optional<T&>`. Assignment to a `maybe<T&>` rebinds the
+//           held pointer rather than assigning through to the referent,
+//           bindings to temporaries are deleted, and `value_or` returns by
+//           value to avoid dangling on a temporary fallback.
+//
+// P3836R2   Trivially copyable `std::optional<T&>`. `cat::maybe<T&>` has
+//           pointer layout and is trivially copyable.
+//
+// P3168R1   Range support for `std::optional`. `cat::maybe<T>` models a
+//           contiguous range of size 0 or 1 via `begin()` and `end()`.
+//
+// Rather than use partial template specializations, `cat::maybe` storage is
+// selected internally, and supports:
+//
+//    maybe<void>            -> maybe_value_storage<monostate_type>
+//    maybe<compact<...>>    -> maybe_compact_storage<...>  (niche-using,
+//                              sizeof(maybe) == sizeof(T))
+//    maybe<T&>              -> maybe_reference_storage<T>  (pointer-sized,
+//                              trivially copyable)
+//    maybe<T>               -> maybe_value_storage<T>      (value plus a
+//                              `bool` engagement flag)
+//
+// There are convenience aliases on top of the niche-using storage:
+//
+//    maybe_ptr<T>           -> maybe<sentinel<T*, nullptr>>
+//    maybe_non_zero<T>      -> maybe<sentinel<T, T(0)>>
+//    maybe_non_negative<T>  -> maybe<compact<T, ..., -1>>
+//    maybe_idx              -> maybe<compact<idx, ...>> using the unused
+//                              high bit of `idx` as the empty niche.
+//                              `narrow_cast<idx>(value)` returns it.
+//
+// Accessors are unchecked by default. The unchecked observer is `.value()`,
+// with `.p_value()` for the address of the held value. Checked observers
+// are `.assert()`, `.verify()`, and `.or_exit()`.
+//
+// `cat::maybe` intentionally not provide `operator*`, `operator->`, or implicit
+// conversion to `bool`. Truthiness testing can be replaced by `.has_value()`,
+// and it otherwise causes many subtle type safety concerns, such as:
+// https://brevzin.github.io/c++/2023/01/18/optional-construction/
+//
+// Construct a `maybe` directly with the wrapped type's constructors, with
+// `cat::nullopt`, with `cat::monostate` (for `maybe<void>`), with the
+// `cat::in_place` tag, or via the `cat::make_maybe(value)` and
+// `cat::make_maybe<T>(arguments...)` factories.
+
 namespace cat {
 namespace detail {
 // A `nullopt_type` is consumed by an `maybe` constructor to prevent
@@ -38,8 +104,24 @@ struct is_maybe_impl<maybe<U>> {
 template <typename T>
 concept is_maybe = detail::is_maybe_impl<remove_cvref<T>>::value;
 
-template <typename char_type, bool null_terminated>
-   requires(sizeof(char_type) == 1)
+namespace detail {
+// Mirrors the `converts-from-any-cvref` exposition concept used by
+// `std::optional` to disambiguate the converting-`maybe` constructors and
+// assignment operators when `value_type` is itself constructible or
+// convertible from a `maybe<U>` (see LWG 3836 and Barry Revzin,
+// "Getting in trouble with mixed construction",
+// https://brevzin.github.io/c++/2023/01/18/optional-construction/).
+// `T` is the engaging element type and `W` is the full source `maybe<U>`.
+template <typename T, typename W>
+concept maybe_converts_from_any_cvref =
+   is_constructible<T, W&> || is_convertible<W&, T> || is_constructible<T, W>
+   || is_convertible<W, T> || is_constructible<T, W const&>
+   || is_convertible<W const&, T> || is_constructible<T, W const>
+   || is_convertible<W const, T>;
+}  // namespace detail
+
+template <typename CharT, bool null_terminated>
+   requires(sizeof(CharT) == 1)
 class basic_str_span;
 
 using str_view = basic_str_span<char const, false>;
@@ -56,8 +138,8 @@ struct maybe_value_storage {
    // If `T` is forwarded arguments by the `in_place` `maybe`
    // constructor, then construct it in-place with those arguments.
    template <typename... Args>
-   constexpr maybe_value_storage(Args... args) {
-      this->construct(args...);
+   constexpr maybe_value_storage(Args... arguments) {
+      this->construct(arguments...);
    }
 
    // If `T` is trivially copy-constructible, use this simple copy constructor.
@@ -198,8 +280,8 @@ struct maybe_value_storage {
    // Construct an object at the address of the held `storage`.
    template <typename... Args>
    constexpr void
-   construct(Args&&... args) {
-      new (__builtin_addressof(m_storage)) T(fwd(args)...);
+   construct(Args&&... arguments) {
+      new (__builtin_addressof(m_storage)) T(fwd(arguments)...);
       m_has_some = true;
    }
 
@@ -249,27 +331,47 @@ struct maybe_value_storage {
    bool m_has_some = false;
 };
 
+// `maybe_reference_storage` is a non-owning, trivially-copyable wrapper
+// around a pointer to `T`. It models `optional<T&>`: assignment always
+// rebinds and never destroys the referent, and the wrapper itself is
+// trivially copyable so `cat::maybe<T&>` is too.
+//
+// P2988R12 `optional<T&>`. Reference rebinding semantics.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
+// P3836R2 Trivially copyable `optional<T&>`.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3836r2.html
 template <typename T>
 struct maybe_reference_storage {
    using value_type = T;
 
-   template <typename U>
-   constexpr maybe_reference_storage(U& in_value)
-       : p_storage(__builtin_addressof(in_value)) {
-   }
+   constexpr maybe_reference_storage() = default;
+   constexpr maybe_reference_storage(maybe_reference_storage const&) = default;
+   constexpr maybe_reference_storage(maybe_reference_storage&&) = default;
+   constexpr auto
+   operator=(maybe_reference_storage const&)
+      -> maybe_reference_storage& = default;
+   constexpr auto
+   operator=(maybe_reference_storage&&) -> maybe_reference_storage& = default;
+   constexpr ~maybe_reference_storage() = default;
 
    constexpr maybe_reference_storage(detail::nullopt_type)
        : p_storage(nullptr) {
    }
 
-   // Rebind the reference if this is assigned a new value.
+   template <typename U>
+      requires(is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
+   constexpr maybe_reference_storage(U& in_value)
+       : p_storage(__builtin_addressof(static_cast<value_type>(in_value))) {
+   }
+
+   // Rebind the held pointer. The referent is never destroyed, even when
+   // the wrapper transitions through nullopt.
    constexpr auto
-   operator=(value_type& option) -> maybe_reference_storage& {
+   operator=(value_type option) -> maybe_reference_storage& {
       this->p_storage = __builtin_addressof(option);
       return *this;
    }
 
-   // The following methods are homogenous to all `maybe...storage_type` types.
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> value_type& {
@@ -282,35 +384,31 @@ struct maybe_reference_storage {
       return this->p_storage != nullptr;
    }
 
-   // Destroy the storage unconditionally.
+   // Disengage. The referent is never destroyed.
    constexpr void
    hard_reset() {
-      this->p_storage->~remove_reference<value_type>();
       this->p_storage = nullptr;
    }
 
-   // Construct an object at the address of the held `storage`.
-   template <typename... Args>
+   // References cannot be constructed in place (no place to put a temporary).
+   // Bind the held pointer to `referent` instead.
+   template <typename U>
+      requires(is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
    constexpr void
-   construct(Args&&... args) {
-      new (p_storage) T(fwd(args)...);
-      cat::assert(this->has_value());
+   construct(U& referent) {
+      this->p_storage = __builtin_addressof(static_cast<value_type>(referent));
    }
 
-   // If this is assigned an `maybe` which wraps a type that can be
-   // converted to `T` , then convert that storage to this type implicitly.
+   // Copy or clear the held pointer based on whether `maybe` is engaged.
+   // The referent is never destroyed.
    template <is_maybe other_maybe>
    constexpr void
    assign(other_maybe&& maybe) {
-      if (this->has_value()) {
-         // If this `maybe` has a value, then empty it.
-         this->hard_reset();
-      }
-
       if (maybe.has_value()) {
-         this->p_storage = fwd(maybe).p_value();
+         this->p_storage =
+            __builtin_addressof(static_cast<value_type>(maybe.value()));
       } else {
-         // If both `maybe`s are empty, nothing happens.
+         this->p_storage = nullptr;
       }
    }
 
@@ -470,8 +568,8 @@ struct maybe_compact_storage {
    // Construct an object at the address of the held `storage`.
    template <typename... Args>
    constexpr void
-   construct(Args&&... args) {
-      new (__builtin_addressof(m_storage)) value_type(fwd(args)...);
+   construct(Args&&... arguments) {
+      new (__builtin_addressof(m_storage)) value_type(fwd(arguments)...);
    }
 
    // If this is assigned an `maybe` which wraps a type that can be
@@ -529,8 +627,8 @@ class [[nodiscard]] maybe {
    // storage would be uninitialized.
    template <typename... Args>
       requires(!is_reference<value_type>)
-   constexpr maybe(in_place_type, Args... args) {
-      m_storage.construct(args...);
+   constexpr maybe(in_place_type, Args... arguments) {
+      m_storage.construct(arguments...);
    }
 
    // template <typename... Args>
@@ -563,13 +661,29 @@ class [[nodiscard]] maybe {
                && !is_copy_constructible<value_type>)
    constexpr maybe(U const& input) = delete;
 
-   // Rebinding converting reference constructor.
+   // Rebinding converting reference constructor. The dangling-temporary check
+   // rejects bindings that would create a temporary referent, and the
+   // conditional `explicit` mirrors `std::optional<T&>`.
+   //
+   // P2988R12 `optional<T&>`. Converting reference constructor.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
    template <typename U>
-      requires(
-         is_reference<value_type>
-         && is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
-   constexpr maybe(U& input) : m_storage(static_cast<value_type>(input)) {
+      requires(is_reference<value_type>
+               && is_implicitly_convertible<add_lvalue_reference<U>, value_type>
+               && !__reference_constructs_from_temporary(value_type, U&))
+   constexpr explicit(!__is_convertible(U&, value_type)) maybe(U& input)
+       : m_storage(static_cast<value_type>(input)) {
    }
+
+   // Reject reference binding to a temporary or rvalue. A deleted overload is
+   // preferred to a SFINAE failure for clearer diagnostics.
+   //
+   // P2988R12 `optional<T&>`. Dangling-temporary protection.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
+   template <typename U>
+      requires(is_reference<value_type>
+               && __reference_constructs_from_temporary(value_type, U))
+   constexpr maybe(U&&) = delete;
 
    // Move constructor.
    template <rvalue U>
@@ -579,21 +693,27 @@ class [[nodiscard]] maybe {
    constexpr maybe(U&& input) : m_storage(move(input)) {
    }
 
-   // `maybe` can be constructed by another `maybe`.
+   // `maybe` can be constructed by another `maybe`. The
+   // `maybe_converts_from_any_cvref` guard prevents these converting
+   // overloads from hijacking nested cases like `maybe<maybe<int>>` from
+   // `maybe<int>`, where the value constructor should win.
    template <typename U>
-      requires(is_implicitly_convertible<U, value_type>)
+      requires(is_implicitly_convertible<U, value_type>
+               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
    constexpr maybe(maybe<U>& input) {
       m_storage.assign(input);
    }
 
    template <typename U>
-      requires(is_implicitly_convertible<U, value_type>)
+      requires(is_implicitly_convertible<U, value_type>
+               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
    constexpr maybe(maybe<U> const& input) {
       m_storage.assign(input);
    }
 
    template <rvalue U>
-      requires(is_implicitly_convertible<U, value_type>)
+      requires(is_implicitly_convertible<U, value_type>
+               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
    constexpr maybe(maybe<U>&& input) {
       m_storage.assign(move(input));
    }
@@ -661,7 +781,8 @@ class [[nodiscard]] maybe {
    // Rebinding converting `maybe` copy assignment operator.
    template <typename U>
       requires(is_implicitly_convertible<U, value_type>
-               && !is_reference<value_type> && !is_reference<U>)
+               && !is_reference<value_type> && !is_reference<U>
+               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
    constexpr auto
    operator=(maybe<U> const& maybe) -> class maybe& {
       m_storage.assign(maybe);
@@ -671,7 +792,8 @@ class [[nodiscard]] maybe {
    // Rebinding converting `maybe` move assignment operator.
    template <typename U>
       requires(is_implicitly_convertible<U, value_type>
-               && is_move_assignable<value_type>)
+               && is_move_assignable<value_type>
+               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
    constexpr auto
    operator=(maybe<U>&& maybe) -> class maybe& {
       m_storage.assign(move(maybe));
@@ -680,7 +802,8 @@ class [[nodiscard]] maybe {
 
    // Rebinding converting `maybe` reference assignment operator.
    template <typename U>
-      requires(is_implicitly_convertible<U, value_type>)
+      requires(is_implicitly_convertible<U, value_type>
+               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
    constexpr auto
    operator=(maybe<U>& maybe) -> class maybe& {
       m_storage.assign(maybe);
@@ -782,14 +905,33 @@ class [[nodiscard]] maybe {
    }
 
    // Get the value held by a `maybe`, or a fallback value if it does not hold
-   // a value.
+   // a value. For `maybe<T&>`, the fallback is taken by forwarding reference
+   // and the result is returned by value — returning a reference would dangle
+   // when the fallback is a temporary.
+   //
+   // P2988R12 `optional<T&>`. `value_or` returns by value.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
    [[nodiscard]]
    constexpr auto
-   value_or(this auto&& self, value_type fallback) -> value_type {
+   value_or(this auto&& self, value_type fallback) -> value_type
+      requires(!is_reference<value_type> && !is_void<value_type>)
+   {
       if (self.m_storage.has_value()) {
          return fwd(self).m_storage.value();
       }
       return fallback;
+   }
+
+   template <typename U = remove_cvref<value_type>>
+      requires(is_reference<value_type>
+               && is_implicitly_convertible<U, remove_cvref<value_type>>)
+   [[nodiscard]]
+   constexpr auto
+   value_or(this auto&& self, U&& fallback) -> remove_cvref<value_type> {
+      if (self.m_storage.has_value()) {
+         return fwd(self).m_storage.value();
+      }
+      return static_cast<remove_cvref<value_type>>(fwd(fallback));
    }
 
    // Get a pointer to the data owned by this `maybe`. If `maybe` holds a raw
@@ -860,55 +1002,101 @@ class [[nodiscard]] maybe {
    // Monadic methods:
 
    // If this `maybe` holds a value, transform it by a function. Otherwise,
-   // propagate an empty `maybe`.
-   template <is_invocable<value_type> Function>
+   // propagate an empty `maybe`. For `maybe<void>`, the callable is invoked
+   // with no arguments, matching `tl::optional<void>`.
+   //
+   // P0798R8 Monadic operations for `std::optional`.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p0798r8.html
+   template <typename Callback>
    [[nodiscard]]
    constexpr auto
-   transform(this auto&& self, Function&& invocable) -> decltype(auto) {
-      using U = decltype(invocable(fwd(self).value()));
-      static_assert(!is_specialization<U, maybe>);
+   transform(this auto&& self, Callback&& callback) -> decltype(auto) {
+      if constexpr (is_void<T>) {
+         using U = decltype(callback());
+         static_assert(!is_specialization<U, maybe>);
 
-      if constexpr (is_void<U>) {
-         return self.has_value() ? maybe<void>{monostate}
-                                 : maybe<void>{nullopt};
-      } else {
-         if (self.has_value()) {
-            return maybe<U>{fwd(invocable)(fwd(self).value())};
+         if constexpr (is_void<U>) {
+            if (self.has_value()) {
+               fwd(callback)();
+               return maybe<void>{monostate};
+            }
+            return maybe<void>{nullopt};
+         } else {
+            if (self.has_value()) {
+               return maybe<U>{fwd(callback)()};
+            }
+            return maybe<U>{nullopt};
          }
-         return maybe<U>{nullopt};
+      } else {
+         using U = decltype(callback(fwd(self).value()));
+         static_assert(!is_specialization<U, maybe>);
+
+         if constexpr (is_void<U>) {
+            if (self.has_value()) {
+               fwd(callback)(fwd(self).value());
+               return maybe<void>{monostate};
+            }
+            return maybe<void>{nullopt};
+         } else {
+            if (self.has_value()) {
+               return maybe<U>{fwd(callback)(fwd(self).value())};
+            }
+            return maybe<U>{nullopt};
+         }
       }
    }
 
-   // Invoke an invocable returning a `maybe` on the value of this `maybe`, and
-   // propagate the result.
-   template <is_invocable<value_type> Function>
+   // Invoke a callback returning a `maybe` on the value of this `maybe`, and
+   // propagate the result. For `maybe<void>`, the callback is invoked with no
+   // arguments.
+   template <typename Callback>
    constexpr auto
-   and_then(this auto&& self, Function&& invocable) {
-      return self.has_value() ? fwd(invocable)(fwd(self).value()) : nullopt;
+   and_then(this auto&& self, Callback&& callback) {
+      if constexpr (is_void<T>) {
+         using ret = decltype(callback());
+         static_assert(is_specialization<ret, maybe>,
+                       "The callback parameter of `and_then` must return a "
+                       "specialization of `cat::maybe`.");
+         if (self.has_value()) {
+            return fwd(callback)();
+         }
+         return ret{nullopt};
+      } else {
+         using ret = decltype(callback(fwd(self).value()));
+         static_assert(is_specialization<ret, maybe>,
+                       "The callback parameter of `and_then` must return a "
+                       "specialization of `cat::maybe`.");
+         if (self.has_value()) {
+            return fwd(callback)(fwd(self).value());
+         }
+         return ret{nullopt};
+      }
    }
 
-   // Invoke an invocable if this `maybe` holds no value. This invocable must
-   // return either `void` or a `maybe`.
-   template <is_invocable Function>
+   // Invoke a callback if this `maybe` holds no value. The callback must
+   // return either `void` or a `maybe`. When it returns a `maybe`, `*this` is
+   // propagated when a value is held.
+   //
+   // P0798R8 Monadic operations for `std::optional`.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p0798r8.html
+   template <is_invocable Callback>
    constexpr auto
-   or_else(this auto&& self, Function&& invocable) {
-      using return_type = decltype(invocable());
+   or_else(this auto&& self, Callback&& callback) {
+      using return_type = decltype(callback());
       static_assert(is_void<return_type> || is_maybe<return_type>,
-                    "The invocable parameter `invocable` must return either "
+                    "The callback parameter `callback` must return either "
                     "`void` or a specialization of `cat::maybe`.");
 
-      if (!fwd(self).m_storage.has_value()) {
-         if constexpr (is_void<return_type>) {
-            fwd(invocable)();
-         } else {
-            return fwd(invocable)();
-         }
-      }
-
       if constexpr (is_void<return_type>) {
+         if (!self.has_value()) {
+            fwd(callback)();
+         }
          return;
       } else {
-         return return_type(nullopt);
+         if (self.has_value()) {
+            return return_type{fwd(self)};
+         }
+         return fwd(callback)();
       }
    }
 
@@ -955,14 +1143,91 @@ class [[nodiscard]] maybe {
    or_exit(str_view error_message, iword exit_code = 1) const&&;  // NOLINT
 
    // Construct the value in-place and destroy the held value iff it
-   // exists.
+   // exists. For `maybe<T&>`, this rebinds the held pointer.
+   //
+   // P2988R12 `optional<T&>`. `emplace` rebinds the held pointer.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
    template <typename... Args>
       requires(!is_void<T>)
    constexpr auto
-   emplace(Args&&... args) -> value_type& {
+   emplace(Args&&... arguments) -> value_type& {
       *this = nullopt;
-      m_storage.construct(fwd(args)...);
+      m_storage.construct(fwd(arguments)...);
       return m_storage.value();
+   }
+
+   // Disengage. For `maybe<T&>` this clears the held pointer without
+   // destroying the referent.
+   //
+   // P2988R12 `optional<T&>`. `reset` does not destroy the referent.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
+   constexpr void
+   reset() {
+      m_storage.hard_reset();
+   }
+
+   // Swap the engagement and value of two `maybe`s. For `maybe<T&>` the held
+   // pointers are exchanged — the referents themselves are never touched.
+   //
+   // P2988R12 `optional<T&>`. Swap rebinds pointers.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
+   constexpr void
+   swap(maybe& other)
+      requires(!is_void<value_type>)
+   {
+      if constexpr (is_reference<value_type>) {
+         auto* const p_temp = m_storage.p_storage;
+         m_storage.p_storage = other.m_storage.p_storage;
+         other.m_storage.p_storage = p_temp;
+      } else {
+         bool const has_a = this->has_value();
+         bool const has_b = other.has_value();
+         if (has_a && has_b) {
+            value_type temp = move(m_storage.value());
+            m_storage.value() = move(other.m_storage.value());
+            other.m_storage.value() = move(temp);
+         } else if (has_a) {
+            other.m_storage.construct(move(m_storage.value()));
+            m_storage.hard_reset();
+         } else if (has_b) {
+            m_storage.construct(move(other.m_storage.value()));
+            other.m_storage.hard_reset();
+         }
+      }
+   }
+
+   // Range support. A `maybe<T>` models a contiguous range of size 0 or 1, so
+   // iteration is just a bare pointer pair. `maybe<void>` has no traversable
+   // value and therefore no `begin`/`end`.
+   //
+   // P3168R1 Give `std::optional` range support.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3168r1.html
+   //
+   // TODO: When the ranges library lands, add the deferred operators —
+   // `operator==` / `<=>` between two `maybe`s, the range pipe `operator|`,
+   // and the view-adapter `operator&`.
+   [[nodiscard]]
+   constexpr auto
+   begin(this auto&& self)
+      requires(!is_void<value_type>)
+   {
+      using ptr_type = decltype(__builtin_addressof(self.m_storage.value()));
+      if (self.has_value()) {
+         return __builtin_addressof(self.m_storage.value());
+      }
+      return ptr_type{nullptr};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end(this auto&& self)
+      requires(!is_void<value_type>)
+   {
+      using ptr_type = decltype(__builtin_addressof(self.m_storage.value()));
+      if (self.has_value()) {
+         return __builtin_addressof(self.m_storage.value()) + 1;
+      }
+      return ptr_type{nullptr};
    }
 
  private:
@@ -972,6 +1237,48 @@ class [[nodiscard]] maybe {
 // This deduction guide is required for deducing references.
 template <typename T>
 maybe(T) -> maybe<T>;
+
+// `maybe<T&>` is trivially copyable and has the same layout as a pointer.
+// These static checks document and enforce that invariant against future
+// regressions.
+//
+// P3836R2 Trivially copyable `optional<T&>`.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3836r2.html
+static_assert(__is_trivially_copyable(maybe<int&>));
+static_assert(__is_trivially_copyable(maybe<int const&>));
+static_assert(sizeof(maybe<int&>) == sizeof(int*));
+
+// `make_maybe(value)` deduces the value type, like `std::make_optional`.
+// `make_maybe<T>(arguments...)` constructs `maybe<T>` in place. There is no
+// `make_maybe<T&>(...)` overload because constructing a `maybe<T&>` from a
+// temporary is forbidden, and partial-order ranking makes the
+// argument-deducing form pick up lvalues unambiguously, so callers should
+// just write `maybe<T&>{lvalue}` directly.
+//
+// P2988R12 `optional<T&>`. No reference factories.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
+template <typename T>
+[[nodiscard]]
+constexpr auto
+make_maybe(T&& value) -> maybe<remove_cvref<T>> {
+   return maybe<remove_cvref<T>>{fwd(value)};
+}
+
+template <typename T, typename... Args>
+   requires(!is_reference<T> && !is_void<T>)
+[[nodiscard]]
+constexpr auto
+make_maybe(Args&&... arguments) -> maybe<T> {
+   return maybe<T>{in_place, fwd(arguments)...};
+}
+
+template <typename T>
+   requires(is_void<T>)
+[[nodiscard]]
+constexpr auto
+make_maybe() -> maybe<void> {
+   return maybe<void>{monostate};
+}
 
 template <typename T>
 auto
