@@ -3,9 +3,7 @@
 #include "../unit_tests.hpp"
 #include "cat/debug"
 
-test(math) {
-   using namespace cat::arithmetic_literals;
-
+test(math_min_max) {
    // Test `min()`.
    cat::verify(cat::min(0) == 0);
    cat::verify(cat::min(0u) == 0u);
@@ -37,6 +35,10 @@ test(math) {
    cat::verify(cat::max(0u, 1u, 2u) == 2u);
    cat::verify(cat::max(0.f, 1.f, 2.f) == 2.f);
    cat::verify(cat::max(0., 1., 2.) == 2.);
+}
+
+test(math_abs) {
+   using namespace cat::arithmetic_literals;
 
    // Test `abs()`.
    cat::verify(cat::abs(1) == 1);
@@ -62,7 +64,9 @@ test(math) {
    cat::verify(cat::abs(1_u2) == 1_u2);
    cat::verify(cat::abs(1_u4) == 1_u4);
    cat::verify(cat::abs(1_u8) == 1_u8);
+}
 
+test(math_pow_integral) {
    // Test `pow()`.
    cat::verify(cat::pow(2, 2) == 4);
    cat::verify(cat::pow(2, 1) == 2);
@@ -81,9 +85,9 @@ test(math) {
    // cat::verify(cat::pow(2, 1) == 2.);
    // cat::verify(cat::pow(2, 0) == 1.);
    // cat::verify(cat::pow(8, -1) == 0.);
+}
 
-   // TODO: How should rounding functions handle negative inputs?
-
+test(math_round_to_multiple) {
    // Test `round_up_to_multiple_of()`.
    static_assert(cat::round_up_to_multiple_of(5, 2) == 6);
    static_assert(cat::round_up_to_multiple_of(5u, 1) == 5u);
@@ -94,6 +98,10 @@ test(math) {
    static_assert(cat::round_down_to_multiple_of(5u, 1) == 5u);
    static_assert(cat::round_down_to_multiple_of(5, 8) == 0);
 
+   // TODO: How should rounding functions handle negative inputs?
+}
+
+test(math_clamp) {
    // Test `clamp()`.
    cat::verify(cat::clamp(-10, 0, 10) == 0);
    cat::verify(cat::clamp(5, 0, 10) == 5);
@@ -110,4 +118,39 @@ test(math) {
    cat::verify(cat::clamp(-10., 0., 10.) == 0.);
    cat::verify(cat::clamp(5., 0., 10.) == 5.);
    cat::verify(cat::clamp(20., 0., 10.) == 10.);
+}
+
+test(math_comparators) {
+   // Test `<functional>`-style comparators.
+   cat::verify(cat::equal_to<int>{}(2, 2));
+   cat::verify(!cat::equal_to<int>{}(2, 3));
+
+   cat::verify(cat::not_equal_to<int>{}(2, 3));
+   cat::verify(!cat::not_equal_to<int>{}(2, 2));
+
+   cat::verify(cat::less<int>{}(1, 2));
+   cat::verify(!cat::less<int>{}(2, 1));
+
+   cat::verify(cat::greater<int>{}(2, 1));
+   cat::verify(!cat::greater<int>{}(1, 2));
+
+   cat::verify(cat::less_equal<int>{}(2, 2));
+   cat::verify(cat::less_equal<int>{}(1, 2));
+   cat::verify(!cat::less_equal<int>{}(2, 1));
+
+   cat::verify(cat::greater_equal<int>{}(2, 2));
+   cat::verify(cat::greater_equal<int>{}(2, 1));
+   cat::verify(!cat::greater_equal<int>{}(1, 2));
+
+   cat::verify(cat::equal_to<>{}(1, 1l));
+   cat::verify(cat::not_equal_to<>{}(1, 2l));
+   cat::verify(cat::less<>{}(1, 2l));
+   cat::verify(cat::greater<>{}(2, 1l));
+   cat::verify(cat::less_equal<>{}(2, 2l));
+   cat::verify(cat::greater_equal<>{}(2, 2l));
+
+   cat::verify(cat::compare_three_way<int>{}(1, 2) < 0);
+   cat::verify(cat::compare_three_way<int>{}(2, 2) == 0);
+   cat::verify(cat::compare_three_way<int>{}(3, 2) > 0);
+   cat::verify(cat::compare_three_way<>{}(1, 2) < 0);
 }
