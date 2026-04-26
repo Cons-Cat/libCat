@@ -852,7 +852,7 @@ constinit inline struct mover {
    [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
      gnu::nodebug]]
    friend constexpr auto
-   operator*(mover, T& x) -> decltype(auto) {
+   operator*(mover /*mover*/, T& x) -> decltype(auto) {
       return move(x);
    }
 
@@ -861,7 +861,7 @@ constinit inline struct mover {
    [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
      gnu::nodebug]]
    friend constexpr auto
-   operator*(mover, T&& x) -> T&& {
+   operator*(mover /*mover*/, T&& x) -> T&& {
       return static_cast<cat::remove_reference<T>&&>(x);
    }
 
@@ -876,7 +876,7 @@ constinit inline struct mover {
    friend constexpr void
    operator*(mover, mover) =
       delete ("`mov mov ...` syntax is meaningless. Use `mov ...` instead!");
-} mover;
+} const mover;
 }  // namespace detail
 
 #define mov ::cat::detail::mover*
