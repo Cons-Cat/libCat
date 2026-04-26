@@ -1,7 +1,5 @@
 # Configure-time `-fsyntax-only` checks for `cat::arithmetic`, `cat::index`, and
-# `cat::arithmetic_ptr`. Most probes must be ill-formed. A few use
-# `_cat_neg_try_compiles` to lock in overload resolution (e.g. `idx` / `iword` vs
-# `uword`).
+# `cat::arithmetic_ptr`. Every probe must be ill-formed.
 #
 # Bodies and naming follow the **inverse** of the `test_arithmetic` unit tests
 # (compound assignment, brace OOR, `idx`, `arithmetic_ptr`, mixed-wide
@@ -35,7 +33,7 @@ option(CAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS
   "With CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS, print each must-reject probe to configure output (hundreds of lines)."
   OFF)
 option(CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS
-  "Enable -fsyntax-only checks for cat::arithmetic / index / ptr (ill-formed probes and a few must-compile resolution checks) at configure time."
+  "Enable -fsyntax-only checks for cat::arithmetic / index / ptr (ill-formed probes only) at configure time."
   OFF)
 
 if (NOT CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS)
@@ -66,10 +64,20 @@ endforeach()
 unset(_d)
 unset(_cat_neg_includes)
 
-# Macros (not `function`) so per-probe counters in this file stay visible. No
+# Match normal libCat TUs: `global_includes.hpp` forward-declares
+# `default_compact_trait` / `compact` before `<cat/maybe>` pulls `<cat/arithmetic>`,
+# so arithmetic's `default_compact_trait<index<...>>` specialization is valid.
+list(APPEND _cat_neg_compile_args
+  -nostdlib
+  -nostdlib++
+  -fno-exceptions
+  -fno-rtti
+  "-include" "${CMAKE_SOURCE_DIR}/src/global_includes.hpp")
+
+# Macro (not `function`) so per-probe counters in this file stay visible. No
 # `ninja` / `cmake --build` is involved: the compiler is invoked at configure
 # by `execute_process` only. The build tree is not required for linking.
-macro(_cat_neg_try_fails _name _src)
+macro(_cat_neg_expect_illformed _name _src)
   set(_cat_n_path
     "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/${_name}.cpp")
   file(WRITE "${_cat_n_path}" "${_src}")
@@ -144,45 +152,6 @@ macro(_cat_neg_try_fails _name _src)
   endif()
 endmacro()
 
-# A few `operator-` / overload-resolution checks that must *compile* (e.g. the
-# `idx` / `uword` case below). Fails configure if the compiler returns non-zero
-macro(_cat_neg_try_compiles _name _src)
-  set(_cat_n_path
-    "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/${_name}.cpp")
-  file(WRITE "${_cat_n_path}" "${_src}")
-  execute_process(
-    COMMAND
-      "${CMAKE_CXX_COMPILER}"
-      ${_cat_neg_compile_args}
-      "${_cat_n_path}"
-    RESULT_VARIABLE _pos_rc
-    OUTPUT_VARIABLE _pos_out
-    ERROR_VARIABLE _pos_err
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_STRIP_TRAILING_WHITESPACE
-  )
-  if (NOT _pos_rc EQUAL 0)
-    set(_pos_log "${_pos_err}")
-    if (NOT _pos_log)
-      set(_pos_log "${_pos_out}")
-    endif()
-    if (NOT _pos_log)
-      set(_pos_log "(no output)")
-    endif()
-    message(SEND_ERROR
-      "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: case '${_name}' was expected to build with -fsyntax-only. Output:\n"
-      "${_pos_log}")
-  else()
-    file(
-      APPEND
-      "${_cat_neg_diag_path}"
-      "==== ${_name} (expected success, exit 0) ==== OK (no error output)\n\n"
-    )
-    math(EXPR _cat_neg_n_compile_ok
-      "${_cat_neg_n_compile_ok} + 1")
-  endif()
-endmacro()
-
 set(
   _cat_neg_diag_path
   "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log"
@@ -190,18 +159,17 @@ set(
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg")
 file(WRITE
   "${_cat_neg_diag_path}"
-  "cat::arithmetic negative -fsyntax-only (must-reject stderr/stdout, must-accept one-liners)\n"
+  "cat::arithmetic negative -fsyntax-only (must-reject stderr/stdout)\n"
   "Compiler: ${CMAKE_CXX_COMPILER}\n"
   "-----\n"
 )
 
 set(_cat_neg_n_illformed_ok 0)
-set(_cat_neg_n_compile_ok 0)
 
 # Out-of-range brace constants: every `uint1`..`uint8` / `int1`..`int8` width
 # (mirrors the per-width story in the positive `can_brace_init` block).
 foreach(n IN ITEMS 1 2 4 8)
-  _cat_neg_try_fails("uint${n}-brace-neg1" "#include <cat/arithmetic>
+  _cat_neg_expect_illformed("uint${n}-brace-neg1" "#include <cat/arithmetic>
 void t() { (void)cat::uint${n}{-1}; }
 ")
   if (n EQUAL 1)
@@ -214,7 +182,7 @@ void t() { (void)cat::uint${n}{-1}; }
     # 2^64: too large for any 64-bit integer type (fails the lexer / constant path).
     set(_il "18446744073709551616u")
   endif()
-  _cat_neg_try_fails("int${n}-const-too-large" "#include <cat/arithmetic>
+  _cat_neg_expect_illformed("int${n}-const-too-large" "#include <cat/arithmetic>
 void t() { (void)cat::int${n}{${_il}}; }
 ")
   unset(_il)
@@ -232,11 +200,7 @@ file(
   "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/*.cpp"
 )
 list(LENGTH _cat_neg_glob _cat_neg_n_glob)
-math(
-  EXPR
-  _cat_neg_n_calc
-  "${_cat_neg_n_illformed_ok} + ${_cat_neg_n_compile_ok}"
-)
+set(_cat_neg_n_calc "${_cat_neg_n_illformed_ok}")
 if (NOT _cat_neg_n_glob EQUAL _cat_neg_n_calc)
   message(
     WARNING
@@ -247,7 +211,7 @@ endif()
 message(
   STATUS
   "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: OK - compiler `${CMAKE_CXX_COMPILER}` "
-  "(${_cat_neg_n_illformed_ok} must-reject, ${_cat_neg_n_compile_ok} must-accept) "
+  "(${_cat_neg_n_illformed_ok} must-reject) "
   "matches ${_cat_neg_n_glob} -fsyntax-only .cpp. "
   "Per-probe compiler output: ${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log "
   "(or configure with -DCAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS=ON to print excerpts here)"

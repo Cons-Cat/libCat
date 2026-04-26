@@ -14,7 +14,7 @@ namespace cat {
 constexpr void
 copy_memory(void const* p_source, void* p_destination, idx bytes);
 
-template <typename T, idx extent = idx(-1)>
+template <typename T, idx extent = idx::max()>
 class span;
 
 // This is implemented in `<cat/span>`.
