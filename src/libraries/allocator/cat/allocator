@@ -291,7 +291,7 @@ using sized_allocation = tuple<T, idx>;
 
 template <is_pointer T>
 using maybe_sized_allocation =
-   maybe<sentinel<sized_allocation<T>, sized_allocation<T>{nullptr, idx(0u)}>>;
+   maybe<sentinel<sized_allocation<T>, sized_allocation<T>{nullptr, 0u}>>;
 
 template <typename Derived>
 class allocator_interface {

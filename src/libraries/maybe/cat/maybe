@@ -906,7 +906,7 @@ class [[nodiscard]] maybe {
 
    // Get the value held by a `maybe`, or a fallback value if it does not hold
    // a value. For `maybe<T&>`, the fallback is taken by forwarding reference
-   // and the result is returned by value — returning a reference would dangle
+   // and the result is returned by value. Returning a reference would dangle
    // when the fallback is a temporary.
    //
    // P2988R12 `optional<T&>`. `value_or` returns by value.
@@ -1167,7 +1167,7 @@ class [[nodiscard]] maybe {
    }
 
    // Swap the engagement and value of two `maybe`s. For `maybe<T&>` the held
-   // pointers are exchanged — the referents themselves are never touched.
+   // pointers are exchanged. The referents themselves are never touched.
    //
    // P2988R12 `optional<T&>`. Swap rebinds pointers.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
@@ -1203,7 +1203,7 @@ class [[nodiscard]] maybe {
    // P3168R1 Give `std::optional` range support.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3168r1.html
    //
-   // TODO: When the ranges library lands, add the deferred operators —
+   // TODO: When the ranges library lands, add the deferred operators:
    // `operator==` / `<=>` between two `maybe`s, the range pipe `operator|`,
    // and the view-adapter `operator&`.
    [[nodiscard]]

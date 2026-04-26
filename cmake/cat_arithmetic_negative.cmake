@@ -9,7 +9,7 @@
 # paths in `overflow_reference` / `index`, etc.). Only **constructors** and
 # **operator** / assignment / compound-assignment / brace-init expressions
 # (no `static_assert` in probe sources, no concept-`requires` probes in those
-# sources) — the positive suite
+# sources). The positive suite
 # still uses `static_assert` and concepts.
 #
 # `cmake/cat_arithmetic_neg_cases.cmake` holds ad hoc probes, `cat_arithmetic_neg_matrix.cmake`
@@ -251,7 +251,7 @@ message(
   "matches ${_cat_neg_n_glob} -fsyntax-only .cpp. "
   "Per-probe compiler output: ${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log "
   "(or configure with -DCAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS=ON to print excerpts here)"
-  " — no `cmake --build`"
+  ". No `cmake --build`"
 )
 unset(_cat_neg_n_glob)
 unset(_cat_neg_n_calc)
