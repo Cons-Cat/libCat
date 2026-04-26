@@ -16,6 +16,9 @@ on:
 permissions:
   contents: write
 
+env:
+  CMAKE_COLOR_DIAGNOSTICS: 'ON'
+
 jobs:
   auto-format:
     # `GITHUB_TOKEN` is read-only on `pull_request` events from forks,
@@ -41,7 +44,8 @@ jobs:
         # `cat` / `cat-impl` compilation.
         run: |
           cmake -S . -B build-format -G Ninja \
-            -DCMAKE_CXX_COMPILER=clang++-23
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always
 
       - name: Run cat-format
         run: cmake --build build-format --target cat-format
