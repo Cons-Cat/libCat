@@ -861,6 +861,14 @@ class alignas(in_abi::alignment.raw) simd {
 
    [[nodiscard]]
    constexpr auto
+   sum() const -> T
+      requires(is_integral<T> && !is_bool<T>)
+   {
+      return __builtin_reduce_add(this->raw);
+   }
+
+   [[nodiscard]]
+   constexpr auto
    reduce_mul() const -> simd<T, fixed_size_abi<T, 1u>>
       requires(is_integral<T> && !is_bool<T>)
    {
@@ -869,6 +877,14 @@ class alignas(in_abi::alignment.raw) simd {
       simd<T, fixed_size_abi<T, 1u>> out{};
       out.set_lane(0u, static_cast<T>(__builtin_reduce_mul(this->raw)));
       return out;
+   }
+   
+   [[nodiscard]]
+   constexpr auto
+   multiply() const -> T
+      requires(is_integral<T> && !is_bool<T>)
+   {
+      return __builtin_reduce_mul(this->raw);
    }
 
    [[nodiscard]]

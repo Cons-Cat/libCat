@@ -1698,10 +1698,18 @@ test(simd_reduce_add_mul_and_or_xor) {
    int4x4 const a = {10, 20, 30, 40};
    cat::verify(a.reduce_add()[0u] == 100);
    cat::verify(cat::simd_reduce_add(a)[0u] == 100);
+   cat::verify(a.sum() == 100);
+   cat::verify(a.sum() == a.reduce_add()[0u]);
 
    int4x4 const m = {2, 3, -1, 1};
    cat::verify(m.reduce_mul()[0u] == -6);
    cat::verify(cat::simd_reduce_mul(m)[0u] == -6);
+   cat::verify(m.multiply() == -6);
+   cat::verify(m.multiply() == m.reduce_mul()[0u]);
+
+   uint4x4 const p = {2u, 5u, 1u, 3u};
+   cat::verify(p.sum() == 11u);
+   cat::verify(p.multiply() == 30u);
 
    uint4x4 const x = {0xfu, 0xffu, 0u, 0xffffu};
    cat::verify(x.reduce_and()[0u] == 0u);
