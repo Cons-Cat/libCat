@@ -4,7 +4,7 @@
 #include "../unit_tests.hpp"
 
 // Exercises `cat::narrow_cast`: safe widening (still `maybe` wrapped), true
-// narrowing with same signedness, mixed signedness, and `idx` → `maybe_idx`.
+// narrowing with same signedness, mixed signedness, and `idx` → `maybe<idx>`.
 
 namespace {
 
@@ -12,11 +12,11 @@ namespace {
 
 static_assert(cat::is_same<
               decltype(cat::narrow_cast<cat::idx>(cat::uword{0u})),
-              cat::maybe_idx>);
+              cat::maybe<cat::idx>>);
 
 static_assert(
-   sizeof(cat::maybe_idx) == sizeof(cat::idx),
-   "`maybe_idx` must not grow past `idx` (high-bit niche in `narrow_cast<idx>`)");
+   sizeof(cat::maybe<cat::idx>) == sizeof(cat::idx),
+   "`maybe<idx>` must not grow past `idx` (high-bit niche in `narrow_cast<idx>`)");
 
 // Safe widening still produces a `maybe` and preserves the value.
 static_assert(
@@ -151,7 +151,7 @@ test(narrow_cast_iword_to_uword_and_back) {
    }
 }
 
-test(narrow_cast_to_idx_is_maybe_idx) {
+test(narrow_cast_to_idx_is_maybe_of_idx) {
    {
       auto const m = cat::narrow_cast<cat::idx>(cat::uword{0_uz});
       cat::verify(m.has_value());

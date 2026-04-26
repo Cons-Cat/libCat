@@ -107,6 +107,13 @@ struct monotype_storage {
    T m_storage;
 };
 
+template <typename T>
+class maybe;
+
+// Customization point for default niche-value optimization in `maybe<T>`.
+template <typename T>
+struct default_compact_trait;
+
 template <typename T, is_invocable<T> auto predicate, auto>
 struct compact;
 

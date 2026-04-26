@@ -2,7 +2,7 @@
 #include <cat/string>
 
 auto
-cat::println(str_view string) -> maybe_idx {
+cat::println(str_view string) -> maybe<idx> {
    // There is no reasonable way for a `write` syscall for `nix::stdout` to
    // fail, except by running out of buffer space, which fails gracefully
    // anyways.
@@ -15,7 +15,7 @@ cat::println(str_view string) -> maybe_idx {
 }
 
 auto
-cat::println() -> maybe_idx {
+cat::println() -> maybe<idx> {
    idx length = nix::sys_write(nix::stdout, "\n").value();
    if (length == 0) {
       return nullopt;

@@ -73,10 +73,10 @@ test(compare_strings) {
    // TODO: Bind a `str_view` to `zstr`  containers.
    // TODO: Pass `zstr` containers into `cat::compare_strings()`.
 
-   iword const h = const_string_1.find('H').value();
-   iword const e = const_string_1.find('e').value();
-   iword const l = const_string_1.find('l').value();
-   iword const o = const_string_1.find('o').value();
+   idx const h = const_string_1.find('H').value();
+   idx const e = const_string_1.find('e').value();
+   idx const l = const_string_1.find('l').value();
+   idx const o = const_string_1.find('o').value();
    cat::verify(h == 0);
    cat::verify(e == 1);
    cat::verify(l == 2);

@@ -670,8 +670,19 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
 
    // Parse the entire string:
    while (remainder.size() > 0) {
-      iword const to_open_brace = remainder.find('{').value();
-      iword const to_close_brace = remainder.find('}').value();
+      // Bit-cast these `idx` to `iword`, which is essentially -1.
+
+      maybe<idx> const maybe_open_brace = remainder.find('{');
+      iword const to_open_brace = maybe_open_brace.value();
+      if (!maybe_open_brace.has_value()) {
+         assert(to_open_brace == -1);
+      }
+
+      maybe<idx> const maybe_close_brace = remainder.find('}');
+      iword const to_close_brace = maybe_close_brace.value();
+      if (!maybe_close_brace.has_value()) {
+         assert(to_close_brace == -1);
+      }
 
       // This is true iff both are `-1`, or in other words, neither braces
       // were found. This is the escape condition.

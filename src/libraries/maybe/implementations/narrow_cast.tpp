@@ -17,7 +17,7 @@ namespace cat {
 template <is_integral To, is_integral From>
 [[nodiscard]]
 constexpr auto
-narrow_cast(From value) -> detail::narrow_cast_return<To> {
+narrow_cast(From value) -> maybe<To> {
    if constexpr (is_safe_arithmetic_conversion<From, To>) {
       return To(value);
    } else {

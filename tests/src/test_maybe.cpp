@@ -217,6 +217,30 @@ test_non_structural_slot_nullopt() -> non_structural_slot {
    return -1;
 }
 
+namespace test_maybe_niche {
+struct flagged_value {
+   int raw;
+};
+
+constexpr auto
+has_value(flagged_value value) -> bool {
+   return value.raw >= 0;
+}
+
+constexpr auto
+nullopt_value() -> flagged_value {
+   return {-1};
+}
+}  // namespace test_maybe_niche
+
+template <>
+struct cat::default_compact_trait<test_maybe_niche::flagged_value>
+   : cat::identity_trait<
+        cat::compact<test_maybe_niche::flagged_value,
+                     &test_maybe_niche::has_value,
+                     &test_maybe_niche::nullopt_value>> {
+};
+
 // `sentinel` supports structural NTTP values directly.
 test(maybe_sentinel_tuple) {
    using row = cat::tuple<int4*, cat::idx>;
@@ -231,6 +255,22 @@ test(maybe_sentinel_tuple) {
 
    slot = cat::nullopt;
    cat::verify(!slot.has_value());
+}
+
+test(maybe_default_compact_trait_extension) {
+   using test_maybe_niche::flagged_value;
+
+   static_assert(sizeof(cat::maybe<flagged_value>) == sizeof(flagged_value));
+
+   cat::maybe<flagged_value> value = cat::nullopt;
+   cat::verify(!value.has_value());
+
+   value = flagged_value{3};
+   cat::verify(value.has_value());
+   cat::verify(value.value().raw == 3);
+
+   value = flagged_value{-1};
+   cat::verify(!value.has_value());
 }
 
 // `sentinel_fn` supports non-structural wrapped types in `maybe`.
