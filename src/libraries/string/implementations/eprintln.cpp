@@ -2,7 +2,7 @@
 #include <cat/string>
 
 auto
-cat::eprintln(str_view const string) -> maybe_idx {
+cat::eprintln(str_view const string) -> maybe<idx> {
    // There is no reasonable way for a `write` syscall for `nix::stderr` to
    // fail, except by running out of buffer space, which fails gracefully
    // anyways.
@@ -12,6 +12,6 @@ cat::eprintln(str_view const string) -> maybe_idx {
 }
 
 auto
-cat::eprintln() -> maybe_idx {
+cat::eprintln() -> maybe<idx> {
    return nix::sys_write(nix::stderr, "\n").value();
 }

@@ -54,9 +54,6 @@
 
 namespace cat {
 
-template <typename T>
-class maybe;
-
 // These policies control the overflow semantics of `arithmetic`s.
 enum class overflow_policies : unsigned char {
    undefined,
@@ -1455,8 +1452,8 @@ class arithmetic :
 
    // `iword` and `uword` are aliases for these `arithmetic` parameterizations.
    // `to_idx()` is defined at the end of `<cat/maybe>` so its body has access
-   // to the complete `maybe` (and `maybe_idx`) types. The return type is
-   // deduced there so this declaration does not need to name `maybe_idx`.
+   // to the complete `maybe` type. The return type is deduced there so this
+   // declaration does not need to name `maybe<idx>`.
    [[nodiscard]]
    constexpr auto
    to_idx() const
@@ -2509,6 +2506,23 @@ class index :
       return limits<index<overflow_policy>>::max();
    }
 };
+
+// `idx` uses only 63 bits, so the high-bit state is available as a `maybe`
+// niche value.
+template <overflow_policies overflow_policy>
+constexpr auto
+index_maybe_has_value(index<overflow_policy> value) -> bool {
+   return (value.raw & limits<__SIZE_TYPE__>::high_bit) == 0u;
+}
+
+// `maybe<idx>` can be considered empty when all bits are set.
+template <overflow_policies overflow_policy>
+struct default_compact_trait<index<overflow_policy>>
+   : identity_trait<compact<index<overflow_policy>, &index_maybe_has_value<overflow_policy>,
+                            __builtin_bit_cast(
+                               index<overflow_policy>, limits<__SIZE_TYPE__>::max())>> {
+};
+
 
 template <overflow_policies overflow_policy>
 constexpr auto
