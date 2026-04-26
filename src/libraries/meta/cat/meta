@@ -983,6 +983,66 @@ struct common_type_trait
 template <typename... Args>
 using common_type = detail::common_type_trait<Args...>::type;
 
+namespace detail {
+// Splitting `reference_wrapper_impl<T>` out from the derived class allows us to
+// easily specialize `reference_wrapper` for different types, which is used for
+// algorithms.
+template <typename T>
+struct reference_wrapper_impl {
+   T* m_p_target;
+
+   constexpr reference_wrapper_impl(T& target [[clang::lifetimebound]])
+       : m_p_target(__builtin_addressof(target)) {
+   }
+
+   constexpr reference_wrapper_impl(T&&) = delete (
+      "Assigning an r-value to a `cat::reference_wrapper` would "
+      "immediately dangle!");
+
+   [[nodiscard]]
+   constexpr auto
+   get() const -> T& {
+      return *m_p_target;
+   }
+
+   constexpr
+   operator T&() const {
+      return *m_p_target;
+   }
+};
+}  // namespace detail
+
+template <typename T>
+struct reference_wrapper : detail::reference_wrapper_impl<T> {
+   using detail::reference_wrapper_impl<T>::reference_wrapper_impl;
+};
+
+template <typename T>
+constexpr auto
+ref(T& target [[clang::lifetimebound]]) -> reference_wrapper<T> {
+   return reference_wrapper<T>{target};
+}
+
+template <typename T>
+constexpr void
+ref(T const&&) =
+   delete ("Capturing the reference of an r-value would immediately dangle!");
+
+template <typename T>
+constexpr auto
+cref(T const& target [[clang::lifetimebound]]) -> reference_wrapper<T const> {
+   return reference_wrapper<T const>{target};
+}
+
+template <typename T>
+constexpr void
+cref(T const&&) =
+   delete ("Capturing the reference of an r-value would immediately dangle!");
+
+template <typename T>
+concept is_reference_wrapper =
+   is_specialization<remove_cvref<T>, reference_wrapper>;
+
 }  // namespace cat
 
 // clang-format 12 sorts `common_reference` before `common_type` for some

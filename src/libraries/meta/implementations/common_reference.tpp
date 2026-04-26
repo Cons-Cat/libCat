@@ -134,9 +134,39 @@ template <typename T, typename U, typename V, typename... Remaining>
 struct common_reference_trait<T, U, V, Remaining...>
     : common_reference_trait<typename common_reference_trait<T, U>::type, V,
                              Remaining...> {};
+
+// `cat::reference_wrapper<W>` participates in `common_reference` as if
+// it were `W&`.
+template <typename W, typename U, template <typename> typename TQual,
+          template <typename> typename UQual>
+   requires(
+      requires { typename common_reference_trait<W&, UQual<U>>::type; }
+      && is_convertible<TQual<reference_wrapper<W>>,
+                        typename common_reference_trait<W&, UQual<U>>::type>)
+struct basic_common_reference_trait<reference_wrapper<W>, U, TQual, UQual> {
+   using type = typename common_reference_trait<W&, UQual<U>>::type;
+};
+
+template <typename T, typename W, template <typename> typename TQual,
+          template <typename> typename UQual>
+   requires(
+      requires { typename common_reference_trait<TQual<T>, W&>::type; }
+      && is_convertible<UQual<reference_wrapper<W>>,
+                        typename common_reference_trait<TQual<T>, W&>::type>)
+struct basic_common_reference_trait<T, reference_wrapper<W>, TQual, UQual> {
+   using type = typename common_reference_trait<TQual<T>, W&>::type;
+};
+
+template <typename W1, typename W2, template <typename> typename TQual,
+          template <typename> typename UQual>
+   requires(requires { typename common_reference_trait<W1&, W2&>::type; })
+struct basic_common_reference_trait<reference_wrapper<W1>,
+                                    reference_wrapper<W2>, TQual, UQual> {
+   using type = typename common_reference_trait<W1&, W2&>::type;
+};
 }  // namespace detail
 
-template <typename... types>
-using common_reference = detail::common_reference_trait<types...>::type;
+template <typename... Args>
+using common_reference = detail::common_reference_trait<Args...>::type;
 
 }  // namespace cat

@@ -3,6 +3,11 @@
 
 #include "../unit_tests.hpp"
 
+namespace {
+void
+test_is_function() {
+}
+
 struct members {
    int member_variable;
 
@@ -11,17 +16,14 @@ struct members {
    }
 };
 
-void
-test_is_function() {
-}
-
 template <typename T>
 class templated_one {};
 
 template <typename T>
 class templated_two {};
+}
 
-test(meta) {
+test(meta_fundamental) {
    using namespace cat;
 
    struct structural_type {
@@ -143,6 +145,10 @@ test(meta) {
    // This is supposed to hold false, even with `std::add_rvalue_reference_t`:
    static_assert(!is_rvalue_reference<add_rvalue_reference<int&>>);
    static_assert(is_rvalue_reference<add_rvalue_reference<int&&>>);
+}
+
+test(meta_const_volatile) {
+   using namespace cat;
 
    static_assert(is_const<int const>);
    static_assert(!is_const<int>);
@@ -164,6 +170,43 @@ test(meta) {
    static_assert(is_const_ref<add_const<int const>>);
    static_assert(!is_const_ref<remove_const<int>>);
    static_assert(!is_const_ref<remove_const<int const>>);
+
+   static_assert(is_same<add_const<int>, int const>);
+   static_assert(is_same<add_const<int&>, int const&>);
+   static_assert(is_same<add_const<int&&>, int const&&>);
+   static_assert(is_same<add_const<int const>, int const>);
+   static_assert(is_same<add_const<int const&>, int const&>);
+   static_assert(is_same<add_const<int const&&>, int const&&>);
+
+   static_assert(is_same<add_const<int volatile>, int const volatile>);
+   static_assert(is_same<add_const<int volatile&>, int const volatile&>);
+   static_assert(is_same<add_const<int volatile&&>, int const volatile&&>);
+   static_assert(is_same<add_const<int const volatile>, int const volatile>);
+   static_assert(is_same<add_const<int const volatile&>, int const volatile&>);
+   static_assert(
+      is_same<add_const<int const volatile&&>, int const volatile&&>);
+
+   static_assert(is_same<add_volatile<int>, int volatile>);
+   static_assert(is_same<add_volatile<int&>, int volatile&>);
+   static_assert(is_same<add_volatile<int&&>, int volatile&&>);
+   static_assert(is_same<add_volatile<int volatile>, int volatile>);
+   static_assert(is_same<add_volatile<int volatile&>, int volatile&>);
+   static_assert(is_same<add_volatile<int volatile&&>, int volatile&&>);
+
+   static_assert(is_same<add_volatile<int const>, int const volatile>);
+   static_assert(is_same<add_volatile<int const&>, int const volatile&>);
+   static_assert(is_same<add_volatile<int const&&>, int const volatile&&>);
+   static_assert(is_same<add_volatile<int const volatile>, int const volatile>);
+   static_assert(
+      is_same<add_volatile<int const volatile&>, int const volatile&>);
+   static_assert(
+      is_same<add_volatile<int const volatile&&>, int const volatile&&>);
+}
+
+test(meta_integral_signedness) {
+   using namespace cat;
+
+   class class_type {};
 
    struct signed_type {
       int data;
@@ -205,37 +248,10 @@ test(meta) {
    static_assert(!is_unsigned_integral<int const>);
    static_assert(!is_unsigned_integral<int4 const>);
    static_assert(is_unsigned_integral<uint8 const>);
+}
 
-   static_assert(is_same<add_const<int>, int const>);
-   static_assert(is_same<add_const<int&>, int const&>);
-   static_assert(is_same<add_const<int&&>, int const&&>);
-   static_assert(is_same<add_const<int const>, int const>);
-   static_assert(is_same<add_const<int const&>, int const&>);
-   static_assert(is_same<add_const<int const&&>, int const&&>);
-
-   static_assert(is_same<add_const<int volatile>, int const volatile>);
-   static_assert(is_same<add_const<int volatile&>, int const volatile&>);
-   static_assert(is_same<add_const<int volatile&&>, int const volatile&&>);
-   static_assert(is_same<add_const<int const volatile>, int const volatile>);
-   static_assert(is_same<add_const<int const volatile&>, int const volatile&>);
-   static_assert(
-      is_same<add_const<int const volatile&&>, int const volatile&&>);
-
-   static_assert(is_same<add_volatile<int>, int volatile>);
-   static_assert(is_same<add_volatile<int&>, int volatile&>);
-   static_assert(is_same<add_volatile<int&&>, int volatile&&>);
-   static_assert(is_same<add_volatile<int volatile>, int volatile>);
-   static_assert(is_same<add_volatile<int volatile&>, int volatile&>);
-   static_assert(is_same<add_volatile<int volatile&&>, int volatile&&>);
-
-   static_assert(is_same<add_volatile<int const>, int const volatile>);
-   static_assert(is_same<add_volatile<int const&>, int const volatile&>);
-   static_assert(is_same<add_volatile<int const&&>, int const volatile&&>);
-   static_assert(is_same<add_volatile<int const volatile>, int const volatile>);
-   static_assert(
-      is_same<add_volatile<int const volatile&>, int const volatile&>);
-   static_assert(
-      is_same<add_volatile<int const volatile&&>, int const volatile&&>);
+test(meta_copy_type_traits) {
+   using namespace cat;
 
    static_assert(is_same<copy_const_from<int, int>, int>);
    static_assert(is_same<copy_const_from<int const, int>, int const>);
@@ -269,6 +285,10 @@ test(meta) {
    static_assert(is_same<copy_cvref_from<int&, int const>, int&>);
    static_assert(is_same<copy_cvref_from<int&&, int const>, int&&>);
    static_assert(is_same<copy_cvref_from<int const, int&>, int const>);
+}
+
+test(meta_function_enum_and_common_type) {
+   using namespace cat;
 
    auto lambda = []() {
       return 0;
@@ -288,6 +308,11 @@ test(meta) {
    static_assert(!is_pointer<decltype([] {
    })>);
 
+   enum enum_type : int {
+   };
+   enum class enum_class_type : int {
+   };
+
    static_assert(is_same<underlying_type<enum_type>, int>);
    static_assert(is_same<underlying_type<enum_class_type>, int>);
 
@@ -300,6 +325,10 @@ test(meta) {
    static_assert(is_same<common_type<int const, int>, int>);
    static_assert(is_same<common_type<int, long int, unsigned long int>,
                          unsigned long int>);
+}
+
+test(meta_common_reference) {
+   using namespace cat;
 
    static_assert(is_same<common_reference<int, int>, int>);
    static_assert(is_same<common_reference<int&, int&>, int&>);
@@ -322,6 +351,25 @@ test(meta) {
    static_assert(is_same<common_reference<int const&, int&&>, int const&>);
    static_assert(is_same<common_reference<int, int, int&>, int>);
 
+   // `cat::reference_wrapper<T>` participates in `common_reference` as
+   // a transparent proxy for `T&`.
+   static_assert(is_same<common_reference<reference_wrapper<int>, int&>, int&>);
+   static_assert(is_same<common_reference<int&, reference_wrapper<int>>, int&>);
+   static_assert(
+      is_same<common_reference<reference_wrapper<int>, reference_wrapper<int>>,
+              int&>);
+   static_assert(
+      is_same<common_reference<reference_wrapper<int const>, int const&>,
+              int const&>);
+   static_assert(is_same<common_reference<reference_wrapper<int>, int const&>,
+                         int const&>);
+   // `is_reference_wrapper` holds for any `cat::reference_wrapper<T>`,
+   // including partial specializations.
+   static_assert(is_reference_wrapper<reference_wrapper<int>>);
+   static_assert(is_reference_wrapper<reference_wrapper<int> const&>);
+   static_assert(!is_reference_wrapper<int>);
+   static_assert(!is_reference_wrapper<int*>);
+
    // TODO: This is supposed to work. It is blocked by the `tuple` conversion
    // operator.
    // static_assert(
@@ -329,36 +377,43 @@ test(meta) {
    //             tuple<int, double>>);
    // using test_tuple_common_ref = common_reference<tuple<int, double>,
    //     tuple<int&, double&>>;
+}
+
+test(meta_common_comparison) {
+   using namespace cat;
+
+   static_assert(is_same<std::common_comparison_category_t<std::strong_ordering,
+                                                           std::weak_ordering>,
+                         std::weak_ordering>);
 
    static_assert(
-      cat::is_same<std::common_comparison_category_t<std::strong_ordering,
-                                                     std::weak_ordering>,
-                   std::weak_ordering>);
+      is_same<std::common_comparison_category_t<std::weak_ordering,
+                                                std::strong_ordering>,
+              std::weak_ordering>);
 
    static_assert(
-      cat::is_same<std::common_comparison_category_t<std::weak_ordering,
-                                                     std::strong_ordering>,
-                   std::weak_ordering>);
+      is_same<std::common_comparison_category_t<std::partial_ordering,
+                                                std::weak_ordering>,
+              std::partial_ordering>);
 
    static_assert(
-      cat::is_same<std::common_comparison_category_t<std::partial_ordering,
-                                                     std::weak_ordering>,
-                   std::partial_ordering>);
+      is_same<std::common_comparison_category_t<std::weak_ordering,
+                                                std::partial_ordering>,
+              std::partial_ordering>);
 
    static_assert(
-      cat::is_same<std::common_comparison_category_t<std::weak_ordering,
-                                                     std::partial_ordering>,
-                   std::partial_ordering>);
+      is_same<std::common_comparison_category_t<std::partial_ordering,
+                                                std::strong_ordering>,
+              std::partial_ordering>);
 
    static_assert(
-      cat::is_same<std::common_comparison_category_t<std::partial_ordering,
-                                                     std::strong_ordering>,
-                   std::partial_ordering>);
+      is_same<std::common_comparison_category_t<std::strong_ordering,
+                                                std::partial_ordering>,
+              std::partial_ordering>);
+}
 
-   static_assert(
-      cat::is_same<std::common_comparison_category_t<std::strong_ordering,
-                                                     std::partial_ordering>,
-                   std::partial_ordering>);
+test(meta_member_pointer) {
+   using namespace cat;
 
    // Test member type traits.
    static_assert(is_member_pointer<decltype(&members::member_function)>);
@@ -372,10 +427,18 @@ test(meta) {
    static_assert(is_member_pointer<decltype(p_member_variable)>);
    static_assert(is_member_object_pointer<decltype(p_member_variable)>);
    static_assert(is_member_object_pointer<int members::*>);
+}
+
+test(meta_is_specialization) {
+   using namespace cat;
 
    // Test `is_specialization`.
    static_assert(is_specialization<templated_one<int>, templated_one>);
    static_assert(!is_specialization<templated_one<int>, templated_two>);
+}
+
+test(meta_sign_type_traits) {
+   using namespace cat;
 
    // Test signedness traits.
    static_assert(is_signed<make_signed_type<unsigned>>);
@@ -395,8 +458,12 @@ test(meta) {
    static_assert(!is_signed<copy_sign_from<uint4, int>>);
    static_assert(!is_signed<copy_sign_from<unsigned, int4>>);
    static_assert(!is_signed<copy_sign_from<unsigned, int>>);
+}
+
+test(meta_trivially_copy_construct) {
+   using namespace cat;
 
    struct default_construct {};
 
    static_assert(is_copy_constructible<default_construct>);
-};
+}

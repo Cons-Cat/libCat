@@ -145,9 +145,6 @@ to_underlying(T any_enum) {
    return static_cast<underlying_type<T>>(any_enum);
 }
 
-// TODO: Support `cat::ref`, to enable `variant` and `tuple` to hold references
-// more easily.
-
 template <typename T>
 [[nodiscard, gnu::nodebug]]
 constexpr auto
