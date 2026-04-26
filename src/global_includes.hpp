@@ -4,9 +4,9 @@
 
 #include <cat/meta>
 
-// This file should be implicitly included in all other files. With Clang, this is
-// done using the `--include` flag, as in `--include global_includes.hpp`. The
-// `CMakeLists.txt` in this repository's top level directory does this.
+// This file should be implicitly included in all other files. With Clang, this
+// is done using the `--include` flag, as in `--include global_includes.hpp`.
+// The `CMakeLists.txt` in this repository's top level directory does this.
 
 namespace cat::detail {
 template <typename F>
@@ -107,16 +107,36 @@ struct monotype_storage {
    T m_storage;
 };
 
-// `in_sentinel` should be either a `T` or an error type for `scaredy`s.
-template <typename T, auto predicate, auto sentinel>
-   requires(!predicate(static_cast<T>(sentinel)))
-struct compact {
-   using type = T;
-   static constexpr auto predicate_function = predicate;
-   static constexpr T sentinel_value = sentinel;
-   // `compact`s can only be instantiated at compile-time.
+template <typename T, is_invocable<T> auto predicate, auto>
+struct compact;
+
+template <typename T, is_invocable<T> auto predicate,
+          is_invocable auto get_nullopt>
+// `predicate(get_nullopt())` must evaluate `false`.
+   requires(!predicate(get_nullopt()))
+struct compact<T, predicate, get_nullopt> {
+   static constexpr auto
+   has_value(T const& value) -> bool {
+      return predicate(value);
+   }
+
+   static constexpr auto
+   nullopt_state() -> T {
+      return get_nullopt();
+   }
+
    consteval compact() = default;
 };
+
+template <typename T, is_invocable<T> auto predicate, auto nullopt_value>
+// `predicate(sentinel)` must evaluate `false`.
+   requires(!predicate(T{nullopt_value}))
+struct compact<T, predicate, nullopt_value>
+    : compact<T, predicate,
+              // Sentinel accessor:
+              [] constexpr -> T {
+                 return T{nullopt_value};
+              }> {};
 
 template <typename T, auto predicate>
 struct compact_scaredy {
@@ -150,9 +170,10 @@ sentinel_predicate(T value) -> bool {
 }
 }  // namespace detail
 
-template <typename T, T in_sentinel>
+template <typename T, auto value>
 using sentinel =
-   compact<T, detail::sentinel_predicate<T, in_sentinel>, in_sentinel>;
+   compact<T, detail::sentinel_predicate<T, static_cast<T>(value)>,
+           static_cast<T>(value)>;
 
 // `in_place` is consumed by wrapper classes to default-initialize their
 // storage.

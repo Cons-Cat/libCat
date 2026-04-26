@@ -305,9 +305,9 @@ struct maybe_value_storage {
 
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
-   template <is_maybe other_maybe>
+   template <is_maybe Maybe>
    constexpr void
-   assign(other_maybe&& maybe) {
+   assign(Maybe&& maybe) {
       if (maybe.has_value()) {
          assign(fwd(maybe).value());
       } else {
@@ -401,9 +401,9 @@ struct maybe_reference_storage {
 
    // Copy or clear the held pointer based on whether `maybe` is engaged.
    // The referent is never destroyed.
-   template <is_maybe other_maybe>
+   template <is_maybe Maybe>
    constexpr void
-   assign(other_maybe&& maybe) {
+   assign(Maybe&& maybe) {
       if (maybe.has_value()) {
          this->p_storage =
             __builtin_addressof(static_cast<value_type>(maybe.value()));
@@ -415,10 +415,10 @@ struct maybe_reference_storage {
    remove_reference<T>* p_storage = nullptr;
 };
 
-// `T` is a `predicate<type, function, sentinel>`.
+// `T` is a `compact<T, predicate, nullopt_value>`.
 template <typename T>
 struct maybe_compact_storage {
-   using value_type = T::type;
+   using value_type = decltype(T::nullopt_state());
 
    constexpr maybe_compact_storage() = default;
 
@@ -484,7 +484,7 @@ struct maybe_compact_storage {
    }
 
    constexpr maybe_compact_storage(detail::nullopt_type)
-       : m_storage(T::sentinel_value) {
+       : m_storage(T::nullopt_state()) {
    }
 
    // If other assignment operators are not conditionally specialized by
@@ -555,14 +555,14 @@ struct maybe_compact_storage {
    [[nodiscard]]
    constexpr auto
    has_value() const -> bool {
-      return T::predicate_function(m_storage);
+      return T::has_value(m_storage);
    }
 
    // Destroy the storage unconditionally.
    constexpr void
    hard_reset() {
       m_storage.~value_type();
-      m_storage = T::sentinel_value;
+      m_storage = T::nullopt_state();
    }
 
    // Construct an object at the address of the held `storage`.
@@ -574,9 +574,9 @@ struct maybe_compact_storage {
 
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
-   template <is_maybe other_maybe>
+   template <is_maybe Maybe>
    constexpr void
-   assign(other_maybe&& maybe) {
+   assign(Maybe&& maybe) {
       if (this->has_value()) {
          if (maybe.has_value()) {
             m_storage = fwd(maybe).value();
@@ -606,7 +606,7 @@ class [[nodiscard]] maybe {
       conditional<is_void<T>,
                   // If `T` is `void`:
                   maybe_value_storage<monostate_type>,
-                  conditional<requires { T::sentinel_value; },
+                  conditional<requires { T::nullopt_state(); },
                               // If `T` is a `compact`:
                               maybe_compact_storage<T>,
                               conditional<is_reference<T>,
@@ -1315,16 +1315,15 @@ namespace detail {
 // storage past `sizeof(idx)`.
 constexpr auto
 is_idx_high_bit_unset(idx value) -> bool {
-   return (value.raw & limits<idx>::high_bit) == 0u;
+   return (value.raw & limits<uword>::high_bit) == 0u;
 }
 }  // namespace detail
 
-// Niche-using `maybe<idx>`: stores the empty state in `idx`'s otherwise unused
-// high bit, so `sizeof(maybe_idx) == sizeof(idx)`.
+// Niche value optimized `maybe<idx>`. It stores the empty state in the word's
+// high bit, since `cat::idx` requires this is unset.
 using maybe_idx =
    maybe<compact<idx, detail::is_idx_high_bit_unset,
-                 __builtin_bit_cast(
-                    idx, static_cast<__SIZE_TYPE__>(limits<idx>::high_bit))>>;
+                 __builtin_bit_cast(idx, limits<uword>::high_bit)>>;
 
 static_assert(sizeof(maybe_idx) == sizeof(idx));
 

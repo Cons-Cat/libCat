@@ -1,5 +1,6 @@
 #include <cat/maybe>
 #include <cat/memory>
+#include <cat/tuple>
 #include <cat/unique>
 #include <cat/utility>
 
@@ -168,6 +169,46 @@ test(maybe_compact_void) {
    predicate_void = cat::monostate;
    cat::verify(predicate_void.has_value());
    auto _ = predicate_void.or_exit();
+}
+
+// `compact<T, predicate, value>` accepts a literal sentinel that converts to
+// `T`. This covers the `-1` to `iword` path used by `maybe_non_negative`.
+test(maybe_compact_value_conversion) {
+   cat::maybe<cat::compact<iword,
+                           [](iword input) -> bool {
+                              return input >= 0;
+                           },
+                           -1>>
+      non_negative(cat::nullopt);
+   cat::verify(!non_negative.has_value());
+
+   non_negative = 0;
+   cat::verify(non_negative.has_value());
+   cat::verify(non_negative.value() == 0);
+
+   non_negative = -1;
+   cat::verify(!non_negative.has_value());
+}
+
+constexpr auto
+test_tuple_allocation_sentinel() -> cat::tuple<int4*, cat::idx> {
+   return {nullptr, 0u};
+}
+
+// `sentinel` uses a constexpr function for the empty niche so the wrapped type does not need to be a structural NTTP.
+test(maybe_sentinel_tuple) {
+   using row = cat::tuple<int4*, cat::idx>;
+   cat::maybe<cat::sentinel<row, row{nullptr, 0u}>> slot;
+   cat::verify(!slot.has_value());
+
+   int4 x = 7;
+   slot = row{&x, 1u};
+   cat::verify(slot.has_value());
+   cat::verify(slot.value().first() == &x);
+   cat::verify(slot.value().second() == 1u);
+
+   slot = cat::nullopt;
+   cat::verify(!slot.has_value());
 }
 
 // `sentinel<T, value>` is the simpler compact form: `value` represents the
