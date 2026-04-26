@@ -116,6 +116,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF \
             -DCAT_USE_SANITIZERS=ON
           cmake --build build-debug
           ctest --test-dir build-debug --verbose --output-on-failure
@@ -146,7 +147,8 @@ jobs:
           cmake -S . -B build-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER=clang++-23 \
-            -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always
+            -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF
           cmake --build build-release
           ctest --test-dir build-release --verbose --output-on-failure
 
@@ -191,6 +193,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_USE_SHARED=ON \
             -DCMAKE_INSTALL_PREFIX="${PWD}/install-shared"
@@ -234,6 +237,7 @@ jobs:
           cmake -S consumer-shared -B build-consumer -G Ninja \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF \
             -DCMAKE_PREFIX_PATH="${PWD}/install-shared"
           cmake --build build-consumer
 
@@ -261,6 +265,7 @@ jobs:
           cmake -S . -B build-multi -G 'Ninja Multi-Config' \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF \
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF \
             -DCAT_BUILD_EXAMPLE_HELLO=ON
@@ -312,6 +317,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_BUILD_UNIT_TESTS=OFF \
@@ -336,6 +342,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=OFF \
             -DCAT_BUILD_UNIT_TESTS=OFF \
@@ -360,6 +367,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_BUILD_UNIT_TESTS=OFF \
@@ -384,6 +392,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=OFF \
             -DCAT_BUILD_UNIT_TESTS=OFF \

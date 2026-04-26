@@ -45,7 +45,8 @@ jobs:
         run: |
           cmake -S . -B build-format -G Ninja \
             -DCMAKE_CXX_COMPILER=clang++-23 \
-            -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always
+            -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF
 
       - name: Run cat-format
         run: cmake --build build-format --target cat-format

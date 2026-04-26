@@ -48,6 +48,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_CXX_FLAGS=-fdiagnostics-color=always \
+            -DCAT_USE_SCCACHE=OFF \
             -DCAT_USE_SANITIZERS=OFF \
             -DCAT_BUILD_SHARED=OFF \
             -DCAT_BUILD_UNIT_TESTS=OFF \
