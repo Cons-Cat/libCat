@@ -587,6 +587,13 @@ template <typename T>
 concept is_scalar = is_arithmetic<T> || is_enum<T> || is_pointer<T>
                     || is_member_pointer<T> || is_null_pointer<T>;
 
+// A structural type can be used as a non-type template parameter.
+template <typename T>
+concept is_structural = requires {
+                           []<T value>() {
+                           };
+                        };
+
 template <typename T>
 using add_pointer = __add_pointer(T);
 

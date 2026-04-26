@@ -23,6 +23,23 @@ class templated_two {};
 
 test(meta) {
    using namespace cat;
+
+   struct structural_type {
+      int value;
+      constexpr auto
+      operator==(structural_type const&) const -> bool = default;
+   };
+
+   class non_structural_type {
+      [[maybe_unused]]
+      int _;
+   };
+
+   static_assert(is_structural<int>);
+   static_assert(is_structural<int*>);
+   static_assert(is_structural<structural_type>);
+   static_assert(!is_structural<non_structural_type>);
+
    static_assert(is_same<int, int>);
    static_assert(!is_same<int, unsigned int>);
 

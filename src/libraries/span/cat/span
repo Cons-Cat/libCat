@@ -194,13 +194,6 @@ span
       return size() * sizeof(T);
    }
 
-   // `cat::span` overrides the runtime subview trio inherited from
-   // `collection_interface` because the inherited `subspan` takes
-   // `(start, end)` (libCat convention) whereas `std::span` takes
-   // `(offset, count)`. To keep `first(count)`, `last(count)`, and
-   // `subspan(...)` consistent with each other and with `std::span`, all
-   // three are re-implemented here in terms of the new `subspan` shape.
-
    // Runtime `first(count)`. Returns the first `count` elements as a
    // dynamic-extent span. Mirrors `std::span::first(size_type)`.
    [[nodiscard]]
@@ -220,9 +213,8 @@ span
       return subspan(idx(size() - count), count);
    }
 
-   // Runtime `subspan(offset, count)`. Matches `std::span`: `count` is a
-   // count of elements (not an end index). When `count` is `dynamic_extent`
-   // the resulting span extends to the end of this one.
+   // `count` is a count of elements (not an end index). When `count` is
+   // `dynamic_extent` the resulting span extends to the end of this one.
    [[nodiscard]]
    constexpr auto
    subspan(idx offset, idx count = dynamic_extent) const -> span<T> {
@@ -311,8 +303,7 @@ span
    constexpr auto
    operator<=>(R const& rhs) const;
 
-   // These data members should be `public` so that this is a structural type.
-
+ protected:
    // This is arranged as pointer, then size, to follow the ABI of Linux
    // standard `iovec`s. Unfortunately, that is opposite of Windows' standard
    // `WSABUF`.
@@ -373,16 +364,24 @@ make_span_between(T* p_start, T* p_end) {
    return span(p_start, p_end - p_start);
 }
 
-// Simplify non-negative signed integers.
+namespace detail {
 template <typename T>
-using maybe_span = maybe<compact<span<T>,
-                                 [](span<T> value) -> bool {
-                                    // This span is `nullopt` if its
-                                    // `.p_storage` is null.
-                                    return value.m_p_data;
-                                 },
-                                 // Default to a null span.
-                                 span<T>(nullptr)>>;
+constexpr auto
+maybe_span_has_value(span<T> value) -> bool {
+   return value.data() != nullptr;
+}
+
+template <typename T>
+constexpr auto
+maybe_span_nullopt() -> span<T> {
+   return span<T>(nullptr);
+}
+}  // namespace detail
+
+// Simplify nullable spans.
+template <typename T>
+using maybe_span = maybe<compact<span<T>, detail::maybe_span_has_value<T>,
+                                 detail::maybe_span_nullopt<T>>>;
 
 template <idx index, typename T, idx fixed_extent>
    requires(fixed_extent != dynamic_extent && index < fixed_extent)
