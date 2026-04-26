@@ -2113,9 +2113,9 @@ class index :
    // which keeps `explicit_word_for_index_ctor` types `explicit`.
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr index(U other) __attribute__((enable_if(
-      detail::raw_source_fits_implicit_storage<raw_type>(other),
-      "Value is out of range for conversion to `cat::idx`!")))
+   constexpr index(U other) __attribute__((
+      enable_if(detail::raw_source_fits_implicit_storage<raw_type>(other),
+                "Value is out of range for conversion to `cat::idx`!")))
        : raw(static_cast<__SIZE_TYPE__>(make_raw_arithmetic(other))) {
    }
 
@@ -2124,8 +2124,7 @@ class index :
    [[gnu::always_inline, gnu::nodebug]]
    consteval index(U other) __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<raw_type>(other),
-      "Value is out of range for conversion to `cat::idx`!"))) =
-      delete;
+      "Value is out of range for conversion to `cat::idx`!"))) = delete;
 
    // Constructing with safe conversions is implicit, but constructing with
    // unsafe conversions is explicit. `uword` / `iword` stay explicit even when

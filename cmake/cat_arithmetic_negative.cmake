@@ -74,6 +74,10 @@ list(APPEND _cat_neg_compile_args
   -fno-rtti
   "-include" "${CMAKE_SOURCE_DIR}/src/global_includes.hpp")
 
+separate_arguments(_cat_neg_cmake_cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
+set(_cat_neg_probe_args ${_cat_neg_cmake_cxx_flags} ${_cat_neg_compile_args})
+unset(_cat_neg_cmake_cxx_flags)
+
 # Macro (not `function`) so per-probe counters in this file stay visible. No
 # `ninja` / `cmake --build` is involved: the compiler is invoked at configure
 # by `execute_process` only. The build tree is not required for linking.
@@ -84,7 +88,7 @@ macro(_cat_neg_expect_illformed _name _src)
   execute_process(
     COMMAND
       "${CMAKE_CXX_COMPILER}"
-      ${_cat_neg_compile_args}
+      ${_cat_neg_probe_args}
       "${_cat_n_path}"
     RESULT_VARIABLE _neg_rc
     OUTPUT_VARIABLE _neg_out
