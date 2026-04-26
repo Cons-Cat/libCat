@@ -4127,7 +4127,7 @@ test(arithmetic_binary_ops_take_lhs_overflow_policy) {
       cat::wrap_int4 lhs = cat::int4_min;
       cat::sat_int4 rhs = 1;
       cat::wrap_int4 result = lhs - rhs;
-      cat::verify(result == cat::int4_min - 1_i4);  // wrap.
+      cat::verify(result == cat::int4_max);  // wrap.
    }
    {
       cat::sat_int4 lhs = cat::int4_min;
