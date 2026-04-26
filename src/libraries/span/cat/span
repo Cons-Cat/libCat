@@ -41,7 +41,7 @@
 
 namespace cat {
 
-inline constexpr idx dynamic_extent = idx(-1);
+inline constexpr idx dynamic_extent = idx::max();
 
 template <typename T, idx fixed_extent>
 class [[clang::trivial_abi, gsl::Pointer(T)]]
