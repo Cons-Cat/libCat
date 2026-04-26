@@ -45,9 +45,13 @@
 //    maybe<T>               -> maybe_value_storage<T>      (value plus a
 //                              `bool` engagement flag)
 //
+// The `cat::compact` hint takes a `value_type`, a predicate function, and
+// either a value representing `nullopt` or a function returning some value to
+// represent `nullopt`.
 // There are convenience aliases on top of the niche-using storage:
 //
 //    maybe_ptr<T>           -> maybe<sentinel<T*, nullptr>>
+//    maybe_span<T>          -> maybe<compact<span<T>, ...>>
 //    maybe_non_zero<T>      -> maybe<sentinel<T, T(0)>>
 //    maybe_non_negative<T>  -> maybe<compact<T, ..., -1>>
 //    maybe_idx              -> maybe<compact<idx, ...>> using the unused

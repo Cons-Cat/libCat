@@ -32,7 +32,7 @@ struct allocator_interface<Derived>::meta_alloc_alias_types {
          conditional<has_feedback,
                      conditional<is_multiple, maybe<tuple<span<T>, idx>>,
                                  maybe_sized_allocation<T*>>,
-                     conditional<is_multiple, maybe<span<T>>, maybe_ptr<T>>>,
+                     conditional<is_multiple, maybe_span<T>, maybe_ptr<T>>>,
          conditional<has_feedback, maybe<tuple<handle_type, idx>>,
                      maybe<handle_type>>>,
       conditional<

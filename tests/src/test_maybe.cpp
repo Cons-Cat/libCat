@@ -195,7 +195,29 @@ test_tuple_allocation_sentinel() -> cat::tuple<int4*, cat::idx> {
    return {nullptr, 0u};
 }
 
-// `sentinel` uses a constexpr function for the empty niche so the wrapped type does not need to be a structural NTTP.
+class non_structural_slot {
+   int m_state;
+
+ public:
+   constexpr non_structural_slot() : m_state(-1) {
+   }
+
+   constexpr non_structural_slot(int state) : m_state(state) {
+   }
+
+   friend constexpr auto
+   operator==(non_structural_slot const& lhs, non_structural_slot const& rhs)
+      -> bool {
+      return lhs.m_state == rhs.m_state;
+   }
+};
+
+constexpr auto
+test_non_structural_slot_nullopt() -> non_structural_slot {
+   return -1;
+}
+
+// `sentinel` supports structural NTTP values directly.
 test(maybe_sentinel_tuple) {
    using row = cat::tuple<int4*, cat::idx>;
    cat::maybe<cat::sentinel<row, row{nullptr, 0u}>> slot;
@@ -206,6 +228,21 @@ test(maybe_sentinel_tuple) {
    cat::verify(slot.has_value());
    cat::verify(slot.value().first() == &x);
    cat::verify(slot.value().second() == 1u);
+
+   slot = cat::nullopt;
+   cat::verify(!slot.has_value());
+}
+
+// `sentinel_fn` supports non-structural wrapped types in `maybe`.
+test(maybe_sentinel_fn_non_structural) {
+   cat::maybe<
+      cat::sentinel_fn<non_structural_slot, test_non_structural_slot_nullopt>>
+      slot;
+   cat::verify(!slot.has_value());
+
+   slot = non_structural_slot(7);
+   cat::verify(slot.has_value());
+   cat::verify(slot.value() == non_structural_slot(7));
 
    slot = cat::nullopt;
    cat::verify(!slot.has_value());
@@ -222,6 +259,26 @@ test(maybe_sentinel_predicate) {
 
    nonzero = 0;
    cat::verify(!nonzero.has_value());
+}
+
+test(maybe_span_basic) {
+   static_assert(sizeof(cat::maybe_span<int4>) == sizeof(cat::span<int4>));
+
+   int4 values[2] = {1, 2};
+   cat::maybe_span<int4> maybe_values = cat::span<int4>(values, 2u);
+   cat::verify(maybe_values.has_value());
+   cat::verify(maybe_values.value().size() == 2u);
+   cat::verify(maybe_values.value()[0] == 1);
+   cat::verify(maybe_values.value()[1] == 2);
+
+   // Empty spans are still values if they point to real storage.
+   maybe_values = cat::span<int4>(values, 0u);
+   cat::verify(maybe_values.has_value());
+   cat::verify(maybe_values.value().size() == 0u);
+   cat::verify(maybe_values.value().data() == values);
+
+   maybe_values = cat::nullopt;
+   cat::verify(!maybe_values.has_value());
 }
 
 // `maybe_ptr<T>` is `maybe<sentinel<T*, nullptr>>` (a pointer that can also

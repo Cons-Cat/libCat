@@ -168,12 +168,23 @@ constexpr auto
 sentinel_predicate(T value) -> bool {
    return value != in_sentinel;
 }
+
+template <typename T, T (*get_nullopt)()>
+constexpr auto
+sentinel_predicate_for_callable(T value) -> bool {
+   return value != get_nullopt();
+}
 }  // namespace detail
 
-template <typename T, auto value>
+template <is_structural T, auto value>
 using sentinel =
    compact<T, detail::sentinel_predicate<T, static_cast<T>(value)>,
            static_cast<T>(value)>;
+
+template <typename T, T (*get_nullopt)()>
+using sentinel_fn =
+   compact<T, &detail::sentinel_predicate_for_callable<T, get_nullopt>,
+           get_nullopt>;
 
 // `in_place` is consumed by wrapper classes to default-initialize their
 // storage.
