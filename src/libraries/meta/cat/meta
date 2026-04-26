@@ -914,7 +914,9 @@ concept is_nothrow_invocable =
 // `bool` (return-type "boolean-testable" for predicates).
 template <typename Callback, typename... Args>
 concept is_predicate = requires(Callback c, Args&&... args) {
-   { __builtin_invoke(fwd(c), fwd(args)...) } -> is_convertible<bool>;
+                          {
+                             __builtin_invoke(fwd(c), fwd(args)...)
+                          } -> is_convertible<bool>;
 };
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/

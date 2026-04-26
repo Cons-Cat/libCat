@@ -6,17 +6,16 @@
 #include <cat/utility>
 
 namespace cat {
-   template <typename Callback, typename... Args>
-requires is_invocable<Callback, Args...>
+template <typename Callback, typename... Args>
+   requires is_invocable<Callback, Args...>
 // noexcept(is_nothrow_invocable<Callback, Args...>)
 constexpr auto
-invoke(Callback&& callback, Args&&... arguments) noexcept(
-   noexcept(__builtin_invoke(
-      forward<Callback>(callback), forward<Args>(arguments)...)))
-   -> decltype(__builtin_invoke(
-      forward<Callback>(callback), forward<Args>(arguments)...)) {
-   return __builtin_invoke(
-      forward<Callback>(callback), forward<Args>(arguments)...);
+invoke(Callback&& callback, Args&&... arguments) noexcept(noexcept(
+   __builtin_invoke(forward<Callback>(callback), forward<Args>(arguments)...)))
+   -> decltype(__builtin_invoke(forward<Callback>(callback),
+                                forward<Args>(arguments)...)) {
+   return __builtin_invoke(forward<Callback>(callback),
+                           forward<Args>(arguments)...);
 }
 
 template <typename ReturnT, typename Callback, typename... Args>
