@@ -28,6 +28,12 @@ AlignAfterOpenBracket: Align
 AlignConsecutiveTableGenCondOperatorColons: None
 AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
 AlignEscapedNewlines: Left
+BreakBinaryOperations:
+  Default: Never
+  PerOperator:
+    - Operators: ['|', '&']
+      Style: OnePerLine
+      MinChainLength: 2
 BreakBeforeBinaryOperators: NonAssignment
 AlignOperands: Align
 AlignTrailingComments: true

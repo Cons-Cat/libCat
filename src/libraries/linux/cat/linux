@@ -707,7 +707,8 @@ consteval auto
 compose_io_request(io_requests a, io_requests b, io_requests c, io_requests d)
    -> io_requests {
    return io_requests{(cat::to_underlying(a) << 30)
-                      | (cat::to_underlying(b) << 8) | cat::to_underlying(c)
+                      | (cat::to_underlying(b) << 8)
+                      | cat::to_underlying(c)
                       | (cat::to_underlying(d) << 16)};
 }
 }  // namespace detail
@@ -1470,9 +1471,12 @@ struct process {
    // `spawn_impl` when the executable has a `PT_TLS` image so each clone child
    // receives an initialized `%fs` base.
    static constexpr clone_flags default_flags =
-      clone_flags::virtual_memory | clone_flags::file_system
-      | clone_flags::file_descriptor_table | clone_flags::io
-      | clone_flags::parent_set_tid | clone_flags::child_clear_tid
+      clone_flags::virtual_memory
+      | clone_flags::file_system
+      | clone_flags::file_descriptor_table
+      | clone_flags::io
+      | clone_flags::parent_set_tid
+      | clone_flags::child_clear_tid
       | static_cast<clone_flags>(static_cast<unsigned int>(
          static_cast<unsigned char>(signal::child_stopped)));
 
