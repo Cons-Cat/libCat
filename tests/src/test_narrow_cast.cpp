@@ -26,7 +26,7 @@ static_assert(
    }());
 
 // `int4` → `int8` is non-narrowing in the hierarchy; no loss check on the
-// "narrowing" name — value must still round-trip inside `maybe`.
+// "narrowing" name. Value must still round-trip inside `maybe`.
 static_assert(
    [] {
       auto const m = cat::narrow_cast<cat::int8>(cat::int4{-99});
@@ -83,7 +83,7 @@ test(narrow_cast_narrowing_same_signedness_int8_to_int4) {
 }
 
 test(narrow_cast_mixed_width_signed_to_unsigned) {
-   // `int4` and `uint4` are the same width but opposite signedness — needs the
+   // `int4` and `uint4` are the same width but opposite signedness. Needs the
    // `raw_mixed_integral_spaceship` path; negative `int4` must not bit-cast
    // into a huge `uint4`.
    cat::verify(!cat::narrow_cast<cat::uint4>(cat::int4{-1}).has_value());
@@ -135,7 +135,7 @@ test(narrow_cast_large_integrals_toward_smaller) {
 }
 
 test(narrow_cast_iword_to_uword_and_back) {
-   // Same `sizeof` but not `is_safe_arithmetic_comparison` — must still reject
+   // Same `sizeof` but not `is_safe_arithmetic_comparison`. Must still reject
    // negative `iword` and accept non-negative values that fit.
    cat::verify(!cat::narrow_cast<cat::uword>(cat::iword{-1}).has_value());
    cat::verify(!cat::narrow_cast<cat::uword>(cat::iword{cat::limits<cat::iword>::min()})

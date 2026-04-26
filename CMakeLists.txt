@@ -281,7 +281,7 @@ set_target_properties(cat-impl PROPERTIES PCH_WARN_INVALID ON)
 # Tripwire (deferred): fail configure if `INTERFACE_PRECOMPILE_HEADERS` is
 # ever set on `cat`, `cat-impl`, or `cat-impl-shared`. That would export PCH
 # usage requirements through `cat::cat[-impl[-shared]]` and bake `cat-impl`'s
-# default `gnu::naked` `_start` declaration into every consumer — fatal for
+# default `gnu::naked` `_start` declaration into every consumer. Fatal for
 # any TU that defines `NO_ARGC_ARGV` (`unit_tests`, `hello`, external no-args
 # programs), which would then hit "non-ASM statement in naked function" on the
 # call to `call_main_noargs()`. `REUSE_FROM cat-impl` is unaffected: it writes

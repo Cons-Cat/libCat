@@ -183,8 +183,8 @@ test(maybe_sentinel_predicate) {
    cat::verify(!nonzero.has_value());
 }
 
-// `maybe_ptr<T>` is `maybe<sentinel<T*, nullptr>>`. a pointer that can also
-// be nullopt without growing.
+// `maybe_ptr<T>` is `maybe<sentinel<T*, nullptr>>` (a pointer that can also
+// be `nullopt` without growing.
 test(maybe_ptr_basic) {
    int4 get_addr = 0;
    cat::maybe_ptr<int4> opt_ptr = &get_addr;
@@ -440,8 +440,8 @@ test(maybe_nontrivial_value) {
    cat::maybe<maybe_non_trivial> nontrivial = maybe_non_trivial();
 }
 
-// `maybe<void>` construction modes default, `monostate`, `in_place`,
-// `nullopt`. plus `in_place` for non-trivial value types.
+// `maybe<void>` construction modes: default, `monostate`, `in_place`, and
+// `nullopt`, plus `in_place` for non-trivial value types.
 test(maybe_void_construction) {
    cat::maybe<void> optvoid;
    cat::verify(!optvoid.has_value());
@@ -639,12 +639,12 @@ test(maybe_reference_no_destroy) {
       cat::verify(!ref.has_value());
       cat::verify(dtor_counter == 0);
 
-      // Rebind to the same object. still no destruction.
+      // Rebind to the same object, still no destruction.
       ref = t;
       cat::verify(ref.has_value());
       cat::verify(dtor_counter == 0);
 
-      // Reset(). also non-destructive.
+      // Reset() is also non-destructive.
       ref.reset();
       cat::verify(!ref.has_value());
       cat::verify(dtor_counter == 0);
@@ -660,16 +660,16 @@ test(maybe_reference_no_destroy) {
 
 // Rejection of bindings that would create a temporary referent.
 // `is_constructible` properly treats `= delete` overloads as not constructible
-//. `requires` would not (a viable-but-deleted overload still satisfies it).
+// unlike `requires` (a viable-but-deleted overload still satisfies it).
 // P2988R12 `optional<T&>`. Dangling-temporary protection.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
 test(maybe_reference_dangling) {
    // Lvalue binding succeeds.
    static_assert(cat::is_constructible<cat::maybe<int const&>, int&>);
    static_assert(cat::is_constructible<cat::maybe<int&>, int&>);
-   // `int const&` binding to a prvalue would create a temporary. rejected.
+   // `int const&` binding to a prvalue would create a temporary (rejected).
    static_assert(!cat::is_constructible<cat::maybe<int const&>, int>);
-   // `int&` cannot bind a prvalue at all. also rejected.
+   // `int&` cannot bind a prvalue at all (also rejected).
    static_assert(!cat::is_constructible<cat::maybe<int&>, int>);
 }
 
@@ -762,7 +762,7 @@ test(maybe_range) {
    cat::verify(referent == 100);
 }
 
-// `cat::make_maybe` factory. both deducing and explicit-type forms.
+// `cat::make_maybe` factory covers both deducing and explicit-type forms.
 test(maybe_make_maybe) {
    auto deduced = cat::make_maybe(int4{42});
    static_assert(cat::is_same<decltype(deduced), cat::maybe<int4>>);
@@ -777,7 +777,7 @@ test(maybe_make_maybe) {
    cat::verify(void_maybe.has_value());
 }
 
-// Monadic methods on `maybe<void>`. the callable is invoked with no
+// Monadic methods on `maybe<void>`. The callable is invoked with no
 // arguments, matching `tl::optional`.
 // P0798R8 Monadic operations for `std::optional`.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p0798r8.html
@@ -836,7 +836,7 @@ test(maybe_void_monadic) {
    cat::verify(propagated.has_value());
 }
 
-// `or_else` propagates `*this` when engaged. a fix to a long-standing
+// `or_else` propagates `*this` when engaged, fixing a long-standing
 // bug where the return was always `nullopt`.
 test(maybe_or_else_propagates) {
    cat::maybe<int4> engaged = 5;
@@ -886,7 +886,7 @@ test(maybe_reset) {
    cat::verify(!w.has_value());
 }
 
-// `swap()` on value `maybe`s. covers the four engagement combinations.
+// `swap()` on value `maybe`s covers the four engagement combinations.
 test(maybe_value_swap) {
    cat::maybe<int4> a = 1;
    cat::maybe<int4> b = 2;

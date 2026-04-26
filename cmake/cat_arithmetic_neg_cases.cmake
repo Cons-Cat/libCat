@@ -34,10 +34,10 @@ void t() { (void)cat::int1{ 200_i4 }; }
 # constructors (undefined policy), aligned with `arithmetic_detail_raw_implicit_storage` /
 # `raw_source_fits` coverage: 300 for `uint1`, 300u for
 # `int1`, 16'777'217 for `float4`, -1ll for `uint8`, -1 / -1ll for `idx` and
-# `uintptr` (no `deconst_number` — we *want* these to stay constant
+# `uintptr` (no `deconst_number`, and we *want* these to stay constant
 # expressions so the `enable_if` / `consteval` resolution matches the table).
 # (No `intptr` = -1: `raw_source_fits` is true for that pairing in
-# `arithmetic_detail_raw_implicit_storage` — the implicit ctor is *sound*.)
+# `arithmetic_detail_raw_implicit_storage`. The implicit ctor is *sound*.)
 _cat_neg_try_fails("enable-if-uint1-implicit-int-300" [[#include <cat/arithmetic>
 void t() { cat::uint1 a = 300; }
 ]])
