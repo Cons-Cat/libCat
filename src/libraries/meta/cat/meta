@@ -891,24 +891,31 @@ concept rvalue = is_rvalue_reference<T&&> && !is_const<T>;
 
 template <typename Callback, typename... Args>
 concept is_invocable =
-// Clang 19 does not support `__is_invocable`.
+// Clang 23 does not support `__is_invocable`.
 #if __has_builtin(__is_invocable)
    __is_invocable(Callback, Args...);
 #else
    requires(Callback callback, Args&&... arguments) {
-      callback(fwd(arguments)...);
+      (void)__builtin_invoke(fwd(callback), fwd(arguments)...);
    };
 #endif
 
 template <typename Callback, typename... Args>
 concept is_nothrow_invocable =
-// Clang 19 does not support `__is_nothrow_invocable`.
+// Clang 23 does not support `__is_nothrow_invocable`.
 #if __has_builtin(__is_nothrow_invocable)
    __is_nothrow_invocable(Callback, Args...);
 #else
    // TODO: Properly implement `is_nothrow_invocable` for Clang.
    is_invocable<Callback, Args...>;
 #endif
+
+// Like `is_invocable`, but the result is contextually convertible to
+// `bool` (return-type "boolean-testable" for predicates).
+template <typename Callback, typename... Args>
+concept is_predicate = requires(Callback c, Args&&... args) {
+   { __builtin_invoke(fwd(c), fwd(args)...) } -> is_convertible<bool>;
+};
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <typename T>

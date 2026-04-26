@@ -1,4 +1,5 @@
 #include <cat/compare>
+#include <cat/meta>
 #include <cat/tuple>
 
 #include "../unit_tests.hpp"
@@ -466,4 +467,65 @@ test(meta_trivially_copy_construct) {
    struct default_construct {};
 
    static_assert(is_copy_constructible<default_construct>);
+}
+
+namespace {
+auto
+add_two(int a, int b) -> int {
+   return a + b;
+}
+
+struct opaque_return {
+};
+
+auto
+return_opaque(int x) -> opaque_return {
+   (void)x;
+   return {};
+}
+
+auto
+is_positive(int x) -> bool {
+   return x > 0;
+}
+
+struct member_receiver {
+   auto
+   positive(int x) const -> bool {
+      return x > 0;
+   }
+};
+
+struct non_convertible_to_bool {
+   explicit
+   operator bool() = delete;
+};
+
+auto
+bad_predicate_return(int x) -> non_convertible_to_bool {
+   (void)x;
+   return {};
+}
+}  // namespace
+
+test(meta_is_invocable) {
+   using namespace cat;
+   static_assert(is_invocable<decltype(&add_two), int, int>);
+   static_assert(!is_invocable<decltype(&add_two), int>);
+   static_assert(!is_invocable<int>);
+
+   static_assert(is_invocable<bool (member_receiver::*)(int) const,
+                              member_receiver const&, int>);
+}
+
+test(meta_is_predicate) {
+   using namespace cat;
+   static_assert(is_predicate<decltype(&is_positive), int>);
+   static_assert(
+      is_predicate<bool (member_receiver::*)(int) const,
+                   member_receiver const&, int>);
+
+   static_assert(!is_predicate<decltype(&add_two), int, int, int>);
+   static_assert(!is_predicate<decltype(&return_opaque), int>);
+   static_assert(!is_predicate<decltype(&bad_predicate_return), int>);
 }

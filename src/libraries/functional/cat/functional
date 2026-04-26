@@ -6,121 +6,24 @@
 #include <cat/utility>
 
 namespace cat {
-namespace detail {
-template <typename T>
-struct is_reference_wrapper_trait : false_trait {};
-
-// This is not needed until a reference wrapper is implemented.
-// template <typename U>
-// struct is_reference_wrapper_trait<reference_wrapper<U>> : true_type {};
-
-template <typename T>
-inline constexpr bool is_reference_wrapper =
-   is_reference_wrapper_trait<T>::value;
-
-template <typename C, typename Pointed, typename T1, typename... Args>
-constexpr auto
-invoke_member_function(Pointed C::* f, T1&& t1, Args&&... arguments)
-   -> decltype(auto) {
-   if constexpr (is_function<Pointed>) {
-      if constexpr (is_base_of<C, decay<T1>>) {
-         return (fwd(t1).*f)(fwd(arguments)...);
-      } else if constexpr (is_reference_wrapper<decay<T1>>) {
-         return (t1.get().*f)(fwd(arguments)...);
-      } else {
-         return ((*fwd(t1)).*f)(fwd(arguments)...);
-      }
-   } else {
-      static_assert(is_object<Pointed> && sizeof...(arguments) == 0);
-      if constexpr (is_base_of<C, decay<T1>>) {
-         return fwd(t1).*f;
-      } else if constexpr (is_reference_wrapper<decay<T1>>) {
-         return t1.get().*f;
-      } else {
-         return (*fwd(t1)).*f;
-      }
-   }
-}
-
-template <typename T>
-struct invoke_impl_trait {
    template <typename Callback, typename... Args>
-   static auto
-   call(Callback&& f, Args&&... arguments)
-      -> decltype(fwd(f)(fwd(arguments)...));
-};
-
-template <typename B, typename MT>
-struct invoke_impl_trait<MT B::*> {
-   template <typename T, typename Td = decay<T>>
-      requires(is_base_of<B, Td>)
-   static auto
-   get(T&& t) -> T&&;
-
-   template <typename T, typename Td = decay<T>>
-      requires(is_reference_wrapper<Td>)
-   static auto
-   get(T&& t) -> decltype(t.get());
-
-   template <typename T, typename Td = decay<T>>
-      requires(!is_base_of<B, Td> && !is_reference_wrapper<Td>)
-   static auto
-   get(T&& t) -> decltype(*fwd(t));
-
-   template <typename T, typename... Args, typename MT1>
-      requires(is_function<MT1>)
-   static auto
-   call(MT1 B::* pmf, T&& t, Args&&... arguments)
-      -> decltype((invoke_impl_trait::get(fwd(t)).*pmf)(fwd(arguments)...));
-
-   template <typename T>
-   static auto
-   call(MT B::* pmd, T&& t) -> decltype(invoke_impl_trait::get(fwd(t)).*pmd);
-};
-
-template <typename Callback, typename... Args,
-          typename DecayedCallback = decay<Callback>::type>
-auto
-invoke_detail(Callback&& f, Args&&... arguments)
-   -> decltype(invoke_impl_trait<DecayedCallback>::call(fwd(f),
-                                                        fwd(arguments)...));
-
-template <typename AlwaysVoid, typename, typename...>
-struct invoke_result_trait {};
-
-template <typename Callback, typename... Args>
-struct invoke_result_trait<decltype(void(detail::invoke_detail(
-                              declval<Callback>(), declval<Args>()...))),
-                           Callback, Args...> {
-   using type =
-      decltype(detail::invoke_detail(declval<Callback>(), declval<Args>()...));
-};
-}  // namespace detail
-
-template <typename Callback, typename... Args>
-struct invoke_result : detail::invoke_result_trait<void, Callback, Args...> {};
-
-template <typename Callback, typename... Args>
-// requires is_invocable<Callback, Args...>
-constexpr auto
-invoke(Callback&& callback, Args&&... arguments)
-   -> invoke_result<Callback, Args...>
+requires is_invocable<Callback, Args...>
 // noexcept(is_nothrow_invocable<Callback, Args...>)
-{
-   if constexpr (is_member_pointer<decay<Callback>>) {
-      // Member functions must be special-cased.
-      return detail::invoke_member_function(callback, fwd(arguments)...);
-   } else {
-      // Invoke the callback with a call operator.
-      return fwd(callback)(fwd(arguments)...);
-   }
+constexpr auto
+invoke(Callback&& callback, Args&&... arguments) noexcept(
+   noexcept(__builtin_invoke(
+      forward<Callback>(callback), forward<Args>(arguments)...)))
+   -> decltype(__builtin_invoke(
+      forward<Callback>(callback), forward<Args>(arguments)...)) {
+   return __builtin_invoke(
+      forward<Callback>(callback), forward<Args>(arguments)...);
 }
 
 template <typename ReturnT, typename Callback, typename... Args>
-// requires is_invocable_r<return_type, Callback, Args...>
+// requires is_invocable_r<ReturnT, Callback, Args...>
 constexpr auto
 invoke_r(Callback&& callback, Args&&... arguments) -> ReturnT
-// noexcept(is_nothrow_invocable_r<return_type, Callback, Args...>)
+// noexcept(is_nothrow_invocable_r<ReturnT, Callback, Args...>)
 {
    if constexpr (is_void<ReturnT>) {
       invoke(fwd(callback), fwd(arguments)...);
