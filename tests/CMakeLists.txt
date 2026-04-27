@@ -38,8 +38,8 @@ if(CAT_BUILD_UNIT_TESTS)
   # Specifying each source file individually makes disabling tests convenient.
   target_sources(
     cat-tests INTERFACE
-	  ${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_iterator.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_stepanov.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
@@ -47,6 +47,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_simd_sse_avx.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_string_length.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_iterable.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pool_allocator.cpp

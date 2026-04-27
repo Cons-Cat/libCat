@@ -606,7 +606,7 @@ test(simd_rsqrt_rcbrt_rnroot) {
    cat::verify(id0 == v);
 }
 
-test(simd_as_vectorized_iterator) {
+test(simd_as_vectorized_stepanov_iterator) {
    int_lane const data[] = {10, 20, 30, 40};
    auto it = cat::as_vectorized<int4, 4u>(data);
    int4x4 chunk = *it;
@@ -1920,7 +1920,7 @@ test(simd_concepts) {
    static_assert(cat::vectorizable_element<double_lane>);
 }
 
-// --- ?17 as_vectorized_iterator (Vc simdize iterator-style coverage) ---
+// --- ?17 vectorized_stepanov_iterator (Vc simdize iterator-style coverage) ---
 
 test(simd_as_vectorized_iterate_twice) {
    int_lane const data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -2139,7 +2139,7 @@ test(simd_as_vectorized_over_vec_float_data) {
 
 // TODO: Claude is too dumb to write this. Do it yourself.
 #if 0
-test(simd_list_iterator_vectorization_float) {
+test(simd_list_stepanov_iterator_vectorization_float) {
    // Mirrors Vc `list_iterator_vectorization` (float `std::list` block).
    // `list_iter` models `simdize<L::iterator>`; `e` is ++list.end() because `cat::list`
    // keeps the last node as `end()` and advancing past the tail matches a

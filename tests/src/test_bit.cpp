@@ -140,9 +140,9 @@ test(bit) {
    bit1 = bit5;
    cat::verify(!bit1);
 
-   // Test `bit_iterator`.
+   // Test `bit_stepanov_iterator`.
    cat::array<uint4, 4u> array(0u, cat::uint4_max, 0u, 0u);
-   cat::bit_iterator it(array.begin());
+   cat::bit_stepanov_iterator it(array.begin());
 
    // 1st bit of 1st uint4 is 0:
    cat::verify(*it == false);

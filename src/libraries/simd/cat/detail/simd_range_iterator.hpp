@@ -7,9 +7,9 @@
 // Semantics match the draft. There is no lane subobject inside the pack, so
 // `operator*` yields a lane prvalue (`dereference()` returns `value_type` by
 // value). `iterator_concept` is `random_access_iterator_tag`. `reference` and
-// `pointer` follow P2727 `proxy_iterator_interface`. The `pointer` type is
-// `proxy_arrow_result<value_type>`, so `operator->` stores a lane value per
-// `proxy_arrow_result`.
+// `pointer` follow P2727 `proxy_stepanov_iterator_interface`. The `pointer`
+// type is `proxy_arrow_result<value_type>`, so `operator->` stores a lane value
+// per `proxy_arrow_result`.
 //
 // Preconditions from C++26. After `advance`, `lane_index()` lies in
 // `[0, pack_type::size()]`. `distance_to`, ordering, and iterator difference
@@ -18,8 +18,8 @@
 
 #include <cat/arithmetic>
 #include <cat/debug>
-#include <cat/iterator>
 #include <cat/meta>
+#include <cat/stepanov>
 
 namespace cat {
 
@@ -33,12 +33,12 @@ class simd_mask;
 namespace detail {
 
 template <typename Pack>
-class simd_range_iterator
-    : public proxy_iterator_interface<
+class simd_range_stepanov_iterator
+    : public proxy_stepanov_iterator_interface<
          random_access_iterator_tag, typename remove_const<Pack>::value_type,
          typename remove_const<Pack>::value_type, iword> {
    using pack_type = remove_const<Pack>;
-   using self_type = simd_range_iterator<Pack>;
+   using self_type = simd_range_stepanov_iterator<Pack>;
 
  public:
    using value_type = typename pack_type::value_type;
@@ -48,15 +48,17 @@ class simd_range_iterator
    idx m_offset = 0u;
 
  public:
-   constexpr simd_range_iterator() = default;
+   constexpr simd_range_stepanov_iterator() = default;
 
-   constexpr simd_range_iterator(simd_range_iterator const&) = default;
+   constexpr simd_range_stepanov_iterator(simd_range_stepanov_iterator const&) =
+      default;
 
-   constexpr simd_range_iterator(Pack* p_data_in, idx offset_in)
+   constexpr simd_range_stepanov_iterator(Pack* p_data_in, idx offset_in)
        : m_data(p_data_in), m_offset(offset_in) {
    }
 
-   constexpr simd_range_iterator(simd_range_iterator<pack_type> const& other)
+   constexpr simd_range_stepanov_iterator(
+      simd_range_stepanov_iterator<pack_type> const& other)
       requires(is_const<Pack>)
        : m_data(other.m_data), m_offset(other.m_offset) {
    }
@@ -109,7 +111,8 @@ class simd_range_iterator
 template <typename Pack>
 [[nodiscard]]
 constexpr auto
-operator==(simd_range_iterator<Pack> const& i, default_sentinel_t) -> bool {
+operator==(simd_range_stepanov_iterator<Pack> const& i, default_sentinel_t)
+   -> bool {
    using pack_type = remove_const<Pack>;
    return i.lane_index() == pack_type::size();
 }
@@ -117,15 +120,16 @@ operator==(simd_range_iterator<Pack> const& i, default_sentinel_t) -> bool {
 template <typename Pack>
 [[nodiscard]]
 constexpr auto
-operator==(default_sentinel_t, simd_range_iterator<Pack> const& i) -> bool {
+operator==(default_sentinel_t, simd_range_stepanov_iterator<Pack> const& i)
+   -> bool {
    return i == default_sentinel;
 }
 
 template <typename Pack>
 [[nodiscard]]
 constexpr auto
-operator-(simd_range_iterator<Pack> const& i, default_sentinel_t) ->
-   typename simd_range_iterator<Pack>::difference_type {
+operator-(simd_range_stepanov_iterator<Pack> const& i, default_sentinel_t) ->
+   typename simd_range_stepanov_iterator<Pack>::difference_type {
    using pack_type = remove_const<Pack>;
    return iword(i.lane_index()) - iword(pack_type::size());
 }
@@ -133,8 +137,8 @@ operator-(simd_range_iterator<Pack> const& i, default_sentinel_t) ->
 template <typename Pack>
 [[nodiscard]]
 constexpr auto
-operator-(default_sentinel_t, simd_range_iterator<Pack> const& i) ->
-   typename simd_range_iterator<Pack>::difference_type {
+operator-(default_sentinel_t, simd_range_stepanov_iterator<Pack> const& i) ->
+   typename simd_range_stepanov_iterator<Pack>::difference_type {
    using pack_type = remove_const<Pack>;
    return iword(pack_type::size()) - iword(i.lane_index());
 }

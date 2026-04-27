@@ -2,8 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/iterator>
 #include <cat/meta>
+#include <cat/stepanov>
 
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by Clang.
 namespace cat {
@@ -609,12 +609,16 @@ class bit_value {
 struct byte;
 
 template <typename iterator>
-// Only storage types can be iterated bitwise.
-   requires(is_unsigned_integral<typename iterator::value_type>
+// Only storage types can be iterated bitwise. Like other
+// `proxy_stepanov_iterator_interface` adaptors, the wrapped iterator must model
+// random access (`advance` uses `+=` on the underlying iterator).
+   requires(is_random_access_stepanov_iterator<iterator>
+            && is_unsigned_integral<typename iterator::value_type>
             /* || is_same<typename iterator::value_type, byte> */)
-class bit_iterator : public proxy_iterator_interface<
-                        random_access_iterator_tag, bit_value,
-                        bit_reference<typename iterator::value_type>, iword> {
+class bit_stepanov_iterator
+    : public proxy_stepanov_iterator_interface<
+         random_access_iterator_tag, bit_value,
+         bit_reference<typename iterator::value_type>, iword> {
  private:
    static constexpr idx word_bits = limits<typename iterator::value_type>::bits;
 
@@ -625,11 +629,12 @@ class bit_iterator : public proxy_iterator_interface<
    using const_reference =
       bit_reference<remove_cvref<typename iterator::value_type> const>;
 
-   constexpr bit_iterator() = default;
-   constexpr bit_iterator(bit_iterator const&) = default;
-   constexpr bit_iterator(bit_iterator&&) = default;
+   constexpr bit_stepanov_iterator() = default;
+   constexpr bit_stepanov_iterator(bit_stepanov_iterator const&) = default;
+   constexpr bit_stepanov_iterator(bit_stepanov_iterator&&) = default;
 
-   constexpr explicit bit_iterator(iterator const& other, idx current_bit = 0u)
+   constexpr explicit bit_stepanov_iterator(iterator const& other,
+                                            idx current_bit = 0u)
        : m_internal_iterator(other), m_bit_position(current_bit) {
    }
 
@@ -643,9 +648,9 @@ class bit_iterator : public proxy_iterator_interface<
       return const_reference::from_offset(*m_internal_iterator, m_bit_position);
    }
 
-   // The `bit_iterator` proxy iterator moves in a way that may be
+   // The `bit_stepanov_iterator` proxy iterator moves in a way that may be
    // couner-intuitive at first. It will travel forwards across the elements of
-   // a collection, but backwards across that element's bits. It cannot move
+   // a container, but backwards across that element's bits. It cannot move
    // backwards across the elements, because that would require it adapt to only
    // bidi-iterators and never forward iterators, which s an unacceptable
    // limitation.
@@ -661,7 +666,7 @@ class bit_iterator : public proxy_iterator_interface<
    }
 
    constexpr auto
-   distance_to(bit_iterator const& other) const -> iword {
+   distance_to(bit_stepanov_iterator const& other) const -> iword {
       iword const word_difference =
          m_internal_iterator - other.m_internal_iterator;
       // Multiply the number of words between the two iterators by the size of

@@ -33,8 +33,8 @@
 #include <detail/initializer_list.hpp>
 
 #include <cat/bit>
-#include <cat/collection>
 #include <cat/compare>
+#include <cat/container>
 #include <cat/math>
 #include <cat/memory>
 #include <cat/meta>
@@ -48,15 +48,15 @@ class [[clang::trivial_abi, gsl::Pointer(T)]]
 span
     // It is not possible to make this an aggregate class while using CRTP
     // classes.
-    : public collection_interface<span<T, fixed_extent>, T>,
-      public random_access_iterable_interface<T> {
+    : public container_interface<span<T, fixed_extent>, T>,
+      public random_access_stepanov_iterable_interface<T> {
  public:
    static constexpr idx extent = fixed_extent;
 
    // `element_type` is the only span-specific typedef; everything else
    // (`value_type`, `reference`, `const_reference`, `pointer`,
    // `const_pointer`, `size_type`, `difference_type`, and the iterator
-   // family) comes from `collection_interface` / `iterable_interface`.
+   // family) comes from `container_interface` / `stepanov_iterable_interface`.
    using element_type = T;
 
    constexpr span() = default;
@@ -97,11 +97,11 @@ span
    // Implicitly convert a contiguous container into a span. Const-correctness
    // is managed by the deduction guides below.
    template <is_random_access U>
-   constexpr span(U& collection [[clang::lifetimebound]])
+   constexpr span(U& container [[clang::lifetimebound]])
       requires(is_convertible<typename U::value_type (*)[], T (*)[]>)
-       : m_p_data(collection.data()), m_size(collection.size()) {
+       : m_p_data(container.data()), m_size(container.size()) {
       if constexpr (fixed_extent != dynamic_extent) {
-         assert(collection.size() == fixed_extent);
+         assert(container.size() == fixed_extent);
       }
    }
 
@@ -118,7 +118,7 @@ span
    }
 
    template <typename U>
-   constexpr span(U&& collection) =
+   constexpr span(U&& container) =
       delete ("A `cat::span` cannot alias a temporary, because the span would"
               "immediately dangle.");
 
@@ -145,20 +145,20 @@ span
    // is managed by the deduction guides below.
    template <is_random_access U>
    auto
-   operator=(U& collection [[clang::lifetimebound]]) -> span<T, fixed_extent>&
+   operator=(U& container [[clang::lifetimebound]]) -> span<T, fixed_extent>&
       requires(is_convertible<typename U::value_type (*)[], T (*)[]>)
    {
       if constexpr (fixed_extent != dynamic_extent) {
-         assert(collection.size() == fixed_extent);
+         assert(container.size() == fixed_extent);
       }
-      m_p_data = collection.data();
-      m_size = collection.size();
+      m_p_data = container.data();
+      m_size = container.size();
       return *this;
    }
 
    template <typename U>
    auto
-   operator=(U&& collection) =
+   operator=(U&& container) =
       delete ("A `cat::span` cannot alias a temporary, because the span would"
               "immediately dangle.");
 

@@ -108,7 +108,7 @@ test(array_range_based_for_each_direction) {
       ++count;
    }
 
-   for (int& a : cat::as_reverse(array_1)) {
+   for (int& a : cat::as_reverse_stepanov(array_1)) {
       count.raw -= 1u;
       cat::verify(a == array_1[count]);
    }
@@ -120,7 +120,7 @@ test(array_range_based_for_each_direction) {
    }
    auto _ = array_1.cbegin();
 
-   for (int const& a : cat::as_const_reverse(array_1)) {
+   for (int const& a : cat::as_const_reverse_stepanov(array_1)) {
       count.raw -= 1u;
       cat::verify(a == array_1[count]);
    }

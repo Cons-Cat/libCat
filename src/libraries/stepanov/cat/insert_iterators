@@ -3,18 +3,18 @@
 #pragma once
 
 #include <cat/allocator>
-#include <cat/iterator>
+#include <cat/stepanov>
 
 namespace cat {
 
 template <typename T>
-class back_insert_iterator
-    : public iterator_interface<output_iterator_tag, void,
-                                back_insert_iterator<T>&, void> {
+class back_insert_stepanov_iterator
+    : public stepanov_iterator_interface<
+         output_iterator_tag, void, back_insert_stepanov_iterator<T>&, void> {
  public:
    using container_type = T;
 
-   constexpr explicit back_insert_iterator(T& input_iterable)
+   constexpr explicit back_insert_stepanov_iterator(T& input_iterable)
        : m_iterable(input_iterable) {
    }
 
@@ -28,7 +28,7 @@ class back_insert_iterator
    template <typename U>
    constexpr auto
    insert(/* allocator */ auto& allocator, U& value)
-      -> maybe<back_insert_iterator<T>&> {
+      -> maybe<back_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_back(allocator, value);
       if (!result.has_value()) {
          return nullopt;
@@ -38,7 +38,7 @@ class back_insert_iterator
 
    template <typename U>
    constexpr auto
-   insert(U& value) -> back_insert_iterator<T>& {
+   insert(U& value) -> back_insert_stepanov_iterator<T>& {
       m_iterable.push_back(value);
       return *this;
    }
@@ -46,7 +46,7 @@ class back_insert_iterator
    template <typename U>
    constexpr auto
    insert(/* allocator */ auto& allocator, U const& value)
-      -> maybe<back_insert_iterator<T>&> {
+      -> maybe<back_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_back(allocator, value);
       if (!result.has_value()) {
          return nullopt;
@@ -56,14 +56,14 @@ class back_insert_iterator
 
    template <typename U>
    constexpr auto
-   insert(U const& value) -> back_insert_iterator<T>& {
+   insert(U const& value) -> back_insert_stepanov_iterator<T>& {
       m_iterable.push_back(value);
       return *this;
    }
 
    template <typename U>
    constexpr auto
-   operator=(U const& value) -> back_insert_iterator<T>& {
+   operator=(U const& value) -> back_insert_stepanov_iterator<T>& {
       m_iterable.push_back(value);
       return *this;
    }
@@ -71,7 +71,7 @@ class back_insert_iterator
    template <typename U>
    constexpr auto
    insert(/* allocator */ auto& allocator, U&& value)
-      -> maybe<back_insert_iterator<T>&> {
+      -> maybe<back_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_back(allocator, fwd(value));
       if (!result.has_value()) {
          return nullopt;
@@ -81,27 +81,27 @@ class back_insert_iterator
 
    template <typename U>
    constexpr auto
-   insert(U&& value) -> maybe<back_insert_iterator<T>&> {
+   insert(U&& value) -> maybe<back_insert_stepanov_iterator<T>&> {
       prop(m_iterable.push_back(fwd(value)));
       return *this;
    }
 
    template <typename U>
    constexpr auto
-   operator=(U&& value) -> back_insert_iterator<T>& {
+   operator=(U&& value) -> back_insert_stepanov_iterator<T>& {
       m_iterable.push_back(fwd(value));
       return *this;
    }
 
    // Dereference operator is no-op.
    constexpr auto
-   dereference() -> back_insert_iterator<T>& {
+   dereference() -> back_insert_stepanov_iterator<T>& {
       return *this;
    }
 
    // Increment operators are no-op.
    constexpr auto
-   increment() -> back_insert_iterator<T>& {
+   increment() -> back_insert_stepanov_iterator<T>& {
       return *this;
    }
 
@@ -109,14 +109,14 @@ class back_insert_iterator
    T& m_iterable;
 };
 
-template <is_iterable T>
-class front_insert_iterator
-    : public iterator_interface<output_iterator_tag, void,
-                                front_insert_iterator<T>&, void> {
+template <is_stepanov_iterable T>
+class front_insert_stepanov_iterator
+    : public stepanov_iterator_interface<
+         output_iterator_tag, void, front_insert_stepanov_iterator<T>&, void> {
  public:
    using container_type = T;
 
-   constexpr explicit front_insert_iterator(T& input_iterable)
+   constexpr explicit front_insert_stepanov_iterator(T& input_iterable)
        : m_iterable(input_iterable) {
    }
 
@@ -130,7 +130,7 @@ class front_insert_iterator
    template <typename U>
    constexpr auto
    insert(/* allocator */ auto& allocator, U& value)
-      -> maybe<front_insert_iterator<T>&> {
+      -> maybe<front_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_front(allocator, value);
       if (!result.has_value()) {
          return nullopt;
@@ -140,7 +140,7 @@ class front_insert_iterator
 
    template <typename U>
    constexpr auto
-   insert(U& value) -> front_insert_iterator<T>& {
+   insert(U& value) -> front_insert_stepanov_iterator<T>& {
       m_iterable.push_front(value);
       return *this;
    }
@@ -148,7 +148,7 @@ class front_insert_iterator
    template <typename U>
    constexpr auto
    insert(/* allocator */ auto& allocator, U const& value)
-      -> maybe<front_insert_iterator<T>&> {
+      -> maybe<front_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_front(allocator, value);
       if (!result.has_value()) {
          return nullopt;
@@ -158,14 +158,14 @@ class front_insert_iterator
 
    template <typename U>
    constexpr auto
-   insert(U const& value) -> front_insert_iterator<T>& {
+   insert(U const& value) -> front_insert_stepanov_iterator<T>& {
       m_iterable.push_front(value);
       return *this;
    }
 
    template <typename U>
    constexpr auto
-   operator=(U const& value) -> front_insert_iterator<T>& {
+   operator=(U const& value) -> front_insert_stepanov_iterator<T>& {
       m_iterable.push_front(value);
       return *this;
    }
@@ -173,7 +173,7 @@ class front_insert_iterator
    template <typename U>
    constexpr auto
    insert(/* allocator */ auto& allocator, U&& value)
-      -> maybe<front_insert_iterator<T>&> {
+      -> maybe<front_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_front(allocator, fwd(value));
       if (!result.has_value()) {
          return nullopt;
@@ -183,27 +183,27 @@ class front_insert_iterator
 
    template <typename U>
    constexpr auto
-   insert(U&& value) -> maybe<front_insert_iterator<T>&> {
+   insert(U&& value) -> maybe<front_insert_stepanov_iterator<T>&> {
       prop(m_iterable.push_front(fwd(value)));
       return *this;
    }
 
    template <typename U>
    constexpr auto
-   operator=(U&& value) -> front_insert_iterator<T>& {
+   operator=(U&& value) -> front_insert_stepanov_iterator<T>& {
       m_iterable.push_front(fwd(value));
       return *this;
    }
 
    // Dereference operator is no-op.
    constexpr auto
-   dereference() -> front_insert_iterator<T>& {
+   dereference() -> front_insert_stepanov_iterator<T>& {
       return *this;
    }
 
    // Increment operators are no-op.
    constexpr auto
-   increment() -> front_insert_iterator<T>& {
+   increment() -> front_insert_stepanov_iterator<T>& {
       return *this;
    }
 
@@ -211,18 +211,18 @@ class front_insert_iterator
    T& m_iterable;
 };
 
-template <is_iterable T>
+template <is_stepanov_iterable T>
 [[nodiscard]]
 constexpr auto
-as_back_inserter(T& container) -> back_insert_iterator<T> {
-   return back_insert_iterator<T>(container);
+as_back_inserter(T& container) -> back_insert_stepanov_iterator<T> {
+   return back_insert_stepanov_iterator<T>(container);
 }
 
-template <is_iterable T>
+template <is_stepanov_iterable T>
 [[nodiscard]]
 constexpr auto
-as_front_inserter(T& container) -> front_insert_iterator<T> {
-   return front_insert_iterator<T>(container);
+as_front_inserter(T& container) -> front_insert_stepanov_iterator<T> {
+   return front_insert_stepanov_iterator<T>(container);
 }
 
 }  // namespace cat

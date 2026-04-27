@@ -4,10 +4,11 @@
 
 namespace cat {
 
-// Tag for `cat::iterator_interface` specializations. `arithmetic_interface`
-// uses it to keep `iterator + iword` on `iterator_interface` operators
-// instead of `plus_interface` on the `iword` type.
-struct iterator_interface_base {};
+// Tag for `cat::stepanov_iterator_interface` specializations.
+// `arithmetic_interface` uses it to keep `iterator + iword` on
+// `stepanov_iterator_interface` operators instead of `plus_interface` on the
+// `iword` type.
+struct stepanov_iterator_interface_base {};
 
 // Forward declare numeric types. These are implemented in `<arithmetic>`.
 enum class overflow_policies : unsigned char;
@@ -917,7 +918,7 @@ concept is_predicate = requires(Callback c, Args&&... args) {
                           {
                              __builtin_invoke(fwd(c), fwd(args)...)
                           } -> is_convertible<bool>;
-};
+                       };
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <typename T>

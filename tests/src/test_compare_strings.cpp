@@ -41,7 +41,7 @@ test(compare_strings) {
    constexpr cat::str_inplace const_string_3 = "Hello, ";
    constexpr cat::str_inplace const_string_4 = "world!";
 
-   // Test collection operations.
+   // Test container operations.
    auto _ = const_string_1[1];
    cat::verify(!const_string_3.at(10).has_value());
 

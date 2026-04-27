@@ -281,7 +281,7 @@ test(span_iteration_forward) {
 
    idx index = 0u;
    for (int4& element : view) {
-      cat::verify(element == values[index.raw]);
+      cat::verify(element == values[index]);
       ++index;
    }
    cat::verify(index == 4u);
@@ -292,10 +292,10 @@ test(span_iteration_reverse) {
    cat::span<int4> view{values, 4u};
 
    // Each visited element should equal the value at the descending index
-   idx position = 4u;
-   for (int4& element : cat::as_reverse(view)) {
-      position.raw -= 1u;
-      cat::verify(element == values[position.raw]);
+   iword position = 4u;
+   for (int4& element : cat::as_reverse_stepanov(view)) {
+      position -= 1;
+      cat::verify(element == values[narrow_cast<idx>(position).verify()]);
    }
 }
 
@@ -478,7 +478,7 @@ test(span_nested_typedefs) {
 
    // For a span over `T const`, `element_type` keeps the `const` (mirrors
    // `std::span`); `value_type` strips it (also mirrors `std::span`, since
-   // `collection_interface::value_type = remove_cv<T>`).
+   // `container_interface::value_type = remove_cv<T>`).
    static_assert(cat::is_same<const_span::element_type, int4 const>);
    static_assert(cat::is_same<const_span::value_type, int4>);
    static_assert(cat::is_same<const_span::pointer, int4 const*>);
@@ -832,12 +832,12 @@ test(span_iterator_methods_reverse) {
    cat::verify(*crfirst == 4);
 }
 
-// `iterator` is a contiguous (random-access) iterator type; verify the
+// `iterator` is a contiguous (random-access) iterator type. Verify the
 // libCat concepts hold so generic algorithms can pick the contiguous
 // specialization.
 test(span_iterator_concepts) {
    using iterator = cat::span<int4>::iterator;
-   static_assert(cat::is_random_access_iterator<iterator>);
+   static_assert(cat::is_random_access_stepanov_iterator<iterator>);
 }
 
 // A zero-extent span is a well-formed empty view: no allocation, no data,

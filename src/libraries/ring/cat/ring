@@ -4,14 +4,14 @@
 
 #include <cat/allocator>
 #include <cat/bit>
-#include <cat/collection>
+#include <cat/container>
 
 // TODO: Make `ring` be `constexpr`.
 
 namespace cat {
 
 template <typename T>
-class ring : public collection_interface<ring<T>, T> {
+class ring : public container_interface<ring<T>, T> {
  public:
    ring()
        : p_storage(nullptr),

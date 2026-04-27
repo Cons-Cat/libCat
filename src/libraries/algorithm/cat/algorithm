@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/iterator>
+#include <cat/stepanov>
 
 namespace cat {
 
@@ -12,7 +12,7 @@ concept is_random_access = requires(T t) {
                               t.size();
                            };
 
-// Copy-assign the elements of one collection into another.
+// Copy-assign the elements of one container into another.
 template <typename input_iterator, typename output_iterator>
 auto
 copy(input_iterator source_begin, input_iterator source_end,
@@ -28,7 +28,7 @@ copy(input_iterator source_begin, input_iterator source_end,
    return destination_begin;
 }
 
-// Move-assign the elements of one collection into another.
+// Move-assign the elements of one container into another.
 template <typename input_iterator, typename output_iterator>
 auto
 move(input_iterator source_begin, input_iterator source_end,
@@ -45,7 +45,7 @@ move(input_iterator source_begin, input_iterator source_end,
    return destination_begin;
 }
 
-// Optimally relocate the elements of one collection into another.
+// Optimally relocate the elements of one container into another.
 template <typename input_iterator, typename output_iterator>
 auto
 relocate(input_iterator source_begin, input_iterator source_end,
@@ -56,8 +56,8 @@ relocate(input_iterator source_begin, input_iterator source_end,
    // If the source and destination containers are contiguous, and they hold
    // the same element type, and that type is trivially relocatable, copy them
    // fast.
-   if constexpr (is_random_access_iterator<input_iterator>
-                 && is_random_access_iterator<output_iterator>
+   if constexpr (is_random_access_stepanov_iterator<input_iterator>
+                 && is_random_access_stepanov_iterator<output_iterator>
                  && is_same<source_element, destination_element>
                  && is_trivially_relocatable<source_element>) {
       copy_memory(__builtin_addressof(*source_begin),
@@ -76,7 +76,8 @@ relocate(input_iterator source_begin, input_iterator source_end,
    }
 }
 
-template <is_forward_iterator ItLhs, is_forward_iterator ItRhs>
+template <is_forward_stepanov_iterator ItLhs,
+          is_forward_stepanov_iterator ItRhs>
 constexpr auto
 lexicographical_compare(ItLhs lhs_start, ItLhs lhs_end, ItRhs rhs_start,
                         ItRhs rhs_end) -> bool {
@@ -95,7 +96,8 @@ lexicographical_compare(ItLhs lhs_start, ItLhs lhs_end, ItRhs rhs_start,
    return (rhs_start != rhs_end);
 }
 
-template <is_forward_iterator ItLhs, is_forward_iterator ItRhs>
+template <is_forward_stepanov_iterator ItLhs,
+          is_forward_stepanov_iterator ItRhs>
 constexpr auto
 lexicographical_compare_three_way(ItLhs lhs_start, ItLhs lhs_end,
                                   ItRhs rhs_start,

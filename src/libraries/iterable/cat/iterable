@@ -1,0 +1,528 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/detail/iterable_interface.hpp>
+
+#include <cat/maybe>
+#include <cat/span>
+#include <cat/utility>
+
+// While libCat supports Stepanov-like iterators, algorithmic composition is
+// generally done with a model closely inspired by the Flux v2
+// "sequence-orientated programming model proposed by Tristan Brindle.
+// https://tristanbrindle.com/posts/the-road-to-flux-10
+//
+// Iteration is defined by two complementary protocols:
+//
+// `is_iterable`    Single-pass internal iteration via an
+//                  `iteration_context`. The context owns the loop and
+//                  fuses read-and-advance, which structurally rules
+//                  dangling iteration state.
+
+// `is_collection`  Multi-pass position-based access. A `position` is a
+//                  regular, totally-ordered value, and reads always go
+//                  through the parent collection so dangling is not a
+//                  category of bug.
+//
+// An `iteration_context` can model any type of collection. It exposes a
+// `.run_while(callback)` member that returns a `cat::iteration_result`.
+// Iteration contexts are non-copyable and non-movable to enforce that they
+// cannot outlive their parent and cannot be aliased against it.
+//
+// A "collection" models contiguous storage by exposing `begin_pos`, `end_pos`,
+// `inc_pos`, and `read_at_unchecked` over a `position` type. The position must
+// be `cat::is_regular && cat::is_totally_ordered`. Integers are a customary
+// position. All collections are iterables.
+//
+// Collections are automatically iterable by `cat::collection_iteration_context`
+// or `cat::reverse_collection_iteration_context`.
+//
+// A container, for example, could be either a collection or merely iterable.
+//
+// Either of these can "pipe" into a function pipeline. If this iterable
+// implements the `cat::iterable_interface`, then a dot-chaining fluent API
+// may be used instead. However, this design is not user-extensible, whereas
+// the pipe-chaining API is.
+//
+// Iterables pipe into "views", which model lazily evaluated functions.
+// Pipelines end in a "terminal", which eagerly evaluates.
+//
+// Views take ownership of their base by value. An r-value argument is moves
+// into its view. A trivially-copyable lvalue is copied, but non
+// trivially-copyable lvalues are rejected. They must be passed through
+// `cat::ref` or `cat::cref` explicitly to opt in to non-owning aliasing. This
+// makes accidental dangling references against temporaries impossible.
+//
+// `is_collection` refines into a small hierarchy:
+//
+//    `is_collection`                - basis: positions + `read_at_unchecked`.
+//    `is_bidirectional_collection`  - adds `dec_pos(p)`.
+//    `is_random_access_collection`  - adds offset/distance over positions.
+//
+// A bidirectional collection auto-derives `reverse_iterate(c)` via a
+// `reverse_collection_iteration_context`, so `data | cat::reverse()` works by
+// default.
+//
+// On the random-access leaf we also expose four bounds-checked
+// accessors: `read_at`, `try_read_at`, `slice`, and `as_span` (the
+// last only for collections that already carry contiguous storage).
+
+namespace cat {
+
+// A `run_while` loop returns `iteration_result` to signal its status.
+enum class iteration_result : bool {
+   incomplete = false,  // The loop was suspened.
+   complete = true,     // The loop completed.
+};
+
+}  // namespace cat
+
+// Member-call mixin and contiguous position helpers live in
+// <cat/detail/iterable_interface.hpp>. Iterable member implementations are
+// included from the bottom of this header.
+
+namespace cat::detail {
+// Peel `reference_wrapper` so adapters and range-for see the wrapped iterable.
+template <typename T>
+constexpr auto
+unwrap_ref(T& value) -> T& {
+   return value;
+}
+
+template <typename T>
+constexpr auto
+unwrap_ref(::cat::reference_wrapper<T>& borrow) -> T& {
+   return borrow.get();
+}
+
+template <typename T>
+constexpr auto
+unwrap_ref(::cat::reference_wrapper<T> const& borrow) -> T& {
+   return borrow.get();
+}
+}  // namespace cat::detail
+
+namespace cat {
+
+// A `position` is a handle to a collection element. It is regular and
+// strictly totally ordered. The strict total order is what lets us
+// bounds-check arbitrary slices in constant time.
+template <typename P>
+concept is_position = requires(P const& left, P const& right) {
+                         P{};
+                         P{left};
+                         { left == right } -> is_convertible<bool>;
+                         { left < right } -> is_convertible<bool>;
+                      };
+
+}  // namespace cat
+
+namespace cat::detail {
+template <typename T>
+concept has_position_protocol = requires(T const& collection) {
+                                   collection.begin_pos();
+                                   collection.end_pos();
+                                };
+}  // namespace cat::detail
+
+namespace cat {
+
+template <typename T>
+   requires(detail::has_position_protocol<T>)
+using position_type = remove_cvref<decltype(declval<T const&>().begin_pos())>;
+
+// `is_collection<T>` is satisfied when `T` exposes the four basis
+// operations required of a collection: `begin_pos`, `end_pos`,
+// `inc_pos`, and `read_at_unchecked`. The first three take the collection
+// by const reference. Only the read may need a non-const handle.
+template <typename T>
+concept is_collection =
+   detail::has_position_protocol<T> && is_position<position_type<T>>
+   && requires(T& collection, position_type<T>& position,
+               position_type<T> const& read_position) {
+         collection.inc_pos(position);
+         collection.read_at_unchecked(read_position);
+      };
+
+// `is_bidirectional_collection` adds `dec_pos(p)`: step a mutable
+// position one slot back. With this, the reverse iteration adapter can
+// be auto-derived from the collection.
+template <typename T>
+concept is_bidirectional_collection =
+   is_collection<T>
+   && requires(T const& collection, position_type<T>& position) {
+         collection.dec_pos(position);
+      };
+
+// `is_random_access_collection` adds O(1) advance and distance over
+// positions. `inc_pos(position, count)` advances `position` by `count` (count
+// may be negative where the position type allows), and `distance(left, right)`
+// returns the signed offset from `left` to `right`.
+template <typename T>
+concept is_random_access_collection =
+   is_bidirectional_collection<T>
+   && requires(T const& collection, position_type<T>& position,
+               position_type<T> const& left, position_type<T> const& right,
+               iword count) {
+         collection.inc_pos(position, count);
+         { collection.distance(left, right) } -> is_convertible<iword>;
+      };
+
+// `collection_iteration_context<T>` is the default iterable adapter for
+// any collection: walk positions from `begin_pos` to `end_pos` and read
+// through `read_at_unchecked`. It is non-copyable and non-movable, so it
+// cannot be hoisted out of its parent's scope.
+template <typename T>
+class collection_iteration_context {
+   T* m_p_collection;
+   position_type<T> m_position;
+   position_type<T> m_stop;
+
+ public:
+   using element_type = decltype(declval<T&>().read_at_unchecked(
+      declval<position_type<T> const&>()));
+
+   constexpr collection_iteration_context(T* p_collection,
+                                          position_type<T> begin_position,
+                                          position_type<T> end_position)
+       : m_p_collection(p_collection),
+         m_position(begin_position),
+         m_stop(end_position) {
+   }
+
+   collection_iteration_context(collection_iteration_context const&) = delete;
+   collection_iteration_context(collection_iteration_context&&) = delete;
+   auto
+   operator=(collection_iteration_context const&)
+      -> collection_iteration_context& = delete;
+   auto
+   operator=(collection_iteration_context&&)
+      -> collection_iteration_context& = delete;
+
+   template <is_predicate<element_type> LoopBody>
+   constexpr auto
+   run_while(LoopBody&& loop_body) -> iteration_result {
+      while (m_position < m_stop) {
+         auto const position_before_advance = m_position;
+         m_p_collection->inc_pos(m_position);
+         if (!loop_body(
+                m_p_collection->read_at_unchecked(position_before_advance))) {
+            return iteration_result::incomplete;
+         }
+      }
+      return iteration_result::complete;
+   }
+};
+
+// `reverse_collection_iteration_context<T>` walks a bidirectional
+// collection backwards. The loop holds a position one past the next
+// element to read. Before each call to `read_at_unchecked` it steps
+// `dec_pos` so the position lands on the element being read. This is
+// why the context only requires `dec_pos` from `T`. It never needs to
+// step "before begin".
+template <typename T>
+class reverse_collection_iteration_context {
+   T* m_p_collection;
+   position_type<T> m_position;
+   position_type<T> m_stop;
+
+ public:
+   using element_type = decltype(declval<T&>().read_at_unchecked(
+      declval<position_type<T> const&>()));
+
+   constexpr reverse_collection_iteration_context(
+      T* p_collection, position_type<T> begin_position,
+      position_type<T> end_position)
+       : m_p_collection(p_collection),
+         m_position(begin_position),
+         m_stop(end_position) {
+   }
+
+   reverse_collection_iteration_context(
+      reverse_collection_iteration_context const&) = delete;
+   reverse_collection_iteration_context(
+      reverse_collection_iteration_context&&) = delete;
+   auto
+   operator=(reverse_collection_iteration_context const&)
+      -> reverse_collection_iteration_context& = delete;
+   auto
+   operator=(reverse_collection_iteration_context&&)
+      -> reverse_collection_iteration_context& = delete;
+
+   template <is_predicate<element_type> LoopBody>
+   constexpr auto
+   run_while(LoopBody&& loop_body) -> iteration_result {
+      while (m_stop < m_position) {
+         m_p_collection->dec_pos(m_position);
+         if (!loop_body(m_p_collection->read_at_unchecked(m_position))) {
+            return iteration_result::incomplete;
+         }
+      }
+      return iteration_result::complete;
+   }
+};
+
+}  // namespace cat
+
+namespace cat::detail {
+template <typename T>
+concept has_member_iterate = requires(T& t) { t.iterate(); };
+
+template <typename T>
+concept has_member_reverse_iterate = requires(T& t) { t.reverse_iterate(); };
+
+// `iterate_fn` is the dispatcher behind `iterate`. It first
+// unwraps any `cat::reference_wrapper`, then looks for a member
+// `.iterate()`, and otherwise auto-derives an `iterate` for any type
+// that satisfies `is_collection` by wrapping it in a
+// `collection_iteration_context`.
+struct iterate_fn {
+   // Forward this call through a mutable borrow from `reference_wrapper`.
+   template <typename T>
+   constexpr auto
+   operator()(::cat::reference_wrapper<T>& borrow) const
+      -> decltype((*this)(borrow.get())) {
+      return (*this)(borrow.get());
+   }
+
+   // Forward this call through a const borrow from `reference_wrapper`.
+   template <typename T>
+   constexpr auto
+   operator()(::cat::reference_wrapper<T> const& borrow) const
+      -> decltype((*this)(borrow.get())) {
+      return (*this)(borrow.get());
+   }
+
+   // Use the type's own `.iterate()` when present.
+   template <typename T>
+      requires(!is_reference_wrapper<T> && has_member_iterate<T>)
+   constexpr auto
+   operator()(T& source) const -> decltype(source.iterate()) {
+      return source.iterate();
+   }
+
+   // Otherwise wrap a collection in the default forward position walk.
+   template <typename T>
+      requires(!is_reference_wrapper<T> && !has_member_iterate<T>
+               && is_collection<T>)
+   constexpr auto
+   operator()(T& source) const -> collection_iteration_context<T> {
+      return collection_iteration_context<T>{
+         __builtin_addressof(source), source.begin_pos(), source.end_pos()};
+   }
+};
+
+struct reverse_iterate_fn {
+   // Forward this call through a mutable borrow from `reference_wrapper`.
+   template <typename T>
+   constexpr auto
+   operator()(::cat::reference_wrapper<T>& borrow) const
+      -> decltype((*this)(borrow.get())) {
+      return (*this)(borrow.get());
+   }
+
+   // Forward this call through a const borrow from `reference_wrapper`.
+   template <typename T>
+   constexpr auto
+   operator()(::cat::reference_wrapper<T> const& borrow) const
+      -> decltype((*this)(borrow.get())) {
+      return (*this)(borrow.get());
+   }
+
+   // Use the type's own `.reverse_iterate()` when present.
+   template <typename T>
+      requires(!is_reference_wrapper<T> && has_member_reverse_iterate<T>)
+   constexpr auto
+   operator()(T& source) const -> decltype(source.reverse_iterate()) {
+      return source.reverse_iterate();
+   }
+
+   // Otherwise walk a bidirectional collection backward by positions.
+   template <typename T>
+      requires(!is_reference_wrapper<T> && !has_member_reverse_iterate<T>
+               && is_bidirectional_collection<T>)
+   constexpr auto
+   operator()(T& source) const -> reverse_collection_iteration_context<T> {
+      return reverse_collection_iteration_context<T>{
+         __builtin_addressof(source), source.end_pos(), source.begin_pos()};
+   }
+};
+}  // namespace cat::detail
+
+namespace cat {
+
+// `cat::iterate(t)` is the only customization point that an iterable
+// source has to provide. It returns the source's `iteration_context` as a
+// pr-value, so the context is materialized in place at the call site as it is
+// non-movable.
+inline constexpr detail::iterate_fn iterate{};
+
+// `cat::reverse_iterate(t)` is the dual customization point for sources
+// that can be walked backwards. Like `cat::iterate`, it returns a
+// non-movable context by pr-value.
+inline constexpr detail::reverse_iterate_fn reverse_iterate{};
+
+// `is_iterable<T>` holds when `cat::iterate(t)` is a valid call for
+// `T&`. It is the single-pass entry concept that every adaptor and terminal
+// targets.
+template <typename T>
+concept is_iterable = requires(T& t) { iterate(t); };
+
+// `is_reverse_iterable<T>` holds when `cat::reverse_iterate(t)` is
+// a valid call. Every bidirectional collection satisfies it for free
+// via the auto-derived adapter, and any iterable can opt in by writing
+// a member `.reverse_iterate()`.
+template <typename T>
+concept is_reverse_iterable = requires(T& t) { reverse_iterate(t); };
+
+template <is_iterable T>
+using iterable_iteration_context_type = decltype(iterate(declval<T&>()));
+
+template <is_iterable T>
+using iterable_element_type =
+   typename iterable_iteration_context_type<T>::element_type;
+
+template <is_iterable T>
+using iterable_value_type = remove_cvref<iterable_element_type<T>>;
+
+// When the target is iterable, `reference_wrapper` also inherits
+// `iterable_interface` so borrowed sequences carry the member-call surface.
+template <typename T>
+   requires(is_iterable<T&>)
+struct reference_wrapper<T> : detail::reference_wrapper_impl<T>,
+                              iterable_interface {
+   using detail::reference_wrapper_impl<T>::reference_wrapper_impl;
+};
+
+// Pipe `apply` accepts r-values, trivially-copyable l-values, or
+// `reference_wrapper` as the storage policy for the adaptor base. Non
+// trivially-copyable l-values are rejected be default for safety.
+template <typename Iterable>
+concept is_borrow_acceptable = !is_lvalue_reference<Iterable>
+                               || is_trivially_copyable<remove_cvref<Iterable>>
+                               || cat::is_reference_wrapper<Iterable>;
+
+// Structural shape of a loop object (`element_type`, `run_while`, and unique
+// ownership).
+template <typename IterationContext>
+concept is_iteration_context =
+   requires { typename IterationContext::element_type; }
+   && !is_copy_constructible<IterationContext>
+   && !is_move_constructible<IterationContext>
+   && !is_copy_assignable<IterationContext>
+   && !is_move_assignable<IterationContext>;
+
+// `run_while(iteration_context, callback)` is a forwarding shim around
+// `iteration_context.run_while`.
+// It exists so generic code never has to spell
+// `iteration_context.run_while(...)` directly.
+// TODO: Do we need this?
+template <is_iteration_context IterationContext,
+          is_predicate<typename IterationContext::element_type> Callback>
+constexpr auto
+run_while(IterationContext& iteration_context, Callback&& callback)
+   -> iteration_result {
+   return iteration_context.run_while(fwd(callback));
+}
+
+// `next_element(context)` pulls one element off the context, returning a
+// disengaged `maybe` when the context has been exhausted. This is the
+// safe single-step primitive used to walk multiple iterables in lock-step (e.g.
+// an `is_equal` algorithm).
+//
+// When `element_type` is a reference, the maybe holds a reference and
+// the stored binding is invalidated by the next call to `run_while` /
+// `step` / `next_element` on the same context.
+template <typename IterationContext>
+   requires(is_iteration_context<IterationContext>)
+constexpr auto
+next_element(IterationContext& iteration_context)
+   -> maybe<typename IterationContext::element_type> {
+   maybe<typename IterationContext::element_type> maybe_element{nullopt};
+   iteration_context.run_while([&maybe_element](auto&& element) -> bool {
+      maybe_element = fwd(element);
+      return false;
+   });
+   return maybe_element;
+}
+
+// `step(context, callback)` advances the context one element and invokes
+// `callback` on that element. The return type is always `maybe<R>` where `R` is
+// `callback`'s return type, including `R = void`: `maybe<void>` is the
+// monadic abstraction over a `bool` "did it happen", which collapses
+// the void / non-void cases into one path. `nullopt` means the
+// context was exhausted before `callback` ran.
+template <typename IterationContext, typename Callback>
+   requires(is_iteration_context<IterationContext>)
+constexpr auto
+step(IterationContext& iteration_context, Callback callback) {
+   using element_type = typename IterationContext::element_type;
+   using result_type =
+      remove_cvref<decltype(callback(declval<element_type>()))>;
+
+   maybe<result_type> maybe_result{nullopt};
+   iteration_context.run_while(
+      [&maybe_result, &callback](auto&& element) -> bool {
+         if constexpr (is_void<result_type>) {
+            callback(fwd(element));
+            maybe_result = monostate;
+         } else {
+            maybe_result = callback(fwd(element));
+         }
+         return false;
+      });
+   return maybe_result;
+}
+
+// `view_interface` is the CRTP shell that gives every view object `operator|`
+// against an incoming iterable for free. A type opts in nominally by inheriting
+// `view_interface<Derived>` and providing an `apply(Iterable&&)` member which
+// builds the view from `Iterable` (typically with the `is_borrow_acceptable`
+// ownership-policy guard applied as a constraint).
+//
+// View types returned from `apply()` inherit their `*_impl` iterable body.
+//
+// This is the public extension point. External code can build its own
+// adaptor closures, and have them participate in the pipe surface, by
+// inheriting `view_interface`, exactly like `transform_impl` and friends do
+// below.
+template <typename Derived>
+// NOLINTNEXTLINE This must be structural, so its constructor is `public`.
+struct view_interface {
+   template <typename Iterable>
+      requires(is_iterable<remove_cvref<Iterable>>)
+   friend constexpr auto
+   operator|(Iterable&& incoming, Derived&& pipe_impl) {
+      return move(pipe_impl).apply(fwd(incoming));
+   }
+
+   template <typename Iterable>
+      requires(is_iterable<remove_cvref<Iterable>>)
+   friend constexpr auto
+   operator|(Iterable&& incoming, Derived const& pipe_impl) {
+      return pipe_impl.apply(fwd(incoming));
+   }
+};
+
+}  // namespace cat
+
+// Views:
+#include "../implementations/as_rvalue.tpp"
+#include "../implementations/filter.tpp"
+#include "../implementations/reverse.tpp"
+#include "../implementations/transform.tpp"
+
+// Terminal algorithms:
+#include "../implementations/count.tpp"
+#include "../implementations/fold.tpp"
+#include "../implementations/for_each.tpp"
+#include "../implementations/sum.tpp"
+#include "../implementations/take.tpp"
+#include "../implementations/to.tpp"
+
+// Out-of-line `iterable_interface` templates, then `detail::slice_view`, then
+// bounds-checked accessors.
+#include "../implementations/bounds.tpp"
+#include "../implementations/iterable_interface.tpp"
+#include "../implementations/slice_view.tpp"

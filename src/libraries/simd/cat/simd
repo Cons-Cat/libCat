@@ -61,7 +61,7 @@ template <typename T, typename Abi>
 struct mask_any_of;
 }  // namespace cat::detail::simd_abi
 
-// TODO: Implement `cat::collection_interface` on `cat::simd` and
+// TODO: Implement `cat::container_interface` on `cat::simd` and
 // `cat::simd_mask`?
 
 namespace cat {
@@ -390,8 +390,8 @@ class alignas(in_abi::alignment.raw) simd {
    // is a wrapper such as `cat::int4`).
    using memory_lane = simd_vector_element<T>;
 
-   using iterator = detail::simd_range_iterator<simd>;
-   using const_iterator = detail::simd_range_iterator<simd const>;
+   using iterator = detail::simd_range_stepanov_iterator<simd>;
+   using const_iterator = detail::simd_range_stepanov_iterator<simd const>;
 
    // `gnu::vector_size` is a Clang attribute that represents SIMD data-types.
    // `gnu::aligned` is a Clang attribute that guarantees alignment for all
@@ -878,7 +878,7 @@ class alignas(in_abi::alignment.raw) simd {
       out.set_lane(0u, static_cast<T>(__builtin_reduce_mul(this->raw)));
       return out;
    }
-   
+
    [[nodiscard]]
    constexpr auto
    multiply() const -> T
@@ -1254,8 +1254,8 @@ class alignas(in_abi::alignment.raw) simd_mask {
    using lane_scalar = typename mask_traits::lane_scalar;
    using raw_type = typename mask_traits::raw_type;
 
-   using iterator = detail::simd_range_iterator<mask_type>;
-   using const_iterator = detail::simd_range_iterator<mask_type const>;
+   using iterator = detail::simd_range_stepanov_iterator<mask_type>;
+   using const_iterator = detail::simd_range_stepanov_iterator<mask_type const>;
 
    constexpr simd_mask() = default;
 

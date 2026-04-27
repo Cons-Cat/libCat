@@ -194,7 +194,7 @@ test(bitset) {
    }
 
    // TODO: Get this working.
-   //  for (cat::bit_reference bit : cat::as_reverse(bits127_3)) {
+   //  for (cat::bit_reference bit : cat::as_reverse_stepanov(bits127_3)) {
    //     cat::verify(bit == true);
    //  }
 

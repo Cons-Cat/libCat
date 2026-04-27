@@ -3,8 +3,8 @@
 #pragma once
 
 #include <cat/algorithm>
-#include <cat/collection>
 #include <cat/compare>
+#include <cat/container>
 #include <cat/memory>
 
 namespace cat {
@@ -15,8 +15,8 @@ namespace cat {
 template <typename T, idx length>
 class [[clang::trivial_abi, gsl::Owner(T)]]
 // It is not possible to make this an aggregate class while using CRTP classes.
-array : public collection_interface<array<T, length>, T>,
-        public random_access_iterable_interface<T> {
+array : public container_interface<array<T, length>, T>,
+        public random_access_stepanov_iterable_interface<T> {
  public:
    // Implicit copy/move (rule of Zero), except `array()` defaulted because this
    // forwarding constructor suppresses implicit default construction

@@ -5,7 +5,7 @@
 #include <cat/algorithm>
 #include <cat/allocator>
 #include <cat/array>
-#include <cat/collection>
+#include <cat/container>
 #include <cat/math>
 #include <cat/null_allocator>
 #include <cat/utility>
@@ -16,8 +16,8 @@ namespace cat {
 
 template <typename T, is_allocator Allocator>
 class [[gsl::Owner]]
-vec : public collection_interface<vec<T, Allocator>, T>,
-      public random_access_iterable_interface<T> {
+vec : public container_interface<vec<T, Allocator>, T>,
+      public random_access_stepanov_iterable_interface<T> {
    template <typename U, is_allocator A, typename... Us>
       requires(sizeof...(Us) > 0u)
    friend constexpr auto

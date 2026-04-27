@@ -4,7 +4,7 @@
 
 #include <cat/allocator>
 #include <cat/array>
-#include <cat/collection>
+#include <cat/container>
 
 // TODO: Add an `intrusive_list`.
 
@@ -25,7 +25,7 @@ struct slist_node {
 };
 
 template <typename, bool>
-class list_iterator;
+class list_stepanov_iterator;
 
 template <typename T>
 struct list_storage {
@@ -57,11 +57,11 @@ struct slist_storage {
 
 template <typename T, is_allocator Allocator, bool is_doubly_linked>
 class basic_list
-    : public collection_interface<basic_list<T, Allocator, is_doubly_linked>,
-                                  T>,
-      public iterable_interface<basic_list<T, Allocator, is_doubly_linked>,
-                                detail::list_iterator, T, is_doubly_linked> {
-   friend detail::list_iterator<T, is_doubly_linked>;
+    : public container_interface<basic_list<T, Allocator, is_doubly_linked>, T>,
+      public stepanov_iterable_interface<
+         basic_list<T, Allocator, is_doubly_linked>,
+         detail::list_stepanov_iterator, T, is_doubly_linked> {
+   friend detail::list_stepanov_iterator<T, is_doubly_linked>;
 
    // Doubly-linked list factory functions:
    template <typename U, is_allocator A>
@@ -97,7 +97,7 @@ class basic_list
    using node_type = storage_type::node;
 
  public:
-   using iterator = detail::list_iterator<T, is_doubly_linked>;
+   using iterator = detail::list_stepanov_iterator<T, is_doubly_linked>;
 
    constexpr basic_list() = delete (
       "`cat::list` cannot be created without an allocator. Call "
@@ -500,7 +500,7 @@ class basic_list
    }
 
    // Providing these four iterator getters generates the remaining eight
-   // through the `collection_interface`.
+   // through the `container_interface`.
    [[nodiscard]]
    auto
    begin() -> iterator {
@@ -520,7 +520,7 @@ class basic_list
    rbegin()
       requires(is_doubly_linked)
    {
-      return cat::reverse_proxy_iterator<iterator>{m_storage.m_p_tail};
+      return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_tail};
    }
 
    [[nodiscard]]
@@ -528,7 +528,7 @@ class basic_list
    rend()
       requires(is_doubly_linked)
    {
-      return cat::reverse_proxy_iterator<iterator>{m_storage.m_p_head};
+      return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_head};
    }
 
    [[nodiscard]]
@@ -536,7 +536,7 @@ class basic_list
    rbegin() const
       requires(is_doubly_linked)
    {
-      return cat::reverse_proxy_iterator<iterator>{m_storage.m_p_tail};
+      return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_tail};
    }
 
    [[nodiscard]]
@@ -544,7 +544,7 @@ class basic_list
    rend() const
       requires(is_doubly_linked)
    {
-      return cat::reverse_proxy_iterator<iterator>{m_storage.m_p_head};
+      return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_head};
    }
 
  private:
@@ -562,8 +562,8 @@ using slist = basic_list<T, Allocator, false>;
 namespace detail {
 
 template <typename T, bool is_doubly_linked>
-class list_iterator
-    : public iterator_interface<
+class list_stepanov_iterator
+    : public stepanov_iterator_interface<
          conditional<is_doubly_linked, bidirectional_iterator_tag,
                      forward_iterator_tag>,
          T> {
@@ -575,23 +575,23 @@ class list_iterator
 
    using node_type = conditional<is_doubly_linked, list_node<T>, slist_node<T>>;
 
-   // using collection_type [[maybe_unused]] = list<T>;
+   // using container_type [[maybe_unused]] = list<T>;
 
    // TODO: This default constructor is deprecated due to the user-defined
    // constructor. Should this still exist?
    // iterator(iterator const&) = default;
 
-   list_iterator(node_type* p_input) : m_p_node(p_input) {
+   list_stepanov_iterator(node_type* p_input) : m_p_node(p_input) {
    }
 
    auto
-   increment() -> list_iterator& {
+   increment() -> list_stepanov_iterator& {
       m_p_node = m_p_node->p_next_node;
       return *this;
    }
 
    auto
-   decrement() -> list_iterator&
+   decrement() -> list_stepanov_iterator&
       requires(is_doubly_linked)
    {
       m_p_node = m_p_node->p_previous_node;
@@ -605,7 +605,7 @@ class list_iterator
    }
 
    auto
-   equal_to(list_iterator const& it) const -> bool {
+   equal_to(list_stepanov_iterator const& it) const -> bool {
       return it.m_p_node == m_p_node;
    }
 

@@ -2,48 +2,61 @@
 // vim: set ft=cpp:
 #pragma once
 
-// `cat::iterator_interface` is a mixin class for generating conventional
-// iterator boilerplate from a minimal set of user-written functions. It is
-// closely based on the proposed P2727R4 `std::iterator_interface`. You can also
-// generate proxy iterators with `cat::proxy_iterator_interface`.
+// `cat::stepanov_iterator_interface` is a mixin class for generating
+// conventional Stepanov-style iterator boilerplate (the begin/end pair model)
+// from a minimal set of user-written functions. It is closely based on the
+// proposed P2727R4 `std::iterator_interface`. You can also generate proxy
+// iterators with `cat::proxy_stepanov_iterator_interface`.
+//
+// libCat is migrating to the Flux v2 sequence model under `cat/iterable`. The
+// Stepanov begin/end machinery is marked so the transition is visible at
+// every call site (iterator types are `cat::*_stepanov_iterator` and
+// matching concepts are `cat::is_*_stepanov_iterator` where the role prefix
+// mirrors C++20; range shape in `<cat/container>` is
+// `cat::is_stepanov_container`). New code should prefer
+// `cat::is_iterable` / `cat::is_collection`.
 //
 // We also provide helpers for generating reverse and const iterators, as well
-// as simple adaptors for iterating over ranges like `cat::as_reverse` and
-// `cat::as_const_reverse`. With this model, problems such as P2836 disappear.
+// as simple adaptors for iterating over ranges like `cat::as_reverse_stepanov`
+// and `cat::as_const_reverse_stepanov`. With this model, problems such as P2836
+// disappear.
 //
-// Iterator `concept`s mirror C++20 iterator concepts. Several refinement
-// hierarchies apply:
+// Iterator `concept`s mirror C++20 iterator concepts. Names use
+// `is_<role>_stepanov_iterator` for iterator refinements, parallel to
+// `is_stepanov_iterable` / `is_stepanov_bidi_iterable` for containers.
+// Several
+// refinement hierarchies apply:
 //
 // Incrementability refinements:
-//    `cat::is_weakly_incrementable`
-//    `cat::is_incrementable`
+//    `cat::is_stepanov_weakly_incrementable`
+//    `cat::is_stepanov_incrementable`
 //
 // Shared floor for iterators with `*` and `++`:
-//    `cat::is_input_or_output_iterator`
+//    `cat::is_input_or_output_stepanov_iterator`
 //
-// Readable traversal refinements (`is_forward_iterator` also requires
-// `is_incrementable`):
-//    `cat::is_indirectly_readable`
-//    `cat::is_input_iterator`
-//    `cat::is_forward_iterator`
-//    `cat::is_bidirectional_iterator`
-//    `cat::is_random_access_iterator`
-//    `cat::is_contiguous_iterator`
+// Readable traversal refinements (`is_forward_stepanov_iterator` also
+// requires `is_stepanov_incrementable`):
+//    `cat::is_stepanov_indirectly_readable`
+//    `cat::is_input_stepanov_iterator`
+//    `cat::is_forward_stepanov_iterator`
+//    `cat::is_bidirectional_stepanov_iterator`
+//    `cat::is_random_access_stepanov_iterator`
+//    `cat::is_contiguous_stepanov_iterator`
 //
 // Writable traversal refinements:
-//    `cat::is_indirectly_writable`
-//    `cat::is_output_iterator`
+//    `cat::is_stepanov_indirectly_writable`
+//    `cat::is_output_stepanov_iterator`
 //
 // Raw pointers can model random access or contiguous iterators without forward
-// or bidirectional `iterator_interface` tags
+// or bidirectional `stepanov_iterator_interface` tags
 //
 // Iterable containers:
-//    `cat::is_iterable`
-//    `cat::is_bidi_iterable`
+//    `cat::is_stepanov_iterable`
+//    `cat::is_stepanov_bidi_iterable`
 //
 
 namespace cat {
-struct iterator_interface_access {
+struct stepanov_iterator_interface_access {
    template <typename Derived>
    static constexpr auto
    base(Derived& derived) -> decltype(derived.base_reference())
@@ -62,7 +75,8 @@ struct iterator_interface_access {
 };
 
 template <typename Reference>
-using proxy_iterator_pointer = proxy_arrow_result<remove_cvref<Reference>>;
+using proxy_stepanov_iterator_pointer =
+   proxy_arrow_result<remove_cvref<Reference>>;
 
 namespace detail {
 template <typename Iterator>
@@ -199,10 +213,11 @@ struct iter_value_trait<I> {
 template <typename I>
 using iter_value_t = typename detail::iter_value_trait<I>::type;
 
-// `cat::iterator_interface` is a mixin class for generating conventional
-// iterator boilerplate from a minimal set of user-written functions. It is
-// closely based on the proposed P2727r4 `std::iterator_interface`. Derived
-// classes provide core operations for their iterator category.
+// `cat::stepanov_iterator_interface` is a mixin class for generating
+// conventional iterator boilerplate from a minimal set of user-written
+// functions. It is closely based on the proposed P2727r4
+// `std::iterator_interface`. Derived classes provide core operations for their
+// iterator category.
 //
 //   Output (`output_iterator_tag`): supply `.dereference()` for * (and writes
 // through * where applicable), plus either `.increment()` or `.advance(one)`
@@ -232,7 +247,7 @@ using iter_value_t = typename detail::iter_value_trait<I>::type;
 template <typename IteratorConceptTag, typename Element,
           typename Reference = Element&, typename Pointer = Element*,
           typename Difference = iword>
-class iterator_interface : public iterator_interface_base {
+class stepanov_iterator_interface : public stepanov_iterator_interface_base {
  public:
    using iterator_concept = IteratorConceptTag;
    using value_type =
@@ -265,8 +280,10 @@ class iterator_interface : public iterator_interface_base {
 
    constexpr auto
    operator*(this auto&& self) -> decltype(auto) {
-      if constexpr (requires { iterator_interface_access::base(self); }) {
-         return *iterator_interface_access::base(self);
+      if constexpr (requires {
+                       stepanov_iterator_interface_access::base(self);
+                    }) {
+         return *stepanov_iterator_interface_access::base(self);
       } else {
          return self.dereference();
       }
@@ -356,18 +373,19 @@ class iterator_interface : public iterator_interface_base {
 
 template <typename IteratorConceptTag, typename Element,
           typename Reference = Element, typename Difference = iword>
-using proxy_iterator_interface =
-   iterator_interface<IteratorConceptTag, Element, Reference,
-                      proxy_iterator_pointer<Reference>, Difference>;
+using proxy_stepanov_iterator_interface =
+   stepanov_iterator_interface<IteratorConceptTag, Element, Reference,
+                               proxy_stepanov_iterator_pointer<Reference>,
+                               Difference>;
 
 template <typename Iterator>
-using infer_iterator_pointer =
+using infer_stepanov_iterator_pointer =
    conditional<is_lvalue_reference<typename Iterator::reference>,
                add_pointer<remove_reference<typename Iterator::reference>>,
-               proxy_iterator_pointer<typename Iterator::reference>>;
+               proxy_stepanov_iterator_pointer<typename Iterator::reference>>;
 
 template <typename Derived>
-   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
+   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
 operator==(Derived const& left, Derived const& right) -> bool {
    using iter = remove_cvref<Derived>;
@@ -382,7 +400,7 @@ operator==(Derived const& left, Derived const& right) -> bool {
 }
 
 template <typename Derived>
-   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>
+   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>
             && detail::has_distance_to<remove_cvref<Derived>>)
 constexpr auto
 operator<=>(Derived const& left, Derived const& right) {
@@ -392,7 +410,7 @@ operator<=>(Derived const& left, Derived const& right) {
 }
 
 template <typename Derived>
-   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
+   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
 operator+(Derived const& left, auto offset) -> remove_cvref<Derived>
    requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
@@ -410,7 +428,7 @@ operator+(Derived const& left, auto offset) -> remove_cvref<Derived>
 }
 
 template <typename Derived>
-   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
+   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
 operator+(auto offset, Derived const& right) -> remove_cvref<Derived>
    requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
@@ -428,7 +446,7 @@ operator+(auto offset, Derived const& right) -> remove_cvref<Derived>
 }
 
 template <typename Derived>
-   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
+   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
 operator-(Derived const& left, auto offset) -> remove_cvref<Derived>
    requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
@@ -447,7 +465,7 @@ operator-(Derived const& left, auto offset) -> remove_cvref<Derived>
 }
 
 template <typename Derived>
-   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>)
+   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
 operator-=(Derived& left, auto offset) -> remove_cvref<Derived>&
    requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
@@ -464,7 +482,7 @@ operator-=(Derived& left, auto offset) -> remove_cvref<Derived>&
 }
 
 template <typename Derived>
-   requires(is_base_of<iterator_interface_base, remove_cvref<Derived>>
+   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>
             && detail::has_distance_to<remove_cvref<Derived>>)
 constexpr auto
 operator-(Derived const& left, Derived const& right)
@@ -473,13 +491,14 @@ operator-(Derived const& left, Derived const& right)
 }
 
 template <typename Iterator>
-class reverse_proxy_iterator
-    : public iterator_interface<
+class reverse_proxy_stepanov_iterator
+    : public stepanov_iterator_interface<
          random_access_iterator_tag, typename Iterator::value_type,
-         typename Iterator::reference, infer_iterator_pointer<Iterator>,
+         typename Iterator::reference,
+         infer_stepanov_iterator_pointer<Iterator>,
          infer_difference_type<Iterator>> {
  private:
-   using self_type = reverse_proxy_iterator<Iterator>;
+   using self_type = reverse_proxy_stepanov_iterator<Iterator>;
 
  public:
    using value_type = Iterator::value_type;
@@ -487,13 +506,13 @@ class reverse_proxy_iterator
    using reference = Iterator::reference;
    using const_reference = Iterator::const_reference;
 
-   constexpr reverse_proxy_iterator(Iterator const& other)
+   constexpr reverse_proxy_stepanov_iterator(Iterator const& other)
        : m_internal_iterator(other) {
    }
 
    // Forward any constructor to the `internal_iterator`.
    template <typename... Args>
-   constexpr reverse_proxy_iterator(Args&&... arguments)
+   constexpr reverse_proxy_stepanov_iterator(Args&&... arguments)
        : m_internal_iterator(fwd(arguments)...) {
    }
 
@@ -538,25 +557,25 @@ class reverse_proxy_iterator
 
 template <template <typename, auto...> typename Iterator, typename T,
           auto... args>
-using const_proxy_iterator = Iterator<T const, args...>;
+using const_proxy_stepanov_iterator = Iterator<T const, args...>;
 
 // TODO: More iterable related `concept`s.
 template <typename T>
-concept is_iterable = requires(T it) {
-                         it.begin();
-                         it.end();
-                      };
+concept is_stepanov_iterable = requires(T it) {
+                                  it.begin();
+                                  it.end();
+                               };
 
 template <typename T>
-concept is_bidi_iterable = requires(T it) {
-                              it.begin();
-                              it.end();
-                              it.rbegin();
-                              it.rend();
-                           };
+concept is_stepanov_bidi_iterable = requires(T it) {
+                                       it.begin();
+                                       it.end();
+                                       it.rbegin();
+                                       it.rend();
+                                    };
 
 template <typename T>
-concept is_weakly_incrementable =
+concept is_stepanov_weakly_incrementable =
    detail::is_iterator_movable<remove_cvref<T>>
    && detail::is_signed_integer_like<iterator_difference_type<T>>
    && detail::is_iterator_movable<iterator_difference_type<T>>
@@ -566,8 +585,8 @@ concept is_weakly_incrementable =
       };
 
 template <typename T>
-concept is_incrementable =
-   is_weakly_incrementable<T>
+concept is_stepanov_incrementable =
+   is_stepanov_weakly_incrementable<T>
    && requires(remove_cvref<T> it) {
          { it++ } -> is_same<remove_cvref<T>>;
       } && (detail::is_object_pointer_iterator<T> || detail::is_iterator_regular<remove_cvref<T>>);
@@ -585,41 +604,42 @@ template <typename T>
 using iter_difference_t = iterator_difference_type<T>;
 
 template <typename T>
-concept is_input_or_output_iterator =
-   requires(T it) { *it; } && is_weakly_incrementable<T>;
+concept is_input_or_output_stepanov_iterator =
+   requires(T it) { *it; } && is_stepanov_weakly_incrementable<T>;
 
 // [iterator.concept.readable]
 template <typename In>
-concept is_indirectly_readable = requires(remove_cvref<In> const in) {
-                                    typename iter_value_t<remove_cvref<In>>;
-                                    { *in };
-                                 };
+concept is_stepanov_indirectly_readable =
+   requires(remove_cvref<In> const in) {
+      typename iter_value_t<remove_cvref<In>>;
+      { *in };
+   };
 
 // [iterator.concept.input]
 template <typename T>
-concept is_input_iterator =
-   is_input_or_output_iterator<T> && is_indirectly_readable<T>
+concept is_input_stepanov_iterator =
+   is_input_or_output_stepanov_iterator<T> && is_stepanov_indirectly_readable<T>
    && is_equality_comparable<T>;
 
 template <typename T>
-concept is_random_access_iterator =
+concept is_random_access_stepanov_iterator =
    detail::is_object_pointer_iterator<T>
-   || (is_base_of<iterator_interface_base, remove_cvref<T>>
+   || (is_base_of<stepanov_iterator_interface_base, remove_cvref<T>>
        && is_same<typename remove_cvref<T>::iterator_concept,
                   random_access_iterator_tag>);
 
 template <typename T>
-concept is_contiguous_iterator =
-   is_random_access_iterator<T>
+concept is_contiguous_stepanov_iterator =
+   is_random_access_stepanov_iterator<T>
    && (detail::is_object_pointer_iterator<T>
-       || (is_base_of<iterator_interface_base, remove_cvref<T>>
+       || (is_base_of<stepanov_iterator_interface_base, remove_cvref<T>>
            && is_same<typename remove_cvref<T>::iterator_concept,
                       contiguous_iterator_tag>));
 
 template <typename T>
-concept is_bidirectional_iterator =
-   is_random_access_iterator<T>
-   || (is_base_of<iterator_interface_base, remove_cvref<T>>
+concept is_bidirectional_stepanov_iterator =
+   is_random_access_stepanov_iterator<T>
+   || (is_base_of<stepanov_iterator_interface_base, remove_cvref<T>>
        && is_same<typename remove_cvref<T>::iterator_concept,
                   bidirectional_iterator_tag>);
 
@@ -627,7 +647,7 @@ namespace detail {
 
 template <typename T>
 concept iter_has_forward_capacity_tag =
-   is_base_of<iterator_interface_base, remove_cvref<T>>
+   is_base_of<stepanov_iterator_interface_base, remove_cvref<T>>
    && (is_same<typename remove_cvref<T>::iterator_concept, forward_iterator_tag>
        || is_same<typename remove_cvref<T>::iterator_concept,
                   bidirectional_iterator_tag>
@@ -638,21 +658,21 @@ concept iter_has_forward_capacity_tag =
 
 template <typename T>
 concept iter_is_pure_input_interface_iterator =
-   is_base_of<iterator_interface_base, remove_cvref<T>>
+   is_base_of<stepanov_iterator_interface_base, remove_cvref<T>>
    && is_same<typename remove_cvref<T>::iterator_concept, input_iterator_tag>;
 
 }  // namespace detail
 
 // [iterator.concept.forward]
 template <typename T>
-concept is_forward_iterator =
-   is_input_iterator<T> && is_incrementable<T>
+concept is_forward_stepanov_iterator =
+   is_input_stepanov_iterator<T> && is_stepanov_incrementable<T>
    && (detail::is_object_pointer_iterator<T>
        || (detail::iter_has_forward_capacity_tag<T>
            && !detail::iter_is_pure_input_interface_iterator<T>));
 
 template <typename Outputter, typename Value>
-concept is_indirectly_writable =
+concept is_stepanov_indirectly_writable =
    requires(Outputter&& output_iterator, Value&& value) {
       *output_iterator = fwd(value);
       *fwd(output_iterator) = fwd(value);
@@ -663,19 +683,19 @@ concept is_indirectly_writable =
    };
 
 template <typename Outputter, typename Value>
-concept is_output_iterator =
-   is_input_or_output_iterator<Outputter>
-   && is_indirectly_writable<Outputter, Value>
+concept is_output_stepanov_iterator =
+   is_input_or_output_stepanov_iterator<Outputter>
+   && is_stepanov_indirectly_writable<Outputter, Value>
    && requires(Outputter iterator, Value&& value) { *iterator++ = fwd(value); };
 
 // With a similar syntax to `as_const()`, this wrapper takes an iterable
 // container and inverts its iterator's forwards and backwards movement.
-template <is_bidi_iterable Collection>
-struct as_reverse : Collection {
-   constexpr as_reverse(Collection& base) : Collection(base) {
+template <is_stepanov_bidi_iterable Collection>
+struct as_reverse_stepanov : Collection {
+   constexpr as_reverse_stepanov(Collection& base) : Collection(base) {
    }
 
-   constexpr as_reverse(Collection&& base)
+   constexpr as_reverse_stepanov(Collection&& base)
       requires(is_rvalue_reference<decltype(base)>)
        : Collection(move(base)) {
    }
@@ -744,12 +764,12 @@ struct as_reverse : Collection {
 // With a similar syntax to `as_const()`, this wrapper takes an iterable
 // container, makes its iterator `const`, and inverts its forwards and backwards
 // movement.
-template <is_bidi_iterable Collection>
-struct as_const_reverse : Collection {
-   constexpr as_const_reverse(Collection& base) : Collection(base) {
+template <is_stepanov_bidi_iterable Collection>
+struct as_const_reverse_stepanov : Collection {
+   constexpr as_const_reverse_stepanov(Collection& base) : Collection(base) {
    }
 
-   constexpr as_const_reverse(Collection&& base)
+   constexpr as_const_reverse_stepanov(Collection&& base)
       requires(is_rvalue_reference<decltype(base)>)
        : Collection(move(base)) {
    }

@@ -210,7 +210,7 @@ test(list) {
    // cat::verify(*(slist_2.begin() + 2) == 2);
    // cat::verify(*(slist_2.begin() + 3) == 3);
 
-   // Test `back_insert_iterator`.
+   // Test `back_insert_stepanov_iterator`.
    cat::list back_list = cat::make_list<int4>(allocator).verify();
    auto back_iterator = cat::as_back_inserter(back_list);
    auto front_iterator = cat::as_front_inserter(back_list);

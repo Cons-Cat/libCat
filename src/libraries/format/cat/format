@@ -282,8 +282,8 @@ struct format_type_constant {
 // A buffer that can grow through `.push_back()` and reallocate when its
 // storage is exceeded. This container is used in `vfmt()` calls as the
 // default container for `vfmt_to()`.
-struct format_string_vector : collection_interface<format_string_vector, char>,
-                              random_access_iterable_interface<char> {
+struct format_string_vector : container_interface<format_string_vector, char>,
+                              random_access_stepanov_iterable_interface<char> {
    format_string_vector(char* p_in_storage, idx in_length, idx in_max_length)
        : p_storage(p_in_storage), length(in_length), max_length(in_max_length) {
    }
@@ -430,12 +430,12 @@ struct format_args {
 };
 
 // To prevent redundant template specializations for a contiguous
-// container's `back_insert_iterator`, it is wrapped by virtual function
-// dispatch in this container.
+// container's `back_insert_stepanov_iterator`, it is wrapped by virtual
+// function dispatch in this container.
 template <is_allocator Allocator>
 struct format_buffer_base
-    : collection_interface<format_buffer_base<Allocator>, char>,
-      random_access_iterable_interface<char> {
+    : container_interface<format_buffer_base<Allocator>, char>,
+      random_access_stepanov_iterable_interface<char> {
    format_buffer_base(char* p_in_string, uword in_length, uword in_max_length)
        : p_string(p_in_string), length(in_length), max_length(in_max_length) {
    }
@@ -563,7 +563,7 @@ struct format_buffer_iterator<Allocator, T*> : format_buffer_base<Allocator> {
 // One back-insert iterator type should be used, to ensure type-erasure.
 template <is_allocator Allocator>
 using format_contiguous_output_iterator =
-   back_insert_iterator<format_buffer_base<Allocator>>;
+   back_insert_stepanov_iterator<format_buffer_base<Allocator>>;
 
 // Holds the format string parsing state consisting of the string's range
 // and a counter for which arguments have previously been parsed.
@@ -774,7 +774,7 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
 }
 }  // namespace detail
 
-// Format a collection of `char` and push it into some container.
+// Format a sequence of `char` and push it into some container.
 template <is_allocator Allocator, typename Outputter>
 auto
 vfmt_to(Allocator& allocator, Outputter output_iterator, str_view const format,
@@ -821,8 +821,8 @@ vfmt(Allocator& allocator, str_view const format, detail::format_args arguments)
 
    // `format_string_vector` is a container that satisfies the `Iterable`
    // `concept` and has a `.push_back()` method for
-   // `as_back_inserter` / `back_insert_iterator`. It is used to store the
-   // formatted string and reallocates when that string grows beyond
+   // `as_back_inserter` / `back_insert_stepanov_iterator`. It is used to store
+   // the formatted string and reallocates when that string grows beyond
    // `initial_size`.
    detail::format_string_vector into_buffer = {p_memory, 0u, initial_size};
 
@@ -837,10 +837,10 @@ vfmt(Allocator& allocator, str_view const format, detail::format_args arguments)
    return str_view(into_buffer.p_storage, length);
 }
 
-// Store `arguments` in a compacted variant object. Then format a collection
+// Store `arguments` in a compacted variant object. Then format a sequence
 // of `char` with those arguments, and push the result into some container.
-template <is_allocator Allocator, is_output_iterator<str_view> Outputter,
-          typename... Args>
+template <is_allocator Allocator,
+          is_output_stepanov_iterator<str_view> Outputter, typename... Args>
 [[nodiscard]]
 auto
 fmt_to(Allocator& allocator, Outputter output_iterator, str_view const format,

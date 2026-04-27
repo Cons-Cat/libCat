@@ -1,4 +1,4 @@
-#include <cat/functional>
+#include <cat/utility>
 
 #include "../unit_tests.hpp"
 

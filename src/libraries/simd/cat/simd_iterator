@@ -2,12 +2,12 @@
 #pragma once
 
 // Chunk iterator over scalar buffers as `simd<Lane, fixed_size_abi<Lane,
-// width>>`. Implemented with `iterator_interface`, parallel to
-// `cat::reverse_proxy_iterator`.
+// width>>`. Implemented with `stepanov_iterator_interface`, parallel to
+// `cat::reverse_proxy_stepanov_iterator`.
 
 #include <cat/arithmetic>
-#include <cat/iterator>
 #include <cat/simd>
+#include <cat/stepanov>
 #include <cat/utility>
 
 namespace cat {
@@ -38,12 +38,12 @@ struct as_vectorized_chunk_reference {
 };
 
 template <typename Lane, idx width, bool is_const>
-class as_vectorized_iterator
-    : public proxy_iterator_interface<
+class vectorized_stepanov_iterator
+    : public proxy_stepanov_iterator_interface<
          random_access_iterator_tag, simd<Lane, fixed_size_abi<Lane, width>>,
          conditional<is_const, simd<Lane, fixed_size_abi<Lane, width>>,
                      as_vectorized_chunk_reference<Lane, width>>> {
-   using self_type = as_vectorized_iterator<Lane, width, is_const>;
+   using self_type = vectorized_stepanov_iterator<Lane, width, is_const>;
 
  public:
    using value_type = simd<Lane, fixed_size_abi<Lane, width>>;
@@ -53,11 +53,12 @@ class as_vectorized_iterator
 
    storage_pointer p = nullptr;
 
-   constexpr as_vectorized_iterator() = default;
-   constexpr as_vectorized_iterator(self_type const&) = default;
-   constexpr as_vectorized_iterator(self_type&&) = default;
+   constexpr vectorized_stepanov_iterator() = default;
+   constexpr vectorized_stepanov_iterator(self_type const&) = default;
+   constexpr vectorized_stepanov_iterator(self_type&&) = default;
 
-   constexpr explicit as_vectorized_iterator(storage_pointer ptr) : p(ptr) {
+   constexpr explicit vectorized_stepanov_iterator(storage_pointer ptr)
+       : p(ptr) {
    }
 
    [[nodiscard]]
@@ -103,20 +104,20 @@ template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
 as_vectorized(raw_arithmetic_type<Lane> const* p_lane)
-   -> as_vectorized_iterator<Lane, width, true>
+   -> vectorized_stepanov_iterator<Lane, width, true>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {
-   return as_vectorized_iterator<Lane, width, true>(p_lane);
+   return vectorized_stepanov_iterator<Lane, width, true>(p_lane);
 }
 
 template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
 as_vectorized(raw_arithmetic_type<Lane>* p_lane)
-   -> as_vectorized_iterator<Lane, width, false>
+   -> vectorized_stepanov_iterator<Lane, width, false>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {
-   return as_vectorized_iterator<Lane, width, false>(p_lane);
+   return vectorized_stepanov_iterator<Lane, width, false>(p_lane);
 }
 
 }  // namespace cat

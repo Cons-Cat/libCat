@@ -3,38 +3,38 @@
 #pragma once
 
 #include <cat/algorithm>
-#include <cat/iterator>
 #include <cat/math>
 #include <cat/maybe>
+#include <cat/stepanov>
 
 namespace cat {
 
 // Forward declarations for containers and algorithms needed by
-// `collection_interface`.
+// `container_interface`.
 template <typename T, idx fixed_extent>
 class span;
 
 template <typename T>
-concept is_collection = requires(T container) {
-                           container.begin();
-                           container.end();
-                           container.cbegin();
-                           container.cend();
-                           container.size();
-                        };
+concept is_stepanov_container = requires(T container) {
+                                   container.begin();
+                                   container.end();
+                                   container.cbegin();
+                                   container.cend();
+                                   container.size();
+                                };
 
 namespace detail {
 template <typename T>
-concept is_contiguous_collection =  // is_collection<T> &&
-   requires(T collection) { collection.data(); };
+concept is_stepanov_contiguous_container =  // is_stepanov_container<T> &&
+   requires(T container) { container.data(); };
 
 // clang-format off
     template <typename T>
     // Parentheses are required here to satisfy cppcheck.
-    concept is_bounded_collection = (requires(T collection) {
-        collection.size();
-    }) || (requires(T collection) {
-        collection.capacity();
+    concept is_stepanov_bounded_container = (requires(T container) {
+        container.size();
+    }) || (requires(T container) {
+        container.capacity();
     });
 // clang-format on
 
@@ -48,61 +48,65 @@ concept has_capacity = requires(T t) { t.capacity(); };
 
 // If `.begin()` is provided.
 template <typename T>
-concept has_begin = requires(T t) { t.begin(); };
+concept has_stepanov_begin = requires(T t) { t.begin(); };
 
 // If `.begin() const` is provided.
 template <typename T>
-concept has_begin_const_qual = requires(T const& t) { t.begin(); };
+concept has_stepanov_begin_const_qual = requires(T const& t) { t.begin(); };
 
 // If `.end()` is provided.
 template <typename T>
-concept has_end = requires(T t) { t.end(); };
+concept has_stepanov_end = requires(T t) { t.end(); };
 
 // If `.end() const` is provided.
 template <typename T>
-concept has_end_const_qual = requires(T const& t) { t.end(); };
+concept has_stepanov_end_const_qual = requires(T const& t) { t.end(); };
 
 // If `.rbegin()` is provided.
 template <typename T>
-concept has_rbegin = requires(T t) { t.rbegin(); };
+concept has_stepanov_rbegin = requires(T t) { t.rbegin(); };
 
 // If `.rend()` is provided.
 template <typename T>
-concept has_rend = requires(T t) { t.rend(); };
+concept has_stepanov_rend = requires(T t) { t.rend(); };
 
 // If `.cbegin()` is provided.
 template <typename T>
-concept has_cbegin = requires(T t) { t.cbegin(); };
+concept has_stepanov_cbegin = requires(T t) { t.cbegin(); };
 
 // If `.cend()` is provided.
 template <typename T>
-concept has_cend = requires(T t) { t.cend(); };
+concept has_stepanov_cend = requires(T t) { t.cend(); };
 
-// `detail::collection_iterator` is shared by all containers that
-// implement `iterable_interface`. Unlike the standard library, this means
-// that two different containers or container specializations can have the
+// `detail::container_stepanov_iterator` is shared by all containers that
+// implement `stepanov_iterable_interface`. Unlike the standard library, this
+// means that two different containers or container specializations can have the
 // same `iterator` type, so long as they have the same `value_type`.
 //
-// This iterator's type can be accessed as eg.
-// `cat::vec<int4, allocator>::iterator`.
+// This iterator's type can be accessed as:
+//    cat::vec<int4, allocator>::iterator
 template <typename T>
-class collection_iterator
-    : public iterator_interface<random_access_iterator_tag, T> {
+class container_stepanov_iterator
+    : public stepanov_iterator_interface<random_access_iterator_tag, T> {
  public:
    using value_type = T;
    using const_value_type = T const;
    using reference = T&;
    using const_reference = T const&;
 
-   constexpr collection_iterator() = default;
-   constexpr collection_iterator(collection_iterator const&) = default;
-   constexpr collection_iterator(collection_iterator&&) = default;
+   constexpr container_stepanov_iterator() = default;
+   constexpr container_stepanov_iterator(container_stepanov_iterator const&) =
+      default;
+   constexpr container_stepanov_iterator(container_stepanov_iterator&&) =
+      default;
    constexpr auto
-   operator=(collection_iterator const&) -> collection_iterator& = default;
+   operator=(container_stepanov_iterator const&)
+      -> container_stepanov_iterator& = default;
    constexpr auto
-   operator=(collection_iterator&&) -> collection_iterator& = default;
+   operator=(container_stepanov_iterator&&)
+      -> container_stepanov_iterator& = default;
 
-   constexpr collection_iterator(idx index, T* p_in_array)
+   constexpr container_stepanov_iterator(idx index, T* p_in_array)
        : m_current_index(index), m_p_array(p_in_array) {
    }
 
@@ -122,7 +126,7 @@ class collection_iterator
    }
 
    constexpr auto
-   distance_to(collection_iterator const& other) const -> iword {
+   distance_to(container_stepanov_iterator const& other) const -> iword {
       return other.m_current_index - m_current_index;
    }
 
@@ -132,16 +136,17 @@ class collection_iterator
 };
 
 template <typename T>
-collection_iterator(idx, T*) -> collection_iterator<T>;
+container_stepanov_iterator(idx, T*) -> container_stepanov_iterator<T>;
 
 template <typename T>
-collection_iterator(idx, T const*) -> collection_iterator<T const>;
+container_stepanov_iterator(idx, T const*)
+   -> container_stepanov_iterator<T const>;
 
 }  // namespace detail
 
 template <typename Container, template <typename, auto...> typename Iterator,
           typename T, auto... args>
-class iterable_interface {
+class stepanov_iterable_interface {
  public:
    // `value_type` is the canonical (cv-unqualified) element type. `reference`
    // and `const_reference` preserve `T`'s const-ness on the mutable side and
@@ -152,126 +157,130 @@ class iterable_interface {
    using const_reference = T const&;
 
    using iterator = Iterator<T, args...>;
-   using const_iterator = const_proxy_iterator<Iterator, T, args...>;
-   using reverse_iterator = reverse_proxy_iterator<iterator>;
-   using const_reverse_iterator = reverse_proxy_iterator<const_iterator>;
+   using const_iterator = const_proxy_stepanov_iterator<Iterator, T, args...>;
+   using reverse_iterator = reverse_proxy_stepanov_iterator<iterator>;
+   using const_reverse_iterator =
+      reverse_proxy_stepanov_iterator<const_iterator>;
 
    [[nodiscard]]
    constexpr auto
-   begin(this auto&& collection) {
-      constexpr bool is_const = is_const_ref<decltype(collection)>;
+   begin(this auto&& container) {
+      constexpr bool is_const = is_const_ref<decltype(container)>;
       using it = conditional<is_const, const_iterator, iterator>;
 
-      return it(0, fwd(collection).data());
+      return it(0, fwd(container).data());
    }
 
    [[nodiscard]]
    constexpr auto
-   end(this auto&& collection) {
-      constexpr bool is_const = is_const_ref<decltype(collection)>;
+   end(this auto&& container) {
+      constexpr bool is_const = is_const_ref<decltype(container)>;
       using it = conditional<is_const, const_iterator, iterator>;
 
       // `cat::forward` must be called on last use, and because argument
       // evaluation order is unspecified, it cannot be called inside an
       // argument list.
-      auto size = collection.size();
-      auto* p_data = fwd(collection).data();
+      auto size = container.size();
+      auto* p_data = fwd(container).data();
       return it(size, p_data);
    }
 
    [[nodiscard]]
    constexpr auto
-   cbegin(this auto const& collection) {
-      if constexpr (detail::has_begin_const_qual<decltype(collection)>) {
-         return collection.begin();
+   cbegin(this auto const& container) {
+      if constexpr (detail::has_stepanov_begin_const_qual<
+                       decltype(container)>) {
+         return container.begin();
       } else {
          // If no `const-qualified` `.begin()` method is provided, wrap over the
          // non-`const` one.
-         return unconst(collection).begin();
+         return unconst(container).begin();
       }
    }
 
    [[nodiscard]]
    constexpr auto
-   cend(this auto const& collection) {
-      if constexpr (detail::has_end_const_qual<decltype(collection)>) {
-         return collection.end();
+   cend(this auto const& container) {
+      if constexpr (detail::has_stepanov_end_const_qual<decltype(container)>) {
+         return container.end();
       } else {
          // If no `const-qualified` `.end()` method is provided, wrap over the
          // non-`const` one.
-         return unconst(collection).end();
+         return unconst(container).end();
       }
    }
 
-   // `cat::as_reverse()` cannot be used to streamline this, because that
-   // has a potential dependency upon this code.
+   // `cat::as_reverse_stepanov()` cannot be used to streamline this, because
+   // that has a potential dependency upon this code.
 
    [[nodiscard]]
    constexpr auto
-   crbegin(this auto const& collection) {
-      return collection.rbegin();
+   crbegin(this auto const& container) {
+      return container.rbegin();
    }
 
    [[nodiscard]]
    constexpr auto
-   crend(this auto const& collection) {
-      return collection.rend();
+   crend(this auto const& container) {
+      return container.rend();
    }
 };
 
 template <typename T>
-class random_access_iterable_interface
-    : public iterable_interface<random_access_iterable_interface<T>,
-                                detail::collection_iterator, T> {
-   using iterator_t = detail::collection_iterator<T>;
+class random_access_stepanov_iterable_interface
+    : public stepanov_iterable_interface<
+         random_access_stepanov_iterable_interface<T>,
+         detail::container_stepanov_iterator, T> {
+   using iterator_t = detail::container_stepanov_iterator<T>;
 
  public:
    [[nodiscard]]
    constexpr auto
-   begin(this auto&& collection) {
-      // `collection_iterator` deduces `const`-ness for us here.
-      return detail::collection_iterator(0u, fwd(collection).data());
+   begin(this auto&& container) {
+      // `container_stepanov_iterator` deduces `const`-ness for us here.
+      return detail::container_stepanov_iterator(0u, fwd(container).data());
    }
 
    [[nodiscard]]
    constexpr auto
-   end(this auto&& collection) {
-      idx size = collection.size();
-      auto* p_data = fwd(collection).data();
-      // `collection_iterator` deduces `const`-ness for us here.
-      return detail::collection_iterator(size, p_data);
+   end(this auto&& container) {
+      idx size = container.size();
+      auto* p_data = fwd(container).data();
+      // `container_stepanov_iterator` deduces `const`-ness for us here.
+      return detail::container_stepanov_iterator(size, p_data);
    }
 
    [[nodiscard]]
    constexpr auto
-   rbegin(this auto&& collection) {
+   rbegin(this auto&& container) {
       // `cat::forward` must be called on last use, and because argument
       // evaluation order is unspecified, it cannot be called inside an
       // argument list.
-      // `rbegin` is only valid on non-empty collections. `assert` enforces
+      // `rbegin` is only valid on non-empty containers. `assert` enforces
       // `size >= 1` so `size - 1u` does not wrap in unsigned arithmetic.
-      cat::assert(collection.size() > 0u);
-      idx const last{collection.size().raw - 1u};
-      auto* p_data = fwd(collection).data();
-      return reverse_proxy_iterator(detail::collection_iterator(last, p_data));
+      cat::assert(container.size() > 0u);
+      idx const last{container.size().raw - 1u};
+      auto* p_data = fwd(container).data();
+      return reverse_proxy_stepanov_iterator(
+         detail::container_stepanov_iterator(last, p_data));
    }
 
    [[nodiscard]]
    constexpr auto
-   rend(this auto&& collection) {
-      return reverse_proxy_iterator(
-         detail::collection_iterator(0, fwd(collection).data()));
+   rend(this auto&& container) {
+      return reverse_proxy_stepanov_iterator(
+         detail::container_stepanov_iterator(0, fwd(container).data()));
    }
 };
 
 template <typename Derived, typename T>
-class collection_interface {
+class container_interface {
  protected:
    // `is_array_like` at the top of this class instead of the bottom prevents
    // clangd false-positive diagnostics.
    static constexpr bool is_array_like =
-      detail::is_contiguous_collection<Derived>
-      && detail::is_bounded_collection<Derived>;
+      detail::is_stepanov_contiguous_container<Derived>
+      && detail::is_stepanov_bounded_container<Derived>;
 
  public:
    // `value_type` is the canonical (cv-unqualified) element type. `reference`
@@ -307,7 +316,7 @@ class collection_interface {
    }
 
    // This evaluates true if there are one or more elements currently in this
-   // collection.
+   // container.
    [[nodiscard]]
    constexpr auto
    is_empty(this Derived const& self) -> bool
@@ -317,7 +326,7 @@ class collection_interface {
    }
 
    // This evaluates true if there are one or more elements currently in this
-   // collection.
+   // container.
    [[nodiscard]]
    constexpr auto
    is_full(this Derived const& self) -> bool
@@ -326,7 +335,7 @@ class collection_interface {
       return self.size() == self.capacity();
    }
 
-   // Index into this collection with bounds-checking.
+   // Index into this container with bounds-checking.
    [[nodiscard]]
    constexpr auto
    at(this auto&& self [[clang::lifetimebound]], idx index) -> maybe<T&>
@@ -338,7 +347,7 @@ class collection_interface {
       return nullopt;
    }
 
-   // Index into this collection with bounds-checking.
+   // Index into this container with bounds-checking.
    [[nodiscard]]
    constexpr auto
    at(this Derived const& self [[clang::lifetimebound]], idx index)
@@ -445,7 +454,7 @@ class collection_interface {
    {
       if !consteval {
          assert(index < fwd(self).size(),
-                "A collection was indexed out of bounds!");
+                "A container was indexed out of bounds!");
       }
 
       return fwd(self).data()[make_raw_arithmetic(index)];
@@ -466,21 +475,21 @@ class collection_interface {
 
    // Member-access syntax algorithms.
 
-   template <is_collection Other>
+   template <is_stepanov_container Other>
    auto
    copy_to(this auto const& self, Other& destination) {
       assert(destination.capacity() >= self.capacity());
       return cat::copy(self.begin(), self.end(), destination.begin());
    }
 
-   template <is_collection Other>
+   template <is_stepanov_container Other>
    auto
    move_to(this auto const& self, Other& destination) {
       assert(destination.capacity() >= self.capacity());
       return cat::move(self.begin(), self.end(), destination.begin());
    }
 
-   template <is_collection Other>
+   template <is_stepanov_container Other>
    auto
    relocate_to(this auto const& self, Other& destination) {
       assert(destination.capacity() >= self.capacity());

@@ -3,7 +3,7 @@
 #pragma once
 
 #include <cat/arithmetic>
-#include <cat/iterator>
+#include <cat/stepanov>
 #include <cat/utility>
 
 // TODO: Write tests for math functions.
@@ -35,7 +35,7 @@ min(T value_1, U value_2, Remaining... remaining) -> T {
 
 [[nodiscard]]
 constexpr auto
-min(is_iterable auto&& iterable) {
+min(is_stepanov_iterable auto&& iterable) {
    auto iterator = iterable.begin();
    auto maximum = *iterator;
    ++iterator;
@@ -49,7 +49,7 @@ min(is_iterable auto&& iterable) {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-min(is_iterable auto&& iterable) {
+min(is_stepanov_iterable auto&& iterable) {
    auto iterator = iterable.begin();
    auto maximum = *iterator;
    ++iterator;
@@ -83,7 +83,7 @@ max(T value_1, U value_2, Remaining... remaining) -> T {
 
 [[nodiscard]]
 constexpr auto
-max(is_iterable auto&& iterable) {
+max(is_stepanov_iterable auto&& iterable) {
    auto iterator = iterable.begin();
    auto maximum = *iterator;
    ++iterator;
@@ -97,7 +97,7 @@ max(is_iterable auto&& iterable) {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-max(is_iterable auto&& iterable) {
+max(is_stepanov_iterable auto&& iterable) {
    auto iterator = iterable.begin();
    auto maximum = *iterator;
    ++iterator;

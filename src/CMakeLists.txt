@@ -8,10 +8,10 @@ include(GNUInstallDirs)
 # scope) so `cat_install.cmake`'s `install(DIRECTORY)` uses the same list.
 set(CAT_INCLUDE_SUBDIRS
   meta compare limits runtime cpuid sanitizer arithmetic
-  simd algorithm debug variant scaredy maybe match notype unique collection
-  array span list string tui format memory allocator utility functional file
-  linux thread atomic socket x11 bit bitset iterator math type_list tuple
-  vec ring enum)
+  simd algorithm debug variant scaredy maybe match notype unique container
+  array span list string tui format memory allocator utility file
+  linux thread atomic socket x11 bit bitset stepanov math type_list tuple
+  vec ring enum iterable)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 # Each entry has `BUILD_INTERFACE` (in-tree path) and `INSTALL_INTERFACE`
@@ -156,17 +156,31 @@ set(CAT_HEADER_FILES
   ${CATLIB}/atomic/cat/atomic
   ${CATLIB}/bit/cat/bit
   ${CATLIB}/bitset/cat/bitset
-  ${CATLIB}/collection/cat/collection
-  ${CATLIB}/collection/detail/initializer_list.hpp
+  ${CATLIB}/container/cat/container
+  ${CATLIB}/container/detail/initializer_list.hpp
   ${CATLIB}/compare/cat/compare
   ${CATLIB}/debug/cat/debug
   ${CATLIB}/file/cat/file
   ${CATLIB}/format/cat/format
   ${CATLIB}/format/cat/detail/ftoa_dragonbox.hpp
   ${CATLIB}/format/cat/detail/itoa_jeaiii.hpp
-  ${CATLIB}/functional/cat/functional
-  ${CATLIB}/iterator/cat/iterator
-  ${CATLIB}/iterator/cat/insert_iterators
+  ${CATLIB}/iterable/cat/iterable
+  ${CATLIB}/iterable/cat/detail/iterable_interface.hpp
+  ${CATLIB}/iterable/implementations/as_rvalue.tpp
+  ${CATLIB}/iterable/implementations/bounds.tpp
+  ${CATLIB}/iterable/implementations/count.tpp
+  ${CATLIB}/iterable/implementations/filter.tpp
+  ${CATLIB}/iterable/implementations/fold.tpp
+  ${CATLIB}/iterable/implementations/for_each.tpp
+  ${CATLIB}/iterable/implementations/iterable_interface.tpp
+  ${CATLIB}/iterable/implementations/reverse.tpp
+  ${CATLIB}/iterable/implementations/slice_view.tpp
+  ${CATLIB}/iterable/implementations/sum.tpp
+  ${CATLIB}/iterable/implementations/take.tpp
+  ${CATLIB}/iterable/implementations/to.tpp
+  ${CATLIB}/iterable/implementations/transform.tpp
+  ${CATLIB}/stepanov/cat/stepanov
+  ${CATLIB}/stepanov/cat/insert_iterators
   ${CATLIB}/limits/cat/limits
   ${CATLIB}/linux/cat/linux
   ${CATLIB}/list/cat/list

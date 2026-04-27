@@ -260,10 +260,10 @@ using zstr_span = basic_str_span<char, true>;
 
 template <typename CharT, idx length, bool is_null_terminated>
 class basic_str_inplace
-    : public collection_interface<
+    : public container_interface<
          // TODO: Use CharT instead of `char`.
          basic_str_inplace<CharT, length, is_null_terminated>, char>,
-      public random_access_iterable_interface<char> {
+      public random_access_stepanov_iterable_interface<char> {
  public:
    constexpr basic_str_inplace() = default;
 
