@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # `cat-opt-report` -- Clang `-fsave-optimization-record` sweep
 #
 # `cat-opt-report` is an OBJECT shadow of `cat-impl`. Building it

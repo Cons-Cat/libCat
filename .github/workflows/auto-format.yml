@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 name: Auto-format
 
 # Companion to `ci.yml`'s advisory `cat-format-check`: when a PR has

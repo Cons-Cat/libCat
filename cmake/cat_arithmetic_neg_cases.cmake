@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # Negative probe sources for `execute_process` + `${CMAKE_CXX_COMPILER} -fsyntax-only` (included
 # from `cat_arithmetic_negative.cmake` after
 # `_cat_neg_expect_illformed` is defined). Each case must be ill-formed. Sources mirror the **inverse** of

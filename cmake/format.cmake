@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # Source formatting (`cat-format`, `cat-format-check`) and full-line // reflow
 # (`cat-reflow-comments`, `cat-reflow-comments-check`, see
 # `scripts/reflow_prefix_comment_paragraphs.py`)

@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # `cat-syntax` -- fast `-fsyntax-only` sweep over every libCat TU
 #
 # Re-runs Clang's frontend (lex, parse, type-check, template

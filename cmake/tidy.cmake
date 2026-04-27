@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # Source tidying (`cat-tidy`, `cat-tidy-check`)
 #
 # Dual-mode file (`CMAKE_SCRIPT_MODE_FILE` is the discriminator):

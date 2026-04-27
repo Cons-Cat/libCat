@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # `cat-impl-shared` -- `libcat.so` opt-in (`CAT_BUILD_SHARED`)
 #
 # Canonical libCat artifact is `libcat.a` (`cat-impl`). This file adds a

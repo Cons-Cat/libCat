@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # Configure-time `-fsyntax-only` checks for `cat::arithmetic`, `cat::index`, and
 # `cat::arithmetic_ptr`. Every probe must be ill-formed.
 #

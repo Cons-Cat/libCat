@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 name: Setup libCat toolchain
 description: >
   Restore (or install + cache) the apt.llvm.org Clang 23 toolchain libCat

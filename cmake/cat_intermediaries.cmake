@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # Pin script-mode invocations (`cmake -P`) to the same policy floor as
 # module mode (CMP0057 / `foreach IN ZIP_LISTS`).
 cmake_minimum_required(VERSION 3.24)

@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # LLVM archiver / ranlib selection
 #
 # `libcat.a` is a bitcode archive whenever LTO is on (see `-flto=auto` /

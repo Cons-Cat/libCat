@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 name: Arithmetic negative-compile
 
 # `CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON` runs `-fsyntax-only` probes from

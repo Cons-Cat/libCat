@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 """Emit the `--Xcc` flags clang-repl needs to parse a libCat translation unit.
 
 Reads `<build-dir>/compile_commands.json`, picks a representative `cat-impl`

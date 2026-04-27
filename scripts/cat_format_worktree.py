@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # Parallel driver for the =cat-format= and =cat-format-check= build targets. Same
 # contract as the old =cmake -P= script block in =cmake/format.cmake=.
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # `install` / `find_package(cat)` support
 #
 # `cmake --install build [--prefix <sysroot>]` lays out the libCat tree

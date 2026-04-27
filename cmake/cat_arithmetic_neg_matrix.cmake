@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # Exercises the full ill-formed `cat::[u]int{1,2,4,8}` cross-width and `int` to
 # `float{2,4,8}` and `iword` on `int4` grids that the unit `can_*_assign` story
 # allows as `-fsyntax-only` TUs. `index` and `arithmetic_ptr` are not a width

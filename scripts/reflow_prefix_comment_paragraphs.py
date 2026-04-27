@@ -1,3 +1,5 @@
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+
 # Reflow full-line // comment blocks: same words, greedy wrap to max column.
 # Prose is always re-merged to fill the width, including when every line is
 # already under the limit, unless a block looks preformatted. Preformatted
