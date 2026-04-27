@@ -334,9 +334,9 @@ struct connection_response_info {
    cat::uint2 vendor_string_length;
    // Maximum length of a request that this server can handle.
    cat::uint2 request_maximum_length;
-   // The number of root windows hosted by this server. These are transmitted
-   // as `root_window_packet`s imillimetersediately after the pixel map
-   // formats. This can determine the number of screens held by the server.
+   // The number of root windows hosted by this server. These are transmitted as
+   // `root_window_packet`s imillimetersediately after the pixel map formats.
+   // This can determine the number of screens held by the server.
    cat::uint1 root_windows_count;
    // The number of pixel map formats available for this server. These are
    // transmitted as `pixel_map_format_packet`s imillimetersediately after this
@@ -398,8 +398,8 @@ struct depth_packet {
    cat::uint1 _;
 
  public:
-   // The number of `visual_packet`s transmitted imillimetersediately after
-   // this packet.
+   // The number of `visual_packet`s transmitted imillimetersediately after this
+   // packet.
    cat::uint2 visuals_count;
 
  private:
@@ -451,8 +451,8 @@ handshake(cat::is_allocator auto& allocator,
       return cat::nullopt;
    }
 
-   // A dynamic allocation must be made because the total size of all
-   // recieved packets is unknown and potentially a very large amount.
+   // A dynamic allocation must be made because the total size of all recieved
+   // packets is unknown and potentially a very large amount.
    // TODO: Deallocate this somehow.
    auto memory = prop(allocator.template alloc_multi<connection_response_info>(
       cat::idx(x_connection.header.message_length.raw * 4u)));

@@ -39,8 +39,8 @@ allocator_interface<Derived>::get(T& handle) & -> decltype(auto) {
 }
 
 template <typename Derived>
-// Get a `const` handle to the data in any memory handle. If that memory
-// handle is to a multi-allocation, this returns a `span`.
+// Get a `const` handle to the data in any memory handle. If that memory handle
+// is to a multi-allocation, this returns a `span`.
 template <mem T>
 [[nodiscard]]
 constexpr auto

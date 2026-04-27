@@ -15,8 +15,8 @@ test(linear_allocator) {
    };
    cat::is_allocator auto allocator = cat::make_linear_allocator(page);
 
-   // It should not be possible to allocate 7 times here, because 24 bytes
-   // can only hold 6 `int4`s.
+   // It should not be possible to allocate 7 times here, because 24 bytes can
+   // only hold 6 `int4`s.
    for (int i = 0; i < 7; ++i) {
       cat::maybe handle = allocator.alloc<int4>();
       if (!handle.has_value()) {
@@ -34,8 +34,8 @@ overallocated:
       cat::verify(handle.has_value());
    }
    // This allocated 16 bytes, which is 8-byte-aligned. Another int allocation
-   // would make it 4-byte-aligned. However, 8 bytes should be allocated here
-   // to keep it 8-byte-aligned.
+   // would make it 4-byte-aligned. However, 8 bytes should be allocated here to
+   // keep it 8-byte-aligned.
    auto* p_handle = allocator.align_alloc<int4>(8u).value();
    cat::verify(cat::is_aligned(p_handle, 8u));
 

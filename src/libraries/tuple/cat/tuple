@@ -4,8 +4,8 @@
 
 #include <cat/type_list>
 
-// A `tuple` is an anonymous struct type with tuple protocol
-// support and small convenience helpers.
+// A `tuple` is an anonymous struct type with tuple protocol support and small
+// convenience helpers.
 //
 // Much of the design is inspired by the tuplet library. `cat::tuple` is
 // permitted to an aggregate type, and it uses `[[no_unique_address]]` to
@@ -28,8 +28,8 @@ template <typename... Types>
 struct tuple;
 
 namespace detail {
-// Return type for `tuple_element::operator[]() const &&` (see `get` for a
-// const rvalue: `T const &&` for value `T`, `T &&` for reference `T` elision)
+// Return type for `tuple_element::operator[]() const &&` (see `get` for a const
+// rvalue: `T const &&` for value `T`, `T &&` for reference `T` elision)
 template <typename T, bool = __is_reference(T)>
 struct subscript_const_rv_return;
 
@@ -43,10 +43,9 @@ struct subscript_const_rv_return<T, false> {
    using type = add_rvalue_reference<add_const<remove_reference<T>>>;
 };
 
-// Because any type can only be derived from once, types must be binded to
-// their position in a paremeter pack to guarantee their uniqueness. This is
-// required to support `tuple`s with non-uniquely-typed elements.
-// e.g. `tuple<int, int>`
+// Because any type can only be derived from once, types must be binded to their
+// position in a paremeter pack to guarantee their uniqueness. This is required
+// to support `tuple`s with non-uniquely-typed elements. e.g. `tuple<int, int>`
 template <idx index, typename T>
 struct tuple_element {
    using element = T;

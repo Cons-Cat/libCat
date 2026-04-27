@@ -178,8 +178,8 @@ class stepanov_iterable_interface {
       using it = conditional<is_const, const_iterator, iterator>;
 
       // `cat::forward` must be called on last use, and because argument
-      // evaluation order is unspecified, it cannot be called inside an
-      // argument list.
+      // evaluation order is unspecified, it cannot be called inside an argument
+      // list.
       auto size = container.size();
       auto* p_data = fwd(container).data();
       return it(size, p_data);
@@ -254,9 +254,8 @@ class random_access_stepanov_iterable_interface
    constexpr auto
    rbegin(this auto&& container) {
       // `cat::forward` must be called on last use, and because argument
-      // evaluation order is unspecified, it cannot be called inside an
-      // argument list.
-      // `rbegin` is only valid on non-empty containers. `assert` enforces
+      // evaluation order is unspecified, it cannot be called inside an argument
+      // list. `rbegin` is only valid on non-empty containers. `assert` enforces
       // `size >= 1` so `size - 1u` does not wrap in unsigned arithmetic.
       cat::assert(container.size() > 0u);
       idx const last{container.size().raw - 1u};
@@ -295,8 +294,7 @@ class container_interface {
    using size_type = idx;
    using difference_type = iword;
 
-   // If `.size()` is not, provided and `.capacity()` is, generate
-   // `.size()`.
+   // If `.size()` is not, provided and `.capacity()` is, generate `.size()`.
    [[nodiscard]]
    constexpr auto
    size(this Derived const& self) -> idx
@@ -305,8 +303,7 @@ class container_interface {
       return self.capacity();
    }
 
-   // If `.size()` is provided and `.capacity()` is not, generate
-   // `.capacity()`.
+   // If `.size()` is provided and `.capacity()` is not, generate `.capacity()`.
    [[nodiscard]]
    constexpr auto
    capacity(this Derived const& self) -> idx

@@ -66,9 +66,9 @@ signal_fence(memory_order&& order) {
    __atomic_signal_fence(order);
 }
 
-// Ensure that the dependency tree started by an `memory_order::consume`
-// atomic load operation does not extend past this return value. `expression`
-// does not carry a dependency into the return value.
+// Ensure that the dependency tree started by an `memory_order::consume` atomic
+// load operation does not extend past this return value. `expression` does not
+// carry a dependency into the return value.
 template <typename T>
 auto
 kill_dependency(T expression) -> T {

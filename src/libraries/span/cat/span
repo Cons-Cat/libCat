@@ -19,16 +19,15 @@
 //           dynamic_extent`.
 //
 // Comparison operators (`==` and `<=>`) follow Barry Revzin's `span_ext`
-// design.
-// https://brevzin.github.io/c++/2020/03/30/span-comparisons/
-// Both compare against any `is_random_access` range with a matching element
-// type. Three-way ordering uses a "synth three way" fallback so element types
-// that only model `<` (without a native `<=>`) still order lexicographically.
-// The implementations live out-of-line in `implementations/span.tpp`.
+// design. https://brevzin.github.io/c++/2020/03/30/span-comparisons/ Both
+// compare against any `is_random_access` range with a matching element type.
+// Three-way ordering uses a "synth three way" fallback so element types that
+// only model `<` (without a native `<=>`) still order lexicographically. The
+// implementations live out-of-line in `implementations/span.tpp`.
 //
 // `cat::span` is `[[clang::trivial_abi]]` so it passes in registers, and
-// `[[gsl::Pointer(T)]]` so it participates in Clang's lifetime analysis.
-// It matches the ABI of `nix::io_vector` for trivial syscall compatibility.
+// `[[gsl::Pointer(T)]]` so it participates in Clang's lifetime analysis. It
+// matches the ABI of `nix::io_vector` for trivial syscall compatibility.
 
 #include <detail/initializer_list.hpp>
 
@@ -54,9 +53,9 @@ span
    static constexpr idx extent = fixed_extent;
 
    // `element_type` is the only span-specific typedef; everything else
-   // (`value_type`, `reference`, `const_reference`, `pointer`,
-   // `const_pointer`, `size_type`, `difference_type`, and the iterator
-   // family) comes from `container_interface` / `stepanov_iterable_interface`.
+   // (`value_type`, `reference`, `const_reference`, `pointer`, `const_pointer`,
+   // `size_type`, `difference_type`, and the iterator family) comes from
+   // `container_interface` / `stepanov_iterable_interface`.
    using element_type = T;
 
    constexpr span() = default;
@@ -327,10 +326,10 @@ span(T const&) -> span<typename T::value_type const>;
 
 // Reinterpret a `cat::span` as a read-only view of its underlying bytes.
 // Mirrors `std::as_bytes`. Uses `__builtin_bit_cast`, the same primitive
-// `cat::uintptr` and `cat::byte` use, in place of `reinterpret_cast`. Still
-// not `constexpr` because Clang forbids `bit_cast` to a pointer type during
-// constant evaluation, and even a constexpr `byte*` could not be read from
-// in a constant expression.
+// `cat::uintptr` and `cat::byte` use, in place of `reinterpret_cast`. Still not
+// `constexpr` because Clang forbids `bit_cast` to a pointer type during
+// constant evaluation, and even a constexpr `byte*` could not be read from in a
+// constant expression.
 template <typename T, idx fixed_extent>
 [[nodiscard]]
 auto

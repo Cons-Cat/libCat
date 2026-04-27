@@ -19,8 +19,7 @@ allocator_interface<Derived>::free(T const& handle) {
    if (!handle.is_inline()) {
       allocation_type const* p_memory;
       if constexpr (T::is_multi_handle) {
-         // Get the pointer from a span produced by the
-         // allocator.
+         // Get the pointer from a span produced by the allocator.
          p_memory = this->get(handle).data();
       } else {
          // Get the pointer from the allocator.

@@ -352,8 +352,8 @@ test(meta_common_reference) {
    static_assert(is_same<common_reference<int const&, int&&>, int const&>);
    static_assert(is_same<common_reference<int, int, int&>, int>);
 
-   // `cat::reference_wrapper<T>` participates in `common_reference` as
-   // a transparent proxy for `T&`.
+   // `cat::reference_wrapper<T>` participates in `common_reference` as a
+   // transparent proxy for `T&`.
    static_assert(is_same<common_reference<reference_wrapper<int>, int&>, int&>);
    static_assert(is_same<common_reference<int&, reference_wrapper<int>>, int&>);
    static_assert(
@@ -475,8 +475,7 @@ add_two(int a, int b) -> int {
    return a + b;
 }
 
-struct opaque_return {
-};
+struct opaque_return {};
 
 auto
 return_opaque(int x) -> opaque_return {
@@ -521,9 +520,8 @@ test(meta_is_invocable) {
 test(meta_is_predicate) {
    using namespace cat;
    static_assert(is_predicate<decltype(&is_positive), int>);
-   static_assert(
-      is_predicate<bool (member_receiver::*)(int) const,
-                   member_receiver const&, int>);
+   static_assert(is_predicate<bool (member_receiver::*)(int) const,
+                              member_receiver const&, int>);
 
    static_assert(!is_predicate<decltype(&add_two), int, int, int>);
    static_assert(!is_predicate<decltype(&return_opaque), int>);

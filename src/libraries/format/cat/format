@@ -279,9 +279,9 @@ struct format_type_constant {
    }
 };
 
-// A buffer that can grow through `.push_back()` and reallocate when its
-// storage is exceeded. This container is used in `vfmt()` calls as the
-// default container for `vfmt_to()`.
+// A buffer that can grow through `.push_back()` and reallocate when its storage
+// is exceeded. This container is used in `vfmt()` calls as the default
+// container for `vfmt_to()`.
 struct format_string_vector : container_interface<format_string_vector, char>,
                               random_access_stepanov_iterable_interface<char> {
    format_string_vector(char* p_in_storage, idx in_length, idx in_max_length)
@@ -393,8 +393,8 @@ class format_args_compact_storage {
    byte packed_args_storage[argument_count * 8];  // Needs work.
 };
 
-// Formatting arguments are packed into a small type-erased array to
-// conserve storage.
+// Formatting arguments are packed into a small type-erased array to conserve
+// storage.
 struct format_args {
    template <typename... Types>
    explicit constexpr format_args(
@@ -414,10 +414,10 @@ struct format_args {
          (this->p_args_indices + argument_index)->byte_index;
 
       // TODO: Make this type punning with `bit_cast`, because
-      // this `reinterpret_cast` is undefined behavior. Offset the
-      // pointer to the array of indices by the length of that
-      // array. That produces a pointer to the next struct member,
-      // which happens to be the raw storage array.
+      // this `reinterpret_cast` is undefined behavior. Offset the pointer to
+      // the array of indices by the length of that array. That produces a
+      // pointer to the next struct member, which happens to be the raw storage
+      // array.
       byte const* const p_storage = reinterpret_cast<byte const* const>(
          this->p_args_indices + argument_count);
 
@@ -429,9 +429,9 @@ struct format_args {
    uword const argument_count;
 };
 
-// To prevent redundant template specializations for a contiguous
-// container's `back_insert_stepanov_iterator`, it is wrapped by virtual
-// function dispatch in this container.
+// To prevent redundant template specializations for a contiguous container's
+// `back_insert_stepanov_iterator`, it is wrapped by virtual function dispatch
+// in this container.
 template <is_allocator Allocator>
 struct format_buffer_base
     : container_interface<format_buffer_base<Allocator>, char>,
@@ -467,8 +467,8 @@ struct format_buffer_base
 
    auto
    push_back(Allocator&, char character) -> maybe<void> {
-      // If the new length would exceed the current capacity, call
-      // `.grow()` to extend the capacity, first.
+      // If the new length would exceed the current capacity, call `.grow()` to
+      // extend the capacity, first.
       if (this->length + 1u > this->max_length) {
          maybe<void> result = this->grow(this->length + 1u);
          if (!result.has_value()) {
@@ -489,8 +489,8 @@ struct format_buffer_base
 template <typename...>
 struct format_buffer_iterator {};
 
-// Temporarily store formatted string data on the stack before pushing it to
-// an output-iterator it `.flush()`.
+// Temporarily store formatted string data on the stack before pushing it to an
+// output-iterator it `.flush()`.
 template <is_allocator Allocator, typename Outputter>
 struct format_buffer_iterator<Allocator, Outputter>
     : format_buffer_base<Allocator> {
@@ -498,8 +498,7 @@ struct format_buffer_iterator<Allocator, Outputter>
    Allocator& allocator;
    Outputter output_iterator;
 
-   // To optimize common usage, `256` bytes of storage is reserved on
-   // stack.
+   // To optimize common usage, `256` bytes of storage is reserved on stack.
    char storage[256];
 
    format_buffer_iterator(Allocator& in_allocator, Outputter iterator)
@@ -516,12 +515,12 @@ struct format_buffer_iterator<Allocator, Outputter>
       }
    }
 
-   // Overload the pure virtual `format_buffer_base::grow()`
-   // function. Instead of expanding its own memory, this buffer is flushed
-   // itself to make more room.
+   // Overload the pure virtual `format_buffer_base::grow()` function. Instead
+   // of expanding its own memory, this buffer is flushed itself to make more
+   // room.
    auto
-   // Without `override`, clang-20 will attempt to link against the pure
-   // virtual `grow()` function even with the `final` specifier.
+   // Without `override`, clang-20 will attempt to link against the pure virtual
+   // `grow()` function even with the `final` specifier.
    grow(uword) -> maybe<void> override final {  // NOLINT
       // `size()` is derived from `format_buffer_base`.
       if (this->size() == 256u) {
@@ -549,8 +548,8 @@ struct format_buffer_iterator<Allocator, Outputter>
    }
 };
 
-// If only a pointer is provided, then assume the buffer can never overflow
-// and skip bounds-checking and buffer growing.
+// If only a pointer is provided, then assume the buffer can never overflow and
+// skip bounds-checking and buffer growing.
 template <is_allocator Allocator, typename T>
 struct format_buffer_iterator<Allocator, T*> : format_buffer_base<Allocator> {
    // `.grow()` for a `T[]` is no-op.
@@ -565,16 +564,15 @@ template <is_allocator Allocator>
 using format_contiguous_output_iterator =
    back_insert_stepanov_iterator<format_buffer_base<Allocator>>;
 
-// Holds the format string parsing state consisting of the string's range
-// and a counter for which arguments have previously been parsed.
+// Holds the format string parsing state consisting of the string's range and a
+// counter for which arguments have previously been parsed.
 class format_parse_context {
  private:
    // These members must be at the top so they can be `decltype`'d.
    str_view const m_format;
 
-   // Iff `argument_index` is less than `0`, the format string has
-   // manually indexed an argument. Otherwise, all arguments are
-   // automatically indexed.
+   // Iff `argument_index` is less than `0`, the format string has manually
+   // indexed an argument. Otherwise, all arguments are automatically indexed.
    iword m_argument_index = 0;
 
  public:
@@ -612,8 +610,8 @@ class format_parse_context {
       return ++(this->m_argument_index);
    }
 
-   // Check if a manually indexed argument is within reasonable bounds, a
-   // d check that this context is not using automatic indexing.
+   // Check if a manually indexed argument is within reasonable bounds, a d
+   // check that this context is not using automatic indexing.
    constexpr auto
    check_argument_index(iword index) -> maybe<void> {
       if consteval {
@@ -624,8 +622,8 @@ class format_parse_context {
       }
 
       if (this->m_argument_index > 0) {
-         // This argument is manually indexed in a context where
-         // automatic indexing has been used.
+         // This argument is manually indexed in a context where automatic
+         // indexing has been used.
          return nullopt;
       }
 
@@ -663,8 +661,8 @@ template <is_allocator Allocator>
 constexpr auto
 parse_format_string(str_view const format, format_handler<Allocator>&& handler)
    -> scaredy_format<void> {
-   // char const* p_first = format.data();
-   // char const* p_last = format.data() + format.size();
+   // char const* p_first = format.data(); char const* p_last = format.data() +
+   // format.size();
    str_view remainder = format;
    idx current_argument;
 
@@ -684,8 +682,8 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
          assert(to_close_brace == -1);
       }
 
-      // This is true iff both are `-1`, or in other words, neither braces
-      // were found. This is the escape condition.
+      // This is true iff both are `-1`, or in other words, neither braces were
+      // found. This is the escape condition.
       if (to_open_brace == to_close_brace) {
          for (char const& character : remainder) {
             // TODO: Optimize this with a multiple-insert overload.
@@ -698,8 +696,8 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
          break;
       }
 
-      // If there is an argument, then copy over all text leading up to
-      // the next argument.
+      // If there is an argument, then copy over all text leading up to the next
+      // argument.
       for (idx i; i < to_open_brace; ++i) {
          // TODO: Optimize this with a multiple-insert overload.
          maybe result =
@@ -781,14 +779,14 @@ vfmt_to(Allocator& allocator, Outputter output_iterator, str_view const format,
         detail::format_args arguments) -> scaredy_format<Outputter> {
    if constexpr (is_same<Outputter, detail::format_contiguous_output_iterator<
                                        Allocator>>) {
-      // If the type-erased contiguous format buffer is used, then
-      // this routine can be slightly streamlined.
+      // If the type-erased contiguous format buffer is used, then this routine
+      // can be slightly streamlined.
       detail::format_handler<Allocator> handler = {allocator, output_iterator,
                                                    format, arguments};
       return parse_format_string(format, move(handler));
    } else {
-      // Otherwise, create a type-erased contiguous format buffer to
-      // optimize pushing to this output iterator.
+      // Otherwise, create a type-erased contiguous format buffer to optimize
+      // pushing to this output iterator.
       detail::format_buffer_iterator<Allocator, Outputter> buffer = {
          allocator, output_iterator};
       detail::format_handler<Allocator> handler = {
@@ -820,10 +818,9 @@ vfmt(Allocator& allocator, str_view const format, detail::format_args arguments)
    str_view output{p_memory, initial_size};
 
    // `format_string_vector` is a container that satisfies the `Iterable`
-   // `concept` and has a `.push_back()` method for
-   // `as_back_inserter` / `back_insert_stepanov_iterator`. It is used to store
-   // the formatted string and reallocates when that string grows beyond
-   // `initial_size`.
+   // `concept` and has a `.push_back()` method for `as_back_inserter` /
+   // `back_insert_stepanov_iterator`. It is used to store the formatted string
+   // and reallocates when that string grows beyond `initial_size`.
    detail::format_string_vector into_buffer = {p_memory, 0u, initial_size};
 
    // TODO: Specify which kind of `scaredy_format` this is.
@@ -837,8 +834,8 @@ vfmt(Allocator& allocator, str_view const format, detail::format_args arguments)
    return str_view(into_buffer.p_storage, length);
 }
 
-// Store `arguments` in a compacted variant object. Then format a sequence
-// of `char` with those arguments, and push the result into some container.
+// Store `arguments` in a compacted variant object. Then format a sequence of
+// `char` with those arguments, and push the result into some container.
 template <is_allocator Allocator,
           is_output_stepanov_iterator<str_view> Outputter, typename... Args>
 [[nodiscard]]

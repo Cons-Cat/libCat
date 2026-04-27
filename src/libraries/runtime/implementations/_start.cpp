@@ -58,8 +58,8 @@ extern "C"
 [[gnu::used
 #ifndef NO_ARGC_ARGV
    // If arguments are loaded, this must be `naked` to prevent pushing `%rbp`
-   // first, which breaks argument loading. I've tried other solutions, but
-   // none worked yet.
+   // first, which breaks argument loading. I've tried other solutions, but none
+   // worked yet.
    , gnu::naked
 #endif
 ]]

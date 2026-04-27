@@ -44,9 +44,9 @@ class page_allocator : public allocator_interface<page_allocator> {
       return (allocation_bytes / 4_uki + 1u) * 4_uki;
    }
 
-   // Allocate memory in multiples of a page-size. A page is `4_uki` large
-   // on x86-64. If fewer than 4096 bytes are allocated, that amount will
-   // be rounded up to 4096.
+   // Allocate memory in multiples of a page-size. A page is `4_uki` large on
+   // x86-64. If fewer than 4096 bytes are allocated, that amount will be
+   // rounded up to 4096.
    auto
    allocate(idx allocation_bytes) -> maybe_ptr<void> {
       scaredy result =
@@ -69,8 +69,8 @@ class page_allocator : public allocator_interface<page_allocator> {
       return nullptr;
    }
 
-   // Allocate a page(s) of virtual memory that is guaranteed to align to
-   // any power of 2, but less than `4_uki`.
+   // Allocate a page(s) of virtual memory that is guaranteed to align to any
+   // power of 2, but less than `4_uki`.
    auto
    aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
       // Pages cannot be aligned by greater than 4 kibibytes.

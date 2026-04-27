@@ -44,8 +44,7 @@ static cat::detail::pair_jeaiii const s_pairs[] = {
 
 #define LN(N) (L##N, b += N + 1)
 #define LZ LN
-// if you want to '\0' terminate
-// #define LZ(N) &(L##N, b[N + 1] = '\0')
+// if you want to '\0' terminate #define LZ(N) &(L##N, b[N + 1] = '\0')
 
 #define LG(F)                                                     \
    (u < 100             ? u < 10 ? F(0) : F(1)                    \

@@ -100,7 +100,8 @@ test(thread_clone_failure) {
 
    nix::rlimit original{};
    cat::verify(nix::sys_getrlimit(
-                  nix::rlimit_resource::max_processes_and_threads_per_real_user, &original)
+                  nix::rlimit_resource::max_processes_and_threads_per_real_user,
+                  &original)
                   .has_value());
 
    // Lower only the soft limit so the hard ceiling stays high enough to restore
@@ -109,20 +110,23 @@ test(thread_clone_failure) {
       .soft = 1u,
       .hard = original.hard,
    };
-   cat::verify(nix::sys_setrlimit(
-                  nix::rlimit_resource::max_processes_and_threads_per_real_user, &narrow)
-                  .has_value());
+   cat::verify(
+      nix::sys_setrlimit(
+         nix::rlimit_resource::max_processes_and_threads_per_real_user, &narrow)
+         .has_value());
 
-   // `cat::thread::spawn` maps errors to `nullopt`. `nix::process` with the same
-   // clone flags keeps the errno from `clone` on failure.
+   // `cat::thread::spawn` maps errors to `nullopt`. `nix::process` with the
+   // same clone flags keeps the errno from `clone` on failure.
    nix::process child;
    child.add_clone_flag(nix::clone_flags::thread);
    child.add_clone_flag(nix::clone_flags::child_set_tid);
    nix::scaredy_nix<void> const spawn_result =
-      child.spawn(allocator, 2_uki, []{});
+      child.spawn(allocator, 2_uki, [] {
+      });
 
    cat::verify(nix::sys_setrlimit(
-                  nix::rlimit_resource::max_processes_and_threads_per_real_user, &original)
+                  nix::rlimit_resource::max_processes_and_threads_per_real_user,
+                  &original)
                   .has_value());
 
    cat::verify(!spawn_result.has_value());

@@ -4,11 +4,13 @@
 
 #include "../unit_tests.hpp"
 
-// Regression for `arithmetic_ptr`: `void const*` must deduce `uintptr<void const>`
-// without duplicate conversion operators. This matches `copy_memory_impl` holding
-// addresses as `cat::uintptr` from `void const*` / `void*`.
-static_assert(cat::is_same<decltype(cat::uintptr{static_cast<void const*>(nullptr)}),
-                           cat::uintptr<void const>>);
+// Regression for `arithmetic_ptr`: `void const*` must deduce `uintptr<void
+// const>` without duplicate conversion operators. This matches
+// `copy_memory_impl` holding addresses as `cat::uintptr` from `void const*` /
+// `void*`.
+static_assert(
+   cat::is_same<decltype(cat::uintptr{static_cast<void const*>(nullptr)}),
+                cat::uintptr<void const>>);
 static_assert(cat::is_same<decltype(cat::uintptr{static_cast<void*>(nullptr)}),
                            cat::uintptr<void>>);
 
@@ -38,8 +40,7 @@ test(copy_memory) {
       for (idx i = 0; i < n; ++i) {
          source[i] = static_cast<int4>(i);
       }
-      cat::copy_memory(source.data(), dest.data(),
-                       sizeof(dest));
+      cat::copy_memory(source.data(), dest.data(), sizeof(dest));
       for (idx i = 0; i < n; ++i) {
          cat::verify(source[i] == dest[i]);
       }

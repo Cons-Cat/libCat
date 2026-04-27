@@ -9,12 +9,11 @@
 // iterators with `cat::proxy_stepanov_iterator_interface`.
 //
 // libCat is migrating to the Flux v2 sequence model under `cat/iterable`. The
-// Stepanov begin/end machinery is marked so the transition is visible at
-// every call site (iterator types are `cat::*_stepanov_iterator` and
-// matching concepts are `cat::is_*_stepanov_iterator` where the role prefix
-// mirrors C++20; range shape in `<cat/container>` is
-// `cat::is_stepanov_container`). New code should prefer
-// `cat::is_iterable` / `cat::is_collection`.
+// Stepanov begin/end machinery is marked so the transition is visible at every
+// call site (iterator types are `cat::*_stepanov_iterator` and matching
+// concepts are `cat::is_*_stepanov_iterator` where the role prefix mirrors
+// C++20; range shape in `<cat/container>` is `cat::is_stepanov_container`). New
+// code should prefer `cat::is_iterable` / `cat::is_collection`.
 //
 // We also provide helpers for generating reverse and const iterators, as well
 // as simple adaptors for iterating over ranges like `cat::as_reverse_stepanov`
@@ -23,8 +22,8 @@
 //
 // Iterator `concept`s mirror C++20 iterator concepts. Names use
 // `is_<role>_stepanov_iterator` for iterator refinements, parallel to
-// `is_stepanov_iterable` / `is_stepanov_bidi_iterable` for containers.
-// Several refinement hierarchies exist:
+// `is_stepanov_iterable` / `is_stepanov_bidi_iterable` for containers. Several
+// refinement hierarchies exist:
 //
 // Incrementability refinements:
 //    `cat::is_stepanov_weakly_incrementable`
@@ -103,8 +102,7 @@ struct infer_difference_trait {
    using type = iword;
 };
 
-// If `iterator` provides `.distance_to()`, infer `difference_type` from
-// that.
+// If `iterator` provides `.distance_to()`, infer `difference_type` from that.
 template <detail::has_distance_to Iterator>
 struct infer_difference_trait<Iterator> {
    static Iterator const& it;

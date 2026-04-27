@@ -6,9 +6,9 @@
 
 #include <cat/iterable>
 
-// Out-of-line `iterable_interface` member templates. This file is
-// included only at the end of `<cat/iterable>`, so every `cat::`
-// entity named here is a complete, previously-declared entity.
+// Out-of-line `iterable_interface` member templates. This file is included only
+// at the end of `<cat/iterable>`, so every `cat::` entity named here is a
+// complete, previously-declared entity.
 
 namespace cat {
 namespace detail {

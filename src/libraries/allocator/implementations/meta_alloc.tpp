@@ -46,8 +46,7 @@ struct allocator_interface<Derived>::meta_alloc_alias_types {
 
 template <typename Derived>
 // Only called from `meta_alloc` when `is_inline` is true; alias_types always
-// use `true` for the inline slot so this is not instantiated per
-// `is_inline`.
+// use `true` for the inline slot so this is not instantiated per `is_inline`.
 template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
           bool is_zeroed, bool has_feedback, typename... Args>
 [[gnu::no_sanitize_address]]
@@ -276,8 +275,7 @@ allocator_interface<Derived>::meta_alloc_finish_non_inline(
    using return_handle = typename alias_types::return_handle;
    T* p_allocation;
    if constexpr (has_feedback) {
-      // The `.first()` element of the `sized_allocation` tuple is
-      // a `void*`.
+      // The `.first()` element of the `sized_allocation` tuple is a `void*`.
       p_allocation = static_cast<T*>(maybe_memory.value().first());
 
       auto const all_bytes = maybe_memory.value().second();
@@ -349,8 +347,7 @@ allocator_interface<Derived>::meta_alloc_finish_inline_overflow(
    using underlying_handle = typename alias_types::underlying_handle;
    T* p_allocation;
    if constexpr (has_feedback) {
-      // The `.first()` element of the `sized_allocation` tuple is
-      // a `void*`.
+      // The `.first()` element of the `sized_allocation` tuple is a `void*`.
       p_allocation = static_cast<T*>(maybe_memory.value().first());
 
       auto const all_bytes = maybe_memory.value().second();
@@ -471,18 +468,18 @@ allocator_interface<Derived>::meta_alloc_consteval_allocate(
 }
 
 template <typename Derived>
-// `is_inline` tries the inline buffer before the heap,
-// `is_fail_safe` maps allocation failure to maybe-style results,
-// `is_aligned` selects aligned allocation entry points,
-// `is_multiple` allocates arrays (span handles) instead of one `T`,
-// `is_zeroed` uses implicit-lifetime zeroing instead of constructor args,
-// `has_feedback` returns sized byte counts when the allocator supports them
+// `is_inline` tries the inline buffer before the heap, `is_fail_safe` maps
+// allocation failure to maybe-style results, `is_aligned` selects aligned
+// allocation entry points, `is_multiple` allocates arrays (span handles)
+// instead of one `T`, `is_zeroed` uses implicit-lifetime zeroing instead of
+// constructor args, `has_feedback` returns sized byte counts when the allocator
+// supports them
 template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
           bool is_multiple, bool is_zeroed, bool has_feedback, typename... Args>
    requires((!is_multiple || (sizeof...(Args) <= 0))
-            // Multi-allocations must be default-constructed.
-            // Zeroed-out allocations must not take constructor arguments and
-            // must use a trivial object type.
+            // Multi-allocations must be default-constructed. Zeroed-out
+            // allocations must not take constructor arguments and must use a
+            // trivial object type.
             && (!is_zeroed || (sizeof...(Args) == 0))
             && (!is_zeroed || is_implicit_lifetime<T>))
 constexpr auto

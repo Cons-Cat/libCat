@@ -19,12 +19,12 @@ template <typename, typename = void>
 inline constexpr bool can_as_writable_bytes = false;
 template <typename T>
 inline constexpr bool can_as_writable_bytes<
-   T,
-   cat::detail::void_type<decltype(cat::as_writable_bytes(cat::declval<T>()))>>
-   = true;
+   T, cat::detail::void_type<decltype(cat::as_writable_bytes(
+         cat::declval<T>()))>> = true;
 
-// Heterogeneous comparability concepts modeled after the simplified versions
-// in `brevzin/span_ext/test/test.cxx`.
+// Heterogeneous comparability concepts modeled after the simplified versions in
+// `brevzin/span_ext/test/test.cxx`.
+// clang-format off
 template <typename T, typename U>
 concept is_equality_comparable_with = requires(T const& t, U const& u) {
    { t == u } -> cat::is_convertible<bool>;
@@ -46,19 +46,21 @@ concept is_totally_ordered_with =
          { u > t } -> cat::is_convertible<bool>;
          { u >= t } -> cat::is_convertible<bool>;
       };
+// clang-format on
 
-// Element type with `operator==` only. No `<` or `<=>`, so spans of these
-// can be equality-compared but not ordered.
+// Element type with `operator==` only. No `<` or `<=>`, so spans of these can
+// be equality-compared but not ordered.
 struct only_equality {
    int4 i;
+
    constexpr bool
    operator==(only_equality const& other) const {
       return i == other.i;
    }
 };
 
-// Inherits the equality-only element type. Distinct from `only_equality`,
-// so `span<derived_only_equality>` and `span<only_equality>` should NOT be
+// Inherits the equality-only element type. Distinct from `only_equality`, so
+// `span<derived_only_equality>` and `span<only_equality>` should NOT be
 // equality-comparable with each other.
 struct derived_only_equality : only_equality {};
 
@@ -167,8 +169,8 @@ test(span_type_safety_and_extent) {
    cat::verify(fixed_const.size() == 4u);
    cat::verify(dynamic_const.size() == 4u);
 
-   static_assert(!cat::is_constructible<cat::span<int4>,
-                                        cat::span<int4 const>>);
+   static_assert(
+      !cat::is_constructible<cat::span<int4>, cat::span<int4 const>>);
 }
 
 test(span_construction_from_array_container) {
@@ -221,8 +223,8 @@ test(span_const_correctness_conversions) {
    cat::verify(const_view.size() == 3u);
    cat::verify(const_view.data() == view.data());
 
-   static_assert(!cat::is_constructible<cat::span<int4>,
-                                        cat::span<int4 const>>);
+   static_assert(
+      !cat::is_constructible<cat::span<int4>, cat::span<int4 const>>);
 }
 
 test(span_assignment_dynamic) {
@@ -250,8 +252,8 @@ test(span_element_access_subscript) {
    cat::verify(const_view[2u] == 33);
 }
 
-// `at()` returns a `maybe<T&>` rather than asserting on out-of-bounds, so it
-// is safe to query indices beyond `size()`
+// `at()` returns a `maybe<T&>` rather than asserting on out-of-bounds, so it is
+// safe to query indices beyond `size()`
 test(span_at_returns_value_or_nullopt) {
    int4 values[3] = {7, 8, 9};
    cat::span<int4> view{values, 3u};
@@ -420,10 +422,11 @@ test(span_fixed_extent_tuple_protocol) {
    cat::span<int4, 3_idx> fixed{values, 3u};
 
    static_assert(std::tuple_size_v<cat::span<int4, 3_idx>> == 3u);
-   static_assert(cat::is_same<std::tuple_element_t<0, cat::span<int4, 3_idx>>,
-                              int4&>);
    static_assert(
-      cat::is_same<std::tuple_element_t<0, cat::span<int4, 3_idx> const>, int4&>);
+      cat::is_same<std::tuple_element_t<0, cat::span<int4, 3_idx>>, int4&>);
+   static_assert(
+      cat::is_same<std::tuple_element_t<0, cat::span<int4, 3_idx> const>,
+                   int4&>);
 
    auto& [x, y, z] = fixed;
    cat::verify(x == 7 && y == 8 && z == 9);
@@ -460,8 +463,8 @@ test(span_is_memory_overlapping_helper) {
    cat::verify(cat::is_memory_overlapping(source_view, aliasing_view));
 }
 
-// Member typedefs follow `std::span`. `value_type` is `remove_cv_t<T>`,
-// not `T`, so a `span<int4 const>` reports `value_type == int4`.
+// Member typedefs follow `std::span`. `value_type` is `remove_cv_t<T>`, not
+// `T`, so a `span<int4 const>` reports `value_type == int4`.
 test(span_nested_typedefs) {
    using mutable_span = cat::span<int4>;
    using const_span = cat::span<int4 const>;
@@ -538,11 +541,11 @@ test(span_last_template) {
    cat::verify(fixed_tail[0u] == 40 && fixed_tail[2u] == 60);
 }
 
-// Template `subspan<Offset, Count>()` mirrors `std::span`. With a fixed
-// source extent and an explicit `Count`, the result extent equals `Count`.
-// With a fixed source extent and a defaulted `Count`, the result extent is
-// `Extent - Offset`. With a dynamic source extent, the result is dynamic
-// unless `Count` is given.
+// Template `subspan<Offset, Count>()` mirrors `std::span`. With a fixed source
+// extent and an explicit `Count`, the result extent equals `Count`. With a
+// fixed source extent and a defaulted `Count`, the result extent is `Extent -
+// Offset`. With a dynamic source extent, the result is dynamic unless `Count`
+// is given.
 test(span_subspan_template) {
    int4 values[6] = {10, 20, 30, 40, 50, 60};
    cat::span<int4, 6_idx> fixed_view{values, 6u};
@@ -622,37 +625,37 @@ test(span_as_writable_bytes) {
 // asserts in span_ext's test.cxx. A `cat::span` is equality-comparable and
 // orderable with any random-access range whose element type matches.
 test(span_compare_concepts_random_access_match) {
-   static_assert(is_equality_comparable_with<cat::span<int4>,
-                                             cat::array<int4, 3u>>);
-   static_assert(is_totally_ordered_with<cat::span<int4>,
-                                         cat::array<int4, 3u>>);
+   static_assert(
+      is_equality_comparable_with<cat::span<int4>, cat::array<int4, 3u>>);
+   static_assert(
+      is_totally_ordered_with<cat::span<int4>, cat::array<int4, 3u>>);
 }
 
-// Mirrors span_ext's mixed-const-ness checks: comparing a span and a
-// container should work in every const combination of the two operands.
+// Mirrors span_ext's mixed-const-ness checks: comparing a span and a container
+// should work in every const combination of the two operands.
 test(span_compare_concepts_mixed_constness) {
-   static_assert(is_totally_ordered_with<cat::span<int4>,
-                                         cat::array<int4, 3u> const>);
-   static_assert(is_totally_ordered_with<cat::span<int4 const>,
-                                         cat::array<int4, 3u>>);
+   static_assert(
+      is_totally_ordered_with<cat::span<int4>, cat::array<int4, 3u> const>);
+   static_assert(
+      is_totally_ordered_with<cat::span<int4 const>, cat::array<int4, 3u>>);
    static_assert(is_totally_ordered_with<cat::span<int4 const>,
                                          cat::array<int4, 3u> const>);
 }
 
 // Mirrors `not equality_comparable_with<std::span<int>, std::vector<long>>`
-// from span_ext: the element types must match (modulo cv) for either form
-// of comparison to compile.
+// from span_ext: the element types must match (modulo cv) for either form of
+// comparison to compile.
 test(span_compare_concepts_element_type_mismatch) {
-   static_assert(!is_equality_comparable_with<cat::span<int4>,
-                                              cat::array<int8, 3u>>);
-   static_assert(!is_totally_ordered_with<cat::span<int4>,
-                                          cat::array<int8, 3u>>);
+   static_assert(
+      !is_equality_comparable_with<cat::span<int4>, cat::array<int8, 3u>>);
+   static_assert(
+      !is_totally_ordered_with<cat::span<int4>, cat::array<int8, 3u>>);
 }
 
-// Mirrors span_ext's `B` / `D` cases. A type with only `operator==` makes
-// the span equality-comparable but not ordered. Inheritance carries the
-// equality through, but pairing differently-typed spans is rejected even
-// when the elements share a base.
+// Mirrors span_ext's `B` / `D` cases. A type with only `operator==` makes the
+// span equality-comparable but not ordered. Inheritance carries the equality
+// through, but pairing differently-typed spans is rejected even when the
+// elements share a base.
 test(span_compare_concepts_only_equality_element) {
    static_assert(is_equality_comparable_with<cat::span<only_equality>,
                                              cat::span<only_equality>>);
@@ -664,13 +667,13 @@ test(span_compare_concepts_only_equality_element) {
    static_assert(!is_totally_ordered_with<cat::span<derived_only_equality>,
                                           cat::span<derived_only_equality>>);
 
-   static_assert(!is_equality_comparable_with<cat::span<only_equality>,
-                                              cat::span<derived_only_equality>>);
+   static_assert(
+      !is_equality_comparable_with<cat::span<only_equality>,
+                                   cat::span<derived_only_equality>>);
 }
 
 // Mirrors `not equality_comparable_with<std::span<NonComparable>, ...>` from
-// span_ext: an element type with no comparison operators disables both
-// forms.
+// span_ext: an element type with no comparison operators disables both forms.
 test(span_compare_concepts_uncomparable_element) {
    static_assert(!is_equality_comparable_with<cat::span<uncomparable>,
                                               cat::span<uncomparable>>);
@@ -702,9 +705,9 @@ test(span_compare_self_all_int_widths) {
    });
 }
 
-// Mirrors span_ext's `compare_same_length_diff` template test: when the
-// length matches but the last element differs, ordering follows the
-// differing element and equality is `false`.
+// Mirrors span_ext's `compare_same_length_diff` template test: when the length
+// matches but the last element differs, ordering follows the differing element
+// and equality is `false`.
 test(span_compare_same_length_diff_all_int_widths) {
    for_each_int_width([]<typename T>() {
       cat::array<T, 3u> x{T(1), T(2), T(3)};
@@ -753,9 +756,8 @@ test(span_compare_prefix_all_int_widths) {
    });
 }
 
-// Two spans over the same underlying buffer must compare equal regardless
-// of how each side was constructed (raw pointer + size vs. CTAD from
-// container).
+// Two spans over the same underlying buffer must compare equal regardless of
+// how each side was constructed (raw pointer + size vs. CTAD from container).
 test(span_compare_aliasing_buffers) {
    int4 values[3] = {1, 2, 3};
    cat::span<int4> direct{values, 3u};
@@ -767,8 +769,7 @@ test(span_compare_aliasing_buffers) {
 }
 
 // A fixed-extent span and a dynamic-extent span over equal contents compare
-// equal: the constraint only requires `value_type` parity, not extent
-// parity.
+// equal: the constraint only requires `value_type` parity, not extent parity.
 test(span_compare_fixed_vs_dynamic_extent) {
    int4 values[3] = {1, 2, 3};
    cat::span<int4 const, 3_idx> fixed{values, 3u};
@@ -779,8 +780,8 @@ test(span_compare_fixed_vs_dynamic_extent) {
    cat::verify((fixed <=> dynamic) == 0);
 }
 
-// `operator==` is short-circuit: when sizes differ it returns `false`
-// without inspecting any element, even if the prefix would otherwise match.
+// `operator==` is short-circuit: when sizes differ it returns `false` without
+// inspecting any element, even if the prefix would otherwise match.
 // `operator<=>` instead falls back to the shorter-is-less rule.
 test(span_compare_size_mismatch_short_circuits) {
    int4 short_values[2] = {1, 2};
@@ -808,8 +809,8 @@ test(span_iterator_methods_explicit) {
    cat::verify((last - first) == 4);
 }
 
-// `cbegin` / `cend` always yield iterators to `T const`, even on a
-// non-`const` span.
+// `cbegin` / `cend` always yield iterators to `T const`, even on a non-`const`
+// span.
 test(span_iterator_methods_const_cbegin_cend) {
    int4 values[3] = {1, 2, 3};
    cat::span<int4> view{values, 3u};
@@ -832,9 +833,8 @@ test(span_iterator_methods_reverse) {
    cat::verify(*crfirst == 4);
 }
 
-// `iterator` is a contiguous (random-access) iterator type. Verify the
-// libCat concepts hold so generic algorithms can pick the contiguous
-// specialization.
+// `iterator` is a contiguous (random-access) iterator type. Verify the libCat
+// concepts hold so generic algorithms can pick the contiguous specialization.
 test(span_iterator_concepts) {
    using iterator = cat::span<int4>::iterator;
    static_assert(cat::is_random_access_stepanov_iterator<iterator>);
@@ -853,8 +853,8 @@ test(span_empty_fixed_extent) {
    cat::verify(empty == dyn_empty);
 }
 
-// Calling subview helpers with a count of zero on a non-empty span yields
-// an empty span, leaving the source unchanged.
+// Calling subview helpers with a count of zero on a non-empty span yields an
+// empty span, leaving the source unchanged.
 test(span_subview_zero_count) {
    int4 values[4] = {1, 2, 3, 4};
    cat::span<int4> view{values, 4u};
@@ -872,8 +872,8 @@ test(span_subview_zero_count) {
    cat::verify(mid.size() == 0u);
 }
 
-// Asking for the full extent via the template subview overloads should
-// yield a span of the original size, with the same data pointer.
+// Asking for the full extent via the template subview overloads should yield a
+// span of the original size, with the same data pointer.
 test(span_subview_full_extent) {
    int4 values[4] = {1, 2, 3, 4};
    cat::span<int4, 4_idx> view{values, 4u};
@@ -894,8 +894,8 @@ test(span_subview_full_extent) {
    cat::verify(all_subspan.size() == 4u);
 }
 
-// Subviews must compose: chaining `first` and `last` and `subspan`
-// preserves both data positions and extents.
+// Subviews must compose: chaining `first` and `last` and `subspan` preserves
+// both data positions and extents.
 test(span_subview_chain) {
    int4 values[8] = {1, 2, 3, 4, 5, 6, 7, 8};
    cat::span<int4, 8_idx> view{values, 8u};
@@ -924,9 +924,9 @@ test(span_write_through_view) {
 }
 
 // On a fixed-extent span the tuple `get` overloads are reachable on a
-// `const`-qualified span, but the returned reference is to the same
-// element regardless of `const` (matches `std::span` since `T const&` would
-// require `T` to itself be `const`).
+// `const`-qualified span, but the returned reference is to the same element
+// regardless of `const` (matches `std::span` since `T const&` would require `T`
+// to itself be `const`).
 test(span_tuple_get_on_const_span) {
    int4 values[2] = {7, 8};
    cat::span<int4, 2_idx> const fixed{values, 2u};
@@ -937,8 +937,8 @@ test(span_tuple_get_on_const_span) {
 }
 
 // `dynamic_extent` is exposed as a `cat::idx`. Spot-check it equals the
-// sentinel used everywhere internally and selects the dynamic specialization
-// of the primary template.
+// sentinel used everywhere internally and selects the dynamic specialization of
+// the primary template.
 test(span_dynamic_extent_constant) {
    static_assert(cat::is_same<decltype(cat::dynamic_extent), cat::idx const>);
    static_assert(cat::span<int4>::extent == cat::dynamic_extent);

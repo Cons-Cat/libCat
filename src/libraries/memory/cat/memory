@@ -8,9 +8,9 @@
 
 namespace cat {
 
-// `memcpy`-class copy: the `[p_source, p_source+bytes)` and
-// `[p_destination, p_destination+bytes)` intervals must not overlap (including
-// a single shared byte). Violations are rejected by `assert`
+// `memcpy`-class copy: the `[p_source, p_source+bytes)` and `[p_destination,
+// p_destination+bytes)` intervals must not overlap (including a single shared
+// byte). Violations are rejected by `assert`
 constexpr void
 copy_memory(void const* p_source, void* p_destination, idx bytes);
 
@@ -128,9 +128,8 @@ set_memory_detail(void* p_source, T value, idx const size) {
          remaining_bytes -= sizeof(T);
       }
 
-      // Non-type template parameters are not allowed in a lambda's
-      // template parameter list, so the lanes are passed through a
-      // `constant`.
+      // Non-type template parameters are not allowed in a lambda's template
+      // parameter list, so the lanes are passed through a `constant`.
       auto vectorized_fill = [&]<typename lanes_constant>(lanes_constant) {
          // TODO: Consider optimizing this by tiling the loop.
          constexpr idx lanes = lanes_constant::value;
@@ -235,9 +234,9 @@ zero_object_explicit(T& object) {
    zero_memory_explicit(__builtin_addressof(object), sizeof(T));
 }
 
-// Prevent a compiler from constant-folding the non-`const`-qualified
-// `p_object` when it shares its location in memory with, but has distinct
-// lifetime from, a separate `const`-qualified object.
+// Prevent a compiler from constant-folding the non-`const`-qualified `p_object`
+// when it shares its location in memory with, but has distinct lifetime from, a
+// separate `const`-qualified object.
 template <typename T>
 [[nodiscard]]
 constexpr auto

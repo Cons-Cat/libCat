@@ -6,9 +6,9 @@
 
 namespace cat {
 
-// Forward declare collection operations. Befriended
-// by `contiguous_position_interface` so the defaults keep hooks `private`.
-// These are implemented in `<cat/iterable>`.
+// Forward declare collection operations. Befriended by
+// `contiguous_position_interface` so the defaults keep hooks `private`. These
+// are implemented in `<cat/iterable>`.
 template <typename Collection>
 [[nodiscard]]
 constexpr auto
@@ -42,10 +42,10 @@ constexpr auto
 distance(Collection const& collection, Position const& from, Position const& to)
    -> iword;
 
-// `cat::iterable_interface` is the mixin that turns the pipe-only
-// surface (`data | cat::filter(position) | cat::sum()`) into a fluent API
-// surface (`data.filter(position).sum()`). It is implemented on every adaptor
-// in `<cat/iterable>`.
+// `cat::iterable_interface` is the mixin that turns the pipe-only surface
+// (`data | cat::filter(position) | cat::sum()`) into a fluent API surface
+// (`data.filter(position).sum()`). It is implemented on every adaptor in
+// `<cat/iterable>`.
 struct iterable_interface {
    // These are implemented in
    // `<cat/iterable/implementations/iterable_interface.tpp>`.
@@ -131,9 +131,9 @@ struct contiguous_position_interface {
 
    constexpr void
    dec_pos(idx& position) const {
-      // `cat::idx` deletes `operator--` to forbid silent underflow.
-      // `dec_pos`'s invariant is that `position > begin_pos`, so we can
-      // cast back to `idx` after subtraction.
+      // `cat::idx` deletes `operator--` to forbid silent underflow. `dec_pos`'s
+      // invariant is that `position > begin_pos`, so we can cast back to `idx`
+      // after subtraction.
       position = narrow_cast<idx>(position - 1u).assert();
    }
 

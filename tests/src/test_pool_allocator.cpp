@@ -19,9 +19,9 @@ test(pool_allocator) {
    int8* p_int2 = allocator.alloc<int8>(20).value();
    cat::verify(*p_int2 == 20);
 
-   // Test allocation limit is correct.
-   // The allocator owns 128 bytes, divided into 16 sections of 8-bytes.
-   // Two allocations have already been made, so 14 remain.
+   // Test allocation limit is correct. The allocator owns 128 bytes, divided
+   // into 16 sections of 8-bytes. Two allocations have already been made, so 14
+   // remain.
    for (idx i; i < 14; ++i) {
       auto* _ = allocator.alloc<int4>(10).verify();
    }

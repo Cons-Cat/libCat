@@ -300,8 +300,8 @@ emulated_exp(double argument) -> double {
    return emulated_ldexp(exponential_series_sum, binary_exponent_for_scale);
 }
 
-// Euler's formula `x^y = exp(y ln x)` (Leonhard Euler) after IEEE
-// special cases and integer-exponent handling when `x` is negative.
+// Euler's formula `x^y = exp(y ln x)` (Leonhard Euler) after IEEE special cases
+// and integer-exponent handling when `x` is negative.
 [[nodiscard]]
 constexpr auto
 emulated_pow(double base, double exponent) -> double {
@@ -366,9 +366,9 @@ emulated_powf(float base, float exponent) -> float {
 
 // `sqrt` / `sqrtf` for targets without `libm`. Clang can lower lane
 // `__builtin_sqrt` / `__builtin_sqrtf` and `__builtin_elementwise_sqrt` to
-// those C ABI symbols.
-// `sqrt(x)`: logarithmic identity `sqrt(x) = exp((1/2) ln x)` using the same
-// Taylor/Maclaurin `exp` and Maclaurin `artanh` `log` path as above.
+// those C ABI symbols. `sqrt(x)`: logarithmic identity `sqrt(x) = exp((1/2) ln
+// x)` using the same Taylor/Maclaurin `exp` and Maclaurin `artanh` `log` path
+// as above.
 [[nodiscard]]
 constexpr auto
 emulated_sqrt(double argument) -> double {

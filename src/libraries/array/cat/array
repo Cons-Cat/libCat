@@ -10,8 +10,8 @@
 namespace cat {
 
 // An `array` represents an array of `T` with a `constexpr` length. It stores
-// its elements within itself, so this array can be constructed on the stack.
-// It is random-access iterable.
+// its elements within itself, so this array can be constructed on the stack. It
+// is random-access iterable.
 template <typename T, idx length>
 class [[clang::trivial_abi, gsl::Owner(T)]]
 // It is not possible to make this an aggregate class while using CRTP classes.

@@ -1,7 +1,7 @@
 // Copyright 2020-2022 Junekey Jeon
 //
-// The contents of this file may be used under the terms of
-// the Apache License v2.0 with LLVM Exceptions.
+// The contents of this file may be used under the terms of the Apache License
+// v2.0 with LLVM Exceptions.
 //
 //    (See accompanying file LICENSE-Apache or copy at
 //     https://llvm.org/foundation/relicensing/LICENSE.txt)
@@ -11,8 +11,8 @@
 //    (See accompanying file LICENSE-Boost or copy at
 //     https://www.boost.org/LICENSE_1_0.txt)
 //
-// Unless required by applicable law or agreed to in writing, this software
-// is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// Unless required by applicable law or agreed to in writing, this software is
+// distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 // KIND, either express or implied.
 
 // NOLINTBEGIN
@@ -52,14 +52,13 @@ namespace to_chars_detail {
 // clang-format on
 
 // These digit generation routines are inspired by James Anhalt's itoa
-// algorithm: https://github.com/jeaiii/itoa The main idea is for given n,
-// find y such that floor(10^k * y / 2^32) = n holds, where k is an
-// appropriate integer depending on the length of n. For example, if n =
-// 1234567, we set k = 6. In this case, we have floor(y / 2^32) = 1,
-// floor(10^2 * ((10^0 * y) mod 2^32) / 2^32) = 23,
-// floor(10^2 * ((10^2 * y) mod 2^32) / 2^32) = 45, and
-// floor(10^2 * ((10^4 * y) mod 2^32) / 2^32) = 67.
-// See https://jk-jeon.github.io/posts/2022/02/jeaiii-algorithm/ for more
+// algorithm: https://github.com/jeaiii/itoa The main idea is for given n, find
+// y such that floor(10^k * y / 2^32) = n holds, where k is an appropriate
+// integer depending on the length of n. For example, if n = 1234567, we set k =
+// 6. In this case, we have floor(y / 2^32) = 1, floor(10^2 * ((10^0 * y) mod
+// 2^32) / 2^32) = 23, floor(10^2 * ((10^2 * y) mod 2^32) / 2^32) = 45, and
+// floor(10^2 * ((10^4 * y) mod 2^32) / 2^32) = 67. See
+// https://jk-jeon.github.io/posts/2022/02/jeaiii-algorithm/ for more
 // explanation.
 
 JKJ_FORCEINLINE static void
@@ -80,8 +79,7 @@ print_9_digits(uint4::raw_type s32, int& exponent, char*& buffer) noexcept {
    } else {
       if (s32 < 1'000'000) {
          if (s32 < 10'000) {
-            // 3 or 4 digits.
-            // 42949673 = ceil(2^32 / 100)
+            // 3 or 4 digits. 42949673 = ceil(2^32 / 100)
             auto prod = s32 * uint8::raw_type(42'949'673);
             auto two_digits = int(prod >> 32);
 
@@ -107,8 +105,7 @@ print_9_digits(uint4::raw_type s32, int& exponent, char*& buffer) noexcept {
                buffer += 5;
             }
          } else {
-            // 5 or 6 digits.
-            // 429497 = ceil(2^32 / 1'0000)
+            // 5 or 6 digits. 429497 = ceil(2^32 / 1'0000)
             auto prod = s32 * uint8::raw_type(429'497);
             auto two_digits = int(prod >> 32);
 
@@ -142,8 +139,7 @@ print_9_digits(uint4::raw_type s32, int& exponent, char*& buffer) noexcept {
          }
       } else {
          if (s32 < 100'000'000) {
-            // 7 or 8 digits.
-            // 281474978 = ceil(2^48 / 100'0000) + 1
+            // 7 or 8 digits. 281474978 = ceil(2^48 / 100'0000) + 1
             auto prod = s32 * uint8::raw_type(281'474'978);
             prod >>= 16;
             auto two_digits = int(prod >> 32);
@@ -182,8 +178,7 @@ print_9_digits(uint4::raw_type s32, int& exponent, char*& buffer) noexcept {
                buffer += 9;
             }
          } else {
-            // 9 digits.
-            // 1441151882 = ceil(2^57 / 1'0000'0000) + 1
+            // 9 digits. 1441151882 = ceil(2^57 / 1'0000'0000) + 1
             auto prod = s32 * uint8::raw_type(1'441'151'882);
             prod >>= 25;
             buffer[0] = char(int(prod >> 32) + '0');
@@ -284,8 +279,7 @@ to_chars<double, default_float_traits<double>>(
    }
 
    if (exponent >= 100) {
-      // d1 = exponent / 10; d2 = exponent % 10;
-      // 6554 = ceil(2^16 / 10)
+      // d1 = exponent / 10; d2 = exponent % 10; 6554 = ceil(2^16 / 10)
       auto prod = uint4::raw_type(exponent) * uint4::raw_type(6'554);
       auto d1 = prod >> 16;
       prod = uint2::raw_type(prod) * uint4::raw_type(5);  // * 10

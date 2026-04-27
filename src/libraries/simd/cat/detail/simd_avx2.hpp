@@ -78,8 +78,8 @@ mfence() {
    __builtin_ia32_mfence();
 }
 
-// Load fence. Orders prior loads against later loads (and with
-// `lfence/mfence` pairs).
+// Load fence. Orders prior loads against later loads (and with `lfence/mfence`
+// pairs).
 [[gnu::always_inline]]
 inline void
 lfence() {

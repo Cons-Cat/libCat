@@ -18,8 +18,8 @@
 namespace x64::detail {
 
 // Movmsk-derived lane-bit map for `cat::bitset`. Bit `i` matches
-// `simd_mask::operator[](i)` for masks from elementwise compares. The same
-// word feeds mask reductions below after masking to active lanes. Consumed by
+// `simd_mask::operator[](i)` for masks from elementwise compares. The same word
+// feeds mask reductions below after masking to active lanes. Consumed by
 // `mask_to_bitset` in `implementations/simd_mask_bitset.tpp`.
 
 template <typename T, typename Abi>

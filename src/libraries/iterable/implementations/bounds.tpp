@@ -7,16 +7,16 @@
 
 namespace cat {
 
-// Position-based reads and slice construction. These are only available
-// on collections, not iterables, because you need a position to ask "is this in
+// Position-based reads and slice construction. These are only available on
+// collections, not iterables, because you need a position to ask "is this in
 // range?" The position arithmetic deliberately uses only `<` so the same code
 // works on any `is_position` type.
 
-// `read_at(c, p)` reads at position `p`, asserting that `p` is in the
-// half-open range `[begin_pos, end_pos)`. The unchecked counterpart
-// `c.read_at_unchecked(p)` is the basis operation. This wrapper exists
-// so library code can opt into bounds checking everywhere with no
-// per-call boilerplate.
+// `read_at(c, p)` reads at position `p`, asserting that `p` is in the half-open
+// range `[begin_pos, end_pos)`. The unchecked counterpart
+// `c.read_at_unchecked(p)` is the basis operation. This wrapper exists so
+// library code can opt into bounds checking everywhere with no per-call
+// boilerplate.
 template <typename T>
    requires(is_collection<T>)
 constexpr auto
@@ -27,9 +27,9 @@ read_at(T& collection, position_type<T> const& position)
    return read_at_unchecked(collection, position);
 }
 
-// `try_read_at(collection, position)` returns `nullopt` if `position` is
-// out of range, and otherwise the same element `read_at` would return.
-// Use this when callers prefer a `maybe` over a failing assert.
+// `try_read_at(collection, position)` returns `nullopt` if `position` is out of
+// range, and otherwise the same element `read_at` would return. Use this when
+// callers prefer a `maybe` over a failing assert.
 template <typename T>
    requires(is_collection<T>)
 constexpr auto

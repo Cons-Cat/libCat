@@ -24,9 +24,9 @@ test(format_strings) {
    // TODO: Test `int1`, `uint1`, `int2`, `uint2`, `uint4`, `int8`, and
    // `uint8`.
 
-   // TOOD: These stopped working for some reason.
-   // constexpr cat::str_inplace const_int = cat::to_chars<136>();
-   // constexpr cat::str_inplace const_negative = cat::to_chars<-1650>();
+   // TOOD: These stopped working for some reason. constexpr cat::str_inplace
+   // const_int = cat::to_chars<136>(); constexpr cat::str_inplace
+   // const_negative = cat::to_chars<-1650>();
 
    // cat::verify(cat::compare_strings(const_int.data(), "136"));
    // cat::verify(cat::compare_strings(const_negative.data(), "-1650"));
@@ -92,34 +92,13 @@ test(fmt_long_pattern_substitutes) {
    };
    auto allocator = make_linear_allocator(page);
 
-   cat::str_view const formatted = cat::fmt(allocator,
-                                            "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:"
-                                            "{}:{}:{}:{}:{}:{}:{}:{}",
-                                            0,
-                                            1,
-                                            2,
-                                            3,
-                                            4,
-                                            5,
-                                            6,
-                                            7,
-                                            8,
-                                            9,
-                                            10,
-                                            11,
-                                            12,
-                                            13,
-                                            14,
-                                            15,
-                                            16,
-                                            17,
-                                            18,
-                                            19,
-                                            20,
-                                            21,
-                                            22,
-                                            23)
-                               .or_exit();
+   cat::str_view const formatted =
+      cat::fmt(allocator,
+               "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:"
+               "{}:{}:{}:{}:{}:{}:{}:{}",
+               0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+               19, 20, 21, 22, 23)
+         .or_exit();
 
    cat::verify(cat::compare_strings(
       formatted,

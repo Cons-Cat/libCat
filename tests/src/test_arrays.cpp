@@ -20,8 +20,8 @@ test(array_structured_bindings) {
    [] consteval {
       constexpr cat::array<int, 3> constexpr_array{1, 2, 3};
       static_assert(std::tuple_size_v<cat::array<int, 3>> == 3);
-      static_assert(cat::is_same<
-                    std::tuple_element_t<1, cat::array<int, 3>>, int>);
+      static_assert(
+         cat::is_same<std::tuple_element_t<1, cat::array<int, 3>>, int>);
       static_assert(cat::get<0>(constexpr_array) == 1);
       static_assert(cat::get<2>(constexpr_array) == 3);
    }();

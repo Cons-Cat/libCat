@@ -10,9 +10,8 @@ extern "C"
    auto
    std::memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void* {
    // TODO: Clang inserts `memset()` calls as some structs' `default`
-   // assignment operators. The vectorized `set_memory` causes some
-   // problems with that, so this trivial loop is done insead. Find a
-   // better solution.
+   // assignment operators. The vectorized `set_memory` causes some problems
+   // with that, so this trivial loop is done insead. Find a better solution.
    for (unsigned long long i = 0; i < bytes; ++i) {
       *(static_cast<unsigned char*>(p_source) + i) =
          static_cast<unsigned char>(byte_value);

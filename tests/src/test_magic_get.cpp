@@ -46,7 +46,7 @@ test(magic_get_get_const_lvalue) {
 
 test(magic_get_get_rvalue) {
    three_fields s{7, 'r', true};
-   cat::int4 x = cat::get<0>(cat::move(s)); // NOLINT
+   cat::int4 x = cat::get<0>(cat::move(s));  // NOLINT
    cat::verify(x == 7);
 }
 

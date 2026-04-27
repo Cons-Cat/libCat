@@ -109,8 +109,8 @@ bitset : public bitwise_interface<bitset<bits_count>> {
 
       uword bit_offset = index_bit + leading_skipped_bits;
       if constexpr (total_bytes > word_bytes) {
-         // If the bitset is larger than a word, wrap the bit offset by the
-         // size of a word.
+         // If the bitset is larger than a word, wrap the bit offset by the size
+         // of a word.
          bit_offset.raw &= word_bits.raw - 1u;
       }
 
@@ -213,9 +213,9 @@ bitset : public bitwise_interface<bitset<bits_count>> {
          }
       }
 
-      // On the last array element, compare against a bitmask.
-      // Leading bits of the leading byte should not be considered
-      // part of the bitset, so they are masked on unconditionally.
+      // On the last array element, compare against a bitmask. Leading bits of
+      // the leading byte should not be considered part of the bitset, so they
+      // are masked on unconditionally.
       auto const mask = (array_type_element(1u) << (leading_skipped_bits))--;
       return (m_data[storage_array_size - 1u] | mask)
              == array_type_element::max();
@@ -265,8 +265,8 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       idx count;
 
       // Iff `leading_skipped_bits` is not zero, then the first iteration of
-      // this loop requires special handling to prevent leading bits from
-      // being considered in the ctz.
+      // this loop requires special handling to prevent leading bits from being
+      // considered in the ctz.
       constexpr bool has_prologue = (leading_skipped_bits != 0u);
       if constexpr (has_prologue) {
          // This mask is all one bits except for the leading zero bits.
@@ -313,8 +313,8 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       return *this;
    }
 
-   // Set every bit (all logical indices 0..bits_count) to `value`. Padding
-   // bits are left at 0 so the class invariant holds.
+   // Set every bit (all logical indices 0..bits_count) to `value`. Padding bits
+   // are left at 0 so the class invariant holds.
    constexpr auto
    fill(bit_value value = true) -> bitset& {
       if (value) {
@@ -390,8 +390,8 @@ bitset : public bitwise_interface<bitset<bits_count>> {
          return *this;
       } else if constexpr (storage_array_size == 1u
                            && leading_skipped_bits == 0u) {
-         // The bitset exactly fills one storage word, so `cat::rotate_left`
-         // on the element is the rotation of the whole bitset.
+         // The bitset exactly fills one storage word, so `cat::rotate_left` on
+         // the element is the rotation of the whole bitset.
          bitset result;
          result.m_data[0] = cat::rotate_left(m_data[0], shift);
          return result;
@@ -541,8 +541,8 @@ bitset : public bitwise_interface<bitset<bits_count>> {
 
    static constexpr array_type_element odd_bits_pattern = ~even_bits_pattern;
 
-   // Reset the low `leading_skipped_bits` bits of `m_data.back()` to zero.
-   // Used to restore the class invariant after a bitwise-OR that may have set
+   // Reset the low `leading_skipped_bits` bits of `m_data.back()` to zero. Used
+   // to restore the class invariant after a bitwise-OR that may have set
    // padding bits.
    constexpr auto
    clear_padding_bits() -> void {
@@ -563,8 +563,8 @@ bitset(char const (&bitstring)[bits_count]) -> bitset<idx(bits_count - 1u)>;
 
 template <idx bits_count, is_unsigned_integral... Arguments>
 // Ensure that all `types` are the same size. E.g., `uint4` and `unsigned` are
-// compatible here.
-// requires((sizeof(Arguments...[0]) == sizeof(Arguments)) && ...)
+// compatible here. requires((sizeof(Arguments...[0]) == sizeof(Arguments)) &&
+// ...)
 [[nodiscard]]
 constexpr auto
 make_bitset(Arguments... arguments) {
@@ -587,8 +587,8 @@ make_bitset_filled(bit_value value) {
    return new_bitset;
 }
 
-// Construct a bitset with only the even-indexed bits (logical indices 0, 2,
-// 4, ...) set. Odd-indexed bits are 0.
+// Construct a bitset with only the even-indexed bits (logical indices 0, 2, 4,
+// ...) set. Odd-indexed bits are 0.
 template <idx bits_count>
 [[nodiscard]]
 constexpr auto
@@ -598,8 +598,8 @@ make_bitset_even() {
    return new_bitset;
 }
 
-// Construct a bitset with only the odd-indexed bits (logical indices 1, 3,
-// 5, ...) set. Even-indexed bits are 0.
+// Construct a bitset with only the odd-indexed bits (logical indices 1, 3, 5,
+// ...) set. Even-indexed bits are 0.
 template <idx bits_count>
 [[nodiscard]]
 constexpr auto

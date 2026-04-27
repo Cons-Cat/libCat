@@ -289,10 +289,10 @@ class overflow_reference
    }
 
    // Assignment from a compile-time-known raw integer that fits `raw_type`.
-   // Writes through `raw` directly because `index`'s only assignment path
-   // is implicit-ctor + default copy assign, whose `enable_if` requires a
-   // constant expression at the call site (lost once `operand` becomes a
-   // function parameter here).
+   // Writes through `raw` directly because `index`'s only assignment path is
+   // implicit-ctor + default copy assign, whose `enable_if` requires a constant
+   // expression at the call site (lost once `operand` becomes a function
+   // parameter here).
    template <is_integral U>
       requires(!is_const<WrappedQual> && detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -356,14 +356,14 @@ class overflow_reference
       return *this;
    }
 
-   // `-=`. The `arithmetic_interface`-provided friend `operator-=` only
-   // fires when `subtract_by` returns `Derived`, which is never true
-   // for `overflow_reference` (it always returns the underlying `arithmetic`).
-   // We mirror the `+=` family with a dedicated member that writes the
-   // result back through the wrapped storage. SFINAE intentionally rejects
-   // the promoting case: `subtract_by` returns a wider type for signed
-   // undefined LHS with a wider RHS, and that wider value would silently
-   // narrow to the LHS storage on assignment.
+   // `-=`. The `arithmetic_interface`-provided friend `operator-=` only fires
+   // when `subtract_by` returns `Derived`, which is never true for
+   // `overflow_reference` (it always returns the underlying `arithmetic`). We
+   // mirror the `+=` family with a dedicated member that writes the result back
+   // through the wrapped storage. SFINAE intentionally rejects the promoting
+   // case: `subtract_by` returns a wider type for signed undefined LHS with a
+   // wider RHS, and that wider value would silently narrow to the LHS storage
+   // on assignment.
    template <is_arithmetic U>
       requires(is_safe_arithmetic_comparison<raw_type, U>
                && !is_const<WrappedQual>
@@ -379,8 +379,8 @@ class overflow_reference
       return *this;
    }
 
-   // Cross-signedness `-=` for compile-time-known operands that fit the
-   // wrapped storage. Mirrors the `+=` overload above.
+   // Cross-signedness `-=` for compile-time-known operands that fit the wrapped
+   // storage. Mirrors the `+=` overload above.
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_comparison<raw_type, U>
                && !is_const<WrappedQual>
@@ -399,11 +399,10 @@ class overflow_reference
       return *this;
    }
 
-   // Cross-signedness `+=` for compile-time-known operands that fit the
-   // wrapped storage. The body converts `operand` into the wrapped storage
-   // first so the inner `add` call goes through the same-signedness path
-   // (the constexpr-ness needed by `enable_if` is consumed at the call site,
-   // not inside the body).
+   // Cross-signedness `+=` for compile-time-known operands that fit the wrapped
+   // storage. The body converts `operand` into the wrapped storage first so the
+   // inner `add` call goes through the same-signedness path (the constexpr-ness
+   // needed by `enable_if` is consumed at the call site, not inside the body).
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_comparison<raw_type, U>
                && !is_const<WrappedQual>
@@ -467,9 +466,9 @@ class overflow_reference
    }
 
    // Cross-signedness binary `+`. The inherited `operator+` requires
-   // `has_binary_plus`, whose SFINAE check uses `declval` and so cannot see
-   // the `enable_if` overload of `add`. This friend captures the operand
-   // directly, allowing `enable_if` to fire on the call-site constant.
+   // `has_binary_plus`, whose SFINAE check uses `declval` and so cannot see the
+   // `enable_if` overload of `add`. This friend captures the operand directly,
+   // allowing `enable_if` to fire on the call-site constant.
    template <is_arithmetic U>
       requires(!detail::is_arithmetic_ptr<wrapper_type>
                && !detail::is_idx<wrapper_type> && is_unsafe_arithmetic<U>
@@ -532,9 +531,9 @@ class overflow_reference
       return view().add(p_operand);
    }
 
-   // Mirror the `arithmetic::subtract_by` promotion rule: signed undefined
-   // LHS widens to a wider non-pointer RHS; everything else (unsigned,
-   // wrap/sat, pointer RHS, equal/narrower RHS) keeps the LHS shape.
+   // Mirror the `arithmetic::subtract_by` promotion rule: signed undefined LHS
+   // widens to a wider non-pointer RHS; everything else (unsigned, wrap/sat,
+   // pointer RHS, equal/narrower RHS) keeps the LHS shape.
    template <is_arithmetic U>
       requires(!detail::is_arithmetic_ptr<wrapper_type>
                && !detail::is_idx<wrapper_type>)
@@ -833,8 +832,8 @@ class overflow_reference
 
    // `shift_left_by` forwarders. `arithmetic` allows any integral storage
    // (signed `<<` is the C++ arithmetic shift). `idx` always supports shifts
-   // via the signed-bitcast trick. `arithmetic_ptr` only forwards for
-   // unsigned storage.
+   // via the signed-bitcast trick. `arithmetic_ptr` only forwards for unsigned
+   // storage.
    template <is_arithmetic U>
       requires(!detail::is_arithmetic_ptr<wrapper_type>
                && !detail::is_idx<wrapper_type> && is_integral<raw_type>)
@@ -861,9 +860,8 @@ class overflow_reference
       return view().shift_left_by(operand);
    }
 
-   // `shift_left_into` forwarders. Same eligibility as `shift_left_by`:
-   // both names map to the same `<<` operator, just for the two dispatch
-   // sides.
+   // `shift_left_into` forwarders. Same eligibility as `shift_left_by`: both
+   // names map to the same `<<` operator, just for the two dispatch sides.
    template <is_arithmetic U>
       requires(!detail::is_arithmetic_ptr<wrapper_type>
                && !detail::is_idx<wrapper_type> && is_integral<raw_type>)

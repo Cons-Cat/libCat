@@ -23,11 +23,10 @@ inline constexpr idx inline_buffer_size = 256u;
 
 // TODO: Handles' `.get()` should be only visible to allocators.
 namespace detail {
-// `base_memory_handle` is an opaque memory handle. allocators are to define
-// and produce a memory handle type which derives from this. These handles
-// contain absolutely arbitrary storage (such as a `T*`, or an `ssize`
-// address offset). Handles must provide a `.get()` method to return
-// whatever that storage is.
+// `base_memory_handle` is an opaque memory handle. allocators are to define and
+// produce a memory handle type which derives from this. These handles contain
+// absolutely arbitrary storage (such as a `T*`, or an `ssize` address offset).
+// Handles must provide a `.get()` method to return whatever that storage is.
 template <typename T>
 struct base_memory_handle {
    static constexpr bool is_inline_handle = false;
@@ -97,8 +96,7 @@ struct multi_memory_handle {
    // Intercept a propagating call to `.set_count()`.
    constexpr void
    set_count(idx count) {
-      // This conversion to `idx` is safe, because `count` is always
-      // positive.
+      // This conversion to `idx` is safe, because `count` is always positive.
       this->array_length = count;
    }
 
@@ -146,10 +144,10 @@ struct multi_memory_handle {
 };
 
 // An `inline_memory_handle` wraps another memory handle for `inline_*`
-// allocations. It extends the storage of this handle to at least 256 bytes,
-// and if the memory allocated is smaller than that, it is stored inside the
-// handle instead of inside an allocator. It effectively overrides the
-// `.is_inline()` method of the handle that it wraps.
+// allocations. It extends the storage of this handle to at least 256 bytes, and
+// if the memory allocated is smaller than that, it is stored inside the handle
+// instead of inside an allocator. It effectively overrides the `.is_inline()`
+// method of the handle that it wraps.
 template <typename handle_type>
 struct inline_memory_handle {
    static constexpr bool is_inline_handle = true;
@@ -159,8 +157,8 @@ struct inline_memory_handle {
    union {
       handle_type handle;
       allocation_type inline_storage;
-      // Reserve `inline_buffer_size` bytes to make the size
-      // of this handle predictible.
+      // Reserve `inline_buffer_size` bytes to make the size of this handle
+      // predictible.
       byte empty[inline_buffer_size];
    };
 
@@ -301,17 +299,17 @@ class allocator_interface {
 
    // `meta_alloc` flags: `is_inline` tries the inline buffer before the heap,
    // `is_fail_safe` maps allocation failure to maybe-style results,
-   // `is_aligned` selects aligned allocation entry points,
-   // `is_multiple` allocates arrays (span handles) instead of one `T`,
-   // `is_zeroed` uses implicit-lifetime zeroing instead of constructor args,
-   // `has_feedback` returns sized byte counts when the allocator supports them
+   // `is_aligned` selects aligned allocation entry points, `is_multiple`
+   // allocates arrays (span handles) instead of one `T`, `is_zeroed` uses
+   // implicit-lifetime zeroing instead of constructor args, `has_feedback`
+   // returns sized byte counts when the allocator supports them
    template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
              bool is_multiple, bool is_zeroed, bool has_feedback,
              typename... Args>
       requires((!is_multiple || (sizeof...(Args) <= 0))
-               // Multi-allocations must be default-constructed.
-               // Zeroed-out allocations must not take constructor arguments and
-               // must use a trivial object type.
+               // Multi-allocations must be default-constructed. Zeroed-out
+               // allocations must not take constructor arguments and must use a
+               // trivial object type.
                && (!is_zeroed || (sizeof...(Args) == 0))
                && (!is_zeroed || is_implicit_lifetime<T>))
    constexpr auto
@@ -394,8 +392,8 @@ class allocator_interface {
    constexpr auto
    alloc(Args&&... arguments) {
       if constexpr (alignof(T) > 1) {
-         // If the alignment of `T` is greater than 1, it should have
-         // implied strong alignment guarantees.
+         // If the alignment of `T` is greater than 1, it should have implied
+         // strong alignment guarantees.
          return align_alloc<T>(alignof(T), fwd(arguments)...);
       } else {
          return unalign_alloc<T>(fwd(arguments)...);
@@ -410,8 +408,8 @@ class allocator_interface {
    constexpr auto
    xalloc(Args&&... arguments) {
       if constexpr (alignof(T) > 1) {
-         // If the alignment of `T` is greater than 1, it should have
-         // implied strong alignment guarantees.
+         // If the alignment of `T` is greater than 1, it should have implied
+         // strong alignment guarantees.
          return align_xalloc<T>(alignof(T), fwd(arguments)...);
       } else {
          return unalign_xalloc<T>(fwd(arguments)...);
@@ -425,8 +423,8 @@ class allocator_interface {
    constexpr auto
    alloc_multi(idx count) {
       if constexpr (alignof(T) > 1) {
-         // If the alignment of `T` is greater than 1, it should have
-         // implied strong alignment guarantees.
+         // If the alignment of `T` is greater than 1, it should have implied
+         // strong alignment guarantees.
          return align_alloc_multi<T>(alignof(T), count);
       } else {
          return unalign_alloc_multi<T>(count);
@@ -440,8 +438,8 @@ class allocator_interface {
    constexpr auto
    xalloc_multi(idx count) {
       if constexpr (alignof(T) > 1) {
-         // If the alignment of `T` is greater than 1, it should have
-         // implied strong alignment guarantees.
+         // If the alignment of `T` is greater than 1, it should have implied
+         // strong alignment guarantees.
          return align_xalloc_multi<T>(alignof(T), count);
       } else {
          return unalign_xalloc_multi<T>(count);
@@ -537,8 +535,8 @@ class allocator_interface {
    constexpr auto
    inline_alloc(Args&&... arguments) {
       if constexpr (alignof(T) > 1) {
-         // If the alignment of `T` is greater than 1, it should have
-         // implied strong alignment guarantees.
+         // If the alignment of `T` is greater than 1, it should have implied
+         // strong alignment guarantees.
          return inline_align_alloc<T>(alignof(T), fwd(arguments)...);
       } else {
          return inline_unalign_alloc<T>(fwd(arguments)...);
@@ -552,8 +550,8 @@ class allocator_interface {
    constexpr auto
    inline_xalloc(Args&&... arguments) {
       if constexpr (alignof(T) > 1) {
-         // If the alignment of `T` is greater than 1, it should have
-         // implied strong alignment guarantees.
+         // If the alignment of `T` is greater than 1, it should have implied
+         // strong alignment guarantees.
          return inline_align_xalloc<T>(alignof(T), fwd(arguments)...);
       } else {
          return inline_unalign_xalloc<T>(fwd(arguments)...);
@@ -566,8 +564,8 @@ class allocator_interface {
    constexpr auto
    inline_alloc_multi(idx count) {
       if constexpr (alignof(T) > 1) {
-         // If the alignment of `T` is greater than 1, it should have
-         // implied strong alignment guarantees.
+         // If the alignment of `T` is greater than 1, it should have implied
+         // strong alignment guarantees.
          return inline_align_alloc_multi<T>(alignof(T), count);
       } else {
          return inline_unalign_alloc_multi<T>(count);
@@ -580,8 +578,8 @@ class allocator_interface {
    constexpr auto
    inline_xalloc_multi(idx count) {
       if constexpr (alignof(T) > 1) {
-         // If the alignment of `T` is greater than 1, it should have
-         // implied strong alignment guarantees.
+         // If the alignment of `T` is greater than 1, it should have implied
+         // strong alignment guarantees.
          return inline_align_xalloc_multi<T>(alignof(T), count);
       } else {
          return inline_unalign_xalloc_multi<T>(count);

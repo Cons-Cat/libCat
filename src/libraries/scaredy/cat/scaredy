@@ -30,11 +30,11 @@ struct scaredy_variant_storage {
       // `U` must be one of the errors.
       type_list<error_types...>::template has_type<U>;
 
-   // value_type and error types must have separate constructors and
-   // operators, because `cat::variant` cannot have implicit conversions in
-   // its own constructors or operators. So an explicit conversion is
-   // required to implicitly convert a value type without accidentally
-   // converting error types.
+   // value_type and error types must have separate constructors and operators,
+   // because `cat::variant` cannot have implicit conversions in its own
+   // constructors or operators. So an explicit conversion is required to
+   // implicitly convert a value type without accidentally converting error
+   // types.
 
    constexpr scaredy_variant_storage() = default;
 
@@ -264,14 +264,12 @@ struct scaredy_compact_storage {
       } else if constexpr (is_same<U, error_type>) {
          return !this->has_value();
       } else {
-         // Any type besides `value_type` and `error_type` can never hold
-         // true.
+         // Any type besides `value_type` and `error_type` can never hold true.
          return false;
       }
    }
 
-   // value_type comparison against either `m_storage` or
-   // `m_error_code`.
+   // value_type comparison against either `m_storage` or `m_error_code`.
    template <typename U>
    constexpr auto
    is(U&& in_value) const -> bool {
@@ -592,8 +590,8 @@ class [[nodiscard]] scaredy {
       detail::match_patterns (*this)(fwd(patterns)...);
    }
 
-   // If this non-`const`-qualified `scaredy` holds a value, transform it
-   // with a callback. Otherwise, propagate the error value.
+   // If this non-`const`-qualified `scaredy` holds a value, transform it with a
+   // callback. Otherwise, propagate the error value.
    template <is_invocable<value_type> Callback>
    [[nodiscard]]
    constexpr auto
@@ -668,8 +666,7 @@ class [[nodiscard]] scaredy {
 
 template <typename T>
 concept is_scaredy = requires(T t) {
-                        // T::value_type;
-                        // T::error_types;
+                        // T::value_type; T::error_types;
                         cat::maybe<decltype(t.value())>();
                      } && !requires(T t) { t = cat::nullopt; };
 

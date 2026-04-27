@@ -33,7 +33,8 @@ test(pointer_in_range) {
    cat::span<int4 const> const range = values;
 
    for (idx i = 0u; i < range.size(); ++i) {
-      cat::verify(cat::is_pointer_in_range(__builtin_addressof(values[i]), range));
+      cat::verify(
+         cat::is_pointer_in_range(__builtin_addressof(values[i]), range));
    }
 
    cat::verify(!cat::is_pointer_in_range(values.data() + values.size(), range));

@@ -10,9 +10,9 @@
 
 namespace cat {
 
-// `narrow_cast` safely casts one integer to a different integer type,
-// safely returning a `maybe` holding `nullopt` when the value is out of range
-// of the new type. This should be used instead of `static_cast` for integer
+// `narrow_cast` safely casts one integer to a different integer type, safely
+// returning a `maybe` holding `nullopt` when the value is out of range of the
+// new type. This should be used instead of `static_cast` for integer
 // conversions.
 template <is_integral To, is_integral From>
 [[nodiscard]]

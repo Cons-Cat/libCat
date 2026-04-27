@@ -17,8 +17,8 @@ cat::assert(bool invariant_expression,
 #endif
 }
 
-// Check that an expression holds true when `NDEBUG` is not defined. If it
-// holds false, print `error_string` and invoke `p_assert_handler`.
+// Check that an expression holds true when `NDEBUG` is not defined. If it holds
+// false, print `error_string` and invoke `p_assert_handler`.
 void
 cat::assert(bool invariant_expression, str_view const error_string,
             void (*p_assert_handler)(source_location const&),

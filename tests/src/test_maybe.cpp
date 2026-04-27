@@ -13,7 +13,8 @@ struct movable {
    operator=(movable&&) {};
 };
 
-// NOLINTNEXTLINE We use a global mutable variable for this single-threaded test.
+// NOLINTNEXTLINE We use a global mutable variable for this single-threaded
+// test.
 int4 maybe_counter = 0;
 
 struct maybe_non_trivial {
@@ -87,8 +88,8 @@ test(maybe_basic_value) {
 }
 
 // Reference rebinding semantics: assignment rebinds the held pointer rather
-// than assigning through to the referent.
-// P2988R12 `optional<T&>`. Reference rebinding semantics.
+// than assigning through to the referent. P2988R12 `optional<T&>`. Reference
+// rebinding semantics.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
 test(maybe_reference_rebinding) {
    cat::maybe<int4&> ref(cat::nullopt);
@@ -109,8 +110,7 @@ test(maybe_reference_rebinding) {
    cat::verify(ref.value() == 2);
 
    int4 goo_2 = 3;
-   // `ref` is rebinded to `goo_2`, instead of `3` assigning through into
-   // `goo`.
+   // `ref` is rebinded to `goo_2`, instead of `3` assigning through into `goo`.
    ref = goo_2;
    cat::verify(goo == 2);
    goo = 0;
@@ -156,8 +156,8 @@ test(maybe_compact_predicate) {
    cat::verify(!default_predicate_empty.has_value());
 }
 
-// Compact predicate over a void wrapper. `monotype_storage` lets the
-// engagement bit live in the predicate's storage instead of a side flag.
+// Compact predicate over a void wrapper. `monotype_storage` lets the engagement
+// bit live in the predicate's storage instead of a side flag.
 test(maybe_compact_void) {
    cat::maybe<cat::compact<cat::monotype_storage<int, 0>,
                            [](int input) -> bool {
@@ -235,11 +235,9 @@ nullopt_value() -> flagged_value {
 
 template <>
 struct cat::default_compact_trait<test_maybe_niche::flagged_value>
-   : cat::identity_trait<
-        cat::compact<test_maybe_niche::flagged_value,
-                     &test_maybe_niche::has_value,
-                     &test_maybe_niche::nullopt_value>> {
-};
+    : cat::identity_trait<cat::compact<test_maybe_niche::flagged_value,
+                                       &test_maybe_niche::has_value,
+                                       &test_maybe_niche::nullopt_value>> {};
 
 // `sentinel` supports structural NTTP values directly.
 test(maybe_sentinel_tuple) {
@@ -321,8 +319,8 @@ test(maybe_span_basic) {
    cat::verify(!maybe_values.has_value());
 }
 
-// `maybe_ptr<T>` is `maybe<sentinel<T*, nullptr>>` (a pointer that can also
-// be `nullopt` without growing.
+// `maybe_ptr<T>` is `maybe<sentinel<T*, nullptr>>` (a pointer that can also be
+// `nullopt` without growing.
 test(maybe_ptr_basic) {
    int4 get_addr = 0;
    cat::maybe_ptr<int4> opt_ptr = &get_addr;
@@ -453,8 +451,8 @@ test(maybe_monadic_callables) {
    cat::verify(monadic_void.has_value());
 }
 
-// `and_then` from a `maybe<T&>` source unwraps the reference for the
-// callable without writing through to the referent.
+// `and_then` from a `maybe<T&>` source unwraps the reference for the callable
+// without writing through to the referent.
 test(maybe_monadic_reference_source) {
    auto return_opt_void = [](int4) -> cat::maybe<void> {
       return cat::monostate;
@@ -716,8 +714,8 @@ test(maybe_type_traits) {
    static_assert(!cat::is_scaredy<cat::maybe<int4>>);
 }
 
-// The `prop` macro propagates an empty `maybe` like a `?` operator, and
-// passes through values otherwise.
+// The `prop` macro propagates an empty `maybe` like a `?` operator, and passes
+// through values otherwise.
 test(maybe_prop_macro) {
    auto _ = maybe_try_success().verify();
    cat::maybe fail = maybe_try_fail();
@@ -751,8 +749,8 @@ returns_empty_void_maybe() -> cat::maybe<void> {
 
 }  // namespace
 
-// `cat::maybe<T&>` is trivially copyable and pointer-sized.
-// P3836R2 Trivially copyable `optional<T&>`.
+// `cat::maybe<T&>` is trivially copyable and pointer-sized. P3836R2 Trivially
+// copyable `optional<T&>`.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3836r2.html
 test(maybe_reference_layout) {
    static_assert(__is_trivially_copyable(cat::maybe<int4&>));
@@ -762,8 +760,8 @@ test(maybe_reference_layout) {
    static_assert(sizeof(cat::maybe<tracked&>) == sizeof(tracked*));
 }
 
-// Clearing a `maybe<T&>` must not destroy the referent.
-// P2988R12 `optional<T&>`. Reference rebinding semantics.
+// Clearing a `maybe<T&>` must not destroy the referent. P2988R12
+// `optional<T&>`. Reference rebinding semantics.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
 test(maybe_reference_no_destroy) {
    int4 dtor_counter = 0;
@@ -811,8 +809,8 @@ test(maybe_reference_dangling) {
    static_assert(!cat::is_constructible<cat::maybe<int&>, int>);
 }
 
-// `swap` exchanges held pointers, not the referents.
-// P2988R12 `optional<T&>`. Swap rebinds pointers.
+// `swap` exchanges held pointers, not the referents. P2988R12 `optional<T&>`.
+// Swap rebinds pointers.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
 test(maybe_reference_swap) {
    int4 a = 10;
@@ -836,8 +834,8 @@ test(maybe_reference_swap) {
 }
 
 // `value_or` for `maybe<T&>` returns by value (rather than by reference) to
-// avoid dangling on a temporary fallback.
-// P2988R12 `optional<T&>`. `value_or` returns by value.
+// avoid dangling on a temporary fallback. P2988R12 `optional<T&>`. `value_or`
+// returns by value.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
 test(maybe_reference_value_or) {
    int4 held = 7;
@@ -862,8 +860,8 @@ test(maybe_reference_value_or) {
    cat::verify(v.value_or(0) == 0);
 }
 
-// Range-based for loops over `maybe`.
-// P3168R1 Give `std::optional` range support.
+// Range-based for loops over `maybe`. P3168R1 Give `std::optional` range
+// support.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3168r1.html
 test(maybe_range) {
    cat::maybe<int4> engaged = 11;
@@ -915,9 +913,8 @@ test(maybe_make_maybe) {
    cat::verify(void_maybe.has_value());
 }
 
-// Monadic methods on `maybe<void>`. The callable is invoked with no
-// arguments, matching `tl::optional`.
-// P0798R8 Monadic operations for `std::optional`.
+// Monadic methods on `maybe<void>`. The callable is invoked with no arguments,
+// matching `tl::optional`. P0798R8 Monadic operations for `std::optional`.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p0798r8.html
 test(maybe_void_monadic) {
    cat::maybe<void> engaged = cat::monostate;
@@ -974,8 +971,8 @@ test(maybe_void_monadic) {
    cat::verify(propagated.has_value());
 }
 
-// `or_else` propagates `*this` when engaged, fixing a long-standing
-// bug where the return was always `nullopt`.
+// `or_else` propagates `*this` when engaged, fixing a long-standing bug where
+// the return was always `nullopt`.
 test(maybe_or_else_propagates) {
    cat::maybe<int4> engaged = 5;
    cat::maybe<int4> propagated = engaged.or_else([]() -> cat::maybe<int4> {
@@ -1046,9 +1043,9 @@ test(maybe_value_swap) {
 // `cat::maybe<bool>` round-trips, and is immune to the `optional<bool>` from
 // `optional<U>` ambiguity that Barry Revzin documented for `std::optional`.
 // libCat omits `operator bool()`, so the value constructor
-// `maybe<bool>(maybe<int> const&)` is not viable and overload resolution
-// falls through to the converting `maybe<U>` constructor, meaning `0`
-// converts to `false`, not silently to `true` as it does in `std::optional`.
+// `maybe<bool>(maybe<int> const&)` is not viable and overload resolution falls
+// through to the converting `maybe<U>` constructor, meaning `0` converts to
+// `false`, not silently to `true` as it does in `std::optional`.
 // https://brevzin.github.io/c++/2023/01/18/optional-construction/
 test(maybe_bool) {
    cat::maybe<bool> default_b;
@@ -1076,16 +1073,15 @@ test(maybe_bool) {
    cat::verify(empty.value_or(true) == true);
 
    // `cat::maybe<U>` does not silently convert to `bool`, so the value
-   // constructor is not viable when the source is itself a `maybe`. This
-   // is what immunizes `cat::maybe<bool>` from the bug.
+   // constructor is not viable when the source is itself a `maybe`. This is
+   // what immunizes `cat::maybe<bool>` from the bug.
    static_assert(!cat::is_constructible<bool, cat::maybe<int>>);
    static_assert(!cat::is_implicitly_convertible<cat::maybe<int>, bool>);
 
-   // The converting `maybe<U>` constructor is the only viable candidate,
-   // so the inner `int` is converted to `bool`: zero -> false, non-zero
-   // -> true. `std::optional` would give `true` regardless because its
-   // value constructor would hijack overload resolution via
-   // `explicit operator bool()`.
+   // The converting `maybe<U>` constructor is the only viable candidate, so the
+   // inner `int` is converted to `bool`: zero -> false, non-zero -> true.
+   // `std::optional` would give `true` regardless because its value constructor
+   // would hijack overload resolution via `explicit operator bool()`.
    cat::maybe<int> src_zero = 0;
    cat::maybe<bool> dst_zero(src_zero);
    cat::verify(dst_zero.has_value());
@@ -1102,8 +1098,8 @@ test(maybe_bool) {
 }
 
 // LWG 3836 / Barry Revzin, "Getting in trouble with mixed construction"
-// (https://brevzin.github.io/c++/2023/01/18/optional-construction/).
-// The converting `maybe<U>` constructors and assignments are guarded by
+// (https://brevzin.github.io/c++/2023/01/18/optional-construction/). The
+// converting `maybe<U>` constructors and assignments are guarded by
 // `maybe_converts_from_any_cvref`, so the value constructor wins when the
 // element type is itself constructible from the source `maybe`.
 test(maybe_nested_construction) {
@@ -1117,9 +1113,9 @@ test(maybe_nested_construction) {
    cat::verify(outer_lval.value().has_value());
    cat::verify(outer_lval.value().value() == 42);
 
-   // From a disengaged `maybe<int>` lvalue: the outer is still engaged, and
-   // the wrapped inner is disengaged. Without the guard, the converting
-   // constructor would have left the outer disengaged.
+   // From a disengaged `maybe<int>` lvalue: the outer is still engaged, and the
+   // wrapped inner is disengaged. Without the guard, the converting constructor
+   // would have left the outer disengaged.
    cat::maybe<cat::maybe<int>> outer_empty(empty_inner);
    cat::verify(outer_empty.has_value());
    cat::verify(!outer_empty.value().has_value());

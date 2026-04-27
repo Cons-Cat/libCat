@@ -647,11 +647,10 @@ struct simd_load_from_blend_masked_impl {
 };
 
 // Same EVE-style split as `simd_elementwise_interface` (`simd_sqrt`, ...):
-// unmasked `operator()` and `operator[]` returning a lane-masked helper.
-// Load factories take `memory_lane const*` (`invoke` / `bind_masked`)
-// instead of `simd` input / `invoke_full` / `invoke_lanewise`. `Simd` is
-// repeated on the base so signatures do not depend on `Derived` while it is
-// incomplete.
+// unmasked `operator()` and `operator[]` returning a lane-masked helper. Load
+// factories take `memory_lane const*` (`invoke` / `bind_masked`) instead of
+// `simd` input / `invoke_full` / `invoke_lanewise`. `Simd` is repeated on the
+// base so signatures do not depend on `Derived` while it is incomplete.
 template <typename Derived, is_simd Simd>
 class simd_elementwise_factory_interface {
    friend Derived;
@@ -957,8 +956,8 @@ struct simd_load_impl {
 // Subscript yields masked scatter-style stores to a contiguous base pointer.
 //
 // `simd_store_aligned` / `simd_store_unaligned` / `simd_store` name the memory
-// contract for symmetry with `simd_load_*`; each is only a subscript entry
-// that returns `simd_store_to_masked_impl`, like `simd_load_impl` returning
+// contract for symmetry with `simd_load_*`; each is only a subscript entry that
+// returns `simd_store_to_masked_impl`, like `simd_load_impl` returning
 // `simd_load_blend_masked_impl` / `simd_load_aligned_blend_masked_impl`.
 struct simd_store_impl {
    template <typename T, typename Abi>
@@ -1054,9 +1053,9 @@ struct simd_elementwise_interface {
    }
 };
 
-// If `Derived` defines its own `invoke_masked`, add
-// `using simd_binary_derived_supplies_invoke_masked = void;` so this base does
-// not declare `invoke_masked` (avoids an ill-formed duplicate member).
+// If `Derived` defines its own `invoke_masked`, add `using
+// simd_binary_derived_supplies_invoke_masked = void;` so this base does not
+// declare `invoke_masked` (avoids an ill-formed duplicate member).
 template <typename Derived>
 concept simd_binary_derived_supplies_invoke_masked =
    requires { typename Derived::simd_binary_derived_supplies_invoke_masked; };
@@ -2544,8 +2543,8 @@ constexpr auto
 simd_popcount_lane(T x) -> T {
    auto const unsigned_bits = static_cast<make_unsigned_type<T>>(x);
    // TODO: Swap back to `__builtin_stdc_count_ones` once the apt.llvm.org
-   // Clang 23 nightly picks up PR #185978 (merged 2026-04-17).
-   // return static_cast<T>(__builtin_stdc_count_ones(unsigned_bits));
+   // Clang 23 nightly picks up PR #185978 (merged 2026-04-17). return
+   // static_cast<T>(__builtin_stdc_count_ones(unsigned_bits));
    return static_cast<T>(__builtin_popcountg(unsigned_bits));
 }
 

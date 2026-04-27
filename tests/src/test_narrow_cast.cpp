@@ -10,28 +10,25 @@ namespace {
 
 // --- Compile-time invariants (fail the build if these regress). --------------
 
-static_assert(cat::is_same<
-              decltype(cat::narrow_cast<cat::idx>(cat::uword{0u})),
-              cat::maybe<cat::idx>>);
+static_assert(cat::is_same<decltype(cat::narrow_cast<cat::idx>(cat::uword{0u})),
+                           cat::maybe<cat::idx>>);
 
-static_assert(
-   sizeof(cat::maybe<cat::idx>) == sizeof(cat::idx),
-   "`maybe<idx>` must not grow past `idx` (high-bit niche in `narrow_cast<idx>`)");
+static_assert(sizeof(cat::maybe<cat::idx>) == sizeof(cat::idx),
+              "`maybe<idx>` must not grow past `idx` (high-bit niche in "
+              "`narrow_cast<idx>`)");
 
 // Safe widening still produces a `maybe` and preserves the value.
-static_assert(
-   [] {
-      auto const m = cat::narrow_cast<cat::int4>(cat::int2{42});
-      return m.has_value() && m.value().raw == 42;
-   }());
+static_assert([] {
+   auto const m = cat::narrow_cast<cat::int4>(cat::int2{42});
+   return m.has_value() && m.value().raw == 42;
+}());
 
 // `int4` → `int8` is non-narrowing in the hierarchy; no loss check on the
 // "narrowing" name. Value must still round-trip inside `maybe`.
-static_assert(
-   [] {
-      auto const m = cat::narrow_cast<cat::int8>(cat::int4{-99});
-      return m.has_value() && m.value() == -99_i8;
-   }());
+static_assert([] {
+   auto const m = cat::narrow_cast<cat::int8>(cat::int4{-99});
+   return m.has_value() && m.value() == -99_i8;
+}());
 
 }  // namespace
 
@@ -42,9 +39,9 @@ test(narrow_cast_safe_widening_and_no_check_small_to_large) {
       cat::verify(m.value().raw == 100);
    }
    {
-      auto const m = cat::narrow_cast<cat::int8>(cat::int4{0x1234'5678_i4});
+      auto const m = cat::narrow_cast<cat::int8>(cat::int4{0x12345678_i4});
       cat::verify(m.has_value());
-      cat::verify(m.value() == 0x1234'5678_i8);
+      cat::verify(m.value() == 0x12345678_i8);
    }
    {
       auto const m = cat::narrow_cast<cat::uint4>(cat::uint1{200_u1});
@@ -61,12 +58,14 @@ test(narrow_cast_narrowing_same_signedness_int8_to_int4) {
       cat::verify(m.value() == in_range);
    }
    {
-      auto const m = cat::narrow_cast<cat::int4>(cat::int8{cat::limits<cat::int4>::min()});
+      auto const m =
+         cat::narrow_cast<cat::int4>(cat::int8{cat::limits<cat::int4>::min()});
       cat::verify(m.has_value());
       cat::verify(m.value() == cat::limits<cat::int4>::min());
    }
    {
-      auto const m = cat::narrow_cast<cat::int4>(cat::int8{cat::limits<cat::int4>::max()});
+      auto const m =
+         cat::narrow_cast<cat::int4>(cat::int8{cat::limits<cat::int4>::max()});
       cat::verify(m.has_value());
       cat::verify(m.value() == cat::limits<cat::int4>::max());
    }
@@ -89,7 +88,7 @@ test(narrow_cast_mixed_width_signed_to_unsigned) {
    cat::verify(!cat::narrow_cast<cat::uint4>(cat::int4{-1}).has_value());
    cat::verify(
       !cat::narrow_cast<cat::uint4>(cat::int4{cat::limits<cat::int4>::min()})
-         .has_value());
+          .has_value());
 
    {
       auto const m = cat::narrow_cast<cat::uint4>(cat::int4{0});
@@ -102,8 +101,8 @@ test(narrow_cast_mixed_width_signed_to_unsigned) {
    {
       // Largest positive int32 is inside uint32; must not use naive `<` on
       // unsigned/signed (would reject valid positives).
-      auto const m = cat::narrow_cast<cat::uint4>(cat::int4{0x7FFF'FFFF_i4});
-      cat::verify(m.has_value() && m.value().raw == 0x7FFF'FFFFu);
+      auto const m = cat::narrow_cast<cat::uint4>(cat::int4{0x7FFFFFFF_i4});
+      cat::verify(m.has_value() && m.value().raw == 0x7FFFFFFFu);
    }
 }
 
@@ -111,17 +110,17 @@ test(narrow_cast_mixed_width_unsigned_to_signed) {
    // Value above `int4::max` must be rejected without mis-promoting
    // `limits<int4>::min()` in an unsigned/signed compare.
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::uint4{0x8000'0000u}).has_value());
+      !cat::narrow_cast<cat::int4>(cat::uint4{0x80000000u}).has_value());
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::uint4{0xFFFF'FFFFu}).has_value());
+      !cat::narrow_cast<cat::int4>(cat::uint4{0xFFFFFFFFu}).has_value());
 
    {
       auto const m = cat::narrow_cast<cat::int4>(cat::uint4{0u});
       cat::verify(m.has_value() && m.value() == 0_i4);
    }
    {
-      auto const m = cat::narrow_cast<cat::int4>(cat::uint4{0x7FFF'FFFFu});
-      cat::verify(m.has_value() && m.value() == 0x7FFF'FFFF_i4);
+      auto const m = cat::narrow_cast<cat::int4>(cat::uint4{0x7FFFFFFFu});
+      cat::verify(m.has_value() && m.value() == 0x7FFFFFFF_i4);
    }
 }
 
@@ -138,8 +137,9 @@ test(narrow_cast_iword_to_uword_and_back) {
    // Same `sizeof` but not `is_safe_arithmetic_comparison`. Must still reject
    // negative `iword` and accept non-negative values that fit.
    cat::verify(!cat::narrow_cast<cat::uword>(cat::iword{-1}).has_value());
-   cat::verify(!cat::narrow_cast<cat::uword>(cat::iword{cat::limits<cat::iword>::min()})
-                  .has_value());
+   cat::verify(
+      !cat::narrow_cast<cat::uword>(cat::iword{cat::limits<cat::iword>::min()})
+          .has_value());
 
    {
       auto const m = cat::narrow_cast<cat::uword>(cat::iword{0});
@@ -172,13 +172,12 @@ test(narrow_cast_to_idx_is_maybe_of_idx) {
    {
       // Full `uword` is far above `idx` max.
       cat::verify(
-         !cat::narrow_cast<cat::idx>(cat::uword{0xFFFF'FFFF'FFFF'FFFF_uz})
-            .has_value());
+         !cat::narrow_cast<cat::idx>(cat::uword{0xFFFFFFFF'FFFFFFFF_uz})
+             .has_value());
    }
    {
       // Negative `iword` is below `idx` min (0).
-      cat::verify(
-         !cat::narrow_cast<cat::idx>(cat::iword{-1}).has_value());
+      cat::verify(!cat::narrow_cast<cat::idx>(cat::iword{-1}).has_value());
    }
    {
       auto const m = cat::narrow_cast<cat::idx>(cat::iword{42});

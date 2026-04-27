@@ -76,8 +76,8 @@ inline constexpr idx word_bytes = sizeof(uword);
 inline constexpr idx page_size = idx(4'096_uki);
 
 // TODO: Swap the fallbacks below back to the commented `__builtin_stdc_*`
-// calls once the `apt.llvm.org` Clang 23 distribution updates to a version
-// with C23 bitwise intrinsics.
+// calls once the `apt.llvm.org` Clang 23 distribution updates to a version with
+// C23 bitwise intrinsics.
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
@@ -315,8 +315,8 @@ class bit_reference {
  private:
    friend bit_value;
 
-   // This constructor is only used by the static factory functions.
-   // A constructor is required to initialize a reference member, such as
+   // This constructor is only used by the static factory functions. A
+   // constructor is required to initialize a reference member, such as
    // `bit_reference::storage`.
    constexpr bit_reference(storage_type& in_storage, storage_type in_mask)
        : m_storage(in_storage), m_bit_mask(in_mask) {
@@ -348,8 +348,8 @@ class bit_reference {
       return bit_reference(reference, mask);
    }
 
-   // Create a `bit_reference` to a bit position `offset` bits from the right
-   // of a `storage_type`.
+   // Create a `bit_reference` to a bit position `offset` bits from the right of
+   // a `storage_type`.
    static constexpr auto
    from_offset(storage_type& reference, uword offset) -> bit_reference {
       if !consteval {
@@ -669,10 +669,10 @@ class bit_stepanov_iterator
    distance_to(bit_stepanov_iterator const& other) const -> iword {
       iword const word_difference =
          m_internal_iterator - other.m_internal_iterator;
-      // Multiply the number of words between the two iterators by the size of
-      // a word in bits, then add the difference between the iterators'
-      // current bit offset within their word. That gives the total number of
-      // bits between any two bit iterators.
+      // Multiply the number of words between the two iterators by the size of a
+      // word in bits, then add the difference between the iterators' current
+      // bit offset within their word. That gives the total number of bits
+      // between any two bit iterators.
       return (word_difference * word_bits) + other.m_bit_position
              - m_bit_position;
    }

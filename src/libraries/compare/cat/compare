@@ -65,8 +65,7 @@ class partial_ordering {
       return lhs.order >= rhs.order;
    }
 
-   // `0` is the only integer literal which can implicitly convert to
-   // `nullptr`.
+   // `0` is the only integer literal which can implicitly convert to `nullptr`.
 
    // Check equality with a `0` literal.
    friend constexpr auto
@@ -142,10 +141,9 @@ class partial_ordering {
       return lhs;
    }
 
-   // Check threeway-comparison with a `0` literal.
-   // If the `partial_ordering` is `less`, then this should return
-   // `greater`. But if `partial_ordering` is `greater`, then this should
-   // return `less`.
+   // Check threeway-comparison with a `0` literal. If the `partial_ordering` is
+   // `less`, then this should return `greater`. But if `partial_ordering` is
+   // `greater`, then this should return `less`.
    friend constexpr auto
    operator<=>(decltype(nullptr), partial_ordering rhs) -> partial_ordering {
       return partial_ordering{static_cast<detail::order>(-rhs.order)};
@@ -206,8 +204,7 @@ class weak_ordering {
       return lhs.order >= rhs.order;
    }
 
-   // `0` is the only integer literal which can implicitly convert to
-   // `nullptr`.
+   // `0` is the only integer literal which can implicitly convert to `nullptr`.
 
    // Check equality with a `0` literal.
    friend constexpr auto
@@ -283,19 +280,18 @@ class weak_ordering {
       return lhs;
    }
 
-   // Check threeway-comparison with a `0` literal.
-   // If the `weak_ordering` is `less`, then this should return
-   // `greater`. But if `weak_ordering` is `greater`, then this should
-   // return `less`.
+   // Check threeway-comparison with a `0` literal. If the `weak_ordering` is
+   // `less`, then this should return `greater`. But if `weak_ordering` is
+   // `greater`, then this should return `less`.
    friend constexpr auto
    operator<=>(decltype(nullptr), weak_ordering rhs) -> weak_ordering {
       return weak_ordering{static_cast<detail::order>(-rhs.order)};
    }
 };
 
-// Initializing these values inside of `weak_ordering` is not possible, since
-// it would be an incomplete type in that context. They are initialized
-// afterwards, here, instead.
+// Initializing these values inside of `weak_ordering` is not possible, since it
+// would be an incomplete type in that context. They are initialized afterwards,
+// here, instead.
 inline constexpr weak_ordering weak_ordering::less(detail::order::less);
 inline constexpr weak_ordering
    weak_ordering::equivalent(detail::order::equivalent);
@@ -356,8 +352,7 @@ class strong_ordering {
       return lhs.order >= rhs.order;
    }
 
-   // `0` is the only integer literal which can implicitly convert to
-   // `nullptr`.
+   // `0` is the only integer literal which can implicitly convert to `nullptr`.
 
    // Check equality with a `0` literal.
    friend constexpr auto
@@ -445,10 +440,9 @@ class strong_ordering {
       return lhs;
    }
 
-   // Check threeway-comparison with a `0` literal.
-   // If the `strong_ordering` is `less`, then this should return
-   // `greater`. But if `strong_ordering` is `greater`, then this should
-   // return `less`.
+   // Check threeway-comparison with a `0` literal. If the `strong_ordering` is
+   // `less`, then this should return `greater`. But if `strong_ordering` is
+   // `greater`, then this should return `less`.
    [[gnu::always_inline]]
    friend constexpr auto
    operator<=>(decltype(nullptr), strong_ordering rhs) -> strong_ordering {
@@ -484,17 +478,16 @@ struct weakest_comparison_category {
 
    using type =
       cat::conditional<(sizeof...(Remaining) > 0) && (!cat::is_void<U>),
-                       // Recurse through `weakest_comparison_category`
-                       // to find the strongest type in this list.
+                       // Recurse through `weakest_comparison_category` to find
+                       // the strongest type in this list.
                        weakest_comparison_category<
-                          // Set the next recursion's `T` to the weaker
-                          // of `T` and `U`.
+                          // Set the next recursion's `T` to the weaker of `T`
+                          // and `U`.
                           weaker,
-                          // Recurse with the remaining types. Appending
-                          // `void` is required, because this branch is
-                          // not short-circuited by `conditional`, and
-                          // there must be at least two template
-                          // arguments.
+                          // Recurse with the remaining types. Appending `void`
+                          // is required, because this branch is not
+                          // short-circuited by `conditional`, and there must be
+                          // at least two template arguments.
                           Remaining..., void>,
                        // The base case, when there are no types left in
                        // `Remaining`, is the weaker of `T` and `U`.

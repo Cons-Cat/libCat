@@ -581,8 +581,8 @@ enum class open_flags : unsigned int {
    truncate = 01000,
    append_file = 02000,
    nonblocking = 04000,
-   // Write I/O operations on the `file_descriptor` shall complete as defined
-   // by synchronized I/O data integrity completion.
+   // Write I/O operations on the `file_descriptor` shall complete as defined by
+   // synchronized I/O data integrity completion.
    dsync = 010000,
    sync = 04010000,
    read_sync = 04010000,
@@ -1329,8 +1329,8 @@ auto
 create_socket_local(cat::int8 type, cat::int8 protocol)
    -> scaredy_nix<file_descriptor>;
 
-// `tty_io_serial` handles a configuration of tty IO, often referred to
-// as termios.
+// `tty_io_serial` handles a configuration of tty IO, often referred to as
+// termios.
 struct tty_io_serial {
    tty_configuration_flags input_flags;
    tty_configuration_flags output_flags;
@@ -1371,8 +1371,8 @@ enum class tty_set_mode : unsigned short {
    now = 0x5402,
    // Update the tty once all currently written data has been transmitted.
    wait_write = 0x5403,
-   // Update the tty once all currently written data has been transmitted,
-   // and all recieved data has been read.
+   // Update the tty once all currently written data has been transmitted, and
+   // all recieved data has been read.
    wait_recieve = 0x5404,
 };
 

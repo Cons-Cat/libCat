@@ -48,8 +48,8 @@ inline constexpr bool has_std_tuple_size_for_aggregate_get<
    T, void_type<decltype(std::tuple_size<T>::value)>> = true;
 
 // Tuple-like for magic aggregate access: P2141 path is only for real
-// aggregates, not for types that already have the tuple-size protocol or
-// a member `.get<>` like `cat::tuple`
+// aggregates, not for types that already have the tuple-size protocol or a
+// member `.get<>` like `cat::tuple`
 template <typename T>
 consteval auto
 has_aggregate_get_impl() -> bool {
@@ -95,8 +95,8 @@ get(S const& t) noexcept -> decltype(auto) {
    return ::cat::detail::get_aggregate_lvalue<index>(t);
 }
 
-// `S&&` with `is_rvalue_reference`: true prvalue or xvalue aggregate so we
-// can bind the pack and move the selected element out
+// `S&&` with `is_rvalue_reference`: true prvalue or xvalue aggregate so we can
+// bind the pack and move the selected element out
 template <idx index, typename S>
    requires(is_rvalue_reference<S &&> && has_aggregate_get<remove_cvref<S>>
             && index

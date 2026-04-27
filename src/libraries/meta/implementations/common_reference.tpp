@@ -68,8 +68,8 @@ struct common_reference_sub_bullet_2 : common_reference_sub_bullet_3<T, U> {};
 template <typename T, typename U>
 struct common_reference_sub_bullet_1 : common_reference_sub_bullet_2<T, U> {};
 
-// Attempt to resolve the common reference of `T` and `U` here, otherwise
-// fall back to `common_reference_sub_bullet_2`.
+// Attempt to resolve the common reference of `T` and `U` here, otherwise fall
+// back to `common_reference_sub_bullet_2`.
 template <typename T, typename U>
    requires(is_reference<T> && is_reference<U>
             && requires { typename common_reference_detail<T, U>; })
@@ -94,24 +94,24 @@ using basic_common_reference =
                                          x_ref<T>::template apply,
                                          x_ref<U>::template apply>::type;
 
-// Attempt to resolve the common reference of `T` and `U` here, otherwise
-// fall back to `common_reference_sub_bullet_3`.
+// Attempt to resolve the common reference of `T` and `U` here, otherwise fall
+// back to `common_reference_sub_bullet_3`.
 template <typename T, typename U>
    requires(requires { typename basic_common_reference<T, U>; })
 struct common_reference_sub_bullet_2<T, U> {
    using type = basic_common_reference<T, U>;
 };
 
-// Attempt to resolve the common reference of `T` and `U` here, otherwise
-// fall back to `common_type`.
+// Attempt to resolve the common reference of `T` and `U` here, otherwise fall
+// back to `common_type`.
 template <typename T, typename U>
    requires(requires { typename conditionally_resolve_common_reference<T, U>; })
 struct common_reference_sub_bullet_3<T, U> {
    using type = conditionally_resolve_common_reference<T, U>;
 };
 
-// If no other templates satisfy `T` and `U`, then `common_reference<T, U>`
-// is equivalent to `common_type<T, U>`.
+// If no other templates satisfy `T` and `U`, then `common_reference<T, U>` is
+// equivalent to `common_type<T, U>`.
 template <typename T, typename U>
 struct common_reference_sub_bullet_3 : common_type<T, U> {};
 
@@ -135,8 +135,8 @@ struct common_reference_trait<T, U, V, Remaining...>
     : common_reference_trait<typename common_reference_trait<T, U>::type, V,
                              Remaining...> {};
 
-// `cat::reference_wrapper<W>` participates in `common_reference` as if
-// it were `W&`.
+// `cat::reference_wrapper<W>` participates in `common_reference` as if it were
+// `W&`.
 template <typename W, typename U, template <typename> typename TQual,
           template <typename> typename UQual>
    requires(

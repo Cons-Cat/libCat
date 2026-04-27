@@ -11,10 +11,10 @@
 // type is `proxy_arrow_result<value_type>`, so `operator->` stores a lane value
 // per `proxy_arrow_result`.
 //
-// Preconditions from C++26. After `advance`, `lane_index()` lies in
-// `[0, pack_type::size()]`. `distance_to`, ordering, and iterator difference
-// need the same underlying pack pointer (`data_`). Violations use `cat::assert`
-// in debug builds
+// Preconditions from C++26. After `advance`, `lane_index()` lies in `[0,
+// pack_type::size()]`. `distance_to`, ordering, and iterator difference need
+// the same underlying pack pointer (`data_`). Violations use `cat::assert` in
+// debug builds
 
 #include <cat/arithmetic>
 #include <cat/debug>

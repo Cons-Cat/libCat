@@ -10,8 +10,8 @@
 // `invoke` with the signature expected by `simd_extras.hpp`.
 //
 // Call sites use `if constexpr (requires { unary_full<...>::invoke(...) })` and
-// `invoke<Expected, Hook, ...>(...)`. Mismatched return types fail `static_assert`
-// with an explicit message instead of a terse concept error.
+// `invoke<Expected, Hook, ...>(...)`. Mismatched return types fail
+// `static_assert` with an explicit message instead of a terse concept error.
 //
 // `mask_to_bitset<T, Abi>` specializations for x86 ABIs live in
 // `implementations/simd_mask_bitset.tpp` beside `simd_to_bitset` (after
@@ -28,12 +28,12 @@
 // per-lane fallbacks.
 //
 // Primary templates `unary_full`, `binary_full`, `ternary_full`,
-// `ternary_masked`, and `binary_mixed` have no `invoke` until an ISA header adds
-// one, so the elementwise path stays available. `simd::popcount()` remains the
-// member and elementwise builtin story. There is no elementwise full-vector
+// `ternary_masked`, and `binary_mixed` have no `invoke` until an ISA header
+// adds one, so the elementwise path stays available. `simd::popcount()` remains
+// the member and elementwise builtin story. There is no elementwise full-vector
 // rotate builtin. `op_rsqrt` pairs with `simd_rsqrt` (see `simd_avx2.hpp` and
-// `simd_sse2.hpp`). `op_rotate_*` pairs with `unary_int` overrides or lane loops
-// in `simd_extras.hpp`.
+// `simd_sse2.hpp`). `op_rotate_*` pairs with `unary_int` overrides or lane
+// loops in `simd_extras.hpp`.
 //
 // `binary_masked` and `has_simd_abi_binary_masked` cover blends with packed ops
 // when `invoke_full` does not encode inactive lanes and the target wants an
@@ -46,13 +46,12 @@
 // paths (for example AVX-512 masked FMA). Unspecialized `ternary_masked` has no
 // `invoke` until an ISA header defines one (`simd_extras.hpp`).
 //
-// `fill_masked<T, Abi>` implements lane-blended scalar fill. Broadcast into lanes
-// selected by `lane_mask`, and keep `passthrough` elsewhere
-// (`simd_filled<Simd>[lane_mask](passthrough, value)` in `simd_ops`). `simd_ops`
-// selects it when
-// `has_simd_abi_fill_masked<T, Abi>` holds. The primary template has no
-// `invoke` until a target supplies one (for example AVX-512 `vblendm*` or mask
-// registers with a splat).
+// `fill_masked<T, Abi>` implements lane-blended scalar fill. Broadcast into
+// lanes selected by `lane_mask`, and keep `passthrough` elsewhere
+// (`simd_filled<Simd>[lane_mask](passthrough, value)` in `simd_ops`).
+// `simd_ops` selects it when `has_simd_abi_fill_masked<T, Abi>` holds. The
+// primary template has no `invoke` until a target supplies one (for example
+// AVX-512 `vblendm*` or mask registers with a splat).
 
 namespace cat::detail::simd_abi {
 

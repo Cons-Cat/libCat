@@ -1,22 +1,19 @@
-# Source formatting (`cat-format`, `cat-format-check`)
-#
-# Dual-mode file (`CMAKE_SCRIPT_MODE_FILE` is the discriminator):
+# Source formatting (`cat-format`, `cat-format-check`) and full-line // reflow
+# (`cat-reflow-comments`, `cat-reflow-comments-check`, see
+# `scripts/reflow_prefix_comment_paragraphs.py`)
 #
 # Module mode (`include()`): locates a `clang-format` whose major
-# matches the configured Clang, gathers libCat's sources and public
-# headers from the `cat` / `cat-impl` targets, and registers the
-# `cat-format` (in-place rewrite) and `cat-format-check` (read-only,
-# non-zero exit on drift) custom targets. Both re-invoke this same file
-# in script mode at build time.
+# matches the configured Clang, gathers libCat's sources, public
+# headers from the `cat` / `cat-impl` targets, and unit test sources
+# on `cat-tests` plus `tests/unit_tests.cpp`, and registers the
+# `cat-format` and `cat-format-check` custom targets. Both run
+# `scripts/cat_format_worktree.py` (parallel) with the same file list
+# (capped at 4 workers, default. Tune down with =CAT_LIBCAT_JOBS= or =-j=, see
+# the script help).
+# `APPLY` rewrites mismatches. `CHECK` is read-only, non-zero on drift.
 #
-# Script mode (`cmake -P`): pipes each listed file through
-# `clang-format`. `APPLY` rewrites mismatches in place. `CHECK` reports
-# every file that would be reformatted and exits non-zero so CI fails.
-#
-# Script-mode args:
-#   CMAKE_ARGV3      mode, `APPLY` or `CHECK`
-#   CMAKE_ARGV4      `clang-format` executable (CAT_CLANG_FORMAT_PATH)
-#   CMAKE_ARGV5+     source paths to format / check
+# Requires `python3` on =PATH= for `cat-format=`, =cat-format-check=, and
+# `cat-reflow-*`.
 
 if (NOT CMAKE_SCRIPT_MODE_FILE)
   # ===== Module mode =====================================================
@@ -67,28 +64,29 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
     ${_cat_impl_sources}
     ${_cat_iface_sources}
     ${CAT_HEADER_FILES})
-
-  # Capture this file's path so the custom target can re-invoke it via
-  # `cmake -P` (script mode) at build time.
-  set(_cat_format_script "${CMAKE_CURRENT_LIST_FILE}")
-
+  # `tests/` is not on `cat` or `cat-impl`, add so `cat-format` and reflows stay
+  # consistent with the rest of the tree.
+  if (TARGET cat-tests)
+    get_target_property(_cat_test_format_SOURCES cat-tests INTERFACE_SOURCES)
+    if (NOT _cat_test_format_SOURCES STREQUAL
+        "_cat_test_format_SOURCES-NOTFOUND")
+      list(APPEND _cat_format_files ${_cat_test_format_SOURCES})
+    endif()
+  endif()
+  list(APPEND _cat_format_files
+    "${CMAKE_SOURCE_DIR}/tests/unit_tests.cpp")
+  set(_cat_format_worktree
+    "${CMAKE_SOURCE_DIR}/scripts/cat_format_worktree.py")
+  set(_cat_format_file_list "${_cat_format_files}")
+  list(FILTER _cat_format_file_list EXCLUDE REGEX "^$")
+  find_program(CAT_PYTHON3
+    NAMES python3
+    DOC "Python 3 for `cat-format` and `cat-reflow-comments`")
   # `cat-format` rewrites mismatches in place. `cat-format-check` is the
-  # read-only CI variant that reports every file that would be reformatted
-  # and exits non-zero so the build fails on drift. Both share this
-  # script, distinguished by the leading mode argument.
+  # read-only CI variant. Both use `cat_format_worktree.py` in parallel
+  # (capped at 4 workers, default. Tune down with =CAT_LIBCAT_JOBS= or =-j=.)
   function(_cat_add_format_target target mode)
-    if (CAT_CLANG_FORMAT_PATH)
-      add_custom_target(
-        ${target}
-        COMMAND
-          ${CMAKE_COMMAND}
-          -P
-          ${_cat_format_script}
-          ${mode}
-          ${CAT_CLANG_FORMAT_PATH}
-          ${_cat_format_files}
-        DEPENDS ${_cat_format_files})
-    else()
+    if (NOT CAT_CLANG_FORMAT_PATH)
       add_custom_target(
         ${target}
         COMMAND
@@ -97,82 +95,127 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
           echo
           "${target}: cmake did not find clang-format ${_cat_cf_major}. Install clang-format-${_cat_cf_major} or configure with -DCAT_CLANG_FORMAT_PATH=/path/to/clang-format-${_cat_cf_major}"
         COMMAND ${CMAKE_COMMAND} -E false)
+    elseif (NOT CAT_PYTHON3)
+      add_custom_target(
+        ${target}
+        COMMAND
+          ${CMAKE_COMMAND}
+          -E
+          echo
+          "${target}: `python3` not found on PATH (required for parallel format)"
+        COMMAND ${CMAKE_COMMAND} -E false)
+    elseif (NOT EXISTS "${_cat_format_worktree}")
+      add_custom_target(
+        ${target}
+        COMMAND
+          ${CMAKE_COMMAND}
+          -E
+          echo
+          "cat-format: missing `${_cat_format_worktree}`"
+        COMMAND ${CMAKE_COMMAND} -E false)
+    else()
+      add_custom_target(
+        ${target}
+        COMMAND
+          ${CAT_PYTHON3}
+          "${_cat_format_worktree}"
+          ${mode}
+          ${CAT_CLANG_FORMAT_PATH}
+          ${_cat_format_file_list}
+        WORKING_DIRECTORY
+          "${CMAKE_SOURCE_DIR}"
+        DEPENDS
+          "${_cat_format_worktree}"
+          ${_cat_format_file_list}
+        VERBATIM)
     endif()
   endfunction()
 
   _cat_add_format_target(cat-format       APPLY)
   _cat_add_format_target(cat-format-check CHECK)
-  unset(_cat_cf_major)
-  return()
-endif()
 
-# ===== Script mode =========================================================
-if (CMAKE_ARGC LESS 6)
-  message(FATAL_ERROR
-    "cat-format: expected mode, clang-format path, and at least one file.")
-endif()
-
-set(_mode         "${CMAKE_ARGV3}")
-set(_clang_format "${CMAKE_ARGV4}")
-set(_compare_tmp  "${CMAKE_CURRENT_LIST_DIR}/.cat-format-compare.tmp")
-
-if (NOT (_mode STREQUAL "APPLY" OR _mode STREQUAL "CHECK"))
-  message(FATAL_ERROR "cat-format: unknown mode `${_mode}`, expected APPLY or CHECK.")
-endif()
-
-set(_mismatches "")
-
-set(_i 5)
-while (_i LESS CMAKE_ARGC)
-  set(_file "${CMAKE_ARGV${_i}}")
-  math(EXPR _i "${_i} + 1")
-
-  if (_file STREQUAL "")
-    continue()
-  endif()
-
-  execute_process(
-    COMMAND "${_clang_format}" "${_file}"
-    OUTPUT_FILE "${_compare_tmp}"
-    RESULT_VARIABLE _fmt_out_result
-    ERROR_VARIABLE _fmt_out_stderr)
-  if (NOT _fmt_out_result EQUAL 0)
-    message(FATAL_ERROR "cat-format: clang-format failed for `${_file}`: ${_fmt_out_stderr}")
-  endif()
-
-  execute_process(
-    COMMAND "${CMAKE_COMMAND}" -E compare_files "${_file}" "${_compare_tmp}"
-    RESULT_VARIABLE _diff
-    OUTPUT_QUIET
-    ERROR_QUIET)
-
-  if (_diff EQUAL 1)
-    list(APPEND _mismatches "${_file}")
-    if (_mode STREQUAL "APPLY")
-      message(STATUS "formatted: ${_file}")
-      execute_process(
-        COMMAND "${_clang_format}" -i "${_file}"
-        RESULT_VARIABLE _fmt_in_result
-        ERROR_VARIABLE _fmt_in_stderr)
-      if (NOT _fmt_in_result EQUAL 0)
-        message(FATAL_ERROR "cat-format: clang-format -i failed for `${_file}`: ${_fmt_in_stderr}")
-      endif()
+  # `cat-reflow-comments` / `cat-reflow-comments-check` run the same file set
+  # through
+  # `scripts/reflow_prefix_comment_paragraphs.py` (word-preserving // wrap to
+  # 80 columns, URL-safe). `CHECK` is read-only, like `cat-format-check`.
+  # Reflow is not a substitute for `clang-format`; run `cat-format` afterward
+  # so the tree matches `.clang-format`.
+  set(_cat_reflow_script "${CMAKE_SOURCE_DIR}/scripts/reflow_prefix_comment_paragraphs.py")
+  if (CAT_PYTHON3)
+    if (EXISTS "${_cat_reflow_script}")
+      set(_cat_reflow_files "${_cat_format_files}")
+      list(FILTER _cat_reflow_files EXCLUDE REGEX "^$")
+      add_custom_target(
+        cat-reflow-comments
+        COMMAND
+          ${CAT_PYTHON3}
+          "${_cat_reflow_script}"
+          --max-col
+          80
+          ${_cat_reflow_files}
+        DEPENDS
+          ${_cat_reflow_files}
+        WORKING_DIRECTORY
+          "${CMAKE_SOURCE_DIR}"
+        COMMENT
+          "Reflow full-line // comments in place (run `cat-format` after)"
+        VERBATIM)
+      add_custom_target(
+        cat-reflow-comments-check
+        COMMAND
+          ${CAT_PYTHON3}
+          "${_cat_reflow_script}"
+          --check
+          --max-col
+          80
+          ${_cat_reflow_files}
+        DEPENDS
+          ${_cat_reflow_files}
+        WORKING_DIRECTORY
+          "${CMAKE_SOURCE_DIR}"
+        COMMENT
+          "Check // comment reflow (read-only; `cat-reflow-comments` to fix)"
+        VERBATIM)
     else()
-      message(STATUS "would reformat: ${_file}")
+      add_custom_target(
+        cat-reflow-comments
+        COMMAND
+          ${CMAKE_COMMAND}
+          -E
+          echo
+          "cat-reflow-comments: missing `${_cat_reflow_script}`"
+        COMMAND ${CMAKE_COMMAND} -E false
+        VERBATIM)
+      add_custom_target(
+        cat-reflow-comments-check
+        COMMAND
+          ${CMAKE_COMMAND}
+          -E
+          echo
+          "cat-reflow-comments-check: missing `${_cat_reflow_script}`"
+        COMMAND ${CMAKE_COMMAND} -E false
+        VERBATIM)
     endif()
-  elseif (_diff EQUAL 2)
-    message(FATAL_ERROR "cat-format: could not compare `${_file}` (missing file or read error).")
+  else()
+    add_custom_target(
+      cat-reflow-comments
+      COMMAND
+        ${CMAKE_COMMAND}
+        -E
+        echo
+        "cat-reflow-comments: `python3` not found on PATH"
+      COMMAND ${CMAKE_COMMAND} -E false
+      VERBATIM)
+    add_custom_target(
+      cat-reflow-comments-check
+      COMMAND
+        ${CMAKE_COMMAND}
+        -E
+        echo
+        "cat-reflow-comments-check: `python3` not found on PATH"
+      COMMAND ${CMAKE_COMMAND} -E false
+      VERBATIM)
   endif()
-endwhile()
 
-file(REMOVE "${_compare_tmp}")
-
-# `CHECK` must surface a non-zero exit status so CI fails. Collecting all
-# mismatches first (instead of aborting on the first one) reports every file
-# in a single pass, which is more useful when scanning a dirty tree.
-if (_mode STREQUAL "CHECK" AND _mismatches)
-  list(LENGTH _mismatches _count)
-  message(FATAL_ERROR
-    "cat-format-check: ${_count} file(s) would be reformatted. "
-    "Run `cmake --build <build> --target cat-format` to fix.")
+  unset(_cat_cf_major)
 endif()

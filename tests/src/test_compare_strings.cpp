@@ -117,10 +117,8 @@ test(str_view_find_past_first_simd_chunk) {
    idx const past_first_chunk = lanes + 7u;
    buffer[past_first_chunk.raw] = 'Z';
 
-   cat::str_view const haystack_past_chunk{
-      buffer, past_first_chunk + 1u};
-   cat::verify(haystack_past_chunk.find('Z').value()
-               == past_first_chunk);
+   cat::str_view const haystack_past_chunk{buffer, past_first_chunk + 1u};
+   cat::verify(haystack_past_chunk.find('Z').value() == past_first_chunk);
    cat::verify(!haystack_past_chunk.find('q').has_value());
 
    char buffer2[128]{};

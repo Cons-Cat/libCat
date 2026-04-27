@@ -47,8 +47,8 @@ test(bit) {
    static_assert(cat::popcount(0b0'1010'1011_u1) == 5);
    static_assert(cat::popcount(0b0'1010'1011_u2) == 5);
 
-   // Test `has_single_bit()`. Matches C23 `stdc_has_single_bit`, so zero is
-   // not a single-bit value.
+   // Test `has_single_bit()`. Matches C23 `stdc_has_single_bit`, so zero is not
+   // a single-bit value.
    cat::verify(!cat::has_single_bit(0));
    cat::verify(cat::has_single_bit(1));
    cat::verify(cat::has_single_bit(2));

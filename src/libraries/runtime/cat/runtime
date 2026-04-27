@@ -60,12 +60,7 @@ class jmp_buffer {
    // This buffer layout should vary by all ISAs.
 
  private:
-   // %rbx:
-   // %rbp:
-   // %r12:
-   // %r13:
-   // %r14:
-   // %r15:
+   // %rbx: %rbp: %r12: %r13: %r14: %r15:
    [[maybe_unused]]
    unsigned long m_registers[6];
    // %rsp:

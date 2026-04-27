@@ -39,11 +39,10 @@ test(paging_memory) {
    // `allocation_type` with small-size optimization.
    auto small_memory_1 = allocator.inline_alloc<int4>().verify();
    allocator.get(small_memory_1) = 2;
-   // Both values should be on stack, so these addresses are close
-   // together.
+   // Both values should be on stack, so these addresses are close together.
    cat::verify(small_memory_1.is_inline());
-   // The handle's address should be the same as the data's if it was
-   // allocated on the stack.
+   // The handle's address should be the same as the data's if it was allocated
+   // on the stack.
    int4& intref = *reinterpret_cast<int4*>(&small_memory_1);
    intref = 10;
    cat::verify(allocator.get(small_memory_1) == 10);

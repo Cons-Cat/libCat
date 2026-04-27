@@ -135,17 +135,17 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
    stack_top -= 8;
    __builtin_memcpy(stack_top.get(), &p_args_struct, 8);  // NOLINT
 
-   // Place a pointer to function on the new stack:
-   // 8 is the size of a pointer, such as `p_function`.
+   // Place a pointer to function on the new stack: 8 is the size of a pointer,
+   // such as `p_function`.
    stack_top -= 8;
    __builtin_memcpy(stack_top.get(), &p_function, 8);  // NOLINT
 
    // This syscall is made manually here because it's important to be careful
-   // with the stack and registers and not introduce a new stack frame.
-   // Parent and child share `clone_flags::virtual_memory`, so they must not
-   // both spill `%rax` through one C variable. That would race. Only the parent
-   // executes the `mov` into `clone_result` (`asm goto`); the child
-   // jumps away before that store.
+   // with the stack and registers and not introduce a new stack frame. Parent
+   // and child share `clone_flags::virtual_memory`, so they must not both spill
+   // `%rax` through one C variable. That would race. Only the parent executes
+   // the `mov` into `clone_result` (`asm goto`); the child jumps away before
+   // that store.
    nix::clone_flags active_clone_flags = m_flags;
    if (tls_memory_size > 0u) {
       active_clone_flags |= nix::clone_flags::set_tls;

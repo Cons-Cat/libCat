@@ -280,8 +280,8 @@ concept is_boolean_testable = detail::is_boolean_testable_detail<T>
                                     } -> detail::is_boolean_testable_detail;
                                  };
 
-// `weakly_equality_comparable_with` is adapted from the exposition-only
-// concept `__weakly_equality_comparable_with`.
+// `weakly_equality_comparable_with` is adapted from the exposition-only concept
+// `__weakly_equality_comparable_with`.
 namespace detail {
 template <typename T, typename U>
 concept is_weakly_equality_comparable_with =
@@ -389,8 +389,8 @@ template <typename T, typename Storage, auto policy>
 inline constexpr bool is_integral_detail<arithmetic_ptr<T, Storage, policy>> =
    true;
 
-// Another partial specialization of `is_integral_detail` for `idx` is
-// defined in `<cat/arithmetic>`.
+// Another partial specialization of `is_integral_detail` for `idx` is defined
+// in `<cat/arithmetic>`.
 }  // namespace detail
 
 namespace detail {
@@ -414,8 +414,8 @@ namespace detail {
 template <typename...>
 inline constexpr bool is_signed_detail = false;
 
-// Special-casing the `is_signed` trait for `arithmetic` is necessary to
-// prevent a circular template instantiation.
+// Special-casing the `is_signed` trait for `arithmetic` is necessary to prevent
+// a circular template instantiation.
 template <typename T, overflow_policies policy>
 inline constexpr bool is_signed_detail<arithmetic<T, policy>> =
    is_signed_detail<T>;
@@ -620,8 +620,7 @@ inline constexpr bool is_object = __is_object(T);
 template <typename T>
 concept is_function = __is_function(T);
 
-// Remove `const/volatile`-qualifiers, references, and pointers from a
-// type.
+// Remove `const/volatile`-qualifiers, references, and pointers from a type.
 template <typename T>
 using decay = __decay(T);
 
@@ -809,9 +808,8 @@ concept is_bitnotable = requires(T t) { ~t; };
 
 // These symbols must be declared in `std::` to enable some useful Clang
 // features, such as move-semantics warnings, and preventing GDB from stepping
-// into the functions.
-// These must be declared in `<cat/meta>`, but they are implemented in
-// `<cat/utility/detail/...>`.
+// into the functions. These must be declared in `<cat/meta>`, but they are
+// implemented in `<cat/utility/detail/...>`.
 namespace std {
 
 template <typename T>
@@ -884,9 +882,9 @@ constinit inline struct mover {
 
 #define fwd(x) ::cat::forward<decltype(x)>(x)
 
-// `rvalue` binds r-value references and excludes any other references. This
-// is useful for perfect-forwarding parameter functions which could
-// otherwise hide `const&` or && overloads.
+// `rvalue` binds r-value references and excludes any other references. This is
+// useful for perfect-forwarding parameter functions which could otherwise hide
+// `const&` or && overloads.
 template <typename T>
 concept rvalue = is_rvalue_reference<T&&> && !is_const<T>;
 
@@ -911,8 +909,8 @@ concept is_nothrow_invocable =
    is_invocable<Callback, Args...>;
 #endif
 
-// Like `is_invocable`, but the result is contextually convertible to
-// `bool` (return-type "boolean-testable" for predicates).
+// Like `is_invocable`, but the result is contextually convertible to `bool`
+// (return-type "boolean-testable" for predicates).
 template <typename Callback, typename... Args>
 concept is_predicate = requires(Callback c, Args&&... args) {
                           {
@@ -958,12 +956,11 @@ concept is_narrow_convertible = requires() { U({declval<T>()}); };
 // `is_trivially_relocatable` can be overrided by partial template
 // specializations, such as:
 //
-// template <>
-// constexpr bool is_trivially_relocatable<MyClass> = true;
+// template <> constexpr bool is_trivially_relocatable<MyClass> = true;
 //
-// Trivially relocatable types can enable algorithms to make optimizations,
-// such as relocating objects with `cat::copy_memory()` instead of
-// `cat::move()`. By default, implicit-lifetime types are trivially relocatable.
+// Trivially relocatable types can enable algorithms to make optimizations, such
+// as relocating objects with `cat::copy_memory()` instead of `cat::move()`. By
+// default, implicit-lifetime types are trivially relocatable.
 template <typename T>
 inline constexpr bool is_trivially_relocatable = is_implicit_lifetime<T>;
 

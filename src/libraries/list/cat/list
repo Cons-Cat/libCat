@@ -336,8 +336,7 @@ class basic_list
       node.storage = fwd(value);
 
       if (m_size == 0) [[unlikely]] {
-         // If this list has nothing in it, `.insert()` must be
-         // special-cased.
+         // If this list has nothing in it, `.insert()` must be special-cased.
          this->place_initial_node(node);
       } else {
          this->place_node(where, node);
@@ -355,8 +354,7 @@ class basic_list
       new (&node.storage) T(fwd(arguments)...);
 
       if (m_size == 0) [[unlikely]] {
-         // If this list has nothing in it, `.emplace()` must be
-         // special-cased.
+         // If this list has nothing in it, `.emplace()` must be special-cased.
          this->place_initial_node(node);
       } else {
          this->place_node(where, node);
@@ -578,8 +576,7 @@ class list_stepanov_iterator
    // using container_type [[maybe_unused]] = list<T>;
 
    // TODO: This default constructor is deprecated due to the user-defined
-   // constructor. Should this still exist?
-   // iterator(iterator const&) = default;
+   // constructor. Should this still exist? iterator(iterator const&) = default;
 
    list_stepanov_iterator(node_type* p_input) : m_p_node(p_input) {
    }
@@ -620,9 +617,9 @@ initialize_list_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
       // Construct a node at this address.
       T* p_current = list_nodes.data();
       new (p_current) T(p_current + 1u, p_previous, fwd(current));
-      // Recurse to the next node.
-      // `sizeof...(next) > 0` means at least one node remains, so the span has
-      // length at least two and `size - 1u` cannot wrap.
+      // Recurse to the next node. `sizeof...(next) > 0` means at least one node
+      // remains, so the span has length at least two and `size - 1u` cannot
+      // wrap.
       list_nodes =
          list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
       initialize_list_variadic<T>(list_nodes, p_current, fwd(next)...);
@@ -641,8 +638,8 @@ initialize_slist_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
       // Construct a node at this address.
       T* p_current = list_nodes.data();
       new (p_current) T(p_current + 1u, fwd(current));
-      // Recurse to the next node.
-      // Same span-length reasoning as `initialize_list_variadic`.
+      // Recurse to the next node. Same span-length reasoning as
+      // `initialize_list_variadic`.
       list_nodes =
          list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
       initialize_slist_variadic<T>(list_nodes, p_current, fwd(next)...);
@@ -662,8 +659,8 @@ initialize_list_filled(span<T> list_nodes, T* p_previous,
    if (list_nodes.size() > 1u) {
       // Construct a node at this address.
       new (p_current) T(p_current + 1u, p_previous, value);
-      // Recurse to the next node.
-      // The branch requires `size > 1u`, so `size - 1u` is safe.
+      // Recurse to the next node. The branch requires `size > 1u`, so `size -
+      // 1u` is safe.
       list_nodes =
          list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
       initialize_list_filled<T>(list_nodes, p_current, value);
@@ -681,8 +678,8 @@ initialize_slist_filled(span<T> list_nodes, T* p_previous,
       // Construct a node at this address.
       T* p_current = list_nodes.data();
       new (p_current) T(p_current + 1u, value);
-      // Recurse to the next node.
-      // Same `size > 1u` guard as `initialize_list_filled`.
+      // Recurse to the next node. Same `size > 1u` guard as
+      // `initialize_list_filled`.
       list_nodes =
          list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
       initialize_slist_filled<T>(list_nodes, p_current, value);

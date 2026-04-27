@@ -22,8 +22,8 @@ class back_insert_stepanov_iterator
    constexpr auto
    operator=(U& value) = delete;
 
-   // `.insert()` is used instead of an overloaded = because it might
-   // need to take an allocator parameter.
+   // `.insert()` is used instead of an overloaded = because it might need to
+   // take an allocator parameter.
 
    template <typename U>
    constexpr auto
@@ -124,8 +124,8 @@ class front_insert_stepanov_iterator
    constexpr auto
    operator=(U& value) = delete;
 
-   // `.insert()` is used instead of an overloaded = because it might
-   // need to take an allocator parameter.
+   // `.insert()` is used instead of an overloaded = because it might need to
+   // take an allocator parameter.
 
    template <typename U>
    constexpr auto

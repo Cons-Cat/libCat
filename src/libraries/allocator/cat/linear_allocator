@@ -62,8 +62,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
       uintptr<void> allocation =
          align_down(m_p_arena_current - uword(allocation_bytes), alignment);
 
-      // The allocation size is the difference between the current pointer
-      // and the new pointer.
+      // The allocation size is the difference between the current pointer and
+      // the new pointer.
       if (allocation >= m_p_arena_end) {
          return static_cast<idx>(m_p_arena_current - allocation);
       }
@@ -81,8 +81,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
       return nullptr;
    }
 
-   // Try to allocate memory aligned to some boundary and bump the pointer
-   // down.
+   // Try to allocate memory aligned to some boundary and bump the pointer down.
    auto
    aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
       uintptr<void> allocation =
@@ -116,8 +115,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
       return nullopt;
    }
 
-   // In general, memory cannot be deallocated in a linear allocator, so
-   // this function is no-op.
+   // In general, memory cannot be deallocated in a linear allocator, so this
+   // function is no-op.
    void
    deallocate(void const*, uword) {
    }

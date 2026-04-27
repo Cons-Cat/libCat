@@ -29,8 +29,7 @@ test(reallocation_disjoint_linear_ptr_realloc) {
    p = allocator.realloc(p).or_exit();
    cat::verify(*p == int4{42});
 
-   cat::span<int4> row =
-      allocator.realloc_multi(p, idx{1u}, idx{4u}).or_exit();
+   cat::span<int4> row = allocator.realloc_multi(p, idx{1u}, idx{4u}).or_exit();
    row[0] = int4{1};
    row[3] = int4{9};
    cat::verify(row[0] == int4{1});

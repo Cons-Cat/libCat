@@ -53,8 +53,8 @@ main() -> int {
    // `atomic` objects.
    cat::idx const n_passed = tests_passed.load(cat::memory_order::relaxed);
    cat::idx const n_failed = tests_failed.load(cat::memory_order::relaxed);
-   auto _ = cat::print(
-      cat::fmt(pager, "\n{} tests passed.\n{} tests failed.\n", n_passed, n_failed)
-         .or_exit());
-   return static_cast<int>(n_failed != 0u); // Return 0 or 1.
+   auto _ = cat::print(cat::fmt(pager, "\n{} tests passed.\n{} tests failed.\n",
+                                n_passed, n_failed)
+                          .or_exit());
+   return static_cast<int>(n_failed != 0u);  // Return 0 or 1.
 }

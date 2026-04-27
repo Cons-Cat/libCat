@@ -75,8 +75,8 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
 
    simd_vector vectors[8];
 
-   // This routine is optimized for buffers in L3 cache. Streaming is
-   // slower there.
+   // This routine is optimized for buffers in L3 cache. Streaming is slower
+   // there.
    if (bytes_remaining <= l3_cache_size) {
       while (bytes_remaining >= step_size) {
          // Load 8 vectors, then increment the source pointer by that size.

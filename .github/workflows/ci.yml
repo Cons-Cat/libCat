@@ -129,8 +129,8 @@ jobs:
           echo "OK: build-debug/.gdbinit"
 
   release:
-    # Release + format check. `cat-format-check` rides here because
-    # it reuses `build-release`.
+    # Release + format and // reflow checks. `cat-format-check` and
+    # `cat-reflow-comments-check` ride here because they reuse `build-release`.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -161,6 +161,11 @@ jobs:
         # `cmake --build build-release --target cat-format`.
         continue-on-error: true
         run: cmake --build build-release --target cat-format-check
+
+      - name: cat-reflow-comments-check
+        # Same advisory policy as `cat-format-check` above.
+        continue-on-error: true
+        run: cmake --build build-release --target cat-reflow-comments-check
 
   shared:
     # End-to-end `libcat.so` flow: build, install, then have a

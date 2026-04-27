@@ -118,6 +118,7 @@ list(
   -Wdangling
   -Wdangling-gsl
   "SHELL:-Xclang -fexperimental-bounds-safety"
+  # TODO: -Wlifetime-safety-permissive
 )
 
 if(CAT_USE_SANITIZERS)
@@ -356,7 +357,8 @@ add_subdirectory(examples/)
 #   LINK_DEPENDS ${CMAKE_SOURCE_DIR}/src/ctor.ld
 # )
 
-# Source-formatting targets (`cat-format`, `cat-format-check`).
+# Source-formatting targets (`cat-format`, `cat-format-check`, `cat-reflow-comments`,
+# `cat-reflow-comments-check`).
 include(${CMAKE_SOURCE_DIR}/cmake/format.cmake)
 
 # Source-tidying targets (`cat-tidy`, `cat-tidy-check`).

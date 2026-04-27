@@ -33,9 +33,8 @@
 // A "collection" models multipass access using Flux v2 customization points
 // (`cat::begin_pos()`, `cat::end_pos()`, `cat::inc_pos()`,
 // `cat::read_at_unchecked()`), and other refinements. A model usually
-// implements these as members, which
-// these CPOs call by default. The `position` type is `is_regular` and totally
-// ordered. All collections are iterables.
+// implements these as members, which these CPOs call by default. The `position`
+// type is `is_regular` and totally ordered. All collections are iterables.
 //
 // Collections are automatically iterable by `cat::collection_iteration_context`
 // or `cat::reverse_collection_iteration_context`.
@@ -43,9 +42,9 @@
 // A container, for example, could be either a collection or merely iterable.
 //
 // Either of these can "pipe" into a function pipeline. If this iterable
-// implements the `cat::iterable_interface`, then a dot-chaining fluent API
-// may be used instead. However, this design is not user-extensible, whereas
-// the pipe-chaining API is.
+// implements the `cat::iterable_interface`, then a dot-chaining fluent API may
+// be used instead. However, this design is not user-extensible, whereas the
+// pipe-chaining API is.
 //
 // Iterables pipe into "views", which model lazily evaluated functions.
 // Pipelines end in a "terminal", which eagerly evaluates.
@@ -66,9 +65,9 @@
 // `reverse_collection_iteration_context`, so `data | cat::reverse()` works by
 // default.
 //
-// On the random-access leaf we also expose four bounds-checked
-// accessors: `read_at`, `try_read_at`, `slice`, and `as_span` (the
-// last only for collections that already carry contiguous storage).
+// On the random-access leaf we also expose four bounds-checked accessors:
+// `read_at`, `try_read_at`, `slice`, and `as_span` (the last only for
+// collections that already carry contiguous storage).
 
 namespace cat {
 
@@ -107,9 +106,9 @@ unwrap_ref(::cat::reference_wrapper<T> const& borrow) -> T& {
 
 namespace cat {
 
-// A `position` is a handle to a collection element. It is regular and
-// strictly totally ordered. The strict total order is what lets us
-// bounds-check arbitrary slices in constant time.
+// A `position` is a handle to a collection element. It is regular and strictly
+// totally ordered. The strict total order is what lets us bounds-check
+// arbitrary slices in constant time.
 template <typename P>
 concept is_position = requires(P const& left, P const& right) {
                          P{};
@@ -179,9 +178,9 @@ template <typename T>
 concept is_contiguous_position_model =
    is_base_of<contiguous_position_interface<remove_cv<T>>, remove_cv<T>>;
 
-// Private hooks on the contiguous default are not `requires`able as members,
-// so that model is detected by base-class. All other collections still use
-// the public `begin_pos` / `end_pos` member spellings here.
+// Private hooks on the contiguous default are not `requires`able as members, so
+// that model is detected by base-class. All other collections still use the
+// public `begin_pos` / `end_pos` member spellings here.
 template <typename T>
 concept has_position_protocol =
    is_contiguous_position_model<T> || (requires(T const& c) {
@@ -193,9 +192,8 @@ concept has_position_protocol =
 template <detail::has_position_protocol T>
 using position_type = remove_cvref<decltype(begin_pos(declval<T const&>()))>;
 
-// `is_collection` holds when the Flux CPOs `inc_pos` and
-// `read_at_unchecked` (non-const collection on the first argument for the
-// read) exist for a model.
+// `is_collection` holds when the Flux CPOs `inc_pos` and `read_at_unchecked`
+// (non-const collection on the first argument for the read) exist for a model.
 template <typename T>
 concept is_collection =
    detail::has_position_protocol<T> && is_position<position_type<T>>
@@ -221,10 +219,10 @@ concept is_random_access_collection =
          { distance(c, a, b) } -> is_convertible<iword>;
       };
 
-// `collection_iteration_context<T>` is the default iterable adapter for
-// any collection: walk positions from `begin_pos` to `end_pos` and read
-// through `read_at_unchecked`. It is non-copyable and non-movable, so it
-// cannot be hoisted out of its parent's scope.
+// `collection_iteration_context<T>` is the default iterable adapter for any
+// collection: walk positions from `begin_pos` to `end_pos` and read through
+// `read_at_unchecked`. It is non-copyable and non-movable, so it cannot be
+// hoisted out of its parent's scope.
 template <typename T>
 class collection_iteration_context {
    T* m_p_collection;
@@ -267,12 +265,11 @@ class collection_iteration_context {
    }
 };
 
-// `reverse_collection_iteration_context<T>` walks a bidirectional
-// collection backwards. The loop holds a position one past the next
-// element to read. Before each call to `read_at_unchecked` it steps
-// `.dec_pos(p)` so the position lands on the element being read. This is
-// why the context only requires `.dec_pos(p)` from `T`. It never needs to
-// step "before begin".
+// `reverse_collection_iteration_context<T>` walks a bidirectional collection
+// backwards. The loop holds a position one past the next element to read.
+// Before each call to `read_at_unchecked` it steps `.dec_pos(p)` so the
+// position lands on the element being read. This is why the context only
+// requires `.dec_pos(p)` from `T`. It never needs to step "before begin".
 template <typename T>
 class reverse_collection_iteration_context {
    T* m_p_collection;
@@ -324,11 +321,10 @@ concept has_member_iterate = requires(T& t) { t.iterate(); };
 template <typename T>
 concept has_member_reverse_iterate = requires(T& t) { t.reverse_iterate(); };
 
-// `iterate_fn` is the dispatcher behind `iterate`. It first
-// unwraps any `cat::reference_wrapper`, then looks for a member
-// `.iterate()`, and otherwise auto-derives an `iterate` for any type
-// that satisfies `is_collection` by wrapping it in a
-// `collection_iteration_context`.
+// `iterate_fn` is the dispatcher behind `iterate`. It first unwraps any
+// `cat::reference_wrapper`, then looks for a member `.iterate()`, and otherwise
+// auto-derives an `iterate` for any type that satisfies `is_collection` by
+// wrapping it in a `collection_iteration_context`.
 struct iterate_fn {
    // Forward this call through a mutable borrow from `reference_wrapper`.
    template <typename T>
@@ -404,27 +400,25 @@ struct reverse_iterate_fn {
 
 namespace cat {
 
-// `cat::iterate(t)` is the only customization point that an iterable
-// source has to provide. It returns the source's `iteration_context` as a
-// pr-value, so the context is materialized in place at the call site as it is
-// non-movable.
+// `cat::iterate(t)` is the only customization point that an iterable source has
+// to provide. It returns the source's `iteration_context` as a pr-value, so the
+// context is materialized in place at the call site as it is non-movable.
 inline constexpr detail::iterate_fn iterate{};
 
-// `cat::reverse_iterate(t)` is the dual customization point for sources
-// that can be walked backwards. Like `cat::iterate`, it returns a
-// non-movable context by pr-value.
+// `cat::reverse_iterate(t)` is the dual customization point for sources that
+// can be walked backwards. Like `cat::iterate`, it returns a non-movable
+// context by pr-value.
 inline constexpr detail::reverse_iterate_fn reverse_iterate{};
 
-// `is_iterable<T>` holds when `cat::iterate(t)` is a valid call for
-// `T&`. It is the single-pass entry concept that every adaptor and terminal
-// targets.
+// `is_iterable<T>` holds when `cat::iterate(t)` is a valid call for `T&`. It is
+// the single-pass entry concept that every adaptor and terminal targets.
 template <typename T>
 concept is_iterable = requires(T& t) { iterate(t); };
 
-// `is_reverse_iterable<T>` holds when `cat::reverse_iterate(t)` is
-// a valid call. Every bidirectional collection satisfies it for free
-// via the auto-derived adapter, and any iterable can opt in by writing
-// a member `.reverse_iterate()`.
+// `is_reverse_iterable<T>` holds when `cat::reverse_iterate(t)` is a valid
+// call. Every bidirectional collection satisfies it for free via the
+// auto-derived adapter, and any iterable can opt in by writing a member
+// `.reverse_iterate()`.
 template <typename T>
 concept is_reverse_iterable = requires(T& t) { reverse_iterate(t); };
 
@@ -466,8 +460,7 @@ concept is_iteration_context =
    && !is_move_assignable<IterationContext>;
 
 // `run_while(iteration_context, callback)` is a forwarding shim around
-// `iteration_context.run_while`.
-// It exists so generic code never has to spell
+// `iteration_context.run_while`. It exists so generic code never has to spell
 // `iteration_context.run_while(...)` directly.
 // TODO: Do we need this?
 template <is_iteration_context IterationContext,
@@ -479,13 +472,13 @@ run_while(IterationContext& iteration_context, Callback&& callback)
 }
 
 // `next_element(context)` pulls one element off the context, returning a
-// disengaged `maybe` when the context has been exhausted. This is the
-// safe single-step primitive used to walk multiple iterables in lock-step (e.g.
-// an `is_equal` algorithm).
+// disengaged `maybe` when the context has been exhausted. This is the safe
+// single-step primitive used to walk multiple iterables in lock-step (e.g. an
+// `is_equal` algorithm).
 //
-// When `element_type` is a reference, the maybe holds a reference and
-// the stored binding is invalidated by the next call to `run_while` /
-// `step` / `next_element` on the same context.
+// When `element_type` is a reference, the maybe holds a reference and the
+// stored binding is invalidated by the next call to `run_while` / `step` /
+// `next_element` on the same context.
 template <typename IterationContext>
    requires(is_iteration_context<IterationContext>)
 constexpr auto
@@ -501,10 +494,10 @@ next_element(IterationContext& iteration_context)
 
 // `step(context, callback)` advances the context one element and invokes
 // `callback` on that element. The return type is always `maybe<R>` where `R` is
-// `callback`'s return type, including `R = void`: `maybe<void>` is the
-// monadic abstraction over a `bool` "did it happen", which collapses
-// the void / non-void cases into one path. `nullopt` means the
-// context was exhausted before `callback` ran.
+// `callback`'s return type, including `R = void`: `maybe<void>` is the monadic
+// abstraction over a `bool` "did it happen", which collapses the void /
+// non-void cases into one path. `nullopt` means the context was exhausted
+// before `callback` ran.
 template <typename IterationContext, typename Callback>
    requires(is_iteration_context<IterationContext>)
 constexpr auto
@@ -535,10 +528,9 @@ step(IterationContext& iteration_context, Callback callback) {
 //
 // View types returned from `apply()` inherit their `*_impl` iterable body.
 //
-// This is the public extension point. External code can build its own
-// adaptor closures, and have them participate in the pipe surface, by
-// inheriting `view_interface`, exactly like `transform_impl` and friends do
-// below.
+// This is the public extension point. External code can build its own adaptor
+// closures, and have them participate in the pipe surface, by inheriting
+// `view_interface`, exactly like `transform_impl` and friends do below.
 template <typename Derived>
 // NOLINTNEXTLINE This must be structural, so its constructor is `public`.
 struct view_interface {

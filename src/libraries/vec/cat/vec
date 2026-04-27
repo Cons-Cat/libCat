@@ -106,8 +106,8 @@ vec : public container_interface<vec<T, Allocator>, T>,
       idx const minimum_capacity =
          (m_current_capacity > 0u)
             ? m_current_capacity * 2u
-            // If this storage has not been allocated yet,
-            // then greedily allocate its capacity as 4.
+            // If this storage has not been allocated yet, then greedily
+            // allocate its capacity as 4.
             : 4u;
 
       if consteval {

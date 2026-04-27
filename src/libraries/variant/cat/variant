@@ -34,9 +34,9 @@ struct variant_node<T, Remaining...> {
    constexpr variant_node() : dummy() {
    }
 
-   // `.get()` is provided an alternative type's index. It then recurses
-   // through the alternative types that many times. Then it returns a
-   // reference to the storage of this node it has reached.
+   // `.get()` is provided an alternative type's index. It then recurses through
+   // the alternative types that many times. Then it returns a reference to the
+   // storage of this node it has reached.
 
    template <idx remaining_recursions>
    constexpr auto
@@ -66,8 +66,8 @@ struct variant_node<T, Remaining...> {
    union {
       T storage;
       variant_node<Remaining...> remaining_nodes;
-      // A dummy member is required to constant-evaluate this union
-      // without initializing it if `T` is a non-trivial class.
+      // A dummy member is required to constant-evaluate this union without
+      // initializing it if `T` is a non-trivial class.
       monostate_type dummy;
    };
 };
@@ -355,8 +355,8 @@ class variant {
       return this->discriminant;
    }
 
-   // Holds true if this `variant` currently has some value of the type
-   // `T`. This method allows `variant` to be used in `match` statements.
+   // Holds true if this `variant` currently has some value of the type `T`.
+   // This method allows `variant` to be used in `match` statements.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -379,9 +379,9 @@ class variant {
       return false;
    }
 
-   // Recurse through every alternative type, and if it is currently the
-   // active alternative, convert `in_value` to that type, then check if it
-   // is equal to this `variant`'s value.
+   // Recurse through every alternative type, and if it is currently the active
+   // alternative, convert `in_value` to that type, then check if it is equal to
+   // this `variant`'s value.
    template <alternative_index_type index, typename T, typename... Remaining>
       requires(sizeof...(Remaining) > 0)
    constexpr auto
@@ -394,8 +394,7 @@ class variant {
 
  public:
    // Holds true if this `variant` currently has some value convertible to
-   // `in_value`. This method allows `variant` to be used in `match`
-   // statements.
+   // `in_value`. This method allows `variant` to be used in `match` statements.
    template <typename T>
       requires(is_implicitly_convertible<T, alternative_types> && ...)
    [[nodiscard]]
@@ -420,9 +419,9 @@ class variant {
       detail::match_patterns (*this)(fwd(patterns)...);
    }
 
-   // Holds true if this `variant` currently has some value of the type
-   // `T`. Unlike `.is()`, this only accepts types that are potentially
-   // valid alternatives.
+   // Holds true if this `variant` currently has some value of the type `T`.
+   // Unlike `.is()`, this only accepts types that are potentially valid
+   // alternatives.
    template <typename T>
       requires(types::template has_type<T>)
    [[nodiscard]]

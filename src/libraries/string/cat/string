@@ -249,8 +249,7 @@ class basic_str_span : public span<CharT> {
  private:
    // `basic_str_span` inherits:
    //
-   // `char_type* m_p_data;`
-   // `iword m_size;`
+   // `char_type* m_p_data;` `iword m_size;`
 };
 
 using str_view = basic_str_span<char const, false>;
@@ -269,8 +268,8 @@ class basic_str_inplace
 
    constexpr basic_str_inplace(basic_str_inplace const& string) = default;
 
-   // Construct and deduce length from a string literal.
-   // Add 1 to length to ignore a null terminator.
+   // Construct and deduce length from a string literal. Add 1 to length to
+   // ignore a null terminator.
    consteval basic_str_inplace(
       CharT const (&string)[idx(length.raw + !is_null_terminated)]) {
       [[assume(
@@ -449,8 +448,8 @@ make_str_inplace(char const (&string)[deduced_length])
       new_string[i] = string[i.raw];
    }
    // Pad the string out with null bytes. Padding starts at the same index as
-   // the literal's trailing null slot, so the starting index matches the
-   // copy loop bound above.
+   // the literal's trailing null slot, so the starting index matches the copy
+   // loop bound above.
    for (idx i = narrow_cast<idx>(deduced_length - 1u).value();
         i < padded_length; ++i) {
       new_string[i] = '\0';
