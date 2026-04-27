@@ -1,2 +1,14 @@
 Index:
   StandardLibrary: No
+
+# Merged with `.clang-tidy`; clangd config wins on conflict. Stops
+# `readability-magic-numbers` / `cppcoreguidelines-avoid-magic-numbers` if
+# another layer (e.g. user `config.yaml`) re-enables `readability-*`.
+Diagnostics:
+  ClangTidy:
+    Remove:
+      - readability-magic-numbers
+      - cppcoreguidelines-avoid-magic-numbers
+  Suppress:
+    - readability-magic-numbers
+    - cppcoreguidelines-avoid-magic-numbers

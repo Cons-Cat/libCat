@@ -14,13 +14,13 @@ Checks: "bugprone-*,
          -performance-noexcept-move-constructor, # TODO: Enable this when exceptions work.
          -modernize-use-auto, # TODO: Configure this.
          -readability-magic-numbers,
+         -cppcoreguidelines-avoid-magic-numbers,
          -readability-identifier-length,
          -readability-uppercase-literal-suffix,
          -readability-convert-member-functions-to-static,
          -readability-static-accessed-through-instance,
          -readability-function-cognitive-complexity,
          -readability-redundant-parentheses, # This doesn't work reliably.
-         -cppcoreguidelines-avoid-magic-numbers,
          -cppcoreguidelines-pro-type-union-access,
          -cppcoreguidelines-pro-bounds-pointer-arithmetic,
          -cppcoreguidelines-pro-type-reinterpret-cast,
@@ -73,4 +73,4 @@ CheckOptions:
   - { key: readability-operators-representation.BinaryOperators,            value: '&&;&=;&;|;~;!;!=;||;|=;^;^=' }
   - { key: cppcoreguidelines-macro-usage.AllowedRegexp,                     value: '^(CAT_.*|JKJ_.*|mov|fwd|ssizeof|defer|prop|prop_or|prop_as|test|[PWASD]|L[0-9NZG])$' }
   - { key: readability-named-parameter.InsertPlainNamesInForwardDecls,      value: 'true' }
-...
+  - { key: modernize-use-trailing-return-type.TransformLambdas,             value: none }
