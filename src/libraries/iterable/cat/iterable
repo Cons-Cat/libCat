@@ -521,8 +521,12 @@ struct view_interface {
 #include "../implementations/take.tpp"
 #include "../implementations/to.tpp"
 
-// Out-of-line `iterable_interface` templates, then `detail::slice_view`, then
-// bounds-checked accessors.
+namespace cat::detail {
+template <typename T>
+struct slice_view;
+}  // namespace cat::detail
+
+// `bounds.tpp` names `detail::slice_view` before the struct is defined below
 #include "../implementations/bounds.tpp"
 #include "../implementations/iterable_interface.tpp"
 #include "../implementations/slice_view.tpp"
