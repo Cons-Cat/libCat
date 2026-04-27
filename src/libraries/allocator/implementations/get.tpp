@@ -14,7 +14,8 @@ template <typename Derived>
 template <mem T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::get(T& handle) & -> decltype(auto) {
+allocator_interface<Derived>::get(
+   T& handle [[clang::lifetimebound]]) & -> decltype(auto) {
    using allocation_type = T::allocation_type;
    if constexpr (T::is_inline_handle) {
       // Get small-size optimized data:
@@ -44,7 +45,8 @@ template <typename Derived>
 template <mem T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::get(T const& memory) & -> decltype(auto) {
+allocator_interface<Derived>::get(
+   T const& memory [[clang::lifetimebound]]) & -> decltype(auto) {
    return unconst(this)->get(unconst(memory));
 }
 
@@ -73,12 +75,15 @@ template <mem T>
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::p_get(T& memory) -> auto {
-   decltype(auto) ref = this->get(memory);
-   using handle_type = decltype(this->get(memory));
-   if constexpr (is_reference<handle_type>) {
+   // Omitting `[[clang::lifetimebound]]` on this parameter avoids Clang 23
+   // `-Wreturn-stack-address` false positives on the `cat::span` branch when
+   // `get(memory).data()` still refers to storage owned by `memory`.
+   using get_result = decltype(this->get(memory));
+   if constexpr (is_reference<get_result>) {
+      decltype(auto) ref = this->get(memory);
       return __builtin_addressof(ref);
    } else {
-      return ref.data();
+      return this->get(memory).data();
    }
 }
 
@@ -89,12 +94,15 @@ template <mem T>
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::p_get(T const& memory) -> auto {
-   decltype(auto) ref = this->get(memory);
-   using handle_type = decltype(this->get(memory));
-   if constexpr (is_reference<handle_type>) {
+   // Omitting `[[clang::lifetimebound]]` on this parameter avoids Clang 23
+   // `-Wreturn-stack-address` false positives on the `cat::span` branch when
+   // `get(memory).data()` still refers to storage owned by `memory`.
+   using get_result = decltype(this->get(memory));
+   if constexpr (is_reference<get_result>) {
+      decltype(auto) ref = this->get(memory);
       return __builtin_addressof(ref);
    } else {
-      return ref.data();
+      return this->get(memory).data();
    }
 }
 

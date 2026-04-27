@@ -165,6 +165,10 @@ span
    [[nodiscard]]
    constexpr auto
    data() -> T* {
+      // Omitting `[[clang::lifetimebound]]` avoids Clang 23
+      // `-Wreturn-stack-address` false positives on `get(memory).data()` when
+      // `get` returns a prvalue `span` while the pointer still names handle
+      // storage.
       return m_p_data;
    }
 
@@ -172,6 +176,10 @@ span
    [[nodiscard]]
    constexpr auto
    data() const -> T const* {
+      // Omitting `[[clang::lifetimebound]]` avoids Clang 23
+      // `-Wreturn-stack-address` false positives on `get(memory).data()` when
+      // `get` returns a prvalue `span` while the pointer still names handle
+      // storage.
       return m_p_data;
    }
 
@@ -197,7 +205,7 @@ span
    // dynamic-extent span. Mirrors `std::span::first(size_type)`.
    [[nodiscard]]
    constexpr auto
-   first(idx count) const -> span<T> {
+   first(idx count) const [[clang::lifetimebound]] -> span<T> {
       return subspan(0u, count);
    }
 
@@ -205,7 +213,7 @@ span
    // dynamic-extent span. Mirrors `std::span::last(size_type)`.
    [[nodiscard]]
    constexpr auto
-   last(idx count) const -> span<T> {
+   last(idx count) const [[clang::lifetimebound]] -> span<T> {
       if !consteval {
          assert(count <= size());
       }
@@ -216,7 +224,8 @@ span
    // `dynamic_extent` the resulting span extends to the end of this one.
    [[nodiscard]]
    constexpr auto
-   subspan(idx offset, idx count = dynamic_extent) const -> span<T> {
+   subspan(idx offset, idx count = dynamic_extent) const
+      [[clang::lifetimebound]] -> span<T> {
       if !consteval {
          assert(offset <= size());
          if (count != dynamic_extent) {
@@ -234,7 +243,7 @@ span
       requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   first() const -> span<T, count> {
+   first() const [[clang::lifetimebound]] -> span<T, count> {
       if constexpr (fixed_extent == dynamic_extent) {
          assert(count <= size());
       }
@@ -247,7 +256,7 @@ span
       requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   last() const -> span<T, count> {
+   last() const [[clang::lifetimebound]] -> span<T, count> {
       if constexpr (fixed_extent == dynamic_extent) {
          assert(count <= size());
       }
@@ -264,7 +273,7 @@ span
                        || count <= fixed_extent - offset)))
    [[nodiscard]]
    constexpr auto
-   subspan() const {
+   subspan() const [[clang::lifetimebound]] {
       constexpr idx result_extent = []() consteval {
          if constexpr (count != dynamic_extent) {
             return count;

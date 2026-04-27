@@ -1145,13 +1145,13 @@ class alignas(in_abi::alignment.raw) simd {
 
    [[nodiscard]]
    constexpr auto
-   data() -> T* {
+   data() [[clang::lifetimebound]] -> T* {
       return __builtin_bit_cast(T*, &raw);
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const -> T* {
+   data() const [[clang::lifetimebound]] -> T* {
       return __builtin_bit_cast(T const*, &raw);
    }
 
@@ -1758,13 +1758,13 @@ class alignas(in_abi::alignment.raw) simd_mask {
 
    [[nodiscard]]
    constexpr auto
-   data() -> lane_scalar* {
+   data() [[clang::lifetimebound]] -> lane_scalar* {
       return __builtin_bit_cast(lane_scalar*, &raw);
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const -> lane_scalar const* {
+   data() const [[clang::lifetimebound]] -> lane_scalar const* {
       return __builtin_bit_cast(lane_scalar const*, &raw);
    }
 

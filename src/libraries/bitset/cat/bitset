@@ -11,7 +11,7 @@
 namespace cat {
 
 template <idx bits_count>
-class [[clang::trivial_abi]]
+class [[clang::trivial_abi, gsl::Owner]]
 bitset : public bitwise_interface<bitset<bits_count>> {
  private:
    template <idx, is_unsigned_integral... Arguments>

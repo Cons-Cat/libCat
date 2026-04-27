@@ -39,7 +39,8 @@ class basic_str_inplace;
 
 template <typename CharT, bool is_null_terminated>
    requires(sizeof(CharT) == 1)  // TODO: Generalize this to wide chars.
-class basic_str_span : public span<CharT> {
+class [[gsl::Pointer(CharT)]]
+basic_str_span : public span<CharT> {
  public:
    constexpr basic_str_span() : span<CharT>(nullptr) {
    }
@@ -180,6 +181,9 @@ class basic_str_span : public span<CharT> {
 
    constexpr auto
    operator=(basic_str_span const& other_string) -> basic_str_span& {
+      // Omitting `[[clang::lifetimebound]]` on the RHS avoids Clang 23
+      // `-Wdangling-assignment` false positives on assigns from pointers or
+      // arrays whose storage still outlives this view.
       this->m_p_data = other_string.data();
       this->m_size = other_string.size();
       return *this;
@@ -196,18 +200,27 @@ class basic_str_span : public span<CharT> {
    [[nodiscard]]
    constexpr auto
    substring(idx position, idx count) -> basic_str_span {
+      // Omitting `[[clang::lifetimebound]]` avoids Clang 23
+      // `-Wdangling-assignment` false positives when slicing still aliases the
+      // same backing buffer.
       return {this->m_p_data + position, count};
    }
 
    [[nodiscard]]
    constexpr auto
    remove_prefix(idx offset) -> basic_str_span {
+      // Omitting `[[clang::lifetimebound]]` avoids Clang 23
+      // `-Wdangling-assignment` false positives when slicing still aliases the
+      // same backing buffer.
       return this->substring(offset, idx(this->m_size - offset));
    }
 
    [[nodiscard]]
    constexpr auto
    remove_suffix(idx offset) -> basic_str_span {
+      // Omitting `[[clang::lifetimebound]]` avoids Clang 23
+      // `-Wdangling-assignment` false positives when slicing still aliases the
+      // same backing buffer.
       return this->substring(0u, idx(this->m_size - offset));
    }
 
@@ -258,7 +271,8 @@ using zstr_view = basic_str_span<char const, true>;
 using zstr_span = basic_str_span<char, true>;
 
 template <typename CharT, idx length, bool is_null_terminated>
-class basic_str_inplace
+class [[gsl::Owner]]
+basic_str_inplace
     : public container_interface<
          // TODO: Use CharT instead of `char`.
          basic_str_inplace<CharT, length, is_null_terminated>, char>,

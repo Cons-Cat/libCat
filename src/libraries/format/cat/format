@@ -123,7 +123,8 @@ to_chars() {
 template <is_integral T>
 [[nodiscard]]
 constexpr auto
-to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<str_view> {
+to_string_at(arithmetic<T> value, span<char> output_buffer
+             [[clang::lifetimebound]]) -> maybe<str_view> {
    // Add 1 for a negative sign - character.
    constexpr iword max_length = to_chars<arithmetic<T>::max()>().size() + 1;
    char buffer[max_length.raw];
@@ -290,7 +291,7 @@ struct format_string_vector : container_interface<format_string_vector, char>,
 
    [[nodiscard]]
    auto
-   data() const -> char* {
+   data() const [[clang::lifetimebound]] -> char* {
       return this->p_storage;
    }
 
@@ -308,7 +309,8 @@ struct format_string_vector : container_interface<format_string_vector, char>,
 
    // TODO: Embed the allocator so this isn't dangling.
    auto
-   push_back(is_allocator auto& allocator, char character) -> maybe<void> {
+   push_back(is_allocator auto& allocator [[clang::lifetimebound]],
+             char character) -> maybe<void> {
       if (this->length + 1 > this->max_length) {
          // Reallocate double the memory if its capacity is exceeded.
          maybe result = allocator.template realloc_multi<char>(
@@ -501,7 +503,9 @@ struct format_buffer_iterator<Allocator, Outputter>
    // To optimize common usage, `256` bytes of storage is reserved on stack.
    char storage[256];
 
-   format_buffer_iterator(Allocator& in_allocator, Outputter iterator)
+   format_buffer_iterator(Allocator& in_allocator [[clang::lifetimebound]]
+                          ,
+                          Outputter iterator)
        : format_buffer_base<Allocator>(storage, 0u, 256u),
          allocator(in_allocator),
          output_iterator(iterator) {
@@ -581,7 +585,8 @@ class format_parse_context {
    using iterator = decltype(m_format.begin());
    using const_iterator = decltype(m_format.cbegin());
 
-   constexpr format_parse_context(str_view const in_format,
+   constexpr format_parse_context(str_view const in_format
+                                  [[clang::lifetimebound]],
                                   uword in_args_count = 0u)
        : m_format(in_format), arguments_count(in_args_count) {
    }
@@ -646,9 +651,11 @@ struct format_handler {
    // and wide chars:
    format_args const arguments;
 
-   format_handler(Allocator& in_allocator,
+   format_handler(Allocator& in_allocator [[clang::lifetimebound]],
                   detail::format_contiguous_output_iterator<Allocator> iterator,
-                  str_view const in_format, format_args in_args)
+                  str_view const in_format [[clang::lifetimebound]]
+                  ,
+                  format_args in_args)
        : allocator(in_allocator),
          output_iterator(iterator),
          format(in_format),
@@ -762,9 +769,10 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
       ++current_argument;
 
       // Slice the string past the text that's just been parsed.
-      remainder =
-         // Casting this to `idx` is guaranteed to be safe by this point.
-         remainder.remove_prefix(idx(to_close_brace) + 1u);
+      idx const skip = idx(to_close_brace) + 1u;
+      char const* const p_tail = remainder.data() + skip.raw;
+      idx const tail_size = idx(remainder.size() - skip);
+      remainder = str_view(p_tail, tail_size);
    }
 
    // No errors occurred.

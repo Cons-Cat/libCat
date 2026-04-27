@@ -3672,14 +3672,14 @@ class allocator_interface {
    template <mem T>
    [[nodiscard]]
    constexpr auto
-   get(T& handle) & -> decltype(auto);
+   get(T& handle [[clang::lifetimebound]]) & -> decltype(auto);
 
    // Get a `const` handle to the data in any memory handle. If that memory
    // handle is to a multi-allocation, this returns a `span`.
    template <mem T>
    [[nodiscard]]
    constexpr auto
-   get(T const& memory) & -> decltype(auto);
+   get(T const& memory [[clang::lifetimebound]]) & -> decltype(auto);
 
    // Get a non-`const` reference to the data in any pointer handle.
    template <typename T>

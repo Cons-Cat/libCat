@@ -11,7 +11,7 @@
 namespace cat {
 
 template <typename T>
-class ring : public container_interface<ring<T>, T> {
+class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
  public:
    ring()
        : p_storage(nullptr),

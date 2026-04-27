@@ -56,7 +56,8 @@ struct slist_storage {
 }  // namespace detail
 
 template <typename T, is_allocator Allocator, bool is_doubly_linked>
-class basic_list
+class [[gsl::Owner]]
+basic_list
     : public container_interface<basic_list<T, Allocator, is_doubly_linked>, T>,
       public stepanov_iterable_interface<
          basic_list<T, Allocator, is_doubly_linked>,
@@ -164,13 +165,13 @@ class basic_list
 
    [[nodiscard]]
    auto
-   front() -> T& {
+   front() [[clang::lifetimebound]] -> T& {
       return m_storage.m_p_head->storage;
    }
 
    [[nodiscard]]
    auto
-   back() -> T&
+   back() [[clang::lifetimebound]] -> T&
       requires(is_doubly_linked)
    {
       return m_storage.m_p_tail->storage;
@@ -701,7 +702,8 @@ initialize_slist_filled(span<T> list_nodes, T* p_previous,
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_list(Allocator& allocator) -> maybe<list<T, Allocator>> {
+make_list(Allocator& allocator [[clang::lifetimebound]])
+   -> maybe<list<T, Allocator>> {
    return list<T, Allocator>(allocator);
 }
 
@@ -710,8 +712,8 @@ template <typename T, is_allocator Allocator, is_convertible<T> U,
           is_convertible<T>... Args>
 [[nodiscard]]
 auto
-make_list(Allocator& allocator, U&& value, Args&&... remaining)
-   -> maybe<list<T, Allocator>> {
+make_list(Allocator& allocator [[clang::lifetimebound]], U&& value,
+          Args&&... remaining) -> maybe<list<T, Allocator>> {
    list<T, Allocator> new_list(allocator);
    using node = detail::list_node<T>;
 
@@ -744,7 +746,7 @@ make_list(Allocator& allocator, U&& value, Args&&... remaining)
 template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 auto
-make_list(Allocator& allocator, Args&&... arguments) {
+make_list(Allocator& allocator [[clang::lifetimebound]], Args&&... arguments) {
    using common = common_type<Args...>;
    return make_list<common>(allocator, static_cast<common>(fwd(arguments))...);
 }
@@ -753,8 +755,8 @@ make_list(Allocator& allocator, Args&&... arguments) {
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_list_filled(Allocator& allocator, idx count, T const& value)
-   -> maybe<list<T, Allocator>> {
+make_list_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
+                 T const& value) -> maybe<list<T, Allocator>> {
    list<T, Allocator> new_list(allocator);
 
    using node = detail::list_node<T>;
@@ -773,7 +775,8 @@ make_list_filled(Allocator& allocator, idx count, T const& value)
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_slist(Allocator& allocator) -> maybe<slist<T, Allocator>> {
+make_slist(Allocator& allocator [[clang::lifetimebound]])
+   -> maybe<slist<T, Allocator>> {
    return slist<T, Allocator>(allocator);
 }
 
@@ -782,8 +785,8 @@ template <typename T, is_allocator Allocator, is_convertible<T> U,
           is_convertible<T>... Args>
 [[nodiscard]]
 auto
-make_slist(Allocator& allocator, U&& value, Args&&... remaining)
-   -> maybe<slist<T, Allocator>> {
+make_slist(Allocator& allocator [[clang::lifetimebound]], U&& value,
+           Args&&... remaining) -> maybe<slist<T, Allocator>> {
    slist<T, Allocator> new_slist(allocator);
    using node = detail::slist_node<T>;
 
@@ -814,7 +817,7 @@ make_slist(Allocator& allocator, U&& value, Args&&... remaining)
 template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 auto
-make_slist(Allocator& allocator, Args&&... arguments) {
+make_slist(Allocator& allocator [[clang::lifetimebound]], Args&&... arguments) {
    using common = common_type<Args...>;
    return make_slist<common>(allocator, static_cast<common>(fwd(arguments))...);
 }
@@ -823,8 +826,8 @@ make_slist(Allocator& allocator, Args&&... arguments) {
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_slist_filled(Allocator& allocator, idx count, T const& value)
-   -> maybe<slist<T, Allocator>> {
+make_slist_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
+                  T const& value) -> maybe<slist<T, Allocator>> {
    slist<T, Allocator> new_slist(allocator);
 
    using node = detail::slist_node<T>;
