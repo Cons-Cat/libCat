@@ -10,7 +10,8 @@
 // included only at the end of `<cat/iterable>`, so every `cat::`
 // entity named here is a complete, previously-declared entity.
 
-namespace cat::detail {
+namespace cat {
+namespace detail {
 
 template <typename Self, typename Callback>
 constexpr auto
@@ -60,9 +61,7 @@ iterable_pipe_fold(Self&& self, Callback callback, Init init) -> Init {
    return fold(fwd(self), move(callback), move(init));
 }
 
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 template <typename Self, typename Callback>
 constexpr auto

@@ -4,7 +4,8 @@
 
 #include <cat/iterable>
 
-namespace cat::detail {
+namespace cat {
+namespace detail {
 template <typename Base>
 struct take_view_impl : iterable_interface {
    Base m_base;
@@ -73,9 +74,7 @@ struct take_impl : view_interface<take_impl> {
       return take_view<Iterable>{{}, fwd(incoming), count};
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // Access a fixed number of elements from the input. This is a terminal
 // algorithm.

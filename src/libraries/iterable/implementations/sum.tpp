@@ -21,9 +21,7 @@ sum(Iterable&& source) -> iterable_value_type<Iterable> {
    return total;
 }
 
-}  // namespace cat
-
-namespace cat::detail {
+namespace detail {
 struct sum_impl {
    template <is_iterable Iterable>
    friend constexpr auto
@@ -31,9 +29,7 @@ struct sum_impl {
       return sum(fwd(incoming));
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // Reduce the incoming elements with `+`. This is a terminal algorithm.
 constexpr auto

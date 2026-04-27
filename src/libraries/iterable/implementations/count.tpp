@@ -21,9 +21,7 @@ count(Iterable&& source) -> idx {
    return element_count;
 }
 
-}  // namespace cat
-
-namespace cat::detail {
+namespace detail {
 struct count_impl {
    template <is_iterable Iterable>
    friend constexpr auto
@@ -31,9 +29,7 @@ struct count_impl {
       return count(fwd(incoming));
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // Count the incoming elements. This is a terminal algorithm.
 constexpr auto

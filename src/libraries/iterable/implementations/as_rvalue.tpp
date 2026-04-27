@@ -4,7 +4,8 @@
 
 #include <cat/iterable>
 
-namespace cat::detail {
+namespace cat {
+namespace detail {
 template <typename Base>
 struct as_rvalue_view_impl : iterable_interface {
    Base m_base;
@@ -75,9 +76,7 @@ struct as_rvalue_impl : view_interface<as_rvalue_impl> {
       return as_rvalue_view<Iterable>{{}, fwd(incoming)};
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // `as_rvalue()` `cat::move()`s every incoming element so an outgoing terminal
 // can accept x-values. Internal iteration makes this safe even after `filter |

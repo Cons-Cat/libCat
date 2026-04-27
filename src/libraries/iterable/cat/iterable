@@ -10,7 +10,7 @@
 
 // While libCat supports Stepanov-like iterators, algorithmic composition is
 // generally done with a model closely inspired by the Flux v2
-// "sequence-orientated programming model proposed by Tristan Brindle.
+// "sequence-orientated programming model" proposed by Tristan Brindle.
 // https://tristanbrindle.com/posts/the-road-to-flux-10
 //
 // Iteration is defined by two complementary protocols:
@@ -20,7 +20,7 @@
 //                  fuses read-and-advance, which structurally rules
 //                  dangling iteration state.
 
-// `is_collection`  Multi-pass position-based access. A `position` is a
+// `is_collection`  Multi-pass position-based access. A "position" is a
 //                  regular, totally-ordered value, and reads always go
 //                  through the parent collection so dangling is not a
 //                  category of bug.
@@ -30,10 +30,12 @@
 // Iteration contexts are non-copyable and non-movable to enforce that they
 // cannot outlive their parent and cannot be aliased against it.
 //
-// A "collection" models contiguous storage by exposing `begin_pos`, `end_pos`,
-// `inc_pos`, and `read_at_unchecked` over a `position` type. The position must
-// be `cat::is_regular && cat::is_totally_ordered`. Integers are a customary
-// position. All collections are iterables.
+// A "collection" models multipass access using Flux v2 customization points
+// (`cat::begin_pos()`, `cat::end_pos()`, `cat::inc_pos()`,
+// `cat::read_at_unchecked()`), and other refinements. A model usually
+// implements these as members, which
+// these CPOs call by default. The `position` type is `is_regular` and totally
+// ordered. All collections are iterables.
 //
 // Collections are automatically iterable by `cat::collection_iteration_context`
 // or `cat::reverse_collection_iteration_context`.
@@ -48,19 +50,19 @@
 // Iterables pipe into "views", which model lazily evaluated functions.
 // Pipelines end in a "terminal", which eagerly evaluates.
 //
-// Views take ownership of their base by value. An r-value argument is moves
-// into its view. A trivially-copyable lvalue is copied, but non
-// trivially-copyable lvalues are rejected. They must be passed through
+// Views take ownership of their base by value. An r-value argument is moved
+// into its view. A trivially-copyable lvalue is copied, but
+// non-trivially-copyable lvalues are rejected. They must be passed through
 // `cat::ref` or `cat::cref` explicitly to opt in to non-owning aliasing. This
 // makes accidental dangling references against temporaries impossible.
 //
 // `is_collection` refines into a small hierarchy:
 //
-//    `is_collection`                - basis: positions + `read_at_unchecked`.
-//    `is_bidirectional_collection`  - adds `dec_pos(p)`.
-//    `is_random_access_collection`  - adds offset/distance over positions.
+//    `is_collection`                - position + `read_at_unchecked` CPOs.
+//    `is_bidirectional_collection`  - `dec_pos` CPO.
+//    `is_random_access_collection`  - `offset_pos` and `distance` CPOs
 //
-// A bidirectional collection auto-derives `reverse_iterate(c)` via a
+// A bidirectional collection auto-derives `reverse_iterate(data)` via a
 // `reverse_collection_iteration_context`, so `data | cat::reverse()` works by
 // default.
 //
@@ -116,57 +118,107 @@ concept is_position = requires(P const& left, P const& right) {
                          { left < right } -> is_convertible<bool>;
                       };
 
-}  // namespace cat
+template <typename Collection>
+[[nodiscard]]
+constexpr auto
+begin_pos(Collection const& collection) {
+   return collection.begin_pos();
+}
 
-namespace cat::detail {
+template <typename Collection>
+[[nodiscard]]
+constexpr auto
+end_pos(Collection const& collection) {
+   return collection.end_pos();
+}
+
+template <typename Collection, typename Position>
+constexpr void
+inc_pos(Collection const& collection, Position& position) {
+   collection.inc_pos(position);
+}
+
+template <typename Collection, typename Position>
+constexpr void
+dec_pos(Collection const& collection, Position& position) {
+   collection.dec_pos(position);
+}
+
+template <typename Collection, typename Position>
+[[nodiscard]]
+constexpr auto
+read_at_unchecked(Collection& collection, Position const& position)
+   -> decltype(auto) {
+   return collection.read_at_unchecked(position);
+}
+
+template <typename Collection, typename Position>
+[[nodiscard]]
+constexpr auto
+read_at_unchecked(Collection const& collection, Position const& position)
+   -> decltype(auto) {
+   return collection.read_at_unchecked(position);
+}
+
+template <typename Collection, typename Position>
+constexpr void
+offset_pos(Collection const& collection, Position& position, iword offset) {
+   collection.offset_pos(position, offset);
+}
+
+template <typename Collection, typename Position>
+[[nodiscard]]
+constexpr auto
+distance(Collection const& collection, Position const& from, Position const& to)
+   -> iword {
+   return collection.distance(from, to);
+}
+
+namespace detail {
 template <typename T>
-concept has_position_protocol = requires(T const& collection) {
-                                   collection.begin_pos();
-                                   collection.end_pos();
-                                };
-}  // namespace cat::detail
+concept is_contiguous_position_model =
+   is_base_of<contiguous_position_interface<remove_cv<T>>, remove_cv<T>>;
 
-namespace cat {
-
+// Private hooks on the contiguous default are not `requires`able as members,
+// so that model is detected by base-class. All other collections still use
+// the public `begin_pos` / `end_pos` member spellings here.
 template <typename T>
-   requires(detail::has_position_protocol<T>)
-using position_type = remove_cvref<decltype(declval<T const&>().begin_pos())>;
+concept has_position_protocol =
+   is_contiguous_position_model<T> || (requires(T const& c) {
+                                          c.begin_pos();
+                                          c.end_pos();
+                                       });
+}  // namespace detail
 
-// `is_collection<T>` is satisfied when `T` exposes the four basis
-// operations required of a collection: `begin_pos`, `end_pos`,
-// `inc_pos`, and `read_at_unchecked`. The first three take the collection
-// by const reference. Only the read may need a non-const handle.
+template <detail::has_position_protocol T>
+using position_type = remove_cvref<decltype(begin_pos(declval<T const&>()))>;
+
+// `is_collection` holds when the Flux CPOs `inc_pos` and
+// `read_at_unchecked` (non-const collection on the first argument for the
+// read) exist for a model.
 template <typename T>
 concept is_collection =
    detail::has_position_protocol<T> && is_position<position_type<T>>
-   && requires(T& collection, position_type<T>& position,
-               position_type<T> const& read_position) {
-         collection.inc_pos(position);
-         collection.read_at_unchecked(read_position);
+   && requires(T& c, position_type<T>& p, position_type<T> const& r) {
+         inc_pos(c, p);
+         read_at_unchecked(c, r);
       };
 
-// `is_bidirectional_collection` adds `dec_pos(p)`: step a mutable
-// position one slot back. With this, the reverse iteration adapter can
-// be auto-derived from the collection.
+// `is_bidirectional_collection` adds `dec_pos` for reverse walks.
 template <typename T>
 concept is_bidirectional_collection =
    is_collection<T>
-   && requires(T const& collection, position_type<T>& position) {
-         collection.dec_pos(position);
-      };
+   && requires(T const& c, position_type<T>& p) { dec_pos(c, p); };
 
-// `is_random_access_collection` adds O(1) advance and distance over
-// positions. `inc_pos(position, count)` advances `position` by `count` (count
-// may be negative where the position type allows), and `distance(left, right)`
-// returns the signed offset from `left` to `right`.
+// `is_random_access_collection` adds in-place `offset_pos` and `distance` CPOs
+// (satisfied by members on the default contiguous adapters).
 template <typename T>
 concept is_random_access_collection =
    is_bidirectional_collection<T>
-   && requires(T const& collection, position_type<T>& position,
-               position_type<T> const& left, position_type<T> const& right,
-               iword count) {
-         collection.inc_pos(position, count);
-         { collection.distance(left, right) } -> is_convertible<iword>;
+   && requires(T const& c, position_type<T>& p, position_type<T> const& a,
+               position_type<T> const& b, iword offset) {
+         offset_pos(c, p, offset);
+         { distance(c, a, b) } -> is_convertible<iword>;
       };
 
 // `collection_iteration_context<T>` is the default iterable adapter for
@@ -180,8 +232,8 @@ class collection_iteration_context {
    position_type<T> m_stop;
 
  public:
-   using element_type = decltype(declval<T&>().read_at_unchecked(
-      declval<position_type<T> const&>()));
+   using element_type = decltype(read_at_unchecked(
+      declval<T&>(), declval<position_type<T> const&>()));
 
    constexpr collection_iteration_context(T* p_collection,
                                           position_type<T> begin_position,
@@ -205,9 +257,9 @@ class collection_iteration_context {
    run_while(LoopBody&& loop_body) -> iteration_result {
       while (m_position < m_stop) {
          auto const position_before_advance = m_position;
-         m_p_collection->inc_pos(m_position);
+         inc_pos(*m_p_collection, m_position);
          if (!loop_body(
-                m_p_collection->read_at_unchecked(position_before_advance))) {
+                read_at_unchecked(*m_p_collection, position_before_advance))) {
             return iteration_result::incomplete;
          }
       }
@@ -218,8 +270,8 @@ class collection_iteration_context {
 // `reverse_collection_iteration_context<T>` walks a bidirectional
 // collection backwards. The loop holds a position one past the next
 // element to read. Before each call to `read_at_unchecked` it steps
-// `dec_pos` so the position lands on the element being read. This is
-// why the context only requires `dec_pos` from `T`. It never needs to
+// `.dec_pos(p)` so the position lands on the element being read. This is
+// why the context only requires `.dec_pos(p)` from `T`. It never needs to
 // step "before begin".
 template <typename T>
 class reverse_collection_iteration_context {
@@ -228,8 +280,8 @@ class reverse_collection_iteration_context {
    position_type<T> m_stop;
 
  public:
-   using element_type = decltype(declval<T&>().read_at_unchecked(
-      declval<position_type<T> const&>()));
+   using element_type = decltype(read_at_unchecked(
+      declval<T&>(), declval<position_type<T> const&>()));
 
    constexpr reverse_collection_iteration_context(
       T* p_collection, position_type<T> begin_position,
@@ -254,8 +306,8 @@ class reverse_collection_iteration_context {
    constexpr auto
    run_while(LoopBody&& loop_body) -> iteration_result {
       while (m_stop < m_position) {
-         m_p_collection->dec_pos(m_position);
-         if (!loop_body(m_p_collection->read_at_unchecked(m_position))) {
+         dec_pos(*m_p_collection, m_position);
+         if (!loop_body(read_at_unchecked(*m_p_collection, m_position))) {
             return iteration_result::incomplete;
          }
       }
@@ -309,7 +361,7 @@ struct iterate_fn {
    constexpr auto
    operator()(T& source) const -> collection_iteration_context<T> {
       return collection_iteration_context<T>{
-         __builtin_addressof(source), source.begin_pos(), source.end_pos()};
+         __builtin_addressof(source), begin_pos(source), end_pos(source)};
    }
 };
 
@@ -345,7 +397,7 @@ struct reverse_iterate_fn {
    constexpr auto
    operator()(T& source) const -> reverse_collection_iteration_context<T> {
       return reverse_collection_iteration_context<T>{
-         __builtin_addressof(source), source.end_pos(), source.begin_pos()};
+         __builtin_addressof(source), end_pos(source), begin_pos(source)};
    }
 };
 }  // namespace cat::detail

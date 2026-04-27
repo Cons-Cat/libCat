@@ -20,9 +20,7 @@ fold(Iterable&& source, Callback callback, Init init = Init{}) -> Init {
    return init;
 }
 
-}  // namespace cat
-
-namespace cat::detail {
+namespace detail {
 template <typename Callback, typename Init>
 struct fold_impl {
    Callback callback;
@@ -34,9 +32,7 @@ struct fold_impl {
       return fold(fwd(incoming), move(self.callback), move(self.init));
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // Left-fold with a callback and initial value. This is a terminal algorithm.
 template <typename Callback, typename Init>

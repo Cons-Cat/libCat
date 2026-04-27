@@ -21,9 +21,7 @@ for_each(Iterable&& source, Callback callback) -> Callback {
    return callback;
 }
 
-}  // namespace cat
-
-namespace cat::detail {
+namespace detail {
 template <typename Callback>
 struct for_each_impl {
    Callback callback;
@@ -34,9 +32,7 @@ struct for_each_impl {
       return for_each(fwd(incoming), move(self.callback));
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // Invoke a callback on every element. This is a terminal algorithm.
 template <typename Callback>

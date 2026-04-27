@@ -24,8 +24,7 @@
 // Iterator `concept`s mirror C++20 iterator concepts. Names use
 // `is_<role>_stepanov_iterator` for iterator refinements, parallel to
 // `is_stepanov_iterable` / `is_stepanov_bidi_iterable` for containers.
-// Several
-// refinement hierarchies apply:
+// Several refinement hierarchies exist:
 //
 // Incrementability refinements:
 //    `cat::is_stepanov_weakly_incrementable`

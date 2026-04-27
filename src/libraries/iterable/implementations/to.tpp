@@ -4,7 +4,8 @@
 
 #include <cat/iterable>
 
-namespace cat::detail {
+namespace cat {
+namespace detail {
 // Drain into a default-constructed container using `push_back`. Composing this
 // with `as_rvalue` is a basic idiom to move the values out from a pipeline into
 // a container.
@@ -25,9 +26,7 @@ struct to_impl {
       return result;
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // Drain into a default-constructed container using `push_back`. This is a
 // terminal algorithm.

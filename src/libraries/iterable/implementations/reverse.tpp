@@ -4,7 +4,8 @@
 
 #include <cat/iterable>
 
-namespace cat::detail {
+namespace cat {
+namespace detail {
 template <typename Base>
 struct reverse_view_impl : iterable_interface {
    Base m_base;
@@ -34,9 +35,7 @@ struct reverse_impl : view_interface<reverse_impl> {
       return reverse_view<Iterable>{{}, fwd(incoming)};
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // `reverse()` returns a closure consumable by `data | reverse()`. The
 // underlying iterable must model `is_reverse_iterable`.

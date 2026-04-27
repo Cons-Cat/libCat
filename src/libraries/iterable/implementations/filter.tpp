@@ -4,7 +4,8 @@
 
 #include <cat/iterable>
 
-namespace cat::detail {
+namespace cat {
+namespace detail {
 template <is_iterable Base, is_predicate<iterable_element_type<Base>> Callback>
 struct filter_view_impl : iterable_interface {
    Base m_base;
@@ -89,9 +90,7 @@ struct filter_impl : view_interface<filter_impl<Callback>> {
       return filter_view<Iterable, Callback>{{}, fwd(incoming), move(callback)};
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // Lazy predicate filter. Iterable-only (not a multipass collection).
 template <typename Callback>

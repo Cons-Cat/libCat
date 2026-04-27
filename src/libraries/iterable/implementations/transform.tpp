@@ -4,7 +4,8 @@
 
 #include <cat/iterable>
 
-namespace cat::detail {
+namespace cat {
+namespace detail {
 template <typename Base, typename Callback>
 struct transform_view_impl : iterable_interface {
    Base m_base;
@@ -87,9 +88,7 @@ struct transform_impl : view_interface<transform_impl<Callback>> {
          {}, fwd(incoming), move(callback)};
    }
 };
-}  // namespace cat::detail
-
-namespace cat {
+}  // namespace detail
 
 // Lazy element-wise transform.
 template <typename Callback>

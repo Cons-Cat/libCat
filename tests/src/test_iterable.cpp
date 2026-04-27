@@ -903,11 +903,13 @@ test(flux_internal_iterate_chain) {
       {1, 2, 3, 4, 5, 6}
    };
    int total = 0;
-   (arr | cat::filter([](int x) -> bool {
-       return (x % 2) == 0;
-    }) | cat::transform([](int x) -> int {
-       return x * 10;
-    }))
+   (arr
+    | cat::filter([](int x) -> bool {
+         return (x % 2) == 0;
+      })
+    | cat::transform([](int x) -> int {
+         return x * 10;
+      }))
       .for_each([&total](int x) {
          total += x;
       });
@@ -1025,7 +1027,7 @@ test(flux_p3725_filter_reverse_as_rvalue_to) {
 //
 // Jonathan Boccara coined "The Terrible Problem Of Incrementing A Smart
 // Iterator" on Fluent C++:
-//   https://www.fluentcpp.com/2019/02/12/the-terrible-problem-of-incrementing-a-smart-iterator/
+// https://www.fluentcpp.com/2019/02/12/the-terrible-problem-of-incrementing-a-smart-iterator/
 //
 // In range-v3 / std::views, the chain
 //   numbers | transform(times2) | filter(isMultipleOf4)
