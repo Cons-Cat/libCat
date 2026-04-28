@@ -90,6 +90,10 @@ runs:
       shell: bash
       run: echo "/usr/lib/llvm-23/bin" >> "${GITHUB_PATH}"
 
+    - name: Register Clang warning matcher
+      shell: bash
+      run: echo "::add-matcher::${{ github.workspace }}/.github/problem-matchers/clang.json"
+
     - name: Install cmake and ninja-build
       # Tiny standard-archive packages, not worth caching. The
       # `apt-get update` here covers the cache-hit path.

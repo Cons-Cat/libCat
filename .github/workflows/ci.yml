@@ -27,6 +27,17 @@ jobs:
         run: |
           set -eu
 
+          flags=$(awk -F: '/^flags/ { gsub(/^ +/, "", $2); print $2; exit }' /proc/cpuinfo)
+          avx512_flags=$(printf '%s\n' ${flags} \
+            | grep -Ex 'avx512.*' \
+            | sort -u \
+            | tr '\n' ' ' || true)
+          if [ -n "${avx512_flags}" ]; then
+            printf 'AVX-512: **yes** (%s)\n' "${avx512_flags}"
+          else
+            echo 'AVX-512: **no**'
+          fi
+
           echo "::group::OS / kernel"
           if [ -r /etc/os-release ]; then
             . /etc/os-release
@@ -44,7 +55,6 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::ISA extensions (/proc/cpuinfo flags)"
-          flags=$(awk -F: '/^flags/ { gsub(/^ +/, "", $2); print $2; exit }' /proc/cpuinfo)
           show() {
             label="$1"; pat="$2"; matches=
             matches=$(printf '%s\n' ${flags} \
@@ -69,17 +79,20 @@ jobs:
           echo "::endgroup::"
 
   lint:
-    # Lightweight static checks on the source tree. No toolchain
-    # needed; runs in parallel with the heavier compile / test jobs to
-    # gate invariants that don't require a build.
+    # Lightweight static checks on the source tree. Runs in parallel
+    # with the heavier compile / test jobs to gate invariants that don't
+    # require compiling.
     runs-on: ubuntu-24.04
+    env:
+      CAT_LINT_BUILD_DIR: ${{ runner.temp }}/cat-build-lint
     steps:
       - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-toolchain
 
       - name: Verify unique basenames under src/
         # Every file under `src/` must have a unique name. This makes searching
         # the codebase easier and is important for the `cat-intermediaries` target.
-        continue-on-error: true
         run: |
           set -eu
           dups=$(find src -type f \
@@ -93,13 +106,39 @@ jobs:
               printf '\n  %s:\n' "${name}"
               find src -type f -name "${name}" -printf '    %p\n'
             done <<< "${dups}"
-            exit 1
+            echo "::warning title=Duplicate source basenames::Duplicate basenames under src. See this step log for the full file list."
           fi
           count=$(find src -type f \
             ! -name 'CMakeLists.txt' \
             ! -name '*.ld' \
             | wc -l)
           printf 'OK: %d files under src/ have unique basenames\n' "${count}"
+
+      - name: Configure CMake lint targets
+        run: |
+          cmake -S . -B "${CAT_LINT_BUILD_DIR}" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCAT_BUILD_ALL_EXAMPLES=OFF \
+            -DCAT_PCH=OFF
+
+      - name: cat-format-check
+        # Advisory. Emits a warning annotation instead of gating the merge. Fix
+        # locally with
+        # `cmake --build "${CAT_LINT_BUILD_DIR}" --target cat-format`.
+        run: |
+          if ! cmake --build "${CAT_LINT_BUILD_DIR}" --target cat-format-check
+          then
+            echo "::warning title=cat-format-check::Formatting drift detected! Run the `cat-format` target to fix it."
+          fi
+
+      - name: cat-restyle-comments-check
+        # Same advisory policy as `cat-format-check` above.
+        run: |
+          if ! cmake --build "${CAT_LINT_BUILD_DIR}" --target cat-restyle-comments-check
+          then
+            echo "::warning title=cat-restyle-comments-check::Comment styling drift detected! Run the `cat-restyle-comments` target to fix it."
+          fi
 
   debug:
     # Debug build with sanitizers.
@@ -151,8 +190,7 @@ jobs:
           echo "OK: build-debug/.gdbinit"
 
   release:
-    # Release + format and comment restyle checks. `cat-format-check` and
-    # `cat-restyle-comments-check` ride here because they reuse `build-release`.
+    # Release build and tests.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -176,18 +214,6 @@ jobs:
             exit 1
           fi
           echo "OK: build-release/.gdbinit"
-
-      - name: cat-format-check
-        # Advisory. `continue-on-error` keeps formatting drift from
-        # gating the merge. Fix locally with
-        # `cmake --build build-release --target cat-format`.
-        continue-on-error: true
-        run: cmake --build build-release --target cat-format-check
-
-      - name: cat-restyle-comments-check
-        # Same advisory policy as `cat-format-check` above.
-        continue-on-error: true
-        run: cmake --build build-release --target cat-restyle-comments-check
 
   shared:
     # End-to-end `libcat.so` flow: build, install, then have a
