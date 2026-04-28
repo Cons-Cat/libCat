@@ -9,31 +9,31 @@
 // iterators with `cat::proxy_stepanov_iterator_interface`.
 //
 // libCat is migrating to the Flux v2 sequence model under `cat/iterable`. The
-// Stepanov begin/end machinery is marked so the transition is visible at every
-// call site (iterator types are `cat::*_stepanov_iterator` and matching
+// Stepanov `begin`/`end` machinery is marked so the transition is visible at.
+// every site (iterator types are `cat::*_stepanov_iterator` and matching
 // concepts are `cat::is_*_stepanov_iterator` where the role prefix mirrors
-// C++20; range shape in `<cat/container>` is `cat::is_stepanov_container`). New
-// code should prefer `cat::is_iterable` / `cat::is_collection`.
+// C++20. Range shape in `<cat/container>` is `cat::is_stepanov_container`). New
+// code should prefer `cat::is_iterable`/`cat::is_collection`.
 //
-// We also provide helpers for generating reverse and const iterators, as well
+// We also provide helpers for generating reverse and `const` iterators, as well
 // as simple adaptors for iterating over ranges like `cat::as_reverse_stepanov`
 // and `cat::as_const_reverse_stepanov`. With this model, problems such as P2836
 // disappear.
 //
 // Iterator `concept`s mirror C++20 iterator concepts. Names use
 // `is_<role>_stepanov_iterator` for iterator refinements, parallel to
-// `is_stepanov_iterable` / `is_stepanov_bidi_iterable` for containers. Several
+// `is_stepanov_iterable`/`is_stepanov_bidi_iterable` for containers. Several
 // refinement hierarchies exist:
 //
 // Incrementability refinements:
 //    `cat::is_stepanov_weakly_incrementable`
 //    `cat::is_stepanov_incrementable`
 //
-// Shared floor for iterators with `*` and `++`:
+// Shared floor for iterators with * and ++:
 //    `cat::is_input_or_output_stepanov_iterator`
 //
-// Readable traversal refinements (`is_forward_stepanov_iterator` also
-// requires `is_stepanov_incrementable`):
+// Readable traversal refinements (`is_forward_stepanov_iterator` also requires
+// `is_stepanov_incrementable`):
 //    `cat::is_stepanov_indirectly_readable`
 //    `cat::is_input_stepanov_iterator`
 //    `cat::is_forward_stepanov_iterator`
@@ -46,7 +46,7 @@
 //    `cat::is_output_stepanov_iterator`
 //
 // Raw pointers can model random access or contiguous iterators without forward
-// or bidirectional `stepanov_iterator_interface` tags
+// or bidirectional `stepanov_iterator_interface` tags.
 //
 // Iterable containers:
 //    `cat::is_stepanov_iterable`
@@ -217,8 +217,8 @@ using iter_value_t = typename detail::iter_value_trait<I>::type;
 // iterator category.
 //
 //   Output (`output_iterator_tag`): supply `.dereference()` for * (and writes
-// through * where applicable), plus either `.increment()` or `.advance(one)`
-// so ++ works
+// through * where applicable), plus either `.increment()` or `.advance(one)` so
+// ++ works.
 //
 //   Forward / input-style (often `forward_iterator_tag` or `input_iterator_tag`
 // here): `.increment()` or `.advance(one)` for ++, and either
@@ -226,11 +226,11 @@ using iter_value_t = typename detail::iter_value_trait<I>::type;
 //
 //   Bidirectional (`bidirectional_iterator_tag`): add `.decrement()` unless you
 // already provide random-access hooks, then `has_bidirectional` follows from
-// `advance` + `distance_to`
+// `advance` + `distance_to`.
 //
 //   Random access (`random_access_iterator_tag`): `.advance(offset)` using the
 // inferred `difference_type` and `.distance_to(other)` so -, ordering,
-// +/-/*/[], and == via zero distance compose
+// +/-/*/[], and == via zero distance compose.
 //
 // These tags are specified rather than inferred because that could
 // over-constrain implementations. For instance, a linked list iterator might
@@ -604,7 +604,7 @@ template <typename T>
 concept is_input_or_output_stepanov_iterator =
    requires(T it) { *it; } && is_stepanov_weakly_incrementable<T>;
 
-// [iterator.concept.readable]
+// [`iterator.concept.readable`].
 template <typename In>
 concept is_stepanov_indirectly_readable =
    requires(remove_cvref<In> const in) {
@@ -612,7 +612,7 @@ concept is_stepanov_indirectly_readable =
       { *in };
    };
 
-// [iterator.concept.input]
+// [`iterator.concept.input`].
 template <typename T>
 concept is_input_stepanov_iterator =
    is_input_or_output_stepanov_iterator<T> && is_stepanov_indirectly_readable<T>
@@ -660,7 +660,7 @@ concept iter_is_pure_input_interface_iterator =
 
 }  // namespace detail
 
-// [iterator.concept.forward]
+// [`iterator.concept.forward`].
 template <typename T>
 concept is_forward_stepanov_iterator =
    is_input_stepanov_iterator<T> && is_stepanov_incrementable<T>

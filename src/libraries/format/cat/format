@@ -13,7 +13,7 @@
 
 namespace cat {
 
-// TODO: Support formatting 1 and 2 byte integers.
+// TODO: Support formatting 1 and 2-byte integers.
 // TODO: Functions in this header should return owning-`str_span`, not
 // `str_view`.
 
@@ -27,7 +27,7 @@ to_chars(is_allocator auto& allocator, arithmetic<T, policy> numeral)
 }
 
 // TODO: Zero-allocation `str_inplace` version?
-// Dynamically allocate an is_integral value converted to `string`.
+// Dynamically allocate an `is_integral` value converted to `string`.
 template <is_integral T>
 [[nodiscard]]
 auto
@@ -46,7 +46,7 @@ to_chars(is_allocator auto& allocator, T integer) -> maybe<str_view> {
    } else if constexpr (is_same<T, uint8::raw_type>) {
       detail::u64toa_jeaiii(integer, p_string);
    } else {
-      // TODO: Format 1 and 2 byte integers.
+      // TODO: Format 1 and 2-byte integers.
       __builtin_unreachable();
    }
 
@@ -95,7 +95,7 @@ make_const_string(str_inplace<length> const& string) {
 }
 }  // namespace detail
 
-// Convert a `constexpr` is_integral to `str_inplace`.
+// Convert a `constexpr` `is_integral` to `str_inplace`.
 template <auto value>
    requires(is_integral<decltype(value)>)
 [[nodiscard]]
@@ -164,7 +164,7 @@ to_string_at(arithmetic<T> value, span<char> output_buffer
    return str_view(output_buffer.data(), length);
 }
 
-// Formatting
+// Formatting.
 enum class format_errors : unsigned char {
    out_of_memory,
    cannot_format_argument,
@@ -500,7 +500,7 @@ struct format_buffer_iterator<Allocator, Outputter>
    Allocator& allocator;
    Outputter output_iterator;
 
-   // To optimize common usage, `256` bytes of storage is reserved on stack.
+   // To optimize common usage, 256 bytes of storage is reserved on stack.
    char storage[256];
 
    format_buffer_iterator(Allocator& in_allocator [[clang::lifetimebound]]
@@ -523,7 +523,7 @@ struct format_buffer_iterator<Allocator, Outputter>
    // of expanding its own memory, this buffer is flushed itself to make more
    // room.
    auto
-   // Without `override`, clang-20 will attempt to link against the pure virtual
+   // Without `override`, Clang 20 will attempt to link against the pure virtual
    // `grow()` function even with the `final` specifier.
    grow(uword) -> maybe<void> override final {  // NOLINT
       // `size()` is derived from `format_buffer_base`.
@@ -575,7 +575,7 @@ class format_parse_context {
    // These members must be at the top so they can be `decltype`'d.
    str_view const m_format;
 
-   // Iff `argument_index` is less than `0`, the format string has manually
+   // Iff `argument_index` is less than 0, the format string has manually
    // indexed an argument. Otherwise, all arguments are automatically indexed.
    iword m_argument_index = 0;
 
@@ -659,7 +659,6 @@ struct format_handler {
        : allocator(in_allocator),
          output_iterator(iterator),
          format(in_format),
-         // p_tempory_buffer(iterator.iterable.data()),
          arguments(move(in_args)) {
    }
 };
@@ -668,8 +667,6 @@ template <is_allocator Allocator>
 constexpr auto
 parse_format_string(str_view const format, format_handler<Allocator>&& handler)
    -> scaredy_format<void> {
-   // char const* p_first = format.data(); char const* p_last = format.data() +
-   // format.size();
    str_view remainder = format;
    idx current_argument;
 
@@ -689,7 +686,7 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
          assert(to_close_brace == -1);
       }
 
-      // This is true iff both are `-1`, or in other words, neither braces were
+      // This is true iff both are -1, or in other words, neither braces were
       // found. This is the escape condition.
       if (to_open_brace == to_close_brace) {
          for (char const& character : remainder) {

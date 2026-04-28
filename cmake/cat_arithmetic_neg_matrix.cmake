@@ -1,4 +1,5 @@
-# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+# This file is flagrantly "vibe-coded". It may not be up to the standards of
+# most libCat code.
 
 # Exercises the full ill-formed `cat::[u]int{1,2,4,8}` cross-width and `int` to
 # `float{2,4,8}` and `iword` on `int4` grids that the unit `can_*_assign` story
@@ -10,7 +11,8 @@ set(_m_hdr [[#include <cat/arithmetic>
 #include "arithmetic_neg_deconst.hpp"
 ]])
 
-# `uintA` = `deconst(intB)` and `intA` = `deconst(uintB)` (skip pairs that are well-formed)
+# `uintA` = `deconst(intB)` and `intA` = `deconst(uintB)` (skip pairs that are
+# well-formed).
 set(_cat_neg_ok_u_eq_i 1-2 1-4 1-8 2-4 2-8 4-8)
 set(_cat_neg_ok_i_eq_u 2-1 4-1 4-2 8-1 8-2 8-4)
 foreach(ua IN ITEMS 1 2 4 8)
@@ -40,7 +42,7 @@ foreach(ua IN ITEMS 1 2 4 8)
   endforeach()
 endforeach()
 
-# Implicit copy-init: narrow `intS` = wider `deconst(intL)` and same for `uint`
+# Implicit copy-init: narrow `intS` = wider `deconst(intL)` and same for `uint`.
 set(_cat_neg_narrow 1-2 1-4 1-8 2-4 2-8 4-8)
 foreach(_p IN LISTS _cat_neg_narrow)
   string(REPLACE "-" ";" _ij "${_p}")
@@ -64,7 +66,7 @@ endforeach()
 unset(s)
 unset(l)
 
-# Mixed unsigned / signed: every `deconst(intA)` to `uintB` is ill-formed
+# Mixed unsigned / signed: every `deconst(intA)` to `uintB` is ill-formed.
 foreach(ia IN ITEMS 1 2 4 8)
   foreach(ub IN ITEMS 1 2 4 8)
     string(CONFIGURE "icvt-impl-mix-int@ia@-to-uint@ub@" _mxn @ONLY)
@@ -79,7 +81,7 @@ endforeach()
 unset(ia)
 unset(ub)
 
-# `uintA` to `deconst(intB)` (skip well-formed)
+# `uintA` to `deconst(intB)` (skip well-formed).
 set(_cat_neg_ok_uitoi 2-1 4-1 4-2 8-1 8-2 8-4)
 foreach(ib IN ITEMS 1 2 4 8)
   foreach(ua IN ITEMS 1 2 4 8)
@@ -97,7 +99,7 @@ foreach(ib IN ITEMS 1 2 4 8)
   endforeach()
 endforeach()
 
-# `icvt` to `float2` / `float4` / `float8` (`int` RHS)
+# `icvt` to `float2`/`float4` / `float8` (`int` RHS).
 string(CONFIGURE
   "${_m_hdr}void t() { int v = cat_neg_probe::deconst_number(1);
   cat::float2 f = v; }"
@@ -116,7 +118,8 @@ _cat_neg_expect_illformed("icvt-impl-int-to-float8" "${_f8}")
 unset(ua)
 unset(ib)
 
-# Undefined compound ops that promote (see `!can_{plus,times,minus}_assign` grid)
+# Undefined compound ops that promote (see `!can_{plus,times,minus}_assign`
+# grid).
 set(_m_hdr2 [[#include <cat/arithmetic>
 #include "arithmetic_neg_deconst.hpp"
 ]])
@@ -164,7 +167,7 @@ endforeach()
 unset(s2)
 unset(l2)
 
-# `int4 -= iword` (`subtract_by` would widen)
+# `int4 -= iword` (`subtract_by` would widen).
 string(CONFIGURE
   "${_m_hdr2}void t() { cat::int4 a{}; cat::iword w(0);
   a -= cat_neg_probe::deconst_number(w); }"

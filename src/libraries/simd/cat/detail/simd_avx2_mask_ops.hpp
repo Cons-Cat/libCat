@@ -104,7 +104,7 @@ namespace cat::detail::simd_abi {
 // assembly references.
 
 // TODO: Swap the fallbacks below back to the commented `__builtin_stdc_*`
-// instrinsics once the Clang distribution at apt.llvm.org updates.
+// instrinsics once the Clang distribution at `apt.llvm.org` updates.
 
 template <typename T, typename Abi>
    requires(cat::is_same<Abi, x64::avx2_abi<T>>
@@ -113,7 +113,7 @@ struct mask_count_if_true<T, Abi> {
    [[nodiscard]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> idx {
-      // `popcount` on the movmsk lane-bit map
+      // `popcount` on the movmsk lane-bit map.
       __UINT32_TYPE__ const masked_logical_lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(mask);
       return idx{__builtin_popcountg(masked_logical_lane_bits)};
@@ -143,7 +143,7 @@ struct mask_find_last_if_true<T, Abi> {
    [[nodiscard]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> idx {
-      // Precondition: at least one true lane (lane-bit word is non-zero).
+      // At least one true lane (lane-bit word is non-zero).
       __UINT32_TYPE__ const masked_logical_lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(mask);
       // return __builtin_stdc_bit_width(masked_logical_lane_bits) - 1u;
@@ -158,7 +158,7 @@ struct mask_all_of<T, Abi> {
    [[nodiscard]]
    static constexpr auto
    invoke(simd_mask<T, Abi> mask) -> bool {
-      // Movmsk lane bits equal the active-lane mask iff every lane is true
+      // Movmsk lane bits equal the active-lane mask iff every lane is true.
       return ::x64::detail::avx2_abi_masked_lane_bits(mask)
              == ::x64::detail::avx2_movmsk_full_lane_mask(Abi::lanes);
    }

@@ -5,16 +5,16 @@
 // random-access ranges. `end` is `default_sentinel_t`.
 //
 // Semantics match the draft. There is no lane subobject inside the pack, so
-// `operator*` yields a lane prvalue (`dereference()` returns `value_type` by
+// `operator*` yields a lane pr-value (`dereference()` returns `value_type` by
 // value). `iterator_concept` is `random_access_iterator_tag`. `reference` and
 // `pointer` follow P2727 `proxy_stepanov_iterator_interface`. The `pointer`
 // type is `proxy_arrow_result<value_type>`, so `operator->` stores a lane value
 // per `proxy_arrow_result`.
 //
-// Preconditions from C++26. After `advance`, `lane_index()` lies in `[0,
-// pack_type::size()]`. `distance_to`, ordering, and iterator difference need
-// the same underlying pack pointer (`data_`). Violations use `cat::assert` in
-// debug builds
+// Preconditions from C++26. After `advance`, `lane_index()` lies in
+// `[0, pack_type::size()]`. `distance_to`, ordering, and iterator difference
+// need the same underlying pack pointer (`data_`). Violations use `cat::assert`
+// in debug builds.
 
 #include <cat/arithmetic>
 #include <cat/debug>

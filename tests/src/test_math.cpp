@@ -76,12 +76,17 @@ test(math_pow_integral) {
 
    cat::verify(cat::pow(2u, 2u) == 4u);
 
-   // cat::verify(cat::pow(2.f, 2) == 4.f); cat::verify(cat::pow(2.f, 1) ==
-   // 2.f); cat::verify(cat::pow(2.f, 0) == 1.f); cat::verify(cat::pow(8.f, -1)
+   // cat::verify(cat::pow(2.f, 2) == 4.f);
+   // cat::verify(cat::pow(2.f, 1) ==
+   // 2.f);
+   // cat::verify(cat::pow(2.f, 0) == 1.f);
+   // cat::verify(cat::pow(8.f, -1)
    // == 0.f);
 
-   // cat::verify(cat::pow(2, 2) == 4.); cat::verify(cat::pow(2, 1) == 2.);
-   // cat::verify(cat::pow(2, 0) == 1.); cat::verify(cat::pow(8, -1) == 0.);
+   // cat::verify(cat::pow(2, 2) == 4.);
+   // cat::verify(cat::pow(2, 1) == 2.);
+   // cat::verify(cat::pow(2, 0) == 1.);
+   // cat::verify(cat::pow(8, -1) == 0.);
 }
 
 test(math_round_to_multiple) {

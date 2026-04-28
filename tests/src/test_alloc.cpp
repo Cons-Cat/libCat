@@ -653,13 +653,13 @@ test(alloc) {
    p_realloc_1 = allocator.realloc(p_realloc_2).value();
    cat::verify(*p_realloc_1 == 2);
 
-   // Test `realloc_to`
+   // Test `realloc_to`.
    p_alloc = allocator.realloc_to(allocator, p_alloc).value();
 
-   // Test `xrealloc`
+   // Test `xrealloc`.
    p_alloc = allocator.xrealloc(p_alloc);
 
-   // Test `xrealloc_to`
+   // Test `xrealloc_to`.
    p_alloc = allocator.xrealloc_to(allocator, p_alloc);
 
    // Test `align_realloc`.
@@ -691,15 +691,15 @@ test(alloc) {
    p_alloc = allocator.realloc_multi(p_alloc, 5, 10u).value().data();
    allocator.free(p_alloc);
 
-   // Test `realloc_multi_to`
+   // Test `realloc_multi_to`.
    p_alloc =
       allocator.realloc_multi_to(allocator, p_alloc, 5, 10u).value().data();
 
-   // Test `xrealloc_multi`
+   // Test `xrealloc_multi`.
    auto xrealloc_multi_handle = allocator.xrealloc_multi(p_alloc, 5, 10u);
    p_alloc = xrealloc_multi_handle.data();
 
-   // Test `xrealloc_multi_to`
+   // Test `xrealloc_multi_to`.
    auto xrealloc_multi_to_handle =
       allocator.xrealloc_multi_to(allocator, p_alloc, 5, 10u);
    p_alloc = xrealloc_multi_to_handle.data();
@@ -748,13 +748,13 @@ test(alloc) {
    // Test `recalloc`.
    p_alloc = allocator.recalloc(p_alloc).value();
 
-   // Test `recalloc_to`
+   // Test `recalloc_to`.
    p_alloc = allocator.recalloc_to(allocator, p_alloc).value();
 
-   // Test `xrecalloc`
+   // Test `xrecalloc`.
    p_alloc = allocator.xrecalloc(p_alloc);
 
-   // Test `xrecalloc_to`
+   // Test `xrecalloc_to`.
    p_alloc = allocator.xrecalloc_to(allocator, p_alloc);
 
    // Test `align_recalloc`.
@@ -784,15 +784,15 @@ test(alloc) {
    // Test `recalloc_multi`.
    p_alloc = allocator.recalloc_multi(p_alloc, 5, 10u).value().data();
 
-   // Test `recalloc_multi_to`
+   // Test `recalloc_multi_to`.
    p_alloc =
       allocator.recalloc_multi_to(allocator, p_alloc, 5, 10u).value().data();
 
-   // Test `xrecalloc_multi`
+   // Test `xrecalloc_multi`.
    auto xrecalloc_multi_handle = allocator.xrecalloc_multi(p_alloc, 5, 10u);
    p_alloc = xrecalloc_multi_handle.data();
 
-   // Test `xrecalloc_multi_to`
+   // Test `xrecalloc_multi_to`.
    auto xrecalloc_multi_to_handle =
       allocator.xrecalloc_multi_to(allocator, p_alloc, 5, 10u);
    p_alloc = xrecalloc_multi_to_handle.data();
@@ -1276,13 +1276,13 @@ test(alloc) {
    p_alloc = allocator.alloc<int4>(0).value();
    p_alloc = allocator.resalloc(p_alloc).value().first();
 
-   // Test `resalloc_to`
+   // Test `resalloc_to`.
    p_alloc = allocator.resalloc_to(allocator, p_alloc).value().first();
 
-   // Test `xresalloc`
+   // Test `xresalloc`.
    p_alloc = allocator.xresalloc(p_alloc).first();
 
-   // Test `xresalloc_to`
+   // Test `xresalloc_to`.
    p_alloc = allocator.xresalloc_to(allocator, p_alloc).first();
 
    // Test `align_resalloc`.
@@ -1313,16 +1313,16 @@ test(alloc) {
    // Test `resalloc_multi`.
    p_alloc = allocator.resalloc_multi(p_alloc, 5, 10u).value().first().data();
 
-   // Test `resalloc_multi_to`
+   // Test `resalloc_multi_to`.
    p_alloc = allocator.resalloc_multi_to(allocator, p_alloc, 5, 10u)
                 .value()
                 .first()
                 .data();
 
-   // Test `xresalloc_multi`
+   // Test `xresalloc_multi`.
    p_alloc = allocator.xresalloc_multi(p_alloc, 5, 10u).first().data();
 
-   // Test `xresalloc_multi_to`
+   // Test `xresalloc_multi_to`.
    p_alloc =
       allocator.xresalloc_multi_to(allocator, p_alloc, 5, 10u).first().data();
 
@@ -1372,13 +1372,13 @@ test(alloc) {
    p_alloc = allocator.alloc<int4>(0).value();
    p_alloc = allocator.rescalloc(p_alloc).value().first();
 
-   // Test `rescalloc_to`
+   // Test `rescalloc_to`.
    p_alloc = allocator.rescalloc_to(allocator, p_alloc).value().first();
 
-   // Test `xrescalloc`
+   // Test `xrescalloc`.
    p_alloc = allocator.xrescalloc(p_alloc).first();
 
-   // Test `xrescalloc_to`
+   // Test `xrescalloc_to`.
    p_alloc = allocator.xrescalloc_to(allocator, p_alloc).first();
 
    // Test `align_rescalloc`.
@@ -1409,16 +1409,16 @@ test(alloc) {
    // Test `rescalloc_multi`.
    p_alloc = allocator.rescalloc_multi(p_alloc, 5, 10u).value().first().data();
 
-   // Test `rescalloc_multi_to`
+   // Test `rescalloc_multi_to`.
    p_alloc = allocator.rescalloc_multi_to(allocator, p_alloc, 5, 10u)
                 .value()
                 .first()
                 .data();
 
-   // Test `xrescalloc_multi`
+   // Test `xrescalloc_multi`.
    p_alloc = allocator.xrescalloc_multi(p_alloc, 5, 10u).first().data();
 
-   // Test `xrescalloc_multi_to`
+   // Test `xrescalloc_multi_to`.
    p_alloc =
       allocator.xrescalloc_multi_to(allocator, p_alloc, 5, 10u).first().data();
 

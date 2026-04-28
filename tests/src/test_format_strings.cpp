@@ -25,7 +25,8 @@ test(format_strings) {
    // `uint8`.
 
    // TOOD: These stopped working for some reason. constexpr cat::str_inplace
-   // const_int = cat::to_chars<136>(); constexpr cat::str_inplace
+   // const_int = cat::to_chars<136>();
+   // constexpr cat::str_inplace
    // const_negative = cat::to_chars<-1650>();
 
    // cat::verify(cat::compare_strings(const_int.data(), "136"));

@@ -1,7 +1,7 @@
 #include <cat/linux>
 
 extern "C" {
-// Supplied by `src/libcat.ld`
+// Supplied by `src/libcat.ld`.
 extern char __cat_tls_memory_size[];
 extern char __cat_tls_file_size[];
 extern char __cat_tls_alignment[];

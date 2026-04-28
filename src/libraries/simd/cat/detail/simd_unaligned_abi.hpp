@@ -9,10 +9,10 @@ template <typename AbiTag, typename ElementT>
 struct mask_lane;
 }
 
-// Unaligned view of a base `simd` ABI: same `size` and `lanes` as `BaseAbi` but
+// Unaligned view of a base `simd` ABI. Same `size` and `lanes` as `BaseAbi` but
 // `alignment` is 1 so `gnu::vector_size` storage is not over-aligned (mirrors
-// `x64::avx2_unaligned_abi` / `x64::sse2_unaligned_abi` before the generic
-// spelling)
+// `x64::avx2_unaligned_abi`/`x64::sse2_unaligned_abi` before the generic
+// spelling).
 template <typename BaseAbi>
 struct unaligned_abi {
    using scalar_type = typename BaseAbi::scalar_type;

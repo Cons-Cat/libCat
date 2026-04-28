@@ -54,7 +54,7 @@ relocate(input_iterator source_begin, input_iterator source_end,
    using destination_element = decltype(*destination_begin);
 
    // If the source and destination containers are contiguous, and they hold the
-   // same element type, and that type is trivially relocatable, copy them fast.
+   // same element type, and that type is trivially-relocatable, copy them fast.
    if constexpr (is_random_access_stepanov_iterator<input_iterator>
                  && is_random_access_stepanov_iterator<output_iterator>
                  && is_same<source_element, destination_element>

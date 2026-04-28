@@ -8,9 +8,9 @@
 
 namespace cat {
 
-// `memcpy`-class copy: the `[p_source, p_source+bytes)` and `[p_destination,
-// p_destination+bytes)` intervals must not overlap (including a single shared
-// byte). Violations are rejected by `assert`
+// `memcpy`-class copy. The `[p_source, p_source+bytes)` and
+// `[p_destination, p_destination+bytes)` intervals must not overlap (including
+// a single shared byte). Violations are rejected by `assert`.
 constexpr void
 copy_memory(void const* p_source, void* p_destination, idx bytes);
 
@@ -48,15 +48,15 @@ template <typename T>
 constexpr void
 copy_memory_backward(span<T const> source, span<T> destination);
 
-// `memmove`-class scalar copy: overlapping intervals are allowed. When they
+// `memmove`-class scalar copy. Overlapping intervals are allowed. When they
 // overlap, copies forward when `p_destination <= p_source` and backward
-// otherwise so every source byte is read before it can be overwritten
+// otherwise so every source byte is read before it can be overwritten.
 constexpr void
 copy_memory_backward_scalar(void const* p_source, void* p_destination,
                             idx bytes);
 
 // `memmove`-class copy for arbitrary length. Overlapping source and destination
-// intervals are allowed
+// intervals are allowed.
 constexpr void
 copy_memory_backward(void const* p_source, void* p_destination, idx bytes);
 
@@ -147,7 +147,7 @@ set_memory_detail(void* p_source, T value, idx const size) {
          vectorized_fill(constant<32_idx>{});
       }
 
-      // TODO: Support `fill()` on 16-byte x86-64 simd.
+      // TODO: Support `fill()` on 16-byte x86-64 SIMD.
       // // Fill out 16-byte portion.
       // if constexpr (native_abi<T>::size >= 16) {
       //     vectorized_fill(constant<16_idx>{});
@@ -251,7 +251,7 @@ constexpr void launder(FunctionPtrReturn (*)(Args...)) = delete;
 template <typename FunctionPtrReturn, typename... Args>
 constexpr void launder(FunctionPtrReturn (*)(Args..., ...)) = delete;
 
-// `launder` cannot be used on `void*`
+// `launder` cannot be used on `void*`.
 constexpr void
 launder(void*) = delete;
 constexpr void

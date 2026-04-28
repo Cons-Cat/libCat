@@ -9,10 +9,10 @@
 //
 // `mask_to_bitset` for x86 ABIs lives here so `<cat/simd>` does not pull
 // `<cat/bitset>` during its initial parse. Movmsk helpers live in
-// `simd_avx2_mask_ops.hpp` / `simd_sse2_movmsk.hpp`. That keeps `<cat/memory>`
-// -> `<cat/simd>` -> `implementations/simd_abi_*.tpp` from reaching
+// `simd_avx2_mask_ops.hpp`/`simd_sse2_movmsk.hpp`. That keeps `<cat/memory>` ->
+// `<cat/simd>` -> `implementations/simd_abi_*.tpp` from reaching
 // `<cat/container>` while outer `<cat/maybe>` has not finished defining
-// `nullopt` / `.to_idx()`.
+// `nullopt`/`.to_idx()`.
 // TODO: Rethink this when `.to_idx()` is removed.
 
 #include <cat/detail/simd_abi_hooks.hpp>

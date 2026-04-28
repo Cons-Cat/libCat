@@ -18,11 +18,12 @@
 //           structured bindings work on `span<T, N>` when `N !=
 //           dynamic_extent`.
 //
-// Comparison operators (`==` and `<=>`) follow Barry Revzin's `span_ext`
-// design. https://brevzin.github.io/c++/2020/03/30/span-comparisons/ Both
-// compare against any `is_random_access` range with a matching element type.
+// Comparison operators (== and <=>) follow Barry Revzin's `span_ext` design.
+// https://brevzin.github.io/c++/2020/03/30/span-comparisons/
+// Both compare against any `is_random_access` range with a matching element
+// type.
 // Three-way ordering uses a "synth three way" fallback so element types that
-// only model `<` (without a native `<=>`) still order lexicographically. The
+// only model < (without a native <=>) still order lexicographically. The
 // implementations live out-of-line in `implementations/span.tpp`.
 //
 // `cat::span` is `[[clang::trivial_abi]]` so it passes in registers, and
@@ -52,10 +53,10 @@ span
  public:
    static constexpr idx extent = fixed_extent;
 
-   // `element_type` is the only span-specific typedef; everything else
+   // `element_type` is the only span-specific typedef. Everything else
    // (`value_type`, `reference`, `const_reference`, `pointer`, `const_pointer`,
    // `size_type`, `difference_type`, and the iterator family) comes from
-   // `container_interface` / `stepanov_iterable_interface`.
+   // `container_interface`/`stepanov_iterable_interface`.
    using element_type = T;
 
    constexpr span() = default;
@@ -93,7 +94,7 @@ span
        : m_p_data(array), m_size(length) {
    }
 
-   // Implicitly convert a contiguous container into a span. Const-correctness
+   // Implicitly convert a contiguous container into a span. `const`-correctness
    // is managed by the deduction guides below.
    template <is_random_access U>
    constexpr span(U& container [[clang::lifetimebound]])
@@ -140,7 +141,7 @@ span
       return *this;
    }
 
-   // Implicitly convert a contiguous container into a span. Const-correctness
+   // Implicitly convert a contiguous container into a span. `const`-correctness
    // is managed by the deduction guides below.
    template <is_random_access U>
    auto
@@ -167,7 +168,7 @@ span
    data() -> T* {
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wreturn-stack-address` false positives on `get(memory).data()` when
-      // `get` returns a prvalue `span` while the pointer still names handle
+      // `get` returns a pr-value `span` while the pointer still names handle
       // storage.
       return m_p_data;
    }
@@ -178,7 +179,7 @@ span
    data() const -> T const* {
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wreturn-stack-address` false positives on `get(memory).data()` when
-      // `get` returns a prvalue `span` while the pointer still names handle
+      // `get` returns a pr-value `span` while the pointer still names handle
       // storage.
       return m_p_data;
    }
@@ -264,7 +265,7 @@ span
    }
 
    // Compile-time `subspan<offset, count>()`. Mirrors `std::span`'s template
-   // overload: `count` is a count of elements. When `count` is omitted on a
+   // overload. `count` is a count of elements. When `count` is omitted on a
    // fixed-extent span the result extent is `fixed_extent - offset`.
    template <idx offset, idx count = dynamic_extent>
       requires(fixed_extent == dynamic_extent
@@ -337,8 +338,8 @@ span(T const&) -> span<typename T::value_type const>;
 // Mirrors `std::as_bytes`. Uses `__builtin_bit_cast`, the same primitive
 // `cat::uintptr` and `cat::byte` use, in place of `reinterpret_cast`. Still not
 // `constexpr` because Clang forbids `bit_cast` to a pointer type during
-// constant evaluation, and even a constexpr `byte*` could not be read from in a
-// constant expression.
+// constant evaluation, and even a `constexpr` `byte*` could not be read from in
+// a constant expression.
 template <typename T, idx fixed_extent>
 [[nodiscard]]
 auto

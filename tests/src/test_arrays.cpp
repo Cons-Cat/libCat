@@ -46,7 +46,7 @@ test(array_structured_bindings) {
    cat::verify(mutable_array[0] == 7_i4 && ref_b == 5_i4 && ref_c == 6_i4);
 
    // Two-element `cat::get` + structured binding (shorter `cat::array` than
-   // above)
+   // above).
    {
       cat::array<int, 2u> pair_array{1, 2};
       cat::verify(cat::get<0>(pair_array) == 1);

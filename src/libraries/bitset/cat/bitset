@@ -284,7 +284,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
          }
       }
 
-      // `i` is signed so the prologue case can start at `-1` when the backing
+      // `i` is signed so the prologue case can start at -1 when the backing
       // store is a single element and the first byte was already scanned.
       // `to_idx` is only called after `i >= 0`, so the value fits `idx`.
       for (iword i = iword(storage_array_size.raw - 1u)
@@ -304,7 +304,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
 
    // TODO: `.countr_one()`.
 
-   // Clear every bit (all logical indices 0..bits_count) to 0.
+   // Clear every bit (all logical indices `0..bits_count`) to 0.
    constexpr auto
    clear() -> bitset& {
       for (auto& word : m_data) {
@@ -313,8 +313,8 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       return *this;
    }
 
-   // Set every bit (all logical indices 0..bits_count) to `value`. Padding bits
-   // are left at 0 so the class invariant holds.
+   // Set every bit (all logical indices `0..bits_count`) to `value`. Padding
+   // bits are left at 0 so the class invariant holds.
    constexpr auto
    fill(bit_value value = true) -> bitset& {
       if (value) {
@@ -382,7 +382,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    }
 
    // Bitwise rotate left by `shift` positions, across all `bits_count` bits.
-   // `shift` is reduced mod `bits_count`; negative shifts rotate the other way.
+   // `shift` is reduced mod `bits_count`. Negative shifts rotate the other way.
    [[nodiscard]]
    constexpr auto
    rotate_left(iword shift) const -> bitset {
@@ -418,7 +418,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    }
 
    // Bitwise rotate right by `shift` positions, across all `bits_count` bits.
-   // `shift` is reduced mod `bits_count`; negative shifts rotate the other way.
+   // `shift` is reduced mod `bits_count`. Negative shifts rotate the other way.
    [[nodiscard]]
    constexpr auto
    rotate_right(iword shift) const -> bitset {
@@ -527,7 +527,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    }
 
  private:
-   // Base pattern `0x55...55`: every other bit set starting at physical bit 0.
+   // Base pattern `0x55...55`. Every other bit set starting at physical bit 0.
    static constexpr array_type_element every_other_bit_pattern =
       array_type_element::max() / array_type_element(3u);
 
@@ -562,9 +562,9 @@ template <__SIZE_TYPE__ bits_count>
 bitset(char const (&bitstring)[bits_count]) -> bitset<idx(bits_count - 1u)>;
 
 template <idx bits_count, is_unsigned_integral... Arguments>
-// Ensure that all `types` are the same size. E.g., `uint4` and `unsigned` are
-// compatible here. requires((sizeof(Arguments...[0]) == sizeof(Arguments)) &&
-// ...)
+// Ensure that all `types` are the same size. e.g., `uint4` and unsigned are
+// compatible here.
+// requires((sizeof(Arguments...[0]) == sizeof(Arguments)) && ...)
 [[nodiscard]]
 constexpr auto
 make_bitset(Arguments... arguments) {

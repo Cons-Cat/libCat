@@ -28,8 +28,9 @@ template <typename... Types>
 struct tuple;
 
 namespace detail {
-// Return type for `tuple_element::operator[]() const &&` (see `get` for a const
-// rvalue: `T const &&` for value `T`, `T &&` for reference `T` elision)
+// Return type for `tuple_element::operator[]() const &&` (see `get` for a
+// `const` r-value. `T const &&` for value `T`, `T &&` for reference `T`
+// elision).
 template <typename T, bool = __is_reference(T)>
 struct subscript_const_rv_return;
 
@@ -45,12 +46,12 @@ struct subscript_const_rv_return<T, false> {
 
 // Because any type can only be derived from once, types must be binded to their
 // position in a paremeter pack to guarantee their uniqueness. This is required
-// to support `tuple`s with non-uniquely-typed elements. e.g. `tuple<int, int>`
+// to support `tuple`s with non-uniquely-typed elements. e.g. `tuple<int, int>`.
 template <idx index, typename T>
 struct tuple_element {
    using element = T;
 
-   // Implements comparison for tuples containing reference types
+   // Implements comparison for tuples containing reference types.
    constexpr auto
    operator<=>(tuple_element const&) const = default;
 
@@ -379,17 +380,17 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    }
 };
 
-// `tuple{...}` and CTAD: element types are exactly as the inits and guides
+// `tuple{...}` and CTAD. Element types are exactly as the inits and guides
 // provide. The `tuple<...>` value holds that type list, unlike `tie` (only
-// lvalue ref aliases to existing names), `make_tuple` (decay into owned
-// values), or `forward_as_tuple` (forwarding-reference `T&&` slot types)
+// l-value ref aliases to existing names), `make_tuple` (decay into owned
+// values), or `forward_as_tuple` (forwarding-reference `T&&` slot types).
 template <typename... Types>
 tuple(Types...) -> tuple<Types...>;
 
 template <typename Tuple>
 concept is_tuple = detail::is_tuple_impl<decay<Tuple>>::value;
 
-// Analogous to the proposed `std::aggr::get` in the P2141 paper
+// Analogous to the proposed `std::aggr::get` in the P2141 paper.
 template <idx index, typename Tuple>
    requires(is_tuple<Tuple>)
 [[nodiscard]]
@@ -398,10 +399,11 @@ get(Tuple&& tuple) -> decltype(auto) {
    return fwd(tuple).template get<index>();
 }
 
-// `tuple<types&...>`: only lvalue references, each element aliases an existing
+// `tuple<types&...>`. Only l-value references, each element aliases an
+// existing.
 // name so the tuple is a view for write-back, unlike `make_tuple` (owning
 // decays) or `forward_as_tuple` (forwarding `T&&` in the type) or `tuple{...}`
-// (general element types, not a ref-only view)
+// (general element types, not a ref-only view).
 template <typename... Arguments>
 [[nodiscard]]
 constexpr auto
@@ -409,11 +411,11 @@ tie(Arguments&... references) -> tuple<Arguments&...> {
    return {references...};
 }
 
-// `tuple<types&&...>`: parameter types are the forwarding ref pattern, the
-// tuple keeps a `T&&` per slot to pass the arguments on with the same lvalue,
-// xvalue, or prvalue kind. `tie` is lvalue references only, `make_tuple`
+// `tuple<types&&...>`. Parameter types are the forwarding ref pattern, the
+// tuple keeps a `T&&` per slot to pass the arguments on with the same l-value,
+// x-value, or pr-value kind. `tie` is l-value references only, `make_tuple`
 // decays, a plain `tuple{ a }` stores the type list from the inits, not a
-// forwarding ref bundle
+// forwarding ref bundle.
 template <typename... Arguments>
 [[nodiscard]]
 constexpr auto
@@ -421,10 +423,10 @@ forward_as_tuple(Arguments&&... arguments) -> tuple<Arguments&&...> {
    return {fwd(arguments)...};
 }
 
-// `tuple<decay<types>...>`: `decay` each element into owned by-value members,
-// the common “tuple of values” for heterogeneous sources, where `tie` and
+// `tuple<decay<types>...>`. `decay` each element into owned by-value members,
+// the common "tuple of values" for heterogeneous sources, where `tie` and
 // `forward_as_tuple` would keep ref kinds and `tuple{ a }` would use exact init
-// types and CTAD instead of this decay
+// types and CTAD instead of this decay.
 template <typename... Arguments>
 [[nodiscard]]
 constexpr auto

@@ -168,8 +168,8 @@ class StrInplacePrinter:
         try:
              self.m_size = val.type.template_argument(1)['raw']
         except:
-            # If the template parameter can't be found by GDB, parse
-            # out the last integer in the type signature instead.
+            # If the template parameter can't be found by GDB, parse out the last
+            # integer in the type signature instead.
             type_string = val.type.strip_typedefs().name
             regex = re.compile(r"[0-9]+", re.MULTILINE)
             self.m_size = int(regex.findall(type_string)[-1])
@@ -230,8 +230,8 @@ class BitsetPrinter:
         return
 
     def _fmt_int(self, bytes_index: int):
-        # Create a bitstring of `element_size_bits` length from the element
-        # at `bytes_index.
+        # Create a bitstring of `element_size_bits` length from the element at
+        # `bytes_index`.
         bitstring: str = format(int(self.m_data[bytes_index]['raw']),
                                 '0' + str(self.element_size_bits) + 'b')
 

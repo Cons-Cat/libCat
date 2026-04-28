@@ -183,9 +183,9 @@ concept is_rvalue_reference = __is_same(T, remove_reference<T>&&);
 
 template <typename From, typename To>
 using copy_const_from = conditional<is_const_ref<From>,
-                                    // From is const.
+                                    // From is `const`.
                                     add_const<To>,
-                                    // From is not const.
+                                    // From is not `const`.
                                     remove_const<To>>;
 
 template <typename From, typename To>
@@ -270,7 +270,7 @@ template <typename T>
 concept is_boolean_testable_detail = is_convertible<T, bool>;
 }
 
-// boolean_testable is adapted from the exposition-only concept
+// `boolean_testable` is adapted from the exposition-only concept
 // boolean-testable.
 template <typename T>
 concept is_boolean_testable = detail::is_boolean_testable_detail<T>
@@ -405,7 +405,7 @@ template <typename T>
 concept is_bool = detail::is_bool_detail<T>;
 
 template <typename T>
-// __is_arithmetic will short-circuit, but we need the others for
+// `__is_arithmetic` will short-circuit, but we need the others for
 // `cat::arithmetic`.
 concept is_arithmetic =
    __is_arithmetic(T) || is_integral<T> || is_floating_point<T>;
@@ -424,10 +424,10 @@ template <typename T, typename Storage, auto policy>
 inline constexpr bool is_signed_detail<arithmetic_ptr<T, Storage, policy>> =
    is_signed_detail<Storage>;
 
-// A signed type is less-than-comparable with a `bool` result. For example,
-// this holds true for `cat::arithmetic` and false for `cat::simd`. We use
+// A signed type is less-than-comparable with a `bool` result. For example, this
+// holds true for `cat::arithmetic` and false for `cat::simd`. We use
 // `decltype(a < b)` instead of:
-//    `requires { { a < b } -> is_convertible<bool>; }`
+//    requires { { a < b } -> is_convertible<bool>; }
 // because that operator lookup causes unbounded recursion on some libCat types.
 template <typename T>
    requires(is_convertible<signed char, T>
@@ -454,7 +454,7 @@ struct make_signed_trait {
    using type = T;
 };
 
-// Identity on the type `make_signed` / `make_signed_type`. Leave floats
+// Identity on the type `make_signed`/`make_signed_type`. Leave floats
 // unchanged.
 template <typename T>
    requires(is_floating_point<T>)
@@ -498,7 +498,7 @@ struct make_signed_trait<arithmetic<T, policy>> {
 };
 }  // namespace detail
 
-// `make_signed_type` maps unsigned integers to their signed width; for
+// `make_signed_type` maps unsigned integers to their signed width. For
 // floating-point types it is the identity (the type is unchanged).
 template <is_arithmetic T>
 using make_signed_type =
@@ -958,9 +958,9 @@ concept is_narrow_convertible = requires() { U({declval<T>()}); };
 //
 // template <> constexpr bool is_trivially_relocatable<MyClass> = true;
 //
-// Trivially relocatable types can enable algorithms to make optimizations, such
+// Trivially-relocatable types can enable algorithms to make optimizations, such
 // as relocating objects with `cat::copy_memory()` instead of `cat::move()`. By
-// default, implicit-lifetime types are trivially relocatable.
+// default, implicit-lifetime types are trivially-relocatable.
 template <typename T>
 inline constexpr bool is_trivially_relocatable = is_implicit_lifetime<T>;
 
@@ -1052,7 +1052,7 @@ concept is_reference_wrapper =
 
 }  // namespace cat
 
-// clang-format 12 sorts `common_reference` before `common_type` for some
+// `clang-format` 12 sorts `common_reference` before `common_type` for some
 // reason.
 // clang-format off
 #include "implementations/common_reference.tpp"

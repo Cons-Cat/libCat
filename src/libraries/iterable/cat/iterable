@@ -50,9 +50,9 @@
 // Pipelines end in a "terminal", which eagerly evaluates.
 //
 // Views take ownership of their base by value. An r-value argument is moved
-// into its view. A trivially-copyable lvalue is copied, but
-// non-trivially-copyable lvalues are rejected. They must be passed through
-// `cat::ref` or `cat::cref` explicitly to opt in to non-owning aliasing. This
+// into its view. A trivially-copyable l-value is copied, but
+// non-trivially-copyable l-values are rejected. They must be passed through
+// `cat::ref` or `cat::cref` explicitly to opt-in to non-owning aliasing. This
 // makes accidental dangling references against temporaries impossible.
 //
 // `is_collection` refines into a small hierarchy:
@@ -178,9 +178,9 @@ template <typename T>
 concept is_contiguous_position_model =
    is_base_of<contiguous_position_interface<remove_cv<T>>, remove_cv<T>>;
 
-// Private hooks on the contiguous default are not `requires`able as members, so
-// that model is detected by base-class. All other collections still use the
-// public `begin_pos` / `end_pos` member spellings here.
+// Private hooks on the contiguous default are not `requires` able as members,
+// so that model is detected by base-class. All other collections still use the
+// public `begin_pos`/`end_pos` member spellings here.
 template <typename T>
 concept has_position_protocol =
    is_contiguous_position_model<T> || (requires(T const& c) {
@@ -193,7 +193,8 @@ template <detail::has_position_protocol T>
 using position_type = remove_cvref<decltype(begin_pos(declval<T const&>()))>;
 
 // `is_collection` holds when the Flux CPOs `inc_pos` and `read_at_unchecked`
-// (non-const collection on the first argument for the read) exist for a model.
+// (non-`const` collection on the first argument for the read) exist for a
+// model.
 template <typename T>
 concept is_collection =
    detail::has_position_protocol<T> && is_position<position_type<T>>
@@ -220,7 +221,7 @@ concept is_random_access_collection =
       };
 
 // `collection_iteration_context<T>` is the default iterable adapter for any
-// collection: walk positions from `begin_pos` to `end_pos` and read through
+// collection. Walk positions from `begin_pos` to `end_pos` and read through
 // `read_at_unchecked`. It is non-copyable and non-movable, so it cannot be
 // hoisted out of its parent's scope.
 template <typename T>
@@ -334,7 +335,7 @@ struct iterate_fn {
       return (*this)(borrow.get());
    }
 
-   // Forward this call through a const borrow from `reference_wrapper`.
+   // Forward this call through a `const` borrow from `reference_wrapper`.
    template <typename T>
    constexpr auto
    operator()(::cat::reference_wrapper<T> const& borrow) const
@@ -370,7 +371,7 @@ struct reverse_iterate_fn {
       return (*this)(borrow.get());
    }
 
-   // Forward this call through a const borrow from `reference_wrapper`.
+   // Forward this call through a `const` borrow from `reference_wrapper`.
    template <typename T>
    constexpr auto
    operator()(::cat::reference_wrapper<T> const& borrow) const
@@ -417,7 +418,7 @@ concept is_iterable = requires(T& t) { iterate(t); };
 
 // `is_reverse_iterable<T>` holds when `cat::reverse_iterate(t)` is a valid
 // call. Every bidirectional collection satisfies it for free via the
-// auto-derived adapter, and any iterable can opt in by writing a member
+// auto-derived adapter, and any iterable can opt-in by writing a member
 // `.reverse_iterate()`.
 template <typename T>
 concept is_reverse_iterable = requires(T& t) { reverse_iterate(t); };
@@ -477,7 +478,7 @@ run_while(IterationContext& iteration_context, Callback&& callback)
 // `is_equal` algorithm).
 //
 // When `element_type` is a reference, the maybe holds a reference and the
-// stored binding is invalidated by the next call to `run_while` / `step` /
+// stored binding is invalidated by the next call to `run_while`/`step` /
 // `next_element` on the same context.
 template <typename IterationContext>
    requires(is_iteration_context<IterationContext>)
@@ -494,9 +495,9 @@ next_element(IterationContext& iteration_context)
 
 // `step(context, callback)` advances the context one element and invokes
 // `callback` on that element. The return type is always `maybe<R>` where `R` is
-// `callback`'s return type, including `R = void`: `maybe<void>` is the monadic
-// abstraction over a `bool` "did it happen", which collapses the void /
-// non-void cases into one path. `nullopt` means the context was exhausted
+// `callback`'s return type, including `R = void`. `maybe<void>` is the monadic
+// abstraction over a `bool` "did it happen", which collapses the `void` /
+// non-`void` cases into one path. `nullopt` means the context was exhausted
 // before `callback` ran.
 template <typename IterationContext, typename Callback>
    requires(is_iteration_context<IterationContext>)
@@ -570,7 +571,7 @@ template <typename T>
 struct slice_view;
 }  // namespace cat::detail
 
-// `bounds.tpp` names `detail::slice_view` before the struct is defined below
+// `bounds.tpp` names `detail::slice_view` before the struct is defined below.
 #include "../implementations/bounds.tpp"
 #include "../implementations/iterable_interface.tpp"
 #include "../implementations/slice_view.tpp"

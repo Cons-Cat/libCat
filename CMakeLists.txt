@@ -4,8 +4,8 @@ project(cat
   VERSION 0.1.0
   LANGUAGES CXX)
 
-# libCat is Clang-only and uses Clang 23 features. Bail early instead of failing later
-# with cryptic flag or intrinsic errors.
+# libCat is Clang-only and uses Clang 23 features. Bail early instead of failing
+# later with cryptic flag or intrinsic errors.
 if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   message(FATAL_ERROR
     "libCat only supports Clang. Detected `${CMAKE_CXX_COMPILER_ID}` "
@@ -68,14 +68,13 @@ if (CAT_USE_SCCACHE)
   set(CMAKE_CXX_COMPILER_LAUNCHER "${CAT_SCCACHE_EXECUTABLE}")
 endif()
 
-# Bitcode-aware AR/RANLIB so `libcat.a` stays loadable by LTO and clang-repl.
+# Bitcode-aware AR/RANLIB so `libcat.a` stays loadable by LTO and `clang-repl`.
 include(${CMAKE_SOURCE_DIR}/cmake/llvm_archivers.cmake)
 
-# Two flag tiers: `ESSENTIAL` = usage requirements every consumer must honor
-# (on `cat` `INTERFACE`). `INTERNAL` = libCat's own warnings/diagnostics/per-
-# config codegen (`PRIVATE` on `cat-impl`, re-propagated to in-tree tests/
-# examples via `cat-tests` / `cat-examples`). External users only inherit
-# `ESSENTIAL`.
+# Two flag tiers: `ESSENTIAL` = usage requirements every consumer must honor (on
+# `cat` `INTERFACE`). `INTERNAL` = libCat's own warnings/diagnostics/per- config
+# codegen (`PRIVATE` on `cat-impl`, re-propagated to in-tree tests/ examples via
+# `cat-tests`/`cat-examples`). External users only inherit `ESSENTIAL`.
 list(
   APPEND CAT_COMPILE_OPTIONS_ESSENTIAL
   # Disable linking libC symbols.
@@ -118,7 +117,7 @@ list(
   -Wdangling
   -Wdangling-gsl
   "SHELL:-Xclang -fexperimental-bounds-safety"
-  # TODO: -Wlifetime-safety-permissive
+  # TODO: -Wlifetime-safety-permissive.
 )
 
 if(CAT_USE_SANITIZERS)
@@ -156,10 +155,10 @@ list(
   ${CAT_COMPILE_OPTIONS_RELEASE}
 )
 
-# LTO breaks under clang with sanitizers, so it's special-cased. Same conditional
-# adds `-fvisibility=hidden` only to `Release` (`RelWithDebInfo` already captured
-# the list above), keeping `RelWithDebInfo` inspectable in tools like `nm` or
-# debuggers.
+# LTO breaks under Clang with sanitizers, so it's special-cased. Same
+# conditional adds `-fvisibility=hidden` only to `Release` (`RelWithDebInfo`
+# already captured the list above), keeping `RelWithDebInfo` inspectable in
+# tools like `nm` or debuggers.
 if (NOT CAT_USE_SANITIZERS)
   list(
     APPEND CAT_COMPILE_OPTIONS_RELEASE
@@ -211,29 +210,30 @@ list(
 )
 
 # Two-target setup: `cat` (`INTERFACE`) carries usage requirements. `cat-impl`
-# (`STATIC`) owns the .cpp sources and produces `libcat.a`. `cat` `INTERFACE`-
+# (`STATIC`) owns the .cpp sources and produces `libcat.a`. `cat` `INTERFACE` -
 # links `cat-impl` (or `cat-impl-shared`, see `CAT_USE_SHARED` below). The
 # wiring happens further down once both targets exist. `_start.cpp` is the one
 # source that stays on `cat` `INTERFACE` because its body switches on the per-
 # consumer `NO_ARGC_ARGV` define.
 add_library(cat INTERFACE)
 
-# C++26 + GNU extensions. Raw flag instead of `cxx_std_26` because that's
-# broken for Clang 19 until CMake 3.29.2.
+# C++26 + GNU extensions. Raw flag instead of `cxx_std_26` because that's broken
+# for Clang 19 until CMake 3.29.2.
 target_compile_options(cat INTERFACE "-std=gnu++26")
 
 if (CAT_USE_SANITIZERS)
   target_link_options(cat INTERFACE
     -fsanitize=address
-    #-fsanitize=undefined
+    #-fsanitize=undefined.
     -shared-libasan
     # `libcat.ld`'s `INSERT AFTER .text` splits RELRO sections under ASan + lld,
     # which lld rejects unless RELRO is disabled for this link.
     -Wl,-z,norelro
   )
 
-  # Shared ASan lives next to Clang's resource dir, which is not a default loader
-  # path. RPATH lets every linked executable run from the build tree or shell.
+  # Shared ASan lives next to Clang's resource dir, which is not a default
+  # loader path. RPATH lets every linked executable run from the build tree or
+  # shell.
   # `CAT_ASAN_RUNTIME_PATH` was populated and verified at the top of this file.
   get_filename_component(_cat_asan_rpath_dir "${CAT_ASAN_RUNTIME_PATH}" DIRECTORY)
   target_link_options(cat INTERFACE "-Wl,-rpath,${_cat_asan_rpath_dir}")
@@ -244,7 +244,7 @@ target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS_ESSENTIAL})
 target_link_options(cat INTERFACE ${CAT_LINK_OPTIONS})
 
 # TODO: Implement these symbols in libCat directly.
-# target_link_libraries(cat INTERFACE gcc)
+# `target_link_libraries(cat INTERFACE gcc)`.
 
 # `cat-impl` deliberately does NOT link `cat`. That would drag `_start.cpp`
 # (`cat`'s `INTERFACE_SOURCES`) into the archive with the wrong `NO_ARGC_ARGV`
@@ -262,15 +262,15 @@ target_include_directories(cat-impl PRIVATE
 
 add_subdirectory(src/)
 
-# PCH uses `.hpp` only (extensionless API headers go through the regular
-# include path via `CAT_HEADER_FILES` in `src/CMakeLists.txt`). Glob is scoped
-# to `src/` so the PCH never picks up `tests/unit_tests.hpp`.
+# PCH uses `.hpp` only (extensionless API headers go through the regular include
+# path via `CAT_HEADER_FILES` in `src/CMakeLists.txt`). Glob is scoped to `src/`
+# so the PCH never picks up `tests/unit_tests.hpp`.
 file(GLOB_RECURSE CAT_HEADERS "src/*.hpp")
 
 option(CAT_PCH "Enable precompiled-headers for libCat headers." ON)
 if (CAT_PCH)
   # `PRIVATE` on `cat-impl` so external consumers of `cat::cat` don't inherit
-  # PCH machinery. In-tree tests/examples opt in via `REUSE_FROM cat-impl`.
+  # PCH machinery. In-tree tests/examples opt-in via `REUSE_FROM cat-impl`.
   target_precompile_headers(cat-impl PRIVATE ${CAT_HEADERS})
   # Strip the PCH's embedded mtime so sccache / ccache can reuse PCH-consuming
   # TUs across rebuilds. `SHELL:` keeps `-Xclang` glued to its argument.
@@ -279,14 +279,14 @@ if (CAT_PCH)
   )
 endif()
 set_target_properties(cat-impl PROPERTIES PCH_WARN_INVALID ON)
-# Tripwire (deferred): fail configure if `INTERFACE_PRECOMPILE_HEADERS` is
-# ever set on `cat`, `cat-impl`, or `cat-impl-shared`. That would export PCH
-# usage requirements through `cat::cat[-impl[-shared]]` and bake `cat-impl`'s
-# default `gnu::naked` `_start` declaration into every consumer. Fatal for
-# any TU that defines `NO_ARGC_ARGV` (`unit_tests`, `hello`, external no-args
-# programs), which would then hit "non-ASM statement in naked function" on the
-# call to `call_main_noargs()`. `REUSE_FROM cat-impl` is unaffected: it writes
-# on the consumer target, not on `cat-impl`'s `INTERFACE`.
+# Tripwire (deferred): fail configure if `INTERFACE_PRECOMPILE_HEADERS` is ever
+# set on `cat`, `cat-impl`, or `cat-impl-shared`. That would export PCH usage
+# requirements through `cat::cat[-impl[-shared]]` and bake `cat-impl`'s default
+# `gnu::naked` `_start` declaration into every consumer. Fatal for any TU that
+# defines `NO_ARGC_ARGV` (`unit_tests`, `hello`, external no-args programs),
+# which would then hit "non-asm statement in naked function" on the call to
+# `call_main_noargs()`. `REUSE_FROM cat-impl` is unaffected: it writes on the
+# consumer target, not on `cat-impl`'s `INTERFACE`.
 function(_cat_assert_no_interface_pch)
   set(_targets cat cat-impl)
   if (TARGET cat-impl-shared)
@@ -350,15 +350,8 @@ enable_testing()
 add_subdirectory(tests/)
 add_subdirectory(examples/)
 
-# # `ctor.ld` is a minimal linker script necessary for thread local storage.
-# target_link_options(cat INTERFACE -T ${CMAKE_SOURCE_DIR}/src/ctor.ld)
-# set_target_properties(
-#   cat PROPERTIES
-#   LINK_DEPENDS ${CMAKE_SOURCE_DIR}/src/ctor.ld
-# )
-
-# Source-formatting targets (`cat-format`, `cat-format-check`, `cat-reflow-comments`,
-# `cat-reflow-comments-check`).
+# Source-formatting targets (`cat-format`, `cat-format-check`,
+# `cat-restyle-comments`, `cat-restyle-comments-check`).
 include(${CMAKE_SOURCE_DIR}/cmake/format.cmake)
 
 # Source-tidying targets (`cat-tidy`, `cat-tidy-check`).
@@ -373,11 +366,12 @@ include(${CMAKE_SOURCE_DIR}/cmake/cat_intermediaries.cmake)
 # Syntax-only check target (`cat-syntax`).
 include(${CMAKE_SOURCE_DIR}/cmake/cat_syntax.cmake)
 
-# Install / export rules (`cmake --install build/` = `find_package(cat)` sysroot).
+# Install / export rules (`cmake --install build/` = `find_package(cat)`
+# sysroot).
 include(${CMAKE_SOURCE_DIR}/cmake/cat_install.cmake)
 
 # Optional configure-time `try_compile` negative checks for
-# `cat::arithmetic` / `cat::index` / `cat::arithmetic_ptr` (see
+# `cat::arithmetic`/`cat::index` / `cat::arithmetic_ptr` (see
 # `cmake/cat_arithmetic_negative.cmake`). Off by default; the
 # `arithmetic-negative.yml` workflow opts in via
 # `CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON`. Included after

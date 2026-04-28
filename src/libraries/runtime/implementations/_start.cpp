@@ -68,7 +68,7 @@ extern "C"
    cat::detail::_start() {
    // `NO_ARGC_ARGV` can defined from a CMake target to skip argument loading.
    // The argument loading version must stay in `asm`. `_start` is `gnu::naked`
-   // so the prologue won't push `%rbp` before reading `argc` / `argv` off the
+   // so the prologue won't push `%rbp` before reading `argc`/`argv` off the
    // kernel-supplied stack.
 #ifndef NO_ARGC_ARGV
    asm(R"(.att_syntax prefix ; # rmsbolt requires this. Try `-masm=att`

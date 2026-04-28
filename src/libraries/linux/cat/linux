@@ -169,7 +169,7 @@ enum class linux_error : long long {
    dotdot = -73,
    // Not a data message.
    badmsg = -74,
-   // value_type too large for defined data type.
+   // `value_type` too large for defined data type.
    overflow = -75,
    // Name not unique on network.
    notuniq = -76,
@@ -181,7 +181,7 @@ enum class linux_error : long long {
    libacc = -79,
    // Accessing a corrupted shared library.
    libbad = -80,
-   // .lib section in a.out corrupted.
+   // .lib section in `a.out` corrupted.
    libscn = -81,
    // Attempting to link in too many shared libraries.
    libmax = -82,
@@ -237,7 +237,7 @@ enum class linux_error : long long {
    notconn = -107,
    // Cannot send after transport endpoint shutdown.
    shutdown = -108,
-   // Too many references: cannot splice.
+   // Too many references. Cannot splice.
    toomanyrefs = -109,
    // Connection timed out.
    timedout = -110,
@@ -287,7 +287,7 @@ enum class linux_error : long long {
 
 namespace detail {
 // Map `void` to `cat::monotype_storage` and map `T*` to `cat::intptr<T>` so
-// that these types can both hold `-1`.
+// that these types can both hold -1.
 template <typename T>
 using map_syscall_type =
    cat::conditional<cat::is_void<T>, cat::monotype_storage<int, 0>, T>;
@@ -360,8 +360,8 @@ inline constexpr nix::file_descriptor stderr = {2};
 struct tty_descriptor : file_descriptor {};
 
 struct process_id {
-   // Linux supports the better part of `8` `cat::byte` process IDs on 64-bit
-   // systems, but only up to `4` `cat::byte` process IDs on 32-bit systems.
+   // Linux supports the better part of 8-byte process IDs on 64-bit systems,
+   // but only up to 4 `cat::byte` process IDs on 32-bit systems.
    cat::iword value;
 };
 
@@ -449,8 +449,8 @@ enum class futex_options : unsigned int {
 
 // Per-wait-entry flags in `struct futex_waitv::flags` (`linux/futex.h`,
 // futex2). Underlying type is `unsigned int` so values like `clock_realtime`
-// (`256`) fit and `struct futex_waitv` exposes a full `__u32`-sized flags word
-// to the kernel.
+// (256) fit and `struct futex_waitv` exposes a full `__u32`-sized flags word to
+// the kernel.
 enum class futex_wait_flags : unsigned int {
    word_32 = 2,
    word_64 = 3,
@@ -458,8 +458,8 @@ enum class futex_wait_flags : unsigned int {
    clock_realtime = 256,
 };
 
-// `flags` argument to `sys_futex_waitv()` (syscall `futex_waitv`, `man 2
-// futex_waitv`).
+// `flags` argument to `sys_futex_waitv()` (syscall `futex_waitv`,
+// `man 2 futex_waitv`).
 enum class futex_waitv_call_flags : unsigned char {
    none = 0,
 };
@@ -482,7 +482,7 @@ struct futex_word {
 
 // Selects `basic_futex` behavior. `futex_plain` is an ordinary user-chosen
 // futex word. `futex_robust` marks the same layout as used with the userspace
-// robust list (`set_robust_list` / `get_robust_list`) and owner/waiter bits.
+// robust list (`set_robust_list`/`get_robust_list`) and owner/waiter bits.
 struct futex_plain {};
 
 struct futex_robust {};
@@ -905,12 +905,12 @@ namespace nix {
 
 // TODO: These can return `idx` rather than `iword`.
 
-// Syscall 0
+// Syscall 0.
 auto
 sys_read(file_descriptor file_descriptor, char* p_string_buffer,
          cat::iword length) -> scaredy_nix<cat::iword>;
 
-// Syscall 1
+// Syscall 1.
 auto
 sys_write(file_descriptor file_descriptor, char const* p_string_buffer,
           cat::iword length) -> scaredy_nix<cat::idx>;
@@ -919,12 +919,12 @@ auto
 sys_write(file_descriptor file_descriptor, cat::str_view string)
    -> scaredy_nix<cat::idx>;
 
-// Syscall 2
+// Syscall 2.
 auto
 sys_open(char const* p_file_path, open_mode file_mode,
          open_flags flags = open_flags(0)) -> scaredy_nix<file_descriptor>;
 
-// Syscall 3
+// Syscall 3.
 auto
 sys_close(file_descriptor descriptor) -> scaredy_nix<void>;
 
@@ -971,32 +971,32 @@ struct file_handle {
    // Locale* locale;
 };
 
-// Syscall 4
+// Syscall 4.
 auto
 sys_stat(cat::str_view file_path) -> cat::scaredy<file_status, linux_error>;
 
-// Syscall 5
+// Syscall 5.
 auto
 sys_fstat(file_descriptor file_descriptor)
    -> cat::scaredy<file_status, linux_error>;
 
-// TODO: `sys_lstat()`
-// TODO: `sys_lseek()`
+// TODO: `sys_lstat()`.
+// TODO: `sys_lseek()`.
 
-// Syscall 9
+// Syscall 9.
 auto
 sys_mmap(cat::uword beginning_address, cat::uword bytes_size,
          memory_protection_flags protections, memory_flags flags,
          file_descriptor file_descriptor, cat::uword pages_offset)
    -> scaredy_nix<void*>;
 
-// TODO: `sys_mprotect()`
+// TODO: `sys_mprotect()`.
 
-// Syscall 11
+// Syscall 11.
 auto
 sys_munmap(void const* p_memory, cat::uword length) -> scaredy_nix<void>;
 
-// TODO: `sys_brk()`
+// TODO: `sys_brk()`.
 
 enum class signal : unsigned char {
    hang_up = 1,                    // sighng
@@ -1047,17 +1047,17 @@ enum class signal_action : unsigned char {
    set_mask = 2
 };
 
-// Syscall 14
+// Syscall 14.
 auto
 sys_rt_sigprocmask(signal_action action,
                    signals_mask_set const* __restrict p_other_set,
                    signals_mask_set* __restrict p_current_set)
    -> scaredy_nix<void>;
 
-// TODO: `sys_rt_sigaction()`
-// TODO: `sys_rt_sigreturn()`
+// TODO: `sys_rt_sigaction()`.
+// TODO: `sys_rt_sigreturn()`.
 
-// Syscall 16
+// Syscall 16.
 auto
 sys_ioctl(file_descriptor io_descriptor, io_requests request)
    -> scaredy_nix<void>;
@@ -1066,8 +1066,8 @@ auto
 sys_ioctl(file_descriptor io_descriptor, io_requests request,
           cat::no_type_ptr p_argument) -> scaredy_nix<void>;
 
-// TODO: `sys_pread64()`
-// TODO: `sys_pwrite64()`
+// TODO: `sys_pread64()`.
+// TODO: `sys_pwrite64()`.
 
 struct io_vector : cat::span<cat::byte> {
    constexpr io_vector() = default;
@@ -1102,49 +1102,49 @@ struct io_vector : cat::span<cat::byte> {
    }
 };
 
-// Syscall 19
+// Syscall 19.
 auto
 sys_readv(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
    -> scaredy_nix<cat::iword>;
 
-// Syscall 20
+// Syscall 20.
 auto
 sys_writev(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
    -> scaredy_nix<cat::idx>;
 
-// Syscall 24
+// Syscall 24.
 auto
 sys_sched_yield() -> scaredy_nix<void>;
 
-// Syscall 39
+// Syscall 39.
 auto
 sys_getpid() -> process_id;
 
-// Syscall 41
+// Syscall 41.
 auto
 sys_socket(cat::int8 protocol_family, cat::int8 type, cat::int8 protocol)
    -> scaredy_nix<file_descriptor>;
 
-// Syscall 42
+// Syscall 42.
 auto
 sys_connect(file_descriptor socket_descriptor, void const* p_socket,
             cat::iword socket_size) -> scaredy_nix<void>;
 
-// Syscall 43
+// Syscall 43.
 auto
 sys_accept(file_descriptor socket_descriptor,
            void const* __restrict p_socket = nullptr,
            cat::iword const* __restrict p_addr_len = nullptr)
    -> scaredy_nix<file_descriptor>;
 
-// Syscall 44
+// Syscall 44.
 auto
 sys_sendto(file_descriptor socket_descriptor, void const* p_message_buffer,
            cat::iword buffer_length, cat::int8 flags,
            cat::Socket const* p_destination_socket = nullptr,
            cat::iword addr_length = 0) -> scaredy_nix<cat::iword>;
 
-// Syscall 45
+// Syscall 45.
 auto
 sys_recv(file_descriptor socket_descriptor, void* p_message_buffer,
          cat::iword buffer_length,
@@ -1154,40 +1154,40 @@ sys_recv(file_descriptor socket_descriptor, void* p_message_buffer,
 
 // TODO: More syscalls between here.
 
-// Syscall 49
+// Syscall 49.
 auto
 sys_bind(file_descriptor socket_descriptor, void const* p_socket,
          cat::iword p_addr_len) -> scaredy_nix<void>;
 
-// Syscall 50
+// Syscall 50.
 auto
 sys_listen(file_descriptor socket_descriptor, cat::int8 backlog)
    -> scaredy_nix<void>;
 
-// Syscall 56
+// Syscall 56.
 auto
 sys_clone(clone_flags flags, void* p_stack_entry, process_id* p_parent_id,
           process_id* p_child_id, void* p_thread_pointer)
    -> scaredy_nix<process_id>;
 
-// Syscall 61
+// Syscall 61.
 auto
 sys_wait4(process_id waiting_on_id, cat::int4* p_status_output,
           wait_options_flags options, void* p_resource_usage)
    -> scaredy_nix<process_id>;
 
-// Syscall 85
+// Syscall 85.
 auto
 sys_creat(char const* p_file_path, open_mode file_mode)
    -> scaredy_nix<file_descriptor>;
 
-// TODO: `sys_link()`
+// TODO: `sys_link()`.
 
-// Syscall 87
+// Syscall 87.
 auto
 sys_unlink(char const* p_path_name) -> scaredy_nix<void>;
 
-// Syscall 97
+// Syscall 97.
 enum class rlimit_resource : unsigned int {
    // CPU time in seconds.
    cpu_time_seconds = 0,
@@ -1231,16 +1231,16 @@ struct rlimit {
 auto
 sys_getrlimit(rlimit_resource resource, rlimit* p_limits) -> scaredy_nix<void>;
 
-// Syscall 160
+// Syscall 160.
 auto
 sys_setrlimit(rlimit_resource resource, rlimit const* p_limits)
    -> scaredy_nix<void>;
 
-// Syscall 200
+// Syscall 200.
 auto
 sys_tkill(process_id pid, signal signal) -> scaredy_nix<void>;
 
-// Syscall 234
+// Syscall 234.
 auto
 sys_tgkill(process_id thread_group_id, process_id target, signal delivered)
    -> scaredy_nix<void>;
@@ -1252,7 +1252,7 @@ struct futex_waitv {
    cat::uint4 kernel_reserved;
 };
 
-// Matches Linux `struct robust_list` / `struct robust_list_head`.
+// Matches Linux `struct robust_list`/`struct robust_list_head`.
 struct robust_list {
    robust_list* p_next;
 };
@@ -1267,28 +1267,28 @@ inline constexpr cat::idx futex_waitv_max_count = 128u;
 
 struct futex_op;
 
-// Syscall 202
+// Syscall 202.
 auto
 sys_futex(futex_word* p_futex, futex_op const& operation, cat::uint4 value,
           futex_timespec const* p_timeout, futex_word* p_second_futex,
           cat::uint4 value3) -> scaredy_nix<cat::idx>;
 
-// Syscall 247
+// Syscall 247.
 auto
 sys_waitid(wait_id type, process_id id, wait_options_flags options)
    -> scaredy_nix<process_id>;
 
-// Syscall 273
+// Syscall 273.
 auto
 sys_set_robust_list(robust_list_head* p_head, cat::uword length_bytes)
    -> scaredy_nix<void>;
 
-// Syscall 274
+// Syscall 274.
 auto
 sys_get_robust_list(process_id target, robust_list_head** pp_head,
                     cat::idx* p_length_bytes) -> scaredy_nix<void>;
 
-// Syscall 449
+// Syscall 449.
 auto
 sys_futex_waitv(cat::span<futex_waitv const> waiters,
                 futex_waitv_call_flags call_flags,
@@ -1546,7 +1546,7 @@ raise(signal signal, process_id pid) -> scaredy_nix<void>;
 auto
 raise_here(signal signal) -> scaredy_nix<void>;
 
-// `arch_prctl_request::set_fs_base` / `get_fs_base` for x86-64. A custom
+// `arch_prctl_request::set_fs_base`/`get_fs_base` for x86-64. A custom
 // main-thread TLS block can be installed by copying the executable TLS image
 // with `detail::install_executable_tls_image_at_thread_pointer` then calling
 // `sys_arch_prctl(arch_prctl_request::set_fs_base, thread_pointer.get())`.

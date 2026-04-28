@@ -65,9 +65,9 @@ class partial_ordering {
       return lhs.order >= rhs.order;
    }
 
-   // `0` is the only integer literal which can implicitly convert to `nullptr`.
+   // 0 is the only integer literal which can implicitly convert to `nullptr`.
 
-   // Check equality with a `0` literal.
+   // Check equality with a 0 literal.
    friend constexpr auto
    operator==(partial_ordering partial, decltype(nullptr)) -> bool {
       return partial.order == 0;
@@ -78,7 +78,7 @@ class partial_ordering {
       return partial.order == 0;
    }
 
-   // Check inequality with a `0` literal.
+   // Check inequality with a 0 literal.
    friend constexpr auto
    operator!=(partial_ordering partial, decltype(nullptr)) -> bool {
       return partial.order != 0;
@@ -89,7 +89,7 @@ class partial_ordering {
       return partial.order != 0;
    }
 
-   // Check less-than with a `0` literal.
+   // Check less-than with a 0 literal.
    friend constexpr auto
    operator<(partial_ordering partial, decltype(nullptr)) -> bool {
       return partial.order < 0;
@@ -100,7 +100,7 @@ class partial_ordering {
       return 0 < partial.order;
    }
 
-   // Check less-than-or-equal with a `0` literal.
+   // Check less-than-or-equal with a 0 literal.
    friend constexpr auto
    operator<=(partial_ordering partial, decltype(nullptr)) -> bool {
       return partial.order <= 0;
@@ -111,7 +111,7 @@ class partial_ordering {
       return 0 <= partial.order;
    }
 
-   // Check greater-than with a `0` literal.
+   // Check greater-than with a 0 literal.
    friend constexpr auto
    operator>(partial_ordering partial, decltype(nullptr)) -> bool {
       return partial.order > 0;
@@ -122,7 +122,7 @@ class partial_ordering {
       return 0 > partial.order;
    }
 
-   // Check greater-than with a `0` literal.
+   // Check greater-than with a 0 literal.
    friend constexpr auto
    operator>=(partial_ordering partial, decltype(nullptr)) -> bool {
       return partial.order >= 0;
@@ -133,7 +133,7 @@ class partial_ordering {
       return 0 >= partial.order;
    }
 
-   // Check threeway-comparison with a `0` literal.
+   // Check threeway-comparison with a 0 literal.
    friend constexpr auto
    operator<=>(partial_ordering lhs, decltype(nullptr)) -> partial_ordering {
       // If the `partial_ordering` is a left-hand operand, this always returns
@@ -141,7 +141,7 @@ class partial_ordering {
       return lhs;
    }
 
-   // Check threeway-comparison with a `0` literal. If the `partial_ordering` is
+   // Check threeway-comparison with a 0 literal. If the `partial_ordering` is
    // `less`, then this should return `greater`. But if `partial_ordering` is
    // `greater`, then this should return `less`.
    friend constexpr auto
@@ -204,9 +204,9 @@ class weak_ordering {
       return lhs.order >= rhs.order;
    }
 
-   // `0` is the only integer literal which can implicitly convert to `nullptr`.
+   // 0 is the only integer literal which can implicitly convert to `nullptr`.
 
-   // Check equality with a `0` literal.
+   // Check equality with a 0 literal.
    friend constexpr auto
    operator==(weak_ordering partial, decltype(nullptr)) -> bool {
       return partial.order == 0;
@@ -217,7 +217,7 @@ class weak_ordering {
       return partial.order == 0;
    }
 
-   // Check inequality with a `0` literal.
+   // Check inequality with a 0 literal.
    friend constexpr auto
    operator!=(weak_ordering partial, decltype(nullptr)) -> bool {
       return partial.order != 0;
@@ -228,7 +228,7 @@ class weak_ordering {
       return partial.order != 0;
    }
 
-   // Check less-than with a `0` literal.
+   // Check less-than with a 0 literal.
    friend constexpr auto
    operator<(weak_ordering partial, decltype(nullptr)) -> bool {
       return partial.order < 0;
@@ -239,7 +239,7 @@ class weak_ordering {
       return 0 < partial.order;
    }
 
-   // Check less-than-or-equal with a `0` literal.
+   // Check less-than-or-equal with a 0 literal.
    friend constexpr auto
    operator<=(weak_ordering partial, decltype(nullptr)) -> bool {
       return partial.order <= 0;
@@ -250,7 +250,7 @@ class weak_ordering {
       return 0 <= partial.order;
    }
 
-   // Check greater-than with a `0` literal.
+   // Check greater-than with a 0 literal.
    friend constexpr auto
    operator>(weak_ordering partial, decltype(nullptr)) -> bool {
       return partial.order > 0;
@@ -261,7 +261,7 @@ class weak_ordering {
       return 0 > partial.order;
    }
 
-   // Check greater-than with a `0` literal.
+   // Check greater-than with a 0 literal.
    friend constexpr auto
    operator>=(weak_ordering partial, decltype(nullptr)) -> bool {
       return partial.order >= 0;
@@ -272,7 +272,7 @@ class weak_ordering {
       return 0 >= partial.order;
    }
 
-   // Check threeway-comparison with a `0` literal.
+   // Check threeway-comparison with a 0 literal.
    friend constexpr auto
    operator<=>(weak_ordering lhs, decltype(nullptr)) -> weak_ordering {
       // If the `weak_ordering` is a left-hand operand, this always returns
@@ -280,7 +280,7 @@ class weak_ordering {
       return lhs;
    }
 
-   // Check threeway-comparison with a `0` literal. If the `weak_ordering` is
+   // Check threeway-comparison with a 0 literal. If the `weak_ordering` is
    // `less`, then this should return `greater`. But if `weak_ordering` is
    // `greater`, then this should return `less`.
    friend constexpr auto
@@ -352,9 +352,9 @@ class strong_ordering {
       return lhs.order >= rhs.order;
    }
 
-   // `0` is the only integer literal which can implicitly convert to `nullptr`.
+   // 0 is the only integer literal which can implicitly convert to `nullptr`.
 
-   // Check equality with a `0` literal.
+   // Check equality with a 0 literal.
    friend constexpr auto
    operator==(strong_ordering partial, decltype(nullptr)) -> bool {
       return partial.order == 0;
@@ -366,7 +366,7 @@ class strong_ordering {
       return partial.order == 0;
    }
 
-   // Check inequality with a `0` literal.
+   // Check inequality with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator!=(strong_ordering partial, decltype(nullptr)) -> bool {
@@ -379,7 +379,7 @@ class strong_ordering {
       return partial.order != 0;
    }
 
-   // Check less-than with a `0` literal.
+   // Check less-than with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator<(strong_ordering partial, decltype(nullptr)) -> bool {
@@ -392,7 +392,7 @@ class strong_ordering {
       return 0 < partial.order;
    }
 
-   // Check less-than-or-equal with a `0` literal.
+   // Check less-than-or-equal with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator<=(strong_ordering partial, decltype(nullptr)) -> bool {
@@ -405,7 +405,7 @@ class strong_ordering {
       return 0 <= partial.order;
    }
 
-   // Check greater-than with a `0` literal.
+   // Check greater-than with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator>(strong_ordering partial, decltype(nullptr)) -> bool {
@@ -418,7 +418,7 @@ class strong_ordering {
       return 0 > partial.order;
    }
 
-   // Check greater-than with a `0` literal.
+   // Check greater-than with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator>=(strong_ordering partial, decltype(nullptr)) -> bool {
@@ -431,7 +431,7 @@ class strong_ordering {
       return 0 >= partial.order;
    }
 
-   // Check threeway-comparison with a `0` literal.
+   // Check threeway-comparison with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator<=>(strong_ordering lhs, decltype(nullptr)) -> strong_ordering {
@@ -440,7 +440,7 @@ class strong_ordering {
       return lhs;
    }
 
-   // Check threeway-comparison with a `0` literal. If the `strong_ordering` is
+   // Check threeway-comparison with a 0 literal. If the `strong_ordering` is
    // `less`, then this should return `greater`. But if `strong_ordering` is
    // `greater`, then this should return `less`.
    [[gnu::always_inline]]

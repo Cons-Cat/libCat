@@ -57,7 +57,7 @@ struct variant_node<T, Remaining...> {
       if constexpr (remaining_recursions == 0) {
          return this->storage;
       } else {
-         // Same recursion depth reasoning as the non-const overload.
+         // Same recursion depth reasoning as the non-`const` overload.
          return this->remaining_nodes.template get<
             narrow_cast<idx>(remaining_recursions - 1u).value()>();
       }
@@ -239,8 +239,7 @@ class variant {
    }
 
    // constexpr auto operator=(variant<alternative_types...>&& operand) ->
-   // variant<alternative_types...>&
-   // {
+   // variant<alternative_types...>& {
    //     this->assign_other_variant<alternative_types...>(
    //         forward<variant<alternative_types...>>(operand));
    //     return *this;

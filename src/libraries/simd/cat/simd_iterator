@@ -1,8 +1,9 @@
 // -*- mode: c++ -*-
 #pragma once
 
-// Chunk iterator over scalar buffers as `simd<Lane, fixed_size_abi<Lane,
-// width>>`. Implemented with `stepanov_iterator_interface`, parallel to
+// Chunk iterator over scalar buffers as
+// `simd<Lane, fixed_size_abi<Lane, width>>`. Implemented with
+// `stepanov_iterator_interface`, parallel to
 // `cat::reverse_proxy_stepanov_iterator`.
 
 #include <cat/arithmetic>

@@ -8,24 +8,24 @@
 // We generate arithmetic operators by finding implementations of the
 // corresponding member functions in a CRTP derived `class`. These include:
 //
-//     `.add()`
-//     `.bit_and()`
-//     `.bit_complement()`
-//     `.bit_not()`
-//     `.bit_or()`
-//     `.bit_xor()`
-//     `.divide_by()`
-//     `.divide_into()`
-//     `.modulo_by()`
-//     `.modulo_into()`
-//     `.multiply()`
-//     `.negate()`
-//     `.shift_left_by()`
-//     `.shift_left_into()`
-//     `.shift_right_by()`
-//     `.shift_right_into()`
-//     `.subtract_by()`
-//     `.subtract_from()`
+//    `.add()`
+//    `.bit_and()`
+//    `.bit_complement()`
+//    `.bit_not()`
+//    `.bit_or()`
+//    `.bit_xor()`
+//    `.divide_by()`
+//    `.divide_into()`
+//    `.modulo_by()`
+//    `.modulo_into()`
+//    `.multiply()`
+//    `.negate()`
+//    `.shift_left_by()`
+//    `.shift_left_into()`
+//    `.shift_right_by()`
+//    `.shift_right_into()`
+//    `.subtract_by()`
+//    `.subtract_from()`
 //
 // These are each wrapped by conventional operator overloading, so to add an
 // overload of both `operator+` and `operator+=` simultaneously, you need only
@@ -108,7 +108,7 @@ concept has_bit_not_interface = requires(T lhs, U rhs) { lhs.bit_not(rhs); };
 template <typename T>
 concept has_bit_complement = requires(T lhs) { lhs.bit_complement(); };
 
-// operator++ / operator-- assign `add(1)` / `subtract_by(1)` back to the
+// `operator++`/`operator--` assign `add(1)`/`subtract_by(1)` back to the
 // operand. They exist only when those calls preserve the operand type (for
 // example `cat::index` subtraction against another `index` widens to
 // `cat::iword`, so decrement is not generated).
@@ -271,7 +271,7 @@ struct plus_interface {
  public:
    using decay_Derived = remove_cvref<Derived>;
 
-   // Same-type `+` where the RHS may implicitly construct `decay_Derived`
+   // Same-type + where the RHS may implicitly construct `decay_Derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+(this Derived const& self, decay_Derived const& other)
@@ -440,7 +440,7 @@ struct minus_interface {
  public:
    using decay_Derived = remove_cvref<Derived>;
 
-   // Same-type `-` where the RHS may implicitly construct `decay_Derived`
+   // Same-type - where the RHS may implicitly construct `decay_Derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator-(this Derived const& lhs, decay_Derived const& other)
@@ -474,7 +474,7 @@ struct minus_interface {
 
    // `this` is an l-value.
    template <typename T>
-   // If this operator's left operand can subtract_by `Derived` as its
+   // If this operator's left operand can `subtract_by` `Derived` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_subtract_by_interface<T, Derived>
                && !is_same<remove_cvref<T>, decay_Derived>
@@ -487,7 +487,7 @@ struct minus_interface {
 
    // `this` is an r-value.
    template <typename T>
-   // If this operator's left operand can subtract_by `Derived` as its
+   // If this operator's left operand can `subtract_by` `Derived` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_subtract_by_interface<T, Derived>
                && !is_same<remove_cvref<T>, decay_Derived>
@@ -498,7 +498,7 @@ struct minus_interface {
       return fwd(self).subtract_from(fwd(other));
    }
 
-   // Same-type compound assignment when `subtract_by(rhs)` preserves `Derived`
+   // Same-type compound assignment when `subtract_by(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(Derived& self, decay_Derived const& rhs) -> Derived&
@@ -534,7 +534,7 @@ struct minus_interface {
 
    // `this` is an l-value.
    template <typename T>
-   // If this operator's left operand can subtract_by `Derived` as its
+   // If this operator's left operand can `subtract_by` `Derived` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_subtract_by_interface<T, Derived>
                && detail::has_reverse_binary_minus<Derived, T>)
@@ -547,7 +547,7 @@ struct minus_interface {
 
    // `this` is an r-value.
    template <typename T>
-   // If this operator's left operand can subtract_by `Derived` as its
+   // If this operator's left operand can `subtract_by` `Derived` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_subtract_by_interface<T, Derived>
                && detail::has_reverse_binary_minus<Derived, T>)
@@ -612,7 +612,7 @@ struct multiply_interface {
  public:
    using decay_Derived = remove_cvref<Derived>;
 
-   // Same-type `*` where the RHS may implicitly construct `decay_Derived`
+   // Same-type * where the RHS may implicitly construct `decay_Derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator*(this Derived const& self, decay_Derived const& other)
@@ -670,7 +670,7 @@ struct multiply_interface {
       return fwd(self).multiply(fwd(other));
    }
 
-   // Same-type compound assignment when `multiply(rhs)` preserves `Derived`
+   // Same-type compound assignment when `multiply(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(Derived& self, decay_Derived const& rhs) -> Derived&
@@ -742,7 +742,7 @@ struct divide_interface {
  public:
    using decay_Derived = remove_cvref<Derived>;
 
-   // Same-type `/` where the RHS may implicitly construct `decay_Derived`
+   // Same-type / where the RHS may implicitly construct `decay_Derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator/(this Derived const& self, decay_Derived const& other)
@@ -800,7 +800,7 @@ struct divide_interface {
       return fwd(self).divide_into(fwd(other));
    }
 
-   // Same-type compound assignment when `divide_by(rhs)` preserves `Derived`
+   // Same-type compound assignment when `divide_by(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(Derived& self, decay_Derived const& rhs) -> Derived&
@@ -872,7 +872,7 @@ struct bit_and_interface {
  public:
    using decay_Derived = remove_cvref<Derived>;
 
-   // Same-type `&` where the RHS may implicitly construct `decay_Derived`
+   // Same-type & where the RHS may implicitly construct `decay_Derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator&(this Derived const& self, decay_Derived const& other)
@@ -930,7 +930,7 @@ struct bit_and_interface {
       return fwd(self).bit_and(fwd(other));
    }
 
-   // Same-type compound assignment when `bit_and(rhs)` preserves `Derived`
+   // Same-type compound assignment when `bit_and(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(Derived& self, decay_Derived const& rhs) -> Derived&
@@ -1002,7 +1002,7 @@ struct bit_or_interface {
  public:
    using decay_Derived = remove_cvref<Derived>;
 
-   // Same-type `|` where the RHS may implicitly construct `decay_Derived`
+   // Same-type | where the RHS may implicitly construct `decay_Derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator|(this Derived const& self, decay_Derived const& other)
@@ -1060,7 +1060,7 @@ struct bit_or_interface {
       return fwd(self).bit_or(fwd(other));
    }
 
-   // Same-type compound assignment when `bit_or(rhs)` preserves `Derived`
+   // Same-type compound assignment when `bit_or(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(Derived& self, decay_Derived const& rhs) -> Derived&
@@ -1132,7 +1132,7 @@ struct modulo_interface {
  public:
    using decay_Derived = remove_cvref<Derived>;
 
-   // Same-type `%` where the RHS may implicitly construct `decay_Derived`
+   // Same-type % where the RHS may implicitly construct `decay_Derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator%(this Derived const& self, decay_Derived const& other)
@@ -1190,7 +1190,7 @@ struct modulo_interface {
       return fwd(self).modulo_into(fwd(other));
    }
 
-   // Same-type compound assignment when `modulo_by(rhs)` preserves `Derived`
+   // Same-type compound assignment when `modulo_by(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(Derived& self, decay_Derived const& rhs) -> Derived&
@@ -1211,7 +1211,7 @@ struct modulo_interface {
       return self;
    }
 
-   // `%=` operator where this is a left-hand-side operand.
+   // %= operator where this is a left-hand-side operand.
    template <typename T>
       requires(detail::has_modulo_assign<decay_Derived, T>
                && !is_same<remove_cvref<T>, decay_Derived>)
@@ -1222,7 +1222,7 @@ struct modulo_interface {
       return self;
    }
 
-   // `%=` operators where this is a right-hand-side operand.
+   // %= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -1262,7 +1262,7 @@ struct shift_left_interface {
  public:
    using decay_Derived = remove_cvref<Derived>;
 
-   // Same-type `<<` where the RHS may implicitly construct `decay_Derived`
+   // Same-type << where the RHS may implicitly construct `decay_Derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<<(this Derived const& self, decay_Derived const& other)
@@ -1321,7 +1321,7 @@ struct shift_left_interface {
    }
 
    // Same-type compound assignment when `shift_left_by(rhs)` preserves
-   // `Derived`
+   // `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(Derived& self, decay_Derived const& rhs) -> Derived&
@@ -1393,7 +1393,7 @@ struct shift_right_interface {
  public:
    using decay_Derived = remove_cvref<Derived>;
 
-   // Same-type `>>` where the RHS may implicitly construct `decay_Derived`
+   // Same-type >> where the RHS may implicitly construct `decay_Derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator>>(this Derived const& self, decay_Derived const& other)
@@ -1452,7 +1452,7 @@ struct shift_right_interface {
    }
 
    // Same-type compound assignment when `shift_right_by(rhs)` preserves
-   // `Derived`
+   // `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(Derived& self, decay_Derived const& rhs) -> Derived&
@@ -1576,7 +1576,7 @@ struct arithmetic_interface : plus_interface<Derived>,
       if constexpr (detail::has_negate_interface<Derived>) {
          return self.negate();
       } else {
-         // Subtract `self` from `0` to negate itself.
+         // Subtract `self` from 0 to negate itself.
          return static_cast<Derived>(0) - self;
       }
    }
@@ -1589,7 +1589,7 @@ struct arithmetic_interface : plus_interface<Derived>,
       if constexpr (detail::has_negate_interface<Derived>) {
          return self.negate();
       } else {
-         // Subtract `self` from `0` to negate itself.
+         // Subtract `self` from 0 to negate itself.
          return static_cast<Derived>(0) - move(self);
       }
    }

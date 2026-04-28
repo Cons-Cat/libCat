@@ -15,7 +15,7 @@ struct two_const {
 };
 }  // namespace
 
-// Test a plain aggregate with no libCat tuple protocol
+// Test a plain aggregate with no libCat tuple protocol.
 test(magic_get_structured_bindings_plain_aggregate) {
    three_fields s{1, 'd', true};
    auto& [p0, p1, p2] = s;

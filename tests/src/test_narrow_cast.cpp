@@ -4,11 +4,12 @@
 #include "../unit_tests.hpp"
 
 // Exercises `cat::narrow_cast`: safe widening (still `maybe` wrapped), true
-// narrowing with same signedness, mixed signedness, and `idx` → `maybe<idx>`.
+// narrowing with same signed-ness, mixed signed-ness, and `idx` ->
+// `maybe<idx>`.
 
 namespace {
 
-// --- Compile-time invariants (fail the build if these regress). --------------
+// Compile-time invariants (fail the build if these regress):
 
 static_assert(cat::is_same<decltype(cat::narrow_cast<cat::idx>(cat::uword{0u})),
                            cat::maybe<cat::idx>>);
@@ -23,7 +24,7 @@ static_assert([] {
    return m.has_value() && m.value().raw == 42;
 }());
 
-// `int4` → `int8` is non-narrowing in the hierarchy; no loss check on the
+// `int4` -> `int8` is non-narrowing in the hierarchy. No loss check on the
 // "narrowing" name. Value must still round-trip inside `maybe`.
 static_assert([] {
    auto const m = cat::narrow_cast<cat::int8>(cat::int4{-99});
@@ -82,8 +83,8 @@ test(narrow_cast_narrowing_same_signedness_int8_to_int4) {
 }
 
 test(narrow_cast_mixed_width_signed_to_unsigned) {
-   // `int4` and `uint4` are the same width but opposite signedness. Needs the
-   // `raw_mixed_integral_spaceship` path; negative `int4` must not bit-cast
+   // `int4` and `uint4` are the same width but opposite signed-ness. Needs the
+   // `raw_mixed_integral_spaceship` path. Negative `int4` must not bit-cast
    // into a huge `uint4`.
    cat::verify(!cat::narrow_cast<cat::uint4>(cat::int4{-1}).has_value());
    cat::verify(
@@ -99,7 +100,7 @@ test(narrow_cast_mixed_width_signed_to_unsigned) {
       cat::verify(m.has_value() && m.value().raw == 42u);
    }
    {
-      // Largest positive int32 is inside uint32; must not use naive `<` on
+      // Largest positive int32 is inside uint32. Must not use naive < on
       // unsigned/signed (would reject valid positives).
       auto const m = cat::narrow_cast<cat::uint4>(cat::int4{0x7FFFFFFF_i4});
       cat::verify(m.has_value() && m.value().raw == 0x7FFFFFFFu);
@@ -163,7 +164,7 @@ test(narrow_cast_to_idx_is_maybe_of_idx) {
       cat::verify(m.has_value());
    }
    {
-      // `idx` is 63 bits of magnitude; 2^63 and above set bit 63 => out of
+      // `idx` is 63 bits of magnitude. 2^63 and above set bit 63 => out of
       // range and must be empty (also exercises `raw_mixed_integral_spaceship`
       // for unsigned vs `limits<idx>::max()`).
       cat::verify(

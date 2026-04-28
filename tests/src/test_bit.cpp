@@ -5,7 +5,7 @@
 test(bit) {
    using namespace cat::arithmetic_literals;
 
-   // Test clz().
+   // Test `clz()`.
    static_assert(cat::countl_zero(0x7FFFFFFF'FFFFFFFFu) == 1);
    static_assert(cat::countl_zero(0x7FFFFFFFu) == 1);
    static_assert(cat::countl_one(0x7FFFFFFF'FFFFFFFFu) == 0);
@@ -17,7 +17,7 @@ test(bit) {
    static_assert(cat::countl_zero(0x0FFFFFFF_u4) == 4);
    static_assert(cat::countl_zero(0x0FFFFFFF'FFFFFFFF_u8) == 4);
 
-   // Test ctz().
+   // Test `ctz()`.
    static_assert(cat::countr_zero(0xFFFFFFFF'FFFFFFFEu) == 1);
    static_assert(cat::countr_zero(0xFFFFFFFEu) == 1);
    static_assert(cat::countr_one(0xFFFFFFFF'FFFFFFFEu) == 0);
@@ -105,7 +105,7 @@ test(bit) {
    // NOLINTNEXTLINE
    cat::verify(bit1 == bit1);
 
-   // Test `bit_reference`
+   // Test `bit_reference`.
    unsigned char number = 0u;
    cat::bit_reference bit2 =
       cat::bit_reference<unsigned char>::from_mask(number, 0b0000'0010u);

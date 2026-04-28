@@ -92,8 +92,8 @@ operator|(string_control flag_1, string_control flag_2) -> string_control {
 
 namespace x64 {
 
-// SSE4.2 `pcmpistri` / `pcmpistric` on `simd` with `sse2_abi` layout (128-bit
-// XMM `raw`). `control_mask` must be a constant suitable for the intrinsics.
+// SSE4.2 `pcmpistri`/`pcmpistric` on `simd` with `sse2_abi` layout (128-bit XMM
+// `raw`). `control_mask` must be a constant suitable for the intrinsics.
 template <string_control control_mask, typename T>
 [[gnu::no_sanitize_address]]
 constexpr auto

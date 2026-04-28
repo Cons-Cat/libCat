@@ -441,7 +441,7 @@ test(meta_is_specialization) {
 test(meta_sign_type_traits) {
    using namespace cat;
 
-   // Test signedness traits.
+   // Test signed-ness traits.
    static_assert(is_signed<make_signed_type<unsigned>>);
    static_assert(is_signed<make_signed_type<unsigned const>>);
    static_assert(is_signed<make_signed_type<uint4>>);

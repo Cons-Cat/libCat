@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Config-time negative TUs only: same idea as `deconst_number` in
+// Config-time negative TUs only. Same idea as `deconst_number` in
 // the `test_arithmetic` unit tests. Wrapping
 // a literal (or a prvalue) in this strips its constant-expression-ness
 // without changing the value, so it no longer short-circuits an `enable_if` or

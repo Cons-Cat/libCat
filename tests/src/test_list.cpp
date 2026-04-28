@@ -163,13 +163,15 @@ test(list) {
    cat::verify(slist_1.size() == 0);
    auto _ = slist_1.push_front(0).verify();
    auto _ = slist_1.emplace_front(1).verify();
-   // auto _ = slist_1.insert_after(slist_1.begin() + 1, 2).verify(); auto _ =
+   // auto _ = slist_1.insert_after(slist_1.begin() + 1, 2).verify();
+   // auto _ =
    // slist_1.emplace_after(slist_1.end(), 3).verify();
    cat::verify(slist_1.size() == 2);
 
    cat::verify(*slist_1.begin() == 1);
    cat::verify(*(slist_1.begin() + 1u) == 0);
-   // cat::verify(*(slist_1.begin() + 2) == 2); cat::verify(*(slist_1.begin() +
+   // cat::verify(*(slist_1.begin() + 2) == 2);
+   // cat::verify(*(slist_1.begin() +
    // 3) == 3);
 
    // Test filling out an `slist`.
@@ -204,8 +206,9 @@ test(list) {
    // cat::verify(*slist_1.begin() == 2);
 
    // Test that the copy was deep, after modifying the original.
-   // cat::verify(*(slist_2.begin()) == 1); cat::verify(*(slist_2.begin() + 1)
-   // == 0); cat::verify(*(slist_2.begin() + 2) == 2);
+   // cat::verify(*(slist_2.begin()) == 1);
+   // cat::verify(*(slist_2.begin() + 1) == 0);
+   // cat::verify(*(slist_2.begin() + 2) == 2);
    // cat::verify(*(slist_2.begin() + 3) == 3);
 
    // Test `back_insert_stepanov_iterator`.

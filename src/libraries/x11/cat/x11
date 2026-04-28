@@ -314,9 +314,9 @@ struct connection_request_info {
    // This should almost always be `{11, 0}`.
    cat::array<cat::uint2, 2u> x_version = {static_cast<unsigned char>(11),
                                            static_cast<unsigned char>(0)};
-   // No explicit protocol is specified if this is `0`.
+   // No explicit protocol is specified if this is 0.
    cat::uint2 authorization_protocol_length = static_cast<unsigned char>(0);
-   // No explicit protocol is specified if this is `0`.
+   // No explicit protocol is specified if this is 0.
    cat::uint2 authorization_data_length = static_cast<unsigned char>(0);
 
  private:
@@ -347,7 +347,7 @@ struct connection_response_info {
    // The leftmost bit in the bitmap is either the least significant or most
    // significant bit in the scanline unit, as given by `bitmap_order`.
    cat::uint1 bitmap_endianness;
-   // These will be `8`, `16`, or `32`.
+   // These will be 8, 16, or 32.
    cat::uint1 scanline_unit, scanline_padding;
    // This is the smallest key code the server will transmit.
    key_code keycode_minimum;

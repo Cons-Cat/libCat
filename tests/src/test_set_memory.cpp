@@ -28,7 +28,7 @@ test(set_memory) {
    cat::verify(p_page[0] == 0_u1);
    cat::verify(p_page[4_uki - 1u] == 0_u1);
 
-   // Test setting values larger than 1 byte.
+   // Test setting values larger than 1-byte.
    cat::set_memory(p_page, 1_i2, 2_uki);
    cat::verify(static_cast<int2*>(static_cast<void*>(p_page))[10] == 1_i2);
    // The next byte after this should be 0.

@@ -4,7 +4,7 @@
 #include "../unit_tests.hpp"
 
 // Not a P2141 magic-aggregate: tuple-like `std` hooks + `cat::get` and member
-// `get` for structured bindings
+// `get` for structured bindings.
 test(tuple_structured_bindings_with_get) {
    cat::tuple<int, bool> t{4, true};
    static_assert(!cat::has_aggregate_get<decltype(t)>);
@@ -144,7 +144,7 @@ test(tuple_basics) {
    cat::verify(empty_tuple.size() == 0);
    cat::verify(!tuple.is_empty());
 
-   // tuple of tuples.
+   // Tuple of tuples.
    static_assert(cat::is_implicit_lifetime<
                  cat::tuple<cat::tuple<int, int>, cat::tuple<int, char>>>);
    cat::tuple<cat::tuple<int, int>, cat::tuple<int, char>> tuple_of_tuple = {
@@ -172,7 +172,7 @@ test(tuple_implicit_lifetime_when_members_are) {
 
 test(tuple_operator_index) {
    // Subscript is `t[index]` with `cat::idx` and Clang `enable_if` so only the
-   // element whose slot matches `index` is a viable member `operator[]`
+   // element whose slot matches `index` is a viable member `operator[]`.
    cat::tuple<int, int> t{1, 2};
    static_assert(cat::is_same<decltype(t[0_idx]), int&>);
    static_assert(cat::is_same<decltype(t[1_idx]), int&>);
@@ -188,7 +188,7 @@ test(tuple_operator_index) {
    cat::verify(tc[0_idx] == 3);
    cat::verify(tc[1_idx] == 4);
 
-   // Rvalue `tuple<...>` and value elements: `[]` yields xvalue and can move
+   // r-value `tuple<...>` and value elements: `[]` yields x-value and can move
    // from move-only element storage.
    {
       struct move_only {
@@ -220,7 +220,7 @@ test(tuple_operator_index) {
    }
 
    {
-      // `const` rvalue: `T const&&` for non-ref elements
+      // `const` r-value: `T const&&` for non-ref elements.
       int from_const_rvalue =
          static_cast<cat::tuple<int> const&&>(cat::tuple<int>{5})[0_idx];
       cat::verify(from_const_rvalue == 5);
@@ -317,8 +317,8 @@ test(tuple_cat) {
    left_i = 9;
    cat::verify(cat_refs.first() == 9);
 
-   // `const` lvalue arguments should be forwarded into element types as `T
-   // const&`
+   // `const` l-value arguments should be forwarded into element types as
+   // `T const&`.
    int const a_const = 11;
    int const b_const = 12;
    auto cat_const = cat::tuple_cat(cat::tuple<int const&>{a_const},
@@ -338,8 +338,8 @@ test(tuple_cat) {
       constexpr not_copy(not_copy&&) = default;
    };
 
-   // `tuple_cat` of rvalue `tuple<...>` should move the elements, even when the
-   // element type is move-only
+   // `tuple_cat` of r-value `tuple<...>` should move the elements, even when
+   // the element type is move-only.
    {
       not_copy m0{};
       not_copy m1{};
@@ -398,8 +398,8 @@ test(tuple_tie_make_forward) {
    }
 
    {
-      // `T&&` parameters in `forward_as_tuple` still bind glvalues, so a named
-      // rvalue reference is an lvalue here, not an xvalue
+      // `T&&` parameters in `forward_as_tuple` still bind gl-values, so a named
+      // r-value reference is an l-value here, not an x-value.
       int x = 5;
       int&& rvalue_ref = static_cast<int&&>(x);
       int prvalue = 7;

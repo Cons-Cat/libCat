@@ -55,7 +55,7 @@ class type_list {
    // Recurse from the tail down to the index in this list.
    template <typename head, typename... tail, idx index>
    struct recurse_for_type_at_index<type_list<head, tail...>, index> {
-      // Index `0` is handled by the partial specialization above, so `index` is
+      // Index 0 is handled by the partial specialization above, so `index` is
       // never zero here and `index.raw - 1uz` cannot wrap.
       using result = recurse_for_type_at_index<
          type_list<tail...>, narrow_cast<idx>(index - 1u).value()>::result;
@@ -129,7 +129,7 @@ class type_list {
    template <typename Othertype_list>
    using concat_types = decltype(concat(Othertype_list()));
 
-   // A `+` is required instead of `concat_types` to use this inside of fold
+   // A + is required instead of `concat_types` to use this inside of fold
    // expressions.
    template <typename... Us>
    friend constexpr auto
@@ -182,7 +182,7 @@ type_list_fill(type_list<types...> type_list) {
 }
 }  // namespace detail
 
-// Produce a type_list filled with `count` of `T`.
+// Produce a `type_list` filled with `count` of `T`.
 template <typename T, idx count>
 using type_list_filled = decltype(detail::type_list_fill<T, count, 0u>({}));
 

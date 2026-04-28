@@ -13,7 +13,7 @@ struct thread {
       m_handle.add_clone_flag(nix::clone_flags::thread);
       // `clone_flags::child_set_tid` pairs with `clone_flags::child_clear_tid`
       // (already in `nix::process::default_flags`) so the kernel publishes the
-      // tid into `m_clone_child_clear_tid_for_kernel` before user code runs;
+      // tid into `m_clone_child_clear_tid_for_kernel` before user code runs.
       // `join` waits on that word with `futex_command::wait`.
       m_handle.add_clone_flag(nix::clone_flags::child_set_tid);
    }

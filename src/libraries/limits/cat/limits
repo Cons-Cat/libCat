@@ -235,8 +235,8 @@ struct limits<__INT64_TYPE__> {
 
    static consteval auto
    min() -> __INT64_TYPE__ {
-      // `9223372036854775808` does not fit in signed 64-bit literals on this
-      // model, so build `INT64_MIN` as `-INT64_MAX - 1` from literals that fit
+      // 9223372036854775808 does not fit in signed 64-bit literals on this
+      // model, so build `INT64_MIN` as `-INT64_MAX - 1` from literals that fit.
       return -9'223'372'036'854'775'807 - 1;
    }
 
@@ -276,15 +276,15 @@ struct limits<__UINT64_TYPE__> {
 };
 
 template <typename T>
-// On LP64, `limits<long long> needs explicit specialization.
+// On LP64, `limits<long long>` needs explicit specialization.
    requires(is_same<T, long long> && sizeof(long) == 8)
 struct limits<T> {
    constexpr limits() = delete;
 
    static consteval auto
    min() -> long long {
-      // `9223372036854775808` does not fit in signed 64-bit literals on this
-      // model, so build `INT64_MIN` as `-INT64_MAX - 1` from literals that fit
+      // 9223372036854775808 does not fit in signed 64-bit literals on this
+      // model, so build `INT64_MIN` as `-INT64_MAX - 1` from literals that fit.
       return -9'223'372'036'854'775'807ll - 1;
    }
 
@@ -302,7 +302,7 @@ struct limits<T> {
 };
 
 template <typename T>
-// On LP64, `limits<long long> needs explicit specialization.
+// On LP64, `limits<long long>` needs explicit specialization.
    requires(is_same<T, unsigned long long> && sizeof(long) == 8)
 struct limits<T> {
    constexpr limits() = delete;

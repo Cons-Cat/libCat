@@ -119,7 +119,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
       // Local-exec TLS lowering loads the thread pointer from `%fs:0`. The
       // copied executable TLS image only covers `.tdata/.tbss` strictly below
-      // `tls_tp`; the word at `tls_tp` is the TCB self slot and must equal
+      // `tls_tp`. The word at `tls_tp` is the TCB self slot and must equal
       // `tls_tp` after `clone_flags::set_tls` installs that base in `%fs`.
       *reinterpret_cast<void**>(tls_thread_pointer.get()) =
          tls_thread_pointer.get();
@@ -128,14 +128,14 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
    cat::uintptr<void> stack_top = tls_thread_pointer;
    stack_top -= thread_local_slab_bytes;
 
-   // 32 byte alignment is required for AVX2 support.
+   // 32-byte alignment is required for AVX2 support.
    stack_top = cat::align_down(stack_top, 32u);
 
    // Place a pointer to function arguments on the new stack:
    stack_top -= 8;
    __builtin_memcpy(stack_top.get(), &p_args_struct, 8);  // NOLINT
 
-   // Place a pointer to function on the new stack: 8 is the size of a pointer,
+   // Place a pointer to function on the new stack. 8 is the size of a pointer,
    // such as `p_function`.
    stack_top -= 8;
    __builtin_memcpy(stack_top.get(), &p_function, 8);  // NOLINT
@@ -144,7 +144,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
    // with the stack and registers and not introduce a new stack frame. Parent
    // and child share `clone_flags::virtual_memory`, so they must not both spill
    // `%rax` through one C variable. That would race. Only the parent executes
-   // the `mov` into `clone_result` (`asm goto`); the child jumps away before
+   // the `mov` into `clone_result` (`asm goto`). The child jumps away before
    // that store.
    nix::clone_flags active_clone_flags = m_flags;
    if (tls_memory_size > 0u) {
@@ -195,7 +195,7 @@ auto
 nix::process::wait() const -> scaredy_nix<process_id> {
    // Spin until the kernel publishes the child tid for
    // `clone_flags::parent_set_tid`. Use an acquire load so this synchronizes
-   // with that store; `pause` hints the spin loop on x86.
+   // with that store. `pause` hints the spin loop on x86.
    // TODO: Implement a high level spin-lock.
    while (__atomic_load_n(&m_id.value.raw, cat::memory_order::acquire) == 0) {
       __builtin_ia32_pause();

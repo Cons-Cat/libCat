@@ -267,8 +267,8 @@ test(fixed_size_simd_alignment) {
 }
 
 test(simd_is_array_like_v) {
-   // P3983R1 §4 mandates array-like layout for `_native-abi_`. cat::native_abi
-   // satisfies it for every supported lane type today.
+   // P3983R1 mandates array-like layout for `cat::native_abi` satisfies it for
+   // every supported lane type today.
    static_assert(is_simd_array_like<int1, native_abi<int1>>);
    static_assert(is_simd_array_like<int2, native_abi<int2>>);
    static_assert(is_simd_array_like<int4, native_abi<int4>>);
@@ -280,18 +280,18 @@ test(simd_is_array_like_v) {
    static_assert(is_simd_array_like<bool, native_abi<bool>>);
    static_assert(is_simd_array_like<char, native_abi<char>>);
 
-   // compatible_abi shares native_abi storage today.
+   // `compatible_abi` shares `native_abi` storage today.
    static_assert(is_simd_array_like<int4, compatible_abi<int4>>);
    static_assert(is_simd_array_like<float4, compatible_abi<float4>>);
 
-   // scalar_abi is always 16 bytes, a power of two divisible by every supported
-   // scalar size.
+   // `scalar_abi` is always 16 bytes, a power of two divisible by every
+   // supported scalar size.
    static_assert(is_simd_array_like<int1, scalar_abi<int1>>);
    static_assert(is_simd_array_like<int4, scalar_abi<int4>>);
    static_assert(is_simd_array_like<int8, scalar_abi<int8>>);
    static_assert(is_simd_array_like<float4, scalar_abi<float4>>);
 
-   // fixed_size_abi where lanes * sizeof(T) is itself a power of two has no
+   // `fixed_size_abi` where lanes * sizeof(`T`) is itself a power of two has no
    // trailing padding.
    static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 1u>>);
    static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 2u>>);
@@ -306,10 +306,9 @@ test(simd_is_array_like_v) {
    static_assert(is_simd_array_like<int1, fixed_size_abi<int1, 16u>>);
    static_assert(is_simd_array_like<int1, fixed_size_abi<int1, 32u>>);
 
-   // fixed_size_abi where lanes * sizeof(T) is not a power of two: Clang
-   // gnu::vector_size rounds the storage up which leaves trailing padding, so
-   // the layout is not array-like. P3983R1 §4.3 anticipates this for
-   // `fixed_size`.
+   // `fixed_size_abi` where lanes * sizeof(`T`) is not a power of two: Clang
+   // `gnu::vector_size` rounds the storage up which leaves trailing padding, so
+   // the layout is not array-like. P3983R1 anticipates this for `fixed_size`.
    static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 3u>>);
    static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 5u>>);
    static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 6u>>);
@@ -324,9 +323,9 @@ test(simd_is_array_like_v) {
    static_assert(
       !is_simd_array_like<float4, unaligned_abi<fixed_size_abi<float4, 3u>>>);
 
-   // P3983R1 §10.2 note: when the trait is `true`, `bit_cast` between `simd<T,
-   // Abi>` and the corresponding `array<T, N>` is well-defined and preserves
-   // lane order.
+   // P3983R1 note: when the trait is `true`, `bit_cast` between `simd<T, Abi>`
+   // and the corresponding `array<T, N>` is well-defined and preserves lane
+   // order.
    using simd_4f = fixed_size_simd<float4, 4u>;
    using array_4f = cat::array<float4, 4u>;
    static_assert(is_simd_array_like<float4, simd_4f::abi_type>);
@@ -621,9 +620,9 @@ test(simd_as_vectorized_stepanov_iterator) {
    cat::verify(fchunk[3] == 4.5f);
 }
 
-// Pointer + idx length: load, store, partial_*. Prefer EVE-style masked
-// `cat::simd_load_*[mask](passthrough, p)` / `cat::simd_store_*[mask](v, p)`
-// when only some lanes are defined (see tests below).
+// Pointer + idx length: load, store, `partial_*`. Prefer EVE-style masked
+// `cat::simd_load_*[mask](passthrough, p)`/`cat::simd_store_*[mask](v, p)` when
+// only some lanes are defined (see tests below).
 
 test(simd_eve_mask_subscript_load_store_aligned) {
    alignas(int4x4::abi_type::alignment.raw)
@@ -777,7 +776,7 @@ test(simd_load_and_loaded_dispatch) {
    cat::verify(fb[3] == 4.f);
 }
 
-// Byte lanes must use unaligned memory through `.load()` / `.store()` because
+// Byte lanes must use unaligned memory through `.load()`/`.store()` because
 // arbitrary `char const*` is not guaranteed to match vector register alignment.
 test(simd_byte_lane_load_store_dispatch_misaligned) {
    alignas(128) char backing[128]{};
@@ -943,7 +942,7 @@ test(simd_float_roundtrip) {
    cat::verify(p[2] == 0.f);
 }
 
-// --- ?4 lane-wise arithmetic and bitwise (cat::simd) ---
+// ane-wise arithmetic and bitwise (`cat::simd`):
 
 test(simd_int_binary_ops) {
    int4x4 a = {10, 20, -5, 7};
@@ -1053,7 +1052,7 @@ test(simd_int_compound_assign) {
 }
 
 // Integral lanes only: bitwise and shift operators are not used on `float`
-// simd.
+// SIMD.
 test(simd_int_bitwise_and_shifts) {
    int4x4 a = {0x0f0f0f0f, 0x00ff00ff, -1, 0};
    int4x4 b = {0x00ff00ff, 0x0f0f0f0f, 0x12345678, 0x55};
@@ -1117,9 +1116,9 @@ test(simd_value_type_list_ctor) {
    cat::verify(fv[3] == 4.25f);
 }
 
-// --- loads/stores (pointer + idx): tests above ---
+// Loads/stores (pointer + idx): tests above:
 
-// --- ?6 simd_mask constructors, fill, bitwise ---
+// `simd_mask` constructors, fill, bitwise:
 
 test(simd_mask_ctors_fill) {
    using M = int4x4::mask_type;
@@ -1207,7 +1206,7 @@ test(simd_mask_compare_eq_ne) {
    cat::verify(!nef[0] && nef[1] && nef[2] && !nef[3]);
 }
 
-// P3922R1: CTAD `simd` from `simd_mask` matches `decltype(+mask)`; unary +/-/~
+// P3922R1: CTAD `simd` from `simd_mask` matches `decltype(+mask)`. Unary +/-/~
 // on masks yield integral `simd` with scalar-sized signed lanes.
 test(simd_mask_ctad_and_integral_unaries) {
    int4x4 const a{1, 2, 3, 4};
@@ -1308,7 +1307,7 @@ test(simd_mask_load_and_loaded_from_bool_buffer) {
                && !blended_fill[3]);
 }
 
-// --- ?7 simd_mask lane setter (P3275: no writable subscript) ---
+// `simd_mask` ` lane setter (P3275: no writable subscript):
 
 test(simd_mask_set_lane) {
    using M = int4x4::mask_type;
@@ -1324,7 +1323,7 @@ test(simd_mask_set_lane) {
    cat::verify(mf[0] && !mf[1] && mf[2] && !mf[3]);
 }
 
-// --- ?8 mask queries (cat:: and members) ---
+// Mask queries (`cat::` and members):
 
 test(simd_all_any_none_of) {
    using M = int4x4::mask_type;
@@ -1390,7 +1389,7 @@ test(make_simd_mask_from_count_edges) {
    cat::verify(mf2[0] && mf2[1] && !mf2[2] && !mf2[3]);
 }
 
-// --- ?9 select, if_else, min, max ---
+// Select, `if_else`, min, max:
 
 test(simd_select_matches_if_else) {
    int4x4 a = {1, 2, 3, 4};
@@ -1428,7 +1427,7 @@ test(simd_min_max) {
    cat::verify(xf[3] == 8_f4);
 }
 
-// --- ?10 permute, compress, expand, load_from, store_to ---
+// Permute, compress, expand, `load_from`, `store_to`:
 
 test(simd_permute_dynamic) {
    int4x4 source_lanes = {10, 20, 30, 40};
@@ -1668,7 +1667,7 @@ test(simd_load_from_store_to) {
                && masked_filled_lanes[2] == 3 && masked_filled_lanes[3] == 4);
 }
 
-// --- ?11 simd_bit_cast_as, `.raw` round-trip ---
+// `simd_bit_cast_as`, `.raw` round-trip:
 
 test(simd_bit_cast_as_unsigned) {
    int4x4 signed_source_lanes = {-1, 0, 1, -2};
@@ -1698,7 +1697,7 @@ test(simd_raw_roundtrip) {
    cat::verify(float_roundtrip_rebuilt[1] == 8.f);
 }
 
-// --- ?12 reductions (`__builtin_reduce_*`, P0918R1 context) ---
+// Reductions (`__builtin_reduce_*`, P0918R1 context):
 
 test(simd_reduce_add_mul_and_or_xor) {
    int4x4 const a = {10, 20, 30, 40};
@@ -1751,9 +1750,9 @@ test(simd_reduce_min_max_maximum_minimum_float) {
    float4x4 const nanish = {__builtin_nanf(""), 2_f4, 3_f4, 4_f4};
    cat::verify(nanish.reduce_max()[0u] == 4_f4);
    cat::verify(nanish.reduce_min()[0u] == 2_f4);
-   // `reduce_max` / `reduce_min` ignore `NaN` unless every lane is `NaN`; IEEE
-   // `reduce_maximum` / `reduce_minimum` follow `maximumNumber` /
-   // `minimumNumber` and can propagate `NaN` from a lane.
+   // `reduce_max`/`reduce_min` ignore `NaN` unless every lane is `NaN`. IEEE
+   // `reduce_maximum`/`reduce_minimum` follow `maximumNumber`/`minimumNumber`
+   // and can propagate `NaN` from a lane.
    cat::verify(
       __builtin_isnan(make_raw_arithmetic(nanish.reduce_maximum()[0u])));
    cat::verify(
@@ -1783,8 +1782,8 @@ test(simd_mask_reduce_integral) {
    cat::verify(a.find_last_if_true() == 3u);
 }
 
-// --- ?13 <bit>-style lane ops (integral scalar lanes only: popcount, rotate
-// left, rotate right) ---
+// <bit>-style lane ops (integral scalar lanes only: popcount, rotate:
+// left, rotate right):
 
 test(simd_popcount_rotate_left_rotate_right) {
    cat::simd<uint_lane, cat::fixed_size_abi<uint_lane, 4u>> v{0u, 3u, 15u,
@@ -1807,9 +1806,9 @@ test(simd_popcount_rotate_left_rotate_right) {
    cat::verify(rotated_right[3] == 4u);
 }
 
-// --- EVE-style mask subscript: `fn[mask](args?)` applies `fn` only where the
-// mask is true; inactive lanes keep the first simd argument (`v`, or `a` for
-// binary). ---
+// EVE-style mask subscript: `fn[mask](args?)` applies `fn` only where the:
+// mask is true. Inactive lanes keep the first SIMD argument (`v`, or `a` for
+// binary):
 
 test(simd_eve_mask_subscript_sqrt_cbrt_nroot_float) {
    float4x4 v = {1_f4, 4_f4, 9_f4, 16_f4};
@@ -1894,7 +1893,7 @@ test(simd_eve_mask_subscript_min_max_popcount_rotate_left_rotate_right) {
    cat::verify(rotated_right[3] == 1u);
 }
 
-// --- ?15 chunked_invoke, vectorizable_element ---
+// `chunked_invoke`, `vectorizable_element`:
 
 test(simd_chunked_invoke) {
    iword seen = iword(0);
@@ -1933,8 +1932,7 @@ test(simd_concepts) {
    static_assert(cat::vectorizable_element<double_lane>);
 }
 
-// --- ?17 vectorized_stepanov_iterator (Vc simdize iterator-style coverage) ---
-
+// `vectorized_stepanov_iterator` (Vc simdize iterator-style coverage):
 test(simd_as_vectorized_iterate_twice) {
    int_lane const data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
    auto it = cat::as_vectorized<int4, 4u>(data);
@@ -2147,8 +2145,8 @@ test(simd_as_vectorized_over_vec_float_data) {
 // TODO: Claude is too dumb to write this. Do it yourself.
 #if 0
 test(simd_list_stepanov_iterator_vectorization_float) {
-   // Mirrors Vc `list_iterator_vectorization` (float `std::list` block).
-   // `list_iter` models `simdize<L::iterator>`; `e` is ++list.end() because
+   // Mirrors Vc `list_iterator_vectorization` (`float` `std::list` block).
+   // `list_iter` models `simdize<L::iterator>`. `e` is `++list.end()` because
    // `cat::list` keeps the last node as `end()` and advancing past the tail
    // matches a simdized past-end iterator.
    cat::page_allocator pager;
@@ -2198,7 +2196,7 @@ test(simd_list_stepanov_iterator_vectorization_float) {
 }
 #endif
 
-// --- ?18 EVE-style conditionals ---
+// EVE-style conditionals:
 
 test(simd_ignore_first_last_keep_between) {
    auto a = cat::make_simd_mask_ignore_first<int4x4>(1u);

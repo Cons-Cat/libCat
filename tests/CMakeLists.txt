@@ -4,9 +4,8 @@ cat_gdb_symlink(cat-gdb-tests)
 
 # `cat-tests-base` holds the flags/links needed to match `cat-impl`'s compile
 # commands (so `REUSE_FROM cat-impl` passes PCH validation) but no test sources.
-# A focused single-test binary would link `cat-tests-base` and add only its
-# own source. The bulk `unit_tests` binary pulls everything via `cat-tests`
-# below.
+# A focused single-test binary would link `cat-tests-base` and add only its own
+# source. The bulk `unit_tests` binary pulls everything via `cat-tests` below.
 add_library(cat-tests-base INTERFACE) # Do not produce a `.so` or `.a` artifact.
 target_link_libraries(cat-tests-base INTERFACE cat)
 
@@ -17,6 +16,7 @@ target_compile_options(cat-tests-base INTERFACE
   # Tests should fail if they produce sanitizer warnings.
   # TODO: Re-enable this when threads consistently work.
   # -fno-sanitize-recover=all
+  #
   # Tests should be allowed to have unused variables.
   -Wno-unused-variable
   -Wno-self-assign-overloaded
@@ -58,7 +58,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_narrow_cast.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
     # TODO: I might remove this feature.
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_raii.cpp
+    # ${CMAKE_SOURCE_DIR}/tests/src/test_raii.cpp.
     ${CMAKE_SOURCE_DIR}/tests/src/test_typelist.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_set_memory.cpp
@@ -67,15 +67,12 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vec.cpp
     # TODO: This container needs a lot of work.
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_ring.cpp
+    # ${CMAKE_SOURCE_DIR}/tests/src/test_ring.cpp.
     ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_copy_memory.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_stringify.cpp
-    # `test_cpuid.cpp` asserts a literal microarch (`__builtin_cpu_is("skylake")`),
-    # so it is built standalone below and only registered with `ctest` under
-    # Intel SDE pinned to `-skl`.
     ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pointer_in_range.cpp
@@ -88,7 +85,7 @@ if(CAT_BUILD_UNIT_TESTS)
   # compile commands byte-equal to `cat-impl`'s so `REUSE_FROM cat-impl` below
   # passes PCH validation). `SKIP_PRECOMPILE_HEADERS` on the same TU because
   # `cat-impl`'s PCH bakes `_start` as `gnu::naked` and reusing it here would
-  # leave the no-args body all-asm ("non-ASM statement in naked function").
+  # leave the no-args body all-asm ("non-asm statement in naked function").
   set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
     TARGET_DIRECTORY unit_tests
@@ -96,7 +93,8 @@ if(CAT_BUILD_UNIT_TESTS)
       COMPILE_DEFINITIONS "NO_ARGC_ARGV"
       SKIP_PRECOMPILE_HEADERS ON)
   target_link_libraries(unit_tests PRIVATE cat-tests)
-  # `CAT_LINK_OPTIONS` arrives transitively from `cat`'s `INTERFACE_LINK_OPTIONS`.
+  # `CAT_LINK_OPTIONS` arrives transitively from `cat`'s
+  # `INTERFACE_LINK_OPTIONS`.
   if(CAT_PCH)
     target_precompile_headers(unit_tests REUSE_FROM cat-impl)
   endif()
@@ -105,8 +103,8 @@ if(CAT_BUILD_UNIT_TESTS)
   add_test(NAME UnitTests COMMAND unit_tests)
 
   # # Parked: standalone `test_cpuid` runner. Linking `cat-tests-base` skips the
-  # # bulk source list so only `test_cpuid` registers. Re-enable alongside the
-  # # SDE step in `ci.yml`.
+  # # bulk source list so only `test_cpuid` registers. Re-enable alongside the #
+  # SDE step in `ci.yml`.
   # add_executable(
   #   unit_tests_cpuid
   #   unit_tests.cpp
@@ -120,14 +118,14 @@ if(CAT_BUILD_UNIT_TESTS)
   #   target_precompile_headers(unit_tests_cpuid REUSE_FROM cat-impl)
   # endif()
   #
-  # find_program(CAT_SDE_EXECUTABLE
+  # `find_program` (`CAT_SDE_EXECUTABLE`.
   #   NAMES sde64 sde
   #   DOC "Path to the Intel Software Development Emulator binary.")
-  # if(CAT_SDE_EXECUTABLE)
+  # if(`CAT_SDE_EXECUTABLE`).
   #   add_test(
   #     NAME UnitTestsCpuid
   #     COMMAND ${CAT_SDE_EXECUTABLE} -skl -- $<TARGET_FILE:unit_tests_cpuid>)
-  # endif()
+  # `endif()`.
 else()
   # `.gdbinit` symlink needs at least one target. Link `cat-tests` so this
   # placeholder also exercises `REUSE_FROM cat-impl`.

@@ -161,7 +161,7 @@ basic_str_span : public span<CharT> {
                             [[clang::lifetimebound]]
    ) {
       this->m_p_data = in_span.data();
-      // Same as the non-const promotion above.
+      // Same as the non-`const` promotion above.
       this->m_size = narrow_cast<idx>(in_span.size() - 1u).value();
    }
 
@@ -290,7 +290,7 @@ basic_str_inplace
          string[length.raw - static_cast<__SIZE_TYPE__>(is_null_terminated)]
          == '\0')]];
       // This must be copied instead of initialized in-place to guarantee
-      // const-correctness.
+      // `const`-correctness.
       this->copy_string_data(string);
    }
 

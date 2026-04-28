@@ -79,7 +79,7 @@ max(T value_1, U value_2, Remaining... remaining) -> T {
                               : max(value_2, remaining...);
 }
 
-// TODO: If an `iterable` has `<` and `>` operators, this has unclear intent.
+// TODO: If an `iterable` has < and > operators, this has unclear intent.
 
 [[nodiscard]]
 constexpr auto
@@ -135,7 +135,7 @@ abs(T value) -> T {
 }
 
 // TODO: Support floating point here.
-// `index - integral` is `signed_distance`, not `index`; keep rounding in raw
+// `index - integral` is `signed_distance`, not `index`. Keep rounding in raw
 // space so `div_ceil(idx, u)` stays `idx`.
 template <typename T, is_integral U>
    requires(cat::detail::is_idx<T>)
@@ -191,7 +191,7 @@ inline constexpr float8 ln2 =
 
 // Emulate floating point math for targets without native instructions. This is
 // required for linking Clang math intrinsics.
-// TODO: Look into better algorithms. If these are the best, n
+// TODO: Look into better algorithms. If these are the best, note that.
 
 // ISO C `ldexp` semantics by repeated scaling (no classical power series).
 [[nodiscard]]
@@ -261,8 +261,8 @@ emulated_log(double argument) -> double {
           + static_cast<double>(unbiased_binary_exponent) * ln2.raw;
 }
 
-// `exp(z)`: Taylor–Maclaurin series for `exp` (Brook Taylor, 1715, Maclaurin
-// form) on `z` minus the nearest multiple of `ln 2`, then scale with `ldexp`.
+// Taylor-Maclaurin series for `exp` (Brook Taylor, 1715, Maclaurin form) on `z`
+// minus the nearest multiple of `ln 2`, then scale with `ldexp`.
 [[nodiscard]]
 constexpr auto
 emulated_exp(double argument) -> double {
@@ -364,8 +364,8 @@ emulated_powf(float base, float exponent) -> float {
       emulated_pow(static_cast<double>(base), static_cast<double>(exponent)));
 }
 
-// `sqrt` / `sqrtf` for targets without `libm`. Clang can lower lane
-// `__builtin_sqrt` / `__builtin_sqrtf` and `__builtin_elementwise_sqrt` to
+// `sqrt`/`sqrtf` for targets without libM. Clang can lower lane
+// `__builtin_sqrt`/`__builtin_sqrtf` and `__builtin_elementwise_sqrt` to.
 // those C ABI symbols. `sqrt(x)`: logarithmic identity `sqrt(x) = exp((1/2) ln
 // x)` using the same Taylor/Maclaurin `exp` and Maclaurin `artanh` `log` path
 // as above.
@@ -413,10 +413,9 @@ pow(T base, U exponent) -> T {
    }
 }
 
-// Clang has no `__builtin_powg` (Builtins.def `g` is a predicate flag, not a
-// `pow` variant). `__builtin_powf` / `__builtin_pow` lower to `powf` / `pow`
-// calls anyway, so call `emulated_*` here and avoid an extra hop through
-// `math/implementations/pow.cpp`.
+// Clang has no `__builtin_powg()`. `__builtin_powf()`/`__builtin_pow()` lower
+// to `powf`/`pow` calls anyway, so call `emulated_*` here and avoid an extra
+// hop through `math/implementations/pow.cpp`.
 
 [[nodiscard]]
 constexpr auto

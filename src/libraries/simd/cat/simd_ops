@@ -43,8 +43,8 @@ concept vec_floating_point =
 template <typename Simd, typename T>
 concept is_simd_of = is_simd<Simd> && is_same<typename Simd::scalar_type, T>;
 
-// EVE-style elementwise functors: `fn(input...)` unmasked, `fn[mask](input...)`
-// applies per lane where the mask is true. Inactive lanes keep the first simd
+// EVE-style elementwise functors. `fn(input...)` unmasked, `fn[mask](input...)`
+// applies per lane where the mask is true. Inactive lanes keep the first SIMD
 // argument (`input`, or `left` for two-vector ops). CRTP bases are
 // `simd_elementwise_*_interface`.
 
@@ -523,9 +523,9 @@ struct simd_load_aligned_blend_masked_impl {
 
 // Masked scatter: `simd_store_*[lane_mask](values, p)` binds this functor;
 // `values` is a `simd`, `p` is contiguous scalars. Lanes where `lane_mask[i]`
-// is false leave `p[i]` unchanged. `simd_store_to<T, Abi>[lane_mask](base,
-// indices, values)` binds the same type for indexed scatter; inactive lanes
-// leave `base[indices[i]]` unchanged.
+// is false leave `p[i]` unchanged.
+// `simd_store_to<T, Abi>[lane_mask](base, indices, values)` binds the same type
+// for indexed scatter. Inactive lanes leave `base[indices[i]]` unchanged.
 template <typename Mask>
 struct simd_store_to_masked_impl {
    Mask mask;
@@ -648,8 +648,8 @@ struct simd_load_from_blend_masked_impl {
 
 // Same EVE-style split as `simd_elementwise_interface` (`simd_sqrt`, ...):
 // unmasked `operator()` and `operator[]` returning a lane-masked helper. Load
-// factories take `memory_lane const*` (`invoke` / `bind_masked`) instead of
-// `simd` input / `invoke_full` / `invoke_lanewise`. `Simd` is repeated on the
+// factories take `memory_lane const*` (`invoke`/`bind_masked`) instead of
+// `simd` input / `invoke_full`/`invoke_lanewise`. `Simd` is repeated on the
 // base so signatures do not depend on `Derived` while it is incomplete.
 template <typename Derived, is_simd Simd>
 class simd_elementwise_factory_interface {
@@ -870,7 +870,7 @@ struct simd_mask_fill_blend_masked_impl {
    }
 };
 
-// Same split as `simd_elementwise_factory_interface`: unmasked `operator()`
+// Same split as `simd_elementwise_factory_interface`. Unmasked `operator()`
 // reads from `bool const*`, `operator[]` returns a blend functor for
 // `make_simd_mask_loaded`.
 template <typename Derived, is_simd_mask M>
@@ -938,13 +938,13 @@ struct make_simd_mask_loaded_impl
 };
 
 // Subscript yields masked gather-style loads from a contiguous base pointer.
-template <simd_memory_kind Kind>
+template <simd_memory_kind kind>
 struct simd_load_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
    operator[](simd_mask<T, Abi> lane_mask) const {
-      if constexpr (Kind == simd_memory_kind::aligned) {
+      if constexpr (kind == simd_memory_kind::aligned) {
          return simd_load_aligned_blend_masked_impl<simd_mask<T, Abi>>{
             lane_mask};
       } else {
@@ -955,10 +955,10 @@ struct simd_load_impl {
 
 // Subscript yields masked scatter-style stores to a contiguous base pointer.
 //
-// `simd_store_aligned` / `simd_store_unaligned` / `simd_store` name the memory
-// contract for symmetry with `simd_load_*`; each is only a subscript entry that
+// `simd_store_aligned`/`simd_store_unaligned` / `simd_store` name the memory
+// contract for symmetry with `simd_load_*`. Each is only a subscript entry that
 // returns `simd_store_to_masked_impl`, like `simd_load_impl` returning
-// `simd_load_blend_masked_impl` / `simd_load_aligned_blend_masked_impl`.
+// `simd_load_blend_masked_impl`/`simd_load_aligned_blend_masked_impl`.
 struct simd_store_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
@@ -984,7 +984,7 @@ simd_if_else_apply(simd_mask<T, Abi> mask, simd<T, Abi> on_true,
    return result;
 }
 
-// Indexed gather: each lane reads from `base[indices[i]]`.
+// Indexed gather. Each lane reads from `base[indices[i]]`.
 template <typename T, typename Abi>
 struct simd_load_from_impl {
    template <typename IdxAbi, typename Idx>
@@ -1006,7 +1006,7 @@ struct simd_load_from_impl {
    }
 };
 
-// Indexed scatter: each lane writes to `base[indices[i]]`.
+// Indexed scatter. Each lane writes to `base[indices[i]]`.
 template <typename T, typename Abi>
 struct simd_store_to_impl {
    template <typename IdxAbi, typename Idx>
@@ -1053,9 +1053,9 @@ struct simd_elementwise_interface {
    }
 };
 
-// If `Derived` defines its own `invoke_masked`, add `using
-// simd_binary_derived_supplies_invoke_masked = void;` so this base does not
-// declare `invoke_masked` (avoids an ill-formed duplicate member).
+// If `Derived` defines its own `invoke_masked`, add
+// `using simd_binary_derived_supplies_invoke_masked = void;` so this base does
+// not declare `invoke_masked` (avoids an ill-formed duplicate member).
 template <typename Derived>
 concept simd_binary_derived_supplies_invoke_masked =
    requires { typename Derived::simd_binary_derived_supplies_invoke_masked; };
@@ -1064,11 +1064,12 @@ template <typename Derived>
 concept simd_ternary_derived_supplies_invoke_masked =
    requires { typename Derived::simd_ternary_derived_supplies_invoke_masked; };
 
-// Optional `AbiBinaryMaskedOpTag` names a `simd_abi::binary_masked<OpTag, T,
-// Abi>` hook when present, else `invoke_full` blended with `left` on inactive
-// lanes (same contract as `simd_binary_masked_lanewise_fallback` when
-// `invoke_full` is lane-wise equivalent). When defaulted to `void`, masked
-// dispatch stays on `invoke_lanewise` only (constexpr-friendly lane path).
+// Optional `AbiBinaryMaskedOpTag` names a
+// `simd_abi::binary_masked<OpTag, T, Abi>` hook when present, else
+// `invoke_full` blended with `left` on inactive lanes (same contract as
+// `simd_binary_masked_lanewise_fallback` when `invoke_full` is lane-wise
+// equivalent). When defaulted to `void`, masked dispatch stays on
+// `invoke_lanewise` only (`constexpr`-friendly lane path).
 template <typename Derived, typename AbiBinaryMaskedOpTag = void>
 struct simd_elementwise_binary_interface {
    template <typename T, typename Abi>
@@ -1116,8 +1117,9 @@ struct simd_elementwise_binary_interface {
    }
 };
 
-// Optional `AbiTernaryMaskedOpTag` names `simd_abi::ternary_masked<OpTag, T,
-// Abi>` when present; else `invoke_full` blended with `x` on inactive lanes.
+// Optional `AbiTernaryMaskedOpTag` names
+// `simd_abi::ternary_masked<OpTag, T, Abi>` when present. Else `invoke_full`
+// blended with `x` on inactive lanes.
 template <typename Derived, typename AbiTernaryMaskedOpTag = void>
 struct simd_elementwise_ternary_interface {
    template <typename T, typename Abi>
@@ -2542,9 +2544,9 @@ template <typename T>
 constexpr auto
 simd_popcount_lane(T x) -> T {
    auto const unsigned_bits = static_cast<make_unsigned_type<T>>(x);
-   // TODO: Swap back to `__builtin_stdc_count_ones` once the apt.llvm.org
-   // Clang 23 nightly picks up PR #185978 (merged 2026-04-17). return
-   // static_cast<T>(__builtin_stdc_count_ones(unsigned_bits));
+   // TODO: Swap back to `__builtin_stdc_count_ones` once the `apt.llvm.org`.
+   // Clang 23 nightly picks up PR #185978 (merged 2026-04-17).
+   // return static_cast<T>(__builtin_stdc_count_ones(unsigned_bits));
    return static_cast<T>(__builtin_popcountg(unsigned_bits));
 }
 
@@ -3053,7 +3055,7 @@ make_simd_mask_filled(bool value) -> M {
    return detail::make_simd_mask_filled_impl<M>{}(value);
 }
 
-// Factory exports. Mask-free `make_simd_*` / `iota` pairs sit next to each
+// Factory exports. Mask-free `make_simd_*`/`iota` pairs sit next to each
 // `simd_*` functor above.
 
 // Gather-style loads into a new `simd` from a contiguous buffer.
@@ -3094,14 +3096,14 @@ inline constexpr detail::make_simd_mask_filled_impl<M> simd_mask_filled{};
 template <is_simd_mask M>
 inline constexpr detail::make_simd_mask_loaded_impl<M> make_simd_mask_loaded{};
 
-// Gather-style masked loads (vector←memory).
+// Gather-style masked loads (vector <- memory).
 inline constexpr detail::simd_load_impl<simd_memory_kind::aligned>
    simd_load_aligned{};
 inline constexpr detail::simd_load_impl<simd_memory_kind::unaligned>
    simd_load_unaligned{};
 inline constexpr detail::simd_load_impl<simd_memory_kind::dispatch> simd_load{};
 
-// Scatter-style masked stores (memory←vector).
+// Scatter-style masked stores (memory <- vector).
 inline constexpr detail::simd_store_impl simd_store_aligned{};
 inline constexpr detail::simd_store_impl simd_store_unaligned{};
 inline constexpr detail::simd_store_impl simd_store{};

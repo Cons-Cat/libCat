@@ -33,13 +33,13 @@ overallocated:
       cat::maybe handle = allocator.alloc<cat::byte>();
       cat::verify(handle.has_value());
    }
-   // This allocated 16 bytes, which is 8-byte-aligned. Another int allocation
+   // This allocated 16 bytes, which is 8-byte-aligned. Another `int` allocation
    // would make it 4-byte-aligned. However, 8 bytes should be allocated here to
    // keep it 8-byte-aligned.
    auto* p_handle = allocator.align_alloc<int4>(8u).value();
    cat::verify(cat::is_aligned(p_handle, 8u));
 
-   // Allocate another int.
+   // Allocate another `int`.
    auto* p_handle_2 = allocator.alloc<int4>().value();
    cat::verify(cat::is_aligned(p_handle_2, 4u));
    // This is now 4-byte-aligned.
@@ -86,7 +86,7 @@ overallocated:
    // Test sized allocations.
    allocator.reset();
    auto _ = allocator.alloc<int2>().or_exit();
-   // Because the allocator is now 2 byte aligned, an extra 2 bytes have to be
+   // Because the allocator is now 2-byte aligned, an extra 2 bytes have to be
    // reserved to allocate a 4-byte aligned value:
    cat::verify(allocator.nalloc<int4>().or_exit() == 6u);
 

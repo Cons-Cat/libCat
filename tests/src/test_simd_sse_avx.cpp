@@ -9,10 +9,10 @@ using cat::float4x4;
 using cat::int4x4;
 using cat::int4x8;
 
-// SSE2 hooks (`simd_sse2.hpp`): `unary_full<op_rsqrt>`; plus `mask_to_bitset`
-// via `sse2_abi_mask_to_bitset` in `simd_mask_bitset.tpp`. Reference behavior
-// uses `scalar_abi` (16-byte, no ISA hooks), not `native_abi` (which may alias
-// `avx2_abi` on this target).
+// SSE2 hooks (`simd_sse2.hpp`).
+// `unary_full<op_rsqrt>`, plus `mask_to_bitset` via `sse2_abi_mask_to_bitset`
+// in `simd_mask_bitset.tpp`. Reference behavior uses `scalar_abi` (16-byte, no
+// ISA hooks), not `native_abi` (which may alias `avx2_abi` on this target).
 test(simd_sse2_abi_hooks_permute_and_rsqrt) {
    static_assert(cat::scalar_abi<int4>::size == 16u);
    static_assert(cat::scalar_abi<int4>::alignment == 16u);
@@ -62,8 +62,9 @@ test(simd_sse2_abi_hooks_mask_to_bitset) {
    cat::verify(bits[3u] == true);
 }
 
-// AVX2 hooks (`simd_avx2.hpp`): `unary_full<op_rsqrt>`;
-// `simd_avx2_mask_ops.hpp`: mask reductions; `mask_to_bitset` via
+// AVX2 hooks (`simd_avx2.hpp`).
+// `unary_full<op_rsqrt>`, plus mask reductions via `simd_avx2_mask_ops.hpp` and
+// `simd_avx2_mask_ops.hpp` mask reductions. `mask_to_bitset` via
 // `avx2_abi_mask_to_bitset`.
 test(simd_avx2_abi_hooks_permute_and_rsqrt) {
    x64::avx2_simd<float4> const fv{10_f4, 20_f4, 30_f4, 40_f4,
@@ -143,9 +144,9 @@ test(simd_avx2_rsqrt_times_sqrt_near_one) {
 test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
    x64::avx2_simd_mask<float4> const sparse{false, false, true,  false,
                                             false, true,  false, true};
-   // Eight `float4` lanes need 32 bytes; `scalar_abi` is fixed at 16 bytes
+   // Eight `float4` lanes need 32 bytes. `scalar_abi` is fixed at 16 bytes
    // (four lanes). Compare against `fixed_size_abi<float4, 8>` instead of
-   // `native_abi<float4>` (which aliases `avx2_abi<float4>` here): no AVX2 mask
+   // `native_abi<float4>` (which aliases `avx2_abi<float4>` here). No AVX2 mask
    // hook specializations apply to `fixed_size_abi`.
    cat::simd_mask<float4, cat::fixed_size_abi<float4, 8>> const sparse_ref{
       false, false, true, false, false, true, false, true};

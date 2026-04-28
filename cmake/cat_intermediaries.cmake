@@ -1,12 +1,13 @@
-# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+# This file is flagrantly "vibe-coded". It may not be up to the standards of
+# most libCat code.
 
-# Pin script-mode invocations (`cmake -P`) to the same policy floor as
-# module mode (CMP0057 / `foreach IN ZIP_LISTS`).
+# Pin script-mode invocations (`cmake -P`) to the same policy floor as module
+# mode (CMP0057 / `foreach IN ZIP_LISTS`).
 cmake_minimum_required(VERSION 3.24)
 
-# `cat-intermediaries` -- recompile every libCat TU (impl, tests, examples)
-# with `-save-temps=obj` and copy the resulting `.ii` / `.bc` / `.s` into
-# a flattened per-domain layout under `${CMAKE_BINARY_DIR}`:
+# `cat-intermediaries` -- recompile every libCat TU (impl, tests, examples) with
+# `-save-temps=obj` and copy the resulting `.ii`/`.bc` / `.s` into a flattened
+# per-domain layout under `${CMAKE_BINARY_DIR}`:
 #
 #   simd/is_avx_supported.{ii,bc,s}   # from cat-impl           (`impl`)
 #   runtime/_start.{ii,bc,s}
@@ -14,17 +15,16 @@ cmake_minimum_required(VERSION 3.24)
 #   examples/hello.{ii,bc,s}          # from the example execs  (`examples`)
 #   ...
 #
-# Each copied `.ii` is run through `clang-format -i` at the end of the
-# target so the preprocessed source is human-readable.
+# Each copied `.ii` is run through `clang-format -i` at the end of the target so
+# the preprocessed source is human-readable.
 #
 # Dual-mode file (`CMAKE_SCRIPT_MODE_FILE` is the discriminator):
 #
-# Module mode (`include()`): defines a per-domain OBJECT "shadow" library
-# (impl is always present, tests / examples are conditional on their
-# interface library existing with sources), plus the `cat-intermediaries`
-# custom target. The custom target has no `DEPENDS` -- script mode drives
-# every shadow's sub-build itself with `-k 0` so a per-TU compile failure
-# can't stop the copy step.
+# Module mode (`include()`): defines a per-domain OBJECT "shadow" library (impl
+# is always present, tests / examples are conditional on their interface library
+# existing with sources), plus the `cat-intermediaries` custom target. The
+# custom target has no `DEPENDS` -- script mode drives every shadow's sub-build
+# itself with `-k 0` so a per-TU compile failure can't stop the copy step.
 #
 # Script mode (`cmake -P`):
 #   1. Drives one `cmake --build ... --target <shadow> --target <shadow>`
@@ -34,21 +34,21 @@ cmake_minimum_required(VERSION 3.24)
 #      for that domain, prunes stale destination files (scoped to the
 #      top-level dirs we just produced), and copies via
 #      `configure_file COPYONLY`.
-#   3. Runs `clang-format -i` on every copied `.ii` (sequential; dumb).
+#   3. Runs `clang-format -i` on every copied `.ii` (sequential).
 #   4. Re-surfaces a non-zero sub-build exit via `FATAL_ERROR`, but only
 #      after the copy has ferried whatever Clang wrote before failing.
 #
 # OBJECT-shadow setup: each shadow links PRIVATE to its domain's interface
-# library (cat / cat-tests / cat-examples) to inherit include dirs and
-# compile options. The impl shadow re-applies `CAT_COMPILE_OPTIONS_INTERNAL`
-# because `cat-impl`'s copy is PRIVATE; the tests / examples domains get
-# those flags transitively via `cat-tests-base` / `cat-examples`'s
-# INTERFACE. PCH is left off so each `.ii` carries the fully expanded
-# header set; `EXCLUDE_FROM_ALL` keeps plain `ninja` off the hook.
+# library (cat / `cat-tests`/`cat-examples`) to inherit include dirs and compile
+# options. The impl shadow re-applies `CAT_COMPILE_OPTIONS_INTERNAL` because
+# `cat-impl`'s copy is PRIVATE; the tests / examples domains get those flags
+# transitively via `cat-tests-base`/`cat-examples`'s INTERFACE. PCH is left off
+# so each `.ii` carries the fully expanded header set; `EXCLUDE_FROM_ALL` keeps
+# plain `ninja` off the hook.
 #
-# Incremental: Ninja skips up-to-date TU compiles; `configure_file COPYONLY`
-# (= `copy_if_different`) skips unchanged temps so their destination mtimes
-# stay put; `clang-format -i` is idempotent.
+# Incremental: Ninja skips up-to-date TU compiles; `configure_file COPYONLY` (=
+# `copy_if_different`) skips unchanged temps so their destination mtimes stay
+# put; `clang-format -i` is idempotent.
 #
 # Script-mode args (`-D`-passed):
 #   CAT_INTER_IMPL_TARGET / CAT_INTER_IMPL_OBJ_DIR         \
@@ -60,10 +60,10 @@ cmake_minimum_required(VERSION 3.24)
 #   CAT_CLANG_FORMAT_PATH   clang-format binary (may be empty -- skipped then)
 
 if (NOT CMAKE_SCRIPT_MODE_FILE)
-  # ===== Module mode =======================================================
+  # Module mode:
   set(_cat_intermediaries_script "${CMAKE_CURRENT_LIST_FILE}")
 
-  # ---- impl shadow (always present) --------------------------------------
+  # Impl shadow (always present):
   get_property(_cat_impl_sources_for_intermediaries TARGET cat-impl PROPERTY SOURCES)
   add_library(cat-intermediaries-lib OBJECT EXCLUDE_FROM_ALL
     ${_cat_impl_sources_for_intermediaries})
@@ -73,15 +73,14 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
     -save-temps=obj)
   unset(_cat_impl_sources_for_intermediaries)
 
-  # ---- tests shadow (iff cat-tests has test sources attached) ------------
+  # Tests shadow (iff `cat-tests` has test sources attached):
   set(_cat_inter_tests_target "")
   set(_cat_inter_tests_obj_dir "")
   if (TARGET cat-tests)
     get_property(_cat_tests_sources_for_intermediaries
       TARGET cat-tests PROPERTY INTERFACE_SOURCES)
-    # `unit_tests.cpp` is the main entry point for the test binary; pick
-    # it up too when it exists so its `.ii` is available alongside the
-    # per-test files.
+    # `unit_tests.cpp` is the main entry point for the test binary; pick it up
+    # too when it exists so its `.ii` is available alongside the per-test files.
     if (EXISTS "${CMAKE_SOURCE_DIR}/tests/unit_tests.cpp")
       list(APPEND _cat_tests_sources_for_intermediaries
         "${CMAKE_SOURCE_DIR}/tests/unit_tests.cpp")
@@ -89,9 +88,9 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
     if (_cat_tests_sources_for_intermediaries)
       add_library(cat-intermediaries-tests-lib OBJECT EXCLUDE_FROM_ALL
         ${_cat_tests_sources_for_intermediaries})
-      # `cat-tests-base` already carries `CAT_COMPILE_OPTIONS_INTERNAL`
-      # via INTERFACE, so -- unlike the impl shadow -- we do not need to
-      # re-apply them here. `-save-temps=obj` is the only per-shadow add.
+      # `cat-tests-base` already carries `CAT_COMPILE_OPTIONS_INTERNAL` via
+      # INTERFACE, so -- unlike the impl shadow -- we do not need to re-apply
+      # them here. `-save-temps=obj` is the only per-shadow add.
       target_link_libraries(cat-intermediaries-tests-lib PRIVATE cat-tests)
       target_compile_options(cat-intermediaries-tests-lib PRIVATE -save-temps=obj)
       set(_cat_inter_tests_target cat-intermediaries-tests-lib)
@@ -101,13 +100,13 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
     unset(_cat_tests_sources_for_intermediaries)
   endif()
 
-  # ---- examples shadow (iff at least one example executable exists) ------
+  # Examples shadow (iff at least one example executable exists):
   set(_cat_inter_examples_target "")
   set(_cat_inter_examples_obj_dir "")
   if (TARGET cat-examples)
     set(_cat_examples_sources_for_intermediaries "")
     # Enumerate the direct sources of each example executable.
-    # Absolutize each relative source against the target's SOURCE_DIR so
+    # Absolutize each relative source against the target's `SOURCE_DIR` so
     # re-attaching to a shadow defined in the root doesn't resolve e.g.
     # `hello.cpp` against `${CMAKE_SOURCE_DIR}/`.
     foreach(_ex IN ITEMS hello echo client server window unixcat dummy)
@@ -159,7 +158,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   return()
 endif()
 
-# ===== Script mode =========================================================
+# Script mode:
 
 if (NOT CAT_INTER_IMPL_TARGET OR NOT CAT_INTER_IMPL_OBJ_DIR
     OR NOT CAT_INTER_DST_DIR OR NOT CAT_INTER_BUILD_DIR)
@@ -169,7 +168,7 @@ if (NOT CAT_INTER_IMPL_TARGET OR NOT CAT_INTER_IMPL_OBJ_DIR
 endif()
 
 # Collect every non-empty shadow target and build them in a single inner
-# `cmake --build` so ninja parallelises across domains. `-- -k 0` / `-- -k`
+# `cmake --build` so ninja parallelises across domains. `-- -k 0`/`-- -k`
 # maximises partial output even if some TU fails.
 set(_cat_inter_targets "${CAT_INTER_IMPL_TARGET}")
 if (CAT_INTER_TESTS_TARGET)
@@ -198,8 +197,8 @@ execute_process(
   RESULT_VARIABLE _cat_inter_build_rc)
 
 # Per-domain processing: glob obj dir, flatten, prune stale, copy, format.
-# Parallel lists drive one iteration per domain. Empty obj_dir entries
-# (tests / examples absent) are skipped inside the loop.
+# Parallel lists drive one iteration per domain. Empty `obj_dir` entries (tests
+# / examples absent) are skipped inside the loop.
 set(_cat_inter_doms      "impl"
                          "tests"
                          "examples")
@@ -207,11 +206,11 @@ set(_cat_inter_obj_dirs  "${CAT_INTER_IMPL_OBJ_DIR}"
                          "${CAT_INTER_TESTS_OBJ_DIR}"
                          "${CAT_INTER_EXAMPLES_OBJ_DIR}")
 # Per-domain "home prefix" regex applied to flattened dst paths. Anything
-# matching is what the domain is responsible for; anything NOT matching
-# is dropped (handled by another domain). Impl's home is empty == no
-# filter, so it catches everything the libCat layout produces. Tests /
-# examples drop `_start.cpp` that leaks in via `cat`'s INTERFACE_SOURCES
-# -- otherwise their prune would stomp impl's `runtime/*.ii` copies.
+# matching is what the domain is responsible for; anything NOT matching is
+# dropped (handled by another domain). Impl's home is empty == no filter, so it
+# catches everything the libCat layout produces. Tests / examples drop
+# `_start.cpp` that leaks in via `cat`'s `INTERFACE_SOURCES` -- otherwise their
+# prune would stomp impl's `runtime/*.ii` copies.
 set(_cat_inter_home_re   ""
                          "^tests/"
                          "^examples/")
@@ -231,11 +230,12 @@ foreach(_dom _obj_dir _home IN ZIP_LISTS
     continue()
   endif()
 
-  # Flatten rules are anchored to mutually-exclusive path prefixes, so
-  # applying all three to every domain is safe:
+  # Flatten rules are anchored to mutually-exclusive path prefixes, so applying
+  # all three to every domain is safe:
   #   * `src/libraries/<lib>/implementations/<stem>` -> `<lib>/<stem>`
   #   * `tests/src/<stem>` -> `tests/<stem>`
-  #   * `examples/<stem>`  -> `examples/<stem>`  (identity; kept for
+  #   * `examples/<stem>`  -> `examples/<stem>`  (identity;
+  #   kept for
   #     symmetry so a future move of the examples dir only needs one
   #     regex update.)
   set(_cat_inter_dst_rel ${_cat_inter_src_rel})
@@ -245,9 +245,9 @@ foreach(_dom _obj_dir _home IN ZIP_LISTS
   list(TRANSFORM _cat_inter_dst_rel REPLACE "^examples/" "examples/")
 
   # Filter to this domain's home prefix (if any), dropping cross-domain
-  # leak-through paths (`runtime/_start.ii` from the tests / examples
-  # shadows). Index-aligned with `_cat_inter_src_rel` so the copy loop
-  # below still has the right source path for each dst.
+  # leak-through paths (`runtime/_start.ii` from the tests / examples shadows).
+  # Index-aligned with `_cat_inter_src_rel` so the copy loop below still has the
+  # right source path for each dst.
   if (_home)
     set(_cat_inter_filtered_src "")
     set(_cat_inter_filtered_dst "")
@@ -266,9 +266,9 @@ foreach(_dom _obj_dir _home IN ZIP_LISTS
     endif()
   endif()
 
-  # Prune stale destination files (TUs removed since the last build),
-  # scoped to the top-level dirs we just produced so the scan never
-  # reaches into `CMakeFiles/.../source-temps` or unrelated artifacts.
+  # Prune stale destination files (TUs removed since the last build), scoped to
+  # the top-level dirs we just produced so the scan never reaches into
+  # `CMakeFiles/.../source-temps` or unrelated artifacts.
   # Surgical `file(REMOVE)` keeps `COPYONLY`'s "skip if identical" check
   # effective on the next run.
   set(_cat_inter_owned_dirs "")
@@ -302,10 +302,10 @@ foreach(_dom _obj_dir _home IN ZIP_LISTS
   message(STATUS
     "cat-intermediaries: ${_dom}: copied ${_cat_inter_count} file(s).")
 
-  # Format the copied `.ii` files in place. `.bc` is binary and `.s` is
+  # Format the copied `.ii` files in place. `.bc` is binary and `.s` is.
   # assembly, so neither is clang-formattable. Sequential and dumb;
-  # clang-format is idempotent so subsequent runs are still correct,
-  # just not free.
+  # `clang-format` is idempotent so subsequent runs are still correct, just not
+  # free.
   if (CAT_CLANG_FORMAT_PATH)
     set(_cat_inter_ii_count 0)
     foreach(_dst_rel IN LISTS _cat_inter_dst_rel)
@@ -325,10 +325,9 @@ foreach(_dom _obj_dir _home IN ZIP_LISTS
   endif()
 endforeach()
 
-# Re-surface the captured sub-build exit. The copy already ran, so the
-# user gets both the compile errors (streamed via USES_TERMINAL) and
-# access to whatever partial `.ii` / `.bc` / `.s` Clang wrote before
-# failing.
+# Re-surface the captured sub-build exit. The copy already ran, so the user gets
+# both the compile errors (streamed via `USES_TERMINAL`) and access to whatever
+# partial `.ii`/`.bc` / `.s` Clang wrote before failing.
 if (NOT _cat_inter_build_rc EQUAL 0)
   message(FATAL_ERROR
     "cat-intermediaries shadow lib(s) build returned exit ${_cat_inter_build_rc}; "

@@ -18,8 +18,8 @@ option(CAT_BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)
 option(CAT_BUILD_EXAMPLE_HELLO "Compile hello.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(hello hello.cpp)
-  # `NO_ARGC_ARGV` pinned to `_start.cpp` and gated on the `hello` target so
-  # it doesn't contaminate sibling examples that share `TARGET_DIRECTORY`. See
+  # `NO_ARGC_ARGV` pinned to `_start.cpp` and gated on the `hello` target so it
+  # doesn't contaminate sibling examples that share `TARGET_DIRECTORY`. See
   # `tests/CMakeLists.txt` for the `SKIP_PRECOMPILE_HEADERS` rationale.
   set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
@@ -96,7 +96,7 @@ if(
   endif()
 endif()
 
-# libC executables are only configured for Release.
+# libC executables are only configured for `Release`.
 list(
   APPEND
   LIBC_RELEASE_OPTIONS

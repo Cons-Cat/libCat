@@ -1,23 +1,24 @@
-# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+# This file is flagrantly "vibe-coded". It may not be up to the standards of
+# most libCat code.
 
-# Source tidying (`cat-tidy`, `cat-tidy-check`)
+# Source tidying (`cat-tidy`, `cat-tidy-check`).
 #
 # Dual-mode file (`CMAKE_SCRIPT_MODE_FILE` is the discriminator):
 #
-# Module mode (`include()`): locates a `clang-tidy` whose major
-# matches the configured Clang, locates the companion `run-clang-tidy`
-# parallel driver, gathers libCat's translation units from `cat` /
-# `cat-impl`, and registers the `cat-tidy` (apply fix-its) and
-# `cat-tidy-check` (read-only, warnings-as-errors) custom targets.
+# Module mode (`include()`): locates a `clang-tidy` whose major matches the
+# configured Clang, locates the companion `run-clang-tidy` parallel driver,
+# gathers libCat's translation units from `cat`/`cat-impl`, and registers the
+# `cat-tidy` (apply fix-its) and `cat-tidy-check` (read-only,
+# warnings-as-errors) custom targets.
 # Both re-invoke this same file in script mode at build time.
 #
-# Script mode (`cmake -P`): drives `run-clang-tidy` over the listed
-# files against the build tree's `compile_commands.json`. `APPLY`
-# adds `-fix -format` so fix-its land in place and clang-format
-# cleans up afterwards. `CHECK` adds `-warnings-as-errors=*`, which
-# makes `run-clang-tidy` exit non-zero on any diagnostic so CI fails.
+# Script mode (`cmake -P`): drives `run-clang-tidy` over the listed files
+# against the build tree's `compile_commands.json`. `APPLY` adds `-fix -format`
+# so fix-its land in place and `clang-format` cleans up afterwards. `CHECK` adds
+# `-warnings-as-errors=*`, which makes `run-clang-tidy` exit non-zero on any
+# diagnostic so CI fails.
 #
-# clang-tidy reads the compile database, so this file forces
+# `clang-tidy` reads the compile database, so this file forces
 # `CMAKE_EXPORT_COMPILE_COMMANDS=ON`.
 #
 # Script-mode args:
@@ -28,12 +29,12 @@
 #   CMAKE_ARGV7+     source paths to tidy (also used for regex filter)
 
 if (NOT CMAKE_SCRIPT_MODE_FILE)
-  # ===== Module mode =====================================================
-  # `cat-tidy` requires a `clang-tidy` whose major matches the C++
-  # compiler CMake selected, so the linter and the compiler stay in
-  # lockstep with libCat's `.clang-tidy` rules. Prefer the explicitly
-  # versioned binary, and fall back to an unversioned `clang-tidy` only
-  # if it actually reports the same major.
+  # Module mode:
+  # `cat-tidy` requires a `clang-tidy` whose major matches the C++ compiler
+  # CMake selected, so the linter and the compiler stay in lockstep with
+  # libCat's `.clang-tidy` rules. Prefer the explicitly versioned binary, and
+  # fall back to an unversioned `clang-tidy` only if it actually reports the
+  # same major.
   string(REGEX MATCH "^[0-9]+" _cat_ct_major "${CMAKE_CXX_COMPILER_VERSION}")
   find_program(CAT_CLANG_TIDY_PATH
     NAMES "clang-tidy-${_cat_ct_major}" clang-tidy
@@ -69,9 +70,9 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
     unset(_cat_ct_drop)
   endif()
 
-  # `run-clang-tidy` parallelizes per-TU clang-tidy runs and merges
-  # fix-its via `clang-apply-replacements`. Both scripts ship with
-  # the same `clang-tools-<MAJOR>` package on Debian / Ubuntu.
+  # `run-clang-tidy` parallelizes per-TU `clang-tidy` runs and merges fix-its
+  # via `clang-apply-replacements`. Both scripts ship with the same
+  # `clang-tools-<MAJOR>` package on Debian / Ubuntu.
   if (CAT_CLANG_TIDY_PATH AND NOT CAT_RUN_CLANG_TIDY_PATH)
     message(WARNING
       "`clang-tidy-${_cat_ct_major}` was found but "
@@ -82,19 +83,19 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
       "is resolved.")
   endif()
 
-  # clang-tidy reads `compile_commands.json` from the build dir, so the
-  # tidy targets are only useful if CMake emits that file. Force it on
-  # for this configure -- cheap and idempotent, and downstream tooling
-  # like clangd wants it anyway.
+  # `clang-tidy` reads `compile_commands.json` from the build dir, so the tidy
+  # targets are only useful if CMake emits that file. Force it on for this
+  # configure -- cheap and idempotent, and downstream tooling like clangd wants
+  # it anyway.
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
   # `cat-impl` owns libCat's `.cpp`s; `_start.cpp` rides on `cat`'s
   # `INTERFACE_SOURCES` for its per-consumer `NO_ARGC_ARGV` branch.
-  # Both lists feed `compile_commands.json`, but `INTERFACE_SOURCES`
-  # still carries `$<BUILD_INTERFACE:...>` / `$<INSTALL_INTERFACE:...>`
-  # generator expressions -- the empty `INSTALL_INTERFACE` result is
-  # skipped in script mode. Drop non-TUs (`.hpp` / `.tpp`) since
-  # clang-tidy only runs against compile-database entries.
+  # Both lists feed `compile_commands.json`, but `INTERFACE_SOURCES` still
+  # carries `$<BUILD_INTERFACE:...>`/`$<INSTALL_INTERFACE:...>` generator
+  # expressions -- the empty `INSTALL_INTERFACE` result is skipped in script
+  # mode. Drop non-TUs (`.hpp`/`.tpp`) since `clang-tidy` only runs against
+  # compile-database entries.
   get_property(_cat_impl_sources  TARGET cat-impl PROPERTY SOURCES)
   get_property(_cat_iface_sources TARGET cat      PROPERTY INTERFACE_SOURCES)
   set(_cat_tidy_files
@@ -106,18 +107,17 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   # `cmake -P` (script mode) at build time.
   set(_cat_tidy_script "${CMAKE_CURRENT_LIST_FILE}")
 
-  # `cat-tidy` applies fix-its in place (and reformats). `cat-tidy-check`
-  # is the read-only CI variant that upgrades every diagnostic to an
-  # error and exits non-zero on drift. Both share this script,
-  # distinguished by the leading mode argument.
+  # `cat-tidy` applies fix-its in place (and reformats). `cat-tidy-check` is the
+  # read-only CI variant that upgrades every diagnostic to an error and exits
+  # non-zero on drift. Both share this script, distinguished by the leading mode
+  # argument.
   #
-  # Depending on `cat-impl` ensures its PCH (`cmake_pch.hxx.pch`) has
-  # been built before tidy runs. The compile-database entries for every
-  # cat-impl source (and for `_start.cpp` under `cat-syntax-lib` /
-  # `cat-opt-report`, which `REUSE_FROM cat-impl`) name that PCH
-  # explicitly, so without it clang-tidy fails with "PCH file not found"
-  # before it can analyse anything. sccache / ninja keep the rebuild
-  # nearly free on incremental runs.
+  # Depending on `cat-impl` ensures its PCH (`cmake_pch.hxx.pch`) has been built
+  # before tidy runs. The compile-database entries for every `cat-impl` source
+  # (and for `_start.cpp` under `cat-syntax-lib`/`cat-opt-report`, which
+  # `REUSE_FROM cat-impl`) name that PCH explicitly, so without it `clang-tidy`
+  # fails with "PCH file not found" before it can analyse anything. sccache /
+  # ninja keep the rebuild nearly free on incremental runs.
   function(_cat_add_tidy_target target mode)
     if (CAT_CLANG_TIDY_PATH AND CAT_RUN_CLANG_TIDY_PATH)
       add_custom_target(
@@ -161,7 +161,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   return()
 endif()
 
-# ===== Script mode =========================================================
+# Script mode:
 if (CMAKE_ARGC LESS 8)
   message(FATAL_ERROR
     "cat-tidy: expected mode, run-clang-tidy, clang-tidy, build dir, and at "
@@ -184,8 +184,8 @@ if (NOT EXISTS "${_build_dir}/compile_commands.json")
     "so re-run `cmake -B ${_build_dir}` to regenerate it.")
 endif()
 
-# Collect file arguments, dropping empties (from `INSTALL_INTERFACE`
-# generator expressions that evaluate to nothing at build time).
+# Collect file arguments, dropping empties (from `INSTALL_INTERFACE` generator
+# expressions that evaluate to nothing at build time).
 set(_files "")
 set(_i 7)
 while (_i LESS CMAKE_ARGC)
@@ -200,9 +200,9 @@ if (NOT _files)
   message(FATAL_ERROR "cat-tidy: no input files after filtering.")
 endif()
 
-# `run-clang-tidy` treats trailing positional args as a regex-or'd
-# filter over `compile_commands.json`. Escape regex metacharacters in
-# each path and join with `|` so a single match term holds every file.
+# `run-clang-tidy` treats trailing positional args as a regex-or'd filter over
+# `compile_commands.json`. Escape regex metacharacters in each path and join
+# with | so a single match term holds every file.
 set(_escaped_files "")
 foreach (_f IN LISTS _files)
   string(REGEX REPLACE "([][(){}.*+?^$|\\\\])" "\\\\\\1" _escaped "${_f}")

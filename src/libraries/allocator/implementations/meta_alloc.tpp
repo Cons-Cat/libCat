@@ -7,7 +7,7 @@
 namespace cat {
 
 template <typename Derived>
-// Handle and return types implied by the same flags as `meta_alloc`
+// Handle and return types implied by the same flags as `meta_alloc`.
 template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
           bool is_multiple, bool is_zeroed, bool has_feedback>
 struct allocator_interface<Derived>::meta_alloc_alias_types {
@@ -45,7 +45,7 @@ struct allocator_interface<Derived>::meta_alloc_alias_types {
 };
 
 template <typename Derived>
-// Only called from `meta_alloc` when `is_inline` is true; alias_types always
+// Only called from `meta_alloc` when `is_inline` is true. `alias_types` always
 // use `true` for the inline slot so this is not instantiated per `is_inline`.
 template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
           bool is_zeroed, bool has_feedback, typename... Args>
@@ -473,7 +473,7 @@ template <typename Derived>
 // allocation entry points, `is_multiple` allocates arrays (span handles)
 // instead of one `T`, `is_zeroed` uses implicit-lifetime zeroing instead of
 // constructor args, `has_feedback` returns sized byte counts when the allocator
-// supports them
+// supports them.
 template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
           bool is_multiple, bool is_zeroed, bool has_feedback, typename... Args>
    requires((!is_multiple || (sizeof...(Args) <= 0))

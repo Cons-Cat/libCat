@@ -30,8 +30,8 @@ unset(_cat_subdir)
 # `libcat.ld` defines `__cat_tls_*` symbols against the linkee's own TLS, so
 # `.a` consumers need `-Wl,-T,libcat.ld` at link time. `.so` bakes the same
 # definitions in during its own link, so its consumers don't. Hanging this on
-# `cat-impl` (rather than `cat`) means `CAT_USE_SHARED` automatically swaps
-# the `-T` along with the impl.
+# `cat-impl` (rather than `cat`) means `CAT_USE_SHARED` automatically swaps the
+# `-T` along with the impl.
 set(LIBCAT_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/src/libcat.ld")
 target_link_options(cat-impl INTERFACE
   "$<BUILD_INTERFACE:-Wl,-T,${LIBCAT_LINKER_SCRIPT}>"

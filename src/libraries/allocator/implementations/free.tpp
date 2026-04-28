@@ -4,7 +4,7 @@
 
 #include <cat/allocator>
 
-// member `free` / `cfree` definitions for `allocator_interface`
+// Member `free`/`cfree` definitions for `allocator_interface`.
 
 namespace cat {
 

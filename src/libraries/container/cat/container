@@ -149,8 +149,8 @@ template <typename Container, template <typename, auto...> typename Iterator,
 class stepanov_iterable_interface {
  public:
    // `value_type` is the canonical (cv-unqualified) element type. `reference`
-   // and `const_reference` preserve `T`'s const-ness on the mutable side and
-   // force `const` on the const side, mirroring `std::span` / `std::vector`.
+   // and `const_reference` preserve `T`'s `const`-ness on the mutable side and
+   // force `const` on the `const` side.
    using value_type = remove_cv<T>;
    using const_value_type = remove_cv<T> const;
    using reference = T&;
@@ -283,8 +283,8 @@ class container_interface {
 
  public:
    // `value_type` is the canonical (cv-unqualified) element type. `reference`
-   // and `const_reference` preserve `T`'s const-ness on the mutable side and
-   // force `const` on the const side, mirroring `std::span` / `std::vector`.
+   // and `const_reference` preserve `T`'s `const`-ness on the mutable side and
+   // force `const` on the `const` side, mirroring `std::span`/`std::vector`.
    using value_type = remove_cv<T>;
    using const_value_type = remove_cv<T> const;
    using reference = T&;

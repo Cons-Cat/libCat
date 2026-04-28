@@ -163,7 +163,7 @@ bit_ceil(T value) -> T {
 }
 
 // Bitwise rotate left by `shift` positions. `shift` is reduced mod the bit
-// width of `T`; negative shifts rotate in the opposite direction.
+// width of `T`. Negative shifts rotate in the opposite direction.
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
@@ -176,7 +176,7 @@ rotate_left(T value, iword shift) -> T {
 }
 
 // Bitwise rotate right by `shift` positions. `shift` is reduced mod the bit
-// width of `T`; negative shifts rotate in the opposite direction.
+// width of `T`. Negative shifts rotate in the opposite direction.
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
@@ -376,7 +376,7 @@ class bit_reference {
       return *this;
    }
 
-   // Because `bit_reference` and `bit_value` convert to bool, this comparison
+   // Because `bit_reference` and `bit_value` convert to `bool`, this comparison
    // works between all the above.
    friend constexpr auto
    operator==(bit_reference<storage_type> const& self, bool other) -> bool {
@@ -471,7 +471,7 @@ class bit_value {
    constexpr bit_value(bit_value const&) = default;
    constexpr bit_value(bit_value&&) = default;
 
-   // Implicitly convert from a bool.
+   // Implicitly convert from a `bool`.
    constexpr bit_value(bool other) : m_value(other) {
    }
 
@@ -611,7 +611,7 @@ struct byte;
 template <typename iterator>
 // Only storage types can be iterated bitwise. Like other
 // `proxy_stepanov_iterator_interface` adaptors, the wrapped iterator must model
-// random access (`advance` uses `+=` on the underlying iterator).
+// random access (`advance` uses += on the underlying iterator).
    requires(is_random_access_stepanov_iterator<iterator>
             && is_unsigned_integral<typename iterator::value_type>
             /* || is_same<typename iterator::value_type, byte> */)
@@ -775,21 +775,21 @@ struct byte : bitwise_interface<byte> {
       return __builtin_bit_cast(T, value);
    }
 
-   // Generate operator&.
+   // Generate `operator&`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(is_integral auto from) const -> byte {
       return this->value & from;
    }
 
-   // Generate operator|.
+   // Generate `operator|`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(is_integral auto from) const -> byte {
       return this->value | from;
    }
 
-   // Generate operator<<.
+   // Generate `operator<<`.
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
      gnu::nodebug]]
@@ -806,7 +806,7 @@ struct byte : bitwise_interface<byte> {
       return other << value;
    }
 
-   // Generate operator>>.
+   // Generate `operator>>`.
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
      gnu::nodebug]]
@@ -865,14 +865,6 @@ operator|(T flag_1, T flag_2) -> T {
    using U = cat::underlying_type<T>;
    return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
 }
-
-// template <cat::is_enum_flag T>
-// [[nodiscard]]
-// constexpr auto
-// operator|(T flag_1, cat::underlying_type<T> flag_2) -> T {
-//     using U = cat::underlying_type<T>;
-//     return static_cast<T>(static_cast<U>(flag_1) | flag_2);
-// }
 
 template <cat::is_enum_flag T>
 constexpr auto

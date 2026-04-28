@@ -9,7 +9,7 @@ namespace cat {
 
 // Disjointness of two half-open byte intervals `[p_first, p_first+first_bytes)`
 // and `[p_second, p_second+second_bytes)` as raw addresses (including touching
-// at an endpoint as non-overlapping for `memcpy`-class use)
+// at an endpoint as non-overlapping for `memcpy`-class use).
 [[nodiscard]]
 constexpr auto
 is_memory_overlapping(void const* p_first, idx first_bytes,

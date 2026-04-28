@@ -50,8 +50,8 @@ test(futex_syscalls) {
    cat::verify(woken == 0u);
 
    nix::futex futex_other{};
-   // Source word is `0`; `expected_source_value` `1` fails the kernel compare
-   // for `futex_command::compare_requeue` (`linux_error::again`).
+   // Source word is 0. `expected_source_value` 1 fails the kernel compare for
+   // `futex_command::compare_requeue` (`linux_error::again`).
    auto const cmp_requeue_result =
       futex_word.compare_requeue(1u, 1u, futex_other, 1u);
    cat::verify(!cmp_requeue_result.has_value());
@@ -70,7 +70,7 @@ test(futex_syscalls) {
    cat::verify(length == sizeof(head));
 
    // `futex_wait_flags::word_32` | `futex_wait_flags::private_process`. `val`
-   // does not match `futex_word.m_value` (`0`), so the kernel returns
+   // does not match `futex_word.m_value` (0), so the kernel returns
    // `linux_error::again` without enqueueing a waiter.
    nix::futex_waitv const waiter{
       .expected_value = 1u,

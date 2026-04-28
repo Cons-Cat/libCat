@@ -33,7 +33,7 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
    // When source and destination share the same residue mod `simd_align`,
    // padding the destination also aligns the source. Otherwise peel the
    // destination first, then peel additional `bytes_remaining` until the source
-   // is aligned for `load_aligned` (stores may then use `store_unaligned`)
+   // is aligned for `load_aligned` (stores may then use `store_unaligned`).
    uword const padding =
       src_mod == dest_mod
          ? (simd_align - dest_mod) % simd_align

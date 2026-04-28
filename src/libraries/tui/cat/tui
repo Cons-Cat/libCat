@@ -12,7 +12,7 @@ namespace cat {
 
 // "Virtual tty" control sequence introducers.
 
-// Font style sequences
+// Font style sequences.
 inline constexpr str_view vt_bold = "\e[1m";
 inline constexpr str_view vt_italic = "\e[2m";
 inline constexpr str_view vt_underline = "\e[3m";

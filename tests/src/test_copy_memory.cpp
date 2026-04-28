@@ -4,8 +4,8 @@
 
 #include "../unit_tests.hpp"
 
-// Regression for `arithmetic_ptr`: `void const*` must deduce `uintptr<void
-// const>` without duplicate conversion operators. This matches
+// Regression for `arithmetic_ptr`: `void const*` must deduce
+// `uintptr<void const>` without duplicate conversion operators. This matches
 // `copy_memory_impl` holding addresses as `cat::uintptr` from `void const*` /
 // `void*`.
 static_assert(

@@ -38,7 +38,7 @@ nix::process::spawn(cat::is_allocator auto& allocator,
       // tuple storage.
       static cat::tuple tuple_args{fwd(callback), fwd(arguments)...};
 
-      // Unary `+` converts this lambda to function pointer.
+      // Unary + converts this lambda to function pointer.
       static auto* p_entry =
          +[] [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
           (cat::tuple<Callback, Args...> * p_arguments) {

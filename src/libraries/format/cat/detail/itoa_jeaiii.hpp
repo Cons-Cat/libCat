@@ -1,8 +1,8 @@
 #pragma once
 
-// This header forward-declares Jeaiii's int-to-string conversion functions for
-// use by my string formatting. The implementations, and their copyright notice,
-// are located in `../../implementations/itoa_jeaiii.cpp`.
+// This header forward-declares Jeaiii's `int`-to-string conversion functions
+// for use by my string formatting. The implementations, and their copyright
+// notice, are located in `../../implementations/itoa_jeaiii.cpp`.
 
 // NOLINTBEGIN
 
@@ -44,7 +44,7 @@ static cat::detail::pair_jeaiii const s_pairs[] = {
 
 #define LN(N) (L##N, b += N + 1)
 #define LZ LN
-// if you want to '\0' terminate #define LZ(N) &(L##N, b[N + 1] = '\0')
+// If you want to '\0' terminate #define LZ(N) &(L##N, b[N + 1] = '\0').
 
 #define LG(F)                                                     \
    (u < 100             ? u < 10 ? F(0) : F(1)                    \

@@ -6,7 +6,7 @@
 
 namespace cat {
 
-// `sum(source)` reduces with `+`.
+// `sum(source)` reduces with +.
 template <is_iterable Iterable>
 constexpr auto
 sum(Iterable&& source) -> iterable_value_type<Iterable> {
@@ -31,7 +31,7 @@ struct sum_impl {
 };
 }  // namespace detail
 
-// Reduce the incoming elements with `+`. This is a terminal algorithm.
+// Reduce the incoming elements with +. This is a terminal algorithm.
 constexpr auto
 sum() -> detail::sum_impl {
    return {};

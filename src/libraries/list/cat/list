@@ -577,7 +577,8 @@ class list_stepanov_iterator
    // using container_type [[maybe_unused]] = list<T>;
 
    // TODO: This default constructor is deprecated due to the user-defined
-   // constructor. Should this still exist? iterator(iterator const&) = default;
+   // constructor. Should this still exist?
+   //    iterator(iterator const&) = default;
 
    list_stepanov_iterator(node_type* p_input) : m_p_node(p_input) {
    }
@@ -660,8 +661,8 @@ initialize_list_filled(span<T> list_nodes, T* p_previous,
    if (list_nodes.size() > 1u) {
       // Construct a node at this address.
       new (p_current) T(p_current + 1u, p_previous, value);
-      // Recurse to the next node. The branch requires `size > 1u`, so `size -
-      // 1u` is safe.
+      // Recurse to the next node. The branch requires `size > 1u`, so
+      // `size - 1u` is safe.
       list_nodes =
          list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
       initialize_list_filled<T>(list_nodes, p_current, value);

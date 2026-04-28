@@ -19,7 +19,7 @@ array : public container_interface<array<T, length>, T>,
         public random_access_stepanov_iterable_interface<T> {
  public:
    // Implicit copy/move (rule of Zero), except `array()` defaulted because this
-   // forwarding constructor suppresses implicit default construction
+   // forwarding constructor suppresses implicit default construction.
    constexpr array() = default;
 
    template <typename... Args>
@@ -97,7 +97,7 @@ array : public container_interface<array<T, length>, T>,
    T m_data[length];  // NOLINT We need a raw array to implement this.
 };
 
-// Construct an `array<int, 3>` as: `array a = {0, 1, 2};`
+// Construct an `array<int, 3>` as `array a = {0, 1, 2};`
 template <typename T, typename... Args>
 array(T, Args...) -> array<T, sizeof...(Args) + 1u>;
 
@@ -129,7 +129,7 @@ make_array_filled(T const& value) -> array<T, length> {
    return array;
 }
 
-// Analogous to the proposed `std::aggr::get` in the P2141 paper
+// Analogous to the proposed `std::aggr::get` in the P2141 paper.
 template <idx index, typename T, idx length>
    requires(index < length)
 [[nodiscard]]
@@ -156,8 +156,9 @@ get(array<T, length>&& a) noexcept -> T&& {
 
 }  // namespace cat
 
-// Tuple protocol: `std::tuple_size` / `tuple_element` for generic code, index
-// access via `cat::get`
+// Tuple protocol:
+// `std::tuple_size`/`tuple_element` for generic code, index access via
+// `cat::get()`.
 namespace std {
 
 template <typename T, ::cat::idx length>

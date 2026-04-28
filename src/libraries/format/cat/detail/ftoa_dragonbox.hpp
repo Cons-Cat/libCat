@@ -1,5 +1,5 @@
 #pragma once
-// Copyright 2020-2022 Junekey Jeon
+// Copyright 2020-2022 Junekey Jeon.
 //
 // The contents of this file may be used under the terms of the Apache License
 // v2.0 with LLVM Exceptions.
@@ -7,8 +7,8 @@
 //    (See accompanying file LICENSE-Apache or copy at
 //     https://llvm.org/foundation/relicensing/LICENSE.txt)
 //
-// Alternatively, the contents of this file may be used under the terms of
-// the Boost Software License, Version 1.0.
+// Alternatively, the contents of this file may be used under the terms of the
+// Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE-Boost or copy at
 //     https://www.boost.org/LICENSE_1_0.txt)
 //
@@ -75,7 +75,7 @@ struct ieee754_binary64 {
 template <class T>
 struct default_float_traits {
    // I don't know if there is a truly reliable way of detecting IEEE-754
-   // binary32/binary64 formats; I just did my best here.
+   // binary32/binary64 formats. I just did my best here.
    static_assert(
       limits<T>::is_iec559 && limits<T>::radix == 2
          && (detail::physical_bits<T> == 32 || detail::physical_bits<T> == 64),
@@ -90,7 +90,7 @@ struct default_float_traits {
                               ieee754_binary64>;
 
    // Defines an unsigned integer type that is large enough to carry a variable
-   // of type T. Most of the operations will be done on this integer type.
+   // of type `T`. Most of the operations will be done on this integer type.
    using carrier_uint = conditional<detail::physical_bits<T> == 32,
                                     uint4::raw_type, uint8::raw_type>;
    static_assert(sizeof(carrier_uint) == sizeof(T));
@@ -98,7 +98,7 @@ struct default_float_traits {
    // Number of bits in the above unsigned integer type.
    static constexpr int carrier_bits = int(detail::physical_bits<carrier_uint>);
 
-   // Convert from carrier_uint into the original type. Depending on the
+   // Convert from `carrier_uint` into the original type. Depending on the
    // floating-point encoding format, this operation might not be possible for
    // some specific bit patterns. However, the contract is that u always denotes
    // a valid bit pattern, so this function must be assumed to be noexcept.
@@ -222,7 +222,7 @@ struct default_float_traits {
 
 // Convenient wrappers for floating-point traits classes. In order to reduce the
 // argument passing overhead, these classes should be as simple as possible
-// (e.g., no inheritance, no private non-static data member, etc.; this is an
+// (e.g., no inheritance, no private non-static data member, `etc.;` this is an
 // unfortunate fact about common ABI convention).
 
 template <class T, class Traits = default_float_traits<T>>
@@ -409,8 +409,8 @@ namespace wuint {
 
 // clang-format off
     #if defined(__SIZEOF_INT128__)
-            // To silence "error: ISO C++ does not support '__int128' for 'type
-            // name' [-Wpedantic]"
+            // To silence "error: ISO C++ does not support '`__int128`' for
+            // 'type name' [-Wpedantic]".
             __extension__
             using builtin_uint128_t = unsigned __int128;
     #endif
@@ -565,7 +565,7 @@ umul96_lower64(uint4::raw_type x, uint8::raw_type y) noexcept {
 }  // namespace wuint
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Some simple utilities for constexpr computation.
+// Some simple utilities for `constexpr` computation.
 ////////////////////////////////////////////////////////////////////////////////////////
 
 template <int k, class Int>
@@ -592,7 +592,7 @@ count_factors(UInt n) noexcept {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Utilities for fast/constexpr log computation.
+// Utilities for fast/`constexpr` log computation.
 ////////////////////////////////////////////////////////////////////////////////////////
 
 namespace log {
@@ -620,7 +620,7 @@ compute(int e) noexcept {
               >> uword::raw_type(k));
 }
 
-// For constexpr computation. Returns -1 when n = 0.
+// For `constexpr` computation. Returns -1 when n = 0.
 template <class UInt>
 constexpr int
 floor_log2(UInt n) noexcept {
@@ -696,7 +696,8 @@ floor_log5_pow2_minus_log5_3(int e) noexcept {
 
 namespace div {
 // Replace n by floor(n / 10^index). Returns true if and only if n is divisible
-// by 10^index. Precondition: n <= 10^(index+1) !!It takes an in-out parameter!!
+// by 10^index. Precondition:
+// n <= 10^(index+1) !!It takes an in-out parameter!!
 template <int index>
 struct divide_by_pow10_info;
 
@@ -715,7 +716,7 @@ struct divide_by_pow10_info<2> {
 template <int index>
 constexpr bool
 check_divisibility_and_divide_by_pow10(uint4::raw_type& n) noexcept {
-   // Make sure the computation for max_n does not overflow.
+   // Make sure the computation for `max_n` does not overflow.
    static_assert(index + 1 <= log::floor_log10_pow2(31));
    // assert(n <= compute_power<index + 1>(uint4::raw_type(10)));
 
@@ -730,12 +731,12 @@ check_divisibility_and_divide_by_pow10(uint4::raw_type& n) noexcept {
    return result;
 }
 
-// Compute floor(n / 10^index) for small n and index. Precondition: n <=
-// 10^(index+1)
+// Compute floor(n / 10^index) for small n and index. Precondition:
+// n <= 10^(index+1).
 template <int index>
 constexpr uint4::raw_type
 small_division_by_pow10(uint4::raw_type n) noexcept {
-   // Make sure the computation for max_n does not overflow.
+   // Make sure the computation for `max_n` does not overflow.
    static_assert(index + 1 <= log::floor_log10_pow2(31));
    // assert(n <= compute_power<index + 1>(uint4::raw_type(10)));
 
@@ -743,7 +744,8 @@ small_division_by_pow10(uint4::raw_type n) noexcept {
           >> divide_by_pow10_info<index>::shift_amount;
 }
 
-// Compute floor(n / 10^index) for small index. Precondition: n <= n_max
+// Compute floor(n / 10^index) for small index. Precondition:
+// n <= `n_max`.
 template <int index, class UInt, UInt n_max>
 constexpr UInt
 divide_by_pow10(UInt n) noexcept {
@@ -1493,7 +1495,7 @@ struct cache_holder<ieee754_binary64> {
    };
 };
 
-// Compressed cache for double
+// Compressed cache for double.
 struct compressed_cache_detail {
    static constexpr int compression_ratio = 27;
    static constexpr uword::raw_type compressed_table_size =
@@ -2022,7 +2024,7 @@ struct away_from_zero : base {
 };
 }  // namespace decimal_to_binary_rounding
 
-// Binary-to-decimal rounding policies. (Always assumes nearest rounding modes.)
+// Binary-to-decimal rounding policies. (Always assumes nearest rounding modes).
 namespace binary_to_decimal_rounding {
 struct base {};
 
@@ -2100,8 +2102,8 @@ struct full : base {
    template <class FloatFormat>
    static constexpr typename cache_holder<FloatFormat>::cache_entry_type
    get_cache(int k) noexcept {
-      // assert(k >= cache_holder<FloatFormat>::min_k && k <=
-      // cache_holder<FloatFormat>::max_k);
+      // assert(k >= `cache_holder` `<FloatFormat>::` `min_k` && k <=
+      // `cache_holder` `<FloatFormat>::` `max_k`).
       return cache_holder<FloatFormat>::cache[uword::raw_type(
          k - cache_holder<FloatFormat>::min_k)];
    }
@@ -2113,8 +2115,8 @@ struct compact : base {
    template <class FloatFormat>
    static constexpr typename cache_holder<FloatFormat>::cache_entry_type
    get_cache(int k) noexcept {
-      // assert(k >= cache_holder<FloatFormat>::min_k && k <=
-      // cache_holder<FloatFormat>::max_k);
+      // assert(k >= `cache_holder` `<FloatFormat>::` `min_k` && k <=
+      // `cache_holder` `<FloatFormat>::` `max_k`).
 
       if constexpr (cat::is_same<FloatFormat, ieee754_binary64>) {
          // Compute the base index.
@@ -2159,7 +2161,7 @@ struct compact : base {
             return recovered_cache;
          }
       } else {
-         // Just use the full cache for anything other than binary64
+         // Just use the full cache for anything other than binary64.
          return cache_holder<FloatFormat>::cache[uword::raw_type(
             k - cache_holder<FloatFormat>::min_k)];
       }
@@ -2268,8 +2270,8 @@ struct impl : private FloatTraits,
    static_assert(min_k >= cache_holder<format>::min_k);
 
    static constexpr int max_k = [] {
-      // We do invoke shorter_interval_case for exponent == min_exponent case,
-      // so we should not add 1 here.
+      // We do invoke `shorter_interval_case` for exponent == `min_exponent`
+      // case, so we should not add 1 here.
       constexpr auto a = -log::floor_log10_pow2_minus_log10_4_over_3(
          int(min_exponent - significand_bits /*+ 1*/));
       constexpr auto b =
@@ -2326,7 +2328,8 @@ struct impl : private FloatTraits,
    compute_nearest_normal(carrier_uint const two_fc, int const exponent,
                           AdditionalArgs... additional_args) noexcept {
       //////////////////////////////////////////////////////////////////////
-      // Step 1: Schubfach multiplier calculation
+      // Step 1:
+      // Schubfach multiplier calculation.
       //////////////////////////////////////////////////////////////////////
 
       return_type ret_value;
@@ -2337,7 +2340,7 @@ struct impl : private FloatTraits,
       auto const cache = CachePolicy::template get_cache<format>(-minus_k);
       int const beta = exponent + log::floor_log2_pow10(-minus_k);
 
-      // Compute zi and deltai. 10^kappa <= deltai < 10^(kappa + 1)
+      // Compute zi and deltai. 10^kappa <= deltai < 10^(kappa + 1).
       auto const deltai = compute_delta(cache, beta);
       // For the case of binary32, the result of integer check is not correct
       // for 29711844 * 2^-82 =
@@ -2346,13 +2349,14 @@ struct impl : private FloatTraits,
       // 1.2288530660000000001731007559513386695471126586198806762695... *
       // 10^-17, and they are the unique counterexamples. However, since
       // 29711844 is even, this does not cause any problem for the endpoints
-      // calculations; it can only cause a problem when we need to perform
+      // calculations. It can only cause a problem when we need to perform
       // integer check for the center. Fortunately, with these inputs, that
       // branch is never executed, so we are fine.
       auto const [zi, is_z_integer] = compute_mul((two_fc | 1) << beta, cache);
 
       //////////////////////////////////////////////////////////////////////
-      // Step 2: Try larger divisor; remove trailing zeros if necessary
+      // Step 2:
+      // Try larger divisor. Remove trailing zeros if necessary.
       //////////////////////////////////////////////////////////////////////
 
       constexpr auto big_divisor =
@@ -2360,7 +2364,7 @@ struct impl : private FloatTraits,
       constexpr auto small_divisor = compute_power<kappa>(uint4::raw_type(10));
 
       // Using an upper bound on zi, we might be able to optimize the division
-      // better than the compiler; we are computing zi / big_divisor here.
+      // better than the compiler. We are computing zi / `big_divisor` here.
       ret_value.significand = div::divide_by_pow10<
          kappa + 1, carrier_uint,
          (carrier_uint(1) << (significand_bits + 1)) * big_divisor - 1>(zi);
@@ -2386,7 +2390,7 @@ struct impl : private FloatTraits,
       } else if (r > deltai) {
          goto small_divisor_case_label;
       } else {
-         // r == deltai; compare fractional parts.
+         // R == deltai. Compare fractional parts.
          auto const [xi_parity, x_is_integer] =
             compute_mul_parity(two_fc - 1, cache, beta);
 
@@ -2401,7 +2405,8 @@ struct impl : private FloatTraits,
       return ret_value;
 
       //////////////////////////////////////////////////////////////////////
-      // Step 3: Find the significand with the smaller divisor
+      // Step 3:
+      // Find the significand with the smaller divisor.
       //////////////////////////////////////////////////////////////////////
 
 small_divisor_case_label:
@@ -2412,10 +2417,10 @@ small_divisor_case_label:
       if constexpr (BinaryToDecimalRoundingPolicy::tag
                     == policy_impl::binary_to_decimal_rounding::tag_t::
                        do_not_care) {
-         // Normally, we want to compute ret_value.significand += r /
-         // small_divisor and return, but we need to take care of the case that
-         // the resulting value is exactly the right endpoint, while that is not
-         // included in the interval.
+         // Normally, we want to compute `ret_value.significand` += r /
+         // `small_divisor` and return, but we need to take care of the case
+         // that the resulting value is exactly the right endpoint, while that
+         // is not included in the interval.
          if (!interval.include_right_endpoint()) {
             // Is r divisible by 10^kappa?
             if (is_z_integer
@@ -2527,7 +2532,8 @@ small_divisor_case_label:
    compute_left_closed_directed(carrier_uint const two_fc,
                                 int exponent) noexcept {
       //////////////////////////////////////////////////////////////////////
-      // Step 1: Schubfach multiplier calculation
+      // Step 1:
+      // Schubfach multiplier calculation.
       //////////////////////////////////////////////////////////////////////
 
       return_type ret_value;
@@ -2537,7 +2543,7 @@ small_divisor_case_label:
       auto const cache = CachePolicy::template get_cache<format>(-minus_k);
       int const beta = exponent + log::floor_log2_pow10(-minus_k);
 
-      // Compute xi and deltai. 10^kappa <= deltai < 10^(kappa + 1)
+      // Compute xi and deltai. 10^kappa <= deltai < 10^(kappa + 1).
       auto const deltai = compute_delta(cache, beta);
       auto [xi, is_x_integer] = compute_mul(two_fc << beta, cache);
 
@@ -2557,14 +2563,15 @@ small_divisor_case_label:
       }
 
       //////////////////////////////////////////////////////////////////////
-      // Step 2: Try larger divisor; remove trailing zeros if necessary
+      // Step 2:
+      // Try larger divisor. Remove trailing zeros if necessary.
       //////////////////////////////////////////////////////////////////////
 
       constexpr auto big_divisor =
          compute_power<kappa + 1>(uint4::raw_type(10));
 
       // Using an upper bound on xi, we might be able to optimize the division
-      // better than the compiler; we are computing xi / big_divisor here.
+      // better than the compiler. We are computing xi / `big_divisor` here.
       ret_value.significand = div::divide_by_pow10<
          kappa + 1, carrier_uint,
          (carrier_uint(1) << (significand_bits + 1)) * big_divisor - 1>(xi);
@@ -2578,7 +2585,7 @@ small_divisor_case_label:
       if (r > deltai) {
          goto small_divisor_case_label;
       } else if (r == deltai) {
-         // Compare the fractional parts. This branch is never taken for the
+         // Compare the fractional parts. This branch is never taken for the.
          // exceptional cases 2f_c = 29711482, e = -81
          // (6.1442649164096937243516663440523473127541365101933479309082... *
          // 10^-18) and 2f_c = 29711482, e = -80
@@ -2597,7 +2604,8 @@ small_divisor_case_label:
       return ret_value;
 
       //////////////////////////////////////////////////////////////////////
-      // Step 3: Find the significand with the smaller divisor
+      // Step 3:
+      // Find the significand with the smaller divisor.
       //////////////////////////////////////////////////////////////////////
 
 small_divisor_case_label:
@@ -2613,7 +2621,8 @@ small_divisor_case_label:
    compute_right_closed_directed(carrier_uint const two_fc, int const exponent,
                                  bool shorter_interval) noexcept {
       //////////////////////////////////////////////////////////////////////
-      // Step 1: Schubfach multiplier calculation
+      // Step 1:
+      // Schubfach multiplier calculation.
       //////////////////////////////////////////////////////////////////////
 
       return_type ret_value;
@@ -2624,20 +2633,21 @@ small_divisor_case_label:
       auto const cache = CachePolicy::template get_cache<format>(-minus_k);
       int const beta = exponent + log::floor_log2_pow10(-minus_k);
 
-      // Compute zi and deltai. 10^kappa <= deltai < 10^(kappa + 1)
+      // Compute zi and deltai. 10^kappa <= deltai < 10^(kappa + 1).
       auto const deltai = shorter_interval ? compute_delta(cache, beta - 1)
                                            : compute_delta(cache, beta);
       carrier_uint const zi = compute_mul(two_fc << beta, cache).result;
 
       //////////////////////////////////////////////////////////////////////
-      // Step 2: Try larger divisor; remove trailing zeros if necessary
+      // Step 2:
+      // Try larger divisor. Remove trailing zeros if necessary.
       //////////////////////////////////////////////////////////////////////
 
       constexpr auto big_divisor =
          compute_power<kappa + 1>(uint4::raw_type(10));
 
       // Using an upper bound on zi, we might be able to optimize the division
-      // better than the compiler; we are computing zi / big_divisor here.
+      // better than the compiler. We are computing zi / `big_divisor` here.
       ret_value.significand = div::divide_by_pow10<
          kappa + 1, carrier_uint,
          (carrier_uint(1) << (significand_bits + 1)) * big_divisor - 1>(zi);
@@ -2660,7 +2670,8 @@ small_divisor_case_label:
       return ret_value;
 
       //////////////////////////////////////////////////////////////////////
-      // Step 3: Find the significand with the small divisor
+      // Step 3:
+      // Find the significand with the small divisor.
       //////////////////////////////////////////////////////////////////////
 
 small_divisor_case_label:
@@ -2701,7 +2712,7 @@ small_divisor_case_label:
          static_assert(cat::is_same<format, ieee754_binary64>);
 
          // Divide by 10^8 and reduce to 32-bits if divisible. Since
-         // ret_value.significand <= (2^53 * 1000 - 1) / 1000 < 10^16, n is at
+         // `ret_value.significand` <= (2^53 * 1000 - 1) / 1000 < 10^16, n is at
          // most of 16 digits.
 
          // This magic number is ceil(2^90 / 10^8).
@@ -2787,7 +2798,8 @@ small_divisor_case_label:
    static compute_mul_parity_result
    compute_mul_parity(carrier_uint two_f, cache_entry_type const& cache,
                       int beta) noexcept {
-      // assert(beta >= 1); assert(beta < 64);
+      // assert(beta >= 1);
+      // assert(beta < 64);
 
       if constexpr (cat::is_same<format, ieee754_binary32>) {
          auto r = wuint::umul96_lower64(two_f, cache);
@@ -2862,9 +2874,9 @@ small_divisor_case_label:
 ////////////////////////////////////////////////////////////////////////////////////////
 
 namespace policy_impl {
-// The library will specify a list of accepted kinds of policies and
-// their defaults, and the user will pass a list of policies. The aim of
-// helper classes/functions here is to do the following:
+// The library will specify a list of accepted kinds of policies and their
+// defaults, and the user will pass a list of policies. The aim of helper
+// classes/functions here is to do the following:
 //   1. Check if the policy parameters given by the user are all valid;
 //   that means,
 //      each of them should be of the kinds specified by the library.
@@ -2876,8 +2888,7 @@ namespace policy_impl {
 //   and also from
 //      the default policies if the user did not specify one for some
 //      kinds.
-// A policy belongs to a certain kind if it is deriving from a base
-// class.
+// A policy belongs to a certain kind if it is deriving from a base class.
 
 // For a given kind, find a policy belonging to that kind. Check if there are
 // more than one such policies.
@@ -2970,7 +2981,7 @@ check_policy_list_validity(BaseDefaultPairList, FirstPolicy,
                                         remaining_policies...);
 }
 
-// Build policy_holder.
+// Build `policy_holder`.
 template <bool repeated_, class... FoundPolicyPairs>
 struct found_policy_pair_list {
    static constexpr bool repeated = repeated_;
@@ -3081,9 +3092,9 @@ to_decimal(signed_significand_bits<Float, FloatTraits> signed_significand_bits,
             if (exponent != 0) {
                exponent += format::exponent_bias - format::significand_bits;
 
-               // Shorter interval case; proceed like Schubfach. One might think
-               // this condition is wrong, since when exponent_bits == 1 and
-               // two_fc == 0, the interval is actually regular. However, it
+               // Shorter interval case. Proceed like Schubfach. One might think
+               // this condition is wrong, since when `exponent_bits` == 1 and
+               // `two_fc` == 0, the interval is actually regular. However, it
                // turns out that this seemingly wrong condition is actually
                // fine, because the end result is anyway the same.
                //
@@ -3093,7 +3104,8 @@ to_decimal(signed_significand_bits<Float, FloatTraits> signed_significand_bits,
                //    fc    * 2^e = 1.175'494'35... * 10^-38
                // (fc+1/2) * 2^e = 1.175'494'42... * 10^-38
                //
-               // Hence, shorter_interval_case will return 1.175'494'4 * 10^-38.
+               // Hence, `shorter_interval_case` will return 1.175'494'4 *
+               // 10^-38.
                // 1.175'494'3 * 10^-38 is also a correct shortest representation
                // that will be rejected if we assume shorter interval, but
                // 1.175'494'4 * 10^-38 is closer to the true value so it doesn't
@@ -3105,7 +3117,7 @@ to_decimal(signed_significand_bits<Float, FloatTraits> signed_significand_bits,
                //    fc    * 2^e = 2.225'073'858'507'201'38... * 10^-308
                // (fc+1/2) * 2^e = 2.225'073'858'507'201'63... * 10^-308
                //
-               // Hence, shorter_interval_case will return
+               // Hence, `shorter_interval_case` will return
                // 2.225'073'858'507'201'4 * 10^-308. This is indeed of the
                // shortest length, and it is the unique one closest to the true
                // value among valid representations of the same length.
@@ -3264,7 +3276,7 @@ to_chars_n_impl(float_bits<Float, FloatTraits> br, char* buffer) noexcept {
 }
 }  // namespace to_chars_detail
 
-// Returns the next-to-end position
+// Returns the next-to-end position.
 template <class Float, class FloatTraits = default_float_traits<Float>,
           class... Policies>
 char*
@@ -3283,7 +3295,7 @@ to_chars_n(Float x, char* buffer, Policies... policies) noexcept {
       float_bits<Float, FloatTraits>(x), buffer);
 }
 
-// Null-terminate and bypass the return value of fp_to_chars_n
+// Null-terminate and bypass the return value of `fp_to_chars_n`.
 template <class Float, class FloatTraits = default_float_traits<Float>,
           class... Policies>
 char*
@@ -3293,7 +3305,7 @@ to_chars(Float x, char* buffer, Policies... policies) noexcept {
    return ptr;
 }
 
-// Maximum required buffer size (excluding null-terminator)
+// Maximum required buffer size (excluding null-terminator).
 template <class FloatFormat>
 inline constexpr uword::raw_type max_output_string_length =
    cat::is_same<FloatFormat, ieee754_binary32>

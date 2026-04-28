@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat
+# code.
 
 """Emit the `--Xcc` flags clang-repl needs to parse a libCat translation unit.
 
@@ -29,12 +30,11 @@ import sys
 from pathlib import Path
 
 
-# Clang's driver explodes `-Xclang <arg>` into two positional tokens, so
-# parse the command line back into "logical arguments" where each
-# `-Xclang <arg>` pair is a single cc1 unit and plain driver flags stay
-# as-is. Filtering then operates on whole units, which lets us drop a cc1
-# flag along with both its `-Xclang` prefix AND any follow-on value
-# token it expects (e.g. `-Xclang -include-pch -Xclang <path>`).
+# Clang's driver explodes `-Xclang <arg>` into two positional tokens, so parse the
+# command line back into "logical arguments" where each `-Xclang <arg>` pair is a single
+# cc1 unit and plain driver flags stay as-is. Filtering then operates on whole units,
+# which lets us drop a cc1 flag along with both its `-Xclang` prefix AND any follow-on
+# value token it expects (e.g. `-Xclang -include-pch -Xclang <path>`).
 def _to_logical(tokens: list[str]) -> list[tuple[str, str]]:
     out: list[tuple[str, str]] = []
     i = 1  # skip compiler driver
@@ -50,8 +50,8 @@ def _to_logical(tokens: list[str]) -> list[tuple[str, str]]:
 
 _DROP_EXACT = {
     "-c", "-MD", "-MMD",
-    # CMake PCH leftovers. `-Winvalid-pch` is harmless to keep but pointless
-    # once the `-include-pch` it guards is gone.
+    # CMake PCH leftovers. `-Winvalid-pch` is harmless to keep but pointless once the
+    # `-include-pch` it guards is gone.
     "-Winvalid-pch", "-fno-pch-timestamp",
 }
 # These flags consume the next logical argument as their value. Drop both.
@@ -63,9 +63,9 @@ _STRIP_SUBSTRINGS = (
 
 
 def _pick_entry(data: list[dict]) -> dict:
-    # Prefer a known stable file so flag derivation is deterministic across
-    # adds/removes elsewhere in the tree. Fall back to any cat-impl object,
-    # then to any libCat source.
+    # Prefer a known stable file so flag derivation is deterministic across adds/removes
+    # elsewhere in the tree. Fall back to any `cat-impl` object, then to any libCat
+    # source.
     preferred = "src/libraries/string/implementations/println.cpp"
     for e in data:
         if e["file"].endswith(preferred):
@@ -108,10 +108,9 @@ def build_xcc_args(build_dir: Path) -> list[str]:
         if val in _VALUE_TAKING:
             j += 2
             continue
-        # CMake force-includes `cmake_pch.hxx` so Clang picks up its
-        # sidecar `.pch`. That `.pch` was not built with
-        # `-fincremental-extensions`, so `clang-repl` refuses it. Drop the
-        # `-include` and the path that follows.
+        # CMake force-includes `cmake_pch.hxx` so Clang picks up its sidecar `.pch`.
+        # That `.pch` was not built with `-fincremental-extensions`, so `clang-repl`
+        # refuses it. Drop the `-include` and the path that follows.
         if val == "-include" and nxt and "cmake_pch.hxx" in nxt:
             j += 2
             continue

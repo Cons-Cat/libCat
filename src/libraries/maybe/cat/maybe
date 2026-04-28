@@ -28,7 +28,7 @@
 //           bindings to temporaries are deleted, and `value_or` returns by
 //           value to avoid dangling on a temporary fallback.
 //
-// P3836R2   Trivially copyable `std::optional<T&>`. `cat::maybe<T&>` has
+// P3836R2   Trivially-copyable `std::optional<T&>`. `cat::maybe<T&>` has
 //           pointer layout and is trivially copyable.
 //
 // P3168R1   Range support for `std::optional`. `cat::maybe<T>` models a
@@ -108,9 +108,10 @@ struct is_maybe_impl<maybe<U>> {
 template <typename T>
 concept is_maybe = detail::is_maybe_impl<remove_cvref<T>>::value;
 
-// Customization point for default niche-value storage in `maybe<T>`. - Default:
-// `type = T` (no compact storage) - Specialize to `compact<...>`: `maybe<T>`
-// stores nullopt in a niche
+// Customization point for default niche-value storage in `maybe<T>`.
+// `operator-` Default:
+// `type = T` (no compact storage) `operator-` Specialize to `compact<...>`:
+// `maybe<T>` stores `nullopt` in a niche.
 template <typename T>
 struct default_compact_trait : identity_trait<T> {};
 
@@ -157,13 +158,13 @@ struct maybe_value_storage {
       this->construct(arguments...);
    }
 
-   // If `T` is trivially copy-constructible, use this simple copy constructor.
+   // If `T` is trivially-copy-constructible, use this simple copy constructor.
    constexpr maybe_value_storage(T const& in_value)
       requires(is_trivially_copy_constructible<T>)
        : m_storage(in_value), m_has_some(true) {
    }
 
-   // If `T` is not trivially copy-constructible, then manually construct it
+   // If `T` is not trivially-copy-constructible, then manually construct it
    // in-place.
    constexpr maybe_value_storage(T const& in_value)
       requires(is_copy_constructible<T> && !is_trivially_copy_constructible<T>)
@@ -176,13 +177,13 @@ struct maybe_value_storage {
       requires(!is_copy_constructible<T>)
    = delete;
 
-   // If `T` is trivially move-constructible, use this simple move constructor.
+   // If `T` is trivially-move-constructible, use this simple move constructor.
    constexpr maybe_value_storage(T&& in_value)
       requires(is_trivially_move_constructible<T>)
        : m_storage(fwd(in_value)), m_has_some(true) {
    }
 
-   // If `T` is not trivially move-constructible, then manually invoke `move` on
+   // If `T` is not trivially-move-constructible, then manually invoke `move` on
    // it.
    constexpr maybe_value_storage(T&& in_value)
       requires(is_move_constructible<T> && !is_trivially_move_constructible<T>)
@@ -204,7 +205,7 @@ struct maybe_value_storage {
    // `requires`, they should be `default` or deleted.
    constexpr ~maybe_value_storage() = default;
 
-   // If `T` is not trivially destructible, then manually invoke its destructor.
+   // If `T` is not trivially-destructible, then manually invoke its destructor.
    constexpr ~maybe_value_storage()
       requires(!is_trivially_destructible<T>)
    {
@@ -216,7 +217,7 @@ struct maybe_value_storage {
       }
    }
 
-   // If `T` is trivially copy-assignable, then forward this value.
+   // If `T` is trivially-copy-assignable, then forward this value.
    constexpr auto
    operator=(T const& in_value) -> maybe_value_storage&
       requires(is_trivially_copy_assignable<T>)
@@ -226,7 +227,7 @@ struct maybe_value_storage {
       return *this;
    }
 
-   // If `T` is non-trivially copy-assignable, then manually construct it
+   // If `T` is non-trivially-copy-assignable, then manually construct it
    // in-place.
    constexpr auto
    operator=(T const& in_value) -> maybe_value_storage&
@@ -243,7 +244,7 @@ struct maybe_value_storage {
       requires(!is_copy_assignable<T>)
    = delete;
 
-   // If `T` is trivially move-assignable, then forward this value.
+   // If `T` is trivially-move-assignable, then forward this value.
    constexpr auto
    operator=(T&& in_value) -> maybe_value_storage&
       requires(is_trivially_move_assignable<T>)
@@ -253,7 +254,7 @@ struct maybe_value_storage {
       return *this;
    }
 
-   // If `T` is non-trivially move-assignable, then manually invoke `move()` on
+   // If `T` is non-trivially-move-assignable, then manually invoke `move()` on
    // it.
    constexpr auto
    operator=(T&& in_value) -> maybe_value_storage&
@@ -270,7 +271,7 @@ struct maybe_value_storage {
       requires(!is_move_assignable<T>)
    = delete;
 
-   // The following methods are homogenous to all `maybe...storage_type`
+   // The following methods are homogenous to all `maybe...storage_type`.
 
    [[nodiscard]]
    constexpr auto
@@ -318,7 +319,7 @@ struct maybe_value_storage {
    }
 
    // If this is assigned an `maybe` which wraps a type that can be converted to
-   // `T` , then convert that storage to this type implicitly.
+   // `T`, then convert that storage to this type implicitly.
    template <is_maybe Maybe>
    constexpr void
    assign(Maybe&& maybe) {
@@ -345,13 +346,13 @@ struct maybe_value_storage {
 };
 
 // `maybe_reference_storage` is a non-owning, trivially-copyable wrapper around
-// a pointer to `T`. It models `optional<T&>`: assignment always rebinds and
-// never destroys the referent, and the wrapper itself is trivially copyable so
+// a pointer to `T`. It models `optional<T&>`. Assignment always rebinds and
+// never destroys the referent, and the wrapper itself is trivially-copyable so
 // `cat::maybe<T&>` is too.
 //
 // P2988R12 `optional<T&>`. Reference rebinding semantics.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf P3836R2
-// Trivially copyable `optional<T&>`.
+// Trivially-copyable `optional<T&>`.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3836r2.html
 template <typename T>
 struct maybe_reference_storage {
@@ -378,7 +379,7 @@ struct maybe_reference_storage {
    }
 
    // Rebind the held pointer. The referent is never destroyed, even when the
-   // wrapper transitions through nullopt.
+   // wrapper transitions through `nullopt`.
    constexpr auto
    operator=(value_type option) -> maybe_reference_storage& {
       this->p_storage = __builtin_addressof(option);
@@ -438,14 +439,14 @@ struct maybe_compact_storage {
    // Enable copy and move constructors iff `maybe_compact_storage` supports
    // them.
 
-   // If `value_type` is trivially copy-constructible, use this simple copy
+   // If `value_type` is trivially-copy-constructible, use this simple copy
    // constructor.
    constexpr maybe_compact_storage(value_type const& in_value)
       requires(is_trivially_copy_constructible<value_type>)
        : m_storage(in_value) {
    }
 
-   // If `value_type` is not trivially copy-constructible, then manually
+   // If `value_type` is not trivially-copy-constructible, then manually
    // construct it in-place.
    constexpr maybe_compact_storage(value_type const& in_value)
       requires(is_copy_constructible<value_type>
@@ -459,14 +460,14 @@ struct maybe_compact_storage {
       requires(!is_copy_constructible<value_type>)
    = delete;
 
-   // If `value_type` is trivially move-constructible, use this simple move
+   // If `value_type` is trivially-move-constructible, use this simple move
    // constructor.
    constexpr maybe_compact_storage(value_type&& in_value)
       requires(is_trivially_move_constructible<value_type>)
        : m_storage(move(in_value)) {
    }
 
-   // If `value_type` is not trivially move-constructible, then manually invoke
+   // If `value_type` is not trivially-move-constructible, then manually invoke
    // `move` on it.
    constexpr maybe_compact_storage(value_type&& in_value)
       requires(is_move_constructible<value_type>
@@ -484,7 +485,7 @@ struct maybe_compact_storage {
    // `requires`, they should be `default` or deleted.
    constexpr ~maybe_compact_storage() = default;
 
-   // If `value_type` is not trivially destructible, then manually invoke its
+   // If `value_type` is not trivially-destructible, then manually invoke its
    // destructor.
    constexpr ~maybe_compact_storage()
       requires(!is_trivially_destructible<value_type>)
@@ -503,7 +504,7 @@ struct maybe_compact_storage {
    // If other assignment operators are not conditionally specialized by their
    // `requires`, they should be `default` or deleted.
 
-   // If `value_type` is trivially copy-assignable, then forward this value.
+   // If `value_type` is trivially-copy-assignable, then forward this value.
    constexpr auto
    operator=(value_type const& in_value) -> maybe_compact_storage&
       requires(is_trivially_copy_assignable<value_type>)
@@ -512,7 +513,7 @@ struct maybe_compact_storage {
       return *this;
    }
 
-   // If `value_type` is non-trivially copy-assignable, then manually construct
+   // If `value_type` is non-trivially-copy-assignable, then manually construct
    // it in-place.
    constexpr auto
    operator=(value_type const& in_value) -> maybe_compact_storage&
@@ -530,7 +531,7 @@ struct maybe_compact_storage {
       requires(!is_copy_assignable<value_type>)
    = delete;
 
-   // If `value_type` is trivially move-assignable, then forward this value.
+   // If `value_type` is trivially-move-assignable, then forward this value.
    constexpr auto
    operator=(value_type&& in_value) -> maybe_compact_storage&
       requires(is_trivially_move_assignable<value_type>)
@@ -539,7 +540,7 @@ struct maybe_compact_storage {
       return *this;
    }
 
-   // If `value_type` is non-trivially move-assignable, then manually invoke
+   // If `value_type` is non-trivially-move-assignable, then manually invoke
    // `move()` on it.
    constexpr auto
    operator=(value_type&& in_value) -> maybe_compact_storage&
@@ -585,7 +586,7 @@ struct maybe_compact_storage {
    }
 
    // If this is assigned an `maybe` which wraps a type that can be converted to
-   // `T` , then convert that storage to this type implicitly.
+   // `T`, then convert that storage to this type implicitly.
    template <is_maybe Maybe>
    constexpr void
    assign(Maybe&& maybe) {
@@ -695,7 +696,7 @@ class [[nodiscard]] maybe {
        : m_storage(static_cast<value_type>(input)) {
    }
 
-   // Reject reference binding to a temporary or rvalue. A deleted overload is
+   // Reject reference binding to a temporary or r-value. A deleted overload is
    // preferred to a SFINAE failure for clearer diagnostics.
    //
    // P2988R12 `optional<T&>`. Dangling-temporary protection.
@@ -1223,7 +1224,7 @@ class [[nodiscard]] maybe {
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3168r1.html
    //
    // TODO: When the ranges library lands, add the deferred operators:
-   // `operator==` / `<=>` between two `maybe`s, the range pipe `operator|`, and
+   // `operator==` / <=> between two `maybe`s, the range pipe `operator|`, and
    // the view-adapter `operator&`.
    [[nodiscard]]
    constexpr auto
@@ -1257,20 +1258,20 @@ class [[nodiscard]] maybe {
 template <typename T>
 maybe(T) -> maybe<T>;
 
-// `maybe<T&>` is trivially copyable and has the same layout as a pointer. These
+// `maybe<T&>` is trivially-copyable and has the same layout as a pointer. These
 // static checks document and enforce that invariant against future regressions.
 //
-// P3836R2 Trivially copyable `optional<T&>`.
+// P3836R2 Trivially-copyable `optional<T&>`.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3836r2.html
 static_assert(__is_trivially_copyable(maybe<int&>));
 static_assert(__is_trivially_copyable(maybe<int const&>));
 static_assert(sizeof(maybe<int&>) == sizeof(int*));
 
 // `make_maybe(value)` deduces the value type, like `std::make_optional`.
-// `make_maybe<T>(arguments...)` constructs `maybe<T>` in place. There is no
-// `make_maybe<T&>(...)` overload because constructing a `maybe<T&>` from a
+// `make_maybe<T>(arguments).` constructs `maybe<T>` in place. There is no
+// `make_maybe<T&>().` overload because constructing a `maybe<T&>` from a
 // temporary is forbidden, and partial-order ranking makes the argument-deducing
-// form pick up lvalues unambiguously, so callers should just write
+// form pick up l-values unambiguously, so callers should just write
 // `maybe<T&>{lvalue}` directly.
 //
 // P2988R12 `optional<T&>`. No reference factories.

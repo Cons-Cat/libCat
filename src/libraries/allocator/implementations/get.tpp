@@ -4,7 +4,7 @@
 
 #include <cat/allocator>
 
-// member `get` / `p_get` definitions for `allocator_interface`
+// Member `.get()`/`.p_get()` definitions for `allocator_interface`.
 
 namespace cat {
 

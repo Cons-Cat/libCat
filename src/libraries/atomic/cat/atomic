@@ -76,8 +76,8 @@ kill_dependency(T expression) -> T {
 }
 
 // TODO: Enforce this with a `concept`.
-// `atomic<T>` wraps a type that may be `2`, `4`, or `8` bytes large. If it
-// wraps a `bool`, it does not have fetch methods or operators.
+// `atomic<T>` wraps a type that may be 2, 4, or 8 bytes large. If it wraps a
+// `bool`, it does not have fetch methods or operators.
 template <typename T>
 class atomic {
  public:

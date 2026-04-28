@@ -1,9 +1,9 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-// P2141R2-style "named tuples": Clang `__builtin_structured_binding_size`,
-// `cat::get` / `cat::tuple_size` (analogous to the proposed `std::aggr::get` in
+// P2141R2-style "named tuples". Clang `__builtin_structured_binding_size`,
+// `cat::get`/`cat::tuple_size` (analogous to the proposed `std::aggr::get` in
 // that paper) for such aggregates, `has_aggregate_get`, and `cat::apply` for
-// plain aggregates
+// plain aggregates.
 
 namespace cat {
 namespace detail {
@@ -15,7 +15,8 @@ template <idx index, typename T>
 [[nodiscard, gnu::always_inline]]
 constexpr auto
 get_aggregate_lvalue(T& t) -> decltype(auto) {
-   // Compared to Boost.pfr or the magic_get library, this is extremely simple.
+   // Compared to `Boost.pfr` or the `magic_get` library, this is extremely
+   // simple.
    // We just destructure into a pack, and then index that pack.
    auto& [... members] = t;
    return (members...[index]);
@@ -47,15 +48,15 @@ template <typename T>
 inline constexpr bool has_std_tuple_size_for_aggregate_get<
    T, void_type<decltype(std::tuple_size<T>::value)>> = true;
 
-// Tuple-like for magic aggregate access: P2141 path is only for real
+// Tuple-like for magic aggregate access. P2141 path is only for real
 // aggregates, not for types that already have the tuple-size protocol or a
-// member `.get<>` like `cat::tuple`
+// member `.get<>` like `cat::tuple`.
 template <typename T>
 consteval auto
 has_aggregate_get_impl() -> bool {
    using type = remove_cvref<T>;
-   // C++ aggregates include array types, not only `class` / `struct`, so
-   // `__is_aggregate` does not imply `__is_class`
+   // C++ aggregates include array types, not only `class`/`struct`, so
+   // `__is_aggregate` does not imply `__is_class`.
    return !has_std_tuple_size_for_aggregate_get<remove_cvref<T>>
           && !has_member_get_at_index_zero_v<type> && __is_class(type)
           && __is_aggregate(type)
@@ -63,9 +64,9 @@ has_aggregate_get_impl() -> bool {
 }
 }  // namespace detail
 
-// Predicate for the libCat P2141 path: plain aggregates with
+// Predicate for the libCat P2141 path. Plain aggregates with
 // `__builtin_structured_binding_size` in range, and not in the tuple protocol
-// (specialized tuple-size or a tuple-like `.get<>` on the type)
+// (specialized tuple-size or a tuple-like `.get<>` on the type).
 template <typename T>
 inline constexpr bool has_aggregate_get = detail::has_aggregate_get_impl<T>();
 
@@ -74,7 +75,7 @@ template <typename T>
 struct tuple_size
     : constant<__builtin_structured_binding_size(remove_cvref<T>)> {};
 
-// Analogous to the proposed `std::aggr::get` in the P2141 paper
+// Analogous to the proposed `std::aggr::get` in the P2141 paper.
 template <idx index, typename S>
    requires(has_aggregate_get<remove_cvref<S>>
             && index
@@ -95,8 +96,9 @@ get(S const& t) noexcept -> decltype(auto) {
    return ::cat::detail::get_aggregate_lvalue<index>(t);
 }
 
-// `S&&` with `is_rvalue_reference`: true prvalue or xvalue aggregate so we can
-// bind the pack and move the selected element out
+// `S&&` with `is_rvalue_reference`:
+// True pr-value or x-value aggregate so we can bind the pack and move the
+// selected element out.
 template <idx index, typename S>
    requires(is_rvalue_reference<S &&> && has_aggregate_get<remove_cvref<S>>
             && index
@@ -115,7 +117,7 @@ get(S&& t) noexcept
 namespace cat::detail {
 
 // `make_index_sequence` over `cat::idx` to `cat::get` for
-// `aggregate_apply_impl`
+// `aggregate_apply_impl`.
 template <idx index, typename Aggregate>
    requires(has_aggregate_get<remove_cvref<Aggregate>>)
 [[nodiscard, gnu::always_inline]]
@@ -138,7 +140,7 @@ aggregate_apply_impl(Callback&& callback, Aggregate&& t,
 namespace cat {
 
 // `apply` for `has_aggregate_get` types, separate overload from
-// `is_tuple<>`-based `apply` in the main `tuple` header
+// `is_tuple<>`-based `apply` in the main `tuple` header.
 template <typename Callback, typename Aggregate>
    requires(has_aggregate_get<remove_cvref<Aggregate>>)
 [[nodiscard]]

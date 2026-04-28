@@ -1,31 +1,32 @@
-# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+# This file is flagrantly "vibe-coded". It may not be up to the standards of
+# most libCat code.
 
 # Configure-time `-fsyntax-only` checks for `cat::arithmetic`, `cat::index`, and
 # `cat::arithmetic_ptr`. Every probe must be ill-formed.
 #
 # Bodies and naming follow the **inverse** of the `test_arithmetic` unit tests
-# (compound assignment, brace OOR, `idx`, `arithmetic_ptr`, mixed-wide
-# bitwise, `__attribute__((enable_if(...)))` on some `operator+=` / `operator=`
-# paths in `overflow_reference` / `index`, etc.). Only **constructors** and
-# **operator** / assignment / compound-assignment / brace-init expressions
-# (no `static_assert` in probe sources, no concept-`requires` probes in those
-# sources). The positive suite
-# still uses `static_assert` and concepts.
+# (compound assignment, brace OOR, `idx`, `arithmetic_ptr`, mixed-wide bitwise,
+# `__attribute__((enable_if(...)))` on some `operator+=`/`operator=` paths in
+# `overflow_reference`/`index`, etc.) Only **constructors** and **`operator*`* /
+# assignment / compound-assignment / brace-init expressions (no `static_assert`
+# in probe sources, no concept-`requires` probes in those sources). The positive
+# suite still uses `static_assert` and concepts.
 #
-# `cmake/cat_arithmetic_neg_cases.cmake` holds ad hoc probes, `cat_arithmetic_neg_matrix.cmake`
-# the full `intN` / `uintN` `=` / `icvt` / compound grid, and a width `foreach` here
-# matches every `int1`..`int8` / `uint1`..`uint8` OOR case.
-# Pure type-trait negations (e.g. `!is_signed`, `!is_lvalue_reference`) are
-# not expressed as TUs: they are not an ill-formed *constructor or operator*
-# in user code.
+# `cmake/cat_arithmetic_neg_cases.cmake` holds ad hoc probes,
+# `cat_arithmetic_neg_matrix.cmake` the full `intN`/`uintN` = / `icvt` /
+# compound grid, and a width `foreach` here matches every `int1`..
+# `int8`/`uint1`..`uint8` OOR case.
+# Pure type-trait negations (e.g. `!is_signed`, `!is_lvalue_reference`) are not
+# expressed as TUs: they are not an ill-formed *constructor or `operator*` in
+# user code.
 #
 # When `CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON`, checks run at **configure**
 # time. Full compiler text for each *must-reject* probe (stderr/stdout) is
-# written to
-# `CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log` in the build tree.
+# written to `CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log` in the
+# build tree.
 # A final `message(STATUS` reports counts and points at that file. Set
-# `CAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS=ON` to `message(STATUS` every probe
-# (very verbose on configure output). No CTest, no `cmake --build`.
+# `CAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS=ON` to `message(STATUS` every probe (very
+# verbose on configure output). No CTest, no `cmake --build`.
 #
 # Local:
 #   cmake -S . -B build-neg -G Ninja -DCMAKE_CXX_COMPILER=clang++-23 \
@@ -49,7 +50,7 @@ if (NOT DEFINED CAT_INCLUDE_SUBDIRS)
 endif()
 
 # Match `cat` include layout (one `-I` per list entry) plus this directory for
-# `arithmetic_neg_deconst.hpp` (deconst_number; see `test_arithmetic`).
+# `arithmetic_neg_deconst.hpp` (`deconst_number` see `test_arithmetic`).
 set(_cat_neg_includes "${CMAKE_SOURCE_DIR}/src")
 foreach(_d IN LISTS CAT_INCLUDE_SUBDIRS)
   list(APPEND _cat_neg_includes "${CMAKE_SOURCE_DIR}/src/libraries/${_d}")
@@ -67,8 +68,9 @@ unset(_d)
 unset(_cat_neg_includes)
 
 # Match normal libCat TUs: `global_includes.hpp` forward-declares
-# `default_compact_trait` / `compact` before `<cat/maybe>` pulls `<cat/arithmetic>`,
-# so arithmetic's `default_compact_trait<index<...>>` specialization is valid.
+# `default_compact_trait`/`compact` before `<cat/maybe>` pulls
+# `<cat/arithmetic>`, so arithmetic's `default_compact_trait<index<...>>`
+# specialization is valid.
 list(APPEND _cat_neg_compile_args
   -nostdlib
   -nostdlib++
@@ -77,8 +79,8 @@ list(APPEND _cat_neg_compile_args
   "-include" "${CMAKE_SOURCE_DIR}/src/global_includes.hpp")
 
 # Macro (not `function`) so per-probe counters in this file stay visible. No
-# `ninja` / `cmake --build` is involved: the compiler is invoked at configure
-# by `execute_process` only. The build tree is not required for linking.
+# `ninja`/`cmake --build` is involved: the compiler is invoked at configure by
+# `execute_process` only. The build tree is not required for linking.
 macro(_cat_neg_expect_illformed _name _src)
   set(_cat_n_path
     "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/${_name}.cpp")
@@ -168,7 +170,7 @@ file(WRITE
 
 set(_cat_neg_n_illformed_ok 0)
 
-# Out-of-range brace constants: every `uint1`..`uint8` / `int1`..`int8` width
+# Out-of-range brace constants: every `uint1`..`uint8`/`int1`..`int8` width
 # (mirrors the per-width story in the positive `can_brace_init` block).
 foreach(n IN ITEMS 1 2 4 8)
   _cat_neg_expect_illformed("uint${n}-brace-neg1" "#include <cat/arithmetic>
@@ -181,7 +183,8 @@ void t() { (void)cat::uint${n}{-1}; }
   elseif (n EQUAL 4)
     set(_il "5000000000")
   else()
-    # 2^64: too large for any 64-bit integer type (fails the lexer / constant path).
+    # 2^64: too large for any 64-bit integer type (fails the lexer / constant
+    # path).
     set(_il "18446744073709551616u")
   endif()
   _cat_neg_expect_illformed("int${n}-const-too-large" "#include <cat/arithmetic>

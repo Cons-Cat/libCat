@@ -79,11 +79,12 @@ struct as_rvalue_impl : view_interface<as_rvalue_impl> {
 }  // namespace detail
 
 // `as_rvalue()` `cat::move()`s every incoming element so an outgoing terminal
-// can accept x-values. Internal iteration makes this safe even after `filter |
-// reverse` because the base context stops at its own bounds, so the broken
-// `std::views` pipeline `views::filter | views::reverse | views::as_rvalue |
-// ranges::to` (example from P3725) becomes a single fused loop where the
-// wrapper only ever observes elements the base actually yielded.
+// can accept x-values. Internal iteration makes this safe even after
+// `filter | reverse` because the base context stops at its own bounds, so the
+// broken `std::views` pipeline
+// `views::filter | views::reverse | views::as_rvalue | ranges::to` (example
+// from P3725) becomes a single fused loop where the wrapper only ever observes
+// elements the base actually yielded.
 constexpr auto
 as_rvalue() -> detail::as_rvalue_impl {
    return detail::as_rvalue_impl{{}};

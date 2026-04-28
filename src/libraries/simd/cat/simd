@@ -34,7 +34,7 @@
 // `cat::simd_mask` varies immensely between instruction sets, so its data
 // representation and truthiness values are determined by partial template
 // specializations of a `cat::simd_abi::mask_lane` class. An example may be
-// found in `cat/detail/simd_mask_lane_sseavx.hpp`
+// found in `cat/detail/simd_mask_lane_sseavx.hpp`.
 
 #include <cat/arithmetic>
 #include <cat/bit>
@@ -152,7 +152,7 @@ struct native_abi {
 };
 
 // An ABI tag for efficient execution that stays stable across translation units
-// on the target. Same layout as `native_abi` today (`target_abi`); distinct
+// on the target. Same layout as `native_abi` today (`target_abi`). Distinct
 // type so `simd<T, compatible<T>>` differs from `simd<T, native<T>>` for
 // overload resolution / tagging.
 template <typename T>
@@ -268,7 +268,7 @@ concept is_simd_or_mask = is_simd<X> || is_simd_mask<X>;
 // Element type stored in `simd::raw` (`GNU` vector lanes). `T` is the logical
 // lane type (`int`, `cat::int4`, ...). Raw `bool` uses `unsigned char` storage
 // because `[[gnu::vector_size]]` cannot be `bool`. Other lanes use
-// `make_raw_arithmetic`
+// `make_raw_arithmetic`.
 template <typename T>
 struct simd_vector_element_trait {
    using type = raw_arithmetic_type<T>;
@@ -307,7 +307,7 @@ simd_lane_to_storage(T lane) -> simd_vector_element<T> {
 }
 
 // Inverse of `simd_lane_to_storage` for one vector lane slot (Clang accepts GNU
-// vector `raw[i]` reads in constant evaluation; `reinterpret_cast` lane
+// vector `raw[i]` reads in constant evaluation. `reinterpret_cast` lane
 // pointers are not).
 template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
@@ -428,7 +428,7 @@ class alignas(in_abi::alignment.raw) simd {
 
    // When the scalar must be a compile-time constant (`consteval`), the splat
    // is the same as `simd(U&&)`. Inexact conversion is undefined and is
-   // rejected by failed constant evaluation on a violated [[assume]].
+   // rejected by failed constant evaluation on a violated `[[assume]]`.
    template <typename U>
       requires detail::simd_consteval_broadcast_arg<remove_cvref<U>, T>
    consteval simd(U value) {
@@ -456,7 +456,7 @@ class alignas(in_abi::alignment.raw) simd {
        : raw(raw_type{simd_lane_to_storage(static_cast<T>(Us))...}) {
    }
 
-   // `simd` from `simd_mask` by way of unary `+` on the mask.
+   // `simd` from `simd_mask` by way of unary + on the mask.
    template <typename U, typename AbiM>
    constexpr simd(simd_mask<U, AbiM> const& k)
       requires(
@@ -503,7 +503,7 @@ class alignas(in_abi::alignment.raw) simd {
    constexpr auto
    operator=(simd&& operand) -> simd& = default;
 
-   // Value equality: true only if every lane compares equal (`NaN` lanes behave
+   // Value equality. `true` iff every lane compares equal (`NaN` lanes behave
    // like scalar floating-point compare).
    [[nodiscard]]
    constexpr auto
@@ -548,8 +548,8 @@ class alignas(in_abi::alignment.raw) simd {
       return this->raw <= operand.raw;
    }
 
-   // Overflow accessors mirror `cat::arithmetic`: `undef` and `wrap` both
-   // select wrapping vector operations; `sat` forces saturating forms. Integer
+   // Overflow accessors mirror `cat::arithmetic`. `undef` and `wrap` both
+   // select wrapping vector operations. `sat` forces saturating forms. Integer
    // lanes with `T::policy == saturate` use the same by default on `simd`
    // without an accessor.
    constexpr auto
@@ -824,8 +824,8 @@ class alignas(in_abi::alignment.raw) simd {
       raw[index.raw] = simd_lane_to_storage(value);
    }
 
-   // P2664R11 permuting subscript `v[indices]` and C++26 multi-subscript `v[i0,
-   // i1, ...]` (implemented via `simd_permute`).
+   // P2664R11 permuting subscript `v[indices]` and C++26 multi-subscript
+   // `v[i0, i1, ...]` (implemented via `simd_permute`).
    template <typename Idx, typename IdxAbi>
    [[nodiscard]]
    constexpr auto
@@ -1004,7 +1004,8 @@ class alignas(in_abi::alignment.raw) simd {
    // Fill all lanes with `value`. This is also known as a "splat" operation.
    template <typename U>
       requires(is_constructible<scalar_type, U>)
-   // This impedes correct codegen. TODO: Why?
+   // This impedes correct codegen.
+   // TODO: Why?
    [[gnu::no_sanitize_address]]
    constexpr auto
    fill(U value) -> simd& {
@@ -1029,7 +1030,7 @@ class alignas(in_abi::alignment.raw) simd {
    }
 
    // Load a vector from `data`, aligned to `abi_type::alignment` (also called a
-   // gather: memory to vector lanes).
+   // "gather").
    constexpr auto
    load_aligned(memory_lane const* p_data) -> simd& {
       this->raw =
@@ -1058,10 +1059,9 @@ class alignas(in_abi::alignment.raw) simd {
       }
    }
 
-   // --- P3299-shaped memory (pointer + length; no std::span) ---
+   // P3299-shaped memory (pointer + length. No `cat::span`):
 
-   // Write lanes to aligned memory (also called a scatter: vector lanes to
-   // memory).
+   // Write lanes to aligned memory (also called a "scatter").
    constexpr void
    store_aligned(memory_lane* p_data) const {
       static_cast<simd*>(static_cast<void*>(p_data))->raw = this->raw;
@@ -1272,7 +1272,7 @@ class alignas(in_abi::alignment.raw) simd_mask {
       "every "
       "lane, use `make_simd_mask_filled`.");
 
-   // Construct from a variadic argument list (one bool per logical lane).
+   // Construct from a variadic argument list (one `bool` per logical lane).
    template <typename... Bools>
    constexpr simd_mask(Bools&&... arguments)
       requires(sizeof...(arguments) > 1
@@ -1337,7 +1337,7 @@ class alignas(in_abi::alignment.raw) simd_mask {
 
    // Compare equality for each lane to another mask's lanes. Integral lane
    // storage matches `raw ==`. floating-point lanes use logical equality so
-   // compare masks (`NaN == NaN` as float lanes would be wrong).
+   // compare masks (`NaN == NaN` as `float` lanes would be wrong).
    [[nodiscard]]
    constexpr auto
    operator==(mask_type const& operand) const -> mask_type {
@@ -1524,8 +1524,8 @@ class alignas(in_abi::alignment.raw) simd_mask {
       return *this;
    }
 
-   // Logical lane `i` maps to `mask_traits` storage (`lane_scalar`); decode is
-   // ABI-defined but operator[] always yields abstract `bool`.
+   // Logical lane `i` maps to `mask_traits` storage (`lane_scalar`). Decode is
+   // ABI-defined but `operator[]` always yields abstract `bool`.
    [[nodiscard, gnu::no_sanitize("bounds")]]
    constexpr auto
    operator[](idx index) const -> bool {
@@ -1549,7 +1549,8 @@ class alignas(in_abi::alignment.raw) simd_mask {
       return result;
    }
 
-   // Integral `simd` lanes from abstract mask lanes (feeds mask→`simd` ctor).
+   // Integral `simd` lanes from abstract mask lanes (feeds mask -> `simd`
+   // constructor).
    [[nodiscard]]
    constexpr auto
    operator+() const
@@ -1638,7 +1639,7 @@ class alignas(in_abi::alignment.raw) simd_mask {
    }
 
    // Standard mask reductions-style helpers on logical lanes (standard mask
-   // wording: reduce_min_index / reduce_max_index over true lane indices).
+   // wording. `reduce_min_index`/`reduce_max_index` over true lane indices).
    [[nodiscard]]
    constexpr auto
    count_if_true() const -> idx {
@@ -1709,7 +1710,7 @@ class alignas(in_abi::alignment.raw) simd_mask {
    }
 
    // Load each logical lane from one `bool` per lane in `lane_bools` (gather
-   // from memory into mask lanes; not a `raw_type` object representation; use
+   // from memory into mask lanes. Not a `raw_type` object representation. Use
    // `raw` assignment for that).
    constexpr auto
    load(bool const* lane_bools) -> mask_type& {
@@ -1791,7 +1792,7 @@ simd(simd_mask<T, Abi>)
 // Reductions use Clang `__builtin_reduce_*` on the GNU vector `raw` value.
 // `simd_reduce_*` are `inline constexpr` functors forwarding `simd::reduce_*`
 // (always `simd<T, fixed_size_abi<T, 1>>`. mask summaries use `idx`-valued
-// `count_if_true` / `find_if_true` / `find_last_if_true` on `simd_mask`).
+// `count_if_true`/`find_if_true` / `find_last_if_true` on `simd_mask`).
 
 namespace detail {
 
@@ -1958,7 +1959,7 @@ inline constexpr detail::simd_reduce_assoc_fadd_impl simd_reduce_assoc_fadd{};
 inline constexpr detail::simd_reduce_in_order_fadd_impl
    simd_reduce_in_order_fadd{};
 
-// Per-lane equality / inequality; use operator== on `simd` for value equality
+// Per-lane equality / inequality. Use `operator==` on `simd` for value equality
 // (`bool`).
 template <typename T, typename Abi>
 [[nodiscard]]
@@ -1975,30 +1976,6 @@ simd_unequal_lanes(simd<T, Abi> const& a, simd<T, Abi> const& b)
    -> simd_mask<T, Abi> {
    return a.unequal_lanes(b);
 }
-
-// `cat::simd` is tricky to support structured bindings, because the following
-// pattern cannot be directly prevented:
-//   cat::get<0>(ints) = 1;
-//
-// This is a major footgun, so structured bindings are disabled for now.
-// `std::simd` doesn't support it either.
-//
-// // Analogous to the proposed `std::aggr::get` in the P2141 paper
-// template <idx index, typename T, typename Abi>
-//    requires(index < simd<T, Abi>::abi_type::lanes)
-// [[nodiscard]]
-// constexpr auto
-// get(simd<T, Abi> const& v) -> T {
-//    return v[index];
-// }
-
-// template <idx index, typename T, typename Abi>
-//    requires(index < simd_mask<T, Abi>::abi_type::lanes)
-// [[nodiscard]]
-// constexpr auto
-// get(simd_mask<T, Abi> const& m) -> typename simd_mask<T, Abi>::lane_scalar {
-//    return m[index];
-// }
 
 template <typename T, idx lanes>
 using fixed_size_simd = simd<T, fixed_size_abi<T, lanes>>;
@@ -2074,8 +2051,8 @@ struct resize_simd_impl<index, simd_mask<U, Abi>> {
 
 }  // namespace detail
 
-// Element or width sugar for `simd` / `simd_mask` (see
-// https://en.cppreference.com/w/cpp/experimental/simd/rebind_simd).
+// Element or width sugar for `simd`/`simd_mask`.
+// https://en.cppreference.com/w/cpp/experimental/simd/rebind_simd
 template <typename T, typename Simd>
 using rebind_simd = typename detail::rebind_simd_impl<T, Simd>::type;
 
@@ -2144,10 +2121,10 @@ template <typename T>
 void
 stream_in(void* p_destination, T const* p_source);
 
-// Physical mask storage and per-lane truth patterns are owned by each ABI tag’s
-// `simd_mask_lane` traits (`decode_lane` / `encode_lane`). operator[] still
-// exposes abstract `bool` lanes. `simd_all_of` / `simd_any_of` dispatch through
-// `detail::simd_abi::mask_all_of` / `mask_any_of` (lane loops in primaries;
+// Physical mask storage and per-lane truth patterns are owned by each ABI tag's
+// `simd_mask_lane` traits (`decode_lane`/`encode_lane`). `operator[]` still
+// exposes abstract `bool` lanes. `simd_all_of`/`simd_any_of` dispatch through
+// `detail::simd_abi::mask_all_of`/`mask_any_of` (lane loops in primaries.
 // AVX2 `movmsk*` partial specializations in `simd_avx2_mask_ops.hpp`).
 //
 // Standard mask reductions / mask subscript relate to logical mask elements
@@ -2202,7 +2179,7 @@ swap(M& left, M& right) {
    right = tmp;
 }
 
-// TODO: __builtin_cpu_init() must be called before these.
+// TODO: `__builtin_cpu_init()` must be called before these.
 
 auto
 is_mmx_supported() -> bool;

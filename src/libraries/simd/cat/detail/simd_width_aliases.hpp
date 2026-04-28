@@ -34,7 +34,7 @@ using uint_unalign_1x32 = fixed_size_unaligned_simd<uint1, 32u>;
 using uint_unalign_1x_ = native_unaligned_simd<uint1>;
 
 // Same portable shapes as `int4x16`-style aliases. Fixed lane counts versus
-// `native_abi` for the widest tag the build selects as `native_simd<char>`
+// `native_abi` for the widest tag the build selects as `native_simd<char>`.
 // TODO: Think over the string vectorization API.
 // TODO: Support `char2x_` vector family.
 // strings need their own vectors.

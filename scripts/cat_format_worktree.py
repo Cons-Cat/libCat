@@ -1,7 +1,8 @@
-# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat code.
+# This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat
+# code.
 
-# Parallel driver for the =cat-format= and =cat-format-check= build targets. Same
-# contract as the old =cmake -P= script block in =cmake/format.cmake=.
+# Parallel driver for the `cat-format` and `cat-format-check` build targets. Same
+# contract as the old `cmake -P` script block in `cmake/format.cmake`.
 from __future__ import annotations
 
 import os
@@ -14,8 +15,8 @@ from typing import Tuple
 # (kind, path, err)  kind: same, would, formatted, fail, skip
 _FileResult = Tuple[str, str, str | None]
 
-# Hard cap: many concurrent clang-format child processes are heavy in RAM
-# (e.g. WSL2).
+# Hard cap: many concurrent `clang-format` child processes are heavy in RAM (e.g.
+# WSL2).
 _MAX_PARALLEL = 4
 
 

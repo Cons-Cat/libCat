@@ -32,7 +32,7 @@ load_base_stack_pointer() -> void*;
 [[gnu::always_inline]]
 inline void
 align_stack_pointer_16() {
-   // rmsbolt requires `.att_syntax prefix` here for some reason.
+   // `rmsbolt` requires `.att_syntax prefix` here for some reason.
    asm volatile(".att_syntax prefix ;\nand $-16, %rsp");
 }
 
@@ -41,7 +41,7 @@ align_stack_pointer_16() {
 [[gnu::always_inline]]
 inline void
 align_stack_pointer_32() {
-   // rmsbolt requires `.att_syntax prefix` here for some reason.
+   // `rmsbolt` requires `.att_syntax prefix` here for some reason.
    asm volatile(".att_syntax prefix ;\nand $-32, %rsp");
 }
 
@@ -60,7 +60,7 @@ class jmp_buffer {
    // This buffer layout should vary by all ISAs.
 
  private:
-   // %rbx: %rbp: %r12: %r13: %r14: %r15:
+   // %rbx, %rbp, %r12, %r13, %r14, %r15.
    [[maybe_unused]]
    unsigned long m_registers[6];
    // %rsp:

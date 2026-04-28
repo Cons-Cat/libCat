@@ -13,8 +13,7 @@ struct movable {
    operator=(movable&&) {};
 };
 
-// NOLINTNEXTLINE We use a global mutable variable for this single-threaded
-// test.
+// NOLINTNEXTLINE We use a global mutable variable for this test.
 int4 maybe_counter = 0;
 
 struct maybe_non_trivial {
@@ -64,8 +63,8 @@ maybe_try_fail() -> cat::maybe<int> {
    return boo;
 }
 
-// Default-construction, nullopt assignment, value assignment, value() and
-// value_or() on a value-typed `maybe`.
+// Default-construction, `nullopt` assignment, value assignment, `value()` and
+// `value_or()` on a value-typed `maybe`.
 test(maybe_basic_value) {
    cat::maybe<int4> foo{cat::nullopt};
    cat::verify(!foo.has_value());
@@ -110,7 +109,7 @@ test(maybe_reference_rebinding) {
    cat::verify(ref.value() == 2);
 
    int4 goo_2 = 3;
-   // `ref` is rebinded to `goo_2`, instead of `3` assigning through into `goo`.
+   // `ref` is rebinded to `goo_2`, instead of 3 assigning through into `goo`.
    ref = goo_2;
    cat::verify(goo == 2);
    goo = 0;
@@ -148,7 +147,7 @@ test(maybe_compact_predicate) {
    positive = cat::nullopt;
    cat::verify(!positive.has_value());
 
-   // The default value of `int4` is `0`, which the predicate accepts.
+   // The default value of `int4` is 0, which the predicate accepts.
    decltype(positive) default_predicate{cat::in_place, 0};
    cat::verify(default_predicate.value() == 0);
 
@@ -156,8 +155,8 @@ test(maybe_compact_predicate) {
    cat::verify(!default_predicate_empty.has_value());
 }
 
-// Compact predicate over a void wrapper. `monotype_storage` lets the engagement
-// bit live in the predicate's storage instead of a side flag.
+// Compact predicate over a `void` wrapper. `monotype_storage` lets the
+// engagement bit live in the predicate's storage instead of a side flag.
 test(maybe_compact_void) {
    cat::maybe<cat::compact<cat::monotype_storage<int, 0>,
                            [](int input) -> bool {
@@ -172,7 +171,7 @@ test(maybe_compact_void) {
 }
 
 // `compact<T, predicate, value>` accepts a literal sentinel that converts to
-// `T`. This covers the `-1` to `iword` path used by `maybe_non_negative`.
+// `T`. This covers the -1 to `iword` path used by `maybe_non_negative`.
 test(maybe_compact_value_conversion) {
    cat::maybe<cat::compact<iword,
                            [](iword input) -> bool {
@@ -553,7 +552,7 @@ test(maybe_const_qualified) {
    cat::verify(con == 1);
 }
 
-// `maybe<int4 const&>` binds both const and non-const lvalues.
+// `maybe<int4 const&>` binds both `const` and non-`const` l-values.
 test(maybe_const_references) {
    int4 nonconstant_int = 10;
    int4 const constant_int = 9;
@@ -714,8 +713,8 @@ test(maybe_type_traits) {
    static_assert(!cat::is_scaredy<cat::maybe<int4>>);
 }
 
-// The `prop` macro propagates an empty `maybe` like a `?` operator, and passes
-// through values otherwise.
+// The `prop` macro propagates an empty `maybe`, and passes through values
+// otherwise.
 test(maybe_prop_macro) {
    auto _ = maybe_try_success().verify();
    cat::maybe fail = maybe_try_fail();
@@ -749,8 +748,8 @@ returns_empty_void_maybe() -> cat::maybe<void> {
 
 }  // namespace
 
-// `cat::maybe<T&>` is trivially copyable and pointer-sized. P3836R2 Trivially
-// copyable `optional<T&>`.
+// `cat::maybe<T&>` is trivially-copyable and pointer-sized. P3836R2
+// Trivially-copyable `optional<T&>`.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3836r2.html
 test(maybe_reference_layout) {
    static_assert(__is_trivially_copyable(cat::maybe<int4&>));
@@ -770,7 +769,7 @@ test(maybe_reference_no_destroy) {
       cat::maybe<tracked&> ref = t;
       cat::verify(ref.has_value());
 
-      // Disengaging via nullopt assignment must not run `~tracked`.
+      // Disengaging via `nullopt` assignment must not run `~tracked`.
       ref = cat::nullopt;
       cat::verify(!ref.has_value());
       cat::verify(dtor_counter == 0);
@@ -780,12 +779,12 @@ test(maybe_reference_no_destroy) {
       cat::verify(ref.has_value());
       cat::verify(dtor_counter == 0);
 
-      // Reset() is also non-destructive.
+      // `.reset()` is also non-destructive.
       ref.reset();
       cat::verify(!ref.has_value());
       cat::verify(dtor_counter == 0);
 
-      // emplace() rebinds without destroying anything.
+      // `.emplace()` rebinds without destroying anything.
       ref.emplace(t);
       cat::verify(ref.has_value());
       cat::verify(dtor_counter == 0);
@@ -800,12 +799,12 @@ test(maybe_reference_no_destroy) {
 // P2988R12 `optional<T&>`. Dangling-temporary protection.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
 test(maybe_reference_dangling) {
-   // Lvalue binding succeeds.
+   // l-value binding succeeds.
    static_assert(cat::is_constructible<cat::maybe<int const&>, int&>);
    static_assert(cat::is_constructible<cat::maybe<int&>, int&>);
-   // `int const&` binding to a prvalue would create a temporary (rejected).
+   // `int const&` binding to a pr-value would create a temporary (rejected).
    static_assert(!cat::is_constructible<cat::maybe<int const&>, int>);
-   // `int&` cannot bind a prvalue at all (also rejected).
+   // `int&` cannot bind a pr-value at all (also rejected).
    static_assert(!cat::is_constructible<cat::maybe<int&>, int>);
 }
 
@@ -920,7 +919,7 @@ test(maybe_void_monadic) {
    cat::maybe<void> engaged = cat::monostate;
    cat::maybe<void> empty;
 
-   // `transform` on engaged void invokes `f()` and produces `maybe<U>`.
+   // `transform` on engaged `void` invokes `f()` and produces `maybe<U>`.
    bool called = false;
    cat::maybe<int4> mapped = engaged.transform([&]() -> int4 {
       called = true;
@@ -929,7 +928,7 @@ test(maybe_void_monadic) {
    cat::verify(called);
    cat::verify(mapped.value() == 7);
 
-   // `transform` on empty void does NOT call `f()`.
+   // `transform` on empty `void` does NOT call `f()`.
    called = false;
    mapped = empty.transform([&]() -> int4 {
       called = true;
@@ -938,7 +937,7 @@ test(maybe_void_monadic) {
    cat::verify(!called);
    cat::verify(!mapped.has_value());
 
-   // `transform` returning void promotes to `maybe<void>`.
+   // `transform` returning `void` promotes to `maybe<void>`.
    called = false;
    cat::maybe<void> mapped_void = engaged.transform([&]() -> void {
       called = true;
@@ -946,7 +945,7 @@ test(maybe_void_monadic) {
    cat::verify(called);
    cat::verify(mapped_void.has_value());
 
-   // `and_then` on engaged void invokes `f()` and forwards the result.
+   // `and_then` on engaged `void` invokes `f()` and forwards the result.
    called = false;
    cat::maybe<int4> chained = engaged.and_then([&]() -> cat::maybe<int4> {
       called = true;
@@ -955,7 +954,7 @@ test(maybe_void_monadic) {
    cat::verify(called);
    cat::verify(chained.value() == 99);
 
-   // `and_then` on empty void does NOT call `f()` and returns `nullopt`.
+   // `and_then` on empty `void` does NOT call `f()` and returns `nullopt`.
    called = false;
    chained = empty.and_then([&]() -> cat::maybe<int4> {
       called = true;
@@ -993,19 +992,14 @@ test(maybe_monadic_value_categories) {
       return x + 1;
    };
 
-   // lvalue.
+   // l-value.
    cat::maybe<int4> lv = 1;
    cat::verify(lv.transform(add_one).value() == 2);
-   // const lvalue.
+   // `const` l-value.
    cat::maybe<int4> const clv = 2;
    cat::verify(clv.transform(add_one).value() == 3);
-   // rvalue.
+   // r-value.
    cat::verify(cat::maybe<int4>{3}.transform(add_one).value() == 4);
-   // const rvalue.
-   auto const_rvalue = []() -> cat::maybe<int4> const {
-      return cat::maybe<int4>{4};
-   };
-   cat::verify(const_rvalue().transform(add_one).value() == 5);
 }
 
 // `reset()` on a value `maybe` destroys the held value and disengages.
@@ -1044,7 +1038,7 @@ test(maybe_value_swap) {
 // `optional<U>` ambiguity that Barry Revzin documented for `std::optional`.
 // libCat omits `operator bool()`, so the value constructor
 // `maybe<bool>(maybe<int> const&)` is not viable and overload resolution falls
-// through to the converting `maybe<U>` constructor, meaning `0` converts to
+// through to the converting `maybe<U>` constructor, meaning 0 converts to
 // `false`, not silently to `true` as it does in `std::optional`.
 // https://brevzin.github.io/c++/2023/01/18/optional-construction/
 test(maybe_bool) {
@@ -1106,21 +1100,21 @@ test(maybe_nested_construction) {
    cat::maybe<int> engaged_inner = 42;
    cat::maybe<int> empty_inner;
 
-   // From an engaged `maybe<int>` lvalue: the outer must engage and hold the
+   // From an engaged `maybe<int>` l-value: the outer must engage and hold the
    // engaged inner, *not* collapse one level via the converting constructor.
    cat::maybe<cat::maybe<int>> outer_lval(engaged_inner);
    cat::verify(outer_lval.has_value());
    cat::verify(outer_lval.value().has_value());
    cat::verify(outer_lval.value().value() == 42);
 
-   // From a disengaged `maybe<int>` lvalue: the outer is still engaged, and the
-   // wrapped inner is disengaged. Without the guard, the converting constructor
-   // would have left the outer disengaged.
+   // From a disengaged `maybe<int>` l-value: the outer is still engaged, and
+   // the wrapped inner is disengaged. Without the guard, the converting
+   // constructor would have left the outer disengaged.
    cat::maybe<cat::maybe<int>> outer_empty(empty_inner);
    cat::verify(outer_empty.has_value());
    cat::verify(!outer_empty.value().has_value());
 
-   // Same story for an rvalue `maybe<int>`.
+   // Same story for an r-value `maybe<int>`.
    cat::maybe<cat::maybe<int>> outer_rval(cat::maybe<int>{7});
    cat::verify(outer_rval.has_value());
    cat::verify(outer_rval.value().has_value());

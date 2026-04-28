@@ -165,7 +165,7 @@ struct inline_memory_handle {
    bool is_on_stack;
 
    // Value-initialize `handle` so the union has an active member before
-   // `set_count` / other mutators run; required for constant evaluation.
+   // `set_count` / other mutators run. Required for constant evaluation.
    constexpr inline_memory_handle() : handle(), is_on_stack(false) {
    }
 
@@ -297,12 +297,13 @@ class allocator_interface {
    constexpr allocator_interface() = default;
    friend Derived;
 
-   // `meta_alloc` flags: `is_inline` tries the inline buffer before the heap,
-   // `is_fail_safe` maps allocation failure to maybe-style results,
-   // `is_aligned` selects aligned allocation entry points, `is_multiple`
-   // allocates arrays (span handles) instead of one `T`, `is_zeroed` uses
-   // implicit-lifetime zeroing instead of constructor args, `has_feedback`
-   // returns sized byte counts when the allocator supports them
+   // `meta_alloc` flags:
+   // `is_inline` tries the inline buffer before the heap, `is_fail_safe` maps
+   // allocation failure to maybe-style results, `is_aligned` selects aligned
+   // allocation entry points, `is_multiple` allocates arrays (span handles)
+   // instead of one `T`, `is_zeroed` uses implicit-lifetime zeroing instead of
+   // constructor args, `has_feedback` returns sized byte counts when the
+   // allocator supports them.
    template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
              bool is_multiple, bool is_zeroed, bool has_feedback,
              typename... Args>
@@ -316,7 +317,7 @@ class allocator_interface {
    meta_alloc(uword allocation_alignment, idx allocation_count,
               Args&&... arguments);
 
-   // Handle and return types implied by the same flags as `meta_alloc`
+   // Handle and return types implied by the same flags as `meta_alloc`.
    template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
              bool is_multiple, bool is_zeroed, bool has_feedback>
    struct meta_alloc_alias_types;
@@ -2453,7 +2454,8 @@ class allocator_interface {
    }
 
    // Move a small-size optimized handle from this allocator into itself with an
-   // alignment guarantee, and zero-out the allocated memory. [[nodiscard]]
+   // alignment guarantee, and zero-out the allocated memory.
+   [[nodiscard]]
    auto
    inline_align_xrecalloc(mem auto& handle, uword alignment) {
       return inline_align_xrecalloc_to(*this, handle, alignment);
@@ -2479,7 +2481,8 @@ class allocator_interface {
    }
 
    // Move a small-size optimized handle from this allocator into another with
-   // no alignment guarantee, and zero-out the allocated memory. [[nodiscard]]
+   // no alignment guarantee, and zero-out the allocated memory.
+   [[nodiscard]]
    constexpr auto
    inline_unalign_xrecalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
@@ -2489,7 +2492,8 @@ class allocator_interface {
    }
 
    // Move a small-size optimized handle from this allocator into itself with no
-   // alignment guarantee, and zero-out the allocated memory. [[nodiscard]]
+   // alignment guarantee, and zero-out the allocated memory.
+   [[nodiscard]]
    auto
    inline_unalign_xrecalloc(mem auto& handle) {
       return inline_unalign_xrecalloc_to(*this, handle);
@@ -2507,14 +2511,16 @@ class allocator_interface {
    }
 
    // Try to move a small-size optimized array memory handle from this allocator
-   // into itself, and zero-out the allocated memory. [[nodiscard]]
+   // into itself, and zero-out the allocated memory.
+   [[nodiscard]]
    constexpr auto
    inline_recalloc_multi(mem auto& handle, idx new_count) {
       return inline_recalloc_multi_to(*this, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
-   // allocator into another, and zero-out the allocated memory. [[nodiscard]]
+   // allocator into another, and zero-out the allocated memory.
+   [[nodiscard]]
    constexpr auto
    inline_xrecalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
@@ -2524,14 +2530,16 @@ class allocator_interface {
    }
 
    // Move and resize a small-size optimized array memory handle from this
-   // allocator into itself, and zero-out the allocated memory. [[nodiscard]]
+   // allocator into itself, and zero-out the allocated memory.
+   [[nodiscard]]
    constexpr auto
    inline_xrecalloc_multi(mem auto& handle, idx new_count) {
       return inline_xrecalloc_multi_to(*this, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
-   // allocator into another, and zero-out the allocated memory. [[nodiscard]]
+   // allocator into another, and zero-out the allocated memory.
+   [[nodiscard]]
    constexpr auto
    inline_align_recalloc_multi_to(auto& allocator, mem auto& handle,
                                   uword alignment, idx new_count) {
@@ -3803,7 +3811,7 @@ class allocator_interface {
    }
 
    // Move data from `handle` into `allocation`. Allocators used with this
-   // interface supply non-overlapping destination storage for this transfer
+   // interface supply non-overlapping destination storage for this transfer.
    constexpr void
    relocate_inline_handle(mem auto& handle, mem auto& allocation) {
       using allocation_type =

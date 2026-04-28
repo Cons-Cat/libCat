@@ -9,7 +9,7 @@ namespace cat {
 
 // Position-based reads and slice construction. These are only available on
 // collections, not iterables, because you need a position to ask "is this in
-// range?" The position arithmetic deliberately uses only `<` so the same code
+// range?" The position arithmetic deliberately uses only < so the same code
 // works on any `is_position` type.
 
 // `read_at(c, p)` reads at position `p`, asserting that `p` is in the half-open
@@ -42,7 +42,7 @@ try_read_at(T& collection, position_type<T> const& position)
 }
 
 // Returns a non-owning sub-collection over `[first, last)`. This re-uses the
-// parent collection's `.inc_pos()` / `.dec_pos()` / `.read_at_unchecked()` so a
+// parent collection's `.inc_pos()`/`.dec_pos()` / `.read_at_unchecked()` so a
 // slice keeps every refinement (multipass / bidirectional / random access) of
 // its parent. This is how it differs from contiguous views like `cat::span`.
 template <typename T>

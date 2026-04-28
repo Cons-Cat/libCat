@@ -29,7 +29,7 @@ cat::string_length(char const* p_string) -> idx {
             | x64::string_control::compare_equal_each
             | x64::string_control::least_significant;
 
-         // If there are one or more `0` bytes in `data`:
+         // If there are one or more 0 bytes in `data`:
          if (x64::compare_implicit_length_strings<mask>(data, zeros)) {
             uint4 const index =
                x64::compare_implicit_length_strings_return_index<mask>(data,

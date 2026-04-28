@@ -12,7 +12,7 @@
 // numeric data types which both prevent unsound implicit type conversions and
 // make safe comparisons between different arithmetic types.
 //
-// All of their conversion operators, is_arithmetic operators and constructors
+// All of their conversion operators, `is_arithmetic` operators and constructors
 // are generic with constraints. Because these methods are constrained, it is
 // possible that the compiler will fail to resolve any satisfying overloads for
 // an invocation of an operator or constructor, and thus prevent compilation.
@@ -35,12 +35,12 @@
 // the parameter of indexing functions or quantities of memory.
 //
 // It is roughly analogous to `std::size_t`, however because it is 63-bit, it
-// may safely convert to both 64-bit signed and unsigned integers. Subtracting
-// from a `cat::index` will cast to `cat::iword`, thereby teaching the type
-// system that this subtraction will never underflow. When the difference is
-// compile-time known to be positive, this is relaxed and a `cat::index` is
-// returned instead. This is important for expressions involving literals used
-// within subscripting.
+// may safely convert to both 64-bit signed and unsigned integers.
+// Subtracting from a `cat::index` will cast to `cat::iword`, thereby teaching
+// the type system that this subtraction will never underflow. When the
+// difference is compile-time known to be positive, this is relaxed and a
+// `cat::index` is returned instead. This is important for expressions involving
+// literals used within subscripting.
 //
 // All `for` loops in libCat use either `cat::index` or `cat::iword` as its
 // iterator integer.
@@ -223,7 +223,7 @@ inline constexpr overflow_policies overflow_policy_of =
    overflow_policy_for<T>::value;
 
 // Rebind the overflow policy of an arithmetic-like type. Raw integers and
-// floats become `arithmetic<T, new_policy>`; `arithmetic`, `index`, and
+// floats become `arithmetic<T, new_policy>`. `arithmetic`, `index`, and
 // `arithmetic_ptr` keep their kind and replace just the policy.
 template <typename T, overflow_policies new_policy>
 struct rebind_overflow_policy {
@@ -250,28 +250,29 @@ struct rebind_overflow_policy<arithmetic_ptr<T, storage_type, old_policy>,
 
 // `promoted_arithmetic` picks the result shape for a binary op. For `undefined`
 // LHS this is the wider of the two operands tagged with `left`'s policy, which
-// is what `+` and `*` need so the result has room for the worst case. For
-// `wrap` / `saturate` LHS we never widen: the user opted into a fixed-width
+// is what + and * need so the result has room for the worst case. For
+// `wrap`/`saturate` LHS we never widen. The user opted into a fixed-width
 // well-defined overflow domain, and silently growing into a wider type would
-// defeat that intent. (`-`, `/`, `%`, shifts, `&`, and `|` keep the LHS's
-// storage type by construction; the same-width-or-narrower constraints on `&` /
-// `|` reject the truncating direction outright.)
+// defeat that intent. (-, /, %, shifts, &, and | keep the LHS's storage type by
+// construction. The same-width-or-narrower constraints on & / | reject the
+// truncating direction outright).
 template <typename left, typename right>
 consteval auto
 promoted_arithmetic() {
    constexpr overflow_policies policy = overflow_policy_of<left>;
 
    if constexpr (policy != overflow_policies::undefined) {
-      // wrap / sat / trap: never promote, always return LHS shape.
+      // Wrap / sat / trap. Never promote, always return LHS shape.
       return typename rebind_overflow_policy<left, policy>::type();
    } else if constexpr (integer_promotion_hierarchy<left>::order
                         >= integer_promotion_hierarchy<right>::order) {
-      // LHS wins on width: keep its kind, force `policy` (a no-op when `left`
-      // already has that policy; for raw `left` this wraps it).
+      // LHS wins on width. Keep its kind, force `policy` (a no-op when `left`
+      // already has that policy. For raw `left` this wraps it).
       return typename rebind_overflow_policy<left, policy>::type();
    } else {
-      // RHS wins on width: keep RHS's kind (`arithmetic`, `index`,
-      // `arithmetic_ptr`, or a raw type) and tag it with `left`'s policy.
+      // RHS wins on width:
+      // keep RHS's kind (`arithmetic`, `index`, `arithmetic_ptr`, or a raw
+      // type) and tag it with `left`'s policy.
       return typename rebind_overflow_policy<right, policy>::type();
    }
 }
@@ -288,15 +289,15 @@ using promoted_type = decltype(promoted_arithmetic<remove_constref<left>,
 template <typename left_type, typename right_type>
 concept is_safe_arithmetic_comparison =
    // `raw_arithmetic_type` is needed here to prevent a recursive constraint in
-   // evaluating the `<` operator inside `is_signed`.
+   // evaluating the < operator inside `is_signed`.
    (  // If both types have the same signed-ness:
       (is_signed<raw_arithmetic_type<left_type>>
        == is_signed<raw_arithmetic_type<right_type>>)
-      // Or, if left_type is signed and larger than right_type:
+      // Or, if `left_type` is signed and larger than `right_type`:
       || (is_signed<raw_arithmetic_type<left_type>>
           && is_unsigned<raw_arithmetic_type<right_type>>
           && (sizeof(left_type) > sizeof(right_type)))
-      // Or, if right_type is signed and larger than left_type.
+      // Or, if `right_type` is signed and larger than `left_type`.
       || (is_unsigned<raw_arithmetic_type<left_type>>
           && is_signed<raw_arithmetic_type<right_type>>
           && (sizeof(left_type) < sizeof(right_type))))
@@ -335,9 +336,9 @@ using implicit_raw_compare_wide = conditional<
                larger_type<RawSource, DestStorage>>>;
 
 // Value check for the four raw `enable_if` converting constructors. Width and
-// signedness pairing are enforced on the `arithmetic` constructors; this only
+// signed-ness pairing are enforced on the `arithmetic` constructors. This only
 // answers whether the runtime value fits the destination storage. This is
-// `constexpr` rather than `consteval`
+// `constexpr` rather than `consteval`.
 template <typename Dest, typename U>
 constexpr auto
 raw_source_fits_implicit_storage(U const& other) -> bool {
@@ -345,7 +346,7 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
    using raw_value = remove_cvref<decltype(raw)>;
    if constexpr (is_floating_point<Dest>) {
       if constexpr (is_integral<raw_value>) {
-         // Integral to float. `implicit_raw_compare_wide` does not support
+         // Integral to `float`. `implicit_raw_compare_wide` does not support
          // `float` `Dest`.
          Dest const fd = static_cast<Dest>(raw);
          if (!__builtin_isfinite(fd)) {
@@ -382,7 +383,7 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
    }
 }
 
-// `<=>` for two raw integers of any signedness/width combination. Negative
+// <=> for two raw integers of any signed-ness/width combination. Negative
 // signed operands are handled up front (strictly less / strictly greater than
 // any unsigned value) so that the subsequent cast through `common_type` only
 // ever runs on non-negative values, where it is lossless in every direction.
@@ -404,8 +405,8 @@ raw_mixed_integral_spaceship(RawL const lhs, RawR const rhs) {
    return static_cast<C>(lhs) <=> static_cast<C>(rhs);
 }
 
-// `==` companion to `raw_mixed_integral_spaceship`. A negative signed operand
-// can never equal an unsigned operand.
+// == companion to `raw_mixed_integral_spaceship`. A negative signed operand can
+// never equal an unsigned operand.
 template <typename RawL, typename RawR>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -453,7 +454,7 @@ template <is_integral T, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 sat_add(T lhs, U rhs) -> detail::promoted_type<T, U> {
-   // Saturating is_arithmetic inputs must be raw and cast to the same size.
+   // Saturating `is_arithmetic` inputs must be raw and cast to the same size.
    using type = raw_arithmetic_type<larger_type<T, U>>;
    return sat_add(static_cast<type>(lhs), static_cast<type>(rhs));
 }
@@ -487,9 +488,9 @@ sat_sub(T lhs, T rhs) -> T {
    if (overflow) {
       // For signed `T`, opposite-sign operands are the only overflow shape
       // (same-sign differences always fit). The sign of `lhs` points at the
-      // saturating endpoint: a positive `lhs` minus a negative `rhs` saturates
+      // saturating endpoint. A positive `lhs` minus a negative `rhs` saturates
       // upward, and the inverse saturates downward. Unsigned `T` can only
-      // underflow (saturate to `0`).
+      // underflow (saturate to 0).
       if constexpr (is_signed<T>) {
          return lhs < 0 ? limits<T>::min() : limits<T>::max();
       } else {
@@ -501,7 +502,7 @@ sat_sub(T lhs, T rhs) -> T {
 
 // Erase redundant type information for `sat_sub()`. Computes the difference in
 // the wider operand's space and saturates back into the LHS raw type so the
-// result honors the LHS-shape rule for `-`.
+// result honors the LHS-shape rule for -.
 template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -536,8 +537,9 @@ sat_mul(T lhs, T rhs) -> T {
    bool overflow = __builtin_mul_overflow(lhs, rhs, &sum);
    if (overflow) {
       // For signed `T`, the true result's sign is the XOR of the operands'
-      // signs: same sign overflows positive, mixed sign overflows negative.
-      // (Neither operand can be zero on overflow.) Unsigned `T` only overflows
+      // signs:
+      // same sign overflows positive, mixed sign overflows negative.
+      // (Neither operand can be zero on overflow). Unsigned `T` only overflows
       // positive.
       if constexpr (is_signed<T>) {
          return ((lhs ^ rhs) < 0) ? limits<T>::min() : limits<T>::max();
@@ -554,7 +556,7 @@ template <is_integral T, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 sat_mul(T lhs, U rhs) -> detail::promoted_type<T, U> {
-   // Saturating is_arithmetic inputs must be raw and cast to the same size.
+   // Saturating `is_arithmetic` inputs must be raw and cast to the same size.
    using type = raw_arithmetic_type<larger_type<T, U>>;
    return sat_mul(static_cast<type>(lhs), static_cast<type>(rhs));
 }
@@ -608,7 +610,7 @@ sat_div(T lhs, U rhs) -> remove_constref<T> {
 // Division can only overflow at signed `min() / -1` (mathematically `-min() ==
 // max() + 1`); two's-complement wrap of that result is `min()` itself. Every
 // other division is in range, so just compute it in the wider operand's space
-// (preserving signedness so a negative result keeps its sign) and narrow back
+// (preserving signed-ness so a negative result keeps its sign) and narrow back
 // to the LHS storage.
 template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
@@ -628,7 +630,7 @@ wrap_div(T lhs, U rhs) -> remove_constref<T> {
 }
 
 // Left bit-shifting two unsigned integers with saturating overflow. The highest
-// set bit lives at position `bits - 1 - clz(value)`; if `bits` would push it
+// set bit lives at position `bits - 1 - clz(value)`. If `bits` would push it
 // past the most-significant position, saturate to `max()`.
 template <is_raw_integral T, is_raw_integral U>
    requires(is_unsigned<T>)
@@ -639,8 +641,9 @@ sat_shl(T value, U bits) -> T {
       return T(0);
    }
    // TODO: Swap back to `__builtin_stdc_leading_zeros` once the
-   // apt.llvm.org Clang 23 nightly picks up PR #185978 (merged 2026-04-17). The
-   // early `value == 0` return above makes single-arg `__builtin_clzg` safe
+   // `apt.llvm.org` Clang 23 nightly picks up PR #185978 (merged 2026-04-17).
+   // The early `value == 0` return above makes single-arg `__builtin_clzg`
+   // safe.
    // here. if (bits > __builtin_stdc_leading_zeros(value)) {
    if (bits > static_cast<U>(__builtin_clzg(value))) {
       return limits<T>::max();
@@ -651,7 +654,7 @@ sat_shl(T value, U bits) -> T {
 // Left bit-shifting a signed integer with saturating overflow. C++20 signed
 // left shift wraps modulo 2^N, so we shift via the unsigned representation
 // (defined behavior) and detect overflow by round-tripping through an
-// arithmetic right shift: if `(result >> bits) != value`, the shift pushed bits
+// arithmetic right shift. If `(result >> bits) != value`, the shift pushed bits
 // past the sign position. Positive overflow saturates to `max()`, negative
 // overflow saturates to `min()`.
 template <is_raw_integral T, is_raw_integral U>
@@ -674,9 +677,9 @@ sat_shl(T value, U bits) -> T {
 }
 
 // Erase redundant type information for `sat_shl()`. Result keeps the shifted
-// value's width: `bits` is a count, not a value to widen against. Saturation
+// value's width. `bits` is a count, not a value to widen against. Saturation
 // runs in the wider space and is clamped back into the LHS raw type to honor
-// the LHS-shape rule for `<<`.
+// the LHS-shape rule for <<.
 template <is_integral T, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -708,8 +711,8 @@ sat_shr(T value, U bits) -> T {
 // arithmetic right shift never overflows (it divides by `2^bits` and rounds
 // toward `-inf`), so the only "saturation" needed is to guard against shift
 // counts at or above the bit width, which the C++ shift rules leave undefined.
-// Beyond the width, a positive value saturates to `0` and a negative value
-// saturates to `-1` (sign bit fully replicated).
+// Beyond the width, a positive value saturates to 0 and a negative value
+// saturates to -1 (sign bit fully replicated).
 template <is_raw_integral T, is_raw_integral U>
    requires(is_signed<T>)
 [[nodiscard]]
@@ -738,7 +741,7 @@ sat_shr(T value, U bits) -> remove_constref<T> {
 // with no information lost. The shift count is taken modulo the bit width of
 // `T`, so any non-negative count is valid -- a count of `N` is a no-op, `N + 1`
 // rotates by one, etc. This is the wrapping counterpart to `sat_shl` and is the
-// dispatch path for `wrap`-policy `<<` on `arithmetic`.
+// dispatch path for `wrap`-policy << on `arithmetic`.
 template <is_raw_integral T, is_raw_integral U>
    requires(is_unsigned<T>)
 [[nodiscard]]
@@ -767,7 +770,7 @@ wrap_shl(T value, U bits) -> T {
 }
 
 // Erase redundant type information for `wrap_shl`. Result keeps the shifted
-// value's width: `bits` is a count, not a value to widen against.
+// value's width. `bits` is a count, not a value to widen against.
 template <is_integral T, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -778,9 +781,9 @@ wrap_shl(T value, U bits) -> remove_constref<T> {
       wrap_shl(static_cast<lhs_raw>(value), static_cast<bits_raw>(bits)));
 }
 
-// Right bit-rotation of an unsigned raw integer. Mirror of `wrap_shl`: bits
-// shifted out the low end re-enter at the high end, count is taken modulo the
-// bit width.
+// Right bit-rotation of an unsigned raw integer. Mirror of `wrap_shl`.
+// Bits shifted out the low end re-enter at the high end, count is taken modulo
+// the bit width.
 template <is_raw_integral T, is_raw_integral U>
    requires(is_unsigned<T>)
 [[nodiscard]]
@@ -819,7 +822,7 @@ wrap_shr(T value, U bits) -> remove_constref<T> {
 }
 
 // Saturating cast for raw integers. Clamps `value` into `T`'s representable
-// range. Mixed-signedness pairs are handled without ever signed-converting an
+// range. Mixed-signed-ness pairs are handled without ever signed-converting an
 // out-of-range unsigned value, so this is well-defined for every operand.
 template <is_raw_integral T, is_raw_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -856,7 +859,7 @@ sat_cast(U value) -> T {
 namespace detail {
 
 // Convert `value` to `T` using the semantics of `policy`. Saturating policies
-// clamp out-of-range values; wrapping policies (and `undefined`) reuse
+// clamp out-of-range values. Wrapping policies (and `undefined`) reuse
 // `static_cast`'s well-defined two's-complement modular reduction.
 template <typename T, overflow_policies policy, typename U>
    requires(policy != overflow_policies::undefined)
@@ -894,11 +897,11 @@ class arithmetic :
    constexpr arithmetic(arithmetic const&) = default;
    constexpr arithmetic(arithmetic&&) = default;
 
-   // Sound implicit conversion. Unsafe pairings (e.g. `int4 -> int1`, `uint4 ->
-   // int4`) only enable this constructor when `enable_if` proves the value fits
-   // the destination at compile time. For runtime operands the predicate is
-   // non-constant, so Clang treats this overload as not viable, forcing the
-   // explicit / policy_cast catch-alls below to take over.
+   // Sound implicit conversion. Unsafe pairings (e.g. `int4 -> int1`,
+   // `uint4 -> int4`) only enable this constructor when `enable_if` proves the
+   // value fits the destination at compile time. For runtime operands the
+   // predicate is non-constant, so Clang treats this overload as not viable,
+   // forcing the explicit / `policy_cast` catch-alls below to take over.
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy == overflow_policies::undefined)
@@ -944,13 +947,13 @@ class arithmetic :
        : raw(static_cast<T>(make_raw_arithmetic(other))) {
    }
 
-   // Catch-all for `saturate` / `wrap` overflow policies. Saturating
-   // destinations clamp out-of-range values, wrapping destinations reduce them
-   // modulo `2 ** sizeof(T) * 8`. Both behaviors are well-defined, so
-   // construction is implicit -- choosing a sat/wrap type is itself an explicit
-   // opt-in to these semantics. This overload covers compile-time and runtime
-   // operands alike, including out-of-range constants which are honored through
-   // `policy_cast` (instead of being silently truncated).
+   // Catch-all for `saturate`/`wrap` overflow policies. Saturating destinations
+   // clamp out-of-range values, wrapping destinations reduce them modulo
+   // `2 ** sizeof(T) * 8`. Both behaviors are well-defined, so construction is
+   // implicit -- choosing a sat/wrap type is itself an explicit opt-in to these
+   // semantics. This overload covers compile-time and runtime operands alike,
+   // including out-of-range constants which are honored through `policy_cast`
+   // (instead of being silently truncated).
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy != overflow_policies::undefined)
@@ -984,8 +987,8 @@ class arithmetic :
       return lhs.raw == make_raw_arithmetic(rhs);
    }
 
-   // Mixed-signedness `<=>` / `==`. The body widens to `common_type` after
-   // peeling off the negative-signed-vs-unsigned case, so this works for any
+   // Mixed-signed-ness <=> / ==. The body widens to `common_type` after peeling
+   // off the negative-signed-vs-unsigned case, so this works for any
    // combination of widths and runs at runtime as well as `consteval`.
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_comparison<T, U>
@@ -1025,8 +1028,9 @@ class arithmetic :
       return *this;
    }
 
-   // Generate `operator-`. Disabled for `wrap`/`saturate` with mixed-signedness
-   // same-size operands, which `wrap_add` / `sat_add` cannot disambiguate.
+   // Generate `operator-`. Disabled for `wrap`/`saturate` with
+   // mixed-signed-ness same-size operands, which `wrap_add`/`sat_add` cannot
+   // disambiguate.
    // Those cases are reached instead via the implicit `enable_if` constructor
    // on the operand, which converts to `arithmetic<T, overflow_policy>` at the
    // call site so the same-type overload of this function runs.
@@ -1109,7 +1113,8 @@ class arithmetic :
    template <is_arithmetic U>
       requires((overflow_policy == overflow_policies::undefined
                 || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>)
-               // Excluded: same-signedness-integer cases handled above.
+               // Excluded:
+               // same-signed-ness-integer cases handled above.
                && !(is_unsigned_integral<T> && is_unsigned_integral<U>)
                && !(is_signed_integral<T> && is_signed_integral<U>
                     && overflow_policy == overflow_policies::undefined))
@@ -1122,7 +1127,8 @@ class arithmetic :
       if constexpr (overflow_policy == undefined) {
          // TODO: See if using `[[gnu::assume]]` actually optimizes
          // this. if constexpr (is_unsigned<T>) { Assume there is no overflow.
-         // [[gnu::assume((raw >= operand))]]; }
+         // [[gnu::assume((raw >= operand))]];
+         // }
          using promoted_raw = raw_arithmetic_type<result_type>;
          return result_type(static_cast<promoted_raw>(raw)
                             - static_cast<promoted_raw>(raw_operand));
@@ -1189,7 +1195,7 @@ class arithmetic :
       return raw * p_operand;
    }
 
-   // Generate `operator/`. Result fits in LHS width: `|a / b| <= |a|`.
+   // Generate `operator/`. Result fits in LHS width `|a / b| <= |a|`.
    template <typename U>
       requires(overflow_policy == overflow_policies::undefined
                || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>)
@@ -1245,17 +1251,16 @@ class arithmetic :
       return arithmetic(~(raw));
    }
 
-   // Generate `operator%`. The result fits in LHS width: `|a % b| < |a|`.
+   // Generate `operator%`. The result fits in LHS width `|a % b| < |a|`.
    //
-   // For SIGNED LHS this is the C++ truncated *remainder*: the sign of the
-   // result follows the dividend, so `(-7) % 3 == -1`. The RHS is narrowed to
-   // the LHS storage `T` before the `%` so that the usual arithmetic
-   // conversions cannot quietly promote a signed dividend to unsigned (which
-   // would turn a negative LHS into a huge positive operand and produce the
-   // wrong remainder).
+   // For SIGNED LHS this is the C++ truncated remainder the sign of the result
+   // follows the dividend, so `(-7) % 3 == -1`. The RHS is narrowed to the LHS
+   // storage `T` before the % so that the usual arithmetic conversions cannot
+   // quietly promote a signed dividend to unsigned (which would turn a negative
+   // LHS into a huge positive operand and produce the wrong remainder).
    //
-   // For UNSIGNED LHS this is mathematical *modulo*: the result is always in
-   // `[0, |rhs|)`. With a signed RHS the absolute value is taken first; just
+   // For UNSIGNED LHS this is mathematical *modulo*. The result is always in
+   // `[0, |rhs|)`. With a signed RHS the absolute value is taken first. Just
    // narrowing a negative RHS into the unsigned LHS storage would otherwise
    // turn it into a huge value and collapse the modulo to the LHS itself.
    template <is_arithmetic U>
@@ -1301,7 +1306,7 @@ class arithmetic :
       return p_operand & raw;
    }
 
-   // Generate `operator|`. Wider-or-equal LHS unsigned only; see `bit_and`.
+   // Generate `operator|`. Wider-or-equal LHS unsigned only. See `bit_and`.
    template <is_unsigned_integral U>
       requires(is_unsigned_integral<T> && sizeof(T) >= sizeof(U))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -1319,12 +1324,12 @@ class arithmetic :
    }
 
    // Generate `operator<<`. `shift_left_by` is the dispatch path when this type
-   // is on the LHS; `shift_left_into` is the dispatch path when this type is on
-   // the RHS. Both are exposed for any integral storage so that `<<` works in
-   // either position. For signed `T`, the underlying `<<` is the C++ arithmetic
-   // shift; with `saturate` policy a positive overflow clamps to `max()` and a
+   // is on the LHS. `shift_left_into` is the dispatch path when this type is on
+   // the RHS. Both are exposed for any integral storage so that << works in
+   // either position. For signed `T`, the underlying << is the C++ arithmetic
+   // shift. With `saturate` policy a positive overflow clamps to `max()` and a
    // negative overflow clamps to `min()`. With `wrap` policy the shift instead
-   // ROTATES the underlying bit pattern: bits shifted out the high end re-enter
+   // ROTATES the underlying bit pattern. Bits shifted out the high end re-enter
    // at the low end, and the count is taken modulo the bit width so any
    // non-negative count is valid. A negative shift count is undefined per the
    // C++ shift rules and is the caller's responsibility to avoid.
@@ -1351,14 +1356,14 @@ class arithmetic :
       return other << raw;
    }
 
-   // Generate `operator>>`. Same dispatch story as `<<`: `shift_right_by` for
-   // the LHS path and `shift_right_into` for the RHS path. For signed `T`, the
-   // underlying `>>` is the C++ arithmetic shift, which sign-extends negative
-   // LHS values. Right shift can never overflow, so `saturate` only adds a
-   // guard against shift counts at or above the bit width: positive values
-   // clamp to `0`, negative values clamp to `-1`. With `wrap` policy `>>`
-   // ROTATES instead: bits shifted out the low end re-enter at the high end,
-   // and the count is taken modulo the bit width.
+   // Generate `operator>>`. Same dispatch story as <<. `shift_right_by` for the
+   // LHS path and `shift_right_into` for the RHS path. For signed `T`, the
+   // underlying >> is the C++ arithmetic shift, which sign-extends negative LHS
+   // values. Right shift can never overflow, so `saturate` only adds a guard
+   // against shift counts at or above the bit width. Positive values clamp to
+   // 0, negative values clamp to -1. With `wrap` policy >> ROTATES instead:
+   // bits shifted out the low end re-enter at the high end, and the count is
+   // taken modulo the bit width.
    template <is_arithmetic U>
       requires(is_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -1587,9 +1592,9 @@ class arithmetic_ptr :
       return __builtin_bit_cast(T const*, raw);
    }
 
-   // When `T` is already const-qualified (e.g. `const void`, `unsigned char
-   // const`), `T*` and `T const*` name the same type, so we disable this to
-   // disambiguate.
+   // When `T` is already `const`-qualified (e.g. `const void`,
+   // `unsigned char const`), `T*` and `T const*` name the same type, so we
+   // disable this to disambiguate.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
    operator T const*() const
@@ -1643,8 +1648,8 @@ class arithmetic_ptr :
       return *this;
    }
 
-   // Same-signedness `<=>` / `==`. Falls through to a direct raw comparison
-   // because no width/signedness mismatch needs handling.
+   // Same-signed-ness <=> / ==. Falls through to a direct raw comparison
+   // because no width/signed-ness mismatch needs handling.
    template <is_integral U>
       requires(is_safe_arithmetic_comparison<storage_type, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -1661,9 +1666,9 @@ class arithmetic_ptr :
       return lhs.raw == make_raw_arithmetic(rhs);
    }
 
-   // Mixed-signedness `<=>` / `==`. Routes through
-   // `raw_mixed_integral_spaceship`, which peels off the negative-vs-unsigned
-   // case before widening through `common_type`.
+   // Mixed-signed-ness <=> / ==. Routes through `raw_mixed_integral_spaceship`,
+   // which peels off the negative-vs-unsigned case before widening through
+   // `common_type`.
    template <is_integral U>
       requires(!is_safe_arithmetic_comparison<storage_type, U>
                && ((is_unsigned_integral<storage_type> && is_signed_integral<U>)
@@ -1817,7 +1822,7 @@ class arithmetic_ptr :
    }
 
    // Generate `operator&`. Only available for unsigned pointer storage (e.g.
-   // `uintptr<T>`); `intptr<T>` intentionally opts out of bitwise.
+   // `uintptr<T>`). `intptr<T>` intentionally opts out of bitwise.
    template <typename U>
       requires(is_unsigned_integral<storage_type>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -2091,9 +2096,9 @@ class index :
    // which the compiler can only do for constant expressions, so runtime
    // operands fall through to the generic constructor below.
    //
-   // `iword` / `uword` are intentionally permitted here so that their
+   // `iword`/`uword` are intentionally permitted here so that their
    // compile-time-known values can implicitly become an `index`. Runtime
-   // `iword` / `uword` operands fall through to the generic constructor below,
+   // `iword`/`uword` operands fall through to the generic constructor below,
    // which keeps `explicit_word_for_index_ctor` types `explicit`.
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
@@ -2111,7 +2116,7 @@ class index :
       "Value is out of range for conversion to `cat::idx`!"))) = delete;
 
    // Constructing with safe conversions is implicit, but constructing with
-   // unsafe conversions is explicit. `uword` / `iword` stay explicit even when
+   // unsafe conversions is explicit. `uword`/`iword` stay explicit even when
    // the conversion is otherwise considered safe.
    template <is_arithmetic U>
    [[gnu::always_inline, gnu::nodebug]]
@@ -2302,10 +2307,10 @@ class index :
       return p_other * raw;
    }
 
-   // Generate `operator/`. `divide_by(unsigned)`: non-negative quotient; keep
+   // Generate `operator/`. `divide_by(unsigned)` non-negative quotient. Keep
    // `cat::index`.
    //
-   // `divide_by(signed)`: usual arithmetic conversions would mix
+   // `divide_by(signed)`. Usual arithmetic conversions would mix
    // `__SIZE_TYPE__` with a signed divisor so a negative `other` becomes a huge
    // unsigned value. Evaluate in `signed long long`, same as `multiply` /
    // `subtract_by`. The quotient may be negative, so return `signed_distance`
@@ -2326,10 +2331,10 @@ class index :
          / static_cast<signed long long>(make_raw_arithmetic(other)));
    }
 
-   // `divide_into(unsigned)`: quotient fits the usual unsigned story; narrow
-   // `T` still truncates the result like any explicit cast.
+   // `divide_into(unsigned)`. The quotient fits the usual unsigned story.
+   // Narrow `T` still truncates the result like any explicit cast.
    //
-   // `divide_into(signed)`: do not cast `raw` to `T` (narrowing and mixed
+   // `divide_into(signed)`. Do not cast `raw` to `T` (narrowing and mixed
    // promotion with `T`). Use the same wide signed division as
    // `divide_by(signed)` and return `signed_distance` so negative quotients are
    // representable.
@@ -2372,15 +2377,15 @@ class index :
       return make_raw_arithmetic(operand) % raw;
    }
 
-   // `cat::index` does not provide the bitwise operators (`&`, `|`, `~`)
-   // because, like signed types, it has a high bit with semantics that are
-   // confusing in a bitwise context. Treat an index as an opaque count-like
-   // value; unwrap it via `.raw` for any bit-mask manipulation. Shifts are
-   // exposed below: an `index` is guaranteed to keep its high bit zero, so we
-   // can bitcast its raw storage to `signed __SIZE_TYPE__`, perform the C++
-   // arithmetic shift, and bitcast back without losing any bits. With
-   // `saturate` policy the shift goes through `sat_shl`/`sat_shr` on the signed
-   // bitcast, so the index's high-bit-zero invariant is preserved by saturating
+   // `cat::index` does not provide the bitwise operators (&, |, ~) because,
+   // like signed types, it has a high bit with semantics that are confusing in
+   // a bitwise context. Treat an index as an opaque count-like value. Unwrap it
+   // via `.raw` for any bit-mask manipulation. Shifts are exposed below. An
+   // `index` is guaranteed to keep its high bit zero, so we can bitcast its raw
+   // storage to `signed __SIZE_TYPE__`, perform the C++ arithmetic shift, and
+   // bitcast back without losing any bits. With `saturate` policy the shift
+   // goes through `sat_shl`/`sat_shr` on the signed bitcast, so the index's
+   // high-bit-zero invariant is preserved by saturating.
    // to `signed_size`'s `max()` (which equals `index::max()`). With `wrap`
    // policy the shift becomes a ROTATION over the lower (`bit_width - 1`) bits
    // -- the high bit stays zero (so the `index` invariant is preserved), and
@@ -2419,12 +2424,12 @@ class index :
    }
 
    // Generate `operator>>`. The signed-bitcast result matches the C++
-   // arithmetic right shift; because the high bit is always zero this is the
-   // same value the unsigned `>>` would produce. Right shift can never
-   // overflow, so `saturate` only adds the C++-shift width guard via `sat_shr`.
-   // With `wrap` policy `>>` mirrors `<<`: the lower 63 bits are rotated as a
-   // ring (count taken modulo 63), bits shifted off the bottom re-enter at the
-   // top of the ring, and the high bit is always cleared.
+   // arithmetic right shift. Because the high bit is always zero this is the
+   // same value the unsigned >> would produce. Right shift can never overflow,
+   // so `saturate` only adds the C++-shift width guard via `sat_shr`.
+   // With `wrap` policy >> mirrors <<. The lower 63 bits are rotated as a ring
+   // (count taken modulo 63), bits shifted off the bottom re-enter at the top
+   // of the ring, and the high bit is always cleared.
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -2623,7 +2628,7 @@ wrap_shl(index<P> value, U bits) -> index<P> {
 }
 
 // Right bit-rotation mirror of `wrap_shl(index)`. Bits rotated off the bottom
-// re-enter at the top of the 63-bit ring; the high bit stays zero.
+// re-enter at the top of the 63-bit ring. The high bit stays zero.
 template <overflow_policies P, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -2650,8 +2655,6 @@ using int4 = arithmetic<__INT32_TYPE__, overflow_policies::undefined>;
 using uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::undefined>;
 using int8 = arithmetic<__INT64_TYPE__, overflow_policies::undefined>;
 using uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;
-// using i128 = arithmetic<int128_t, overflow_policies::undefined>; using u128 =
-// arithmetic<uint128_t, overflow_policies::undefined>;
 
 using float4 = arithmetic<float, overflow_policies::undefined>;
 using float8 = arithmetic<double, overflow_policies::undefined>;

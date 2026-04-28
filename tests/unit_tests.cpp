@@ -49,7 +49,7 @@ main() -> int {
    // `tests_passed` and `tests_failed` are modified within the `CAT_TEST`
    // macro.
    // TODO: This will leak. An `inline_allocator` should be used.
-   // `fmt` stores arguments in type-erased storage; pass plain `int`s, not
+   // `fmt` stores arguments in type-erased storage. Pass plain `int`s, not
    // `atomic` objects.
    cat::idx const n_passed = tests_passed.load(cat::memory_order::relaxed);
    cat::idx const n_failed = tests_failed.load(cat::memory_order::relaxed);

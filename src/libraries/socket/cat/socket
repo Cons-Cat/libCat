@@ -147,7 +147,6 @@ struct socket_unix {
            Socket const* __restrict const p_socket = nullptr,
            iword const* __restrict const p_socket_size = nullptr)
       -> maybe<iword> {
-      // scaredy const result =
       nix::scaredy_nix<iword> const result =
          nix::sys_recv(this->descriptor, p_message_buffer, buffer_length,
                        p_socket, p_socket_size);

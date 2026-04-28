@@ -33,7 +33,7 @@
 // The `pattern` predicates will call `.is()` on the reference provided to
 // `match`, if such a method exists. `.is()` can be given either a single
 // template type argument, or a single value function argument. If no such
-// method exists in this case, instead a `cat::is_same<>()` or `==` will be
+// method exists in this case, instead a `cat::is_same<>()` or == will be
 // called, respectively. Generally, the value equality checks will explicitly
 // convert the pattern's argument type to the underlying type of the reference
 // provided to `cat::match()`.
@@ -141,7 +141,7 @@ struct is_a_value_type : pattern {
             }
          } else {
             // If there is no `.is()` method for `matching`, fall back to a
-            // trivial `==` check.
+            // trivial == check.
             if (static_cast<unqualified_matching>(matching) == value) {
                fwd(callback)();
                return true;
