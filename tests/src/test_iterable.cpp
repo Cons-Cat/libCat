@@ -202,24 +202,27 @@ struct noisy_box : cat::iterable_interface {
       return *this;
    }
 
+   [[nodiscard]]
    constexpr auto
    begin_pos() const -> cat::idx {
-      return data.begin_pos();
+      return cat::begin_pos(data);
    }
 
+   [[nodiscard]]
    constexpr auto
    end_pos() const -> cat::idx {
-      return data.end_pos();
+      return cat::end_pos(data);
    }
 
-   constexpr auto
-   inc_pos(cat::idx& p) const -> void {
-      data.inc_pos(p);
+   constexpr void
+   inc_pos(cat::idx& p) const {
+      cat::inc_pos(data, p);
    }
 
+   [[nodiscard]]
    constexpr auto
    read_at_unchecked(cat::idx p) const -> int const& {
-      return data.read_at_unchecked(p);
+      return cat::read_at_unchecked(data, p);
    }
 };
 
