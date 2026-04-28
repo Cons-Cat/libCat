@@ -73,16 +73,31 @@ class ArithmeticPrinter:
 
 @cat_type('index')
 class IndexPrinter:
-    "Print a `cat::index`"
+    "Print a `cat::idx`"
 
     def __init__(self, val: gdb.Value):
         self.raw = val['raw']
+        typed_policy = val.type.template_argument(0)
+        stripped_policy = str(typed_policy)[24:]
+        match stripped_policy:
+            case 'undefined':
+                self.policy = 'undefined'
+            case 'wrap':
+                self.policy = 'wrap'
+            case 'saturate':
+                self.policy = 'sat'
+            case 'trap':
+                self.policy = 'trap'
+            case _:
+                self.policy = 'WTF'
         return
 
     def to_string(self):
-        return str(self.raw)
+        if self.policy == 'undefined':
+            return str(self.raw)
+        return str(self.raw) + ' (' + self.policy + ')'
 
-    
+
 @cat_type('byte')
 class BytePrinter:
     "Print a `cat::byte`"
@@ -139,6 +154,7 @@ class StrSpanPrinter:
     def __init__(self, val: gdb.Value):
         self.m_p_data = val['m_p_data']
         self.m_size = val['m_size']['raw']
+        self.is_null_terminated = str(val.type.template_argument(1)) == 'true'
         return
 
     def to_string(self):
@@ -153,17 +169,19 @@ class StrSpanPrinter:
                   for i
                   in string])
         
+        zstr_suffix = ", null-terminated" if self.is_null_terminated else ""
         return ("\"" + string + "\" ("
             + str(self.m_size)
-            + " chars, " + str(hex(self.m_p_data))
+            + " chars" + zstr_suffix + ", " + str(hex(self.m_p_data))
             + ")")
 
 @cat_type('basic_str_inplace')
 class StrInplacePrinter:
-    "Print a `cat::str_inplace`"
+    "Print a `cat::(z)str_inplace`"
 
     def __init__(self, val: gdb.Value):
         self.m_data = val['m_data']
+        self.is_null_terminated = str(val.type.template_argument(2)) == 'true'
         
         try:
              self.m_size = val.type.template_argument(1)['raw']
@@ -188,8 +206,9 @@ class StrInplacePrinter:
                   for i
                   in string])
 
+        zstr_suffix = ", null-terminated" if self.is_null_terminated else ""
         return ("\"" + string + "\" ("
-                + str(self.m_size) + " chars)")
+                + str(self.m_size) + " chars" + zstr_suffix + ")")
 
 
 @cat_type('bit_value')
@@ -232,29 +251,34 @@ class BitsetPrinter:
     def _fmt_int(self, bytes_index: int):
         # Create a bitstring of `element_size_bits` length from the element at
         # `bytes_index`.
-        bitstring: str = format(int(self.m_data[bytes_index]['raw']),
-                                '0' + str(self.element_size_bits) + 'b')
+        return format(int(self.m_data[bytes_index]['raw']),
+                      '0' + str(self.element_size_bits) + 'b')
 
+    def _separate_bytes(self, bitstring: str):
         # Insert ' separators between every 8 bits.
-        separated_bytes: str = \
-            '\''.join([bitstring[::-1][i:i+8][::-1]
-                       for i
-                       in range(0, len(bitstring), 8)][::-1])
-        
-        return separated_bytes
+        return '\''.join([bitstring[i:i+8]
+                          for i
+                          in range(0, len(bitstring), 8)])
 
     def to_string(self):
         bitstrings = [self._fmt_int(x)
                       for x
                       in range(self.array_len)]
         
-        # Truncate leading skipped bits from the last bytes in the array.
+        # Truncate right-padding bits from the last bytes in the array.
         if self.leading_skipped_bits > 0:
             bitstrings[-1] = bitstrings[-1][:-self.leading_skipped_bits]
+        bitstrings = [self._separate_bytes(bitstring)
+                      for bitstring
+                      in bitstrings
+                      if len(bitstring) > 0]
 
+        bits_count = self.array_len * self.element_size_bits - self.leading_skipped_bits
+        padding_suffix = ''
+        if self.leading_skipped_bits > 0:
+            padding_suffix = ', ' + str(self.leading_skipped_bits) + ' r-padding'
         return '[' + str(', '.join(bitstrings)) + '] (' \
-            + str(self.array_len * self.element_size_bits - self.leading_skipped_bits) \
-            + ' bits)'
+            + str(bits_count) + ' bits' + padding_suffix + ')'
 
 
 # At the end of the script, register all `cat_pretty_printers` simultaneously.

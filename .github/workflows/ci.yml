@@ -118,6 +118,26 @@ jobs:
           cmake --build build-debug
           ctest --test-dir build-debug --verbose --output-on-failure
 
+      - name: GDB pretty printers (-O0 Debug)
+        run: cmake --build build-debug --target check-gdb-pretty-printers
+
+      - name: GDB pretty printers (-O0 Debug, PCH=OFF)
+        run: |
+          cmake -S . -B build-debug-no-pch -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCAT_USE_SANITIZERS=ON \
+            -DCAT_PCH=OFF
+          cmake --build build-debug-no-pch --target check-gdb-pretty-printers
+
+      - name: GDB pretty printers (RelWithDebInfo, PCH=ON)
+        run: |
+          cmake -S . -B build-gdb-relwithdebinfo -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_CXX_COMPILER=clang++-23
+            -DCAT_PCH=ON
+          cmake --build build-gdb-relwithdebinfo --target check-gdb-pretty-printers
+
       - name: Verify .gdbinit symlink (Debug)
         # Single-config layout per `cmake/gdb_symlink.cmake`. The
         # multi-config variant lives in the `tools` job.

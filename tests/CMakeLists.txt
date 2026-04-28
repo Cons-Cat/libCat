@@ -102,6 +102,46 @@ if(CAT_BUILD_UNIT_TESTS)
   # Enable running `unit_tests` through `ctest`.
   add_test(NAME UnitTests COMMAND unit_tests)
 
+  find_program(CAT_GDB_EXECUTABLE gdb DOC "Path to the GDB executable.")
+  if(CAT_GDB_EXECUTABLE)
+    add_executable(
+      gdb_pretty_printer_fixture
+      ${CMAKE_SOURCE_DIR}/tests/src/gdb_pretty_printer_fixture.cpp)
+    set_source_files_properties(
+      ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
+      TARGET_DIRECTORY gdb_pretty_printer_fixture
+      PROPERTIES
+        COMPILE_DEFINITIONS "NO_ARGC_ARGV"
+        SKIP_PRECOMPILE_HEADERS ON)
+    target_link_libraries(gdb_pretty_printer_fixture PRIVATE cat-tests-base)
+    target_compile_options(gdb_pretty_printer_fixture PRIVATE -ggdb3 -gfull -O0)
+    add_custom_target(
+      check-gdb-pretty-printers
+      COMMAND ${CAT_GDB_EXECUTABLE}
+              --batch
+              -silent
+              -nx
+              -q
+              -x ${CMAKE_SOURCE_DIR}/tests/gdb_pretty_printers.gdb
+              $<TARGET_FILE:gdb_pretty_printer_fixture>
+      DEPENDS gdb_pretty_printer_fixture
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      USES_TERMINAL)
+    add_test(
+      NAME GdbPrettyPrinters
+      COMMAND ${CAT_GDB_EXECUTABLE}
+              --batch
+              -silent
+              -nx
+              -q
+              -x ${CMAKE_SOURCE_DIR}/tests/gdb_pretty_printers.gdb
+              $<TARGET_FILE:gdb_pretty_printer_fixture>)
+    set_tests_properties(
+      GdbPrettyPrinters
+      PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  endif()
+
   # # Parked: standalone `test_cpuid` runner. Linking `cat-tests-base` skips the
   # # bulk source list so only `test_cpuid` registers. Re-enable alongside the #
   # SDE step in `ci.yml`.
