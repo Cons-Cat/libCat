@@ -128,12 +128,13 @@ jobs:
     # require compiling.
     runs-on: ubuntu-24.04
     needs: toolchain
-    env:
-      CAT_LINT_BUILD_DIR: ${{ runner.temp }}/cat-build-lint
     steps:
       - uses: actions/checkout@v4
 
       - uses: ./.github/actions/setup-toolchain
+
+      - name: Set lint build directory
+        run: echo "CAT_LINT_BUILD_DIR=${RUNNER_TEMP}/cat-build-lint" >> "${GITHUB_ENV}"
 
       - name: Verify unique basenames under src/
         # Every file under `src/` must have a unique name. This makes searching
@@ -248,10 +249,8 @@ jobs:
             -DCAT_PCH=ON
           cmake --build build-gdb-relwithdebinfo --target check-gdb-pretty-printers
 
-      - name: Verify .gdbinit symlink (Debug)
+      - name: Verify .gdbinit symlink (Debug, Ninja generator non-multi)
         if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
-        # Single-config layout per `cmake/gdb_symlink.cmake`. The
-        # multi-config variant lives in the `tools` job.
         run: |
           set -eu
           if [ ! -f build-debug/.gdbinit ]; then
@@ -273,11 +272,11 @@ jobs:
       - name: Configure, build, and test (Release)
         run: |
           cmake -S . -B build-release \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=Release
           cmake --build build-release
           ctest --test-dir build-release --verbose --output-on-failure
 
-      - name: Verify .gdbinit symlink (Release)
+      - name: Verify .gdbinit symlink (Release, Ninja generator non-multi)
         if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
         run: |
           set -eu
@@ -385,7 +384,7 @@ jobs:
           cmake --build build-multi --config Debug --target test_dummy hello
           cmake --build build-multi --config Release --target test_dummy hello
 
-      - name: Verify .gdbinit symlinks (multi-config)
+      - name: Verify .gdbinit symlinks (Ninja generator multi-config)
         if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
         # Multi-config layout: per-subdirectory per-config files, no
         # top-level. Single-config equivalents are checked in the

@@ -50,9 +50,12 @@ unset(_cat_impl_sources_for_opt_report)
 # without the executable bit, so prefix `python3` when the resolved path ends in
 # `.py`.
 string(REGEX MATCH "^[0-9]+" _cat_opt_clang_major "${CMAKE_CXX_COMPILER_VERSION}")
+get_filename_component(_cat_opt_compiler_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
+get_filename_component(_cat_opt_toolchain_root "${_cat_opt_compiler_bin}" DIRECTORY)
 find_program(CAT_OPT_VIEWER_PATH
   NAMES opt-viewer.py opt-viewer
   HINTS
+    "${_cat_opt_toolchain_root}/usr/lib/llvm-${_cat_opt_clang_major}/share/opt-viewer"
     "/usr/lib/llvm-${_cat_opt_clang_major}/share/opt-viewer"
     "/usr/share/llvm-${_cat_opt_clang_major}/opt-viewer"
     "/usr/local/lib/llvm-${_cat_opt_clang_major}/share/opt-viewer"
@@ -72,4 +75,6 @@ else()
     "cat-opt-report: `opt-viewer.py` not found; install `llvm-${_cat_opt_clang_major}-tools` "
     "or put `opt-viewer.py` on PATH to render the YAML records.")
 endif()
+unset(_cat_opt_compiler_bin)
 unset(_cat_opt_clang_major)
+unset(_cat_opt_toolchain_root)
