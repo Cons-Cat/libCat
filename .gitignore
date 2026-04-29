@@ -12,3 +12,5 @@ CMakeFiles/
 *.o
 *.s
 *.bc
+*.pyc
+__pycache__/

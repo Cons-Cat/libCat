@@ -1,12 +1,15 @@
 [tools]
-cmake = "latest"
-ninja = "latest"
+cmake = "4.3.2"
+ninja = "1.13.2"
+sccache = "0.15.0"
 
 [env]
-CAT_LLVM_VERSION = "23~++20260428111539+a24c1dedc6f5-1~exp1~20260428111719.3532"
+CAT_LLVM_VERSION = "unstable"
 CC = "clang"
-CMAKE_GENERATOR = "Ninja"
 CXX = "clang++"
+CMAKE_CXX_FLAGS = "-fdiagnostics-color=always"
+CMAKE_GENERATOR = "Ninja"
+CMAKE_LINKER_TYPE = "LLD"
 _.path = ".cache/cat-llvm/bin"
 
 [tasks.install-toolchain]

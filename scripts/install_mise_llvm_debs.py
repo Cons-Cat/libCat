@@ -3,6 +3,7 @@
 # This file is flagrantly "vibe-coded". It may not be up to the standards of most libCat
 #code.
 
+import gzip
 import hashlib
 import os
 import pathlib
@@ -12,119 +13,32 @@ import sys
 import urllib.request
 
 
-LLVM_BASE_URL = "https://apt.llvm.org/unstable/pool/main/l/llvm-toolchain-snapshot"
+LLVM_BASE_URL = "https://apt.llvm.org/unstable"
+LLVM_PACKAGES_INDEX_URL = f"{LLVM_BASE_URL}/dists/llvm-toolchain/main/binary-amd64/Packages.gz"
+LLVM_PACKAGE_NAMES = (
+    "clang-23",
+    "clang-format-23",
+    "clangd-23",
+    "clang-tidy-23",
+    "clang-tools-23",
+    "lld-23",
+    "liblld-23",
+    "llvm-23",
+    "llvm-23-dev",
+    "llvm-23-linker-tools",
+    "llvm-23-runtime",
+    "llvm-23-tools",
+    "libclang-23-dev",
+    "libclang-common-23-dev",
+    "libclang-cpp23",
+    "libclang-rt-23-dev",
+    "libclang1-23",
+    "libllvm23",
+)
 DEBIAN_BASE_URL = "https://deb.debian.org/debian"
-VERSION = "23~++20260428111539+a24c1dedc6f5-1~exp1~20260428111719.3532"
+PACKAGE_SET_REVISION = "3"
 
-PACKAGES = (
-    (
-        LLVM_BASE_URL,
-        "clang-23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        140172,
-        "371b4ab1a77df9404aef77f53937133093f59be06133439f4ca5117fa3272487",
-    ),
-    (
-        LLVM_BASE_URL,
-        "clang-format-23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        70520,
-        "e42c296ecf0c32ec68e80bb492a08bc8b3443250a327a61a6c6c204b22a9c801",
-    ),
-    (
-        LLVM_BASE_URL,
-        "clangd-23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        3465740,
-        "93b1d66bd57f207b8ddd409e764ae0f311921be8a6fa27f69c7053c55b497f38",
-    ),
-    (
-        LLVM_BASE_URL,
-        "clang-tidy-23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        2024836,
-        "78ac69efb6366494339e876c71d9bd863476077bbf8b7b139d092a78b01c910e",
-    ),
-    (
-        LLVM_BASE_URL,
-        "clang-tools-23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        9671104,
-        "bc84cc445942dbe4a8506f85fcb326705f8b5bbf929412f4c9b26d6d2d58b743",
-    ),
-    (
-        LLVM_BASE_URL,
-        "lld-23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        1486804,
-        "3491f972902dc52cdab2b89850e1babc2b1cdd5028cc1f902af4627719c362cb",
-    ),
-    (
-        LLVM_BASE_URL,
-        "liblld-23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        1902176,
-        "db5e09e6971bf6465fd9400ca95a5da598547b7e6e19a6fffede37829095df78",
-    ),
-    (
-        LLVM_BASE_URL,
-        "llvm-23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        19362404,
-        "cc572ce5ef20ca57cb0275cf31a05ad008514ce042133bba72c2fa4c4e0e7823",
-    ),
-    (
-        LLVM_BASE_URL,
-        "llvm-23-dev_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        50766480,
-        "363f640e7595fc5f1bb5f2713f8b982bdd434f9c5fe01c84b4ca4a04622ec1e6",
-    ),
-    (
-        LLVM_BASE_URL,
-        "llvm-23-linker-tools_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        1220096,
-        "be6f5083a28e0be7a2bb962dca2af890eb9500b380b10481d59f44796b3ed9fc",
-    ),
-    (
-        LLVM_BASE_URL,
-        "llvm-23-runtime_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        576056,
-        "ba3b4082b0c1d54d364a914a5895e58e062fad21eada4f3282ab31c829210b11",
-    ),
-    (
-        LLVM_BASE_URL,
-        "llvm-23-tools_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        465552,
-        "7ad4264ac5111aba1bd03d184fad2c654d14426d98cb5086e06c682d89bbc84f",
-    ),
-    (
-        LLVM_BASE_URL,
-        "libclang-23-dev_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        32701072,
-        "566a265c31c16bd1dc986c2900406e8b93e3a2da32b08d2fab4d5e2cfabfa65b",
-    ),
-    (
-        LLVM_BASE_URL,
-        "libclang-common-23-dev_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        776992,
-        "55378e8213769b91477ec1f2f96f7a4c0468f4d365369a1c3f1eff1b209265c9",
-    ),
-    (
-        LLVM_BASE_URL,
-        "libclang-cpp23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        13676972,
-        "074083158e24666785c9faef3aebd87f4314f3f537afc924944be3154ab2e65a",
-    ),
-    (
-        LLVM_BASE_URL,
-        "libclang-rt-23-dev_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        4212856,
-        "495180c4000c74c99f897d5d5299e62f15d353381c5115bed36e702c34bd73bb",
-    ),
-    (
-        LLVM_BASE_URL,
-        "libclang1-23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        8448504,
-        "088ceea88463f7f458779fbf99390a809494ee2aa2c78e75cc55f78b00dcdd6e",
-    ),
-    (
-        LLVM_BASE_URL,
-        "libllvm23_23~%2B%2B20260428111539%2Ba24c1dedc6f5-1~exp1~20260428111719.3532_amd64.deb",
-        30112128,
-        "0a16a9c3cc11c60f4d9c597549596e2d54931d473cba349405bbf1e1a6efdbff",
-    ),
+PINNED_DEBIAN_PACKAGES = (
     (
         DEBIAN_BASE_URL,
         "pool/main/g/gcc-16/gcc-16-base_16-20260425-1_amd64.deb",
@@ -193,6 +107,42 @@ PACKAGES = (
     ),
     (
         DEBIAN_BASE_URL,
+        "pool/main/g/grpc/libgrpc++1.51t64_1.51.1-9_amd64.deb",
+        498928,
+        "cd9c3d8938b659fdbb57d052a7f24605f010b8396b733e2f0ff997110c7dcd07",
+    ),
+    (
+        DEBIAN_BASE_URL,
+        "pool/main/g/grpc/libgrpc29t64_1.51.1-9_amd64.deb",
+        2892780,
+        "a05fc5bc2621730f129786a947257e9293163766a8f52aa9bb76619c07ec082c",
+    ),
+    (
+        DEBIAN_BASE_URL,
+        "pool/main/p/protobuf/libprotobuf32t64_3.21.12-15+b1_amd64.deb",
+        986364,
+        "b5b6f0f29cc06b598a5d74dd463578ed9a1cf6e28bd61b5871f440780e195953",
+    ),
+    (
+        DEBIAN_BASE_URL,
+        "pool/main/p/protobuf/libprotoc32t64_3.21.12-15+b1_amd64.deb",
+        937456,
+        "672f41ecc298aee1357ddf03555f590870c4d89d4f21f135696dce95ca45ba81",
+    ),
+    (
+        DEBIAN_BASE_URL,
+        "pool/main/c/c-ares/libcares2_1.34.6-1+b1_amd64.deb",
+        99132,
+        "2b7dd3c2b8f34ae1466de09f91722724d9515b495f27ae99d2369aad1da4885d",
+    ),
+    (
+        DEBIAN_BASE_URL,
+        "pool/main/o/openssl/libssl3t64_3.6.2-1_amd64.deb",
+        2482492,
+        "a34acac9b52d64498ce8d98e23597ebbc9883af5f8c4fcf7802450945fb4c2d0",
+    ),
+    (
+        DEBIAN_BASE_URL,
         "pool/main/libx/libxml2/libxml2-16_2.15.2+dfsg-0.1_amd64.deb",
         641024,
         "8571682a07f329bb462569502b57aced4866e5b95c2db3ec7e5414a5b3bbdc14",
@@ -249,16 +199,28 @@ RUNTIME_LIBRARIES = (
     "libclang-cpp.so.23.0",
     "libre2.so.11",
     "libre2.so.11.0.0",
+    "libstdc++.so.6",
+    "libstdc++.so.6.0.35",
+    "libcrypto.so.3",
+    "libssl.so.3",
     "libxml2.so.16",
     "libxml2.so.16.1.2",
 )
 
 RUNTIME_LIBRARY_PREFIXES = (
     "libabsl",
+    "libaddress_sorting",
+    "libcares",
+    "libgpr",
+    "libgrpc",
+    "libprotobuf",
+    "libprotoc",
+    "libupb",
 )
 
 REQUIRED_PREFIX_RUNTIME_LIBRARIES = (
     "libabsl_base.so.20260107",
+    "libgrpc++.so.1.51",
 )
 
 
@@ -399,11 +361,59 @@ def install_wrappers(root: pathlib.Path) -> None:
             suffixed.symlink_to(command)
 
 
-def is_current(root: pathlib.Path) -> bool:
+def parse_debian_package_index(index_text: str) -> dict[str, dict[str, str]]:
+    packages = {}
+    for paragraph in index_text.split("\n\n"):
+        fields = {}
+        for line in paragraph.splitlines():
+            if ": " not in line:
+                continue
+            key, value = line.split(": ", 1)
+            fields[key] = value
+        name = fields.get("Package")
+        if name is not None:
+            packages[name] = fields
+    return packages
+
+
+def resolve_llvm_packages() -> tuple[str, tuple[tuple[str, str, int, str], ...]]:
+    print(f"resolve {LLVM_PACKAGES_INDEX_URL}", flush=True)
+    with urllib.request.urlopen(LLVM_PACKAGES_INDEX_URL) as response:
+        packages = parse_debian_package_index(
+            gzip.decompress(response.read()).decode("utf-8")
+        )
+
+    resolved_packages = []
+    resolved_versions = set()
+    for package_name in LLVM_PACKAGE_NAMES:
+        fields = packages.get(package_name)
+        if fields is None:
+            raise SystemExit(f"missing LLVM package metadata: {package_name}")
+        version = fields["Version"].removeprefix("1:")
+        resolved_versions.add(version)
+        resolved_packages.append(
+            (
+                LLVM_BASE_URL,
+                fields["Filename"],
+                int(fields["Size"]),
+                fields["SHA256"],
+            )
+        )
+
+    if len(resolved_versions) != 1:
+        versions = ", ".join(sorted(resolved_versions))
+        raise SystemExit(f"LLVM package metadata has mixed versions: {versions}")
+
+    llvm_version = resolved_versions.pop()
+    print(f"LLVM nightly {llvm_version}", flush=True)
+    return llvm_version, tuple(resolved_packages)
+
+
+def is_current(root: pathlib.Path, stamp_version: str) -> bool:
     stamp = root / "VERSION"
     return (
         stamp.exists()
-        and stamp.read_text(encoding="utf-8").strip() == VERSION
+        and stamp.read_text(encoding="utf-8").strip() == stamp_version
         and all((root / "bin" / command).exists() for command, _ in WRAPPERS)
         and all((root / "runtime" / "lib" / library).exists() for library in RUNTIME_LIBRARIES)
         and all((root / "runtime" / "lib" / library).exists() for library in REQUIRED_PREFIX_RUNTIME_LIBRARIES)
@@ -411,15 +421,20 @@ def is_current(root: pathlib.Path) -> bool:
 
 
 def main() -> int:
+    llvm_version, llvm_packages = resolve_llvm_packages()
+    stamp_version = f"{llvm_version}+cat.{PACKAGE_SET_REVISION}"
     configured_version = os.environ.get("CAT_LLVM_VERSION")
-    if configured_version is not None and configured_version != VERSION:
-        raise SystemExit(f"mise CAT_LLVM_VERSION is {configured_version}, but package metadata is {VERSION}")
+    if configured_version not in (None, "unstable") and configured_version != llvm_version:
+        raise SystemExit(
+            f"mise CAT_LLVM_VERSION is {configured_version}, "
+            f"but package metadata is {llvm_version}"
+        )
 
     root = project_root() / ".cache" / "cat-llvm"
     downloads = project_root() / ".cache" / "cat-llvm-downloads"
     downloads.mkdir(parents=True, exist_ok=True)
 
-    if is_current(root):
+    if is_current(root, stamp_version):
         subprocess.run([str(root / "bin" / "clang++"), "--version"], check=True)
         return 0
 
@@ -427,13 +442,13 @@ def main() -> int:
         shutil.rmtree(root)
     root.mkdir(parents=True)
 
-    for base_url, url_path, size, sha256 in PACKAGES:
+    for base_url, url_path, size, sha256 in llvm_packages + PINNED_DEBIAN_PACKAGES:
         package = download_package(downloads, base_url, url_path, size, sha256)
         extract_deb(package, root)
 
     install_runtime_libraries(root)
     install_wrappers(root)
-    (root / "VERSION").write_text(VERSION + "\n", encoding="utf-8")
+    (root / "VERSION").write_text(stamp_version + "\n", encoding="utf-8")
 
     subprocess.run([str(root / "bin" / "clang++"), "--version"], check=True)
     subprocess.run([str(root / "bin" / "clangd"), "--version"], check=True)

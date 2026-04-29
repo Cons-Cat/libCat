@@ -16,7 +16,7 @@ but other build systems may work.
 The ="Ninja Multi-Config"= generator is also supported.
 
 #+BEGIN_SRC sh
-  mise install-toolchain
+  mise install
   cmake -B build/
   # mise x -- cmake -B build/
   cmake --build build/  

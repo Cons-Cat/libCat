@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.24)
 
+if (NOT DEFINED CMAKE_LINKER_TYPE AND DEFINED ENV{CMAKE_LINKER_TYPE})
+  set(CMAKE_LINKER_TYPE "$ENV{CMAKE_LINKER_TYPE}" CACHE STRING
+    "CMake linker type selected by mise.")
+endif()
+
 project(cat
   VERSION 0.1.0
   LANGUAGES CXX)
@@ -191,8 +196,6 @@ list(
   APPEND CAT_LINK_OPTIONS_COMMON
   # This is required to prevent duplicate symbols.
   -nostdlib
-  # `lld` is required for LLVM LTO. Bfd and `mold` do not work.
-  -fuse-ld=lld
 )
 
 list(
