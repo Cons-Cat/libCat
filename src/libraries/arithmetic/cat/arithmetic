@@ -64,8 +64,8 @@ enum class overflow_policies : unsigned char {
 template <typename WrappedQual, overflow_policies Semantics>
 class overflow_reference;
 
-template <typename T, typename storage_type, overflow_policies overflow_policy>
-   requires(sizeof(storage_type) == sizeof(void*))
+template <typename T, typename Storage, overflow_policies>
+   requires(sizeof(Storage) == sizeof(void*))
 class arithmetic_ptr;
 
 template <overflow_policies overflow_policy>
@@ -314,7 +314,7 @@ concept is_safe_arithmetic_conversion =
 
    // A special-case exception must be made for `index` -> `iword`. This doesn't
    // work by default because they have different signed-ness.
-   // TODO: Support overflow semantics.
+   // This is only used for `undefined` overflow.
    || (is_same<from_type, index<overflow_policies::undefined>>
        && is_same<to_type,
                   arithmetic<signed long, overflow_policies::undefined>>);
@@ -637,15 +637,12 @@ template <is_raw_integral T, is_raw_integral U>
 [[nodiscard]]
 constexpr auto
 sat_shl(T value, U bits) -> T {
-   if (value == 0) {
-      return T(0);
+   if (value == 0u) {
+      return 0u;
    }
-   // TODO: Swap back to `__builtin_stdc_leading_zeros` once the
-   // `apt.llvm.org` Clang 23 nightly picks up PR #185978 (merged 2026-04-17).
-   // The early `value == 0` return above makes single-arg `__builtin_clzg`
-   // safe.
-   // here. if (bits > __builtin_stdc_leading_zeros(value)) {
-   if (bits > static_cast<U>(__builtin_clzg(value))) {
+   // `cat/bit` is an extremely difficult circular include for `cat/arithmetic`,
+   // so use the intrinsic directly.
+   if (bits > __builtin_stdc_leading_zeros(value)) {
       return limits<T>::max();
    }
    return static_cast<T>(value << bits);
@@ -695,13 +692,9 @@ template <is_raw_integral T, is_raw_integral U>
 [[nodiscard]]
 constexpr auto
 sat_shr(T value, U bits) -> T {
-   if (value == 0) {
-      return T(0);
-   }
-   // TODO: See PR #185978 note in `sat_shl` above.
-   // if (bits >= limits<T>::bits - __builtin_stdc_leading_zeros(value)) {
+   // `cat/bit` is an extremely difficult circular include for `cat/arithmetic`.
    if (bits >= static_cast<U>(limits<T>::bits)
-                  - static_cast<U>(__builtin_clzg(value))) {
+                  - static_cast<U>(__builtin_stdc_leading_zeros(value))) {
       return limits<T>::min();
    }
    return static_cast<T>(value >> bits);

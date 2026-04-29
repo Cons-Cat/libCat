@@ -17,7 +17,6 @@ on:
       - 'cmake/cat_arithmetic_negative.cmake'
       - 'cmake/cat_arithmetic_neg_cases.cmake'
       - 'cmake/cat_arithmetic_neg_matrix.cmake'
-      - 'cmake/arithmetic_neg_deconst.hpp'
       - '.github/workflows/arithmetic-negative.yml'
       - '.github/actions/setup-toolchain/**'
   pull_request:
@@ -26,7 +25,6 @@ on:
       - 'cmake/cat_arithmetic_negative.cmake'
       - 'cmake/cat_arithmetic_neg_cases.cmake'
       - 'cmake/cat_arithmetic_neg_matrix.cmake'
-      - 'cmake/arithmetic_neg_deconst.hpp'
       - '.github/workflows/arithmetic-negative.yml'
       - '.github/actions/setup-toolchain/**'
 

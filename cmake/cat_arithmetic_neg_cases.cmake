@@ -1,9 +1,8 @@
 # This file is flagrantly "vibe-coded". It may not be up to the standards of
 # most libCat code.
 
-# Negative probe sources for `execute_process` +
-# `${CMAKE_CXX_COMPILER} -fsyntax-only` (included from
-# `cat_arithmetic_negative.cmake` after `_cat_neg_expect_illformed` is defined).
+# Negative probe sources. Included from `cat_arithmetic_negative.cmake` after
+# `_cat_neg_expect_illformed` is defined.
 # Each case must be ill-formed. Sources mirror the **inverse** of the positive /
 # trait story in the `test_arithmetic` unit tests: `!is_assignable`,
 # `!is_convertible`, `!is_implicitly_constructible`, `!can_brace_init`,
@@ -12,9 +11,7 @@
 # Operands that are **plain literals** (or pr-values that look like them) are
 # often still constant expressions, so they can take a different
 # `enable_if`/`consteval` path than the runtime `is_convertible`/`requires`
-# story in the unit file. We wrap those with `cat_neg_probe::deconst_number`
-# from `cmake/arithmetic_neg_deconst.hpp` (same idea as `deconst_number` in the
-# `test_arithmetic` sources).
+# story in the unit file. We wrap those with `cat::deconst`.
 #
 # **Not** every `static_assert` in the unit file. Type-only traits are still
 # out. The `int1`..`int8`/`uint1`..`uint8` = / `icvt` / += / *= / -= grids that
@@ -41,7 +38,7 @@ void t() { (void)cat::int1{ 200_i4 }; }
 # constructors (undefined policy), aligned with
 # `arithmetic_detail_raw_implicit_storage`/`raw_source_fits` coverage: 300 for
 # `uint1`, 300u for `int1`, 16'777'217 for `float4`, -1ll for `uint8`, -1 / -1ll
-# for `idx` and `uintptr` (no `deconst_number`, and we *want* these to stay
+# for `idx` and `uintptr` (no `cat::deconst`, and we *want* these to stay
 # constant expressions so the `enable_if`/`consteval` resolution matches the
 # table).
 # (No `intptr` = -1: `raw_source_fits` is true for that pairing in
@@ -82,10 +79,28 @@ void t() { cat::uintptr<void> p = -1ll; }
 # `overflow_reference.hpp`, `index` in `arithmetic`): operands are **literals**
 # or pr-values that stay constant expressions so the attribute / `consteval`
 # delete on the inner `arithmetic` conversion is exercised (not
-# `deconst_number`).
+# `cat::deconst`).
 # `idx += -1` has no viable += (no `add` that yields `index`).
 _cat_neg_expect_illformed("idx-pluseq-negative-literal" [[#include <cat/arithmetic>
 void t() { cat::idx i(0u); i += -1; }
+]])
+_cat_neg_expect_illformed("bit-countl-zero-raw-zero" [[#include <cat/bit>
+void t() { (void)cat::countl_zero_raw(0u); }
+]])
+_cat_neg_expect_illformed("bit-countl-one-raw-zero" [[#include <cat/bit>
+void t() { (void)cat::countl_one_raw(0u); }
+]])
+_cat_neg_expect_illformed("bit-countr-zero-raw-zero" [[#include <cat/bit>
+void t() { (void)cat::countr_zero_raw(0u); }
+]])
+_cat_neg_expect_illformed("bit-countr-zero-raw-idx-zero" [[#include <cat/bit>
+void t() { (void)cat::countr_zero_raw(cat::idx{0u}); }
+]])
+_cat_neg_expect_illformed("bit-countr-one-raw-zero" [[#include <cat/bit>
+void t() { (void)cat::countr_one_raw(0u); }
+]])
+_cat_neg_expect_illformed("bit-countr-one-raw-idx-zero" [[#include <cat/bit>
+void t() { (void)cat::countr_one_raw(cat::idx{0u}); }
 ]])
 _cat_neg_expect_illformed("undef-int1-pluseq-uint-OOR" [[#include <cat/arithmetic>
 void t() { auto r = cat::int1(0).undef(); r += 300u; }
@@ -96,20 +111,16 @@ void t() { auto r = cat::uint1(0u).undef(); r += -1; }
 
 # `!is_convertible` (implicit) / `!is_implicitly_constructible`:
 _cat_neg_expect_illformed("cvt-idx-to-int" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { int x; x = cat::idx(cat_neg_probe::deconst_number(0u)); }
+void t() { int x; x = cat::idx(cat::deconst(0u)); }
 ]])
 _cat_neg_expect_illformed("cvt-idx-to-int2" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::int2 x; x = cat::idx(cat_neg_probe::deconst_number(0u)); }
+void t() { cat::int2 x; x = cat::idx(cat::deconst(0u)); }
 ]])
 _cat_neg_expect_illformed("cvt-idx-to-int4" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::int4 x; x = cat::idx(cat_neg_probe::deconst_number(0u)); }
+void t() { cat::int4 x; x = cat::idx(cat::deconst(0u)); }
 ]])
 _cat_neg_expect_illformed("cvt-idx-to-float4" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::float4 f; f = cat::idx(cat_neg_probe::deconst_number(0u)); }
+void t() { cat::float4 f; f = cat::idx(cat::deconst(0u)); }
 ]])
 # (No `x = cat::idx(0u)` to `int4` probe: resolution can match a conversion the
 # positive suite flags as `!is_convertible` in the trait only; a plain
@@ -120,40 +131,32 @@ void t() { cat::float4 f; f = cat::idx(cat_neg_probe::deconst_number(0u)); }
 
 # Runtime `iword`/`uword` to `idx` (implicit).
 _cat_neg_expect_illformed("icvt-uword-to-idx" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::uword w(0u); cat::idx i = cat_neg_probe::deconst_number(w); }
+void t() { cat::uword w(0u); cat::idx i = cat::deconst(w); }
 ]])
 _cat_neg_expect_illformed("icvt-iword-to-idx" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::iword w(0); cat::idx i = cat_neg_probe::deconst_number(w); }
+void t() { cat::iword w(0); cat::idx i = cat::deconst(w); }
 ]])
 # Assignment without conversion from `iword` to `idx` (same as positive
 # `!is_convertible<iword,idx>` for =).
 _cat_neg_expect_illformed("asgn-idx-iword" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::idx i(0u); cat::iword w(0); i = cat_neg_probe::deconst_number(w); }
+void t() { cat::idx i(0u); cat::iword w(0); i = cat::deconst(w); }
 ]])
 
 # `!is_convertible` to `arithmetic_ptr` (implicit).
 _cat_neg_expect_illformed("icvt-unsigned-long-to-intptr" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { unsigned long u = cat_neg_probe::deconst_number(0ul); cat::intptr<void> p = u; }
+void t() { unsigned long u = cat::deconst(0ul); cat::intptr<void> p = u; }
 ]])
 _cat_neg_expect_illformed("icvt-int-to-uintptr" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { int x = cat_neg_probe::deconst_number(0); cat::uintptr<void> p = x; }
+void t() { int x = cat::deconst(0); cat::uintptr<void> p = x; }
 ]])
 _cat_neg_expect_illformed("icvt-long-to-uintptr" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { long x = cat_neg_probe::deconst_number(0L); cat::uintptr<void> p = x; }
+void t() { long x = cat::deconst(0L); cat::uintptr<void> p = x; }
 ]])
 _cat_neg_expect_illformed("icvt-uword-to-intptr" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::uword w(0u); cat::intptr<void> p = cat_neg_probe::deconst_number(w); }
+void t() { cat::uword w(0u); cat::intptr<void> p = cat::deconst(w); }
 ]])
 _cat_neg_expect_illformed("icvt-iword-to-uintptr" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::iword w(0); cat::uintptr<void> p = cat_neg_probe::deconst_number(w); }
+void t() { cat::iword w(0); cat::uintptr<void> p = cat::deconst(w); }
 ]])
 
 # `!has_binary_bit_{and,or}<uint4,uword>`: there is no ill-formed *expression*
@@ -165,24 +168,19 @@ void t() { cat::iword w(0); cat::uintptr<void> p = cat_neg_probe::deconst_number
 
 # `index` deleted or absent operations:
 _cat_neg_expect_illformed("idx-minuseq" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::idx i(cat_neg_probe::deconst_number(1u)); i -= cat_neg_probe::deconst_number(1u); }
+void t() { cat::idx i(cat::deconst(1u)); i -= cat::deconst(1u); }
 ]])
 _cat_neg_expect_illformed("idx-predec" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::idx i(cat_neg_probe::deconst_number(1u)); --i; }
+void t() { cat::idx i(cat::deconst(1u)); --i; }
 ]])
 _cat_neg_expect_illformed("idx-postdec" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::idx i(cat_neg_probe::deconst_number(1u)); i--; }
+void t() { cat::idx i(cat::deconst(1u)); i--; }
 ]])
 _cat_neg_expect_illformed("idx-diveq-signed" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::idx i(cat_neg_probe::deconst_number(6u)); int s = cat_neg_probe::deconst_number(2); i /= s; }
+void t() { cat::idx i(cat::deconst(6u)); int s = cat::deconst(2); i /= s; }
 ]])
 _cat_neg_expect_illformed("idx-bitand" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { (void)(cat::idx(cat_neg_probe::deconst_number(1u)) & cat::idx(cat_neg_probe::deconst_number(1u))); }
+void t() { (void)(cat::idx(cat::deconst(1u)) & cat::idx(cat::deconst(1u))); }
 ]])
 
 # `operator-` (binary): only the `is_integral` `__attribute__((enable_if(...)))`
@@ -202,17 +200,15 @@ void t() { int a = 0; (void)(cat::idx(0u) - &a); }
 # `idx(0u) - deconst(1u)` widens to `iword`; it must not implicitly become
 # `uword`.
 _cat_neg_expect_illformed("idx-minus-deconst-1u-binds-iword" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
 void t() {
-   cat::uword w = cat::idx(0u) - cat_neg_probe::deconst_number(1u);
+   cat::uword w = cat::idx(0u) - cat::deconst(1u);
    (void)w;
 }
 ]])
 
 # Mixed `uintptr`/`int` and `intptr` / wide unsigned (ill-formed `operator=`).
 _cat_neg_expect_illformed("asgn-uintptr-int-negative" [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
-void t() { cat::uintptr<void> p; int x = cat_neg_probe::deconst_number(-1); p = x; }
+void t() { cat::uintptr<void> p; int x = cat::deconst(-1); p = x; }
 ]])
 # (No `p = (unsigned long)-1` to `intptr`: the raw value is often a safe conversion;
 #  the `!is_convertible` trait is not a single = probe).

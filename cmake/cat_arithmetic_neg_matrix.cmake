@@ -8,7 +8,6 @@
 # Uses `_cat_neg_expect_illformed` from `cat_arithmetic_negative.cmake`.
 
 set(_m_hdr [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
 ]])
 
 # `uintA` = `deconst(intB)` and `intA` = `deconst(uintB)` (skip pairs that are
@@ -23,7 +22,7 @@ foreach(ua IN ITEMS 1 2 4 8)
       string(CONFIGURE "asgn-uint@ua@-int@ib@" _z @ONLY)
       string(CONFIGURE
         "${_m_hdr}void t() { cat::uint@ua@ u(0u); cat::int@ib@ x(0);
-  u = cat_neg_probe::deconst_number(x); }"
+  u = cat::deconst(x); }"
         _src @ONLY)
       _cat_neg_expect_illformed("${_z}" "${_src}")
     endif()
@@ -35,7 +34,7 @@ foreach(ua IN ITEMS 1 2 4 8)
       string(CONFIGURE "asgn-int@ua@-uint@ub@" _z2 @ONLY)
       string(CONFIGURE
         "${_m_hdr}void t() { cat::int@ua@ a(0); cat::uint@ub@ b(0u);
-  a = cat_neg_probe::deconst_number(b); }"
+  a = cat::deconst(b); }"
         _src2 @ONLY)
       _cat_neg_expect_illformed("${_z2}" "${_src2}")
     endif()
@@ -50,13 +49,13 @@ foreach(_p IN LISTS _cat_neg_narrow)
   list(GET _ij 1 l)
   string(CONFIGURE "icvt-impl-narrow-to-int@s@-int@l@" _nmid @ONLY)
   string(CONFIGURE
-    "${_m_hdr}void t() { cat::int@l@ w(cat_neg_probe::deconst_number(0));
+    "${_m_hdr}void t() { cat::int@l@ w(cat::deconst(0));
   cat::int@s@ a = w; }"
     _n1 @ONLY)
   _cat_neg_expect_illformed("${_nmid}" "${_n1}")
   string(CONFIGURE "icvt-impl-narrow-to-uint@s@-uint@l@" _nmid2 @ONLY)
   string(CONFIGURE
-    "${_m_hdr}void t() { cat::uint@l@ w(cat_neg_probe::deconst_number(0u));
+    "${_m_hdr}void t() { cat::uint@l@ w(cat::deconst(0u));
   cat::uint@s@ a = w; }"
     _n2 @ONLY)
   _cat_neg_expect_illformed("${_nmid2}" "${_n2}")
@@ -71,7 +70,7 @@ foreach(ia IN ITEMS 1 2 4 8)
   foreach(ub IN ITEMS 1 2 4 8)
     string(CONFIGURE "icvt-impl-mix-int@ia@-to-uint@ub@" _mxn @ONLY)
     string(CONFIGURE
-      "${_m_hdr}void t() { cat::int@ia@ i(cat_neg_probe::deconst_number(0));
+      "${_m_hdr}void t() { cat::int@ia@ i(cat::deconst(0));
   cat::uint@ub@ u = i; }"
       _mx1 @ONLY)
     _cat_neg_expect_illformed("${_mxn}" "${_mx1}")
@@ -90,7 +89,7 @@ foreach(ib IN ITEMS 1 2 4 8)
     if(_skip3 LESS 0)
       string(CONFIGURE "icvt-impl-mix-uint@ua@-to-int@ib@" _mxn2 @ONLY)
       string(CONFIGURE
-        "${_m_hdr}void t() { cat::uint@ua@ w(cat_neg_probe::deconst_number(0u));
+        "${_m_hdr}void t() { cat::uint@ua@ w(cat::deconst(0u));
   cat::int@ib@ a = w; }"
         _mx2 @ONLY)
       _cat_neg_expect_illformed("${_mxn2}" "${_mx2}")
@@ -101,17 +100,17 @@ endforeach()
 
 # `icvt` to `float2`/`float4` / `float8` (`int` RHS).
 string(CONFIGURE
-  "${_m_hdr}void t() { int v = cat_neg_probe::deconst_number(1);
+  "${_m_hdr}void t() { int v = cat::deconst(1);
   cat::float2 f = v; }"
   _f2 @ONLY)
 _cat_neg_expect_illformed("icvt-impl-int-to-float2" "${_f2}")
 string(CONFIGURE
-  "${_m_hdr}void t() { int v = cat_neg_probe::deconst_number(1);
+  "${_m_hdr}void t() { int v = cat::deconst(1);
   cat::float4 f = v; }"
   _f4 @ONLY)
 _cat_neg_expect_illformed("icvt-impl-int-to-float4" "${_f4}")
 string(CONFIGURE
-  "${_m_hdr}void t() { int v = cat_neg_probe::deconst_number(1);
+  "${_m_hdr}void t() { int v = cat::deconst(1);
   cat::float8 f = v; }"
   _f8 @ONLY)
 _cat_neg_expect_illformed("icvt-impl-int-to-float8" "${_f8}")
@@ -121,7 +120,6 @@ unset(ib)
 # Undefined compound ops that promote (see `!can_{plus,times,minus}_assign`
 # grid).
 set(_m_hdr2 [[#include <cat/arithmetic>
-#include "arithmetic_neg_deconst.hpp"
 ]])
 
 foreach(_p IN LISTS _cat_neg_narrow)
@@ -130,32 +128,32 @@ foreach(_p IN LISTS _cat_neg_narrow)
   list(GET _ij2 1 l2)
   string(CONFIGURE "pluseq-int@s2@-int@l2@" _cid1 @ONLY)
   string(CONFIGURE
-    "${_m_hdr2}void t() { cat::int@s2@ a{}; a += cat_neg_probe::deconst_number(
+    "${_m_hdr2}void t() { cat::int@s2@ a{}; a += cat::deconst(
     cat::int@l2@{0}); }"
     _c1 @ONLY)
   _cat_neg_expect_illformed("${_cid1}" "${_c1}")
   string(CONFIGURE "muleq-int@s2@-int@l2@" _cid2 @ONLY)
   string(CONFIGURE
-    "${_m_hdr2}void t() { cat::int@s2@ a{}; a *= cat_neg_probe::deconst_number(
+    "${_m_hdr2}void t() { cat::int@s2@ a{}; a *= cat::deconst(
     cat::int@l2@{0}); }"
     _c2 @ONLY)
   _cat_neg_expect_illformed("${_cid2}" "${_c2}")
   string(CONFIGURE "minuseq-int@s2@-int@l2@" _cid3 @ONLY)
   string(CONFIGURE
-    "${_m_hdr2}void t() { cat::int@s2@ a{}; a -= cat_neg_probe::deconst_number(
+    "${_m_hdr2}void t() { cat::int@s2@ a{}; a -= cat::deconst(
     cat::int@l2@{0}); }"
     _c3 @ONLY)
   _cat_neg_expect_illformed("${_cid3}" "${_c3}")
   string(CONFIGURE "pluseq-uint@s2@-uint@l2@" _cid4 @ONLY)
   string(CONFIGURE
-    "${_m_hdr2}void t() { cat::uint@s2@ a{}; a += cat_neg_probe::deconst_number(
+    "${_m_hdr2}void t() { cat::uint@s2@ a{}; a += cat::deconst(
     cat::uint@l2@{0u}); }"
     _c4 @ONLY)
   _cat_neg_expect_illformed("${_cid4}" "${_c4}")
   string(CONFIGURE "undef-minuseq-int@s2@-int@l2@" _cid5 @ONLY)
   string(CONFIGURE
     "${_m_hdr2}void t() { cat::int@s2@ a{}; a.undef() -=
-    cat_neg_probe::deconst_number(cat::int@l2@{0}); }"
+    cat::deconst(cat::int@l2@{0}); }"
     _c5 @ONLY)
   _cat_neg_expect_illformed("${_cid5}" "${_c5}")
   unset(_cid1)
@@ -170,7 +168,7 @@ unset(l2)
 # `int4 -= iword` (`subtract_by` would widen).
 string(CONFIGURE
   "${_m_hdr2}void t() { cat::int4 a{}; cat::iword w(0);
-  a -= cat_neg_probe::deconst_number(w); }"
+  a -= cat::deconst(w); }"
   _iwe @ONLY)
 _cat_neg_expect_illformed("minuseq-int4-iword" "${_iwe}")
 unset(_m_hdr)

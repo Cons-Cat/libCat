@@ -812,12 +812,12 @@ struct simd_iota_impl {
    constexpr auto
    operator()(Simd::scalar_type start) const -> Simd {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-      using T = typename Simd::scalar_type;
+      using T = Simd::scalar_type;
       T const base = static_cast<T>(start);
       Simd result{};
 #pragma clang loop vectorize(enable)
-      for (idx i = 0u; i < Simd::abi_type::lanes; ++i) {
-         result.set_lane(i, static_cast<T>(base + static_cast<T>(i.raw)));
+      for (unsigned char i = 0u; i < Simd::abi_type::lanes; ++i) {
+         result.set_lane(i, static_cast<T>(make_raw_arithmetic(base) + i));
       }
       return result;
    }
@@ -2538,23 +2538,11 @@ struct simd_rnroot_impl
    }
 };
 
-template <typename T>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard]]
-constexpr auto
-simd_popcount_lane(T x) -> T {
-   auto const unsigned_bits = static_cast<make_unsigned_type<T>>(x);
-   // TODO: Swap back to `__builtin_stdc_count_ones` once the `apt.llvm.org`.
-   // Clang 23 nightly picks up PR #185978 (merged 2026-04-17).
-   // return static_cast<T>(__builtin_stdc_count_ones(unsigned_bits));
-   return static_cast<T>(__builtin_popcountg(unsigned_bits));
-}
-
 struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
    constexpr simd_popcount_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_unsigned_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
@@ -2562,11 +2550,13 @@ struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_unsigned_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      return simd_popcount_lane(x);
+      // `cat/maybe` is an extremely difficult circular include for
+      // `cat/arithmetic`,
+      return T(__builtin_popcountg(make_raw_arithmetic(x)));
    }
 };
 
@@ -2687,44 +2677,6 @@ struct simd_expand_impl {
    }
 };
 
-template <is_unsigned_integral T>
-[[nodiscard]]
-constexpr auto
-simd_rotate_left_lane(T operand, iword count) -> T {
-   return rotate_left(operand, count);
-}
-
-template <is_unsigned_integral T>
-[[nodiscard]]
-constexpr auto
-simd_rotate_right_lane(T operand, iword count) -> T {
-   return rotate_right(operand, count);
-}
-
-template <typename T, typename Abi>
-   requires(is_unsigned_integral<T>)
-[[nodiscard]]
-constexpr auto
-simd_rotate_left_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
-   simd<T, Abi> result{};
-   for (idx i = 0u; i < Abi::lanes; ++i) {
-      result.set_lane(i, simd_rotate_left_lane(input[i], count));
-   }
-   return result;
-}
-
-template <typename T, typename Abi>
-   requires(is_unsigned_integral<T>)
-[[nodiscard]]
-constexpr auto
-simd_rotate_right_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
-   simd<T, Abi> result{};
-   for (idx i = 0u; i < Abi::lanes; ++i) {
-      result.set_lane(i, simd_rotate_right_lane(input[i], count));
-   }
-   return result;
-}
-
 struct simd_rotate_left_impl
     : simd_elementwise_unary_int_interface<simd_rotate_left_impl> {
    constexpr simd_rotate_left_impl() = default;
@@ -2738,7 +2690,15 @@ struct simd_rotate_left_impl
          return simd_abi_apply_unary_int<simd_abi::op_rotate_left, T, Abi>(
             input, count);
       } else {
-         return simd_rotate_left_generic(input, count);
+         simd<T, Abi> result{};
+#pragma clang loop vectorize(enable)
+         for (idx i = 0u; i < Abi::lanes; ++i) {
+            // `cat/maybe` is an extremely difficult circular include for
+            // `cat/simd`, so use the intrinsic directly.
+            result.set_lane(i, T(__builtin_stdc_rotate_left(
+                                  make_raw_arithmetic(input[i]), count.raw)));
+         }
+         return result;
       }
    }
 
@@ -2746,7 +2706,10 @@ struct simd_rotate_left_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T operand, iword count) const -> T {
-      return simd_rotate_left_lane(operand, count);
+      // `cat/maybe` is an extremely difficult circular include for `cat/simd`,
+      // so use the intrinsic directly.
+      return T(
+         __builtin_stdc_rotate_left(make_raw_arithmetic(operand), count.raw));
    }
 };
 
@@ -2763,7 +2726,15 @@ struct simd_rotate_right_impl
          return simd_abi_apply_unary_int<simd_abi::op_rotate_right, T, Abi>(
             input, count);
       } else {
-         return simd_rotate_right_generic(input, count);
+         simd<T, Abi> result{};
+#pragma clang loop vectorize(enable)
+         for (idx i = 0u; i < Abi::lanes; ++i) {
+            // `cat/maybe` is an extremely difficult circular include for
+            // `cat/simd`, so use the intrinsic directly.
+            result.set_lane(i, T(__builtin_stdc_rotate_right(
+                                  make_raw_arithmetic(input[i]), count.raw)));
+         }
+         return result;
       }
    }
 
@@ -2771,7 +2742,10 @@ struct simd_rotate_right_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T operand, iword count) const -> T {
-      return simd_rotate_right_lane(operand, count);
+      // `cat/maybe` is an extremely difficult circular include for `cat/simd`,
+      // so use the intrinsic directly.
+      return T(
+         __builtin_stdc_rotate_right(make_raw_arithmetic(operand), count.raw));
    }
 };
 

@@ -842,7 +842,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    popcount() const -> simd
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_unsigned_integral<T> && !is_bool<T>)
    {
       return simd(__builtin_elementwise_popcount(this->raw));
    }

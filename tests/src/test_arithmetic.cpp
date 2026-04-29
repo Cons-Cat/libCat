@@ -5155,18 +5155,6 @@ test(arithmetic_semantics_signed_remainder_unsigned_modulo) {
    static_assert((uint4{8} % int4{-3}) == uint4{2});
 }
 
-namespace {
-// Non-`constexpr` identity. Wrapping a literal in this strips its
-// constant-expression-ness without changing its type, which hides it from the
-// `consteval` `idx::operator-` overload's `enable_if` predicate. Lets us keep
-// type-trait checks on the runtime / iword-widening path while still spelling
-// literals at the call site.
-auto
-deconst_number(auto i) {
-   return i;
-}
-}  // namespace
-
 // `index` (idx) follows the same rules as the comparable `arithmetic`, but
 // `idx - idx` (and `idx - signed`) returns an `iword` (signed distance) so an
 // underflowed difference is representable. Wrap / sat `idx` never promote. The
@@ -5181,13 +5169,13 @@ test(arithmetic_semantics_idx_subtract_returns_signed_distance) {
    static_assert(cat::is_same<decltype(idx{} - idx{}), iword>);
 
    // `idx + signed -> iword` (`signed_distance`). For `idx - signed` we launder
-   // the RHS through `deconst_number` so it is no longer a constant expression.
+   // the RHS through `cat::deconst` so it is no longer a constant expression.
    // That hides it from the `constexpr` non-underflow overload's `enable_if`
    // and exercises the genuine iword widening.
    static_assert(cat::is_same<decltype(idx{} + int4{}), iword>);
-   static_assert(cat::is_same<decltype(idx{} - deconst_number(int4{})), iword>);
-   static_assert(cat::is_same<decltype(idx{} - deconst_number(1)), iword>);
-   static_assert(cat::is_same<decltype(idx{} - deconst_number(1u)), iword>);
+   static_assert(cat::is_same<decltype(idx{} - cat::deconst(int4{})), iword>);
+   static_assert(cat::is_same<decltype(idx{} - cat::deconst(1)), iword>);
+   static_assert(cat::is_same<decltype(idx{} - cat::deconst(1u)), iword>);
 
    // `wrap_idx`/`sat_idx` never promote.
    static_assert(cat::is_same<decltype(wrap_idx{} + idx{}), wrap_idx>);

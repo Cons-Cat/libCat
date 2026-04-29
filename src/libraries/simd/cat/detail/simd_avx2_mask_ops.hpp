@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/arithmetic>
+#include <cat/bit>
 #include <cat/meta>
 
 // AVX2-class reductions follow the usual Intel-style pattern. Reduce a ymm
@@ -103,9 +104,6 @@ namespace cat::detail::simd_abi {
 // same customary AVX2 approach as MOVMSKPS plus BSF or BSR style operations in
 // assembly references.
 
-// TODO: Swap the fallbacks below back to the commented `__builtin_stdc_*`
-// instrinsics once the Clang distribution at `apt.llvm.org` updates.
-
 template <typename T, typename Abi>
    requires(cat::is_same<Abi, x64::avx2_abi<T>>
             || cat::is_same<Abi, x64::avx2_unaligned_abi<T>>)
@@ -132,7 +130,7 @@ struct mask_find_if_true<T, Abi> {
       __UINT32_TYPE__ const masked_logical_lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(mask);
       // return __builtin_stdc_trailing_zeros(masked_logical_lane_bits);
-      return static_cast<unsigned>(__builtin_ctzg(masked_logical_lane_bits));
+      return make_raw_arithmetic(countr_zero(masked_logical_lane_bits));
    }
 };
 
@@ -147,7 +145,7 @@ struct mask_find_last_if_true<T, Abi> {
       __UINT32_TYPE__ const masked_logical_lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(mask);
       // return __builtin_stdc_bit_width(masked_logical_lane_bits) - 1u;
-      return 31u - __builtin_clzg(masked_logical_lane_bits);
+      return 31u - make_raw_arithmetic(countl_zero(masked_logical_lane_bits));
    }
 };
 

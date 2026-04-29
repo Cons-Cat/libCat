@@ -2,14 +2,92 @@
 
 #include "../unit_tests.hpp"
 
+namespace {
+template <typename T>
+concept can_countl_zero = requires(T value) { cat::countl_zero(value); };
+
+template <typename T>
+concept can_countl_zero_raw =
+   requires(T value) { cat::countl_zero_raw(value); };
+
+template <typename T>
+concept can_countl_one = requires(T value) { cat::countl_one(value); };
+
+template <typename T>
+concept can_countl_one_raw = requires(T value) { cat::countl_one_raw(value); };
+
+template <typename T>
+concept can_countr_zero = requires(T value) { cat::countr_zero(value); };
+
+template <typename T>
+concept can_countr_zero_raw =
+   requires(T value) { cat::countr_zero_raw(value); };
+
+template <typename T>
+concept can_countr_one = requires(T value) { cat::countr_one(value); };
+
+template <typename T>
+concept can_countr_one_raw = requires(T value) { cat::countr_one_raw(value); };
+
+template <typename T>
+concept can_popcount = requires(T value) { cat::popcount(value); };
+
+template <typename T>
+concept can_has_single_bit = requires(T value) { cat::has_single_bit(value); };
+
+template <typename T>
+concept can_bit_floor = requires(T value) { cat::bit_floor(value); };
+
+template <typename T>
+concept can_bit_ceil = requires(T value) { cat::bit_ceil(value); };
+
+template <typename T>
+concept can_bit_ceil_raw = requires(T value) { cat::bit_ceil_raw(value); };
+
+template <typename T>
+concept can_rotate_left =
+   requires(T value) { cat::rotate_left(value, cat::iword(1)); };
+
+template <typename T>
+concept can_rotate_right =
+   requires(T value) { cat::rotate_right(value, cat::iword(1)); };
+}  // namespace
+
 test(bit) {
    using namespace cat::arithmetic_literals;
 
+   static_assert(!can_countl_zero<cat::idx>);
+   static_assert(!can_countl_zero_raw<cat::idx>);
+   static_assert(!can_countl_one<cat::idx>);
+   static_assert(!can_countl_one_raw<cat::idx>);
+   static_assert(can_countr_zero<cat::idx>);
+   static_assert(can_countr_zero_raw<cat::idx>);
+   static_assert(can_countr_one<cat::idx>);
+   static_assert(can_countr_one_raw<cat::idx>);
+   static_assert(can_popcount<cat::idx>);
+   static_assert(!can_has_single_bit<cat::idx>);
+   static_assert(!can_rotate_left<cat::idx>);
+   static_assert(!can_rotate_right<cat::idx>);
+
    // Test `clz()`.
+   static_assert(cat::countl_zero(0_u4) == 32u);
+   static_assert(cat::countl_zero(0_u8) == 64u);
    static_assert(cat::countl_zero(0x7FFFFFFF'FFFFFFFFu) == 1);
+   static_assert(cat::countl_zero_raw(0x7FFFFFFF'FFFFFFFFu).value() == 1);
    static_assert(cat::countl_zero(0x7FFFFFFFu) == 1);
+   static_assert(cat::countl_zero_raw(0x7FFFFFFFu).value() == 1);
+   auto raw_countl_runtime = 0x7FFFFFFF_u4;
+   cat::verify(cat::countl_zero_raw(raw_countl_runtime).value() == 1);
+   raw_countl_runtime = 0_u4;
+   cat::verify(!cat::countl_zero_raw(raw_countl_runtime).has_value());
    static_assert(cat::countl_one(0x7FFFFFFF'FFFFFFFFu) == 0);
+   static_assert(cat::countl_one_raw(0x7FFFFFFF'FFFFFFFFu).value() == 0);
    static_assert(cat::countl_one(0x7FFFFFFFu) == 0);
+   static_assert(cat::countl_one_raw(0x7FFFFFFFu).value() == 0);
+   auto raw_countl_one_runtime = 0x7FFFFFFF_u4;
+   cat::verify(cat::countl_one_raw(raw_countl_one_runtime).value() == 0);
+   raw_countl_one_runtime = 0_u4;
+   cat::verify(!cat::countl_one_raw(raw_countl_one_runtime).has_value());
 
    static_assert(cat::countl_zero(0xFFFFFFFF_u4) == 0);
    static_assert(cat::countl_zero(0xFFFFFFFF'FFFFFFFF_u8) == 0);
@@ -18,10 +96,29 @@ test(bit) {
    static_assert(cat::countl_zero(0x0FFFFFFF'FFFFFFFF_u8) == 4);
 
    // Test `ctz()`.
+   static_assert(cat::countr_zero(0_u4) == 32u);
+   static_assert(cat::countr_zero(0_u8) == 64u);
+   static_assert(cat::countr_zero(cat::idx{0u}) == __SIZE_WIDTH__);
+   static_assert(cat::countr_zero(cat::idx{8u}) == 3u);
+   static_assert(cat::countr_zero_raw(cat::idx{8u}).value() == 3u);
+   auto raw_countr_runtime = cat::idx{8u};
+   cat::verify(cat::countr_zero_raw(raw_countr_runtime).value() == 3u);
+   raw_countr_runtime = cat::idx{0u};
+   cat::verify(!cat::countr_zero_raw(raw_countr_runtime).has_value());
+   static_assert(cat::countr_one(cat::idx{7u}) == 3u);
+   static_assert(cat::countr_one_raw(cat::idx{7u}).value() == 3u);
+   auto raw_countr_one_runtime = cat::idx{7u};
+   cat::verify(cat::countr_one_raw(raw_countr_one_runtime).value() == 3u);
+   raw_countr_one_runtime = cat::idx{0u};
+   cat::verify(!cat::countr_one_raw(raw_countr_one_runtime).has_value());
    static_assert(cat::countr_zero(0xFFFFFFFF'FFFFFFFEu) == 1);
+   static_assert(cat::countr_zero_raw(0xFFFFFFFF'FFFFFFFEu).value() == 1);
    static_assert(cat::countr_zero(0xFFFFFFFEu) == 1);
+   static_assert(cat::countr_zero_raw(0xFFFFFFFEu).value() == 1);
    static_assert(cat::countr_one(0xFFFFFFFF'FFFFFFFEu) == 0);
+   static_assert(cat::countr_one_raw(0xFFFFFFFF'FFFFFFFEu).value() == 0);
    static_assert(cat::countr_one(0xFFFFFFFEu) == 0);
+   static_assert(cat::countr_one_raw(0xFFFFFFFEu).value() == 0);
 
    // Test small integers.
    static_assert(cat::countl_zero(0x0F_u1) == 4);
@@ -46,6 +143,8 @@ test(bit) {
    static_assert(cat::popcount(0b0'1010'1001_u8) == 4);
    static_assert(cat::popcount(0b0'1010'1011_u1) == 5);
    static_assert(cat::popcount(0b0'1010'1011_u2) == 5);
+   static_assert(cat::popcount(cat::idx{0b0'1010'1011u}) == 5);
+   static_assert(cat::popcount(0_u4) == 0);
 
    // Test `has_single_bit()`. Matches C23 `stdc_has_single_bit`, so zero is not
    // a single-bit value.
@@ -64,6 +163,19 @@ test(bit) {
    static_assert(cat::bit_ceil(3u) == 4u);
    static_assert(cat::bit_ceil(4u) == 4u);
    static_assert(cat::bit_ceil(5u) == 8u);
+   cat::verify(cat::bit_ceil_raw(3u).value() == 4u);
+   cat::verify(cat::bit_ceil_raw(5u).value() == 8u);
+   cat::verify(cat::bit_ceil_raw(0u).value() == 1u);
+   cat::verify(cat::bit_ceil_raw(cat::idx(5u)).value() == 8u);
+   cat::verify(!cat::bit_ceil_raw(0x80000001u).has_value());
+   cat::verify(
+      cat::bit_ceil_raw(cat::idx(cat::limits<cat::idx>::high_bit)).value()
+      == cat::limits<cat::idx>::high_bit);
+   cat::verify(
+      !cat::bit_ceil_raw(cat::idx(cat::limits<cat::idx>::high_bit + 1u))
+          .has_value());
+   auto raw_bit_ceil_runtime = 0x80000001_u4;
+   cat::verify(!cat::bit_ceil_raw(raw_bit_ceil_runtime).has_value());
 
    // Test `bit_floor()`.
    static_assert(cat::bit_floor(0u) == 0u);
@@ -72,6 +184,26 @@ test(bit) {
    static_assert(cat::bit_floor(3u) == 2u);
    static_assert(cat::bit_floor(4u) == 4u);
    static_assert(cat::bit_floor(5u) == 4u);
+
+   // Test rotate.
+   static_assert(cat::rotate_left(0b1000'0001_u1, cat::uword(1u))
+                 == 0b0000'0011_u1);
+   static_assert(cat::rotate_right(0b1000'0001_u1, cat::uword(1u))
+                 == 0b1100'0000_u1);
+   static_assert(cat::rotate_left(0b1000'0001_u1, cat::uword(9u))
+                 == cat::rotate_left(0b1000'0001_u1, cat::uword(1u)));
+   cat::verify(cat::rotate_left(0b1000'0001_u1, cat::uword(9u))
+               == cat::rotate_left(0b1000'0001_u1, cat::uword(1u)));
+   cat::verify(cat::rotate_right(0b1000'0001_u1, cat::uword(9u))
+               == cat::rotate_right(0b1000'0001_u1, cat::uword(1u)));
+   static_assert(cat::rotate_left(0b1000'0001_u1, 6)
+                 == cat::rotate_left(0b1000'0001_u1, cat::uword(6u)));
+   static_assert(cat::rotate_right(0b1000'0001_u1, 6)
+                 == cat::rotate_right(0b1000'0001_u1, cat::uword(6u)));
+   static_assert(cat::rotate_left(0b1000'0001_u1, cat::iword(-1))
+                 == cat::rotate_right(0b1000'0001_u1, cat::uword(1u)));
+   static_assert(cat::rotate_right(0b1000'0001_u1, cat::iword(-1))
+                 == cat::rotate_left(0b1000'0001_u1, cat::uword(1u)));
 
    // Test bextr.
    static_assert(x64::extract_bits(uint1::max() >> 1, 4_u1, 4u) == 0b0111u);

@@ -1328,20 +1328,11 @@ using maybe_non_negative =
 template <typename T>
 using maybe_non_zero = maybe<sentinel<T, T(0)>>;
 
-// `narrow_cast` is defined in `<cat/../implementations/narrow_cast.tpp>`, which
-// is included after `maybe` is fully defined so the function body can wrap the
-// conversion result.
-template <is_integral T, is_integral U>
-[[nodiscard]]
-constexpr auto
-narrow_cast(U value) -> maybe<T>;
-
 }  // namespace cat
 
-// `narrow_cast`'s body needs the complete `maybe` (and the full `arithmetic`
-// machinery) to wrap the conversion result, so its definition lives in this
-// `.tpp` and is pulled in after `maybe` has been defined above. The `to_idx()`
-// specializations below call `narrow_cast`, so this include must precede them.
+// These templates have circular dependencies with `maybe`, so they are included
+// here.
+#include "../../bit/implementations/bit_raw.tpp"
 #include "../implementations/narrow_cast.tpp"
 
 namespace cat {
@@ -1364,5 +1355,4 @@ constexpr auto
 arithmetic<__SIZE_TYPE__, overflow_policies::undefined>::to_idx() const {
    return narrow_cast<idx>(*this);
 }
-
-}  // namespace cat
+}

@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/arithmetic>
 #include <cat/meta>
 #include <cat/stepanov>
 
@@ -75,117 +76,212 @@ inline constexpr idx word_bytes = sizeof(uword);
 
 inline constexpr idx page_size = idx(4'096_uki);
 
-// TODO: Swap the fallbacks below back to the commented `__builtin_stdc_*`
-// calls once the `apt.llvm.org` Clang 23 distribution updates to a version with
-// C23 bitwise intrinsics.
+// Count the number of leading zero bits (counting "leftwards") before the first
+// found zero bit. When the input is zero, this returns the bit width of `T`.
+template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
+[[nodiscard]]
+constexpr auto
+countl_zero(T value) -> uint1 {
+   return uint1(__builtin_stdc_leading_zeros(make_raw_arithmetic(value)));
+}
+
+// The overloads of `countl_zero_raw()` are implemented in
+// `../implementations/bit_raw.tpp`.
+
+// When a constant 0 is inputted, this function is disabled.
+template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
+[[nodiscard]]
+consteval maybe<uint1>
+countl_zero_raw(T value) __attribute__((enable_if(
+   value == 0u,
+   "Input must be non-zero! Consider `cat::countl_zero()` instead for "
+   "known 0 input. If you must use this version, consider wrapping "
+   "input in `cat::deconst()`."))) = delete;
+
+// Count the number of leading one bits (counting "leftwards") before the first
+// found zero bit. When the input is zero, this returns zero.
+template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
+[[nodiscard]]
+constexpr auto
+countl_one(T value) -> uint1 {
+   return uint1(__builtin_stdc_leading_ones(make_raw_arithmetic(value)));
+}
+
+// The overloads of `countl_one_raw()` are implemented in
+// `../implementations/bit_raw.tpp`.
+
+// When a constant zero is inputted, this function is disabled.
+template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
+[[nodiscard]]
+consteval maybe<uint1>
+countl_one_raw(T value) __attribute__((
+   enable_if(value == 0u,
+             "Input must be non-zero! Consider `cat::countl_one()` instead for "
+             "known 0 input. If you must use this version, consider "
+             "wrapping input in `cat::deconst()`."))) = delete;
+
+// Count the number of trailing zero bits (counting "rightwards") before the
+// first found one bit. When the input is zero, this returns the bit width of
+// `T`.
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-countl_zero(T value) -> idx {
-   // return __builtin_stdc_leading_zeros(make_raw_arithmetic(value));
-   return static_cast<unsigned>(
-      __builtin_clzg(make_raw_arithmetic(value), limits<T>::bits));
+countr_zero(T value) -> uint1 {
+   return uint1(__builtin_stdc_trailing_zeros(make_raw_arithmetic(value)));
 }
 
+// The overloads of `countr_zero_raw()` are implemented in
+// `../implementations/bit_raw.tpp`.
+
+// When a constant 0 is inputted, this function is disabled.
+template <is_unsigned_integral T>
+[[nodiscard]]
+consteval maybe<uint1>
+countr_zero_raw(T value) __attribute__((enable_if(
+   value == 0u,
+   "Input must be non-zero! Consider `cat::countr_zero()` instead for "
+   "known 0 input. If you must use this version, consider wrapping "
+   "input in `cat::deconst()`."))) = delete;
+
+// Count the number of trailing one bits (counting "rightwards") before the
+// first found zero bit. When the input is zero, this returns zero.
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-countl_one(T value) -> idx {
-   // return __builtin_stdc_leading_ones(make_raw_arithmetic(value));
-   return static_cast<unsigned>(__builtin_clzg(
-      raw_arithmetic_type<T>(~make_raw_arithmetic(value)), limits<T>::bits));
+countr_one(T value) -> uint1 {
+   return uint1(__builtin_stdc_trailing_ones(make_raw_arithmetic(value)));
 }
 
+// The overloads of `countr_one_raw()` are implemented in
+// `../implementations/bit_raw.tpp`.
+
+// When a constant zero is inputted, this function is disabled.
+template <is_unsigned_integral T>
+[[nodiscard]]
+consteval maybe<uint1>
+countr_one_raw(T value) __attribute__((
+   enable_if(value == 0u,
+             "Input must be non-zero! Consider `cat::countr_one()` instead for "
+             "known 0 input. If you must use this version, consider "
+             "wrapping input in `cat::deconst()`."))) = delete;
+
+// Returns the number of one bits in `value`.
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-countr_zero(T value) -> idx {
-   // return __builtin_stdc_trailing_zeros(make_raw_arithmetic(value));
-   return static_cast<unsigned>(
-      __builtin_ctzg(make_raw_arithmetic(value), limits<T>::bits));
+popcount(T value) -> uint1 {
+   // This intrinsic returns `int` but it can't exceed 64 so it's safe to cast.
+   return uint1(__builtin_popcountg(make_raw_arithmetic(value)));
 }
 
+// Returns whether `value` has exactly one set bit. For zero, returns false.
 template <is_unsigned_integral T>
-[[nodiscard]]
-constexpr auto
-countr_one(T value) -> idx {
-   // return __builtin_stdc_trailing_ones(make_raw_arithmetic(value));
-   return static_cast<unsigned>(__builtin_ctzg(
-      raw_arithmetic_type<T>(~make_raw_arithmetic(value)), limits<T>::bits));
-}
-
-template <is_unsigned_integral T>
-[[nodiscard]]
-constexpr auto
-popcount(T value) -> idx {
-   return static_cast<unsigned>(
-      __builtin_popcountg(make_raw_arithmetic(value)));
-}
-
-// If `value` is a power of two, or in other words, has exactly one set bit.
-template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
 [[nodiscard]]
 constexpr auto
 has_single_bit(T value) -> bool {
-   // return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
-   return __builtin_popcountg(make_raw_arithmetic(value)) == 1;
+   return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
 }
 
-// Largest power of two `<= value`. Matches C23 `stdc_bit_floor`, so
-// `bit_floor(0) == 0`.
+// Returns the largest power of two less than or equal to `value`. For zero,
+// returns zero.
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 bit_floor(T value) -> T {
-   // return T(__builtin_stdc_bit_floor(make_raw_arithmetic(value)));
-   auto const raw_value = make_raw_arithmetic(value);
-   if (raw_value == 0) {
-      return T(0);
-   }
-   return T(raw_arithmetic_type<T>(1)
-            << (limits<T>::bits - 1u - __builtin_clzg(raw_value)));
+   return T(__builtin_stdc_bit_floor(make_raw_arithmetic(value)));
 }
 
-// Smallest power of two `>= value`. Matches C23 `stdc_bit_ceil`, so
-// `bit_ceil(0) == 1`. Undefined behavior if the result is not representable.
+// Returns the smallest power of two greater than or equal to `value`. For zero,
+// returns one. Undefined behavior if the result is not representable.
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 bit_ceil(T value) -> T {
-   // return __builtin_stdc_bit_ceil(make_raw_arithmetic(value));
-   auto const raw_value = make_raw_arithmetic(value);
-   if (raw_value <= 1u) {
-      return T(1);
-   }
-   return T(raw_arithmetic_type<T>(1)
-            << (limits<T>::bits
-                - __builtin_clzg(raw_arithmetic_type<T>(raw_value - 1u))));
+   return T(__builtin_stdc_bit_ceil(make_raw_arithmetic(value)));
 }
 
-// Bitwise rotate left by `shift` positions. `shift` is reduced mod the bit
-// width of `T`. Negative shifts rotate in the opposite direction.
+// Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
+// width of `T`.
 template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
 constexpr auto
-rotate_left(T value, iword shift) -> T {
-   auto s = shift.raw % iword::raw_type(limits<T>::bits);
-   if (s < 0) {
-      s += iword::raw_type(limits<T>::bits);
-   }
-   return T(__builtin_stdc_rotate_left(make_raw_arithmetic(value), s));
+rotate_left(T value, uword shift) -> T {
+   return T(__builtin_stdc_rotate_left(make_raw_arithmetic(value), shift.raw));
 }
 
-// Bitwise rotate right by `shift` positions. `shift` is reduced mod the bit
-// width of `T`. Negative shifts rotate in the opposite direction.
+// Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
+// width of `T`. Negative shifts rotate right by the same magnitude value.
 template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
+[[nodiscard]]
+constexpr T
+rotate_left(T value, iword shift) {
+   // Unsigned wrap is intentional so the most-negative value has a magnitude.
+   uword magnitude = 0u - shift;
+   return rotate_right(value, magnitude);
+}
+
+template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
+[[nodiscard]]
+constexpr auto rotate_right(T, uword) -> T;
+
+// Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
+// width of `T`.
+template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
+[[nodiscard]]
+constexpr T
+rotate_left(T value, iword shift)
+   // When a signed positive shift constant is inputted, forward to
+   // `cat::rotate_right()`.
+   __attribute__((enable_if(shift.raw >= 0, ""))) {
+   // Unsigned wrap is intentional so the most-negative value has a magnitude.
+   uword magnitude = 0u - shift;
+   return rotate_right(value, uword(magnitude));
+}
+
+// Returns `value` rotated right by `shift` positions. Shifts wrap around the
+// bit width of `T`.
+template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
 constexpr auto
-rotate_right(T value, iword shift) -> T {
-   auto s = shift.raw % iword::raw_type(limits<T>::bits);
-   if (s < 0) {
-      s += iword::raw_type(limits<T>::bits);
-   }
-   return T(__builtin_stdc_rotate_right(make_raw_arithmetic(value), s));
+rotate_right(T value, uword shift) -> T {
+   return T(__builtin_stdc_rotate_right(make_raw_arithmetic(value), shift.raw));
+}
+
+// Returns `value` rotated right by `shift` positions. Shifts wrap around the
+// bit width of `T`. Negative shifts rotate left by the same magnitude value.
+template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
+[[nodiscard]]
+constexpr T
+rotate_right(T value, iword shift) {
+   // Unsigned wrap is intentional so the most-negative value has a magnitude.
+   uword magnitude = 0u - shift;
+   return rotate_left(value, magnitude);
+}
+
+// Returns `value` rotated right by `shift` positions. Shifts wrap around the
+// bit width of `T`.
+template <is_unsigned_integral T>
+   requires(!detail::is_idx<T>)
+[[nodiscard]]
+constexpr T
+rotate_right(T value, iword shift)
+   // When a signed positive shift constant is inputted, forward to
+   // `cat::rotate_left()`.
+   __attribute__((enable_if(shift.raw >= 0, ""))) {
+   // Unsigned wrap is intentional so the most-negative value has a magnitude.
+   uword magnitude = 0u - shift;
+   return rotate_left(value, uword(magnitude));
 }
 
 }  // namespace cat
@@ -283,6 +379,7 @@ template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
+   // TODO: Make this portable.
    if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
       return __builtin_ia32_bzhi_si(cat::make_raw_arithmetic(source),
                                     bit_index.raw);
@@ -826,22 +923,20 @@ struct byte : bitwise_interface<byte> {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    has_single_bit() const -> bool {
-      // return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
-      return __builtin_popcountg(make_raw_arithmetic(value)) == 1;
+      return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
    }
 };
 
 static_assert(is_implicit_lifetime<cat::byte>);
 
 template <is_integral T>
+   requires(!is_unsigned_integral<T>)
 [[nodiscard]]
 constexpr auto
 has_single_bit(T value) -> bool {
-   // return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
-   return __builtin_popcountg(
-             static_cast<make_unsigned_type<raw_arithmetic_type<T>>>(
-                make_raw_arithmetic(value)))
-          == 1;
+   return __builtin_stdc_has_single_bit(
+      static_cast<make_unsigned_type<raw_arithmetic_type<T>>>(
+         make_raw_arithmetic(value)));
 }
 
 [[nodiscard]]

@@ -942,7 +942,7 @@ test(simd_float_roundtrip) {
    cat::verify(p[2] == 0.f);
 }
 
-// ane-wise arithmetic and bitwise (`cat::simd`):
+// Lane-wise arithmetic (`cat::simd`):
 
 test(simd_int_binary_ops) {
    int4x4 a = {10, 20, -5, 7};
@@ -1049,39 +1049,6 @@ test(simd_int_compound_assign) {
    cat::verify(fv[2] == 24_f4);
    fv /= float4x4{2_f4, 2_f4, 2_f4, 2_f4};
    cat::verify(fv[3] == 13_f4);
-}
-
-// Integral lanes only: bitwise and shift operators are not used on `float`
-// SIMD.
-test(simd_int_bitwise_and_shifts) {
-   int4x4 a = {0x0f0f0f0f, 0x00ff00ff, -1, 0};
-   int4x4 b = {0x00ff00ff, 0x0f0f0f0f, 0x12345678, 0x55};
-   int4x4 x = a & b;
-   cat::verify(x[0] == 0x000f000f);
-   int4x4 o = a | b;
-   cat::verify(o[0] == 0x0fff0fff);
-   int4x4 xr = a ^ b;
-   cat::verify(xr[0] == 0x0ff00ff0);
-
-   int4x4 u = int4x4{1, 2, 4, 8};
-   u &= int4x4{3, 3, 3, 3};
-   cat::verify(u[0] == 1);
-   u |= int4x4{8, 8, 8, 8};
-   cat::verify(u[1] == 10);
-   u ^= int4x4{15, 15, 15, 15};
-   cat::verify(u[2] == 7);
-
-   int4x4 const one = 1;
-   int4x4 sh = int4x4{1, 2, 4, 8} << one;
-   cat::verify(sh[0] == 2);
-   int4x4 shr = int4x4{8, 16, 32, 64} >> one;
-   cat::verify(shr[0] == 4);
-
-   int4x4 y = int4x4{1, 2, 4, 8};
-   y <<= one;
-   cat::verify(y[1] == 4);
-   y >>= one;
-   cat::verify(y[2] == 4);
 }
 
 test(simd_float_ops) {
@@ -1794,6 +1761,12 @@ test(simd_popcount_rotate_left_rotate_right) {
    cat::verify(pc[1] == 2u);
    cat::verify(pc[2] == 4u);
    cat::verify(pc[3] == 32u);
+   // pc = cat::popcount(v);
+   // cat::verify(v.popcount() == pc);
+   // cat::verify(pc[0] == 0u);
+   // cat::verify(pc[1] == 2u);
+   // cat::verify(pc[2] == 4u);
+   // cat::verify(pc[3] == 32u);
 
    using mi4 = cat::simd_mask<cat::int4, cat::fixed_size_abi<cat::int4, 4u>>;
    mi4 mb{true, false, true, false};

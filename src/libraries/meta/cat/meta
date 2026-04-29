@@ -37,6 +37,13 @@ template <typename T>
 auto
 declval() -> decltype(detail::declval_detail<T>(0));
 
+// Make a value stop being a constant expression without changing its type.
+template <typename T>
+auto
+deconst(T value) -> T {
+   return value;
+}
+
 template <typename T>
 struct identity_trait {
    using type = T;
