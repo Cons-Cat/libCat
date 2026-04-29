@@ -10,6 +10,7 @@ name: Arithmetic negative-compile
 # Triggers only when arithmetic or this file changes.
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
