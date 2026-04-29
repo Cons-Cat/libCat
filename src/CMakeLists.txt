@@ -59,11 +59,13 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/simd/implementations/is_avx2_supported.cpp
   ${CATLIB}/simd/implementations/is_avx512f_supported.cpp
+  ${CATLIB}/simd/implementations/is_avx512vl_supported.cpp
   ${CATLIB}/simd/implementations/is_avx_supported.cpp
   ${CATLIB}/simd/implementations/is_mmx_supported.cpp
   ${CATLIB}/simd/implementations/is_sse1_supported.cpp
   ${CATLIB}/simd/implementations/is_sse2_supported.cpp
   ${CATLIB}/simd/implementations/is_sse3_supported.cpp
+  ${CATLIB}/simd/implementations/is_ssse3_supported.cpp
   ${CATLIB}/simd/implementations/is_sse4_1_supported.cpp
   ${CATLIB}/simd/implementations/is_sse4_2_supported.cpp
   ${CATLIB}/math/implementations/pow.cpp
@@ -92,6 +94,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_close.cpp
   ${CATLIB}/linux/implementations/clonearguments.cpp
   ${CATLIB}/linux/implementations/sys_open.cpp
+  ${CATLIB}/linux/implementations/sys_creat.cpp
   ${CATLIB}/linux/implementations/sys_rt_sigprocmask.cpp
   ${CATLIB}/linux/implementations/sys_unlink.cpp
   ${CATLIB}/linux/implementations/sys_getrlimit.cpp
@@ -140,6 +143,7 @@ target_sources(cat-impl PRIVATE
 )
 
 set(CAT_HEADER_FILES
+  ${CMAKE_SOURCE_DIR}/src/global_includes.hpp
   ${CATLIB}/algorithm/cat/algorithm
   ${CATLIB}/allocator/cat/allocator
   ${CATLIB}/allocator/implementations/meta_alloc.tpp
@@ -160,6 +164,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/container/cat/container
   ${CATLIB}/container/detail/initializer_list.hpp
   ${CATLIB}/compare/cat/compare
+  ${CATLIB}/cpuid/cat/cpuid
   ${CATLIB}/debug/cat/debug
   ${CATLIB}/file/cat/file
   ${CATLIB}/format/cat/format
@@ -202,6 +207,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/simd
   ${CATLIB}/simd/cat/detail/simd_overflow_reference.hpp
   ${CATLIB}/simd/cat/detail/simd_abi_hooks.hpp
+  ${CATLIB}/simd/cat/detail/simd_extras.hpp
+  ${CATLIB}/simd/cat/detail/simd_impl.hpp
   ${CATLIB}/simd/cat/simd_ops
   ${CATLIB}/simd/cat/simd_iterator
   ${CATLIB}/simd/implementations/simd_mask_bitset.tpp

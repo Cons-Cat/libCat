@@ -968,6 +968,8 @@ operator|=(T& self, T other) -> T& {
    return self;
 }
 
+// TODO: Enable selective compatibility between multiple enum flag types.
+// For example, `nix::open_mode` and `nix::open_flags`.
 template <cat::is_enum_flag T>
 [[nodiscard]]
 constexpr auto

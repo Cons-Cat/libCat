@@ -88,6 +88,39 @@ jobs:
             | sort
           echo "::endgroup::"
 
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      gdb_symlink: ${{ steps.changed.outputs.gdb_symlink }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect gdb_symlink changes
+        id: changed
+        run: |
+          set -eu
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+
+          if [ -z "${base}" ] || [ "${base}" = "0000000000000000000000000000000000000000" ]; then
+            changed="true"
+          elif git diff --name-only "${base}" "${{ github.sha }}" \
+            | grep -qx 'cmake/gdb_symlink.cmake'
+          then
+            changed="true"
+          else
+            changed="false"
+          fi
+
+          echo "gdb_symlink=${changed}" >> "${GITHUB_OUTPUT}"
+          echo "gdb_symlink changed: ${changed}"
+
   lint:
     # Lightweight static checks on the source tree. Runs in parallel
     # with the heavier compile / test jobs to gate invariants that don't
@@ -125,6 +158,35 @@ jobs:
             | wc -l)
           printf 'OK: %d files under src/ have unique basenames\n' "${count}"
 
+      - name: Verify src files are listed in src/CMakeLists.txt
+        run: |
+          set -eu
+          missing="${RUNNER_TEMP:-/tmp}/cat-missing-src-cmake-files"
+          : > "${missing}"
+
+          find src -type f -print | sort | while IFS= read -r file; do
+            if [ "${file#src/libraries/}" != "${file}" ]; then
+              needle="${file#src/libraries/}"
+            else
+              needle="${file#src/}"
+            fi
+
+            if ! grep -F -q -- "${needle}" src/CMakeLists.txt; then
+              printf '%s\n' "${file}" >> "${missing}"
+            fi
+          done
+
+          if [ -s "${missing}" ]; then
+            echo 'FAIL: files under src/ missing from src/CMakeLists.txt:'
+            while IFS= read -r file; do
+              printf '  %s\n' "${file}"
+            done < "${missing}"
+            exit 1
+          fi
+
+          count=$(find src -type f -print | wc -l)
+          printf 'OK: %d files under src/ are mentioned in src/CMakeLists.txt\n' "${count}"
+
       - name: Configure CMake lint targets
         run: |
           cmake -S . -B "${CAT_LINT_BUILD_DIR}" \
@@ -153,7 +215,7 @@ jobs:
   debug:
     # Debug build with sanitizers.
     runs-on: ubuntu-24.04
-    needs: toolchain
+    needs: [toolchain, changes]
     steps:
       - uses: actions/checkout@v4
 
@@ -186,6 +248,7 @@ jobs:
           cmake --build build-gdb-relwithdebinfo --target check-gdb-pretty-printers
 
       - name: Verify .gdbinit symlink (Debug)
+        if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
         # Single-config layout per `cmake/gdb_symlink.cmake`. The
         # multi-config variant lives in the `tools` job.
         run: |
@@ -200,7 +263,7 @@ jobs:
   release:
     # Release build and tests.
     runs-on: ubuntu-24.04
-    needs: toolchain
+    needs: [toolchain, changes]
     steps:
       - uses: actions/checkout@v4
 
@@ -214,6 +277,7 @@ jobs:
           ctest --test-dir build-release --verbose --output-on-failure
 
       - name: Verify .gdbinit symlink (Release)
+        if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
         run: |
           set -eu
           if [ ! -f build-release/.gdbinit ]; then
@@ -302,13 +366,14 @@ jobs:
     # The SDE-pinned `cpuid` run (commented out below)
     # also lands here so the cached toolchain is reused.
     runs-on: ubuntu-24.04
-    needs: toolchain
+    needs: [toolchain, changes]
     steps:
       - uses: actions/checkout@v4
 
       - uses: ./.github/actions/setup-toolchain
 
       - name: Configure and minimal build (Ninja Multi-Config, Debug and Release)
+        if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
         # Smallest surface that still pulls in `cat-gdb-tests` and
         # `cat-gdb-examples` so we can symlink `.gdbinit`.
         run: |
@@ -320,6 +385,7 @@ jobs:
           cmake --build build-multi --config Release --target test_dummy hello
 
       - name: Verify .gdbinit symlinks (multi-config)
+        if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
         # Multi-config layout: per-subdirectory per-config files, no
         # top-level. Single-config equivalents are checked in the
         # Debug and Release jobs.
