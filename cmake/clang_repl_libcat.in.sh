@@ -28,6 +28,7 @@ set -eEuo pipefail
 build_dir='@CMAKE_BINARY_DIR@'
 libcat_so="${build_dir}/libcat.so"
 flag_extractor='@CMAKE_SOURCE_DIR@/cmake/clang_repl_libcat.py'
+interactive_relay='@CMAKE_SOURCE_DIR@/cmake/clang_repl_libcat_interactive.py'
 clang_repl='@CAT_CLANG_REPL_EXECUTABLE@'
 asan_runtime='@CAT_ASAN_RUNTIME_PATH@'
 
@@ -85,16 +86,19 @@ echo "[clang-repl-libcat] preloading ${libcat_so}" >&2
 # (piped stdin or one-shot `--eval`) where there's no human to read it.
 if [ -t 0 ] && (( oneshot == 0 )); then
   interactive=1
-  echo "[clang-repl-libcat] ready (no prompt). Type C++; %quit or Ctrl+D to exit." >&2
+  echo "[clang-repl-libcat] ready. Type C++; %quit or Ctrl+D to exit." >&2
 else
   interactive=0
 fi
 
-# Inject the `%lib` directive ahead of the user's input. Interactive mode
-# reopens the controlling terminal because build tools can hand commands
-# an stdin that looks terminal-backed but EOFs before keys are read. Stream
-# mode keeps using stdin so pipes and redirects work normally. In one-shot
-# mode, dump the snippets and `%quit` so clang-repl evaluates them and exits.
+if (( interactive )); then
+  exec python3 "${interactive_relay}" "${libcat_so}" -- \
+    "${clang_repl}" "${flags[@]}" "${extra_args[@]}"
+fi
+
+# Inject the `%lib` directive ahead of the user's input. Stream mode keeps using
+# stdin so pipes and redirects work normally. In one-shot mode, dump the snippets
+# and `%quit` so clang-repl evaluates them and exits.
 {
   printf '%%lib %s\n' "${libcat_so}"
   if (( oneshot )); then
@@ -103,9 +107,6 @@ fi
     done
     printf '%%quit\n'
   else
-    if (( interactive )) && [ -r /dev/tty ]; then
-      exec cat /dev/tty
-    fi
     exec cat
   fi
 } | exec "${clang_repl}" "${flags[@]}" "${extra_args[@]}"
