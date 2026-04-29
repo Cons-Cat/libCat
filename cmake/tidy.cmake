@@ -71,13 +71,13 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   endif()
 
   # `run-clang-tidy` parallelizes per-TU `clang-tidy` runs and merges fix-its
-  # via `clang-apply-replacements`. Both scripts ship with the same
-  # `clang-tools-<MAJOR>` package on Debian / Ubuntu.
+  # via `clang-apply-replacements`. Both scripts ship with the same clang-tools
+  # installation as the matching `clang-tidy`.
   if (CAT_CLANG_TIDY_PATH AND NOT CAT_RUN_CLANG_TIDY_PATH)
     message(WARNING
       "`clang-tidy-${_cat_ct_major}` was found but "
       "`run-clang-tidy-${_cat_ct_major}` was not. Install "
-      "`clang-tools-${_cat_ct_major}` (apt) or configure with "
+      "the matching clang-tools package or configure with "
       "`-DCAT_RUN_CLANG_TIDY_PATH=/path/to/run-clang-tidy-${_cat_ct_major}`. "
       "`cat-tidy` and `cat-tidy-check` will exit non-zero until this "
       "is resolved.")

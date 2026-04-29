@@ -8,6 +8,15 @@ on:
   pull_request:
 
 jobs:
+  toolchain:
+    # Prime the mise cache once so parallel jobs do not all download and extract
+    # the Clang package set on a cold cache in the same workflow run.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-toolchain
+
   lscpu:
     # Log host CPU and ISA up front so a CPU-dependent failure
     # anywhere in the matrix is diagnosable from the run log. The
@@ -18,6 +27,7 @@ jobs:
     # hour, with no advance notice and with materially different
     # feature flags (AVX-512, AVX-VNNI, GFNI-on-VEX, etc.).
     runs-on: ubuntu-24.04
+    needs: toolchain
     steps:
       - uses: actions/checkout@v4
 
@@ -73,7 +83,7 @@ jobs:
           # Clang's source of truth for codegen. Cross-check against
           # /proc/cpuinfo above when a feature appears in one but not
           # the other (e.g. AVX-512 masked off by clang's CPU model).
-          clang++-23 -dM -E -x c++ -march=native /dev/null \
+          clang++ -dM -E -x c++ -march=native /dev/null \
             | grep -E '^#define __(SSE|AVX|F16C|FMA|XOP|BMI|LZCNT|POPCNT|MOVBE|AES|VAES|SHA|PCLMUL|VPCLMULQDQ|GFNI|ADX|RDRND|RDSEED|CLFLUSHOPT|CLWB|FSGSBASE|MWAIT|MWAITX|CLDEMOTE|RDTSCP|MOVDIR|WAITPKG|SERIALIZE)' \
             | sort
           echo "::endgroup::"
@@ -83,6 +93,7 @@ jobs:
     # with the heavier compile / test jobs to gate invariants that don't
     # require compiling.
     runs-on: ubuntu-24.04
+    needs: toolchain
     env:
       CAT_LINT_BUILD_DIR: ${{ runner.temp }}/cat-build-lint
     steps:
@@ -116,9 +127,8 @@ jobs:
 
       - name: Configure CMake lint targets
         run: |
-          cmake -S . -B "${CAT_LINT_BUILD_DIR}" -G Ninja \
+          cmake -S . -B "${CAT_LINT_BUILD_DIR}" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_BUILD_ALL_EXAMPLES=OFF \
             -DCAT_PCH=OFF
 
@@ -143,6 +153,7 @@ jobs:
   debug:
     # Debug build with sanitizers.
     runs-on: ubuntu-24.04
+    needs: toolchain
     steps:
       - uses: actions/checkout@v4
 
@@ -150,9 +161,8 @@ jobs:
 
       - name: Configure, build, and test (Debug)
         run: |
-          cmake -S . -B build-debug -G Ninja \
+          cmake -S . -B build-debug \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_USE_SANITIZERS=ON
           cmake --build build-debug
           ctest --test-dir build-debug --verbose --output-on-failure
@@ -162,18 +172,16 @@ jobs:
 
       - name: GDB pretty printers (-O0 Debug, PCH=OFF)
         run: |
-          cmake -S . -B build-debug-no-pch -G Ninja \
+          cmake -S . -B build-debug-no-pch \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_PCH=OFF
           cmake --build build-debug-no-pch --target check-gdb-pretty-printers
 
       - name: GDB pretty printers (RelWithDebInfo, PCH=ON)
         run: |
-          cmake -S . -B build-gdb-relwithdebinfo -G Ninja \
+          cmake -S . -B build-gdb-relwithdebinfo \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DCMAKE_CXX_COMPILER=clang++-23
             -DCAT_PCH=ON
           cmake --build build-gdb-relwithdebinfo --target check-gdb-pretty-printers
 
@@ -192,6 +200,7 @@ jobs:
   release:
     # Release build and tests.
     runs-on: ubuntu-24.04
+    needs: toolchain
     steps:
       - uses: actions/checkout@v4
 
@@ -199,9 +208,8 @@ jobs:
 
       - name: Configure, build, and test (Release)
         run: |
-          cmake -S . -B build-release -G Ninja \
+          cmake -S . -B build-release \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_COMPILER=clang++-23
           cmake --build build-release
           ctest --test-dir build-release --verbose --output-on-failure
 
@@ -219,6 +227,7 @@ jobs:
     # End-to-end `libcat.so` flow: build, install, then have a
     # downstream `find_package(cat)` consumer link it.
     runs-on: ubuntu-24.04
+    needs: toolchain
     steps:
       - uses: actions/checkout@v4
 
@@ -235,9 +244,8 @@ jobs:
         run: |
           set -eu
 
-          cmake -S . -B build-shared -G Ninja \
+          cmake -S . -B build-shared \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_USE_SHARED=ON \
             -DCMAKE_INSTALL_PREFIX="${PWD}/install-shared"
@@ -278,8 +286,7 @@ jobs:
              return 0;
           }
           EOF
-          cmake -S consumer-shared -B build-consumer -G Ninja \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
+          cmake -S consumer-shared -B build-consumer \
             -DCMAKE_PREFIX_PATH="${PWD}/install-shared"
           cmake --build build-consumer
 
@@ -295,6 +302,7 @@ jobs:
     # The SDE-pinned `cpuid` run (commented out below)
     # also lands here so the cached toolchain is reused.
     runs-on: ubuntu-24.04
+    needs: toolchain
     steps:
       - uses: actions/checkout@v4
 
@@ -305,7 +313,6 @@ jobs:
         # `cat-gdb-examples` so we can symlink `.gdbinit`.
         run: |
           cmake -S . -B build-multi -G 'Ninja Multi-Config' \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF \
             -DCAT_BUILD_EXAMPLE_HELLO=ON
@@ -353,9 +360,8 @@ jobs:
         # dir to avoid CMake reconfiguration churn between runs.
         run: |
           set -eu
-          cmake -S . -B build-repl-debug-asan -G Ninja \
+          cmake -S . -B build-repl-debug-asan \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_BUILD_UNIT_TESTS=OFF \
@@ -376,9 +382,8 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           set -eu
-          cmake -S . -B build-repl-debug -G Ninja \
+          cmake -S . -B build-repl-debug \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=OFF \
             -DCAT_BUILD_UNIT_TESTS=OFF \
@@ -399,9 +404,8 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           set -eu
-          cmake -S . -B build-repl-release-asan -G Ninja \
+          cmake -S . -B build-repl-release-asan \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_BUILD_UNIT_TESTS=OFF \
@@ -422,9 +426,8 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           set -eu
-          cmake -S . -B build-repl-release -G Ninja \
+          cmake -S . -B build-repl-release \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=OFF \
             -DCAT_BUILD_UNIT_TESTS=OFF \
@@ -472,9 +475,9 @@ jobs:
       #   # Sanitizers and sccache off: ASan and Pin-based binary
       #   # instrumentation do not coexist cleanly.
       #   run: |
-      #     cmake -S . -B build-sde -G Ninja \
+      #     cmake -S . -B build-sde \
       #       -DCMAKE_BUILD_TYPE=Release \
-      #       -DCMAKE_CXX_COMPILER=clang++-23 \
+      #       -DCMAKE_CXX_COMPILER=clang++ \
       #       -DCAT_USE_SANITIZERS=OFF \
       #       -DCAT_USE_SCCACHE=OFF \
       #       -DCAT_SDE_EXECUTABLE="${CAT_SDE_EXECUTABLE}"

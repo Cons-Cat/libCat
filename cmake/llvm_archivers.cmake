@@ -13,8 +13,8 @@
 #
 # Clang publishes matching `llvm-ar`/`llvm-ranlib` binaries via
 # `CMAKE_CXX_COMPILER_AR`/`_RANLIB`. Prefer those, then fall back to a
-# version-matched lookup derived from `CMAKE_CXX_COMPILER_VERSION` (e.g.
-# `llvm-ar-23` alongside `clang++-23`), then to the unversioned names on PATH.
+# version-matched lookup derived from `CMAKE_CXX_COMPILER_VERSION`, then to the
+# unversioned names on PATH.
 # No specific major is pinned, so the project tracks whichever Clang CMake
 # selected.
 #

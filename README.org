@@ -4,22 +4,24 @@
 #+STARTUP: fold
 
 libCat is a non-POSIX compliant C++26 runtime.
-It has no pthreads nor =malloc()=, and by extension no exceptions.
+It has no pthreads nor global =malloc()=, and currently does not support exceptions.
 It has type-safe arithmetic, SIMD, fast syscalls, CRTP interfaces,
 
 * Building
 libCat requires a recent development version of Clang 23 from the =trunk= branch.
-It is tested on GitHub using the [[https://apt.llvm.org/][official nightly]] distribution,
-so this is certainly servicable for any local or downstream development.
-Compiling libCat is only routinely tested using =ninja=, but other build systems may work.
+=mise= can be used to fetch an appropriate version locally. This also downloads
+recent versions of =cmake= and =ninja=, and sets =CMAKE_GENERATOR=Ninja= by
+default. Compiling libCat is only routinely tested using =ninja=,
+but other build systems may work.
 The ="Ninja Multi-Config"= generator is also supported.
-A reasonably recent version of CMake is required (at least 3.28 is recommended).
 
 #+BEGIN_SRC sh
-  export CXX=clang++-23
-  cmake -B build/ -G 'Ninja'
-  cmake --build build/
-  ./build/tests/unit_tests # or ctest --test-dir/build --output-on-failure
+  mise install-toolchain
+  cmake -B build/
+  # mise x -- cmake -B build/
+  cmake --build build/  
+  ./build/tests/unit_tests
+  # or ctest --test-dir build/ --output-on-failure
 #+END_SRC
 
 The =.clang-format= and =.clang-tidy= configurations are only compatible with correspondingly

@@ -34,16 +34,15 @@ jobs:
           ref: ${{ github.head_ref }}
 
       - uses: ./.github/actions/setup-toolchain
-        # Shares the `ci.yml` cache. The composite includes
-        # `clang-format-23`, which `cmake/format.cmake` requires.
+        # Shares the `ci.yml` mise cache. The composite includes
+        # the clang-format that `cmake/format.cmake` requires.
 
       - name: Configure
         # Configure-only. `cat-format`'s `DEPENDS` are source files,
         # so `--target cat-format` runs the formatter alone with no
         # `cat` / `cat-impl` compilation.
         run: |
-          cmake -S . -B build-format -G Ninja \
-            -DCMAKE_CXX_COMPILER=clang++-23
+          cmake -S . -B build-format
 
       - name: Run cat-format
         run: cmake --build build-format --target cat-format

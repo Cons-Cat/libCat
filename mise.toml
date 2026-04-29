@@ -1,0 +1,14 @@
+[tools]
+cmake = "latest"
+ninja = "latest"
+
+[env]
+CAT_LLVM_VERSION = "23~++20260428111539+a24c1dedc6f5-1~exp1~20260428111719.3532"
+CC = "clang"
+CMAKE_GENERATOR = "Ninja"
+CXX = "clang++"
+_.path = ".cache/cat-llvm/bin"
+
+[tasks.install-toolchain]
+description = "Download and extract the pinned Clang 23 nightly toolchain"
+run = "python3 scripts/install_mise_llvm_debs.py"

@@ -84,13 +84,17 @@ echo "[clang-repl-libcat] preloading ${libcat_so}" >&2
 # mistake the silence for a hang. Skip it for non-interactive runs
 # (piped stdin or one-shot `--eval`) where there's no human to read it.
 if [ -t 0 ] && (( oneshot == 0 )); then
+  interactive=1
   echo "[clang-repl-libcat] ready (no prompt). Type C++; %quit or Ctrl+D to exit." >&2
+else
+  interactive=0
 fi
 
-# Inject the `%lib` directive ahead of the user's input. In interactive
-# / stream mode, `exec cat` relays stdin (terminal or pipe) so the REPL
-# keeps reading line by line. In one-shot mode, dump the snippets and
-# `%quit` so clang-repl evaluates them and exits.
+# Inject the `%lib` directive ahead of the user's input. Interactive mode
+# reopens the controlling terminal because build tools can hand commands
+# an stdin that looks terminal-backed but EOFs before keys are read. Stream
+# mode keeps using stdin so pipes and redirects work normally. In one-shot
+# mode, dump the snippets and `%quit` so clang-repl evaluates them and exits.
 {
   printf '%%lib %s\n' "${libcat_so}"
   if (( oneshot )); then
@@ -99,6 +103,9 @@ fi
     done
     printf '%%quit\n'
   else
+    if (( interactive )) && [ -r /dev/tty ]; then
+      exec cat /dev/tty
+    fi
     exec cat
   fi
 } | exec "${clang_repl}" "${flags[@]}" "${extra_args[@]}"

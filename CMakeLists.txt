@@ -9,8 +9,7 @@ project(cat
 if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   message(FATAL_ERROR
     "libCat only supports Clang. Detected `${CMAKE_CXX_COMPILER_ID}` "
-    "(`${CMAKE_CXX_COMPILER}`). Pass `-DCMAKE_CXX_COMPILER=clang++-23` "
-    "when configuring.")
+    "(`${CMAKE_CXX_COMPILER}`). Run CMake through `mise x -- cmake`!")
 endif()
 if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 23)
   message(FATAL_ERROR
@@ -39,8 +38,8 @@ if (CAT_USE_SANITIZERS)
   if (NOT CAT_ASAN_RUNTIME_PATH)
     message(FATAL_ERROR
       "CAT_USE_SANITIZERS=ON but `libclang_rt.asan-x86_64.so` could not be "
-      "located for `${CMAKE_CXX_COMPILER}`. Install the Clang ASan runtime "
-      "(apt: `libclang-rt-<MAJOR>-dev`) or reconfigure with "
+      "located for `${CMAKE_CXX_COMPILER}`. Install the matching Clang ASan "
+      "runtime or reconfigure with "
       "`-DCAT_USE_SANITIZERS=OFF`.")
   endif()
   message(STATUS "CAT_USE_SANITIZERS: using ${CAT_ASAN_RUNTIME_PATH}")

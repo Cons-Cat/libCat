@@ -29,7 +29,7 @@
 # verbose on configure output). No CTest, no `cmake --build`.
 #
 # Local:
-#   cmake -S . -B build-neg -G Ninja -DCMAKE_CXX_COMPILER=clang++-23 \
+#   cmake -S . -B build-neg -G Ninja -DCMAKE_CXX_COMPILER=clang++ \
 #     -DCAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON
 
 option(CAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS

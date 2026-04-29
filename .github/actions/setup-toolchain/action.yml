@@ -2,118 +2,84 @@
 
 name: Setup libCat toolchain
 description: >
-  Restore (or install + cache) the apt.llvm.org Clang 23 toolchain libCat
-  needs in CI: clang / clang++, lld, llvm-ar / llvm-ranlib, llvm-symbolizer,
-  clang-format, and `clang-tidy-23` (so `cmake/tidy.cmake` matches
-  `clang++-23`). lldb-23 and clangd-23 are purged before the cache save.
-  Version-suffixed `/usr/bin/*-23` symlinks
-  are recreated after install or restore so a cache hit looks
-  indistinguishable from a fresh `llvm.sh 23` run, which matters because
-  `cmake/llvm_archivers.cmake` and `cmake/format.cmake` look up
-  `llvm-ar-${MAJOR}` / `clang-format-${MAJOR}` derived from
-  `CMAKE_CXX_COMPILER_VERSION`.
+  Install the mise-pinned Clang toolchain that libCat needs in CI:
+  clang / clang++, lld, llvm-ar / llvm-ranlib, llvm-symbolizer,
+  clang-format, clang-tidy, run-clang-tidy, and clang-repl.
 
 runs:
   using: composite
   steps:
-    - name: Cache LLVM 23 toolchain
-      id: cache-llvm
-      uses: actions/cache@v4
-      with:
-        path: /usr/lib/llvm-23
-        # Bump `-vN` whenever the install / purge set changes (new
-        # tool, dropped purge, different LLVM major).
-        key: llvm-23-ubuntu-24.04-v2
-
-    - name: Install Clang 23 from apt.llvm.org (cache miss)
-      if: steps.cache-llvm.outputs.cache-hit != 'true'
-      shell: bash
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        set -eu
-        sudo apt-get update
-        sudo apt-get install -y \
-          wget lsb-release software-properties-common gnupg
-        wget -q https://apt.llvm.org/llvm.sh
-        chmod +x llvm.sh
-        sudo ./llvm.sh 23
-
-        # `llvm-ar` / `llvm-ranlib` (used by
-        # `cmake/llvm_archivers.cmake` for the LTO bitcode index)
-        # ship in `llvm-23`. `clang-format-23` is what
-        # `cmake/format.cmake` invokes for `cat-format-check`.
-        # `clang-tidy-23` stays on the image: `include(cmake/tidy.cmake)` in
-        # the root `CMakeLists.txt` must find a 23-series `clang-tidy`
-        # matching the compiler, even for jobs that never run `cat-tidy`.
-        # `run-clang-tidy-23` lives in `clang-tools-23` on Debian / Ubuntu
-        # (used by `cmake/tidy.cmake`).
-        sudo apt-get install -y llvm-23 clang-format-23 \
-          clang-tidy-23 clang-tools-23
-
-        # `libclang-rt-23-dev` is intentionally NOT purged.
-        # `CMakeLists.txt` resolves `libclang_rt.asan-x86_64.so`
-        # from clang's resource dir for `-shared-libasan`.
-        sudo apt-get remove --purge -y \
-          lldb-23 liblldb-23 python3-lldb-23 \
-          clangd-23 \
-          || true
-
-        # `actions/cache` saves with a non-sudo `tar`, which would
-        # silently fail on root-owned trees. Re-own to the runner
-        # user. Linux ignores ownership for execve, so the binaries
-        # still run.
-        sudo chown -R "$(id -u):$(id -g)" /usr/lib/llvm-23
-
-    - name: Recreate /usr/bin version-suffixed symlinks
-      shell: bash
-      run: |
-        # apt's `update-alternatives` machinery owns
-        # `/usr/bin/clang-23` etc. but only `/usr/lib/llvm-23` is in
-        # the cache. Recreate the version-suffixed names so consumers
-        # of `clang++-23` / `llvm-ar-23` / `clang-format-23` resolve
-        # identically on cache hit and miss.
-        set -eu
-        for tool in \
-          clang clang++ clang-cpp clang-format \
-          lld ld.lld \
-          llvm-ar llvm-ranlib llvm-symbolizer \
-          clang-tidy run-clang-tidy
-        do
-          src="/usr/lib/llvm-23/bin/${tool}"
-          if [ -x "${src}" ]; then
-            sudo ln -sf "${src}" "/usr/bin/${tool}-23"
-          fi
-        done
-
-    - name: Add /usr/lib/llvm-23/bin to PATH
-      shell: bash
-      run: echo "/usr/lib/llvm-23/bin" >> "${GITHUB_PATH}"
-
     - name: Register Clang warning matcher
       shell: bash
       run: echo "::add-matcher::${{ github.workspace }}/.github/problem-matchers/clang.json"
 
-    - name: Install cmake and ninja-build
-      # Tiny standard-archive packages, not worth caching. The
-      # `apt-get update` here covers the cache-hit path.
+    - name: Install extraction dependencies
       shell: bash
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
         set -eu
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends cmake ninja-build
+        sudo apt-get install -y --no-install-recommends \
+          ca-certificates curl python3 tar xz-utils zstd
+
+    - name: Install mise
+      uses: jdx/mise-action@v4
+      with:
+        version: 2026.3.10
+        cache: false
+        install: true
+
+    - name: Cache mise-pinned Clang toolchain
+      uses: actions/cache@v4
+      with:
+        path: |
+          .cache/cat-llvm
+          .cache/cat-llvm-downloads
+        key: cat-llvm-debs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'scripts/install_mise_llvm_debs.py') }}
+
+    - name: Install mise-pinned Clang toolchain
+      shell: bash
+      run: mise run install-toolchain
+
+    - name: Add mise toolchain bin to PATH
+      shell: bash
+      run: |
+        set -eu
+        tool_bin=$(mise exec -- sh -c 'dirname "$(command -v clang++)"')
+        cmake_bin=$(mise exec -- sh -c 'dirname "$(command -v cmake)"')
+        ninja_bin=$(mise exec -- sh -c 'dirname "$(command -v ninja)"')
+        echo "${tool_bin}" >> "${GITHUB_PATH}"
+        echo "${cmake_bin}" >> "${GITHUB_PATH}"
+        echo "${ninja_bin}" >> "${GITHUB_PATH}"
+        echo "CC=${tool_bin}/clang" >> "${GITHUB_ENV}"
+        echo "CXX=${tool_bin}/clang++" >> "${GITHUB_ENV}"
+        echo "CMAKE_GENERATOR=Ninja" >> "${GITHUB_ENV}"
+        echo "CAT_LLVM_BIN=${tool_bin}" >> "${GITHUB_ENV}"
 
     - name: Verify toolchain
       shell: bash
       run: |
         set -eu
-        command -v clang++-23
-        clang++-23 --version
-        command -v lld-23
-        command -v llvm-ar-23
-        command -v llvm-ranlib-23
-        command -v clang-format-23
-        command -v clang-tidy-23
-        command -v run-clang-tidy-23
+        command -v clang++
+        clang++ --version
+        major=$(clang++ --version | sed -n 's/.*version \([0-9][0-9]*\).*/\1/p' | head -1)
+        if [ "${major}" -lt 23 ]; then
+          echo "FAIL: libCat requires Clang 23+, got ${major}"
+          exit 1
+        fi
+        command -v lld
+        command -v ld.lld
+        command -v llvm-ar
+        command -v llvm-ranlib
+        command -v llvm-symbolizer
+        command -v clang-format
+        command -v clangd
+        command -v clang-tidy
+        command -v run-clang-tidy
+        command -v clang-apply-replacements
+        command -v clang-repl
+        command -v cmake
+        cmake --version
+        command -v ninja
+        ninja --version

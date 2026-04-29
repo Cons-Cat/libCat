@@ -11,8 +11,8 @@
 # `tests/unit_tests.cpp`, and registers the `cat-format` and `cat-format-check`
 # custom targets. Both run `scripts/cat_format_worktree.py` (parallel) with the
 # same file list (capped at 4 workers, default. Tune down with `CAT_LIBCAT_JOBS`
-# or `-j`, see the script help) `APPLY` rewrites mismatches. `CHECK` is
-# `read-only`, `non-zero` on drift.
+# or `-j`, see the script help).
+# `APPLY` rewrites mismatches. `CHECK` is `read-only`, `non-zero` on drift.
 #
 # Requires `python3` on `PATH` for `cat-format`, `cat-format-check`, and
 # `cat-restyle-*`.
