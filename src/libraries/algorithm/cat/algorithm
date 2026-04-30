@@ -102,7 +102,7 @@ lexicographical_compare_three_way(ItLhs lhs_start, ItLhs lhs_end,
                                   ItRhs rhs_start,
                                   ItRhs rhs_end)  // Formatting.
    requires(
-      is_common_comparison_category<decltype((*lhs_start) <=> (*rhs_start))>)
+      is_common_comparison_category<decltype((* lhs_start) <=> (* rhs_start))>)
 {
    bool exhaust_left = (lhs_start == lhs_end);
    bool exhaust_right = (rhs_start == rhs_end);

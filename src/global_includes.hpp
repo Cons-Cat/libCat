@@ -115,14 +115,12 @@ template <typename T>
 struct default_compact_trait;
 
 template <typename T, auto predicate, auto>
-   requires(
-      is_predicate<remove_cvref<decltype(predicate)>, T const&>)
+   requires(is_predicate<remove_cvref<decltype(predicate)>, T const&>)
 struct compact;
 
 template <typename T, auto predicate, is_invocable auto get_nullopt>
-   requires(
-      is_predicate<remove_cvref<decltype(predicate)>, T const&> &&
-      !predicate(get_nullopt()))
+   requires(is_predicate<remove_cvref<decltype(predicate)>, T const&>
+            && !predicate(get_nullopt()))
 struct compact<T, predicate, get_nullopt> {
    static constexpr auto
    has_value(T const& value) -> bool {
@@ -138,9 +136,8 @@ struct compact<T, predicate, get_nullopt> {
 };
 
 template <typename T, auto predicate, auto nullopt_value>
-   requires(
-      is_predicate<remove_cvref<decltype(predicate)>, T const&> &&
-      !predicate(T{nullopt_value}))
+   requires(is_predicate<remove_cvref<decltype(predicate)>, T const&>
+            && !predicate(T{nullopt_value}))
 struct compact<T, predicate, nullopt_value>
     : compact<T, predicate,
               // Sentinel accessor:
