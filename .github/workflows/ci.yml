@@ -213,9 +213,9 @@ jobs:
       - name: cat-format-check
         # Advisory. Emits a warning annotation instead of gating the merge. Fix
         # locally with
-        # `cmake --build "${CAT_LINT_BUILD_DIR}" --target cat-format`.
+        # `just format "${CAT_LINT_BUILD_DIR}"`.
         run: |
-          if ! cmake --build "${CAT_LINT_BUILD_DIR}" --target cat-format-check
+          if ! just format-check "${CAT_LINT_BUILD_DIR}"
           then
             echo "::warning title=cat-format-check::Formatting drift detected! Run the `cat-format` target to fix it."
           fi
@@ -223,7 +223,7 @@ jobs:
       - name: cat-restyle-comments-check
         # Same advisory policy as `cat-format-check` above.
         run: |
-          if ! cmake --build "${CAT_LINT_BUILD_DIR}" --target cat-restyle-comments-check
+          if ! just restyle-comments-check "${CAT_LINT_BUILD_DIR}"
           then
             echo "::warning title=cat-restyle-comments-check::Comment styling drift detected! Run the `cat-restyle-comments` target to fix it."
           fi
@@ -437,8 +437,8 @@ jobs:
         # {Debug, Release} x {ASan, no ASan} matrix. Catches
         # regressions in the `%lib` injection, the
         # `compile_commands.json` flag extractor, and the optional
-        # ASan runtime preload all at once. `--eval` runs libCat
-        # code one-shot (no interactive plumbing), so we can grep
+        # ASan runtime preload all at once. A final snippet argument
+        # runs libCat code one-shot, so we can grep
         # stdout for the marker the snippet prints.
         #
         # Was a `repl:` matrix job; folded in here as four
@@ -458,8 +458,8 @@ jobs:
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-debug-asan --target cat-impl-shared
           out=$(./build-repl-debug-asan/clang-repl-libcat \
-            --eval '#include <cat/string>' \
-            --eval 'auto _ = cat::println("Meow world!");' \
+            '#include <cat/string>
+             auto _ = cat::println("Meow world!");' \
             2>&1)
           printf 'cat-repl output:\n%s\n' "${out}"
           if ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
@@ -480,8 +480,8 @@ jobs:
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-debug --target cat-impl-shared
           out=$(./build-repl-debug/clang-repl-libcat \
-            --eval '#include <cat/string>' \
-            --eval 'auto _ = cat::println("Meow world!");' \
+            '#include <cat/string>
+             auto _ = cat::println("Meow world!");' \
             2>&1)
           printf 'cat-repl output:\n%s\n' "${out}"
           if ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
@@ -502,8 +502,8 @@ jobs:
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-release-asan --target cat-impl-shared
           out=$(./build-repl-release-asan/clang-repl-libcat \
-            --eval '#include <cat/string>' \
-            --eval 'auto _ = cat::println("Meow world!");' \
+            '#include <cat/string>
+             auto _ = cat::println("Meow world!");' \
             2>&1)
           printf 'cat-repl output:\n%s\n' "${out}"
           if ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
@@ -524,8 +524,8 @@ jobs:
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-release --target cat-impl-shared
           out=$(./build-repl-release/clang-repl-libcat \
-            --eval '#include <cat/string>' \
-            --eval 'auto _ = cat::println("Meow world!");' \
+            '#include <cat/string>
+             auto _ = cat::println("Meow world!");' \
             2>&1)
           printf 'cat-repl output:\n%s\n' "${out}"
           if ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then

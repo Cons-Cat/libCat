@@ -219,6 +219,7 @@ add_custom_target(cat-repl
   COMMAND "${CMAKE_COMMAND}" -E env
     "CAT_REPL_CONFIG=$<CONFIG>"
     "${CMAKE_BINARY_DIR}/clang-repl-libcat"
+    --
   USES_TERMINAL
   COMMENT "Launching clang-repl with libCat preloaded.")
 add_dependencies(cat-repl cat-impl-shared)

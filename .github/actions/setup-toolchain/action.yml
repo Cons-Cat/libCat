@@ -2,9 +2,9 @@
 
 name: Setup libCat toolchain
 description: >
-  Install the mise-pinned Clang toolchain that libCat needs in CI:
+  Install the mise-pinned build tools and Clang toolchain that libCat needs in CI:
   clang / clang++, lld, llvm-ar / llvm-ranlib, llvm-symbolizer,
-  clang-format, clang-tidy, run-clang-tidy, and clang-repl.
+  clang-format, clang-tidy, run-clang-tidy, clang-repl, and just.
 
 runs:
   using: composite
@@ -48,9 +48,11 @@ runs:
         set -eu
         tool_bin=$(mise exec -- sh -c 'dirname "$(command -v clang++)"')
         cmake_bin=$(mise exec -- sh -c 'dirname "$(command -v cmake)"')
+        just_bin=$(mise exec -- sh -c 'dirname "$(command -v just)"')
         ninja_bin=$(mise exec -- sh -c 'dirname "$(command -v ninja)"')
         echo "${tool_bin}" >> "${GITHUB_PATH}"
         echo "${cmake_bin}" >> "${GITHUB_PATH}"
+        echo "${just_bin}" >> "${GITHUB_PATH}"
         echo "${ninja_bin}" >> "${GITHUB_PATH}"
         echo "CC=${tool_bin}/clang" >> "${GITHUB_ENV}"
         echo "CXX=${tool_bin}/clang++" >> "${GITHUB_ENV}"
@@ -81,5 +83,7 @@ runs:
         command -v clang-repl
         command -v cmake
         cmake --version
+        command -v just
+        just --version
         command -v ninja
         ninja --version

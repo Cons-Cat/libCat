@@ -9,15 +9,15 @@ It has type-safe arithmetic, SIMD, fast syscalls, CRTP interfaces,
 
 * Building
 libCat requires a recent development version of Clang 23 from the =trunk= branch.
-=mise= can be used to fetch an appropriate version. This also installs recent versions
-of build tools, and sets =CMAKE_GENERATOR=Ninja Multi-Config= by default, but setting
+=mise= can be used to fetch an appropriate version. This also installs =just=, recent
+versions of build tools, and sets =CMAKE_GENERATOR=Ninja Multi-Config= by default, but setting
 =CMAKE_GENERATOR= is supported (e.g. =CMAKE_GENERATOR=Ninja=) for all tools and in all
 release modes.
 =mise= is not required, but is highly recommended.
 
 #+BEGIN_SRC sh
   mise install
-  mise run build
+  just build
   ./build/Release/tests/unit_tests
   # or ctest --test-dir build/ -C Release --output-on-failure
 #+END_SRC
@@ -29,15 +29,17 @@ Currently, running libCat requires AVX2. On x86 microarchitectures lacking that,
 [[https://www.intel.com/content/www/us/en/developer/articles/tool/software-development-emulator.html][Intel Software Development Emulator]]
 is known to work for libCat binaries. =mise= does not install this emulator.
 
-=mise= can configure release modes with one or more additional arguments.
+=just= can configure release modes with one or more optional release mode arguments.
+If no mode argument is passed, =just= reuses the last explicit mode from this worktree,
+defaulting to =release=.
 Pass =-v= to show verbose CMake configure messages and build commands.
 #+BEGIN_SRC sh
-  mise run build debug
-  mise run build release
-  mise run build relwithdebinfo
+  just build debug
+  just build release
+  just build relwithdebinfo
 
-  mise run build debug release
-  mise run build -v debug
+  just build all -v
+  just build debug -v
 #+END_SRC
 
 Developers of libCat are encouraged to enable sanitizers with =san=. Use =nosan=
@@ -45,11 +47,11 @@ to disable them again. If neither argument is passed, CMake keeps the cached
 =CAT_USE_SANITIZERS= setting. The order of this argument is arbitrary to the
 build modes.
 #+BEGIN_SRC sh
-  mise run build san
-  mise run build nosan
+  just build san
+  just build nosan
 
-  mise run build san debug
-  mise run build debug san release
+  just build san debug
+  just build debug san release
 #+END_SRC
 
 This will compile every translation unit with AddressSanitizer + UndefinedBehaviorSanitizer.
@@ -57,21 +59,30 @@ Note that enabling these disables link-time optimization in =release= and =relwi
 
 In an initial build, sanitizers are not enabled. This state may be restored by:
 #+BEGIN_SRC sh
-  mise run clean
-  mise run clean release relwithdebinfo
+  just clean
+  just clean release
+  just clean all
+#+END_SRC
+
+Additional optiization or warning flags can be passed in anywhere in the command. =-w= is
+special, and disables all compiler warnings in the REPL. These flags are set in the CMake cache,
+except for =-w=, which must be used explicitly whenever it is desired.
+#+BEGIN_SRC sh
+  just build -fomit-frame-pointer -fstrict-bool san -Wno-unused-variable
+  just build -w release
 #+END_SRC
 
 * Tools
 libCat provides several developer utilities. They are organized in the =cmake/=
 subdirectory.
 
-The =mise= tasks below use the same build modes as the =build= task. For many of them,
+The =just= recipes below use the same build modes as the =build= recipe. For many of them,
 build mode is not very relevant. They are implemented as CMake targets, which have the same
 names prepended by a =cat-= namespace (e.g. =cat-format=, =cat-syntax=).
 
 *** =format=
 #+BEGIN_SRC sh
-  mise run format
+  just format
 #+END_SRC
 Runs =clang-format= in place on every libCat implementation source and public
 header. The files which changed are reported afterwards.
@@ -81,7 +92,7 @@ When not using =mise=, CMake automatically attempts to find an appropriate versi
 
 *** =format-check=
 #+BEGIN_SRC sh
-  mise run format-check
+  just format-check
 #+END_SRC
 The dry-run variant of =format= primarily intended for CI. Performs the
 same comparison as =cat-format=, but instead of rewriting, it reports every
@@ -90,7 +101,7 @@ exits with an error code.
 
 *** =restyle-comments=
 #+BEGIN_SRC sh
-  mise run restyle-comments
+  just restyle-comments
 #+END_SRC
 =clang-format= does not aggressively merge erroneous line breaks in comments, which are
 common after mass refactoring. =cat-restyle-comments= performs more aggressive
@@ -101,7 +112,7 @@ The ordered style rules are documented at the top of
 
 *** =restyle-comments-check=
 #+BEGIN_SRC sh
-  mise run restyle-comments-check
+  just restyle-comments-check
 #+END_SRC
 The dry-run variant, same idea as =format-check=, reports =would restyle: ...=
 for any file where comment restyling would change. Run =restyle-comments= to fix
@@ -109,7 +120,7 @@ drift.
 
 *** =tidy=
 #+BEGIN_SRC sh
-  mise run tidy
+  just tidy
 #+END_SRC
 Runs =clang-tidy= across every libCat translation unit via the =run-clang-tidy=
 driver, applying fix-its in place and re-formatting touched lines with the
@@ -123,7 +134,7 @@ of =clang-tidy= and =run-clang-tidy= on =PATH=. Override either with
 
 *** =tidy-check=
 #+BEGIN_SRC sh
-  mise run tidy-check
+  just tidy-check
 #+END_SRC
 The dry-run variant of =tidy= primarily intended for CI. Runs the same
 =clang-tidy= pass with =-warnings-as-errors=*= so any diagnostic exits the
@@ -131,7 +142,7 @@ script with an error code.
 
 *** =opt-report=
 #+BEGIN_SRC sh
-  mise run opt-report
+  just opt-report
 #+END_SRC
 Compiles a Clang optimization report and prints the =opt-viewer.py= invocation required
 to render the resulting record into an interactive HTML document. Optview2 is not
@@ -140,9 +151,9 @@ the same version of this script assosciated with your Clang installation.
 
 *** =intermediaries=
 #+BEGIN_SRC sh
-  mise run intermediaries
-  mise run intermediaries fmt
-  mise run intermediaries no-fmt
+  just intermediaries
+  just intermediaries fmt
+  just intermediaries no-fmt
 #+END_SRC
 Saves compilation byproducts to build directories. =fmt= is unfortunately very slow,
 so it is disabled by default. Pass =fmt= to format the resulting =.ii= files.
@@ -165,7 +176,7 @@ This is useful for manually inspecting macro expansion and optimization, among o
 
 *** =syntax=
 #+BEGIN_SRC sh
-  mise run syntax
+  just syntax
 #+END_SRC
 Compiles a libCat with =-fsyntax-only=. This is useful for quickly checking if
 code can compile, without bothering to enter deep LLVM. It will reuse existing
@@ -173,7 +184,7 @@ precompiled headers, if they are enabled, further accelerating the development l
 
 *** =repl=
 #+BEGIN_SRC sh
-  mise run repl
+  just repl
 #+END_SRC
 Launches =clang-repl= with libCat preloaded so its headers and external
 linkage symbols resolve at JIT time. The wrapper reads the matching compile flags
@@ -185,33 +196,42 @@ independantly, if desired.
 For use in scripts, pass a one-shot snippet or readable path as the final argument,
 after any conventional =clang-repl= arguments.
 #+BEGIN_SRC sh
-  mise run repl \
-      '#include <cat/string>
+  just repl \
+      '#include <cat/string> \
        auto _ = cat::println("Meow world!");'
 
   # Meow world!
 #+END_SRC
 
-The wrapper script also accepts =eval= or =--eval= when an explicit flag is clearer.
-The input must be in quotes, because other arguments may proceed it.
+The input code or file must be in quotes. =clang-repl= flags are forwarded through
+automatically.
 #+BEGIN_SRC sh
-  mise run repl eval "1 + 1"
-  mise run repl eval --no-warn "1 + 1" # This is an arbitrary `clang-repl` flag.
-  mise run repl eval build/Debug/examples/hello.cpp
-  mise run repl eval skip-main build/Debug/examples/hello.cpp
-  mise run repl eval-first build/Debug/examples/hello.cpp
-  mise run repl --eval "1 + 1"
+  just repl "1 + 1"
+  just repl -Wno-unused-variable "1 + 1"
+  just repl -w
+  just repl san -fstrict-bool "bool b = 2;"
+  just repl build/Debug/examples/hello.cpp
+  just repl "1 + 1"
 #+END_SRC
 
-Piping code on stdin works the same way
-
+=skip-main= prevents evaluating =main()=. Use =drop= to evaluate the input, then
+stay in the REPL.
 #+BEGIN_SRC sh
-  echo "1 + 1" | mise run repl # Can specify release mode here as well.
+  just repl drop skip-main build/Debug/examples/hello.cpp
+  # ...
+  clang-repl> main();
+
+  # Hello, world!
+#+END_SRC
+
+Piping code on stdin works the same way.
+#+BEGIN_SRC sh
+  echo "1 + 1" | just repl release
 
   # 2
 #+END_SRC
 
-The =mise run repl= task configures the build with =CAT_BUILD_SHARED=ON= before
+The =just repl= recipe configures the build with =CAT_BUILD_SHARED=ON= before
 building the wrapper. Pass extra =clang-repl= arguments at the end of the
 command, after a =--=.
 

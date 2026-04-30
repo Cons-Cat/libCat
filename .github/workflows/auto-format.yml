@@ -45,7 +45,7 @@ jobs:
           cmake -S . -B build-format -G Ninja
 
       - name: Run cat-format
-        run: cmake --build build-format --target cat-format
+        run: just format build-format
 
       - name: Commit and push fix-up if anything changed
         # `git diff --quiet` exits 0 on a clean tree, so the

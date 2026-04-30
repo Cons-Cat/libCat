@@ -13,26 +13,17 @@
 #     line-buffered. `%quit` or Ctrl+D to exit.
 #   * Stream (pipe / redirected stdin): no hint, no prompt, code on
 #     stdin gets evaluated until EOF.
-#   * One-shot (`eval`, `--eval`, `--eval-file`, or final positional snippet):
-#     no hint, stdin is ignored, the supplied snippets run in order and the REPL
-#     exits.
-#   * Eval-first (`eval-first`): evaluates the same input syntax as one-shot,
-#     then drops into the interactive REPL.
+#   * One-shot (final positional snippet or readable path): no hint, stdin is
+#     ignored, the supplied input runs and the REPL exits.
+#   * Drop (drop INPUT): evaluates INPUT, then stays in the interactive REPL.
 #
 # Flags (consumed by this wrapper before clang-repl ever sees them):
-#   eval [ARGS...] INPUT
-#                       Evaluate INPUT, which may be code or a readable path.
-#   eval-first [ARGS...] INPUT
-#                       Evaluate INPUT, then stay in the REPL.
+#   drop                Evaluate the final input before starting interaction.
 #   skip-main           Do not call `main()` automatically for file inputs.
-#   --eval INPUT        Same as `eval INPUT`. Repeatable.
-#   --eval-file PATH    Compatibility spelling for `--eval PATH`.
-#                       Evaluate `#include "PATH"` as one REPL input.
-#                       Source-like files also run `main()`.
-#   --                  End of wrapper flags. Everything after this is
-#                       passed through to clang-repl verbatim.
-# Anything else is treated as a clang-repl argument, except a final non-option
-# argument, which is treated as a one-shot snippet or included file path.
+#   --                  End of wrapper flags.
+# Compiler flags are read from compile_commands.json and passed through --Xcc.
+# Anything else is treated as a clang-repl driver argument, except a final
+# non-option argument, which is treated as a one-shot snippet or included file path.
 
 set -eEuo pipefail
 
@@ -94,14 +85,11 @@ resolve_eval_file() {
   elif [[ "${rel}" == tests/src/* ]]; then
     rel="tests/${rel#tests/src/}"
   fi
-  case "${rel}" in
-    *.cc|*.cpp|*.cxx)
-      candidate="${build_dir}/${rel%.*}.ii"
-      if [[ -r "${candidate}" ]]; then
-        realpath "${candidate}"
-        return 0
-      fi ;;
-  esac
+  candidate="${source_dir}/${rel}"
+  if [[ -r "${candidate}" ]]; then
+    realpath "${candidate}"
+    return 0
+  fi
   return 1
 }
 
@@ -143,28 +131,35 @@ fi
 evals=()
 extra_args=()
 main_probe_files=()
-eval_first=0
 skip_main=0
+drop=0
+add_extra_arg() {
+  case "$1" in
+    -w)
+      extra_args+=("--Xcc=-Wno-everything") ;;
+    --Xcc=*|-v)
+      extra_args+=("$1") ;;
+    -*)
+      extra_args+=("--Xcc=$1") ;;
+    *)
+      extra_args+=("$1") ;;
+  esac
+}
+
 while (( $# > 0 )); do
   case "$1" in
-    eval)
-      shift ;;
-    eval-first)
-      eval_first=1; shift ;;
+    drop)
+      drop=1; shift ;;
     skip-main)
       skip_main=1; shift ;;
-    --eval)
-      [[ $# -ge 2 ]] || { echo "clang-repl-libcat: --eval needs an argument" >&2; exit 2; }
-      add_eval_input "$2"; shift 2 ;;
-    --eval-file)
-      [[ $# -ge 2 ]] || { echo "clang-repl-libcat: --eval-file needs a path" >&2; exit 2; }
-      [[ -r "$2" ]] || { echo "clang-repl-libcat: cannot read $2" >&2; exit 2; }
-      add_eval_input "$2"
-      shift 2 ;;
     --)
-      shift; extra_args+=("$@"); break ;;
+      shift
+      while (( $# > 0 )); do
+        add_extra_arg "$1"; shift
+      done
+      break ;;
     *)
-      extra_args+=("$1"); shift ;;
+      add_extra_arg "$1"; shift ;;
   esac
 done
 
@@ -178,7 +173,7 @@ if (( ${#evals[@]} == 0 && ${#extra_args[@]} > 0 )); then
 fi
 
 oneshot=0
-if (( ${#evals[@]} > 0 && eval_first == 0 )); then
+if (( ${#evals[@]} > 0 && drop == 0 )); then
   oneshot=1
 fi
 
@@ -249,11 +244,16 @@ if [ -n "${asan_runtime}" ]; then
 fi
 
 echo "[clang-repl-libcat] preloading ${libcat_so}" >&2
+if (( drop && ${#evals[@]} > 0 )) && [ ! -t 0 ]; then
+  echo "clang-repl-libcat: drop requires tty stdin." >&2
+  exit 2
+fi
+
 # `clang-repl` sees a pipe on stdin (we feed it `%lib` then relay the
 # user's keys through `cat`) and silently suppresses its prompt as a
 # result. Surface a one-time ready indicator so interactive users don't
 # mistake the silence for a hang. Skip it for non-interactive runs
-# (piped stdin or one-shot `--eval`) where there's no human to read it.
+# (piped stdin or one-shot input) where there's no human to read it.
 if [ -t 0 ] && (( oneshot == 0 )); then
   interactive=1
   echo "[clang-repl-libcat] ready. Type C++; %quit or Ctrl+D to exit." >&2
@@ -262,7 +262,7 @@ else
 fi
 
 if (( interactive )); then
-  if (( eval_first && ${#evals[@]} > 0 )); then
+  if (( drop && ${#evals[@]} > 0 )); then
     initial_input=""
     for snippet in "${evals[@]}"; do
       initial_input+="${snippet}"$'\n'
@@ -278,7 +278,7 @@ fi
 # and `%quit` so clang-repl evaluates them and exits.
 {
   printf '%%lib %s\n' "${libcat_so}"
-  if (( oneshot || eval_first )); then
+  if (( oneshot )); then
     for snippet in "${evals[@]}"; do
       printf '%s\n' "${snippet}"
     done

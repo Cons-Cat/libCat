@@ -110,7 +110,7 @@ def main() -> int:
     if a.mode == "CHECK" and n_would:
         print(
             f"cat-format-check: {n_would} file(s) would be reformatted. "
-            "Run `cmake --build <build> --target cat-format` to fix.",
+            "Run `just format` to fix!",
             file=sys.stderr,
         )
         return 1

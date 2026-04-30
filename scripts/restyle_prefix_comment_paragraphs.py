@@ -2751,7 +2751,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     if a.check and n_would:
         print(
             f"cat-restyle-comments-check: {n_would} file(s) would be restyled. "
-            "Run `cmake --build <build> --target cat-restyle-comments` to fix.",
+            "Run `just restyle-comments` to fix!",
             file=sys.stderr,
         )
     for path, _ch, _er, warnings, _punctuation_changed in outs:

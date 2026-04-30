@@ -229,7 +229,7 @@ if (NOT _tidy_result EQUAL 0)
   if (_mode STREQUAL "CHECK")
     message(FATAL_ERROR
       "cat-tidy-check: diagnostics reported (exit ${_tidy_result}). "
-      "Run `cmake --build <build> --target cat-tidy` to apply fix-its.")
+      "Run `just tidy` to apply fix-its!")
   else()
     message(FATAL_ERROR
       "cat-tidy: `run-clang-tidy` exited with ${_tidy_result}.")
