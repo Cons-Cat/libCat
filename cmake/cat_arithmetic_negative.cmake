@@ -317,12 +317,12 @@ if (NOT _cat_neg_n_glob EQUAL _cat_neg_n_calc)
     "(${_cat_neg_n_glob}) != ill+must total (${_cat_neg_n_calc}) (glob check)"
   )
 endif()
-message(STATUS
+message(VERBOSE
   "CAT_ARITHMETIC_NEGATIVE_CTEST: registered ${_cat_neg_n_cases} "
   "must-reject build target(s) as `ArithmeticNegativeBuild`")
 if (CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS)
   message(
-    STATUS
+    VERBOSE
     "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: OK - compiler `${CMAKE_CXX_COMPILER}` "
     "(${_cat_neg_n_illformed_ok} must-reject) "
     "matches ${_cat_neg_n_glob} -fsyntax-only .cpp. "

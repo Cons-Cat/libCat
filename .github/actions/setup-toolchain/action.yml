@@ -23,13 +23,6 @@ runs:
         sudo apt-get install -y --no-install-recommends \
           ca-certificates curl python3 tar xz-utils zstd
 
-    - name: Install mise
-      uses: jdx/mise-action@v4
-      with:
-        version: 2026.3.10
-        cache: false
-        install: true
-
     - name: Cache mise-pinned Clang toolchain
       uses: actions/cache@v4
       with:
@@ -38,11 +31,18 @@ runs:
           .cache/cat-llvm-downloads
         key: cat-llvm-debs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'scripts/install_mise_llvm_debs.py') }}
 
-    - name: Install mise-pinned Clang toolchain
-      shell: bash
-      run: mise run install-toolchain
+    - name: Install mise
+      uses: jdx/mise-action@v4
+      with:
+        version: 2026.3.10
+        cache: false
+        install: true
 
-    - name: Add mise toolchain bin to PATH
+    - name: Install Clang toolchain
+      shell: bash
+      run: mise run install-clang-nightly
+
+    - name: Add mise toolchain binaries to PATH
       shell: bash
       run: |
         set -eu
@@ -57,7 +57,7 @@ runs:
         echo "CMAKE_GENERATOR=Ninja" >> "${GITHUB_ENV}"
         echo "CAT_LLVM_BIN=${tool_bin}" >> "${GITHUB_ENV}"
 
-    - name: Verify toolchain
+    - name: Verify mise toolchain
       shell: bash
       run: |
         set -eu

@@ -47,7 +47,7 @@ if (CAT_USE_SANITIZERS)
       "runtime or reconfigure with "
       "`-DCAT_USE_SANITIZERS=OFF`.")
   endif()
-  message(STATUS "CAT_USE_SANITIZERS: using ${CAT_ASAN_RUNTIME_PATH}")
+  message(VERBOSE "CAT_USE_SANITIZERS: using ${CAT_ASAN_RUNTIME_PATH}")
 endif()
 
 # Optional sccache compiler-launcher. Auto-on when `sccache` is on PATH.
@@ -68,7 +68,7 @@ if (CAT_USE_SCCACHE)
       "CAT_USE_SCCACHE=ON but `sccache` was not found on PATH. "
       "Install it to path or pass -DCAT_SCCACHE_EXECUTABLE=/path/to/sccache.")
   endif()
-  message(STATUS "sccache: using ${CAT_SCCACHE_EXECUTABLE} as compiler launcher")
+  message(VERBOSE "sccache: using ${CAT_SCCACHE_EXECUTABLE} as compiler launcher")
   set(CMAKE_CXX_COMPILER_LAUNCHER "${CAT_SCCACHE_EXECUTABLE}")
 endif()
 
@@ -317,11 +317,14 @@ option(CAT_BUILD_SHARED
 # Switches `cat`'s `INTERFACE`-linked impl to `cat-impl-shared`, so every
 # `cat`-linker transparently picks up `libcat.so`. Implies `CAT_BUILD_SHARED`.
 option(CAT_USE_SHARED
-  "Make `cat` link libcat.so instead of libcat.a (implies CAT_BUILD_SHARED)." OFF)
+  [=[
+Make `cat` link libcat.so instead of libcat.a (implies CAT_BUILD_SHARED).
+This primarily exists for testing compatibility with `clang-repl` in CI.
+]=] OFF)
 if (CAT_USE_SHARED AND NOT CAT_BUILD_SHARED)
   set(CAT_BUILD_SHARED ON CACHE BOOL
     "Build libcat.so (cat-impl-shared) and the clang-repl-libcat wrapper." FORCE)
-  message(STATUS "CAT_USE_SHARED=ON: forcing CAT_BUILD_SHARED on.")
+  message(VERBOSE "CAT_USE_SHARED=ON: forcing CAT_BUILD_SHARED on.")
 endif()
 
 if (CAT_BUILD_SHARED)

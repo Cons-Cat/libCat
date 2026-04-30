@@ -15,8 +15,8 @@ cmake_minimum_required(VERSION 3.24)
 #   examples/hello.{ii,bc,s}          # from the example execs  (`examples`)
 #   ...
 #
-# Each copied `.ii` is run through `clang-format -i` at the end of the target so
-# the preprocessed source is human-readable.
+# Copied `.ii` files are run through the parallel format driver at the end of
+# the target so the preprocessed source is human-readable.
 #
 # Dual-mode file (`CMAKE_SCRIPT_MODE_FILE` is the discriminator):
 #
@@ -34,7 +34,7 @@ cmake_minimum_required(VERSION 3.24)
 #      for that domain, prunes stale destination files (scoped to the
 #      top-level dirs we just produced), and copies via
 #      `configure_file COPYONLY`.
-#   3. Runs `clang-format -i` on every copied `.ii` (sequential).
+#   3. Runs the parallel format driver on every copied `.ii`.
 #   4. Re-surfaces a non-zero sub-build exit via `FATAL_ERROR`, but only
 #      after the copy has ferried whatever Clang wrote before failing.
 #
@@ -48,7 +48,7 @@ cmake_minimum_required(VERSION 3.24)
 #
 # Incremental: Ninja skips up-to-date TU compiles; `configure_file COPYONLY` (=
 # `copy_if_different`) skips unchanged temps so their destination mtimes stay
-# put; `clang-format -i` is idempotent.
+# put. `clang-format` is idempotent.
 #
 # Script-mode args (`-D`-passed):
 #   CAT_INTER_IMPL_TARGET / CAT_INTER_IMPL_OBJ_DIR         \
@@ -58,10 +58,17 @@ cmake_minimum_required(VERSION 3.24)
 #   CAT_INTER_BUILD_DIR     build dir for the inner `cmake --build`
 #   CAT_INTER_GENERATOR     `CMAKE_GENERATOR`, picks the keep-going flag
 #   CAT_CLANG_FORMAT_PATH   clang-format binary (may be empty -- skipped then)
+#   CAT_FORMAT_INTERMEDIARIES whether to format copied .ii output
 
 if (NOT CMAKE_SCRIPT_MODE_FILE)
   # Module mode:
   set(_cat_intermediaries_script "${CMAKE_CURRENT_LIST_FILE}")
+  set(_cat_inter_format_worktree
+    "${CMAKE_SOURCE_DIR}/scripts/cat_format_worktree.py")
+  option(CAT_FORMAT_INTERMEDIARIES "Format copied .ii intermediaries." ON)
+  find_program(CAT_PYTHON3
+    NAMES python3
+    DOC "Python 3 for libCat helper scripts.")
 
   # Impl shadow (always present):
   get_property(_cat_impl_sources_for_intermediaries TARGET cat-impl PROPERTY SOURCES)
@@ -70,7 +77,8 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   target_link_libraries(cat-intermediaries-lib PRIVATE cat)
   target_compile_options(cat-intermediaries-lib PRIVATE
     ${CAT_COMPILE_OPTIONS_INTERNAL}
-    -save-temps=obj)
+    -save-temps=obj
+    -Wa,--no-warn)
   unset(_cat_impl_sources_for_intermediaries)
 
   # Tests shadow (iff `cat-tests` has test sources attached):
@@ -92,7 +100,9 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
       # INTERFACE, so -- unlike the impl shadow -- we do not need to re-apply
       # them here. `-save-temps=obj` is the only per-shadow add.
       target_link_libraries(cat-intermediaries-tests-lib PRIVATE cat-tests)
-      target_compile_options(cat-intermediaries-tests-lib PRIVATE -save-temps=obj)
+      target_compile_options(cat-intermediaries-tests-lib PRIVATE
+        -save-temps=obj
+        -Wa,--no-warn)
       set(_cat_inter_tests_target cat-intermediaries-tests-lib)
       set(_cat_inter_tests_obj_dir
         "${CMAKE_BINARY_DIR}/CMakeFiles/cat-intermediaries-tests-lib.dir")
@@ -127,7 +137,9 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
       add_library(cat-intermediaries-examples-lib OBJECT EXCLUDE_FROM_ALL
         ${_cat_examples_sources_for_intermediaries})
       target_link_libraries(cat-intermediaries-examples-lib PRIVATE cat-examples)
-      target_compile_options(cat-intermediaries-examples-lib PRIVATE -save-temps=obj)
+      target_compile_options(cat-intermediaries-examples-lib PRIVATE
+        -save-temps=obj
+        -Wa,--no-warn)
       set(_cat_inter_examples_target cat-intermediaries-examples-lib)
       set(_cat_inter_examples_obj_dir
         "${CMAKE_BINARY_DIR}/CMakeFiles/cat-intermediaries-examples-lib.dir")
@@ -147,10 +159,14 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
       -DCAT_INTER_BUILD_DIR=${CMAKE_BINARY_DIR}
       -DCAT_INTER_GENERATOR=${CMAKE_GENERATOR}
       -DCAT_CLANG_FORMAT_PATH=${CAT_CLANG_FORMAT_PATH}
+      -DCAT_FORMAT_INTERMEDIARIES=${CAT_FORMAT_INTERMEDIARIES}
+      -DCAT_INTER_FORMAT_WORKTREE=${_cat_inter_format_worktree}
+      -DCAT_PYTHON3=${CAT_PYTHON3}
       -P ${_cat_intermediaries_script}
     USES_TERMINAL
-    COMMENT "Building cat-intermediaries shadow libs (failures tolerated) + copying .ii / .bc / .s into ${CMAKE_BINARY_DIR}/.")
+    COMMENT "Copying intermediaries.")
 
+  unset(_cat_inter_format_worktree)
   unset(_cat_inter_tests_target)
   unset(_cat_inter_tests_obj_dir)
   unset(_cat_inter_examples_target)
@@ -196,12 +212,26 @@ execute_process(
           ${_cat_inter_keep_going_args}
   RESULT_VARIABLE _cat_inter_build_rc)
 
+if (NOT CAT_FORMAT_INTERMEDIARIES)
+  message(STATUS "Skipping formatting.")
+endif()
+set(_cat_inter_can_format OFF)
+if (CAT_FORMAT_INTERMEDIARIES
+    AND CAT_CLANG_FORMAT_PATH
+    AND CAT_PYTHON3
+    AND EXISTS "${CAT_INTER_FORMAT_WORKTREE}")
+  set(_cat_inter_can_format ON)
+endif()
+
 # Per-domain processing: glob obj dir, flatten, prune stale, copy, format.
 # Parallel lists drive one iteration per domain. Empty `obj_dir` entries (tests
 # / examples absent) are skipped inside the loop.
 set(_cat_inter_doms      "impl"
                          "tests"
                          "examples")
+set(_cat_inter_labels    "Libraries"
+                         "Tests"
+                         "Examples")
 set(_cat_inter_obj_dirs  "${CAT_INTER_IMPL_OBJ_DIR}"
                          "${CAT_INTER_TESTS_OBJ_DIR}"
                          "${CAT_INTER_EXAMPLES_OBJ_DIR}")
@@ -214,9 +244,13 @@ set(_cat_inter_obj_dirs  "${CAT_INTER_IMPL_OBJ_DIR}"
 set(_cat_inter_home_re   ""
                          "^tests/"
                          "^examples/")
+set(_cat_inter_format_dirs "${CAT_INTER_DST_DIR}/{library_name}"
+                           "${CAT_INTER_DST_DIR}/tests"
+                           "${CAT_INTER_DST_DIR}/examples")
 
-foreach(_dom _obj_dir _home IN ZIP_LISTS
-        _cat_inter_doms _cat_inter_obj_dirs _cat_inter_home_re)
+foreach(_dom _label _obj_dir _home _format_dir IN ZIP_LISTS
+        _cat_inter_doms _cat_inter_labels _cat_inter_obj_dirs
+        _cat_inter_home_re _cat_inter_format_dirs)
   if (NOT _obj_dir OR NOT EXISTS "${_obj_dir}")
     continue()
   endif()
@@ -239,6 +273,8 @@ foreach(_dom _obj_dir _home IN ZIP_LISTS
   #     symmetry so a future move of the examples dir only needs one
   #     regex update.)
   set(_cat_inter_dst_rel ${_cat_inter_src_rel})
+  list(TRANSFORM _cat_inter_dst_rel REPLACE
+    "^(Debug|Release|RelWithDebInfo)/" "")
   list(TRANSFORM _cat_inter_dst_rel REPLACE
     "^src/libraries/([^/]+)/implementations/" "\\1/")
   list(TRANSFORM _cat_inter_dst_rel REPLACE "^tests/src/" "tests/")
@@ -293,37 +329,127 @@ foreach(_dom _obj_dir _home IN ZIP_LISTS
     endif()
   endforeach()
 
+  set(_cat_inter_changed_ii_paths "")
+  set(_cat_inter_changed_ii_stamps "")
+  set(_cat_inter_changed_ii_stamp_values "")
+  set(_cat_inter_copied_count 0)
+  set(_cat_inter_skipped_count 0)
   foreach(_src_rel _dst_rel IN ZIP_LISTS _cat_inter_src_rel _cat_inter_dst_rel)
-    configure_file("${_obj_dir}/${_src_rel}"
-                   "${CAT_INTER_DST_DIR}/${_dst_rel}" COPYONLY)
-  endforeach()
-
-  list(LENGTH _cat_inter_src_rel _cat_inter_count)
-  message(STATUS
-    "cat-intermediaries: ${_dom}: copied ${_cat_inter_count} file(s).")
-
-  # Format the copied `.ii` files in place. `.bc` is binary and `.s` is.
-  # assembly, so neither is clang-formattable. Sequential and dumb;
-  # `clang-format` is idempotent so subsequent runs are still correct, just not
-  # free.
-  if (CAT_CLANG_FORMAT_PATH)
-    set(_cat_inter_ii_count 0)
-    foreach(_dst_rel IN LISTS _cat_inter_dst_rel)
-      if (_dst_rel MATCHES "\\.ii$")
-        execute_process(
-          COMMAND "${CAT_CLANG_FORMAT_PATH}" -i "${CAT_INTER_DST_DIR}/${_dst_rel}"
-          RESULT_VARIABLE _cat_inter_fmt_rc)
-        if (NOT _cat_inter_fmt_rc EQUAL 0)
-          message(WARNING
-            "cat-intermediaries: clang-format failed on `${_dst_rel}` (exit ${_cat_inter_fmt_rc})")
-        endif()
-        math(EXPR _cat_inter_ii_count "${_cat_inter_ii_count} + 1")
+    set(_cat_inter_src "${_obj_dir}/${_src_rel}")
+    set(_cat_inter_dst "${CAT_INTER_DST_DIR}/${_dst_rel}")
+    set(_cat_inter_stamp
+      "${CAT_INTER_DST_DIR}/.cat-intermediaries-stamps/${_dst_rel}.sha256")
+    if (_dst_rel MATCHES "\\.ii$" AND _cat_inter_can_format)
+      set(_cat_inter_stamp_mode "formatted-repl-lines-v1")
+    elseif (_dst_rel MATCHES "\\.ii$")
+      set(_cat_inter_stamp_mode "repl-lines-v1")
+    else()
+      set(_cat_inter_stamp_mode "raw")
+    endif()
+    file(SHA256 "${_cat_inter_src}" _cat_inter_src_sha256)
+    set(_cat_inter_stamp_value
+      "${_cat_inter_stamp_mode}:${_cat_inter_src_sha256}")
+    set(_cat_inter_should_copy ON)
+    if (EXISTS "${_cat_inter_dst}" AND EXISTS "${_cat_inter_stamp}")
+      file(READ "${_cat_inter_stamp}" _cat_inter_old_stamp)
+      string(STRIP "${_cat_inter_old_stamp}" _cat_inter_old_stamp)
+      if (_cat_inter_old_stamp STREQUAL _cat_inter_stamp_value)
+        set(_cat_inter_should_copy OFF)
       endif()
-    endforeach()
+    endif()
+    if (_cat_inter_should_copy)
+      configure_file("${_cat_inter_src}" "${_cat_inter_dst}" COPYONLY)
+      math(EXPR _cat_inter_copied_count "${_cat_inter_copied_count} + 1")
+      if (_dst_rel MATCHES "\\.ii$")
+        file(READ "${_cat_inter_dst}" _cat_inter_ii_contents)
+        string(REGEX REPLACE "(^|\n)# [0-9]+[^\n]*" "\\1"
+          _cat_inter_ii_contents "${_cat_inter_ii_contents}")
+        file(WRITE "${_cat_inter_dst}" "${_cat_inter_ii_contents}")
+        if (_cat_inter_can_format)
+          list(APPEND _cat_inter_changed_ii_paths "${_cat_inter_dst}")
+          list(APPEND _cat_inter_changed_ii_stamps "${_cat_inter_stamp}")
+          list(APPEND _cat_inter_changed_ii_stamp_values
+            "${_cat_inter_stamp_value}")
+        else()
+          get_filename_component(_cat_inter_stamp_dir
+            "${_cat_inter_stamp}" DIRECTORY)
+          file(MAKE_DIRECTORY "${_cat_inter_stamp_dir}")
+          file(WRITE "${_cat_inter_stamp}" "${_cat_inter_stamp_value}\n")
+        endif()
+      else()
+        get_filename_component(_cat_inter_stamp_dir
+          "${_cat_inter_stamp}" DIRECTORY)
+        file(MAKE_DIRECTORY "${_cat_inter_stamp_dir}")
+        file(WRITE "${_cat_inter_stamp}" "${_cat_inter_stamp_value}\n")
+      endif()
+    else()
+      math(EXPR _cat_inter_skipped_count "${_cat_inter_skipped_count} + 1")
+    endif()
+  endforeach()
+  unset(_cat_inter_src)
+  unset(_cat_inter_dst)
+  unset(_cat_inter_stamp)
+  unset(_cat_inter_stamp_mode)
+  unset(_cat_inter_stamp_value)
+  unset(_cat_inter_stamp_dir)
+  unset(_cat_inter_src_sha256)
+  unset(_cat_inter_old_stamp)
+  unset(_cat_inter_ii_contents)
+  unset(_cat_inter_should_copy)
+
+  if (_cat_inter_copied_count GREATER 0)
     message(STATUS
-      "cat-intermediaries: ${_dom}: formatted ${_cat_inter_ii_count} .ii file(s).")
+      "${_label}: Copied ${_cat_inter_copied_count} files.")
   endif()
+  if (_cat_inter_skipped_count GREATER 0)
+    message(STATUS
+      "${_label}: Skipped copying ${_cat_inter_skipped_count} unchanged files.")
+  endif()
+
+  # Format only changed `.ii` files in place. `.bc` is binary and `.s` is
+  # assembly, so neither is clang-formattable.
+  if (_cat_inter_can_format)
+    list(LENGTH _cat_inter_changed_ii_paths _cat_inter_ii_count)
+    if (_cat_inter_ii_count EQUAL 0)
+      message(STATUS
+        "${_label}: Skipped formatting because no .ii files changed.")
+    else()
+      message(STATUS
+        "${_label}: Formatting ${_cat_inter_ii_count} .ii files in "
+        "${_format_dir}.")
+      execute_process(
+        COMMAND "${CAT_PYTHON3}" "${CAT_INTER_FORMAT_WORKTREE}"
+                APPLY_IN_PLACE "${CAT_CLANG_FORMAT_PATH}"
+                ${_cat_inter_changed_ii_paths}
+        RESULT_VARIABLE _cat_inter_fmt_rc)
+      if (NOT _cat_inter_fmt_rc EQUAL 0)
+        message(WARNING
+          "cat-intermediaries: clang-format failed for ${_label} "
+          "(exit ${_cat_inter_fmt_rc})")
+      else()
+        foreach(_cat_inter_stamp _cat_inter_stamp_value IN ZIP_LISTS
+                _cat_inter_changed_ii_stamps
+                _cat_inter_changed_ii_stamp_values)
+          get_filename_component(_cat_inter_stamp_dir
+            "${_cat_inter_stamp}" DIRECTORY)
+          file(MAKE_DIRECTORY "${_cat_inter_stamp_dir}")
+          file(WRITE "${_cat_inter_stamp}" "${_cat_inter_stamp_value}\n")
+        endforeach()
+      endif()
+      message(STATUS
+        "${_label}: Finished formatting.")
+      unset(_cat_inter_fmt_rc)
+    endif()
+  endif()
+  unset(_cat_inter_changed_ii_paths)
+  unset(_cat_inter_changed_ii_stamps)
+  unset(_cat_inter_changed_ii_stamp_values)
+  unset(_cat_inter_copied_count)
+  unset(_cat_inter_skipped_count)
 endforeach()
+unset(_cat_inter_can_format)
+
+message(STATUS "Copied library intermediaries to:\n ${CAT_INTER_DST_DIR}/*")
 
 # Re-surface the captured sub-build exit. The copy already ran, so the user gets
 # both the compile errors (streamed via `USES_TERMINAL`) and access to whatever

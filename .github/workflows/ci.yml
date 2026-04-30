@@ -9,7 +9,7 @@ on:
   pull_request:
 
 jobs:
-  toolchain:
+  install-toolchain:
     # Prime the mise cache once so parallel jobs do not all download and extract
     # the Clang package set on a cold cache in the same workflow run.
     runs-on: ubuntu-24.04
@@ -28,7 +28,7 @@ jobs:
     # hour, with no advance notice and with materially different
     # feature flags (AVX-512, AVX-VNNI, GFNI-on-VEX, etc.).
     runs-on: ubuntu-24.04
-    needs: toolchain
+    needs: install-toolchain
     steps:
       - uses: actions/checkout@v4
 
@@ -89,9 +89,10 @@ jobs:
             | sort
           echo "::endgroup::"
 
-  changes:
+  detect-changes:
     runs-on: ubuntu-24.04
     outputs:
+      compile: ${{ steps.changed.outputs.compile }}
       gdb_symlink: ${{ steps.changed.outputs.gdb_symlink }}
     steps:
       - uses: actions/checkout@v4
@@ -110,16 +111,29 @@ jobs:
           fi
 
           if [ -z "${base}" ] || [ "${base}" = "0000000000000000000000000000000000000000" ]; then
-            changed="true"
-          elif git diff --name-only "${base}" "${{ github.sha }}" \
-            | grep -qx 'cmake/gdb_symlink.cmake'
-          then
+            compile="true"
             changed="true"
           else
-            changed="false"
+            changed_files=$(git diff --name-only "${base}" "${{ github.sha }}")
+            if printf '%s\n' "${changed_files}" \
+              | grep -Eq '(^|/)CMakeLists\.txt$|^cmake/|^src/|^tests/|^examples/'
+            then
+              compile="true"
+            else
+              compile="false"
+            fi
+
+            if printf '%s\n' "${changed_files}" | grep -qx 'cmake/gdb_symlink.cmake'
+            then
+              changed="true"
+            else
+              changed="false"
+            fi
           fi
 
+          echo "compile=${compile}" >> "${GITHUB_OUTPUT}"
           echo "gdb_symlink=${changed}" >> "${GITHUB_OUTPUT}"
+          echo "compile changed: ${compile}"
           echo "gdb_symlink changed: ${changed}"
 
   lint:
@@ -127,7 +141,7 @@ jobs:
     # with the heavier compile / test jobs to gate invariants that don't
     # require compiling.
     runs-on: ubuntu-24.04
-    needs: toolchain
+    needs: install-toolchain
     steps:
       - uses: actions/checkout@v4
 
@@ -191,7 +205,7 @@ jobs:
 
       - name: Configure CMake lint targets
         run: |
-          cmake -S . -B "${CAT_LINT_BUILD_DIR}" \
+          cmake -S . -B "${CAT_LINT_BUILD_DIR}" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCAT_BUILD_ALL_EXAMPLES=OFF \
             -DCAT_PCH=OFF
@@ -217,15 +231,22 @@ jobs:
   debug:
     # Debug build with sanitizers.
     runs-on: ubuntu-24.04
-    needs: [toolchain, changes]
+    needs: [install-toolchain, detect-changes]
+    if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: ./.github/actions/setup-toolchain
 
+      - name: Install GDB
+        # TODO: Check whether mise can manage GDB for us instead of apt.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
+
       - name: Configure, build, and test (Debug)
         run: |
-          cmake -S . -B build-debug \
+          cmake -S . -B build-debug -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_USE_SANITIZERS=ON
           cmake --build build-debug
@@ -236,7 +257,7 @@ jobs:
 
       - name: GDB pretty printers (-O0 Debug, PCH=OFF)
         run: |
-          cmake -S . -B build-debug-no-pch \
+          cmake -S . -B build-debug-no-pch -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_PCH=OFF
@@ -244,13 +265,13 @@ jobs:
 
       - name: GDB pretty printers (RelWithDebInfo, PCH=ON)
         run: |
-          cmake -S . -B build-gdb-relwithdebinfo \
+          cmake -S . -B build-gdb-relwithdebinfo -G Ninja \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCAT_PCH=ON
           cmake --build build-gdb-relwithdebinfo --target check-gdb-pretty-printers
 
       - name: Verify .gdbinit symlink (Debug, Ninja generator non-multi)
-        if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
+        if: ${{ needs.detect-changes.outputs.gdb_symlink == 'true' }}
         run: |
           set -eu
           if [ ! -f build-debug/.gdbinit ]; then
@@ -263,7 +284,8 @@ jobs:
   release:
     # Release build and tests.
     runs-on: ubuntu-24.04
-    needs: [toolchain, changes]
+    needs: [install-toolchain, detect-changes]
+    if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -271,13 +293,13 @@ jobs:
 
       - name: Configure, build, and test (Release)
         run: |
-          cmake -S . -B build-release \
+          cmake -S . -B build-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build-release
           ctest --test-dir build-release --verbose --output-on-failure
 
       - name: Verify .gdbinit symlink (Release, Ninja generator non-multi)
-        if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
+        if: ${{ needs.detect-changes.outputs.gdb_symlink == 'true' }}
         run: |
           set -eu
           if [ ! -f build-release/.gdbinit ]; then
@@ -291,7 +313,8 @@ jobs:
     # End-to-end `libcat.so` flow: build, install, then have a
     # downstream `find_package(cat)` consumer link it.
     runs-on: ubuntu-24.04
-    needs: toolchain
+    needs: [install-toolchain, detect-changes]
+    if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -308,7 +331,7 @@ jobs:
         run: |
           set -eu
 
-          cmake -S . -B build-shared \
+          cmake -S . -B build-shared -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_USE_SHARED=ON \
@@ -350,7 +373,7 @@ jobs:
              return 0;
           }
           EOF
-          cmake -S consumer-shared -B build-consumer \
+          cmake -S consumer-shared -B build-consumer -G Ninja \
             -DCMAKE_PREFIX_PATH="${PWD}/install-shared"
           cmake --build build-consumer
 
@@ -366,14 +389,15 @@ jobs:
     # The SDE-pinned `cpuid` run (commented out below)
     # also lands here so the cached toolchain is reused.
     runs-on: ubuntu-24.04
-    needs: [toolchain, changes]
+    needs: [install-toolchain, detect-changes]
+    if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: ./.github/actions/setup-toolchain
 
       - name: Configure and minimal build (Ninja Multi-Config, Debug and Release)
-        if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
+        if: ${{ needs.detect-changes.outputs.gdb_symlink == 'true' }}
         # Smallest surface that still pulls in `cat-gdb-tests` and
         # `cat-gdb-examples` so we can symlink `.gdbinit`.
         run: |
@@ -385,7 +409,7 @@ jobs:
           cmake --build build-multi --config Release --target test_dummy hello
 
       - name: Verify .gdbinit symlinks (Ninja generator multi-config)
-        if: ${{ needs.changes.outputs.gdb_symlink == 'true' }}
+        if: ${{ needs.detect-changes.outputs.gdb_symlink == 'true' }}
         # Multi-config layout: per-subdirectory per-config files, no
         # top-level. Single-config equivalents are checked in the
         # Debug and Release jobs.
@@ -426,7 +450,7 @@ jobs:
         # dir to avoid CMake reconfiguration churn between runs.
         run: |
           set -eu
-          cmake -S . -B build-repl-debug-asan \
+          cmake -S . -B build-repl-debug-asan -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=ON \
@@ -448,7 +472,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           set -eu
-          cmake -S . -B build-repl-debug \
+          cmake -S . -B build-repl-debug -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=OFF \
@@ -470,7 +494,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           set -eu
-          cmake -S . -B build-repl-release-asan \
+          cmake -S . -B build-repl-release-asan -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=ON \
@@ -492,7 +516,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           set -eu
-          cmake -S . -B build-repl-release \
+          cmake -S . -B build-repl-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCAT_BUILD_SHARED=ON \
             -DCAT_USE_SANITIZERS=OFF \
@@ -541,7 +565,7 @@ jobs:
       #   # Sanitizers and sccache off: ASan and Pin-based binary
       #   # instrumentation do not coexist cleanly.
       #   run: |
-      #     cmake -S . -B build-sde \
+      #     cmake -S . -B build-sde -G Ninja \
       #       -DCMAKE_BUILD_TYPE=Release \
       #       -DCMAKE_CXX_COMPILER=clang++ \
       #       -DCAT_USE_SANITIZERS=OFF \

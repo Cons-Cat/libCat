@@ -17,7 +17,7 @@ _FileResult = Tuple[str, str, str | None]
 
 # Hard cap: many concurrent `clang-format` child processes are heavy in RAM (e.g.
 # WSL2).
-_MAX_PARALLEL = 4
+_MAX_PARALLEL = 8
 
 
 def _cap_jobs(n: int) -> int:
@@ -27,9 +27,6 @@ def _cap_jobs(n: int) -> int:
 
 
 def _default_jobs() -> int:
-    raw = os.environ.get("CAT_LIBCAT_JOBS", "").strip()
-    if raw and all(c.isdigit() for c in raw) and int(raw) > 0:
-        return _cap_jobs(int(raw, 10))
     n = os.cpu_count() or 1
     return _cap_jobs(n)
 
@@ -37,6 +34,14 @@ def _default_jobs() -> int:
 def _one_file(path: str, mode: str, cf: str) -> _FileResult:
     if not path:
         return "skip", "", None
+    if mode == "APPLY_IN_PLACE":
+        p = subprocess.run(
+            [cf, "-i", path], capture_output=True, text=True, check=False
+        )
+        if p.returncode != 0:
+            b = p.stderr or p.stdout or ""
+            return "fail", path, b.rstrip()
+        return "same", path, None
     try:
         p = subprocess.run(
             [cf, path], capture_output=True, text=True, check=False
@@ -67,24 +72,15 @@ def _one_file(path: str, mode: str, cf: str) -> _FileResult:
 
 def _parse() -> Namespace:
     p = ArgumentParser()
-    p.add_argument("mode", choices=["APPLY", "CHECK"])
+    p.add_argument("mode", choices=["APPLY", "APPLY_IN_PLACE", "CHECK"])
     p.add_argument("clang_format", type=str)
     p.add_argument("paths", nargs="*", type=str, default=[])
-    p.add_argument(
-        "-j",
-        "--jobs",
-        type=int,
-        default=None,
-        help="concurrent clang-format calls (capped at 4, default: env "
-        "CAT_LIBCAT_JOBS or min(4, CPU count)) ",
-    )
     return p.parse_args(list(sys.argv[1:]) if len(sys.argv) > 1 else None)
 
 
 def main() -> int:
     a = _parse()
-    jcap = a.jobs if a.jobs is not None else _default_jobs()
-    jcap = _cap_jobs(jcap)
+    jcap = _default_jobs()
     paths = [p for p in a.paths if p]
     if not paths:
         return 0

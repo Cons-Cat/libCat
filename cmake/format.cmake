@@ -48,7 +48,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
         "is resolved.")
       unset(CAT_CLANG_FORMAT_PATH CACHE)
     else()
-      message(STATUS
+      message(VERBOSE
         "clang-format: ${CAT_CLANG_FORMAT_PATH} (version ${_cat_cf_major})")
     endif()
     unset(_cat_cf_version)
@@ -146,10 +146,14 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   if (CAT_PYTHON3)
     if (EXISTS "${_cat_restyle_script}")
       file(GLOB_RECURSE _cat_restyle_cmake_files CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/*.cmake"
-        "${CMAKE_SOURCE_DIR}/*/CMakeLists.txt")
+        "${CMAKE_SOURCE_DIR}/cmake/*.cmake"
+        "${CMAKE_SOURCE_DIR}/src/CMakeLists.txt"
+        "${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt"
+        "${CMAKE_SOURCE_DIR}/examples/CMakeLists.txt")
       file(GLOB_RECURSE _cat_restyle_python_files CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/*.py")
+        "${CMAKE_SOURCE_DIR}/cmake/*.py"
+        "${CMAKE_SOURCE_DIR}/gdb_pretty_printers/*.py"
+        "${CMAKE_SOURCE_DIR}/scripts/*.py")
       set(_cat_restyle_files
         ${_cat_format_files}
         ${_cat_restyle_cmake_files}

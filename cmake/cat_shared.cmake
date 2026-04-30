@@ -173,7 +173,7 @@ unset(_cat_impl_sources_for_so)
 if (NOT CMAKE_EXPORT_COMPILE_COMMANDS)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL
     "Export compile_commands.json (required by clang-repl-libcat)." FORCE)
-  message(STATUS
+  message(VERBOSE
     "CAT_BUILD_SHARED: enabling CMAKE_EXPORT_COMPILE_COMMANDS for clang-repl-libcat.")
 endif()
 
@@ -216,7 +216,9 @@ file(CHMOD "${CMAKE_BINARY_DIR}/clang-repl-libcat"
 # `%lib`-load it (the wrapper's existence is configure- time, but the `.so` only
 # appears after `cat-impl-shared` builds).
 add_custom_target(cat-repl
-  COMMAND "${CMAKE_BINARY_DIR}/clang-repl-libcat"
+  COMMAND "${CMAKE_COMMAND}" -E env
+    "CAT_REPL_CONFIG=$<CONFIG>"
+    "${CMAKE_BINARY_DIR}/clang-repl-libcat"
   USES_TERMINAL
   COMMENT "Launching clang-repl with libCat preloaded.")
 add_dependencies(cat-repl cat-impl-shared)

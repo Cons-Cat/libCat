@@ -32,6 +32,7 @@ add_library(cat-syntax-lib OBJECT EXCLUDE_FROM_ALL ${_cat_impl_sources_for_synta
 target_link_libraries(cat-syntax-lib PRIVATE cat)
 target_compile_options(cat-syntax-lib PRIVATE
   ${CAT_COMPILE_OPTIONS_INTERNAL}
+  -Wno-unused-command-line-argument
   -fsyntax-only)
 
 if (CAT_PCH)

@@ -49,6 +49,11 @@ def main() -> int:
     try:
         tty.setraw(stdin_fd)
         _write_all(master_fd, f"%lib {libcat_so}\n".encode())
+        initial_input = os.environ.get("CAT_REPL_INITIAL_INPUT", "")
+        if initial_input:
+            _write_all(master_fd, initial_input.encode())
+            if not initial_input.endswith("\n"):
+                _write_all(master_fd, b"\n")
 
         watched = [stdin_fd, master_fd]
         while True:

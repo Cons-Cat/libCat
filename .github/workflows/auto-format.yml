@@ -42,7 +42,7 @@ jobs:
         # so `--target cat-format` runs the formatter alone with no
         # `cat` / `cat-impl` compilation.
         run: |
-          cmake -S . -B build-format
+          cmake -S . -B build-format -G Ninja
 
       - name: Run cat-format
         run: cmake --build build-format --target cat-format

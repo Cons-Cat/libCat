@@ -62,7 +62,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
         "is resolved.")
       unset(CAT_CLANG_TIDY_PATH CACHE)
     else()
-      message(STATUS
+      message(VERBOSE
         "clang-tidy: ${CAT_CLANG_TIDY_PATH} (version ${_cat_ct_major})")
     endif()
     unset(_cat_ct_version)

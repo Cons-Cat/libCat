@@ -67,11 +67,11 @@ if (CAT_OPT_VIEWER_PATH)
   else()
     set(_cat_opt_viewer_cmd "${CAT_OPT_VIEWER_PATH}")
   endif()
-  message(STATUS
+  message(VERBOSE
     "cat-opt-report: render with `${_cat_opt_viewer_cmd} ${CMAKE_BINARY_DIR}`")
   unset(_cat_opt_viewer_cmd)
 else()
-  message(STATUS
+  message(WARNING
     "cat-opt-report: `opt-viewer.py` not found; install `llvm-${_cat_opt_clang_major}-tools` "
     "or put `opt-viewer.py` on PATH to render the YAML records.")
 endif()

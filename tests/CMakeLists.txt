@@ -140,6 +140,11 @@ if(CAT_BUILD_UNIT_TESTS)
       GdbPrettyPrinters
       PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  else()
+    message(WARNING
+      "check-gdb-pretty-printers: `gdb` not found. Skipping.")
+    add_custom_target(
+      check-gdb-pretty-printers)
   endif()
 
   # # Parked: standalone `test_cpuid` runner. Linking `cat-tests-base` skips the

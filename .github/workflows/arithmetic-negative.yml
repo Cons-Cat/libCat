@@ -42,7 +42,7 @@ jobs:
         # off, no need to `cmake --build`.
         run: |
           set -euxo pipefail
-          cmake -S . -B build-arith-negative \
+          cmake -S . -B build-arith-negative -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_USE_SANITIZERS=OFF \
             -DCAT_BUILD_SHARED=OFF \

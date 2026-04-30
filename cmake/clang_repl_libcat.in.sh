@@ -13,24 +13,125 @@
 #     line-buffered. `%quit` or Ctrl+D to exit.
 #   * Stream (pipe / redirected stdin): no hint, no prompt, code on
 #     stdin gets evaluated until EOF.
-#   * One-shot (`--eval`): no hint, stdin is ignored, the supplied
-#     snippets run in order and the REPL exits.
+#   * One-shot (`eval`, `--eval`, `--eval-file`, or final positional snippet):
+#     no hint, stdin is ignored, the supplied snippets run in order and the REPL
+#     exits.
+#   * Eval-first (`eval-first`): evaluates the same input syntax as one-shot,
+#     then drops into the interactive REPL.
 #
 # Flags (consumed by this wrapper before clang-repl ever sees them):
-#   --eval CODE         Evaluate CODE. Repeatable; snippets run in order.
-#   --eval-file PATH    Same, with snippet sourced from a file.
+#   eval [ARGS...] INPUT
+#                       Evaluate INPUT, which may be code or a readable path.
+#   eval-first [ARGS...] INPUT
+#                       Evaluate INPUT, then stay in the REPL.
+#   skip-main           Do not call `main()` automatically for file inputs.
+#   --eval INPUT        Same as `eval INPUT`. Repeatable.
+#   --eval-file PATH    Compatibility spelling for `--eval PATH`.
+#                       Evaluate `#include "PATH"` as one REPL input.
+#                       Source-like files also run `main()`.
 #   --                  End of wrapper flags. Everything after this is
 #                       passed through to clang-repl verbatim.
-# Anything else is treated as a clang-repl argument.
+# Anything else is treated as a clang-repl argument, except a final non-option
+# argument, which is treated as a one-shot snippet or included file path.
 
 set -eEuo pipefail
 
 build_dir='@CMAKE_BINARY_DIR@'
+source_dir='@CMAKE_SOURCE_DIR@'
 libcat_so="${build_dir}/libcat.so"
+repl_config="${CAT_REPL_CONFIG:-}"
 flag_extractor='@CMAKE_SOURCE_DIR@/cmake/clang_repl_libcat.py'
 interactive_relay='@CMAKE_SOURCE_DIR@/cmake/clang_repl_libcat_interactive.py'
 clang_repl='@CAT_CLANG_REPL_EXECUTABLE@'
 asan_runtime='@CAT_ASAN_RUNTIME_PATH@'
+preprocessed_eval=0
+
+eval_include_file() {
+  path="$(realpath "$1")"
+  path="${path//\\/\\\\}"
+  path="${path//\"/\\\"}"
+  printf '#include "%s"' "${path}"
+}
+
+is_translation_unit_file() {
+  case "$1" in
+    *.cc|*.cpp|*.cxx|*.i|*.ii)
+      return 0 ;;
+    *)
+      return 1 ;;
+  esac
+}
+
+resolve_eval_file() {
+  input="$1"
+  candidates=("${input}")
+  if [[ "${input}" == ./* ]]; then
+    candidates+=("${input#./}")
+  fi
+  if [[ "${input}" != /* ]]; then
+    candidates+=("${source_dir}/${input}")
+  fi
+  for candidate in "${candidates[@]}"; do
+    if [[ -r "${candidate}" ]]; then
+      realpath "${candidate}"
+      return 0
+    fi
+  done
+
+  rel="${input}"
+  case "${rel}" in
+    "${source_dir}/"*) rel="${rel#"${source_dir}/"}" ;;
+    "${build_dir}/"*) rel="${rel#"${build_dir}/"}" ;;
+    ./*) rel="${rel#./}" ;;
+  esac
+  rel="${rel#build/}"
+  case "${rel}" in
+    Debug/*|Release/*|RelWithDebInfo/*)
+      rel="${rel#*/}" ;;
+  esac
+  if [[ "${rel}" =~ ^src/libraries/([^/]+)/implementations/(.*)$ ]]; then
+    rel="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+  elif [[ "${rel}" == tests/src/* ]]; then
+    rel="tests/${rel#tests/src/}"
+  fi
+  case "${rel}" in
+    *.cc|*.cpp|*.cxx)
+      candidate="${build_dir}/${rel%.*}.ii"
+      if [[ -r "${candidate}" ]]; then
+        realpath "${candidate}"
+        return 0
+      fi ;;
+  esac
+  return 1
+}
+
+add_eval_input() {
+  if path="$(resolve_eval_file "$1")"; then
+    case "${path}" in *.i|*.ii) preprocessed_eval=1 ;; esac
+    evals+=("$(eval_include_file "${path}")")
+    if is_translation_unit_file "${path}"; then
+      main_probe_files+=("${path}")
+    fi
+  else
+    case "$1" in
+      *.cc|*.cpp|*.cxx|*.i|*.ii)
+        echo "clang-repl-libcat: cannot resolve path $1" >&2
+        exit 2 ;;
+    esac
+    evals+=("$1")
+  fi
+}
+
+if [ -n "${repl_config}" ] && [ -f "${build_dir}/${repl_config}/libcat.so" ]; then
+  libcat_so="${build_dir}/${repl_config}/libcat.so"
+elif [ ! -f "${libcat_so}" ]; then
+  for config in Debug Release RelWithDebInfo; do
+    if [ -f "${build_dir}/${config}/libcat.so" ]; then
+      libcat_so="${build_dir}/${config}/libcat.so"
+      break
+    fi
+  done
+fi
 
 if [ ! -f "${libcat_so}" ]; then
   echo "clang-repl-libcat: ${libcat_so} not found." >&2
@@ -41,15 +142,25 @@ fi
 
 evals=()
 extra_args=()
+main_probe_files=()
+eval_first=0
+skip_main=0
 while (( $# > 0 )); do
   case "$1" in
+    eval)
+      shift ;;
+    eval-first)
+      eval_first=1; shift ;;
+    skip-main)
+      skip_main=1; shift ;;
     --eval)
       [[ $# -ge 2 ]] || { echo "clang-repl-libcat: --eval needs an argument" >&2; exit 2; }
-      evals+=("$2"); shift 2 ;;
+      add_eval_input "$2"; shift 2 ;;
     --eval-file)
       [[ $# -ge 2 ]] || { echo "clang-repl-libcat: --eval-file needs a path" >&2; exit 2; }
       [[ -r "$2" ]] || { echo "clang-repl-libcat: cannot read $2" >&2; exit 2; }
-      evals+=("$(< "$2")"); shift 2 ;;
+      add_eval_input "$2"
+      shift 2 ;;
     --)
       shift; extra_args+=("$@"); break ;;
     *)
@@ -57,12 +168,71 @@ while (( $# > 0 )); do
   esac
 done
 
+if (( ${#evals[@]} == 0 && ${#extra_args[@]} > 0 )); then
+  last_index=$(( ${#extra_args[@]} - 1 ))
+  if [[ ${extra_args[${last_index}]} != -* ]]; then
+    final_arg="${extra_args[${last_index}]}"
+    add_eval_input "${final_arg}"
+    unset 'extra_args[${last_index}]'
+  fi
+fi
+
 oneshot=0
-if (( ${#evals[@]} > 0 )); then
+if (( ${#evals[@]} > 0 && eval_first == 0 )); then
   oneshot=1
 fi
 
 mapfile -t flags < <(python3 "${flag_extractor}" "${build_dir}")
+if (( preprocessed_eval )); then
+  filtered_flags=()
+  skip_next=0
+  for flag in "${flags[@]}"; do
+    if (( skip_next )); then
+      skip_next=0
+      continue
+    fi
+    if [[ "${flag}" == "--Xcc=-include" ]]; then
+      skip_next=1
+      continue
+    fi
+    filtered_flags+=("${flag}")
+  done
+  flags=("${filtered_flags[@]}")
+  unset filtered_flags
+fi
+flags+=("--Xcc=-DCAT_CLANG_REPL=1")
+flags+=("--Xcc=-Wno-unused-variable")
+
+has_zero_arg_main() {
+  path="$(realpath "$1")"
+  path="${path//\\/\\\\}"
+  path="${path//\"/\\\"}"
+  probe="$(mktemp --suffix=.cpp)"
+  {
+    printf '#include "%s"\n' "${path}"
+    printf 'auto __cat_repl_main_probe = main();\n'
+  } > "${probe}"
+  cxx_flags=()
+  for flag in "${flags[@]}"; do
+    cxx_flags+=("${flag#--Xcc=}")
+  done
+  if "${CXX:-@CMAKE_CXX_COMPILER@}" "${cxx_flags[@]}" -fsyntax-only "${probe}" \
+      >/dev/null 2>&1
+  then
+    rm -f "${probe}"
+    return 0
+  fi
+  rm -f "${probe}"
+  return 1
+}
+
+if (( skip_main == 0 )); then
+  for file in "${main_probe_files[@]}"; do
+    if has_zero_arg_main "${file}"; then
+      evals+=("main();")
+    fi
+  done
+fi
 
 # When the build is sanitised, the AddressSanitizer runtime has to be in
 # the address space before any JIT-loaded libCat code touches a global,
@@ -92,6 +262,13 @@ else
 fi
 
 if (( interactive )); then
+  if (( eval_first && ${#evals[@]} > 0 )); then
+    initial_input=""
+    for snippet in "${evals[@]}"; do
+      initial_input+="${snippet}"$'\n'
+    done
+    export CAT_REPL_INITIAL_INPUT="${initial_input}"
+  fi
   exec python3 "${interactive_relay}" "${libcat_so}" -- \
     "${clang_repl}" "${flags[@]}" "${extra_args[@]}"
 fi
@@ -101,10 +278,12 @@ fi
 # and `%quit` so clang-repl evaluates them and exits.
 {
   printf '%%lib %s\n' "${libcat_so}"
-  if (( oneshot )); then
+  if (( oneshot || eval_first )); then
     for snippet in "${evals[@]}"; do
       printf '%s\n' "${snippet}"
     done
+  fi
+  if (( oneshot )); then
     printf '%%quit\n'
   else
     exec cat

@@ -3,15 +3,70 @@ cmake = "4.3.2"
 ninja = "1.13.2"
 sccache = "0.15.0"
 
+[settings]
+experimental = true
+
 [env]
 CAT_LLVM_VERSION = "unstable"
 CC = "clang"
 CXX = "clang++"
 CMAKE_CXX_FLAGS = "-fdiagnostics-color=always"
-CMAKE_GENERATOR = "Ninja"
+CMAKE_GENERATOR = "Ninja Multi-Config"
 CMAKE_LINKER_TYPE = "LLD"
+CMAKE_EXPORT_COMPILE_COMMANDS = "ON"
 _.path = ".cache/cat-llvm/bin"
 
-[tasks.install-toolchain]
-description = "Download and extract the pinned Clang 23 nightly toolchain"
+[hooks]
+postinstall = { task = "install-clang-nightly" }
+
+[tasks.install-clang-nightly]
+description = "Download and extract the pinned Clang 23 nightly toolchain."
 run = "python3 scripts/install_mise_llvm_debs.py"
+
+[tasks.build]
+description = "Build libCat."
+run = "sh -c 'san_arg=; cmake_log=; build_v=; selected=0; is_multi() { grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null || case \"${CMAKE_GENERATOR:-}\" in *Multi-Config*) true ;; *) false ;; esac; }; build_dir() { cmake $cmake_log -S . -B \"$1\" $san_arg && cmake --build \"$1\" $build_v; }; build_config() { selected=1; if is_multi; then cmake $cmake_log -S . -B build $san_arg && cmake --build build --config \"$1\" $build_v; else cmake $cmake_log -S . -B \"build-$2\" -DCMAKE_BUILD_TYPE=\"$1\" $san_arg && cmake --build \"build-$2\" $build_v; fi; }; for arg do case \"$arg\" in -v) cmake_log=--log-level=VERBOSE; build_v=--verbose ;; san) san_arg=-DCAT_USE_SANITIZERS=ON ;; nosan) san_arg=-DCAT_USE_SANITIZERS=OFF ;; esac; done; for arg do case \"$arg\" in -v|san|nosan) ;; debug) build_config Debug debug ;; release) build_config Release release ;; relwithdebinfo) build_config RelWithDebInfo relwithdebinfo ;; *) selected=1; build_dir \"$arg\" ;; esac; done; [ \"$selected\" -eq 1 ] || build_dir build' --"
+
+[tasks.clean]
+description = "Clean libCat build outputs."
+run = "sh -c 'build_v=; selected=0; is_multi() { grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null; }; clean_existing() { [ -f \"$1/CMakeCache.txt\" ] && cmake --build \"$1\" --target clean $build_v; }; clean_dir() { selected=1; cmake --build \"$1\" --target clean $build_v; }; clean_config() { selected=1; if is_multi; then cmake --build build --config \"$1\" --target clean $build_v; else clean_dir \"build-$2\"; fi; }; for arg do case \"$arg\" in -v) build_v=--verbose ;; esac; done; for arg do case \"$arg\" in -v) ;; debug) clean_config Debug debug ;; release) clean_config Release release ;; relwithdebinfo) clean_config RelWithDebInfo relwithdebinfo ;; *) clean_dir \"$arg\" ;; esac; done; if [ \"$selected\" -eq 0 ]; then if is_multi; then for c in Debug Release RelWithDebInfo; do cmake --build build --config \"$c\" --target clean $build_v; done; else clean_existing build; clean_existing build-debug; clean_existing build-release; clean_existing build-relwithdebinfo; fi; fi' --"
+
+[tasks.format]
+description = "Run clang-format over libCat sources."
+run = "sh -c 'd=build; c=; n=; build_v=; for arg do case \"$arg\" in -v) build_v=--verbose ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; *) d=$arg ;; esac; done; if [ -n \"${c:-}\" ]; then if grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null; then cmake --build build --config \"$c\" --target cat-format $build_v; else cmake --build \"build-$n\" --target cat-format $build_v; fi; else cmake --build \"$d\" --target cat-format $build_v; fi' --"
+
+[tasks.format-check]
+description = "Check libCat formatting without rewriting files."
+run = "sh -c 'd=build; c=; n=; build_v=; for arg do case \"$arg\" in -v) build_v=--verbose ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; *) d=$arg ;; esac; done; if [ -n \"${c:-}\" ]; then if grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null; then cmake --build build --config \"$c\" --target cat-format-check $build_v; else cmake --build \"build-$n\" --target cat-format-check $build_v; fi; else cmake --build \"$d\" --target cat-format-check $build_v; fi' --"
+
+[tasks.restyle-comments]
+description = "Restyle libCat comments in place."
+run = "sh -c 'd=build; c=; n=; build_v=; for arg do case \"$arg\" in -v) build_v=--verbose ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; *) d=$arg ;; esac; done; if [ -n \"${c:-}\" ]; then if grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null; then cmake --build build --config \"$c\" --target cat-restyle-comments $build_v; else cmake --build \"build-$n\" --target cat-restyle-comments $build_v; fi; else cmake --build \"$d\" --target cat-restyle-comments $build_v; fi' --"
+
+[tasks.restyle-comments-check]
+description = "Check libCat comment style without rewriting files."
+run = "sh -c 'd=build; c=; n=; build_v=; for arg do case \"$arg\" in -v) build_v=--verbose ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; *) d=$arg ;; esac; done; if [ -n \"${c:-}\" ]; then if grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null; then cmake --build build --config \"$c\" --target cat-restyle-comments-check $build_v; else cmake --build \"build-$n\" --target cat-restyle-comments-check $build_v; fi; else cmake --build \"$d\" --target cat-restyle-comments-check $build_v; fi' --"
+
+[tasks.tidy]
+description = "Run clang-tidy over libCat translation units."
+run = "sh -c 'd=build; c=; n=; build_v=; for arg do case \"$arg\" in -v) build_v=--verbose ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; *) d=$arg ;; esac; done; if [ -n \"${c:-}\" ]; then if grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null; then cmake --build build --config \"$c\" --target cat-tidy $build_v; else cmake --build \"build-$n\" --target cat-tidy $build_v; fi; else cmake --build \"$d\" --target cat-tidy $build_v; fi' --"
+
+[tasks.tidy-check]
+description = "Run clang-tidy in read-only CI mode."
+run = "sh -c 'd=build; c=; n=; build_v=; for arg do case \"$arg\" in -v) build_v=--verbose ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; *) d=$arg ;; esac; done; if [ -n \"${c:-}\" ]; then if grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null; then cmake --build build --config \"$c\" --target cat-tidy-check $build_v; else cmake --build \"build-$n\" --target cat-tidy-check $build_v; fi; else cmake --build \"$d\" --target cat-tidy-check $build_v; fi' --"
+
+[tasks.opt-report]
+description = "Build Clang optimization records."
+run = "sh -c 'd=build; c=; n=; build_v=; for arg do case \"$arg\" in -v) build_v=--verbose ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; *) d=$arg ;; esac; done; if [ -n \"${c:-}\" ]; then if grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null; then cmake --build build --config \"$c\" --target cat-opt-report $build_v; else cmake --build \"build-$n\" --target cat-opt-report $build_v; fi; else cmake --build \"$d\" --target cat-opt-report $build_v; fi' --"
+
+[tasks.intermediaries]
+description = "Save preprocessed, LLVM IR, and assembly intermediaries."
+run = "sh -c 'd=build; fmt=OFF; c=; n=; cmake_log=; build_v=; for arg do case \"$arg\" in -v) cmake_log=--log-level=VERBOSE; build_v=--verbose ;; fmt) fmt=ON ;; no-fmt) fmt=OFF ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; *) d=$arg ;; esac; done; if [ -n \"$c\" ]; then if grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null || case \"${CMAKE_GENERATOR:-}\" in *Multi-Config*) true ;; *) false ;; esac; then cmake $cmake_log -S . -B build -DCAT_FORMAT_INTERMEDIARIES=\"$fmt\" && cmake --build build --config \"$c\" --target cat-intermediaries $build_v; else cmake $cmake_log -S . -B \"build-$n\" -DCMAKE_BUILD_TYPE=\"$c\" -DCAT_FORMAT_INTERMEDIARIES=\"$fmt\" && cmake --build \"build-$n\" --target cat-intermediaries $build_v; fi; else cmake $cmake_log -S . -B \"$d\" -DCAT_FORMAT_INTERMEDIARIES=\"$fmt\" && cmake --build \"$d\" --target cat-intermediaries $build_v; fi' --"
+
+[tasks.syntax]
+description = "Run libCat syntax-only compilation."
+run = "sh -c 'd=build; c=; n=; build_v=; for arg do case \"$arg\" in -v) build_v=--verbose ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; *) d=$arg ;; esac; done; if [ -n \"${c:-}\" ]; then if grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null; then cmake --build build --config \"$c\" --target cat-syntax $build_v; else cmake --build \"build-$n\" --target cat-syntax $build_v; fi; else cmake --build \"$d\" --target cat-syntax $build_v; fi' --"
+
+[tasks.repl]
+description = "Launch clang-repl with libCat preloaded."
+run = "bash -lc 'd=build; c=; n=; cmake_log=; build_v=; repl_args=(); while (( $# > 0 )); do case \"$1\" in -v) cmake_log=--log-level=VERBOSE; build_v=--verbose ;; debug) c=Debug; n=debug ;; release) c=Release; n=release ;; relwithdebinfo) c=RelWithDebInfo; n=relwithdebinfo ;; --) shift; repl_args+=(\"$@\"); break ;; *) repl_args+=(\"$1\") ;; esac; shift; done; is_multi() { grep -q \"CMAKE_GENERATOR:INTERNAL=.*Multi-Config\" build/CMakeCache.txt 2>/dev/null || case \"${CMAKE_GENERATOR:-}\" in *Multi-Config*) true ;; *) false ;; esac; }; if [ -n \"$c\" ]; then if is_multi; then cmake $cmake_log -S . -B build -DCAT_BUILD_SHARED=ON && cmake --build build --config \"$c\" --target cat-impl-shared $build_v && CAT_REPL_CONFIG=\"$c\" ./build/clang-repl-libcat \"${repl_args[@]}\"; else d=\"build-$n\"; cmake $cmake_log -S . -B \"$d\" -DCMAKE_BUILD_TYPE=\"$c\" -DCAT_BUILD_SHARED=ON && cmake --build \"$d\" --target cat-impl-shared $build_v && \"$d/clang-repl-libcat\" \"${repl_args[@]}\"; fi; else cmake $cmake_log -S . -B \"$d\" -DCAT_BUILD_SHARED=ON && cmake --build \"$d\" --target cat-impl-shared $build_v && \"$d/clang-repl-libcat\" \"${repl_args[@]}\"; fi' --"
