@@ -6,11 +6,11 @@
 
 #include "../unit_tests.hpp"
 
-test(linear_allocator) {
+$test(linear_allocator) {
    // Initialize an allocator.
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(24u).verify();
-   defer {
+   $defer {
       pager.free(page);
    };
    cat::is_allocator auto allocator = cat::make_linear_allocator(page);

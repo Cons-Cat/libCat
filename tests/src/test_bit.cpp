@@ -53,7 +53,7 @@ concept can_rotate_right =
    requires(T value) { cat::rotate_right(value, cat::iword(1)); };
 }  // namespace
 
-test(bit) {
+$test(bit) {
    using namespace cat::arithmetic_literals;
 
    static_assert(!can_countl_zero<cat::idx>);
@@ -223,7 +223,7 @@ test(bit) {
    static_assert(x64::parallel_extract_bits(uint2::max(), 0b1_u2) == 0b1_u2);
 
    // Test bzhi.
-   // TODO: These only test it compiles. Test that it works correctly.
+   // TODO: These only $test it compiles. Test that it works correctly.
    cat::assert(x64::zero_high_bits_at(8_u4, 8u) != 0u);
    cat::assert(x64::zero_high_bits_at(8_u8, 8u) != 0u);
 

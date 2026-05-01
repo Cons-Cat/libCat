@@ -24,7 +24,7 @@ template <typename T>
 class templated_two {};
 }
 
-test(meta_fundamental) {
+$test(meta_fundamental) {
    using namespace cat;
 
    struct structural_type {
@@ -148,7 +148,7 @@ test(meta_fundamental) {
    static_assert(is_rvalue_reference<add_rvalue_reference<int&&>>);
 }
 
-test(meta_const_volatile) {
+$test(meta_const_volatile) {
    using namespace cat;
 
    static_assert(is_const<int const>);
@@ -204,7 +204,7 @@ test(meta_const_volatile) {
       is_same<add_volatile<int const volatile&&>, int const volatile&&>);
 }
 
-test(meta_integral_signedness) {
+$test(meta_integral_signedness) {
    using namespace cat;
 
    class class_type {};
@@ -251,7 +251,7 @@ test(meta_integral_signedness) {
    static_assert(is_unsigned_integral<uint8 const>);
 }
 
-test(meta_copy_type_traits) {
+$test(meta_copy_type_traits) {
    using namespace cat;
 
    static_assert(is_same<copy_const_from<int, int>, int>);
@@ -288,7 +288,7 @@ test(meta_copy_type_traits) {
    static_assert(is_same<copy_cvref_from<int const, int&>, int const>);
 }
 
-test(meta_function_enum_and_common_type) {
+$test(meta_function_enum_and_common_type) {
    using namespace cat;
 
    auto lambda = []() {
@@ -328,7 +328,7 @@ test(meta_function_enum_and_common_type) {
                          unsigned long int>);
 }
 
-test(meta_common_reference) {
+$test(meta_common_reference) {
    using namespace cat;
 
    static_assert(is_same<common_reference<int, int>, int>);
@@ -380,7 +380,7 @@ test(meta_common_reference) {
    //     tuple<int&, double&>>;
 }
 
-test(meta_common_comparison) {
+$test(meta_common_comparison) {
    using namespace cat;
 
    static_assert(is_same<std::common_comparison_category_t<std::strong_ordering,
@@ -413,7 +413,7 @@ test(meta_common_comparison) {
               std::partial_ordering>);
 }
 
-test(meta_member_pointer) {
+$test(meta_member_pointer) {
    using namespace cat;
 
    // Test member type traits.
@@ -430,7 +430,7 @@ test(meta_member_pointer) {
    static_assert(is_member_object_pointer<int members::*>);
 }
 
-test(meta_is_specialization) {
+$test(meta_is_specialization) {
    using namespace cat;
 
    // Test `is_specialization`.
@@ -438,7 +438,7 @@ test(meta_is_specialization) {
    static_assert(!is_specialization<templated_one<int>, templated_two>);
 }
 
-test(meta_sign_type_traits) {
+$test(meta_sign_type_traits) {
    using namespace cat;
 
    // Test signed-ness traits.
@@ -461,7 +461,7 @@ test(meta_sign_type_traits) {
    static_assert(!is_signed<copy_sign_from<unsigned, int>>);
 }
 
-test(meta_trivially_copy_construct) {
+$test(meta_trivially_copy_construct) {
    using namespace cat;
 
    struct default_construct {};
@@ -507,7 +507,7 @@ bad_predicate_return(int x) -> non_convertible_to_bool {
 }
 }  // namespace
 
-test(meta_is_invocable) {
+$test(meta_is_invocable) {
    using namespace cat;
    static_assert(is_invocable<decltype(&add_two), int, int>);
    static_assert(!is_invocable<decltype(&add_two), int>);
@@ -517,7 +517,7 @@ test(meta_is_invocable) {
                               member_receiver const&, int>);
 }
 
-test(meta_is_predicate) {
+$test(meta_is_predicate) {
    using namespace cat;
    static_assert(is_predicate<decltype(&is_positive), int>);
    static_assert(is_predicate<bool (member_receiver::*)(int) const,

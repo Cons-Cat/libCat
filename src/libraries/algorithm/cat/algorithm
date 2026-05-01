@@ -62,7 +62,7 @@ relocate(input_iterator source_begin, input_iterator source_end,
       copy_memory(__builtin_addressof(*source_begin),
                   __builtin_addressof(*destination_begin),
                   cat::make_raw_arithmetic((source_end - source_begin)
-                                           * ssizeof(*source_begin)));
+                                           * sizeof(*source_begin)));
       return destination_begin;
    } else {
       // Otherwise, if the destination can be moved to, do so.

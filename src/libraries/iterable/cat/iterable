@@ -469,7 +469,7 @@ template <is_iteration_context IterationContext,
 constexpr auto
 run_while(IterationContext& iteration_context, Callback&& callback)
    -> iteration_result {
-   return iteration_context.run_while(fwd(callback));
+   return iteration_context.run_while($fwd(callback));
 }
 
 // `next_element(context)` pulls one element off the context, returning a
@@ -487,7 +487,7 @@ next_element(IterationContext& iteration_context)
    -> maybe<typename IterationContext::element_type> {
    maybe<typename IterationContext::element_type> maybe_element{nullopt};
    iteration_context.run_while([&maybe_element](auto&& element) -> bool {
-      maybe_element = fwd(element);
+      maybe_element = $fwd(element);
       return false;
    });
    return maybe_element;
@@ -511,10 +511,10 @@ step(IterationContext& iteration_context, Callback callback) {
    iteration_context.run_while(
       [&maybe_result, &callback](auto&& element) -> bool {
          if constexpr (is_void<result_type>) {
-            callback(fwd(element));
+            callback($fwd(element));
             maybe_result = monostate;
          } else {
-            maybe_result = callback(fwd(element));
+            maybe_result = callback($fwd(element));
          }
          return false;
       });
@@ -539,14 +539,14 @@ struct view_interface {
       requires(is_iterable<remove_cvref<Iterable>>)
    friend constexpr auto
    operator|(Iterable&& incoming, Derived&& pipe_impl) {
-      return move(pipe_impl).apply(fwd(incoming));
+      return move(pipe_impl).apply($fwd(incoming));
    }
 
    template <typename Iterable>
       requires(is_iterable<remove_cvref<Iterable>>)
    friend constexpr auto
    operator|(Iterable&& incoming, Derived const& pipe_impl) {
-      return pipe_impl.apply(fwd(incoming));
+      return pipe_impl.apply($fwd(incoming));
    }
 };
 

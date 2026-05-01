@@ -423,7 +423,7 @@ class alignas(in_abi::alignment.raw) simd {
       !detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
       simd(U&& value) {
       // These semantics are described by P3844R2.
-      this->fill(static_cast<scalar_type>(fwd(value)));
+      this->fill(static_cast<scalar_type>($fwd(value)));
    }
 
    // When the scalar must be a compile-time constant (`consteval`), the splat
@@ -443,8 +443,8 @@ class alignas(in_abi::alignment.raw) simd {
       requires(sizeof...(Us) > 1u && sizeof...(Us) == in_abi::lanes.raw)
    [[gnu::nodebug]] constexpr simd(Us&&... arguments)
        // Clang requires curly braces here.
-       : raw(
-            raw_type{simd_lane_to_storage(static_cast<T>(fwd(arguments)))...}) {
+       : raw(raw_type{
+            simd_lane_to_storage(static_cast<T>($fwd(arguments)))...}) {
    }
 
    // Construct from a constant list, such as `value_list` or
@@ -638,7 +638,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    operator+(U&& operand) const -> simd {
-      return *this + simd(fwd(operand));
+      return *this + simd($fwd(operand));
    }
 
    template <typename U>
@@ -647,7 +647,7 @@ class alignas(in_abi::alignment.raw) simd {
          && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
    constexpr auto
    operator+=(U&& operand) -> simd& {
-      *this += simd(fwd(operand));
+      *this += simd($fwd(operand));
       return *this;
    }
 
@@ -658,7 +658,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    operator-(U&& operand) const -> simd {
-      return *this - simd(fwd(operand));
+      return *this - simd($fwd(operand));
    }
 
    template <typename U>
@@ -667,7 +667,7 @@ class alignas(in_abi::alignment.raw) simd {
          && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
    constexpr auto
    operator-=(U&& operand) -> simd& {
-      *this -= simd(fwd(operand));
+      *this -= simd($fwd(operand));
       return *this;
    }
 
@@ -678,7 +678,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    operator*(U&& operand) const -> simd {
-      return *this * simd(fwd(operand));
+      return *this * simd($fwd(operand));
    }
 
    template <typename U>
@@ -687,7 +687,7 @@ class alignas(in_abi::alignment.raw) simd {
          && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
    constexpr auto
    operator*=(U&& operand) -> simd& {
-      *this *= simd(fwd(operand));
+      *this *= simd($fwd(operand));
       return *this;
    }
 
@@ -698,7 +698,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    operator/(U&& operand) const -> simd {
-      return *this / simd(fwd(operand));
+      return *this / simd($fwd(operand));
    }
 
    template <typename U>
@@ -707,7 +707,7 @@ class alignas(in_abi::alignment.raw) simd {
          && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
    constexpr auto
    operator/=(U&& operand) -> simd& {
-      *this /= simd(fwd(operand));
+      *this /= simd($fwd(operand));
       return *this;
    }
 
@@ -1279,7 +1279,7 @@ class alignas(in_abi::alignment.raw) simd_mask {
                && sizeof...(arguments) == abi_type::lanes.raw)
    {
       this->raw = raw_type{};
-      bool const lane_vals[] = {static_cast<bool>(fwd(arguments))...};
+      bool const lane_vals[] = {static_cast<bool>($fwd(arguments))...};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          this->set_lane(i, lane_vals[i.raw]);
       }
@@ -2228,7 +2228,7 @@ template <typename... Ts>
 constexpr auto
 simd<T, in_abi>::operator[](Ts&&... lanes) const {
    return simd_permute(*this, simd<T, fixed_size_abi<T, idx(sizeof...(Ts))>>(
-                                 static_cast<T>(fwd(lanes))...));
+                                 static_cast<T>($fwd(lanes))...));
 }
 
 }  // namespace cat

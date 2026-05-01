@@ -59,30 +59,30 @@ enum class error_set : unsigned char {
 auto
 scaredy_try_success() -> cat::scaredy<int, error_set> {
    cat::scaredy<int, error_set> error{0};
-   int boo = prop(error);
+   int boo = $prop(error);
    return boo;
 }
 
 auto
 scaredy_try_fail() -> cat::scaredy<int, error_set> {
    cat::scaredy<int, error_set> error{error_set::one};
-   int boo = prop(error);
+   int boo = $prop(error);
    return boo;
 }
 
 auto
 scaredy_try_success_2() -> cat::scaredy<uint4, error_set> {
    cat::scaredy<int, error_set> error{1};
-   return prop_or(error, 2_u4);
+   return $prop_or(error, 2_u4);
 }
 
 auto
 scaredy_try_fail_2() -> cat::scaredy<cat::monostate_type, error_set> {
    cat::scaredy<int, error_set> error{error_set::one};
-   return prop_or(error, cat::monostate);
+   return $prop_or(error, cat::monostate);
 }
 
-test(scaredy) {
+$test(scaredy) {
    cat::scaredy result = union_errors(0);
    // The `scaredy` here adds a flag to the `int8`, which is padded out to 16
    // bytes. No storage cost exists for the error types.
@@ -260,13 +260,13 @@ test(scaredy) {
    static_assert(cat::is_scaredy<cat::scaredy<int, error_type_one>>);
    static_assert(cat::is_scaredy<decltype(result)>);
 
-   // Test `prop` macro.
+   // Test `$prop` macro.
    auto _ = scaredy_try_success().verify();
    cat::scaredy fail = scaredy_try_fail();
    cat::verify(!fail.has_value());
 
-   // Test `prop_or` macro for converting `scaredy` into a different type with a
-   // different value.
+   // Test `$prop_or` macro for converting `scaredy` into a different type with
+   // a different value.
    uint4 non_error = scaredy_try_success_2().verify();
    cat::verify(non_error == 2u);
    cat::scaredy fail2 = scaredy_try_fail_2();

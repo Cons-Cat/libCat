@@ -441,7 +441,7 @@ handshake(cat::is_allocator auto& allocator,
 
    x_connection.socket_descriptor = socket.descriptor;
    // TODO: Is the return of `.recieve` important here?
-   auto _ = socket.recieve(&x_connection.header, ssizeof(x_connection.header))
+   auto _ = socket.recieve(&x_connection.header, sizeof(x_connection.header))
                .or_exit();
 
    // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
@@ -454,7 +454,7 @@ handshake(cat::is_allocator auto& allocator,
    // A dynamic allocation must be made because the total size of all recieved
    // packets is unknown and potentially a very large amount.
    // TODO: Deallocate this somehow.
-   auto memory = prop(allocator.template alloc_multi<connection_response_info>(
+   auto memory = $prop(allocator.template alloc_multi<connection_response_info>(
       cat::idx(x_connection.header.message_length.raw * 4u)));
 
    x_connection.p_setup = memory.data();
@@ -506,8 +506,8 @@ initiate_connection(cat::is_allocator auto& allocator)
    cat::socket_unix<cat::socket_type::stream> socket;
    socket.path_name = x11::socket_path;
 
-   prop(socket.create());
-   prop(socket.connect());
+   $prop(socket.create());
+   $prop(socket.connect());
    return x11::handshake(allocator, socket);
 }
 

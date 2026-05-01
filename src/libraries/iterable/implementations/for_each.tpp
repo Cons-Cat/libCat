@@ -14,7 +14,7 @@ for_each(Iterable&& source, Callback callback) -> Callback {
    auto context = iterate(source);
 
    context.run_while([&callback](auto&& element) -> bool {
-      callback(fwd(element));
+      callback($fwd(element));
       return true;
    });
 
@@ -29,7 +29,7 @@ struct for_each_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, for_each_impl self) -> Callback {
-      return for_each(fwd(incoming), move(self.callback));
+      return for_each($fwd(incoming), move(self.callback));
    }
 };
 }  // namespace detail

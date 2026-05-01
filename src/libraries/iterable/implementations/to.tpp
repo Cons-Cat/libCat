@@ -19,7 +19,7 @@ struct to_impl {
 
       // TODO: Optimize with a multi `push_back()`.
       context.run_while([&result](auto&& element) -> bool {
-         result.push_back(fwd(element));
+         result.push_back($fwd(element));
          return true;
       });
 

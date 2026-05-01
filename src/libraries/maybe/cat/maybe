@@ -180,7 +180,7 @@ struct maybe_value_storage {
    // If `T` is trivially-move-constructible, use this simple move constructor.
    constexpr maybe_value_storage(T&& in_value)
       requires(is_trivially_move_constructible<T>)
-       : m_storage(fwd(in_value)), m_has_some(true) {
+       : m_storage($fwd(in_value)), m_has_some(true) {
    }
 
    // If `T` is not trivially-move-constructible, then manually invoke `move` on
@@ -249,7 +249,7 @@ struct maybe_value_storage {
    operator=(T&& in_value) -> maybe_value_storage&
       requires(is_trivially_move_assignable<T>)
    {
-      m_storage = fwd(in_value);
+      m_storage = $fwd(in_value);
       m_has_some = true;
       return *this;
    }
@@ -276,7 +276,7 @@ struct maybe_value_storage {
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> auto&& {
-      return fwd(self).m_storage;
+      return $fwd(self).m_storage;
    }
 
    [[nodiscard]]
@@ -296,7 +296,7 @@ struct maybe_value_storage {
    template <typename... Args>
    constexpr void
    construct(Args&&... arguments) {
-      new (__builtin_addressof(m_storage)) T(fwd(arguments)...);
+      new (__builtin_addressof(m_storage)) T($fwd(arguments)...);
       m_has_some = true;
    }
 
@@ -324,7 +324,7 @@ struct maybe_value_storage {
    constexpr void
    assign(Maybe&& maybe) {
       if (maybe.has_value()) {
-         assign(fwd(maybe).value());
+         assign($fwd(maybe).value());
       } else {
          if (this->has_value()) {
             hard_reset();
@@ -536,7 +536,7 @@ struct maybe_compact_storage {
    operator=(value_type&& in_value) -> maybe_compact_storage&
       requires(is_trivially_move_assignable<value_type>)
    {
-      m_storage = fwd(in_value);
+      m_storage = $fwd(in_value);
       return *this;
    }
 
@@ -547,7 +547,7 @@ struct maybe_compact_storage {
       requires(is_move_assignable<value_type>
                && !is_trivially_move_assignable<value_type>)
    {
-      this->assign(fwd(in_value));
+      this->assign($fwd(in_value));
       return *this;
    }
 
@@ -562,7 +562,7 @@ struct maybe_compact_storage {
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> auto&& {
-      return fwd(self).m_storage;
+      return $fwd(self).m_storage;
    }
 
    [[nodiscard]]
@@ -582,7 +582,7 @@ struct maybe_compact_storage {
    template <typename... Args>
    constexpr void
    construct(Args&&... arguments) {
-      new (__builtin_addressof(m_storage)) value_type(fwd(arguments)...);
+      new (__builtin_addressof(m_storage)) value_type($fwd(arguments)...);
    }
 
    // If this is assigned an `maybe` which wraps a type that can be converted to
@@ -592,7 +592,7 @@ struct maybe_compact_storage {
    assign(Maybe&& maybe) {
       if (this->has_value()) {
          if (maybe.has_value()) {
-            m_storage = fwd(maybe).value();
+            m_storage = $fwd(maybe).value();
          } else {
             // If the incoming `maybe` is empty, then empty this one.
             this->hard_reset();
@@ -785,7 +785,7 @@ class [[nodiscard]] maybe {
                && !is_reference<value_type> && is_move_assignable<value_type>)
    constexpr auto
    operator=(U&& value) -> class maybe& {
-      m_storage = static_cast<value_type&&>(fwd(value));
+      m_storage = static_cast<value_type&&>($fwd(value));
       return *this;
    }
 
@@ -881,7 +881,7 @@ class [[nodiscard]] maybe {
       requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
    match(Patterns&&... patterns) {
-      cat::match (*this)(fwd(patterns)...);
+      cat::match (*this)($fwd(patterns)...);
    }
 
    // Holds true if this `maybe` currently has some value convertible and
@@ -893,7 +893,7 @@ class [[nodiscard]] maybe {
    constexpr auto
    is(U&& in_value) const -> bool {
       if (this->has_value()) {
-         return static_cast<value_type>(fwd(in_value)) == this->value();
+         return static_cast<value_type>($fwd(in_value)) == this->value();
       }
       return false;
    }
@@ -912,7 +912,7 @@ class [[nodiscard]] maybe {
    value(this auto&& self) -> decltype(auto)
       requires(!is_void<T>)
    {
-      return fwd(self).m_storage.value();
+      return $fwd(self).m_storage.value();
    }
 
    // Special discard-able overload for `maybe<void>`.
@@ -937,7 +937,7 @@ class [[nodiscard]] maybe {
       requires(!is_reference<value_type> && !is_void<value_type>)
    {
       if (self.m_storage.has_value()) {
-         return fwd(self).m_storage.value();
+         return $fwd(self).m_storage.value();
       }
       return fallback;
    }
@@ -949,9 +949,9 @@ class [[nodiscard]] maybe {
    constexpr auto
    value_or(this auto&& self, U&& fallback) -> remove_cvref<value_type> {
       if (self.m_storage.has_value()) {
-         return fwd(self).m_storage.value();
+         return $fwd(self).m_storage.value();
       }
-      return static_cast<remove_cvref<value_type>>(fwd(fallback));
+      return static_cast<remove_cvref<value_type>>($fwd(fallback));
    }
 
    // Get a pointer to the data owned by this `maybe`. If `maybe` holds a raw
@@ -961,9 +961,9 @@ class [[nodiscard]] maybe {
    constexpr auto
    p_value(this auto&& self) {
       if constexpr (is_pointer<value_type>) {
-         return fwd(self).m_storage.value();
+         return $fwd(self).m_storage.value();
       } else {
-         return __builtin_addressof(fwd(self).m_storage.value());
+         return __builtin_addressof($fwd(self).m_storage.value());
       }
    }
 
@@ -980,7 +980,7 @@ class [[nodiscard]] maybe {
       requires(!is_void<value_type>)
    {
       cat::assert(self.has_value(), p_assert_handler, callsite);
-      return fwd(self).value();
+      return $fwd(self).value();
    }
 
    // Special discard-able overload for `maybe<void>`.
@@ -1005,7 +1005,7 @@ class [[nodiscard]] maybe {
       requires(!is_void<value_type>)
    {
       cat::verify(self.has_value(), p_assert_handler, callsite);
-      return fwd(self).value();
+      return $fwd(self).value();
    }
 
    // Special discard-able overload for `maybe<void>`.
@@ -1037,29 +1037,29 @@ class [[nodiscard]] maybe {
 
          if constexpr (is_void<U>) {
             if (self.has_value()) {
-               fwd(callback)();
+               $fwd(callback)();
                return maybe<void>{monostate};
             }
             return maybe<void>{nullopt};
          } else {
             if (self.has_value()) {
-               return maybe<U>{fwd(callback)()};
+               return maybe<U>{$fwd(callback)()};
             }
             return maybe<U>{nullopt};
          }
       } else {
-         using U = decltype(callback(fwd(self).value()));
+         using U = decltype(callback($fwd(self).value()));
          static_assert(!is_specialization<U, maybe>);
 
          if constexpr (is_void<U>) {
             if (self.has_value()) {
-               fwd(callback)(fwd(self).value());
+               $fwd(callback)($fwd(self).value());
                return maybe<void>{monostate};
             }
             return maybe<void>{nullopt};
          } else {
             if (self.has_value()) {
-               return maybe<U>{fwd(callback)(fwd(self).value())};
+               return maybe<U>{$fwd(callback)($fwd(self).value())};
             }
             return maybe<U>{nullopt};
          }
@@ -1078,16 +1078,16 @@ class [[nodiscard]] maybe {
                        "The callback parameter of `and_then` must return a "
                        "specialization of `cat::maybe`.");
          if (self.has_value()) {
-            return fwd(callback)();
+            return $fwd(callback)();
          }
          return ret{nullopt};
       } else {
-         using ret = decltype(callback(fwd(self).value()));
+         using ret = decltype(callback($fwd(self).value()));
          static_assert(is_specialization<ret, maybe>,
                        "The callback parameter of `and_then` must return a "
                        "specialization of `cat::maybe`.");
          if (self.has_value()) {
-            return fwd(callback)(fwd(self).value());
+            return $fwd(callback)($fwd(self).value());
          }
          return ret{nullopt};
       }
@@ -1109,14 +1109,14 @@ class [[nodiscard]] maybe {
 
       if constexpr (is_void<return_type>) {
          if (!self.has_value()) {
-            fwd(callback)();
+            $fwd(callback)();
          }
          return;
       } else {
          if (self.has_value()) {
-            return return_type{fwd(self)};
+            return return_type{$fwd(self)};
          }
-         return fwd(callback)();
+         return $fwd(callback)();
       }
    }
 
@@ -1127,7 +1127,7 @@ class [[nodiscard]] maybe {
       requires(!is_void<T>)
    {
       if (self.has_value()) [[likely]] {
-         return fwd(self).value();
+         return $fwd(self).value();
       } else {
          exit(exit_code);
       }
@@ -1172,7 +1172,7 @@ class [[nodiscard]] maybe {
    constexpr auto
    emplace(Args&&... arguments) -> value_type& {
       *this = nullopt;
-      m_storage.construct(fwd(arguments)...);
+      m_storage.construct($fwd(arguments)...);
       return m_storage.value();
    }
 
@@ -1280,7 +1280,7 @@ template <typename T>
 [[nodiscard]]
 constexpr auto
 make_maybe(T&& value) -> maybe<remove_cvref<T>> {
-   return maybe<remove_cvref<T>>{fwd(value)};
+   return maybe<remove_cvref<T>>{$fwd(value)};
 }
 
 template <typename T, typename... Args>
@@ -1288,7 +1288,7 @@ template <typename T, typename... Args>
 [[nodiscard]]
 constexpr auto
 make_maybe(Args&&... arguments) -> maybe<T> {
-   return maybe<T>{in_place, fwd(arguments)...};
+   return maybe<T>{in_place, $fwd(arguments)...};
 }
 
 template <typename T>

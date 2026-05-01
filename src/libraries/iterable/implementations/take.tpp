@@ -32,7 +32,7 @@ struct take_view_impl : iterable_interface {
                   return false;
                }
                ++taken;
-               return loop_body(fwd(element));
+               return loop_body($fwd(element));
             });
 
          if (taken >= limit) {
@@ -71,7 +71,7 @@ struct take_impl : view_interface<take_impl> {
    template <is_borrow_acceptable Iterable>
    constexpr auto
    apply(Iterable&& incoming) const -> take_view<Iterable> {
-      return take_view<Iterable>{{}, fwd(incoming), count};
+      return take_view<Iterable>{{}, $fwd(incoming), count};
    }
 };
 }  // namespace detail

@@ -3,7 +3,7 @@
 
 #include "../unit_tests.hpp"
 
-test(compare_strings) {
+$test(compare_strings) {
    char const* p_string_1 = "Hello!";
    char const* const p_string_2 = "Hello!";
 
@@ -90,7 +90,7 @@ test(compare_strings) {
    cat::verify(char_zstr == 'X');
 }
 
-test(compare_strings_long_misaligned_equal_and_diff) {
+$test(compare_strings_long_misaligned_equal_and_diff) {
    idx const len = 200_idx;
    idx const skew = 11_idx;
    alignas(128) char buf_a[320]{};
@@ -107,7 +107,7 @@ test(compare_strings_long_misaligned_equal_and_diff) {
    cat::verify(!cat::compare_strings(va, vb));
 }
 
-test(str_view_find_past_first_simd_chunk) {
+$test(str_view_find_past_first_simd_chunk) {
    idx const lanes = cat::char1x16::size();
 
    char buffer[128]{};

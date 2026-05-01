@@ -3,7 +3,7 @@
 #include "../unit_tests.hpp"
 #include "cat/debug"
 
-test(math_min_max) {
+$test(math_min_max) {
    // Test `min()`.
    cat::verify(cat::min(0) == 0);
    cat::verify(cat::min(0u) == 0u);
@@ -37,7 +37,7 @@ test(math_min_max) {
    cat::verify(cat::max(0., 1., 2.) == 2.);
 }
 
-test(math_abs) {
+$test(math_abs) {
    using namespace cat::arithmetic_literals;
 
    // Test `abs()`.
@@ -66,7 +66,7 @@ test(math_abs) {
    cat::verify(cat::abs(1_u8) == 1_u8);
 }
 
-test(math_pow_integral) {
+$test(math_pow_integral) {
    // Test `pow()`.
    cat::verify(cat::pow(2, 2) == 4);
    cat::verify(cat::pow(2, 1) == 2);
@@ -89,7 +89,7 @@ test(math_pow_integral) {
    // cat::verify(cat::pow(8, -1) == 0.);
 }
 
-test(math_round_to_multiple) {
+$test(math_round_to_multiple) {
    // Test `round_up_to_multiple_of()`.
    static_assert(cat::round_up_to_multiple_of(5, 2) == 6);
    static_assert(cat::round_up_to_multiple_of(5u, 1) == 5u);
@@ -103,7 +103,7 @@ test(math_round_to_multiple) {
    // TODO: How should rounding functions handle negative inputs?
 }
 
-test(math_clamp) {
+$test(math_clamp) {
    // Test `clamp()`.
    cat::verify(cat::clamp(-10, 0, 10) == 0);
    cat::verify(cat::clamp(5, 0, 10) == 5);
@@ -122,7 +122,7 @@ test(math_clamp) {
    cat::verify(cat::clamp(20., 0., 10.) == 10.);
 }
 
-test(math_comparators) {
+$test(math_comparators) {
    // Test `<functional>`-style comparators.
    cat::verify(cat::equal_to<int>{}(2, 2));
    cat::verify(!cat::equal_to<int>{}(2, 3));

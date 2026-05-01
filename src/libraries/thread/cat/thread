@@ -28,7 +28,7 @@ struct thread {
          is_invocable<Args...> auto&& callback, Args&&... arguments)
       -> maybe<void> {
       scaredy result = m_handle.spawn(allocator, initial_stack_size,
-                                      fwd(callback), fwd(arguments)...);
+                                      $fwd(callback), $fwd(arguments)...);
       if (result.has_value()) {
          return monostate;
       }

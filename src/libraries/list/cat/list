@@ -282,7 +282,7 @@ basic_list
       basic_list new_list =
          basic_list<T, Allocator, is_doubly_linked>(allocator);
       cat::span<node_type> new_nodes =
-         prop(allocator.template alloc_multi<node_type>(m_size));
+         $prop(allocator.template alloc_multi<node_type>(m_size));
 
       new_list.m_storage.m_p_head = new_nodes.data();
       new_list.m_size = m_size;
@@ -332,9 +332,9 @@ basic_list
       requires(is_implicitly_convertible<U, T>)
    auto
    insert(iterator where, U&& value) -> maybe<iterator> {
-      node_type* p_node = prop(m_allocator.template alloc<node_type>());
+      node_type* p_node = $prop(m_allocator.template alloc<node_type>());
       node_type& node = *p_node;
-      node.storage = fwd(value);
+      node.storage = $fwd(value);
 
       if (m_size == 0) [[unlikely]] {
          // If this list has nothing in it, `.insert()` must be special-cased.
@@ -350,9 +350,9 @@ basic_list
    template <typename... Args>
    auto
    emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
-      auto* p_node = prop(m_allocator.template alloc<node_type>());
+      auto* p_node = $prop(m_allocator.template alloc<node_type>());
       node_type& node = *p_node;
-      new (&node.storage) T(fwd(arguments)...);
+      new (&node.storage) T($fwd(arguments)...);
 
       if (m_size == 0) [[unlikely]] {
          // If this list has nothing in it, `.emplace()` must be special-cased.
@@ -411,7 +411,7 @@ basic_list
       requires(is_implicitly_convertible<U, T>)
    auto
    push_front(U const& value) -> maybe<iterator> {
-      auto* p_node = prop(m_allocator.template alloc<node_type>());
+      auto* p_node = $prop(m_allocator.template alloc<node_type>());
       node_type& node = *p_node;
       node.storage = static_cast<T>(value);
       this->place_node_front(node);
@@ -423,9 +423,9 @@ basic_list
    template <typename... Args>
    auto
    emplace_front(Args&&... arguments) -> maybe<iterator> {
-      auto* p_node = prop(m_allocator.template alloc<node_type>());
+      auto* p_node = $prop(m_allocator.template alloc<node_type>());
       node_type& node = *p_node;
-      new (&node.storage) T(fwd(arguments)...);
+      new (&node.storage) T($fwd(arguments)...);
       this->place_node_front(node);
 
       return iterator(p_node);
@@ -461,7 +461,7 @@ basic_list
       requires(is_implicitly_convertible<U, T> && is_doubly_linked)
    auto
    push_back(U const& value) -> maybe<iterator> {
-      node_type* p_node = prop(m_allocator.template alloc<node_type>());
+      node_type* p_node = $prop(m_allocator.template alloc<node_type>());
 
       p_node->storage = static_cast<T>(value);
       this->place_node_back(*p_node);
@@ -474,9 +474,9 @@ basic_list
       requires(is_doubly_linked)
    auto
    emplace_back(Args&&... arguments) -> maybe<iterator> {
-      auto* p_node = prop(m_allocator.template alloc<node_type>());
+      auto* p_node = $prop(m_allocator.template alloc<node_type>());
       node_type& node = *p_node;
-      new (&node.storage) T(fwd(arguments)...);
+      new (&node.storage) T($fwd(arguments)...);
       this->place_node_back(node);
 
       return iterator(p_node);
@@ -618,17 +618,17 @@ initialize_list_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
    if constexpr (sizeof...(next) > 0u) {
       // Construct a node at this address.
       T* p_current = list_nodes.data();
-      new (p_current) T(p_current + 1u, p_previous, fwd(current));
+      new (p_current) T(p_current + 1u, p_previous, $fwd(current));
       // Recurse to the next node. `sizeof...(next) > 0` means at least one node
       // remains, so the span has length at least two and `size - 1u` cannot
       // wrap.
       list_nodes =
          list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
-      initialize_list_variadic<T>(list_nodes, p_current, fwd(next)...);
+      initialize_list_variadic<T>(list_nodes, p_current, $fwd(next)...);
    } else {
       // Final node.
       T* p_current = p_previous + 1u;
-      new (p_current) T(nullptr, p_previous, fwd(current));
+      new (p_current) T(nullptr, p_previous, $fwd(current));
    }
 }
 
@@ -639,16 +639,16 @@ initialize_slist_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
    if constexpr (sizeof...(next) > 0u) {
       // Construct a node at this address.
       T* p_current = list_nodes.data();
-      new (p_current) T(p_current + 1u, fwd(current));
+      new (p_current) T(p_current + 1u, $fwd(current));
       // Recurse to the next node. Same span-length reasoning as
       // `initialize_list_variadic`.
       list_nodes =
          list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
-      initialize_slist_variadic<T>(list_nodes, p_current, fwd(next)...);
+      initialize_slist_variadic<T>(list_nodes, p_current, $fwd(next)...);
    } else {
       // Final node.
       T* p_current = p_previous + 1u;
-      new (p_current) T(nullptr, fwd(current));
+      new (p_current) T(nullptr, $fwd(current));
    }
 }
 
@@ -720,7 +720,7 @@ make_list(Allocator& allocator [[clang::lifetimebound]], U&& value,
 
    if constexpr (sizeof...(Args) > 0) {
       cat::span<node> nodes =
-         prop(allocator.template alloc_multi<node>(sizeof...(remaining) + 1));
+         $prop(allocator.template alloc_multi<node>(sizeof...(remaining) + 1));
 
       // TODO: Test `make_list` with exactly 1 value.
       new_list.m_storage.m_p_head = nodes.data();
@@ -728,13 +728,13 @@ make_list(Allocator& allocator [[clang::lifetimebound]], U&& value,
       new_list.m_size = nodes.size();
 
       detail::initialize_list_variadic<node>(nodes, nullptr, value,
-                                             fwd(remaining)...);
+                                             $fwd(remaining)...);
    } else {
       // TODO: Is `calloc` more efficient here?
-      node* p_new_node = prop(allocator.template alloc<node>());
+      node* p_new_node = $prop(allocator.template alloc<node>());
       p_new_node->p_next_node = nullptr;
       p_new_node->p_previous_node = nullptr;
-      p_new_node->storage = fwd(value);
+      p_new_node->storage = $fwd(value);
 
       new_list.m_storage.m_p_head = p_new_node;
       new_list.m_size = 1u;
@@ -749,7 +749,7 @@ template <is_allocator Allocator, typename... Args>
 auto
 make_list(Allocator& allocator [[clang::lifetimebound]], Args&&... arguments) {
    using common = common_type<Args...>;
-   return make_list<common>(allocator, static_cast<common>(fwd(arguments))...);
+   return make_list<common>(allocator, static_cast<common>($fwd(arguments))...);
 }
 
 // Make a `list` initialized to `value`.
@@ -761,7 +761,7 @@ make_list_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
    list<T, Allocator> new_list(allocator);
 
    using node = detail::list_node<T>;
-   cat::span<node> nodes = prop(allocator.template alloc_multi<node>(count));
+   cat::span<node> nodes = $prop(allocator.template alloc_multi<node>(count));
 
    new_list.m_storage.m_p_head = nodes.data();
    new_list.m_storage.m_p_tail = nodes.data() + count - 1u;
@@ -793,19 +793,19 @@ make_slist(Allocator& allocator [[clang::lifetimebound]], U&& value,
 
    if constexpr (sizeof...(Args) > 0) {
       cat::span<node> nodes =
-         prop(allocator.template alloc_multi<node>(sizeof...(remaining) + 1));
+         $prop(allocator.template alloc_multi<node>(sizeof...(remaining) + 1));
 
       // TODO: Test `make_slist` with exactly 1 value.
       new_slist.m_storage.m_p_head = nodes.data();
       new_slist.m_size = nodes.size();
       detail::initialize_slist_variadic<node>(nodes, nullptr, value,
-                                              fwd(remaining)...);
+                                              $fwd(remaining)...);
    } else {
       // TODO: Is `calloc` more efficient here?
-      node* p_new_node = prop(allocator.template alloc<node>());
+      node* p_new_node = $prop(allocator.template alloc<node>());
       p_new_node->p_next_node = nullptr;
       p_new_node->p_previous_node = nullptr;
-      p_new_node->storage = fwd(value);
+      p_new_node->storage = $fwd(value);
 
       new_slist.m_storage.m_p_head = p_new_node;
       new_slist.m_size = 1u;
@@ -820,7 +820,8 @@ template <is_allocator Allocator, typename... Args>
 auto
 make_slist(Allocator& allocator [[clang::lifetimebound]], Args&&... arguments) {
    using common = common_type<Args...>;
-   return make_slist<common>(allocator, static_cast<common>(fwd(arguments))...);
+   return make_slist<common>(allocator,
+                             static_cast<common>($fwd(arguments))...);
 }
 
 // Make an `slist` initialized to `value`.
@@ -832,7 +833,7 @@ make_slist_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
    slist<T, Allocator> new_slist(allocator);
 
    using node = detail::slist_node<T>;
-   cat::span<node> nodes = prop(allocator.template alloc_multi<node>(count));
+   cat::span<node> nodes = $prop(allocator.template alloc_multi<node>(count));
 
    new_slist.m_storage.m_p_head = nodes.data();
    new_slist.m_size = count;

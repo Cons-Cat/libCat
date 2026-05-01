@@ -13,7 +13,7 @@ using cat::int4x8;
 // `unary_full<op_rsqrt>`, plus `mask_to_bitset` via `sse2_abi_mask_to_bitset`
 // in `simd_mask_bitset.tpp`. Reference behavior uses `scalar_abi` (16-byte, no
 // ISA hooks), not `native_abi` (which may alias `avx2_abi` on this target).
-test(simd_sse2_abi_hooks_permute_and_rsqrt) {
+$test(simd_sse2_abi_hooks_permute_and_rsqrt) {
    static_assert(cat::scalar_abi<int4>::size == 16u);
    static_assert(cat::scalar_abi<int4>::alignment == 16u);
    static_assert(cat::scalar_abi<float4>::lanes == idx{4});
@@ -52,7 +52,7 @@ test(simd_sse2_abi_hooks_permute_and_rsqrt) {
    }
 }
 
-test(simd_sse2_abi_hooks_mask_to_bitset) {
+$test(simd_sse2_abi_hooks_mask_to_bitset) {
    x64::sse2_simd<float> const v{1.f, 2.f, 3.f, 4.f};
    auto const m = v > x64::sse2_simd<float>{2.f, 2.f, 2.f, 2.f};
    cat::bitset<4u> const bits = m.to_bitset();
@@ -66,7 +66,7 @@ test(simd_sse2_abi_hooks_mask_to_bitset) {
 // `unary_full<op_rsqrt>`, plus mask reductions via `simd_avx2_mask_ops.hpp` and
 // `simd_avx2_mask_ops.hpp` mask reductions. `mask_to_bitset` via
 // `avx2_abi_mask_to_bitset`.
-test(simd_avx2_abi_hooks_permute_and_rsqrt) {
+$test(simd_avx2_abi_hooks_permute_and_rsqrt) {
    x64::avx2_simd<float4> const fv{10_f4, 20_f4, 30_f4, 40_f4,
                                    50_f4, 60_f4, 70_f4, 80_f4};
    int4x8 const fid{0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u};
@@ -121,7 +121,7 @@ test(simd_avx2_abi_hooks_permute_and_rsqrt) {
    }
 }
 
-test(simd_avx2_rsqrt_times_sqrt_near_one) {
+$test(simd_avx2_rsqrt_times_sqrt_near_one) {
    using avxf = cat::simd<float, x64::avx2_abi<float>>;
    using sxf = cat::simd<float, cat::scalar_abi<float>>;
    avxf wide{};
@@ -141,7 +141,7 @@ test(simd_avx2_rsqrt_times_sqrt_near_one) {
    }
 }
 
-test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
+$test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
    x64::avx2_simd_mask<float4> const sparse{false, false, true,  false,
                                             false, true,  false, true};
    // Eight `float4` lanes need 32 bytes. `scalar_abi` is fixed at 16 bytes
@@ -195,13 +195,13 @@ test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
    }
 }
 
-test(simd_avx2_unaligned_abi) {
+$test(simd_avx2_unaligned_abi) {
    static_assert(x64::avx2_unaligned_simd<float>::size() == 8u);
    static_assert(alignof(x64::avx2_unaligned_simd<float>) == 1);
 
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
-   defer {
+   $defer {
       pager.free(page);
    };
    cat::linear_allocator allocator = cat::make_linear_allocator(page);
@@ -228,13 +228,13 @@ test(simd_avx2_unaligned_abi) {
    cat::verify(cat::abs(rr[0u] - 0.5_f4) < 0.001_f4);
 }
 
-test(simd_sse2_and_unaligned_abi) {
+$test(simd_sse2_and_unaligned_abi) {
    static_assert(x64::sse2_unaligned_simd<float>::size() == 4u);
    static_assert(alignof(x64::sse2_unaligned_simd<float>) == 1);
 
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
-   defer {
+   $defer {
       pager.free(page);
    };
    cat::linear_allocator allocator = cat::make_linear_allocator(page);
@@ -259,13 +259,13 @@ test(simd_sse2_and_unaligned_abi) {
    cat::verify(cat::abs(rr[0u] - 0.5_f4) < 0.001_f4);
 }
 
-test(simd_avx2_unaligned_abi_mask) {
+$test(simd_avx2_unaligned_abi_mask) {
    static_assert(x64::avx2_unaligned_simd_mask<float>::size() == 8u);
    static_assert(alignof(x64::avx2_unaligned_simd_mask<float>) == 1);
 
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
-   defer {
+   $defer {
       pager.free(page);
    };
    cat::linear_allocator allocator = cat::make_linear_allocator(page);
@@ -292,13 +292,13 @@ test(simd_avx2_unaligned_abi_mask) {
    cat::verify(!cat::simd_any_of(*p_unaligned));
 }
 
-test(simd_sse2_and_unaligned_abi_mask) {
+$test(simd_sse2_and_unaligned_abi_mask) {
    static_assert(x64::sse2_unaligned_simd_mask<float>::size() == 4u);
    static_assert(alignof(x64::sse2_unaligned_simd_mask<float>) == 1);
 
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
-   defer {
+   $defer {
       pager.free(page);
    };
    cat::linear_allocator allocator = cat::make_linear_allocator(page);
@@ -323,7 +323,7 @@ test(simd_sse2_and_unaligned_abi_mask) {
    cat::verify(!cat::simd_any_of(*p_unaligned));
 }
 
-test(simd_unaligned_abi_adaptor) {
+$test(simd_unaligned_abi_adaptor) {
    static_assert(cat::is_same<x64::avx2_unaligned_abi<float>,
                               cat::unaligned_abi<x64::avx2_abi<float>>>);
    static_assert(cat::is_same<x64::sse2_unaligned_abi<float>,

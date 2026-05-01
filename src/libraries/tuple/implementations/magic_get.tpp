@@ -123,7 +123,7 @@ template <idx index, typename Aggregate>
 [[nodiscard, gnu::always_inline]]
 constexpr auto
 aggregate_get(Aggregate&& t) -> decltype(auto) {
-   return ::cat::get<index>(fwd(t));
+   return ::cat::get<index>($fwd(t));
 }
 
 template <typename Callback, typename Aggregate, idx... indices>
@@ -131,8 +131,8 @@ template <typename Callback, typename Aggregate, idx... indices>
 constexpr auto
 aggregate_apply_impl(Callback&& callback, Aggregate&& t,
                      index_list_type<indices...>)
-   -> decltype(fwd(callback)(aggregate_get<indices>(fwd(t))...)) {
-   return fwd(callback)(aggregate_get<indices>(fwd(t))...);
+   -> decltype($fwd(callback)(aggregate_get<indices>($fwd(t))...)) {
+   return $fwd(callback)(aggregate_get<indices>($fwd(t))...);
 }
 
 }  // namespace cat::detail
@@ -147,7 +147,7 @@ template <typename Callback, typename Aggregate>
 constexpr auto
 apply(Callback&& callback, Aggregate&& t) {
    return detail::aggregate_apply_impl(
-      fwd(callback), fwd(t),
+      $fwd(callback), $fwd(t),
       make_index_sequence<static_cast<idx>(
          __builtin_structured_binding_size(::cat::remove_cvref<Aggregate>))>{});
 }

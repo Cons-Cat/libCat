@@ -48,7 +48,7 @@ read_and_print_file(char* p_file_name) {
    cat::span<nix::io_vector> io_vectors =
       pager.alloc_multi<nix::io_vector>(blocks).or_exit(
          "Failed to allocate memory!", 3);
-   defer {
+   $defer {
       pager.free_multi(io_vectors.data(), io_vectors.size());
    };
 

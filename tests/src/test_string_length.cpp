@@ -3,7 +3,7 @@
 
 #include "unit_tests.hpp"
 
-test(string_length) {
+$test(string_length) {
    char const* p_string_1 = "Hello!";
    char const* const p_string_2 = "Hello!";
 
@@ -65,7 +65,7 @@ test(string_length) {
    mut_zstr[1] = 'b';
    mut_zstr[2] = 'c';  // A \0 gap is at the 4th byte.
    mut_zstr[4] = 'd';
-   defer {
+   $defer {
       pager.free(mut_zstr);
    };
    cat::verify(mut_zstr.size() == 6);

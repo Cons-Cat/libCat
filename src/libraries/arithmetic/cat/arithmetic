@@ -49,8 +49,6 @@
 // arithmetic types. It is essentially a type-safe `std::intptr_t` or
 // `std::uintptr_t` that may only reinterpret-cast back to the pointer type that
 // it originates from.
-#define ssizeof(argument) cat::make_signed(sizeof(argument))
-
 namespace cat {
 
 // These policies control the overflow semantics of `arithmetic`s.

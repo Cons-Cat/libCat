@@ -222,7 +222,7 @@ simd_mask_any_of(simd_mask<T, Abi> m) -> bool {
 template <typename Fn, typename T, typename Abi, typename... Args>
 constexpr void
 simd_chunked_invoke(Fn&& fn, simd<T, Abi> const& pack, Args&&... arguments) {
-   fwd(fn)(pack, fwd(arguments)...);
+   $fwd(fn)(pack, $fwd(arguments)...);
 }
 
 }  // namespace cat

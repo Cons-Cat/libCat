@@ -13,7 +13,7 @@ struct movable {
    operator=(movable&&) {};
 };
 
-// NOLINTNEXTLINE We use a global mutable variable for this test.
+// NOLINTNEXTLINE We use a global mutable variable for this $test.
 int4 maybe_counter = 0;
 
 struct maybe_non_trivial {
@@ -52,20 +52,20 @@ struct maybe_const_non_trivial {
 auto
 maybe_try_success() -> cat::maybe<int> {
    cat::maybe<int> error{0};
-   int boo = prop(error);
+   int boo = $prop(error);
    return boo;
 }
 
 auto
 maybe_try_fail() -> cat::maybe<int> {
    cat::maybe<int> error{cat::nullopt};
-   int boo = prop(error);
+   int boo = $prop(error);
    return boo;
 }
 
 // Default-construction, `nullopt` assignment, value assignment, `value()` and
 // `value_or()` on a value-typed `maybe`.
-test(maybe_basic_value) {
+$test(maybe_basic_value) {
    cat::maybe<int4> foo{cat::nullopt};
    cat::verify(!foo.has_value());
 
@@ -90,7 +90,7 @@ test(maybe_basic_value) {
 // than assigning through to the referent. P2988R12 `optional<T&>`. Reference
 // rebinding semantics.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
-test(maybe_reference_rebinding) {
+$test(maybe_reference_rebinding) {
    cat::maybe<int4&> ref(cat::nullopt);
    cat::maybe<int4&> ref_2 = cat::nullopt;
    cat::verify(!ref.has_value());
@@ -125,7 +125,7 @@ test(maybe_reference_rebinding) {
 
 // `maybe<compact<T, predicate, sentinel>>` packs the empty state into the
 // otherwise-unused `sentinel` value of `T`.
-test(maybe_compact_predicate) {
+$test(maybe_compact_predicate) {
    cat::maybe<cat::compact<int4,
                            [](int4 input) -> bool {
                               return input >= 0;
@@ -157,7 +157,7 @@ test(maybe_compact_predicate) {
 
 // Compact predicate over a `void` wrapper. `monotype_storage` lets the
 // engagement bit live in the predicate's storage instead of a side flag.
-test(maybe_compact_void) {
+$test(maybe_compact_void) {
    cat::maybe<cat::compact<cat::monotype_storage<int, 0>,
                            [](int input) -> bool {
                               return input >= 0;
@@ -172,7 +172,7 @@ test(maybe_compact_void) {
 
 // `compact<T, predicate, value>` accepts a literal sentinel that converts to
 // `T`. This covers the -1 to `iword` path used by `maybe_non_negative`.
-test(maybe_compact_value_conversion) {
+$test(maybe_compact_value_conversion) {
    cat::maybe<cat::compact<iword,
                            [](iword input) -> bool {
                               return input >= 0;
@@ -239,7 +239,7 @@ struct cat::default_compact_trait<test_maybe_niche::flagged_value>
                                        &test_maybe_niche::nullopt_value>> {};
 
 // `sentinel` supports structural NTTP values directly.
-test(maybe_sentinel_tuple) {
+$test(maybe_sentinel_tuple) {
    using row = cat::tuple<int4*, cat::idx>;
    cat::maybe<cat::sentinel<row, row{nullptr, 0u}>> slot;
    cat::verify(!slot.has_value());
@@ -254,7 +254,7 @@ test(maybe_sentinel_tuple) {
    cat::verify(!slot.has_value());
 }
 
-test(maybe_default_compact_trait_extension) {
+$test(maybe_default_compact_trait_extension) {
    using test_maybe_niche::flagged_value;
 
    static_assert(sizeof(cat::maybe<flagged_value>) == sizeof(flagged_value));
@@ -271,7 +271,7 @@ test(maybe_default_compact_trait_extension) {
 }
 
 // `sentinel_fn` supports non-structural wrapped types in `maybe`.
-test(maybe_sentinel_fn_non_structural) {
+$test(maybe_sentinel_fn_non_structural) {
    cat::maybe<
       cat::sentinel_fn<non_structural_slot, test_non_structural_slot_nullopt>>
       slot;
@@ -287,7 +287,7 @@ test(maybe_sentinel_fn_non_structural) {
 
 // `sentinel<T, value>` is the simpler compact form: `value` represents the
 // empty state.
-test(maybe_sentinel_predicate) {
+$test(maybe_sentinel_predicate) {
    cat::maybe<cat::sentinel<int4, 0>> nonzero = cat::nullopt;
    cat::verify(!nonzero.has_value());
 
@@ -298,7 +298,7 @@ test(maybe_sentinel_predicate) {
    cat::verify(!nonzero.has_value());
 }
 
-test(maybe_span_basic) {
+$test(maybe_span_basic) {
    static_assert(sizeof(cat::maybe_span<int4>) == sizeof(cat::span<int4>));
 
    int4 values[2] = {1, 2};
@@ -320,7 +320,7 @@ test(maybe_span_basic) {
 
 // `maybe_ptr<T>` is `maybe<sentinel<T*, nullptr>>` (a pointer that can also be
 // `nullopt` without growing.
-test(maybe_ptr_basic) {
+$test(maybe_ptr_basic) {
    int4 get_addr = 0;
    cat::maybe_ptr<int4> opt_ptr = &get_addr;
    cat::verify(opt_ptr.has_value());
@@ -335,7 +335,7 @@ test(maybe_ptr_basic) {
 }
 
 // Implicit conversions on assignment. `int4` accepts `int` and `short`.
-test(maybe_converting_assign) {
+$test(maybe_converting_assign) {
    cat::maybe<int4> foo;
    foo = int{1};
    cat::verify(foo.value() == 1);
@@ -345,7 +345,7 @@ test(maybe_converting_assign) {
 
 // `transform`, `and_then`, and `or_else` chained against value `maybe`s,
 // covering both engaged and disengaged sources.
-test(maybe_monadic_chains) {
+$test(maybe_monadic_chains) {
    cat::maybe<int4> moo = 2;
 
    // Type-converting transform.
@@ -383,7 +383,7 @@ test(maybe_monadic_chains) {
 
 // Same chain shapes against a compact-predicate `maybe` to exercise the
 // non-trivial storage path.
-test(maybe_monadic_compact) {
+$test(maybe_monadic_compact) {
    cat::maybe<cat::compact<int4,
                            [](int4 input) -> bool {
                               return input >= 0;
@@ -409,7 +409,7 @@ test(maybe_monadic_compact) {
 
 // Chains across function-typed callables, including `maybe<void>` results
 // produced by `transform(return_void)`.
-test(maybe_monadic_callables) {
+$test(maybe_monadic_callables) {
    auto return_int = [](int4 input) -> int4 {
       return input + 1;
    };
@@ -452,7 +452,7 @@ test(maybe_monadic_callables) {
 
 // `and_then` from a `maybe<T&>` source unwraps the reference for the callable
 // without writing through to the referent.
-test(maybe_monadic_reference_source) {
+$test(maybe_monadic_reference_source) {
    auto return_opt_void = [](int4) -> cat::maybe<void> {
       return cat::monostate;
    };
@@ -465,7 +465,7 @@ test(maybe_monadic_reference_source) {
 
 // Monadic chain that flows a move-only value through `and_then` and
 // `transform`.
-test(maybe_monadic_move_only) {
+$test(maybe_monadic_move_only) {
    auto return_none = [](int4) -> cat::maybe<int4> {
       return cat::nullopt;
    };
@@ -487,7 +487,7 @@ test(maybe_monadic_move_only) {
 
 // Copy-construction and copy-init between `maybe<T>` instances of the same
 // shape.
-test(maybe_copy) {
+$test(maybe_copy) {
    cat::maybe<int4> opt_original = 10;
    cat::maybe<int4> opt_copy_1 = cat::maybe(opt_original);
    cat::maybe<int4> opt_copy_2 = opt_original;
@@ -497,7 +497,7 @@ test(maybe_copy) {
 
 // `p_value()` returns the address of the held value (and equals
 // `__builtin_addressof(value())`).
-test(maybe_pointer_access) {
+$test(maybe_pointer_access) {
    cat::maybe<int4> foo = 1;
    int4 const& ref_foo = foo.value();
    cat::verify(&ref_foo == &foo.value());
@@ -507,7 +507,7 @@ test(maybe_pointer_access) {
 
 // All const/mut combinations of `maybe<T&>` over a non-trivially-destructible
 // `T` compile and bind correctly.
-test(maybe_nontrivial_references) {
+$test(maybe_nontrivial_references) {
    maybe_non_trivial nontrivial_val;
    cat::maybe<maybe_non_trivial&> nontrivial_ref_default;
    nontrivial_ref_default = nontrivial_val;
@@ -543,7 +543,7 @@ test(maybe_nontrivial_references) {
 }
 
 // Top-level `const` qualifier on the `maybe` itself.
-test(maybe_const_qualified) {
+$test(maybe_const_qualified) {
    cat::maybe<int4> const constant_val = 1;
    [[maybe_unused]]
    cat::maybe<int4> const constant_null = cat::nullopt;
@@ -553,7 +553,7 @@ test(maybe_const_qualified) {
 }
 
 // `maybe<int4 const&>` binds both `const` and non-`const` l-values.
-test(maybe_const_references) {
+$test(maybe_const_references) {
    int4 nonconstant_int = 10;
    int4 const constant_int = 9;
    cat::maybe<int4 const&> constant_ref = constant_int;
@@ -563,21 +563,21 @@ test(maybe_const_references) {
 }
 
 // Move-only value type round-trips into a `maybe`.
-test(maybe_move_only) {
+$test(maybe_move_only) {
    movable test_move;
    [[maybe_unused]]
-   cat::maybe<movable> maybe_movs(mov test_move);
+   cat::maybe<movable> maybe_movs($mov test_move);
 }
 
 // Non-trivial destructor must run when a wrapped value goes out of scope.
-test(maybe_nontrivial_value) {
+$test(maybe_nontrivial_value) {
    [[maybe_unused]]
    cat::maybe<maybe_non_trivial> nontrivial = maybe_non_trivial();
 }
 
 // `maybe<void>` construction modes: default, `monostate`, `in_place`, and
 // `nullopt`, plus `in_place` for non-trivial value types.
-test(maybe_void_construction) {
+$test(maybe_void_construction) {
    cat::maybe<void> optvoid;
    cat::verify(!optvoid.has_value());
    cat::maybe<void> optvoid_2{cat::monostate};
@@ -596,7 +596,7 @@ test(maybe_void_construction) {
 }
 
 // Assigning `monostate` engages a `maybe<void>`, `nullopt` disengages it.
-test(maybe_void_assignment) {
+$test(maybe_void_assignment) {
    cat::maybe<void> optvoid;
    optvoid = cat::monostate;
    cat::verify(optvoid.has_value());
@@ -606,7 +606,7 @@ test(maybe_void_assignment) {
 
 // `maybe` is usable in a `constexpr` context across the value, compact, and
 // `maybe_ptr` storage paths.
-test(maybe_constexpr) {
+$test(maybe_constexpr) {
    [] consteval {
       [[maybe_unused]]
       constexpr cat::maybe<int> const_int_default;
@@ -650,7 +650,7 @@ test(maybe_constexpr) {
 }
 
 // `.is<T>()` answers type membership questions used by `match()`.
-test(maybe_is_trait) {
+$test(maybe_is_trait) {
    cat::maybe<int4> opt_is = 1;
    cat::verify(opt_is.is<int4>());
    cat::verify(!opt_is.is<uint8>());
@@ -662,7 +662,7 @@ test(maybe_is_trait) {
 
 // Pattern-match against value, type, and `nullopt`, using both the free
 // function and the member-access syntax.
-test(maybe_match) {
+$test(maybe_match) {
    cat::maybe<int4> opt_match = 1;
 
    bool matched = false;
@@ -706,16 +706,16 @@ test(maybe_match) {
 }
 
 // `cat::is_maybe` and `cat::is_scaredy` correctly classify `maybe<T>`.
-test(maybe_type_traits) {
+$test(maybe_type_traits) {
    static_assert(cat::is_maybe<cat::maybe<int>>);
    static_assert(cat::is_maybe<cat::maybe<int4>>);
    static_assert(!cat::is_scaredy<cat::maybe<int>>);
    static_assert(!cat::is_scaredy<cat::maybe<int4>>);
 }
 
-// The `prop` macro propagates an empty `maybe`, and passes through values
+// The `$prop` macro propagates an empty `maybe`, and passes through values
 // otherwise.
-test(maybe_prop_macro) {
+$test(maybe_prop_macro) {
    auto _ = maybe_try_success().verify();
    cat::maybe fail = maybe_try_fail();
    cat::verify(!fail.has_value());
@@ -751,7 +751,7 @@ returns_empty_void_maybe() -> cat::maybe<void> {
 // `cat::maybe<T&>` is trivially-copyable and pointer-sized. P3836R2
 // Trivially-copyable `optional<T&>`.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3836r2.html
-test(maybe_reference_layout) {
+$test(maybe_reference_layout) {
    static_assert(__is_trivially_copyable(cat::maybe<int4&>));
    static_assert(__is_trivially_copyable(cat::maybe<int4 const&>));
    static_assert(__is_trivially_copyable(cat::maybe<tracked&>));
@@ -762,7 +762,7 @@ test(maybe_reference_layout) {
 // Clearing a `maybe<T&>` must not destroy the referent. P2988R12
 // `optional<T&>`. Reference rebinding semantics.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
-test(maybe_reference_no_destroy) {
+$test(maybe_reference_no_destroy) {
    int4 dtor_counter = 0;
    {
       tracked t{dtor_counter};
@@ -798,7 +798,7 @@ test(maybe_reference_no_destroy) {
 // unlike `requires` (a viable-but-deleted overload still satisfies it).
 // P2988R12 `optional<T&>`. Dangling-temporary protection.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
-test(maybe_reference_dangling) {
+$test(maybe_reference_dangling) {
    // l-value binding succeeds.
    static_assert(cat::is_constructible<cat::maybe<int const&>, int&>);
    static_assert(cat::is_constructible<cat::maybe<int&>, int&>);
@@ -811,7 +811,7 @@ test(maybe_reference_dangling) {
 // `swap` exchanges held pointers, not the referents. P2988R12 `optional<T&>`.
 // Swap rebinds pointers.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
-test(maybe_reference_swap) {
+$test(maybe_reference_swap) {
    int4 a = 10;
    int4 b = 20;
    cat::maybe<int4&> opt_a = a;
@@ -836,7 +836,7 @@ test(maybe_reference_swap) {
 // avoid dangling on a temporary fallback. P2988R12 `optional<T&>`. `value_or`
 // returns by value.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
-test(maybe_reference_value_or) {
+$test(maybe_reference_value_or) {
    int4 held = 7;
    cat::maybe<int4&> engaged = held;
    int4 fallback = 99;
@@ -862,7 +862,7 @@ test(maybe_reference_value_or) {
 // Range-based for loops over `maybe`. P3168R1 Give `std::optional` range
 // support.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3168r1.html
-test(maybe_range) {
+$test(maybe_range) {
    cat::maybe<int4> engaged = 11;
    int4 sum = 0;
    for (int4& x : engaged) {
@@ -898,7 +898,7 @@ test(maybe_range) {
 }
 
 // `cat::make_maybe` factory covers both deducing and explicit-type forms.
-test(maybe_make_maybe) {
+$test(maybe_make_maybe) {
    auto deduced = cat::make_maybe(int4{42});
    static_assert(cat::is_same<decltype(deduced), cat::maybe<int4>>);
    cat::verify(deduced.value() == 42);
@@ -915,7 +915,7 @@ test(maybe_make_maybe) {
 // Monadic methods on `maybe<void>`. The callable is invoked with no arguments,
 // matching `tl::optional`. P0798R8 Monadic operations for `std::optional`.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p0798r8.html
-test(maybe_void_monadic) {
+$test(maybe_void_monadic) {
    cat::maybe<void> engaged = cat::monostate;
    cat::maybe<void> empty;
 
@@ -972,7 +972,7 @@ test(maybe_void_monadic) {
 
 // `or_else` propagates `*this` when engaged, fixing a long-standing bug where
 // the return was always `nullopt`.
-test(maybe_or_else_propagates) {
+$test(maybe_or_else_propagates) {
    cat::maybe<int4> engaged = 5;
    cat::maybe<int4> propagated = engaged.or_else([]() -> cat::maybe<int4> {
       return int4{99};
@@ -987,7 +987,7 @@ test(maybe_or_else_propagates) {
 }
 
 // Monadic methods across the four value categories.
-test(maybe_monadic_value_categories) {
+$test(maybe_monadic_value_categories) {
    auto add_one = [](int4 x) -> int4 {
       return x + 1;
    };
@@ -1003,7 +1003,7 @@ test(maybe_monadic_value_categories) {
 }
 
 // `reset()` on a value `maybe` destroys the held value and disengages.
-test(maybe_reset) {
+$test(maybe_reset) {
    cat::maybe<int4> v = 5;
    cat::verify(v.has_value());
    v.reset();
@@ -1016,7 +1016,7 @@ test(maybe_reset) {
 }
 
 // `swap()` on value `maybe`s covers the four engagement combinations.
-test(maybe_value_swap) {
+$test(maybe_value_swap) {
    cat::maybe<int4> a = 1;
    cat::maybe<int4> b = 2;
    a.swap(b);
@@ -1041,7 +1041,7 @@ test(maybe_value_swap) {
 // through to the converting `maybe<U>` constructor, meaning 0 converts to
 // `false`, not silently to `true` as it does in `std::optional`.
 // https://brevzin.github.io/c++/2023/01/18/optional-construction/
-test(maybe_bool) {
+$test(maybe_bool) {
    cat::maybe<bool> default_b;
    cat::verify(!default_b.has_value());
 
@@ -1096,7 +1096,7 @@ test(maybe_bool) {
 // converting `maybe<U>` constructors and assignments are guarded by
 // `maybe_converts_from_any_cvref`, so the value constructor wins when the
 // element type is itself constructible from the source `maybe`.
-test(maybe_nested_construction) {
+$test(maybe_nested_construction) {
    cat::maybe<int> engaged_inner = 42;
    cat::maybe<int> empty_inner;
 

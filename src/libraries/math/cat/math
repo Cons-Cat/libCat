@@ -525,8 +525,9 @@ struct equal_to<void> {
    template <typename T, typename U>
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator()(T&& left, U&& right) const -> decltype(fwd(left) == fwd(right)) {
-      return fwd(left) == fwd(right);
+   operator()(T&& left, U&& right) const
+      -> decltype($fwd(left) == $fwd(right)) {
+      return $fwd(left) == $fwd(right);
    }
 };
 
@@ -549,8 +550,9 @@ struct not_equal_to<void> {
    template <typename T, typename U>
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator()(T&& left, U&& right) const -> decltype(fwd(left) != fwd(right)) {
-      return fwd(left) != fwd(right);
+   operator()(T&& left, U&& right) const
+      -> decltype($fwd(left) != $fwd(right)) {
+      return $fwd(left) != $fwd(right);
    }
 };
 
@@ -573,8 +575,8 @@ struct less<void> {
    template <typename T, typename U>
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator()(T&& left, U&& right) const -> decltype(fwd(left) < fwd(right)) {
-      return fwd(left) < fwd(right);
+   operator()(T&& left, U&& right) const -> decltype($fwd(left) < $fwd(right)) {
+      return $fwd(left) < $fwd(right);
    }
 };
 
@@ -597,8 +599,8 @@ struct greater<void> {
    template <typename T, typename U>
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator()(T&& left, U&& right) const -> decltype(fwd(left) > fwd(right)) {
-      return fwd(left) > fwd(right);
+   operator()(T&& left, U&& right) const -> decltype($fwd(left) > $fwd(right)) {
+      return $fwd(left) > $fwd(right);
    }
 };
 
@@ -621,8 +623,9 @@ struct less_equal<void> {
    template <typename T, typename U>
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator()(T&& left, U&& right) const -> decltype(fwd(left) <= fwd(right)) {
-      return fwd(left) <= fwd(right);
+   operator()(T&& left, U&& right) const
+      -> decltype($fwd(left) <= $fwd(right)) {
+      return $fwd(left) <= $fwd(right);
    }
 };
 
@@ -645,8 +648,9 @@ struct greater_equal<void> {
    template <typename T, typename U>
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator()(T&& left, U&& right) const -> decltype(fwd(left) >= fwd(right)) {
-      return fwd(left) >= fwd(right);
+   operator()(T&& left, U&& right) const
+      -> decltype($fwd(left) >= $fwd(right)) {
+      return $fwd(left) >= $fwd(right);
    }
 };
 
@@ -669,8 +673,9 @@ struct compare_three_way<void> {
    template <typename T, typename U>
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator()(T&& left, U&& right) const -> decltype(fwd(left) <=> fwd(right)) {
-      return fwd(left) <=> fwd(right);
+   operator()(T&& left, U&& right) const
+      -> decltype($fwd(left) <=> $fwd(right)) {
+      return $fwd(left) <=> $fwd(right);
    }
 };
 

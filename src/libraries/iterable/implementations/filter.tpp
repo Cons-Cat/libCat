@@ -27,7 +27,7 @@ struct filter_view_impl : iterable_interface {
                   return true;
                }
 
-               return loop_body(fwd(element));
+               return loop_body($fwd(element));
             });
       }
    };
@@ -81,13 +81,14 @@ struct filter_impl : view_interface<filter_impl<Callback>> {
    template <is_borrow_acceptable Iterable>
    constexpr auto
    apply(Iterable&& incoming) const& -> filter_view<Iterable, Callback> {
-      return filter_view<Iterable, Callback>{{}, fwd(incoming), callback};
+      return filter_view<Iterable, Callback>{{}, $fwd(incoming), callback};
    }
 
    template <is_borrow_acceptable Iterable>
    constexpr auto
    apply(Iterable&& incoming) && -> filter_view<Iterable, Callback> {
-      return filter_view<Iterable, Callback>{{}, fwd(incoming), move(callback)};
+      return filter_view<Iterable, Callback>{
+         {}, $fwd(incoming), move(callback)};
    }
 };
 }  // namespace detail

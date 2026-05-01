@@ -83,7 +83,7 @@ struct tuple_element {
    // cannot express that per-index overload set across heterogeneous `T...`.
    // `tuple` still exposes subscript by inheriting every base `[]` through
    // `type_map`'s `using types::operator[]...`, which `tuple::get` uses as
-   // `fwd(self)[subscript]`.
+   // `$fwd(self)[subscript]`.
    constexpr T&
    operator[](idx subscript) & [[clang::lifetimebound]]
    __attribute__((enable_if(subscript == index,
@@ -192,7 +192,7 @@ template <typename Self, typename Callback, idx... indices>
 constexpr auto
 tuple_any_impl(Self&& self, Callback&& callback, index_list_type<indices...>)
    -> bool {
-   return (static_cast<bool>(fwd(callback)(fwd(self).template get<indices>()))
+   return (static_cast<bool>($fwd(callback)($fwd(self).template get<indices>()))
            || ...);
 }
 
@@ -200,7 +200,7 @@ template <typename Self, typename Callback, idx... indices>
 constexpr auto
 tuple_all_impl(Self&& self, Callback&& callback, index_list_type<indices...>)
    -> bool {
-   return (static_cast<bool>(fwd(callback)(fwd(self).template get<indices>()))
+   return (static_cast<bool>($fwd(callback)($fwd(self).template get<indices>()))
            && ...);
 }
 
@@ -208,30 +208,31 @@ template <typename Self, typename Callback, idx... indices>
 constexpr auto
 tuple_transform_impl(Self&& self, Callback&& callback,
                      index_list_type<indices...>) {
-   return tuple<decltype(fwd(callback)(fwd(self).template get<indices>()))...>{
-      fwd(callback)(fwd(self).template get<indices>())...};
+   return tuple<decltype($fwd(callback)(
+      $fwd(self).template get<indices>()))...>{
+      $fwd(callback)($fwd(self).template get<indices>())...};
 }
 
 template <typename Self, typename Callback, idx... indices>
 constexpr void
 tuple_for_each_impl(Self&& self, Callback&& callback,
                     index_list_type<indices...>) {
-   (fwd(callback)(fwd(self).template get<indices>()), ...);
+   ($fwd(callback)($fwd(self).template get<indices>()), ...);
 }
 
 template <typename Self, typename... Arguments, idx... indices>
 constexpr void
 tuple_assign_impl(Self&& self, index_list_type<indices...>,
                   Arguments&&... arguments) {
-   ((fwd(self).template get<indices>() = fwd(arguments)), ...);
+   (($fwd(self).template get<indices>() = $fwd(arguments)), ...);
 }
 
 template <typename Callback, typename Tuple, idx... indices>
 constexpr auto
 tuple_apply_impl(Callback&& callback, Tuple&& tuple,
                  index_list_type<indices...>)
-   -> decltype(fwd(callback)(fwd(tuple).template get<indices>()...)) {
-   return fwd(callback)(fwd(tuple).template get<indices>()...);
+   -> decltype($fwd(callback)($fwd(tuple).template get<indices>()...)) {
+   return $fwd(callback)($fwd(tuple).template get<indices>()...);
 }
 
 template <typename Self, typename Subscript, idx... indices>
@@ -245,7 +246,7 @@ tuple_at(Self&& self, idx index, index_list_type<indices...>)
    using pointee = remove_reference<Subscript>;
    add_pointer<pointee> p = nullptr;
    (void)((index == idx{indices}
-           && (p = &fwd(self).template get<indices>(), true))
+           && (p = &$fwd(self).template get<indices>(), true))
           || ...);
    cat::assert(p);
    if constexpr (is_lvalue_reference<Subscript>) {
@@ -290,7 +291,7 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
       requires(index < types::size)
    constexpr auto
    get(this auto&& self) -> decltype(auto) {
-      return fwd(self)[index];
+      return $fwd(self)[index];
    }
 
    // `at(index)` yields `nullopt` when index is out of range.
@@ -308,7 +309,7 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    first(this auto&& self) -> decltype(auto)
       requires(types::size >= 1)
    {
-      return fwd(self).template get<0u>();
+      return $fwd(self).template get<0u>();
    }
 
    // Get a reference to the second stored variable.
@@ -317,7 +318,7 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    second(this auto&& self) -> decltype(auto)
       requires(types::size >= 2)
    {
-      return fwd(self).template get<1u>();
+      return $fwd(self).template get<1u>();
    }
 
    // Get a reference to the third stored variable.
@@ -326,7 +327,7 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    third(this auto&& self) -> decltype(auto)
       requires(types::size >= 3)
    {
-      return fwd(self).template get<2u>();
+      return $fwd(self).template get<2u>();
    }
 
    // Get a reference to the fourth stored variable.
@@ -335,7 +336,7 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    fourth(this auto&& self) -> decltype(auto)
       requires(types::size >= 4)
    {
-      return fwd(self).template get<3u>();
+      return $fwd(self).template get<3u>();
    }
 
    // Get a reference to the fifth stored variable.
@@ -344,14 +345,14 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    fifth(this auto&& self) -> decltype(auto)
       requires(types::size >= 5)
    {
-      return fwd(self).template get<4u>();
+      return $fwd(self).template get<4u>();
    }
 
    template <typename Callback>
    [[nodiscard]]
    constexpr auto
    any_of(this auto&& self, Callback&& callback) -> bool {
-      return detail::tuple_any_impl(fwd(self), fwd(callback),
+      return detail::tuple_any_impl($fwd(self), $fwd(callback),
                                     make_index_sequence<types::size>{});
    }
 
@@ -359,7 +360,7 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    [[nodiscard]]
    constexpr auto
    all_of(this auto&& self, Callback&& callback) -> bool {
-      return detail::tuple_all_impl(fwd(self), fwd(callback),
+      return detail::tuple_all_impl($fwd(self), $fwd(callback),
                                     make_index_sequence<types::size>{});
    }
 
@@ -367,7 +368,7 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    [[nodiscard]]
    constexpr auto
    transform(this auto&& self, Callback&& callback) {
-      return detail::tuple_transform_impl(fwd(self), fwd(callback),
+      return detail::tuple_transform_impl($fwd(self), $fwd(callback),
                                           make_index_sequence<types::size>{});
    }
 
@@ -375,8 +376,8 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
       requires(sizeof...(Arguments) == types::size.raw)
    constexpr void
    assign(this auto&& self, Arguments&&... arguments) {
-      detail::tuple_assign_impl(fwd(self), make_index_sequence<types::size>{},
-                                fwd(arguments)...);
+      detail::tuple_assign_impl($fwd(self), make_index_sequence<types::size>{},
+                                $fwd(arguments)...);
    }
 };
 
@@ -396,7 +397,7 @@ template <idx index, typename Tuple>
 [[nodiscard]]
 constexpr auto
 get(Tuple&& tuple) -> decltype(auto) {
-   return fwd(tuple).template get<index>();
+   return $fwd(tuple).template get<index>();
 }
 
 // `tuple<types&...>`. Only l-value references, each element aliases an
@@ -420,7 +421,7 @@ template <typename... Arguments>
 [[nodiscard]]
 constexpr auto
 forward_as_tuple(Arguments&&... arguments) -> tuple<Arguments&&...> {
-   return {fwd(arguments)...};
+   return {$fwd(arguments)...};
 }
 
 // `tuple<decay<types>...>`. `decay` each element into owned by-value members,
@@ -431,7 +432,7 @@ template <typename... Arguments>
 [[nodiscard]]
 constexpr auto
 make_tuple(Arguments&&... arguments) -> tuple<decay<Arguments>...> {
-   return {fwd(arguments)...};
+   return {$fwd(arguments)...};
 }
 
 template <typename Callback, typename Tuple>
@@ -441,7 +442,7 @@ constexpr auto
 apply(Callback&& callback, Tuple&& tuple) {
    using tuple_decay = decay<Tuple>;
    return detail::tuple_apply_impl(
-      fwd(callback), fwd(tuple),
+      $fwd(callback), $fwd(tuple),
       make_index_sequence<tuple_decay::types::size>{});
 }
 

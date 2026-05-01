@@ -2,11 +2,11 @@
 
 #include "../unit_tests.hpp"
 
-test(pool_allocator) {
+$test(pool_allocator) {
    // Initialize an allocator.
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128u).verify();
-   defer {
+   $defer {
       pager.free(page);
    };
    cat::is_allocator auto allocator = cat::make_pool_allocator<8>(page);

@@ -25,7 +25,7 @@ array : public container_interface<array<T, length>, T>,
    template <typename... Args>
       requires(sizeof...(Args) == length)
    constexpr array(Args&&... arguments)
-       : m_data(static_cast<T>(fwd(arguments))...) {
+       : m_data(static_cast<T>($fwd(arguments))...) {
    }
 
    // Lexicographic ordering and element-wise equality, matching `std::array`.
@@ -90,7 +90,7 @@ array : public container_interface<array<T, length>, T>,
    template <idx i>
    constexpr auto
    get(this auto&& self [[clang::lifetimebound]]) -> decltype(auto) {
-      return fwd(self).m_data[i.raw];
+      return $fwd(self).m_data[i.raw];
    }
 
  private:

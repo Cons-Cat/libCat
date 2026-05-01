@@ -68,7 +68,7 @@ namespace detail {
 auto
 style_tty_fg(is_allocator auto& alloc, str_view text, str_view color)
    -> maybe<str_span> {
-   str_span memory = prop(alloc.template alloc_multi<char>(
+   str_span memory = $prop(alloc.template alloc_multi<char>(
       text.size() + color.size() + vt_fg_default.size()));
 
    char* p_memory = memory.data();
@@ -87,7 +87,7 @@ style_tty_fg(is_allocator auto& alloc, str_view text, str_view color)
 auto
 style_tty_bg(is_allocator auto& alloc, str_view text, str_view color)
    -> maybe<str_span> {
-   str_span memory = prop(alloc.template alloc_multi<char>(
+   str_span memory = $prop(alloc.template alloc_multi<char>(
       text.size() + color.size() + vt_bg_default.size()));
 
    char* p_memory = memory.data();

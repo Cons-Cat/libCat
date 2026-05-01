@@ -5,11 +5,11 @@
 
 #include "../unit_tests.hpp"
 
-test(list) {
+$test(list) {
    // Initialize an allocator.
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
-   defer {
+   $defer {
       pager.free(page);
    };
    auto allocator = cat::make_linear_allocator(page);
@@ -117,7 +117,7 @@ test(list) {
    list_1.push_front(2).verify();
    list_1.push_front(1).verify();
    list_1.push_front(0).verify();
-   cat::list list_4 = mov list_1;
+   cat::list list_4 = $mov list_1;
    cat::verify(list_4.size() == 3);
    cat::verify(list_4.front() == 0);
    cat::verify(*(list_4.begin() + 1u) == 1);

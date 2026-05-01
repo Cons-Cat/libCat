@@ -32,7 +32,7 @@ struct reverse_impl : view_interface<reverse_impl> {
       requires(is_reverse_iterable<Iterable>)
    constexpr auto
    apply(Iterable&& incoming) const -> reverse_view<Iterable> {
-      return reverse_view<Iterable>{{}, fwd(incoming)};
+      return reverse_view<Iterable>{{}, $fwd(incoming)};
    }
 };
 }  // namespace detail

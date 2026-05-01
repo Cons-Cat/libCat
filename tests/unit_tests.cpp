@@ -34,12 +34,12 @@ main() -> int {
    cat::jmp_buffer jump_buffer;
    p_jump_buffer = &jump_buffer;
 
-   // Call all unit test functions that were pushed into `test_fns` by the
+   // Call all unit $test functions that were pushed into `test_fns` by the
    // `CAT_TEST` macro.
    for (cat::idx i = 0; i < test_fns.value().size(); ++i) {
-      auto _ = ::cat::print(::cat::fmt(pager, "Running test {}", i).value());
+      auto _ = ::cat::print(::cat::fmt(pager, "Running $test {}", i).value());
       if (cat::setjmp(jump_buffer)) {
-         // Jump here when a test fails, skipping the rest of a test's
+         // Jump here when a $test fails, skipping the rest of a $test's
          // constructor function.
          continue;
       }

@@ -176,9 +176,9 @@ invoke_r(Callback&& callback, Args&&... arguments) -> ReturnT
 // noexcept(is_nothrow_invocable_r<ReturnT, Callback, Args...>)
 {
    if constexpr (is_void<ReturnT>) {
-      invoke(fwd(callback), fwd(arguments)...);
+      invoke($fwd(callback), $fwd(arguments)...);
    } else {
-      return invoke(fwd(callback), fwd(arguments)...);
+      return invoke($fwd(callback), $fwd(arguments)...);
    }
 }
 

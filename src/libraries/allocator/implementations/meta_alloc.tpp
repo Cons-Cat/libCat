@@ -77,7 +77,7 @@ allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
          if constexpr (is_zeroed) {
             stack_handle.set_inline_storage(T{});
          } else {
-            stack_handle.set_inline_storage(T(fwd(arguments)...));
+            stack_handle.set_inline_storage(T($fwd(arguments)...));
          }
       }
 
@@ -122,7 +122,7 @@ allocator_interface<Derived>::meta_alloc_consteval_inline_allocate(
          if constexpr (is_zeroed) {
             stack_handle.set_inline_storage(T{});
          } else {
-            stack_handle.set_inline_storage(T(fwd(arguments)...));
+            stack_handle.set_inline_storage(T($fwd(arguments)...));
          }
       }
 
@@ -303,7 +303,7 @@ allocator_interface<Derived>::meta_alloc_finish_non_inline(
       if constexpr (is_zeroed) {
          new (p_allocation + i) T;
       } else {
-         new (p_allocation + i) T(fwd(arguments)...);
+         new (p_allocation + i) T($fwd(arguments)...);
       }
    }
 
@@ -375,7 +375,7 @@ allocator_interface<Derived>::meta_alloc_finish_inline_overflow(
       if constexpr (is_zeroed) {
          new (p_allocation + i) T;
       } else {
-         new (p_allocation + i) T(fwd(arguments)...);
+         new (p_allocation + i) T($fwd(arguments)...);
       }
    }
 
@@ -499,11 +499,11 @@ allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
       if constexpr (!is_inline) {
          return this->template meta_alloc_consteval_allocate<
             T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
-            allocation_alignment, allocation_count, fwd(arguments)...);
+            allocation_alignment, allocation_count, $fwd(arguments)...);
       } else {
          return this->template meta_alloc_consteval_inline_allocate<
             T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
-            allocation_bytes, allocation_count, fwd(arguments)...);
+            allocation_bytes, allocation_count, $fwd(arguments)...);
       }
    } else {
       using alias_types =
@@ -514,7 +514,7 @@ allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
             return this->template meta_alloc_inline_stack_allocate<
                T, is_fail_safe, is_aligned, is_multiple, is_zeroed,
                has_feedback>(allocation_bytes, allocation_count,
-                             fwd(arguments)...);
+                             $fwd(arguments)...);
          }
       }
 
@@ -551,12 +551,12 @@ allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
          return this->template meta_alloc_finish_non_inline<
             T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
             move(maybe_memory), allocation_bytes, allocation_count,
-            fwd(arguments)...);
+            $fwd(arguments)...);
       } else {
          return this->template meta_alloc_finish_inline_overflow<
             T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
             move(maybe_memory), allocation_bytes, allocation_count,
-            fwd(arguments)...);
+            $fwd(arguments)...);
       }
    }
 }

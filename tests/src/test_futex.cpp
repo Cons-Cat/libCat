@@ -2,7 +2,7 @@
 
 #include "../unit_tests.hpp"
 
-test(futex_syscalls) {
+$test(futex_syscalls) {
    using nix::futex_command;
    using nix::futex_options;
    using nix::futex_wait_flags;

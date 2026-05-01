@@ -20,7 +20,7 @@ struct test_page_type {
 };
 }  // namespace
 
-test(paging_memory) {
+$test(paging_memory) {
    // Initialize an allocator.
    cat::page_allocator allocator;
 
@@ -28,7 +28,7 @@ test(paging_memory) {
    cat::span memory =
       allocator.alloc_multi<int4>(1'000u).or_exit("Failed to page memory!");
    // Free the page at the end of this program.
-   defer {
+   $defer {
       allocator.free(memory);
    };
 

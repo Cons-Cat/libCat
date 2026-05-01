@@ -176,7 +176,7 @@ if (NOT CAT_USE_SANITIZERS)
     -flto=thin
   )
 endif()
-
+`
 list(
   APPEND CAT_CXX_FLAGS_INTERNAL
   ${CAT_CXX_FLAGS_COMMON}

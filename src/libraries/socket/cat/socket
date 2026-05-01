@@ -47,7 +47,7 @@ struct socket_unix {
    // holds.
    auto
    get_size() -> iword {
-      return ssizeof(attributes) + ssizeof(path_name);
+      return iword(sizeof(attributes) + sizeof(path_name));
    }
 
    // Create and return a `Socket`.
@@ -91,7 +91,7 @@ struct socket_unix {
                cat::Socket const* p_destination_socket = nullptr,
                iword const addr_length = 0) -> maybe<void> {
       scaredy result = nix::sys_sendto(this->descriptor, &message_struct,
-                                       ssizeof(message_struct), flags,
+                                       sizeof(message_struct), flags,
                                        p_destination_socket, addr_length);
       if (result.has_value()) {
          return monostate;

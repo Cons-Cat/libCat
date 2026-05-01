@@ -298,7 +298,7 @@ struct plus_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+(this auto&& self, T&& other) -> decltype(auto) {
-      return fwd(self).add(fwd(other));
+      return $fwd(self).add($fwd(other));
    }
 
    // + operators where this is a right-hand-side operand.
@@ -313,7 +313,7 @@ struct plus_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(T&& other, decay_Derived const& self) -> decltype(auto) {
-      return self.add(fwd(other));
+      return self.add($fwd(other));
    }
 
    // `this` is an r-value.
@@ -326,7 +326,7 @@ struct plus_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(T&& other, Derived&& self) -> decltype(auto) {
-      return fwd(self).add(fwd(other));
+      return $fwd(self).add($fwd(other));
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -356,7 +356,7 @@ struct plus_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(Derived& self, T&& other) -> Derived& {
-      self = self.add(fwd(other));
+      self = self.add($fwd(other));
       return self;
    }
 
@@ -467,7 +467,7 @@ struct minus_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator-(this auto&& lhs, T&& other) -> decltype(auto) {
-      return fwd(lhs).subtract_by(fwd(other));
+      return $fwd(lhs).subtract_by($fwd(other));
    }
 
    // - operators where this is a right-hand-side operand.
@@ -482,7 +482,7 @@ struct minus_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(T&& other, decay_Derived const& self) -> decltype(auto) {
-      return self.subtract_from(fwd(other));
+      return self.subtract_from($fwd(other));
    }
 
    // `this` is an r-value.
@@ -495,7 +495,7 @@ struct minus_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(T&& other, Derived&& self) -> decltype(auto) {
-      return fwd(self).subtract_from(fwd(other));
+      return $fwd(self).subtract_from($fwd(other));
    }
 
    // Same-type compound assignment when `subtract_by(rhs)` preserves `Derived`.
@@ -526,7 +526,7 @@ struct minus_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(Derived& self, T&& other) -> Derived& {
-      self = self.subtract_by(fwd(other));
+      self = self.subtract_by($fwd(other));
       return self;
    }
 
@@ -639,7 +639,7 @@ struct multiply_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator*(this auto&& self, T&& other) -> decltype(auto) {
-      return fwd(self).multiply(fwd(other));
+      return $fwd(self).multiply($fwd(other));
    }
 
    // * operators where this is a right-hand-side operand.
@@ -654,7 +654,7 @@ struct multiply_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*(T&& other, decay_Derived const& self) -> decltype(auto) {
-      return self.multiply(fwd(other));
+      return self.multiply($fwd(other));
    }
 
    // `this` is an r-value.
@@ -667,7 +667,7 @@ struct multiply_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*(T&& other, Derived&& self) -> decltype(auto) {
-      return fwd(self).multiply(fwd(other));
+      return $fwd(self).multiply($fwd(other));
    }
 
    // Same-type compound assignment when `multiply(rhs)` preserves `Derived`.
@@ -698,7 +698,7 @@ struct multiply_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(Derived& self, T&& other) -> Derived& {
-      self = self.multiply(fwd(other));
+      self = self.multiply($fwd(other));
       return self;
    }
 
@@ -769,7 +769,7 @@ struct divide_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator/(this auto&& self, T&& other) -> decltype(auto) {
-      return fwd(self).divide_by(fwd(other));
+      return $fwd(self).divide_by($fwd(other));
    }
 
    // / operators where this is a right-hand-side operand.
@@ -784,7 +784,7 @@ struct divide_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/(T&& other, decay_Derived const& self) -> decltype(auto) {
-      return self.divide_into(fwd(other));
+      return self.divide_into($fwd(other));
    }
 
    // `this` is an r-value.
@@ -797,7 +797,7 @@ struct divide_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/(T&& other, Derived&& self) -> decltype(auto) {
-      return fwd(self).divide_into(fwd(other));
+      return $fwd(self).divide_into($fwd(other));
    }
 
    // Same-type compound assignment when `divide_by(rhs)` preserves `Derived`.
@@ -828,7 +828,7 @@ struct divide_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(Derived& self, T&& other) -> Derived& {
-      self = self.divide_by(fwd(other));
+      self = self.divide_by($fwd(other));
       return self;
    }
 
@@ -899,7 +899,7 @@ struct bit_and_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator&(this auto&& self, T&& other) -> decltype(auto) {
-      return fwd(self).bit_and(fwd(other));
+      return $fwd(self).bit_and($fwd(other));
    }
 
    // & operators where this is a right-hand-side operand.
@@ -914,7 +914,7 @@ struct bit_and_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&(T&& other, decay_Derived const& self) -> decltype(auto) {
-      return self.bit_and(fwd(other));
+      return self.bit_and($fwd(other));
    }
 
    // `this` is an r-value.
@@ -927,7 +927,7 @@ struct bit_and_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&(T&& other, Derived&& self) -> decltype(auto) {
-      return fwd(self).bit_and(fwd(other));
+      return $fwd(self).bit_and($fwd(other));
    }
 
    // Same-type compound assignment when `bit_and(rhs)` preserves `Derived`.
@@ -958,7 +958,7 @@ struct bit_and_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(Derived& self, T&& other) -> Derived& {
-      self = self.bit_and(fwd(other));
+      self = self.bit_and($fwd(other));
       return self;
    }
 
@@ -1029,7 +1029,7 @@ struct bit_or_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator|(this auto&& self, T&& other) -> decltype(auto) {
-      return fwd(self).bit_or(fwd(other));
+      return $fwd(self).bit_or($fwd(other));
    }
 
    // | operators where this is a right-hand-side operand.
@@ -1044,7 +1044,7 @@ struct bit_or_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|(T&& other, decay_Derived const& self) -> decltype(auto) {
-      return self.bit_or(fwd(other));
+      return self.bit_or($fwd(other));
    }
 
    // `this` is an r-value.
@@ -1057,7 +1057,7 @@ struct bit_or_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|(T&& other, Derived&& self) -> decltype(auto) {
-      return fwd(self).bit_or(fwd(other));
+      return $fwd(self).bit_or($fwd(other));
    }
 
    // Same-type compound assignment when `bit_or(rhs)` preserves `Derived`.
@@ -1088,7 +1088,7 @@ struct bit_or_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(Derived& self, T&& other) -> Derived& {
-      self = self.bit_or(fwd(other));
+      self = self.bit_or($fwd(other));
       return self;
    }
 
@@ -1159,7 +1159,7 @@ struct modulo_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator%(this auto&& self, T&& other) -> decltype(auto) {
-      return fwd(self).modulo_by(fwd(other));
+      return $fwd(self).modulo_by($fwd(other));
    }
 
    // % operators where this is a right-hand-side operand.
@@ -1174,7 +1174,7 @@ struct modulo_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%(T&& other, decay_Derived const& self) -> decltype(auto) {
-      return self.modulo_into(fwd(other));
+      return self.modulo_into($fwd(other));
    }
 
    // `this` is an r-value.
@@ -1187,7 +1187,7 @@ struct modulo_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%(T&& other, Derived&& self) -> decltype(auto) {
-      return fwd(self).modulo_into(fwd(other));
+      return $fwd(self).modulo_into($fwd(other));
    }
 
    // Same-type compound assignment when `modulo_by(rhs)` preserves `Derived`.
@@ -1218,7 +1218,7 @@ struct modulo_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(Derived& self, T&& other) -> Derived& {
-      self = self.modulo_by(fwd(other));
+      self = self.modulo_by($fwd(other));
       return self;
    }
 
@@ -1289,7 +1289,7 @@ struct shift_left_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<<(this auto&& self, T&& other) -> decltype(auto) {
-      return fwd(self).shift_left_by(fwd(other));
+      return $fwd(self).shift_left_by($fwd(other));
    }
 
    // << operators where this is a right-hand-side operand.
@@ -1304,7 +1304,7 @@ struct shift_left_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<(T&& other, decay_Derived const& self) -> decltype(auto) {
-      return self.shift_left_into(fwd(other));
+      return self.shift_left_into($fwd(other));
    }
 
    // `this` is an r-value.
@@ -1317,7 +1317,7 @@ struct shift_left_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<(T&& other, Derived&& self) -> decltype(auto) {
-      return fwd(self).shift_left_into(fwd(other));
+      return $fwd(self).shift_left_into($fwd(other));
    }
 
    // Same-type compound assignment when `shift_left_by(rhs)` preserves
@@ -1349,7 +1349,7 @@ struct shift_left_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(Derived& self, T&& other) -> Derived& {
-      self = self.shift_left_by(fwd(other));
+      self = self.shift_left_by($fwd(other));
       return self;
    }
 
@@ -1420,7 +1420,7 @@ struct shift_right_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator>>(this auto&& self, T&& other) -> decltype(auto) {
-      return fwd(self).shift_right_by(fwd(other));
+      return $fwd(self).shift_right_by($fwd(other));
    }
 
    // >> operators where this is a right-hand-side operand.
@@ -1435,7 +1435,7 @@ struct shift_right_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>(T&& other, decay_Derived const& self) -> decltype(auto) {
-      return self.shift_right_into(fwd(other));
+      return self.shift_right_into($fwd(other));
    }
 
    // `this` is an r-value.
@@ -1448,7 +1448,7 @@ struct shift_right_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>(T&& other, Derived&& self) -> decltype(auto) {
-      return fwd(self).shift_right_into(fwd(other));
+      return $fwd(self).shift_right_into($fwd(other));
    }
 
    // Same-type compound assignment when `shift_right_by(rhs)` preserves
@@ -1480,7 +1480,7 @@ struct shift_right_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(Derived& self, T&& other) -> Derived& {
-      self = self.shift_right_by(fwd(other));
+      self = self.shift_right_by($fwd(other));
       return self;
    }
 

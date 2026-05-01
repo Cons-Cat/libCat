@@ -5,7 +5,7 @@
 
 // Not a P2141 magic-aggregate: tuple-like `std` hooks + `cat::get` and member
 // `get` for structured bindings.
-test(tuple_structured_bindings_with_get) {
+$test(tuple_structured_bindings_with_get) {
    cat::tuple<int, bool> t{4, true};
    static_assert(!cat::has_aggregate_get<decltype(t)>);
    cat::verify(t.first() == 4);
@@ -28,7 +28,7 @@ struct tup_non_trivial {
 
 static_assert(!cat::is_implicit_lifetime<tup_non_trivial>);
 
-test(tuple_basics) {
+$test(tuple_basics) {
    using intint = cat::tuple<int, int>;
    static_assert(cat::is_trivially_copyable<intint>
                  && cat::is_trivially_default_constructible<intint>);
@@ -154,7 +154,7 @@ test(tuple_basics) {
       cat::is_same<decltype(tuple_of_tuple_ctad), decltype(tuple_of_tuple)>);
 }
 
-test(tuple_implicit_lifetime_when_members_are) {
+$test(tuple_implicit_lifetime_when_members_are) {
    static_assert(cat::is_implicit_lifetime<cat::tuple<>>);
 
    static_assert(cat::is_implicit_lifetime<cat::tuple<int4>>);
@@ -170,7 +170,7 @@ test(tuple_implicit_lifetime_when_members_are) {
    static_assert(cat::is_implicit_lifetime<cat::tuple<cat::array<int4, 2u>>>);
 }
 
-test(tuple_operator_index) {
+$test(tuple_operator_index) {
    // Subscript is `t[index]` with `cat::idx` and Clang `enable_if` so only the
    // element whose slot matches `index` is a viable member `operator[]`.
    cat::tuple<int, int> t{1, 2};
@@ -237,7 +237,7 @@ test(tuple_operator_index) {
    cat::verify(n1 == 44);
 }
 
-test(tuple_at) {
+$test(tuple_at) {
    cat::tuple<int, int> t{1, 2};
    cat::verify(t.at(0_idx).has_value() && t.at(0_idx).value() == 1);
    cat::verify(t.at(1_idx).has_value() && t.at(1_idx).value() == 2);
@@ -258,7 +258,7 @@ test(tuple_at) {
    cat::verify(!mixed.at(2_idx).has_value());
 }
 
-test(tuple_cat) {
+$test(tuple_cat) {
    using intint = cat::tuple<int, int>;
    using floatfloat = cat::tuple<float, float>;
    [[maybe_unused]]
@@ -351,7 +351,7 @@ test(tuple_cat) {
    }
 }
 
-test(tuple_tie_make_forward) {
+$test(tuple_tie_make_forward) {
    int tied_left = 1;
    char tied_right = 'a';
    auto tied = cat::tie(tied_left, tied_right);
@@ -410,7 +410,7 @@ test(tuple_tie_make_forward) {
    }
 }
 
-test(tuple_apply) {
+$test(tuple_apply) {
    auto apply_sum = cat::apply(
       [](int left, int right) {
          return left + right;
@@ -419,7 +419,7 @@ test(tuple_apply) {
    cat::verify(apply_sum == 5);
 }
 
-test(tuple_algorithms) {
+$test(tuple_algorithms) {
    cat::tuple<int, int, int> bulk{2, 4, 6};
    cat::verify(bulk.any_of([](int value) {
       return value == 4;

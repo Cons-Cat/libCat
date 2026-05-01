@@ -73,7 +73,7 @@ struct as_rvalue_impl : view_interface<as_rvalue_impl> {
    template <is_borrow_acceptable Iterable>
    constexpr auto
    apply(Iterable&& incoming) const -> as_rvalue_view<Iterable> {
-      return as_rvalue_view<Iterable>{{}, fwd(incoming)};
+      return as_rvalue_view<Iterable>{{}, $fwd(incoming)};
    }
 };
 }  // namespace detail

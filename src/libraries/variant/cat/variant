@@ -189,7 +189,7 @@ class variant {
    // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
    constexpr variant(T&& input) {
       // Construct a new `T` at the address where it will be gotten from.
-      new (__builtin_addressof(this->get<T>())) T(fwd(input));
+      new (__builtin_addressof(this->get<T>())) T($fwd(input));
       this->discriminant = this->alternative_index<T>;
    };
 
@@ -223,10 +223,10 @@ class variant {
          if constexpr (!is_trivially_destructible<T>) {
             this->get<T>().~T();
          }
-         this->get<T>() = fwd(operand);
+         this->get<T>() = $fwd(operand);
          this->discriminant = this->alternative_index<T>;
       } else {
-         this->get<T>() = fwd(operand);
+         this->get<T>() = $fwd(operand);
       }
       return *this;
    }
@@ -255,7 +255,7 @@ class variant {
    template <typename... Us>
    constexpr auto
    operator=(variant<Us...>&& operand) -> variant<alternative_types...>& {
-      this->assign_other_variant<Us...>(mov operand);
+      this->assign_other_variant<Us...>($mov operand);
       return *this;
    }
 
@@ -345,7 +345,7 @@ class variant {
    [[nodiscard]]
    constexpr auto
    get_if(this auto&& self) -> decltype(auto) {
-      return fwd(self).template get_if<idx(index)>();
+      return $fwd(self).template get_if<idx(index)>();
    }
 
    [[nodiscard]]
@@ -415,7 +415,7 @@ class variant {
       requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
    match(Patterns&&... patterns) {
-      detail::match_patterns (*this)(fwd(patterns)...);
+      detail::match_patterns (*this)($fwd(patterns)...);
    }
 
    // Holds true if this `variant` currently has some value of the type `T`.

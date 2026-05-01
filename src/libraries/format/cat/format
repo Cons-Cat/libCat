@@ -9,7 +9,7 @@
 #include <cat/scaredy>
 #include <cat/string>
 
-// TODO: Use `prop` macros to simplify error propagation.
+// TODO: Use `$prop` macros to simplify error propagation.
 
 namespace cat {
 
@@ -33,7 +33,7 @@ template <is_integral T>
 auto
 to_chars(is_allocator auto& allocator, T integer) -> maybe<str_view> {
    span string =
-      prop(allocator.template alloc_multi<char>(limits<T>::digits10));
+      $prop(allocator.template alloc_multi<char>(limits<T>::digits10));
    char* p_string = string.data();
 
    // Modify the allocated string in-place.
@@ -60,7 +60,7 @@ template <typename T>
 auto
 to_chars(is_allocator auto& allocator, T value) -> maybe<str_view> {
    span string =
-      prop(allocator.template alloc_multi<char>(limits<T>::digits10));
+      $prop(allocator.template alloc_multi<char>(limits<T>::digits10));
    char* p_string = string.data();
 
    detail::dragonbox::to_chars(value, p_string);
@@ -321,7 +321,7 @@ struct format_string_vector : container_interface<format_string_vector, char>,
          this->p_storage = result.value().data();
          /*
          this->p_storage =
-            prop(allocator.template realloc_multi<char>(
+            $prop(allocator.template realloc_multi<char>(
                this->p_storage, this->max_length, this->max_length * 2u))
             .data();
           */
@@ -369,7 +369,7 @@ class format_args_compact_storage {
           < sizeof...(Types)) {  // TODO: Explore whether `[[likely]]`
                                  // improves performance here.
          this->arguments_indices[argument_index.raw + 1].byte_index =
-            storage_index.raw + ssizeof(T);
+            storage_index.raw + sizeof(T);
       }
 
       ++argument_index;
@@ -384,7 +384,7 @@ class format_args_compact_storage {
       this->arguments_indices[0].byte_index = 0u;
       idx argument_index;
       // `store_argument()` increments `argument_index`.
-      (this->store_argument(argument_index, fwd(arguments)), ...);
+      (this->store_argument(argument_index, $fwd(arguments)), ...);
    }
 
    static constexpr uword::raw_type argument_count = sizeof...(Types);
@@ -850,7 +850,7 @@ fmt_to(Allocator& allocator, Outputter output_iterator, str_view const format,
    return vfmt_to(
       allocator, output_iterator, format,
       detail::format_args(
-         detail::format_args_compact_storage<Args...>(fwd(arguments)...)));
+         detail::format_args_compact_storage<Args...>($fwd(arguments)...)));
 }
 
 template <is_allocator Allocator, typename... Args>
@@ -860,7 +860,7 @@ fmt(Allocator& allocator, str_view const format, Args&&... arguments)
    -> scaredy_format<str_view> {
    return vfmt(allocator, format,
                detail::format_args(detail::format_args_compact_storage<Args...>(
-                  fwd(arguments)...)));
+                  $fwd(arguments)...)));
 }
 
 }  // namespace cat

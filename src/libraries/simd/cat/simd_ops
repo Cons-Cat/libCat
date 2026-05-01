@@ -470,7 +470,7 @@ struct simd_load_blend_masked_impl {
               typename detail::simd_mask_pack_parameters<Mask>::abi> {
       using lane = typename detail::simd_mask_pack_parameters<Mask>::lane;
       using abi = typename detail::simd_mask_pack_parameters<Mask>::abi;
-      return (*this)(simd<lane, abi>(fwd(passthrough_fill)), source);
+      return (*this)(simd<lane, abi>($fwd(passthrough_fill)), source);
    }
 };
 
@@ -517,7 +517,7 @@ struct simd_load_aligned_blend_masked_impl {
                     typename detail::simd_mask_pack_parameters<Mask>::abi>> {
       using lane = typename detail::simd_mask_pack_parameters<Mask>::lane;
       using abi = typename detail::simd_mask_pack_parameters<Mask>::abi;
-      return (*this)(simd<lane, abi>(fwd(passthrough_fill)), source);
+      return (*this)(simd<lane, abi>($fwd(passthrough_fill)), source);
    }
 };
 
@@ -2173,7 +2173,7 @@ struct simd_if_else_impl {
    constexpr auto
    operator()(simd_mask<T, Abi> mask, simd<T, Abi> on_true, U&& on_false) const
       -> simd<T, Abi> {
-      return (*this)(mask, on_true, simd<T, Abi>(fwd(on_false)));
+      return (*this)(mask, on_true, simd<T, Abi>($fwd(on_false)));
    }
 
    template <typename T, typename Abi, typename A>
@@ -2220,7 +2220,7 @@ struct make_simd_mask_if_builder {
    [[nodiscard]]
    constexpr auto
    else_(Alt&& alt) const -> make_simd_mask_else<M, remove_cvref<Alt>> {
-      return {lane_mask, static_cast<remove_cvref<Alt>>(fwd(alt))};
+      return {lane_mask, static_cast<remove_cvref<Alt>>($fwd(alt))};
    }
 };
 

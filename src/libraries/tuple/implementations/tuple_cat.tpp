@@ -14,14 +14,14 @@ forward_tuple_impl(Tuple&& input_tuple, index_list_type<indices...>) {
    using tuple_decay = decay<Tuple>;
    using tuple_types = typename tuple_decay::types;
    return cat::tuple<typename tuple_types::template get<indices>...>{
-      fwd(input_tuple).template get<indices>()...};
+      $fwd(input_tuple).template get<indices>()...};
 }
 
 template <typename Tuple>
 constexpr auto
 forward_tuple(Tuple&& input_tuple) {
    using tuple_decay = decay<Tuple>;
-   return forward_tuple_impl(fwd(input_tuple),
+   return forward_tuple_impl($fwd(input_tuple),
                              make_index_sequence<tuple_decay::types::size>{});
 }
 
@@ -37,8 +37,8 @@ tuple_cat_two_impl(LeftTuple&& left, RightTuple&& right,
    using right_types = typename right_decay::types;
    return tuple<typename left_types::template get<left_index>...,
                 typename right_types::template get<right_index>...>{
-      fwd(left).template get<left_index>()...,
-      fwd(right).template get<right_index>()...};
+      $fwd(left).template get<left_index>()...,
+      $fwd(right).template get<right_index>()...};
 }
 
 template <typename LeftTuple, typename RightTuple>
@@ -46,7 +46,7 @@ constexpr auto
 tuple_cat_two(LeftTuple&& left, RightTuple&& right) {
    using left_decay = decay<LeftTuple>;
    using right_decay = decay<RightTuple>;
-   return tuple_cat_two_impl(fwd(left), fwd(right),
+   return tuple_cat_two_impl($fwd(left), $fwd(right),
                              make_index_sequence<left_decay::types::size>{},
                              make_index_sequence<right_decay::types::size>{});
 }
@@ -61,7 +61,7 @@ template <typename Tuple>
    requires(is_tuple<Tuple>)
 constexpr auto
 tuple_cat(Tuple&& tuple) {
-   return detail::forward_tuple(fwd(tuple));
+   return detail::forward_tuple($fwd(tuple));
 }
 
 template <typename LeftTuple, typename RightTuple, typename... Remaining>
@@ -69,11 +69,11 @@ template <typename LeftTuple, typename RightTuple, typename... Remaining>
             && (is_tuple<Remaining> && ...))
 constexpr auto
 tuple_cat(LeftTuple&& left, RightTuple&& right, Remaining&&... remaining) {
-   auto combined = detail::tuple_cat_two(fwd(left), fwd(right));
+   auto combined = detail::tuple_cat_two($fwd(left), $fwd(right));
    if constexpr (sizeof...(Remaining) == 0) {
       return combined;
    } else {
-      return tuple_cat(move(combined), fwd(remaining)...);
+      return tuple_cat(move(combined), $fwd(remaining)...);
    }
 }
 }  // namespace cat

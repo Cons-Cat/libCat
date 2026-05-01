@@ -14,7 +14,7 @@ sum(Iterable&& source) -> iterable_value_type<Iterable> {
    auto context = iterate(source);
 
    context.run_while([&total](auto&& element) -> bool {
-      total = total + fwd(element);
+      total = total + $fwd(element);
       return true;
    });
 
@@ -26,7 +26,7 @@ struct sum_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, sum_impl /*sum_impl*/) {
-      return sum(fwd(incoming));
+      return sum($fwd(incoming));
    }
 };
 }  // namespace detail

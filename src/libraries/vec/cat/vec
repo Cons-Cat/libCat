@@ -124,7 +124,7 @@ vec : public container_interface<vec<T, Allocator>, T>,
       } else {
          // Make a new allocation with size feedback.
          auto [alloc_span, alloc_bytes] =
-            prop(internal_allocate(minimum_capacity));
+            $prop(internal_allocate(minimum_capacity));
 
          m_current_capacity = alloc_bytes / sizeof(T);
          m_p_data = alloc_span.data();
@@ -205,7 +205,7 @@ vec : public container_interface<vec<T, Allocator>, T>,
             }
          } else {
             auto [alloc_span, alloc_bytes] =
-               prop(internal_allocate(minimum_capacity));
+               $prop(internal_allocate(minimum_capacity));
 
             m_p_data = alloc_span.data();
             m_current_capacity = idx(alloc_bytes / sizeof(T));
@@ -222,7 +222,7 @@ vec : public container_interface<vec<T, Allocator>, T>,
    resize(idx size) -> maybe<void> {
       if (size > m_current_capacity) {
          // This sets `this->current_capacity` and `this->p_storage`.
-         prop(this->reserve(size));
+         $prop(this->reserve(size));
       }
 
       // TODO: Initialize the values.
@@ -240,7 +240,7 @@ vec : public container_interface<vec<T, Allocator>, T>,
    clone(NewAllocator& allocator
          [[clang::lifetimebound]]) const& -> maybe<vec<T, NewAllocator>> {
       vec<T, NewAllocator> new_vector =
-         prop(make_vec_reserved<T>(allocator, m_current_capacity));
+         $prop(make_vec_reserved<T>(allocator, m_current_capacity));
       new_vector.m_current_size = m_current_size;
       relocate(this->begin(), this->end(), new_vector.begin());
 
@@ -256,10 +256,10 @@ vec : public container_interface<vec<T, Allocator>, T>,
    constexpr auto
    push_back(U&& value) -> maybe<void> {
       if (m_current_size + 1 > m_current_capacity) {
-         prop(this->increase_storage());
+         $prop(this->increase_storage());
       }
 
-      m_p_data[m_current_size.raw] = static_cast<T>(fwd(value));
+      m_p_data[m_current_size.raw] = static_cast<T>($fwd(value));
       ++(m_current_size);
       return monostate;
    }
@@ -283,9 +283,9 @@ namespace detail {
 template <idx i>
 void
 initialize_vec(auto& vec, auto&& current, auto&&... next) {
-   vec[i] = fwd(current);
+   vec[i] = $fwd(current);
    if constexpr (sizeof...(next) > 0u) {
-      initialize_vec<i + 1u>(vec, fwd(next)...);
+      initialize_vec<i + 1u>(vec, $fwd(next)...);
    }
 }
 }
@@ -297,9 +297,9 @@ constexpr auto
 make_vec(Allocator& allocator [[clang::lifetimebound]], Us&&... arguments)
    -> maybe<vec<T, Allocator>> {
    vec<T, Allocator> new_vector(allocator);
-   prop(new_vector.reserve(sizeof...(Us)));
+   $prop(new_vector.reserve(sizeof...(Us)));
    new_vector.m_current_size = sizeof...(Us);
-   detail::initialize_vec<0u>(new_vector, fwd(arguments)...);
+   detail::initialize_vec<0u>(new_vector, $fwd(arguments)...);
    return new_vector;
 }
 
@@ -316,7 +316,7 @@ constexpr auto
 make_vec_reserved(Allocator& allocator [[clang::lifetimebound]], idx capacity)
    -> maybe<vec<T, Allocator>> {
    vec<T, Allocator> new_vector(allocator);
-   prop(new_vector.reserve(capacity));
+   $prop(new_vector.reserve(capacity));
    return new_vector;
 }
 
@@ -326,7 +326,7 @@ constexpr auto
 make_vec_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
                 T const& value) -> maybe<vec<T, Allocator>> {
    vec<T, Allocator> new_vector(allocator);
-   prop(new_vector.reserve(count));
+   $prop(new_vector.reserve(count));
    new_vector.m_current_size = count;
    // TODO: Call a vectorized fill memory function.
    // TODO: Forward from the last `value`.

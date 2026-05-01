@@ -168,7 +168,7 @@ class stepanov_iterable_interface {
       constexpr bool is_const = is_const_ref<decltype(container)>;
       using it = conditional<is_const, const_iterator, iterator>;
 
-      return it(0, fwd(container).data());
+      return it(0, $fwd(container).data());
    }
 
    [[nodiscard]]
@@ -181,7 +181,7 @@ class stepanov_iterable_interface {
       // evaluation order is unspecified, it cannot be called inside an argument
       // list.
       auto size = container.size();
-      auto* p_data = fwd(container).data();
+      auto* p_data = $fwd(container).data();
       return it(size, p_data);
    }
 
@@ -238,14 +238,14 @@ class random_access_stepanov_iterable_interface
    constexpr auto
    begin(this auto&& container) {
       // `container_stepanov_iterator` deduces `const`-ness for us here.
-      return detail::container_stepanov_iterator(0u, fwd(container).data());
+      return detail::container_stepanov_iterator(0u, $fwd(container).data());
    }
 
    [[nodiscard]]
    constexpr auto
    end(this auto&& container) {
       idx size = container.size();
-      auto* p_data = fwd(container).data();
+      auto* p_data = $fwd(container).data();
       // `container_stepanov_iterator` deduces `const`-ness for us here.
       return detail::container_stepanov_iterator(size, p_data);
    }
@@ -259,7 +259,7 @@ class random_access_stepanov_iterable_interface
       // `size >= 1` so `size - 1u` does not wrap in unsigned arithmetic.
       cat::assert(container.size() > 0u);
       idx const last{container.size().raw - 1u};
-      auto* p_data = fwd(container).data();
+      auto* p_data = $fwd(container).data();
       return reverse_proxy_stepanov_iterator(
          detail::container_stepanov_iterator(last, p_data));
    }
@@ -268,7 +268,7 @@ class random_access_stepanov_iterable_interface
    constexpr auto
    rend(this auto&& container) {
       return reverse_proxy_stepanov_iterator(
-         detail::container_stepanov_iterator(0, fwd(container).data()));
+         detail::container_stepanov_iterator(0, $fwd(container).data()));
    }
 };
 
@@ -338,8 +338,8 @@ class container_interface {
    at(this auto&& self [[clang::lifetimebound]], idx index) -> maybe<T&>
       requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      if (index < fwd(self).size()) {
-         return fwd(self).data()[index.raw];
+      if (index < $fwd(self).size()) {
+         return $fwd(self).data()[index.raw];
       }
       return nullopt;
    }
@@ -358,8 +358,8 @@ class container_interface {
    front(this auto&& self) -> T&
       requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      cat::assert(fwd(self).size() > 0);
-      return fwd(self).data()[0];
+      cat::assert($fwd(self).size() > 0);
+      return $fwd(self).data()[0];
    }
 
    [[nodiscard]]
@@ -374,8 +374,8 @@ class container_interface {
    back(this auto&& self) -> T&
       requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      cat::assert(fwd(self).size() > 0);
-      return fwd(self).data()[fwd(self).size().raw - 1u];
+      cat::assert($fwd(self).size() > 0);
+      return $fwd(self).data()[$fwd(self).size().raw - 1u];
    }
 
    [[nodiscard]]
@@ -391,10 +391,10 @@ class container_interface {
       requires(is_array_like && !is_const_ref<decltype(self)>)
    {
       if !consteval {
-         assert(end_index <= fwd(self).capacity());
+         assert(end_index <= $fwd(self).capacity());
       }
 
-      return span<T>(fwd(self).data() + start_index,
+      return span<T>($fwd(self).data() + start_index,
                      idx(end_index - start_index));
    }
 
@@ -417,7 +417,7 @@ class container_interface {
    first(this auto&& self, idx count) -> span<T>
       requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      return fwd(self).subspan(0u, count);
+      return $fwd(self).subspan(0u, count);
    }
 
    [[nodiscard]]
@@ -433,7 +433,8 @@ class container_interface {
    last(this auto&& self, idx count) -> span<T>
       requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      return fwd(self).subspan(idx(fwd(self).size() - count), fwd(self).size());
+      return $fwd(self).subspan(idx($fwd(self).size() - count),
+                                $fwd(self).size());
    }
 
    [[nodiscard]]
@@ -450,11 +451,11 @@ class container_interface {
       requires(is_array_like && !is_const_ref<decltype(self)>)
    {
       if !consteval {
-         assert(index < fwd(self).size(),
+         assert(index < $fwd(self).size(),
                 "A container was indexed out of bounds!");
       }
 
-      return fwd(self).data()[make_raw_arithmetic(index)];
+      return $fwd(self).data()[make_raw_arithmetic(index)];
    }
 
    [[nodiscard]]

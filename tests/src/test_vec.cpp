@@ -23,11 +23,11 @@ const_func() -> int4 {
    return vector[8];
 }
 
-test(vec) {
+$test(vec) {
    // Initialize an allocator.
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
-   defer {
+   $defer {
       pager.free(page);
    };
    auto allocator = cat::make_linear_allocator(page);

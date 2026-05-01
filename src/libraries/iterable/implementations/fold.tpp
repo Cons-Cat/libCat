@@ -14,7 +14,7 @@ constexpr auto
 fold(Iterable&& source, Callback callback, Init init = Init{}) -> Init {
    auto context = iterate(source);
    context.run_while([&init, &callback](auto&& element) -> bool {
-      init = callback(move(init), fwd(element));
+      init = callback(move(init), $fwd(element));
       return true;
    });
    return init;
@@ -29,7 +29,7 @@ struct fold_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, fold_impl self) -> Init {
-      return fold(fwd(incoming), move(self.callback), move(self.init));
+      return fold($fwd(incoming), move(self.callback), move(self.init));
    }
 };
 }  // namespace detail

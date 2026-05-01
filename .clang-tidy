@@ -71,6 +71,6 @@ CheckOptions:
   - { key: cppcoreguidelines-avoid-non-const-global-variables.AllowThreadLocal, value: 'true' }
   - { key: misc-const-correctness.TransformValues,                          value: 'false' } # Does not trace mutable values through output parameters.
   - { key: readability-operators-representation.BinaryOperators,            value: '&&;&=;&;|;~;!;!=;||;|=;^;^=' }
-  - { key: cppcoreguidelines-macro-usage.AllowedRegexp,                     value: '^(CAT_.*|JKJ_.*|mov|fwd|ssizeof|defer|prop|prop_or|prop_as|test|[PWASD]|L[0-9NZG])$' }
+  - { key: cppcoreguidelines-macro-usage.AllowedRegexp,                     value: '^(\$[A-Za-z_][A-Za-z0-9_]*|CAT_[A-Z0-9_]*|JKJ_[A-Z0-9_]*|[PWASD]|L[0-9NZG])$' }
   - { key: readability-named-parameter.InsertPlainNamesInForwardDecls,      value: 'true' }
   - { key: modernize-use-trailing-return-type.TransformLambdas,             value: none }

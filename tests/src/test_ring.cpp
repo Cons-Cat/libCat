@@ -4,12 +4,12 @@
 
 #include "../unit_tests.hpp"
 
-test(ring) {
+$test(ring) {
    // Initialize an allocator.
    cat::page_allocator pager;
    pager.reset();
    auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
-   defer {
+   $defer {
       pager.free(page);
    };
    auto allocator = cat::linear_allocator::backed_handle(pager, page);

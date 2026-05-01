@@ -16,7 +16,7 @@ struct nttp {
 using namespace cat::literals;
 using namespace cat::integers;
 
-test(arithmetic_detail_raw_implicit_storage) {
+$test(arithmetic_detail_raw_implicit_storage) {
    constexpr int int_into_float_zero = 0;
    constexpr int int_into_float_small = 42;
    constexpr int int_into_float_last_exact = 16'777'216;
@@ -65,12 +65,12 @@ test(arithmetic_detail_raw_implicit_storage) {
                  cat::intptr<void>::raw_type>(-1));
 }
 
-test(arithmetic_traits_common_type) {
+$test(arithmetic_traits_common_type) {
    static_assert(cat::is_same<cat::common_type<idx, iword>, iword>);
    static_assert(cat::is_same<cat::common_type<iword, idx>, iword>);
 }
 
-test(arithmetic_integers_are_implicit_lifetime) {
+$test(arithmetic_integers_are_implicit_lifetime) {
    static_assert(cat::is_implicit_lifetime<int1>);
    static_assert(cat::is_implicit_lifetime<uint1>);
    static_assert(cat::is_implicit_lifetime<int2>);
@@ -93,7 +93,7 @@ test(arithmetic_integers_are_implicit_lifetime) {
    static_assert(cat::is_implicit_lifetime<intptr<double>>);
 }
 
-test(arithmetic_traits_is_arithmetic) {
+$test(arithmetic_traits_is_arithmetic) {
    static_assert(cat::is_arithmetic<char>);
    static_assert(cat::is_arithmetic<signed char>);
    static_assert(cat::is_arithmetic<unsigned char>);
@@ -106,7 +106,7 @@ test(arithmetic_traits_is_arithmetic) {
    static_assert(cat::is_arithmetic<idx>);
 }
 
-test(arithmetic_traits_is_assignable) {
+$test(arithmetic_traits_is_assignable) {
    static_assert(cat::is_assignable<int8, uint4>);
    static_assert(!cat::is_assignable<uint4, int2>);
    static_assert(!cat::is_assignable<uint8, int4>);
@@ -114,12 +114,12 @@ test(arithmetic_traits_is_assignable) {
    static_assert(!cat::is_assignable<uint4, int4>);
 }
 
-test(arithmetic_traits_is_constructible) {
+$test(arithmetic_traits_is_constructible) {
    static_assert(cat::is_constructible<idx, uword>);
    static_assert(cat::is_constructible<iword, idx>);
 }
 
-test(arithmetic_traits_is_convertible) {
+$test(arithmetic_traits_is_convertible) {
    static_assert(cat::is_convertible<int2, int4>);
    static_assert(cat::is_convertible<uint2, uint4>);
    static_assert(cat::is_convertible<uint2, int4>);
@@ -135,11 +135,11 @@ test(arithmetic_traits_is_convertible) {
    static_assert(!cat::is_convertible<int4, uint4>);
 }
 
-test(arithmetic_traits_is_explicitly_constructible) {
+$test(arithmetic_traits_is_explicitly_constructible) {
    static_assert(cat::is_explicitly_constructible<float4, int>);
 }
 
-test(arithmetic_traits_is_implicitly_constructible) {
+$test(arithmetic_traits_is_implicitly_constructible) {
    static_assert(cat::is_implicitly_constructible<uword, uword>);
    static_assert(!cat::is_implicitly_constructible<idx, uword>);
    static_assert(cat::is_implicitly_constructible<uword, idx>);
@@ -150,22 +150,22 @@ test(arithmetic_traits_is_implicitly_constructible) {
    static_assert(!cat::is_implicitly_constructible<float4, int>);
 }
 
-test(arithmetic_traits_is_integral) {
+$test(arithmetic_traits_is_integral) {
    static_assert(cat::is_integral<int4>);
    static_assert(cat::is_integral<uint4>);
    static_assert(cat::is_integral<intptr<void>>);
    static_assert(cat::is_integral<uintptr<void>>);
 }
 
-test(arithmetic_traits_is_lvalue_reference) {
+$test(arithmetic_traits_is_lvalue_reference) {
    static_assert(!cat::is_lvalue_reference<int4 const>);
 }
 
-test(arithmetic_traits_is_safe_arithmetic) {
+$test(arithmetic_traits_is_safe_arithmetic) {
    static_assert(cat::is_safe_arithmetic<idx>);
 }
 
-test(arithmetic_traits_is_safe_arithmetic_comparison) {
+$test(arithmetic_traits_is_safe_arithmetic_comparison) {
    static_assert(!cat::is_safe_arithmetic_comparison<int4, uint4>);
    static_assert(!cat::is_safe_arithmetic_comparison<uint4, int4>);
    static_assert(!cat::is_safe_arithmetic_comparison<int2, uint2>);
@@ -173,7 +173,7 @@ test(arithmetic_traits_is_safe_arithmetic_comparison) {
    static_assert(!cat::is_safe_arithmetic_comparison<float4, uint4>);
 }
 
-test(arithmetic_traits_is_safe_arithmetic_conversion) {
+$test(arithmetic_traits_is_safe_arithmetic_conversion) {
    static_assert(cat::is_safe_arithmetic_conversion<idx, iword>);
    static_assert(!cat::is_safe_arithmetic_conversion<int8, int4>);
    static_assert(!cat::is_safe_arithmetic_conversion<uint8, uint4>);
@@ -181,7 +181,7 @@ test(arithmetic_traits_is_safe_arithmetic_conversion) {
    static_assert(!cat::is_safe_arithmetic_conversion<uint4, int4>);
 }
 
-test(arithmetic_traits_is_same) {
+$test(arithmetic_traits_is_same) {
    static_assert(cat::is_same<decltype(uintptr{static_cast<int*>(nullptr)}),
                               uintptr<int>>);
    static_assert(cat::is_same<decltype(uintptr{static_cast<void*>(nullptr)}),
@@ -234,7 +234,7 @@ test(arithmetic_traits_is_same) {
    static_assert(cat::is_same<decltype(3.f + 2_f4), float4>);
 }
 
-test(arithmetic_traits_is_signed) {
+$test(arithmetic_traits_is_signed) {
    static_assert(cat::is_signed<int>);
    static_assert(cat::is_signed<float>);
    static_assert(cat::is_signed<float4>);
@@ -242,13 +242,13 @@ test(arithmetic_traits_is_signed) {
    static_assert(!cat::is_signed<uint4>);
 }
 
-test(arithmetic_traits_is_signed_integral) {
+$test(arithmetic_traits_is_signed_integral) {
    static_assert(cat::is_signed_integral<int>);
    static_assert(!cat::is_signed_integral<unsigned>);
    static_assert(!cat::is_signed_integral<float>);
 }
 
-test(arithmetic_traits_is_trivially_copyable_and_default_constructible) {
+$test(arithmetic_traits_is_trivially_copyable_and_default_constructible) {
    static_assert(cat::is_trivially_copyable<int1>
                  && cat::is_trivially_default_constructible<int1>);
    static_assert(cat::is_trivially_copyable<uint1>
@@ -271,11 +271,11 @@ test(arithmetic_traits_is_trivially_copyable_and_default_constructible) {
                  && cat::is_trivially_default_constructible<float8>);
 }
 
-test(arithmetic_traits_is_trivially_copyable) {
+$test(arithmetic_traits_is_trivially_copyable) {
    static_assert(cat::is_trivially_copyable<int1>);
 }
 
-test(arithmetic_traits_is_trivially_relocatable) {
+$test(arithmetic_traits_is_trivially_relocatable) {
    static_assert(cat::is_trivially_relocatable<int1>);
    static_assert(cat::is_trivially_relocatable<uint1>);
    static_assert(cat::is_trivially_relocatable<int2>);
@@ -292,7 +292,7 @@ test(arithmetic_traits_is_trivially_relocatable) {
    static_assert(cat::is_trivially_relocatable<uintptr<int>>);
 }
 
-test(arithmetic_traits_is_unsigned) {
+$test(arithmetic_traits_is_unsigned) {
    static_assert(cat::is_unsigned<unsigned>);
    static_assert(cat::is_unsigned<idx>);
    static_assert(!cat::is_unsigned<float>);
@@ -301,13 +301,13 @@ test(arithmetic_traits_is_unsigned) {
    static_assert(!cat::is_unsigned<int4>);
 }
 
-test(arithmetic_traits_is_unsigned_integral) {
+$test(arithmetic_traits_is_unsigned_integral) {
    static_assert(!cat::is_unsigned_integral<int>);
    static_assert(cat::is_unsigned_integral<unsigned>);
    static_assert(!cat::is_unsigned_integral<float>);
 }
 
-test(arithmetic_traits_is_unsafe_arithmetic) {
+$test(arithmetic_traits_is_unsafe_arithmetic) {
    static_assert(cat::is_unsafe_arithmetic<int>);
    static_assert(cat::is_unsafe_arithmetic<unsigned long>);
    static_assert(cat::is_unsafe_arithmetic<double>);
@@ -316,7 +316,7 @@ test(arithmetic_traits_is_unsafe_arithmetic) {
    static_assert(!cat::is_unsafe_arithmetic<idx>);
 }
 
-test(arithmetic_traits_rvalue) {
+$test(arithmetic_traits_rvalue) {
    int4 const constant_int4 = 0;
    static_assert(cat::rvalue<decltype(constant_int4.wrap().undef())>);
    static_assert(cat::rvalue<decltype(int4{0}.wrap().undef())>);
@@ -350,7 +350,7 @@ test(arithmetic_traits_rvalue) {
    static_assert(cat::rvalue<decltype(uintptr<void>{0}.sat())>);
 }
 
-test(arithmetic_constants_constexpr_helpers) {
+$test(arithmetic_constants_constexpr_helpers) {
    static_assert(cat::limits<int4>::max() ==  // NOLINT
                  cat::limits<int4::raw_type>::max());
    static_assert(cat::limits<uint8>::max() ==  // NOLINT
@@ -387,7 +387,7 @@ test(arithmetic_constants_constexpr_helpers) {
    static_assert(cat::wrap_uint8(-1) == cat::limits<uword>::max());
 }
 
-test(arithmetic_arithmetic_ptr_deduction_from_pointers) {
+$test(arithmetic_arithmetic_ptr_deduction_from_pointers) {
    int storage{};
    int* p_storage = __builtin_addressof(storage);
    uintptr const deduced{p_storage};
@@ -398,14 +398,14 @@ test(arithmetic_arithmetic_ptr_deduction_from_pointers) {
    cat::verify(deduced_signed == explicit_spelling_signed);
 }
 
-test(arithmetic_raw_types_make_raw) {
+$test(arithmetic_raw_types_make_raw) {
    static_assert(cat::make_raw_arithmetic(7) == 7);
    static_assert(cat::make_raw_arithmetic(3.25) == 3.25);
    static_assert(cat::make_raw_arithmetic(int4{88}) == 88);
    static_assert(cat::make_raw_arithmetic(uint4{11u}) == 11u);
 }
 
-test(arithmetic_numeral_sizes) {
+$test(arithmetic_numeral_sizes) {
    // Test numerals' size,
    static_assert(sizeof(int1) == 1);
    static_assert(sizeof(uint1) == 1);
@@ -418,7 +418,7 @@ test(arithmetic_numeral_sizes) {
    static_assert(sizeof(float8) == 8);
 }
 
-test(arithmetic_int4_uint4_operations_and_ordering) {
+$test(arithmetic_int4_uint4_operations_and_ordering) {
    // Test `int4` constructors and assignment.
    int4 test_int4_1 = 1;
    int4 test_int4_2{};
@@ -469,7 +469,7 @@ test(arithmetic_int4_uint4_operations_and_ordering) {
    cat::verify(int4{0} <= int4{1});
 }
 
-test(arithmetic_intptr_operators_raw_reassign_and_safe_arithmetic) {
+$test(arithmetic_intptr_operators_raw_reassign_and_safe_arithmetic) {
    // Test `arithmetic_ptr` operators on raw numerals.
    [[maybe_unused]]
    intptr<void> intptr_add_1 = 1 + intptr<void>{0};
@@ -501,7 +501,7 @@ test(arithmetic_intptr_operators_raw_reassign_and_safe_arithmetic) {
    cat::verify(iword{120} - intptr<void>{100} == iword{20});
 }
 
-test(arithmetic_intptr_arithmetic_ptr_operators_and_compare) {
+$test(arithmetic_intptr_arithmetic_ptr_operators_and_compare) {
    // Test `arithmetic_ptr` operators on other `arithmetic_ptr`s.
    cat::verify((intptr<void>{0} + intptr<void>{1}) == 1);
    cat::verify((intptr<void>{0} - intptr<void>{1}) == -1);
@@ -519,7 +519,7 @@ test(arithmetic_intptr_arithmetic_ptr_operators_and_compare) {
    cat::verify(intptr<void>{0} <= intptr<void>{1});
 }
 
-test(arithmetic_implicit_promotion_chains_and_assignability) {
+$test(arithmetic_implicit_promotion_chains_and_assignability) {
    // Test integer promotion.
    int1 promote_int1 = 1_i1;
    int2 promote_int2 = promote_int1;
@@ -546,7 +546,7 @@ test(arithmetic_implicit_promotion_chains_and_assignability) {
    promote_int8 = promote_uint4;
 }
 
-test(arithmetic_implicit_conversions_raw_storage_and_pointer_arithmetic) {
+$test(arithmetic_implicit_conversions_raw_storage_and_pointer_arithmetic) {
    // Raw values that fit convert implicitly when widening or for same-width.
    // 64-bit types: signed to unsigned (`uint8 = 300ll`) and unsigned to signed
    // (`int8 = 300ull`), with matching `operator==` and `operator<=>` both ways.
@@ -625,7 +625,7 @@ test(arithmetic_implicit_conversions_raw_storage_and_pointer_arithmetic) {
 // `const` integral sources whose value fits the destination storage. These go
 // through the `enable_if` constructor because the source is a constant
 // expression but the conversion is not `is_safe_arithmetic_conversion`.
-test(arithmetic_implicit_unsigned_fixed_width_constexpr_const) {
+$test(arithmetic_implicit_unsigned_fixed_width_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -745,7 +745,7 @@ test(arithmetic_implicit_unsigned_fixed_width_constexpr_const) {
 // Compile-time-known cross-signed-ness constant operands work for every
 // arithmetic operator on the fixed-width unsigned wrappers (`uint1`..
 // `uint8`).
-test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
+$test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
    constexpr int signed_two = 2;
    int const signed_const_two = 2;
    constexpr long long_two = 2;
@@ -846,7 +846,7 @@ test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
    cat::verify(u4_mask == 0b11_u4);
 }
 
-test(arithmetic_implicit_signed_fixed_width_constexpr_const) {
+$test(arithmetic_implicit_signed_fixed_width_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -965,7 +965,7 @@ test(arithmetic_implicit_signed_fixed_width_constexpr_const) {
 
 // Compile-time-known cross-signed-ness constant operands work for every
 // arithmetic operator on the fixed-width signed wrappers (`int1`..`int8`).
-test(arithmetic_signed_fixed_width_all_operators_constexpr_const) {
+$test(arithmetic_signed_fixed_width_all_operators_constexpr_const) {
    constexpr unsigned int unsigned_two = 2u;
    unsigned int const unsigned_const_two = 2u;
    constexpr unsigned long ulong_two = 2ul;
@@ -1036,7 +1036,7 @@ test(arithmetic_signed_fixed_width_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(i8_six % unsigned_const_two), int8>);
 }
 
-test(arithmetic_implicit_word_constexpr_const) {
+$test(arithmetic_implicit_word_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -1156,7 +1156,7 @@ test(arithmetic_implicit_word_constexpr_const) {
 // arithmetic operator on `iword`/`uword`. Includes the `sizeof(T)` pattern from
 // `set_memory_detail` that originally motivated relaxing `promoted_type` to
 // allow same-order, opposite-signed-ness pairs.
-test(arithmetic_word_all_operators_constexpr_const) {
+$test(arithmetic_word_all_operators_constexpr_const) {
    // Cross-sign compile-time constants used as operands.
    constexpr int signed_two = 2;
    int const signed_const_two = 2;
@@ -1276,7 +1276,7 @@ test(arithmetic_word_all_operators_constexpr_const) {
 // storage. Same-signed-ness `iword`/`uword` (e.g. `iword` -> `intptr`) further
 // stay implicit at runtime via the safe arithmetic conversion path.
 // Cross-signed-ness operands stay `explicit` at runtime.
-test(arithmetic_implicit_intptr_uintptr_constexpr_const) {
+$test(arithmetic_implicit_intptr_uintptr_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -1487,7 +1487,7 @@ test(arithmetic_implicit_intptr_uintptr_constexpr_const) {
 // Multiplicative and modulo operators are intentionally not tested here.
 // `arithmetic_ptr` predates the relaxed `promoted_type` and would need a
 // separate cleanup to participate.
-test(arithmetic_intptr_uintptr_all_operators_constexpr_const) {
+$test(arithmetic_intptr_uintptr_all_operators_constexpr_const) {
    constexpr int signed_two = 2;
    int const signed_const_two = 2;
    constexpr unsigned int unsigned_two = 2u;
@@ -1544,7 +1544,7 @@ test(arithmetic_intptr_uintptr_all_operators_constexpr_const) {
       cat::is_same<decltype(up_six - long_const_two), uintptr<void>>);
 }
 
-test(arithmetic_implicit_idx_constexpr_const) {
+$test(arithmetic_implicit_idx_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -1654,7 +1654,7 @@ test(arithmetic_implicit_idx_constexpr_const) {
 // (`iword`) instead. /= only works with an unsigned right operand (signed
 // division returns `iword`). Cross-signed-ness compile-time constants flow
 // through the supported operators via the implicit `enable_if` constructor.
-test(arithmetic_idx_all_operators_constexpr_const) {
+$test(arithmetic_idx_all_operators_constexpr_const) {
    constexpr int signed_two = 2;
    int const signed_const_two = 2;
    constexpr unsigned int unsigned_two = 2u;
@@ -1765,7 +1765,7 @@ test(arithmetic_idx_all_operators_constexpr_const) {
 // destination has `.sat()` applied. Assignment, compound +=, and binary + all
 // accept the cross-signed-ness constant operand when its compile-time value
 // fits the wrapped storage.
-test(arithmetic_implicit_unsigned_fixed_width_sat_constexpr_const) {
+$test(arithmetic_implicit_unsigned_fixed_width_sat_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -1852,7 +1852,7 @@ test(arithmetic_implicit_unsigned_fixed_width_sat_constexpr_const) {
 // The same conversions as
 // `arithmetic_implicit_signed_fixed_width_constexpr_const` except the
 // destination has `.sat()` applied.
-test(arithmetic_implicit_signed_fixed_width_sat_constexpr_const) {
+$test(arithmetic_implicit_signed_fixed_width_sat_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -1937,7 +1937,7 @@ test(arithmetic_implicit_signed_fixed_width_sat_constexpr_const) {
 
 // The same conversions as `arithmetic_implicit_word_constexpr_const` except the
 // destination has `.sat()` applied.
-test(arithmetic_implicit_word_sat_constexpr_const) {
+$test(arithmetic_implicit_word_sat_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -2020,7 +2020,7 @@ test(arithmetic_implicit_word_sat_constexpr_const) {
 
 // The same conversions as `arithmetic_implicit_idx_constexpr_const` except the
 // destination has `.sat()` applied.
-test(arithmetic_implicit_idx_sat_constexpr_const) {
+$test(arithmetic_implicit_idx_sat_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -2069,7 +2069,7 @@ test(arithmetic_implicit_idx_sat_constexpr_const) {
 // The same conversions as
 // `arithmetic_implicit_unsigned_fixed_width_constexpr_const` except the
 // destination has `.wrap()` applied.
-test(arithmetic_implicit_unsigned_fixed_width_wrap_constexpr_const) {
+$test(arithmetic_implicit_unsigned_fixed_width_wrap_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -2156,7 +2156,7 @@ test(arithmetic_implicit_unsigned_fixed_width_wrap_constexpr_const) {
 // The same conversions as
 // `arithmetic_implicit_signed_fixed_width_constexpr_const` except the
 // destination has `.wrap()` applied.
-test(arithmetic_implicit_signed_fixed_width_wrap_constexpr_const) {
+$test(arithmetic_implicit_signed_fixed_width_wrap_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -2241,7 +2241,7 @@ test(arithmetic_implicit_signed_fixed_width_wrap_constexpr_const) {
 
 // The same conversions as `arithmetic_implicit_word_constexpr_const` except the
 // destination has `.wrap()` applied.
-test(arithmetic_implicit_word_wrap_constexpr_const) {
+$test(arithmetic_implicit_word_wrap_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -2324,7 +2324,7 @@ test(arithmetic_implicit_word_wrap_constexpr_const) {
 
 // The same conversions as `arithmetic_implicit_idx_constexpr_const` except the
 // destination has `.wrap()` applied.
-test(arithmetic_implicit_idx_wrap_constexpr_const) {
+$test(arithmetic_implicit_idx_wrap_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
    constexpr unsigned int unsigned_fit = 0u;
@@ -2372,10 +2372,10 @@ test(arithmetic_implicit_idx_wrap_constexpr_const) {
 
 // `cat::overflow_reference` is a public type, like `cat::bit_reference`. It is
 // normally obtained from `.undef()`, `.wrap()`, and `.sat()` accessors, but it
-// can also be constructed and named directly. This test treats it as a
+// can also be constructed and named directly. This $test treats it as a
 // first-class public API: naming the type, constructing it, storing it, passing
 // it to a function, and reading/writing through it.
-test(arithmetic_overflow_reference_public_type) {
+$test(arithmetic_overflow_reference_public_type) {
    // The accessors return `cat::overflow_reference` instances. Mutable l-values
    // produce a non-`const` reference to the wrapped type. `const` l-values
    // produce a `const` reference.
@@ -2481,7 +2481,7 @@ test(arithmetic_overflow_reference_public_type) {
    cat::verify(static_cast<uint4>(round_trip_ref) == 9_u4);
 }
 
-test(arithmetic_intptr_constructors_conversions_and_dereference) {
+$test(arithmetic_intptr_constructors_conversions_and_dereference) {
    // Test `intptr` constructors and assignment.
    intptr<void> intptr_1 = nullptr;
    intptr<void> intptr_2 = nullptr;
@@ -2514,7 +2514,7 @@ test(arithmetic_intptr_constructors_conversions_and_dereference) {
    cat::verify(uint_intptr->max() == uinteger.max());
 }
 
-test(arithmetic_uintptr_increment_and_decrement) {
+$test(arithmetic_uintptr_increment_and_decrement) {
    // Test `intptr` increment and decrement operators.
    uintptr<void> uincptr{0xb07a70e5};
    cat::verify(++uincptr == 0xb07a70e6);
@@ -2523,7 +2523,7 @@ test(arithmetic_uintptr_increment_and_decrement) {
    cat::verify(uincptr-- == 0xb07a70e5);
 }
 
-test(arithmetic_spaceship_three_way_and_inequality) {
+$test(arithmetic_spaceship_three_way_and_inequality) {
    // Test <=>.
    int4 int_less = 0;
    int4 int_more = 2;
@@ -2558,7 +2558,7 @@ test(arithmetic_spaceship_three_way_and_inequality) {
    cat::verify(4_f4 != 2_f4);
 }
 
-test(arithmetic_cross_sign_comparisons) {
+$test(arithmetic_cross_sign_comparisons) {
    // `arithmetic` cross-signed-ness at runtime (the case used in `set_memory`
    // for `iword >= sizeof(...)` where the right operand is `unsigned long`).
    iword runtime_signed = 16;
@@ -2640,7 +2640,7 @@ test(arithmetic_cross_sign_comparisons) {
    cat::verify(ref_ptr.wrap() != 0ul);
 }
 
-test(arithmetic_match_on_type_and_value) {
+$test(arithmetic_match_on_type_and_value) {
    // Test matching numerals.
    int4 match_int = 1;
    bool matched = false;
@@ -2667,7 +2667,7 @@ test(arithmetic_match_on_type_and_value) {
    cat::verify(matched);
 }
 
-test(arithmetic_unary_operators) {
+$test(arithmetic_unary_operators) {
    // Test unary operators.
    [[maybe_unused]]
    int4 negative_int4 = -1_i4;
@@ -2682,7 +2682,7 @@ test(arithmetic_unary_operators) {
    uint4 negated_uint4 = ~1_u4;
 }
 
-test(arithmetic_nttp_numerals) {
+$test(arithmetic_nttp_numerals) {
    // Test using numerals non-type template parameters.
    [[maybe_unused]]
    nttp<1_i1> nttp_int1{};
@@ -2706,7 +2706,7 @@ test(arithmetic_nttp_numerals) {
    nttp<1_f8> nttp_float8{};
 }
 
-test(arithmetic_sat_add_unsigned_fixed_width) {
+$test(arithmetic_sat_add_unsigned_fixed_width) {
    // Test unsigned saturating addition.
    static_assert(cat::sat_add(cat::uint1_max - 3u, 1_u1) < cat::uint1_max);
    static_assert(cat::sat_add(cat::uint1_max - 1u, 1_u1) == cat::uint1_max);
@@ -2757,7 +2757,7 @@ test(arithmetic_sat_add_unsigned_fixed_width) {
    cat::verify(cat::sat_add(cat::uint8_max, 100u) == cat::uint8_max);
 }
 
-test(arithmetic_sat_add_signed_fixed_width) {
+$test(arithmetic_sat_add_signed_fixed_width) {
    // Test signed saturating addition.
    static_assert(cat::sat_add(cat::int1_max - 3_i1, 1_i1) < cat::int1_max);
    static_assert(cat::sat_add(cat::int1_max - 1_i1, 1_i1) == cat::int1_max);
@@ -2807,7 +2807,7 @@ test(arithmetic_sat_add_signed_fixed_width) {
    cat::verify(cat::sat_add(cat::int8_max, 100) == cat::int8_max);
 }
 
-test(arithmetic_sat_sub_unsigned_fixed_width) {
+$test(arithmetic_sat_sub_unsigned_fixed_width) {
    // Test unsigned saturating subtraction.
    static_assert(cat::sat_sub(cat::uint1_min + 3u, 1_u1) > cat::uint1_min);
    static_assert(cat::sat_sub(cat::uint1_min + 1u, 1_u1) == cat::uint1_min);
@@ -2858,7 +2858,7 @@ test(arithmetic_sat_sub_unsigned_fixed_width) {
    cat::verify(cat::sat_sub(cat::uint8_min, 100u) == cat::uint8_min);
 }
 
-test(arithmetic_sat_sub_signed_fixed_width) {
+$test(arithmetic_sat_sub_signed_fixed_width) {
    // Test signed saturating subtraction.
    static_assert(cat::sat_sub(cat::int1_min + 3_i1, 1_i1) > cat::int1_min);
    static_assert(cat::sat_sub(cat::int1_min + 1_i1, 1_i1) == cat::int1_min);
@@ -2917,7 +2917,7 @@ test(arithmetic_sat_sub_signed_fixed_width) {
 // are covered above. Operands must be the same width so the inner same-type
 // `sat_add(T, T)` overload runs -- mixing widths goes through the promoted
 // overload, which would not hit the overflow branch at sub-`int` widths.
-test(arithmetic_sat_add_sub_signed_overflow_direction) {
+$test(arithmetic_sat_add_sub_signed_overflow_direction) {
    static_assert(cat::sat_add(cat::int1_min.raw, (-1_i1).raw)
                  == cat::int1_min.raw);
    static_assert(cat::sat_add(cat::int2_min.raw, (-1_i2).raw)
@@ -2952,7 +2952,7 @@ test(arithmetic_sat_add_sub_signed_overflow_direction) {
 // `cat::sat_mul` for unsigned integers always saturates upward to `max()`.
 // Same-width and mixed-width operands both go through the
 // `__builtin_mul_overflow` branch.
-test(arithmetic_sat_mul_unsigned_fixed_width) {
+$test(arithmetic_sat_mul_unsigned_fixed_width) {
    static_assert(cat::sat_mul((2_u1).raw, 3_u1) == 6u);
    static_assert(cat::sat_mul(cat::uint1_max.raw, 1_u1) == cat::uint1_max.raw);
    static_assert(cat::sat_mul(cat::uint1_max.raw, 2_u1) == cat::uint1_max.raw);
@@ -2974,7 +2974,7 @@ test(arithmetic_sat_mul_unsigned_fixed_width) {
 // `cat::sat_mul` for signed integers picks the saturation endpoint by the sign
 // of the true product (XOR of operand signs). The `min * min` case is positive
 // overflow and saturates to `max()`.
-test(arithmetic_sat_mul_signed_fixed_width) {
+$test(arithmetic_sat_mul_signed_fixed_width) {
    static_assert(cat::sat_mul((2_i1).raw, 3_i1) == 6);
    static_assert(cat::sat_mul((-2_i1).raw, 3_i1) == -6);
    static_assert(cat::sat_mul(cat::int1_max.raw, 2_i1) == cat::int1_max.raw);
@@ -3013,7 +3013,7 @@ test(arithmetic_sat_mul_signed_fixed_width) {
 
 // `cat::sat_div` only overflows for signed `min() / -1`. Every other division
 // stays in range. Unsigned division never overflows.
-test(arithmetic_sat_div_unsigned_fixed_width) {
+$test(arithmetic_sat_div_unsigned_fixed_width) {
    static_assert(cat::sat_div((6_u1).raw, 2_u1) == 3u);
    static_assert(cat::sat_div(cat::uint1_max.raw, 1_u1) == cat::uint1_max.raw);
    static_assert(cat::sat_div(cat::uint4_max.raw, 1u) == cat::uint4_max.raw);
@@ -3025,13 +3025,13 @@ test(arithmetic_sat_div_unsigned_fixed_width) {
    cat::verify(cat::sat_div(cat::uint4_max.raw, 1u) == cat::uint4_max.raw);
 }
 
-test(arithmetic_sat_div_signed_fixed_width) {
+$test(arithmetic_sat_div_signed_fixed_width) {
    static_assert(cat::sat_div((6_i1).raw, 2_i1) == 3);
    static_assert(cat::sat_div((6_i1).raw, -2_i1) == -3);
    static_assert(cat::sat_div(cat::int1_max.raw, 1_i1) == cat::int1_max.raw);
    static_assert(cat::sat_div(cat::int1_max.raw, -1_i1) == -cat::int1_max.raw);
 
-   // The defining test: `min() / -1` saturates to `max()`.
+   // The defining $test: `min() / -1` saturates to `max()`.
    static_assert(cat::sat_div(cat::int1_min.raw, -1_i1) == cat::int1_max.raw);
    static_assert(cat::sat_div(cat::int2_min.raw, -1_i2) == cat::int2_max.raw);
    static_assert(cat::sat_div(cat::int4_min.raw, -1) == cat::int4_max.raw);
@@ -3052,7 +3052,7 @@ test(arithmetic_sat_div_signed_fixed_width) {
 
 // `cat::wrap_sub` mirrors C++'s well-defined unsigned modular subtraction for
 // unsigned `T` and uses two's-complement wrap for signed `T`.
-test(arithmetic_wrap_sub_fixed_width) {
+$test(arithmetic_wrap_sub_fixed_width) {
    static_assert(cat::wrap_sub(cat::uint1_min.raw, 1_u1) == cat::uint1_max.raw);
    static_assert(cat::wrap_sub(cat::uint1_min.raw, 2_u1)
                  == cat::uint1_max.raw - 1u);
@@ -3079,7 +3079,7 @@ test(arithmetic_wrap_sub_fixed_width) {
 // `cat::wrap_div` performs ordinary signed/unsigned division, with the sole
 // exception of `min() / -1`: the mathematical result is `max() + 1`, which
 // two's-complement-wraps back to `min()` itself.
-test(arithmetic_wrap_div_fixed_width) {
+$test(arithmetic_wrap_div_fixed_width) {
    static_assert(cat::wrap_div((6_u1).raw, 2_u1) == 3u);
    static_assert(cat::wrap_div(cat::uint1_max.raw, 1_u1) == cat::uint1_max.raw);
    static_assert(cat::wrap_div(cat::uint4_max.raw, 1u) == cat::uint4_max.raw);
@@ -3106,7 +3106,7 @@ test(arithmetic_wrap_div_fixed_width) {
    cat::verify(cat::wrap_div(cat::int4_max.raw, 1) == cat::int4_max.raw);
 }
 
-test(arithmetic_sat_shl_unsigned_fixed_width) {
+$test(arithmetic_sat_shl_unsigned_fixed_width) {
    // Uint1: in-range shifts, boundary, count >= width, zero value, zero count.
    static_assert(cat::sat_shl((1_u1).raw, 1u) == 2u);
    static_assert(cat::sat_shl((1_u1).raw, 7u) == 0x80u);
@@ -3179,7 +3179,7 @@ test(arithmetic_sat_shl_unsigned_fixed_width) {
    cat::verify(cat::sat_shl(cat::uint8_max.raw, 0u) == cat::uint8_max.raw);
 }
 
-test(arithmetic_sat_shl_signed_fixed_width) {
+$test(arithmetic_sat_shl_signed_fixed_width) {
    // Int1: in-range shifts, positive overflow, negative overflow, edges.
    static_assert(cat::sat_shl((1_i1).raw, 1u) == 2);
    static_assert(cat::sat_shl((1_i1).raw, 6u) == 0x40);
@@ -3271,7 +3271,7 @@ test(arithmetic_sat_shl_signed_fixed_width) {
    cat::verify(cat::sat_shl((0_i8).raw, 100u) == 0);
 }
 
-test(arithmetic_sat_shr_unsigned_fixed_width) {
+$test(arithmetic_sat_shr_unsigned_fixed_width) {
    // Right shift never overflows. Saturation only guards the count >= width
    // case (and equivalently the count >= `bit_width(value)` case, where the
    // result is mathematically zero anyway).
@@ -3343,7 +3343,7 @@ test(arithmetic_sat_shr_unsigned_fixed_width) {
    cat::verify(cat::sat_shr(cat::uint8_max.raw, 0u) == cat::uint8_max.raw);
 }
 
-test(arithmetic_sat_shr_signed_fixed_width) {
+$test(arithmetic_sat_shr_signed_fixed_width) {
    // Signed right shift is the C++ arithmetic shift for in-range counts:
    // positives lose bits off the bottom, negatives sign-extend. For counts at
    // or above the bit width (the C++-undefined regime), positives clamp to 0
@@ -3420,7 +3420,7 @@ test(arithmetic_sat_shr_signed_fixed_width) {
    cat::verify(cat::sat_shr((0_i8).raw, 100u) == 0);
 }
 
-test(arithmetic_wrap_shl_unsigned_fixed_width) {
+$test(arithmetic_wrap_shl_unsigned_fixed_width) {
    // Wrap left shift rotates bits: bits shifted off the high end re-enter at
    // the low end. The count is taken modulo the bit width, so any non-negative
    // count is valid.
@@ -3516,7 +3516,7 @@ test(arithmetic_wrap_shl_unsigned_fixed_width) {
    cat::verify(cat::wrap_shl(cat::uint8_max.raw, 7u) == cat::uint8_max.raw);
 }
 
-test(arithmetic_wrap_shl_signed_fixed_width) {
+$test(arithmetic_wrap_shl_signed_fixed_width) {
    // Signed wrap shift operates on the raw bit pattern: the sign bit is just
    // bit `N-1`, rotating in and out like any other bit. The result depends only
    // on the bit pattern, not on the sign.
@@ -3591,7 +3591,7 @@ test(arithmetic_wrap_shl_signed_fixed_width) {
    cat::verify(cat::wrap_shl(cat::int8_min.raw, 64u) == cat::int8_min.raw);
 }
 
-test(arithmetic_wrap_shr_unsigned_fixed_width) {
+$test(arithmetic_wrap_shr_unsigned_fixed_width) {
    // Wrap right shift is the mirror of `wrap_shl`: bits shifted off the low end
    // re-enter at the high end. The count is taken modulo the bit width.
 
@@ -3682,7 +3682,7 @@ test(arithmetic_wrap_shr_unsigned_fixed_width) {
    cat::verify(cat::wrap_shr((0_u8).raw, 100u) == 0u);
 }
 
-test(arithmetic_wrap_shr_signed_fixed_width) {
+$test(arithmetic_wrap_shr_signed_fixed_width) {
    // Signed wrap shift operates on the raw bit pattern. Right-rotation moves
    // the low bit into the sign position, flipping sign when bit 0 is set.
 
@@ -3745,7 +3745,7 @@ test(arithmetic_wrap_shr_signed_fixed_width) {
    cat::verify(cat::wrap_shr((0_i8).raw, 100u) == 0);
 }
 
-test(arithmetic_sat_shl_index) {
+$test(arithmetic_sat_shl_index) {
    // Saturating left shift of a `cat::index` clamps at `index::max()` (
    // `2^63 - 1`). The high bit (bit 63) must always stay zero, so any shift
    // that would set it saturates instead. `index` is effectively a 63-bit
@@ -3819,7 +3819,7 @@ test(arithmetic_sat_shl_index) {
    cat::verify((sat_idx{bit_62} << 1u) == cat::idx_max);
 }
 
-test(arithmetic_sat_shr_index) {
+$test(arithmetic_sat_shr_index) {
    // Saturating right shift of a `cat::index`. The value is always non-
    // negative, so the signed arithmetic right shift cannot flip into the sign
    // and the result stays in range.
@@ -3847,7 +3847,7 @@ test(arithmetic_sat_shr_index) {
    cat::verify(cat::sat_shr(sat_idx{0}, 5u) == sat_idx{0});
 }
 
-test(arithmetic_wrap_shl_index) {
+$test(arithmetic_wrap_shl_index) {
    // Wrap left shift of a `cat::index` rotates over the lower `bit_width - 1`
    // bits (the usable index range). The high bit always stays zero, preserving
    // the `index` invariant. The shift count is taken modulo the ring width, so
@@ -3910,7 +3910,7 @@ test(arithmetic_wrap_shl_index) {
                == 0u);
 }
 
-test(arithmetic_wrap_shr_index) {
+$test(arithmetic_wrap_shr_index) {
    // Wrap right shift of a `cat::index` mirrors `wrap_shl`: bits shifted off
    // the bottom re-enter at the top of the 63-bit ring (bit 62 being the top of
    // the usable range), never at bit 63.
@@ -3965,7 +3965,7 @@ test(arithmetic_wrap_shr_index) {
                == 0u);
 }
 
-test(arithmetic_wrap_add_mul_and_overflow_reference_constexpr) {
+$test(arithmetic_wrap_add_mul_and_overflow_reference_constexpr) {
    // Test wrapping arithmetic operations.
    static_assert(cat::wrap_add(0, 1) == 1);
    static_assert(cat::wrap_add(cat::int4_max - 1, 1) == cat::int4_max);
@@ -3995,7 +3995,7 @@ test(arithmetic_wrap_add_mul_and_overflow_reference_constexpr) {
    static_assert((cat::int4_min.sat() - 1) == cat::int4_min);
 }
 
-test(
+$test(
    arithmetic_promotion_hierarchy_overflow_semantics_and_strong_overflow_types) {
    // Test overflow semantics.
    int4 safe_int = int4::max();
@@ -4040,7 +4040,7 @@ test(
 // the operation is performed under the left operand's overflow semantics, and
 // compound assignment operators rely on this rule to assign the result back
 // into the left operand.
-test(arithmetic_binary_ops_take_lhs_overflow_policy) {
+$test(arithmetic_binary_ops_take_lhs_overflow_policy) {
    using cat::is_same;
    using wrap_uword =
       cat::arithmetic<__UINT64_TYPE__, cat::overflow_policies::wrap>;
@@ -4127,7 +4127,7 @@ test(arithmetic_binary_ops_take_lhs_overflow_policy) {
 // because their results are bounded by the LHS by construction.
 // & and | additionally reject a wider RHS because it would have to silently
 // truncate to fit the LHS-shape result.
-test(arithmetic_binary_ops_width_rules) {
+$test(arithmetic_binary_ops_width_rules) {
    using cat::is_same;
 
    // Width is promoted on + and *.
@@ -4190,7 +4190,7 @@ test(arithmetic_binary_ops_width_rules) {
 
 // Compound assignment operators must yield the same unqualified type as the
 // corresponding non-compound operator.
-test(arithmetic_compound_ops_match_non_compound_return_type) {
+$test(arithmetic_compound_ops_match_non_compound_return_type) {
    using cat::is_same;
    using cat::remove_cvref;
    using wrap_iword =
@@ -4305,7 +4305,7 @@ test(arithmetic_compound_ops_match_non_compound_return_type) {
 // use the underlying C++ arithmetic shift (sign-extending >>), and `idx` shifts
 // go through a signed-bitcast trick because `idx` always keeps its high bit
 // zero.
-test(arithmetic_signed_and_idx_arithmetic_shift) {
+$test(arithmetic_signed_and_idx_arithmetic_shift) {
    using cat::is_same;
 
    // Signed >> is the arithmetic right shift: it sign-extends a negative value
@@ -4410,7 +4410,7 @@ test(arithmetic_signed_and_idx_arithmetic_shift) {
 // `min()` instead of pushing bits past the sign / high bit, and >> only adds a
 // guard against shift counts at or above the bit width (the C++ shift would
 // otherwise be undefined).
-test(arithmetic_saturating_shift) {
+$test(arithmetic_saturating_shift) {
    using cat::is_same;
    using sat_idx = cat::index<cat::overflow_policies::saturate>;
 
@@ -4523,7 +4523,7 @@ test(arithmetic_saturating_shift) {
 // to unsigned. Without the explicit RHS narrowing in `arithmetic::modulo_by`,
 // `int4(-7) % uint4(3)` would go through the usual arithmetic conversions, turn
 // -7 into a huge unsigned, and yield 0 instead of -1.
-test(arithmetic_signed_modulo_is_remainder) {
+$test(arithmetic_signed_modulo_is_remainder) {
    // Same-signed remainders. C++'s built-in % already gives the right answer
    // here. This just pins the contract.
    {
@@ -4587,7 +4587,7 @@ test(arithmetic_signed_modulo_is_remainder) {
 // semantics. Compile-time `enable_if` for fitting values still dispatches to
 // the safe constructor, and the `consteval` hard error for unfitting
 // compile-time values stays in place.
-test(arithmetic_saturating_and_wrapping_narrowing_casts) {
+$test(arithmetic_saturating_and_wrapping_narrowing_casts) {
    using cat::is_same;
 
    // `cat::sat_cast` clamps raw integers into the destination's range,
@@ -4661,7 +4661,7 @@ test(arithmetic_saturating_and_wrapping_narrowing_casts) {
                          cat::sat_int4>);
 }
 
-test(arithmetic_uword_mixed_word_operations) {
+$test(arithmetic_uword_mixed_word_operations) {
    // Test integers.
    uword test_uword;
    test_uword = 100u + 0_uz;
@@ -4756,7 +4756,7 @@ test(arithmetic_uword_mixed_word_operations) {
    cat::verify(test_uword == 120_uz);
 }
 
-test(arithmetic_float_construction_raw_assignment_and_bit_cast) {
+$test(arithmetic_float_construction_raw_assignment_and_bit_cast) {
    float4 safe_float = 0.f;
    safe_float = 2.f;
    cat::verify(safe_float == 2.f);
@@ -4778,7 +4778,8 @@ test(arithmetic_float_construction_raw_assignment_and_bit_cast) {
    cat::verify(__builtin_bit_cast(unsigned, 2_i4) == 2u);
 }
 
-test(arithmetic_float8_binary_operations_ordering_limits_and_float4_promotion) {
+$test(
+   arithmetic_float8_binary_operations_ordering_limits_and_float4_promotion) {
    float8 a = 3.5_f8;
    float8 b = 2_f8;
    cat::verify(a + b == 5.5_f8);
@@ -4797,7 +4798,7 @@ test(arithmetic_float8_binary_operations_ordering_limits_and_float4_promotion) {
    cat::verify(mixed == 3._f8);
 }
 
-test(
+$test(
    arithmetic_float4_binary_ops_raw_float_ordering_limits_make_signed_and_compound) {
    float4 x = 10_f4;
    float4 y = 4_f4;
@@ -4829,7 +4830,7 @@ test(
    cat::verify(acc == 1.25_f4);
 }
 
-test(arithmetic_idx_operations_traits_and_word_conversions) {
+$test(arithmetic_idx_operations_traits_and_word_conversions) {
    // Test `idx`.
    idx idx1;
    idx idx2 = 1;
@@ -4931,7 +4932,7 @@ concept can_times_assign = requires(L lhs, R rhs) { lhs *= rhs; };
 // Constructors implicitly accept sound (in-range) integer constants and reject
 // unsound (out-of-range) constants. Non-constant values that may be unsound
 // require an explicit cast.
-test(arithmetic_semantics_constructor_rejects_unsound_constants) {
+$test(arithmetic_semantics_constructor_rejects_unsound_constants) {
    using semantics_helpers::can_brace_init;
 
    constexpr int1 sound_small = 100;
@@ -4959,7 +4960,7 @@ test(arithmetic_semantics_constructor_rejects_unsound_constants) {
 // Implicit construction into wrap/sat types is well-defined regardless of the
 // source value -- choosing wrap/sat is itself the opt-in to that semantics.
 // Casting to an `undefined` type is unsafe and stays explicit.
-test(arithmetic_semantics_implicit_construction_into_wrap_sat) {
+$test(arithmetic_semantics_implicit_construction_into_wrap_sat) {
    // Saturating: clamps to destination range.
    static_assert(sat_int1{cat::int4{500}} == sat_int1::max());
    static_assert(sat_int1{cat::int4{-500}} == sat_int1::min());
@@ -4985,7 +4986,7 @@ test(arithmetic_semantics_implicit_construction_into_wrap_sat) {
 
 // Arithmetic propagates the LHS overflow policy through the result. `wrap` LHS
 // plus `undefined` RHS yields a `wrap` result, etc.
-test(arithmetic_semantics_overflow_policy_propagates_via_lhs) {
+$test(arithmetic_semantics_overflow_policy_propagates_via_lhs) {
    // LHS policy wins.
    static_assert(
       cat::is_same<decltype(cat::wrap_int4{} + cat::int4{}), cat::wrap_int4>);
@@ -5019,7 +5020,7 @@ test(arithmetic_semantics_overflow_policy_propagates_via_lhs) {
 //   * `undefined` SIGNED `-` may promote to a wider RHS so an underflowed
 //     difference stays representable.
 //   * `-`, `/`, `%`, shifts, `&`, `|` otherwise keep LHS shape.
-test(arithmetic_semantics_promotion_rules) {
+$test(arithmetic_semantics_promotion_rules) {
    // `undefined` LHS promotes to wider RHS for + and *.
    static_assert(cat::is_same<decltype(int1{} + int4{}), int4>);
    static_assert(cat::is_same<decltype(int1{} * int4{}), int4>);
@@ -5074,7 +5075,7 @@ test(arithmetic_semantics_promotion_rules) {
 // when the corresponding binary op preserves the LHS shape, so a promoted
 // result on a narrow LHS is rejected. Sound implicit constructors from constant
 // RHS are still allowed.
-test(arithmetic_semantics_compound_assignment_rejects_narrowing) {
+$test(arithmetic_semantics_compound_assignment_rejects_narrowing) {
    using semantics_helpers::can_minus_assign;
    using semantics_helpers::can_plus_assign;
    using semantics_helpers::can_times_assign;
@@ -5110,7 +5111,7 @@ test(arithmetic_semantics_compound_assignment_rejects_narrowing) {
 
 // `overflow_reference` (`.undef()`, `.wrap()`, `.sat()`) observes the same
 // rules as the materialized type at its policy.
-test(arithmetic_semantics_overflow_reference_view_types) {
+$test(arithmetic_semantics_overflow_reference_view_types) {
    using semantics_helpers::can_minus_assign;
 
    int1 a{};
@@ -5137,7 +5138,7 @@ test(arithmetic_semantics_overflow_reference_view_types) {
 // mathematical modulo (result in `[0, |rhs|)`). The discriminating case is
 // unsigned LHS with negative signed RHS, which must take `|rhs|` first so the
 // result stays non-negative.
-test(arithmetic_semantics_signed_remainder_unsigned_modulo) {
+$test(arithmetic_semantics_signed_remainder_unsigned_modulo) {
    // C-style remainder for signed LHS: sign of LHS is preserved.
    static_assert((int4{-7} % int4{3}) == int4{-1});
    static_assert((int4{-7} % int4{-3}) == int4{-1});
@@ -5160,7 +5161,7 @@ test(arithmetic_semantics_signed_remainder_unsigned_modulo) {
 // underflowed difference is representable. Wrap / sat `idx` never promote. The
 // compile-time non-underflow fast path that keeps `idx` is covered by
 // `arithmetic_semantics_idx_subtract_constexpr_preserves_idx`.
-test(arithmetic_semantics_idx_subtract_returns_signed_distance) {
+$test(arithmetic_semantics_idx_subtract_returns_signed_distance) {
    using wrap_idx = cat::index<cat::overflow_policies::wrap>;
    using sat_idx = cat::index<cat::overflow_policies::saturate>;
 
@@ -5189,7 +5190,7 @@ test(arithmetic_semantics_idx_subtract_returns_signed_distance) {
 // Runtime operands and would-underflow constants still fall through to the
 // iword-returning overload (validated in
 // `arithmetic_semantics_idx_subtract_returns_signed_distance` above).
-test(arithmetic_semantics_idx_subtract_constexpr_preserves_idx) {
+$test(arithmetic_semantics_idx_subtract_constexpr_preserves_idx) {
    // Non-underflowing constant operands stay as `idx`. Both signed and unsigned
    // RHS, and the boundary case `lhs == rhs` (result is zero).
    static_assert(cat::is_same<decltype(idx{5} - 3u), idx>);
@@ -5225,7 +5226,7 @@ test(arithmetic_semantics_idx_subtract_constexpr_preserves_idx) {
 // representable. This is the same path runtime operands take, but reached
 // through compile-time evaluation rather than through non-constant operands
 // disabling `enable_if` entirely.
-test(arithmetic_semantics_idx_subtract_constexpr_underflow_widens_to_iword) {
+$test(arithmetic_semantics_idx_subtract_constexpr_underflow_widens_to_iword) {
    // Smallest underflow (`0 - 1`), three-element underflow, and signed RHS
    // underflow. All three are constant expressions. Only the would-underflow
    // predicate forces the iword fall-through.
@@ -5255,7 +5256,7 @@ test(arithmetic_semantics_idx_subtract_constexpr_underflow_widens_to_iword) {
 // `sizeof(__SIZE_TYPE__) * 8 - 1` so the high bit stays zero (preserving the
 // `index` invariant). Any non-negative shift count is valid (taken modulo the
 // bit width).
-test(arithmetic_semantics_wrap_shift_rotates_bits) {
+$test(arithmetic_semantics_wrap_shift_rotates_bits) {
    using wrap_idx = cat::index<cat::overflow_policies::wrap>;
 
    // Result keeps LHS shape (no promotion).
@@ -5322,7 +5323,7 @@ test(arithmetic_semantics_wrap_shift_rotates_bits) {
 // the cases that involve actual computation (saturation clamps, wrap-around
 // values, mathematical modulo, signed-undefined widening sub, wrap-shift
 // rotation through the optimizer pipeline).
-test(arithmetic_semantics_runtime) {
+$test(arithmetic_semantics_runtime) {
    using wrap_idx = cat::index<cat::overflow_policies::wrap>;
    using sat_idx = cat::index<cat::overflow_policies::saturate>;
 
@@ -5439,11 +5440,11 @@ test(arithmetic_semantics_runtime) {
 //   `(sat_T{a}  OP sat_T{b} ).raw == sat_X(a, b)`
 // for every supported `(OP, X)` pair. This is the contract that lets users mix
 // free and member calls freely. If a future refactor wires a member to a
-// different impl than its free function, this test catches the divergence at
+// different impl than its free function, this $test catches the divergence at
 // both compile time and run time.
-test(arithmetic_semantics_member_matches_free_function) {
+$test(arithmetic_semantics_member_matches_free_function) {
    // Pick operands that exercise overflow for each operator so the equivalence
-   // test is meaningful (not just identity).
+   // $test is meaningful (not just identity).
    {
       // `wrap_uint4`: addition wraps past max.
       constexpr unsigned a = 0xFFFFFFFFu;

@@ -32,22 +32,22 @@ inline constinit struct {
 } const deferrer [[maybe_unused]];
 }  // namespace cat::detail
 
-// `defer` is a macro that instantiates a scoped object which executes some
+// `$defer` is a macro that instantiates a scoped object which executes some
 // arbitrary closure in its destructor.
 // For example:
 //    void* p_mem1 = allocator.alloc();
 //    void* p_mem2 = allocator.alloc();
-//    defer {
+//    $defer {
 //        allocator.free(p_mem1);
 //        allocator.free(p_mem2);
 //    };
 #define CAT_DEFER auto _ = ::cat::detail::deferrer << [&]->void
 
-// `CAT_DEFER` should never be `#undef`'d. The redefinable macro `defer` exists
+// `CAT_DEFER` should never be `#undef`'d. The redefinable macro `$defer` exists
 // to make this macro more ergonomic.
 #pragma clang final(CAT_DEFER)
 
-#define defer CAT_DEFER
+#define $defer CAT_DEFER
 
 namespace cat {
 
@@ -235,10 +235,10 @@ enum class align_val_t : __SIZE_TYPE__ {
 // `assert()` is used throughout the library.
 #include <cat/debug>
 
-// `no_type` is required for the `prop()` macro.
+// `no_type` is required for the `$prop()` macro.
 #include <cat/notype>
 
-// `cat::propagate_error` is a configuration point for the `prop` macros. It
+// `cat::propagate_error` is a configuration point for the `$prop` macros. It
 // uses overload resolution to deduce the value that should be returned within a
 // function expanding these macros. In libCat, overloads are implemented for
 // `cat::maybe` and `cat::scaredy`.
@@ -255,11 +255,11 @@ enum class align_val_t : __SIZE_TYPE__ {
       ::cat::move(libcat_temp_expr).value();                           \
    })
 
-// `CAT_PROPAGATE` should never be `#undef`'d. The redefinable macro `prop`
+// `CAT_PROPAGATE` should never be `#undef`'d. The redefinable macro `$prop`
 // exists to make this macro more ergonomic.
 #pragma clang final(CAT_PROPAGATE)
 
-#define prop CAT_PROPAGATE
+#define $prop CAT_PROPAGATE
 
 // Propagate error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds an error, otherwise evaluate to a non-error state `or_value`.
@@ -273,10 +273,10 @@ enum class align_val_t : __SIZE_TYPE__ {
    })
 
 // `CAT_PROPAGATE_OR` should never be `#undef`'d. The redefinable macro
-// `prop_or` exists to make this macro more ergonomic.
+// `$prop_or` exists to make this macro more ergonomic.
 #pragma clang final(CAT_PROPAGATE_OR)
 
-#define prop_or CAT_PROPAGATE_OR
+#define $prop_or CAT_PROPAGATE_OR
 
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds a value, otherwise propagate an error-state `error_value`.
@@ -290,10 +290,10 @@ enum class align_val_t : __SIZE_TYPE__ {
    })
 
 // `CAT_PROPAGATE_AS` should never be `#undef`'d. The redefinable macro
-// `prop_as` exists to make this macro more ergonomic.
+// `$prop_as` exists to make this macro more ergonomic.
 #pragma clang final(CAT_PROPAGATE_AS)
 
-#define prop_as CAT_PROPAGATE_AS
+#define $prop_as CAT_PROPAGATE_AS
 
 auto
 operator new(unsigned long, void* p_address) -> void*;

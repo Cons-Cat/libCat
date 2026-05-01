@@ -24,7 +24,7 @@ struct transform_view_impl : iterable_interface {
       run_while(LoopBody&& loop_body) -> iteration_result {
          return incoming_context.run_while(
             [this, &loop_body](auto&& element) -> bool {
-               return loop_body((*callback_pointer)(fwd(element)));
+               return loop_body((*callback_pointer)($fwd(element)));
             });
       }
    };
@@ -78,14 +78,14 @@ struct transform_impl : view_interface<transform_impl<Callback>> {
    template <is_borrow_acceptable Iterable>
    constexpr auto
    apply(Iterable&& incoming) const& -> transform_view<Iterable, Callback> {
-      return transform_view<Iterable, Callback>{{}, fwd(incoming), callback};
+      return transform_view<Iterable, Callback>{{}, $fwd(incoming), callback};
    }
 
    template <is_borrow_acceptable Iterable>
    constexpr auto
    apply(Iterable&& incoming) && -> transform_view<Iterable, Callback> {
       return transform_view<Iterable, Callback>{
-         {}, fwd(incoming), move(callback)};
+         {}, $fwd(incoming), move(callback)};
    }
 };
 }  // namespace detail

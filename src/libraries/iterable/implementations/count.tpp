@@ -26,7 +26,7 @@ struct count_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, count_impl /*count_impl*/) {
-      return count(fwd(incoming));
+      return count($fwd(incoming));
    }
 };
 }  // namespace detail

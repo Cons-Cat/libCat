@@ -11,7 +11,7 @@ struct type {
 
    type() = default;
 
-   type(cat::string string) : data(mov string) {
+   type(cat::string string) : data($mov string) {
       // cat::print(data);
       // cat::println(" constructor");
    }
@@ -24,7 +24,7 @@ struct type {
 
    auto
    operator=(cat::string string) -> type& {
-      this->data = mov string;
+      this->data = $mov string;
       return *this;
    }
 
@@ -39,7 +39,7 @@ struct type {
 // NOLINTNEXTLINE
 void pass_by_value(cat::unique_weak<type>){};
 
-test(raii) {
+$test(raii) {
    // TODO: Fix `unique` and re-enable these tests.
    // cat::println("Construct objects.");
    // Test constructor.
@@ -53,12 +53,12 @@ test(raii) {
 
    // Test move-assignment.
    // cat::println("Move moo into foo.");
-   foo = mov moo;
+   foo = $mov moo;
    cat::verify(!moo.has_ownership());
 
    // cat::println("Move foo into func().");
    // A move is required:
-   pass_by_value(mov foo);
+   pass_by_value($mov foo);
    cat::verify(!foo.has_ownership());
 
    // This is deliberately ill-formed:
@@ -93,5 +93,5 @@ test(raii) {
    unique = 2;
 
    cat::unique<int> original = 0;
-   cat::unique<int8> const into = mov original;
+   cat::unique<int8> const into = $mov original;
 }

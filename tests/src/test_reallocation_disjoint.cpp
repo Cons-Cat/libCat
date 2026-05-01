@@ -6,7 +6,7 @@
 
 #include "../unit_tests.hpp"
 
-test(reallocation_disjoint_intervals) {
+$test(reallocation_disjoint_intervals) {
    cat::array<unsigned char, 64> buf{};
 
    unsigned char* const p = buf.data();
@@ -15,10 +15,10 @@ test(reallocation_disjoint_intervals) {
    cat::verify(!cat::is_memory_overlapping(p, uword{0u}, p, uword{8u}));
 }
 
-test(reallocation_disjoint_linear_ptr_realloc) {
+$test(reallocation_disjoint_linear_ptr_realloc) {
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(512u).verify();
-   defer {
+   $defer {
       pager.free(page);
    };
    cat::is_allocator auto allocator = cat::make_linear_allocator(page);

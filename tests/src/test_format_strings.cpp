@@ -4,11 +4,11 @@
 
 #include "../unit_tests.hpp"
 
-test(format_strings) {
+$test(format_strings) {
    // Initialize an allocator.
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
-   defer {
+   $defer {
       pager.free(page);
    };
    auto allocator = make_linear_allocator(page);
@@ -85,10 +85,10 @@ test(format_strings) {
    // [[maybe_unused]] constexpr auto hi = make_hi_in_const(1);
 }
 
-test(fmt_long_pattern_substitutes) {
+$test(fmt_long_pattern_substitutes) {
    cat::page_allocator local_pager;
    cat::span page = local_pager.alloc_multi<cat::byte>(16_uki).or_exit();
-   defer {
+   $defer {
       local_pager.free(page);
    };
    auto allocator = make_linear_allocator(page);

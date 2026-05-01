@@ -10,7 +10,7 @@
 // the `check-gdb-pretty-printers` CMake target to catch regressions
 // in pretty printers.
 
-// This test does not address semantics, so we shouldn't see warnings.
+// This $test does not address semantics, so we shouldn't see warnings.
 // NOLINTBEGIN
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"

@@ -16,7 +16,7 @@ struct move_only {
    }
 };
 
-test(array_structured_bindings) {
+$test(array_structured_bindings) {
    [] consteval {
       constexpr cat::array<int, 3> constexpr_array{1, 2, 3};
       static_assert(std::tuple_size_v<cat::array<int, 3>> == 3);
@@ -57,7 +57,7 @@ test(array_structured_bindings) {
    }
 }
 
-test(array_traits) {
+$test(array_traits) {
    static_assert(cat::is_trivially_default_constructible<cat::array<int, 1u>>);
    static_assert(cat::is_trivially_copyable<cat::array<int, 1u>>);
    static_assert(cat::is_trivially_copy_constructible<cat::array<int, 1u>>);
@@ -68,7 +68,7 @@ test(array_traits) {
    static_assert(cat::is_implicit_lifetime<cat::array<int, 1u>>);
 }
 
-test(array_brace_initialization_and_list_assign) {
+$test(array_brace_initialization_and_list_assign) {
    cat::array array_1{0, 1, 2, 3, 4};
    array_1 = {5, 6, 7, 8, 9};
    cat::verify(array_1[0] == 5);
@@ -77,21 +77,21 @@ test(array_brace_initialization_and_list_assign) {
    cat::array<int4, 1u> array_2;
 }
 
-test(array_move_only_element) {
+$test(array_move_only_element) {
    [[maybe_unused]]
    cat::array array_move_only = {move_only()};
    [[maybe_unused]]
-   cat::array array_3 = mov array_move_only;
+   cat::array array_3 = $mov array_move_only;
 }
 
-test(array_const_element_access) {
+$test(array_const_element_access) {
    cat::array<int4, 3u> const array_const = {0, 1, 2};
    [[maybe_unused]]
    int4 const_val = array_const.at(1).or_exit();
    cat::verify(const_val == 1);
 }
 
-test(array_consteval_copy_assign) {
+$test(array_consteval_copy_assign) {
    [] consteval {
       cat::array<int4, 1u> const_array_1{};
       cat::array<int4, 1u> const_array_2 = {1};
@@ -99,7 +99,7 @@ test(array_consteval_copy_assign) {
    }();
 }
 
-test(array_range_based_for_each_direction) {
+$test(array_range_based_for_each_direction) {
    cat::array array_1{5, 6, 7, 8, 9};
 
    idx count = 0u;
@@ -126,7 +126,7 @@ test(array_range_based_for_each_direction) {
    }
 }
 
-test(array_front_back_advance_to) {
+$test(array_front_back_advance_to) {
    cat::array array_1{5, 6, 7, 8, 9};
    cat::verify(array_1.front() == 5);
    cat::verify(array_1.back() == 9);
@@ -135,13 +135,13 @@ test(array_front_back_advance_to) {
    cat::verify(array_to == array_1.back());
 }
 
-test(array_at_in_and_out_of_bounds) {
+$test(array_at_in_and_out_of_bounds) {
    cat::array array_1{5, 6, 7, 8, 9};
    cat::verify(array_1.at(0).value() == 5);
    cat::verify(!array_1.at(6).has_value());
 }
 
-test(array_class_template_argument_deduction) {
+$test(array_class_template_argument_deduction) {
    cat::array implicit_array_1 = {0, 1, 2, 3, 4};
    cat::array implicit_array_2{0, 1, 2, 3, 4};
    cat::array implicit_array_3(0, 1, 2, 3, 4);
@@ -157,7 +157,7 @@ test(array_class_template_argument_deduction) {
    //                  cat::string_length("Hi, Conscat!"));
 }
 
-test(array_subspan_first_last) {
+$test(array_subspan_first_last) {
    cat::array array_1{5, 6, 7, 8, 9};
    cat::span span = array_1;
    span = array_1.first(1u);
@@ -170,14 +170,14 @@ test(array_subspan_first_last) {
    auto _ = array_const.last(2u);
 }
 
-test(array_copy_assignment) {
+$test(array_copy_assignment) {
    cat::array<int4, 4u> base_array = {0_i4, 0_i4, 0_i4, 0_i4};
    cat::array<int4, 4u> copy_array = {1_i4, 2_i4, 3_i4, 4_i4};
    base_array = copy_array;
    cat::verify(base_array[0] == 1_i4 && base_array[3] == 4_i4);
 }
 
-test(array_make_array_filled_and_fill) {
+$test(array_make_array_filled_and_fill) {
    cat::array filled_array = cat::make_array_filled<8>(6_i4);
    for (idx i; i < 8; ++i) {
       cat::verify(filled_array[i] == 6);
@@ -189,7 +189,7 @@ test(array_make_array_filled_and_fill) {
    }
 }
 
-test(array_brace_initializer_lists) {
+$test(array_brace_initializer_lists) {
    cat::array from_array{1, 2, 3};
    cat::verify(from_array[0] == 1);
    cat::verify(from_array[1] == 2);
@@ -200,7 +200,7 @@ test(array_brace_initializer_lists) {
 }
 
 // Mirrors `std::array` lexicographic compare and equality for the same payload.
-test(array_three_way_and_equality_consteval) {
+$test(array_three_way_and_equality_consteval) {
    [] consteval {
       constexpr cat::array<int, 3> a{1, 2, 3};
       constexpr cat::array<int, 3> b{1, 2, 3};
@@ -225,7 +225,7 @@ test(array_three_way_and_equality_consteval) {
    }();
 }
 
-test(array_three_way_and_equality_runtime) {
+$test(array_three_way_and_equality_runtime) {
    cat::array<int, 3> const a{1, 2, 3};
    cat::array<int, 3> const b{1, 2, 3};
    cat::array<int, 3> const c{1, 2, 4};

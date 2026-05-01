@@ -3,7 +3,7 @@
 
 #include "../unit_tests.hpp"
 
-test(iterator_concepts_std_parity_pointers) {
+$test(iterator_concepts_std_parity_pointers) {
    static_assert(cat::is_same<cat::iter_value_t<int*>, int>);
    static_assert(cat::is_same<cat::iter_reference_t<int*>, int&>);
    static_assert(cat::is_same<cat::iter_difference_t<int*>, cat::iword>);
@@ -20,7 +20,7 @@ test(iterator_concepts_std_parity_pointers) {
    static_assert(cat::is_contiguous_stepanov_iterator<int*>);
 }
 
-test(iterator_concepts_std_parity_container_stepanov_iterator) {
+$test(iterator_concepts_std_parity_container_stepanov_iterator) {
    cat::array<int, 3u> arr{};
    using iter = decltype(arr.begin());
 

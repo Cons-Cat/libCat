@@ -23,7 +23,7 @@ constinit inline cat::maybe<cat::vec<void*, cat::page_allocator>> test_fns;
 void
 test_fail(cat::source_location const& source_location);
 
-// This macro declares a unit test named `test_name`, which is executed
+// This macro declares a unit $test named `test_name`, which is executed
 // automatically in this program's constructor calls.
 // Attributes can be placed before an instantiation of the macro to modify its
 // behavior.
@@ -56,15 +56,15 @@ test_fail(cat::source_location const& source_location);
       ++tests_passed;                                                          \
       return;                                                                  \
    }                                                                           \
-   /* AddressSanitizer with O3 can mis-treat a large test body */              \
-   /* as `noreturn` and instrument the test with `__asan_handle_no_return` */  \
-   /* so the return path hits a trap. `[[clang::nomerge]]` keeps each test */  \
+   /* AddressSanitizer with O3 can mis-treat a large $test body */              \
+   /* as `noreturn` and instrument the $test with `__asan_handle_no_return` */  \
+   /* so the return path hits a trap. `[[clang::nomerge]]` keeps each $test */  \
    /* distinct. `[[clang::optnone]]` on the body fixes this. */   \
    /* TODO: Debug IR passes. */ \
    void test_##test_name()
 
-// `CAT_TEST` should never be `#undef`'d. The redefinable macro `test` exists
+// `CAT_TEST` should never be `#undef`'d. The redefinable macro `$test` exists
 // to make this macro more ergonomic.
 #pragma clang final(CAT_TEST)
 
-#define test CAT_TEST
+#define $test CAT_TEST

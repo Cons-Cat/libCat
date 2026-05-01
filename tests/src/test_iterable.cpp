@@ -240,7 +240,7 @@ struct tiny_string {
    constexpr tiny_string() = default;
 
    // Initialise from a NUL-terminated literal. We avoid `cat::strlen` here so
-   // the test stays self-contained.
+   // the $test stays self-contained.
    constexpr tiny_string(char const* literal) {
       while (literal[m_len.raw] != '\0') {
          m_chars[m_len.raw] = literal[m_len.raw];
@@ -376,7 +376,7 @@ static_assert(cat::is_borrow_acceptable<noisy_box>);  // r-value is fine
 
 // Tests:
 
-test(flux_collection_basics) {
+$test(flux_collection_basics) {
    tiny_array<int, 4u> arr = {
       {},
       {1, 2, 3, 4}
@@ -409,7 +409,7 @@ test(flux_collection_basics) {
    cat::verify(cat::count(arr) == 4u);
 }
 
-test(flux_iterable_basics) {
+$test(flux_iterable_basics) {
    tiny_list<int, 8u> list;
    list.push_back(10);
    list.push_back(20);
@@ -429,7 +429,7 @@ test(flux_iterable_basics) {
    cat::verify(total == 60);
 }
 
-test(flux_pipe_collection) {
+$test(flux_pipe_collection) {
    tiny_array<int, 6u> arr = {
       {},
       {1, 2, 3, 4, 5, 6}
@@ -447,7 +447,7 @@ test(flux_pipe_collection) {
    cat::verify(result == 56);
 }
 
-test(flux_pipe_iterable) {
+$test(flux_pipe_iterable) {
    tiny_list<int, 8u> list;
    list.push_back(1);
    list.push_back(2);
@@ -472,7 +472,7 @@ test(flux_pipe_iterable) {
    cat::verify(scaled == 150);
 }
 
-test(flux_take_truncates) {
+$test(flux_take_truncates) {
    tiny_array<int, 6u> arr = {
       {},
       {10, 20, 30, 40, 50, 60}
@@ -491,7 +491,7 @@ test(flux_take_truncates) {
    cat::verify(none == 0);
 }
 
-test(flux_run_while_pause_resume) {
+$test(flux_run_while_pause_resume) {
    // `iteration_result::incomplete` lets the caller pause iteration and pick up
    // where they left off. This is the structural feature behind every
    // short-circuiting algorithm.
@@ -519,7 +519,7 @@ test(flux_run_while_pause_resume) {
    cat::verify(rest == 9);  // 4 + 5
 }
 
-test(flux_run_while_immediate_interrupt) {
+$test(flux_run_while_immediate_interrupt) {
    // Stop on the first element, then continue with the `run_while(ctx, f)` free
    // shim. Confirms the cursor is advanced for the read that ran the body, so
    // the next pass skips that element.
@@ -546,7 +546,7 @@ test(flux_run_while_immediate_interrupt) {
    cat::verify(rest_sum == 9);  // 2 + 3 + 4, first value (1) not seen again
 }
 
-test(flux_step_and_next_element) {
+$test(flux_step_and_next_element) {
    tiny_array<int, 3u> arr = {
       {},
       {7, 8, 9}
@@ -592,7 +592,7 @@ test(flux_step_and_next_element) {
    cat::verify(!empty.has_value());
 }
 
-test(flux_fold_terminal) {
+$test(flux_fold_terminal) {
    tiny_array<int, 4u> arr = {
       {},
       {2, 3, 5, 7}
@@ -617,7 +617,7 @@ test(flux_fold_terminal) {
    cat::verify(piped == 4 + 9 + 25 + 49);
 }
 
-test(flux_reverse_collection) {
+$test(flux_reverse_collection) {
    tiny_array<int, 5u> arr = {
       {},
       {1, 2, 3, 4, 5}
@@ -645,7 +645,7 @@ test(flux_reverse_collection) {
    cat::verify(doubled_first == 9);  // 5 + 4
 }
 
-test(flux_reverse_iterable_member) {
+$test(flux_reverse_iterable_member) {
    // Demonstrates the opt-in path: `tiny_list` is not bidirectional, but it
    // provides a member `reverse_iterate()` so it still works through
    // `cat::reverse()`.
@@ -659,7 +659,7 @@ test(flux_reverse_iterable_member) {
    cat::verify(reversed == 70);  // 40 + 30
 }
 
-test(flux_read_at_and_try_read_at) {
+$test(flux_read_at_and_try_read_at) {
    tiny_array<int, 4u> arr = {
       {},
       {11, 22, 33, 44}
@@ -682,7 +682,7 @@ test(flux_read_at_and_try_read_at) {
    cat::verify(!far_past.has_value());
 }
 
-test(flux_slice_basic) {
+$test(flux_slice_basic) {
    tiny_array<int, 6u> arr = {
       {},
       {10, 20, 30, 40, 50, 60}
@@ -709,7 +709,7 @@ test(flux_slice_basic) {
    cat::verify(cat::sum(empty) == 0);
 }
 
-test(flux_as_span) {
+$test(flux_as_span) {
    tiny_array<int, 4u> arr = {
       {},
       {7, 14, 21, 28}
@@ -726,7 +726,7 @@ test(flux_as_span) {
    cat::verify(arr.m_data[1] == 99);
 }
 
-test(flux_ownership_policy) {
+$test(flux_ownership_policy) {
    // A `noisy_box` l-value cannot be piped directly. The adaptor would have to
    // copy it, and copying is deleted. `cat::ref` provides the would have to
    // copy it, and copying is deleted. `cat::ref` provides the explicit borrow.
@@ -746,7 +746,7 @@ test(flux_ownership_policy) {
    cat::verify(doubled == 40);
 
    // Static check that the adaptor closure rejects a bare `noisy_box&`
-   // outright. We can't trigger SFINAE inside a `test()` body in a way the
+   // outright. We can't trigger SFINAE inside a `$test()` body in a way the
    // compile-time framework would catch, but the ownership-policy assertions
    // further up already cover the structural bit.
 
@@ -759,7 +759,7 @@ test(flux_ownership_policy) {
    cat::verify(from_rvalue == 10);
 }
 
-test(flux_fluent_terminals) {
+$test(flux_fluent_terminals) {
    // Every terminal is reachable via the member form.
    tiny_array<int, 4u> arr = {
       {},
@@ -783,9 +783,9 @@ test(flux_fluent_terminals) {
    cat::verify(product == 384);  // 2 * 4 * 6 * 8
 }
 
-test(flux_fluent_chain) {
+$test(flux_fluent_chain) {
    // The fluent surface is the dual of the pipe surface: same adaptors, same
-   // closures, same ownership policy. This test mirrors `flux_pipe_collection`
+   // closures, same ownership policy. This $test mirrors `flux_pipe_collection`
    // but spelled fluently.
    tiny_array<int, 6u> arr = {
       {},
@@ -806,7 +806,7 @@ test(flux_fluent_chain) {
    cat::verify(first_three == 6);  // 1 + 2 + 3
 }
 
-test(flux_fluent_reverse) {
+$test(flux_fluent_reverse) {
    tiny_array<int, 5u> arr = {
       {},
       {1, 2, 3, 4, 5}
@@ -833,7 +833,7 @@ test(flux_fluent_reverse) {
    cat::verify(reversed_doubled == 200);  // 80 + 60 + 40 + 20
 }
 
-test(flux_fluent_through_ref) {
+$test(flux_fluent_through_ref) {
    // The ownership policy applies to the fluent surface in exactly the same
    // way: a non-trivially-copyable l-value has to come in through
    // `cat::ref(x)`, but once it does, the same chain composes.
@@ -857,7 +857,7 @@ test(flux_fluent_through_ref) {
    cat::verify(sum_inline == 4);
 }
 
-test(flux_internal_iterate_collection) {
+$test(flux_internal_iterate_collection) {
    tiny_array<int, 5u> arr = {
       {},
       {1, 2, 3, 4, 5}
@@ -869,7 +869,7 @@ test(flux_internal_iterate_collection) {
    cat::verify(total == 15);
 }
 
-test(flux_internal_iterate_iterable_only) {
+$test(flux_internal_iterate_iterable_only) {
    tiny_list<int, 8u> list;
    list.push_back(2);
    list.push_back(3);
@@ -883,7 +883,7 @@ test(flux_internal_iterate_iterable_only) {
    cat::verify(total == 17);
 }
 
-test(flux_internal_iterate_moved_collection) {
+$test(flux_internal_iterate_moved_collection) {
    tiny_array<int, 3u> arr = {
       {},
       {1, 2, 3}
@@ -895,7 +895,7 @@ test(flux_internal_iterate_moved_collection) {
    cat::verify(total == 6);
 }
 
-test(flux_internal_iterate_chain) {
+$test(flux_internal_iterate_chain) {
    tiny_array<int, 6u> arr = {
       {},
       {1, 2, 3, 4, 5, 6}
@@ -914,7 +914,7 @@ test(flux_internal_iterate_chain) {
    cat::verify(total == 120);  // 20 + 40 + 60
 }
 
-test(flux_internal_iterate_pipeline_transform) {
+$test(flux_internal_iterate_pipeline_transform) {
    tiny_array<int, 3u> arr = {
       {},
       {0, 1, 2}
@@ -929,7 +929,7 @@ test(flux_internal_iterate_pipeline_transform) {
    cat::verify(total == 6);
 }
 
-test(flux_internal_iterate_empty_filter) {
+$test(flux_internal_iterate_empty_filter) {
    tiny_array<int, 4u> arr = {
       {},
       {0, 0, 0, 0}
@@ -945,7 +945,7 @@ test(flux_internal_iterate_empty_filter) {
    cat::verify(iterations == 0);
 }
 
-test(flux_fluent_on_slice) {
+$test(flux_fluent_on_slice) {
    // A `slice_view` also inherits `iterable_interface`, so a slice can keep
    // using the member-call form without dropping back to the pipe.
    tiny_array<int, 6u> arr = {
@@ -981,7 +981,7 @@ test(flux_fluent_on_slice) {
 // over the *base's* reverse context, which owns its own bounds and stops at
 // `complete`. There is no `--iter` that can run off the front of the source.
 
-test(flux_p3725_filter_reverse_as_rvalue_to) {
+$test(flux_p3725_filter_reverse_as_rvalue_to) {
    tiny_array<tiny_string, 4u> cities{
       {},
       {tiny_string{"Amsterdam"}, tiny_string{"Berlin"}, tiny_string{"Cologne"},
@@ -1041,7 +1041,7 @@ test(flux_p3725_filter_reverse_as_rvalue_to) {
 // checks the predicate, and either the terminal callback runs or the element is
 // dropped. There is no peek/read split, so each lambda runs exactly once per
 // source element no matter how deep the adaptor stack is.
-test(flux_tpoiasi_transform_filter_no_double_invocation) {
+$test(flux_tpoiasi_transform_filter_no_double_invocation) {
    tiny_array<int, 5u> numbers = {
       {},
       {1, 2, 3, 4, 5}
@@ -1080,7 +1080,7 @@ test(flux_tpoiasi_transform_filter_no_double_invocation) {
 // in the latter ordering range-v3's filter iterator does not have to peek
 // through the transform, so TPOIASI does not bite. Pin that the count is
 // identical in Flux v2 either way.
-test(flux_tpoiasi_filter_transform_invocation_count) {
+$test(flux_tpoiasi_filter_transform_invocation_count) {
    tiny_array<int, 5u> numbers = {
       {},
       {1, 2, 3, 4, 5}
@@ -1119,7 +1119,7 @@ test(flux_tpoiasi_filter_transform_invocation_count) {
 // `as_rvalue` rebrands `element_type` as an x-value regardless of whether the
 // incoming iterable is forward or reverse, and regardless of which adaptor it
 // is composed with. Pin the structural pieces.
-test(flux_as_rvalue_element_type) {
+$test(flux_as_rvalue_element_type) {
    tiny_array<tiny_string, 2u> arr;
    using fwd_chain = decltype(cat::ref(arr) | cat::as_rvalue());
    using fwd_ctx = cat::iterable_iteration_context_type<fwd_chain>;
@@ -1138,7 +1138,7 @@ test(flux_as_rvalue_element_type) {
 
 // Pipe terminal closures mirror the free algorithms (`sum`, `count`, etc.) but
 // participate in the same ownership policy as adaptors.
-test(flux_pipe_terminal_closures) {
+$test(flux_pipe_terminal_closures) {
    tiny_array<int, 4u> arr = {
       {},
       {2, 4, 6, 8}
@@ -1172,7 +1172,7 @@ test(flux_pipe_terminal_closures) {
 // `to<Container>()` materialises into the destination through its `push_back`
 // (here `tiny_vector::push_back`) without needing `as_rvalue` when the source
 // elements are cheap to copy.
-test(flux_to_without_as_rvalue) {
+$test(flux_to_without_as_rvalue) {
    tiny_array<int, 4u> arr = {
       {},
       {1, 2, 3, 4}
@@ -1185,7 +1185,7 @@ test(flux_to_without_as_rvalue) {
 
 // A `slice_view` keeps the parent's random-access protocol, so `distance` and
 // `reverse` compose like on the underlying collection.
-test(flux_slice_reverse_and_distance) {
+$test(flux_slice_reverse_and_distance) {
    tiny_array<int, 4u> arr = {
       {},
       {10, 100, 1'000, 10'000}
@@ -1199,7 +1199,7 @@ test(flux_slice_reverse_and_distance) {
 
 // `const` collections still model `is_collection` because the Flux position
 // hooks are `const`-qualified on the CRTP object handle.
-test(flux_iterate_const_collection) {
+$test(flux_iterate_const_collection) {
    tiny_array<int, 3u> const arr = {
       {},
       {3, 4, 5}
@@ -1215,7 +1215,7 @@ test(flux_iterate_const_collection) {
 
 // Structural checks: iteration contexts are non-copyable and expose
 // `element_type`. Element/value aliases match the context.
-test(flux_iteration_context_and_element_traits) {
+$test(flux_iteration_context_and_element_traits) {
    using arr4 = tiny_array<int, 4u>;
    static_assert(
       cat::is_iteration_context<cat::collection_iteration_context<arr4>>);

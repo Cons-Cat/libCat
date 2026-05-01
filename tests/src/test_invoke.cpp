@@ -11,7 +11,7 @@ invoke_fn_int() -> int {
    return 1;
 }
 
-test(invoke) {
+$test(invoke) {
    cat::invoke(&invoke_fn_void);
    cat::verify(cat::invoke(&invoke_fn_int) == 1);
 }

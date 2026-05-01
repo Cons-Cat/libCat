@@ -121,7 +121,7 @@ struct scaredy_variant_storage {
    value(this auto&& self) -> auto&&
       requires(!is_void<T>)
    {
-      return fwd(self).m_storage.template get<value_type>();
+      return $fwd(self).m_storage.template get<value_type>();
    }
 
    template <typename error_type>
@@ -146,7 +146,7 @@ struct scaredy_variant_storage {
    template <typename U>
    constexpr auto
    is(U&& in_value) const -> bool {
-      return m_storage.template is<U>(fwd(in_value));
+      return m_storage.template is<U>($fwd(in_value));
    }
 
    variant<value_type, error_types...> m_storage;
@@ -185,7 +185,7 @@ struct scaredy_compact_storage {
 
    template <rvalue U>
       requires(is_value<U>)
-   constexpr scaredy_compact_storage(U&& input) : m_storage(fwd(input)) {
+   constexpr scaredy_compact_storage(U&& input) : m_storage($fwd(input)) {
    }
 
    constexpr scaredy_compact_storage(error_type const& error)
@@ -211,7 +211,7 @@ struct scaredy_compact_storage {
       requires(is_value<U>)
    constexpr auto
    operator=(U&& operand) -> scaredy_compact_storage& {
-      m_storage = fwd(operand);
+      m_storage = $fwd(operand);
       return *this;
    }
 
@@ -229,7 +229,7 @@ struct scaredy_compact_storage {
 
    constexpr auto
    value(this auto&& self) -> auto&& {
-      return fwd(self).m_storage;
+      return $fwd(self).m_storage;
    }
 
    // `this_type` is variadic to give it a homogenous interface with other
@@ -274,9 +274,9 @@ struct scaredy_compact_storage {
    constexpr auto
    is(U&& in_value) const -> bool {
       if (this->has_value()) {
-         return static_cast<value_type>(fwd(in_value)) == m_storage;
+         return static_cast<value_type>($fwd(in_value)) == m_storage;
       }
-      return static_cast<error_type>(fwd(in_value)) == m_error_code;
+      return static_cast<error_type>($fwd(in_value)) == m_error_code;
    }
 
    constexpr auto
@@ -380,7 +380,7 @@ class [[nodiscard]] scaredy {
    template <rvalue U>
       requires(is_error<U>)
    // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-   constexpr scaredy(U&& error) : m_storage(fwd(error)) {
+   constexpr scaredy(U&& error) : m_storage($fwd(error)) {
    }
 
    // Forward a `monostate` into the storage if there is no value type.
@@ -457,7 +457,7 @@ class [[nodiscard]] scaredy {
    value(this auto&& self) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
-      return fwd(self).m_storage.value();
+      return $fwd(self).m_storage.value();
    }
 
    // Special discard-able overload for `maybe<void>`.
@@ -507,7 +507,7 @@ class [[nodiscard]] scaredy {
    constexpr auto
    value_or(this auto&& self, value_type fallback) {
       if (self.m_storage.has_value()) {
-         return fwd(self).m_storage.value();
+         return $fwd(self).m_storage.value();
       }
       return fallback;
    }
@@ -525,7 +525,7 @@ class [[nodiscard]] scaredy {
       requires(!storage_type::is_wrapping_void)
    {
       cat::assert(self.has_value(), p_assert_handler, callsite);
-      return fwd(self).value();
+      return $fwd(self).value();
    }
 
    // Special discard-able overload for `maybe<void>`.
@@ -548,7 +548,7 @@ class [[nodiscard]] scaredy {
       requires(!storage_type::is_wrapping_void)
    {
       cat::verify(self.has_value(), p_assert_handler, callsite);
-      return fwd(self).value();
+      return $fwd(self).value();
    }
 
    // Special discard-able overload for `maybe<void>`.
@@ -579,7 +579,7 @@ class [[nodiscard]] scaredy {
    [[nodiscard]]
    constexpr auto
    is(U&& in_value) const -> bool {
-      return m_storage.is(fwd(in_value));
+      return m_storage.is($fwd(in_value));
    }
 
    // Member access syntax pattern matching for `cat::match()`.
@@ -587,7 +587,7 @@ class [[nodiscard]] scaredy {
       requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
    match(Patterns&&... patterns) {
-      detail::match_patterns (*this)(fwd(patterns)...);
+      detail::match_patterns (*this)($fwd(patterns)...);
    }
 
    // If this non-`const`-qualified `scaredy` holds a value, transform it with a
@@ -598,9 +598,9 @@ class [[nodiscard]] scaredy {
    transform(this auto&& self, Callback&& callback) {
       using this_type = scaredy<T, error_types...>;
       if (self.has_value()) {
-         return this_type(fwd(callback)(fwd(self).value()));
+         return this_type($fwd(callback)($fwd(self).value()));
       }
-      return this_type(fwd(self).m_storage);
+      return this_type($fwd(self).m_storage);
    }
 
    template <is_invocable<value_type> Callback>
@@ -608,8 +608,8 @@ class [[nodiscard]] scaredy {
    constexpr auto
    and_then(this auto&& self, Callback&& callback) {
       using this_type = scaredy<T, error_types...>;
-      return self.has_value() ? fwd(callback)(fwd(self).value())
-                              : this_type(fwd(self).m_storage);
+      return self.has_value() ? $fwd(callback)($fwd(self).value())
+                              : this_type($fwd(self).m_storage);
    }
 
    template <is_invocable Callback>
@@ -620,16 +620,16 @@ class [[nodiscard]] scaredy {
 
       if (!self.has_value()) {
          if constexpr (is_void<U>) {
-            fwd(callback)();
+            $fwd(callback)();
          } else {
-            return fwd(callback)();
+            return $fwd(callback)();
          }
       }
 
       if constexpr (is_void<U>) {
          return;
       } else {
-         return fwd(self);
+         return $fwd(self);
       }
    }
 
@@ -637,7 +637,7 @@ class [[nodiscard]] scaredy {
    or_exit(this auto&& self, iword exit_code = 1) {
       if (self.has_value()) [[likely]] {
          if constexpr (!is_void<T>) {
-            return fwd(self).value();
+            return $fwd(self).value();
          } else {
             return;
          }
@@ -650,7 +650,7 @@ class [[nodiscard]] scaredy {
    or_exit(this auto&& self, str_view error_message, iword exit_code = 1) {
       if (self.has_value()) [[likely]] {
          if constexpr (!is_void<T>) {
-            return fwd(self).value();
+            return $fwd(self).value();
          } else {
             return;
          }

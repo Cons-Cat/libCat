@@ -34,7 +34,7 @@ class raw_type_file {
 
       // Try to open a file from a path.
       auto m_file_descriptor =
-         prop(nix::sys_open(path.data(), open_mode, open_flags));
+         $prop(nix::sys_open(path.data(), open_mode, open_flags));
 
       // TODO: Is this failable?
       // Get the status of that opened file.

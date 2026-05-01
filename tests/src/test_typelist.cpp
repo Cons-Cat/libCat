@@ -2,7 +2,7 @@
 
 #include "../unit_tests.hpp"
 
-test(typelist) {
+$test(typelist) {
    using types = cat::type_list<int, char>;
    using type_0 = types::get<0>;
    using type_1 = types::get<1>;

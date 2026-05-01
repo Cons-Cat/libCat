@@ -2,7 +2,7 @@
 
 #include "../unit_tests.hpp"
 
-test(bitset) {
+$test(bitset) {
    using namespace cat::arithmetic_literals;
 
    constexpr cat::bitset<7u> bits7{};

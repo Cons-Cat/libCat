@@ -50,13 +50,13 @@ class unique {
    template <rvalue U>
       requires(is_implicitly_convertible<U, T>)
    // NOLINTNEXTLINE
-   constexpr unique(U&& value) : storage(fwd(value)) {
+   constexpr unique(U&& value) : storage($fwd(value)) {
    }
 
    // Forward any possible constructor into `storage`.
    template <typename... Args>
       requires(sizeof...(Args) > 1)
-   unique(Args&&... arguments) : storage(fwd(arguments)...) {
+   unique(Args&&... arguments) : storage($fwd(arguments)...) {
    }
 
    // Allow move-assignment.
@@ -65,7 +65,7 @@ class unique {
    auto
    operator=(U&& value) -> unique& {
       this->storage_destructor();
-      this->storage = static_cast<T>(fwd(value));
+      this->storage = static_cast<T>($fwd(value));
       return *this;
    }
 
@@ -95,7 +95,7 @@ class unique {
 
    constexpr auto
    borrow() -> T&& {
-      return fwd(this->storage);
+      return $fwd(this->storage);
    }
 
  private:
@@ -137,7 +137,7 @@ class unique_weak {
    template <rvalue U>
       requires(is_implicitly_convertible<U, T>)
    constexpr unique_weak(U&& value)  // NOLINT
-       : storage(static_cast<T>(fwd(value))) {
+       : storage(static_cast<T>($fwd(value))) {
    }
 
    template <typename U>
@@ -148,7 +148,7 @@ class unique_weak {
    };
 
    template <typename... Args>
-   unique_weak(Args&&... arguments) : storage(fwd(arguments)...) {
+   unique_weak(Args&&... arguments) : storage($fwd(arguments)...) {
    }
 
    // Allow move-assignment.
@@ -157,7 +157,7 @@ class unique_weak {
    auto
    operator=(U&& value) -> unique_weak<T>& {
       this->storage_destructor();
-      this->storage = fwd(value);
+      this->storage = $fwd(value);
       this->owns_data = true;
       return *this;
    }
@@ -181,7 +181,7 @@ class unique_weak {
    constexpr auto
    borrow() -> T&& {
       this->owns_data = false;
-      return fwd(this->storage);
+      return $fwd(this->storage);
    }
 
    ~unique_weak() {

@@ -28,7 +28,7 @@ static_assert(test_constexpr_pointer_in_range());
 
 }  // namespace
 
-test(pointer_in_range) {
+$test(pointer_in_range) {
    cat::array<int4, 8> values{0, 1, 2, 3, 4, 5, 6, 7};
    cat::span<int4 const> const range = values;
 

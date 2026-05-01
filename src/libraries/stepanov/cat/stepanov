@@ -510,7 +510,7 @@ class reverse_proxy_stepanov_iterator
    // Forward any constructor to the `internal_iterator`.
    template <typename... Args>
    constexpr reverse_proxy_stepanov_iterator(Args&&... arguments)
-       : m_internal_iterator(fwd(arguments)...) {
+       : m_internal_iterator($fwd(arguments)...) {
    }
 
    constexpr auto
@@ -671,19 +671,21 @@ concept is_forward_stepanov_iterator =
 template <typename Outputter, typename Value>
 concept is_stepanov_indirectly_writable =
    requires(Outputter&& output_iterator, Value&& value) {
-      *output_iterator = fwd(value);
-      *fwd(output_iterator) = fwd(value);
+      *output_iterator = $fwd(value);
+      *$fwd(output_iterator) = $fwd(value);
       const_cast<iterator_reference<Outputter> const&&>(*output_iterator) =
-         fwd(value);
-      const_cast<iterator_reference<Outputter> const&&>(*fwd(output_iterator)) =
-         fwd(value);
+         $fwd(value);
+      const_cast<iterator_reference<Outputter> const&&>(
+         *$fwd(output_iterator)) = $fwd(value);
    };
 
 template <typename Outputter, typename Value>
 concept is_output_stepanov_iterator =
    is_input_or_output_stepanov_iterator<Outputter>
    && is_stepanov_indirectly_writable<Outputter, Value>
-   && requires(Outputter iterator, Value&& value) { *iterator++ = fwd(value); };
+   && requires(Outputter iterator, Value&& value) {
+         *iterator++ = $fwd(value);
+      };
 
 // With a similar syntax to `as_const()`, this wrapper takes an iterable
 // container and inverts its iterator's forwards and backwards movement.

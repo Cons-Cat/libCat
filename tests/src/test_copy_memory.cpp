@@ -14,7 +14,7 @@ static_assert(
 static_assert(cat::is_same<decltype(cat::uintptr{static_cast<void*>(nullptr)}),
                            cat::uintptr<void>>);
 
-test(copy_memory) {
+$test(copy_memory) {
    using namespace cat::literals;
    using namespace cat::integers;
 

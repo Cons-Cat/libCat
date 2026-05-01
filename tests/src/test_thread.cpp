@@ -36,7 +36,7 @@ function_2() {
 
 }  // namespace
 
-test(thread) {
+$test(thread) {
    cat::thread threads[5];
    cat::page_allocator allocator;
 
@@ -95,7 +95,7 @@ test(thread) {
    cat::verify(atomic.load() == 11);
 }
 
-test(thread_clone_failure) {
+$test(thread_clone_failure) {
    cat::page_allocator allocator;
 
    nix::rlimit original{};

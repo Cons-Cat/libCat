@@ -17,12 +17,12 @@ nix::process::spawn(cat::is_allocator auto& allocator,
    cat::idx const thread_local_slab_bytes =
       nix::detail::clone_thread_local_slab_min_bytes();
    cat::span<cat::byte> memory =
-      prop_as(allocator.template align_alloc_multi<cat::byte>(
-                 16u, initial_stack_size + thread_local_slab_bytes),
-              nix::linux_error::inval);
+      $prop_as(allocator.template align_alloc_multi<cat::byte>(
+                  16u, initial_stack_size + thread_local_slab_bytes),
+               nix::linux_error::inval);
 
    // TODO: Support call operator for functors.
-   // cat::tuple<Args...> args{fwd(arguments)...};
+   // cat::tuple<Args...> args{$fwd(arguments)...};
 
    cat::byte* p_stack_bottom = memory.data();
 
@@ -36,14 +36,14 @@ nix::process::spawn(cat::is_allocator auto& allocator,
    } else {
       // If there are arguments, `callback` must be wrapped in a lambda that has
       // tuple storage.
-      static cat::tuple tuple_args{fwd(callback), fwd(arguments)...};
+      static cat::tuple tuple_args{$fwd(callback), $fwd(arguments)...};
 
       // Unary + converts this lambda to function pointer.
       static auto* p_entry =
          +[] [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
           (cat::tuple<Callback, Args...>* p_arguments) {
              auto&& [fn, ... pack_args] = *p_arguments;
-             fwd(fn)(fwd(pack_args)...);
+             $fwd(fn)($fwd(pack_args)...);
           };
 
       return this->spawn_impl(p_stack_bottom, initial_stack_size,

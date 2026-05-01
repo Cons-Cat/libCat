@@ -395,9 +395,9 @@ class allocator_interface {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
-         return align_alloc<T>(alignof(T), fwd(arguments)...);
+         return align_alloc<T>(alignof(T), $fwd(arguments)...);
       } else {
-         return unalign_alloc<T>(fwd(arguments)...);
+         return unalign_alloc<T>($fwd(arguments)...);
       }
    }
 
@@ -411,9 +411,9 @@ class allocator_interface {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
-         return align_xalloc<T>(alignof(T), fwd(arguments)...);
+         return align_xalloc<T>(alignof(T), $fwd(arguments)...);
       } else {
-         return unalign_xalloc<T>(fwd(arguments)...);
+         return unalign_xalloc<T>($fwd(arguments)...);
       }
    }
 
@@ -455,7 +455,7 @@ class allocator_interface {
    constexpr auto
    align_alloc(uword alignment, Args&&... arguments) {
       return meta_alloc<T, false, true, true, false, false, false>(
-         alignment, 1u, fwd(arguments)...);
+         alignment, 1u, $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, allocate a `T` with an alignment
@@ -466,7 +466,7 @@ class allocator_interface {
    constexpr auto
    align_xalloc(uword alignment, Args&&... arguments) {
       return meta_alloc<T, false, false, true, false, false, false>(
-         alignment, 1u, fwd(arguments)...);
+         alignment, 1u, $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, try to allocate a `T` with no
@@ -477,7 +477,7 @@ class allocator_interface {
    constexpr auto
    unalign_alloc(Args&&... arguments) {
       return meta_alloc<T, false, true, false, false, false, false>(
-         1u, 1u, fwd(arguments)...);
+         1u, 1u, $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, allocate a `T` with no alignment
@@ -488,7 +488,7 @@ class allocator_interface {
    constexpr auto
    unalign_xalloc(Args&&... arguments) {
       return meta_alloc<T, false, false, false, false, false, false>(
-         1u, 1u, fwd(arguments)...);
+         1u, 1u, $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, try to allocate an array of `T`
@@ -538,9 +538,9 @@ class allocator_interface {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
-         return inline_align_alloc<T>(alignof(T), fwd(arguments)...);
+         return inline_align_alloc<T>(alignof(T), $fwd(arguments)...);
       } else {
-         return inline_unalign_alloc<T>(fwd(arguments)...);
+         return inline_unalign_alloc<T>($fwd(arguments)...);
       }
    }
 
@@ -553,9 +553,9 @@ class allocator_interface {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
-         return inline_align_xalloc<T>(alignof(T), fwd(arguments)...);
+         return inline_align_xalloc<T>(alignof(T), $fwd(arguments)...);
       } else {
-         return inline_unalign_xalloc<T>(fwd(arguments)...);
+         return inline_unalign_xalloc<T>($fwd(arguments)...);
       }
    }
 
@@ -593,7 +593,7 @@ class allocator_interface {
    constexpr auto
    inline_align_alloc(uword alignment, Args&&... arguments) {
       return meta_alloc<T, true, true, true, false, false, false>(
-         alignment, 1u, fwd(arguments)...);
+         alignment, 1u, $fwd(arguments)...);
    }
 
    // Allocate a small-size optimized `T` with an alignment guarantee.
@@ -602,7 +602,7 @@ class allocator_interface {
    constexpr auto
    inline_align_xalloc(uword alignment, Args&&... arguments) {
       return meta_alloc<T, true, false, true, false, false, false>(
-         alignment, 1u, fwd(arguments)...);
+         alignment, 1u, $fwd(arguments)...);
    }
 
    // Try to allocate a small-size optimized `T` with no alignment guarantee.
@@ -611,7 +611,7 @@ class allocator_interface {
    constexpr auto
    inline_unalign_alloc(Args&&... arguments) {
       return meta_alloc<T, true, true, false, false, false, false>(
-         1u, 1u, fwd(arguments)...);
+         1u, 1u, $fwd(arguments)...);
    }
 
    // Allocate a small-size optimized `T` with no alignment guarantee.
@@ -620,7 +620,7 @@ class allocator_interface {
    constexpr auto
    inline_unalign_xalloc(Args&&... arguments) {
       return meta_alloc<T, true, false, false, false, false, false>(
-         1u, 1u, fwd(arguments)...);
+         1u, 1u, $fwd(arguments)...);
    }
 
    // Try to allocate a small-size optimized array of `T` with an alignment
@@ -890,9 +890,9 @@ class allocator_interface {
    constexpr auto
    salloc(Args&&... arguments) {
       if constexpr (alignof(T) > 1) {
-         return align_salloc<T>(alignof(T), fwd(arguments)...);
+         return align_salloc<T>(alignof(T), $fwd(arguments)...);
       } else {
-         return unalign_salloc<T>(fwd(arguments)...);
+         return unalign_salloc<T>($fwd(arguments)...);
       }
    }
 
@@ -904,9 +904,9 @@ class allocator_interface {
    constexpr auto
    xsalloc(Args&&... arguments) {
       if constexpr (alignof(T) > 1) {
-         return align_xsalloc<T>(alignof(T), fwd(arguments)...);
+         return align_xsalloc<T>(alignof(T), $fwd(arguments)...);
       } else {
-         return unalign_xsalloc<T>(fwd(arguments)...);
+         return unalign_xsalloc<T>($fwd(arguments)...);
       }
    }
 
@@ -944,7 +944,7 @@ class allocator_interface {
    constexpr auto
    align_salloc(uword alignment, Args&&... arguments) {
       return meta_alloc<T, false, true, true, false, false, true>(
-         alignment, 1u, fwd(arguments)...);
+         alignment, 1u, $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, allocate a `T` with an alignment
@@ -955,7 +955,7 @@ class allocator_interface {
    constexpr auto
    align_xsalloc(uword alignment, Args&&... arguments) {
       return meta_alloc<T, false, false, true, false, false, true>(
-         alignment, 1u, fwd(arguments)...);
+         alignment, 1u, $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, try to allocate a `T` with no
@@ -966,7 +966,7 @@ class allocator_interface {
    constexpr auto
    unalign_salloc(Args&&... arguments) {
       return meta_alloc<T, false, true, false, false, false, true>(
-         1u, 1u, fwd(arguments)...);
+         1u, 1u, $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, allocate a `T` with no alignment
@@ -977,7 +977,7 @@ class allocator_interface {
    constexpr auto
    unalign_xsalloc(Args&&... arguments) {
       return meta_alloc<T, false, false, false, false, false, true>(
-         1u, 1u, fwd(arguments)...);
+         1u, 1u, $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, try to allocate an array of `T`
@@ -1028,9 +1028,9 @@ class allocator_interface {
    constexpr auto
    inline_salloc(Args&&... arguments) {
       if constexpr (alignof(T) > 1) {
-         return inline_align_salloc<T>(alignof(T), fwd(arguments)...);
+         return inline_align_salloc<T>(alignof(T), $fwd(arguments)...);
       } else {
-         return inline_unalign_salloc<T>(fwd(arguments)...);
+         return inline_unalign_salloc<T>($fwd(arguments)...);
       }
    }
 
@@ -1042,9 +1042,9 @@ class allocator_interface {
    constexpr auto
    inline_xsalloc(Args&&... arguments) {
       if constexpr (alignof(T) > 1) {
-         return inline_align_xsalloc<T>(alignof(T), fwd(arguments)...);
+         return inline_align_xsalloc<T>(alignof(T), $fwd(arguments)...);
       } else {
-         return inline_unalign_xsalloc<T>(fwd(arguments)...);
+         return inline_unalign_xsalloc<T>($fwd(arguments)...);
       }
    }
 
@@ -1082,7 +1082,7 @@ class allocator_interface {
    constexpr auto
    inline_align_salloc(uword alignment, Args&&... arguments) {
       return meta_alloc<T, true, true, true, false, false, true>(
-         alignment, 1u, fwd(arguments)...);
+         alignment, 1u, $fwd(arguments)...);
    }
 
    // Allocate a small-size optimized `T` with an alignment guarantee, and
@@ -1093,7 +1093,7 @@ class allocator_interface {
    constexpr auto
    inline_align_xsalloc(uword alignment, Args&&... arguments) {
       return meta_alloc<T, true, false, true, false, false, true>(
-         alignment, 1u, fwd(arguments)...);
+         alignment, 1u, $fwd(arguments)...);
    }
 
    // Try to allocate a small-size optimized `T` with no alignment guarantee,
@@ -1104,7 +1104,7 @@ class allocator_interface {
    constexpr auto
    inline_unalign_salloc(Args&&... arguments) {
       return meta_alloc<T, true, true, false, false, false, true>(
-         1u, 1u, fwd(arguments)...);
+         1u, 1u, $fwd(arguments)...);
    }
 
    // Allocate a small-size optimized `T` with no alignment guarantee, and
@@ -1115,7 +1115,7 @@ class allocator_interface {
    constexpr auto
    inline_unalign_xsalloc(Args&&... arguments) {
       return meta_alloc<T, true, false, false, false, false, true>(
-         1u, 1u, fwd(arguments)...);
+         1u, 1u, $fwd(arguments)...);
    }
 
    // Try to allocate a small-size optimized array of `T` with an alignment
@@ -3755,11 +3755,11 @@ class allocator_interface {
          if constexpr (pass_old_to_alloc) {
             return (allocator.*alloc_function)(
                // Possible alignment and/or count arguments.
-               fwd(arguments)...,
+               $fwd(arguments)...,
                // Move the data from this handle.
                move(this->get(old_handle)));
          } else {
-            return (allocator.*alloc_function)(fwd(arguments)...);
+            return (allocator.*alloc_function)($fwd(arguments)...);
          }
       }();
 
@@ -3888,7 +3888,7 @@ class allocator_interface {
                              idx new_count, Args&&... arguments) {
       // Zero or one optional alignment argument before the new count.
       auto new_handle =
-         (allocator.*alloc_function)(fwd(arguments)..., new_count);
+         (allocator.*alloc_function)($fwd(arguments)..., new_count);
 
       if constexpr (is_fail_safe) {
          if (!new_handle.has_value()) {
@@ -3923,7 +3923,7 @@ class allocator_interface {
                       idx new_count, Args&&... arguments) {
       // Zero or one optional alignment argument before the new count.
       auto new_handle =
-         (allocator.*alloc_function)(fwd(arguments)..., new_count);
+         (allocator.*alloc_function)($fwd(arguments)..., new_count);
 
       if constexpr (is_fail_safe) {
          if (!new_handle.has_value()) {
