@@ -34,7 +34,7 @@ copy_memory_backward_scalar(void const* p_source, void* p_destination,
       // When the copy is forwards, we wrap `copy_memory` instead.
       copy_memory(p_src, p_dest, bytes);
    } else {
-#pragma clang vectorize(disable)
+#pragma clang loop vectorize(disable)
 #pragma unroll 4
       for (iword k = bytes; k > 0u;) {
          k -= 1u;

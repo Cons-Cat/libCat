@@ -107,7 +107,6 @@ list(
   # Enable most warnings.
   -Wall -Wextra
   -Wno-unused-function
-  -Wno-unknown-pragmas
   -Wno-missing-braces # This breaks `cat::tuple`.
 
   # libCat needs to violate these.
@@ -176,7 +175,7 @@ if (NOT CAT_USE_SANITIZERS)
     -flto=thin
   )
 endif()
-`
+
 list(
   APPEND CAT_CXX_FLAGS_INTERNAL
   ${CAT_CXX_FLAGS_COMMON}

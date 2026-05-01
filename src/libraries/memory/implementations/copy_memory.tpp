@@ -30,7 +30,7 @@ copy_memory_scalar(void const* p_source, void* p_destination, idx bytes) {
       static_cast<unsigned char const*>(p_source);
    unsigned char* const p_dest = static_cast<unsigned char*>(p_destination);
 
-#pragma clang vectorize(disable)
+#pragma clang loop vectorize(disable)
 #pragma unroll 4
    for (idx i = 0u; i < bytes; ++i) {
       p_dest[i] = p_src[i];
