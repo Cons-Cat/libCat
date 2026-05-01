@@ -10,7 +10,7 @@
 # Modeled after `cat_opt_report.cmake`: a parallel `OBJECT` library reuses
 # `cat-impl`'s source list, links `cat` PRIVATE for the essentials (include
 # dirs, `-include global_includes.hpp`, intrinsics), re-applies
-# `CAT_COMPILE_OPTIONS_INTERNAL` (PRIVATE on `cat-impl`, so it does not
+# `CAT_CXX_FLAGS_INTERNAL` (PRIVATE on `cat-impl`, so it does not
 # propagate), and adds `-fsyntax-only` PRIVATE. `EXCLUDE_FROM_ALL` keeps the
 # shadow off the default build.
 #
@@ -31,7 +31,7 @@ get_property(_cat_impl_sources_for_syntax TARGET cat-impl PROPERTY SOURCES)
 add_library(cat-syntax-lib OBJECT EXCLUDE_FROM_ALL ${_cat_impl_sources_for_syntax})
 target_link_libraries(cat-syntax-lib PRIVATE cat)
 target_compile_options(cat-syntax-lib PRIVATE
-  ${CAT_COMPILE_OPTIONS_INTERNAL}
+  ${CAT_CXX_FLAGS_INTERNAL}
   -Wno-unused-command-line-argument
   -fsyntax-only)
 

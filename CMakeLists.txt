@@ -80,7 +80,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/llvm_archivers.cmake)
 # codegen (`PRIVATE` on `cat-impl`, re-propagated to in-tree tests/ examples via
 # `cat-tests`/`cat-examples`). External users only inherit `ESSENTIAL`.
 list(
-  APPEND CAT_COMPILE_OPTIONS_ESSENTIAL
+  APPEND CAT_CXX_FLAGS_ESSENTIAL
   # Disable linking libC symbols.
   -nostdlib
   -nostdlib++
@@ -103,7 +103,7 @@ list(
 )
 
 list(
-  APPEND CAT_COMPILE_OPTIONS_INTERNAL_COMMON
+  APPEND CAT_CXX_FLAGS_COMMON
   # Enable most warnings.
   -Wall -Wextra
   -Wno-unused-function
@@ -127,7 +127,7 @@ list(
 if(CAT_USE_SANITIZERS)
   # Whole-program. Rides with the essentials.
   list(
-    APPEND CAT_COMPILE_OPTIONS_ESSENTIAL
+    APPEND CAT_CXX_FLAGS_ESSENTIAL
     -fomit-frame-pointer # Required for UBsan.
     -fsanitize=undefined
     -fsanitize=address
@@ -140,13 +140,13 @@ if(CAT_USE_SANITIZERS)
 endif()
 
 list(
-  APPEND CAT_COMPILE_OPTIONS_DEBUG
+  APPEND CAT_CXX_FLAGS_DEBUG
   -ggdb3
   -gfull
 )
 
 list(
-  APPEND CAT_COMPILE_OPTIONS_RELEASE
+  APPEND CAT_CXX_FLAGS_RELEASE
   # Remove unused symbols.
   -ffunction-sections -fdata-sections
   # TODO: Consider why no-plt instead of relro.
@@ -154,9 +154,9 @@ list(
 )
 
 list(
-  APPEND CAT_COMPILE_OPTIONS_RELWITHDEBINFO
-  ${CAT_COMPILE_OPTIONS_DEBUG}
-  ${CAT_COMPILE_OPTIONS_RELEASE}
+  APPEND CAT_CXX_FLAGS_RELWITHDEBINFO
+  ${CAT_CXX_FLAGS_DEBUG}
+  ${CAT_CXX_FLAGS_RELEASE}
 )
 
 # LTO breaks under Clang with sanitizers, so it's special-cased. Same
@@ -165,31 +165,31 @@ list(
 # tools like `nm` or debuggers.
 if (NOT CAT_USE_SANITIZERS)
   list(
-    APPEND CAT_COMPILE_OPTIONS_RELEASE
+    APPEND CAT_CXX_FLAGS_RELEASE
     -flto=auto
     -fvisibility=hidden -fvisibility-inlines-hidden
   )
 
   list(
-    APPEND CAT_COMPILE_OPTIONS_RELWITHDEBINFO
+    APPEND CAT_CXX_FLAGS_RELWITHDEBINFO
     # Use thin LTO for optimized non-release builds.
     -flto=thin
   )
 endif()
 
 list(
-  APPEND CAT_COMPILE_OPTIONS_INTERNAL
-  ${CAT_COMPILE_OPTIONS_INTERNAL_COMMON}
-  $<$<CONFIG:Debug>:${CAT_COMPILE_OPTIONS_DEBUG}>
-  $<$<CONFIG:Release>:${CAT_COMPILE_OPTIONS_RELEASE}>
-  $<$<CONFIG:RelWithDebInfo>:${CAT_COMPILE_OPTIONS_RELWITHDEBINFO}>
+  APPEND CAT_CXX_FLAGS_INTERNAL
+  ${CAT_CXX_FLAGS_COMMON}
+  $<$<CONFIG:Debug>:${CAT_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:Release>:${CAT_CXX_FLAGS_RELEASE}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
 )
 
 # Kept for tooling (format target, opt-report) that wants the full set.
 list(
-  APPEND CAT_COMPILE_OPTIONS
-  ${CAT_COMPILE_OPTIONS_ESSENTIAL}
-  ${CAT_COMPILE_OPTIONS_INTERNAL}
+  APPEND CAT_CXX_FLAGS
+  ${CAT_CXX_FLAGS_ESSENTIAL}
+  ${CAT_CXX_FLAGS_INTERNAL}
 )
 
 list(
@@ -219,9 +219,10 @@ list(
 # consumer `NO_ARGC_ARGV` define.
 add_library(cat INTERFACE)
 
-# C++26 + GNU extensions. Raw flag instead of `cxx_std_26` because that's broken
-# for Clang 19 until CMake 3.29.2.
-target_compile_options(cat INTERFACE "-std=gnu++26")
+# C++26 + GNU extensions.
+set(CAT_CXX_STANDARD_FEATURE cxx_std_26)
+target_compile_features(cat INTERFACE ${CAT_CXX_STANDARD_FEATURE})
+set_target_properties(cat PROPERTIES CXX_EXTENSIONS ON)
 
 if (CAT_USE_SANITIZERS)
   target_link_options(cat INTERFACE
@@ -242,7 +243,7 @@ if (CAT_USE_SANITIZERS)
   unset(_cat_asan_rpath_dir)
 endif()
 
-target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS_ESSENTIAL})
+target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS_ESSENTIAL})
 target_link_options(cat INTERFACE ${CAT_LINK_OPTIONS})
 
 # TODO: Implement these symbols in libCat directly.
@@ -254,9 +255,11 @@ target_link_options(cat INTERFACE ${CAT_LINK_OPTIONS})
 # there is still one source of truth on `cat`.
 add_library(cat-impl STATIC)
 set_target_properties(cat-impl PROPERTIES OUTPUT_NAME cat)
+target_compile_features(cat-impl PRIVATE ${CAT_CXX_STANDARD_FEATURE})
+set_target_properties(cat-impl PROPERTIES CXX_EXTENSIONS ON)
 target_compile_options(cat-impl PRIVATE
   $<TARGET_PROPERTY:cat,INTERFACE_COMPILE_OPTIONS>
-  ${CAT_COMPILE_OPTIONS_INTERNAL}
+  ${CAT_CXX_FLAGS_INTERNAL}
 )
 target_include_directories(cat-impl PRIVATE
   $<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>

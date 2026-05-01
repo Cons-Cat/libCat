@@ -59,9 +59,16 @@ endif()
 # automatically rebuilds it into the shared object too.
 get_property(_cat_impl_sources_for_so TARGET cat-impl PROPERTY SOURCES)
 add_library(cat-impl-shared SHARED ${_cat_impl_sources_for_so})
+get_target_property(_cat_cxx_extensions cat CXX_EXTENSIONS)
+if (_cat_cxx_extensions STREQUAL "_cat_cxx_extensions-NOTFOUND")
+  set(_cat_cxx_extensions ON)
+endif()
 set_target_properties(cat-impl-shared PROPERTIES
   OUTPUT_NAME cat
+  CXX_EXTENSIONS "${_cat_cxx_extensions}"
   POSITION_INDEPENDENT_CODE ON)
+unset(_cat_cxx_extensions)
+target_compile_features(cat-impl-shared PUBLIC ${CAT_CXX_STANDARD_FEATURE})
 
 # `PUBLIC` for the props that are usage requirements (essentials, include dirs,
 # link options): the `.so`'s own TUs need them, and any consumer that links
@@ -72,8 +79,8 @@ target_compile_options(cat-impl-shared
   PUBLIC
     $<TARGET_PROPERTY:cat,INTERFACE_COMPILE_OPTIONS>
   PRIVATE
-    ${CAT_COMPILE_OPTIONS_INTERNAL}
-    # Override `-flto=auto`/`-flto=thin` from `CAT_COMPILE_OPTIONS_INTERNAL` so
+    ${CAT_CXX_FLAGS_INTERNAL}
+    # Override `-flto=auto`/`-flto=thin` from `CAT_CXX_FLAGS_INTERNAL` so
     # LLD does not internalise the public API at link time.
     -fno-lto
     # Release-without-sanitizers adds `-fvisibility=hidden`

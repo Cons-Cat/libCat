@@ -39,7 +39,7 @@ Pass =-v= to show verbose CMake configure messages and build commands.
   just build relwithdebinfo
 
   just build all -v
-  just build debug -v
+  just build debug relwithdebinfo -v
 #+END_SRC
 
 Developers of libCat are encouraged to enable sanitizers with =san=. Use =nosan=
@@ -70,6 +70,22 @@ except for =-w=, which must be used explicitly whenever it is desired.
 #+BEGIN_SRC sh
   just build -fomit-frame-pointer -fstrict-bool san -Wno-unused-variable
   just build -w release
+#+END_SRC
+
+After =--=, remaining arguments are forwarded to the native build tool (=ninja= or =make=), the same way
+#+BEGIN_SRC sh
+  just build release -- -n
+  just build -- -k 0
+#+END_SRC
+
+=just ninja= runs Ninja directly on the =build.ninja= file corresponding to the release mode. Ninja tools,
+such as =-t graph= or =-t targets=, can be passed in directly.
+Flags like =-k 0= are passed through uninterrupted.
+#+BEGIN_SRC sh
+  just ninja graph | dot -Tpng -ograph.png
+  just ninja release deps
+  just ninja targets
+  just ninja -k 0
 #+END_SRC
 
 * Tools
@@ -154,33 +170,55 @@ the same version of this script assosciated with your Clang installation.
   just intermediaries
   just intermediaries fmt
   just intermediaries no-fmt
+  just intermediaries bc
+  just intermediaries examples/
+  just intermediaries debug tests/ string
 #+END_SRC
-Saves compilation byproducts to build directories. =fmt= is unfortunately very slow,
-so it is disabled by default. Pass =fmt= to format the resulting =.ii= files.
+Saves compilation byproducts to build directories. By default, this exports =.ii=
+and =.s= files only. Pass =bc= or =ll= to add LLVM bitcode or textual LLVM IR respectively.
+=fmt= additionally runs =clang-format= over the =.ii= files. This is unfortunately slow,
+so it is disabled by default. Passing =examples/=, =tests/=, or one or more cat library names
+restricts output to those paths.
 
 #+BEGIN_SRC
   build/runtime/_start.ii
   build/string/memset.ii
-  build/string/memset.bc
   build/string/memset.s
   build/linux/syscall0.ii
   build/tests/test_alloc.ii
   build/examples/hello.ii
 #+END_SRC
 
-- =<file>.ii= - preprocessed C++ headers and translation units.
-- =<file>.bc= - LLVM IR bitcode handed to the optimizer.
-- =<file>.s= - target assembly emitted by codegen, equivalent to generated machine code in =.o= files.
+- =<file>.ii= - Preprocessed C++ headers and translation units.
+- =<file>.s= - Target textual assembly emitted by codegen.
+- =<file>.bc= - LLVM bitcode saved by Clang's temp pipeline.
+- =<file>.ll= - Textual LLVM IR.
+
+=clang= can be used conventionally to compile or assemble intermediary files afterwards.
+#+BEGIN_SRC sh
+  just intermediaries nosan debug
+  just intermediaries nosan debug bc ll
+  just intermediaries nosan debug examples/ string
+  clang -c build/examples/hello.s -o hello.o
+  clang build/examples/hello.s -Lbuild/Debug -lcat -o hello.o
+  clang++ -std=gnu++26 build/examples/hello.ii -static -Lbuild/Debug -lcat -o hello
+#+END_SRC
 
 This is useful for manually inspecting macro expansion and optimization, among other purposes.
+
+LLVM optimizations can be examined via the =pass= argument. =pass=list= prints every available pass.
+For more info, read [[invoking-opt]][https://llvm.org/docs/NewPassManager.html#invoking-opt] in the LLVM documentation.
+#+BEGIN_SRC sh
+  just intermediaries examples/ pass=instcombine,loop-unroll
+  just intermediaries examples/ 'pass=function(instcombine),always-inline'
+#+END_SRC
 
 *** =syntax=
 #+BEGIN_SRC sh
   just syntax
 #+END_SRC
-Compiles a libCat with =-fsyntax-only=. This is useful for quickly checking if
-code can compile, without bothering to enter deep LLVM. It will reuse existing
-precompiled headers, if they are enabled, further accelerating the development loop.
+Runs =build= with =-fsyntax-only=. This is useful for quickly checking if code can compile,
+without waiting on LLVM codegen.
 
 *** =repl=
 #+BEGIN_SRC sh
@@ -234,6 +272,68 @@ Piping code on stdin works the same way.
 The =just repl= recipe configures the build with =CAT_BUILD_SHARED=ON= before
 building the wrapper. Pass extra =clang-repl= arguments at the end of the
 command, after a =--=.
+
+** =status=
+#+BEGIN_SRC sh
+  just status
+  just status release -v
+#+END_SRC
+Retrieve the current compile configuration of a release mode. This extracts state from CMake
+and prints it in a digestible summary. =-v= can be used to print an elaborate description
+of the build flags, retrieved from the =clang++= CLI. Non-verbose output skips empty
+sections. This compile configuration can be changed by =just build= flags.
+
+For an example configuration:
+#+BEGIN_SRC sh
+  just status release
+  # CAT_USE_SANITIZERS: OFF (cached)
+  # CMAKE_CXX_COMPILER: ./.cache/cat-llvm/bin/clang++
+  # CMAKE_LINKER_TYPE: LLD
+  # ISA: default (x86_64-pc-linux-gnu)
+  # Language: gnu++26 nostdlib nostdlib++
+  # #define: CMAKE_INTDIR="Release" NDEBUG
+  # Inclusion: include=global_includes.hpp
+  # Exceptions: no-exceptions no-unwind-tables no-asynchronous-unwind-tables
+  # RTTI: no-rtti
+  # Warnings: all extra invalid-pch
+  # Disabled warnings: unused-function unknown-pragmas missing-braces unqualified-std-cast-call main redundant-consteval-if gnu
+  # Lifetime/Analysis: dangling dangling-gsl experimental-bounds-safety
+  # Features: no-plt no-pch-timestamp
+  # Architecture: sse4.2 avx2 fma lzcnt bmi bmi2 fsgsbase
+  # Optimization: O3
+  # LTO: function-sections data-sections lto=auto
+  # Visibility: visibility=hidden visibility-inlines-hidden
+  # Link options: nostdlib z=noseparate-code -gc-sections T=src/libcat.ld
+  # Link libraries: build/Release/libcat.a
+
+  # Run just status -v to see all fields or flag descriptions.
+    
+  just status debug -v
+  # CAT_USE_SANITIZERS: OFF (cached)
+  # CMAKE_CXX_COMPILER: /home/lgooch/libCat/.cache/cat-llvm/bin/clang++
+  # CMAKE_LINKER_TYPE: LLD
+  # ISA: default (x86_64-pc-linux-gnu)
+  # Language:
+  #   -std=gnu++26: Language standard to compile for
+  #   -nostdlib: n/a
+  #   -nostdlib++: n/a
+  # C++ modules:
+  # #define:
+  #   -DCMAKE_INTDIR="Debug"
+  # Inclusion:
+  #   -include=global_includes.hpp: Include file before parsing
+  # Exceptions:
+  #   -fno-exceptions: Disable support for exception handling
+  #   -fno-unwind-tables: n/a
+  #   -fno-asynchronous-unwind-tables: n/a
+  # RTTI:
+  #   -fno-rtti: Disable generation of rtti information
+  # Warnings:
+  #   -Wall: Enable the specified warning
+  #   -Wextra: Enable the specified warning
+  #   -Winvalid-pch: Enable the specified warning
+  # ...
+#+END_SRC
 
 *** =cat-gdb-tests=
 This target does not require manual invocation. CMake symlinks a =.gdbinit=

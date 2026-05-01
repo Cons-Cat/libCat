@@ -7,7 +7,7 @@ add_library(cat-examples INTERFACE)
 # In-tree examples need `cat-impl`'s `INTERNAL` flags so `REUSE_FROM cat-impl`
 # below passes the PCH validator.
 target_compile_options(cat-examples INTERFACE
-  ${CAT_COMPILE_OPTIONS_INTERNAL}
+  ${CAT_CXX_FLAGS_INTERNAL}
   -ferror-limit=4
 )
 

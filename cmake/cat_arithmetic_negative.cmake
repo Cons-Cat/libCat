@@ -87,7 +87,7 @@ macro(_cat_neg_expect_illformed _name _src)
   add_library("${_cat_n_target}" OBJECT EXCLUDE_FROM_ALL "${_cat_n_path}")
   target_link_libraries("${_cat_n_target}" PRIVATE cat)
   target_compile_options("${_cat_n_target}" PRIVATE
-    ${CAT_COMPILE_OPTIONS_INTERNAL})
+    ${CAT_CXX_FLAGS_INTERNAL})
   if (CAT_PCH)
     target_precompile_headers("${_cat_n_target}" REUSE_FROM cat-impl)
   endif()

@@ -79,7 +79,7 @@ install(FILES
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/runtime/implementations")
 
 # `global_includes.hpp` is force-included via `-include global_includes.hpp` in
-# `CAT_COMPILE_OPTIONS_ESSENTIAL`. It lives at the top of `src/`, so the
+# `CAT_CXX_FLAGS_ESSENTIAL`. It lives at the top of `src/`, so the
 # `${CMAKE_INSTALL_INCLUDEDIR}/libcat` include dir on `cat`'s
 # `INSTALL_INTERFACE` is enough to make `-include` find it.
 install(FILES "${CMAKE_SOURCE_DIR}/src/global_includes.hpp"

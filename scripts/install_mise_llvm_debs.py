@@ -185,6 +185,7 @@ WRAPPERS = (
     ("clang-repl", "usr/lib/llvm-23/bin/clang-repl"),
     ("lld", "usr/lib/llvm-23/bin/lld"),
     ("ld.lld", "usr/lib/llvm-23/bin/ld.lld"),
+    ("opt", "usr/lib/llvm-23/bin/opt"),
     ("llvm-ar", "usr/lib/llvm-23/bin/llvm-ar"),
     ("llvm-ranlib", "usr/lib/llvm-23/bin/llvm-ranlib"),
     ("llvm-symbolizer", "usr/lib/llvm-23/bin/llvm-symbolizer"),

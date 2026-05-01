@@ -12,7 +12,7 @@
 # keeps CMake in charge of compile rules -- include dirs, definitions,
 # `REUSE_FROM` PCH, the sccache launcher -- so the flag drops in with one line.
 # It PRIVATE-links `cat` for the essentials and re-applies
-# `CAT_COMPILE_OPTIONS_INTERNAL` because those are PRIVATE on `cat-impl` and do
+# `CAT_CXX_FLAGS_INTERNAL` because those are PRIVATE on `cat-impl` and do
 # not propagate.
 #
 # The companion `opt-viewer.py` invocation is located at configure time and
@@ -30,7 +30,7 @@ add_library(cat-opt-report OBJECT EXCLUDE_FROM_ALL
   ${_cat_impl_sources_for_opt_report})
 target_link_libraries(cat-opt-report PRIVATE cat)
 target_compile_options(cat-opt-report PRIVATE
-  ${CAT_COMPILE_OPTIONS_INTERNAL}
+  ${CAT_CXX_FLAGS_INTERNAL}
   -fsave-optimization-record
 )
 

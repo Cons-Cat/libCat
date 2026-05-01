@@ -12,7 +12,7 @@ target_link_libraries(cat-tests-base INTERFACE cat)
 # In-tree tests need `cat-impl`'s `INTERNAL` flags so `REUSE_FROM cat-impl`
 # below passes the Clang PCH validator.
 target_compile_options(cat-tests-base INTERFACE
-  ${CAT_COMPILE_OPTIONS_INTERNAL}
+  ${CAT_CXX_FLAGS_INTERNAL}
   # Tests should fail if they produce sanitizer warnings.
   # TODO: Re-enable this when threads consistently work.
   # -fno-sanitize-recover=all
