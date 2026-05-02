@@ -8,15 +8,12 @@
 # linker entirely, and serves as a quick "did everything still compile?" check.
 #
 # Modeled after `cat_opt_report.cmake`: a parallel `OBJECT` library reuses
-# `cat-impl`'s source list, links `cat` PRIVATE for the essentials (include
-# dirs, `-include global_includes.hpp`, intrinsics), re-applies
-# `CAT_CXX_FLAGS_INTERNAL` (PRIVATE on `cat-impl`, so it does not
-# propagate), and adds `-fsyntax-only` PRIVATE. `EXCLUDE_FROM_ALL` keeps the
-# shadow off the default build.
+# `cat-impl`'s source list, copies `cat`'s usage requirements needed by the
+# frontend, re-applies `CAT_CXX_FLAGS_INTERNAL` (PRIVATE on `cat-impl`, so it
+# does not propagate), and adds `-fsyntax-only` PRIVATE. `EXCLUDE_FROM_ALL` keeps
+# the shadow off the default build.
 #
-# `REUSE_FROM cat-impl` keeps the check fast -- PCH consumption is purely a
-# frontend AST replay, so it composes cleanly with `-fsyntax-only` even though
-# the PCH was built with codegen on.
+# `REUSE_FROM cat-impl` keeps the check fast.
 #
 # Building `cat-syntax` re-runs the check unconditionally: with `-fsyntax-only`
 # writing no `.o`, Ninja sees the declared outputs missing on every invocation.
@@ -29,8 +26,12 @@
 get_property(_cat_impl_sources_for_syntax TARGET cat-impl PROPERTY SOURCES)
 
 add_library(cat-syntax-lib OBJECT EXCLUDE_FROM_ALL ${_cat_impl_sources_for_syntax})
-target_link_libraries(cat-syntax-lib PRIVATE cat)
+target_compile_features(cat-syntax-lib PRIVATE ${CAT_CXX_STANDARD_FEATURE})
+set_target_properties(cat-syntax-lib PROPERTIES CXX_EXTENSIONS ON)
+target_include_directories(cat-syntax-lib PRIVATE
+  $<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>)
 target_compile_options(cat-syntax-lib PRIVATE
+  $<TARGET_PROPERTY:cat,INTERFACE_COMPILE_OPTIONS>
   ${CAT_CXX_FLAGS_INTERNAL}
   -Wno-unused-command-line-argument
   -fsyntax-only)

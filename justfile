@@ -170,8 +170,7 @@ intermediaries *args:
       just _intermediaries-mode "${mode}" "${san}" "${fmt}" "${verbose}" "${bc}" "${ll}" "${cir}" "${selectors}" "${pass}"
 
 syntax mode=last_mode verbose="":
-    just cmake_target cat-syntax {{ mode }} {{ verbose }}
-    @just status_san {{ mode }}
+    @just _syntax-mode {{ mode }} {{ verbose }}
     @printf '\033[36m%s\033[0m\n' 'No syntax errors! :3'
 
 # Print out various properties of a release mode.
@@ -354,6 +353,10 @@ _noop *args:
     @:
 
 [private]
+_print-build-mode mode=last_mode:
+    @printf '\033[1mBuild mode: \033[0m%s\n' "{{ mode(mode) }}"
+
+[private]
 _build-mode mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
     @just {{ if debug_config(mode) == "" { "_noop" } else { "_build-config" } }} \
       debug "{{ san }}" "{{ verbose }}" "{{ no_warnings }}" "{{ cxx_flags }}"
@@ -373,6 +376,8 @@ _build-mode mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
 # `-Wno-everything`.
 [private]
 _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
+    @just _print-build-mode {{ mode }}
+
     @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; clear_cached=false; \
       cache={{ build_dir(mode) }}/CMakeCache.txt; \
       if [[ "${no_warnings}" == true ]]; then \
@@ -421,6 +426,8 @@ _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
 
 [private]
 _build-custom mode="" san="" verbose="" no_warnings="false" cxx_flags="":
+    @just _print-build-mode {{ mode }}
+
     @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; clear_cached=false; \
       cache={{ build_dir(mode) }}/CMakeCache.txt; \
       if [[ "${no_warnings}" == true ]]; then \
@@ -558,14 +565,40 @@ _cmake_target_config target mode=last_mode verbose="":
       --target {{ target }} {{ build_verbose(verbose) }}
 
 [private]
+_syntax-mode mode=last_mode verbose="":
+    @just {{ if debug_config(mode) == "" { "_noop" } else { "_syntax-config" } }} \
+      debug {{ verbose }}
+
+    @just {{ if release_config(mode) == "" { "_noop" } else { "_syntax-config" } }} \
+      release {{ verbose }}
+
+    @just {{ if relwithdebinfo_config(mode) == "" { "_noop" } else { "_syntax-config" } }} \
+      relwithdebinfo {{ verbose }}
+
+    @just {{ if cmake_config(mode) == "" { "_syntax-config" } else { "_noop" } }} \
+      {{ mode }} {{ verbose }}
+
+[private]
+_syntax-config mode=last_mode verbose="":
+    @just _print-build-mode {{ mode }}
+    @just status_san {{ mode }}
+    @cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
+      --target cat-syntax {{ build_verbose(verbose) }}
+
+    @mkdir -p .cache
+    @printf '%s\n' "{{ mode(mode) }}" > .cache/cat-build-mode
+
+[private]
 _repl mode san="" verbose="" *args:
+    @just _print-build-mode {{ mode }}
+
     @test "{{ can_skip_configure(san) }}" = true \
       && test -x {{ build_dir(mode) }}/clang-repl-libcat \
       || cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
         {{ configure_config(mode) }} -DCAT_BUILD_SHARED=ON {{ sanitizer(san) }}
 
     @just status_san {{ mode }} "{{ san }}"
-    cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
+    @cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
       --target cat-impl-shared {{ build_verbose(verbose) }}
 
     @set -- "$@"; shift 3; \
