@@ -99,11 +99,35 @@ simd_memory_alignment_for_fixed_size(idx object_size, uword native_cap,
 // providing a type-safe API by requiring compatible ABI tags between `simd`
 // operands.
 
+template <typename T, idx in_lanes>
+struct fixed_size_abi;
+
+template <typename T>
+struct native_abi;
+
+template <typename T>
+struct compatible_abi;
+
+template <typename T>
+struct scalar_abi;
+
+namespace simd_abi {
+template <typename T, idx index>
+using fixed_size = fixed_size_abi<T, index>;
+template <typename T>
+using native = native_abi<T>;
+template <typename T>
+using compatible = compatible_abi<T>;
+template <typename T>
+using scalar = scalar_abi<T>;
+}  // namespace simd_abi
+
 // `fixed_size_abi` is a portable SIMD ABI that can be expected to work across
 // any supported build target, so long as `in_lanes` (an `idx` lane count) does
 // not exceed that target's maximum vector size.
 template <typename T, idx in_lanes>
-struct fixed_size_abi {
+struct [[clang::preferred_name(simd_abi::fixed_size<T, in_lanes>)]]
+fixed_size_abi {
    using scalar_type = T;
 
    // Produce a similar `fixed_size_abi` for type `U`.
@@ -132,7 +156,7 @@ struct fixed_size_abi {
 // supported build target. However, you cannot safely assume the size or
 // alignment this ABI expresses.
 template <typename T>
-struct native_abi {
+struct [[clang::preferred_name(simd_abi::native<T>)]] native_abi {
    using scalar_type = T;
 
    // Produce a similar `native_abi` for type `U`.
@@ -156,7 +180,7 @@ struct native_abi {
 // type so `simd<T, compatible<T>>` differs from `simd<T, native<T>>` for
 // overload resolution / tagging.
 template <typename T>
-struct compatible_abi {
+struct [[clang::preferred_name(simd_abi::compatible<T>)]] compatible_abi {
    using scalar_type = T;
 
    template <typename U>
@@ -179,7 +203,7 @@ struct compatible_abi {
 // Use beside `native_abi` when that tag aliases an x86 ISA ABI on the host (for
 // example `avx2_abi`).
 template <typename T>
-struct scalar_abi {
+struct [[clang::preferred_name(simd_abi::scalar<T>)]] scalar_abi {
    using scalar_type = T;
 
    template <typename U>
@@ -228,18 +252,6 @@ struct deduce_impl {
 }  // namespace detail
 
 namespace simd_abi {
-template <typename T, idx index>
-using fixed_size = fixed_size_abi<T, index>;
-template <typename T>
-using native = native_abi<T>;
-template <typename T>
-using compatible = compatible_abi<T>;
-template <typename T>
-using scalar = scalar_abi<T>;
-
-template <typename BaseAbi>
-using unaligned = unaligned_abi<BaseAbi>;
-
 template <typename T, idx lane_count, typename... Abis>
 using deduce = detail::deduce_impl<T, lane_count, Abis...>::type;
 }  // namespace simd_abi
@@ -358,6 +370,50 @@ template <typename T, typename Abi>
    requires(is_same<typename Abi::scalar_type, T>)
 class simd;
 
+template <typename T, idx lanes>
+using fixed_size_simd = simd<T, fixed_size_abi<T, lanes>>;
+
+template <typename T, idx lanes>
+using fixed_size_simd_mask = simd_mask<T, fixed_size_abi<T, lanes>>;
+
+template <typename T>
+using native_simd = simd<T, native_abi<T>>;
+
+template <typename T>
+using native_simd_mask = simd_mask<T, native_abi<T>>;
+
+template <typename T>
+using scalar_simd = simd<T, scalar_abi<T>>;
+
+template <typename T>
+using scalar_simd_mask = simd_mask<T, scalar_abi<T>>;
+
+template <typename T, idx lanes>
+using fixed_size_unaligned_simd =
+   simd<T, simd_abi::unaligned<fixed_size_abi<T, lanes>>>;
+template <typename T, idx lanes>
+using fixed_size_unaligned_simd_mask =
+   simd_mask<T, simd_abi::unaligned<fixed_size_abi<T, lanes>>>;
+
+template <typename T>
+using native_unaligned_simd = simd<T, simd_abi::unaligned<native_abi<T>>>;
+template <typename T>
+using native_unaligned_simd_mask =
+   simd_mask<T, simd_abi::unaligned<native_abi<T>>>;
+
+template <typename T>
+using compatible_unaligned_simd =
+   simd<T, simd_abi::unaligned<compatible_abi<T>>>;
+template <typename T>
+using compatible_unaligned_simd_mask =
+   simd_mask<T, simd_abi::unaligned<compatible_abi<T>>>;
+
+template <typename T>
+using scalar_unaligned_simd = simd<T, simd_abi::unaligned<scalar_abi<T>>>;
+template <typename T>
+using scalar_unaligned_simd_mask =
+   simd_mask<T, simd_abi::unaligned<scalar_abi<T>>>;
+
 namespace detail {
 template <typename T, typename Abi, overflow_policies Semantics>
 class simd_overflow_reference;
@@ -390,7 +446,16 @@ simd_integral_shr_follow_storage(simd<T, Abi> const& left,
 
 template <typename T, typename in_abi>
    requires(is_same<typename in_abi::scalar_type, T>)
-class alignas(in_abi::alignment.raw) simd {
+class [[clang::preferred_name(fixed_size_simd<T, in_abi::lanes>),
+        clang::preferred_name(native_simd<T>),
+        clang::preferred_name(scalar_simd<T>),
+        clang::preferred_name(x64::avx2_simd<T>),
+        clang::preferred_name(x64::sse2_simd<T>),
+        clang::preferred_name(fixed_size_unaligned_simd<T, in_abi::lanes>),
+        clang::preferred_name(native_unaligned_simd<T>),
+        clang::preferred_name(compatible_unaligned_simd<T>),
+        clang::preferred_name(
+           scalar_unaligned_simd<T>)]] alignas(in_abi::alignment.raw) simd {
    // `mapped_type` is the fundamental storage shape for each lane (`T` may be
    // `cat::arithmetic`). That keeps `cat::simd_abi` hooks aligned with hardware
    // intrinsics.
@@ -1269,7 +1334,17 @@ simd<T, in_abi>::sat() & -> detail::simd_overflow_reference<
 namespace cat {
 
 template <typename T, typename in_abi>
-class alignas(in_abi::alignment.raw) simd_mask {
+class [[clang::preferred_name(fixed_size_simd_mask<T, in_abi::lanes>),
+        clang::preferred_name(native_simd_mask<T>),
+        clang::preferred_name(scalar_simd_mask<T>),
+        clang::preferred_name(x64::avx2_simd_mask<T>),
+        clang::preferred_name(x64::sse2_simd_mask<T>),
+        clang::preferred_name(fixed_size_unaligned_simd_mask<T, in_abi::lanes>),
+        clang::preferred_name(native_unaligned_simd_mask<T>),
+        clang::preferred_name(compatible_unaligned_simd_mask<T>),
+        clang::preferred_name(
+           scalar_unaligned_simd_mask<T>)]] alignas(in_abi::alignment.raw)
+   simd_mask {
  public:
    using abi_type = in_abi;
    using mask_traits = typename in_abi::template simd_mask_lane<T>;
@@ -2005,50 +2080,6 @@ simd_unequal_lanes(simd<T, Abi> const& a, simd<T, Abi> const& b)
    -> simd_mask<T, Abi> {
    return a.unequal_lanes(b);
 }
-
-template <typename T, idx lanes>
-using fixed_size_simd = simd<T, fixed_size_abi<T, lanes>>;
-
-template <typename T, idx lanes>
-using fixed_size_simd_mask = simd_mask<T, fixed_size_abi<T, lanes>>;
-
-template <typename T>
-using native_simd = simd<T, native_abi<T>>;
-
-template <typename T>
-using native_simd_mask = simd_mask<T, native_abi<T>>;
-
-template <typename T>
-using scalar_simd = simd<T, scalar_abi<T>>;
-
-template <typename T>
-using scalar_simd_mask = simd_mask<T, scalar_abi<T>>;
-
-template <typename T, idx lanes>
-using fixed_size_unaligned_simd =
-   simd<T, simd_abi::unaligned<fixed_size_abi<T, lanes>>>;
-template <typename T, idx lanes>
-using fixed_size_unaligned_simd_mask =
-   simd_mask<T, simd_abi::unaligned<fixed_size_abi<T, lanes>>>;
-
-template <typename T>
-using native_unaligned_simd = simd<T, simd_abi::unaligned<native_abi<T>>>;
-template <typename T>
-using native_unaligned_simd_mask =
-   simd_mask<T, simd_abi::unaligned<native_abi<T>>>;
-
-template <typename T>
-using compatible_unaligned_simd =
-   simd<T, simd_abi::unaligned<compatible_abi<T>>>;
-template <typename T>
-using compatible_unaligned_simd_mask =
-   simd_mask<T, simd_abi::unaligned<compatible_abi<T>>>;
-
-template <typename T>
-using scalar_unaligned_simd = simd<T, simd_abi::unaligned<scalar_abi<T>>>;
-template <typename T>
-using scalar_unaligned_simd_mask =
-   simd_mask<T, simd_abi::unaligned<scalar_abi<T>>>;
 
 namespace detail {
 

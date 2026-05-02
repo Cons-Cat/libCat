@@ -69,6 +69,54 @@ class arithmetic_ptr;
 template <overflow_policies overflow_policy>
 class index;
 
+inline namespace integers {
+// These macros are defined by the Clang compiler.
+using int1 = arithmetic<__INT8_TYPE__, overflow_policies::undefined>;
+using uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::undefined>;
+using int2 = arithmetic<__INT16_TYPE__, overflow_policies::undefined>;
+using uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::undefined>;
+using int4 = arithmetic<__INT32_TYPE__, overflow_policies::undefined>;
+using uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::undefined>;
+using int8 = arithmetic<__INT64_TYPE__, overflow_policies::undefined>;
+using uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;
+
+using float4 = arithmetic<float, overflow_policies::undefined>;
+using float8 = arithmetic<double, overflow_policies::undefined>;
+
+using idx = cat::index<overflow_policies::undefined>;
+
+using iword =
+   arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
+using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
+
+// `__INTPTR_TYPE__` is defined by the Clang compiler.
+template <typename T>
+using intptr = arithmetic_ptr<T, __INTPTR_TYPE__, overflow_policies::undefined>;
+
+// `__UINTPTR_TYPE__` is defined by the Clang compiler.
+template <typename T>
+using uintptr =
+   cat::arithmetic_ptr<T, __UINTPTR_TYPE__, overflow_policies::undefined>;
+
+using wrap_int1 = arithmetic<__INT8_TYPE__, overflow_policies::wrap>;
+using wrap_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::wrap>;
+using wrap_int2 = arithmetic<__INT16_TYPE__, overflow_policies::wrap>;
+using wrap_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::wrap>;
+using wrap_int4 = arithmetic<__INT32_TYPE__, overflow_policies::wrap>;
+using wrap_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::wrap>;
+using wrap_int8 = arithmetic<__INT64_TYPE__, overflow_policies::wrap>;
+using wrap_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::wrap>;
+
+using sat_int1 = arithmetic<__INT8_TYPE__, overflow_policies::saturate>;
+using sat_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::saturate>;
+using sat_int2 = arithmetic<__INT16_TYPE__, overflow_policies::saturate>;
+using sat_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::saturate>;
+using sat_int4 = arithmetic<__INT32_TYPE__, overflow_policies::saturate>;
+using sat_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::saturate>;
+using sat_int8 = arithmetic<__INT64_TYPE__, overflow_policies::saturate>;
+using sat_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::saturate>;
+}  // namespace integers
+
 // Unwraps `cat::arithmetic`, `cat::index`, `cat::arithmetic_ptr`, `cat::bool2`,
 // and `cat::bool4` into their `raw` values.
 template <typename T>
@@ -874,7 +922,21 @@ policy_cast(U value) -> T {
 // non-type template parameter.
 template <typename T,
           overflow_policies overflow_policy = overflow_policies::undefined>
-class arithmetic :
+class [[clang::preferred_name(int1), clang::preferred_name(uint1),
+        clang::preferred_name(int2), clang::preferred_name(uint2),
+        clang::preferred_name(int4), clang::preferred_name(uint4),
+        clang::preferred_name(int8), clang::preferred_name(uint8),
+        clang::preferred_name(float4), clang::preferred_name(float8),
+        clang::preferred_name(iword), clang::preferred_name(uword),
+        clang::preferred_name(wrap_int1), clang::preferred_name(wrap_uint1),
+        clang::preferred_name(wrap_int2), clang::preferred_name(wrap_uint2),
+        clang::preferred_name(wrap_int4), clang::preferred_name(wrap_uint4),
+        clang::preferred_name(wrap_int8), clang::preferred_name(wrap_uint8),
+        clang::preferred_name(sat_int1), clang::preferred_name(sat_uint1),
+        clang::preferred_name(sat_int2), clang::preferred_name(sat_uint2),
+        clang::preferred_name(sat_int4), clang::preferred_name(sat_uint4),
+        clang::preferred_name(sat_int8), clang::preferred_name(sat_uint8)]]
+arithmetic :
     // Generate arithmetic operators.
     public arithmetic_interface<arithmetic<T, overflow_policy>> {
  public:
@@ -1506,7 +1568,8 @@ arithmetic<T, overflow_policy>::sat() const& -> overflow_reference<
 template <typename T, typename storage_type,
           overflow_policies overflow_policy = overflow_policies::undefined>
    requires(sizeof(storage_type) == sizeof(void*))
-class arithmetic_ptr :
+class [[clang::preferred_name(intptr<T>), clang::preferred_name(uintptr<T>)]]
+arithmetic_ptr :
     // Generate arithmetic operators.
     public arithmetic_interface<
        arithmetic_ptr<T, storage_type, overflow_policy>> {
@@ -2062,7 +2125,8 @@ inline constexpr bool explicit_word_for_index_ctor =
 }  // namespace detail
 
 template <overflow_policies overflow_policy = overflow_policies::undefined>
-class index :
+class [[clang::preferred_name(idx)]]
+index :
     // Generate arithmetic operators.
     public arithmetic_interface<index<overflow_policy>> {
  private:
@@ -2637,51 +2701,6 @@ wrap_shr(index<P> value, U bits) -> index<P> {
 }
 
 inline namespace integers {
-// These macros are defined by the Clang compiler.
-using int1 = arithmetic<__INT8_TYPE__, overflow_policies::undefined>;
-using uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::undefined>;
-using int2 = arithmetic<__INT16_TYPE__, overflow_policies::undefined>;
-using uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::undefined>;
-using int4 = arithmetic<__INT32_TYPE__, overflow_policies::undefined>;
-using uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::undefined>;
-using int8 = arithmetic<__INT64_TYPE__, overflow_policies::undefined>;
-using uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;
-
-using float4 = arithmetic<float, overflow_policies::undefined>;
-using float8 = arithmetic<double, overflow_policies::undefined>;
-
-using idx = cat::index<overflow_policies::undefined>;
-
-using iword =
-   arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
-using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
-
-// `__INTPTR_TYPE__` is defined by the Clang compiler.
-template <typename T>
-using intptr = arithmetic_ptr<T, __INTPTR_TYPE__>;
-
-// `__UINTPTR_TYPE__` is defined by the Clang compiler.
-template <typename T>
-using uintptr = cat::arithmetic_ptr<T, __UINTPTR_TYPE__>;
-
-using wrap_int1 = arithmetic<__INT8_TYPE__, overflow_policies::wrap>;
-using wrap_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::wrap>;
-using wrap_int2 = arithmetic<__INT16_TYPE__, overflow_policies::wrap>;
-using wrap_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::wrap>;
-using wrap_int4 = arithmetic<__INT32_TYPE__, overflow_policies::wrap>;
-using wrap_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::wrap>;
-using wrap_int8 = arithmetic<__INT64_TYPE__, overflow_policies::wrap>;
-using wrap_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::wrap>;
-
-using sat_int1 = arithmetic<__INT8_TYPE__, overflow_policies::saturate>;
-using sat_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::saturate>;
-using sat_int2 = arithmetic<__INT16_TYPE__, overflow_policies::saturate>;
-using sat_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::saturate>;
-using sat_int4 = arithmetic<__INT32_TYPE__, overflow_policies::saturate>;
-using sat_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::saturate>;
-using sat_int8 = arithmetic<__INT64_TYPE__, overflow_policies::saturate>;
-using sat_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::saturate>;
-
 template <uword bytes>
    requires(bytes <= 8u &&
             // Is a power of 2:

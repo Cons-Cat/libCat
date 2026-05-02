@@ -38,8 +38,25 @@ template <typename CharT, idx length, bool is_null_terminated>
 class basic_str_inplace;
 
 template <typename CharT, bool is_null_terminated>
+   requires(sizeof(CharT) == 1)
+class basic_str_span;
+
+using str_view = basic_str_span<char const, false>;
+using str_span = basic_str_span<char, false>;
+using zstr_view = basic_str_span<char const, true>;
+using zstr_span = basic_str_span<char, true>;
+
+template <idx deduced_length>
+using str_inplace = basic_str_inplace<char, deduced_length, false>;
+
+template <idx deduced_length>
+using zstr_inplace = basic_str_inplace<char, deduced_length, true>;
+
+template <typename CharT, bool is_null_terminated>
    requires(sizeof(CharT) == 1)  // TODO: Generalize this to wide chars.
-class [[gsl::Pointer(CharT)]]
+class [[clang::preferred_name(str_view), clang::preferred_name(str_span),
+        clang::preferred_name(zstr_view), clang::preferred_name(zstr_span),
+        gsl::Pointer(CharT)]]
 basic_str_span : public span<CharT> {
  public:
    constexpr basic_str_span() : span<CharT>(nullptr) {
@@ -265,13 +282,9 @@ basic_str_span : public span<CharT> {
    // `char_type* m_p_data;` `iword m_size;`
 };
 
-using str_view = basic_str_span<char const, false>;
-using str_span = basic_str_span<char, false>;
-using zstr_view = basic_str_span<char const, true>;
-using zstr_span = basic_str_span<char, true>;
-
 template <typename CharT, idx length, bool is_null_terminated>
-class [[gsl::Owner]]
+class [[clang::preferred_name(str_inplace<length>),
+        clang::preferred_name(zstr_inplace<length>), gsl::Owner]]
 basic_str_inplace
     : public container_interface<
          // TODO: Use CharT instead of `char`.
@@ -439,12 +452,6 @@ template <idx len>
 basic_str_inplace(char const (&str)[len])
    // A string literal includes a trailing null, so `len` is at least one.
    ->basic_str_inplace<char, narrow_cast<idx>(len - 1u).value(), false>;
-
-template <idx deduced_length>
-using str_inplace = basic_str_inplace<char, deduced_length, false>;
-
-template <idx deduced_length>
-using zstr_inplace = basic_str_inplace<char, deduced_length, true>;
 
 // Create a `str_inplace` from a smaller string, and null out the unfilled
 // bytes.

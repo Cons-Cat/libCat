@@ -360,7 +360,7 @@ $test(simd_abi_deduce) {
 
    using compatible_float =
       cat::simd_abi::deduce<float, cat::compatible_abi<float>::lanes,
-                              cat::compatible_abi<float>>;
+                            cat::compatible_abi<float>>;
    static_assert(cat::is_same<compatible_float, cat::compatible_abi<float>>);
 
    using unaligned_double = cat::simd_abi::deduce<

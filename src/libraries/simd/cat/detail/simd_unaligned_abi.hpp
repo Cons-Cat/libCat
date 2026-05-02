@@ -4,9 +4,15 @@
 
 namespace cat {
 
+template <typename BaseAbi>
+struct unaligned_abi;
+
 namespace simd_abi {
 template <typename AbiTag, typename ElementT>
 struct mask_lane;
+
+template <typename BaseAbi>
+using unaligned = unaligned_abi<BaseAbi>;
 }
 
 // Unaligned view of a base `simd` ABI. Same `size` and `lanes` as `BaseAbi` but
@@ -14,7 +20,7 @@ struct mask_lane;
 // `x64::avx2_unaligned_abi`/`x64::sse2_unaligned_abi` before the generic
 // spelling).
 template <typename BaseAbi>
-struct unaligned_abi {
+struct [[clang::preferred_name(simd_abi::unaligned<BaseAbi>)]] unaligned_abi {
    using scalar_type = typename BaseAbi::scalar_type;
 
    template <typename U>

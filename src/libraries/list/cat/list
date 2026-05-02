@@ -56,7 +56,17 @@ struct slist_storage {
 }  // namespace detail
 
 template <typename T, is_allocator Allocator, bool is_doubly_linked>
-class [[gsl::Owner]]
+class basic_list;
+
+template <typename T, is_allocator Allocator>
+using list = basic_list<T, Allocator, true>;
+
+template <typename T, is_allocator Allocator>
+using slist = basic_list<T, Allocator, false>;
+
+template <typename T, is_allocator Allocator, bool is_doubly_linked>
+class [[clang::preferred_name(list<T, Allocator>),
+        clang::preferred_name(slist<T, Allocator>), gsl::Owner]]
 basic_list
     : public container_interface<basic_list<T, Allocator, is_doubly_linked>, T>,
       public stepanov_iterable_interface<
@@ -551,12 +561,6 @@ basic_list
    idx m_size = 0;
    Allocator& m_allocator;
 };
-
-template <typename T, is_allocator Allocator>
-using list = basic_list<T, Allocator, true>;
-
-template <typename T, is_allocator Allocator>
-using slist = basic_list<T, Allocator, false>;
 
 namespace detail {
 

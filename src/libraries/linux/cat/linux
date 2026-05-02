@@ -488,7 +488,14 @@ struct futex_plain {};
 struct futex_robust {};
 
 template <class kind = futex_plain>
-class basic_futex : public futex_word {
+class basic_futex;
+
+using futex = basic_futex<futex_plain>;
+using robust_futex = basic_futex<futex_robust>;
+
+template <class kind>
+class [[clang::preferred_name(futex), clang::preferred_name(robust_futex)]]
+basic_futex : public futex_word {
  public:
    // Block only if `value` still equals `expected` (futex_command::wait);
    // otherwise returns `linux_error::again` without sleeping.
@@ -553,9 +560,6 @@ class basic_futex : public futex_word {
       return (lock_word & futex_owner_died_flag) != 0u;
    }
 };
-
-using futex = basic_futex<futex_plain>;
-using robust_futex = basic_futex<futex_robust>;
 
 static_assert(sizeof(futex_word) == sizeof(cat::uint4));
 static_assert(alignof(futex_word) == alignof(cat::uint4));
