@@ -201,6 +201,32 @@ struct scalar_abi {
    using simd_mask_lane = simd_abi::mask_lane<scalar_abi<ElementT>, ElementT>;
 };
 
+namespace detail {
+
+template <typename T, idx lane_count, typename... Abis>
+struct deduce_from_candidates;
+
+template <typename T, idx lane_count>
+struct deduce_from_candidates<T, lane_count> {
+   using type = fixed_size_abi<T, lane_count>;
+};
+
+template <typename T, idx lane_count, typename Abi, typename... Abis>
+struct deduce_from_candidates<T, lane_count, Abi, Abis...> {
+   using rebound_abi = Abi::template make_abi_type<T>;
+   using fallback = deduce_from_candidates<T, lane_count, Abis...>::type;
+   using type =
+      conditional<rebound_abi::lanes == lane_count, rebound_abi, fallback>;
+};
+
+template <typename T, idx lane_count, typename... Abis>
+struct deduce_impl {
+   using type = deduce_from_candidates<T, lane_count, Abis..., native_abi<T>,
+                                       scalar_abi<T>>::type;
+};
+
+}  // namespace detail
+
 namespace simd_abi {
 template <typename T, idx index>
 using fixed_size = fixed_size_abi<T, index>;
@@ -213,6 +239,9 @@ using scalar = scalar_abi<T>;
 
 template <typename BaseAbi>
 using unaligned = unaligned_abi<BaseAbi>;
+
+template <typename T, idx lane_count, typename... Abis>
+using deduce = detail::deduce_impl<T, lane_count, Abis...>::type;
 }  // namespace simd_abi
 
 namespace detail {

@@ -346,6 +346,31 @@ $test(simd_abi_compatible_alias) {
                == cat::simd<int, cat::native_abi<int>>::abi_type::lanes);
 }
 
+$test(simd_abi_deduce) {
+   using native_float =
+      cat::simd_abi::deduce<float, cat::native_abi<float>::lanes>;
+   static_assert(cat::is_same<native_float, cat::native_abi<float>>);
+
+   using scalar_float =
+      cat::simd_abi::deduce<float, cat::scalar_abi<float>::lanes>;
+   static_assert(cat::is_same<scalar_float, cat::scalar_abi<float>>);
+
+   using fixed_float = cat::simd_abi::deduce<float, 3u>;
+   static_assert(cat::is_same<fixed_float, cat::fixed_size_abi<float, 3u>>);
+
+   using compatible_float =
+      cat::simd_abi::deduce<float, cat::compatible_abi<float>::lanes,
+                              cat::compatible_abi<float>>;
+   static_assert(cat::is_same<compatible_float, cat::compatible_abi<float>>);
+
+   using unaligned_double = cat::simd_abi::deduce<
+      double, cat::simd_abi::unaligned<cat::native_abi<double>>::lanes,
+      cat::simd_abi::unaligned<cat::native_abi<float>>>;
+   static_assert(
+      cat::is_same<unaligned_double,
+                   cat::simd_abi::unaligned<cat::native_abi<double>>>);
+}
+
 $test(simdu) {
    using idx_abi = cat::native_abi<cat::idx>;
    using idxv = cat::simd<cat::idx, idx_abi>;
