@@ -33,6 +33,8 @@ cmake_configure_config(arg) := if multi_config == "true" { "" } else { cmake_bui
 cmake_build_type(arg) := "-DCMAKE_BUILD_TYPE=" + cmake_config(arg)
 build_config(arg) := if cmake_config(arg) == "" { "" } else { cmake_build_config(arg) }
 cmake_build_config(arg) := if multi_config == "true" { "--config " + cmake_config(arg) } else { "" }
+test_config(arg) := if cmake_config(arg) == "" { "" } else { cmake_test_config(arg) }
+cmake_test_config(arg) := if multi_config == "true" { "-C " + cmake_config(arg) } else { "" }
 repl_command(arg) := if mode(arg) == "" { repl_path(arg) } else { configured_repl_command(arg) }
 repl_path(arg) := build_dir(arg) + "/clang-repl-libcat"
 configured_repl_command(arg) := if multi_config == "true" { multi_repl_command(arg) } else { repl_path(arg) }
@@ -42,6 +44,7 @@ multi_repl_command(arg) := "CAT_REPL_CONFIG=" + cmake_config(arg) + " ./build/cl
 cmake_log(verbose) := if verbose == "-v" { "--log-level=VERBOSE" } else { "" }
 build_verbose(verbose) := if verbose == "-v" { "--verbose" } else { "" }
 status_verbose(verbose) := if verbose == "-v" { "--verbose" } else { "" }
+ctest_verbose(verbose) := if verbose == "-v" { "--verbose" } else { "" }
 
 # Set sanitizer flags.
 sanitizer(flag) := if flag == "san" { "-DCAT_USE_SANITIZERS=ON" } else { nosan(flag) }
@@ -170,9 +173,30 @@ intermediaries *args:
       just _intermediaries-mode "${mode}" "${san}" "${fmt}" "${verbose}" "${bc}" "${ll}" "${cir}" "${selectors}" "${pass}"
 
 syntax mode=last_mode verbose="":
-    just cmake_target cat-syntax {{ mode }} {{ verbose }}
-    @just status_san {{ mode }}
+    @just _syntax-mode {{ mode }} {{ verbose }}
     @printf '\033[36m%s\033[0m\n' 'No syntax errors! :3'
+
+test *args:
+    @san=""; verbose=""; modes=""; unset CAT_JUST_TEST_TOOL_TRAILER_B64; set -- "$@"; \
+      while [ $# -gt 0 ]; do \
+        case "$1" in \
+          --) shift; \
+            if [ $# -gt 0 ]; then \
+              CAT_JUST_TEST_TOOL_TRAILER_B64="$(printf '%s\0' "$@" | base64 -w0)"; \
+              export CAT_JUST_TEST_TOOL_TRAILER_B64; \
+            fi; \
+            break ;; \
+          san|nosan) san="$1"; shift ;; \
+          -v) verbose="$1"; shift ;; \
+          debug|release|relwithdebinfo|build|all) modes="${modes:+$modes }$1"; shift ;; \
+          *) printf '%s\n' "just test: unknown flag '$1'!" >&2; exit 1 ;; \
+        esac; \
+      done; \
+      if [ -z "$modes" ]; then modes="{{ last_mode }}"; fi; \
+      for mode in $modes; do \
+        just _test-mode "$mode" "$san" "$verbose"; \
+      done; \
+      unset CAT_JUST_TEST_TOOL_TRAILER_B64
 
 # Print out various properties of a release mode.
 # Any empty fields are folded in non-verbose output.
@@ -354,6 +378,10 @@ _noop *args:
     @:
 
 [private]
+_print-build-mode mode=last_mode:
+    @printf '\033[1mBuild mode: \033[0m%s\n' "{{ mode(mode) }}"
+
+[private]
 _build-mode mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
     @just {{ if debug_config(mode) == "" { "_noop" } else { "_build-config" } }} \
       debug "{{ san }}" "{{ verbose }}" "{{ no_warnings }}" "{{ cxx_flags }}"
@@ -373,6 +401,8 @@ _build-mode mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
 # `-Wno-everything`.
 [private]
 _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
+    @just _print-build-mode {{ mode }}
+
     @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; clear_cached=false; \
       cache={{ build_dir(mode) }}/CMakeCache.txt; \
       if [[ "${no_warnings}" == true ]]; then \
@@ -421,6 +451,8 @@ _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
 
 [private]
 _build-custom mode="" san="" verbose="" no_warnings="false" cxx_flags="":
+    @just _print-build-mode {{ mode }}
+
     @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; clear_cached=false; \
       cache={{ build_dir(mode) }}/CMakeCache.txt; \
       if [[ "${no_warnings}" == true ]]; then \
@@ -558,14 +590,66 @@ _cmake_target_config target mode=last_mode verbose="":
       --target {{ target }} {{ build_verbose(verbose) }}
 
 [private]
+_syntax-mode mode=last_mode verbose="":
+    @just {{ if debug_config(mode) == "" { "_noop" } else { "_syntax-config" } }} \
+      debug {{ verbose }}
+
+    @just {{ if release_config(mode) == "" { "_noop" } else { "_syntax-config" } }} \
+      release {{ verbose }}
+
+    @just {{ if relwithdebinfo_config(mode) == "" { "_noop" } else { "_syntax-config" } }} \
+      relwithdebinfo {{ verbose }}
+
+    @just {{ if cmake_config(mode) == "" { "_syntax-config" } else { "_noop" } }} \
+      {{ mode }} {{ verbose }}
+
+[private]
+_syntax-config mode=last_mode verbose="":
+    @just _print-build-mode {{ mode }}
+    @just status_san {{ mode }}
+    @cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
+      --target cat-syntax {{ build_verbose(verbose) }}
+
+    @mkdir -p .cache
+    @printf '%s\n' "{{ mode(mode) }}" > .cache/cat-build-mode
+
+[private]
+_test-mode mode=last_mode san="" verbose="":
+    @just {{ if debug_config(mode) == "" { "_noop" } else { "_test-config" } }} \
+      debug "{{ san }}" "{{ verbose }}"
+
+    @just {{ if release_config(mode) == "" { "_noop" } else { "_test-config" } }} \
+      release "{{ san }}" "{{ verbose }}"
+
+    @just {{ if relwithdebinfo_config(mode) == "" { "_noop" } else { "_test-config" } }} \
+      relwithdebinfo "{{ san }}" "{{ verbose }}"
+
+    @just {{ if cmake_config(mode) == "" { "_test-config" } else { "_noop" } }} \
+      {{ mode }} "{{ san }}" "{{ verbose }}"
+
+[private]
+_test-config mode=last_mode san="" verbose="":
+    @just _build-config {{ mode }} "{{ san }}" "{{ verbose }}" false ""
+
+    @bash -c 'set -euo pipefail; trailer=(); \
+      if [[ -n "${CAT_JUST_TEST_TOOL_TRAILER_B64:-}" ]]; then \
+        mapfile -d "" -t trailer \
+          < <(base64 -d <<< "${CAT_JUST_TEST_TOOL_TRAILER_B64}"); \
+      fi; \
+      ctest --test-dir {{ build_dir(mode) }} {{ test_config(mode) }} \
+        --output-on-failure {{ ctest_verbose(verbose) }} "${trailer[@]}"'
+
+[private]
 _repl mode san="" verbose="" *args:
+    @just _print-build-mode {{ mode }}
+
     @test "{{ can_skip_configure(san) }}" = true \
       && test -x {{ build_dir(mode) }}/clang-repl-libcat \
       || cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
         {{ configure_config(mode) }} -DCAT_BUILD_SHARED=ON {{ sanitizer(san) }}
 
     @just status_san {{ mode }} "{{ san }}"
-    cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
+    @cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
       --target cat-impl-shared {{ build_verbose(verbose) }}
 
     @set -- "$@"; shift 3; \
