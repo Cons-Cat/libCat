@@ -18,8 +18,8 @@ release modes.
 #+BEGIN_SRC sh
   mise install
   just build
-  ./build/Release/tests/unit_tests
-  # or ctest --test-dir build/ -C Release --output-on-failure
+  just test
+  # or just test full
 #+END_SRC
 
 The =.clang-format= and =.clang-tidy= configurations are only compatible with correspondingly

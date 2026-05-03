@@ -67,7 +67,7 @@ build *args:
               export CAT_JUST_BUILD_TOOL_TRAILER_B64; \
             fi; \
             break ;; \
-          san|nosan) san="$1"; shift ;; \
+          san|nosan) san="$lower"; shift ;; \
           -v) verbose="$1"; shift ;; \
           -w) no_warnings="true"; shift ;; \
           -*) cxx_flags="${cxx_flags:+$cxx_flags }$1"; shift ;; \
@@ -177,9 +177,19 @@ syntax mode=last_mode verbose="":
     @printf '\033[36m%s\033[0m\n' 'No syntax errors! :3'
 
 test *args:
-    @san=""; verbose=""; modes=""; unset CAT_JUST_TEST_TOOL_TRAILER_B64; set -- "$@"; \
+    @san=""; verbose=""; modes=""; tests=""; full="false"; list="false"; \
+      unset CAT_JUST_TEST_TOOL_TRAILER_B64; \
+      add_test_selector() { \
+        case " $tests " in \
+          *" $1 "*) ;; \
+          *) tests="${tests:+$tests }$1" ;; \
+        esac; \
+      }; \
+      set -- "$@"; \
       while [ $# -gt 0 ]; do \
-        case "$1" in \
+        arg="$1"; \
+        lower="$(printf '%s' "$arg" | tr '[:upper:]' '[:lower:]')"; \
+        case "$lower" in \
           --) shift; \
             if [ $# -gt 0 ]; then \
               CAT_JUST_TEST_TOOL_TRAILER_B64="$(printf '%s\0' "$@" | base64 -w0)"; \
@@ -188,13 +198,36 @@ test *args:
             break ;; \
           san|nosan) san="$1"; shift ;; \
           -v) verbose="$1"; shift ;; \
-          debug|release|relwithdebinfo|build|all) modes="${modes:+$modes }$1"; shift ;; \
-          *) printf '%s\n' "just test: unknown flag '$1'!" >&2; exit 1 ;; \
+          debug|release|relwithdebinfo|build|all) modes="${modes:+$modes }$lower"; shift ;; \
+          unit|units|unittest|unittests|compiled|compiled-tests) \
+            add_test_selector UnitTests; shift ;; \
+          gdb|pretty|pretty-printers|printer|printers|gdbprettyprinters) \
+            add_test_selector GdbPrettyPrinters; shift ;; \
+          negative|neg|arithmetic|arithmetic-negative|arithmeticnegativebuild) \
+            add_test_selector ArithmeticNegativeBuild; shift ;; \
+          full) full="true"; shift ;; \
+          list) list="true"; shift ;; \
+          *) printf '%s\n' "just test: unknown option '$arg'!" >&2; \
+             printf '%s\n' "options: unit, gdb, negative, full, list, san, nosan, -v, debug, release, relwithdebinfo, build, all" >&2; \
+             exit 1 ;; \
         esac; \
       done; \
+      if [ "$full" = "true" ] && [ -n "$tests" ]; then \
+        printf '%s\n' "just test: 'full' cannot be combined with named tests!" >&2; \
+        exit 1; \
+      fi; \
+      if [ "$list" = "true" ] && [ -z "$tests" ]; then full="true"; fi; \
+      if [ "$full" = "false" ] && [ -z "$tests" ]; then tests="UnitTests"; fi; \
+      regex=""; \
+      if [ "$full" = "false" ]; then \
+        for test_name in $tests; do \
+          regex="${regex:+$regex|}$test_name"; \
+        done; \
+        regex="^($regex)$"; \
+      fi; \
       if [ -z "$modes" ]; then modes="{{ last_mode }}"; fi; \
       for mode in $modes; do \
-        just _test-mode "$mode" "$san" "$verbose"; \
+        just _test-mode "$mode" "$san" "$verbose" "$regex" "$list"; \
       done; \
       unset CAT_JUST_TEST_TOOL_TRAILER_B64
 
@@ -614,30 +647,42 @@ _syntax-config mode=last_mode verbose="":
     @printf '%s\n' "{{ mode(mode) }}" > .cache/cat-build-mode
 
 [private]
-_test-mode mode=last_mode san="" verbose="":
+_test-mode mode=last_mode san="" verbose="" test_regex="" list="false":
     @just {{ if debug_config(mode) == "" { "_noop" } else { "_test-config" } }} \
-      debug "{{ san }}" "{{ verbose }}"
+      debug "{{ san }}" "{{ verbose }}" "{{ test_regex }}" "{{ list }}"
 
     @just {{ if release_config(mode) == "" { "_noop" } else { "_test-config" } }} \
-      release "{{ san }}" "{{ verbose }}"
+      release "{{ san }}" "{{ verbose }}" "{{ test_regex }}" "{{ list }}"
 
     @just {{ if relwithdebinfo_config(mode) == "" { "_noop" } else { "_test-config" } }} \
-      relwithdebinfo "{{ san }}" "{{ verbose }}"
+      relwithdebinfo "{{ san }}" "{{ verbose }}" "{{ test_regex }}" "{{ list }}"
 
     @just {{ if cmake_config(mode) == "" { "_test-config" } else { "_noop" } }} \
-      {{ mode }} "{{ san }}" "{{ verbose }}"
+      {{ mode }} "{{ san }}" "{{ verbose }}" "{{ test_regex }}" "{{ list }}"
 
 [private]
-_test-config mode=last_mode san="" verbose="":
-    @just _build-config {{ mode }} "{{ san }}" "{{ verbose }}" false ""
+_test-config mode=last_mode san="" verbose="" test_regex="" list="false":
+    @if [ "{{ list }}" = "true" ]; then \
+      just _print-build-mode {{ mode }}; \
+      just status_san {{ mode }} "{{ san }}"; \
+    else \
+      just _build-config {{ mode }} "{{ san }}" "{{ verbose }}" false ""; \
+    fi
 
-    @bash -c 'set -euo pipefail; trailer=(); \
+    @bash -c 'set -euo pipefail; test_regex="$1"; list="$2"; trailer=(); \
       if [[ -n "${CAT_JUST_TEST_TOOL_TRAILER_B64:-}" ]]; then \
         mapfile -d "" -t trailer \
           < <(base64 -d <<< "${CAT_JUST_TEST_TOOL_TRAILER_B64}"); \
       fi; \
-      ctest --test-dir {{ build_dir(mode) }} {{ test_config(mode) }} \
-        --output-on-failure {{ ctest_verbose(verbose) }} "${trailer[@]}"'
+      ctest_args=(ctest --test-dir {{ build_dir(mode) }} {{ test_config(mode) }} \
+        --output-on-failure {{ ctest_verbose(verbose) }}); \
+      if [[ "${list}" == true ]]; then \
+        ctest_args+=(-N); \
+      fi; \
+      if [[ -n "${test_regex}" ]]; then \
+        ctest_args+=(-R "${test_regex}"); \
+      fi; \
+      "${ctest_args[@]}" "${trailer[@]}"' _ "{{ test_regex }}" "{{ list }}"
 
 [private]
 _repl mode san="" verbose="" *args:
