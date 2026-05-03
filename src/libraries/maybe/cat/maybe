@@ -773,6 +773,7 @@ class [[nodiscard]] maybe {
    template <typename U>
       requires(is_implicitly_convertible<U, value_type>
                && !is_reference<value_type> && is_copy_assignable<value_type>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(U const& value) -> class maybe& {
       m_storage = static_cast<value_type const&>(value);
@@ -783,6 +784,7 @@ class [[nodiscard]] maybe {
    template <typename U>
       requires(is_implicitly_convertible<U, value_type>
                && !is_reference<value_type> && is_move_assignable<value_type>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(U&& value) -> class maybe& {
       m_storage = static_cast<value_type&&>($fwd(value));
@@ -793,6 +795,7 @@ class [[nodiscard]] maybe {
    template <typename U>
       requires((is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
                && is_reference<value_type>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(U& value) -> class maybe& {
       m_storage = static_cast<value_type&>(value);
@@ -804,6 +807,7 @@ class [[nodiscard]] maybe {
       requires(is_implicitly_convertible<U, value_type>
                && !is_reference<value_type> && !is_reference<U>
                && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(maybe<U> const& maybe) -> class maybe& {
       m_storage.assign(maybe);
@@ -815,6 +819,7 @@ class [[nodiscard]] maybe {
       requires(is_implicitly_convertible<U, value_type>
                && is_move_assignable<value_type>
                && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(maybe<U>&& maybe) -> class maybe& {
       m_storage.assign(move(maybe));
@@ -825,6 +830,7 @@ class [[nodiscard]] maybe {
    template <typename U>
       requires(is_implicitly_convertible<U, value_type>
                && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(maybe<U>& maybe) -> class maybe& {
       m_storage.assign(maybe);
@@ -832,6 +838,7 @@ class [[nodiscard]] maybe {
    }
 
    // Assigning `nullopt` destroys any value.
+   [[clang::reinitializes]]
    constexpr auto
    operator=(detail::nullopt_type) -> class maybe& {
       m_storage.hard_reset();
@@ -1169,6 +1176,7 @@ class [[nodiscard]] maybe {
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
    template <typename... Args>
       requires(!is_void<T>)
+   [[clang::reinitializes]]
    constexpr auto
    emplace(Args&&... arguments) -> value_type& {
       *this = nullopt;
@@ -1181,6 +1189,7 @@ class [[nodiscard]] maybe {
    //
    // P2988R12 `optional<T&>`. `reset` does not destroy the referent.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
+   [[clang::reinitializes]]
    constexpr void
    reset() {
       m_storage.hard_reset();

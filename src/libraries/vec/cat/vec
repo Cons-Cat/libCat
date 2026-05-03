@@ -56,6 +56,7 @@ vec : public container_interface<vec<T, Allocator>, T>,
                         "`.clone() or move instead!");
 
    // Empty a vector upon move.
+   [[clang::reinitializes]]
    constexpr auto
    operator=(vec&& other) -> vec& {
       m_p_data = other.m_p_data;
@@ -161,6 +162,7 @@ vec : public container_interface<vec<T, Allocator>, T>,
    }
 
    // Destroy, but do not de-allocate, the elements of this `vec`.
+   [[clang::reinitializes]]
    void
    clear() {
       if constexpr (!is_trivially_destructible<T>) {
@@ -173,6 +175,7 @@ vec : public container_interface<vec<T, Allocator>, T>,
    }
 
    // Deallocate this vector.
+   [[clang::reinitializes]]
    constexpr void
    hard_reset() {
       if consteval {

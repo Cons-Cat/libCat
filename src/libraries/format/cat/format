@@ -462,6 +462,7 @@ struct format_buffer_base
 
    virtual auto grow(uword /*new_size*/) -> maybe<void> = 0;
 
+   [[clang::reinitializes]]
    void
    clear() {
       this->length = 0u;
@@ -533,6 +534,7 @@ struct format_buffer_iterator<Allocator, Outputter>
       return monostate;
    }
 
+   [[clang::reinitializes]]
    auto
    flush() -> maybe<void> {
       // `size()` is derived from `format_buffer_base`.

@@ -130,6 +130,7 @@ basic_list
       -> basic_list& = delete ("Implicit copying of `cat::list` is forbidden. "
                                "Call `.clone() or move instead!");
 
+   [[clang::reinitializes]]
    constexpr auto
    operator=(basic_list&& other_list) -> basic_list& {
       m_storage = other_list.m_storage;
@@ -140,6 +141,7 @@ basic_list
          other_list.m_storage.m_p_tail = nullptr;
       }
       other_list.m_size = 0u;
+      return *this;
    }
 
    constexpr ~basic_list() {
@@ -187,6 +189,7 @@ basic_list
       return m_storage.m_p_tail->storage;
    }
 
+   [[clang::reinitializes]]
    constexpr void
    clear() {
       node_type* p_current = m_storage.m_p_head;

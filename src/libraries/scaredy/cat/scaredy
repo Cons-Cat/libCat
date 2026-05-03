@@ -392,6 +392,7 @@ class [[nodiscard]] scaredy {
    // Copy-assign and convert a `scaredy`.
    template <typename U, typename... Othererror_types>
       requires(is_value<U> && (is_error<Othererror_types> && ...))
+   [[clang::reinitializes]]
    constexpr auto
    operator=(scaredy<U, error_types...> const& operand) -> scaredy& {
       m_storage = operand.m_storage;
@@ -401,6 +402,7 @@ class [[nodiscard]] scaredy {
    // Move-assign and convert a `scaredy`.
    template <typename U, typename... Othererror_types>
       requires(is_value<U> && (is_error<Othererror_types> && ...))
+   [[clang::reinitializes]]
    constexpr auto
    operator=(scaredy<U, error_types...>&& operand) -> scaredy& {
       m_storage = operand.m_storage;
@@ -410,6 +412,7 @@ class [[nodiscard]] scaredy {
    // Copy-assign and convert a value to `storage`.
    template <typename U>
       requires(is_value<U>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(U const& operand) -> scaredy& {
       m_storage = static_cast<value_type>(operand);
@@ -419,6 +422,7 @@ class [[nodiscard]] scaredy {
    // Move-assign and convert a value to `storage`.
    template <rvalue U>
       requires(is_value<U>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(U&& operand) -> scaredy& {
       m_storage = static_cast<value_type&&>(operand);
@@ -428,6 +432,7 @@ class [[nodiscard]] scaredy {
    // Copy-assign and convert an error to `storage`.
    template <typename error_type>
       requires(is_error<error_type>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(error_type const& operand) -> scaredy& {
       m_storage = operand;
@@ -437,6 +442,7 @@ class [[nodiscard]] scaredy {
    // Move-assign and convert an error to `storage`.
    template <rvalue error_type>
       requires(is_error<error_type>)
+   [[clang::reinitializes]]
    constexpr auto
    operator=(error_type&& operand) -> scaredy& {
       // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
