@@ -669,20 +669,24 @@ _test-config mode=last_mode san="" verbose="" test_regex="" list="false":
       just _build-config {{ mode }} "{{ san }}" "{{ verbose }}" false ""; \
     fi
 
-    @bash -c 'set -euo pipefail; test_regex="$1"; list="$2"; trailer=(); \
+    @bash -c 'set -euo pipefail; test_regex="$1"; list="$2"; verbose="$3"; trailer=(); \
       if [[ -n "${CAT_JUST_TEST_TOOL_TRAILER_B64:-}" ]]; then \
         mapfile -d "" -t trailer \
           < <(base64 -d <<< "${CAT_JUST_TEST_TOOL_TRAILER_B64}"); \
       fi; \
       ctest_args=(ctest --test-dir {{ build_dir(mode) }} {{ test_config(mode) }} \
-        --output-on-failure {{ ctest_verbose(verbose) }}); \
+        --output-on-failure --progress); \
+      if [[ "${verbose}" == "-v" \
+        || "${list}" != true && ( -z "${test_regex}" || "${test_regex}" == *ArithmeticNegativeBuild* ) ]]; then \
+        ctest_args+=(--verbose); \
+      fi; \
       if [[ "${list}" == true ]]; then \
         ctest_args+=(-N); \
       fi; \
       if [[ -n "${test_regex}" ]]; then \
         ctest_args+=(-R "${test_regex}"); \
       fi; \
-      "${ctest_args[@]}" "${trailer[@]}"' _ "{{ test_regex }}" "{{ list }}"
+      "${ctest_args[@]}" "${trailer[@]}"' _ "{{ test_regex }}" "{{ list }}" "{{ verbose }}"
 
 [private]
 _repl mode san="" verbose="" *args:

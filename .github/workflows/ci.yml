@@ -94,6 +94,7 @@ jobs:
     outputs:
       compile: ${{ steps.changed.outputs.compile }}
       gdb_symlink: ${{ steps.changed.outputs.gdb_symlink }}
+      arithmetic_negative: ${{ steps.changed.outputs.arithmetic_negative }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -113,6 +114,12 @@ jobs:
           if [ -z "${base}" ] || [ "${base}" = "0000000000000000000000000000000000000000" ]; then
             compile="true"
             changed="true"
+            arithmetic_negative="true"
+          elif ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "::warning title=Missing diff base::Could not find base commit ${base}; running changed-path jobs."
+            compile="true"
+            changed="true"
+            arithmetic_negative="true"
           else
             changed_files=$(git diff --name-only "${base}" "${{ github.sha }}")
             if printf '%s\n' "${changed_files}" \
@@ -129,12 +136,22 @@ jobs:
             else
               changed="false"
             fi
+
+            if printf '%s\n' "${changed_files}" \
+              | grep -Eq '^src/libraries/(meta|arithmetic)/|^cmake/cat_arithmetic_neg(ative|_cases|_matrix)\.cmake$|^tests/CMakeLists\.txt$|^\.github/workflows/ci\.yml$'
+            then
+              arithmetic_negative="true"
+            else
+              arithmetic_negative="false"
+            fi
           fi
 
           echo "compile=${compile}" >> "${GITHUB_OUTPUT}"
           echo "gdb_symlink=${changed}" >> "${GITHUB_OUTPUT}"
+          echo "arithmetic_negative=${arithmetic_negative}" >> "${GITHUB_OUTPUT}"
           echo "compile changed: ${compile}"
           echo "gdb_symlink changed: ${changed}"
+          echo "arithmetic negative changed: ${arithmetic_negative}"
 
   lint:
     # Lightweight static checks on the source tree. Runs in parallel
@@ -250,7 +267,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_USE_SANITIZERS=ON
           cmake --build build-debug
-          ctest --test-dir build-debug --verbose --output-on-failure
+          ctest --test-dir build-debug -E '^ArithmeticNegativeBuild$' --verbose --output-on-failure
 
       - name: GDB pretty printers (-O0 Debug)
         run: cmake --build build-debug --target check-gdb-pretty-printers
@@ -296,7 +313,7 @@ jobs:
           cmake -S . -B build-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build build-release
-          ctest --test-dir build-release --verbose --output-on-failure
+          ctest --test-dir build-release -E '^ArithmeticNegativeBuild$' --verbose --output-on-failure
 
       - name: Verify .gdbinit symlink (Release, Ninja generator non-multi)
         if: ${{ needs.detect-changes.outputs.gdb_symlink == 'true' }}
@@ -308,6 +325,23 @@ jobs:
             exit 1
           fi
           echo "OK: build-release/.gdbinit"
+
+  arithmetic-negative:
+    # Must-reject arithmetic probes are expensive. Run them only when the
+    # arithmetic/meta surface or the negative-test machinery changes.
+    runs-on: ubuntu-24.04
+    needs: [install-toolchain, detect-changes]
+    if: ${{ needs.detect-changes.outputs.arithmetic_negative == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-toolchain
+
+      - name: Configure and run arithmetic negative tests
+        run: |
+          cmake -S . -B build-arithmetic-negative -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release
+          ctest --test-dir build-arithmetic-negative -R '^ArithmeticNegativeBuild$' --verbose --output-on-failure
 
   shared:
     # End-to-end `libcat.so` flow: build, install, then have a
@@ -337,7 +371,7 @@ jobs:
             -DCAT_USE_SHARED=ON \
             -DCMAKE_INSTALL_PREFIX="${PWD}/install-shared"
           cmake --build build-shared
-          ctest --test-dir build-shared --verbose --output-on-failure
+          ctest --test-dir build-shared -E '^ArithmeticNegativeBuild$' --verbose --output-on-failure
 
           # Headline artifact for this configuration.
           test -f build-shared/libcat.so

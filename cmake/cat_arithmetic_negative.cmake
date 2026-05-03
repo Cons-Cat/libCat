@@ -59,6 +59,7 @@ unset(_d)
 
 set(_cat_neg_compile_args
   -std=gnu++26
+  -Wno-everything # This test is not about warnings.
   -fsyntax-only)
 foreach(_d IN LISTS _cat_neg_includes)
   list(APPEND _cat_neg_compile_args "-I${_d}")
@@ -87,7 +88,8 @@ macro(_cat_neg_expect_illformed _name _src)
   add_library("${_cat_n_target}" OBJECT EXCLUDE_FROM_ALL "${_cat_n_path}")
   target_link_libraries("${_cat_n_target}" PRIVATE cat)
   target_compile_options("${_cat_n_target}" PRIVATE
-    ${CAT_CXX_FLAGS_INTERNAL})
+    ${CAT_CXX_FLAGS_INTERNAL}
+    -Wno-everything)
   if (CAT_PCH)
     target_precompile_headers("${_cat_n_target}" REUSE_FROM cat-impl)
   endif()
@@ -247,7 +249,11 @@ if (NOT _cat_neg_prepare_rc EQUAL 0)
 endif()
 
 set(_cat_neg_ok 0)
+set(_cat_neg_done 0)
 set(_cat_neg_unexpected_success)
+list(LENGTH _cat_neg_targets _cat_neg_total)
+message(STATUS
+  "CAT_ARITHMETIC_NEGATIVE_CTEST: type-checking ${_cat_neg_total} ill-formed cases.")
 foreach(_target IN LISTS _cat_neg_targets)
   set(_cat_neg_command
     "${cat_neg_cmake_command}" --build "${cat_neg_build_dir}" --target "${_target}")
@@ -275,6 +281,12 @@ foreach(_target IN LISTS _cat_neg_targets)
       "==== ${_target} (expected failure, exit code ${_cat_neg_rc}) ====\n"
       "stderr:\n${_cat_neg_err}\n"
       "stdout:\n${_cat_neg_out}\n\n")
+  endif()
+  math(EXPR _cat_neg_done "${_cat_neg_done} + 1")
+  math(EXPR _cat_neg_progress_mod "${_cat_neg_done} % 25")
+  if (_cat_neg_progress_mod EQUAL 0 OR _cat_neg_done EQUAL _cat_neg_total)
+    message(STATUS
+      "${_cat_neg_done}/${_cat_neg_total} cases type-checked.")
   endif()
 endforeach()
 
