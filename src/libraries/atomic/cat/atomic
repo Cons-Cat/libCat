@@ -4,26 +4,49 @@
 
 #include <cat/arithmetic>
 
-// TODO: This needs tests and lots of fixes.
+// `cat::atomic` is an atomic arithmetic wrapper closely based upon
+// `std::atomic`.
+//
+// Atomic references are spelled `cat::atomic<T&>`, mirroring `cat::maybe<T&>`.
+// Overflow semantics of `cat::arithmetic` are supported, as is the syntax of
+// its `.wrap()`, `.sat()`, etc. members. Deprecated volatile support and the
+// `consume` memory order are removed.
+//
+// This class is also informed by the following papers:
+//
+// P0883R2  Atomic initialization.
+// P2689R3  Bound atomic references and accessors.
+// P3309R3  Make atomic operations `constexpr`.
+//
+// Waiting on spin-polls and notifications are currently no-ops. Fences are host
+// fences for now.
+// TODO: This should be fixed.
 
 namespace cat {
 
 // NOLINTNEXTLINE
 enum memory_order : int {
-   relaxed,
-   consume,
-   acquire,
-   release,
-   acq_rel,
-   seq_cst,
+   relaxed = 0,
+   // We don't use `consume`.
+   // https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3475r2.pdf
+   acquire = 2,
+   release = 3,
+   acq_rel = 4,
+   seq_cst = 5,
 };
+
+inline constexpr memory_order memory_order_relaxed = memory_order::relaxed;
+inline constexpr memory_order memory_order_acquire = memory_order::acquire;
+inline constexpr memory_order memory_order_release = memory_order::release;
+inline constexpr memory_order memory_order_acq_rel = memory_order::acq_rel;
+inline constexpr memory_order memory_order_seq_cst = memory_order::seq_cst;
 
 namespace detail {
 enum memory_order_modifier : unsigned int {
    mask = 0x0ffff,
    modifier_mask = 0xffff0000,
    hle_acquire = 0x10000,
-   hle_release = 0x20000
+   hle_release = 0x20000,
 };
 }  // namespace detail
 
@@ -42,9 +65,13 @@ operator&(memory_order order, detail::memory_order_modifier modifier)
 namespace detail {
 constexpr auto
 cmpexch_failure_order2(memory_order order) -> memory_order {
-   return order == memory_order::acq_rel   ? memory_order::acquire
-          : order == memory_order::release ? memory_order::relaxed
-                                           : order;
+   if (order == memory_order::acq_rel) {
+      return memory_order::acquire;
+   }
+   if (order == memory_order::release) {
+      return memory_order::relaxed;
+   }
+   return order;
 }
 
 constexpr auto
@@ -54,200 +81,394 @@ cmpexch_failure_order(memory_order order) -> memory_order {
       | detail::memory_order_modifier(
          order & detail::memory_order_modifier::modifier_mask));
 }
-}  // namespace detail
 
 constexpr void
-thread_fence(memory_order&& order) {
+assert_load_order(memory_order order) {
+   memory_order test_value = order & detail::mask;
+
+   assert(test_value != memory_order::release);
+   assert(test_value != memory_order::acq_rel);
+}
+
+constexpr void
+assert_store_order(memory_order order) {
+   memory_order test_value = order & detail::mask;
+
+   assert(test_value != memory_order::acquire);
+   assert(test_value != memory_order::acq_rel);
+}
+
+inline void
+atomic_pause_once() {
+   __builtin_ia32_pause();
+}
+
+template <typename T>
+consteval auto
+atomic_default_overflow_policy() -> overflow_policies {
+   if constexpr (requires { T::policy; }) {
+      if constexpr (T::policy == overflow_policies::saturate) {
+         return overflow_policies::saturate;
+      }
+   }
+   return overflow_policies::wrap;
+}
+
+template <typename AtomicQual, overflow_policies overflow_policy>
+class atomic_overflow_reference {
+ public:
+   using value_type = remove_cvref<AtomicQual>::value_type;
+   using raw_value = remove_cvref<AtomicQual>::raw_value;
+
+   constexpr explicit atomic_overflow_reference(AtomicQual& atomic)
+       : m_p_atomic(__builtin_addressof(atomic)) {
+   }
+
+   constexpr auto
+   fetch_add(auto operand, memory_order order = memory_order::seq_cst)
+      -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      if constexpr (overflow_policy == overflow_policies::saturate) {
+         return fetch_update<false>(
+            [operand](value_type observed) {
+               return add_saturating(observed, operand);
+            },
+            order);
+      } else {
+         return value_type(__atomic_fetch_add(
+            m_p_atomic->storage_ptr(), make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   fetch_sub(auto operand, memory_order order = memory_order::seq_cst)
+      -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      if constexpr (overflow_policy == overflow_policies::saturate) {
+         return fetch_update<false>(
+            [operand](value_type observed) {
+               return sub_saturating(observed, operand);
+            },
+            order);
+      } else {
+         return value_type(__atomic_fetch_sub(
+            m_p_atomic->storage_ptr(), make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   add_fetch(auto operand, memory_order order = memory_order::seq_cst)
+      -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      if constexpr (overflow_policy == overflow_policies::saturate) {
+         return fetch_update<true>(
+            [operand](value_type observed) {
+               return add_saturating(observed, operand);
+            },
+            order);
+      } else {
+         return value_type(__atomic_add_fetch(
+            m_p_atomic->storage_ptr(), make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   sub_fetch(auto operand, memory_order order = memory_order::seq_cst)
+      -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      if constexpr (overflow_policy == overflow_policies::saturate) {
+         return fetch_update<true>(
+            [operand](value_type observed) {
+               return sub_saturating(observed, operand);
+            },
+            order);
+      } else {
+         return value_type(__atomic_sub_fetch(
+            m_p_atomic->storage_ptr(), make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   operator++(int) -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      return fetch_add(1);
+   }
+
+   constexpr auto
+   operator++() -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      return add_fetch(1);
+   }
+
+   constexpr auto
+   operator--(int) -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      return fetch_sub(1);
+   }
+
+   constexpr auto
+   operator--() -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      return sub_fetch(1);
+   }
+
+   constexpr auto
+   operator+=(auto operand) -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      return add_fetch(operand);
+   }
+
+   constexpr auto
+   operator-=(auto operand) -> value_type
+      requires(!is_same<value_type, bool>)
+   {
+      return sub_fetch(operand);
+   }
+
+ private:
+   template <bool return_new, typename Operation>
+   constexpr auto
+   fetch_update(Operation&& operation, memory_order order) -> value_type {
+      memory_order failure_order = cmpexch_failure_order(order);
+      value_type observed = m_p_atomic->load(failure_order);
+      for (;;) {
+         value_type desired = operation(observed);
+         value_type expected = observed;
+         if (m_p_atomic->compare_exchange_weak(expected, desired, order,
+                                               failure_order)) {
+            if constexpr (return_new) {
+               return desired;
+            } else {
+               return observed;
+            }
+         }
+         observed = expected;
+      }
+   }
+
+   static constexpr auto
+   add_saturating(value_type observed, auto operand) -> value_type {
+      raw_value const raw_observed = make_raw_arithmetic(observed);
+      raw_value const raw_operand =
+         static_cast<raw_value>(make_raw_arithmetic(operand));
+      return value_type(cat::sat_add(raw_observed, raw_operand));
+   }
+
+   static constexpr auto
+   sub_saturating(value_type observed, auto operand) -> value_type {
+      raw_value const raw_observed = make_raw_arithmetic(observed);
+      raw_value const raw_operand =
+         static_cast<raw_value>(make_raw_arithmetic(operand));
+      return value_type(cat::sat_sub(raw_observed, raw_operand));
+   }
+
+   AtomicQual* m_p_atomic;
+};
+}  // namespace detail
+
+// TODO: Add CUDA-style scoped atomics when libCat has non-host memory scopes.
+constexpr void
+thread_fence(memory_order order) {
    __atomic_thread_fence(order);
 }
 
 constexpr void
-signal_fence(memory_order&& order) {
+signal_fence(memory_order order) {
    __atomic_signal_fence(order);
 }
 
-// Ensure that the dependency tree started by an `memory_order::consume` atomic
-// load operation does not extend past this return value. `expression` does not
-// carry a dependency into the return value.
-template <typename T>
-auto
-kill_dependency(T expression) -> T {
-   return result(expression);
-}
+class atomic_flag {
+ public:
+   static constexpr bool is_always_lock_free =
+      __atomic_always_lock_free(sizeof(bool), nullptr);
 
-// TODO: Enforce this with a `concept`.
-// `atomic<T>` wraps a type that may be 2, 4, or 8 bytes large. If it wraps a
-// `bool`, it does not have fetch methods or operators.
+   constexpr atomic_flag() = default;
+   ~atomic_flag() = default;
+   atomic_flag(atomic_flag const&) = delete;
+   auto
+   operator=(atomic_flag const&) -> atomic_flag& = delete;
+
+   [[nodiscard]]
+   auto
+   test(memory_order order = memory_order::seq_cst) const -> bool {
+      detail::assert_load_order(order);
+
+      return __atomic_load_n(&m_value, order);
+   }
+
+   auto
+   test_and_set(memory_order order = memory_order::seq_cst) -> bool {
+      return __atomic_test_and_set(&m_value, order);
+   }
+
+   void
+   clear(memory_order order = memory_order::seq_cst) {
+      detail::assert_store_order(order);
+
+      __atomic_clear(&m_value, order);
+   }
+
+   void
+   wait(bool old, memory_order order = memory_order::seq_cst) const {
+      while (test(order) == old) {
+         detail::atomic_pause_once();
+      }
+   }
+
+   void
+   notify_one() {
+   }
+
+   void
+   notify_all() {
+   }
+
+ private:
+   bool m_value = false;
+};
+
+static_assert(atomic_flag::is_always_lock_free);
+
 template <typename T>
-class atomic {
+class atomic;
+
+template <typename T>
+   requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
+class atomic<T> {
  public:
    using value_type = T;
    using raw_value = raw_arithmetic_type<T>;
+   using difference_type =
+      conditional<is_pointer<T>, __PTRDIFF_TYPE__, value_type>;
 
-   atomic() = default;
+   static constexpr unsigned long
+      required_alignment = sizeof(raw_value) > alignof(T) ? sizeof(raw_value)
+                                                          : alignof(T);
+   static constexpr bool is_always_lock_free =
+      __atomic_always_lock_free(sizeof(raw_value), nullptr);
+
+   constexpr atomic() = default;
+
+   // Construction has no racing observer, so initialize storage directly.
+   constexpr atomic(T desired) : m_value(desired) {
+   }
+
    ~atomic() = default;
    atomic(atomic const&) = delete;
    auto
    operator=(atomic const&) -> atomic& = delete;
-   auto
-   operator=(atomic const&) volatile -> atomic& = delete;
 
+   constexpr
    operator T() const {
       return load();
    }
 
-   operator T() const volatile {
-      return load();
-   }
-
-   auto
+   constexpr auto
    operator=(T operand) -> T {
       store(operand);
       return operand;
    }
 
-   auto
-   operator=(T operand) volatile -> T {
-      store(operand);
-      return operand;
+   constexpr auto
+   undef() & -> detail::atomic_overflow_reference<atomic,
+                                                  overflow_policies::undefined>
+      requires(!is_same<T, bool>)
+   {
+      return detail::atomic_overflow_reference<atomic,
+                                               overflow_policies::undefined>(
+         *this);
+   }
+
+   constexpr auto
+   wrap() & -> detail::atomic_overflow_reference<atomic,
+                                                 overflow_policies::wrap>
+      requires(!is_same<T, bool>)
+   {
+      return detail::atomic_overflow_reference<atomic, overflow_policies::wrap>(
+         *this);
+   }
+
+   constexpr auto
+   sat() & -> detail::atomic_overflow_reference<atomic,
+                                                overflow_policies::saturate>
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      return detail::atomic_overflow_reference<atomic,
+                                               overflow_policies::saturate>(
+         *this);
    }
 
    // TODO: This should handle all boolean types, not just `bool`.
-   auto
+   constexpr auto
    operator++(int) -> T
       requires(!is_same<T, bool>)
    {
       return fetch_add(1);
    }
 
-   auto
-   operator++(int) volatile -> T
-      requires(!is_same<T, bool>)
-   {
-      return fetch_add(1);
-   }
-
-   auto
+   constexpr auto
    operator++() -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_add_fetch(storage_ptr(), static_cast<raw_value>(1),
-                                  memory_order::seq_cst));
+      return add_fetch(1);
    }
 
-   auto
-   operator++() volatile -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_add_fetch(storage_ptr(), static_cast<raw_value>(1),
-                                  memory_order::seq_cst));
-   }
-
-   auto
+   constexpr auto
    operator--(int) -> T
       requires(!is_same<T, bool>)
    {
       return fetch_sub(1);
    }
 
-   auto
-   operator--(int) volatile -> T
-      requires(!is_same<T, bool>)
-   {
-      return fetch_sub(1);
-   }
-
-   auto
+   constexpr auto
    operator--() -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_sub_fetch(storage_ptr(), static_cast<raw_value>(1),
-                                  memory_order::seq_cst));
+      return sub_fetch(1);
    }
 
-   auto
-   operator--() volatile -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_sub_fetch(storage_ptr(), static_cast<raw_value>(1),
-                                  memory_order::seq_cst));
-   }
-
-   auto
+   constexpr auto
    operator+=(auto operand) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_add_fetch(storage_ptr(), make_raw_arithmetic(operand),
-                                  memory_order::seq_cst));
+      return add_fetch(operand);
    }
 
-   auto
-   operator+=(auto operand) volatile -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_add_fetch(storage_ptr(), make_raw_arithmetic(operand),
-                                  int(memory_order::seq_cst)));
-   }
-
-   auto
+   constexpr auto
    operator-=(auto operand) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_sub_fetch(storage_ptr(), make_raw_arithmetic(operand),
-                                  int(memory_order::seq_cst)));
+      return sub_fetch(operand);
    }
 
-   auto
-   operator-=(auto operand) volatile -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_sub_fetch(storage_ptr(), make_raw_arithmetic(operand),
-                                  int(memory_order::seq_cst)));
-   }
-
-   auto
+   constexpr auto
    operator&=(auto operand) -> T
-      requires(!is_same<T, bool>)
+      requires(is_integral<T> && !is_same<T, bool>)
    {
       return T(__atomic_and_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
    }
 
-   auto
-   operator&=(auto operand) volatile -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_and_fetch(storage_ptr(), make_raw_arithmetic(operand),
-                                  int(memory_order::seq_cst)));
-   }
-
-   auto
+   constexpr auto
    operator|=(auto operand) -> T
-      requires(!is_same<T, bool>)
+      requires(is_integral<T> && !is_same<T, bool>)
    {
       return T(__atomic_or_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                  int(memory_order::seq_cst)));
    }
 
-   auto
-   operator|=(auto operand) volatile -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_or_fetch(storage_ptr(), make_raw_arithmetic(operand),
-                                 int(memory_order::seq_cst)));
-   }
-
-   auto
+   constexpr auto
    operator^=(auto operand) -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_xor_fetch(storage_ptr(), make_raw_arithmetic(operand),
-                                  int(memory_order::seq_cst)));
-   }
-
-   auto
-   operator^=(auto operand) volatile -> T
-      requires(!is_same<T, bool>)
+      requires(is_integral<T> && !is_same<T, bool>)
    {
       return T(__atomic_xor_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
@@ -256,43 +477,30 @@ class atomic {
    [[nodiscard]]
    auto
    is_lock_free() const -> bool {
-      // Use a fake, minimally aligned pointer.
-      return __atomic_is_lock_free(sizeof(m_value),
-                                   reinterpret_cast<void*>(-alignment));
+      return __atomic_is_lock_free(sizeof(raw_value), storage_ptr());
    }
 
-   [[nodiscard]]
-   auto
-   is_lock_free() const volatile -> bool {
-      // Use a fake, minimally aligned pointer.
-      return __atomic_is_lock_free(sizeof(m_value),
-                                   reinterpret_cast<void*>(-alignment));
-   }
-
-   void
+   constexpr void
    store(auto storing, memory_order operand = memory_order::seq_cst) {
+      if consteval {
+         m_value = T(storing);
+         return;
+      }
+
       memory_order test_value = operand & detail::mask;
 
       assert(test_value != memory_order::acquire);
       assert(test_value != memory_order::acq_rel);
-      assert(test_value != memory_order::consume);
 
       __atomic_store_n(storage_ptr(), make_raw_arithmetic(storing), operand);
    }
 
-   void
-   store(auto operand, memory_order order = memory_order::seq_cst) volatile {
-      memory_order test_value = order & detail::mask;
-
-      assert(test_value != memory_order::acquire);
-      assert(test_value != memory_order::acq_rel);
-      assert(test_value != memory_order::consume);
-
-      __atomic_store_n(storage_ptr(), make_raw_arithmetic(operand), order);
-   }
-
-   auto
+   constexpr auto
    load(memory_order order = memory_order::seq_cst) const -> T {
+      if consteval {
+         return m_value;
+      }
+
       memory_order test_value = order & detail::mask;
 
       assert(test_value != memory_order::release);
@@ -301,33 +509,31 @@ class atomic {
       return T(__atomic_load_n(storage_ptr(), order));
    }
 
-   auto
-   load(memory_order order = memory_order::seq_cst) const volatile -> T {
-      memory_order test_value = order & detail::mask;
-
-      assert(test_value != memory_order::release);
-      assert(test_value != memory_order::acq_rel);
-
-      return T(__atomic_load_n(storage_ptr(), order));
-   }
-
-   auto
+   constexpr auto
    exchange(T operand, memory_order order = memory_order::seq_cst) -> T {
+      if consteval {
+         T observed = m_value;
+         m_value = operand;
+         return observed;
+      }
+
       return T(__atomic_exchange_n(storage_ptr(), make_raw_arithmetic(operand),
                                    order));
    }
 
-   auto
-   exchange(T operand, memory_order order = memory_order::seq_cst) volatile
-      -> T {
-      return T(__atomic_exchange_n(storage_ptr(), make_raw_arithmetic(operand),
-                                   order));
-   }
-
-   auto
+   constexpr auto
    compare_exchange_weak(T& operand, T success_value,
                          memory_order success_order, memory_order failure_order)
       -> bool {
+      if consteval {
+         if (m_value == operand) {
+            m_value = success_value;
+            return true;
+         }
+         operand = m_value;
+         return false;
+      }
+
       memory_order test_value1 = success_order & detail::mask;
       memory_order test_value2 = failure_order & detail::mask;
 
@@ -343,44 +549,26 @@ class atomic {
       return result;
    }
 
-   auto
-   compare_exchange_weak(T& operand, T success_value,
-                         memory_order success_order,
-                         memory_order failure_order) volatile -> bool {
-      memory_order test_value1 = success_order & detail::mask;
-      memory_order test_value2 = failure_order & detail::mask;
-
-      assert(test_value2 != memory_order::release);
-      assert(test_value2 != memory_order::acq_rel);
-      assert(test_value2 <= test_value1);
-
-      raw_value observed = make_raw_arithmetic(operand);
-      raw_value const desired = make_raw_arithmetic(success_value);
-      bool const result = __atomic_compare_exchange_n(
-         storage_ptr(), &observed, desired, 1, success_order, failure_order);
-      operand = T(observed);
-      return result;
-   }
-
-   auto
+   constexpr auto
    compare_exchange_weak(T& operand, T success_value,
                          memory_order order = memory_order::seq_cst) -> bool {
       return compare_exchange_weak(operand, success_value, order,
                                    detail::cmpexch_failure_order(order));
    }
 
-   auto
-   compare_exchange_weak(T& operand, T success_value,
-                         memory_order order = memory_order::seq_cst) volatile
-      -> bool {
-      return compare_exchange_weak(operand, success_value, order,
-                                   detail::cmpexch_failure_order(order));
-   }
-
-   auto
+   constexpr auto
    compare_exchange_strong(T& operand, T success_value,
                            memory_order success_order,
                            memory_order failure_order) -> bool {
+      if consteval {
+         if (m_value == operand) {
+            m_value = success_value;
+            return true;
+         }
+         operand = m_value;
+         return false;
+      }
+
       memory_order test_value1 = success_order & detail::mask;
       memory_order test_value2 = failure_order & detail::mask;
 
@@ -396,131 +584,205 @@ class atomic {
       return result;
    }
 
-   auto
-   compare_exchange_strong(T& operand, T success_value,
-                           memory_order success_order,
-                           memory_order failure_order) volatile -> bool {
-      memory_order test_value1 = success_order & detail::mask;
-      memory_order test_value2 = failure_order & detail::mask;
-
-      assert(test_value2 != memory_order::release);
-      assert(test_value2 != memory_order::acq_rel);
-      assert(test_value2 <= test_value1);
-
-      raw_value observed = make_raw_arithmetic(operand);
-      raw_value const desired = make_raw_arithmetic(success_value);
-      bool const result = __atomic_compare_exchange_n(
-         storage_ptr(), &observed, desired, 0, success_order, failure_order);
-      operand = T(observed);
-      return result;
-   }
-
-   auto
+   constexpr auto
    compare_exchange_strong(T& operand, T success_value,
                            memory_order order = memory_order::seq_cst) -> bool {
       return compare_exchange_strong(operand, success_value, order,
                                      detail::cmpexch_failure_order(order));
    }
 
-   auto
-   compare_exchange_strong(T& operand, T success_value,
-                           memory_order order = memory_order::seq_cst) volatile
-      -> bool {
-      return compare_exchange_strong(operand, success_value, order,
-                                     detail::cmpexch_failure_order(order));
-   }
-
-   auto
+   constexpr auto
    fetch_add(auto operand, memory_order order = memory_order::seq_cst) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_fetch_add(storage_ptr(), make_raw_arithmetic(operand),
-                                  order));
+      if consteval {
+         T observed = m_value;
+         m_value = T(observed + operand);
+         return observed;
+      }
+
+      if constexpr (detail::atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return sat().fetch_add(operand, order);
+      } else if constexpr (is_pointer<T> || is_floating_point<T>) {
+         return fetch_update(
+            [operand](T observed) {
+               return observed + operand;
+            },
+            order);
+      } else {
+         return T(__atomic_fetch_add(storage_ptr(),
+                                     make_raw_arithmetic(operand), order));
+      }
    }
 
-   auto
-   fetch_add(auto operand, memory_order order = memory_order::seq_cst) volatile
-      -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_fetch_add(storage_ptr(), make_raw_arithmetic(operand),
-                                  order));
-   }
-
-   auto
+   constexpr auto
    fetch_sub(auto operand, memory_order order = memory_order::seq_cst) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_fetch_sub(storage_ptr(), make_raw_arithmetic(operand),
-                                  order));
+      if consteval {
+         T observed = m_value;
+         m_value = T(observed - operand);
+         return observed;
+      }
+
+      if constexpr (detail::atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return sat().fetch_sub(operand, order);
+      } else if constexpr (is_pointer<T> || is_floating_point<T>) {
+         return fetch_update(
+            [operand](T observed) {
+               return observed - operand;
+            },
+            order);
+      } else {
+         return T(__atomic_fetch_sub(storage_ptr(),
+                                     make_raw_arithmetic(operand), order));
+      }
    }
 
-   auto
-   fetch_sub(auto operand, memory_order order = memory_order::seq_cst) volatile
-      -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_fetch_sub(storage_ptr(), make_raw_arithmetic(operand),
-                                  order));
-   }
-
-   auto
+   constexpr auto
    fetch_and(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(!is_same<T, bool>)
+      requires(is_integral<T> && !is_same<T, bool>)
    {
+      if consteval {
+         T observed = m_value;
+         m_value =
+            T(make_raw_arithmetic(observed) & make_raw_arithmetic(operand));
+         return observed;
+      }
+
       return T(__atomic_fetch_and(storage_ptr(), make_raw_arithmetic(operand),
                                   order));
    }
 
-   auto
-   fetch_and(auto operand, memory_order order = memory_order::seq_cst) volatile
-      -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(__atomic_fetch_and(storage_ptr(), make_raw_arithmetic(operand),
-                                  order));
-   }
-
-   auto
+   constexpr auto
    fetch_or(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(!is_same<T, bool>)
+      requires(is_integral<T> && !is_same<T, bool>)
    {
+      if consteval {
+         T observed = m_value;
+         m_value =
+            T(make_raw_arithmetic(observed) | make_raw_arithmetic(operand));
+         return observed;
+      }
+
       return T(
          __atomic_fetch_or(storage_ptr(), make_raw_arithmetic(operand), order));
    }
 
-   auto
-   fetch_or(auto operand, memory_order order = memory_order::seq_cst) volatile
-      -> T
-      requires(!is_same<T, bool>)
-   {
-      return T(
-         __atomic_fetch_or(storage_ptr(), make_raw_arithmetic(operand), order));
-   }
-
-   auto
+   constexpr auto
    fetch_xor(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(!is_same<T, bool>)
+      requires(is_integral<T> && !is_same<T, bool>)
    {
+      if consteval {
+         T observed = m_value;
+         m_value =
+            T(make_raw_arithmetic(observed) ^ make_raw_arithmetic(operand));
+         return observed;
+      }
+
       return T(__atomic_fetch_xor(storage_ptr(), make_raw_arithmetic(operand),
                                   order));
    }
 
-   auto
-   fetch_xor(auto operand, memory_order order = memory_order::seq_cst) volatile
-      -> T
+   constexpr auto
+   fetch_max(T operand, memory_order order = memory_order::seq_cst) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_fetch_xor(storage_ptr(), make_raw_arithmetic(operand),
-                                  order));
+      return fetch_update(
+         [operand](T observed) {
+            return observed < operand ? operand : observed;
+         },
+         order);
    }
 
-   // TODO: Add C++20 atomic wait operations.
+   constexpr auto
+   fetch_min(T operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_same<T, bool>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return operand < observed ? operand : observed;
+         },
+         order);
+   }
+
+   constexpr void
+   wait(T old, memory_order order = memory_order::seq_cst) const {
+      detail::assert_load_order(order);
+      while (load(order) == old) {
+         detail::atomic_pause_once();
+      }
+   }
+
+   constexpr void
+   notify_one() {
+   }
+
+   constexpr void
+   notify_all() {
+   }
 
  private:
+   template <typename AtomicQual, overflow_policies overflow_policy>
+   friend class detail::atomic_overflow_reference;
+
+   constexpr auto
+   add_fetch(auto operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_same<T, bool>)
+   {
+      if constexpr (detail::atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return sat().add_fetch(operand, order);
+      } else if constexpr (is_pointer<T> || is_floating_point<T>) {
+         T observed = fetch_add(operand, order);
+         return observed + operand;
+      } else {
+         return T(__atomic_add_fetch(storage_ptr(),
+                                     make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   sub_fetch(auto operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_same<T, bool>)
+   {
+      if constexpr (detail::atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return sat().sub_fetch(operand, order);
+      } else if constexpr (is_pointer<T> || is_floating_point<T>) {
+         T observed = fetch_sub(operand, order);
+         return observed - operand;
+      } else {
+         return T(__atomic_sub_fetch(storage_ptr(),
+                                     make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   fetch_update(auto&& operation, memory_order order) -> T {
+      if consteval {
+         T observed = m_value;
+         m_value = operation(observed);
+         return observed;
+      }
+
+      memory_order failure_order = detail::cmpexch_failure_order(order);
+      T observed = load(failure_order);
+      for (;;) {
+         T desired = operation(observed);
+         T expected = observed;
+         if (compare_exchange_weak(expected, desired, order, failure_order)) {
+            return observed;
+         }
+         observed = expected;
+      }
+   }
+
    [[nodiscard]]
    constexpr auto
-   storage_ptr(this auto& self) noexcept {
+   storage_ptr(this auto& self) {
       if constexpr (requires { self.m_value.raw; }) {
          return &self.m_value.raw;
       } else {
@@ -528,13 +790,778 @@ class atomic {
       }
    }
 
-   static constexpr unsigned long
-      alignment = sizeof(T) > alignof(T) ? sizeof(T) : alignof(T);
-
-   alignas(alignment) T m_value{};
+   alignas(required_alignment) T m_value{};
 };
 
-// TODO: Add `atomic_flags`.
-// TODO: Add `atomic_ref`.
+template <typename T>
+   requires(!is_const<T> && !is_volatile<T>)
+class atomic<T&> {
+ public:
+   using value_type = T;
+   using raw_value = raw_arithmetic_type<T>;
+   using difference_type =
+      conditional<is_pointer<T>, __PTRDIFF_TYPE__, value_type>;
+
+   static constexpr unsigned long
+      required_alignment = sizeof(raw_value) > alignof(T) ? sizeof(raw_value)
+                                                          : alignof(T);
+   static constexpr bool is_always_lock_free =
+      __atomic_always_lock_free(sizeof(raw_value), nullptr);
+
+   atomic() = delete;
+   ~atomic() = default;
+
+   constexpr atomic(T& value [[clang::lifetimebound]]) : m_p_value(&value) {
+   }
+
+   atomic(atomic const&) = default;
+   auto
+   operator=(atomic const&)
+      -> atomic& = delete ("`cat::atomic` references cannot be rebound!");
+
+   constexpr
+   operator T() const {
+      return load();
+   }
+
+   constexpr auto
+   operator=(T operand) -> T {
+      store(operand);
+      return operand;
+   }
+
+   constexpr auto
+   undef() & -> detail::atomic_overflow_reference<atomic,
+                                                  overflow_policies::undefined>
+      requires(!is_same<T, bool>)
+   {
+      return detail::atomic_overflow_reference<atomic,
+                                               overflow_policies::undefined>(
+         *this);
+   }
+
+   constexpr auto
+   wrap() & -> detail::atomic_overflow_reference<atomic,
+                                                 overflow_policies::wrap>
+      requires(!is_same<T, bool>)
+   {
+      return detail::atomic_overflow_reference<atomic, overflow_policies::wrap>(
+         *this);
+   }
+
+   constexpr auto
+   sat() & -> detail::atomic_overflow_reference<atomic,
+                                                overflow_policies::saturate>
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      return detail::atomic_overflow_reference<atomic,
+                                               overflow_policies::saturate>(
+         *this);
+   }
+
+   constexpr auto
+   operator++(int) -> T
+      requires(!is_same<T, bool>)
+   {
+      return fetch_add(1);
+   }
+
+   constexpr auto
+   operator++() -> T
+      requires(!is_same<T, bool>)
+   {
+      return add_fetch(1);
+   }
+
+   constexpr auto
+   operator--(int) -> T
+      requires(!is_same<T, bool>)
+   {
+      return fetch_sub(1);
+   }
+
+   constexpr auto
+   operator--() -> T
+      requires(!is_same<T, bool>)
+   {
+      return sub_fetch(1);
+   }
+
+   constexpr auto
+   operator+=(auto operand) -> T
+      requires(!is_same<T, bool>)
+   {
+      return add_fetch(operand);
+   }
+
+   constexpr auto
+   operator-=(auto operand) -> T
+      requires(!is_same<T, bool>)
+   {
+      return sub_fetch(operand);
+   }
+
+   constexpr auto
+   operator&=(auto operand) -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      return T(__atomic_and_fetch(storage_ptr(), make_raw_arithmetic(operand),
+                                  int(memory_order::seq_cst)));
+   }
+
+   constexpr auto
+   operator|=(auto operand) -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      return T(__atomic_or_fetch(storage_ptr(), make_raw_arithmetic(operand),
+                                 int(memory_order::seq_cst)));
+   }
+
+   constexpr auto
+   operator^=(auto operand) -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      return T(__atomic_xor_fetch(storage_ptr(), make_raw_arithmetic(operand),
+                                  int(memory_order::seq_cst)));
+   }
+
+   [[nodiscard]]
+   auto
+   is_lock_free() const -> bool {
+      return __atomic_is_lock_free(sizeof(raw_value), storage_ptr());
+   }
+
+   constexpr void
+   store(auto storing, memory_order operand = memory_order::seq_cst) {
+      if consteval {
+         *m_p_value = T(storing);
+         return;
+      }
+
+      memory_order test_value = operand & detail::mask;
+
+      assert(test_value != memory_order::acquire);
+      assert(test_value != memory_order::acq_rel);
+
+      __atomic_store_n(storage_ptr(), make_raw_arithmetic(storing), operand);
+   }
+
+   constexpr auto
+   load(memory_order order = memory_order::seq_cst) const -> T {
+      if consteval {
+         return *m_p_value;
+      }
+
+      memory_order test_value = order & detail::mask;
+
+      assert(test_value != memory_order::release);
+      assert(test_value != memory_order::acq_rel);
+
+      return T(__atomic_load_n(storage_ptr(), order));
+   }
+
+   constexpr auto
+   exchange(T operand, memory_order order = memory_order::seq_cst) -> T {
+      if consteval {
+         T observed = *m_p_value;
+         *m_p_value = operand;
+         return observed;
+      }
+
+      return T(__atomic_exchange_n(storage_ptr(), make_raw_arithmetic(operand),
+                                   order));
+   }
+
+   constexpr auto
+   compare_exchange_weak(T& operand, T success_value,
+                         memory_order success_order, memory_order failure_order)
+      -> bool {
+      if consteval {
+         if (*m_p_value == operand) {
+            *m_p_value = success_value;
+            return true;
+         }
+         operand = *m_p_value;
+         return false;
+      }
+
+      memory_order test_value1 = success_order & detail::mask;
+      memory_order test_value2 = failure_order & detail::mask;
+
+      assert(test_value2 != memory_order::release);
+      assert(test_value2 != memory_order::acq_rel);
+      assert(test_value2 <= test_value1);
+
+      raw_value observed = make_raw_arithmetic(operand);
+      raw_value const desired = make_raw_arithmetic(success_value);
+      bool const result = __atomic_compare_exchange_n(
+         storage_ptr(), &observed, desired, 1, success_order, failure_order);
+      operand = T(observed);
+      return result;
+   }
+
+   constexpr auto
+   compare_exchange_weak(T& operand, T success_value,
+                         memory_order order = memory_order::seq_cst) -> bool {
+      return compare_exchange_weak(operand, success_value, order,
+                                   detail::cmpexch_failure_order(order));
+   }
+
+   constexpr auto
+   compare_exchange_strong(T& operand, T success_value,
+                           memory_order success_order,
+                           memory_order failure_order) -> bool {
+      if consteval {
+         if (*m_p_value == operand) {
+            *m_p_value = success_value;
+            return true;
+         }
+         operand = *m_p_value;
+         return false;
+      }
+
+      memory_order test_value1 = success_order & detail::mask;
+      memory_order test_value2 = failure_order & detail::mask;
+
+      assert(test_value2 != memory_order::release);
+      assert(test_value2 != memory_order::acq_rel);
+      assert(test_value2 <= test_value1);
+
+      raw_value observed = make_raw_arithmetic(operand);
+      raw_value const desired = make_raw_arithmetic(success_value);
+      bool const result = __atomic_compare_exchange_n(
+         storage_ptr(), &observed, desired, 0, success_order, failure_order);
+      operand = T(observed);
+      return result;
+   }
+
+   constexpr auto
+   compare_exchange_strong(T& operand, T success_value,
+                           memory_order order = memory_order::seq_cst) -> bool {
+      return compare_exchange_strong(operand, success_value, order,
+                                     detail::cmpexch_failure_order(order));
+   }
+
+   constexpr auto
+   fetch_add(auto operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_same<T, bool>)
+   {
+      if consteval {
+         T observed = *m_p_value;
+         *m_p_value = T(observed + operand);
+         return observed;
+      }
+
+      if constexpr (detail::atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return sat().fetch_add(operand, order);
+      } else if constexpr (is_pointer<T> || is_floating_point<T>) {
+         return fetch_update(
+            [operand](T observed) {
+               return observed + operand;
+            },
+            order);
+      } else {
+         return T(__atomic_fetch_add(storage_ptr(),
+                                     make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   fetch_sub(auto operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_same<T, bool>)
+   {
+      if consteval {
+         T observed = *m_p_value;
+         *m_p_value = T(observed - operand);
+         return observed;
+      }
+
+      if constexpr (detail::atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return sat().fetch_sub(operand, order);
+      } else if constexpr (is_pointer<T> || is_floating_point<T>) {
+         return fetch_update(
+            [operand](T observed) {
+               return observed - operand;
+            },
+            order);
+      } else {
+         return T(__atomic_fetch_sub(storage_ptr(),
+                                     make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   fetch_and(auto operand, memory_order order = memory_order::seq_cst) -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      if consteval {
+         T observed = *m_p_value;
+         *m_p_value =
+            T(make_raw_arithmetic(observed) & make_raw_arithmetic(operand));
+         return observed;
+      }
+
+      return T(__atomic_fetch_and(storage_ptr(), make_raw_arithmetic(operand),
+                                  order));
+   }
+
+   constexpr auto
+   fetch_or(auto operand, memory_order order = memory_order::seq_cst) -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      if consteval {
+         T observed = *m_p_value;
+         *m_p_value =
+            T(make_raw_arithmetic(observed) | make_raw_arithmetic(operand));
+         return observed;
+      }
+
+      return T(
+         __atomic_fetch_or(storage_ptr(), make_raw_arithmetic(operand), order));
+   }
+
+   constexpr auto
+   fetch_xor(auto operand, memory_order order = memory_order::seq_cst) -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      if consteval {
+         T observed = *m_p_value;
+         *m_p_value =
+            T(make_raw_arithmetic(observed) ^ make_raw_arithmetic(operand));
+         return observed;
+      }
+
+      return T(__atomic_fetch_xor(storage_ptr(), make_raw_arithmetic(operand),
+                                  order));
+   }
+
+   constexpr auto
+   fetch_max(T operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_same<T, bool>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return observed < operand ? operand : observed;
+         },
+         order);
+   }
+
+   constexpr auto
+   fetch_min(T operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_same<T, bool>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return operand < observed ? operand : observed;
+         },
+         order);
+   }
+
+   constexpr void
+   wait(T old, memory_order order = memory_order::seq_cst) const {
+      detail::assert_load_order(order);
+      while (load(order) == old) {
+         detail::atomic_pause_once();
+      }
+   }
+
+   constexpr void
+   notify_one() const {
+   }
+
+   constexpr void
+   notify_all() const {
+   }
+
+ private:
+   template <typename AtomicQual, overflow_policies overflow_policy>
+   friend class detail::atomic_overflow_reference;
+
+   constexpr auto
+   add_fetch(auto operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_same<T, bool>)
+   {
+      if constexpr (detail::atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return sat().add_fetch(operand, order);
+      } else if constexpr (is_pointer<T> || is_floating_point<T>) {
+         T observed = fetch_add(operand, order);
+         return observed + operand;
+      } else {
+         return T(__atomic_add_fetch(storage_ptr(),
+                                     make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   sub_fetch(auto operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_same<T, bool>)
+   {
+      if constexpr (detail::atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return sat().sub_fetch(operand, order);
+      } else if constexpr (is_pointer<T> || is_floating_point<T>) {
+         T observed = fetch_sub(operand, order);
+         return observed - operand;
+      } else {
+         return T(__atomic_sub_fetch(storage_ptr(),
+                                     make_raw_arithmetic(operand), order));
+      }
+   }
+
+   constexpr auto
+   fetch_update(auto&& operation, memory_order order) -> T {
+      if consteval {
+         T observed = *m_p_value;
+         *m_p_value = operation(observed);
+         return observed;
+      }
+
+      memory_order failure_order = detail::cmpexch_failure_order(order);
+      T observed = load(failure_order);
+      for (;;) {
+         T desired = operation(observed);
+         T expected = observed;
+         if (compare_exchange_weak(expected, desired, order, failure_order)) {
+            return observed;
+         }
+         observed = expected;
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   storage_ptr(this auto& self) {
+      if constexpr (requires { self.m_p_value->raw; }) {
+         return &self.m_p_value->raw;
+      } else {
+         return self.m_p_value;
+      }
+   }
+
+   T* m_p_value;
+};
+
+using atomic_signed_lock_free = atomic<iword>;
+using atomic_unsigned_lock_free = atomic<uword>;
+
+namespace detail {
+template <typename T, memory_order memory_order_value>
+class atomic_ref_bound {
+ public:
+   using value_type = T;
+   using raw_value = raw_arithmetic_type<T>;
+   using difference_type = atomic<T&>::difference_type;
+
+   static constexpr memory_order memory_ordering = memory_order_value;
+   static constexpr unsigned long
+      required_alignment = sizeof(raw_value) > alignof(T) ? sizeof(raw_value)
+                                                          : alignof(T);
+   static constexpr bool is_always_lock_free =
+      __atomic_always_lock_free(sizeof(raw_value), nullptr);
+
+   explicit constexpr atomic_ref_bound(T& value [[clang::lifetimebound]])
+       : m_reference(value) {
+   }
+
+   atomic_ref_bound(atomic_ref_bound const&) = default;
+   auto
+   operator=(atomic_ref_bound const&) -> atomic_ref_bound& = delete;
+
+   [[nodiscard]]
+   auto
+   is_lock_free() const -> bool {
+      return m_reference.is_lock_free();
+   }
+
+   constexpr void
+   store(T desired) const {
+      m_reference.store(desired, store_ordering);
+   }
+
+   constexpr auto
+   operator=(T desired) const -> T {
+      store(desired);
+      return desired;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   load() const -> T {
+      return m_reference.load(load_ordering);
+   }
+
+   constexpr
+   operator T() const {
+      return load();
+   }
+
+   constexpr auto
+   exchange(T desired) const -> T {
+      return m_reference.exchange(desired, memory_ordering);
+   }
+
+   constexpr auto
+   compare_exchange_weak(T& expected, T desired) const -> bool {
+      return m_reference.compare_exchange_weak(expected, desired,
+                                               memory_ordering, load_ordering);
+   }
+
+   constexpr auto
+   compare_exchange_strong(T& expected, T desired) const -> bool {
+      return m_reference.compare_exchange_strong(
+         expected, desired, memory_ordering, load_ordering);
+   }
+
+   constexpr auto
+   fetch_add(auto operand) const -> T
+      requires(!is_same<T, bool>)
+   {
+      if constexpr (atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return m_reference.sat().fetch_add(operand, memory_ordering);
+      } else {
+         return m_reference.wrap().fetch_add(operand, memory_ordering);
+      }
+   }
+
+   constexpr auto
+   fetch_sub(auto operand) const -> T
+      requires(!is_same<T, bool>)
+   {
+      if constexpr (atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return m_reference.sat().fetch_sub(operand, memory_ordering);
+      } else {
+         return m_reference.wrap().fetch_sub(operand, memory_ordering);
+      }
+   }
+
+   constexpr auto
+   fetch_and(auto operand) const -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      return m_reference.fetch_and(operand, memory_ordering);
+   }
+
+   constexpr auto
+   fetch_or(auto operand) const -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      return m_reference.fetch_or(operand, memory_ordering);
+   }
+
+   constexpr auto
+   fetch_xor(auto operand) const -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      return m_reference.fetch_xor(operand, memory_ordering);
+   }
+
+   constexpr auto
+   fetch_max(T operand) const -> T
+      requires(!is_same<T, bool>)
+   {
+      return fetch_update([operand](T observed) {
+         return observed < operand ? operand : observed;
+      });
+   }
+
+   constexpr auto
+   fetch_min(T operand) const -> T
+      requires(!is_same<T, bool>)
+   {
+      return fetch_update([operand](T observed) {
+         return operand < observed ? operand : observed;
+      });
+   }
+
+   constexpr auto
+   operator++(int) const -> T
+      requires(!is_same<T, bool>)
+   {
+      return fetch_add(1);
+   }
+
+   constexpr auto
+   operator++() const -> T
+      requires(!is_same<T, bool>)
+   {
+      return add_fetch(1);
+   }
+
+   constexpr auto
+   operator--(int) const -> T
+      requires(!is_same<T, bool>)
+   {
+      return fetch_sub(1);
+   }
+
+   constexpr auto
+   operator--() const -> T
+      requires(!is_same<T, bool>)
+   {
+      return sub_fetch(1);
+   }
+
+   constexpr auto
+   operator+=(auto operand) const -> T
+      requires(!is_same<T, bool>)
+   {
+      return add_fetch(operand);
+   }
+
+   constexpr auto
+   operator-=(auto operand) const -> T
+      requires(!is_same<T, bool>)
+   {
+      return sub_fetch(operand);
+   }
+
+   constexpr auto
+   operator&=(auto operand) const -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      raw_value const observed = make_raw_arithmetic(fetch_and(operand));
+      raw_value const raw_operand =
+         static_cast<raw_value>(make_raw_arithmetic(operand));
+      return T(observed & raw_operand);
+   }
+
+   constexpr auto
+   operator|=(auto operand) const -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      raw_value const observed = make_raw_arithmetic(fetch_or(operand));
+      raw_value const raw_operand =
+         static_cast<raw_value>(make_raw_arithmetic(operand));
+      return T(observed | raw_operand);
+   }
+
+   constexpr auto
+   operator^=(auto operand) const -> T
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      raw_value const observed = make_raw_arithmetic(fetch_xor(operand));
+      raw_value const raw_operand =
+         static_cast<raw_value>(make_raw_arithmetic(operand));
+      return T(observed ^ raw_operand);
+   }
+
+   constexpr void
+   wait(T old) const {
+      m_reference.wait(old, load_ordering);
+   }
+
+   constexpr void
+   notify_one() const {
+      m_reference.notify_one();
+   }
+
+   constexpr void
+   notify_all() const {
+      m_reference.notify_all();
+   }
+
+ private:
+   static constexpr memory_order store_ordering =
+      memory_order_value == memory_order::acq_rel ? memory_order::release
+                                                  : memory_order_value;
+   static constexpr memory_order load_ordering =
+      memory_order_value == memory_order::acq_rel ? memory_order::acquire
+                                                  : memory_order_value;
+
+   constexpr auto
+   add_fetch(auto operand) const -> T {
+      if constexpr (atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return m_reference.sat().add_fetch(operand, memory_ordering);
+      } else {
+         return m_reference.wrap().add_fetch(operand, memory_ordering);
+      }
+   }
+
+   constexpr auto
+   sub_fetch(auto operand) const -> T {
+      if constexpr (atomic_default_overflow_policy<T>()
+                    == overflow_policies::saturate) {
+         return m_reference.sat().sub_fetch(operand, memory_ordering);
+      } else {
+         return m_reference.wrap().sub_fetch(operand, memory_ordering);
+      }
+   }
+
+   constexpr auto
+   fetch_update(auto&& operation) const -> T {
+      T observed = load();
+      for (;;) {
+         T desired = operation(observed);
+         T expected = observed;
+         if (compare_exchange_weak(expected, desired)) {
+            return observed;
+         }
+         observed = expected;
+      }
+   }
+
+   mutable atomic<T&> m_reference;
+};
+}  // namespace detail
+
+template <typename T>
+using atomic_ref_relaxed = detail::atomic_ref_bound<T, memory_order::relaxed>;
+
+template <typename T>
+using atomic_ref_acq_rel = detail::atomic_ref_bound<T, memory_order::acq_rel>;
+
+template <typename T>
+using atomic_ref_seq_cst = detail::atomic_ref_bound<T, memory_order::seq_cst>;
+
+template <typename ElementType, typename ReferenceType>
+class basic_atomic_accessor {
+ public:
+   using offset_policy = basic_atomic_accessor;
+   using element_type = ElementType;
+   using reference = ReferenceType;
+   using data_handle_type = ElementType*;
+
+   constexpr basic_atomic_accessor() = default;
+
+   template <typename OtherElementType>
+      requires is_convertible<OtherElementType (*)[], element_type (*)[]>
+   constexpr basic_atomic_accessor(
+      basic_atomic_accessor<OtherElementType, ReferenceType> other) {
+      static_cast<void>(other);
+   }
+
+   constexpr auto
+   access(data_handle_type p_data, __SIZE_TYPE__ index) const -> reference {
+      return reference(p_data[index]);
+   }
+
+   constexpr auto
+   offset(data_handle_type p_data, __SIZE_TYPE__ index) const
+      -> data_handle_type {
+      return p_data + index;
+   }
+};
+
+template <typename ElementType>
+using atomic_accessor =
+   basic_atomic_accessor<ElementType, atomic<ElementType&>>;
+
+template <typename ElementType>
+using atomic_accessor_relaxed =
+   basic_atomic_accessor<ElementType, atomic_ref_relaxed<ElementType>>;
+
+template <typename ElementType>
+using atomic_accessor_acq_rel =
+   basic_atomic_accessor<ElementType, atomic_ref_acq_rel<ElementType>>;
+
+template <typename ElementType>
+using atomic_accessor_seq_cst =
+   basic_atomic_accessor<ElementType, atomic_ref_seq_cst<ElementType>>;
 
 }  // namespace cat
