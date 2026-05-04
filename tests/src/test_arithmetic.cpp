@@ -1570,9 +1570,9 @@ $test(arithmetic_implicit_idx_constexpr_const) {
    cat::verify(idx_from_ulong_constexpr == 0_idx);
    cat::verify(idx_from_ulong_const == 0_idx);
 
-   // `iword`/`uword` whose value fits the `index` storage may also implicitly
-   // construct an `idx`. Runtime `iword`/`uword` operands stay `explicit`
-   // (validated by the failing-by-default `requires` checks below).
+   // `iword`/`uword` whose value fits the `basic_idx` storage may also
+   // implicitly construct an `idx`. Runtime `iword`/`uword` operands stay
+   // `explicit` (validated by the failing-by-default `requires` checks below).
    constexpr iword iw_fit = 0_sz;
    iword const iw_const_fit = 0_sz;
    constexpr uword uw_fit = 0_uz;
@@ -1650,7 +1650,8 @@ $test(arithmetic_implicit_idx_constexpr_const) {
 }
 
 // `idx` provides +, -, *, /, % (no bitwise). -= and -- are deleted because
-// subtraction can underflow an `index`. Subtraction yields the signed distance
+// subtraction can underflow an `basic_idx`. Subtraction yields the signed
+// distance
 // (`iword`) instead. /= only works with an unsigned right operand (signed
 // division returns `iword`). Cross-signed-ness compile-time constants flow
 // through the supported operators via the implicit `enable_if` constructor.
@@ -1694,12 +1695,12 @@ $test(arithmetic_idx_all_operators_constexpr_const) {
    ix /= ulong_const_two;
    cat::verify(ix == 6_idx);
 
-   // Binary + return types follow the `index::add` overloads:
-   //   * unsigned operand: `promoted_type<index, U>`. `idx` (order 7) wins
+   // Binary + return types follow the `basic_idx::add` overloads:
+   //   * unsigned operand: `promoted_type<basic_idx, U>`. `idx` (order 7) wins
    //     against `unsigned int` (order 4) but loses to `unsigned long`
    //     (order 8), which promotes to `uword`.
    //   * signed operand: always `iword` (signed distance) since the result may
-   //     underflow `index`.
+   //     underflow `basic_idx`.
    ix = 12_idx;
    auto sum_int_constexpr = ix + signed_two;
    auto sum_int_const = ix + signed_const_two;
@@ -1727,7 +1728,7 @@ $test(arithmetic_idx_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(ix + ulong_const_two), uword>);
 
    // Binary - yields `iword` (the signed distance), regardless of operand
-   // signed-ness, because `index` cannot represent a negative result.
+   // signed-ness, because `basic_idx` cannot represent a negative result.
    auto diff_int_constexpr = ix - signed_two;
    auto diff_uint_const = ix - unsigned_const_two;
    auto diff_ulong_const = ix - ulong_const_two;
@@ -1738,10 +1739,11 @@ $test(arithmetic_idx_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(ix - unsigned_const_two), iword>);
    static_assert(cat::is_same<decltype(ix - ulong_const_two), iword>);
 
-   // Binary * and % always return `idx` (the `index::multiply`/`modulo_by`
-   // overloads cast through wide integers and rebuild an index).
+   // Binary * and % always return `idx` (the `basic_idx::multiply` /
+   // `modulo_by` overloads cast through wide integers and rebuild an `idx`).
    // Binary / with an unsigned operand also stays in `idx`, while a signed
-   // operand yields `iword` since a negative divisor would underflow `index`.
+   // operand yields `iword` since a negative divisor would underflow
+   // `basic_idx`.
    auto product_signed_const = ix * signed_const_two;
    auto quotient_ulong_const = ix / ulong_const_two;
    auto remainder_signed_const = ix % signed_const_two;
@@ -2441,7 +2443,7 @@ $test(arithmetic_overflow_reference_public_type) {
    i4_wrap_ref += 1;
    cat::verify(i4_storage == cat::int4_min);
 
-   // `index` and `arithmetic_ptr` work the same way.
+   // `basic_idx` and `arithmetic_ptr` work the same way.
    idx ix_storage = 5_idx;
    cat::overflow_reference<idx, cat::overflow_policies::wrap> ix_wrap_ref(
       ix_storage);
@@ -2597,7 +2599,7 @@ $test(arithmetic_cross_sign_comparisons) {
    cat::verify(!(iw < uw));
    cat::verify(!(iw > uw));
 
-   // `index` against negative signed values: previously the unsigned cast
+   // `basic_idx` against negative signed values: previously the unsigned cast
    // through `common_type` made these compare as `unsigned long` and silently
    // returned the wrong answer.
    idx idx_zero = 0u;
@@ -2607,8 +2609,8 @@ $test(arithmetic_cross_sign_comparisons) {
    cat::verify(idx_one > -1);
    cat::verify(idx_one > -100);
 
-   // `index` runtime comparisons against raw integer types (the `set_memory`
-   // pattern again, this time with an `index` wrapper).
+   // `basic_idx` runtime comparisons against raw integer types (the
+   // `set_memory` pattern again, this time with an `basic_idx` wrapper).
    idx runtime_idx = 16u;
    cat::verify(runtime_idx >= sizeof(unsigned long));
    cat::verify(runtime_idx > 8u);
@@ -3746,13 +3748,13 @@ $test(arithmetic_wrap_shr_signed_fixed_width) {
 }
 
 $test(arithmetic_sat_shl_index) {
-   // Saturating left shift of a `cat::index` clamps at `index::max()` (
+   // Saturating left shift of a `cat::basic_idx` clamps at `basic_idx::max()` (
    // `2^63 - 1`). The high bit (bit 63) must always stay zero, so any shift
-   // that would set it saturates instead. `index` is effectively a 63-bit
+   // that would set it saturates instead. `basic_idx` is effectively a 63-bit
    // unsigned type:
    // bit 62 is the highest usable bit.
-   using wrap_idx = cat::index<cat::overflow_policies::wrap>;
-   using sat_idx = cat::index<cat::overflow_policies::saturate>;
+   using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
+   using sat_idx = cat::basic_idx<cat::overflow_policies::saturate>;
    constexpr auto high_bit = 1ull << 63u;
    constexpr auto bit_62 = 1ull << 62u;
 
@@ -3775,7 +3777,7 @@ $test(arithmetic_sat_shl_index) {
                  == sat_idx{cat::idx_max.raw - 1u});
 
    // Shift counts >= `bit_width` fully saturate (any non-zero value lands at
-   // `index::max()`).
+   // `basic_idx::max()`).
    static_assert(cat::sat_shl(sat_idx{1}, 64u) == cat::idx_max);
    static_assert(cat::sat_shl(sat_idx{1}, 100u) == cat::idx_max);
    static_assert(cat::sat_shl(sat_idx{cat::idx_max}, 1u) == cat::idx_max);
@@ -3820,10 +3822,10 @@ $test(arithmetic_sat_shl_index) {
 }
 
 $test(arithmetic_sat_shr_index) {
-   // Saturating right shift of a `cat::index`. The value is always non-
+   // Saturating right shift of a `cat::basic_idx`. The value is always non-
    // negative, so the signed arithmetic right shift cannot flip into the sign
    // and the result stays in range.
-   using sat_idx = cat::index<cat::overflow_policies::saturate>;
+   using sat_idx = cat::basic_idx<cat::overflow_policies::saturate>;
 
    // In-range shifts behave like the C++ right shift.
    static_assert(cat::sat_shr(sat_idx{4}, 1u) == sat_idx{2});
@@ -3848,11 +3850,11 @@ $test(arithmetic_sat_shr_index) {
 }
 
 $test(arithmetic_wrap_shl_index) {
-   // Wrap left shift of a `cat::index` rotates over the lower `bit_width - 1`
-   // bits (the usable index range). The high bit always stays zero, preserving
-   // the `index` invariant. The shift count is taken modulo the ring width, so
-   // any non-negative count is valid.
-   using wrap_idx = cat::index<cat::overflow_policies::wrap>;
+   // Wrap left shift of a `cat::basic_idx` rotates over the lower `bit_width -
+   // 1` bits (the usable `basic_idx` range). The high bit always stays zero,
+   // preserving the `basic_idx` invariant. The shift count is taken modulo the
+   // ring width, so any non-negative count is valid.
+   using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
    constexpr auto ring_bits = __SIZE_WIDTH__ - 1u;
 
    // Basic rotation within the ring.
@@ -3887,7 +3889,7 @@ $test(arithmetic_wrap_shl_index) {
    static_assert(cat::wrap_shl(wrap_idx{cat::idx_max}, 1'000u)
                  == wrap_idx{cat::idx_max});
 
-   // The result always has bit 63 cleared (index invariant).
+   // The result always has bit 63 cleared (the `basic_idx` invariant).
    static_assert((cat::wrap_shl(wrap_idx{cat::idx_max}, 1u).raw & (1ull << 63u))
                  == 0u);
    static_assert((cat::wrap_shl(wrap_idx{1ull << 62u}, 3u).raw & (1ull << 63u))
@@ -3911,10 +3913,10 @@ $test(arithmetic_wrap_shl_index) {
 }
 
 $test(arithmetic_wrap_shr_index) {
-   // Wrap right shift of a `cat::index` mirrors `wrap_shl`: bits shifted off
-   // the bottom re-enter at the top of the 63-bit ring (bit 62 being the top of
-   // the usable range), never at bit 63.
-   using wrap_idx = cat::index<cat::overflow_policies::wrap>;
+   // Wrap right shift of a `cat::basic_idx` mirrors `wrap_shl`: bits shifted
+   // off the bottom re-enter at the top of the 63-bit ring (bit 62 being the
+   // top of the usable range), never at bit 63.
+   using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
    constexpr auto ring_bits = __SIZE_WIDTH__ - 1u;
 
    // Basic rotation within the ring.
@@ -4046,7 +4048,7 @@ $test(arithmetic_binary_ops_take_lhs_overflow_policy) {
       cat::arithmetic<__UINT64_TYPE__, cat::overflow_policies::wrap>;
    using sat_iword =
       cat::arithmetic<__INT64_TYPE__, cat::overflow_policies::saturate>;
-   using wrap_idx = cat::index<cat::overflow_policies::wrap>;
+   using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
 
    // Same-width pairs preserve LHS's policy regardless of RHS's policy.
    static_assert(
@@ -4078,13 +4080,14 @@ $test(arithmetic_binary_ops_take_lhs_overflow_policy) {
    static_assert(is_same<decltype(wrap_uword() - cat::uint4()), wrap_uword>);
    static_assert(is_same<decltype(sat_iword() + cat::int4()), sat_iword>);
 
-   // `index` keeps its kind on either side of the width comparison: the result
-   // is always an `index<P>`, where `P` is the LHS's policy.
+   // `basic_idx` keeps its kind on either side of the width comparison. The
+   // result is always a `basic_idx<P>`, where `P` is the LHS's policy.
    static_assert(is_same<decltype(wrap_idx() + cat::uint4()), wrap_idx>);
    // RHS's wrap policy is dropped because LHS (`uint4`) has undefined policy.
-   // The wider index-shape is preserved.
+   // The wider `basic_idx` shape is preserved.
    static_assert(is_same<decltype(cat::uint4() + wrap_idx()), idx>);
-   // `wrap_idx` never promotes either: stay at the index-shape of the LHS.
+   // `wrap_idx` never promotes either: stay at the `basic_idx` shape of the
+   // LHS.
    static_assert(is_same<decltype(wrap_idx() + 0ul), wrap_idx>);
 
    // Bitwise & / | keep the LHS's type (and therefore the LHS's policy). A
@@ -4201,8 +4204,8 @@ $test(arithmetic_compound_ops_match_non_compound_return_type) {
       cat::arithmetic<__UINT64_TYPE__, cat::overflow_policies::wrap>;
    using sat_uword =
       cat::arithmetic<__UINT64_TYPE__, cat::overflow_policies::saturate>;
-   using wrap_idx = cat::index<cat::overflow_policies::wrap>;
-   using sat_idx = cat::index<cat::overflow_policies::saturate>;
+   using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
+   using sat_idx = cat::basic_idx<cat::overflow_policies::saturate>;
 
    // Same-width pairs with mixed policies. +=, -=, *=, /=, %= all keep the
    // LHS's policy because that's exactly what the binary form returns.
@@ -4274,7 +4277,7 @@ $test(arithmetic_compound_ops_match_non_compound_return_type) {
    }
 
    // Shifts always return the LHS's shape regardless of the bit-count operand's
-   // type or policy. Cover unsigned, signed, and `index` LHSes.
+   // type or policy. Cover unsigned, signed, and `basic_idx` LHSes.
    {
       cat::sat_uint4 a;
       wrap_uword b;
@@ -4412,7 +4415,7 @@ $test(arithmetic_signed_and_idx_arithmetic_shift) {
 // otherwise be undefined).
 $test(arithmetic_saturating_shift) {
    using cat::is_same;
-   using sat_idx = cat::index<cat::overflow_policies::saturate>;
+   using sat_idx = cat::basic_idx<cat::overflow_policies::saturate>;
 
    // Unsigned << saturating: shifting a high bit out of the type clamps to
    // `max()` rather than dropping bits.
@@ -4477,8 +4480,8 @@ $test(arithmetic_saturating_shift) {
    // default `undefined` policy).
    {
       sat_idx i = sat_idx(1_idx);
-      // `sat_idx::max()` is the largest representable index, with the high bit
-      // still zero: `(1 << (bits - 1)) - 1`.
+      // `sat_idx::max()` is the largest representable basic_idx, with the high
+      // bit still zero: `(1 << (bits - 1)) - 1`.
       auto const idx_max = sat_idx(cat::limits<idx>::max());
       cat::verify((i << 4_u4) == sat_idx(16_idx));
       // Shifting a 1 all the way to bit `bits - 1` would set the high bit. The
@@ -5156,14 +5159,14 @@ $test(arithmetic_semantics_signed_remainder_unsigned_modulo) {
    static_assert((uint4{8} % int4{-3}) == uint4{2});
 }
 
-// `index` (idx) follows the same rules as the comparable `arithmetic`, but
+// `basic_idx` (idx) follows the same rules as the comparable `arithmetic`, but
 // `idx - idx` (and `idx - signed`) returns an `iword` (signed distance) so an
 // underflowed difference is representable. Wrap / sat `idx` never promote. The
 // compile-time non-underflow fast path that keeps `idx` is covered by
 // `arithmetic_semantics_idx_subtract_constexpr_preserves_idx`.
 $test(arithmetic_semantics_idx_subtract_returns_signed_distance) {
-   using wrap_idx = cat::index<cat::overflow_policies::wrap>;
-   using sat_idx = cat::index<cat::overflow_policies::saturate>;
+   using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
+   using sat_idx = cat::basic_idx<cat::overflow_policies::saturate>;
 
    // `idx + idx -> idx`. `idx - idx -> iword` (signed distance).
    static_assert(cat::is_same<decltype(idx{} + idx{}), idx>);
@@ -5254,10 +5257,10 @@ $test(arithmetic_semantics_idx_subtract_constexpr_underflow_widens_to_iword) {
 // bits off the end. For `arithmetic<T>` the rotation modulus is
 // `sizeof(T) * 8`. For `wrap_idx` the rotation modulus is
 // `sizeof(__SIZE_TYPE__) * 8 - 1` so the high bit stays zero (preserving the
-// `index` invariant). Any non-negative shift count is valid (taken modulo the
-// bit width).
+// `basic_idx` invariant). Any non-negative shift count is valid (taken modulo
+// the bit width).
 $test(arithmetic_semantics_wrap_shift_rotates_bits) {
-   using wrap_idx = cat::index<cat::overflow_policies::wrap>;
+   using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
 
    // Result keeps LHS shape (no promotion).
    static_assert(cat::is_same<decltype(wrap_uint1{} << 1), wrap_uint1>);
@@ -5300,7 +5303,7 @@ $test(arithmetic_semantics_wrap_shift_rotates_bits) {
    static_assert((wrap_int1{wrap_int1::min()} << 1) == wrap_int1{1});
 
    // `wrap_idx`: rotation is over the lower 63 bits. The high bit stays zero so
-   // the `index` high-bit-zero invariant is preserved. Bit 62 (the highest
+   // the `basic_idx` high-bit-zero invariant is preserved. Bit 62 (the highest
    // usable bit) rotates around to bit 0 under `<< 1`.
    constexpr __SIZE_TYPE__ idx_high_bit = static_cast<__SIZE_TYPE__>(1) << 62u;
    static_assert((wrap_idx{idx_high_bit} << 1u) == wrap_idx{1u});
@@ -5324,8 +5327,8 @@ $test(arithmetic_semantics_wrap_shift_rotates_bits) {
 // values, mathematical modulo, signed-undefined widening sub, wrap-shift
 // rotation through the optimizer pipeline).
 $test(arithmetic_semantics_runtime) {
-   using wrap_idx = cat::index<cat::overflow_policies::wrap>;
-   using sat_idx = cat::index<cat::overflow_policies::saturate>;
+   using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
+   using sat_idx = cat::basic_idx<cat::overflow_policies::saturate>;
 
    // Saturating construction clamps. Wrapping construction applies modular
    // reduction. These bypass the compile-time `enable_if` path by going through
@@ -5535,11 +5538,11 @@ $test(arithmetic_semantics_member_matches_free_function) {
       cat::verify((sat_int4{a} >> sat_int4{1}).raw == cat::sat_shr(a, 1));
    }
    {
-      // `wrap_idx`/`sat_idx` shifts go through the index-specific free
+      // `wrap_idx`/`sat_idx` shifts go through the `basic_idx`-specific free
       // overloads.
       // The equivalence must still hold.
-      using wrap_idx = cat::index<cat::overflow_policies::wrap>;
-      using sat_idx = cat::index<cat::overflow_policies::saturate>;
+      using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
+      using sat_idx = cat::basic_idx<cat::overflow_policies::saturate>;
       constexpr __SIZE_TYPE__ bit_62 = static_cast<__SIZE_TYPE__>(1) << 62u;
       static_assert((wrap_idx{bit_62} << 1u).raw
                     == cat::wrap_shl(wrap_idx{bit_62}, 1u).raw);
@@ -5624,7 +5627,7 @@ using promotion_arithmetic_types = cat::type_list<
    // Distinct overflow policies at the same width.
    wrap_int4, sat_uint4,
    // Indices (special promotion order 7).
-   idx, cat::index<cat::overflow_policies::wrap>,
+   idx, cat::basic_idx<cat::overflow_policies::wrap>,
    // Pointer integers (order 9).
    intptr<void>, uintptr<void>, float4, float8>;
 

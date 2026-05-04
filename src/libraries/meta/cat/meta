@@ -17,7 +17,7 @@ template <typename T, overflow_policies>
 class arithmetic;
 
 template <overflow_policies>
-class index;
+class basic_idx;
 
 template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
@@ -553,8 +553,8 @@ struct detail::make_unsigned_trait<arithmetic<T, policy>> {
 };
 
 template <auto policy>
-struct detail::make_unsigned_trait<index<policy>> {
-   using type = index<policy>;
+struct detail::make_unsigned_trait<basic_idx<policy>> {
+   using type = basic_idx<policy>;
 };
 
 template <is_integral Sign, is_integral T>

@@ -6,7 +6,7 @@
 # Each case must be ill-formed. Sources mirror the **inverse** of the positive /
 # trait story in the `test_arithmetic` unit tests: `!is_assignable`,
 # `!is_convertible`, `!is_implicitly_constructible`, `!can_brace_init`,
-# `!can_{plus,minus,times}_assign`, and deleted `index`/`arithmetic` shapes.
+# `!can_{plus,minus,times}_assign`, and deleted `idx`/`arithmetic` shapes.
 #
 # Operands that are **plain literals** (or pr-values that look like them) are
 # often still constant expressions, so they can take a different
@@ -76,11 +76,11 @@ void t() { cat::uintptr<void> p = -1ll; }
 ]])
 
 # `__attribute__((enable_if(...)))` on `operator+=`/`operator=` (see
-# `overflow_reference.hpp`, `index` in `arithmetic`): operands are **literals**
+# `overflow_reference.hpp`, `basic_idx` in `arithmetic`): operands are **literals**
 # or pr-values that stay constant expressions so the attribute / `consteval`
 # delete on the inner `arithmetic` conversion is exercised (not
 # `cat::deconst`).
-# `idx += -1` has no viable += (no `add` that yields `index`).
+# `idx += -1` has no viable += (no `add` that yields `idx`).
 _cat_neg_expect_illformed("idx-pluseq-negative-literal" [[#include <cat/arithmetic>
 void t() { cat::idx i(0u); i += -1; }
 ]])
@@ -166,7 +166,7 @@ void t() { cat::iword w(0); cat::uintptr<void> p = cat::deconst(w); }
 # (Narrow-LHS += / *= / -= / `undef() -=` for every wider `intN`/`uintN` pair is
 # in `cat_arithmetic_neg_matrix.cmake`).
 
-# `index` deleted or absent operations:
+# `idx` deleted or absent operations:
 _cat_neg_expect_illformed("idx-minuseq" [[#include <cat/arithmetic>
 void t() { cat::idx i(cat::deconst(1u)); i -= cat::deconst(1u); }
 ]])

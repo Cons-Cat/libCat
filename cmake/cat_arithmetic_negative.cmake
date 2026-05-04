@@ -1,13 +1,13 @@
 # This file is flagrantly "vibe-coded". It may not be up to the standards of
 # most libCat code.
 
-# Negative type-safety compile checks for `cat::arithmetic`, `cat::index`, and
+# Negative type-safety compile checks for `cat::arithmetic`, `cat::basic_idx`, and
 # `cat::arithmetic_ptr`. Every probe must be ill-formed.
 #
 # Bodies and naming follow the **inverse** of the `test_arithmetic` unit tests
 # (compound assignment, brace OOR, `idx`, `arithmetic_ptr`, mixed-wide bitwise,
 # `__attribute__((enable_if(...)))` on some `operator+=`/`operator=` paths in
-# `overflow_reference`/`index`, etc.) Only **constructors** and **`operator*`* /
+# `overflow_reference`/`basic_idx`, etc.) Only **constructors** and **`operator*`* /
 # assignment / compound-assignment / brace-init expressions (no `static_assert`
 # in probe sources, no concept-`requires` probes in those sources). The positive
 # suite still uses `static_assert` and concepts.
@@ -39,7 +39,7 @@ option(CAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS
   "With CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS, print each must-reject probe to configure output (hundreds of lines)."
   OFF)
 option(CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS
-  "Also run -fsyntax-only checks for cat::arithmetic / index / ptr ill-formed probes at configure time."
+  "Also run -fsyntax-only checks for cat::arithmetic / idx / ptr ill-formed probes at configure time."
   OFF)
 
 if (NOT DEFINED CAT_INCLUDE_SUBDIRS)
@@ -69,7 +69,7 @@ unset(_cat_neg_includes)
 
 # Match normal libCat TUs: `global_includes.hpp` forward-declares
 # `default_compact_trait`/`compact` before `<cat/maybe>` pulls
-# `<cat/arithmetic>`, so arithmetic's `default_compact_trait<index<...>>`
+# `<cat/arithmetic>`, so arithmetic's `default_compact_trait<basic_idx<...>>`
 # specialization is valid.
 list(APPEND _cat_neg_compile_args
   -nostdlib

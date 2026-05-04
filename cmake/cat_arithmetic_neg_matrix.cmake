@@ -3,7 +3,7 @@
 
 # Exercises the full ill-formed `cat::[u]int{1,2,4,8}` cross-width and `int` to
 # `float{2,4,8}` and `iword` on `int4` grids that the unit `can_*_assign` story
-# allows as `-fsyntax-only` TUs. `index` and `arithmetic_ptr` are not a width
+# allows as `-fsyntax-only` TUs. `idx` and `arithmetic_ptr` are not a width
 # product. The named probes for those stay in `cat_arithmetic_neg_cases.cmake`.
 # Uses `_cat_neg_expect_illformed` from `cat_arithmetic_negative.cmake`.
 

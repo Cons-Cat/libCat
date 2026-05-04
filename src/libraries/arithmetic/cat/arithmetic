@@ -8,9 +8,9 @@
 #include <cat/limits>
 #include <cat/meta>
 
-// `cat::arithmetic`, `cat::index`, and `cat::arithmetic_ptr` are containers for
-// numeric data types which both prevent unsound implicit type conversions and
-// make safe comparisons between different arithmetic types.
+// `cat::arithmetic`, `cat::basic_idx`, and `cat::arithmetic_ptr` are containers
+// for numeric data types which both prevent unsound implicit type conversions
+// and make safe comparisons between different arithmetic types.
 //
 // All of their conversion operators, `is_arithmetic` operators and constructors
 // are generic with constraints. Because these methods are constrained, it is
@@ -30,19 +30,19 @@
 // `cat::arithmetic` is an abstraction over fundamental integer and
 // floating-point arithmetic types.
 //
-// `cat::index` is a 63-bit unsigned integer type that is used to index arrays
-// and containers. This type is recommended for the iterator of `for` loops and
-// the parameter of indexing functions or quantities of memory.
+// `cat::basic_idx` is a 63-bit unsigned integer type that is used to index
+// arrays and containers. This type is recommended for the iterator of `for`
+// loops and the parameter of indexing functions or quantities of memory.
 //
 // It is roughly analogous to `std::size_t`, however because it is 63-bit, it
 // may safely convert to both 64-bit signed and unsigned integers.
-// Subtracting from a `cat::index` will cast to `cat::iword`, thereby teaching
-// the type system that this subtraction will never underflow. When the
+// Subtracting from a `cat::basic_idx` will cast to `cat::iword`, thereby
+// teaching the type system that this subtraction will never underflow. When the
 // difference is compile-time known to be positive, this is relaxed and a
-// `cat::index` is returned instead. This is important for expressions involving
-// literals used within subscripting.
+// `cat::basic_idx` is returned instead. This is important for expressions
+// involving literals used within subscripting.
 //
-// All `for` loops in libCat use either `cat::index` or `cat::iword` as its
+// All `for` loops in libCat use either `cat::basic_idx` or `cat::iword` as its
 // iterator integer.
 //
 // `cat::arithmetic_ptr` is a pointer type that is used to store pointers to
@@ -67,7 +67,7 @@ template <typename T, typename Storage, overflow_policies>
 class arithmetic_ptr;
 
 template <overflow_policies overflow_policy>
-class index;
+class basic_idx;
 
 inline namespace integers {
 // These macros are defined by the Clang compiler.
@@ -83,7 +83,7 @@ using uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;
 using float4 = arithmetic<float, overflow_policies::undefined>;
 using float8 = arithmetic<double, overflow_policies::undefined>;
 
-using idx = cat::index<overflow_policies::undefined>;
+using idx = cat::basic_idx<overflow_policies::undefined>;
 
 using iword =
    arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
@@ -117,8 +117,8 @@ using sat_int8 = arithmetic<__INT64_TYPE__, overflow_policies::saturate>;
 using sat_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::saturate>;
 }  // namespace integers
 
-// Unwraps `cat::arithmetic`, `cat::index`, `cat::arithmetic_ptr`, `cat::bool2`,
-// and `cat::bool4` into their `raw` values.
+// Unwraps `cat::arithmetic`, `cat::basic_idx`, `cat::arithmetic_ptr`,
+// `cat::bool2`, and `cat::bool4` into their `raw` values.
 template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -132,8 +132,8 @@ make_raw_arithmetic(T value) {
    }
 }
 
-// Unwraps `cat::arithmetic`, `cat::index`, `cat::arithmetic_ptr`, `cat::bool2`,
-// and `cat::bool4` into their `raw` types.
+// Unwraps `cat::arithmetic`, `cat::basic_idx`, `cat::arithmetic_ptr`,
+// `cat::bool2`, and `cat::bool4` into their `raw` types.
 template <typename T>
 using raw_arithmetic_type = decltype(make_raw_arithmetic(T{}));
 
@@ -151,7 +151,7 @@ template <typename>
 struct is_idx_trait : false_trait {};
 
 template <overflow_policies policy>
-struct is_idx_trait<index<policy>> : true_trait {};
+struct is_idx_trait<basic_idx<policy>> : true_trait {};
 
 template <typename T>
 concept is_idx = is_idx_trait<T>::value;
@@ -226,9 +226,9 @@ struct integer_promotion_hierarchy {
 };
 
 template <overflow_policies policy>
-struct integer_promotion_hierarchy<index<policy>> {
+struct integer_promotion_hierarchy<basic_idx<policy>> {
    // 7 is smaller than 8 from `uword`, but larger than 4 from `uint4`. `uint4`
-   // should promote to `index`, and `index` should promote to `uword`.
+   // should promote to `basic_idx`, and `basic_idx` should promote to `uword`.
    static constexpr unsigned long order = 7;
 };
 
@@ -252,7 +252,7 @@ struct overflow_policy_for_impl<arithmetic<T, policy>> {
 };
 
 template <overflow_policies policy>
-struct overflow_policy_for_impl<index<policy>> {
+struct overflow_policy_for_impl<basic_idx<policy>> {
    static constexpr overflow_policies value = policy;
 };
 
@@ -269,7 +269,7 @@ inline constexpr overflow_policies overflow_policy_of =
    overflow_policy_for<T>::value;
 
 // Rebind the overflow policy of an arithmetic-like type. Raw integers and
-// floats become `arithmetic<T, new_policy>`. `arithmetic`, `index`, and
+// floats become `arithmetic<T, new_policy>`. `arithmetic`, `basic_idx`, and
 // `arithmetic_ptr` keep their kind and replace just the policy.
 template <typename T, overflow_policies new_policy>
 struct rebind_overflow_policy {
@@ -283,8 +283,8 @@ struct rebind_overflow_policy<arithmetic<T, old_policy>, new_policy> {
 };
 
 template <overflow_policies old_policy, overflow_policies new_policy>
-struct rebind_overflow_policy<index<old_policy>, new_policy> {
-   using type = index<new_policy>;
+struct rebind_overflow_policy<basic_idx<old_policy>, new_policy> {
+   using type = basic_idx<new_policy>;
 };
 
 template <typename T, typename storage_type, overflow_policies old_policy,
@@ -317,7 +317,7 @@ promoted_arithmetic() {
       return typename rebind_overflow_policy<left, policy>::type();
    } else {
       // RHS wins on width:
-      // keep RHS's kind (`arithmetic`, `index`, `arithmetic_ptr`, or a raw
+      // keep RHS's kind (`arithmetic`, `basic_idx`, `arithmetic_ptr`, or a raw
       // type) and tag it with `left`'s policy.
       return typename rebind_overflow_policy<right, policy>::type();
    }
@@ -358,10 +358,10 @@ concept is_safe_arithmetic_conversion =
      <= detail::integer_promotion_hierarchy<to_type>::order)
     && is_safe_arithmetic_comparison<from_type, to_type>)
 
-   // A special-case exception must be made for `index` -> `iword`. This doesn't
-   // work by default because they have different signed-ness.
-   // This is only used for `undefined` overflow.
-   || (is_same<from_type, index<overflow_policies::undefined>>
+   // A special-case exception must be made for `basic_idx` -> `iword`. This
+   // doesn't work by default because they have different signed-ness. This is
+   // only used for `undefined` overflow.
+   || (is_same<from_type, basic_idx<overflow_policies::undefined>>
        && is_same<to_type,
                   arithmetic<signed long, overflow_policies::undefined>>);
 
@@ -2126,9 +2126,9 @@ inline constexpr bool explicit_word_for_index_ctor =
 
 template <overflow_policies overflow_policy = overflow_policies::undefined>
 class [[clang::preferred_name(idx)]]
-index :
+basic_idx :
     // Generate arithmetic operators.
-    public arithmetic_interface<index<overflow_policy>> {
+    public arithmetic_interface<basic_idx<overflow_policy>> {
  private:
    // Signed distance has the same representation as `cat::iword` when
    // `overflow_policy` is `undefined`.
@@ -2142,9 +2142,9 @@ index :
 
    __SIZE_TYPE__ raw = 0uz;
 
-   constexpr index() = default;
-   constexpr index(index const&) = default;
-   constexpr index(index&&) = default;
+   constexpr basic_idx() = default;
+   constexpr basic_idx(basic_idx const&) = default;
+   constexpr basic_idx(basic_idx&&) = default;
 
    // Implicit raw integral conversions when the value fits the storage at
    // compile time. `enable_if`'s predicate is checked against the operand,
@@ -2152,12 +2152,12 @@ index :
    // operands fall through to the generic constructor below.
    //
    // `iword`/`uword` are intentionally permitted here so that their
-   // compile-time-known values can implicitly become an `index`. Runtime
+   // compile-time-known values can implicitly become a `basic_idx`. Runtime
    // `iword`/`uword` operands fall through to the generic constructor below,
    // which keeps `explicit_word_for_index_ctor` types `explicit`.
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr index(U other) __attribute__((
+   constexpr basic_idx(U other) __attribute__((
       enable_if(detail::raw_source_fits_implicit_storage<raw_type>(other),
                 "Value is out of range for conversion to `cat::idx`!")))
        : raw(static_cast<__SIZE_TYPE__>(make_raw_arithmetic(other))) {
@@ -2166,7 +2166,7 @@ index :
    template <is_integral U>
       requires(policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval index(U other) __attribute__((enable_if(
+   consteval basic_idx(U other) __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<raw_type>(other),
       "Value is out of range for conversion to `cat::idx`!"))) = delete;
 
@@ -2177,25 +2177,25 @@ index :
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(!is_safe_arithmetic_conversion<U, raw_type>
                       || detail::explicit_word_for_index_ctor<remove_cvref<U>>)
-      index(U other)
+      basic_idx(U other)
        : raw(static_cast<__SIZE_TYPE__>(make_raw_arithmetic(other))) {
    }
 
-   // `index` can safely implictly convert into larger integers than it,
-   // including fundamental integers for use as a subscripting index.
+   // `basic_idx` can safely implictly convert into larger integers than it,
+   // including fundamental integers for use as a subscripting basic_idx.
    template <is_integral U>
-   // `uword` and `uintptr` can implicitly construct from `index`, so a
+   // `uword` and `uintptr` can implicitly construct from `basic_idx`, so a
    // conversion operator to them would be ambiguous. `raw_arithmetic_type`
    // fixes a Clang error here.
       requires(is_signed<raw_arithmetic_type<U>>)
-   // Conversions to signed integers smaller than `index` are explicit.
+   // Conversions to signed integers smaller than `basic_idx` are explicit.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(sizeof(raw_type) > sizeof(U))
    operator U() const {
       return static_cast<U>(raw);
    }
 
-   // `index` can implicitly convert into `__SIZE_TYPE__`.
+   // `basic_idx` can implicitly convert into `__SIZE_TYPE__`.
    template <is_same<__SIZE_TYPE__> U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr
@@ -2204,13 +2204,13 @@ index :
    }
 
    constexpr auto
-   operator=(index const&) -> index& = default;
+   operator=(basic_idx const&) -> basic_idx& = default;
    constexpr auto
-   operator=(index&&) -> index& = default;
+   operator=(basic_idx&&) -> basic_idx& = default;
 
-   // `index` can safely compare against any other integer type, including
+   // `basic_idx` can safely compare against any other integer type, including
    // `iword`. Negative right-hand operands compare strictly less than any
-   // `index` (which is unsigned), via `raw_mixed_integral_spaceship`.
+   // `basic_idx` (which is unsigned), via `raw_mixed_integral_spaceship`.
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -2222,7 +2222,7 @@ index :
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(index lhs, U rhs) -> bool {
+   operator==(basic_idx lhs, U rhs) -> bool {
       return detail::raw_mixed_integral_equals(lhs.raw,
                                                make_raw_arithmetic(rhs));
    }
@@ -2231,15 +2231,15 @@ index :
    template <is_unsigned_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(T other) const -> detail::promoted_type<index<policy>, T> {
-      using result = detail::promoted_type<index<policy>, T>;
+   add(T other) const -> detail::promoted_type<basic_idx<policy>, T> {
+      using result = detail::promoted_type<basic_idx<policy>, T>;
       using raw_result = raw_arithmetic_type<result>;
       return result(static_cast<raw_result>(raw)
                     + static_cast<raw_result>(make_raw_arithmetic(other)));
    }
 
-   // Adding a signed value has the potential of underflowing, so the `index`
-   // should cast to `iword`.
+   // Adding a signed value has the potential of underflowing, so the
+   // `basic_idx` should cast to `iword`.
    template <is_signed_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -2257,55 +2257,55 @@ index :
       return p_other + raw;
    }
 
-   // Generate `operator-`. For `undefined` policy, `index - integer` widens to
-   // `signed_distance` (iword) so an underflow stays representable. For `wrap`
-   // / `saturate`, the user opted into a fixed-width well-defined overflow
-   // domain, so the result keeps the LHS `index<policy>` shape.
+   // Generate `operator-`. For `undefined` policy, `basic_idx - integer`
+   // widens to `signed_distance` (iword) so an underflow stays representable.
+   // For `wrap` / `saturate`, the user opted into a fixed-width well-defined
+   // overflow domain, so the result keeps the LHS `basic_idx<policy>` shape.
    template <is_integral T>
-      requires(!is_same<remove_cvref<T>, index>)
+      requires(!is_same<remove_cvref<T>, basic_idx>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(T other) const
       -> conditional<policy == overflow_policies::undefined, signed_distance,
-                     index> {
+                     basic_idx> {
       using enum overflow_policies;
       auto const rhs_raw = make_raw_arithmetic(other);
       if constexpr (policy == undefined) {
          return signed_distance(static_cast<signed long long>(raw)
                                 - static_cast<signed long long>(rhs_raw));
       } else if constexpr (policy == wrap) {
-         return index(wrap_sub(raw, static_cast<__SIZE_TYPE__>(rhs_raw)));
+         return basic_idx(wrap_sub(raw, static_cast<__SIZE_TYPE__>(rhs_raw)));
       } else if constexpr (policy == saturate) {
-         return index(sat_sub(raw, static_cast<__SIZE_TYPE__>(rhs_raw)));
+         return basic_idx(sat_sub(raw, static_cast<__SIZE_TYPE__>(rhs_raw)));
       }
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(index other) const
+   subtract_by(basic_idx other) const
       -> conditional<policy == overflow_policies::undefined, signed_distance,
-                     index> {
+                     basic_idx> {
       using enum overflow_policies;
       if constexpr (policy == undefined) {
          return signed_distance(
             static_cast<signed long long>(raw)
             - static_cast<signed long long>(make_raw_arithmetic(other)));
       } else if constexpr (policy == wrap) {
-         return index(wrap_sub(raw, other.raw));
+         return basic_idx(wrap_sub(raw, other.raw));
       } else if constexpr (policy == saturate) {
-         return index(sat_sub(raw, other.raw));
+         return basic_idx(sat_sub(raw, other.raw));
       }
    }
 
    // When a subtraction is known to be sound, rather than convert to `iword`,
-   // we can keep the `index` shape. This is necessary to use certain
+   // we can keep the `basic_idx` shape. This is necessary to use certain
    // expressions in subscripting, such as `array[10_idx - 1]`.
    template <is_integral T>
    [[gnu::always_inline, gnu::nodebug]]
-   friend constexpr index
-   operator-(index self, T other)
+   friend constexpr basic_idx
+   operator-(basic_idx self, T other)
       __attribute__((enable_if(self.raw >= other, ""))) {
-      return index(self.raw - make_raw_arithmetic(other));
+      return basic_idx(self.raw - make_raw_arithmetic(other));
    }
 
    template <is_arithmetic U>
@@ -2328,20 +2328,20 @@ index :
    constexpr auto
    operator-=(T) =
       delete ("An integer cannot be subtracted from and then assigned to a "
-              "`cat::index` because "
+              "`cat::basic_idx` because "
               "subtraction underflow. Consider subtracting them "
               "together and assigning the result to a `cat::iword` instead.");
 
    // Provide actionable error messages for `operator--`.
    constexpr auto
    operator--() =
-      delete ("A `cat::index` cannot be decremented because "
+      delete ("A `cat::basic_idx` cannot be decremented because "
               "subtraction may underflow. Consider subtracting 1u from it"
               "and then assigning the result to a `cat::iword` instead.");
 
    constexpr auto
    operator--(int) =
-      delete ("A `cat::index` cannot be decremented because "
+      delete ("A `cat::basic_idx` cannot be decremented because "
               "subtraction may underflow. Consider subtracting 1u from it"
               "and then assigning the result to a `cat::iword` instead.");
 
@@ -2349,9 +2349,10 @@ index :
    template <is_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(T other) const -> index {
-      return index(static_cast<signed long long>(raw)
-                   * static_cast<signed long long>(make_raw_arithmetic(other)));
+   multiply(T other) const -> basic_idx {
+      return basic_idx(
+         static_cast<signed long long>(raw)
+         * static_cast<signed long long>(make_raw_arithmetic(other)));
    }
 
    // Generate `operator*` for pointer arithmetic.
@@ -2363,18 +2364,18 @@ index :
    }
 
    // Generate `operator/`. `divide_by(unsigned)` non-negative quotient. Keep
-   // `cat::index`.
+   // `cat::basic_idx`.
    //
    // `divide_by(signed)`. Usual arithmetic conversions would mix
    // `__SIZE_TYPE__` with a signed divisor so a negative `other` becomes a huge
    // unsigned value. Evaluate in `signed long long`, same as `multiply` /
    // `subtract_by`. The quotient may be negative, so return `signed_distance`
-   // (same as `add` with a signed operand), not `index`.
+   // (same as `add` with a signed operand), not `basic_idx`.
    template <is_unsigned_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(T other) const -> index {
-      return index(raw / make_raw_arithmetic(other));
+   divide_by(T other) const -> basic_idx {
+      return basic_idx(raw / make_raw_arithmetic(other));
    }
 
    template <is_signed_integral T>
@@ -2421,43 +2422,45 @@ index :
    template <is_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(T other) const -> index {
-      return index(raw % make_raw_arithmetic(other));
+   modulo_by(T other) const -> basic_idx {
+      return basic_idx(raw % make_raw_arithmetic(other));
    }
 
    template <is_integral T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(T operand) const -> index {
+   modulo_into(T operand) const -> basic_idx {
       return make_raw_arithmetic(operand) % raw;
    }
 
-   // `cat::index` does not provide the bitwise operators (&, |, ~) because,
+   // `cat::basic_idx` does not provide the bitwise operators (&, |, ~) because,
    // like signed types, it has a high bit with semantics that are confusing in
-   // a bitwise context. Treat an index as an opaque count-like value. Unwrap it
-   // via `.raw` for any bit-mask manipulation. Shifts are exposed below. An
-   // `index` is guaranteed to keep its high bit zero, so we can bitcast its raw
-   // storage to `signed __SIZE_TYPE__`, perform the C++ arithmetic shift, and
-   // bitcast back without losing any bits. With `saturate` policy the shift
-   // goes through `sat_shl`/`sat_shr` on the signed bitcast, so the index's
-   // high-bit-zero invariant is preserved by saturating.
-   // to `signed_size`'s `max()` (which equals `index::max()`). With `wrap`
-   // policy the shift becomes a ROTATION over the lower (`bit_width - 1`) bits
-   // -- the high bit stays zero (so the `index` invariant is preserved), and
-   // any bit shifted off the top of the usable range re-enters at the bottom.
+   // a bitwise context. Treat an basic_idx as an opaque count-like value.
+   // Unwrap it via `.raw` for any bit-mask manipulation. Shifts are exposed
+   // below. An `basic_idx` is guaranteed to keep its high bit zero, so we can
+   // bitcast its raw storage to `signed __SIZE_TYPE__`, perform the C++
+   // arithmetic shift, and bitcast back without losing any bits. With
+   // `saturate` policy the shift goes through `sat_shl`/`sat_shr` on the signed
+   // bitcast, so the basic_idx's high-bit-zero invariant is preserved by
+   // saturating. to `signed_size`'s `max()` (which equals `basic_idx::max()`).
+   // With `wrap` policy the shift becomes a ROTATION over the lower (`bit_width
+   // - 1`) bits
+   // -- the high bit stays zero (so the `basic_idx` invariant is preserved),
+   // and any bit shifted off the top of the usable range re-enters at the
+   // bottom.
 
    // Generate `operator<<`. Implemented as a signed-bitcast shift so it matches
    // `int` shift behavior. With `undefined` policy, the result is undefined if
-   // it would set the high bit, which would break the `index` invariant. With
-   // `saturate` policy the result is clamped to `index::max()` when the shift
-   // would otherwise push a bit into the sign position. With `wrap` policy the
-   // lower 63 bits are rotated as a ring (count taken modulo 63 so any
-   // non-negative count is valid) and the high bit is always cleared,
-   // preserving the `index` invariant.
+   // it would set the high bit, which would break the `basic_idx` invariant.
+   // With `saturate` policy the result is clamped to `basic_idx::max()` when
+   // the shift would otherwise push a bit into the sign position. With `wrap`
+   // policy the lower 63 bits are rotated as a ring (count taken modulo 63 so
+   // any non-negative count is valid) and the high bit is always cleared,
+   // preserving the `basic_idx` invariant.
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> index {
+   shift_left_by(U operand) const -> basic_idx {
       auto const raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::saturate) {
          return sat_shl(*this, raw_operand);
@@ -2466,7 +2469,7 @@ index :
       } else {
          using signed_size = make_signed_type<__SIZE_TYPE__>;
          auto const signed_value = __builtin_bit_cast(signed_size, raw);
-         return index(
+         return basic_idx(
             __builtin_bit_cast(__SIZE_TYPE__, signed_value << raw_operand));
       }
    }
@@ -2488,7 +2491,7 @@ index :
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> index {
+   shift_right_by(U operand) const -> basic_idx {
       auto const raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::saturate) {
          return sat_shr(*this, raw_operand);
@@ -2497,7 +2500,7 @@ index :
       } else {
          using signed_size = make_signed_type<__SIZE_TYPE__>;
          auto const signed_value = __builtin_bit_cast(signed_size, raw);
-         return index(
+         return basic_idx(
             __builtin_bit_cast(__SIZE_TYPE__, signed_value >> raw_operand));
       }
    }
@@ -2510,57 +2513,57 @@ index :
    }
 
    constexpr auto
-   undef() & -> overflow_reference<index<overflow_policy>,
+   undef() & -> overflow_reference<basic_idx<overflow_policy>,
                                    overflow_policies::undefined>;
 
    constexpr auto
-   undef() const& -> overflow_reference<index<overflow_policy> const,
+   undef() const& -> overflow_reference<basic_idx<overflow_policy> const,
                                         overflow_policies::undefined>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && -> index<overflow_policies::undefined> {
-      return index<overflow_policies::undefined>(raw);
+   undef() && -> basic_idx<overflow_policies::undefined> {
+      return basic_idx<overflow_policies::undefined>(raw);
    }
 
    constexpr auto
-   wrap() & -> overflow_reference<index<overflow_policy>,
+   wrap() & -> overflow_reference<basic_idx<overflow_policy>,
                                   overflow_policies::wrap>;
 
    constexpr auto
-   wrap() const& -> overflow_reference<index<overflow_policy> const,
+   wrap() const& -> overflow_reference<basic_idx<overflow_policy> const,
                                        overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && -> index<overflow_policies::wrap> {
-      return index<overflow_policies::wrap>(raw);
+   wrap() && -> basic_idx<overflow_policies::wrap> {
+      return basic_idx<overflow_policies::wrap>(raw);
    }
 
    constexpr auto
-   sat() & -> overflow_reference<index<overflow_policy>,
+   sat() & -> overflow_reference<basic_idx<overflow_policy>,
                                  overflow_policies::saturate>;
 
    constexpr auto
-   sat() const& -> overflow_reference<index<overflow_policy> const,
+   sat() const& -> overflow_reference<basic_idx<overflow_policy> const,
                                       overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && -> index<overflow_policies::saturate> {
-      return index<overflow_policies::saturate>(raw);
+   sat() && -> basic_idx<overflow_policies::saturate> {
+      return basic_idx<overflow_policies::saturate>(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   min() -> index {
-      return limits<index<overflow_policy>>::min();
+   min() -> basic_idx {
+      return limits<basic_idx<overflow_policy>>::min();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   max() -> index {
-      return limits<index<overflow_policy>>::max();
+   max() -> basic_idx {
+      return limits<basic_idx<overflow_policy>>::max();
    }
 };
 
@@ -2568,136 +2571,137 @@ index :
 // niche value.
 template <overflow_policies overflow_policy>
 constexpr auto
-index_maybe_has_value(index<overflow_policy> value) -> bool {
+basic_idx_maybe_has_value(basic_idx<overflow_policy> value) -> bool {
    return (value.raw & limits<__SIZE_TYPE__>::high_bit) == 0u;
 }
 
 // `maybe<idx>` can be considered empty when all bits are set.
 template <overflow_policies overflow_policy>
-struct default_compact_trait<index<overflow_policy>>
-    : identity_trait<compact<
-         index<overflow_policy>, &index_maybe_has_value<overflow_policy>,
-         __builtin_bit_cast(index<overflow_policy>,
-                            limits<__SIZE_TYPE__>::max())>> {};
+struct default_compact_trait<basic_idx<overflow_policy>>
+    : identity_trait<
+         compact<basic_idx<overflow_policy>,
+                 &basic_idx_maybe_has_value<overflow_policy>,
+                 __builtin_bit_cast(basic_idx<overflow_policy>,
+                                    limits<__SIZE_TYPE__>::max())>> {};
 
 template <overflow_policies overflow_policy>
 constexpr auto
-index<overflow_policy>::undef() & -> overflow_reference<
-   index<overflow_policy>, overflow_policies::undefined> {
-   return overflow_reference<index<overflow_policy>,
+basic_idx<overflow_policy>::undef() & -> overflow_reference<
+   basic_idx<overflow_policy>, overflow_policies::undefined> {
+   return overflow_reference<basic_idx<overflow_policy>,
                              overflow_policies::undefined>{*this};
 }
 
 template <overflow_policies overflow_policy>
 constexpr auto
-index<overflow_policy>::undef() const& -> overflow_reference<
-   index<overflow_policy> const, overflow_policies::undefined> {
-   return overflow_reference<index<overflow_policy> const,
+basic_idx<overflow_policy>::undef() const& -> overflow_reference<
+   basic_idx<overflow_policy> const, overflow_policies::undefined> {
+   return overflow_reference<basic_idx<overflow_policy> const,
                              overflow_policies::undefined>{*this};
 }
 
 template <overflow_policies overflow_policy>
 constexpr auto
-index<overflow_policy>::wrap() & -> overflow_reference<
-   index<overflow_policy>, overflow_policies::wrap> {
-   return overflow_reference<index<overflow_policy>, overflow_policies::wrap>{
-      *this};
-}
-
-template <overflow_policies overflow_policy>
-constexpr auto
-index<overflow_policy>::wrap() const& -> overflow_reference<
-   index<overflow_policy> const, overflow_policies::wrap> {
-   return overflow_reference<index<overflow_policy> const,
+basic_idx<overflow_policy>::wrap() & -> overflow_reference<
+   basic_idx<overflow_policy>, overflow_policies::wrap> {
+   return overflow_reference<basic_idx<overflow_policy>,
                              overflow_policies::wrap>{*this};
 }
 
 template <overflow_policies overflow_policy>
 constexpr auto
-index<overflow_policy>::sat() & -> overflow_reference<
-   index<overflow_policy>, overflow_policies::saturate> {
-   return overflow_reference<index<overflow_policy>,
+basic_idx<overflow_policy>::wrap() const& -> overflow_reference<
+   basic_idx<overflow_policy> const, overflow_policies::wrap> {
+   return overflow_reference<basic_idx<overflow_policy> const,
+                             overflow_policies::wrap>{*this};
+}
+
+template <overflow_policies overflow_policy>
+constexpr auto
+basic_idx<overflow_policy>::sat() & -> overflow_reference<
+   basic_idx<overflow_policy>, overflow_policies::saturate> {
+   return overflow_reference<basic_idx<overflow_policy>,
                              overflow_policies::saturate>{*this};
 }
 
 template <overflow_policies overflow_policy>
 constexpr auto
-index<overflow_policy>::sat() const& -> overflow_reference<
-   index<overflow_policy> const, overflow_policies::saturate> {
-   return overflow_reference<index<overflow_policy> const,
+basic_idx<overflow_policy>::sat() const& -> overflow_reference<
+   basic_idx<overflow_policy> const, overflow_policies::saturate> {
+   return overflow_reference<basic_idx<overflow_policy> const,
                              overflow_policies::saturate>{*this};
 }
 
 namespace detail {
 template <overflow_policies policy>
-inline constexpr bool is_integral_detail<index<policy>> = true;
+inline constexpr bool is_integral_detail<basic_idx<policy>> = true;
 }  // namespace detail
 
-// Saturating left shift of a `cat::index`. An index's high bit is always zero,
-// so the shift is performed on a signed bitcast of the raw storage and
+// Saturating left shift of a `cat::basic_idx`. A `basic_idx` high bit is always
+// zero, so the shift is performed on a signed bitcast of the raw storage and
 // saturates to `signed __SIZE_TYPE__`'s `max()` -- which has the same bit
-// pattern as `index::max()`. The `index` invariant is preserved.
-template <overflow_policies P, is_integral U>
+// pattern as `basic_idx::max()`. The `basic_idx` invariant is preserved.
+template <overflow_policies policy, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_shl(index<P> value, U bits) -> index<P> {
+sat_shl(basic_idx<policy> value, U bits) -> basic_idx<policy> {
    using signed_size = make_signed_type<__SIZE_TYPE__>;
    auto const raw_bits = make_raw_arithmetic(bits);
    auto const signed_value = __builtin_bit_cast(signed_size, value.raw);
-   return index<P>(
+   return basic_idx<policy>(
       __builtin_bit_cast(__SIZE_TYPE__, sat_shl(signed_value, raw_bits)));
 }
 
-// Saturating right shift of a `cat::index`. Because the high bit is always zero
-// the value is non-negative, so a signed arithmetic right shift cannot
-// introduce a set sign bit and the `index` invariant is preserved.
-template <overflow_policies P, is_integral U>
+// Saturating right shift of a `cat::basic_idx`. Because the high bit is always
+// zero the value is non-negative, so a signed arithmetic right shift cannot
+// introduce a set sign bit and the `basic_idx` invariant is preserved.
+template <overflow_policies policy, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_shr(index<P> value, U bits) -> index<P> {
+sat_shr(basic_idx<policy> value, U bits) -> basic_idx<policy> {
    using signed_size = make_signed_type<__SIZE_TYPE__>;
    auto const raw_bits = make_raw_arithmetic(bits);
    auto const signed_value = __builtin_bit_cast(signed_size, value.raw);
-   return index<P>(
+   return basic_idx<policy>(
       __builtin_bit_cast(__SIZE_TYPE__, sat_shr(signed_value, raw_bits)));
 }
 
-// Left bit-rotation of a `cat::index`. Rotation happens over the lower
-// `bit_width - 1` bits (the usable index range) so the high bit stays zero and
-// the `index` invariant is preserved. The shift count is taken modulo that ring
-// width, so any non-negative count is valid.
-template <overflow_policies P, is_integral U>
+// Left bit-rotation of a `cat::basic_idx`. Rotation happens over the lower
+// `bit_width - 1` bits so the high bit stays zero and the `basic_idx`
+// invariant is preserved. The shift count is taken modulo that ring width, so
+// any non-negative count is valid.
+template <overflow_policies policy, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_shl(index<P> value, U bits) -> index<P> {
+wrap_shl(basic_idx<policy> value, U bits) -> basic_idx<policy> {
    constexpr __SIZE_TYPE__ ring_bits = (sizeof(__SIZE_TYPE__) * 8u) - 1u;
    constexpr __SIZE_TYPE__ ring_mask =
       (static_cast<__SIZE_TYPE__>(1) << ring_bits) - 1u;
    __SIZE_TYPE__ const norm =
       static_cast<__SIZE_TYPE__>(make_raw_arithmetic(bits)) % ring_bits;
    if (norm == 0) {
-      return index<P>(value.raw & ring_mask);
+      return basic_idx<policy>(value.raw & ring_mask);
    }
-   return index<P>(((value.raw << norm) | (value.raw >> (ring_bits - norm)))
-                   & ring_mask);
+   return basic_idx<policy>(
+      ((value.raw << norm) | (value.raw >> (ring_bits - norm))) & ring_mask);
 }
 
-// Right bit-rotation mirror of `wrap_shl(index)`. Bits rotated off the bottom
-// re-enter at the top of the 63-bit ring. The high bit stays zero.
-template <overflow_policies P, is_integral U>
+// Right bit-rotation mirror of `wrap_shl(basic_idx)`. Bits rotated off the
+// bottom re-enter at the top of the 63-bit ring. The high bit stays zero.
+template <overflow_policies policy, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_shr(index<P> value, U bits) -> index<P> {
+wrap_shr(basic_idx<policy> value, U bits) -> basic_idx<policy> {
    constexpr __SIZE_TYPE__ ring_bits = (sizeof(__SIZE_TYPE__) * 8u) - 1u;
    constexpr __SIZE_TYPE__ ring_mask =
       (static_cast<__SIZE_TYPE__>(1) << ring_bits) - 1u;
    __SIZE_TYPE__ const norm =
       static_cast<__SIZE_TYPE__>(make_raw_arithmetic(bits)) % ring_bits;
    if (norm == 0) {
-      return index<P>(value.raw & ring_mask);
+      return basic_idx<policy>(value.raw & ring_mask);
    }
-   return index<P>(((value.raw >> norm) | (value.raw << (ring_bits - norm)))
-                   & ring_mask);
+   return basic_idx<policy>(
+      ((value.raw >> norm) | (value.raw << (ring_bits - norm))) & ring_mask);
 }
 
 inline namespace integers {

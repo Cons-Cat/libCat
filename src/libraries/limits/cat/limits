@@ -326,10 +326,10 @@ struct limits<T> {
 };
 
 template <overflow_policies>
-class index;
+class basic_idx;
 
 template <overflow_policies policy>
-struct limits<index<policy>> {
+struct limits<basic_idx<policy>> {
    constexpr limits() = delete;
 
    static consteval auto

@@ -10,7 +10,7 @@ namespace cat {
 
 // This proxy reference wraps an arithmetic type with specific overflow
 // semantics. It is intended to be obtained from the overflow accessors of
-// `cat::arithmetic`, `cat::index`, and `cat::arithmetic_ptr` (`.undef()`,
+// `cat::arithmetic`, `cat::basic_idx`, and `cat::arithmetic_ptr` (`.undef()`,
 // `.wrap()`, `.sat()`), but is also a public type so that users can store,
 // pass, or return it.
 //
@@ -43,7 +43,7 @@ class overflow_reference
          return arithmetic_ptr<pointee, raw_type, overflow_policy>(
             m_wrapped->raw);
       } else if constexpr (detail::is_idx<wrapper_type>) {
-         return index<overflow_policy>(m_wrapped->raw);
+         return basic_idx<overflow_policy>(m_wrapped->raw);
       } else {
          return arithmetic<raw_type, overflow_policy>(m_wrapped->raw);
       }
@@ -57,7 +57,7 @@ class overflow_reference
          return arithmetic_ptr<pointee, raw_type, overflow_policies::undefined>(
             m_wrapped->raw);
       } else if constexpr (detail::is_idx<wrapper_type>) {
-         return index<overflow_policies::undefined>(m_wrapped->raw);
+         return basic_idx<overflow_policies::undefined>(m_wrapped->raw);
       } else {
          return arithmetic<raw_type, overflow_policies::undefined>(
             m_wrapped->raw);
@@ -112,7 +112,7 @@ class overflow_reference
          return arithmetic_ptr<pointee, raw_type, overflow_policies::undefined>(
             m_wrapped->raw);
       } else if constexpr (detail::is_idx<wrapper_type>) {
-         return index<overflow_policies::undefined>(m_wrapped->raw);
+         return basic_idx<overflow_policies::undefined>(m_wrapped->raw);
       } else {
          return arithmetic<raw_type, overflow_policies::undefined>(
             m_wrapped->raw);
@@ -127,7 +127,7 @@ class overflow_reference
          return arithmetic_ptr<pointee, raw_type, overflow_policies::wrap>(
             m_wrapped->raw);
       } else if constexpr (detail::is_idx<wrapper_type>) {
-         return index<overflow_policies::wrap>(m_wrapped->raw);
+         return basic_idx<overflow_policies::wrap>(m_wrapped->raw);
       } else {
          return arithmetic<raw_type, overflow_policies::wrap>(m_wrapped->raw);
       }
@@ -141,7 +141,7 @@ class overflow_reference
          return arithmetic_ptr<pointee, raw_type, overflow_policies::saturate>(
             m_wrapped->raw);
       } else if constexpr (detail::is_idx<wrapper_type>) {
-         return index<overflow_policies::saturate>(m_wrapped->raw);
+         return basic_idx<overflow_policies::saturate>(m_wrapped->raw);
       } else {
          return arithmetic<raw_type, overflow_policies::saturate>(
             m_wrapped->raw);
@@ -289,9 +289,9 @@ class overflow_reference
    }
 
    // Assignment from a compile-time-known raw integer that fits `raw_type`.
-   // Writes through `raw` directly because `index`'s only assignment path is
-   // implicit-constructor + default copy assign, whose `enable_if` requires a
-   // constant expression at the call site (lost once `operand` becomes a
+   // Writes through `raw` directly because `basic_idx`'s only assignment path
+   // is implicit-constructor + default copy assign, whose `enable_if` requires
+   // a constant expression at the call site (lost once `operand` becomes a
    // function parameter here).
    template <is_integral U>
       requires(!is_const<WrappedQual> && detail::is_idx<wrapper_type>)
@@ -299,7 +299,7 @@ class overflow_reference
    constexpr overflow_reference&
    operator=(U other) __attribute__((
       enable_if(detail::raw_source_fits_implicit_storage<raw_type>(other),
-                "value is out of range for assignment to cat::index"))) {
+                "value is out of range for assignment to cat::basic_idx"))) {
       m_wrapped->raw = static_cast<raw_type>(make_raw_arithmetic(other));
       return *this;
    }
@@ -439,7 +439,7 @@ class overflow_reference
    constexpr overflow_reference&
    operator+=(U operand) __attribute__((
       enable_if(detail::raw_source_fits_implicit_storage<raw_type>(operand),
-                "value is out of range for `+=` to cat::index"))) {
+                "value is out of range for `+=` to cat::basic_idx"))) {
       m_wrapped->raw =
          static_cast<raw_type>(m_wrapped->raw + make_raw_arithmetic(operand));
       return *this;
@@ -558,7 +558,7 @@ class overflow_reference
    }
 
    template <is_integral U>
-      requires(!is_same<remove_cvref<U>, index<overflow_policy>>
+      requires(!is_same<remove_cvref<U>, basic_idx<overflow_policy>>
                && detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -569,7 +569,7 @@ class overflow_reference
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(index<overflow_policy> other) const
+   subtract_by(basic_idx<overflow_policy> other) const
       -> arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy>
       requires(detail::is_idx<wrapper_type>)
    {
@@ -637,7 +637,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U other) const -> index<overflow_policy> {
+   multiply(U other) const -> basic_idx<overflow_policy> {
       return view().multiply(other);
    }
 
@@ -714,8 +714,8 @@ class overflow_reference
    }
 
    // Bitwise implementations. Only generate when the wrapped type supports
-   // bitwise operators. `cat::index` and signed/floating-point `arithmetic<T>`
-   // / `intptr<T>` are all disabled.
+   // bitwise operators. `cat::basic_idx` and signed/floating-point
+   // `arithmetic<T>` / `intptr<T>` are all disabled.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_complement() const
@@ -745,7 +745,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U other) const -> index<overflow_policy> {
+   modulo_by(U other) const -> basic_idx<overflow_policy> {
       return view().modulo_by(other);
    }
 
@@ -768,7 +768,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(U operand) const -> index<overflow_policy> {
+   modulo_into(U operand) const -> basic_idx<overflow_policy> {
       return view().modulo_into(operand);
    }
 
@@ -848,7 +848,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> index<overflow_policy> {
+   shift_left_by(U operand) const -> basic_idx<overflow_policy> {
       return view().shift_left_by(operand);
    }
 
@@ -903,7 +903,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> index<overflow_policy> {
+   shift_right_by(U operand) const -> basic_idx<overflow_policy> {
       return view().shift_right_by(operand);
    }
 

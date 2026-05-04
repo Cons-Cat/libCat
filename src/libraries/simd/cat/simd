@@ -70,7 +70,7 @@ class bitset;
 
 namespace detail {
 
-// Memory alignment for `simd<T, fixed_size_abi<T, index>>` follows the same
+// Memory alignment for `simd<T, fixed_size_abi<T, size>>` follows the same
 // idea as `std::simd`. An implementation-defined power of two no larger than
 // the object and not exceeding the native SIMD alignment from `target_abi`
 // Effectively, short vectors are 16-byte aligned, and long vectors are 32-byte

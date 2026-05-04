@@ -135,8 +135,8 @@ abs(T value) -> T {
 }
 
 // TODO: Support floating point here.
-// `index - integral` is `signed_distance`, not `index`. Keep rounding in raw
-// space so `div_ceil(idx, u)` stays `idx`.
+// `basic_idx - integral` is `signed_distance`, not `basic_idx`. Keep rounding
+// in raw space so `div_ceil(idx, u)` stays `idx`.
 template <typename T, is_integral U>
    requires(cat::detail::is_idx<T>)
 [[nodiscard]]

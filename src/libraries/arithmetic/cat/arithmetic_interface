@@ -51,7 +51,7 @@
 // cannot take a forwarding reference, therefore we handle both r-value and
 // l-value `const` reference parameters in separate bodies for each operator.
 // Supporting attribute `enable_if` in this way allows, for example,
-// `cat::index` to handle `+= 1` without special casing any operators.
+// `cat::basic_idx` to handle `+= 1` without special casing any operators.
 
 namespace cat {
 
@@ -110,7 +110,7 @@ concept has_bit_complement = requires(T lhs) { lhs.bit_complement(); };
 
 // `operator++`/`operator--` assign `add(1)`/`subtract_by(1)` back to the
 // operand. They exist only when those calls preserve the operand type (for
-// example `cat::index` subtraction against another `index` widens to
+// example `cat::basic_idx` subtraction against another `basic_idx` widens to
 // `cat::iword`, so decrement is not generated).
 template <typename D>
 concept has_unary_increment =

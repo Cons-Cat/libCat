@@ -831,7 +831,7 @@ is_aligned(uintptr<U> p_value, uword alignment) -> bool;
 template <cat::overflow_policies policy>
 [[nodiscard]]
 constexpr auto
-is_aligned(index<policy> value, uword alignment) -> bool;
+is_aligned(basic_idx<policy> value, uword alignment) -> bool;
 
 template <typename U>
 [[nodiscard]]
