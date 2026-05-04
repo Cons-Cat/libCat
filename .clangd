@@ -1,6 +1,11 @@
 Index:
   StandardLibrary: No
 
+CompileFlags:
+  CompilationDatabase: .
+  Add:
+    - -std=gnu++26
+
 # Merged with `.clang-tidy`; clangd config wins on conflict. Stops
 # `readability-magic-numbers` / `cppcoreguidelines-avoid-magic-numbers` if
 # another layer (e.g. user `config.yaml`) re-enables `readability-*`.
