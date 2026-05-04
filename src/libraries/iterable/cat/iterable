@@ -149,8 +149,7 @@ template <typename Collection, typename Position>
 [[nodiscard]]
 constexpr auto
 read_at_unchecked(Collection& collection, Position const& position)
-   -> decltype(collection.read_at_unchecked(position))
-{
+   -> decltype(collection.read_at_unchecked(position)) {
    return collection.read_at_unchecked(position);
 }
 
@@ -158,8 +157,7 @@ template <typename Collection, typename Position>
 [[nodiscard]]
 constexpr auto
 read_at_unchecked(Collection const& collection, Position const& position)
-   -> decltype(collection.read_at_unchecked(position))
-{
+   -> decltype(collection.read_at_unchecked(position)) {
    return collection.read_at_unchecked(position);
 }
 
@@ -188,11 +186,10 @@ concept is_contiguous_position_model =
 // public `begin_pos`/`end_pos` member spellings here.
 template <typename T>
 concept has_position_protocol =
-   is_contiguous_position_model<T>
-   || (requires(T const& c) {
-         begin_pos(c);
-         end_pos(c);
-      });
+   is_contiguous_position_model<T> || (requires(T const& c) {
+                                          begin_pos(c);
+                                          end_pos(c);
+                                       });
 }  // namespace detail
 
 template <detail::has_position_protocol T>

@@ -336,9 +336,10 @@ $test(span_collection) {
    cat::verify(cat::read_at(array_span, 1u) == 2);
    auto span_tail = array_span | cat::reverse() | cat::take(2u);
    cat::verify(span_tail.sum() == 7);
-   auto transformed_tail = array_span.filter([](int value) -> bool {
-                                      return value > 2;
-                                   })
+   auto transformed_tail = array_span
+                              .filter([](int value) -> bool {
+                                 return value > 2;
+                              })
                               .transform([](int value) -> int {
                                  return value * 3;
                               });
@@ -976,4 +977,3 @@ $test(span_dynamic_extent_constant) {
    static_assert(cat::span<int4>::extent == cat::dynamic_extent);
    static_assert(cat::span<int4, 4_idx>::extent != cat::dynamic_extent);
 }
-

@@ -5,55 +5,42 @@
 namespace {
 
 template <typename Atomic>
-concept has_fetch_add = requires(Atomic atomic) {
-   atomic.fetch_add(1);
-};
+concept has_fetch_add = requires(Atomic atomic) { atomic.fetch_add(1); };
 
 template <typename Atomic>
-concept has_fetch_and = requires(Atomic atomic) {
-   atomic.fetch_and(1);
-};
+concept has_fetch_and = requires(Atomic atomic) { atomic.fetch_and(1); };
 
 template <typename Atomic>
 concept has_increment = requires(Atomic atomic) {
-   ++atomic;
-   atomic++;
-};
+                           ++atomic;
+                           atomic++;
+                        };
 
 template <typename Atomic>
-concept has_runtime_load_order = requires(Atomic& atomic) {
-   atomic.load(cat::memory_order::relaxed);
-};
+concept has_runtime_load_order =
+   requires(Atomic& atomic) { atomic.load(cat::memory_order::relaxed); };
 
 template <typename Atomic>
-concept has_runtime_store_order = requires(Atomic& atomic) {
-   atomic.store(1, cat::memory_order::relaxed);
-};
+concept has_runtime_store_order =
+   requires(Atomic& atomic) { atomic.store(1, cat::memory_order::relaxed); };
 
 template <typename T>
-concept has_atomic_specialization = requires {
-   sizeof(cat::atomic<T>);
-};
+concept has_atomic_specialization = requires { sizeof(cat::atomic<T>); };
 
 template <typename Atomic>
-concept has_volatile_load = requires(Atomic volatile& atomic) {
-   atomic.load();
-};
+concept has_volatile_load =
+   requires(Atomic volatile& atomic) { atomic.load(); };
 
 template <typename Atomic>
-concept has_volatile_store = requires(Atomic volatile& atomic) {
-   atomic.store(1);
-};
+concept has_volatile_store =
+   requires(Atomic volatile& atomic) { atomic.store(1); };
 
 template <typename Atomic>
-concept has_volatile_lock_free = requires(Atomic volatile& atomic) {
-   atomic.is_lock_free();
-};
+concept has_volatile_lock_free =
+   requires(Atomic volatile& atomic) { atomic.is_lock_free(); };
 
 template <typename Flag>
-concept has_volatile_flag_test = requires(Flag volatile& flag) {
-   flag.test();
-};
+concept has_volatile_flag_test = requires(Flag volatile& flag) { flag.test(); };
 
 consteval auto
 constexpr_atomic_value_operations() -> bool {
@@ -121,15 +108,12 @@ $test(atomic_memory_order_helpers) {
    static_assert(cat::memory_order_seq_cst == cat::memory_order::seq_cst);
    static_assert(constexpr_atomic_value_operations());
    static_assert(constexpr_atomic_reference_operations());
-   static_assert(
-      cat::detail::cmpexch_failure_order(cat::memory_order::seq_cst)
-      == cat::memory_order::seq_cst);
-   static_assert(
-      cat::detail::cmpexch_failure_order(cat::memory_order::acq_rel)
-      == cat::memory_order::acquire);
-   static_assert(
-      cat::detail::cmpexch_failure_order(cat::memory_order::release)
-      == cat::memory_order::relaxed);
+   static_assert(cat::detail::cmpexch_failure_order(cat::memory_order::seq_cst)
+                 == cat::memory_order::seq_cst);
+   static_assert(cat::detail::cmpexch_failure_order(cat::memory_order::acq_rel)
+                 == cat::memory_order::acquire);
+   static_assert(cat::detail::cmpexch_failure_order(cat::memory_order::release)
+                 == cat::memory_order::relaxed);
 
    cat::thread_fence(cat::memory_order::seq_cst);
    cat::signal_fence(cat::memory_order::seq_cst);
@@ -302,16 +286,14 @@ $test(atomic_overflow_semantics) {
    byte.store(254u);
    cat::verify(byte.sat().fetch_add(2u) == 254u);
    cat::verify(byte.load() == cat::limits<cat::uint1>::max());
-   cat::verify(byte.wrap().fetch_add(1u)
-               == cat::limits<cat::uint1>::max());
+   cat::verify(byte.wrap().fetch_add(1u) == cat::limits<cat::uint1>::max());
    cat::verify(byte.load() == 0u);
    cat::verify(byte.sat().fetch_sub(1u) == 0u);
    cat::verify(byte.load() == 0u);
 
    cat::atomic<cat::sat_uint1> sat_byte;
    sat_byte.store(cat::limits<cat::sat_uint1>::max());
-   cat::verify(sat_byte.fetch_add(1u)
-               == cat::limits<cat::sat_uint1>::max());
+   cat::verify(sat_byte.fetch_add(1u) == cat::limits<cat::sat_uint1>::max());
    cat::verify(sat_byte.load() == cat::limits<cat::sat_uint1>::max());
    cat::verify((sat_byte -= 1u) == 254u);
    cat::verify(sat_byte.wrap().fetch_add(2u) == 254u);

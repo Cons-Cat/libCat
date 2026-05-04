@@ -1,5 +1,5 @@
-#include <cat/linear_allocator>
 #include <cat/iterable>
+#include <cat/linear_allocator>
 #include <cat/page_allocator>
 #include <cat/vec>
 

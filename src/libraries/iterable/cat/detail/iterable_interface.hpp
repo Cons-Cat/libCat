@@ -113,8 +113,8 @@ struct contiguous_position_interface {
                                                   Position const& position)
       -> decltype(collection.read_at_unchecked(position));
    template <typename Collection, typename Position>
-   friend constexpr auto ::cat::read_at_unchecked(
-      Collection const& collection, Position const& position)
+   friend constexpr auto ::cat::read_at_unchecked(Collection const& collection,
+                                                  Position const& position)
       -> decltype(collection.read_at_unchecked(position));
    template <typename Collection, typename Position>
    friend constexpr auto ::cat::offset_pos(Collection const& collection,

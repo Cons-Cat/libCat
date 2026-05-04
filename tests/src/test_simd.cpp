@@ -2564,4 +2564,3 @@ $test(simd_bool2_bool4_lanes_match_bool) {
    }
    cat::verify(iter_4 == f4.size());
 }
-

@@ -155,9 +155,10 @@ $test(array_collection) {
 
    auto array_tail = array_values | cat::reverse() | cat::take(2u);
    cat::verify(array_tail.sum() == 7);
-   auto even_squares = array_values.filter([](int value) -> bool {
-                                    return (value % 2) == 0;
-                                 })
+   auto even_squares = array_values
+                          .filter([](int value) -> bool {
+                             return (value % 2) == 0;
+                          })
                           .transform([](int value) -> int {
                              return value * value;
                           });
@@ -264,4 +265,3 @@ $test(array_three_way_and_equality_runtime) {
    cat::verify(a == b);
    cat::verify(a != c);
 }
-

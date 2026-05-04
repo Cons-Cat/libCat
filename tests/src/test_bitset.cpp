@@ -466,4 +466,3 @@ $test(bitset_collection) {
    cat::verify(first.has_value());
    cat::verify(!first.value());
 }
-

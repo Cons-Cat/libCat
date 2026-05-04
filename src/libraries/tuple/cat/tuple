@@ -390,8 +390,7 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    template <idx... indices>
    constexpr void
    swap_impl(tuple& other, index_list_type<indices...>) {
-      (cat::swap(this->template get<indices>(),
-                 other.template get<indices>()),
+      (cat::swap(this->template get<indices>(), other.template get<indices>()),
        ...);
    }
 };
