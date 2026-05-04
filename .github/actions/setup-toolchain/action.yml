@@ -33,6 +33,8 @@ runs:
 
     - name: Install mise
       uses: jdx/mise-action@v4
+      env:
+        MISE_HTTP_TIMEOUT: 120
       with:
         version: 2026.3.10
         cache: false
@@ -40,10 +42,14 @@ runs:
 
     - name: Install Clang toolchain
       shell: bash
+      env:
+        MISE_HTTP_TIMEOUT: 120
       run: mise run install-clang-nightly
 
     - name: Add mise toolchain binaries to PATH
       shell: bash
+      env:
+        MISE_HTTP_TIMEOUT: 120
       run: |
         set -eu
         tool_bin=$(mise exec -- sh -c 'dirname "$(command -v clang++)"')
