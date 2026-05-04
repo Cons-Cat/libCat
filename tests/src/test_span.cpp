@@ -1,4 +1,5 @@
 #include <cat/array>
+#include <cat/iterable>
 #include <cat/meta>
 #include <cat/span>
 #include <cat/utility>
@@ -290,7 +291,7 @@ $test(span_front_back) {
    cat::verify(values[4] == -2);
 }
 
-$test(span_iteration_forward) {
+$test(span_stepanov_iteration_forward) {
    int4 values[4] = {1, 2, 3, 4};
    cat::span<int4> view{values, 4u};
 
@@ -302,7 +303,7 @@ $test(span_iteration_forward) {
    cat::verify(index == 4u);
 }
 
-$test(span_iteration_reverse) {
+$test(span_stepanov_iteration_reverse) {
    int4 values[4] = {1, 2, 3, 4};
    cat::span<int4> view{values, 4u};
 
@@ -314,7 +315,7 @@ $test(span_iteration_reverse) {
    }
 }
 
-$test(span_iteration_const) {
+$test(span_stepanov_iteration_const) {
    int4 values[3] = {5, 6, 7};
    cat::span<int4> view{values, 3u};
 
@@ -324,6 +325,24 @@ $test(span_iteration_const) {
       ++index;
    }
    cat::verify(index == 3u);
+}
+
+$test(span_collection) {
+   static_assert(cat::is_random_access_collection<cat::span<int>>);
+
+   cat::array array_values{1, 2, 3, 4};
+   cat::span<int> array_span = array_values;
+   cat::verify(cat::sum(array_span) == 10);
+   cat::verify(cat::read_at(array_span, 1u) == 2);
+   auto span_tail = array_span | cat::reverse() | cat::take(2u);
+   cat::verify(span_tail.sum() == 7);
+   auto transformed_tail = array_span.filter([](int value) -> bool {
+                                      return value > 2;
+                                   })
+                              .transform([](int value) -> int {
+                                 return value * 3;
+                              });
+   cat::verify(transformed_tail.sum() == 21);
 }
 
 $test(span_subspan) {
@@ -811,7 +830,7 @@ $test(span_compare_size_mismatch_short_circuits) {
 
 // Cppreference parity: explicit iterator method names must work directly
 // (range-for already exercises `begin`/`end` indirectly).
-$test(span_iterator_methods_explicit) {
+$test(span_stepanov_iterator_methods_explicit) {
    int4 values[4] = {10, 20, 30, 40};
    cat::span<int4> view{values, 4u};
 
@@ -824,7 +843,7 @@ $test(span_iterator_methods_explicit) {
 
 // `cbegin`/`cend` always yield iterators to `T const`, even on a non-`const`
 // span.
-$test(span_iterator_methods_const_cbegin_cend) {
+$test(span_stepanov_iterator_methods_const_cbegin_cend) {
    int4 values[3] = {1, 2, 3};
    cat::span<int4> view{values, 3u};
 
@@ -835,7 +854,7 @@ $test(span_iterator_methods_const_cbegin_cend) {
 }
 
 // Reverse iterator methods produce the elements in descending order.
-$test(span_iterator_methods_reverse) {
+$test(span_stepanov_iterator_methods_reverse) {
    int4 values[4] = {1, 2, 3, 4};
    cat::span<int4> view{values, 4u};
 
@@ -848,7 +867,7 @@ $test(span_iterator_methods_reverse) {
 
 // `iterator` is a contiguous (random-access) iterator type. Verify the libCat
 // concepts hold so generic algorithms can pick the contiguous specialization.
-$test(span_iterator_concepts) {
+$test(span_stepanov_iterator_concepts) {
    using iterator = cat::span<int4>::iterator;
    static_assert(cat::is_random_access_stepanov_iterator<iterator>);
 }
@@ -957,3 +976,4 @@ $test(span_dynamic_extent_constant) {
    static_assert(cat::span<int4>::extent == cat::dynamic_extent);
    static_assert(cat::span<int4, 4_idx>::extent != cat::dynamic_extent);
 }
+

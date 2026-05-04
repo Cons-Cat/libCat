@@ -1,4 +1,5 @@
 #include <cat/array>
+#include <cat/iterable>
 #include <cat/linear_allocator>
 #include <cat/math>
 #include <cat/page_allocator>
@@ -142,7 +143,7 @@ $test(simd_broadcast_traits) {
    cat::verify(from_uint_constant == 4_f4);
 }
 
-$test(simd_lane_iterator) {
+$test(simd_lane_stepanov_iterator) {
    using Simd = int4x4;
    using lane_iter = Simd::iterator;
    static_assert(cat::is_same<typename lane_iter::iterator_concept,
@@ -196,6 +197,43 @@ $test(simd_lane_iterator) {
    auto old = tmp2--;
    cat::verify(old.lane_index() == 2u);
    cat::verify(tmp2.lane_index() == 1u);
+}
+
+$test(simd_collection) {
+   static_assert(cat::is_random_access_collection<cat::int4x4>);
+   static_assert(
+      cat::is_random_access_collection<cat::fixed_size_simd_mask<int4, 4u>>);
+
+   cat::int4x4 lanes{1_i4, 2_i4, 3_i4, 4_i4};
+   cat::verify(cat::sum(lanes) == 10_i4);
+   cat::verify(cat::read_at(lanes, 1u) == 2_i4);
+   auto lane_tail = lanes | cat::reverse() | cat::take(2u);
+   cat::verify(lane_tail.sum() == 7_i4);
+   auto doubled_tail = cat::ref(lanes)
+                          .filter([](int4 lane) -> bool {
+                             return lane > 2_i4;
+                          })
+                          .transform([](int4 lane) -> int4 {
+                             return lane * 2_i4;
+                          });
+   cat::verify(doubled_tail.sum() == 14_i4);
+
+   cat::fixed_size_simd_mask<int4, 4u> mask{true, false, true, false};
+   cat::verify(cat::count(mask) == 4u);
+   cat::verify(cat::read_at(mask, 0u));
+   cat::verify(!cat::read_at(mask, 1u));
+   auto true_lanes = cat::ref(mask) | cat::filter([](bool lane) -> bool {
+                        return lane;
+                     });
+   cat::verify((true_lanes | cat::count()) == 2u);
+   auto true_lane_values = cat::ref(mask)
+                              .filter([](bool lane) -> bool {
+                                 return lane;
+                              })
+                              .transform([](bool lane) -> int {
+                                 return lane ? 3 : 0;
+                              });
+   cat::verify(true_lane_values.sum() == 6);
 }
 
 $test(simd_size_data_and_mask_size_data) {
@@ -1931,7 +1969,7 @@ $test(simd_concepts) {
 }
 
 // `vectorized_stepanov_iterator` (Vc simdize iterator-style coverage):
-$test(simd_as_vectorized_iterate_twice) {
+$test(simd_as_vectorized_stepanov_iterate_twice) {
    int_lane const data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
    auto it = cat::as_vectorized<int4, 4u>(data);
    auto it2 = cat::as_vectorized<int4, 4u>(data + 4);
@@ -2526,3 +2564,4 @@ $test(simd_bool2_bool4_lanes_match_bool) {
    }
    cat::verify(iter_4 == f4.size());
 }
+

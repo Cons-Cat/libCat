@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/algorithm>
+#include <cat/detail/iterable_interface.hpp>
 #include <cat/math>
 #include <cat/maybe>
 #include <cat/stepanov>
@@ -273,7 +274,7 @@ class random_access_stepanov_iterable_interface
 };
 
 template <typename Derived, typename T>
-class container_interface {
+class container_interface : public contiguous_collection_interface<Derived> {
  protected:
    // `is_array_like` at the top of this class instead of the bottom prevents
    // clangd false-positive diagnostics.

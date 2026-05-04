@@ -74,6 +74,51 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    constexpr auto
    operator=(bitset&&) -> bitset& = default;
 
+   [[nodiscard]]
+   constexpr auto
+   begin_pos() const -> idx {
+      return 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end_pos() const -> idx {
+      return bits_count;
+   }
+
+   constexpr void
+   inc_pos(idx& position) const {
+      ++position;
+   }
+
+   constexpr void
+   dec_pos(idx& position) const {
+      position = narrow_cast<idx>(position - 1u).assert();
+   }
+
+   constexpr void
+   offset_pos(idx& position, iword offset) const {
+      position = narrow_cast<idx>(position + offset).assert();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   distance(idx left, idx right) const -> iword {
+      return right - left;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   read_at_unchecked(idx position) -> bit_value {
+      return bit_value{(*this)[position]};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   read_at_unchecked(idx position) const -> bit_value {
+      return bit_value{(*this)[position]};
+   }
+
    constexpr void
    swap(bitset& other) {
       m_data.swap(other.m_data);

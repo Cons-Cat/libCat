@@ -3,8 +3,8 @@
 #pragma once
 
 #include <cat/allocator>
-#include <cat/array>
 #include <cat/container>
+#include <cat/iterable>
 #include <cat/utility>
 
 // TODO: Add an `intrusive_list`.
@@ -293,57 +293,62 @@ basic_list
       }
    }
 
+   template <typename U>
+   auto
+   append_new_node(node_type*& p_tail, U&& value) -> maybe<iterator> {
+      node_type* p_node = $prop(m_allocator.template alloc<node_type>());
+      p_node->p_next_node = nullptr;
+      if constexpr (is_doubly_linked) {
+         p_node->p_previous_node = p_tail;
+      }
+      p_node->storage = $fwd(value);
+
+      if (m_size == 0u) {
+         m_storage.m_p_head = p_node;
+      } else {
+         p_tail->p_next_node = p_node;
+      }
+      if constexpr (is_doubly_linked) {
+         m_storage.m_p_tail = p_node;
+      }
+      p_tail = p_node;
+      ++m_size;
+      return iterator(p_node);
+   }
+
+   auto
+   append_new_nodes([[maybe_unused]] node_type*& p_tail) -> maybe<void> {
+      return monostate;
+   }
+
+   template <typename U, typename... Args>
+   auto
+   append_new_nodes(node_type*& p_tail, U&& value, Args&&... remaining)
+      -> maybe<void> {
+      // Previously, this was implemented by a singular multi-allocation to
+      // reduce the number of allocator calls. That caused issues during
+      // cleanup, when every node necessarily has its own `free()`, resulting in
+      // double free errors. Now we recursively append instead.
+      // TODO: We should look into this optimization again.
+      $prop(this->append_new_node(p_tail, $fwd(value)));
+      return this->append_new_nodes(p_tail, $fwd(remaining)...);
+   }
+
  public:
    // Deep-copy the contents of this `list`.
-   template <is_allocator new_allocator_type>
+   template <is_allocator NewAllocator>
    [[nodiscard]]
    auto
-   clone(new_allocator_type& allocator)
-      -> maybe<basic_list<T, new_allocator_type, is_doubly_linked>> {
-      basic_list new_list =
-         basic_list<T, Allocator, is_doubly_linked>(allocator);
-      cat::span<node_type> new_nodes =
-         $prop(allocator.template alloc_multi<node_type>(m_size));
-
-      new_list.m_storage.m_p_head = new_nodes.data();
-      new_list.m_size = m_size;
-
-      if (new_nodes.size() == 1) [[unlikely]] {
-         node_type& node = new_nodes.front();
-         node.storage = this->front();
-         cat::assert(node.p_next_node == nullptr);
-         if constexpr (is_doubly_linked) {
-            cat::assert(node.p_previous_node == nullptr);
-         }
-         return new_list;
-      }
-
-      node_type* p_current = new_nodes.data();
-      [[maybe_unused]]
-      node_type* p_previous = nullptr;
+   clone(NewAllocator& allocator)
+      -> maybe<basic_list<T, NewAllocator, is_doubly_linked>> {
+      using new_list_type = basic_list<T, NewAllocator, is_doubly_linked>;
+      new_list_type new_list(allocator);
+      typename new_list_type::node_type* p_tail = nullptr;
       iterator it = this->begin();
-      // We can't use `cat::copy` here because the pointers need new values.
-      for (idx i = 0; i < new_nodes.size() - 1; ++i) {
-         node_type& new_node = new_nodes[i];
-         // Copy over the contained element exactly.
-         new_node.storage = *it;
-
-         new_node.p_next_node = p_current + 1u;
-         if constexpr (is_doubly_linked) {
-            new_node.p_previous_node = p_previous;
-         }
-         p_previous = p_current;
-         p_current += 1;
+      for (idx i = 0; i < m_size; ++i) {
+         $prop(new_list.append_new_node(p_tail, *it));
          ++it;
       }
-      // Place the final node.
-      node_type& last_node = new_nodes.back();
-      last_node.storage = *it;
-      last_node.p_next_node = nullptr;
-      if constexpr (is_doubly_linked) {
-         last_node.p_previous_node = p_current;
-      }
-
       return new_list;
    }
 
@@ -567,6 +572,107 @@ basic_list
       return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_head};
    }
 
+   template <typename Node, typename Element>
+   class list_iteration_context {
+      Node* m_p_node;
+
+    public:
+      using element_type = Element&;
+
+      constexpr explicit list_iteration_context(Node* p_node)
+          : m_p_node(p_node) {
+      }
+
+      list_iteration_context(list_iteration_context const&) = delete;
+      list_iteration_context(list_iteration_context&&) = delete;
+      auto
+      operator=(list_iteration_context const&)
+         -> list_iteration_context& = delete;
+      auto
+      operator=(list_iteration_context&&) -> list_iteration_context& = delete;
+
+      template <typename Pred>
+      constexpr auto
+      run_while(Pred&& pred) -> iteration_result {
+         while (m_p_node != nullptr) {
+            Node* const p_node = m_p_node;
+            m_p_node = m_p_node->p_next_node;
+            if (!pred(p_node->storage)) {
+               return iteration_result::incomplete;
+            }
+         }
+         return iteration_result::complete;
+      }
+   };
+
+   template <typename Node, typename Element>
+   class list_reverse_iteration_context {
+      Node* m_p_node;
+
+    public:
+      using element_type = Element&;
+
+      constexpr explicit list_reverse_iteration_context(Node* p_node)
+          : m_p_node(p_node) {
+      }
+
+      list_reverse_iteration_context(list_reverse_iteration_context const&) =
+         delete;
+      list_reverse_iteration_context(list_reverse_iteration_context&&) = delete;
+      auto
+      operator=(list_reverse_iteration_context const&)
+         -> list_reverse_iteration_context& = delete;
+      auto
+      operator=(list_reverse_iteration_context&&)
+         -> list_reverse_iteration_context& = delete;
+
+      template <typename Pred>
+      constexpr auto
+      run_while(Pred&& pred) -> iteration_result {
+         while (m_p_node != nullptr) {
+            Node* const p_node = m_p_node;
+            m_p_node = m_p_node->p_previous_node;
+            if (!pred(p_node->storage)) {
+               return iteration_result::incomplete;
+            }
+         }
+         return iteration_result::complete;
+      }
+   };
+
+   [[nodiscard]]
+   constexpr auto
+   iterate() -> list_iteration_context<node_type, T> {
+      return list_iteration_context<node_type, T>{m_storage.m_p_head};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   iterate() const -> list_iteration_context<node_type const, T const> {
+      return list_iteration_context<node_type const, T const>{
+         m_storage.m_p_head,
+      };
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   reverse_iterate() -> list_reverse_iteration_context<node_type, T>
+      requires(is_doubly_linked)
+   {
+      return list_reverse_iteration_context<node_type, T>{m_storage.m_p_tail};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   reverse_iterate() const
+      -> list_reverse_iteration_context<node_type const, T const>
+      requires(is_doubly_linked)
+   {
+      return list_reverse_iteration_context<node_type const, T const>{
+         m_storage.m_p_tail,
+      };
+   }
+
  private:
    storage_type m_storage;
    idx m_size = 0;
@@ -626,87 +732,6 @@ class list_stepanov_iterator
    node_type* m_p_node;
 };
 
-template <typename T>
-void
-initialize_list_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
-                         auto&&... next) {
-   if constexpr (sizeof...(next) > 0u) {
-      // Construct a node at this address.
-      T* p_current = list_nodes.data();
-      new (p_current) T(p_current + 1u, p_previous, $fwd(current));
-      // Recurse to the next node. `sizeof...(next) > 0` means at least one node
-      // remains, so the span has length at least two and `size - 1u` cannot
-      // wrap.
-      list_nodes =
-         list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
-      initialize_list_variadic<T>(list_nodes, p_current, $fwd(next)...);
-   } else {
-      // Final node.
-      T* p_current = p_previous + 1u;
-      new (p_current) T(nullptr, p_previous, $fwd(current));
-   }
-}
-
-template <typename T>
-void
-initialize_slist_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
-                          auto&&... next) {
-   if constexpr (sizeof...(next) > 0u) {
-      // Construct a node at this address.
-      T* p_current = list_nodes.data();
-      new (p_current) T(p_current + 1u, $fwd(current));
-      // Recurse to the next node. Same span-length reasoning as
-      // `initialize_list_variadic`.
-      list_nodes =
-         list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
-      initialize_slist_variadic<T>(list_nodes, p_current, $fwd(next)...);
-   } else {
-      // Final node.
-      T* p_current = p_previous + 1u;
-      new (p_current) T(nullptr, $fwd(current));
-   }
-}
-
-template <typename T>
-void
-initialize_list_filled(span<T> list_nodes, T* p_previous,
-                       decltype(T::storage) const& value) {
-   T* p_current = list_nodes.data();
-
-   if (list_nodes.size() > 1u) {
-      // Construct a node at this address.
-      new (p_current) T(p_current + 1u, p_previous, value);
-      // Recurse to the next node. The branch requires `size > 1u`, so
-      // `size - 1u` is safe.
-      list_nodes =
-         list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
-      initialize_list_filled<T>(list_nodes, p_current, value);
-   } else {
-      // Final node.
-      new (p_current) T(nullptr, p_previous, value);
-   }
-}
-
-template <typename T>
-void
-initialize_slist_filled(span<T> list_nodes, T* p_previous,
-                        decltype(T::storage) const& value) {
-   if (list_nodes.size() > 1u) {
-      // Construct a node at this address.
-      T* p_current = list_nodes.data();
-      new (p_current) T(p_current + 1u, value);
-      // Recurse to the next node. Same `size > 1u` guard as
-      // `initialize_list_filled`.
-      list_nodes =
-         list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
-      initialize_slist_filled<T>(list_nodes, p_current, value);
-   } else {
-      // Final node.
-      T* p_current = p_previous + 1u;
-      new (p_current) T(nullptr, value);
-   }
-}
-
 }  // namespace detail
 
 // These factory functions require access to the `protected` constructor, which
@@ -732,28 +757,9 @@ make_list(Allocator& allocator [[clang::lifetimebound]], U&& value,
           Args&&... remaining) -> maybe<list<T, Allocator>> {
    list<T, Allocator> new_list(allocator);
    using node = detail::list_node<T>;
+   node* p_tail = nullptr;
 
-   if constexpr (sizeof...(Args) > 0) {
-      cat::span<node> nodes =
-         $prop(allocator.template alloc_multi<node>(sizeof...(remaining) + 1));
-
-      // TODO: Test `make_list` with exactly 1 value.
-      new_list.m_storage.m_p_head = nodes.data();
-      new_list.m_storage.m_p_tail = nodes.data() + nodes.size() - 1u;
-      new_list.m_size = nodes.size();
-
-      detail::initialize_list_variadic<node>(nodes, nullptr, value,
-                                             $fwd(remaining)...);
-   } else {
-      // TODO: Is `calloc` more efficient here?
-      node* p_new_node = $prop(allocator.template alloc<node>());
-      p_new_node->p_next_node = nullptr;
-      p_new_node->p_previous_node = nullptr;
-      p_new_node->storage = $fwd(value);
-
-      new_list.m_storage.m_p_head = p_new_node;
-      new_list.m_size = 1u;
-   }
+   $prop(new_list.append_new_nodes(p_tail, $fwd(value), $fwd(remaining)...));
 
    return new_list;
 }
@@ -774,15 +780,11 @@ auto
 make_list_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
                  T const& value) -> maybe<list<T, Allocator>> {
    list<T, Allocator> new_list(allocator);
-
    using node = detail::list_node<T>;
-   cat::span<node> nodes = $prop(allocator.template alloc_multi<node>(count));
-
-   new_list.m_storage.m_p_head = nodes.data();
-   new_list.m_storage.m_p_tail = nodes.data() + count - 1u;
-   new_list.m_size = count;
-
-   detail::initialize_list_filled<node>(nodes, nodes.data(), value);
+   node* p_tail = nullptr;
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_list.append_new_node(p_tail, value));
+   }
 
    return new_list;
 }
@@ -805,26 +807,9 @@ make_slist(Allocator& allocator [[clang::lifetimebound]], U&& value,
            Args&&... remaining) -> maybe<slist<T, Allocator>> {
    slist<T, Allocator> new_slist(allocator);
    using node = detail::slist_node<T>;
+   node* p_tail = nullptr;
 
-   if constexpr (sizeof...(Args) > 0) {
-      cat::span<node> nodes =
-         $prop(allocator.template alloc_multi<node>(sizeof...(remaining) + 1));
-
-      // TODO: Test `make_slist` with exactly 1 value.
-      new_slist.m_storage.m_p_head = nodes.data();
-      new_slist.m_size = nodes.size();
-      detail::initialize_slist_variadic<node>(nodes, nullptr, value,
-                                              $fwd(remaining)...);
-   } else {
-      // TODO: Is `calloc` more efficient here?
-      node* p_new_node = $prop(allocator.template alloc<node>());
-      p_new_node->p_next_node = nullptr;
-      p_new_node->p_previous_node = nullptr;
-      p_new_node->storage = $fwd(value);
-
-      new_slist.m_storage.m_p_head = p_new_node;
-      new_slist.m_size = 1u;
-   }
+   $prop(new_slist.append_new_nodes(p_tail, $fwd(value), $fwd(remaining)...));
 
    return new_slist;
 }
@@ -846,14 +831,11 @@ auto
 make_slist_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
                   T const& value) -> maybe<slist<T, Allocator>> {
    slist<T, Allocator> new_slist(allocator);
-
    using node = detail::slist_node<T>;
-   cat::span<node> nodes = $prop(allocator.template alloc_multi<node>(count));
-
-   new_slist.m_storage.m_p_head = nodes.data();
-   new_slist.m_size = count;
-
-   detail::initialize_slist_filled<node>(nodes, nodes.data(), value);
+   node* p_tail = nullptr;
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_slist.append_new_node(p_tail, value));
+   }
 
    return new_slist;
 }

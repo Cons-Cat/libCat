@@ -1,3 +1,4 @@
+#include <cat/iterable>
 #include <cat/string>
 #include <cat/utility>
 
@@ -99,4 +100,33 @@ $test(string_length) {
    cat::zstr_view arr_zview = char_array;
    arr_zview = char_array;
    cat::zstr_inplace arr_zinplac = cat::make_zstr_inplace<4>(char_array);
+}
+
+$test(string_collection) {
+   static_assert(cat::is_random_access_collection<cat::str_inplace<4u>>);
+   static_assert(cat::is_random_access_collection<cat::str_view>);
+
+   cat::str_inplace<3u> text = "cat";
+   cat::verify(cat::count(text) == 3u);
+   cat::verify(cat::read_at(text, 0u) == 'c');
+   auto non_a_offsets = cat::ref(text)
+                           .filter([](char value) -> bool {
+                              return value != 'a';
+                           })
+                           .transform([](char value) -> int {
+                              return value - 'a';
+                           });
+   cat::verify(non_a_offsets.sum() == 21);
+
+   cat::str_view view = text;
+   cat::verify(cat::count(view) == 3u);
+   cat::verify(cat::read_at(view, 2u) == 't');
+   auto prefix_offsets = cat::ref(view)
+                            .filter([](char value) -> bool {
+                               return value < 't';
+                            })
+                            .transform([](char value) -> int {
+                               return value - 'a';
+                            });
+   cat::verify(prefix_offsets.sum() == 2);
 }

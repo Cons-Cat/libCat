@@ -1,4 +1,5 @@
 #include <cat/insert_iterators>
+#include <cat/iterable>
 #include <cat/linear_allocator>
 #include <cat/list>
 #include <cat/page_allocator>
@@ -231,4 +232,58 @@ $test(list) {
    front_iterator.insert(2).verify();
    cat::verify(back_list.front() == 2);
    cat::verify(back_list.back() == 10);
+}
+
+$test(list_iterable) {
+   using flux_test_list = cat::list<int, cat::page_allocator>;
+   using flux_test_slist = cat::slist<int, cat::page_allocator>;
+
+   static_assert(cat::is_iterable<flux_test_list>);
+   static_assert(cat::is_iterable<flux_test_slist>);
+   static_assert(!cat::is_collection<flux_test_list>);
+   static_assert(!cat::is_collection<flux_test_slist>);
+   static_assert(cat::is_reverse_iterable<flux_test_list>);
+   static_assert(!cat::is_reverse_iterable<flux_test_slist>);
+
+   cat::page_allocator allocator;
+   auto list_values = cat::make_list<int>(allocator, 1, 2, 3, 4).verify();
+   cat::verify(cat::sum(list_values) == 10);
+   auto list_tail = cat::ref(list_values) | cat::reverse() | cat::take(2u);
+   cat::verify(list_tail.sum() == 7);
+   auto doubled_tail = cat::ref(list_values)
+                          .filter([](int value) -> bool {
+                             return value > 1;
+                          })
+                          .transform([](int value) -> int {
+                             return value * 2;
+                          });
+   cat::verify(doubled_tail.sum() == 18);
+
+   auto context = cat::iterate(list_values);
+   int first_total = 0;
+   auto first = context.run_while([&first_total](int value) -> bool {
+      first_total += value;
+      return first_total < 3;
+   });
+   cat::verify(first == cat::iteration_result::incomplete);
+   cat::verify(first_total == 3);
+
+   int rest_total = 0;
+   auto rest = context.run_while([&rest_total](int value) -> bool {
+      rest_total += value;
+      return true;
+   });
+   cat::verify(rest == cat::iteration_result::complete);
+   cat::verify(rest_total == 7);
+
+   auto slist_values = cat::make_slist<int>(allocator, 4, 5, 6).verify();
+   cat::verify(cat::sum(slist_values) == 15);
+   auto shifted_edges = cat::ref(slist_values)
+                           .filter([](int value) -> bool {
+                              return value != 5;
+                           })
+                           .transform([](int value) -> int {
+                              return value + 1;
+                           });
+   cat::verify(shifted_edges.sum() == 12);
 }

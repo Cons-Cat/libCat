@@ -1,4 +1,5 @@
 #include <cat/array>
+#include <cat/iterable>
 #include <cat/math>
 #include <cat/meta>
 #include <cat/runtime>
@@ -109,7 +110,7 @@ $test(array_consteval_copy_assign) {
    }();
 }
 
-$test(array_range_based_for_each_direction) {
+$test(array_stepanov_range_based_for_each_direction) {
    cat::array array_1{5, 6, 7, 8, 9};
 
    idx count = 0u;
@@ -143,6 +144,25 @@ $test(array_front_back_advance_to) {
 
    int4 array_to = *(array_1.begin().advance_to(--array_1.end()));
    cat::verify(array_to == array_1.back());
+}
+
+$test(array_collection) {
+   static_assert(cat::is_random_access_collection<cat::array<int, 4u>>);
+
+   cat::array array_values{1, 2, 3, 4};
+   cat::verify(cat::sum(array_values) == 10);
+   cat::verify(cat::read_at(array_values, 2u) == 3);
+
+   auto array_tail = array_values | cat::reverse() | cat::take(2u);
+   cat::verify(array_tail.sum() == 7);
+   auto even_squares = array_values.filter([](int value) -> bool {
+                                    return (value % 2) == 0;
+                                 })
+                          .transform([](int value) -> int {
+                             return value * value;
+                          });
+   cat::verify(even_squares.sum() == 20);
+   cat::verify(cat::as_span(array_values).size() == 4u);
 }
 
 $test(array_at_in_and_out_of_bounds) {
@@ -244,3 +264,4 @@ $test(array_three_way_and_equality_runtime) {
    cat::verify(a == b);
    cat::verify(a != c);
 }
+

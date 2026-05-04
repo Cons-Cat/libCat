@@ -1,4 +1,5 @@
 #include <cat/bitset>
+#include <cat/iterable>
 
 #include "../unit_tests.hpp"
 
@@ -159,49 +160,6 @@ $test(bitset) {
    bits127.at(0u).verify() = true;
    cat::verify(bits127.at(0u).has_value());
    cat::verify(!bits127.at(128u).has_value());
-
-   // Test `const` iterator.
-   for ([[maybe_unused]]
-        auto bit : bits127_2) {
-   }
-
-   // Test mutable 8-byte aligned iterator.
-   cat::bitset bits128 =
-      cat::make_bitset<128>(cat::uint8_max >> 2u, 0b0000'0100_u8);
-   for (cat::bit_reference bit : bits128) {
-      bit = false;
-   }
-   for (cat::bit_reference bit : bits128) {
-      cat::verify(bit == false);
-   }
-
-   for (cat::bit_reference bit : bits128) {
-      bit = true;
-   }
-   for (cat::bit_reference bit : bits128) {
-      cat::verify(bit == true);
-   }
-
-   auto bits127_3 = cat::make_bitset<127>(cat::uint8_min, 0b0000'0100_u8);
-   // Test mutable non-8-byte aligned iterator.
-   for (cat::bit_reference bit : bits127_3) {
-      bit = false;
-   }
-   for (cat::bit_reference bit : bits127_3) {
-      cat::verify(bit == false);
-   }
-
-   for (cat::bit_reference bit : bits127_3) {
-      bit = true;
-   }
-   for (cat::bit_reference bit : bits127_3) {
-      cat::verify(bit == true);
-   }
-
-   // TODO: Get this working.
-   //  for (cat::bit_reference bit : cat::as_reverse_stepanov(bits127_3)) {
-   //     cat::verify(bit == true);
-   //  }
 
    cat::bitset bitstring("010101");
    cat::verify(bitstring[0] == false);
@@ -428,3 +386,84 @@ $test(bitset) {
    fill129.clear();
    cat::verify(fill129.none_of());
 }
+
+$test(bitset_stepanov_iterator) {
+   using namespace cat::arithmetic_literals;
+
+   constexpr cat::bitset<127> bits127_2 =
+      cat::make_bitset<127>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+
+   for ([[maybe_unused]]
+        auto bit : bits127_2) {
+   }
+
+   cat::bitset bits128 =
+      cat::make_bitset<128>(cat::uint8_max >> 2u, 0b0000'0100_u8);
+   for (cat::bit_reference bit : bits128) {
+      bit = false;
+   }
+   for (cat::bit_reference bit : bits128) {
+      cat::verify(bit == false);
+   }
+
+   for (cat::bit_reference bit : bits128) {
+      bit = true;
+   }
+   for (cat::bit_reference bit : bits128) {
+      cat::verify(bit == true);
+   }
+
+   auto bits127_3 = cat::make_bitset<127>(cat::uint8_min, 0b0000'0100_u8);
+   for (cat::bit_reference bit : bits127_3) {
+      bit = false;
+   }
+   for (cat::bit_reference bit : bits127_3) {
+      cat::verify(bit == false);
+   }
+
+   for (cat::bit_reference bit : bits127_3) {
+      bit = true;
+   }
+   for (cat::bit_reference bit : bits127_3) {
+      cat::verify(bit == true);
+   }
+
+   // TODO: Get this working.
+   //  for (cat::bit_reference bit : cat::as_reverse_stepanov(bits127_3)) {
+   //     cat::verify(bit == true);
+   //  }
+}
+
+$test(bitset_collection) {
+   static_assert(cat::is_random_access_collection<cat::bitset<9u>>);
+   cat::bitset<5u> bits;
+   bits[0u] = true;
+   bits[2u] = true;
+
+   cat::verify(cat::count(bits) == 5u);
+   cat::verify(bool(cat::read_at(bits, 0u)));
+   cat::verify(!bool(cat::read_at(bits, 1u)));
+   cat::verify(bool(cat::read_at(bits, 2u)));
+
+   idx true_count = 0u;
+   cat::for_each(bits, [&true_count](auto bit) {
+      if (bit) {
+         ++true_count;
+      }
+   });
+   cat::verify(true_count == 2u);
+   auto true_bit_values = cat::ref(bits)
+                             .filter([](auto bit) -> bool {
+                                return bit;
+                             })
+                             .transform([](auto bit) -> int {
+                                return bit ? 10 : 0;
+                             });
+   cat::verify(true_bit_values.sum() == 20);
+
+   auto reversed = cat::reverse_iterate(bits);
+   auto first = cat::next_element(reversed);
+   cat::verify(first.has_value());
+   cat::verify(!first.value());
+}
+

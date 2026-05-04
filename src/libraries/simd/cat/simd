@@ -1208,32 +1208,71 @@ class [[clang::preferred_name(fixed_size_simd<T, in_abi::lanes>),
    }
 
    [[nodiscard]]
-   constexpr iterator
-   begin() {
+   constexpr auto
+   begin_pos() const -> idx {
+      return 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end_pos() const -> idx {
+      return size();
+   }
+
+   constexpr void
+   inc_pos(idx& position) const {
+      ++position;
+   }
+
+   constexpr void
+   dec_pos(idx& position) const {
+      position = idx(position.raw - 1u);
+   }
+
+   constexpr void
+   offset_pos(idx& position, iword offset) const {
+      position = idx(static_cast<idx::raw_type>((position + offset).raw));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   distance(idx left, idx right) const -> iword {
+      return right - left;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   read_at_unchecked(idx position) const -> scalar_type {
+      return (*this)[position];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   begin() -> iterator {
       return iterator(this, 0u);
    }
 
    [[nodiscard]]
-   constexpr const_iterator
-   begin() const {
+   constexpr auto
+   begin() const -> const_iterator {
       return const_iterator(this, 0u);
    }
 
    [[nodiscard]]
-   constexpr const_iterator
-   cbegin() const {
+   constexpr auto
+   cbegin() const -> const_iterator {
       return begin();
    }
 
    [[nodiscard]]
-   constexpr default_sentinel_t
-   end() const {
+   constexpr auto
+   end() const -> default_sentinel_t {
       return default_sentinel;
    }
 
    [[nodiscard]]
-   constexpr default_sentinel_t
-   cend() const {
+   constexpr auto
+   cend() const -> default_sentinel_t {
       return end();
    }
 
@@ -1832,32 +1871,71 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, in_abi::lanes>),
    }
 
    [[nodiscard]]
-   constexpr iterator
-   begin() {
+   constexpr auto
+   begin_pos() const -> idx {
+      return 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end_pos() const -> idx {
+      return size();
+   }
+
+   constexpr void
+   inc_pos(idx& position) const {
+      ++position;
+   }
+
+   constexpr void
+   dec_pos(idx& position) const {
+      position = idx(position.raw - 1u);
+   }
+
+   constexpr void
+   offset_pos(idx& position, iword offset) const {
+      position = idx(static_cast<idx::raw_type>((position + offset).raw));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   distance(idx left, idx right) const -> iword {
+      return right - left;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   read_at_unchecked(idx position) const -> bool {
+      return (*this)[position];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   begin() -> iterator {
       return iterator(this, 0u);
    }
 
    [[nodiscard]]
-   constexpr const_iterator
-   begin() const {
+   constexpr auto
+   begin() const -> const_iterator {
       return const_iterator(this, 0u);
    }
 
    [[nodiscard]]
-   constexpr const_iterator
-   cbegin() const {
+   constexpr auto
+   cbegin() const -> const_iterator {
       return begin();
    }
 
    [[nodiscard]]
-   constexpr default_sentinel_t
-   end() const {
+   constexpr auto
+   end() const -> default_sentinel_t {
       return default_sentinel;
    }
 
    [[nodiscard]]
-   constexpr default_sentinel_t
-   cend() const {
+   constexpr auto
+   cend() const -> default_sentinel_t {
       return end();
    }
 

@@ -120,26 +120,28 @@ concept is_position = requires(P const& left, P const& right) {
 template <typename Collection>
 [[nodiscard]]
 constexpr auto
-begin_pos(Collection const& collection) {
+begin_pos(Collection const& collection) -> decltype(collection.begin_pos()) {
    return collection.begin_pos();
 }
 
 template <typename Collection>
 [[nodiscard]]
 constexpr auto
-end_pos(Collection const& collection) {
+end_pos(Collection const& collection) -> decltype(collection.end_pos()) {
    return collection.end_pos();
 }
 
 template <typename Collection, typename Position>
-constexpr void
-inc_pos(Collection const& collection, Position& position) {
+constexpr auto
+inc_pos(Collection const& collection, Position& position)
+   -> decltype(collection.inc_pos(position)) {
    collection.inc_pos(position);
 }
 
 template <typename Collection, typename Position>
-constexpr void
-dec_pos(Collection const& collection, Position& position) {
+constexpr auto
+dec_pos(Collection const& collection, Position& position)
+   -> decltype(collection.dec_pos(position)) {
    collection.dec_pos(position);
 }
 
@@ -147,7 +149,8 @@ template <typename Collection, typename Position>
 [[nodiscard]]
 constexpr auto
 read_at_unchecked(Collection& collection, Position const& position)
-   -> decltype(auto) {
+   -> decltype(collection.read_at_unchecked(position))
+{
    return collection.read_at_unchecked(position);
 }
 
@@ -155,13 +158,15 @@ template <typename Collection, typename Position>
 [[nodiscard]]
 constexpr auto
 read_at_unchecked(Collection const& collection, Position const& position)
-   -> decltype(auto) {
+   -> decltype(collection.read_at_unchecked(position))
+{
    return collection.read_at_unchecked(position);
 }
 
 template <typename Collection, typename Position>
-constexpr void
-offset_pos(Collection const& collection, Position& position, iword offset) {
+constexpr auto
+offset_pos(Collection const& collection, Position& position, iword offset)
+   -> decltype(collection.offset_pos(position, offset)) {
    collection.offset_pos(position, offset);
 }
 
@@ -169,7 +174,7 @@ template <typename Collection, typename Position>
 [[nodiscard]]
 constexpr auto
 distance(Collection const& collection, Position const& from, Position const& to)
-   -> iword {
+   -> decltype(collection.distance(from, to)) {
    return collection.distance(from, to);
 }
 
@@ -183,10 +188,11 @@ concept is_contiguous_position_model =
 // public `begin_pos`/`end_pos` member spellings here.
 template <typename T>
 concept has_position_protocol =
-   is_contiguous_position_model<T> || (requires(T const& c) {
-                                          c.begin_pos();
-                                          c.end_pos();
-                                       });
+   is_contiguous_position_model<T>
+   || (requires(T const& c) {
+         begin_pos(c);
+         end_pos(c);
+      });
 }  // namespace detail
 
 template <detail::has_position_protocol T>
