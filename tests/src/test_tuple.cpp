@@ -74,6 +74,14 @@ $test(tuple_basics) {
    cat::verify(intchar.first() == 200);
    cat::verify(intchar.second() == 'b');
 
+   cat::tuple swap_left{1, 'a'};
+   cat::tuple swap_right{2, 'b'};
+   cat::swap(swap_left, swap_right);
+   cat::verify(swap_left.first() == 2);
+   cat::verify(swap_left.second() == 'b');
+   cat::verify(swap_right.first() == 1);
+   cat::verify(swap_right.second() == 'a');
+
    // Test `const`.
    cat::tuple<int, char> const intchar_const = {100, 'a'};
    cat::verify(intchar_const.first() == 100);

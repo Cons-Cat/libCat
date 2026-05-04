@@ -7,6 +7,48 @@
 
 namespace cat {
 
+namespace detail {
+
+template <typename T>
+concept is_member_swappable = requires(T& left, T& right) {
+   left.swap(right);
+};
+
+}  // namespace detail
+
+template <typename T>
+   requires detail::is_member_swappable<T>
+[[gnu::nodebug]]
+constexpr void
+swap(T& left, T& right) {
+   left.swap(right);
+}
+
+template <typename T>
+   requires(!detail::is_member_swappable<T>
+            && requires(T& left, T& right) {
+      T(move(left));
+      left = move(right);
+            })
+[[gnu::nodebug]]
+constexpr void
+swap(T& left, T& right) {
+   T temp = move(left);
+   left = move(right);
+   right = move(temp);
+}
+
+template <typename T, __SIZE_TYPE__ extent>
+   requires requires(T& left, T& right) { cat::swap(left, right); }
+[[gnu::nodebug]]
+constexpr void
+swap(T (&left)[extent], T (&right)[extent]) noexcept(noexcept(
+   cat::swap(left[0], right[0]))) {
+   for (cat::idx index = 0u; index < extent; ++index) {
+      cat::swap(left[index], right[index]);
+   }
+}
+
 template <typename T>
 constexpr auto
 unconst(T const& value) -> T& {

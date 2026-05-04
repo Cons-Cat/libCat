@@ -38,6 +38,7 @@
 #include <cat/math>
 #include <cat/memory>
 #include <cat/meta>
+#include <cat/utility>
 
 namespace cat {
 
@@ -161,6 +162,12 @@ span
    operator=(U&& container) =
       delete ("A `cat::span` cannot alias a temporary, because the span would"
               "immediately dangle.");
+
+   constexpr void
+   swap(span& other) {
+      cat::swap(m_p_data, other.m_p_data);
+      cat::swap(m_size, other.m_size);
+   }
 
    // Get the non-`const` address that this `span` starts at.
    [[nodiscard]]

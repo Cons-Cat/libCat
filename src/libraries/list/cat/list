@@ -5,6 +5,7 @@
 #include <cat/allocator>
 #include <cat/array>
 #include <cat/container>
+#include <cat/utility>
 
 // TODO: Add an `intrusive_list`.
 
@@ -146,6 +147,13 @@ basic_list
 
    constexpr ~basic_list() {
       clear();
+   }
+
+   constexpr void
+   swap(basic_list& other) {
+      assert(&m_allocator == &other.m_allocator);
+      cat::swap(m_storage, other.m_storage);
+      cat::swap(m_size, other.m_size);
    }
 
  protected:

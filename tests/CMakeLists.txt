@@ -39,6 +39,7 @@ if(CAT_BUILD_UNIT_TESTS)
   target_sources(
     cat-tests INTERFACE
     ${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_utility.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_atomic.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_stepanov.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp

@@ -8,6 +8,7 @@
 #include <cat/maybe>
 #include <cat/simd>
 #include <cat/span>
+#include <cat/utility>
 
 namespace std {
 
@@ -345,6 +346,13 @@ basic_str_inplace
       requires(length == 1u + static_cast<unsigned>(is_null_terminated))
    {
       return m_data[0] == other;
+   }
+
+   constexpr void
+   swap(basic_str_inplace& other) {
+      for (idx index = 0u; index < length; ++index) {
+         cat::swap(m_data[index], other.m_data[index]);
+      }
    }
 
    constexpr auto

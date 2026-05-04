@@ -84,6 +84,17 @@ $test(vec) {
       cat::verify(integer == 1);
    }
 
+   cat::vec swap_left = cat::make_vec<int4>(allocator, 1_i4, 2_i4).verify();
+   cat::vec swap_right =
+      cat::make_vec<int4>(allocator, 3_i4, 4_i4, 5_i4).verify();
+   cat::swap(swap_left, swap_right);
+   cat::verify(swap_left.size() == 3);
+   cat::verify(swap_left[0] == 3);
+   cat::verify(swap_left[2] == 5);
+   cat::verify(swap_right.size() == 2);
+   cat::verify(swap_right[0] == 1);
+   cat::verify(swap_right[1] == 2);
+
    // Test vector member types.
    using test_vec_t = cat::vec<int4, cat::page_allocator>;
    using iterator = test_vec_t::iterator;

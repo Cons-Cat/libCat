@@ -2223,22 +2223,6 @@ simd_all_of(simd_mask<T, native_abi<T>> mask) -> bool {
    return simd_all_of(detail::native_cast(mask));
 }
 
-template <is_simd Simd>
-constexpr void
-swap(Simd& left, Simd& right) {
-   Simd tmp = left;
-   left = right;
-   right = tmp;
-}
-
-template <is_simd_mask M>
-constexpr void
-swap(M& left, M& right) {
-   M tmp = left;
-   left = right;
-   right = tmp;
-}
-
 // TODO: `__builtin_cpu_init()` must be called before these.
 
 auto

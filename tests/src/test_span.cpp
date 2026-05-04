@@ -115,6 +115,19 @@ $test(span_pointer_length_construction) {
    cat::verify(fixed_span.data() == values);
 }
 
+$test(span_swap) {
+   int4 left_values[2] = {1, 2};
+   int4 right_values[3] = {3, 4, 5};
+   cat::span left{left_values, 2u};
+   cat::span right{right_values, 3u};
+
+   cat::swap(left, right);
+   cat::verify(left.data() == right_values);
+   cat::verify(left.size() == 3u);
+   cat::verify(right.data() == left_values);
+   cat::verify(right.size() == 2u);
+}
+
 // `data()` and `size()` reflect the underlying buffer, and `extent` reports the
 // compile-time length for fixed spans or `dynamic_extent` for dynamic ones.
 $test(span_data_size_extent_observers) {

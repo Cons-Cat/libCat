@@ -77,6 +77,16 @@ $test(array_brace_initialization_and_list_assign) {
    cat::array<int4, 1u> array_2;
 }
 
+$test(array_swap) {
+   cat::array left{1, 2, 3};
+   cat::array right{4, 5, 6};
+   cat::swap(left, right);
+   cat::verify(left[0u] == 4);
+   cat::verify(left[2u] == 6);
+   cat::verify(right[0u] == 1);
+   cat::verify(right[2u] == 3);
+}
+
 $test(array_move_only_element) {
    [[maybe_unused]]
    cat::array array_move_only = {move_only()};

@@ -5,6 +5,7 @@
 #include <cat/allocator>
 #include <cat/bit>
 #include <cat/container>
+#include <cat/utility>
 
 // TODO: Make `ring` be `constexpr`.
 
@@ -21,6 +22,14 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
    }
 
    ring(ring&&) = default;
+
+   constexpr void
+   swap(ring& other) {
+      cat::swap(p_storage, other.p_storage);
+      cat::swap(current_index, other.current_index);
+      cat::swap(current_size, other.current_size);
+      cat::swap(current_capacity, other.current_capacity);
+   }
 
  protected:
    // Being `protected:` permits derived classes and friends to call this. Only

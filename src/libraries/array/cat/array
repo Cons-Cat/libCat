@@ -6,6 +6,7 @@
 #include <cat/compare>
 #include <cat/container>
 #include <cat/memory>
+#include <cat/utility>
 
 namespace cat {
 
@@ -64,6 +65,13 @@ array : public container_interface<array<T, length>, T>,
       }
       // }
       return *this;
+   }
+
+   constexpr void
+   swap(array& other) {
+      for (idx index = 0u; index < length; ++index) {
+         cat::swap(m_data[index], other.m_data[index]);
+      }
    }
 
    // Get the non-`const` address of this `array`'s internal array.

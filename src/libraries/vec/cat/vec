@@ -74,6 +74,15 @@ vec : public container_interface<vec<T, Allocator>, T>,
       hard_reset();
    }
 
+   constexpr void
+   swap(vec& other) {
+      // TODO: Figure out the semantics of container allocator interoperability.
+      assert(&m_allocator == &other.m_allocator);
+      cat::swap(m_p_data, other.m_p_data);
+      cat::swap(m_current_size, other.m_current_size);
+      cat::swap(m_current_capacity, other.m_current_capacity);
+   }
+
  protected:
    // Being `protected:` permits derived classes and friends to call these.
 

@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/type_list>
+#include <cat/utility>
 
 // A `tuple` is an anonymous struct type with tuple protocol support and small
 // convenience helpers.
@@ -286,6 +287,11 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
       return this->size() == 0;
    }
 
+   constexpr void
+   swap(tuple& other) {
+      swap_impl(other, index_sequence_over_types<Types...>{});
+   }
+
    // Get a non-`const` reference to the N'th stored variable.
    template <idx index>
       requires(index < types::size)
@@ -378,6 +384,15 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    assign(this auto&& self, Arguments&&... arguments) {
       detail::tuple_assign_impl($fwd(self), make_index_sequence<types::size>{},
                                 $fwd(arguments)...);
+   }
+
+ private:
+   template <idx... indices>
+   constexpr void
+   swap_impl(tuple& other, index_list_type<indices...>) {
+      (cat::swap(this->template get<indices>(),
+                 other.template get<indices>()),
+       ...);
    }
 };
 

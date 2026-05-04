@@ -136,6 +136,16 @@ $test(list) {
    cat::verify(*++list_it == 2);
    cat::verify(*++list_it == 3);
 
+   cat::list swap_left = cat::make_list(allocator, 7, 8).verify();
+   cat::list swap_right = cat::make_list(allocator, 9, 10, 11).verify();
+   cat::swap(swap_left, swap_right);
+   cat::verify(swap_left.size() == 3);
+   cat::verify(swap_left.front() == 9);
+   cat::verify(swap_left.back() == 11);
+   cat::verify(swap_right.size() == 2);
+   cat::verify(swap_right.front() == 7);
+   cat::verify(swap_right.back() == 8);
+
    // Test filling out a `list`.
    cat::list list_fill = cat::make_list_filled(allocator, 4u, 1).verify();
    cat::verify(list_fill.size() == 4);

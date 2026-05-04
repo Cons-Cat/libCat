@@ -74,6 +74,11 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    constexpr auto
    operator=(bitset&&) -> bitset& = default;
 
+   constexpr void
+   swap(bitset& other) {
+      m_data.swap(other.m_data);
+   }
+
    // Construct a `bitset` from a bit-string at compile time.
    template <__SIZE_TYPE__ bitstring_size>
    consteval bitset(char const (&bitstring)[bitstring_size]) {

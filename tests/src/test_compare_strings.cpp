@@ -88,6 +88,12 @@ $test(compare_strings) {
 
    cat::zstr_inplace char_zstr = cat::make_zstr_inplace<2u>("X");
    cat::verify(char_zstr == 'X');
+
+   cat::str_inplace swap_left = "abc";
+   cat::str_inplace swap_right = "xyz";
+   cat::swap(swap_left, swap_right);
+   cat::verify(cat::compare_strings(swap_left, "xyz"));
+   cat::verify(cat::compare_strings(swap_right, "abc"));
 }
 
 $test(compare_strings_long_misaligned_equal_and_diff) {

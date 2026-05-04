@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/meta>
+#include <cat/utility>
 
 // `unique` wrappers are curiously-recurring-template-pattern types that cannot
 // be copy-constructed. They must be moved to pass into functions. Their
@@ -98,6 +99,11 @@ class unique {
       return $fwd(this->storage);
    }
 
+   constexpr void
+   swap(unique& other) {
+      cat::swap(storage, other.storage);
+   }
+
  private:
    void
    storage_destructor() {
@@ -182,6 +188,12 @@ class unique_weak {
    borrow() -> T&& {
       this->owns_data = false;
       return $fwd(this->storage);
+   }
+
+   constexpr void
+   swap(unique_weak& other) {
+      cat::swap(storage, other.storage);
+      cat::swap(owns_data, other.owns_data);
    }
 
    ~unique_weak() {

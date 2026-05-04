@@ -145,6 +145,12 @@ $test(bitset) {
    bits127[124u] = true;
    cat::verify(bits127[124u]);
 
+   cat::bitset<8u> swap_left = cat::make_bitset<8u>(0b1010'0000_u1);
+   cat::bitset<8u> swap_right = cat::make_bitset<8u>(0b0101'0000_u1);
+   cat::swap(swap_left, swap_right);
+   cat::verify(swap_left == cat::make_bitset<8u>(0b0101'0000_u1));
+   cat::verify(swap_right == cat::make_bitset<8u>(0b1010'0000_u1));
+
    // Test `const` `.at()`.
    auto _ = bits127_2.at(0u).verify();
    cat::verify(!bits127_2.at(128u).has_value());
