@@ -195,7 +195,7 @@ template <typename T>
 concept is_idx = is_idx_trait<T>::value;
 
 template <typename T>
-concept is_basic_intptr = requires { T::ptr; };
+concept is_basic_intptr = requires { typename remove_cvref<T>::ptr; };
 }  // namespace detail
 
 template <is_integral T>
@@ -2203,6 +2203,9 @@ basic_intptr :
    using raw_type = Storage;
    using ptr = T*;
 
+   using arithmetic_interface<basic_intptr<T, Storage,
+                                           overflow_policy>>::operator*;
+
    static constexpr overflow_policies policy = overflow_policy;
 
    Storage raw;
@@ -2451,19 +2454,21 @@ basic_intptr :
          .get();
    }
 
-   template <typename U>
+   template <is_integral U>
+      requires(!detail::is_basic_intptr<remove_cvref<U>>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U operand) const -> basic_intptr {
-      return basic_intptr(raw + make_raw_arithmetic(operand));
+      return basic_intptr(raw * make_raw_arithmetic(operand));
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U* p_operand) const -> basic_intptr {
-      return this->multiply(
-         basic_intptr<U, Storage, overflow_policy>(p_operand));
+      return basic_intptr(raw
+                          * basic_intptr<U, Storage, overflow_policy>(p_operand)
+                               .raw);
    }
 
    template <typename U>

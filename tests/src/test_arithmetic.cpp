@@ -657,6 +657,18 @@ $test(arithmetic_intptr_operators_raw_reassign_and_safe_arithmetic) {
    intptr_sub_2 = 1_i4 - intptr_add_2;
    intptr_sub_2 = intptr_add_2 - 1_i4;
 
+   intptr<void> intptr_mul_1 = intptr<void>{6} * 7;
+   cat::verify(intptr_mul_1 == 42);
+   intptr<void> intptr_mul_2 = 7 * intptr<void>{6};
+   cat::verify(intptr_mul_2 == 42);
+   intptr<void> intptr_mul_3 = intptr<void>{6} * 7_i4;
+   cat::verify(intptr_mul_3 == 42);
+   uintptr<void> uintptr_mul_1 = uintptr<void>{6u} * 7u;
+   cat::verify(uintptr_mul_1 == 42u);
+   static_assert((intptr<void>{6} * 7) == 42);
+   static_assert((7 * intptr<void>{6}) == 42);
+   static_assert((uintptr<void>{6u} * 7u) == 42u);
+
    cat::verify(uword{100} - uintptr<void>{40} == uword{60});
    cat::verify(uint4{500} - uint2{400} == uint4{100});
 

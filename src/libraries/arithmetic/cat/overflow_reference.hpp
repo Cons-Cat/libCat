@@ -317,6 +317,16 @@ class overflow_reference
       return *this;
    }
 
+   template <detail::is_basic_intptr U>
+      requires(!is_const<WrappedQual> && detail::is_basic_intptr<wrapper_type>
+               && is_constructible<wrapper_type, U>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator=(U operand) -> overflow_reference& {
+      *m_wrapped = wrapper_type(operand);
+      return *this;
+   }
+
    // Cross-signed-ness assignment for compile-time-known operands that fit the
    // wrapped storage. Mirrors the `basic_int` `enable_if` constructor.
    template <is_arithmetic U>
