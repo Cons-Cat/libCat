@@ -103,6 +103,10 @@ if(CAT_BUILD_UNIT_TESTS)
 
   # Enable running `unit_tests` through `ctest`.
   add_test(NAME UnitTests COMMAND unit_tests)
+  set_tests_properties(
+    UnitTests
+    PROPERTIES
+      LABELS "unit")
 
   find_program(CAT_GDB_EXECUTABLE gdb DOC "Path to the GDB executable.")
   if(CAT_GDB_EXECUTABLE)
@@ -141,7 +145,8 @@ if(CAT_BUILD_UNIT_TESTS)
     set_tests_properties(
       GdbPrettyPrinters
       PROPERTIES
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        LABELS "gdb")
   else()
     message(WARNING
       "check-gdb-pretty-printers: `gdb` not found. Skipping.")

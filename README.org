@@ -19,7 +19,6 @@ release modes.
   mise install
   just build
   just test
-  # or just test full
 #+END_SRC
 
 The =.clang-format= and =.clang-tidy= configurations are only compatible with correspondingly
@@ -95,6 +94,42 @@ subdirectory.
 The =just= recipes below use the same build modes as the =build= recipe. For many of them,
 build mode is not very relevant. They are implemented as CMake targets, which have the same
 names prepended by a =cat-= namespace (e.g. =cat-format=, =cat-syntax=).
+
+*** =test=
+#+BEGIN_SRC sh
+  just test
+#+END_SRC
+Builds the selected mode and runs CTest. With no arguments, this runs the main
+=UnitTests= executable only.
+
+=test= accepts the same build modes and sanitizer flags as =build=:
+#+BEGIN_SRC sh
+  just test debug
+  just test release nosan
+  just test all san
+#+END_SRC
+
+Arguments choose CTest entries:
+- =unit= runs =UnitTests=.
+- =gdb= runs =GdbPrettyPrinters=.
+- =arithmetic= runs =ArithmeticTypeCheck=.
+
+Use =full= to run every registered CTest entry in the selected mode. Use =list=
+to print the matching CTest entries without running them. =full= and test
+arguments cannot be combined.
+#+BEGIN_SRC sh
+  just test full
+  just test list
+  just test arithmetic
+  just test unit gdb release
+#+END_SRC
+
+Pass =-v= to stream verbose CTest output, including =ArithmeticTypeCheck=
+progress. Arguments after =--= are passed through to CTest.
+#+BEGIN_SRC sh
+  just test -v
+  just test full -- --rerun-failed
+#+END_SRC
 
 *** =format=
 #+BEGIN_SRC sh

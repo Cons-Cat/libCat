@@ -1,3 +1,4 @@
+# This justfile is largely "vibe-coded". It may not be up to the standards of most libCat code.
 set unstable
 set positional-arguments
 
@@ -7,6 +8,8 @@ default:
 # Cache the last release mode.
 saved_mode := `if test -f .cache/cat-build-mode; then cat .cache/cat-build-mode; else printf release; fi`
 last_mode := env_var_or_default("CAT_BUILD_MODE", saved_mode)
+
+# The `mise.toml` defaults `CMAKE_GENERATOR` to `Ninja Multi-Config`.
 generator := env_var_or_default("CMAKE_GENERATOR", "")
 multi_config := if generator == "Ninja Multi-Config" { "true" } else { "false" }
 mode(arg) := arg
@@ -67,7 +70,7 @@ build *args:
               export CAT_JUST_BUILD_TOOL_TRAILER_B64; \
             fi; \
             break ;; \
-          san|nosan) san="$lower"; shift ;; \
+          san|nosan) san="$1"; shift ;; \
           -v) verbose="$1"; shift ;; \
           -w) no_warnings="true"; shift ;; \
           -*) cxx_flags="${cxx_flags:+$cxx_flags }$1"; shift ;; \
@@ -199,16 +202,16 @@ test *args:
           san|nosan) san="$1"; shift ;; \
           -v) verbose="$1"; shift ;; \
           debug|release|relwithdebinfo|build|all) modes="${modes:+$modes }$lower"; shift ;; \
-          unit|units|unittest|unittests|compiled|compiled-tests) \
+          unit) \
             add_test_selector UnitTests; shift ;; \
-          gdb|pretty|pretty-printers|printer|printers|gdbprettyprinters) \
+          gdb|gdbprettyprinters) \
             add_test_selector GdbPrettyPrinters; shift ;; \
-          negative|neg|arithmetic|arithmetic-negative|arithmeticnegativebuild) \
-            add_test_selector ArithmeticNegativeBuild; shift ;; \
+          arithmetic|arithmetictypecheck) \
+            add_test_selector ArithmeticTypeCheck; shift ;; \
           full) full="true"; shift ;; \
           list) list="true"; shift ;; \
           *) printf '%s\n' "just test: unknown option '$arg'!" >&2; \
-             printf '%s\n' "options: unit, gdb, negative, full, list, san, nosan, -v, debug, release, relwithdebinfo, build, all" >&2; \
+             printf '%s\n' "options: unit, gdb, arithmetic, full, list, san, nosan, -v, debug, release, relwithdebinfo, build, all" >&2; \
              exit 1 ;; \
         esac; \
       done; \
@@ -316,7 +319,7 @@ status_cxx mode=last_mode verbose="":
     @cache="{{ build_dir(mode) }}/CMakeCache.txt"; \
       value="$(printf '\033[90mn/a\033[0m')"; \
       test ! -f "$cache" \
-        || value="$(sed -n 's/^CMAKE_CXX_COMPILER:FILEPATH=//p' "$cache")"; \
+        || value="$(sed -n 's/^CMAKE_CXX_COMPILER:[^=]*=//p' "$cache")"; \
       if [ "{{ verbose }}" != "-v" ]; then \
         case "$value" in \
           "$PWD"/*) value=".${value#"$PWD"}" ;; \
@@ -412,7 +415,7 @@ _noop *args:
 
 [private]
 _print-build-mode mode=last_mode:
-    @printf '\033[1mBuild mode: \033[0m%s\n' "{{ mode(mode) }}"
+    @printf '\n\033[1mBuild mode: \033[0m%s\n' "{{ mode(mode) }}"
 
 [private]
 _build-mode mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
@@ -662,10 +665,7 @@ _test-mode mode=last_mode san="" verbose="" test_regex="" list="false":
 
 [private]
 _test-config mode=last_mode san="" verbose="" test_regex="" list="false":
-    @if [ "{{ list }}" = "true" ]; then \
-      just _print-build-mode {{ mode }}; \
-      just status_san {{ mode }} "{{ san }}"; \
-    else \
+    @if [ "{{ list }}" != "true" ]; then \
       just _build-config {{ mode }} "{{ san }}" "{{ verbose }}" false ""; \
     fi
 
@@ -675,10 +675,14 @@ _test-config mode=last_mode san="" verbose="" test_regex="" list="false":
           < <(base64 -d <<< "${CAT_JUST_TEST_TOOL_TRAILER_B64}"); \
       fi; \
       ctest_args=(ctest --test-dir {{ build_dir(mode) }} {{ test_config(mode) }} \
-        --output-on-failure --progress); \
-      if [[ "${verbose}" == "-v" \
-        || "${list}" != true && ( -z "${test_regex}" || "${test_regex}" == *ArithmeticNegativeBuild* ) ]]; then \
+        --progress); \
+      ctest_verbose=false; \
+      if [[ "${verbose}" == "-v" ]]; then \
         ctest_args+=(--verbose); \
+        ctest_verbose=true; \
+      fi; \
+      if [[ "${ctest_verbose}" != true ]]; then \
+        ctest_args+=(--output-on-failure); \
       fi; \
       if [[ "${list}" == true ]]; then \
         ctest_args+=(-N); \

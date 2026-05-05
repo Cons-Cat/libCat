@@ -20,27 +20,33 @@
 # expressed as TUs: they are not an ill-formed *constructor or `operator*` in
 # user code.
 #
-# Each probe is also registered as an `EXCLUDE_FROM_ALL` object target and the
-# `ArithmeticNegativeBuild` CTest builds those targets one by one, expecting
-# every build to fail. The target path reuses `cat-impl`'s PCH when `CAT_PCH=ON`.
+# Each probe is also registered as an `EXCLUDE_FROM_ALL` object target. The
+# `ArithmeticTypeCheck` CTest uses launcher-wrapped check targets that invert
+# compiler results and build in parallel. The target path reuses `cat-impl`'s PCH
+# when `CAT_PCH=ON`.
 #
 # When `CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON`, the same probes additionally run
 # at configure time. Full compiler text for each configure-time probe is written
 # to `CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log` in the build tree.
-# A final `message(STATUS` reports counts and points at that file. Set
-# `CAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS=ON` to `message(STATUS` every probe, which
-# is very verbose on configure output.
+# A final verbose message reports counts and points at that file.
 #
 # Local:
 #   cmake -S . -B build-neg -G Ninja -DCMAKE_CXX_COMPILER=clang++ \
 #     -DCAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON
+# or:
+#   just test arithmetic
 
-option(CAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS
-  "With CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS, print each must-reject probe to configure output (hundreds of lines)."
-  OFF)
 option(CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS
   "Also run -fsyntax-only checks for cat arithmetic wrapper ill-formed probes at configure time."
   OFF)
+
+find_program(CAT_PYTHON3
+  NAMES python3
+  DOC "Python 3 for libCat helper scripts.")
+if (NOT CAT_PYTHON3)
+  message(FATAL_ERROR
+    "Arithmetic negative tests require `python3` on PATH.")
+endif()
 
 if (NOT DEFINED CAT_INCLUDE_SUBDIRS)
   message(FATAL_ERROR
@@ -94,6 +100,25 @@ macro(_cat_neg_expect_illformed _name _src)
     target_precompile_headers("${_cat_n_target}" REUSE_FROM cat-impl)
   endif()
   list(APPEND _cat_neg_targets "${_cat_n_target}")
+
+  set(_cat_n_check_target "cat-arithmetic-neg-check-${_name}")
+  add_library("${_cat_n_check_target}" OBJECT EXCLUDE_FROM_ALL "${_cat_n_path}")
+  target_compile_features("${_cat_n_check_target}" PRIVATE
+    ${CAT_CXX_STANDARD_FEATURE})
+  set_target_properties("${_cat_n_check_target}" PROPERTIES CXX_EXTENSIONS ON)
+  target_include_directories("${_cat_n_check_target}" PRIVATE
+    $<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>)
+  target_compile_options("${_cat_n_check_target}" PRIVATE
+    $<TARGET_PROPERTY:cat,INTERFACE_COMPILE_OPTIONS>
+    ${CAT_CXX_FLAGS_INTERNAL}
+    -Wno-everything)
+  if (CAT_PCH)
+    target_precompile_headers("${_cat_n_check_target}" REUSE_FROM cat-impl)
+  endif()
+  set_property(
+    TARGET "${_cat_n_check_target}"
+    PROPERTY CAT_NEG_REPORT_TARGET "${_cat_n_target}")
+  list(APPEND _cat_neg_check_targets "${_cat_n_check_target}")
   math(EXPR _cat_neg_n_cases "${_cat_neg_n_cases} + 1")
 
   if (CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS)
@@ -117,7 +142,7 @@ macro(_cat_neg_expect_illformed _name _src)
         set(_neg_log "(no output)")
       endif()
       message(SEND_ERROR
-        "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: case '${_name}' built clean with -fsyntax-only; expected a hard error. Output:\n"
+        "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: case '${_name}' compiled successfully. Expected a type error! Output:\n"
         "${_neg_log}")
     else()
       file(
@@ -145,24 +170,6 @@ macro(_cat_neg_expect_illformed _name _src)
         APPEND
         "${_cat_neg_diag_path}" "\n"
       )
-      if (CAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS)
-        set(
-          _cat_neg_merged_err_out
-          "${_neg_err}\n${_neg_out}"
-        )
-        string(
-          SUBSTRING
-          "${_cat_neg_merged_err_out}" 0 800 _cat_neg_echo
-        )
-        if (NOT _cat_neg_echo)
-          set(_cat_neg_echo "${_name} (empty)")
-        endif()
-        message(
-          STATUS
-          "CAT_ARITHMETIC_NEG echo ${_name}:\n${_cat_neg_echo}…\n"
-        )
-        unset(_cat_neg_merged_err_out)
-      endif()
       math(EXPR _cat_neg_n_illformed_ok
         "${_cat_neg_n_illformed_ok} + 1")
     endif()
@@ -184,6 +191,7 @@ file(WRITE
 set(_cat_neg_n_illformed_ok 0)
 set(_cat_neg_n_cases 0)
 set(_cat_neg_targets)
+set(_cat_neg_check_targets)
 
 # Out-of-range brace constants: every `uint1`..`uint8`/`int1`..`int8` width
 # (mirrors the per-width story in the positive `can_brace_init` block).
@@ -212,6 +220,28 @@ unset(n)
 include(${CMAKE_SOURCE_DIR}/cmake/cat_arithmetic_neg_cases.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/cat_arithmetic_neg_matrix.cmake)
 
+set(_cat_neg_launcher
+  "${CMAKE_SOURCE_DIR}/cmake/cat_arithmetic_negative_launcher.py")
+set(_cat_neg_case_diag_dir
+  "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/build_cases")
+set(_cat_neg_marker_dir
+  "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/unexpected")
+set(_cat_neg_progress_path
+  "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/progress.txt")
+foreach(_cat_neg_check_target IN LISTS _cat_neg_check_targets)
+  get_property(
+    _cat_neg_report_target
+    TARGET "${_cat_neg_check_target}"
+    PROPERTY CAT_NEG_REPORT_TARGET)
+  set_property(
+    TARGET "${_cat_neg_check_target}"
+    PROPERTY CXX_COMPILER_LAUNCHER
+      "${CAT_PYTHON3};${_cat_neg_launcher};--target;${_cat_neg_report_target};--marker;${_cat_neg_marker_dir}/${_cat_neg_report_target}.txt;--diagnostic;${_cat_neg_case_diag_dir}/${_cat_neg_report_target}.log;--progress;${_cat_neg_progress_path};--total;${_cat_neg_n_cases}")
+endforeach()
+set(_cat_neg_check_target cat-arithmetic-negative-checks)
+add_custom_target("${_cat_neg_check_target}")
+add_dependencies("${_cat_neg_check_target}" ${_cat_neg_check_targets})
+
 set(
   _cat_neg_build_script
   "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/run_build_tests.cmake"
@@ -227,6 +257,11 @@ file(WRITE
   "cat arithmetic wrapper negative CTest build targets\n"
   "Build dir: ${cat_neg_build_dir}\n"
   "-----\n")
+
+string(ASCII 27 _cat_neg_escape)
+set(_cat_neg_bold "${_cat_neg_escape}[1m")
+set(_cat_neg_bold_red "${_cat_neg_escape}[1;31m")
+set(_cat_neg_reset "${_cat_neg_escape}[0m")
 
 set(_cat_neg_prepare_command
   "${cat_neg_cmake_command}" --build "${cat_neg_build_dir}" --target cat-impl)
@@ -248,70 +283,89 @@ if (NOT _cat_neg_prepare_rc EQUAL 0)
     "CAT_ARITHMETIC_NEGATIVE_CTEST: cat-impl failed before probes ran. See ${cat_neg_diag_path}")
 endif()
 
-set(_cat_neg_ok 0)
-set(_cat_neg_done 0)
-set(_cat_neg_unexpected_success)
 list(LENGTH _cat_neg_targets _cat_neg_total)
+file(REMOVE_RECURSE
+  "${cat_neg_marker_dir}"
+  "${cat_neg_case_diag_dir}")
+file(REMOVE
+  "${cat_neg_progress_path}"
+  "${cat_neg_progress_path}.lock")
+file(MAKE_DIRECTORY
+  "${cat_neg_marker_dir}"
+  "${cat_neg_case_diag_dir}")
+file(GLOB _cat_neg_check_object_dirs
+  "${cat_neg_build_dir}/CMakeFiles/cat-arithmetic-neg-check-*.dir")
+if (_cat_neg_check_object_dirs)
+  file(REMOVE_RECURSE ${_cat_neg_check_object_dirs})
+endif()
 message(STATUS
-  "CAT_ARITHMETIC_NEGATIVE_CTEST: type-checking ${_cat_neg_total} ill-formed cases.")
+  "CAT_ARITHMETIC_NEGATIVE_CTEST: type-checking ${_cat_neg_total} ill-formed cases in parallel.")
+
+set(_cat_neg_command
+  "${cat_neg_cmake_command}" --build "${cat_neg_build_dir}" --target "${cat_neg_check_target}" --parallel)
+if (cat_neg_config)
+  list(APPEND _cat_neg_command --config "${cat_neg_config}")
+endif()
+execute_process(
+  COMMAND ${_cat_neg_command}
+  RESULT_VARIABLE _cat_neg_build_rc)
+if (NOT _cat_neg_build_rc EQUAL 0)
+  message(FATAL_ERROR
+    "CAT_ARITHMETIC_NEGATIVE_CTEST: parallel check target failed before all probe results could be collected. See ${cat_neg_diag_path}")
+endif()
+
+set(_cat_neg_ok 0)
+set(_cat_neg_unexpected_success)
 foreach(_target IN LISTS _cat_neg_targets)
-  set(_cat_neg_command
-    "${cat_neg_cmake_command}" --build "${cat_neg_build_dir}" --target "${_target}")
-  if (cat_neg_config)
-    list(APPEND _cat_neg_command --config "${cat_neg_config}")
-  endif()
-  execute_process(
-    COMMAND ${_cat_neg_command}
-    RESULT_VARIABLE _cat_neg_rc
-    OUTPUT_VARIABLE _cat_neg_out
-    ERROR_VARIABLE _cat_neg_err)
-  if (_cat_neg_rc EQUAL 0)
-    list(APPEND _cat_neg_unexpected_success "${_target}")
+  set(_cat_neg_case_diag "${cat_neg_case_diag_dir}/${_target}.log")
+  if (EXISTS "${_cat_neg_case_diag}")
+    file(READ "${_cat_neg_case_diag}" _cat_neg_case_diag_text)
+    file(APPEND "${cat_neg_diag_path}" "${_cat_neg_case_diag_text}\n")
+  else()
     file(APPEND
       "${cat_neg_diag_path}"
-      "==== ${_target} (unexpected success) ====\n"
-      "stderr:\n${_cat_neg_err}\n"
-      "stdout:\n${_cat_neg_out}\n\n")
-    message(SEND_ERROR
-      "CAT_ARITHMETIC_NEGATIVE_CTEST: ${_target} built clean, expected a hard error")
+      "==== ${_target} (missing launcher diagnostic) ====\n\n")
+  endif()
+
+  if (EXISTS "${cat_neg_marker_dir}/${_target}.txt")
+    list(APPEND _cat_neg_unexpected_success "${_target}")
   else()
     math(EXPR _cat_neg_ok "${_cat_neg_ok} + 1")
-    file(APPEND
-      "${cat_neg_diag_path}"
-      "==== ${_target} (expected failure, exit code ${_cat_neg_rc}) ====\n"
-      "stderr:\n${_cat_neg_err}\n"
-      "stdout:\n${_cat_neg_out}\n\n")
-  endif()
-  math(EXPR _cat_neg_done "${_cat_neg_done} + 1")
-  math(EXPR _cat_neg_progress_mod "${_cat_neg_done} % 25")
-  if (_cat_neg_progress_mod EQUAL 0 OR _cat_neg_done EQUAL _cat_neg_total)
-    message(STATUS
-      "${_cat_neg_done}/${_cat_neg_total} cases type-checked.")
   endif()
 endforeach()
 
 list(LENGTH _cat_neg_unexpected_success _cat_neg_unexpected_count)
 if (_cat_neg_unexpected_count GREATER 0)
+  set(_cat_neg_unexpected_targets)
+  foreach(_cat_neg_unexpected_target IN LISTS _cat_neg_unexpected_success)
+    string(APPEND
+      _cat_neg_unexpected_targets
+      "  ${_cat_neg_bold}${_cat_neg_unexpected_target}${_cat_neg_reset}\n")
+  endforeach()
   message(FATAL_ERROR
-    "CAT_ARITHMETIC_NEGATIVE_CTEST: ${_cat_neg_unexpected_count} probe target(s) built clean. See ${cat_neg_diag_path}")
+    "CAT_ARITHMETIC_NEGATIVE_CTEST: ${_cat_neg_unexpected_count} probe target(s) compiled successfully. ${_cat_neg_bold_red}Expected type errors:${_cat_neg_reset}\n${_cat_neg_unexpected_targets}See ${cat_neg_diag_path}")
 endif()
-message(STATUS
+message(VERBOSE
   "CAT_ARITHMETIC_NEGATIVE_CTEST: ${_cat_neg_ok} build target(s) failed as expected")
 ]=])
 
 add_test(
-  NAME ArithmeticNegativeBuild
+  NAME ArithmeticTypeCheck
   COMMAND
     "${CMAKE_COMMAND}"
     "-Dcat_neg_cmake_command=${CMAKE_COMMAND}"
     "-Dcat_neg_build_dir=${CMAKE_BINARY_DIR}"
     "-Dcat_neg_config=$<CONFIG>"
     "-Dcat_neg_diag_path=${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/build_diagnostics.log"
+    "-Dcat_neg_marker_dir=${_cat_neg_marker_dir}"
+    "-Dcat_neg_case_diag_dir=${_cat_neg_case_diag_dir}"
+    "-Dcat_neg_progress_path=${_cat_neg_progress_path}"
+    "-Dcat_neg_check_target=${_cat_neg_check_target}"
     -P "${_cat_neg_build_script}")
 set_tests_properties(
-  ArithmeticNegativeBuild
+  ArithmeticTypeCheck
   PROPERTIES
-    LABELS "negative;arithmetic")
+    LABELS "arithmetic")
 
 unset(_cat_neg_compile_args)
 
@@ -331,15 +385,14 @@ if (NOT _cat_neg_n_glob EQUAL _cat_neg_n_calc)
 endif()
 message(VERBOSE
   "CAT_ARITHMETIC_NEGATIVE_CTEST: registered ${_cat_neg_n_cases} "
-  "must-reject build target(s) as `ArithmeticNegativeBuild`")
+  "must-reject build target(s) as `ArithmeticTypeCheck`")
 if (CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS)
   message(
     VERBOSE
     "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: OK - compiler `${CMAKE_CXX_COMPILER}` "
     "(${_cat_neg_n_illformed_ok} must-reject) "
     "matches ${_cat_neg_n_glob} -fsyntax-only .cpp. "
-    "Per-probe compiler output: ${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log "
-    "(or configure with -DCAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS=ON to print excerpts here)"
+    "Per-probe compiler output: ${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log"
   )
 endif()
 unset(_cat_neg_n_glob)

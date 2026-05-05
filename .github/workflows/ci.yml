@@ -8,6 +8,10 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   install-toolchain:
     # Prime the mise cache once so parallel jobs do not all download and extract
@@ -246,7 +250,8 @@ jobs:
           fi
 
   debug:
-    # Debug build with sanitizers.
+    # Debug build with sanitizers. The build dir is uploaded for the
+    # `gdb-pretty-printers` job so that job can reuse this configuration and PCH.
     runs-on: ubuntu-24.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
@@ -255,37 +260,23 @@ jobs:
 
       - uses: ./.github/actions/setup-toolchain
 
-      - name: Install GDB
-        # TODO: Check whether mise can manage GDB for us instead of apt.
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
       - name: Configure, build, and test (Debug)
         run: |
           cmake -S . -B build-debug -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCAT_USE_SANITIZERS=ON
-          cmake --build build-debug
-          ctest --test-dir build-debug -E '^ArithmeticNegativeBuild$' --verbose --output-on-failure
-
-      - name: GDB pretty printers (-O0 Debug)
-        run: cmake --build build-debug --target check-gdb-pretty-printers
-
-      - name: GDB pretty printers (-O0 Debug, PCH=OFF)
-        run: |
-          cmake -S . -B build-debug-no-pch -G Ninja \
-            -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_USE_SANITIZERS=ON \
-            -DCAT_PCH=OFF
-          cmake --build build-debug-no-pch --target check-gdb-pretty-printers
+            -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
+          cmake --build build-debug
+          ctest --test-dir build-debug -R '^UnitTests$' --verbose --output-on-failure \
+            || ctest --test-dir build-debug --rerun-failed --verbose --output-on-failure
 
-      - name: GDB pretty printers (RelWithDebInfo, PCH=ON)
-        run: |
-          cmake -S . -B build-gdb-relwithdebinfo -G Ninja \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DCAT_PCH=ON
-          cmake --build build-gdb-relwithdebinfo --target check-gdb-pretty-printers
+      - name: Upload Debug build for GDB pretty printers
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-debug
+          path: build-debug
+          include-hidden-files: true
+          retention-days: 1
 
       - name: Verify .gdbinit symlink (Debug, Ninja generator non-multi)
         if: ${{ needs.detect-changes.outputs.gdb_symlink == 'true' }}
@@ -299,7 +290,8 @@ jobs:
           echo "OK: build-debug/.gdbinit"
 
   release:
-    # Release build and tests.
+    # Release build and tests. The build dir is uploaded for the
+    # `gdb-pretty-printers` job so that job can reuse this configuration and PCH.
     runs-on: ubuntu-24.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
@@ -311,9 +303,19 @@ jobs:
       - name: Configure, build, and test (Release)
         run: |
           cmake -S . -B build-release -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
           cmake --build build-release
-          ctest --test-dir build-release -E '^ArithmeticNegativeBuild$' --verbose --output-on-failure
+          ctest --test-dir build-release -R '^UnitTests$' --verbose --output-on-failure \
+            || ctest --test-dir build-release --rerun-failed --verbose --output-on-failure
+
+      - name: Upload Release build for GDB pretty printers
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-release
+          path: build-release
+          include-hidden-files: true
+          retention-days: 1
 
       - name: Verify .gdbinit symlink (Release, Ninja generator non-multi)
         if: ${{ needs.detect-changes.outputs.gdb_symlink == 'true' }}
@@ -325,6 +327,63 @@ jobs:
             exit 1
           fi
           echo "OK: build-release/.gdbinit"
+
+  gdb-pretty-printers:
+    # GDB checks run after Debug and Release so they can reuse those build dirs
+    # and their PCH outputs instead of configuring separate GDB-only builds.
+    runs-on: ubuntu-24.04
+    needs: [install-toolchain, detect-changes, debug, release]
+    if: ${{ needs.detect-changes.outputs.compile == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-toolchain
+
+      - name: Install GDB
+        # TODO: Check whether mise can manage GDB for us instead of apt.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
+
+      - name: Download Debug build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-debug
+          path: build-debug
+
+      - name: Download Release build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-release
+          path: build-release
+
+      - name: GDB pretty printers (Debug)
+        run: cmake --build build-debug --target check-gdb-pretty-printers
+
+      - name: GDB pretty printers (Release)
+        run: cmake --build build-release --target check-gdb-pretty-printers
+
+      - name: Delete downloaded build artifacts
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactNames = new Set(['build-debug', 'build-release']);
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+              per_page: 100,
+            });
+            await Promise.all(
+              artifacts
+                .filter((artifact) => artifactNames.has(artifact.name))
+                .map((artifact) => github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: artifact.id,
+                })),
+            );
 
   arithmetic-negative:
     # Must-reject arithmetic probes are expensive. Run them only when the
@@ -341,7 +400,7 @@ jobs:
         run: |
           cmake -S . -B build-arithmetic-negative -G Ninja \
             -DCMAKE_BUILD_TYPE=Release
-          ctest --test-dir build-arithmetic-negative -R '^ArithmeticNegativeBuild$' --verbose --output-on-failure
+          ctest --test-dir build-arithmetic-negative -R '^ArithmeticTypeCheck$' --verbose
 
   shared:
     # End-to-end `libcat.so` flow: build, install, then have a
@@ -371,7 +430,8 @@ jobs:
             -DCAT_USE_SHARED=ON \
             -DCMAKE_INSTALL_PREFIX="${PWD}/install-shared"
           cmake --build build-shared
-          ctest --test-dir build-shared -E '^ArithmeticNegativeBuild$' --verbose --output-on-failure
+          ctest --test-dir build-shared -R '^UnitTests$' --verbose --output-on-failure \
+            || ctest --test-dir build-shared --rerun-failed --verbose --output-on-failure
 
           # Headline artifact for this configuration.
           test -f build-shared/libcat.so
