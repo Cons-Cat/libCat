@@ -40,8 +40,8 @@ simd_float_div_forced(cat::simd<T, Abi> const& left,
 
 template <typename WrappedQual, precision_policies precision>
 class simd_precision_reference
-    : public arithmetic_interface<simd_precision_reference<WrappedQual,
-                                                           precision>> {
+    : public arithmetic_interface<
+         simd_precision_reference<WrappedQual, precision>> {
    using wrapper_type = remove_cvref<WrappedQual>;
    using T = wrapper_type::value_type;
    using abi_type = wrapper_type::abi_type;
@@ -55,10 +55,9 @@ class simd_precision_reference
       simd_precision_scalar<LeftT, simd_float_precision_policy<LeftT>>::type;
 
    template <typename LeftT, typename LeftAbi>
-   using left_result_type =
-      cat::simd<left_result_scalar<LeftT, LeftAbi>,
-                typename LeftAbi::template make_abi_type<
-                   left_result_scalar<LeftT, LeftAbi>>>;
+   using left_result_type = cat::simd<left_result_scalar<LeftT, LeftAbi>,
+                                      typename LeftAbi::template make_abi_type<
+                                         left_result_scalar<LeftT, LeftAbi>>>;
 
    using result_mask =
       cat::simd_mask<result_scalar,
@@ -100,8 +99,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    equal_lanes(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
-      result_type const left =
-         make_simd_value<result_type>(*m_wrapped);
+      result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(simd_float_equal<precision>(left.raw, right.raw));
    }
@@ -113,8 +111,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    unequal_lanes(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
-      result_type const left =
-         make_simd_value<result_type>(*m_wrapped);
+      result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(simd_float_unequal<precision>(left.raw, right.raw));
    }
@@ -126,8 +123,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    less(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
-      result_type const left =
-         make_simd_value<result_type>(*m_wrapped);
+      result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(simd_float_less<precision>(left.raw, right.raw));
    }
@@ -139,11 +135,9 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    less_equal(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
-      result_type const left =
-         make_simd_value<result_type>(*m_wrapped);
+      result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
-      return result_mask(
-         simd_float_less_equal<precision>(left.raw, right.raw));
+      return result_mask(simd_float_less_equal<precision>(left.raw, right.raw));
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -153,8 +147,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    greater(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
-      result_type const left =
-         make_simd_value<result_type>(*m_wrapped);
+      result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(simd_float_greater<precision>(left.raw, right.raw));
    }
@@ -166,8 +159,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    greater_equal(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
-      result_type const left =
-         make_simd_value<result_type>(*m_wrapped);
+      result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(
          simd_float_greater_equal<precision>(left.raw, right.raw));
@@ -176,8 +168,8 @@ class simd_precision_reference
    constexpr auto
    precise() & -> simd_precision_reference<WrappedQual,
                                            precision_policies::precise> {
-      return simd_precision_reference<WrappedQual,
-                                      precision_policies::precise>(*m_wrapped);
+      return simd_precision_reference<WrappedQual, precision_policies::precise>(
+         *m_wrapped);
    }
 
    constexpr auto
@@ -188,8 +180,7 @@ class simd_precision_reference
    }
 
    constexpr auto
-   fast() & -> simd_precision_reference<WrappedQual,
-                                        precision_policies::fast> {
+   fast() & -> simd_precision_reference<WrappedQual, precision_policies::fast> {
       return simd_precision_reference<WrappedQual, precision_policies::fast>(
          *m_wrapped);
    }
@@ -382,8 +373,8 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<(cat::simd<OtherT, OtherAbi> const& lhs,
-             simd_precision_reference rhs) -> left_result_mask<OtherT,
-                                                               OtherAbi> {
+             simd_precision_reference rhs)
+      -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
       constexpr precision_policies left_precision =
@@ -400,8 +391,8 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<=(cat::simd<OtherT, OtherAbi> const& lhs,
-              simd_precision_reference rhs) -> left_result_mask<OtherT,
-                                                                OtherAbi> {
+              simd_precision_reference rhs)
+      -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
       constexpr precision_policies left_precision =
@@ -419,16 +410,15 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>(cat::simd<OtherT, OtherAbi> const& lhs,
-             simd_precision_reference rhs) -> left_result_mask<OtherT,
-                                                               OtherAbi> {
+             simd_precision_reference rhs)
+      -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
       constexpr precision_policies left_precision =
          simd_float_precision_policy<OtherT>;
       left_type const left = make_simd_value<left_type>(lhs);
       left_type const right = make_simd_value<left_type>(*rhs.m_wrapped);
-      return mask_type(
-         simd_float_greater<left_precision>(left.raw, right.raw));
+      return mask_type(simd_float_greater<left_precision>(left.raw, right.raw));
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -438,8 +428,8 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>=(cat::simd<OtherT, OtherAbi> const& lhs,
-              simd_precision_reference rhs) -> left_result_mask<OtherT,
-                                                                OtherAbi> {
+              simd_precision_reference rhs)
+      -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
       constexpr precision_policies left_precision =
@@ -451,10 +441,9 @@ class simd_precision_reference
    }
 
    template <typename U>
-      requires(!is_const<WrappedQual> && requires(simd_precision_reference self,
-                                                  U&& operand) {
-                  self + static_cast<U&&>(operand);
-               })
+      requires(!is_const<WrappedQual>
+               && requires(simd_precision_reference self,
+                           U&& operand) { self + static_cast<U&&>(operand); })
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+=(U&& operand) -> simd_precision_reference& {
@@ -463,10 +452,9 @@ class simd_precision_reference
    }
 
    template <typename U>
-      requires(!is_const<WrappedQual> && requires(simd_precision_reference self,
-                                                  U&& operand) {
-                  self - static_cast<U&&>(operand);
-               })
+      requires(!is_const<WrappedQual>
+               && requires(simd_precision_reference self,
+                           U&& operand) { self - static_cast<U&&>(operand); })
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator-=(U&& operand) -> simd_precision_reference& {
@@ -475,10 +463,9 @@ class simd_precision_reference
    }
 
    template <typename U>
-      requires(!is_const<WrappedQual> && requires(simd_precision_reference self,
-                                                  U&& operand) {
-                  self * static_cast<U&&>(operand);
-               })
+      requires(!is_const<WrappedQual>
+               && requires(simd_precision_reference self,
+                           U&& operand) { self * static_cast<U&&>(operand); })
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator*=(U&& operand) -> simd_precision_reference& {
@@ -487,10 +474,9 @@ class simd_precision_reference
    }
 
    template <typename U>
-      requires(!is_const<WrappedQual> && requires(simd_precision_reference self,
-                                                  U&& operand) {
-                  self / static_cast<U&&>(operand);
-               })
+      requires(!is_const<WrappedQual>
+               && requires(simd_precision_reference self,
+                           U&& operand) { self / static_cast<U&&>(operand); })
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator/=(U&& operand) -> simd_precision_reference& {

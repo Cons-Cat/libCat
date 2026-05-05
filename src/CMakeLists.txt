@@ -155,6 +155,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/cat/pool_allocator
   ${CATLIB}/arithmetic/cat/arithmetic
   ${CATLIB}/arithmetic/cat/overflow_reference.hpp
+  ${CATLIB}/arithmetic/cat/precision_reference.hpp
   ${CATLIB}/arithmetic/cat/arithmetic_interface
   ${CATLIB}/array/cat/array
   ${CATLIB}/atomic/cat/atomic
@@ -206,6 +207,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/scaredy/cat/scaredy
   ${CATLIB}/simd/cat/simd
   ${CATLIB}/simd/cat/detail/simd_overflow_reference.hpp
+  ${CATLIB}/simd/cat/detail/simd_precision_policy.hpp
+  ${CATLIB}/simd/cat/detail/simd_precision_reference.hpp
   ${CATLIB}/simd/cat/detail/simd_abi_hooks.hpp
   ${CATLIB}/simd/cat/detail/simd_extras.hpp
   ${CATLIB}/simd/cat/detail/simd_impl.hpp
