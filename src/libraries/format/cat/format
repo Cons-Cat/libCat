@@ -17,11 +17,11 @@ namespace cat {
 // TODO: Functions in this header should return owning-`str_span`, not
 // `str_view`.
 
-// Erase the type of `cat::arithmetic` from redundant template instantiations.
+// Erase the type of `cat::basic_int` from redundant template instantiations.
 template <is_integral T, overflow_policies policy>
 [[nodiscard]]
 auto
-to_chars(is_allocator auto& allocator, arithmetic<T, policy> numeral)
+to_chars(is_allocator auto& allocator, basic_int<T, policy> numeral)
    -> maybe<str_view> {
    return to_chars(allocator, make_raw_arithmetic(numeral));
 }
@@ -123,10 +123,10 @@ to_chars() {
 template <is_integral T>
 [[nodiscard]]
 constexpr auto
-to_string_at(arithmetic<T> value, span<char> output_buffer
+to_string_at(basic_int<T> value, span<char> output_buffer
              [[clang::lifetimebound]]) -> maybe<str_view> {
    // Add 1 for a negative sign - character.
-   constexpr iword max_length = to_chars<arithmetic<T>::max()>().size() + 1;
+   constexpr iword max_length = to_chars<basic_int<T>::max()>().size() + 1;
    char buffer[max_length.raw];
    if consteval {
       iword i = 0;
@@ -136,7 +136,7 @@ to_string_at(arithmetic<T> value, span<char> output_buffer
       }
       for (; i < max_length; ++i) {
          if (value > 0) {
-            arithmetic<T> const remainder = value % 10;
+            basic_int<T> const remainder = value % 10;
             buffer[i.raw] = remainder.raw + '0';
             value /= 10;
          } else {

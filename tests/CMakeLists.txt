@@ -132,10 +132,10 @@ if(CAT_BUILD_UNIT_TESTS)
     add_test(
       NAME GdbPrettyPrinters
       COMMAND ${CAT_GDB_EXECUTABLE}
-              --batch
-              -silent
-              -nx
-              -q
+              --batch # Run commands and exit.
+              -silent # Do not print startup banners.
+              -nx # Ignore user GDB init files.
+              -q # Keep startup output quiet.
               -x ${CMAKE_SOURCE_DIR}/tests/gdb_pretty_printers.gdb
               $<TARGET_FILE:gdb_pretty_printer_fixture>)
     set_tests_properties(

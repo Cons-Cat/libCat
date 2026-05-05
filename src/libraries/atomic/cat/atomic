@@ -8,7 +8,7 @@
 // `std::atomic`.
 //
 // Atomic references are spelled `cat::atomic<T&>`, mirroring `cat::maybe<T&>`.
-// Overflow semantics of `cat::arithmetic` are supported, as is the syntax of
+// Overflow semantics of `cat::basic_int` are supported, as is the syntax of
 // its `.wrap()`, `.sat()`, etc. members. Deprecated volatile support and the
 // `consume` memory order are removed.
 //

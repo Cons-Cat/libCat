@@ -42,9 +42,9 @@ class MonostatePrinter:
         return 'monostate'
 
 
-@cat_type('arithmetic')
-class ArithmeticPrinter:
-    "Print a `cat::arithmetic`"
+@cat_type('basic_int')
+class BasicIntPrinter:
+    "Print a `cat::basic_int`"
 
     def __init__(self, val: gdb.Value):
         self.raw = val['raw']
@@ -58,8 +58,8 @@ class ArithmeticPrinter:
                 self.policy = 'wrap'
             case 'saturate':
                 self.policy = 'sat'
-            case 'trap':
-                self.policy = 'trap'
+            # case 'trap':
+            #     self.policy = 'trap'
             case _:
                 self.policy = 'WTF'
 
@@ -71,7 +71,19 @@ class ArithmeticPrinter:
         return str(self.raw) + ' (' + self.policy + ')'
 
 
-@cat_type('index')
+@cat_type('basic_float')
+class BasicFloatPrinter:
+    "Print a `cat::basic_float`"
+
+    def __init__(self, val: gdb.Value):
+        self.raw = val['raw']
+        return
+
+    def to_string(self):
+        return str(self.raw)
+
+
+@cat_type('basic_idx')
 class IndexPrinter:
     "Print a `cat::idx`"
 
@@ -86,8 +98,8 @@ class IndexPrinter:
                 self.policy = 'wrap'
             case 'saturate':
                 self.policy = 'sat'
-            case 'trap':
-                self.policy = 'trap'
+            # case 'trap':
+            #     self.policy = 'trap'
             case _:
                 self.policy = 'WTF'
         return

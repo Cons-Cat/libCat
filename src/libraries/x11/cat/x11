@@ -470,7 +470,7 @@ handshake(cat::is_allocator auto& allocator,
    // `connection`.
    // TODO: Use `intptr`.
    char* p_iterator = static_cast<char*>(static_cast<void*>(
-      // TODO: Fix `cat::arithmetic` so that these parentheses around
+      // TODO: Fix `cat::basic_int` so that these parentheses around
       // `(sizeof() + uint2)` are not required.
       x_connection.p_setup
       + (sizeof(x11::connection_response_info)

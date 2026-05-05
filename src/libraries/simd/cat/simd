@@ -326,7 +326,7 @@ using simd_vector_element = simd_vector_element_trait<T>::type;
 namespace detail {
 
 // Integral type with the same size as a mask lane, for `__builtin_bit_cast`
-// when `lane_scalar` is not an integral type (e.g. `arithmetic<float>`).
+// when `lane_scalar` is not an integral type (e.g. `basic_float<float>`).
 template <typename LaneScalar>
 using simd_mask_lane_bits_t =
    conditional<sizeof(LaneScalar) == 4zu, unsigned int,
@@ -457,8 +457,8 @@ class [[clang::preferred_name(fixed_size_simd<T, in_abi::lanes>),
         clang::preferred_name(
            scalar_unaligned_simd<T>)]] alignas(in_abi::alignment.raw) simd {
    // `mapped_type` is the fundamental storage shape for each lane (`T` may be
-   // `cat::arithmetic`). That keeps `cat::simd_abi` hooks aligned with hardware
-   // intrinsics.
+   // a libCat arithmetic wrapper). That keeps `cat::simd_abi` hooks aligned
+   // with hardware intrinsics.
    using mapped_type = simd_vector_element<T>;
 
    struct unaligned_abi {
@@ -642,7 +642,7 @@ class [[clang::preferred_name(fixed_size_simd<T, in_abi::lanes>),
       return this->raw <= operand.raw;
    }
 
-   // Overflow accessors mirror `cat::arithmetic`. `undef` and `wrap` both
+   // Overflow accessors mirror `cat::basic_int`. `undef` and `wrap` both
    // select wrapping vector operations. `sat` forces saturating forms. Integer
    // lanes with `T::policy == saturate` use the same by default on `simd`
    // without an accessor.

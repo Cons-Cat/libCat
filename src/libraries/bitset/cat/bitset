@@ -230,7 +230,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       return result;
    }
 
-   // XOR is not part of `bitwise_interface` and `cat::arithmetic` does not
+   // XOR is not part of `bitwise_interface` and `cat::basic_int` does not
    // define `operator^`, so compute on the raw underlying integers.
    [[nodiscard]]
    friend constexpr auto

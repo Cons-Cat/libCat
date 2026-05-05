@@ -10,18 +10,22 @@ namespace cat {
 // `iword` type.
 struct stepanov_iterator_interface_base {};
 
-// Forward declare numeric types. These are implemented in `<arithmetic>`.
+// Forward declare arithmetic wrappers. These are implemented in `<arithmetic>`.
 enum class overflow_policies : unsigned char;
+enum class precision_policies : unsigned char;
 
 template <typename T, overflow_policies>
-class arithmetic;
+class basic_int;
+
+template <typename T, precision_policies>
+class basic_float;
 
 template <overflow_policies>
 class basic_idx;
 
 template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
-class arithmetic_ptr;
+class basic_intptr;
 
 namespace detail {
 template <typename T, typename U = T&&>
@@ -371,7 +375,11 @@ inline constexpr bool is_floating_point_detail =
    || __is_same(T, __float128);
 
 template <typename T, auto policy>
-inline constexpr bool is_floating_point_detail<arithmetic<T, policy>> =
+inline constexpr bool is_floating_point_detail<basic_int<T, policy>> =
+   is_floating_point_detail<T>;
+
+template <typename T, auto policy>
+inline constexpr bool is_floating_point_detail<basic_float<T, policy>> =
    is_floating_point_detail<T>;
 }  // namespace detail
 
@@ -389,11 +397,11 @@ inline constexpr bool is_integral_detail =
    || __is_same(T, signed long long) || __is_same(T, unsigned long long);
 
 template <typename T, auto policy>
-inline constexpr bool is_integral_detail<arithmetic<T, policy>> =
+inline constexpr bool is_integral_detail<basic_int<T, policy>> =
    is_integral_detail<T>;
 
 template <typename T, typename Storage, auto policy>
-inline constexpr bool is_integral_detail<arithmetic_ptr<T, Storage, policy>> =
+inline constexpr bool is_integral_detail<basic_intptr<T, Storage, policy>> =
    true;
 
 // Another partial specialization of `is_integral_detail` for `idx` is defined
@@ -412,8 +420,8 @@ template <typename T>
 concept is_bool = detail::is_bool_detail<T>;
 
 template <typename T>
-// `__is_arithmetic` will short-circuit, but we need the others for
-// `cat::arithmetic`.
+// `__is_arithmetic` will short-circuit, but we need the others for libCat
+// arithmetic wrappers.
 concept is_arithmetic =
    __is_arithmetic(T) || is_integral<T> || is_floating_point<T>;
 
@@ -421,18 +429,22 @@ namespace detail {
 template <typename...>
 inline constexpr bool is_signed_detail = false;
 
-// Special-casing the `is_signed` trait for `arithmetic` is necessary to prevent
-// a circular template instantiation.
+// Special-casing the `is_signed` trait for libCat arithmetic wrappers is
+// necessary to prevent a circular template instantiation.
 template <typename T, overflow_policies policy>
-inline constexpr bool is_signed_detail<arithmetic<T, policy>> =
+inline constexpr bool is_signed_detail<basic_int<T, policy>> =
+   is_signed_detail<T>;
+
+template <typename T, auto policy>
+inline constexpr bool is_signed_detail<basic_float<T, policy>> =
    is_signed_detail<T>;
 
 template <typename T, typename Storage, auto policy>
-inline constexpr bool is_signed_detail<arithmetic_ptr<T, Storage, policy>> =
+inline constexpr bool is_signed_detail<basic_intptr<T, Storage, policy>> =
    is_signed_detail<Storage>;
 
 // A signed type is less-than-comparable with a `bool` result. For example, this
-// holds true for `cat::arithmetic` and false for `cat::simd`. We use
+// holds true for libCat arithmetic wrappers and false for `cat::simd`. We use
 // `decltype(a < b)` instead of:
 //    requires { { a < b } -> is_convertible<bool>; }
 // because that operator lookup causes unbounded recursion on some libCat types.
@@ -500,8 +512,13 @@ struct make_signed_trait<unsigned long long> {
 };
 
 template <typename T, auto policy>
-struct make_signed_trait<arithmetic<T, policy>> {
-   using type = arithmetic<typename make_signed_trait<T>::type, policy>;
+struct make_signed_trait<basic_int<T, policy>> {
+   using type = basic_int<typename make_signed_trait<T>::type, policy>;
+};
+
+template <typename T, auto policy>
+struct make_signed_trait<basic_float<T, policy>> {
+   using type = basic_float<typename make_signed_trait<T>::type, policy>;
 };
 }  // namespace detail
 
@@ -548,8 +565,8 @@ using make_unsigned_type =
    copy_cv_from<T, typename detail::make_unsigned_trait<remove_cv<T>>::type>;
 
 template <typename T, auto policy>
-struct detail::make_unsigned_trait<arithmetic<T, policy>> {
-   using type = arithmetic<typename make_unsigned_trait<T>::type, policy>;
+struct detail::make_unsigned_trait<basic_int<T, policy>> {
+   using type = basic_int<typename make_unsigned_trait<T>::type, policy>;
 };
 
 template <auto policy>

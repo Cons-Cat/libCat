@@ -8,27 +8,36 @@
 #include <cat/limits>
 #include <cat/meta>
 
-// `cat::arithmetic`, `cat::basic_idx`, and `cat::arithmetic_ptr` are containers
-// for numeric data types which both prevent unsound implicit type conversions
-// and make safe comparisons between different arithmetic types.
+// `cat::basic_int`, `cat::basic_float`, `cat::basic_idx`, and
+// `cat::basic_intptr` are arithmetic wrappers which both
+// prevent unsound implicit type conversions and make safe comparisons between
+// different arithmetic types.
 //
-// All of their conversion operators, `is_arithmetic` operators and constructors
-// are generic with constraints. Because these methods are constrained, it is
-// possible that the compiler will fail to resolve any satisfying overloads for
-// an invocation of an operator or constructor, and thus prevent compilation.
+// All of their conversion operators, math operators, and constructors are
+// generic with constraints. Because these methods are constrained, it is
+// intended that the compiler will fail to resolve any satisfying overloads for
+// an invocation of an operator or constructor, and prevent unsafe compilation.
 //
 // Constraints such as "the operand's size must be less than or equal to my own
 // size" guarantee that an unwanted overload cannot be resolved. This solution
 // is concise, because any constraint broadly applies to all possible type
 // conversions.
 //
-// There are attribute `enable_if` overloads that relax these constraints for
-// compile-time known sound conversions.
+// On the other paw, the type system tries to make sound operations between two
+// different types work where possible. e.g. adding an unsigned integer to a
+// signed integer promotes to a wider signed integer, mixed signed-ness
+// comparisions behave intuitively, etc.
+//
+// There are Clang attribute `enable_if` overloads that relax these constraints
+// and type promotions for compile-time known sound operations. Adding a
+// constant 1 to an unsigned integer does not promote it to a wider signed
+// integer, as 1u would not either.
 //
 // There are also attribute `enable_if` overloads that relax these constraints.
 //
-// `cat::arithmetic` is an abstraction over fundamental integer and
-// floating-point arithmetic types.
+// `cat::basic_int` is an abstraction over fundamental integer types.
+//
+// `cat::basic_float` is an abstraction over fundamental floating-point types.
 //
 // `cat::basic_idx` is a 63-bit unsigned integer type that is used to index
 // arrays and containers. This type is recommended for the iterator of `for`
@@ -39,19 +48,30 @@
 // Subtracting from a `cat::basic_idx` will cast to `cat::iword`, thereby
 // teaching the type system that this subtraction will never underflow. When the
 // difference is compile-time known to be positive, this is relaxed and a
-// `cat::basic_idx` is returned instead. This is important for expressions
+// `cat::idx` is returned instead. This is important for expressions
 // involving literals used within subscripting.
 //
-// All `for` loops in libCat use either `cat::basic_idx` or `cat::iword` as its
-// iterator integer.
+// All `for` loops in libCat use either `cat::basic_idx` or `cat::iword` as
+// their iterator integer.
 //
-// `cat::arithmetic_ptr` is a pointer type that is used to store pointers to
+// `cat::basic_intptr` is a pointer type that is used to store pointers to
 // arithmetic types. It is essentially a type-safe `std::intptr_t` or
 // `std::uintptr_t` that may only reinterpret-cast back to the pointer type that
 // it originates from.
+//
+// Integer types additionally hold overflow policies in their type which
+// controls how overflows are handled. These are strictly left-assosciative, and
+// most previous type constraints and type promotions do not apply when the
+// left-hand operand is not `overflow_policies::undefined`. They can be
+// `undefined`, `wrap`, or `saturate`.
+//
+// Floating-point types hold precision policies in their type which control
+// how floating-point operations are performed. These too are strictly
+// left-assosciative. They can be `precise` or `fast`.
+
 namespace cat {
 
-// These policies control the overflow semantics of `arithmetic`s.
+// These policies control the overflow semantics of integer wrappers.
 enum class overflow_policies : unsigned char {
    undefined,
    wrap,
@@ -59,66 +79,78 @@ enum class overflow_policies : unsigned char {
    trap,
 };
 
-template <typename WrappedQual, overflow_policies Semantics>
+enum class precision_policies : unsigned char {
+   precise,
+   fast,
+};
+
+template <typename WrappedQual, overflow_policies policy>
 class overflow_reference;
+
+template <typename T, overflow_policies>
+class basic_int;
+
+template <typename T,
+          precision_policies precision_policy = precision_policies::precise>
+class basic_float;
 
 template <typename T, typename Storage, overflow_policies>
    requires(sizeof(Storage) == sizeof(void*))
-class arithmetic_ptr;
+class basic_intptr;
 
 template <overflow_policies overflow_policy>
 class basic_idx;
 
 inline namespace integers {
 // These macros are defined by the Clang compiler.
-using int1 = arithmetic<__INT8_TYPE__, overflow_policies::undefined>;
-using uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::undefined>;
-using int2 = arithmetic<__INT16_TYPE__, overflow_policies::undefined>;
-using uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::undefined>;
-using int4 = arithmetic<__INT32_TYPE__, overflow_policies::undefined>;
-using uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::undefined>;
-using int8 = arithmetic<__INT64_TYPE__, overflow_policies::undefined>;
-using uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;
+using int1 = basic_int<__INT8_TYPE__, overflow_policies::undefined>;
+using uint1 = basic_int<__UINT8_TYPE__, overflow_policies::undefined>;
+using int2 = basic_int<__INT16_TYPE__, overflow_policies::undefined>;
+using uint2 = basic_int<__UINT16_TYPE__, overflow_policies::undefined>;
+using int4 = basic_int<__INT32_TYPE__, overflow_policies::undefined>;
+using uint4 = basic_int<__UINT32_TYPE__, overflow_policies::undefined>;
+using int8 = basic_int<__INT64_TYPE__, overflow_policies::undefined>;
+using uint8 = basic_int<__UINT64_TYPE__, overflow_policies::undefined>;
 
-using float4 = arithmetic<float, overflow_policies::undefined>;
-using float8 = arithmetic<double, overflow_policies::undefined>;
+using float4 = basic_float<float>;
+using float8 = basic_float<double>;
 
 using idx = cat::basic_idx<overflow_policies::undefined>;
 
 using iword =
-   arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
-using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
+   basic_int<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
+using uword = basic_int<__SIZE_TYPE__, overflow_policies::undefined>;
 
 // `__INTPTR_TYPE__` is defined by the Clang compiler.
 template <typename T>
-using intptr = arithmetic_ptr<T, __INTPTR_TYPE__, overflow_policies::undefined>;
+using intptr = basic_intptr<T, __INTPTR_TYPE__, overflow_policies::undefined>;
 
 // `__UINTPTR_TYPE__` is defined by the Clang compiler.
 template <typename T>
 using uintptr =
-   cat::arithmetic_ptr<T, __UINTPTR_TYPE__, overflow_policies::undefined>;
+   cat::basic_intptr<T, __UINTPTR_TYPE__, overflow_policies::undefined>;
 
-using wrap_int1 = arithmetic<__INT8_TYPE__, overflow_policies::wrap>;
-using wrap_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::wrap>;
-using wrap_int2 = arithmetic<__INT16_TYPE__, overflow_policies::wrap>;
-using wrap_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::wrap>;
-using wrap_int4 = arithmetic<__INT32_TYPE__, overflow_policies::wrap>;
-using wrap_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::wrap>;
-using wrap_int8 = arithmetic<__INT64_TYPE__, overflow_policies::wrap>;
-using wrap_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::wrap>;
+using wrap_int1 = basic_int<__INT8_TYPE__, overflow_policies::wrap>;
+using wrap_uint1 = basic_int<__UINT8_TYPE__, overflow_policies::wrap>;
+using wrap_int2 = basic_int<__INT16_TYPE__, overflow_policies::wrap>;
+using wrap_uint2 = basic_int<__UINT16_TYPE__, overflow_policies::wrap>;
+using wrap_int4 = basic_int<__INT32_TYPE__, overflow_policies::wrap>;
+using wrap_uint4 = basic_int<__UINT32_TYPE__, overflow_policies::wrap>;
+using wrap_int8 = basic_int<__INT64_TYPE__, overflow_policies::wrap>;
+using wrap_uint8 = basic_int<__UINT64_TYPE__, overflow_policies::wrap>;
 
-using sat_int1 = arithmetic<__INT8_TYPE__, overflow_policies::saturate>;
-using sat_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::saturate>;
-using sat_int2 = arithmetic<__INT16_TYPE__, overflow_policies::saturate>;
-using sat_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::saturate>;
-using sat_int4 = arithmetic<__INT32_TYPE__, overflow_policies::saturate>;
-using sat_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::saturate>;
-using sat_int8 = arithmetic<__INT64_TYPE__, overflow_policies::saturate>;
-using sat_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::saturate>;
+using sat_int1 = basic_int<__INT8_TYPE__, overflow_policies::saturate>;
+using sat_uint1 = basic_int<__UINT8_TYPE__, overflow_policies::saturate>;
+using sat_int2 = basic_int<__INT16_TYPE__, overflow_policies::saturate>;
+using sat_uint2 = basic_int<__UINT16_TYPE__, overflow_policies::saturate>;
+using sat_int4 = basic_int<__INT32_TYPE__, overflow_policies::saturate>;
+using sat_uint4 = basic_int<__UINT32_TYPE__, overflow_policies::saturate>;
+using sat_int8 = basic_int<__INT64_TYPE__, overflow_policies::saturate>;
+using sat_uint8 = basic_int<__UINT64_TYPE__, overflow_policies::saturate>;
 }  // namespace integers
 
-// Unwraps `cat::arithmetic`, `cat::basic_idx`, `cat::arithmetic_ptr`,
-// `cat::bool2`, and `cat::bool4` into their `raw` values.
+// Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
+// `raw` values.
 template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -132,8 +164,8 @@ make_raw_arithmetic(T value) {
    }
 }
 
-// Unwraps `cat::arithmetic`, `cat::basic_idx`, `cat::arithmetic_ptr`,
-// `cat::bool2`, and `cat::bool4` into their `raw` types.
+// Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
+// `raw` types.
 template <typename T>
 using raw_arithmetic_type = decltype(make_raw_arithmetic(T{}));
 
@@ -157,7 +189,7 @@ template <typename T>
 concept is_idx = is_idx_trait<T>::value;
 
 template <typename T>
-concept is_arithmetic_ptr = requires { T::ptr; };
+concept is_basic_intptr = requires { T::ptr; };
 }  // namespace detail
 
 template <is_integral T>
@@ -197,7 +229,7 @@ make_sign_from(sign_type, T value) -> copy_sign_from<sign_type, T> {
 
 template <typename T>
 concept is_safe_arithmetic =
-   detail::is_idx<T> || detail::is_arithmetic_ptr<T>
+   detail::is_idx<T> || detail::is_basic_intptr<T>
    || (is_arithmetic<T> && !__is_same(T, raw_arithmetic_type<T>));
 
 template <typename T>
@@ -206,7 +238,7 @@ concept is_unsafe_arithmetic =
 
 template <typename T>
 concept is_safe_integral =
-   detail::is_idx<T> || detail::is_arithmetic_ptr<T>
+   detail::is_idx<T> || detail::is_basic_intptr<T>
    || (is_integral<T> && !__is_same(T, raw_arithmetic_type<T>));
 
 template <typename T>
@@ -218,8 +250,8 @@ namespace detail {
 // integer promotion. Any type with a lower `order` can safely convert to a type
 // with a higher `order`, regardless of signed-ness.
 
-// This specialization matches fundamental arithmetic types as well as
-// `cat::arithmetic` specializations.
+// This specialization matches fundamental arithmetic types as well as libCat
+// arithmetic wrapper specializations.
 template <typename T>
 struct integer_promotion_hierarchy {
    static constexpr unsigned long order = sizeof(T);
@@ -233,9 +265,9 @@ struct integer_promotion_hierarchy<basic_idx<policy>> {
 };
 
 template <typename T, typename storage_type, overflow_policies policy>
-struct integer_promotion_hierarchy<arithmetic_ptr<T, storage_type, policy>> {
+struct integer_promotion_hierarchy<basic_intptr<T, storage_type, policy>> {
    // 9 is larger than 8 from `uword` and `iword`, so all integers should
-   // promote to `arithmetic_ptr`.
+   // promote to `basic_intptr`.
    static constexpr unsigned long order = 9;
 };
 
@@ -247,7 +279,7 @@ struct overflow_policy_for_impl {
 };
 
 template <typename T, overflow_policies policy>
-struct overflow_policy_for_impl<arithmetic<T, policy>> {
+struct overflow_policy_for_impl<basic_int<T, policy>> {
    static constexpr overflow_policies value = policy;
 };
 
@@ -257,7 +289,7 @@ struct overflow_policy_for_impl<basic_idx<policy>> {
 };
 
 template <typename T, typename storage_type, overflow_policies policy>
-struct overflow_policy_for_impl<arithmetic_ptr<T, storage_type, policy>> {
+struct overflow_policy_for_impl<basic_intptr<T, storage_type, policy>> {
    static constexpr overflow_policies value = policy;
 };
 
@@ -268,18 +300,26 @@ template <typename T>
 inline constexpr overflow_policies overflow_policy_of =
    overflow_policy_for<T>::value;
 
-// Rebind the overflow policy of an arithmetic-like type. Raw integers and
-// floats become `arithmetic<T, new_policy>`. `arithmetic`, `basic_idx`, and
-// `arithmetic_ptr` keep their kind and replace just the policy.
+// Rebind the overflow policy of an arithmetic-like type. Raw integers become
+// `basic_int<T, new_policy>`. `basic_float` keeps its shape because precision
+// is its policy axis. `basic_idx` and `basic_intptr` keep their kind and
+// replace just the overflow policy.
 template <typename T, overflow_policies new_policy>
 struct rebind_overflow_policy {
-   using type = arithmetic<T, new_policy>;
+   using type = conditional<is_floating_point<T>, basic_float<T>,
+                            basic_int<T, new_policy>>;
 };
 
 template <typename T, overflow_policies old_policy,
           overflow_policies new_policy>
-struct rebind_overflow_policy<arithmetic<T, old_policy>, new_policy> {
-   using type = arithmetic<T, new_policy>;
+struct rebind_overflow_policy<basic_int<T, old_policy>, new_policy> {
+   using type = basic_int<T, new_policy>;
+};
+
+template <typename T, precision_policies old_precision,
+          overflow_policies new_policy>
+struct rebind_overflow_policy<basic_float<T, old_precision>, new_policy> {
+   using type = basic_float<T, old_precision>;
 };
 
 template <overflow_policies old_policy, overflow_policies new_policy>
@@ -289,9 +329,9 @@ struct rebind_overflow_policy<basic_idx<old_policy>, new_policy> {
 
 template <typename T, typename storage_type, overflow_policies old_policy,
           overflow_policies new_policy>
-struct rebind_overflow_policy<arithmetic_ptr<T, storage_type, old_policy>,
+struct rebind_overflow_policy<basic_intptr<T, storage_type, old_policy>,
                               new_policy> {
-   using type = arithmetic_ptr<T, storage_type, new_policy>;
+   using type = basic_intptr<T, storage_type, new_policy>;
 };
 
 // `promoted_arithmetic` picks the result shape for a binary op. For `undefined`
@@ -317,8 +357,7 @@ promoted_arithmetic() {
       return typename rebind_overflow_policy<left, policy>::type();
    } else {
       // RHS wins on width:
-      // keep RHS's kind (`arithmetic`, `basic_idx`, `arithmetic_ptr`, or a raw
-      // type) and tag it with `left`'s policy.
+      // keep RHS's kind and tag it with `left`'s policy.
       return typename rebind_overflow_policy<right, policy>::type();
    }
 }
@@ -350,8 +389,8 @@ concept is_safe_arithmetic_comparison =
    // And both types have the same floating-point-ness.
    && (is_floating_point<left_type> == is_floating_point<right_type>);
 
-// Any `arithmetic` can safely convert to a type larger than itself, but not
-// smaller than itself.
+// Any arithmetic wrapper can safely convert to a type larger than itself, but
+// not smaller than itself.
 template <typename from_type, typename to_type>
 concept is_safe_arithmetic_conversion =
    ((detail::integer_promotion_hierarchy<from_type>::order
@@ -363,7 +402,7 @@ concept is_safe_arithmetic_conversion =
    // only used for `undefined` overflow.
    || (is_same<from_type, basic_idx<overflow_policies::undefined>>
        && is_same<to_type,
-                  arithmetic<signed long, overflow_policies::undefined>>);
+                  basic_int<signed long, overflow_policies::undefined>>);
 
 namespace detail {
 
@@ -382,7 +421,7 @@ using implicit_raw_compare_wide = conditional<
                larger_type<RawSource, DestStorage>>>;
 
 // Value check for the four raw `enable_if` converting constructors. Width and
-// signed-ness pairing are enforced on the `arithmetic` constructors. This only
+// signed-ness pairing are enforced on the wrapper constructors. This only
 // answers whether the runtime value fits the destination storage. This is
 // `constexpr` rather than `consteval`.
 template <typename Dest, typename U>
@@ -780,7 +819,7 @@ sat_shr(T value, U bits) -> remove_constref<T> {
 // with no information lost. The shift count is taken modulo the bit width of
 // `T`, so any non-negative count is valid -- a count of `N` is a no-op, `N + 1`
 // rotates by one, etc. This is the wrapping counterpart to `sat_shl` and is the
-// dispatch path for `wrap`-policy << on `arithmetic`.
+// dispatch path for `wrap`-policy << on `basic_int`.
 template <is_raw_integral T, is_raw_integral U>
    requires(is_unsigned<T>)
 [[nodiscard]]
@@ -915,9 +954,280 @@ policy_cast(U value) -> T {
 
 }  // namespace detail
 
+namespace detail {
+#pragma float_control(push)
+#pragma float_control(precise, on)
+
+template <typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+precise_float_add(T lhs, U rhs) {
+   return lhs + rhs;
+}
+
+template <typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+precise_float_subtract(T lhs, U rhs) {
+   return lhs - rhs;
+}
+
+template <typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+precise_float_multiply(T lhs, U rhs) {
+   return lhs * rhs;
+}
+
+template <typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+precise_float_divide(T lhs, U rhs) {
+   return lhs / rhs;
+}
+
+#pragma float_control(pop)
+
+#pragma float_control(push)
+#pragma float_control(precise, off)
+
+template <typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+fast_float_add(T lhs, U rhs) {
+   return lhs + rhs;
+}
+
+template <typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+fast_float_subtract(T lhs, U rhs) {
+   return lhs - rhs;
+}
+
+template <typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+fast_float_multiply(T lhs, U rhs) {
+   return lhs * rhs;
+}
+
+template <typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+fast_float_divide(T lhs, U rhs) {
+   return lhs / rhs;
+}
+
+#pragma float_control(pop)
+
+template <precision_policies precision, typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+float_add(T lhs, U rhs) {
+   if constexpr (precision == precision_policies::precise) {
+      return precise_float_add(lhs, rhs);
+   } else {
+      return fast_float_add(lhs, rhs);
+   }
+}
+
+template <precision_policies precision, typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+float_subtract(T lhs, U rhs) {
+   if constexpr (precision == precision_policies::precise) {
+      return precise_float_subtract(lhs, rhs);
+   } else {
+      return fast_float_subtract(lhs, rhs);
+   }
+}
+
+template <precision_policies precision, typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+float_multiply(T lhs, U rhs) {
+   if constexpr (precision == precision_policies::precise) {
+      return precise_float_multiply(lhs, rhs);
+   } else {
+      return fast_float_multiply(lhs, rhs);
+   }
+}
+
+template <precision_policies precision, typename T, typename U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+float_divide(T lhs, U rhs) {
+   if constexpr (precision == precision_policies::precise) {
+      return precise_float_divide(lhs, rhs);
+   } else {
+      return fast_float_divide(lhs, rhs);
+   }
+}
+}  // namespace detail
+
+template <typename T, precision_policies precision>
+class [[clang::preferred_name(float4), clang::preferred_name(float8)]]
+basic_float : public arithmetic_interface<basic_float<T, precision>> {
+ public:
+   using raw_type = T;
+
+   static constexpr precision_policies precision_policy = precision;
+
+   T raw;
+
+   constexpr basic_float() = default;
+   constexpr basic_float(basic_float const&) = default;
+   constexpr basic_float(basic_float&&) = default;
+
+   template <is_arithmetic U>
+      requires(!is_safe_arithmetic_conversion<U, T>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr basic_float(U other) __attribute__((
+      enable_if(detail::raw_source_fits_implicit_storage<T>(other),
+                "value is out of range for implicit conversion to this "
+                "basic_float type")))
+       : raw(static_cast<T>(make_raw_arithmetic(other))) {
+   }
+
+   template <is_arithmetic U>
+      requires(!is_safe_arithmetic_conversion<U, T>)
+   [[gnu::always_inline, gnu::nodebug]]
+   consteval basic_float(U other) __attribute__((
+      enable_if(!detail::raw_source_fits_implicit_storage<T>(other),
+                "value is out of range for implicit conversion to this "
+                "basic_float type"))) = delete;
+
+   template <is_arithmetic U>
+      requires(is_safe_arithmetic_conversion<U, T>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr basic_float(U other)
+       : raw(static_cast<T>(make_raw_arithmetic(other))) {
+   }
+
+   template <is_arithmetic U>
+      requires(!is_safe_arithmetic_conversion<U, T>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit basic_float(U other)
+       : raw(static_cast<T>(make_raw_arithmetic(other))) {
+   }
+
+   template <typename U>
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit
+   operator U() const {
+      return static_cast<U>(raw);
+   }
+
+   template <is_arithmetic U>
+      requires(is_safe_arithmetic_comparison<T, U>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator<=>(U rhs) const {
+      using common = common_type<raw_type, raw_arithmetic_type<U>>;
+      return common(raw) <=> common(make_raw_arithmetic(rhs));
+   }
+
+   template <is_arithmetic U>
+      requires(is_safe_arithmetic_comparison<T, U>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator==(basic_float lhs, U rhs) -> bool {
+      return lhs.raw == make_raw_arithmetic(rhs);
+   }
+
+   constexpr auto
+   operator=(basic_float const&) -> basic_float& = default;
+   constexpr auto
+   operator=(basic_float&&) -> basic_float& = default;
+
+   template <is_arithmetic U>
+      requires(is_safe_arithmetic_comparison<T, U>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator=(U operand) -> basic_float& {
+      raw = make_raw_arithmetic(operand);
+      return *this;
+   }
+
+   template <is_arithmetic U>
+      requires(is_floating_point<U>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   add(U other) const
+      -> basic_float<common_type<T, raw_arithmetic_type<U>>, precision> {
+      using result_type =
+         basic_float<common_type<T, raw_arithmetic_type<U>>, precision>;
+      return result_type(
+         detail::float_add<precision>(raw, make_raw_arithmetic(other)));
+   }
+
+   template <is_arithmetic U>
+      requires(is_floating_point<U>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   subtract_by(U operand) const -> basic_float {
+      return basic_float(
+         detail::float_subtract<precision>(raw, make_raw_arithmetic(operand)));
+   }
+
+   template <is_arithmetic U>
+      requires(is_floating_point<U>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   subtract_from(U operand) const -> remove_constref<U> {
+      using result_type = remove_constref<U>;
+      return result_type(
+         detail::float_subtract<precision>(make_raw_arithmetic(operand), raw));
+   }
+
+   template <is_arithmetic U>
+      requires(is_floating_point<U>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   multiply(U operand) const
+      -> basic_float<common_type<T, raw_arithmetic_type<U>>, precision> {
+      using result_type =
+         basic_float<common_type<T, raw_arithmetic_type<U>>, precision>;
+      return result_type(
+         detail::float_multiply<precision>(raw, make_raw_arithmetic(operand)));
+   }
+
+   template <is_arithmetic U>
+      requires(is_floating_point<U>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_by(U operand) const -> basic_float {
+      return basic_float(
+         detail::float_divide<precision>(raw, make_raw_arithmetic(operand)));
+   }
+
+   template <is_unsafe_arithmetic U>
+      requires(is_floating_point<U>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_into(U operand) const -> remove_constref<U> {
+      using result_type = remove_constref<U>;
+      return result_type(
+         detail::float_divide<precision>(make_raw_arithmetic(operand), raw));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   min() -> basic_float<raw_type, precision> {
+      return limits<raw_type>::min();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   max() -> basic_float<raw_type, precision> {
+      return limits<raw_type>::max();
+   }
+};
+
 // TODO: Mark these member functions `[[gnu::nodebug]]`.
 // TODO: Implement trapping overflow policy.
-// `arithmetic` can represent an integer or floating point value. It prevents
+// `basic_int` represents integer values. It prevents
 // unsafe casts or operations. This is a trivial `struct` so it can be used as a
 // non-type template parameter.
 template <typename T,
@@ -926,7 +1236,6 @@ class [[clang::preferred_name(int1), clang::preferred_name(uint1),
         clang::preferred_name(int2), clang::preferred_name(uint2),
         clang::preferred_name(int4), clang::preferred_name(uint4),
         clang::preferred_name(int8), clang::preferred_name(uint8),
-        clang::preferred_name(float4), clang::preferred_name(float8),
         clang::preferred_name(iword), clang::preferred_name(uword),
         clang::preferred_name(wrap_int1), clang::preferred_name(wrap_uint1),
         clang::preferred_name(wrap_int2), clang::preferred_name(wrap_uint2),
@@ -936,9 +1245,9 @@ class [[clang::preferred_name(int1), clang::preferred_name(uint1),
         clang::preferred_name(sat_int2), clang::preferred_name(sat_uint2),
         clang::preferred_name(sat_int4), clang::preferred_name(sat_uint4),
         clang::preferred_name(sat_int8), clang::preferred_name(sat_uint8)]]
-arithmetic :
-    // Generate arithmetic operators.
-    public arithmetic_interface<arithmetic<T, overflow_policy>> {
+basic_int :
+    // Generate basic_int operators.
+    public arithmetic_interface<basic_int<T, overflow_policy>> {
  public:
    using raw_type = T;
 
@@ -946,9 +1255,9 @@ arithmetic :
 
    T raw;
 
-   constexpr arithmetic() = default;
-   constexpr arithmetic(arithmetic const&) = default;
-   constexpr arithmetic(arithmetic&&) = default;
+   constexpr basic_int() = default;
+   constexpr basic_int(basic_int const&) = default;
+   constexpr basic_int(basic_int&&) = default;
 
    // Sound implicit conversion. Unsafe pairings (e.g. `int4 -> int1`,
    // `uint4 -> int4`) only enable this constructor when `enable_if` proves the
@@ -959,9 +1268,9 @@ arithmetic :
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr arithmetic(U other) __attribute__((enable_if(
+   constexpr basic_int(U other) __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<T>(other),
-      "value is out of range for implicit conversion to this arithmetic type")))
+      "value is out of range for implicit conversion to this basic_int type")))
        : raw(static_cast<T>(make_raw_arithmetic(other))) {
    }
 
@@ -976,17 +1285,17 @@ arithmetic :
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval arithmetic(U other) __attribute__((
+   consteval basic_int(U other) __attribute__((
       enable_if(!detail::raw_source_fits_implicit_storage<T>(other),
                 "value is out of range for implicit conversion to this "
-                "arithmetic type"))) = delete;
+                "basic_int type"))) = delete;
 
    // Constructing with safe conversions is implicit, but constructing with
    // unsafe conversions is explicit.
    template <is_arithmetic U>
       requires(is_safe_arithmetic_conversion<U, T>)
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr arithmetic(U other)
+   constexpr basic_int(U other)
        : raw(static_cast<T>(make_raw_arithmetic(other))) {
    }
 
@@ -996,7 +1305,7 @@ arithmetic :
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit arithmetic(U other)
+   constexpr explicit basic_int(U other)
        : raw(static_cast<T>(make_raw_arithmetic(other))) {
    }
 
@@ -1011,7 +1320,7 @@ arithmetic :
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy != overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr arithmetic(U other)
+   constexpr basic_int(U other)
        : raw(detail::policy_cast<T, overflow_policy>(
             make_raw_arithmetic(other))) {
    }
@@ -1036,7 +1345,7 @@ arithmetic :
       requires(is_safe_arithmetic_comparison<T, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(arithmetic lhs, U rhs) -> bool {
+   operator==(basic_int lhs, U rhs) -> bool {
       return lhs.raw == make_raw_arithmetic(rhs);
    }
 
@@ -1045,38 +1354,38 @@ arithmetic :
    // combination of widths and runs at runtime as well as `consteval`.
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_comparison<T, U>
-               && !detail::is_idx<arithmetic>
+               && !detail::is_idx<basic_int>
                && ((is_unsigned_integral<T> && is_signed_integral<U>)
                    || (is_signed_integral<T> && is_unsigned_integral<U>)))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(arithmetic lhs, U rhs) {
+   operator<=>(basic_int lhs, U rhs) {
       return detail::raw_mixed_integral_spaceship(lhs.raw,
                                                   make_raw_arithmetic(rhs));
    }
 
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_comparison<T, U>
-               && !detail::is_idx<arithmetic>
+               && !detail::is_idx<basic_int>
                && ((is_unsigned_integral<T> && is_signed_integral<U>)
                    || (is_signed_integral<T> && is_unsigned_integral<U>)))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(arithmetic lhs, U rhs) -> bool {
+   operator==(basic_int lhs, U rhs) -> bool {
       return detail::raw_mixed_integral_equals(lhs.raw,
                                                make_raw_arithmetic(rhs));
    }
 
    constexpr auto
-   operator=(arithmetic const&) -> arithmetic& = default;
+   operator=(basic_int const&) -> basic_int& = default;
    constexpr auto
-   operator=(arithmetic&&) -> arithmetic& = default;
+   operator=(basic_int&&) -> basic_int& = default;
 
    template <is_arithmetic U>
       requires(is_safe_arithmetic_comparison<T, U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> arithmetic& {
+   operator=(U operand) -> basic_int& {
       raw = make_raw_arithmetic(operand);
       return *this;
    }
@@ -1085,16 +1394,16 @@ arithmetic :
    // mixed-signed-ness same-size operands, which `wrap_add`/`sat_add` cannot
    // disambiguate.
    // Those cases are reached instead via the implicit `enable_if` constructor
-   // on the operand, which converts to `arithmetic<T, overflow_policy>` at the
+   // on the operand, which converts to `basic_int<T, overflow_policy>` at the
    // call site so the same-type overload of this function runs.
    template <is_arithmetic U>
       requires(overflow_policy == overflow_policies::undefined
                || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const -> detail::promoted_type<arithmetic, U> {
+   add(U other) const -> detail::promoted_type<basic_int, U> {
       using enum overflow_policies;
-      using result_type = detail::promoted_type<arithmetic, U>;
+      using result_type = detail::promoted_type<basic_int, U>;
       auto raw_other = make_raw_arithmetic(other);
       if constexpr (overflow_policy == undefined) {
          // `make_signed` is the identity on floating-point `raw_type`. For
@@ -1120,20 +1429,20 @@ arithmetic :
       requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> arithmetic {
+   subtract_by(U operand) const -> basic_int {
       using enum overflow_policies;
       auto const rhs_raw = make_raw_arithmetic(operand);
       using ut = make_unsigned_type<T>;
       ut const lhs_u = static_cast<ut>(raw);
       ut const rhs_u = static_cast<ut>(rhs_raw);
       if constexpr (overflow_policy == undefined || overflow_policy == wrap) {
-         return arithmetic(static_cast<T>(lhs_u - rhs_u));
+         return basic_int(static_cast<T>(lhs_u - rhs_u));
       }
       if constexpr (overflow_policy == saturate) {
          if (lhs_u >= rhs_u) {
-            return arithmetic(static_cast<T>(lhs_u - rhs_u));
+            return basic_int(static_cast<T>(lhs_u - rhs_u));
          }
-         return arithmetic(static_cast<T>(0));
+         return basic_int(static_cast<T>(0));
       }
    }
 
@@ -1148,10 +1457,10 @@ arithmetic :
    constexpr auto
    subtract_by(U operand) const
       -> conditional<(sizeof(raw_arithmetic_type<U>) > sizeof(T)),
-                     detail::promoted_type<arithmetic, U>, arithmetic> {
+                     detail::promoted_type<basic_int, U>, basic_int> {
       auto const rhs_raw = make_raw_arithmetic(operand);
       if constexpr (sizeof(raw_arithmetic_type<U>) > sizeof(T)) {
-         using result_type = detail::promoted_type<arithmetic, U>;
+         using result_type = detail::promoted_type<basic_int, U>;
          using promoted_raw = raw_arithmetic_type<result_type>;
          return result_type(static_cast<promoted_raw>(raw)
                             - static_cast<promoted_raw>(rhs_raw));
@@ -1159,7 +1468,7 @@ arithmetic :
          using st = make_signed_type<T>;
          st const lhs_s = static_cast<st>(raw);
          st const rhs_s = static_cast<st>(rhs_raw);
-         return arithmetic(static_cast<T>(lhs_s - rhs_s));
+         return basic_int(static_cast<T>(lhs_s - rhs_s));
       }
    }
 
@@ -1173,9 +1482,9 @@ arithmetic :
                     && overflow_policy == overflow_policies::undefined))
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> arithmetic {
+   subtract_by(U operand) const -> basic_int {
       using enum overflow_policies;
-      using result_type = arithmetic;
+      using result_type = basic_int;
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == undefined) {
          // TODO: See if using `[[gnu::assume]]` actually optimizes
@@ -1220,7 +1529,7 @@ arithmetic :
                || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const -> detail::promoted_type<arithmetic, U> {
+   multiply(U operand) const -> detail::promoted_type<basic_int, U> {
       using enum overflow_policies;
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::undefined) {
@@ -1231,7 +1540,7 @@ arithmetic :
             // Assume there is no overflow. [[gnu::assume((raw >= operand))]];
          }
          using promoted_raw =
-            raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
+            raw_arithmetic_type<detail::promoted_type<basic_int, U>>;
          return promoted_raw(static_cast<promoted_raw>(raw)
                              * static_cast<promoted_raw>(raw_operand));
       } else if constexpr (overflow_policy == wrap) {
@@ -1254,9 +1563,9 @@ arithmetic :
                || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const -> arithmetic {
+   divide_by(U operand) const -> basic_int {
       using enum overflow_policies;
-      using result_type = arithmetic;
+      using result_type = basic_int;
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == undefined) {
          using promoted_raw = raw_arithmetic_type<result_type>;
@@ -1298,19 +1607,20 @@ arithmetic :
    // Generate `operator~`. Only available for unsigned integral storage.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const -> arithmetic
+   bit_complement() const -> basic_int
       requires(is_unsigned_integral<T>)
    {
-      return arithmetic(~(raw));
+      return basic_int(~(raw));
    }
 
    // Generate `operator%`. The result fits in LHS width `|a % b| < |a|`.
    //
    // For SIGNED LHS this is the C++ truncated remainder the sign of the result
    // follows the dividend, so `(-7) % 3 == -1`. The RHS is narrowed to the LHS
-   // storage `T` before the % so that the usual arithmetic conversions cannot
-   // quietly promote a signed dividend to unsigned (which would turn a negative
-   // LHS into a huge positive operand and produce the wrong remainder).
+   // storage `T` before the % so that the usual C++ arithmetic conversions
+   // cannot quietly promote a signed dividend to unsigned (which would turn a
+   // negative LHS into a huge positive operand and produce the wrong
+   // remainder).
    //
    // For UNSIGNED LHS this is mathematical *modulo*. The result is always in
    // `[0, |rhs|)`. With a signed RHS the absolute value is taken first. Just
@@ -1319,16 +1629,16 @@ arithmetic :
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U operand) const -> arithmetic {
+   modulo_by(U operand) const -> basic_int {
       auto const rhs_raw = make_raw_arithmetic(operand);
       if constexpr (is_unsigned_integral<T>
                     && is_signed_integral<raw_arithmetic_type<U>>) {
          T const rhs_unsigned = static_cast<T>(rhs_raw);
          T const rhs_abs =
             (rhs_raw < 0) ? static_cast<T>(-rhs_unsigned) : rhs_unsigned;
-         return arithmetic(raw % rhs_abs);
+         return basic_int(raw % rhs_abs);
       } else {
-         return arithmetic(raw % static_cast<T>(rhs_raw));
+         return basic_int(raw % static_cast<T>(rhs_raw));
       }
    }
 
@@ -1347,8 +1657,8 @@ arithmetic :
       requires(is_unsigned_integral<T> && sizeof(T) >= sizeof(U))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U operand) const -> arithmetic {
-      return arithmetic(raw & static_cast<T>(make_raw_arithmetic(operand)));
+   bit_and(U operand) const -> basic_int {
+      return basic_int(raw & static_cast<T>(make_raw_arithmetic(operand)));
    }
 
    template <typename U>
@@ -1364,8 +1674,8 @@ arithmetic :
       requires(is_unsigned_integral<T> && sizeof(T) >= sizeof(U))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U operand) const -> arithmetic {
-      return arithmetic(raw | static_cast<T>(make_raw_arithmetic(operand)));
+   bit_or(U operand) const -> basic_int {
+      return basic_int(raw | static_cast<T>(make_raw_arithmetic(operand)));
    }
 
    template <typename U>
@@ -1379,7 +1689,7 @@ arithmetic :
    // Generate `operator<<`. `shift_left_by` is the dispatch path when this type
    // is on the LHS. `shift_left_into` is the dispatch path when this type is on
    // the RHS. Both are exposed for any integral storage so that << works in
-   // either position. For signed `T`, the underlying << is the C++ arithmetic
+   // either position. For signed `T`, the underlying << is the C++ basic_int
    // shift. With `saturate` policy a positive overflow clamps to `max()` and a
    // negative overflow clamps to `min()`. With `wrap` policy the shift instead
    // ROTATES the underlying bit pattern. Bits shifted out the high end re-enter
@@ -1390,14 +1700,14 @@ arithmetic :
       requires(is_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> arithmetic {
+   shift_left_by(U operand) const -> basic_int {
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::saturate) {
-         return arithmetic(sat_shl(raw, raw_operand));
+         return basic_int(sat_shl(raw, raw_operand));
       } else if constexpr (overflow_policy == overflow_policies::wrap) {
-         return arithmetic(wrap_shl(raw, raw_operand));
+         return basic_int(wrap_shl(raw, raw_operand));
       } else {
-         return arithmetic(static_cast<T>(raw << raw_operand));
+         return basic_int(static_cast<T>(raw << raw_operand));
       }
    }
 
@@ -1411,7 +1721,7 @@ arithmetic :
 
    // Generate `operator>>`. Same dispatch story as <<. `shift_right_by` for the
    // LHS path and `shift_right_into` for the RHS path. For signed `T`, the
-   // underlying >> is the C++ arithmetic shift, which sign-extends negative LHS
+   // underlying >> is the C++ basic_int shift, which sign-extends negative LHS
    // values. Right shift can never overflow, so `saturate` only adds a guard
    // against shift counts at or above the bit width. Positive values clamp to
    // 0, negative values clamp to -1. With `wrap` policy >> ROTATES instead:
@@ -1421,14 +1731,14 @@ arithmetic :
       requires(is_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> arithmetic {
+   shift_right_by(U operand) const -> basic_int {
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::saturate) {
-         return arithmetic(sat_shr(raw, raw_operand));
+         return basic_int(sat_shr(raw, raw_operand));
       } else if constexpr (overflow_policy == overflow_policies::wrap) {
-         return arithmetic(wrap_shr(raw, raw_operand));
+         return basic_int(wrap_shr(raw, raw_operand));
       } else {
-         return arithmetic(static_cast<T>(raw >> raw_operand));
+         return basic_int(static_cast<T>(raw >> raw_operand));
       }
    }
 
@@ -1441,59 +1751,59 @@ arithmetic :
    }
 
    constexpr auto
-   undef() & -> overflow_reference<arithmetic, overflow_policies::undefined>;
+   undef() & -> overflow_reference<basic_int, overflow_policies::undefined>;
 
    constexpr auto
-   undef() const& -> overflow_reference<arithmetic const,
+   undef() const& -> overflow_reference<basic_int const,
                                         overflow_policies::undefined>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && -> arithmetic<T, overflow_policies::undefined> {
-      return arithmetic<T, overflow_policies::undefined>(raw);
+   undef() && -> basic_int<T, overflow_policies::undefined> {
+      return basic_int<T, overflow_policies::undefined>(raw);
    }
 
    constexpr auto
-   wrap() & -> overflow_reference<arithmetic<T, overflow_policy>,
+   wrap() & -> overflow_reference<basic_int<T, overflow_policy>,
                                   overflow_policies::wrap>;
 
    constexpr auto
-   wrap() const& -> overflow_reference<arithmetic<T, overflow_policy> const,
+   wrap() const& -> overflow_reference<basic_int<T, overflow_policy> const,
                                        overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && -> arithmetic<T, overflow_policies::wrap> {
-      return arithmetic<T, overflow_policies::wrap>(raw);
+   wrap() && -> basic_int<T, overflow_policies::wrap> {
+      return basic_int<T, overflow_policies::wrap>(raw);
    }
 
    constexpr auto
-   sat() & -> overflow_reference<arithmetic<T, overflow_policy>,
+   sat() & -> overflow_reference<basic_int<T, overflow_policy>,
                                  overflow_policies::saturate>;
 
    constexpr auto
-   sat() const& -> overflow_reference<arithmetic<T, overflow_policy> const,
+   sat() const& -> overflow_reference<basic_int<T, overflow_policy> const,
                                       overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && -> arithmetic<T, overflow_policies::saturate> {
-      return arithmetic<T, overflow_policies::saturate>(raw);
+   sat() && -> basic_int<T, overflow_policies::saturate> {
+      return basic_int<T, overflow_policies::saturate>(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   min() -> arithmetic<raw_type, overflow_policy> {
+   min() -> basic_int<raw_type, overflow_policy> {
       return limits<raw_type>::min();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   max() -> arithmetic<raw_type, overflow_policy> {
+   max() -> basic_int<raw_type, overflow_policy> {
       return limits<raw_type>::max();
    }
 
-   // `iword` and `uword` are aliases for these `arithmetic` parameterizations.
+   // `iword` and `uword` are aliases for these `basic_int` parameterizations.
    // `to_idx()` is defined at the end of `<cat/maybe>` so its body has access
    // to the complete `maybe` type. The return type is deduced there so this
    // declaration does not need to name `maybe<idx>`.
@@ -1504,7 +1814,7 @@ arithmetic :
                && (is_same<T, __SIZE_TYPE__>
                    || is_same<T, make_signed_type<__SIZE_TYPE__>>));
 
-   // `arithmetic` derives public storage from `detail::arithmetic_storage`.
+   // `basic_int` derives public storage from `detail::arithmetic_storage`.
 };
 
 }  // namespace cat
@@ -1515,53 +1825,53 @@ namespace cat {
 
 template <typename T, overflow_policies overflow_policy>
 constexpr auto
-arithmetic<T, overflow_policy>::undef() & -> overflow_reference<
-   arithmetic<T, overflow_policy>, overflow_policies::undefined> {
-   return overflow_reference<arithmetic<T, overflow_policy>,
+basic_int<T, overflow_policy>::undef() & -> overflow_reference<
+   basic_int<T, overflow_policy>, overflow_policies::undefined> {
+   return overflow_reference<basic_int<T, overflow_policy>,
                              overflow_policies::undefined>{*this};
 }
 
 template <typename T, overflow_policies overflow_policy>
 constexpr auto
-arithmetic<T, overflow_policy>::undef() const& -> overflow_reference<
-   arithmetic<T, overflow_policy> const, overflow_policies::undefined> {
-   return overflow_reference<arithmetic<T, overflow_policy> const,
+basic_int<T, overflow_policy>::undef() const& -> overflow_reference<
+   basic_int<T, overflow_policy> const, overflow_policies::undefined> {
+   return overflow_reference<basic_int<T, overflow_policy> const,
                              overflow_policies::undefined>{*this};
 }
 
 template <typename T, overflow_policies overflow_policy>
 constexpr auto
-arithmetic<T, overflow_policy>::wrap() & -> overflow_reference<
-   arithmetic<T, overflow_policy>, overflow_policies::wrap> {
-   return overflow_reference<arithmetic<T, overflow_policy>,
+basic_int<T, overflow_policy>::wrap() & -> overflow_reference<
+   basic_int<T, overflow_policy>, overflow_policies::wrap> {
+   return overflow_reference<basic_int<T, overflow_policy>,
                              overflow_policies::wrap>{*this};
 }
 
 template <typename T, overflow_policies overflow_policy>
 constexpr auto
-arithmetic<T, overflow_policy>::wrap() const& -> overflow_reference<
-   arithmetic<T, overflow_policy> const, overflow_policies::wrap> {
-   return overflow_reference<arithmetic<T, overflow_policy> const,
+basic_int<T, overflow_policy>::wrap() const& -> overflow_reference<
+   basic_int<T, overflow_policy> const, overflow_policies::wrap> {
+   return overflow_reference<basic_int<T, overflow_policy> const,
                              overflow_policies::wrap>{*this};
 }
 
 template <typename T, overflow_policies overflow_policy>
 constexpr auto
-arithmetic<T, overflow_policy>::sat() & -> overflow_reference<
-   arithmetic<T, overflow_policy>, overflow_policies::saturate> {
-   return overflow_reference<arithmetic<T, overflow_policy>,
+basic_int<T, overflow_policy>::sat() & -> overflow_reference<
+   basic_int<T, overflow_policy>, overflow_policies::saturate> {
+   return overflow_reference<basic_int<T, overflow_policy>,
                              overflow_policies::saturate>{*this};
 }
 
 template <typename T, overflow_policies overflow_policy>
 constexpr auto
-arithmetic<T, overflow_policy>::sat() const& -> overflow_reference<
-   arithmetic<T, overflow_policy> const, overflow_policies::saturate> {
-   return overflow_reference<arithmetic<T, overflow_policy> const,
+basic_int<T, overflow_policy>::sat() const& -> overflow_reference<
+   basic_int<T, overflow_policy> const, overflow_policies::saturate> {
+   return overflow_reference<basic_int<T, overflow_policy> const,
                              overflow_policies::saturate>{*this};
 }
 
-// `arithmetic_ptr` can be constructed from any integer type or any pointer. It
+// `basic_intptr` can be constructed from any integer type or any pointer. It
 // can only convert into `T*`, but it is otherwise interchangeable with
 // integers. It satisfies the `is_integral` type trait and `is_integral`
 // concept.
@@ -1569,10 +1879,10 @@ template <typename T, typename storage_type,
           overflow_policies overflow_policy = overflow_policies::undefined>
    requires(sizeof(storage_type) == sizeof(void*))
 class [[clang::preferred_name(intptr<T>), clang::preferred_name(uintptr<T>)]]
-arithmetic_ptr :
+basic_intptr :
     // Generate arithmetic operators.
     public arithmetic_interface<
-       arithmetic_ptr<T, storage_type, overflow_policy>> {
+       basic_intptr<T, storage_type, overflow_policy>> {
  public:
    using raw_type = storage_type;
    using ptr = T*;
@@ -1582,9 +1892,9 @@ arithmetic_ptr :
    storage_type raw;
 
    // These must be declared explicitly.
-   constexpr arithmetic_ptr() = default;
-   constexpr arithmetic_ptr(arithmetic_ptr const&) = default;
-   constexpr arithmetic_ptr(arithmetic_ptr&&) = default;
+   constexpr basic_intptr() = default;
+   constexpr basic_intptr(basic_intptr const&) = default;
+   constexpr basic_intptr(basic_intptr&&) = default;
 
    // Implicit raw integral conversions when the value fits the storage at
    // compile time. `enable_if`'s predicate is checked against the operand,
@@ -1593,7 +1903,7 @@ arithmetic_ptr :
    template <is_integral U>
       requires(is_integral<storage_type>)
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr arithmetic_ptr(U other) __attribute__((
+   constexpr basic_intptr(U other) __attribute__((
       enable_if(detail::raw_source_fits_implicit_storage<storage_type>(other),
                 "value is out of range for implicit conversion to this pointer "
                 "integer")))
@@ -1604,7 +1914,7 @@ arithmetic_ptr :
       requires(is_integral<storage_type>
                && policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval arithmetic_ptr(U other) __attribute__((
+   consteval basic_intptr(U other) __attribute__((
       enable_if(!detail::raw_source_fits_implicit_storage<storage_type>(other),
                 "Value is out of range for conversion to this pointer "
                 "integer!"))) = delete;
@@ -1614,21 +1924,21 @@ arithmetic_ptr :
    template <is_arithmetic U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(!is_safe_arithmetic_conversion<U, storage_type>)
-      arithmetic_ptr(U other)
+      basic_intptr(U other)
        : raw(make_raw_arithmetic(other)) {
    }
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr arithmetic_ptr(T* p_input)
+   constexpr basic_intptr(T* p_input)
        : raw(__builtin_bit_cast(storage_type, p_input)) {
    }
 
-   // Allow explicitly constructing from another `arithmetic_ptr` with the same
+   // Allow explicitly constructing from another `basic_intptr` with the same
    // `T`.
    template <is_arithmetic U, overflow_policies other_policy>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(policy != other_policy)
-      arithmetic_ptr(arithmetic_ptr<T, U, other_policy> other)
+      basic_intptr(basic_intptr<T, U, other_policy> other)
        : raw(other.raw) {
    }
 
@@ -1688,16 +1998,16 @@ arithmetic_ptr :
    }
 
    constexpr auto
-   operator=(arithmetic_ptr const&) -> arithmetic_ptr& = default;
+   operator=(basic_intptr const&) -> basic_intptr& = default;
 
    constexpr auto
-   operator=(arithmetic_ptr&&) -> arithmetic_ptr& = default;
+   operator=(basic_intptr&&) -> basic_intptr& = default;
 
    template <is_integral U>
       requires(is_safe_arithmetic_conversion<U, storage_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> arithmetic_ptr& {
+   operator=(U operand) -> basic_intptr& {
       raw = make_raw_arithmetic(operand);
       return *this;
    }
@@ -1708,7 +2018,7 @@ arithmetic_ptr :
       requires(is_safe_arithmetic_comparison<storage_type, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(arithmetic_ptr lhs, U rhs) {
+   operator<=>(basic_intptr lhs, U rhs) {
       return lhs.raw <=> make_raw_arithmetic(rhs);
    }
 
@@ -1716,7 +2026,7 @@ arithmetic_ptr :
       requires(is_safe_arithmetic_comparison<storage_type, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(arithmetic_ptr lhs, U rhs) -> bool {
+   operator==(basic_intptr lhs, U rhs) -> bool {
       return lhs.raw == make_raw_arithmetic(rhs);
    }
 
@@ -1730,7 +2040,7 @@ arithmetic_ptr :
                        && is_unsigned_integral<U>)))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(arithmetic_ptr lhs, U rhs) {
+   operator<=>(basic_intptr lhs, U rhs) {
       return detail::raw_mixed_integral_spaceship(lhs.raw,
                                                   make_raw_arithmetic(rhs));
    }
@@ -1742,7 +2052,7 @@ arithmetic_ptr :
                        && is_unsigned_integral<U>)))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(arithmetic_ptr lhs, U rhs) -> bool {
+   operator==(basic_intptr lhs, U rhs) -> bool {
       return detail::raw_mixed_integral_equals(lhs.raw,
                                                make_raw_arithmetic(rhs));
    }
@@ -1755,50 +2065,50 @@ arithmetic_ptr :
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U operand) const -> arithmetic_ptr {
-      return arithmetic_ptr(raw + make_raw_arithmetic(operand));
+   add(U operand) const -> basic_intptr {
+      return basic_intptr(raw + make_raw_arithmetic(operand));
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(U* p_operand) const -> U* {
-      return arithmetic_ptr<U, storage_type, overflow_policy>(p_operand)
+      return basic_intptr<U, storage_type, overflow_policy>(p_operand)
          .add(*this)
          .get();
    }
 
-   // Subtracting `arithmetic_ptr` from `arithmetic_ptr` returns the distance
+   // Subtracting `basic_intptr` from `basic_intptr` returns the distance
    // between them, not another pointer.
 
    // Subtraction between two pointers returns the distance between them. When
    // this is `uintptr`, perform a simple subtraction.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(arithmetic_ptr rhs) const
-      -> arithmetic<storage_type, overflow_policy>
+   subtract_by(basic_intptr rhs) const
+      -> basic_int<storage_type, overflow_policy>
       requires(is_unsigned_integral<storage_type>)
    {
-      return arithmetic<storage_type, overflow_policy>(raw - rhs.raw);
+      return basic_int<storage_type, overflow_policy>(raw - rhs.raw);
    }
 
    // When this is `intptr`, signed distance at the same width as
    // `storage_type`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(arithmetic_ptr rhs) const
-      -> arithmetic<storage_type, overflow_policy>
+   subtract_by(basic_intptr rhs) const
+      -> basic_int<storage_type, overflow_policy>
       requires(is_signed_integral<storage_type>)
    {
-      return arithmetic<storage_type, overflow_policy>(raw - rhs.raw);
+      return basic_int<storage_type, overflow_policy>(raw - rhs.raw);
    }
 
    // Subtract a non-pointer integer.
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> arithmetic_ptr {
-      return arithmetic_ptr(raw - make_raw_arithmetic(operand));
+   subtract_by(U operand) const -> basic_intptr {
+      return basic_intptr(raw - make_raw_arithmetic(operand));
    }
 
    // Subtraction as the right-hand operand on a left-hand pointer does integer
@@ -1807,7 +2117,7 @@ arithmetic_ptr :
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U* p_operand) const -> U* {
-      return arithmetic_ptr<U, storage_type, overflow_policy>(p_operand)
+      return basic_intptr<U, storage_type, overflow_policy>(p_operand)
          .subtract_by(*this)
          .get();
    }
@@ -1825,7 +2135,7 @@ arithmetic_ptr :
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U* p_operand) const -> U* {
-      return arithmetic_ptr<U, storage_type, overflow_policy>(p_operand)
+      return basic_intptr<U, storage_type, overflow_policy>(p_operand)
          .subtract_by(raw)
          .get();
    }
@@ -1833,45 +2143,45 @@ arithmetic_ptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const -> arithmetic_ptr {
-      return arithmetic_ptr(raw + make_raw_arithmetic(operand));
+   multiply(U operand) const -> basic_intptr {
+      return basic_intptr(raw + make_raw_arithmetic(operand));
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U* p_operand) const -> arithmetic_ptr {
+   multiply(U* p_operand) const -> basic_intptr {
       return this->multiply(
-         arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+         basic_intptr<U, storage_type, overflow_policy>(p_operand));
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const -> arithmetic_ptr {
-      return arithmetic_ptr(raw / make_raw_arithmetic(operand));
+   divide_by(U operand) const -> basic_intptr {
+      return basic_intptr(raw / make_raw_arithmetic(operand));
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U* p_operand) const -> arithmetic_ptr {
+   divide_by(U* p_operand) const -> basic_intptr {
       return this->divide_by(
-         arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+         basic_intptr<U, storage_type, overflow_policy>(p_operand));
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const -> arithmetic_ptr {
-      return arithmetic_ptr(make_raw_arithmetic(operand).divide_into(raw));
+   divide_into(U operand) const -> basic_intptr {
+      return basic_intptr(make_raw_arithmetic(operand).divide_into(raw));
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U* p_operand) const -> arithmetic_ptr {
-      return arithmetic_ptr<U, storage_type, overflow_policy>(p_operand)
+   divide_into(U* p_operand) const -> basic_intptr {
+      return basic_intptr<U, storage_type, overflow_policy>(p_operand)
          .divide_into(raw);
    }
 
@@ -1881,17 +2191,17 @@ arithmetic_ptr :
       requires(is_unsigned_integral<storage_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U other) const -> arithmetic_ptr {
-      return arithmetic_ptr(raw & make_raw_arithmetic(other));
+   bit_and(U other) const -> basic_intptr {
+      return basic_intptr(raw & make_raw_arithmetic(other));
    }
 
    template <typename U>
       requires(is_unsigned_integral<storage_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U* p_operand) const -> arithmetic_ptr {
+   bit_and(U* p_operand) const -> basic_intptr {
       return this->bit_and(
-         arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+         basic_intptr<U, storage_type, overflow_policy>(p_operand));
    }
 
    // Generate `operator|`. Only available for unsigned pointer storage.
@@ -1899,38 +2209,38 @@ arithmetic_ptr :
       requires(is_unsigned_integral<storage_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(arithmetic_ptr self, U operand) const -> arithmetic_ptr {
-      return arithmetic_ptr(self.raw | make_raw_arithmetic(operand));
+   bit_or(basic_intptr self, U operand) const -> basic_intptr {
+      return basic_intptr(self.raw | make_raw_arithmetic(operand));
    }
 
    template <typename U>
       requires(is_unsigned_integral<storage_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U* p_operand) const -> arithmetic_ptr {
+   bit_or(U* p_operand) const -> basic_intptr {
       return this->bit_or(
-         arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+         basic_intptr<U, storage_type, overflow_policy>(p_operand));
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U operand) const -> arithmetic_ptr {
+   modulo_by(U operand) const -> basic_intptr {
       return raw % make_raw_arithmetic(operand);
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U* p_operand) const -> arithmetic_ptr {
+   modulo_by(U* p_operand) const -> basic_intptr {
       return this->modulo_by(
-         arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+         basic_intptr<U, storage_type, overflow_policy>(p_operand));
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(U operand) const -> arithmetic_ptr {
+   modulo_into(U operand) const -> basic_intptr {
       return make_raw_arithmetic(operand) % raw;
    }
 
@@ -1939,7 +2249,7 @@ arithmetic_ptr :
       requires(is_unsigned_integral<storage_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> arithmetic_ptr {
+   shift_left_by(U operand) const -> basic_intptr {
       return static_cast<storage_type>(raw << make_raw_arithmetic(operand));
    }
 
@@ -1956,7 +2266,7 @@ arithmetic_ptr :
       requires(is_unsigned_integral<storage_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> arithmetic_ptr {
+   shift_right_by(U operand) const -> basic_intptr {
       return static_cast<storage_type>(raw >> make_raw_arithmetic(operand));
    }
 
@@ -1971,7 +2281,7 @@ arithmetic_ptr :
    // Generate `operator~`. Only available for unsigned pointer storage.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const -> arithmetic_ptr
+   bit_complement() const -> basic_intptr
       requires(is_unsigned_integral<storage_type>)
    {
       return ~(raw);
@@ -1979,139 +2289,134 @@ arithmetic_ptr :
 
    constexpr auto
    undef() & -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy>,
+      basic_intptr<T, storage_type, overflow_policy>,
       overflow_policies::undefined>;
 
    constexpr auto
    undef() const& -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      basic_intptr<T, storage_type, overflow_policy> const,
       overflow_policies::undefined>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && -> arithmetic_ptr<T, storage_type, overflow_policies::undefined> {
-      return arithmetic_ptr<T, storage_type, overflow_policies::undefined>(raw);
+   undef() && -> basic_intptr<T, storage_type, overflow_policies::undefined> {
+      return basic_intptr<T, storage_type, overflow_policies::undefined>(raw);
    }
 
    constexpr auto
    wrap() & -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy>,
-      overflow_policies::wrap>;
+      basic_intptr<T, storage_type, overflow_policy>, overflow_policies::wrap>;
 
    constexpr auto
    wrap() const& -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      basic_intptr<T, storage_type, overflow_policy> const,
       overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && -> arithmetic_ptr<T, storage_type, overflow_policies::wrap> {
-      return arithmetic_ptr<T, storage_type, overflow_policies::wrap>(raw);
+   wrap() && -> basic_intptr<T, storage_type, overflow_policies::wrap> {
+      return basic_intptr<T, storage_type, overflow_policies::wrap>(raw);
    }
 
    constexpr auto
-   sat() & -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy>,
-      overflow_policies::saturate>;
+   sat() & -> overflow_reference<basic_intptr<T, storage_type, overflow_policy>,
+                                 overflow_policies::saturate>;
 
    constexpr auto
    sat() const& -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      basic_intptr<T, storage_type, overflow_policy> const,
       overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && -> arithmetic_ptr<T, storage_type, overflow_policies::saturate> {
-      return arithmetic_ptr<T, storage_type, overflow_policies::saturate>(raw);
+   sat() && -> basic_intptr<T, storage_type, overflow_policies::saturate> {
+      return basic_intptr<T, storage_type, overflow_policies::saturate>(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   min() -> arithmetic_ptr {
-      return limits<arithmetic_ptr<T, storage_type, overflow_policy>>::min();
+   min() -> basic_intptr {
+      return limits<basic_intptr<T, storage_type, overflow_policy>>::min();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   max() -> arithmetic_ptr {
-      return limits<arithmetic_ptr<T, storage_type, overflow_policy>>::max();
+   max() -> basic_intptr {
+      return limits<basic_intptr<T, storage_type, overflow_policy>>::max();
    }
 };
 
 // Deduction guide for `uintptr(address)`. Since `uintptr` and `intptr` are
-// consolidated into the same `arithmetic_ptr` template, it is not possible to
+// consolidated into the same `basic_intptr` template, it is not possible to
 // deduce both of them, as in:
 //    cat::uintptr u = &address;
 //    cat::intptr i = &address;
 // Only one may exist. Since unsigned is far more common, default to that.
 template <typename T>
-arithmetic_ptr(T*) -> arithmetic_ptr<T, __UINTPTR_TYPE__>;
+basic_intptr(T*) -> basic_intptr<T, __UINTPTR_TYPE__>;
 
 template <typename T, typename storage_type, overflow_policies overflow_policy>
    requires(sizeof(storage_type) == sizeof(void*))
 constexpr auto
-arithmetic_ptr<T, storage_type, overflow_policy>::
-   undef() & -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy>,
-      overflow_policies::undefined> {
-   return overflow_reference<arithmetic_ptr<T, storage_type, overflow_policy>,
+basic_intptr<T, storage_type, overflow_policy>::undef() & -> overflow_reference<
+   basic_intptr<T, storage_type, overflow_policy>,
+   overflow_policies::undefined> {
+   return overflow_reference<basic_intptr<T, storage_type, overflow_policy>,
                              overflow_policies::undefined>{*this};
 }
 
 template <typename T, typename storage_type, overflow_policies overflow_policy>
    requires(sizeof(storage_type) == sizeof(void*))
 constexpr auto
-arithmetic_ptr<T, storage_type, overflow_policy>::undef()
+basic_intptr<T, storage_type, overflow_policy>::undef()
    const& -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      basic_intptr<T, storage_type, overflow_policy> const,
       overflow_policies::undefined> {
    return overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      basic_intptr<T, storage_type, overflow_policy> const,
       overflow_policies::undefined>{*this};
 }
 
 template <typename T, typename storage_type, overflow_policies overflow_policy>
    requires(sizeof(storage_type) == sizeof(void*))
 constexpr auto
-arithmetic_ptr<T, storage_type, overflow_policy>::
-   wrap() & -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy>,
-      overflow_policies::wrap> {
-   return overflow_reference<arithmetic_ptr<T, storage_type, overflow_policy>,
+basic_intptr<T, storage_type, overflow_policy>::wrap() & -> overflow_reference<
+   basic_intptr<T, storage_type, overflow_policy>, overflow_policies::wrap> {
+   return overflow_reference<basic_intptr<T, storage_type, overflow_policy>,
                              overflow_policies::wrap>{*this};
 }
 
 template <typename T, typename storage_type, overflow_policies overflow_policy>
    requires(sizeof(storage_type) == sizeof(void*))
 constexpr auto
-arithmetic_ptr<T, storage_type, overflow_policy>::wrap()
+basic_intptr<T, storage_type, overflow_policy>::wrap()
    const& -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      basic_intptr<T, storage_type, overflow_policy> const,
       overflow_policies::wrap> {
    return overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      basic_intptr<T, storage_type, overflow_policy> const,
       overflow_policies::wrap>{*this};
 }
 
 template <typename T, typename storage_type, overflow_policies overflow_policy>
    requires(sizeof(storage_type) == sizeof(void*))
 constexpr auto
-arithmetic_ptr<T, storage_type, overflow_policy>::sat() & -> overflow_reference<
-   arithmetic_ptr<T, storage_type, overflow_policy>,
+basic_intptr<T, storage_type, overflow_policy>::sat() & -> overflow_reference<
+   basic_intptr<T, storage_type, overflow_policy>,
    overflow_policies::saturate> {
-   return overflow_reference<arithmetic_ptr<T, storage_type, overflow_policy>,
+   return overflow_reference<basic_intptr<T, storage_type, overflow_policy>,
                              overflow_policies::saturate>{*this};
 }
 
 template <typename T, typename storage_type, overflow_policies overflow_policy>
    requires(sizeof(storage_type) == sizeof(void*))
 constexpr auto
-arithmetic_ptr<T, storage_type, overflow_policy>::sat()
+basic_intptr<T, storage_type, overflow_policy>::sat()
    const& -> overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      basic_intptr<T, storage_type, overflow_policy> const,
       overflow_policies::saturate> {
    return overflow_reference<
-      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      basic_intptr<T, storage_type, overflow_policy> const,
       overflow_policies::saturate>{*this};
 }
 
@@ -2119,9 +2424,9 @@ namespace detail {
 template <typename T>
 inline constexpr bool explicit_word_for_index_ctor =
    is_same<remove_cvref<T>,
-           arithmetic<__SIZE_TYPE__, overflow_policies::undefined>>
-   || is_same<remove_cvref<T>, arithmetic<make_signed_type<__SIZE_TYPE__>,
-                                          overflow_policies::undefined>>;
+           basic_int<__SIZE_TYPE__, overflow_policies::undefined>>
+   || is_same<remove_cvref<T>, basic_int<make_signed_type<__SIZE_TYPE__>,
+                                         overflow_policies::undefined>>;
 }  // namespace detail
 
 template <overflow_policies overflow_policy = overflow_policies::undefined>
@@ -2133,7 +2438,7 @@ basic_idx :
    // Signed distance has the same representation as `cat::iword` when
    // `overflow_policy` is `undefined`.
    using signed_distance =
-      arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy>;
+      basic_int<make_signed_type<__SIZE_TYPE__>, overflow_policy>;
 
  public:
    using raw_type = __SIZE_TYPE__;
@@ -2243,9 +2548,9 @@ basic_idx :
    template <is_signed_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(T other) const -> arithmetic<make_signed_type<__SIZE_TYPE__>, policy> {
+   add(T other) const -> basic_int<make_signed_type<__SIZE_TYPE__>, policy> {
       // Return an `iword`.
-      return arithmetic<make_signed_type<__SIZE_TYPE__>, policy>(
+      return basic_int<make_signed_type<__SIZE_TYPE__>, policy>(
          raw + make_raw_arithmetic(other));
    }
 

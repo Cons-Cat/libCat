@@ -399,7 +399,7 @@ template <is_arithmetic T, is_integral U>
 [[nodiscard]]
 constexpr auto
 pow(T base, U exponent) -> T {
-   // type-erase `arithmetic`s to prevent redundant code gen.
+   // type-erase arithmetic wrappers to prevent redundant code gen.
    using raw_type = raw_arithmetic_type<T>;
    raw_type raw_base = make_raw_arithmetic(base);
    raw_type raw_exponent = make_raw_arithmetic(exponent);

@@ -16,15 +16,15 @@
 #pragma clang diagnostic ignored "-Weverything"
 
 using wrap_int4 =
-   cat::arithmetic<__INT32_TYPE__, cat::overflow_policies::wrap>;
+   cat::basic_int<__INT32_TYPE__, cat::overflow_policies::wrap>;
 using wrap_iword =
-   cat::arithmetic<cat::iword::raw_type, cat::overflow_policies::wrap>;
+   cat::basic_int<cat::iword::raw_type, cat::overflow_policies::wrap>;
 using sat_iword =
-   cat::arithmetic<cat::iword::raw_type, cat::overflow_policies::saturate>;
+   cat::basic_int<cat::iword::raw_type, cat::overflow_policies::saturate>;
 using wrap_uword =
-   cat::arithmetic<cat::uword::raw_type, cat::overflow_policies::wrap>;
+   cat::basic_int<cat::uword::raw_type, cat::overflow_policies::wrap>;
 using sat_uword =
-   cat::arithmetic<cat::uword::raw_type, cat::overflow_policies::saturate>;
+   cat::basic_int<cat::uword::raw_type, cat::overflow_policies::saturate>;
 using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
 using sat_idx = cat::basic_idx<cat::overflow_policies::saturate>;
 
@@ -34,10 +34,10 @@ template <typename... Types>
 struct type_pack {};
 
 template <typename T>
-inline constexpr bool is_index = false;
+inline constexpr bool is_idx = false;
 
 template <cat::overflow_policies policy>
-inline constexpr bool is_basic_idx<cat::basic_idx<policy>> = true;
+inline constexpr bool is_idx<cat::basic_idx<policy>> = true;
 
 template <typename T>
 constexpr auto
@@ -83,7 +83,7 @@ template <typename T>
 constexpr auto
 undefined_checks() -> bool {
    bool ok = in_range_checks<T>();
-   if constexpr (is_basic_idx<T>) {
+   if constexpr (is_idx<T>) {
       ok = ok && cat::is_same<decltype(T{0u} - T{1u}), cat::iword>;
    } else {
       ok = ok && cat::is_same<decltype(T{6u} + T{2u}), T>;
@@ -98,7 +98,7 @@ wrap_checks() -> bool {
    bool ok = in_range_checks<T>();
    using raw_type = typename T::raw_type;
 
-   if constexpr (is_basic_idx<T>) {
+   if constexpr (is_idx<T>) {
       constexpr raw_type ring_bits = cat::limits<T>::digits;
       constexpr raw_type ring_top = raw_type{1u} << (ring_bits - 1u);
       constexpr raw_type high_bit = raw_type{1u} << (cat::limits<T>::bits - 1u);
@@ -139,7 +139,7 @@ saturate_checks() -> bool {
    bool ok = in_range_checks<T>();
    using raw_type = typename T::raw_type;
 
-   if constexpr (is_basic_idx<T>) {
+   if constexpr (is_idx<T>) {
       constexpr raw_type high_bit = raw_type{1u} << (cat::limits<T>::bits - 1u);
       ok = ok && raw_equals(T{0u} - T{1u}, 0u);
       ok = ok && raw_equals(T{1u} << T{cat::limits<T>::digits},
@@ -186,11 +186,11 @@ using cases = type_pack<
    cat::wrap_uint2, cat::sat_uint2, cat::int4, cat::wrap_int4, cat::sat_int4,
    cat::uint4, cat::wrap_uint4, cat::sat_uint4, cat::int8, cat::wrap_int8,
    cat::sat_int8, cat::uint8, cat::wrap_uint8, cat::sat_uint8, cat::iword,
-   cat::arithmetic<cat::iword::raw_type, cat::overflow_policies::wrap>,
-   cat::arithmetic<cat::iword::raw_type, cat::overflow_policies::saturate>,
+   cat::basic_int<cat::iword::raw_type, cat::overflow_policies::wrap>,
+   cat::basic_int<cat::iword::raw_type, cat::overflow_policies::saturate>,
    cat::uword,
-   cat::arithmetic<cat::uword::raw_type, cat::overflow_policies::wrap>,
-   cat::arithmetic<cat::uword::raw_type, cat::overflow_policies::saturate>,
+   cat::basic_int<cat::uword::raw_type, cat::overflow_policies::wrap>,
+   cat::basic_int<cat::uword::raw_type, cat::overflow_policies::saturate>,
    cat::idx, cat::basic_idx<cat::overflow_policies::wrap>,
    cat::basic_idx<cat::overflow_policies::saturate>>;
 

@@ -3,7 +3,7 @@
 #pragma once
 
 // Included from `global_includes.hpp` only after `<cat/maybe>` and
-// `<cat/runtime>` so `bitset` and `arithmetic<>::to_idx()` are available. Do
+// `<cat/runtime>` so `bitset` and `basic_int<>::to_idx()` are available. Do
 // not include from `<cat/simd>` to avoid pulling `bitset` while `maybe` is
 // still being parsed.
 //

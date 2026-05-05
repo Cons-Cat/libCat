@@ -1346,22 +1346,22 @@ using maybe_non_zero = maybe<sentinel<T, T(0)>>;
 
 namespace cat {
 
-// `arithmetic<>::to_idx()` is declared in `<cat/arithmetic>` with a deduced
+// `basic_int<>::to_idx()` is declared in `<cat/arithmetic>` with a deduced
 // return type so its signature does not need to name `maybe<idx>` while `maybe`
 // is only forward-declared there. The bodies below deduce `maybe<idx>`, which
 // carries the high-bit niche.
 template <>
 [[nodiscard]]
 constexpr auto
-arithmetic<make_signed_type<__SIZE_TYPE__>,
-           overflow_policies::undefined>::to_idx() const {
+basic_int<make_signed_type<__SIZE_TYPE__>,
+          overflow_policies::undefined>::to_idx() const {
    return narrow_cast<idx>(*this);
 }
 
 template <>
 [[nodiscard]]
 constexpr auto
-arithmetic<__SIZE_TYPE__, overflow_policies::undefined>::to_idx() const {
+basic_int<__SIZE_TYPE__, overflow_policies::undefined>::to_idx() const {
    return narrow_cast<idx>(*this);
 }
 }

@@ -1,11 +1,11 @@
 # This file is flagrantly "vibe-coded". It may not be up to the standards of
 # most libCat code.
 
-# Negative type-safety compile checks for `cat::arithmetic`, `cat::basic_idx`, and
-# `cat::arithmetic_ptr`. Every probe must be ill-formed.
+# Negative type-safety compile checks for `cat::basic_int`, `cat::basic_float`,
+# `cat::basic_idx`, and `cat::basic_intptr`. Every probe must be ill-formed.
 #
 # Bodies and naming follow the **inverse** of the `test_arithmetic` unit tests
-# (compound assignment, brace OOR, `idx`, `arithmetic_ptr`, mixed-wide bitwise,
+# (compound assignment, brace OOR, `idx`, `basic_intptr`, mixed-wide bitwise,
 # `__attribute__((enable_if(...)))` on some `operator+=`/`operator=` paths in
 # `overflow_reference`/`basic_idx`, etc.) Only **constructors** and **`operator*`* /
 # assignment / compound-assignment / brace-init expressions (no `static_assert`
@@ -39,7 +39,7 @@ option(CAT_ARITHMETIC_NEG_ECHO_DIAGNOSTICS
   "With CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS, print each must-reject probe to configure output (hundreds of lines)."
   OFF)
 option(CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS
-  "Also run -fsyntax-only checks for cat::arithmetic / idx / ptr ill-formed probes at configure time."
+  "Also run -fsyntax-only checks for cat arithmetic wrapper ill-formed probes at configure time."
   OFF)
 
 if (NOT DEFINED CAT_INCLUDE_SUBDIRS)
@@ -176,7 +176,7 @@ set(
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg")
 file(WRITE
   "${_cat_neg_diag_path}"
-  "cat::arithmetic negative -fsyntax-only (must-reject stderr/stdout)\n"
+  "cat arithmetic wrapper negative -fsyntax-only (must-reject stderr/stdout)\n"
   "Compiler: ${CMAKE_CXX_COMPILER}\n"
   "-----\n"
 )
@@ -224,7 +224,7 @@ file(APPEND "${_cat_neg_build_script}" ")\n")
 file(APPEND "${_cat_neg_build_script}" [=[
 file(WRITE
   "${cat_neg_diag_path}"
-  "cat::arithmetic negative CTest build targets\n"
+  "cat arithmetic wrapper negative CTest build targets\n"
   "Build dir: ${cat_neg_build_dir}\n"
   "-----\n")
 

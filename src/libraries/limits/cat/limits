@@ -11,38 +11,47 @@ namespace cat {
 
 // Forward declare types. These are implemented in `<numeral>`.
 enum class overflow_policies : unsigned char;
+enum class precision_policies : unsigned char;
 
 template <typename T, overflow_policies>
-class arithmetic;
+class basic_int;
+
+template <typename T, precision_policies>
+class basic_float;
 
 template <typename T, typename storage_type, overflow_policies overflow_policy>
    requires(sizeof(storage_type) == sizeof(void*))
-class arithmetic_ptr;
+class basic_intptr;
 
 template <typename>
 struct limits {};
 
-// Unwrap all `arithmetic`s inside of `limits`.
+// Unwrap arithmetic wrappers inside of `limits`.
 template <typename T, auto policy>
-struct limits<arithmetic<T, policy>> : limits<T> {};
+struct limits<basic_int<T, policy>> : limits<T> {};
 
 template <typename T, auto policy>
-struct limits<arithmetic<T, policy> const> : limits<T> {};
+struct limits<basic_int<T, policy> const> : limits<T> {};
 
 template <typename T, auto policy>
-struct limits<arithmetic<T const, policy>> : limits<T> {};
+struct limits<basic_int<T const, policy>> : limits<T> {};
 
 template <typename T, auto policy>
-struct limits<arithmetic<T const, policy> const> : limits<T> {};
+struct limits<basic_int<T const, policy> const> : limits<T> {};
 
-// Unwrap `arithmetic_ptr` to its storage type (same role as `arithmetic`
+template <typename T, auto policy>
+struct limits<basic_float<T, policy>> : limits<T> {};
+
+template <typename T, auto policy>
+struct limits<basic_float<T, policy> const> : limits<T> {};
+
+// Unwrap `basic_intptr` to its storage type (same role as arithmetic wrappers
 // above).
 template <typename T, typename storage_type, overflow_policies policy>
-struct limits<arithmetic_ptr<T, storage_type, policy>> : limits<storage_type> {
-};
+struct limits<basic_intptr<T, storage_type, policy>> : limits<storage_type> {};
 
 template <typename T, typename storage_type, overflow_policies policy>
-struct limits<arithmetic_ptr<T, storage_type, policy> const>
+struct limits<basic_intptr<T, storage_type, policy> const>
     : limits<storage_type> {};
 
 // TODO: Implement `min` and `max` limits in terms of Clang macros, like
