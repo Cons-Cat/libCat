@@ -428,26 +428,52 @@ $test(tuple_apply) {
 }
 
 $test(tuple_algorithms) {
-   cat::tuple<int, int, int> bulk{2, 4, 6};
-   cat::verify(bulk.any_of([](int value) {
+   cat::tuple<int, int4, idx> bulk{2, 4, 6};
+   cat::verify(bulk.any_of([](auto value) {
       return value == 4;
    }));
-   cat::verify(!bulk.any_of([](int value) {
+   cat::verify(!bulk.any_of([](auto value) {
       return value == 5;
    }));
-   cat::verify(bulk.all_of([](int value) {
+   cat::verify(bulk.all_of([](auto value) {
       return value % 2 == 0;
    }));
-   cat::verify(!bulk.all_of([](int value) {
+   cat::verify(!bulk.all_of([](auto value) {
       return value < 6;
    }));
 
-   auto mapped = bulk.transform([](int value) {
+   auto mapped = bulk.transform([](auto value) {
       return value + 1;
    });
-   static_assert(cat::is_same<decltype(mapped), cat::tuple<int, int, int>>);
+   static_assert(cat::is_same<decltype(mapped), cat::tuple<int, int4, idx>>);
    cat::verify(mapped.first() == 3);
    cat::verify(mapped.second() == 5);
    cat::verify(mapped.third() == 7);
    cat::verify(bulk.first() + bulk.second() + bulk.third() == 12);
+}
+
+$test(tuple_for_each) {
+   cat::tuple<int, int4, idx> bulk{2, 4, 6};
+   idx member_count = 0;
+   bulk.for_each([&member_count](auto value) {
+      cat::verify(value % 2 == 0);
+      member_count += 1u;
+   });
+   cat::verify(member_count == 3);
+
+   idx free_count = 0;
+   cat::for_each(bulk, [&free_count](auto value) {
+      cat::verify(value % 2 == 0);
+      free_count += 1u;
+   });
+   cat::verify(free_count == 3);
+
+   cat::for_each(bulk, [](auto& value) {
+      value += 1u;
+   });
+   cat::verify(bulk.first() + bulk.second() + bulk.third() == 15);
+
+   cat::for_each(cat::tuple<int>{1}, [](auto&& value) {
+      static_assert(cat::is_same<decltype(value), int&&>);
+   });
 }

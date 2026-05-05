@@ -208,22 +208,23 @@ tuple_all_impl(Self&& self, Callback&& callback, index_list_type<indices...>)
 template <typename Self, typename Callback, idx... indices>
 constexpr auto
 tuple_transform_impl(Self&& self, Callback&& callback,
-                     index_list_type<indices...>) {
+                     index_list_type<indices...> /*unused*/) {
    return tuple<decltype($fwd(callback)(
       $fwd(self).template get<indices>()))...>{
       $fwd(callback)($fwd(self).template get<indices>())...};
 }
 
 template <typename Self, typename Callback, idx... indices>
-constexpr void
-tuple_for_each_impl(Self&& self, Callback&& callback,
-                    index_list_type<indices...>) {
-   ($fwd(callback)($fwd(self).template get<indices>()), ...);
+constexpr auto
+tuple_for_each_impl(Self&& self, Callback callback,
+                    index_list_type<indices...> /*unused*/) -> Callback {
+   (callback($fwd(self).template get<indices>()), ...);
+   return callback;
 }
 
 template <typename Self, typename... Arguments, idx... indices>
 constexpr void
-tuple_assign_impl(Self&& self, index_list_type<indices...>,
+tuple_assign_impl(Self&& self, index_list_type<indices...> /*unused*/,
                   Arguments&&... arguments) {
    (($fwd(self).template get<indices>() = $fwd(arguments)), ...);
 }
@@ -231,14 +232,14 @@ tuple_assign_impl(Self&& self, index_list_type<indices...>,
 template <typename Callback, typename Tuple, idx... indices>
 constexpr auto
 tuple_apply_impl(Callback&& callback, Tuple&& tuple,
-                 index_list_type<indices...>)
+                 index_list_type<indices...> /*unused*/)
    -> decltype($fwd(callback)($fwd(tuple).template get<indices>()...)) {
    return $fwd(callback)($fwd(tuple).template get<indices>()...);
 }
 
 template <typename Self, typename Subscript, idx... indices>
 constexpr auto
-tuple_at(Self&& self, idx index, index_list_type<indices...>)
+tuple_at(Self&& self, idx index, index_list_type<indices...> /*unused*/)
    -> maybe<Subscript> {
    using self_decl = remove_cvref<Self>;
    if (!(index < self_decl::types::size)) {
@@ -378,6 +379,13 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
                                           make_index_sequence<types::size>{});
    }
 
+   template <typename Callback>
+   constexpr auto
+   for_each(this auto&& self, Callback callback) -> Callback {
+      return detail::tuple_for_each_impl($fwd(self), move(callback),
+                                         make_index_sequence<types::size>{});
+   }
+
    template <typename... Arguments>
       requires(sizeof...(Arguments) == types::size.raw)
    constexpr void
@@ -389,16 +397,16 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
  private:
    template <idx... indices>
    constexpr void
-   swap_impl(tuple& other, index_list_type<indices...>) {
+   swap_impl(tuple& other, index_list_type<indices...> /*unused*/) {
       (cat::swap(this->template get<indices>(), other.template get<indices>()),
        ...);
    }
 };
 
-// `tuple{...}` and CTAD. Element types are exactly as the inits and guides
-// provide. The `tuple<...>` value holds that type list, unlike `tie` (only
-// l-value ref aliases to existing names), `make_tuple` (decay into owned
-// values), or `forward_as_tuple` (forwarding-reference `T&&` slot types).
+// `tuple{...}` and CTAD. Element types are preserved exactly as-is. The
+// `tuple<...>` value holds that type list, unlike `tie` (only l-value
+// references to existing names), `make_tuple` (decays into l-value), or
+// `forward_as_tuple` (forwarding-reference `T&&` slot types).
 template <typename... Types>
 tuple(Types...) -> tuple<Types...>;
 
@@ -412,6 +420,15 @@ template <idx index, typename Tuple>
 constexpr auto
 get(Tuple&& tuple) -> decltype(auto) {
    return $fwd(tuple).template get<index>();
+}
+
+// Overload `cat::for_each` for `cat::tuple`, since they are non-heterogenous
+// and not conventionally iterable.
+template <typename Tuple, typename Callback>
+   requires(is_tuple<Tuple>)
+constexpr auto
+for_each(Tuple&& tuple, Callback callback) -> Callback {
+   return $fwd(tuple).for_each(move(callback));
 }
 
 // `tuple<types&...>`. Only l-value references, each element aliases an
@@ -484,13 +501,11 @@ tuple_cat(LeftTuple&& left, RightTuple&& right, Remaining&&... remaining);
 namespace std {
 
 template <typename... Types>
-struct tuple_size<::cat::tuple<Types...>> : ::cat::constant<sizeof...(Types)> {
-};
+struct tuple_size<cat::tuple<Types...>> : cat::constant<sizeof...(Types)> {};
 
 template <__SIZE_TYPE__ index, typename... Types>
-struct tuple_element<index, ::cat::tuple<Types...>> {
-   using type =
-      typename ::cat::type_list<Types...>::template get<::cat::idx(index)>;
+struct tuple_element<index, cat::tuple<Types...>> {
+   using type = cat::type_list<Types...>::template get<cat::idx(index)>;
 };
 
 }  // namespace std
