@@ -415,7 +415,7 @@ _noop *args:
 
 [private]
 _print-build-mode mode=last_mode:
-    @printf '\n\033[1mBuild mode: \033[0m%s\n' "{{ mode(mode) }}"
+    @printf '\033[1mBuild mode: \033[0m%s\n' "{{ mode(mode) }}"
 
 [private]
 _build-mode mode="release" san="" verbose="" no_warnings="false" cxx_flags="":

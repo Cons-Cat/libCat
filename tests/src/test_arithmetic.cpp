@@ -33,8 +33,7 @@ $test(arithmetic_detail_raw_implicit_storage) {
    constexpr int negative_int_into_float_last_exact = -16'777'216;
    constexpr int negative_int_into_float_first_inexact = -16'777'217;
    constexpr long long int_into_double_last_exact = 9'007'199'254'740'992LL;
-   constexpr long long int_into_double_first_inexact =
-      9'007'199'254'740'993LL;
+   constexpr long long int_into_double_first_inexact = 9'007'199'254'740'993LL;
    constexpr long long negative_int_into_double_last_exact =
       -9'007'199'254'740'992LL;
    constexpr long long negative_int_into_double_first_inexact =
@@ -140,13 +139,13 @@ $test(arithmetic_traits_basic_int_and_basic_float) {
    static_assert(
       cat::is_same<int4, cat::basic_int<__INT32_TYPE__,
                                         cat::overflow_policies::undefined>>);
-   static_assert(cat::is_same<decltype(cat::basic_int{1}),
-                              cat::basic_int<int,
-                                             cat::overflow_policies::undefined>>);
    static_assert(
-      cat::is_same<decltype(cat::basic_int{1u}),
-                   cat::basic_int<unsigned int,
-                                  cat::overflow_policies::undefined>>);
+      cat::is_same<decltype(cat::basic_int{1}),
+                   cat::basic_int<int, cat::overflow_policies::undefined>>);
+   static_assert(
+      cat::is_same<
+         decltype(cat::basic_int{1u}),
+         cat::basic_int<unsigned int, cat::overflow_policies::undefined>>);
    static_assert(cat::is_same<decltype(cat::basic_int{cat::wrap_int4{1}}),
                               cat::wrap_int4>);
    static_assert(cat::is_same<decltype(cat::basic_int{cat::sat_uint2{1u}}),
@@ -155,10 +154,10 @@ $test(arithmetic_traits_basic_int_and_basic_float) {
    static_assert(cat::is_same<float8, cat::basic_float<double>>);
    static_assert(cat::is_same<decltype(cat::basic_float{1.f}), float4>);
    static_assert(cat::is_same<decltype(cat::basic_float{1.}), float8>);
-   static_assert(cat::is_same<decltype(cat::basic_float{float4_fast{1.f}}),
-                              float4_fast>);
-   static_assert(cat::is_same<decltype(cat::basic_float{float8_fast{1.}}),
-                              float8_fast>);
+   static_assert(
+      cat::is_same<decltype(cat::basic_float{float4_fast{1.f}}), float4_fast>);
+   static_assert(
+      cat::is_same<decltype(cat::basic_float{float8_fast{1.}}), float8_fast>);
    static_assert(
       cat::is_same<float4_fast,
                    cat::basic_float<float, cat::precision_policies::fast>>);
@@ -663,10 +662,13 @@ $test(arithmetic_intptr_operators_raw_reassign_and_safe_arithmetic) {
    cat::verify(intptr_mul_2 == 42);
    intptr<void> intptr_mul_3 = intptr<void>{6} * 7_i4;
    cat::verify(intptr_mul_3 == 42);
+   intptr<void> intptr_mul_4 = intptr<void>{6} * intptr<void>{7};
+   cat::verify(intptr_mul_4 == 42);
    uintptr<void> uintptr_mul_1 = uintptr<void>{6u} * 7u;
    cat::verify(uintptr_mul_1 == 42u);
    static_assert((intptr<void>{6} * 7) == 42);
    static_assert((7 * intptr<void>{6}) == 42);
+   static_assert((intptr<void>{6} * intptr<void>{7}) == 42);
    static_assert((uintptr<void>{6u} * 7u) == 42u);
 
    cat::verify(uword{100} - uintptr<void>{40} == uword{60});
@@ -5049,8 +5051,7 @@ $test(arithmetic_float_construction_raw_assignment_and_bit_cast) {
 
    long long runtime_long_long = 9'007'199'254'740'992LL;
    float8 from_long_long{runtime_long_long};
-   cat::verify(from_long_long.raw
-               == static_cast<double>(runtime_long_long));
+   cat::verify(from_long_long.raw == static_cast<double>(runtime_long_long));
    float4 runtime_float4 = 1.5_f4;
    from_long_long = float8{runtime_float4};
    cat::verify(from_long_long == 1.5_f8);

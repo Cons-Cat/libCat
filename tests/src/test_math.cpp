@@ -9,6 +9,10 @@ $test(math_min_max) {
    cat::verify(cat::min(0u) == 0u);
    cat::verify(cat::min(0.f) == 0.f);
    cat::verify(cat::min(0.) == 0.);
+   static_assert(cat::is_same<int, decltype(cat::min(0))>);
+   static_assert(cat::is_same<unsigned, decltype(cat::min(0u))>);
+   static_assert(cat::is_same<float, decltype(cat::min(0.f))>);
+   static_assert(cat::is_same<double, decltype(cat::min(0.))>);
 
    cat::verify(cat::min(0, 1) == 0);
    cat::verify(cat::min(0u, 1u) == 0u);
@@ -25,6 +29,10 @@ $test(math_min_max) {
    cat::verify(cat::max(0u) == 0u);
    cat::verify(cat::max(0.f) == 0.f);
    cat::verify(cat::max(0.) == 0.);
+   static_assert(cat::is_same<int, decltype(cat::max(0))>);
+   static_assert(cat::is_same<unsigned, decltype(cat::max(0u))>);
+   static_assert(cat::is_same<float, decltype(cat::max(0.f))>);
+   static_assert(cat::is_same<double, decltype(cat::max(0.))>);
 
    cat::verify(cat::max(0, 1) == 1);
    cat::verify(cat::max(0u, 1u) == 1u);
@@ -35,6 +43,19 @@ $test(math_min_max) {
    cat::verify(cat::max(0u, 1u, 2u) == 2u);
    cat::verify(cat::max(0.f, 1.f, 2.f) == 2.f);
    cat::verify(cat::max(0., 1., 2.) == 2.);
+}
+
+$test(math_sum_product_dot) {
+   cat::verify(cat::sum(2) == 2);
+   cat::verify(cat::sum(2, 3, 4) == 9);
+   static_assert(cat::is_same<int, decltype(cat::sum(2, 3, 4))>);
+
+   cat::verify(cat::product(2) == 2);
+   cat::verify(cat::product(2, 3, 4) == 24);
+   static_assert(cat::is_same<int, decltype(cat::product(2, 3, 4))>);
+
+   cat::verify(cat::dot(2, 3) == 6);
+   cat::verify(cat::dot(2, 3, 4, 5) == 26);
 }
 
 $test(math_abs) {
@@ -55,9 +76,9 @@ $test(math_abs) {
    cat::verify(cat::abs(-1.5_f4) == 1.5_f4);
    cat::verify(cat::abs(-1.5_f8) == 1.5_f8);
 
-   static_assert(cat::is_same<int, typeof(cat::abs(1))>);
-   static_assert(cat::is_same<float, typeof(cat::abs(1.f))>);
-   static_assert(cat::is_same<double, typeof(cat::abs(1.))>);
+   static_assert(cat::is_same<int, decltype(cat::abs(1))>);
+   static_assert(cat::is_same<float, decltype(cat::abs(1.f))>);
+   static_assert(cat::is_same<double, decltype(cat::abs(1.))>);
 
    cat::verify(cat::abs(1u) == 1);
    cat::verify(cat::abs(1_u1) == 1_u1);
@@ -81,6 +102,14 @@ $test(math_fma) {
    static_assert(cat::is_same<decltype(integer_result), int4>);
    cat::verify(integer_result == 17_i4);
 
+   auto raw_integer_result = cat::fma(5, 3, 2);
+   static_assert(cat::is_same<decltype(raw_integer_result), int>);
+   cat::verify(raw_integer_result == 17);
+
+   auto intptr_result = cat::fma(intptr<int>{5}, 3, 2);
+   static_assert(cat::is_same<decltype(intptr_result), intptr<int>>);
+   cat::verify(intptr_result == 17);
+
    auto float_result = cat::fma(2_f4, 3_f4, 4_f4);
    static_assert(cat::is_same<decltype(float_result), float4>);
    cat::verify(float_result == 10_f4);
@@ -100,27 +129,95 @@ $test(math_fma) {
    cat::verify(fast_float8_result == 10_f8);
 }
 
-$test(math_pow_integral) {
+$test(math_pow) {
    // Test `pow()`.
    cat::verify(cat::pow(2, 2) == 4);
+   static_assert(cat::is_same<int, decltype(cat::pow(2, 2))>);
    cat::verify(cat::pow(2, 1) == 2);
    cat::verify(cat::pow(2, 0) == 1);
    cat::verify(cat::pow(1, 10) == 1);
    cat::verify(cat::pow(8, -1) == 0);
 
    cat::verify(cat::pow(2u, 2u) == 4u);
+   static_assert(cat::is_same<unsigned, decltype(cat::pow(2u, 2u))>);
 
-   // cat::verify(cat::pow(2.f, 2) == 4.f);
-   // cat::verify(cat::pow(2.f, 1) ==
-   // 2.f);
-   // cat::verify(cat::pow(2.f, 0) == 1.f);
-   // cat::verify(cat::pow(8.f, -1)
-   // == 0.f);
+   static_assert(cat::pow(wrap_uint1{cat::uint1_max}, 2) == wrap_uint1{1});
+   static_assert(cat::pow(sat_uint1{cat::uint1_max}, 2)
+                 == cat::sat_uint1::max());
+   static_assert(cat::pow(sat_int1{cat::int1_max}, 2) == cat::sat_int1::max());
+
+   cat::verify(cat::pow(2.f, 2) == 4.f);
+   static_assert(cat::is_same<float, decltype(cat::pow(2.f, 2))>);
+   cat::verify(cat::pow(2., 2) == 4.);
+   static_assert(cat::is_same<double, decltype(cat::pow(2., 2))>);
 
    // cat::verify(cat::pow(2, 2) == 4.);
    // cat::verify(cat::pow(2, 1) == 2.);
    // cat::verify(cat::pow(2, 0) == 1.);
    // cat::verify(cat::pow(8, -1) == 0.);
+}
+
+$test(math_sqrt) {
+   cat::verify(cat::sqrt(4.f) == 2.f);
+   static_assert(cat::is_same<float, decltype(cat::sqrt(4.f))>);
+
+   cat::verify(cat::sqrt(4.) == 2.);
+   static_assert(cat::is_same<double, decltype(cat::sqrt(4.))>);
+}
+
+$test(math_div_floor) {
+   using namespace cat::arithmetic_literals;
+
+   static_assert(cat::div_floor(5, 2) == 2);
+   static_assert(cat::div_floor(-5, 2) == -3);
+   static_assert(cat::div_floor(5, -2) == -3);
+   static_assert(cat::div_floor(-5, -2) == 2);
+
+   cat::verify(cat::div_floor(5.f, 2.f) == 2.f);
+   cat::verify(cat::div_floor(-5.f, 2.f) == -3.f);
+   cat::verify(cat::div_floor(5.f, -2.f) == -3.f);
+   cat::verify(cat::div_floor(-5.f, -2.f) == 2.f);
+   cat::verify(cat::div_floor(5., 2.) == 2.);
+   cat::verify(cat::div_floor(-5., 2.) == -3.);
+   static_assert(cat::is_same<float, decltype(cat::div_floor(5.f, 2.f))>);
+   static_assert(cat::is_same<double, decltype(cat::div_floor(5., 2.))>);
+
+   // Precision policy on `T` is respected on the underlying divide.
+   auto precise_result = cat::div_floor(5_f4, 2_f4);
+   static_assert(cat::is_same<decltype(precise_result), cat::float4>);
+   cat::verify(precise_result == 2_f4);
+
+   auto fast_result =
+      cat::div_floor(cat::float4_fast(5_f4), cat::float4_fast(2_f4));
+   static_assert(cat::is_same<decltype(fast_result), cat::float4_fast>);
+   cat::verify(fast_result == 2_f4);
+}
+
+$test(math_div_ceil) {
+   using namespace cat::arithmetic_literals;
+
+   static_assert(cat::div_ceil(5, 2) == 3);
+   static_assert(cat::div_ceil(6, 2) == 3);
+   static_assert(cat::div_ceil(7, 2) == 4);
+
+   cat::verify(cat::div_ceil(5.f, 2.f) == 3.f);
+   cat::verify(cat::div_ceil(-5.f, 2.f) == -2.f);
+   cat::verify(cat::div_ceil(5.f, -2.f) == -2.f);
+   cat::verify(cat::div_ceil(-5.f, -2.f) == 3.f);
+   cat::verify(cat::div_ceil(5., 2.) == 3.);
+   cat::verify(cat::div_ceil(-5., 2.) == -2.);
+   static_assert(cat::is_same<float, decltype(cat::div_ceil(5.f, 2.f))>);
+   static_assert(cat::is_same<double, decltype(cat::div_ceil(5., 2.))>);
+
+   // Precision policy on `T` is respected on the underlying divide.
+   auto precise_result = cat::div_ceil(5_f4, 2_f4);
+   static_assert(cat::is_same<decltype(precise_result), cat::float4>);
+   cat::verify(precise_result == 3_f4);
+
+   auto fast_result =
+      cat::div_ceil(cat::float4_fast(5_f4), cat::float4_fast(2_f4));
+   static_assert(cat::is_same<decltype(fast_result), cat::float4_fast>);
+   cat::verify(fast_result == 3_f4);
 }
 
 $test(math_round_to_multiple) {

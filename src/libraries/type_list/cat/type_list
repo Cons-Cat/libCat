@@ -7,39 +7,14 @@
 
 namespace cat {
 
-// Forward declaring `min()` and `max()` is required here to prevent circular
-// inclusion errors.
-
-template <typename T>
-constexpr auto
-min(T value) -> T;
-
-// Implicit output type `min()`.
-
-// Implicit output type `max()`.
-template <typename T, typename U, typename... Remaining>
-   requires(is_implicitly_convertible<U, T>)
-constexpr auto
-min(T value_1, U value_2, Remaining... remaining_args) -> T;
-
-template <typename T>
-constexpr auto
-max(T value) -> T;
-
-// Implicit output type `max()`.
-template <typename T, typename U, typename... Remaining>
-   requires(is_implicitly_convertible<U, T>)
-constexpr auto
-max(T value_1, U value_2, Remaining... remaining_args) -> T;
-
-template <typename... types>
+template <typename... Types>
 class type_list {
    template <typename>
    struct get_first_element;
 
-   template <typename head, typename... tail>
-   struct get_first_element<type_list<head, tail...>> {
-      using result = head;
+   template <typename Head, typename... Tail>
+   struct get_first_element<type_list<Head, Tail...>> {
+      using result = Head;
    };
 
    // Overload for the end of the type list.
@@ -47,18 +22,18 @@ class type_list {
    struct recurse_for_type_at_index;
 
    // Shortcut for accessing the 0th element.
-   template <typename head, typename... tail>
-   struct recurse_for_type_at_index<type_list<head, tail...>, 0u> {
-      using result = head;
+   template <typename Head, typename... Tail>
+   struct recurse_for_type_at_index<type_list<Head, Tail...>, 0u> {
+      using result = Head;
    };
 
    // Recurse from the tail down to the index in this list.
-   template <typename head, typename... tail, idx index>
-   struct recurse_for_type_at_index<type_list<head, tail...>, index> {
+   template <typename Head, typename... Tail, idx index>
+   struct recurse_for_type_at_index<type_list<Head, Tail...>, index> {
       // Index 0 is handled by the partial specialization above, so `index` is
       // never zero here and `index.raw - 1uz` cannot wrap.
       using result = recurse_for_type_at_index<
-         type_list<tail...>, narrow_cast<idx>(index - 1u).value()>::result;
+         type_list<Tail...>, narrow_cast<idx>(index - 1u).value()>::result;
    };
 
    // If the last element in this type list is `T`.
@@ -69,12 +44,12 @@ class type_list {
    }
 
    // If the any element in this type list is `T`.
-   template <typename T, typename U, typename... Us>
+   template <typename T, typename U, typename... Remaining>
+      requires(sizeof...(Remaining) > 0)
    static consteval auto
    recurse_for_type() -> bool
-      requires(sizeof...(Us) > 0)
    {
-      return is_same<T, U> ? true : recurse_for_type<T, Us...>();
+      return is_same<T, U> ? true : recurse_for_type<T, Remaining...>();
    }
 
    // Propagate the final count of occurences of `T` in this type list.
@@ -85,13 +60,12 @@ class type_list {
    }
 
    // Sum the number of occurences of `T` in this type list.
-   template <typename T, idx count, typename U, typename... Us>
+   template <typename T, idx count, typename U, typename... Remaining>
    static consteval auto
    recurse_for_count() -> idx
-      requires(sizeof...(Us) >= 0)
    {
-      return is_same<T, U> ? recurse_for_count<T, count + 1u, Us...>()
-                           : recurse_for_count<T, count, Us...>();
+      return is_same<T, U> ? recurse_for_count<T, count + 1u, Remaining...>()
+                           : recurse_for_count<T, count, Remaining...>();
    }
 
    template <typename U>
@@ -100,65 +74,64 @@ class type_list {
       return true;
    }
 
-   template <typename U, typename... Us>
+   template <typename U, typename... Remaining>
+      requires(sizeof...(Remaining) > 0)
    static consteval auto
    recurse_for_unique() -> bool
-      requires(sizeof...(Us) > 0)
    {
-      return is_unique<U> ? recurse_for_unique<Us...>() : false;
+      return is_unique<U> ? recurse_for_unique<Remaining...>() : false;
    }
 
  public:
    // Produce an alias to the type stored at an index in this type list.
    template <idx index>
-   using get =
-      typename recurse_for_type_at_index<type_list<types...>, index>::result;
+   using get = recurse_for_type_at_index<type_list<Types...>, index>::result;
    // TODO: Get index of first, last, and N'th occurence of `T`.
 
    // Append one parameter pack to this `type_list`.
-   template <typename... Us>
-   using merge = type_list<types..., Us...>;
+   template <typename... Remaining>
+   using merge = type_list<Types..., Remaining...>;
 
-   template <typename... Us>
+   template <typename... Remaining>
    static consteval auto
-   concat(type_list<Us...>) {
-      return type_list<types..., Us...>{};
+   concat(type_list<Remaining...> /*other*/) {
+      return type_list<Types..., Remaining...>{};
    }
 
    // Concatenate one `type_list` to this `type_list`.
-   template <typename Othertype_list>
-   using concat_types = decltype(concat(Othertype_list()));
+   template <typename OtherList>
+   using concat_types = decltype(concat(OtherList()));
 
    // A + is required instead of `concat_types` to use this inside of fold
    // expressions.
-   template <typename... Us>
+   template <typename... Remaining>
    friend constexpr auto
-   operator+(type_list<types...>, type_list<Us...>) {
-      return type_list<types..., Us...>{};
+   operator+(type_list<Types...> /*self*/, type_list<Remaining...> /*other*/) {
+      return type_list<Types..., Remaining...>{};
    }
 
    // Evaluate `true` iff this type list holds a type `T`.
    template <typename T>
-   static constexpr bool has_type = recurse_for_type<T, types...>();
+   static constexpr bool has_type = recurse_for_type<T, Types...>();
 
    // The number of types in this list.
-   static constexpr idx size = idx(sizeof...(types));
+   static constexpr idx size = sizeof...(Types);
 
    // The size of the largest type in this list.
-   static constexpr idx largest_size = idx(max(sizeof(types)...));
+   static constexpr idx largest_size = max(sizeof(Types)...);
 
    // The size of the smallest type in this list.
-   static constexpr idx smallest_size = idx(min(sizeof(types)...));
+   static constexpr idx smallest_size = min(sizeof(Types)...);
 
    // The smallest alignment of a type in this list.
-   static constexpr idx smallest_alignment = idx(min(alignof(types)...));
+   static constexpr idx smallest_alignment = min(alignof(Types)...);
 
    // The largest alignment of a type in this list.
-   static constexpr idx largest_alignment = idx(max(alignof(types)...));
+   static constexpr idx largest_alignment = max(alignof(Types)...);
 
    // Sum the number of times that a type is in this type list.
    template <typename T>
-   static constexpr idx count_type = recurse_for_count<T, 0, types...>();
+   static constexpr idx count_type = recurse_for_count<T, 0, Types...>();
 
    // Evaluate `true` iff the type `T` only appears exactly once in this type
    // list.
@@ -166,13 +139,13 @@ class type_list {
    static constexpr bool is_unique = (count_type<T> == 1);
 
    // Evaluate `true` if every type in this type list is unique.
-   static constexpr bool is_unique_list = recurse_for_unique<types...>();
+   static constexpr bool is_unique_list = recurse_for_unique<Types...>();
 };
 
 namespace detail {
-template <typename T, idx count, idx index, typename... types>
+template <typename T, idx count, idx index, typename... Remaining>
 consteval auto
-type_list_fill(type_list<types...> type_list) {
+type_list_fill(type_list<Remaining...> type_list) {
    if constexpr (index == count) {
       return type_list;
    } else {

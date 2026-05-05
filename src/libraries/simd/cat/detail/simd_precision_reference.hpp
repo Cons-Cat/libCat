@@ -3,50 +3,9 @@
 #pragma once
 
 #include <cat/arithmetic>
+#include <cat/detail/simd_arithmetic_policies.hpp>
 
 namespace cat::detail {
-
-template <precision_policies precision, typename T, typename Abi>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_float_add_forced(cat::simd<T, Abi> const& left,
-                      cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   return cat::simd<T, Abi>(float_add<precision>(left.raw, right.raw));
-}
-
-template <precision_policies precision, typename T, typename Abi>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_float_sub_forced(cat::simd<T, Abi> const& left,
-                      cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   return cat::simd<T, Abi>(float_subtract<precision>(left.raw, right.raw));
-}
-
-template <precision_policies precision, typename T, typename Abi>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_float_mul_forced(cat::simd<T, Abi> const& left,
-                      cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   return cat::simd<T, Abi>(float_multiply<precision>(left.raw, right.raw));
-}
-
-template <precision_policies precision, typename T, typename Abi>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_float_div_forced(cat::simd<T, Abi> const& left,
-                      cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   return cat::simd<T, Abi>(float_divide<precision>(left.raw, right.raw));
-}
-
-template <precision_policies precision, typename T, typename Abi>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_float_fma_forced(cat::simd<T, Abi> const& left,
-                      cat::simd<T, Abi> const& right,
-                      cat::simd<T, Abi> const& addend) -> cat::simd<T, Abi> {
-   return cat::simd<T, Abi>(
-      simd_float_fma<precision>(left.raw, right.raw, addend.raw));
-}
 
 template <typename WrappedQual, precision_policies precision>
 class simd_precision_reference
@@ -111,7 +70,7 @@ class simd_precision_reference
    equal_lanes(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
-      return result_mask(simd_float_equal<precision>(left.raw, right.raw));
+      return result_mask(left.raw == right.raw);
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -123,7 +82,7 @@ class simd_precision_reference
    unequal_lanes(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
-      return result_mask(simd_float_unequal<precision>(left.raw, right.raw));
+      return result_mask(left.raw != right.raw);
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -135,7 +94,7 @@ class simd_precision_reference
    less(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
-      return result_mask(simd_float_less<precision>(left.raw, right.raw));
+      return result_mask(left.raw < right.raw);
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -147,7 +106,7 @@ class simd_precision_reference
    less_equal(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
-      return result_mask(simd_float_less_equal<precision>(left.raw, right.raw));
+      return result_mask(left.raw <= right.raw);
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -159,7 +118,7 @@ class simd_precision_reference
    greater(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
-      return result_mask(simd_float_greater<precision>(left.raw, right.raw));
+      return result_mask(left.raw > right.raw);
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -171,8 +130,7 @@ class simd_precision_reference
    greater_equal(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
-      return result_mask(
-         simd_float_greater_equal<precision>(left.raw, right.raw));
+      return result_mask(left.raw >= right.raw);
    }
 
    constexpr auto
@@ -209,7 +167,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
-      return simd_float_add_forced<precision>(
+      return simd_floating_add_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(rhs));
    }
@@ -229,7 +187,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
-      return simd_float_sub_forced<precision>(
+      return simd_floating_sub_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(rhs));
    }
@@ -251,9 +209,7 @@ class simd_precision_reference
    subtract_from(cat::simd<OtherT, OtherAbi> const& lhs) const
       -> left_result_type<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
-      constexpr precision_policies left_precision =
-         simd_float_precision_policy<OtherT>;
-      return simd_float_sub_forced<left_precision>(
+      return simd_floating_sub_policy(
          make_simd_value<left_type>(lhs),
          make_simd_value<left_type>(*m_wrapped));
    }
@@ -263,7 +219,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U&& lhs) const -> result_type {
-      return simd_float_sub_forced<precision>(
+      return simd_floating_sub_policy(
          result_type($fwd(lhs)), make_simd_value<result_type>(*m_wrapped));
    }
 
@@ -274,7 +230,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
-      return simd_float_mul_forced<precision>(
+      return simd_floating_mul_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(rhs));
    }
@@ -299,18 +255,18 @@ class simd_precision_reference
    constexpr auto
    fma(cat::simd<FactorT, FactorAbi> const& factor,
        cat::simd<AddendT, AddendAbi> const& addend) const -> result_type {
-      return simd_float_fma_forced<precision>(
+      return simd_floating_fma_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(factor),
          make_simd_value<result_type>(addend));
    }
 
    template <typename Factor, typename Addend>
-      requires(!cat::is_simd<remove_cvref<Factor>>
-               && !cat::is_simd<remove_cvref<Addend>>
-               && simd_broadcast_really_convertible_to<remove_cvref<Factor>, T>()
-               && simd_broadcast_really_convertible_to<remove_cvref<Addend>,
-                                                       T>())
+      requires(
+         !cat::is_simd<remove_cvref<Factor>>
+         && !cat::is_simd<remove_cvref<Addend>>
+         && simd_broadcast_really_convertible_to<remove_cvref<Factor>, T>()
+         && simd_broadcast_really_convertible_to<remove_cvref<Addend>, T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    fma(Factor&& factor, Addend&& addend) const -> result_type {
@@ -324,7 +280,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
-      return simd_float_div_forced<precision>(
+      return simd_floating_div_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(rhs));
    }
@@ -346,9 +302,7 @@ class simd_precision_reference
    divide_into(cat::simd<OtherT, OtherAbi> const& lhs) const
       -> left_result_type<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
-      constexpr precision_policies left_precision =
-         simd_float_precision_policy<OtherT>;
-      return simd_float_div_forced<left_precision>(
+      return simd_floating_div_policy(
          make_simd_value<left_type>(lhs),
          make_simd_value<left_type>(*m_wrapped));
    }
@@ -358,7 +312,7 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_into(U&& lhs) const -> result_type {
-      return simd_float_div_forced<precision>(
+      return simd_floating_div_policy(
          result_type($fwd(lhs)), make_simd_value<result_type>(*m_wrapped));
    }
 
@@ -417,11 +371,9 @@ class simd_precision_reference
       -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
-      constexpr precision_policies left_precision =
-         simd_float_precision_policy<OtherT>;
       left_type const left = make_simd_value<left_type>(lhs);
       left_type const right = make_simd_value<left_type>(*rhs.m_wrapped);
-      return mask_type(simd_float_less<left_precision>(left.raw, right.raw));
+      return mask_type(left.raw < right.raw);
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -435,12 +387,9 @@ class simd_precision_reference
       -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
-      constexpr precision_policies left_precision =
-         simd_float_precision_policy<OtherT>;
       left_type const left = make_simd_value<left_type>(lhs);
       left_type const right = make_simd_value<left_type>(*rhs.m_wrapped);
-      return mask_type(
-         simd_float_less_equal<left_precision>(left.raw, right.raw));
+      return mask_type(left.raw <= right.raw);
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -454,11 +403,9 @@ class simd_precision_reference
       -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
-      constexpr precision_policies left_precision =
-         simd_float_precision_policy<OtherT>;
       left_type const left = make_simd_value<left_type>(lhs);
       left_type const right = make_simd_value<left_type>(*rhs.m_wrapped);
-      return mask_type(simd_float_greater<left_precision>(left.raw, right.raw));
+      return mask_type(left.raw > right.raw);
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -472,12 +419,9 @@ class simd_precision_reference
       -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
-      constexpr precision_policies left_precision =
-         simd_float_precision_policy<OtherT>;
       left_type const left = make_simd_value<left_type>(lhs);
       left_type const right = make_simd_value<left_type>(*rhs.m_wrapped);
-      return mask_type(
-         simd_float_greater_equal<left_precision>(left.raw, right.raw));
+      return mask_type(left.raw >= right.raw);
    }
 
    template <typename U>

@@ -2308,7 +2308,7 @@ constexpr auto
 simd_rsqrt_lane(T x) -> T {
    using R = raw_arithmetic_type<T>;
    R const rx = static_cast<R>(make_raw_arithmetic(x));
-   return T(float_divide<simd_float_precision_policy<T>>(static_cast<R>(1),
+   return T(simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1),
                                                          cat::sqrt(rx)));
 }
 
@@ -2325,7 +2325,7 @@ struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
          return simd_abi_apply_unary_full<simd_abi::op_rsqrt, T, Abi>(input);
       } else {
          simd<T, Abi> one{T(1)};
-         return simd<T, Abi>(float_divide<simd_float_precision_policy<T>>(
+         return simd<T, Abi>(simd_float_divide<simd_float_precision_policy<T>>(
             one.raw, __builtin_elementwise_sqrt(input.raw)));
       }
    }
@@ -2347,29 +2347,26 @@ simd_nroot_lane(T x, iword n) -> T {
    if (n <= 1) {
       return x;
    }
-   if (float_equal<simd_float_precision_policy<T>>(make_raw_arithmetic(x),
-                                                   raw_arithmetic_type<T>{})) {
+   if (make_raw_arithmetic(x) == raw_arithmetic_type<T>{}) {
       return x;
    }
-   T abs_x = float_less<simd_float_precision_policy<T>>(
-                make_raw_arithmetic(x), raw_arithmetic_type<T>{})
+   T abs_x = (make_raw_arithmetic(x) < raw_arithmetic_type<T>{})
                 ? static_cast<T>(-x)
                 : x;
    T const root_magnitude = [&]() -> T {
       auto const abs_raw = make_raw_arithmetic(abs_x);
       if constexpr (is_same<raw_arithmetic_type<T>, float>) {
          return static_cast<T>(
-            emulated_powf(abs_raw, float_divide<simd_float_precision_policy<T>>(
+            emulated_powf(abs_raw, simd_float_divide<simd_float_precision_policy<T>>(
                                       1.f, static_cast<float>(n.raw))));
       } else {
          return static_cast<T>(
             emulated_pow(static_cast<double>(abs_raw),
-                         float_divide<simd_float_precision_policy<T>>(
+                         simd_float_divide<simd_float_precision_policy<T>>(
                             1., static_cast<double>(n.raw))));
       }
    }();
-   if (float_less<simd_float_precision_policy<T>>(make_raw_arithmetic(x),
-                                                  raw_arithmetic_type<T>{})) {
+   if (make_raw_arithmetic(x) < raw_arithmetic_type<T>{}) {
       if ((n.raw & 1u) != 0u) {
          return static_cast<T>(-root_magnitude);
       }
@@ -2394,12 +2391,12 @@ simd_rnroot_lane(T x, iword n) -> T {
       using R = raw_arithmetic_type<T>;
       R const rx = static_cast<R>(make_raw_arithmetic(x));
       return T(
-         float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), rx));
+         simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), rx));
    }
    using R = raw_arithmetic_type<T>;
    R const root = static_cast<R>(make_raw_arithmetic(simd_nroot_lane(x, n)));
    return T(
-      float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), root));
+      simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), root));
 }
 
 template <typename T>
@@ -2420,7 +2417,7 @@ simd_nroot_generic(simd<T, Abi> input, iword n) -> simd<T, Abi> {
    }
    simd<T, Abi> abs_x(__builtin_elementwise_abs(input.raw));
    simd<T, Abi> reciprocal_root{};
-   reciprocal_root.fill(float_divide<simd_float_precision_policy<T>>(
+   reciprocal_root.fill(simd_float_divide<simd_float_precision_policy<T>>(
       T(1), static_cast<T>(n.raw)));
    simd<T, Abi> root_magnitude(
       __builtin_elementwise_pow(abs_x.raw, reciprocal_root.raw));
@@ -2490,7 +2487,7 @@ struct simd_rcbrt_impl : simd_elementwise_interface<simd_rcbrt_impl> {
       simd<T, Abi> const cbrt = simd_cbrt_impl{}.invoke_full(input);
       simd<T, Abi> const one{T(1)};
       return simd<T, Abi>(
-         float_divide<simd_float_precision_policy<T>>(one.raw, cbrt.raw));
+         simd_float_divide<simd_float_precision_policy<T>>(one.raw, cbrt.raw));
    }
 
    template <typename T>
@@ -2517,12 +2514,12 @@ struct simd_rnroot_impl
       if (n == 1) {
          simd<T, Abi> const one{T(1)};
          return simd<T, Abi>(
-            float_divide<simd_float_precision_policy<T>>(one.raw, input.raw));
+            simd_float_divide<simd_float_precision_policy<T>>(one.raw, input.raw));
       }
       simd<T, Abi> const root = simd_nroot_impl{}.invoke_full(input, n);
       simd<T, Abi> const one{T(1)};
       return simd<T, Abi>(
-         float_divide<simd_float_precision_policy<T>>(one.raw, root.raw));
+         simd_float_divide<simd_float_precision_policy<T>>(one.raw, root.raw));
    }
 
    template <typename T>
@@ -2846,8 +2843,7 @@ struct simd_fma_impl
       if constexpr (has_simd_abi_ternary_full<simd_abi::op_fma, T, Abi>) {
          return simd_abi_apply_ternary_full<simd_abi::op_fma, T, Abi>(x, y, z);
       }
-      return simd<T, Abi>(
-         simd_float_fma<simd_float_precision_policy<T>>(x.raw, y.raw, z.raw));
+      return simd<T, Abi>(__builtin_elementwise_fma(x.raw, y.raw, z.raw));
    }
 
    template <typename T>
@@ -2855,11 +2851,13 @@ struct simd_fma_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x, T y, T z) const -> T {
-      // P2638R0 fused multiply-add (scalar lane hook).
+      // P2638R0 fused multiply-add (scalar lane hook). Hardware FMA on x86-64
+      // (vfmadd...) and NEON (vfma...) is single-rounded regardless of the
+      // surrounding precision policy.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-      return T(float_fma<simd_float_precision_policy<T>>(
-         make_raw_arithmetic(x), make_raw_arithmetic(y),
-         make_raw_arithmetic(z)));
+      return T(__builtin_elementwise_fma(make_raw_arithmetic(x),
+                                         make_raw_arithmetic(y),
+                                         make_raw_arithmetic(z)));
    }
 };
 

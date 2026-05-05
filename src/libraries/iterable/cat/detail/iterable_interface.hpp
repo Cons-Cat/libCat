@@ -74,6 +74,22 @@ struct iterable_interface {
 
    template <typename Self>
    constexpr auto
+   product(this Self&& self);
+
+   template <typename Self>
+   constexpr auto
+   min(this Self&& self);
+
+   template <typename Self>
+   constexpr auto
+   max(this Self&& self);
+
+   template <typename Self, typename Other>
+   constexpr auto
+   dot(this Self&& self, Other&& other);
+
+   template <typename Self>
+   constexpr auto
    count(this Self&& self) -> idx;
 
    template <typename Self, typename Callback>

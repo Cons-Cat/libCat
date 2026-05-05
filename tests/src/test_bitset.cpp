@@ -440,13 +440,13 @@ $test(bitset_collection) {
    bits[0u] = true;
    bits[2u] = true;
 
-   cat::verify(cat::count(bits) == 5u);
+   cat::verify((bits | cat::count()) == 5u);
    cat::verify(bool(cat::read_at(bits, 0u)));
    cat::verify(!bool(cat::read_at(bits, 1u)));
    cat::verify(bool(cat::read_at(bits, 2u)));
 
    idx true_count = 0u;
-   cat::for_each(bits, [&true_count](auto bit) {
+   bits | cat::for_each([&true_count](auto bit) {
       if (bit) {
          ++true_count;
       }

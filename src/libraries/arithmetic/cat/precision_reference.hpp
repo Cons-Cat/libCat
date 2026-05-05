@@ -108,8 +108,15 @@ class precision_reference {
       using other_raw_type =
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
       using common = common_type<raw_type, other_raw_type>;
-      return detail::float_compare_three_way<precision>(
-         common(m_wrapped->raw), common(rhs.m_wrapped->raw));
+      common const lhs_common = common(m_wrapped->raw);
+      common const rhs_common = common(rhs.m_wrapped->raw);
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs_common <=> rhs_common;
+      } else {
+#pragma float_control(precise, off)
+         return lhs_common <=> rhs_common;
+      }
    }
 
    template <is_arithmetic U>
@@ -129,8 +136,15 @@ class precision_reference {
       using other_raw_type =
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
       using common = common_type<raw_type, other_raw_type>;
-      return detail::float_equal<precision>(common(lhs.m_wrapped->raw),
-                                            common(rhs.m_wrapped->raw));
+      common const lhs_common = common(lhs.m_wrapped->raw);
+      common const rhs_common = common(rhs.m_wrapped->raw);
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs_common == rhs_common;
+      } else {
+#pragma float_control(precise, off)
+         return lhs_common == rhs_common;
+      }
    }
 
    template <is_arithmetic U>
@@ -163,8 +177,13 @@ class precision_reference {
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
       using result_type =
          basic_float<common_type<raw_type, other_raw_type>, precision>;
-      return result_type(
-         detail::float_add<precision>(m_wrapped->raw, other.m_wrapped->raw));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(m_wrapped->raw + other.m_wrapped->raw);
+      } else {
+#pragma float_control(precise, off)
+         return result_type(m_wrapped->raw + other.m_wrapped->raw);
+      }
    }
 
    template <is_arithmetic U>
@@ -187,8 +206,13 @@ class precision_reference {
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
       using result_type =
          basic_float<common_type<raw_type, other_raw_type>, precision>;
-      return result_type(detail::float_subtract<precision>(
-         m_wrapped->raw, operand.m_wrapped->raw));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(m_wrapped->raw - operand.m_wrapped->raw);
+      } else {
+#pragma float_control(precise, off)
+         return result_type(m_wrapped->raw - operand.m_wrapped->raw);
+      }
    }
 
    template <is_arithmetic U>
@@ -200,8 +224,13 @@ class precision_reference {
          detail::precision_reference_reverse_result<U, raw_type, precision>;
       constexpr precision_policies left_precision =
          detail::float_precision_for<remove_cvref<U>, precision>;
-      return result_type(detail::float_subtract<left_precision>(
-         make_raw_arithmetic(operand), m_wrapped->raw));
+      if constexpr (left_precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(make_raw_arithmetic(operand) - m_wrapped->raw);
+      } else {
+#pragma float_control(precise, off)
+         return result_type(make_raw_arithmetic(operand) - m_wrapped->raw);
+      }
    }
 
    template <is_arithmetic U>
@@ -224,8 +253,13 @@ class precision_reference {
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
       using result_type =
          basic_float<common_type<raw_type, other_raw_type>, precision>;
-      return result_type(detail::float_multiply<precision>(
-         m_wrapped->raw, operand.m_wrapped->raw));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(m_wrapped->raw * operand.m_wrapped->raw);
+      } else {
+#pragma float_control(precise, off)
+         return result_type(m_wrapped->raw * operand.m_wrapped->raw);
+      }
    }
 
    template <is_arithmetic U>
@@ -248,8 +282,13 @@ class precision_reference {
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
       using result_type =
          basic_float<common_type<raw_type, other_raw_type>, precision>;
-      return result_type(detail::float_divide<precision>(
-         m_wrapped->raw, operand.m_wrapped->raw));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(m_wrapped->raw / operand.m_wrapped->raw);
+      } else {
+#pragma float_control(precise, off)
+         return result_type(m_wrapped->raw / operand.m_wrapped->raw);
+      }
    }
 
    template <is_raw_arithmetic U>
@@ -261,8 +300,13 @@ class precision_reference {
          detail::precision_reference_reverse_result<U, raw_type, precision>;
       constexpr precision_policies left_precision =
          detail::float_precision_for<remove_cvref<U>, precision>;
-      return result_type(detail::float_divide<left_precision>(
-         make_raw_arithmetic(operand), m_wrapped->raw));
+      if constexpr (left_precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(make_raw_arithmetic(operand) / m_wrapped->raw);
+      } else {
+#pragma float_control(precise, off)
+         return result_type(make_raw_arithmetic(operand) / m_wrapped->raw);
+      }
    }
 
    template <is_arithmetic U, is_arithmetic V>

@@ -2,189 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/arithmetic>
+#include <cat/detail/simd_arithmetic_policies.hpp>
 
 namespace cat::detail {
-
-template <typename T, typename Abi>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_mul_sat_lanes(cat::simd<T, Abi> const& left,
-                            cat::simd<T, Abi> const& right)
-   -> cat::simd<T, Abi> {
-   cat::simd<T, Abi> out{};
-   for (idx i = 0u; i < left.size(); ++i) {
-      out.set_lane(i, left[i] * right[i]);
-   }
-   return out;
-}
-
-template <typename T, typename Abi, typename F>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_shift_lanes(F&& shift_fn, cat::simd<T, Abi> const& left,
-                          cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   cat::simd<T, Abi> out{};
-   for (idx i = 0u; i < left.size(); ++i) {
-      out.set_lane(i, shift_fn(left[i], right[i]));
-   }
-   return out;
-}
-
-template <typename T, typename Abi>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_add_follow_storage(cat::simd<T, Abi> const& left,
-                                 cat::simd<T, Abi> const& right)
-   -> cat::simd<T, Abi> {
-   if constexpr (requires { T::policy; }) {
-      if constexpr (T::policy == overflow_policies::saturate) {
-         return cat::simd<T, Abi>(
-            __builtin_elementwise_add_sat(left.raw, right.raw));
-      }
-   }
-   return cat::simd<T, Abi>(left.raw + right.raw);
-}
-
-template <typename T, typename Abi>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_sub_follow_storage(cat::simd<T, Abi> const& left,
-                                 cat::simd<T, Abi> const& right)
-   -> cat::simd<T, Abi> {
-   if constexpr (requires { T::policy; }) {
-      if constexpr (T::policy == overflow_policies::saturate) {
-         return cat::simd<T, Abi>(
-            __builtin_elementwise_sub_sat(left.raw, right.raw));
-      }
-   }
-   return cat::simd<T, Abi>(left.raw - right.raw);
-}
-
-template <typename T, typename Abi>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_mul_follow_storage(cat::simd<T, Abi> const& left,
-                                 cat::simd<T, Abi> const& right)
-   -> cat::simd<T, Abi> {
-   if constexpr (requires { T::policy; }) {
-      if constexpr (T::policy == overflow_policies::saturate) {
-         return simd_integral_mul_sat_lanes(left, right);
-      }
-   }
-   return cat::simd<T, Abi>(left.raw * right.raw);
-}
-
-template <typename T, typename Abi>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_shl_follow_storage(cat::simd<T, Abi> const& left,
-                                 cat::simd<T, Abi> const& right)
-   -> cat::simd<T, Abi> {
-   if constexpr (requires { T::policy; }) {
-      if constexpr (T::policy == overflow_policies::saturate) {
-         return simd_integral_shift_lanes<T, Abi>(
-            [](T l, T r) {
-               return l << r;
-            },
-            left, right);
-      }
-   }
-   return cat::simd<T, Abi>(left.raw << right.raw);
-}
-
-template <typename T, typename Abi>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_shr_follow_storage(cat::simd<T, Abi> const& left,
-                                 cat::simd<T, Abi> const& right)
-   -> cat::simd<T, Abi> {
-   if constexpr (requires { T::policy; }) {
-      if constexpr (T::policy == overflow_policies::saturate) {
-         return simd_integral_shift_lanes<T, Abi>(
-            [](T l, T r) {
-               return l >> r;
-            },
-            left, right);
-      }
-   }
-   return cat::simd<T, Abi>(left.raw >> right.raw);
-}
-
-template <typename T, typename Abi, overflow_policies policy>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_add_forced(cat::simd<T, Abi> const& left,
-                         cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   if constexpr (policy == overflow_policies::saturate) {
-      return cat::simd<T, Abi>(
-         __builtin_elementwise_add_sat(left.raw, right.raw));
-   }
-   return cat::simd<T, Abi>(left.raw + right.raw);
-}
-
-template <typename T, typename Abi, overflow_policies policy>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_sub_forced(cat::simd<T, Abi> const& left,
-                         cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   if constexpr (policy == overflow_policies::saturate) {
-      return cat::simd<T, Abi>(
-         __builtin_elementwise_sub_sat(left.raw, right.raw));
-   }
-   return cat::simd<T, Abi>(left.raw - right.raw);
-}
-
-template <typename T, typename Abi, overflow_policies policy>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_mul_forced(cat::simd<T, Abi> const& left,
-                         cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   if constexpr (policy == overflow_policies::saturate) {
-      return simd_integral_mul_sat_lanes(left, right);
-   }
-   return cat::simd<T, Abi>(left.raw * right.raw);
-}
-
-template <typename T, typename Abi, overflow_policies policy>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_shl_forced(cat::simd<T, Abi> const& left,
-                         cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   if constexpr (policy == overflow_policies::saturate) {
-      return simd_integral_shift_lanes<T, Abi>(
-         [](T l, T r) {
-            return l << r;
-         },
-         left, right);
-   }
-   return cat::simd<T, Abi>(left.raw << right.raw);
-}
-
-template <typename T, typename Abi, overflow_policies policy>
-   requires(is_integral<T> && !is_bool<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-simd_integral_shr_forced(cat::simd<T, Abi> const& left,
-                         cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   if constexpr (policy == overflow_policies::saturate) {
-      return simd_integral_shift_lanes<T, Abi>(
-         [](T l, T r) {
-            return l >> r;
-         },
-         left, right);
-   }
-   return cat::simd<T, Abi>(left.raw >> right.raw);
-}
 
 template <typename T, typename Abi, overflow_policies semantics>
 class simd_overflow_reference
@@ -201,7 +21,7 @@ class simd_overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(wrapper_type const& rhs) const -> wrapper_type {
-      return simd_integral_add_forced<T, Abi, semantics>(*m_wrapped, rhs);
+      return simd_integral_add_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
    template <is_arithmetic U>
@@ -215,7 +35,7 @@ class simd_overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(wrapper_type const& rhs) const -> wrapper_type {
-      return simd_integral_sub_forced<T, Abi, semantics>(*m_wrapped, rhs);
+      return simd_integral_sub_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
    template <is_arithmetic U>
@@ -229,7 +49,7 @@ class simd_overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(wrapper_type const& lhs) const -> wrapper_type {
-      return simd_integral_sub_forced<T, Abi, semantics>(lhs, *m_wrapped);
+      return simd_integral_sub_policy<T, Abi, semantics>(lhs, *m_wrapped);
    }
 
    template <is_arithmetic U>
@@ -243,7 +63,7 @@ class simd_overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(wrapper_type const& rhs) const -> wrapper_type {
-      return simd_integral_mul_forced<T, Abi, semantics>(*m_wrapped, rhs);
+      return simd_integral_mul_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
    template <is_arithmetic U>
@@ -256,8 +76,64 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
+   divide_by(wrapper_type const& rhs) const -> wrapper_type {
+      return simd_integral_div_policy<T, Abi, semantics>(*m_wrapped, rhs);
+   }
+
+   template <is_arithmetic U>
+      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_by(U&& rhs) const -> wrapper_type {
+      return divide_by(wrapper_type($fwd(rhs)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_into(wrapper_type const& lhs) const -> wrapper_type {
+      return simd_integral_div_policy<T, Abi, semantics>(lhs, *m_wrapped);
+   }
+
+   template <is_arithmetic U>
+      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_into(U&& lhs) const -> wrapper_type {
+      return divide_into(wrapper_type($fwd(lhs)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   modulo_by(wrapper_type const& rhs) const -> wrapper_type {
+      return simd_integral_mod_policy<T, Abi, semantics>(*m_wrapped, rhs);
+   }
+
+   template <is_arithmetic U>
+      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   modulo_by(U&& rhs) const -> wrapper_type {
+      return modulo_by(wrapper_type($fwd(rhs)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   modulo_into(wrapper_type const& lhs) const -> wrapper_type {
+      return simd_integral_mod_policy<T, Abi, semantics>(lhs, *m_wrapped);
+   }
+
+   template <is_arithmetic U>
+      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   modulo_into(U&& lhs) const -> wrapper_type {
+      return modulo_into(wrapper_type($fwd(lhs)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
    shift_left_by(wrapper_type const& rhs) const -> wrapper_type {
-      return simd_integral_shl_forced<T, Abi, semantics>(*m_wrapped, rhs);
+      return simd_integral_shl_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
    template <is_arithmetic U>
@@ -271,7 +147,7 @@ class simd_overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_into(wrapper_type const& lhs) const -> wrapper_type {
-      return simd_integral_shl_forced<T, Abi, semantics>(lhs, *m_wrapped);
+      return simd_integral_shl_policy<T, Abi, semantics>(lhs, *m_wrapped);
    }
 
    template <is_arithmetic U>
@@ -285,7 +161,7 @@ class simd_overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_by(wrapper_type const& rhs) const -> wrapper_type {
-      return simd_integral_shr_forced<T, Abi, semantics>(*m_wrapped, rhs);
+      return simd_integral_shr_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
    template <is_arithmetic U>
@@ -299,7 +175,7 @@ class simd_overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_into(wrapper_type const& lhs) const -> wrapper_type {
-      return simd_integral_shr_forced<T, Abi, semantics>(lhs, *m_wrapped);
+      return simd_integral_shr_policy<T, Abi, semantics>(lhs, *m_wrapped);
    }
 
    template <is_arithmetic U>
@@ -308,6 +184,65 @@ class simd_overflow_reference
    constexpr auto
    shift_right_into(U&& lhs) const -> wrapper_type {
       return shift_right_into(wrapper_type($fwd(lhs)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_and(wrapper_type const& rhs) const -> wrapper_type {
+      return wrapper_type(m_wrapped->raw & rhs.raw);
+   }
+
+   template <is_arithmetic U>
+      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_and(U&& rhs) const -> wrapper_type {
+      return bit_and(wrapper_type($fwd(rhs)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_or(wrapper_type const& rhs) const -> wrapper_type {
+      return wrapper_type(m_wrapped->raw | rhs.raw);
+   }
+
+   template <is_arithmetic U>
+      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_or(U&& rhs) const -> wrapper_type {
+      return bit_or(wrapper_type($fwd(rhs)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_xor(wrapper_type const& rhs) const -> wrapper_type {
+      return wrapper_type(m_wrapped->raw ^ rhs.raw);
+   }
+
+   template <is_arithmetic U>
+      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_xor(U&& rhs) const -> wrapper_type {
+      return bit_xor(wrapper_type($fwd(rhs)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_complement() const -> wrapper_type
+      requires(is_unsigned_integral<raw_arithmetic_type<T>>)
+   {
+      return wrapper_type(~m_wrapped->raw);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   fma(wrapper_type const& multiplier, wrapper_type const& addend) const
+      -> wrapper_type {
+      return simd_integral_add_policy<T, Abi, semantics>(
+         simd_integral_mul_policy<T, Abi, semantics>(*m_wrapped, multiplier),
+         addend);
    }
 };
 

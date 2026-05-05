@@ -9,9 +9,9 @@
 #include <cat/meta>
 
 // `cat::basic_int`, `cat::basic_float`, `cat::basic_idx`, and
-// `cat::basic_intptr` are arithmetic wrappers which both
-// prevent unsound implicit type conversions and make safe comparisons between
-// different arithmetic types.
+// `cat::basic_intptr` are arithmetic wrappers which both prevent unsound
+// implicit type conversions and make safe comparisons between different
+// arithmetic types.
 //
 // All of their conversion operators, math operators, and constructors are
 // generic with constraints. Because these methods are constrained, it is
@@ -259,7 +259,13 @@ basic_float(float) -> basic_float<float, precision_policies::precise>;
 basic_float(double) -> basic_float<double, precision_policies::precise>;
 
 template <is_integral T>
-inline constexpr overflow_policies make_overflow_policy = basic_int(T{}).policy;
+inline constexpr overflow_policies make_overflow_policy = [] {
+   if constexpr (requires { T::policy; }) {
+      return T::policy;
+   } else {
+      return basic_int(T{}).policy;
+   }
+}();
 
 template <is_floating_point T>
 inline constexpr precision_policies make_precision_policy =
@@ -542,20 +548,7 @@ template <is_raw_integral T>
 [[nodiscard]]
 constexpr auto
 sat_add(T lhs, T rhs) -> T {
-   T sum;
-   bool overflow = __builtin_add_overflow(lhs, rhs, &sum);
-   if (overflow) {
-      // Same-sign overflow is the only case `__builtin_add_overflow` can report
-      // for signed `T` (mixed-sign sums always fit), so the sign of `lhs`
-      // chooses the saturation endpoint. For unsigned `T`, only
-      // positive-direction overflow is possible.
-      if constexpr (is_signed<T>) {
-         return lhs < 0 ? limits<T>::min() : limits<T>::max();
-      } else {
-         return limits<T>::max();
-      }
-   }
-   return sum;
+   return __builtin_elementwise_add_sat(lhs, rhs);
 }
 
 // Erase redundant type information for `sat_add()`.
@@ -593,21 +586,7 @@ template <is_raw_integral T>
 [[nodiscard]]
 constexpr auto
 sat_sub(T lhs, T rhs) -> T {
-   T sum;
-   bool overflow = __builtin_sub_overflow(lhs, rhs, &sum);
-   if (overflow) {
-      // For signed `T`, opposite-sign operands are the only overflow shape
-      // (same-sign differences always fit). The sign of `lhs` points at the
-      // saturating endpoint. A positive `lhs` minus a negative `rhs` saturates
-      // upward, and the inverse saturates downward. Unsigned `T` can only
-      // underflow (saturate to 0).
-      if constexpr (is_signed<T>) {
-         return lhs < 0 ? limits<T>::min() : limits<T>::max();
-      } else {
-         return limits<T>::min();
-      }
-   }
-   return sum;
+   return __builtin_elementwise_sub_sat(lhs, rhs);
 }
 
 // Erase redundant type information for `sat_sub()`. Computes the difference in
@@ -979,246 +958,6 @@ policy_cast(U value) -> T {
 
 }  // namespace detail
 
-namespace detail {
-#pragma float_control(push)
-#pragma float_control(precise, on)
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-precise_float_add(T lhs, U rhs) {
-   return lhs + rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-precise_float_subtract(T lhs, U rhs) {
-   return lhs - rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-precise_float_multiply(T lhs, U rhs) {
-   return lhs * rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-precise_float_divide(T lhs, U rhs) {
-   return lhs / rhs;
-}
-
-template <typename T, typename U, typename V>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-precise_float_fma(T lhs, U rhs, V addend) -> T {
-   return __builtin_elementwise_fma(lhs, rhs, addend);
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-precise_float_less(T lhs, U rhs) -> bool {
-   return lhs < rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-precise_float_greater(T lhs, U rhs) -> bool {
-   return lhs > rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-precise_float_equal(T lhs, U rhs) -> bool {
-   return lhs == rhs;
-}
-
-#pragma float_control(pop)
-
-#pragma float_control(push)
-#pragma float_control(precise, off)
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fast_float_add(T lhs, U rhs) {
-   return lhs + rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fast_float_subtract(T lhs, U rhs) {
-   return lhs - rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fast_float_multiply(T lhs, U rhs) {
-   return lhs * rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fast_float_divide(T lhs, U rhs) {
-   return lhs / rhs;
-}
-
-template <typename T, typename U, typename V>
-   requires(is_same<T, U> && is_same<T, V>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fast_float_fma(T lhs, U rhs, V addend) -> T {
-   return __builtin_elementwise_fma(lhs, rhs, addend);
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fast_float_less(T lhs, U rhs) -> bool {
-   return lhs < rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fast_float_greater(T lhs, U rhs) -> bool {
-   return lhs > rhs;
-}
-
-template <typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fast_float_equal(T lhs, U rhs) -> bool {
-   return lhs == rhs;
-}
-
-#pragma float_control(pop)
-
-template <precision_policies precision, typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-float_add(T lhs, U rhs) {
-   if constexpr (precision == precision_policies::precise) {
-      return precise_float_add(lhs, rhs);
-   } else {
-      return fast_float_add(lhs, rhs);
-   }
-}
-
-template <precision_policies precision, typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-float_subtract(T lhs, U rhs) {
-   if constexpr (precision == precision_policies::precise) {
-      return precise_float_subtract(lhs, rhs);
-   } else {
-      return fast_float_subtract(lhs, rhs);
-   }
-}
-
-template <precision_policies precision, typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-float_multiply(T lhs, U rhs) {
-   if constexpr (precision == precision_policies::precise) {
-      return precise_float_multiply(lhs, rhs);
-   } else {
-      return fast_float_multiply(lhs, rhs);
-   }
-}
-
-template <precision_policies precision, typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-float_divide(T lhs, U rhs) {
-   if constexpr (precision == precision_policies::precise) {
-      return precise_float_divide(lhs, rhs);
-   } else {
-      return fast_float_divide(lhs, rhs);
-   }
-}
-
-template <precision_policies precision, typename T, typename U, typename V>
-   requires(
-      // `U` is either an integer or a non-converting floating point value.
-      (is_integral<U> || (is_floating_point<U> && sizeof(U) == sizeof(T)))
-      // `V` is either an integer or a non-converting floating point value.
-      && (is_integral<V> || (is_floating_point<V> && sizeof(V) == sizeof(T))))
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-float_fma(T lhs, U rhs, V addend) {
-   if constexpr (precision == precision_policies::precise) {
-      // Convert integers to `T`.
-      return precise_float_fma(make_raw_arithmetic(lhs),
-                               make_raw_arithmetic(static_cast<T>(rhs)),
-                               make_raw_arithmetic(static_cast<T>(addend)));
-   } else {
-      // Convert integers to `T`.
-      return fast_float_fma(make_raw_arithmetic(lhs),
-                            make_raw_arithmetic(static_cast<T>(rhs)),
-                            make_raw_arithmetic(static_cast<T>(addend)));
-   }
-}
-
-template <precision_policies precision, typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-float_less(T lhs, U rhs) -> bool {
-   if constexpr (precision == precision_policies::precise) {
-      return precise_float_less(lhs, rhs);
-   } else {
-      return fast_float_less(lhs, rhs);
-   }
-}
-
-template <precision_policies precision, typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-float_greater(T lhs, U rhs) -> bool {
-   if constexpr (precision == precision_policies::precise) {
-      return precise_float_greater(lhs, rhs);
-   } else {
-      return fast_float_greater(lhs, rhs);
-   }
-}
-
-template <precision_policies precision, typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-float_equal(T lhs, U rhs) -> bool {
-   if constexpr (precision == precision_policies::precise) {
-      return precise_float_equal(lhs, rhs);
-   } else {
-      return fast_float_equal(lhs, rhs);
-   }
-}
-
-template <precision_policies precision, typename T, typename U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-float_compare_three_way(T lhs, U rhs) -> std::partial_ordering {
-   if (float_less<precision>(lhs, rhs)) {
-      return std::partial_ordering::less;
-   }
-   if (float_greater<precision>(lhs, rhs)) {
-      return std::partial_ordering::greater;
-   }
-   if (float_equal<precision>(lhs, rhs)) {
-      return std::partial_ordering::equivalent;
-   }
-   return std::partial_ordering::unordered;
-}
-}  // namespace detail
-
 template <typename T, precision_policies precision>
 class [[clang::preferred_name(float4), clang::preferred_name(float8),
         clang::preferred_name(float4_fast), clang::preferred_name(float8_fast)]]
@@ -1306,8 +1045,15 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    constexpr auto
    operator<=>(U rhs) const {
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
-      return detail::float_compare_three_way<precision>(
-         common(raw), common(make_raw_arithmetic(rhs)));
+      common const lhs_common = common(raw);
+      common const rhs_common = common(make_raw_arithmetic(rhs));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs_common <=> rhs_common;
+      } else {
+#pragma float_control(precise, off)
+         return lhs_common <=> rhs_common;
+      }
    }
 
    template <is_arithmetic U>
@@ -1316,8 +1062,15 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    friend constexpr auto
    operator==(basic_float lhs, U rhs) -> bool {
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
-      return detail::float_equal<precision>(common(lhs.raw),
-                                            common(make_raw_arithmetic(rhs)));
+      common const lhs_common = common(lhs.raw);
+      common const rhs_common = common(make_raw_arithmetic(rhs));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs_common == rhs_common;
+      } else {
+#pragma float_control(precise, off)
+         return lhs_common == rhs_common;
+      }
    }
 
    constexpr auto
@@ -1368,8 +1121,13 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
       -> basic_float<common_type<T, raw_arithmetic_type<U>>, precision> {
       using result_type =
          basic_float<common_type<T, raw_arithmetic_type<U>>, precision>;
-      return result_type(
-         detail::float_add<precision>(raw, make_raw_arithmetic(other)));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(raw + make_raw_arithmetic(other));
+      } else {
+#pragma float_control(precise, off)
+         return result_type(raw + make_raw_arithmetic(other));
+      }
    }
 
    template <is_arithmetic U>
@@ -1377,8 +1135,13 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U operand) const -> basic_float {
-      return basic_float(
-         detail::float_subtract<precision>(raw, make_raw_arithmetic(operand)));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return basic_float(raw - make_raw_arithmetic(operand));
+      } else {
+#pragma float_control(precise, off)
+         return basic_float(raw - make_raw_arithmetic(operand));
+      }
    }
 
    template <is_arithmetic U>
@@ -1387,8 +1150,13 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    constexpr auto
    subtract_from(U operand) const -> remove_constref<U> {
       using result_type = remove_constref<U>;
-      return result_type(
-         detail::float_subtract<precision>(make_raw_arithmetic(operand), raw));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(make_raw_arithmetic(operand) - raw);
+      } else {
+#pragma float_control(precise, off)
+         return result_type(make_raw_arithmetic(operand) - raw);
+      }
    }
 
    template <is_arithmetic U>
@@ -1399,8 +1167,13 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
       -> basic_float<common_type<T, raw_arithmetic_type<U>>, precision> {
       using result_type =
          basic_float<common_type<T, raw_arithmetic_type<U>>, precision>;
-      return result_type(
-         detail::float_multiply<precision>(raw, make_raw_arithmetic(operand)));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(raw * make_raw_arithmetic(operand));
+      } else {
+#pragma float_control(precise, off)
+         return result_type(raw * make_raw_arithmetic(operand));
+      }
    }
 
    template <is_arithmetic U>
@@ -1408,8 +1181,13 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(U operand) const -> basic_float {
-      return basic_float(
-         detail::float_divide<precision>(raw, make_raw_arithmetic(operand)));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return basic_float(raw / make_raw_arithmetic(operand));
+      } else {
+#pragma float_control(precise, off)
+         return basic_float(raw / make_raw_arithmetic(operand));
+      }
    }
 
    template <is_raw_arithmetic U>
@@ -1418,8 +1196,13 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    constexpr auto
    divide_into(U operand) const -> remove_constref<U> {
       using result_type = remove_constref<U>;
-      return result_type(
-         detail::float_divide<precision>(make_raw_arithmetic(operand), raw));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return result_type(make_raw_arithmetic(operand) / raw);
+      } else {
+#pragma float_control(precise, off)
+         return result_type(make_raw_arithmetic(operand) / raw);
+      }
    }
 
    template <is_arithmetic U, is_arithmetic V>
@@ -1429,9 +1212,17 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    fma(U multiplier, V addend) const -> basic_float<T, precision> {
-      return basic_float<T, precision>(detail::float_fma<precision>(
-         raw, static_cast<T>(make_raw_arithmetic(multiplier)),
-         static_cast<T>(make_raw_arithmetic(addend))));
+      T const raw_multiplier = static_cast<T>(make_raw_arithmetic(multiplier));
+      T const raw_addend = static_cast<T>(make_raw_arithmetic(addend));
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return basic_float<T, precision>(
+            __builtin_elementwise_fma(raw, raw_multiplier, raw_addend));
+      } else {
+#pragma float_control(precise, off)
+         return basic_float<T, precision>(
+            __builtin_elementwise_fma(raw, raw_multiplier, raw_addend));
+      }
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -2203,9 +1994,6 @@ basic_intptr :
    using raw_type = Storage;
    using ptr = T*;
 
-   using arithmetic_interface<basic_intptr<T, Storage,
-                                           overflow_policy>>::operator*;
-
    static constexpr overflow_policies policy = overflow_policy;
 
    Storage raw;
@@ -2454,8 +2242,12 @@ basic_intptr :
          .get();
    }
 
+   // Explicitly introduce `operator*` generated by `arithmetic_interface`
+   // because the unary `operator*` for dereferencing hides those.
+   using arithmetic_interface<
+      basic_intptr<T, Storage, overflow_policy>>::operator*;
+
    template <is_integral U>
-      requires(!detail::is_basic_intptr<remove_cvref<U>>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U operand) const -> basic_intptr {
@@ -2466,9 +2258,8 @@ basic_intptr :
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U* p_operand) const -> basic_intptr {
-      return basic_intptr(raw
-                          * basic_intptr<U, Storage, overflow_policy>(p_operand)
-                               .raw);
+      return basic_intptr(
+         raw * basic_intptr<U, Storage, overflow_policy>(p_operand).raw);
    }
 
    template <typename U>

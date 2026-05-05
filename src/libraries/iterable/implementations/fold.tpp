@@ -5,21 +5,6 @@
 #include <cat/iterable>
 
 namespace cat {
-
-// Left fold. Default accumulator is value-initialised
-// `iterable_value_type<Iterable>`.
-template <is_iterable Iterable, typename Callback,
-          typename Init = iterable_value_type<Iterable>>
-constexpr auto
-fold(Iterable&& source, Callback callback, Init init = Init{}) -> Init {
-   auto context = iterate(source);
-   context.run_while([&init, &callback](auto&& element) -> bool {
-      init = callback(move(init), $fwd(element));
-      return true;
-   });
-   return init;
-}
-
 namespace detail {
 template <typename Callback, typename Init>
 struct fold_impl {
@@ -29,7 +14,12 @@ struct fold_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, fold_impl self) -> Init {
-      return fold($fwd(incoming), move(self.callback), move(self.init));
+      auto context = iterate(incoming);
+      context.run_while([&self](auto&& element) -> bool {
+         self.init = self.callback(move(self.init), $fwd(element));
+         return true;
+      });
+      return move(self.init);
    }
 };
 }  // namespace detail

@@ -208,7 +208,7 @@ $test(simd_collection) {
       cat::is_random_access_collection<cat::fixed_size_simd_mask<int4, 4u>>);
 
    cat::int4x4 lanes{1_i4, 2_i4, 3_i4, 4_i4};
-   cat::verify(cat::sum(lanes) == 10_i4);
+   cat::verify((lanes | cat::sum()) == 10_i4);
    cat::verify(cat::read_at(lanes, 1u) == 2_i4);
    auto lane_tail = lanes | cat::reverse() | cat::take(2u);
    cat::verify(lane_tail.sum() == 7_i4);
@@ -222,7 +222,7 @@ $test(simd_collection) {
    cat::verify(doubled_tail.sum() == 14_i4);
 
    cat::fixed_size_simd_mask<int4, 4u> mask{true, false, true, false};
-   cat::verify(cat::count(mask) == 4u);
+   cat::verify((mask | cat::count()) == 4u);
    cat::verify(cat::read_at(mask, 0u));
    cat::verify(!cat::read_at(mask, 1u));
    auto true_lanes = cat::ref(mask) | cat::filter([](bool lane) -> bool {
@@ -2754,4 +2754,228 @@ $test(simd_bool2_bool4_lanes_match_bool) {
       ++iter_4;
    }
    cat::verify(iter_4 == f4.size());
+}
+
+$test(simd_unary_negate) {
+   cat::int4x4 const v = {1, -2, 3, -4};
+   cat::int4x4 const neg = -v;
+   cat::verify(neg[0] == -1);
+   cat::verify(neg[1] == 2);
+   cat::verify(neg[2] == -3);
+   cat::verify(neg[3] == 4);
+
+   cat::float4x4 const fv = {1_f4, -2_f4, 3_f4, -4_f4};
+   cat::float4x4 const fneg = -fv;
+   cat::verify(fneg[0] == -1_f4);
+   cat::verify(fneg[1] == 2_f4);
+   cat::verify(fneg[2] == -3_f4);
+   cat::verify(fneg[3] == 4_f4);
+
+   // Negating `int_min` under wrap is `int_min`, matching `basic_int` and
+   // `wrap_sub(0, int_min)`.
+   using wrap4 = cat::wrap_int4;
+   using wrap4x4 = cat::fixed_size_simd<wrap4, 4u>;
+   wrap4x4 vmin{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      vmin.set_lane(i, wrap4::min());
+   }
+   wrap4x4 const wneg = -vmin;
+   cat::verify(wneg[0] == wrap4::min());
+
+   // Saturate policy clamps `-int_min` to `int_max`.
+   using sat4 = cat::sat_int4;
+   using sat4x4 = cat::fixed_size_simd<sat4, 4u>;
+   sat4x4 smin{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      smin.set_lane(i, sat4::min());
+   }
+   sat4x4 const sneg = -smin;
+   cat::verify(sneg[0] == sat4::max());
+}
+
+$test(simd_unary_bit_complement) {
+   cat::uint4x4 const v = {0xfu, 0u, 0xff00u, 0xffffffffu};
+   cat::uint4x4 const bn = ~v;
+   cat::verify(bn[0] == ~0xfu);
+   cat::verify(bn[1] == ~0u);
+   cat::verify(bn[2] == ~0xff00u);
+   cat::verify(bn[3] == 0u);
+}
+
+$test(simd_increment_decrement) {
+   cat::int4x4 v = {1, 2, 3, 4};
+   ++v;
+   cat::verify(v == cat::int4x4{2, 3, 4, 5});
+   cat::int4x4 const post = v++;
+   cat::verify(post == cat::int4x4{2, 3, 4, 5});
+   cat::verify(v == cat::int4x4{3, 4, 5, 6});
+
+   --v;
+   cat::verify(v == cat::int4x4{2, 3, 4, 5});
+   cat::int4x4 const post_dec = v--;
+   cat::verify(post_dec == cat::int4x4{2, 3, 4, 5});
+   cat::verify(v == cat::int4x4{1, 2, 3, 4});
+
+   cat::float4x4 fv = {1_f4, 2_f4, 3_f4, 4_f4};
+   ++fv;
+   cat::verify(fv[0] == 2_f4);
+   cat::verify(fv[3] == 5_f4);
+   --fv;
+   cat::verify(fv[0] == 1_f4);
+}
+
+$test(simd_int_divide_overflow_policies) {
+   // Plain division of `int_min / -1` would be UB. The default `int4` lane
+   // type carries no policy, so this matches `basic_int`'s `undefined` path.
+   // `sat()` and `wrap()` accessors expose the well-defined alternatives.
+   using i4 = cat::int4;
+   using i4x4 = cat::int4x4;
+   i4x4 mins{};
+   i4x4 minus_ones{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      mins.set_lane(i, i4::min());
+      minus_ones.set_lane(i, i4(-1));
+   }
+
+   i4x4 const sat_q = mins.sat() / minus_ones;
+   cat::verify(sat_q[0] == i4::max());
+
+   i4x4 const wrap_q = mins.wrap() / minus_ones;
+   cat::verify(wrap_q[0] == i4::min());
+
+   // Lane-typed wrap and sat policies route through the value-syntax `/`.
+   using sat4 = cat::sat_int4;
+   using sat4x4 = cat::fixed_size_simd<sat4, 4u>;
+   sat4x4 smins{};
+   sat4x4 sm1s{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      smins.set_lane(i, sat4::min());
+      sm1s.set_lane(i, sat4(-1));
+   }
+   sat4x4 const sat_lane_q = smins / sm1s;
+   cat::verify(sat_lane_q[0] == sat4::max());
+
+   using wrap4 = cat::wrap_int4;
+   using wrap4x4 = cat::fixed_size_simd<wrap4, 4u>;
+   wrap4x4 wmins{};
+   wrap4x4 wm1s{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      wmins.set_lane(i, wrap4::min());
+      wm1s.set_lane(i, wrap4(-1));
+   }
+   wrap4x4 const wrap_lane_q = wmins / wm1s;
+   cat::verify(wrap_lane_q[0] == wrap4::min());
+
+   // Ordinary divisions give the same answer under any policy.
+   i4x4 a = {10, 20, -30, 40};
+   i4x4 const b = {3, 4, 5, 8};
+   cat::verify((a / b) == (a.undef() / b));
+   cat::verify((a / b) == (a.wrap() / b));
+   cat::verify((a / b) == (a.sat() / b));
+}
+
+$test(simd_int_modulo_overflow_policies) {
+   using i4 = cat::int4;
+   using i4x4 = cat::int4x4;
+   i4x4 mins{};
+   i4x4 minus_ones{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      mins.set_lane(i, i4::min());
+      minus_ones.set_lane(i, i4(-1));
+   }
+
+   // `min() % -1` is mathematically zero, both `wrap` and `sat` report it.
+   i4x4 const sat_r = mins.sat() % minus_ones;
+   cat::verify(sat_r[0] == 0);
+   i4x4 const wrap_r = mins.wrap() % minus_ones;
+   cat::verify(wrap_r[0] == 0);
+
+   // Ordinary modulo agrees across policies.
+   i4x4 a = {7, 11, -9, 15};
+   i4x4 const b = {3, 5, 4, 8};
+   cat::verify((a % b) == (a.wrap() % b));
+   cat::verify((a % b) == (a.sat() % b));
+   cat::verify((a % b) == (a.undef() % b));
+}
+
+$test(simd_overflow_reference_div_mod_methods) {
+   cat::int4x4 a = {12, 20, -8, 30};
+   cat::int4x4 const b = {3, 4, 2, 5};
+   cat::int4x4 const expected_q = {4, 5, -4, 6};
+   cat::int4x4 const expected_r = {0, 0, 0, 0};
+
+   cat::verify((a.undef().divide_by(b)) == expected_q);
+   cat::verify((a.wrap().divide_by(b)) == expected_q);
+   cat::verify((a.sat().divide_by(b)) == expected_q);
+
+   cat::verify((a.undef().modulo_by(b)) == expected_r);
+   cat::verify((a.wrap().modulo_by(b)) == expected_r);
+   cat::verify((a.sat().modulo_by(b)) == expected_r);
+
+   // `divide_into` divides the wrapped LHS into the argument: arg / wrapped.
+   cat::int4x4 const c = {24, 100, -16, 60};
+   cat::int4x4 const expected_into = {2, 5, 2, 2};
+   cat::verify((a.undef().divide_into(c)) == expected_into);
+   cat::verify((a.wrap().divide_into(c)) == expected_into);
+   cat::verify((a.sat().divide_into(c)) == expected_into);
+}
+
+$test(simd_overflow_reference_bitwise_methods) {
+   cat::uint4x4 a = {0xff00u, 0x0ff0u, 0x00ffu, 0xffffu};
+   cat::uint4x4 const b = {0x0f0fu, 0xf0f0u, 0xf0f0u, 0x0f0fu};
+
+   cat::uint4x4 const and_expected = {0x0f00u, 0x00f0u, 0x00f0u, 0x0f0fu};
+   cat::verify((a.undef().bit_and(b)) == and_expected);
+   cat::verify((a.wrap().bit_and(b)) == and_expected);
+   cat::verify((a.sat().bit_and(b)) == and_expected);
+
+   cat::uint4x4 const or_expected = {0xff0fu, 0xfff0u, 0xf0ffu, 0xffffu};
+   cat::verify((a.undef().bit_or(b)) == or_expected);
+
+   cat::uint4x4 const xor_expected = {0xf00fu, 0xff00u, 0xf00fu, 0xf0f0u};
+   cat::verify((a.undef().bit_xor(b)) == xor_expected);
+
+   cat::uint4x4 const not_expected = {~0xff00u, ~0x0ff0u, ~0x00ffu, ~0xffffu};
+   cat::verify((a.undef().bit_complement()) == not_expected);
+}
+
+$test(simd_overflow_reference_fma) {
+   cat::int4x4 a = {2, 3, 4, 5};
+   cat::int4x4 const b = {10, 10, 10, 10};
+   cat::int4x4 const c = {1, 1, 1, 1};
+   cat::int4x4 const expected = {21, 31, 41, 51};
+   cat::verify((a.undef().fma(b, c)) == expected);
+   cat::verify((a.wrap().fma(b, c)) == expected);
+   cat::verify((a.sat().fma(b, c)) == expected);
+}
+
+$test(simd_signed_wrap_add_sub_mul_well_defined) {
+   // Defined wrap of `int_max + 1` is `int_min`. Same path as
+   // `basic_int::wrap_add`. No signed-overflow UB even on signed lanes.
+   using i4 = cat::int4;
+   using i4x4 = cat::int4x4;
+   i4x4 maxes{};
+   i4x4 ones{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      maxes.set_lane(i, i4::max());
+      ones.set_lane(i, i4(1));
+   }
+   i4x4 const wadd = maxes.wrap() + ones;
+   cat::verify(wadd[0] == i4::min());
+
+   // `int_min - 1` wraps to `int_max`.
+   i4x4 mins{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      mins.set_lane(i, i4::min());
+   }
+   i4x4 const wsub = mins.wrap() - ones;
+   cat::verify(wsub[0] == i4::max());
+
+   // `int_max * 2` wraps to `-2`.
+   i4x4 twos{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      twos.set_lane(i, i4(2));
+   }
+   i4x4 const wmul = maxes.wrap() * twos;
+   cat::verify(wmul[0] == i4(-2));
 }

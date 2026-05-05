@@ -5,22 +5,6 @@
 #include <cat/iterable>
 
 namespace cat {
-
-// `for_each(source, callback)` invokes `callback` on every element of the
-// iterable and returns `callback`.
-template <is_iterable Iterable, typename Callback>
-constexpr auto
-for_each(Iterable&& source, Callback callback) -> Callback {
-   auto context = iterate(source);
-
-   context.run_while([&callback](auto&& element) -> bool {
-      callback($fwd(element));
-      return true;
-   });
-
-   return callback;
-}
-
 namespace detail {
 template <typename Callback>
 struct for_each_impl {
@@ -29,7 +13,14 @@ struct for_each_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, for_each_impl self) -> Callback {
-      return for_each($fwd(incoming), move(self.callback));
+      auto context = iterate(incoming);
+
+      context.run_while([&self](auto&& element) -> bool {
+         self.callback($fwd(element));
+         return true;
+      });
+
+      return move(self.callback);
    }
 };
 }  // namespace detail

@@ -247,7 +247,7 @@ $test(list_iterable) {
 
    cat::page_allocator allocator;
    auto list_values = cat::make_list<int>(allocator, 1, 2, 3, 4).verify();
-   cat::verify(cat::sum(list_values) == 10);
+   cat::verify((list_values | cat::sum()) == 10);
    auto list_tail = cat::ref(list_values) | cat::reverse() | cat::take(2u);
    cat::verify(list_tail.sum() == 7);
    auto doubled_tail = cat::ref(list_values)
@@ -277,7 +277,7 @@ $test(list_iterable) {
    cat::verify(rest_total == 7);
 
    auto slist_values = cat::make_slist<int>(allocator, 4, 5, 6).verify();
-   cat::verify(cat::sum(slist_values) == 15);
+   cat::verify((slist_values | cat::sum()) == 15);
    auto shifted_edges = cat::ref(slist_values)
                            .filter([](int value) -> bool {
                               return value != 5;

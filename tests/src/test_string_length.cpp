@@ -107,7 +107,7 @@ $test(string_collection) {
    static_assert(cat::is_random_access_collection<cat::str_view>);
 
    cat::str_inplace<3u> text = "cat";
-   cat::verify(cat::count(text) == 3u);
+   cat::verify((text | cat::count()) == 3u);
    cat::verify(cat::read_at(text, 0u) == 'c');
    auto non_a_offsets = cat::ref(text)
                            .filter([](char value) -> bool {
@@ -119,7 +119,7 @@ $test(string_collection) {
    cat::verify(non_a_offsets.sum() == 21);
 
    cat::str_view view = text;
-   cat::verify(cat::count(view) == 3u);
+   cat::verify((view | cat::count()) == 3u);
    cat::verify(cat::read_at(view, 2u) == 't');
    auto prefix_offsets = cat::ref(view)
                             .filter([](char value) -> bool {

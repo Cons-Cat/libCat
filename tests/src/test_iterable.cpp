@@ -396,17 +396,26 @@ $test(flux_collection_basics) {
    // `cat::for_each` terminal.
    {
       int total = 0;
-      cat::for_each(arr, [&total](int const& x) {
+      arr | cat::for_each([&total](int const& x) {
          total += x;
       });
       cat::verify(total == 10);
    }
 
-   // `cat::sum` terminal.
-   cat::verify(cat::sum(arr) == 10);
+   // Terminal algorithms.
+   cat::verify((arr | cat::sum()) == 10);
+   cat::verify((arr | cat::product()) == 24);
+   cat::verify((arr | cat::min()) == 1);
+   cat::verify((arr | cat::max()) == 4);
+
+   tiny_array<int, 4u> weights = {
+      {},
+      {4, 3, 2, 1},
+   };
+   cat::verify((arr | cat::dot(weights)) == 20);
 
    // `cat::count` terminal.
-   cat::verify(cat::count(arr) == 4u);
+   cat::verify((arr | cat::count()) == 4u);
 }
 
 $test(flux_iterable_basics) {
@@ -415,15 +424,18 @@ $test(flux_iterable_basics) {
    list.push_back(20);
    list.push_back(30);
 
-   // `cat::sum` terminal over a member-`iterate`-only iterable.
-   cat::verify(cat::sum(list) == 60);
+   // Terminal algorithms over a member-`iterate`-only iterable.
+   cat::verify((list | cat::sum()) == 60);
+   cat::verify((list | cat::product()) == 6'000);
+   cat::verify((list | cat::min()) == 10);
+   cat::verify((list | cat::max()) == 30);
 
    // `cat::count` terminal.
-   cat::verify(cat::count(list) == 3u);
+   cat::verify((list | cat::count()) == 3u);
 
    // `cat::for_each` terminal.
    int total = 0;
-   cat::for_each(list, [&total](int const& x) {
+   list | cat::for_each([&total](int const& x) {
       total += x;
    });
    cat::verify(total == 60);
@@ -445,6 +457,16 @@ $test(flux_pipe_collection) {
                   })
                 | cat::sum();
    cat::verify(result == 56);
+
+   cat::verify((arr | cat::product()) == 720);
+   cat::verify((arr | cat::min()) == 1);
+   cat::verify((arr | cat::max()) == 6);
+
+   tiny_array<int, 6u> weights = {
+      {},
+      {6, 5, 4, 3, 2, 1}
+   };
+   cat::verify((arr | cat::dot(weights)) == 56);
 }
 
 $test(flux_pipe_iterable) {
@@ -599,12 +621,12 @@ $test(flux_fold_terminal) {
    };
 
    // Multiplicative fold: 2 * 3 * 5 * 7 = 210.
-   int product = cat::fold(
-      arr,
-      [](int acc, int x) -> int {
-         return acc * x;
-      },
-      1);
+   int product = arr
+                 | cat::fold(
+                    [](int acc, int x) -> int {
+                       return acc * x;
+                    },
+                    1);
    cat::verify(product == 210);
 
    // Pipeable form.
@@ -690,7 +712,7 @@ $test(flux_slice_basic) {
 
    // Slice [1, 4) gives {20, 30, 40}, sum = 90.
    auto sub = cat::slice(arr, cat::idx{1u}, cat::idx{4u});
-   cat::verify(cat::sum(sub) == 90);
+   cat::verify((sub | cat::sum()) == 90);
 
    // Slices preserve refinement: a slice of a random-access collection is
    // itself random access.
@@ -706,7 +728,7 @@ $test(flux_slice_basic) {
 
    // Empty slice is valid and yields zero.
    auto empty = cat::slice(arr, cat::idx{2u}, cat::idx{2u});
-   cat::verify(cat::sum(empty) == 0);
+   cat::verify((empty | cat::sum()) == 0);
 }
 
 $test(flux_as_span) {
@@ -767,6 +789,15 @@ $test(flux_fluent_terminals) {
    };
 
    cat::verify(arr.sum() == 20);
+   cat::verify(arr.product() == 384);
+   cat::verify(arr.min() == 2);
+   cat::verify(arr.max() == 8);
+
+   tiny_array<int, 4u> weights = {
+      {},
+      {1, 1, 2, 2}
+   };
+   cat::verify(arr.dot(weights) == 34);
    cat::verify(arr.count() == 4u);
 
    int total = 0;
@@ -863,7 +894,7 @@ $test(flux_internal_iterate_collection) {
       {1, 2, 3, 4, 5}
    };
    int total = 0;
-   cat::for_each(arr, [&total](int x) {
+   arr | cat::for_each([&total](int x) {
       total += x;
    });
    cat::verify(total == 15);
@@ -877,7 +908,7 @@ $test(flux_internal_iterate_iterable_only) {
    list.push_back(7);
 
    int total = 0;
-   cat::for_each(cat::cref(list), [&total](int x) {
+   cat::cref(list) | cat::for_each([&total](int x) {
       total += x;
    });
    cat::verify(total == 17);
@@ -889,7 +920,7 @@ $test(flux_internal_iterate_moved_collection) {
       {1, 2, 3}
    };
    int total = 0;
-   cat::for_each(cat::move(arr), [&total](int x) {
+   cat::move(arr) | cat::for_each([&total](int x) {
       total += x;
    });
    cat::verify(total == 6);
@@ -1204,7 +1235,7 @@ $test(flux_iterate_const_collection) {
       {},
       {3, 4, 5}
    };
-   cat::verify(cat::sum(arr) == 12);
+   cat::verify((arr | cat::sum()) == 12);
    cat::verify((arr
                 | cat::filter([](int x) -> bool {
                      return x != 4;

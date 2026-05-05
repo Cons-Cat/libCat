@@ -239,7 +239,7 @@ $test(vec_collection) {
 
    cat::page_allocator allocator;
    auto vec_values = cat::make_vec<int>(allocator, 5, 6, 7).verify();
-   cat::verify(cat::sum(vec_values) == 18);
+   cat::verify((vec_values | cat::sum()) == 18);
    cat::verify(cat::read_at(vec_values, 1u) == 6);
    auto vec_tail = cat::ref(vec_values) | cat::reverse() | cat::take(2u);
    cat::verify(vec_tail.sum() == 13);

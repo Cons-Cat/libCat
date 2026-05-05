@@ -150,7 +150,7 @@ $test(array_collection) {
    static_assert(cat::is_random_access_collection<cat::array<int, 4u>>);
 
    cat::array array_values{1, 2, 3, 4};
-   cat::verify(cat::sum(array_values) == 10);
+   cat::verify((array_values | cat::sum()) == 10);
    cat::verify(cat::read_at(array_values, 2u) == 3);
 
    auto array_tail = array_values | cat::reverse() | cat::take(2u);

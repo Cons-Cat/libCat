@@ -332,7 +332,7 @@ $test(span_collection) {
 
    cat::array array_values{1, 2, 3, 4};
    cat::span<int> array_span = array_values;
-   cat::verify(cat::sum(array_span) == 10);
+   cat::verify((array_span | cat::sum()) == 10);
    cat::verify(cat::read_at(array_span, 1u) == 2);
    auto span_tail = array_span | cat::reverse() | cat::take(2u);
    cat::verify(span_tail.sum() == 7);

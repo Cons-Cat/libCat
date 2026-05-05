@@ -176,10 +176,14 @@ set(CAT_HEADER_FILES
   ${CATLIB}/iterable/implementations/as_rvalue.tpp
   ${CATLIB}/iterable/implementations/bounds.tpp
   ${CATLIB}/iterable/implementations/count.tpp
+  ${CATLIB}/iterable/implementations/dot.tpp
   ${CATLIB}/iterable/implementations/filter.tpp
   ${CATLIB}/iterable/implementations/fold.tpp
   ${CATLIB}/iterable/implementations/for_each.tpp
   ${CATLIB}/iterable/implementations/iterable_interface.tpp
+  ${CATLIB}/iterable/implementations/max.tpp
+  ${CATLIB}/iterable/implementations/min.tpp
+  ${CATLIB}/iterable/implementations/product.tpp
   ${CATLIB}/iterable/implementations/reverse.tpp
   ${CATLIB}/iterable/implementations/slice_view.tpp
   ${CATLIB}/iterable/implementations/sum.tpp
@@ -193,6 +197,18 @@ set(CAT_HEADER_FILES
   ${CATLIB}/list/cat/list
   ${CATLIB}/match/cat/match
   ${CATLIB}/math/cat/math
+  ${CATLIB}/math/implementations/abs.tpp
+  ${CATLIB}/math/implementations/clamp.tpp
+  ${CATLIB}/math/implementations/comparators.tpp
+  ${CATLIB}/math/implementations/div.tpp
+  ${CATLIB}/math/implementations/dot.tpp
+  ${CATLIB}/math/implementations/fma.tpp
+  ${CATLIB}/math/implementations/minmax.tpp
+  ${CATLIB}/math/implementations/pow.tpp
+  ${CATLIB}/math/implementations/product.tpp
+  ${CATLIB}/math/implementations/round_to_multiple.tpp
+  ${CATLIB}/math/implementations/sqrt.tpp
+  ${CATLIB}/math/implementations/sum.tpp
   ${CATLIB}/maybe/cat/maybe
   ${CATLIB}/maybe/implementations/narrow_cast.tpp
   ${CATLIB}/memory/cat/memory
@@ -206,6 +222,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/sanitizer/cat/sanitizer
   ${CATLIB}/scaredy/cat/scaredy
   ${CATLIB}/simd/cat/simd
+  ${CATLIB}/simd/cat/detail/simd_arithmetic_policies.hpp
   ${CATLIB}/simd/cat/detail/simd_overflow_reference.hpp
   ${CATLIB}/simd/cat/detail/simd_precision_policy.hpp
   ${CATLIB}/simd/cat/detail/simd_precision_reference.hpp
