@@ -1,9 +1,8 @@
 // -*- mode: c++ -*-
 #pragma once
 
-// Chunk iterator over scalar buffers as
-// `simd<Lane, fixed_size_abi<Lane, width>>`. Implemented with
-// `stepanov_iterator_interface`, parallel to
+// Chunk iterator over scalar buffers as `deduce_simd<Lane, width>`.
+// Implemented with `stepanov_iterator_interface`, parallel to
 // `cat::reverse_proxy_stepanov_iterator`.
 
 #include <cat/arithmetic>
@@ -18,7 +17,7 @@ concept vectorizable_element = is_trivially_copyable<T> && (sizeof(T) <= 32u);
 
 template <typename Lane, idx width>
 struct as_vectorized_chunk_reference {
-   using value_type = simd<Lane, fixed_size_abi<Lane, width>>;
+   using value_type = deduce_simd<Lane, width>;
    using raw_pointer = raw_arithmetic_type<Lane>*;
 
    raw_pointer p_data = nullptr;
@@ -41,13 +40,13 @@ struct as_vectorized_chunk_reference {
 template <typename Lane, idx width, bool is_const>
 class vectorized_stepanov_iterator
     : public proxy_stepanov_iterator_interface<
-         random_access_iterator_tag, simd<Lane, fixed_size_abi<Lane, width>>,
-         conditional<is_const, simd<Lane, fixed_size_abi<Lane, width>>,
+         random_access_iterator_tag, deduce_simd<Lane, width>,
+         conditional<is_const, deduce_simd<Lane, width>,
                      as_vectorized_chunk_reference<Lane, width>>> {
    using self_type = vectorized_stepanov_iterator<Lane, width, is_const>;
 
  public:
-   using value_type = simd<Lane, fixed_size_abi<Lane, width>>;
+   using value_type = deduce_simd<Lane, width>;
    using raw_pointer_element = raw_arithmetic_type<Lane>;
    using storage_pointer =
       conditional<is_const, raw_pointer_element const*, raw_pointer_element*>;

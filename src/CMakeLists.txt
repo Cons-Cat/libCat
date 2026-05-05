@@ -242,7 +242,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/linux/implementations/futex.tpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp
   ${CATLIB}/meta/implementations/common_reference.tpp
-  ${CATLIB}/simd/implementations/stream_in.tpp
   ${CATLIB}/string/implementations/string_length.tpp
   ${CATLIB}/bit/implementations/is_aligned.tpp
   ${CATLIB}/bit/implementations/align_up.tpp

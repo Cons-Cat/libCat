@@ -23,7 +23,7 @@ template <typename T>
 concept has_sat_accessor = requires(T value) { value.sat(); };
 
 using namespace cat::literals;
-using namespace cat::integers;
+using namespace cat::arithmetic;
 
 $test(arithmetic_detail_raw_implicit_storage) {
    constexpr int int_into_float_zero = 0;
@@ -253,12 +253,12 @@ $test(arithmetic_traits_is_same) {
    static_assert(cat::is_same<decltype(cat::make_signed(1_u4)), int4>);
    static_assert(cat::is_same<decltype(cat::make_unsigned(idx(1u))), idx>);
 
-   static_assert(cat::is_same<decltype(1_idx + 1_sz), iword>);
+   static_assert(cat::is_same<decltype(1_idx + 1_sz), idx>);
    static_assert(cat::is_same<decltype(1_sz + 1_idx), iword>);
    static_assert(cat::is_same<decltype(1_idx + 1_uz), uword>);
    static_assert(cat::is_same<decltype(1_uz + 1_idx), uword>);
    static_assert(cat::is_same<decltype(1_i4 + 1_idx), idx>);
-   static_assert(cat::is_same<decltype(1_idx + 1_i4), iword>);
+   static_assert(cat::is_same<decltype(1_idx + 1_i4), idx>);
 
    static_assert(cat::is_same<decltype(1._f8 + 2._f4), float8>);
    static_assert(cat::is_same<decltype(2_f4 + 3.f), float4>);
@@ -792,25 +792,35 @@ $test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
    u4 %= signed_const_two;
    cat::verify(u4 == 0_u4);
 
-   // Return types follow the new width rules:
-   //   * `uint4 + int` (same order 4): width promoted, LHS wins -> `uint4`.
-   //   * `uint4 * long` (order 4 vs 8): `*` widens to RHS -> `iword`.
-   //   * `uint4 - / % long`: keeps LHS storage -> `uint4`.
+   // Return types follow the constant-safe rules: positive signed operands for
+   // +, *, /, and % keep LHS storage, as does subtracting a negative signed
+   // operand.
    uint4 u4_six = 6_u4;
    cat::verify((u4_six + signed_two) == 8_u4);
    cat::verify((u4_six - signed_const_two) == 4_u4);
    cat::verify((u4_six * long_two) == 12_u4);
    cat::verify((u4_six / long_const_two) == 3_u4);
    cat::verify((u4_six % signed_const_two) == 0_u4);
+   cat::verify((u4_six - int4{-2}) == 8_u4);
    static_assert(cat::is_same<decltype(u4_six + signed_two), uint4>);
    static_assert(cat::is_same<decltype(u4_six - signed_const_two), uint4>);
-   static_assert(cat::is_same<decltype(u4_six * long_two), iword>);
+   static_assert(cat::is_same<decltype(u4_six * long_two), uint4>);
    static_assert(cat::is_same<decltype(u4_six / long_const_two), uint4>);
    static_assert(cat::is_same<decltype(u4_six % signed_const_two), uint4>);
+   static_assert(cat::is_same<decltype(u4_six - int4{-2}), uint4>);
+   static_assert(
+      cat::is_same<decltype(u4_six + cat::deconst(signed_two)), uint4>);
+   static_assert(
+      cat::is_same<decltype(u4_six * cat::deconst(long_two)), iword>);
+   static_assert(
+      cat::is_same<decltype(u4_six / cat::deconst(long_const_two)), uint4>);
+   static_assert(
+      cat::is_same<decltype(u4_six % cat::deconst(signed_const_two)), uint4>);
+   static_assert(
+      cat::is_same<decltype(u4_six - cat::deconst(int4{-2})), uint4>);
 
-   // `uint1` (narrowest width). The signed constant fits via the implicit
-   // `enable_if` constructor. + and * widen to RHS (`int`, order 4) -> `int4`.
-   // -, /, % keep the LHS's width -> `uint1`.
+   // `uint1` (narrowest width). Positive signed constants keep LHS storage
+   // rather than widening to RHS.
    uint1 u1 = 12_u1;
    u1 += signed_two;
    u1 -= signed_const_two;
@@ -822,11 +832,23 @@ $test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
    uint1 u1_six = 6_u1;
    cat::verify((u1_six + signed_two) == 8_u1);
    cat::verify((u1_six - signed_const_two) == 4_u1);
-   static_assert(cat::is_same<decltype(u1_six + signed_two), int4>);
+   cat::verify((u1_six - int4{-2}) == 8_u1);
+   static_assert(cat::is_same<decltype(u1_six + signed_two), uint1>);
    static_assert(cat::is_same<decltype(u1_six - signed_const_two), uint1>);
-   static_assert(cat::is_same<decltype(u1_six * signed_two), int4>);
+   static_assert(cat::is_same<decltype(u1_six * signed_two), uint1>);
    static_assert(cat::is_same<decltype(u1_six / signed_const_two), uint1>);
    static_assert(cat::is_same<decltype(u1_six % signed_const_two), uint1>);
+   static_assert(cat::is_same<decltype(u1_six - int4{-2}), uint1>);
+   static_assert(
+      cat::is_same<decltype(u1_six + cat::deconst(signed_two)), int4>);
+   static_assert(
+      cat::is_same<decltype(u1_six * cat::deconst(signed_two)), int4>);
+   static_assert(
+      cat::is_same<decltype(u1_six / cat::deconst(signed_const_two)), uint1>);
+   static_assert(
+      cat::is_same<decltype(u1_six % cat::deconst(signed_const_two)), uint1>);
+   static_assert(
+      cat::is_same<decltype(u1_six - cat::deconst(int4{-2})), uint1>);
 
    // `uint8` (widest width). Mixing with same-width `signed long` keeps the
    // `uint8` LHS storage. Smaller `signed int` similarly loses to `uint8`.
@@ -846,6 +868,16 @@ $test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(u8_six * long_two), uint8>);
    static_assert(cat::is_same<decltype(u8_six / long_const_two), uint8>);
    static_assert(cat::is_same<decltype(u8_six % signed_const_two), uint8>);
+   static_assert(
+      cat::is_same<decltype(u8_six + cat::deconst(long_two)), uint8>);
+   static_assert(
+      cat::is_same<decltype(u8_six * cat::deconst(long_two)), uint8>);
+   static_assert(
+      cat::is_same<decltype(u8_six / cat::deconst(long_const_two)), uint8>);
+   static_assert(
+      cat::is_same<decltype(u8_six % cat::deconst(signed_const_two)), uint8>);
+   static_assert(
+      cat::is_same<decltype(u8_six - cat::deconst(int4{-2})), uint8>);
 
    // Bitwise and shift with cross-signed-ness compile-time constants on
    // `uint4`.
@@ -1730,33 +1762,47 @@ $test(arithmetic_idx_all_operators_constexpr_const) {
    //   * unsigned operand: `promoted_type<basic_idx, U>`. `idx` (order 7) wins
    //     against `unsigned int` (order 4) but loses to `unsigned long`
    //     (order 8), which promotes to `uword`.
-   //   * signed operand: always `iword` (signed distance) since the result may
-   //     underflow `basic_idx`.
+   //   * non-negative signed constants keep `idx` because they cannot
+   //   underflow.
+   //     Runtime signed operands still yield `iword`.
    ix = 12_idx;
+   int runtime_signed_two = 2;
+   long runtime_long_two = 2;
+   constexpr int signed_negative = -2;
    auto sum_int_constexpr = ix + signed_two;
    auto sum_int_const = ix + signed_const_two;
+   auto sum_int_runtime = ix + runtime_signed_two;
    auto sum_uint_constexpr = ix + unsigned_two;
    auto sum_uint_const = ix + unsigned_const_two;
    auto sum_long_constexpr = ix + long_two;
    auto sum_long_const = ix + long_const_two;
+   auto sum_long_runtime = ix + runtime_long_two;
    auto sum_ulong_constexpr = ix + ulong_two;
    auto sum_ulong_const = ix + ulong_const_two;
+   auto sum_negative_constexpr = ix + signed_negative;
    cat::verify(sum_int_constexpr == 14_idx);
    cat::verify(sum_int_const == 14_idx);
+   cat::verify(sum_int_runtime == 14_idx);
    cat::verify(sum_uint_constexpr == 14_idx);
    cat::verify(sum_uint_const == 14_idx);
    cat::verify(sum_long_constexpr == 14_idx);
    cat::verify(sum_long_const == 14_idx);
+   cat::verify(sum_long_runtime == 14_idx);
    cat::verify(sum_ulong_constexpr == 14_idx);
    cat::verify(sum_ulong_const == 14_idx);
-   static_assert(cat::is_same<decltype(ix + signed_two), iword>);
-   static_assert(cat::is_same<decltype(ix + signed_const_two), iword>);
+   cat::verify(sum_negative_constexpr == 10_idx);
+   static_assert(cat::is_same<decltype(ix + signed_two), idx>);
+   static_assert(cat::is_same<decltype(ix + signed_const_two), idx>);
+   static_assert(cat::is_same<decltype(ix + runtime_signed_two), iword>);
+   static_assert(cat::is_same<decltype(ix + cat::deconst(signed_two)), iword>);
    static_assert(cat::is_same<decltype(ix + unsigned_two), idx>);
    static_assert(cat::is_same<decltype(ix + unsigned_const_two), idx>);
-   static_assert(cat::is_same<decltype(ix + long_two), iword>);
-   static_assert(cat::is_same<decltype(ix + long_const_two), iword>);
+   static_assert(cat::is_same<decltype(ix + long_two), idx>);
+   static_assert(cat::is_same<decltype(ix + long_const_two), idx>);
+   static_assert(cat::is_same<decltype(ix + runtime_long_two), iword>);
    static_assert(cat::is_same<decltype(ix + ulong_two), uword>);
    static_assert(cat::is_same<decltype(ix + ulong_const_two), uword>);
+   static_assert(cat::is_same<decltype(ix + signed_negative), iword>);
 
    // Binary - yields `iword` (the signed distance), regardless of operand
    // signed-ness, because `basic_idx` cannot represent a negative result.
@@ -1772,25 +1818,36 @@ $test(arithmetic_idx_all_operators_constexpr_const) {
 
    // Binary * and % always return `idx` (the `basic_idx::multiply` /
    // `modulo_by` overloads cast through wide integers and rebuild an `idx`).
-   // Binary / with an unsigned operand also stays in `idx`, while a signed
-   // operand yields `iword` since a negative divisor would underflow
-   // `basic_idx`.
+   // Binary *, /, and % with positive signed operands also stay in `idx`.
    auto product_signed_const = ix * signed_const_two;
+   auto product_signed_runtime = ix * runtime_signed_two;
+   auto quotient_signed_constexpr = ix / signed_two;
+   auto quotient_signed_const = ix / long_const_two;
+   auto quotient_signed_runtime = ix / runtime_signed_two;
    auto quotient_ulong_const = ix / ulong_const_two;
    auto remainder_signed_const = ix % signed_const_two;
+   auto remainder_signed_runtime = ix % runtime_signed_two;
    cat::verify(product_signed_const == 24_idx);
+   cat::verify(product_signed_runtime == 24_idx);
+   cat::verify(quotient_signed_constexpr == 6_idx);
+   cat::verify(quotient_signed_const == 6_idx);
+   cat::verify(quotient_signed_runtime == 6_sz);
    cat::verify(quotient_ulong_const == 6_idx);
    cat::verify(remainder_signed_const == 0_idx);
+   cat::verify(remainder_signed_runtime == 0_idx);
    static_assert(cat::is_same<decltype(ix * signed_const_two), idx>);
+   static_assert(cat::is_same<decltype(ix * runtime_signed_two), idx>);
+   static_assert(
+      cat::is_same<decltype(ix * cat::deconst(signed_const_two)), idx>);
+   static_assert(cat::is_same<decltype(ix / signed_two), idx>);
+   static_assert(cat::is_same<decltype(ix / long_const_two), idx>);
+   static_assert(cat::is_same<decltype(ix / runtime_signed_two), iword>);
+   static_assert(cat::is_same<decltype(ix / cat::deconst(signed_two)), iword>);
    static_assert(cat::is_same<decltype(ix / ulong_const_two), idx>);
    static_assert(cat::is_same<decltype(ix % signed_const_two), idx>);
-
-   auto signed_quotient_constexpr = ix / signed_two;
-   auto signed_quotient_const = ix / long_const_two;
-   cat::verify(signed_quotient_constexpr == 6_sz);
-   cat::verify(signed_quotient_const == 6_sz);
-   static_assert(cat::is_same<decltype(ix / signed_two), iword>);
-   static_assert(cat::is_same<decltype(ix / long_const_two), iword>);
+   static_assert(cat::is_same<decltype(ix % runtime_signed_two), idx>);
+   static_assert(
+      cat::is_same<decltype(ix % cat::deconst(signed_const_two)), idx>);
 }
 
 // The same conversions as
@@ -5203,11 +5260,19 @@ $test(arithmetic_semantics_idx_subtract_returns_signed_distance) {
    static_assert(cat::is_same<decltype(idx{} + idx{}), idx>);
    static_assert(cat::is_same<decltype(idx{} - idx{}), iword>);
 
-   // `idx + signed -> iword` (`signed_distance`). For `idx - signed` we launder
-   // the RHS through `cat::deconst` so it is no longer a constant expression.
-   // That hides it from the `constexpr` non-underflow overload's `enable_if`
-   // and exercises the genuine iword widening.
-   static_assert(cat::is_same<decltype(idx{} + int4{}), iword>);
+   // `idx` keeps its shape for known non-negative signed operands in +, *, /,
+   // and %, and for known negative signed operands in -. Launder through
+   // `cat::deconst` to hide constants from the `enable_if` overloads.
+   static_assert(cat::is_same<decltype(idx{} + int4{}), idx>);
+   static_assert(cat::is_same<decltype(idx{} * int4{}), idx>);
+   static_assert(cat::is_same<decltype(idx{1} / int4{1}), idx>);
+   static_assert(cat::is_same<decltype(idx{1} % int4{1}), idx>);
+   static_assert(cat::is_same<decltype(idx{} - int4{-1}), idx>);
+   static_assert(cat::is_same<decltype(idx{} + cat::deconst(int4{})), iword>);
+   static_assert(cat::is_same<decltype(idx{} * cat::deconst(int4{})), idx>);
+   static_assert(cat::is_same<decltype(idx{1} / cat::deconst(int4{1})), iword>);
+   static_assert(cat::is_same<decltype(idx{1} % cat::deconst(int4{1})), idx>);
+   static_assert(cat::is_same<decltype(idx{} - cat::deconst(int4{-1})), iword>);
    static_assert(cat::is_same<decltype(idx{} - cat::deconst(int4{})), iword>);
    static_assert(cat::is_same<decltype(idx{} - cat::deconst(1)), iword>);
    static_assert(cat::is_same<decltype(idx{} - cat::deconst(1u)), iword>);

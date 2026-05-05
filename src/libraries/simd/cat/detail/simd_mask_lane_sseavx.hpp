@@ -35,7 +35,7 @@ struct mask_lane {
       if constexpr (is_integral<lane_scalar>) {
          return slot != lane_scalar{};
       }
-      using bits_t = detail::simd_mask_lane_bits_t<lane_scalar>;
+      using bits_t = detail::simd_mask_lane_bits_type<lane_scalar>;
       return __builtin_bit_cast(bits_t, slot) != bits_t{};
    }
 
@@ -46,7 +46,7 @@ struct mask_lane {
          if constexpr (is_integral<lane_scalar>) {
             raw[lane] = ~lane_scalar{};
          } else {
-            using bits_t = detail::simd_mask_lane_bits_t<lane_scalar>;
+            using bits_t = detail::simd_mask_lane_bits_type<lane_scalar>;
             raw[lane] = __builtin_bit_cast(lane_scalar, ~bits_t{});
          }
       } else {

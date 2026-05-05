@@ -201,7 +201,7 @@ simd_integral_shr_forced(cat::simd<T, Abi> const& left,
    return cat::simd<T, Abi>(left.raw >> right.raw);
 }
 
-template <typename T, typename Abi, overflow_policies Semantics>
+template <typename T, typename Abi, overflow_policies semantics>
 class simd_overflow_reference {
    cat::simd<T, Abi>* m_wrapped;
 
@@ -214,7 +214,7 @@ class simd_overflow_reference {
    friend constexpr auto
    operator+(simd_overflow_reference lhs, cat::simd<T, Abi> const& rhs)
       -> cat::simd<T, Abi> {
-      return simd_integral_add_forced<T, Abi, Semantics>(*lhs.m_wrapped, rhs);
+      return simd_integral_add_forced<T, Abi, semantics>(*lhs.m_wrapped, rhs);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -228,21 +228,21 @@ class simd_overflow_reference {
    friend constexpr auto
    operator-(simd_overflow_reference lhs, cat::simd<T, Abi> const& rhs)
       -> cat::simd<T, Abi> {
-      return simd_integral_sub_forced<T, Abi, Semantics>(*lhs.m_wrapped, rhs);
+      return simd_integral_sub_forced<T, Abi, semantics>(*lhs.m_wrapped, rhs);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(cat::simd<T, Abi> const& lhs, simd_overflow_reference rhs)
       -> cat::simd<T, Abi> {
-      return simd_integral_sub_forced<T, Abi, Semantics>(lhs, *rhs.m_wrapped);
+      return simd_integral_sub_forced<T, Abi, semantics>(lhs, *rhs.m_wrapped);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*(simd_overflow_reference lhs, cat::simd<T, Abi> const& rhs)
       -> cat::simd<T, Abi> {
-      return simd_integral_mul_forced<T, Abi, Semantics>(*lhs.m_wrapped, rhs);
+      return simd_integral_mul_forced<T, Abi, semantics>(*lhs.m_wrapped, rhs);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -256,28 +256,28 @@ class simd_overflow_reference {
    friend constexpr auto
    operator<<(simd_overflow_reference lhs, cat::simd<T, Abi> const& rhs)
       -> cat::simd<T, Abi> {
-      return simd_integral_shl_forced<T, Abi, Semantics>(*lhs.m_wrapped, rhs);
+      return simd_integral_shl_forced<T, Abi, semantics>(*lhs.m_wrapped, rhs);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<(cat::simd<T, Abi> const& lhs, simd_overflow_reference rhs)
       -> cat::simd<T, Abi> {
-      return simd_integral_shl_forced<T, Abi, Semantics>(lhs, *rhs.m_wrapped);
+      return simd_integral_shl_forced<T, Abi, semantics>(lhs, *rhs.m_wrapped);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>(simd_overflow_reference lhs, cat::simd<T, Abi> const& rhs)
       -> cat::simd<T, Abi> {
-      return simd_integral_shr_forced<T, Abi, Semantics>(*lhs.m_wrapped, rhs);
+      return simd_integral_shr_forced<T, Abi, semantics>(*lhs.m_wrapped, rhs);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>(cat::simd<T, Abi> const& lhs, simd_overflow_reference rhs)
       -> cat::simd<T, Abi> {
-      return simd_integral_shr_forced<T, Abi, Semantics>(lhs, *rhs.m_wrapped);
+      return simd_integral_shr_forced<T, Abi, semantics>(lhs, *rhs.m_wrapped);
    }
 };
 

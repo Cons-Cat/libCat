@@ -76,7 +76,7 @@ enum class overflow_policies : unsigned char {
    undefined,
    wrap,
    saturate,
-   trap,
+   // trap,
 };
 
 enum class precision_policies : unsigned char {
@@ -101,8 +101,8 @@ class basic_intptr;
 template <overflow_policies overflow_policy>
 class basic_idx;
 
-inline namespace integers {
-// These macros are defined by the Clang compiler.
+inline namespace arithmetic {
+// These macros are predefined by Clang.
 using int1 = basic_int<__INT8_TYPE__, overflow_policies::undefined>;
 using uint1 = basic_int<__UINT8_TYPE__, overflow_policies::undefined>;
 using int2 = basic_int<__INT16_TYPE__, overflow_policies::undefined>;
@@ -147,7 +147,7 @@ using sat_int4 = basic_int<__INT32_TYPE__, overflow_policies::saturate>;
 using sat_uint4 = basic_int<__UINT32_TYPE__, overflow_policies::saturate>;
 using sat_int8 = basic_int<__INT64_TYPE__, overflow_policies::saturate>;
 using sat_uint8 = basic_int<__UINT64_TYPE__, overflow_policies::saturate>;
-}  // namespace integers
+}  // namespace arithmetic
 
 // Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
 // `raw` values.
@@ -1416,6 +1416,16 @@ basic_int :
       }
    }
 
+   template <is_signed_integral Signed>
+      requires(is_unsigned_integral<T>
+               && overflow_policy == overflow_policies::undefined)
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr basic_int
+   operator+(basic_int self, Signed other)
+      __attribute__((enable_if(other >= 0, ""))) {
+      return basic_int(self.raw + make_raw_arithmetic(other));
+   }
+
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -1501,6 +1511,16 @@ basic_int :
       }
    }
 
+   template <is_signed_integral Signed>
+      requires(is_unsigned_integral<T>
+               && overflow_policy == overflow_policies::undefined)
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr basic_int
+   operator-(basic_int self, Signed other)
+      __attribute__((enable_if(other < 0, ""))) {
+      return basic_int(self.raw - make_raw_arithmetic(other));
+   }
+
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -1550,6 +1570,16 @@ basic_int :
       }
    }
 
+   template <is_signed_integral Signed>
+      requires(is_unsigned_integral<T>
+               && overflow_policy == overflow_policies::undefined)
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr basic_int
+   operator*(basic_int self, Signed other)
+      __attribute__((enable_if(other >= 0, ""))) {
+      return basic_int(self.raw * make_raw_arithmetic(other));
+   }
+
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -1576,6 +1606,16 @@ basic_int :
       } else if constexpr (overflow_policy == saturate) {
          return result_type(sat_div(raw, raw_operand));
       }
+   }
+
+   template <is_signed_integral Signed>
+      requires(is_unsigned_integral<T>
+               && overflow_policy == overflow_policies::undefined)
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr basic_int
+   operator/(basic_int self, Signed other)
+      __attribute__((enable_if(other >= 0, ""))) {
+      return basic_int(self.raw / make_raw_arithmetic(other));
    }
 
    template <typename U>
@@ -1640,6 +1680,16 @@ basic_int :
       } else {
          return basic_int(raw % static_cast<T>(rhs_raw));
       }
+   }
+
+   template <is_signed_integral Signed>
+      requires(is_unsigned_integral<T>
+               && overflow_policy == overflow_policies::undefined)
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr basic_int
+   operator%(basic_int self, Signed other)
+      __attribute__((enable_if(other >= 0, ""))) {
+      return basic_int(self.raw % make_raw_arithmetic(other));
    }
 
    template <typename U>
@@ -2543,15 +2593,24 @@ basic_idx :
                     + static_cast<raw_result>(make_raw_arithmetic(other)));
    }
 
-   // Adding a signed value has the potential of underflowing, so the
+   // Adding a runtime signed value has the potential of underflowing, so the
    // `basic_idx` should cast to `iword`.
-   template <is_signed_integral T>
+   template <is_signed_integral Signed>
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   add(T other) const -> basic_int<make_signed_type<__SIZE_TYPE__>, policy> {
+   constexpr basic_int<make_signed_type<__SIZE_TYPE__>, policy>
+   add(Signed other) const {
       // Return an `iword`.
       return basic_int<make_signed_type<__SIZE_TYPE__>, policy>(
          raw + make_raw_arithmetic(other));
+   }
+
+   template <is_signed_integral Signed>
+      requires(policy == overflow_policies::undefined)
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr basic_idx
+   operator+(basic_idx self, Signed other)
+      __attribute__((enable_if(other >= 0, ""))) {
+      return basic_idx(self.raw + make_raw_arithmetic(other));
    }
 
    // Generate `operator+` for pointer arithmetic.
@@ -2609,7 +2668,18 @@ basic_idx :
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_idx
    operator-(basic_idx self, T other)
-      __attribute__((enable_if(self.raw >= other, ""))) {
+      __attribute__((enable_if(policy == overflow_policies::undefined
+                                  && other >= 0 && self.raw >= other,
+                               ""))) {
+      return basic_idx(self.raw - make_raw_arithmetic(other));
+   }
+
+   template <is_signed_integral Signed>
+      requires(policy == overflow_policies::undefined)
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr basic_idx
+   operator-(basic_idx self, Signed other)
+      __attribute__((enable_if(other < 0, ""))) {
       return basic_idx(self.raw - make_raw_arithmetic(other));
    }
 
@@ -2660,6 +2730,15 @@ basic_idx :
          * static_cast<signed long long>(make_raw_arithmetic(other)));
    }
 
+   template <is_signed_integral Signed>
+      requires(policy == overflow_policies::undefined)
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr basic_idx
+   operator*(basic_idx self, Signed other)
+      __attribute__((enable_if(other >= 0, ""))) {
+      return basic_idx(self.raw * make_raw_arithmetic(other));
+   }
+
    // Generate `operator*` for pointer arithmetic.
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
@@ -2690,6 +2769,15 @@ basic_idx :
       return signed_distance(
          static_cast<signed long long>(raw)
          / static_cast<signed long long>(make_raw_arithmetic(other)));
+   }
+
+   template <is_signed_integral Signed>
+      requires(policy == overflow_policies::undefined)
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr basic_idx
+   operator/(basic_idx self, Signed other)
+      __attribute__((enable_if(other >= 0, ""))) {
+      return basic_idx(self.raw / make_raw_arithmetic(other));
    }
 
    // `divide_into(unsigned)`. The quotient fits the usual unsigned story.
@@ -2724,11 +2812,22 @@ basic_idx :
    }
 
    // Generate `operator%`.
-   template <is_integral T>
+   template <is_unsigned_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    modulo_by(T other) const -> basic_idx {
       return basic_idx(raw % make_raw_arithmetic(other));
+   }
+
+   template <is_signed_integral T>
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   modulo_by(T other) const -> basic_idx {
+      auto const rhs_raw = make_raw_arithmetic(other);
+      auto const rhs_unsigned = static_cast<raw_type>(rhs_raw);
+      auto const rhs_abs =
+         (rhs_raw < 0) ? static_cast<raw_type>(-rhs_unsigned) : rhs_unsigned;
+      return basic_idx(raw % rhs_abs);
    }
 
    template <is_integral T>
@@ -3009,7 +3108,7 @@ wrap_shr(basic_idx<policy> value, U bits) -> basic_idx<policy> {
       ((value.raw >> norm) | (value.raw << (ring_bits - norm))) & ring_mask);
 }
 
-inline namespace integers {
+inline namespace arithmetic {
 template <uword bytes>
    requires(bytes <= 8u &&
             // Is a power of 2:
@@ -3097,7 +3196,7 @@ inline constexpr int8 int8_min = limits<int8>::min();
 inline constexpr int8 int8_max = limits<int8>::max();
 inline constexpr uint8 uint8_min = limits<uint8>::min();
 inline constexpr uint8 uint8_max = limits<uint8>::max();
-}  // namespace integers
+}  // namespace arithmetic
 
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto

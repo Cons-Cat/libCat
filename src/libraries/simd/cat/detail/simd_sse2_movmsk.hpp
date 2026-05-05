@@ -16,13 +16,15 @@ template <typename T, typename Abi>
    } else if constexpr (cat::is_same<T, double>) {
       return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskpd(mask.raw));
    } else if constexpr (sizeof(T) == 4 && Abi::lanes == 4) {
+      using float_abi = Abi::template make_abi_type<float>;
       return static_cast<__UINT32_TYPE__>(
          __builtin_ia32_movmskps(__builtin_bit_cast(
-            typename cat::simd<float, Abi>::raw_type, mask.raw)));
+            typename cat::simd<float, float_abi>::raw_type, mask.raw)));
    } else if constexpr (sizeof(T) == 8 && Abi::lanes == 2) {
+      using double_abi = Abi::template make_abi_type<double>;
       return static_cast<__UINT32_TYPE__>(
          __builtin_ia32_movmskpd(__builtin_bit_cast(
-            typename cat::simd<double, Abi>::raw_type, mask.raw)));
+            typename cat::simd<double, double_abi>::raw_type, mask.raw)));
    } else if constexpr (sizeof(T) == 1 && Abi::lanes == 16) {
       return static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb(mask.raw))
              & static_cast<__UINT32_TYPE__>(0xFFFF);

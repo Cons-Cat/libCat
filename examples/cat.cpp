@@ -4,7 +4,7 @@
 #include <cat/page_allocator>
 
 using namespace cat::literals;
-using namespace cat::integers;
+using namespace cat::arithmetic;
 
 constexpr idx block_size = 4_uki;
 

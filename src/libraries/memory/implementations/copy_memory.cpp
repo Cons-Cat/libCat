@@ -117,7 +117,7 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
       // TODO: This could be improved by using aligned-streaming when
       // possible.
       while (bytes_remaining >= step_size) {
-#pragma unroll 8
+#pragma unroll
          for (idx i = 0u; i < 8u; ++i) {
             unsigned char const* const p_byte =
                p_source_handle.get() + (i * sizeof(simd_vector));
@@ -127,10 +127,12 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
          }
          prefetch_for_one_read(p_source_handle.get() + (step_size * 2u));
          p_source_handle += step_size;
-#pragma unroll 8
+#pragma unroll
          for (idx i = 0u; i < 8u; ++i) {
-            stream_in(p_destination_handle.get() + (i * sizeof(simd_vector)),
-                      &vectors[i]);
+            // Store non-temporally because we aren't going to read or write this again.
+            vectors[i].store_non_temporal(
+               reinterpret_cast<simd_vector::memory_lane*>(
+                  p_destination_handle.get() + (i * sizeof(simd_vector))));
          }
          p_destination_handle += step_size;
          bytes_remaining -= step_size;

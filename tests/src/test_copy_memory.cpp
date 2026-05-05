@@ -16,7 +16,7 @@ static_assert(cat::is_same<decltype(cat::uintptr{static_cast<void*>(nullptr)}),
 
 $test(copy_memory) {
    using namespace cat::literals;
-   using namespace cat::integers;
+   using namespace cat::arithmetic;
 
    // Disjoint small block (scalar tail path for these sizes).
    {

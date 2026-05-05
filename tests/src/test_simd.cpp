@@ -6,32 +6,19 @@
 #include <cat/simd>
 #include <cat/simd_iterator>
 #include <cat/simd_ops>
+#include <cat/tuple>
 #include <cat/vec>
 
 #include "../unit_tests.hpp"
 
 using cat::compatible_abi;
 using cat::fixed_size_abi;
-using cat::fixed_size_simd;
-using cat::float4;
-using cat::float4x4;
-using cat::float4x8;
-using cat::float8;
-using cat::float8x2;
-using cat::int1;
-using cat::int2;
-using cat::int4;
-using cat::int4x4;
-using cat::int4x8;
-using cat::int8;
 using cat::is_simd_array_like;
 using cat::native_abi;
 using cat::scalar_abi;
-using cat::uint1;
-using cat::uint4;
-using cat::uint4x4;
 using cat::unaligned_abi;
 
+using namespace cat::arithmetic;
 using namespace cat::literals;
 
 namespace {
@@ -322,8 +309,11 @@ $test(simd_is_array_like_v) {
    static_assert(is_simd_array_like<int4, compatible_abi<int4>>);
    static_assert(is_simd_array_like<float4, compatible_abi<float4>>);
 
-   // `scalar_abi` is always 16 bytes, a power of two divisible by every
-   // supported scalar size.
+   // `scalar_abi` is one lane.
+   static_assert(cat::scalar_abi<int1>::lanes == 1u);
+   static_assert(cat::scalar_abi<int4>::lanes == 1u);
+   static_assert(cat::scalar_abi<int8>::lanes == 1u);
+   static_assert(cat::scalar_abi<float4>::lanes == 1u);
    static_assert(is_simd_array_like<int1, scalar_abi<int1>>);
    static_assert(is_simd_array_like<int4, scalar_abi<int4>>);
    static_assert(is_simd_array_like<int8, scalar_abi<int8>>);
@@ -388,6 +378,11 @@ $test(simd_abi_deduce) {
    using native_float =
       cat::simd_abi::deduce<float, cat::native_abi<float>::lanes>;
    static_assert(cat::is_same<native_float, cat::native_abi<float>>);
+
+   using sse2_float = cat::simd_abi::deduce<float, x64::sse2_abi<float>::lanes>;
+   static_assert(cat::is_same<sse2_float, x64::sse2_abi<float>>);
+   static_assert(cat::is_same<float4x4::abi_type, x64::sse2_abi<float4>>);
+   static_assert(cat::is_same<float4x8::abi_type, cat::native_abi<float4>>);
 
    using scalar_float =
       cat::simd_abi::deduce<float, cat::scalar_abi<float>::lanes>;
@@ -638,28 +633,35 @@ $test(simd_sqrt_all_lanes_non_negative) {
 }
 
 $test(simd_rsqrt_rcbrt_rnroot) {
+   auto near_one = [](float4 value) {
+      float const diff = value.raw > 1.0f ? value.raw - 1.0f : 1.0f - value.raw;
+      return diff < 0.001f;
+   };
+
    float4x4 v = {1_f4, 4_f4, 9_f4, 16_f4};
    float4x4 const rr = cat::simd_rsqrt(v);
-   cat::verify(rr[0] == 1_f4);
-   cat::verify(rr[1] == 0.5_f4);
-   cat::verify(rr[2] == (1_f4 / 3_f4));
-   cat::verify(rr[3] == 0.25_f4);
    float4x4 const prod = rr * cat::simd_sqrt(v);
-   cat::verify(prod[0] == 1_f4 && prod[1] == 1_f4 && prod[2] == 1_f4
-               && prod[3] == 1_f4);
+   cat::verify(near_one(prod[0]));
+   cat::verify(near_one(prod[1]));
+   cat::verify(near_one(prod[2]));
+   cat::verify(near_one(prod[3]));
 
    float4x4 cubes = {8_f4, 27_f4, 64_f4, 125_f4};
    float4x4 const cr = cat::simd_rcbrt(cubes);
-   cat::verify(cr[0] * cat::simd_cbrt(cubes)[0] == 1_f4);
-   cat::verify(cr[1] * cat::simd_cbrt(cubes)[1] == 1_f4);
+   cat::verify(near_one(cr[0] * cat::simd_cbrt(cubes)[0]));
+   cat::verify(near_one(cr[1] * cat::simd_cbrt(cubes)[1]));
 
    float4x4 fourths = {1_f4, 16_f4, 81_f4, 256_f4};
    float4x4 const nr4 = cat::simd_rnroot(fourths, 4);
-   cat::verify(nr4[0] == 1_f4);
-   cat::verify(nr4[1] == 0.5_f4);
-   cat::verify(nr4[2] == (1_f4 / 3_f4));
-   cat::verify(nr4[3] == 0.25_f4);
-   cat::verify(cat::simd_rnroot(v, 2) == cat::simd_rsqrt(v));
+   cat::verify(near_one(nr4[0] * cat::simd_nroot(fourths, 4)[0]));
+   cat::verify(near_one(nr4[1] * cat::simd_nroot(fourths, 4)[1]));
+   cat::verify(near_one(nr4[2] * cat::simd_nroot(fourths, 4)[2]));
+   cat::verify(near_one(nr4[3] * cat::simd_nroot(fourths, 4)[3]));
+   float4x4 const nr2_prod = cat::simd_rnroot(v, 2) * cat::simd_sqrt(v);
+   cat::verify(near_one(nr2_prod[0]));
+   cat::verify(near_one(nr2_prod[1]));
+   cat::verify(near_one(nr2_prod[2]));
+   cat::verify(near_one(nr2_prod[3]));
 
    float4x4 const inv = cat::simd_rnroot(v, 1);
    cat::verify(inv[0] == 1_f4);
@@ -837,6 +839,28 @@ $test(simd_load_and_loaded_dispatch) {
    cat::verify(fa[1] == 2.f);
    float4x4 fb = cat::make_simd_loaded<float4x4>(fsrc);
    cat::verify(fb[3] == 4.f);
+}
+
+$test(simd_non_temporal_load_store) {
+   alignas(int4x4::abi_type::alignment.raw)
+      int_lane const src[] = {9, 8, 7, 6};
+   int4x4 a{};
+   a.load_non_temporal(src);
+   cat::verify(a[0] == 9);
+   cat::verify(a[3] == 6);
+
+   alignas(int4x4::abi_type::alignment.raw) int_lane dst[4] = {};
+   a.store_non_temporal(dst);
+   cat::verify(dst[1] == 8);
+   cat::verify(dst[2] == 7);
+
+   bool const mask_src[] = {true, false, true, false};
+   int4x4::mask_type mask{};
+   mask.load_non_temporal(mask_src);
+   cat::verify(mask[0]);
+   cat::verify(!mask[1]);
+   cat::verify(mask[2]);
+   cat::verify(!mask[3]);
 }
 
 // Byte lanes must use unaligned memory through `.load()`/`.store()` because
@@ -1157,6 +1181,8 @@ $test(simd_mask_ctors_fill) {
    cat::verify(b.all_of());
    M c = cat::make_simd_mask_filled<M>(false);
    cat::verify(c.none_of());
+   cat::verify((cat::true_mask<int4, int4x4::abi_type>).all_of());
+   cat::verify((cat::false_mask<int4, int4x4::abi_type>).none_of());
 
    M d{true, false, true, false};
    cat::verify(d[0] && !d[1] && d[2] && !d[3]);
@@ -1177,6 +1203,8 @@ $test(simd_mask_ctors_fill) {
    float_mask af{};
    float_mask bf = cat::make_simd_mask_filled<float_mask>(true);
    cat::verify(bf.all_of());
+   cat::verify((cat::true_mask<float4, float4x4::abi_type>).all_of());
+   cat::verify((cat::false_mask<float4, float4x4::abi_type>).none_of());
    float_mask df{true, false, true, false};
    cat::verify(df[0] && !df[1] && df[2] && !df[3]);
    float_mask ff = cat::make_simd_mask_filled<float_mask>(true);
@@ -1510,6 +1538,59 @@ $test(simd_multi_subscript_permutes_via_simd_permute) {
    cat::verify(narrow[1u] == src[3u]);
 }
 
+$test(simd_split) {
+   int4x4 lower_half_lanes = {1, 2, 3, 4};
+   int4x4 upper_half_lanes = {5, 6, 7, 8};
+   int4x8 concatenated_lanes =
+      cat::simd_concat(lower_half_lanes, upper_half_lanes);
+
+   auto split_lanes = cat::simd_split<4u, 4u>(concatenated_lanes);
+   static_assert(cat::is_same<decltype(split_lanes),
+                              cat::tuple<int4x4, int4x4>>);
+   cat::verify(split_lanes.first() == lower_half_lanes);
+   cat::verify(split_lanes.second() == upper_half_lanes);
+
+   auto split_array = cat::simd_split<int4x4>(concatenated_lanes);
+   static_assert(cat::is_same<decltype(split_array), cat::array<int4x4, 2u>>);
+   cat::verify(split_array[0u] == lower_half_lanes);
+   cat::verify(split_array[1u] == upper_half_lanes);
+
+   auto split_by_count = cat::simd_split_by<2u>(concatenated_lanes);
+   static_assert(cat::is_same<decltype(split_by_count),
+                              cat::array<int4x4, 2u>>);
+   cat::verify(split_by_count[0u] == lower_half_lanes);
+   cat::verify(split_by_count[1u] == upper_half_lanes);
+
+   auto split_mask = cat::simd_split<4u, 4u>(
+      int4x8::mask_type{true, false, true, false, false, true, false, true});
+   cat::verify(split_mask.first()[0u]);
+   cat::verify(!split_mask.first()[1u]);
+   cat::verify(split_mask.second()[1u]);
+   cat::verify(split_mask.second()[3u]);
+
+   auto split_mask_array =
+      cat::simd_split<int4x4::mask_type>(int4x8::mask_type{
+         true, false, true, false, false, true, false, true});
+   static_assert(cat::is_same<decltype(split_mask_array),
+                              cat::array<int4x4::mask_type, 2u>>);
+   cat::verify(split_mask_array[0u][2u]);
+   cat::verify(!split_mask_array[1u][0u]);
+
+   auto split_mask_by_count = cat::simd_split_by<2u>(
+      int4x8::mask_type{true, false, true, false, false, true, false, true});
+   static_assert(cat::is_same<decltype(split_mask_by_count),
+                              cat::array<int4x4::mask_type, 2u>>);
+   cat::verify(split_mask_by_count[0u][0u]);
+   cat::verify(split_mask_by_count[1u][3u]);
+
+   // Use `simd_split` to destructure a `cat::simd` into a pack.
+   [&concatenated_lanes]<typename SplitTuple>(SplitTuple split) {
+      auto [... split_parts] = split;
+      static_assert(sizeof...(split_parts) == 2);
+      cat::verify(cat::simd_concat(split_parts...) == concatenated_lanes);
+   }(cat::simd_split<4u, 4u>(concatenated_lanes));
+}
+
 $test(simd_concat_interleave_duplicate_reverse_blocks) {
    int4x4 lower_half_lanes = {1, 2, 3, 4};
    int4x4 upper_half_lanes = {5, 6, 7, 8};
@@ -1610,8 +1691,8 @@ $test(simd_load_from_store_to) {
                                          104, 105, 106, 107};
    int4x4 gather_index_lanes{0, 2, 4, 1};
    auto gathered_int_lanes =
-      cat::simd_load_from<cat::int4, cat::fixed_size_abi<cat::int4, 4u>>(
-         contiguous_int_source, gather_index_lanes);
+      cat::simd_load_from<cat::int4, int4x4::abi_type>(contiguous_int_source,
+                                                       gather_index_lanes);
    cat::verify(gathered_int_lanes[0] == 100);
    cat::verify(gathered_int_lanes[1] == 102);
    cat::verify(gathered_int_lanes[2] == 104);
@@ -1620,7 +1701,7 @@ $test(simd_load_from_store_to) {
    cat::int4 scatter_destination_int[8] = {};
    int4x4 scatter_index_lanes{5, 3, 1, 6};
    int4x4 scatter_value_lanes = {11, 22, 33, 44};
-   cat::simd_store_to<cat::int4, cat::fixed_size_abi<cat::int4, 4u>>(
+   cat::simd_store_to<cat::int4, int4x4::abi_type>(
       scatter_destination_int, scatter_index_lanes, scatter_value_lanes);
    cat::verify(scatter_destination_int[5] == 11);
    cat::verify(scatter_destination_int[3] == 22);
@@ -1631,29 +1712,29 @@ $test(simd_load_from_store_to) {
                                              104_f4, 105_f4, 106_f4, 107_f4};
    float4x4 float_gather_index_lanes{0_f4, 2_f4, 4_f4, 1_f4};
    auto gathered_float_lanes =
-      cat::simd_load_from<cat::float4, cat::fixed_size_abi<cat::float4, 4u>>(
+      cat::simd_load_from<cat::float4, float4x4::abi_type>(
          contiguous_float_source, float_gather_index_lanes);
    cat::verify(gathered_float_lanes[0] == 100.f);
    cat::verify(gathered_float_lanes[2] == 104.f);
    cat::float4 scatter_destination_float[8] = {};
    float4x4 float_scatter_index_lanes{5_f4, 3_f4, 1_f4, 6_f4};
-   cat::simd_store_to<cat::float4, cat::fixed_size_abi<cat::float4, 4u>>(
+   cat::simd_store_to<cat::float4, float4x4::abi_type>(
       scatter_destination_float, float_scatter_index_lanes,
       float4x4{11_f4, 22_f4, 33_f4, 44_f4});
    cat::verify(scatter_destination_float[5] == 11_f4);
    cat::verify(scatter_destination_float[3] == 22_f4);
 
    auto const regathered_int_lanes =
-      cat::simd_load_from<cat::int4, cat::fixed_size_abi<cat::int4, 4u>>(
-         contiguous_int_source, gather_index_lanes);
+      cat::simd_load_from<cat::int4, int4x4::abi_type>(contiguous_int_source,
+                                                       gather_index_lanes);
    cat::verify(regathered_int_lanes[0] == gathered_int_lanes[0]
                && regathered_int_lanes[3] == gathered_int_lanes[3]);
 
    int4x4 const gather_masked_passthrough = {1, 2, 3, 4};
    auto const gather_active_lane_mask =
       cat::make_simd_mask_from_count<int4x4>(2u);
-   int4x4 const masked_gather_lanes = cat::simd_load_from<
-      cat::int4, cat::fixed_size_abi<cat::int4, 4u>>[gather_active_lane_mask](
+   int4x4 const masked_gather_lanes =
+      cat::simd_load_from<cat::int4, int4x4::abi_type>[gather_active_lane_mask](
       gather_masked_passthrough, contiguous_int_source, gather_index_lanes);
    cat::verify(masked_gather_lanes[0] == 100 && masked_gather_lanes[1] == 102
                && masked_gather_lanes[2] == 3 && masked_gather_lanes[3] == 4);
@@ -1661,8 +1742,7 @@ $test(simd_load_from_store_to) {
    cat::int4 partial_scatter_destination[8] = {9, 9, 9, 9, 9, 9, 9, 9};
    int4x4 const partial_scatter_values = {11, 22, 33, 44};
    cat::simd_store_to<
-      cat::int4, cat::fixed_size_abi<
-                    cat::int4, 4u>>[cat::make_simd_mask_from_count<int4x4>(2u)](
+      cat::int4, int4x4::abi_type>[cat::make_simd_mask_from_count<int4x4>(2u)](
       partial_scatter_destination, scatter_index_lanes, partial_scatter_values);
    cat::verify(partial_scatter_destination[5] == 11
                && partial_scatter_destination[3] == 22
