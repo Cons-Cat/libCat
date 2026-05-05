@@ -848,19 +848,14 @@ $test(simd_non_temporal_load_store) {
    a.load_non_temporal(src);
    cat::verify(a[0] == 9);
    cat::verify(a[3] == 6);
+   int4x4 const b = cat::make_simd_loaded_non_temporal<int4x4>(src);
+   cat::verify(b[1] == 8);
+   cat::verify(b[2] == 7);
 
    alignas(int4x4::abi_type::alignment.raw) int_lane dst[4] = {};
    a.store_non_temporal(dst);
    cat::verify(dst[1] == 8);
    cat::verify(dst[2] == 7);
-
-   bool const mask_src[] = {true, false, true, false};
-   int4x4::mask_type mask{};
-   mask.load_non_temporal(mask_src);
-   cat::verify(mask[0]);
-   cat::verify(!mask[1]);
-   cat::verify(mask[2]);
-   cat::verify(!mask[3]);
 }
 
 // Byte lanes must use unaligned memory through `.load()`/`.store()` because

@@ -756,6 +756,18 @@ struct make_simd_loaded_impl
    }
 };
 
+// Builds a vector by loading from memory with non-temporal cache semantics.
+template <is_simd Simd>
+struct make_simd_loaded_non_temporal_impl {
+   [[nodiscard]]
+   constexpr auto
+   operator()(Simd::memory_lane const* p_source) const -> Simd {
+      Simd result{};
+      result.load_non_temporal(p_source);
+      return result;
+   }
+};
+
 // Partial contiguous load from memory into lanes (gather-style transfer).
 template <is_simd Simd>
 struct make_simd_partial_loaded_impl {
@@ -3013,6 +3025,10 @@ inline constexpr detail::make_simd_loaded_unaligned_impl<Simd>
 
 template <is_simd Simd>
 inline constexpr detail::make_simd_loaded_impl<Simd> make_simd_loaded{};
+
+template <is_simd Simd>
+inline constexpr detail::make_simd_loaded_non_temporal_impl<Simd>
+   make_simd_loaded_non_temporal{};
 
 // Partial gather-style load from a contiguous prefix of `source`.
 template <is_simd Simd>

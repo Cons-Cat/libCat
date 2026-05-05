@@ -1933,20 +1933,6 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
       return *this;
    }
 
-   constexpr auto
-   load_non_temporal(bool const* p_lane_bools) -> mask_type& {
-      this->raw = raw_type{};
-      for (idx i = 0u; i < abi_type::lanes; ++i) {
-         if consteval {
-            this->set_lane(i, p_lane_bools[i.raw]);
-         } else {
-            this->set_lane(
-               i, __builtin_nontemporal_load(p_lane_bools + i.raw));
-         }
-      }
-      return *this;
-   }
-
    [[nodiscard]]
    static constexpr auto
    size() -> idx {
