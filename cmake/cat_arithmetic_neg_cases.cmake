@@ -37,10 +37,10 @@ void t() { (void)cat::int1{ 200_i4 }; }
 # `enable_if(detail::raw_source_fits_implicit_storage<...>(other))` converting
 # constructors (undefined policy), aligned with
 # `arithmetic_detail_raw_implicit_storage`/`raw_source_fits` coverage: 300 for
-# `uint1`, 300u for `int1`, 16'777'217 for `float4`, -1ll for `uint8`, -1 / -1ll
-# for `idx` and `uintptr` (no `cat::deconst`, and we *want* these to stay
-# constant expressions so the `enable_if`/`consteval` resolution matches the
-# table).
+# `uint1`, 300u for `int1`, inexact integer values for `float4`/`float8`,
+# -1ll for `uint8`, -1 / -1ll for `idx` and `uintptr` (no `cat::deconst`, and
+# we *want* these to stay constant expressions so the `enable_if`/`consteval`
+# resolution matches the table).
 # (No `intptr` = -1: `raw_source_fits` is true for that pairing in
 # `arithmetic_detail_raw_implicit_storage`. The implicit constructor is
 # *sound*).
@@ -52,6 +52,21 @@ void t() { cat::int1 a = 300u; }
 ]])
 _cat_neg_expect_illformed("enable-if-float4-implicit-int-inexact" [[#include <cat/arithmetic>
 void t() { cat::float4 f = 16'777'217; }
+]])
+_cat_neg_expect_illformed("enable-if-float4-brace-int-inexact" [[#include <cat/arithmetic>
+void t() { (void)cat::float4{16'777'217}; }
+]])
+_cat_neg_expect_illformed("enable-if-float4-brace-int-negative-inexact" [[#include <cat/arithmetic>
+void t() { (void)cat::float4{-16'777'217}; }
+]])
+_cat_neg_expect_illformed("enable-if-float8-implicit-ll-inexact" [[#include <cat/arithmetic>
+void t() { cat::float8 f = 9'007'199'254'740'993LL; }
+]])
+_cat_neg_expect_illformed("enable-if-float8-brace-ll-inexact" [[#include <cat/arithmetic>
+void t() { (void)cat::float8{9'007'199'254'740'993LL}; }
+]])
+_cat_neg_expect_illformed("enable-if-float8-brace-ll-negative-inexact" [[#include <cat/arithmetic>
+void t() { (void)cat::float8{-9'007'199'254'740'993LL}; }
 ]])
 _cat_neg_expect_illformed("enable-if-uint8-implicit-ll-neg1" [[#include <cat/arithmetic>
 void t() { cat::uint8 u = -1ll; }
@@ -121,6 +136,15 @@ void t() { cat::int4 x; x = cat::idx(cat::deconst(0u)); }
 ]])
 _cat_neg_expect_illformed("cvt-idx-to-float4" [[#include <cat/arithmetic>
 void t() { cat::float4 f; f = cat::idx(cat::deconst(0u)); }
+]])
+_cat_neg_expect_illformed("icvt-float4-to-float8" [[#include <cat/arithmetic>
+void t() { cat::float4 f(1.0f); cat::float8 d = f; }
+]])
+_cat_neg_expect_illformed("icvt-float4-fast-to-float8" [[#include <cat/arithmetic>
+void t() { cat::float4_fast f(1.0f); cat::float8 d = f; }
+]])
+_cat_neg_expect_illformed("icvt-float4-to-float8-fast" [[#include <cat/arithmetic>
+void t() { cat::float4 f(1.0f); cat::float8_fast d = f; }
 ]])
 # (No `x = cat::idx(0u)` to `int4` probe: resolution can match a conversion the
 # positive suite flags as `!is_convertible` in the trait only; a plain

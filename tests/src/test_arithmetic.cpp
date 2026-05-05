@@ -30,6 +30,15 @@ $test(arithmetic_detail_raw_implicit_storage) {
    constexpr int int_into_float_small = 42;
    constexpr int int_into_float_last_exact = 16'777'216;
    constexpr int int_into_float_first_inexact = 16'777'217;
+   constexpr int negative_int_into_float_last_exact = -16'777'216;
+   constexpr int negative_int_into_float_first_inexact = -16'777'217;
+   constexpr long long int_into_double_last_exact = 9'007'199'254'740'992LL;
+   constexpr long long int_into_double_first_inexact =
+      9'007'199'254'740'993LL;
+   constexpr long long negative_int_into_double_last_exact =
+      -9'007'199'254'740'992LL;
+   constexpr long long negative_int_into_double_first_inexact =
+      -9'007'199'254'740'993LL;
    static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
       int_into_float_zero));
    static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
@@ -38,6 +47,18 @@ $test(arithmetic_detail_raw_implicit_storage) {
       int_into_float_last_exact));
    static_assert(!cat::detail::raw_source_fits_implicit_storage<float>(
       int_into_float_first_inexact));
+   static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
+      negative_int_into_float_last_exact));
+   static_assert(!cat::detail::raw_source_fits_implicit_storage<float>(
+      negative_int_into_float_first_inexact));
+   static_assert(cat::detail::raw_source_fits_implicit_storage<double>(
+      int_into_double_last_exact));
+   static_assert(!cat::detail::raw_source_fits_implicit_storage<double>(
+      int_into_double_first_inexact));
+   static_assert(cat::detail::raw_source_fits_implicit_storage<double>(
+      negative_int_into_double_last_exact));
+   static_assert(!cat::detail::raw_source_fits_implicit_storage<double>(
+      negative_int_into_double_first_inexact));
    static_assert(
       cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(200));
    static_assert(
@@ -119,8 +140,25 @@ $test(arithmetic_traits_basic_int_and_basic_float) {
    static_assert(
       cat::is_same<int4, cat::basic_int<__INT32_TYPE__,
                                         cat::overflow_policies::undefined>>);
+   static_assert(cat::is_same<decltype(cat::basic_int{1}),
+                              cat::basic_int<int,
+                                             cat::overflow_policies::undefined>>);
+   static_assert(
+      cat::is_same<decltype(cat::basic_int{1u}),
+                   cat::basic_int<unsigned int,
+                                  cat::overflow_policies::undefined>>);
+   static_assert(cat::is_same<decltype(cat::basic_int{cat::wrap_int4{1}}),
+                              cat::wrap_int4>);
+   static_assert(cat::is_same<decltype(cat::basic_int{cat::sat_uint2{1u}}),
+                              cat::sat_uint2>);
    static_assert(cat::is_same<float4, cat::basic_float<float>>);
    static_assert(cat::is_same<float8, cat::basic_float<double>>);
+   static_assert(cat::is_same<decltype(cat::basic_float{1.f}), float4>);
+   static_assert(cat::is_same<decltype(cat::basic_float{1.}), float8>);
+   static_assert(cat::is_same<decltype(cat::basic_float{float4_fast{1.f}}),
+                              float4_fast>);
+   static_assert(cat::is_same<decltype(cat::basic_float{float8_fast{1.}}),
+                              float8_fast>);
    static_assert(
       cat::is_same<float4_fast,
                    cat::basic_float<float, cat::precision_policies::fast>>);
@@ -135,6 +173,27 @@ $test(arithmetic_traits_basic_int_and_basic_float) {
                    cat::basic_float<double, cat::precision_policies::fast>>);
    static_assert(cat::is_same<decltype(float4{} + float4_fast{}), float4>);
    static_assert(cat::is_same<decltype(float4_fast{} + float4{}), float4_fast>);
+   static_assert(cat::is_convertible<float, float8>);
+   static_assert(cat::is_constructible<float8, float4>);
+   static_assert(!cat::is_convertible<float4, float8>);
+   static_assert(cat::is_constructible<float8, float4_fast>);
+   static_assert(!cat::is_convertible<float4_fast, float8>);
+   static_assert(cat::is_constructible<float8_fast, float4>);
+   static_assert(!cat::is_convertible<float4, float8_fast>);
+   static_assert(cat::is_convertible<float4_fast, float4>);
+   static_assert(cat::is_convertible<float4, float4_fast>);
+   static_assert(cat::is_constructible<float4, int&>);
+   static_assert(!cat::is_convertible<int&, float4>);
+   static_assert(cat::is_constructible<float4, int4&>);
+   static_assert(!cat::is_convertible<int4&, float4>);
+   static_assert(cat::is_constructible<float4, uint4&>);
+   static_assert(!cat::is_convertible<uint4&, float4>);
+   static_assert(cat::is_constructible<float8, long long&>);
+   static_assert(!cat::is_convertible<long long&, float8>);
+   static_assert(cat::is_constructible<float8, int8&>);
+   static_assert(!cat::is_convertible<int8&, float8>);
+   static_assert(cat::is_constructible<float8, uint8&>);
+   static_assert(!cat::is_convertible<uint8&, float8>);
 
    static_assert(has_undef_accessor<int4>);
    static_assert(has_wrap_accessor<int4>);
@@ -182,6 +241,29 @@ $test(arithmetic_precision_reference_accessors) {
    cat::verify((nan_value.precise() <=> 1_f4)
                == std::partial_ordering::unordered);
 }
+
+#ifdef CAT_ENABLE_FMA_TESTS
+$test(arithmetic_fma_members) {
+   int4 integer = 5_i4;
+   auto integer_result = integer.fma(3_i4, 2_i4);
+   static_assert(cat::is_same<decltype(integer_result), int4>);
+   cat::verify(integer_result == 17_i4);
+
+   float4 value = 2_f4;
+   auto precise_result = value.fma(3_f4, 4_f4);
+   static_assert(cat::is_same<decltype(precise_result), float4>);
+   cat::verify(precise_result == 10_f4);
+
+   float4_fast fast_value = 2_f4;
+   auto fast_result = fast_value.fma(3_f4, 4_f4);
+   static_assert(cat::is_same<decltype(fast_result), float4_fast>);
+   cat::verify(fast_result == 10_f4);
+
+   auto reference_result = value.fast().fma(3_f4, 4_f4);
+   static_assert(cat::is_same<decltype(reference_result), float4_fast>);
+   cat::verify(reference_result == 10_f4);
+}
+#endif
 
 $test(arithmetic_traits_is_assignable) {
    static_assert(cat::is_assignable<int8, uint4>);
@@ -384,13 +466,16 @@ $test(arithmetic_traits_is_unsigned_integral) {
    static_assert(!cat::is_unsigned_integral<float>);
 }
 
-$test(arithmetic_traits_is_unsafe_arithmetic) {
-   static_assert(cat::is_unsafe_arithmetic<int>);
-   static_assert(cat::is_unsafe_arithmetic<unsigned long>);
-   static_assert(cat::is_unsafe_arithmetic<double>);
-   static_assert(!cat::is_unsafe_arithmetic<int4>);
-   static_assert(!cat::is_unsafe_arithmetic<uintptr<void>>);
-   static_assert(!cat::is_unsafe_arithmetic<idx>);
+$test(arithmetic_traits_is_raw_arithmetic) {
+   static_assert(cat::is_raw_arithmetic<int>);
+   static_assert(cat::is_raw_arithmetic<unsigned long>);
+   static_assert(cat::is_raw_arithmetic<double>);
+   static_assert(cat::is_raw_integral<int>);
+   static_assert(!cat::is_raw_integral<double>);
+   static_assert(cat::is_raw_floating_point<double>);
+   static_assert(!cat::is_raw_arithmetic<int4>);
+   static_assert(!cat::is_raw_arithmetic<uintptr<void>>);
+   static_assert(!cat::is_raw_arithmetic<idx>);
 }
 
 $test(arithmetic_traits_rvalue) {
@@ -4900,16 +4985,69 @@ $test(arithmetic_float_construction_raw_assignment_and_bit_cast) {
    safe_float.raw = 1.f;
    cat::verify(safe_float == 1.f);
 
+   constexpr float4 float4_zero = 0;
+   constexpr float4 float4_negative = -2'024;
+   constexpr float4 float4_unsigned = 65'535u;
+   constexpr float4 float4_cat_int = 42_i4;
+   constexpr float4 float4_cat_uint = 42_u4;
+   constexpr float4 float4_last_exact = 16'777'216;
+   constexpr float4 float4_negative_last_exact = -16'777'216;
+   static_assert(float4_zero == 0_f4);
+   static_assert(float4_negative == -2'024_f4);
+   static_assert(float4_unsigned == 65'535_f4);
+   static_assert(float4_cat_int == 42_f4);
+   static_assert(float4_cat_uint == 42_f4);
+   static_assert(float4_last_exact.raw == 16'777'216.f);
+   static_assert(float4_negative_last_exact.raw == -16'777'216.f);
+
    int const int_into_float_1 = -2'024;
    float4 from_int{int_into_float_1};
    cat::verify(from_int == static_cast<float>(int_into_float_1));
    cat::verify(float4(int_into_float_1).raw
                == static_cast<float>(int_into_float_1));
+   int runtime_int = 12;
+   from_int = float4{runtime_int};
+   cat::verify(from_int == 12_f4);
+   int4 runtime_cat_int = -123_i4;
+   from_int = float4{runtime_cat_int};
+   cat::verify(from_int == -123_f4);
+   uint4 runtime_cat_uint = 123_u4;
+   from_int = float4{runtime_cat_uint};
+   cat::verify(from_int == 123_f4);
    int const int_into_float_2 = 16'777'216;
    from_int = float4{int_into_float_2};
    cat::verify(from_int == static_cast<float>(int_into_float_2));
    cat::verify(float4(int_into_float_2).raw
                == static_cast<float>(int_into_float_2));
+
+   constexpr float8 float8_zero = 0;
+   constexpr float8 float8_negative = -2'024;
+   constexpr float8 float8_unsigned = 65'535u;
+   constexpr float8 float8_cat_int = 42_i8;
+   constexpr float8 float8_cat_uint = 42_u8;
+   constexpr float8 float8_last_exact = 9'007'199'254'740'992LL;
+   constexpr float8 float8_negative_last_exact = -9'007'199'254'740'992LL;
+   static_assert(float8_zero == 0_f8);
+   static_assert(float8_negative == -2'024_f8);
+   static_assert(float8_unsigned == 65'535_f8);
+   static_assert(float8_cat_int == 42_f8);
+   static_assert(float8_cat_uint == 42_f8);
+   static_assert(float8_last_exact.raw == 9'007'199'254'740'992.);
+   static_assert(float8_negative_last_exact.raw == -9'007'199'254'740'992.);
+
+   long long runtime_long_long = 9'007'199'254'740'992LL;
+   float8 from_long_long{runtime_long_long};
+   cat::verify(from_long_long.raw
+               == static_cast<double>(runtime_long_long));
+   float4 runtime_float4 = 1.5_f4;
+   from_long_long = float8{runtime_float4};
+   cat::verify(from_long_long == 1.5_f8);
+   int8 runtime_cat_long = -123_i8;
+   from_long_long = float8{runtime_cat_long};
+   cat::verify(from_long_long == -123_f8);
+   uint8 runtime_cat_ulong = 123_u8;
+   from_long_long = float8{runtime_cat_ulong};
+   cat::verify(from_long_long == 123_f8);
 
    // Test bit-casts.
    cat::verify(__builtin_bit_cast(unsigned, 2_i4) == 2u);
@@ -4928,7 +5066,7 @@ $test(
    cat::verify(a >= a);
    cat::verify((a <=> b) > 0);
 
-   float8 widened = 1_f4;
+   float8 widened{1_f4};
    cat::verify(widened == 1._f8);
 
    float8 mixed = 1._f8 + 2._f4;
@@ -5078,11 +5216,19 @@ $test(arithmetic_semantics_constructor_rejects_unsound_constants) {
    cat::verify(sound_unsigned == 42u);
    static_assert(can_brace_init<int1, 100>);
    static_assert(can_brace_init<uint4, 42u>);
+   static_assert(can_brace_init<float4, 16'777'216>);
+   static_assert(can_brace_init<float4, -16'777'216>);
+   static_assert(can_brace_init<float8, 9'007'199'254'740'992LL>);
+   static_assert(can_brace_init<float8, -9'007'199'254'740'992LL>);
 
    // Out-of-range integer constants must be REJECTED (no silent truncation).
    static_assert(!can_brace_init<int1, 1'000>);
    static_assert(!can_brace_init<uint1, -1>);
    static_assert(!can_brace_init<uint4, -1>);
+   static_assert(!can_brace_init<float4, 16'777'217>);
+   static_assert(!can_brace_init<float4, -16'777'217>);
+   static_assert(!can_brace_init<float8, 9'007'199'254'740'993LL>);
+   static_assert(!can_brace_init<float8, -9'007'199'254'740'993LL>);
 
    // Out-of-range constant via a `consteval` literal: hard error too.
    static_assert(!can_brace_init<int1, 200_i4>);

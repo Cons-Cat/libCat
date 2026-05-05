@@ -38,6 +38,16 @@ simd_float_div_forced(cat::simd<T, Abi> const& left,
    return cat::simd<T, Abi>(float_divide<precision>(left.raw, right.raw));
 }
 
+template <precision_policies precision, typename T, typename Abi>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+simd_float_fma_forced(cat::simd<T, Abi> const& left,
+                      cat::simd<T, Abi> const& right,
+                      cat::simd<T, Abi> const& addend) -> cat::simd<T, Abi> {
+   return cat::simd<T, Abi>(
+      simd_float_fma<precision>(left.raw, right.raw, addend.raw));
+}
+
 template <typename WrappedQual, precision_policies precision>
 class simd_precision_reference
     : public arithmetic_interface<
@@ -275,6 +285,36 @@ class simd_precision_reference
    constexpr auto
    multiply(U&& rhs) const -> result_type {
       return multiply(wrapper_type($fwd(rhs)));
+   }
+
+   template <typename FactorT, typename FactorAbi, typename AddendT,
+             typename AddendAbi>
+      requires(FactorAbi::lanes == abi_type::lanes
+               && AddendAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<FactorT>)
+                     == sizeof(raw_arithmetic_type<T>)
+               && sizeof(raw_arithmetic_type<AddendT>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   fma(cat::simd<FactorT, FactorAbi> const& factor,
+       cat::simd<AddendT, AddendAbi> const& addend) const -> result_type {
+      return simd_float_fma_forced<precision>(
+         make_simd_value<result_type>(*m_wrapped),
+         make_simd_value<result_type>(factor),
+         make_simd_value<result_type>(addend));
+   }
+
+   template <typename Factor, typename Addend>
+      requires(!cat::is_simd<remove_cvref<Factor>>
+               && !cat::is_simd<remove_cvref<Addend>>
+               && simd_broadcast_really_convertible_to<remove_cvref<Factor>, T>()
+               && simd_broadcast_really_convertible_to<remove_cvref<Addend>,
+                                                       T>())
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   fma(Factor&& factor, Addend&& addend) const -> result_type {
+      return fma(wrapper_type($fwd(factor)), wrapper_type($fwd(addend)));
    }
 
    template <typename OtherT, typename OtherAbi>

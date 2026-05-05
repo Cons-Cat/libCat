@@ -92,6 +92,13 @@ precise_simd_float_greater_equal(RawVector left, RawVector right) {
    return left >= right;
 }
 
+template <typename RawVector>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+precise_simd_float_fma(RawVector left, RawVector right, RawVector addend) {
+   return __builtin_elementwise_fma(left, right, addend);
+}
+
 #pragma float_control(pop)
 
 #pragma float_control(push)
@@ -137,6 +144,13 @@ template <typename RawVector>
 constexpr auto
 fast_simd_float_greater_equal(RawVector left, RawVector right) {
    return left >= right;
+}
+
+template <typename RawVector>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+fast_simd_float_fma(RawVector left, RawVector right, RawVector addend) {
+   return __builtin_elementwise_fma(left, right, addend);
 }
 
 #pragma float_control(pop)
@@ -204,6 +218,17 @@ simd_float_greater_equal(RawVector left, RawVector right) {
       return precise_simd_float_greater_equal(left, right);
    } else {
       return fast_simd_float_greater_equal(left, right);
+   }
+}
+
+template <precision_policies precision, typename RawVector>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+simd_float_fma(RawVector left, RawVector right, RawVector addend) {
+   if constexpr (precision == precision_policies::precise) {
+      return precise_simd_float_fma(left, right, addend);
+   } else {
+      return fast_simd_float_fma(left, right, addend);
    }
 }
 

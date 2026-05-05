@@ -1929,6 +1929,23 @@ $test(simd_precision_reference_accessors) {
    cat::verify(precise_sum[0u] == 2_f4);
    cat::verify(precise_sum[3u] == 8_f4);
 
+#ifdef CAT_ENABLE_FMA_TESTS
+   auto precise_fma = value.fma(increment, stable);
+   static_assert(cat::is_same<decltype(precise_fma), float4x4>);
+   cat::verify(precise_fma[0u] == 4_f4);
+   cat::verify(precise_fma[3u] == 10_f4);
+
+   auto fast_fma = fast_value.fma(2_f4, 1_f4);
+   static_assert(cat::is_same<decltype(fast_fma), float4_fastx4>);
+   cat::verify(fast_fma[0u] == 3_f4);
+   cat::verify(fast_fma[3u] == 9_f4);
+
+   auto reference_fma = value.fast().fma(increment, stable);
+   static_assert(cat::is_same<decltype(reference_fma), float4_fastx4>);
+   cat::verify(reference_fma[0u] == 4_f4);
+   cat::verify(reference_fma[3u] == 10_f4);
+#endif
+
    auto direct_precise_sum = value + fast_value;
    static_assert(cat::is_same<decltype(direct_precise_sum), float4x4>);
    cat::verify(direct_precise_sum[0u] == 3_f4);
@@ -2583,7 +2600,7 @@ $test(simd_overflow_accessor_views) {
    cat::verify((u.sat() + bump_i)[0] == scalar_max);
 
    cat::int4 const lane_expected =
-      cat::int4(cat::wrap_add(scalar_max.raw, typename cat::int4::raw_type(1)));
+      cat::int4(cat::wrap_add(scalar_max.raw, cat::int4::raw_type(1)));
    cat::verify((u + bump_i)[0] == lane_expected);
    cat::verify((u.undef() + bump_i)[0] == lane_expected);
    cat::verify((u.wrap() + bump_i)[0] == lane_expected);

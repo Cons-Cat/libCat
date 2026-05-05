@@ -936,6 +936,29 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
 
    [[nodiscard]]
    constexpr auto
+   fma(simd const& multiplier, simd const& addend) const -> simd
+      requires(!is_bool<T>)
+   {
+      if constexpr (is_floating_point<T>) {
+         return simd(
+            detail::simd_float_fma<detail::simd_float_precision_policy<T>>(
+               this->raw, multiplier.raw, addend.raw));
+      } else {
+         return (*this * multiplier) + addend;
+      }
+   }
+
+   template <typename Factor, typename Addend>
+      requires(!is_bool<T> && is_constructible<simd, Factor&&>
+               && is_constructible<simd, Addend&&>)
+   [[nodiscard]]
+   constexpr auto
+   fma(Factor&& multiplier, Addend&& addend) const -> simd {
+      return fma(simd($fwd(multiplier)), simd($fwd(addend)));
+   }
+
+   [[nodiscard]]
+   constexpr auto
    operator/(simd const& operand) const -> simd
       requires(!is_bool<T>)
    {

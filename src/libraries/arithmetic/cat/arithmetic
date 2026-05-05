@@ -190,6 +190,7 @@ struct is_idx_trait : false_trait {};
 template <overflow_policies policy>
 struct is_idx_trait<basic_idx<policy>> : true_trait {};
 
+// TODO: Expose this to users?
 template <typename T>
 concept is_idx = is_idx_trait<T>::value;
 
@@ -216,20 +217,19 @@ make_signed(T value) -> T {
 template <is_integral T>
 constexpr auto
 make_unsigned(T value) -> make_unsigned_type<T> {
-   // return __builtin_bit_cast(make_unsigned_type<T>, value);
    return static_cast<make_unsigned_type<T>>(value);
 }
 
-template <is_integral sign_type, is_integral T>
+template <is_integral Sign, is_integral T>
 constexpr auto
-make_sign_from(T value) -> copy_sign_from<sign_type, T> {
-   return static_cast<copy_sign_from<sign_type, T>>(value);
+make_sign_from(T value) -> copy_sign_from<Sign, T> {
+   return static_cast<copy_sign_from<Sign, T>>(value);
 }
 
-template <is_integral sign_type, is_integral T>
+template <is_integral Sign, is_integral T>
 constexpr auto
-make_sign_from(sign_type, T value) -> copy_sign_from<sign_type, T> {
-   return static_cast<copy_sign_from<sign_type, T>>(value);
+make_sign_from(Sign, T value) -> copy_sign_from<Sign, T> {
+   return static_cast<copy_sign_from<Sign, T>>(value);
 }
 
 template <typename T>
@@ -238,17 +238,32 @@ concept is_safe_arithmetic =
    || (is_arithmetic<T> && !__is_same(T, raw_arithmetic_type<T>));
 
 template <typename T>
-concept is_unsafe_arithmetic =
-   is_arithmetic<T> && __is_same(T, raw_arithmetic_type<T>);
-
-template <typename T>
 concept is_safe_integral =
    detail::is_idx<T> || detail::is_basic_intptr<T>
    || (is_integral<T> && !__is_same(T, raw_arithmetic_type<T>));
 
 template <typename T>
-concept is_unsafe_integral =
-   is_integral<T> && __is_same(T, raw_arithmetic_type<T>);
+concept is_safe_floating_point =
+   is_floating_point<T> && !is_raw_floating_point<T>;
+
+template <typename T, overflow_policies policy>
+basic_int(basic_int<T, policy>) -> basic_int<T, policy>;
+
+template <is_raw_integral T>
+basic_int(T) -> basic_int<T, overflow_policies::undefined>;
+
+template <typename T, precision_policies policy>
+basic_float(basic_float<T, policy>) -> basic_float<T, policy>;
+
+basic_float(float) -> basic_float<float, precision_policies::precise>;
+basic_float(double) -> basic_float<double, precision_policies::precise>;
+
+template <is_integral T>
+inline constexpr overflow_policies make_overflow_policy = basic_int(T{}).policy;
+
+template <is_floating_point T>
+inline constexpr precision_policies make_precision_policy =
+   basic_float(T{}).precision_policy;
 
 namespace detail {
 // The larger the `order` in this hierarchy is, the greater its precedence is in
@@ -472,6 +487,11 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
       }
    }
 }
+
+template <typename From, typename ToRaw>
+concept is_basic_float_widening =
+   is_floating_point<From> && !is_raw_arithmetic<From>
+   && (sizeof(raw_arithmetic_type<From>) < sizeof(ToRaw));
 
 // <=> for two raw integers of any signed-ness/width combination. Negative
 // signed operands are handled up front (strictly less / strictly greater than
@@ -991,6 +1011,13 @@ precise_float_divide(T lhs, U rhs) {
    return lhs / rhs;
 }
 
+template <typename T, typename U, typename V>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+precise_float_fma(T lhs, U rhs, V addend) -> T {
+   return __builtin_elementwise_fma(lhs, rhs, addend);
+}
+
 template <typename T, typename U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -1043,6 +1070,14 @@ template <typename T, typename U>
 constexpr auto
 fast_float_divide(T lhs, U rhs) {
    return lhs / rhs;
+}
+
+template <typename T, typename U, typename V>
+   requires(is_same<T, U> && is_same<T, V>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+fast_float_fma(T lhs, U rhs, V addend) -> T {
+   return __builtin_elementwise_fma(lhs, rhs, addend);
 }
 
 template <typename T, typename U>
@@ -1112,6 +1147,28 @@ float_divide(T lhs, U rhs) {
    }
 }
 
+template <precision_policies precision, typename T, typename U, typename V>
+   requires(
+      // `U` is either an integer or a non-converting floating point value.
+      (is_integral<U> || (is_floating_point<U> && sizeof(U) == sizeof(T)))
+      // `V` is either an integer or a non-converting floating point value.
+      && (is_integral<V> || (is_floating_point<V> && sizeof(V) == sizeof(T))))
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+float_fma(T lhs, U rhs, V addend) {
+   if constexpr (precision == precision_policies::precise) {
+      // Convert integers to `T`.
+      return precise_float_fma(make_raw_arithmetic(lhs),
+                               make_raw_arithmetic(static_cast<T>(rhs)),
+                               make_raw_arithmetic(static_cast<T>(addend)));
+   } else {
+      // Convert integers to `T`.
+      return fast_float_fma(make_raw_arithmetic(lhs),
+                            make_raw_arithmetic(static_cast<T>(rhs)),
+                            make_raw_arithmetic(static_cast<T>(addend)));
+   }
+}
+
 template <precision_policies precision, typename T, typename U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -1177,8 +1234,32 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    constexpr basic_float(basic_float const&) = default;
    constexpr basic_float(basic_float&&) = default;
 
+   template <is_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   consteval basic_float(U other) __attribute__((
+      enable_if(detail::raw_source_fits_implicit_storage<T>(other),
+                "value is out of range for implicit conversion to this "
+                "basic_float type")))
+       : raw(static_cast<T>(make_raw_arithmetic(other))) {
+   }
+
+   template <is_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   consteval basic_float(U other) __attribute__((
+      enable_if(!detail::raw_source_fits_implicit_storage<T>(other),
+                "value is out of range for implicit conversion to this "
+                "basic_float type"))) = delete;
+
+   template <is_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit basic_float(U other) __attribute__((
+      enable_if(!__builtin_constant_p(other),
+                "runtime integer conversion to basic_float is explicit")))
+       : raw(static_cast<T>(make_raw_arithmetic(other))) {
+   }
+
    template <is_arithmetic U>
-      requires(!is_safe_arithmetic_conversion<U, T>)
+      requires(is_floating_point<U> && !is_safe_arithmetic_conversion<U, T>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_float(U other) __attribute__((
       enable_if(detail::raw_source_fits_implicit_storage<T>(other),
@@ -1188,7 +1269,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    }
 
    template <is_arithmetic U>
-      requires(!is_safe_arithmetic_conversion<U, T>)
+      requires(is_floating_point<U> && !is_safe_arithmetic_conversion<U, T>)
    [[gnu::always_inline, gnu::nodebug]]
    consteval basic_float(U other) __attribute__((
       enable_if(!detail::raw_source_fits_implicit_storage<T>(other),
@@ -1196,14 +1277,17 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
                 "basic_float type"))) = delete;
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_conversion<U, T>)
+      requires(is_floating_point<U> && is_safe_arithmetic_conversion<U, T>
+               && !detail::is_basic_float_widening<U, T>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_float(U other)
        : raw(static_cast<T>(make_raw_arithmetic(other))) {
    }
 
    template <is_arithmetic U>
-      requires(!is_safe_arithmetic_conversion<U, T>)
+      requires(is_floating_point<U>
+               && (!is_safe_arithmetic_conversion<U, T>
+                   || detail::is_basic_float_widening<U, T>))
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit basic_float(U other)
        : raw(static_cast<T>(make_raw_arithmetic(other))) {
@@ -1328,7 +1412,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
          detail::float_divide<precision>(raw, make_raw_arithmetic(operand)));
    }
 
-   template <is_unsafe_arithmetic U>
+   template <is_raw_arithmetic U>
       requires(is_floating_point<U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -1336,6 +1420,18 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
       using result_type = remove_constref<U>;
       return result_type(
          detail::float_divide<precision>(make_raw_arithmetic(operand), raw));
+   }
+
+   template <is_arithmetic U, is_arithmetic V>
+      requires(is_floating_point<U> && is_floating_point<V>
+               && (is_integral<U> || is_same<T, raw_arithmetic_type<U>>)
+               && (is_integral<V> || is_same<T, raw_arithmetic_type<V>>))
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   fma(U multiplier, V addend) const -> basic_float<T, precision> {
+      return basic_float<T, precision>(detail::float_fma<precision>(
+         raw, static_cast<T>(make_raw_arithmetic(multiplier)),
+         static_cast<T>(make_raw_arithmetic(addend))));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -1751,6 +1847,13 @@ basic_int :
       return raw * p_operand;
    }
 
+   template <is_integral U, is_integral V>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   fma(U multiplier, V addend) const {
+      return multiply(multiplier).add(addend);
+   }
+
    // Generate `operator/`. Result fits in LHS width `|a / b| <= |a|`.
    template <typename U>
       requires(overflow_policy == overflow_policies::undefined
@@ -1790,7 +1893,7 @@ basic_int :
    }
 
    // Handle left-hand-side raw operands that are larger than this.
-   template <is_unsafe_arithmetic U>
+   template <is_raw_arithmetic U>
       requires(is_safe_arithmetic_comparison<T, U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto

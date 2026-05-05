@@ -2846,7 +2846,8 @@ struct simd_fma_impl
       if constexpr (has_simd_abi_ternary_full<simd_abi::op_fma, T, Abi>) {
          return simd_abi_apply_ternary_full<simd_abi::op_fma, T, Abi>(x, y, z);
       }
-      return simd<T, Abi>(__builtin_elementwise_fma(x.raw, y.raw, z.raw));
+      return simd<T, Abi>(
+         simd_float_fma<simd_float_precision_policy<T>>(x.raw, y.raw, z.raw));
    }
 
    template <typename T>
@@ -2856,15 +2857,9 @@ struct simd_fma_impl
    invoke_lanewise(T x, T y, T z) const -> T {
       // P2638R0 fused multiply-add (scalar lane hook).
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_fmaf(static_cast<R>(make_raw_arithmetic(x)),
-                                 static_cast<R>(make_raw_arithmetic(y)),
-                                 static_cast<R>(make_raw_arithmetic(z))));
-      }
-      return T(__builtin_fma(static_cast<R>(make_raw_arithmetic(x)),
-                             static_cast<R>(make_raw_arithmetic(y)),
-                             static_cast<R>(make_raw_arithmetic(z))));
+      return T(float_fma<simd_float_precision_policy<T>>(
+         make_raw_arithmetic(x), make_raw_arithmetic(y),
+         make_raw_arithmetic(z)));
    }
 };
 

@@ -252,7 +252,7 @@ class precision_reference {
          m_wrapped->raw, operand.m_wrapped->raw));
    }
 
-   template <is_unsafe_arithmetic U>
+   template <is_raw_arithmetic U>
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -263,6 +263,17 @@ class precision_reference {
          detail::float_precision_for<remove_cvref<U>, precision>;
       return result_type(detail::float_divide<left_precision>(
          make_raw_arithmetic(operand), m_wrapped->raw));
+   }
+
+   template <is_arithmetic U, is_arithmetic V>
+      requires((is_integral<U> || is_floating_point<U>)
+               && (is_integral<V> || is_floating_point<V>)
+               && (is_integral<U> || is_same<raw_type, raw_arithmetic_type<U>>)
+               && (is_integral<V> || is_same<raw_type, raw_arithmetic_type<V>>))
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   fma(U multiplier, V addend) const {
+      return view().fma(multiplier, addend);
    }
 
    template <typename U>

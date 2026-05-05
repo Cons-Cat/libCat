@@ -473,7 +473,7 @@ class overflow_reference
    // allowing `enable_if` to fire on the call-site constant.
    template <is_arithmetic U>
       requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type> && is_unsafe_arithmetic<U>
+               && !detail::is_idx<wrapper_type> && is_raw_arithmetic<U>
                && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int<raw_type, overflow_policy>
@@ -486,7 +486,7 @@ class overflow_reference
 
    template <is_arithmetic U>
       requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type> && is_unsafe_arithmetic<U>
+               && !detail::is_idx<wrapper_type> && is_raw_arithmetic<U>
                && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int<raw_type, overflow_policy>
@@ -677,7 +677,7 @@ class overflow_reference
       return view().divide_by(p_operand);
    }
 
-   template <is_unsafe_arithmetic U>
+   template <is_raw_arithmetic U>
       requires(is_safe_arithmetic_comparison<raw_type, U>
                && !detail::is_basic_intptr<wrapper_type>
                && !detail::is_idx<wrapper_type>)

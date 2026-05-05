@@ -134,6 +134,30 @@ abs(T value) -> T {
    return T(__builtin_fabs(make_raw_arithmetic(value)));
 }
 
+// `fma()` is a trivial wrapper over integer arithmetic. The overflow policy is
+// determined by `value` in a left-assosciative fashion.
+template <is_integral T, is_integral U, is_integral V>
+[[nodiscard]]
+constexpr auto
+fma(T value, U multiplier, V addend) {
+   // Return a safe int.
+   return basic_int(value * multiplier + addend);
+}
+
+// Wrap an `fma()` intrinsic in `basic_float` precision policies. The precision
+// is determined by `value` in a left-assosciative fashion.
+template <is_floating_point T, is_arithmetic U, is_arithmetic V>
+[[nodiscard]]
+constexpr auto
+fma(T value, U multiplier, V addend) {
+   // Return a safe float.
+   using result_type =
+      basic_float<raw_arithmetic_type<T>, make_precision_policy<T>>;
+
+   return result_type(
+      detail::float_fma<make_precision_policy<T>>(value, multiplier, addend));
+}
+
 // TODO: Support floating point here.
 // `basic_idx - integral` is `signed_distance`, not `basic_idx`. Keep rounding
 // in raw space so `div_ceil(idx, u)` stays `idx`.
@@ -143,7 +167,7 @@ template <typename T, is_integral U>
 constexpr auto
 div_ceil(T dividend, U divisor) -> T {
    auto const dv = make_raw_arithmetic(divisor);
-   return T(static_cast<typename T::raw_type>((dividend.raw + dv - 1u) / dv));
+   return T(static_cast<T::raw_type>((dividend.raw + dv - 1u) / dv));
 }
 
 template <is_integral T, is_integral U>
