@@ -1,14 +1,12 @@
 #pragma once
 
-// Lane-width sugar for `simd<T, Abi>`, included only from `<cat/simd>`.
-
 // TODO: Add Clang `__bf16` vectors.
 
+// NOLINTBEGIN
 // Permit trailing _ in these identifiers.
 // They stand for "placeholder" vector size.
 
-namespace cat {
-inline namespace arithmetic {
+namespace cat::inline arithmetic {
 
 using int1x2 = deduce_simd<int1, 2u>;
 using int1x4 = deduce_simd<int1, 4u>;
@@ -120,6 +118,15 @@ using float8x2 = deduce_simd<float8, 2u>;
 using float8x4 = deduce_simd<float8, 4u>;
 using float8x_ = native_simd<float8>;
 
+using float4_fastx2 = deduce_simd<float4_fast, 2u>;
+using float4_fastx4 = deduce_simd<float4_fast, 4u>;
+using float4_fastx8 = deduce_simd<float4_fast, 8u>;
+using float4_fastx_ = native_simd<float4_fast>;
+
+using float8_fastx2 = deduce_simd<float8_fast, 2u>;
+using float8_fastx4 = deduce_simd<float8_fast, 4u>;
+using float8_fastx_ = native_simd<float8_fast>;
+
 using float_unalign_4x2 = deduce_unaligned_simd<float4, 2u>;
 using float_unalign_4x4 = deduce_unaligned_simd<float4, 4u>;
 using float_unalign_4x8 = deduce_unaligned_simd<float4, 8u>;
@@ -129,5 +136,15 @@ using float_unalign_8x2 = deduce_unaligned_simd<float8, 2u>;
 using float_unalign_8x4 = deduce_unaligned_simd<float8, 4u>;
 using float_unalign_8x_ = native_unaligned_simd<float8>;
 
-}  // namespace arithmetic
-}  // namespace cat
+using float_fast_unalign_4x2 = deduce_unaligned_simd<float4_fast, 2u>;
+using float_fast_unalign_4x4 = deduce_unaligned_simd<float4_fast, 4u>;
+using float_fast_unalign_4x8 = deduce_unaligned_simd<float4_fast, 8u>;
+using float_fast_unalign_4x_ = native_unaligned_simd<float4_fast>;
+
+using float_fast_unalign_8x2 = deduce_unaligned_simd<float8_fast, 2u>;
+using float_fast_unalign_8x4 = deduce_unaligned_simd<float8_fast, 4u>;
+using float_fast_unalign_8x_ = native_unaligned_simd<float8_fast>;
+
+}  // namespace cat::inline arithmetic
+
+// NOLINTEND

@@ -121,13 +121,20 @@ $test(arithmetic_traits_basic_int_and_basic_float) {
                                         cat::overflow_policies::undefined>>);
    static_assert(cat::is_same<float4, cat::basic_float<float>>);
    static_assert(cat::is_same<float8, cat::basic_float<double>>);
+   static_assert(
+      cat::is_same<float4_fast,
+                   cat::basic_float<float, cat::precision_policies::fast>>);
+   static_assert(
+      cat::is_same<float8_fast,
+                   cat::basic_float<double, cat::precision_policies::fast>>);
    static_assert(float4::precision_policy == cat::precision_policies::precise);
-   using fast_float4 = cat::basic_float<float, cat::precision_policies::fast>;
-   static_assert(fast_float4::precision_policy
+   static_assert(float4_fast::precision_policy
                  == cat::precision_policies::fast);
    static_assert(
-      cat::is_same<decltype(fast_float4{1.0F} + 2.0),
+      cat::is_same<decltype(float4_fast{1.0F} + 2.0),
                    cat::basic_float<double, cat::precision_policies::fast>>);
+   static_assert(cat::is_same<decltype(float4{} + float4_fast{}), float4>);
+   static_assert(cat::is_same<decltype(float4_fast{} + float4{}), float4_fast>);
 
    static_assert(has_undef_accessor<int4>);
    static_assert(has_wrap_accessor<int4>);
@@ -135,6 +142,45 @@ $test(arithmetic_traits_basic_int_and_basic_float) {
    static_assert(!has_undef_accessor<float4>);
    static_assert(!has_wrap_accessor<float4>);
    static_assert(!has_sat_accessor<float4>);
+}
+
+$test(arithmetic_precision_reference_accessors) {
+   float4 value = 1_f4;
+
+   auto fast_sum = value.fast() + 2_f4;
+   static_assert(cat::is_same<decltype(fast_sum), float4_fast>);
+   cat::verify(fast_sum == 3_f4);
+
+   auto precise_plus_fast_reference = value + value.fast();
+   static_assert(
+      cat::is_same<decltype(precise_plus_fast_reference), float4_fast>);
+   cat::verify(precise_plus_fast_reference == 2_f4);
+
+   auto fast_plus_precise_reference = value.fast() + value.precise();
+   static_assert(
+      cat::is_same<decltype(fast_plus_precise_reference), float4_fast>);
+   cat::verify(fast_plus_precise_reference == 2_f4);
+
+   value.fast() += 2_f4;
+   cat::verify(value == 3_f4);
+
+   float4_fast fast_value = 4_f4;
+   auto precise_product = fast_value.precise() * 2_f4;
+   static_assert(cat::is_same<decltype(precise_product), float4>);
+   cat::verify(precise_product == 8_f4);
+
+   fast_value.precise() /= 2_f4;
+   cat::verify(fast_value == 2_f4);
+
+   static_assert(
+      cat::is_same<decltype(value.fast() <=> 1_f4), std::partial_ordering>);
+   cat::verify((value.fast() <=> 3_f4) == std::partial_ordering::equivalent);
+   cat::verify((fast_value.precise() <=> value.fast())
+               == std::partial_ordering::less);
+
+   float4 const nan_value = __builtin_nanf("");
+   cat::verify((nan_value.precise() <=> 1_f4)
+               == std::partial_ordering::unordered);
 }
 
 $test(arithmetic_traits_is_assignable) {

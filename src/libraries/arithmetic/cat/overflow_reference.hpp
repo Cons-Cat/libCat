@@ -27,7 +27,7 @@ class overflow_reference
        : m_wrapped(__builtin_addressof(w)) {
    }
 
-   using raw_type = typename remove_cvref<WrappedQual>::raw_type;
+   using raw_type = remove_cvref<WrappedQual>::raw_type;
 
  private:
    using wrapper_type = remove_cvref<WrappedQual>;
@@ -474,9 +474,7 @@ class overflow_reference
    template <is_arithmetic U>
       requires(!detail::is_basic_intptr<wrapper_type>
                && !detail::is_idx<wrapper_type> && is_unsafe_arithmetic<U>
-               && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>
-               && is_floating_point<basic_int<raw_type, overflow_policy>>
-                     == is_floating_point<U>)
+               && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int<raw_type, overflow_policy>
    operator+(overflow_reference const& self, U operand) __attribute__((
@@ -489,9 +487,7 @@ class overflow_reference
    template <is_arithmetic U>
       requires(!detail::is_basic_intptr<wrapper_type>
                && !detail::is_idx<wrapper_type> && is_unsafe_arithmetic<U>
-               && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>
-               && is_floating_point<basic_int<raw_type, overflow_policy>>
-                     == is_floating_point<U>)
+               && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int<raw_type, overflow_policy>
    operator+(U operand, overflow_reference const& self) __attribute__((

@@ -81,8 +81,8 @@ template <typename Split, typename Simd, idx... indices>
 constexpr auto
 simd_split_uniform_impl(Simd const& input,
                         [[maybe_unused]] index_list_type<indices...> /*unused*/)
-   -> array<Split, idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}>
-{
+   -> array<Split,
+            idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
    constexpr idx split_lanes = Split::abi_type::lanes;
    return {
       simd_extract<idx{indices.raw * split_lanes.raw},
@@ -128,8 +128,8 @@ template <is_simd_or_mask Split, is_simd_or_mask Simd>
 [[nodiscard]]
 constexpr auto
 simd_split(Simd const& input)
-   -> array<Split, idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}>
-{
+   -> array<Split,
+            idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
    // P2638R0 `split<V>` splits into uniform chunks of type `V`.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    constexpr idx split_count =

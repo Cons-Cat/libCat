@@ -22,6 +22,7 @@
 
 #include <cat/detail/simd_abi_hooks.hpp>
 #include <cat/detail/simd_broadcast_traits.hpp>
+#include <cat/detail/simd_precision_policy.hpp>
 
 #include <cat/arithmetic>
 #include <cat/bit>
@@ -2307,7 +2308,8 @@ constexpr auto
 simd_rsqrt_lane(T x) -> T {
    using R = raw_arithmetic_type<T>;
    R const rx = static_cast<R>(make_raw_arithmetic(x));
-   return T(static_cast<R>(1) / cat::sqrt(rx));
+   return T(float_divide<simd_float_precision_policy<T>>(static_cast<R>(1),
+                                                         cat::sqrt(rx)));
 }
 
 struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
@@ -2318,12 +2320,13 @@ struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
-      if constexpr (has_simd_abi_unary_full<simd_abi::op_rsqrt, T, Abi>) {
+      if constexpr (simd_float_precision_policy<T> == precision_policies::fast
+                    && has_simd_abi_unary_full<simd_abi::op_rsqrt, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_rsqrt, T, Abi>(input);
       } else {
-         simd<T, Abi> one{};
-         one.fill(T(1));
-         return simd<T, Abi>(one.raw / __builtin_elementwise_sqrt(input.raw));
+         simd<T, Abi> one{T(1)};
+         return simd<T, Abi>(float_divide<simd_float_precision_policy<T>>(
+            one.raw, __builtin_elementwise_sqrt(input.raw)));
       }
    }
 
@@ -2344,21 +2347,29 @@ simd_nroot_lane(T x, iword n) -> T {
    if (n <= 1) {
       return x;
    }
-   if (x == T(0)) {
+   if (float_equal<simd_float_precision_policy<T>>(make_raw_arithmetic(x),
+                                                   raw_arithmetic_type<T>{})) {
       return x;
    }
-   T abs_x = x < T(0) ? static_cast<T>(-x) : x;
+   T abs_x = float_less<simd_float_precision_policy<T>>(
+                make_raw_arithmetic(x), raw_arithmetic_type<T>{})
+                ? static_cast<T>(-x)
+                : x;
    T const root_magnitude = [&]() -> T {
       auto const abs_raw = make_raw_arithmetic(abs_x);
       if constexpr (is_same<raw_arithmetic_type<T>, float>) {
          return static_cast<T>(
-            emulated_powf(abs_raw, 1.f / static_cast<float>(n.raw)));
+            emulated_powf(abs_raw, float_divide<simd_float_precision_policy<T>>(
+                                      1.f, static_cast<float>(n.raw))));
       } else {
-         return static_cast<T>(emulated_pow(static_cast<double>(abs_raw),
-                                            1. / static_cast<double>(n.raw)));
+         return static_cast<T>(
+            emulated_pow(static_cast<double>(abs_raw),
+                         float_divide<simd_float_precision_policy<T>>(
+                            1., static_cast<double>(n.raw))));
       }
    }();
-   if (x < T(0)) {
+   if (float_less<simd_float_precision_policy<T>>(make_raw_arithmetic(x),
+                                                  raw_arithmetic_type<T>{})) {
       if ((n.raw & 1u) != 0u) {
          return static_cast<T>(-root_magnitude);
       }
@@ -2382,11 +2393,13 @@ simd_rnroot_lane(T x, iword n) -> T {
    if (n == 1) {
       using R = raw_arithmetic_type<T>;
       R const rx = static_cast<R>(make_raw_arithmetic(x));
-      return T(static_cast<R>(1) / rx);
+      return T(
+         float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), rx));
    }
    using R = raw_arithmetic_type<T>;
    R const root = static_cast<R>(make_raw_arithmetic(simd_nroot_lane(x, n)));
-   return T(static_cast<R>(1) / root);
+   return T(
+      float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), root));
 }
 
 template <typename T>
@@ -2407,7 +2420,8 @@ simd_nroot_generic(simd<T, Abi> input, iword n) -> simd<T, Abi> {
    }
    simd<T, Abi> abs_x(__builtin_elementwise_abs(input.raw));
    simd<T, Abi> reciprocal_root{};
-   reciprocal_root.fill(T(1) / static_cast<T>(n.raw));
+   reciprocal_root.fill(float_divide<simd_float_precision_policy<T>>(
+      T(1), static_cast<T>(n.raw)));
    simd<T, Abi> root_magnitude(
       __builtin_elementwise_pow(abs_x.raw, reciprocal_root.raw));
    simd<T, Abi> zeros{};
@@ -2474,9 +2488,9 @@ struct simd_rcbrt_impl : simd_elementwise_interface<simd_rcbrt_impl> {
    constexpr auto
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
       simd<T, Abi> const cbrt = simd_cbrt_impl{}.invoke_full(input);
-      simd<T, Abi> one{};
-      one.fill(T(1));
-      return simd<T, Abi>(one.raw / cbrt.raw);
+      simd<T, Abi> const one{T(1)};
+      return simd<T, Abi>(
+         float_divide<simd_float_precision_policy<T>>(one.raw, cbrt.raw));
    }
 
    template <typename T>
@@ -2501,14 +2515,14 @@ struct simd_rnroot_impl
          return input;
       }
       if (n == 1) {
-         simd<T, Abi> one{};
-         one.fill(T(1));
-         return simd<T, Abi>(one.raw / input.raw);
+         simd<T, Abi> const one{T(1)};
+         return simd<T, Abi>(
+            float_divide<simd_float_precision_policy<T>>(one.raw, input.raw));
       }
       simd<T, Abi> const root = simd_nroot_impl{}.invoke_full(input, n);
-      simd<T, Abi> one{};
-      one.fill(T(1));
-      return simd<T, Abi>(one.raw / root.raw);
+      simd<T, Abi> const one{T(1)};
+      return simd<T, Abi>(
+         float_divide<simd_float_precision_policy<T>>(one.raw, root.raw));
    }
 
    template <typename T>

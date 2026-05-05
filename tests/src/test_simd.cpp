@@ -28,6 +28,15 @@ using float_lane = cat::float4::raw_type;
 using double_lane = cat::float8::raw_type;
 using mask_lane = cat::uint1::raw_type;
 
+template <typename T>
+concept has_simd_undef_accessor = requires(T value) { value.undef(); };
+
+template <typename T>
+concept has_simd_wrap_accessor = requires(T value) { value.wrap(); };
+
+template <typename T>
+concept has_simd_sat_accessor = requires(T value) { value.sat(); };
+
 template <typename WideBoolSimd>
 void
 verify_widened_bool_simd_matches_bool4(cat::fixed_size_simd<bool, 4u> const ref,
@@ -41,6 +50,13 @@ verify_widened_bool_simd_matches_bool4(cat::fixed_size_simd<bool, 4u> const ref,
 }  // namespace
 
 $test(simd) {
+   static_assert(has_simd_undef_accessor<int4x4>);
+   static_assert(has_simd_wrap_accessor<int4x4>);
+   static_assert(has_simd_sat_accessor<int4x4>);
+   static_assert(!has_simd_undef_accessor<float4x4>);
+   static_assert(!has_simd_wrap_accessor<float4x4>);
+   static_assert(!has_simd_sat_accessor<float4x4>);
+
    int4x4 vec1 = {0, 1, 2, 3};
    int4x4 vec2{0, 1, 2, 3};
    vec1 += vec2;
@@ -842,8 +858,7 @@ $test(simd_load_and_loaded_dispatch) {
 }
 
 $test(simd_non_temporal_load_store) {
-   alignas(int4x4::abi_type::alignment.raw)
-      int_lane const src[] = {9, 8, 7, 6};
+   alignas(int4x4::abi_type::alignment.raw) int_lane const src[] = {9, 8, 7, 6};
    int4x4 a{};
    a.load_non_temporal(src);
    cat::verify(a[0] == 9);
@@ -1540,8 +1555,8 @@ $test(simd_split) {
       cat::simd_concat(lower_half_lanes, upper_half_lanes);
 
    auto split_lanes = cat::simd_split<4u, 4u>(concatenated_lanes);
-   static_assert(cat::is_same<decltype(split_lanes),
-                              cat::tuple<int4x4, int4x4>>);
+   static_assert(
+      cat::is_same<decltype(split_lanes), cat::tuple<int4x4, int4x4>>);
    cat::verify(split_lanes.first() == lower_half_lanes);
    cat::verify(split_lanes.second() == upper_half_lanes);
 
@@ -1551,8 +1566,8 @@ $test(simd_split) {
    cat::verify(split_array[1u] == upper_half_lanes);
 
    auto split_by_count = cat::simd_split_by<2u>(concatenated_lanes);
-   static_assert(cat::is_same<decltype(split_by_count),
-                              cat::array<int4x4, 2u>>);
+   static_assert(
+      cat::is_same<decltype(split_by_count), cat::array<int4x4, 2u>>);
    cat::verify(split_by_count[0u] == lower_half_lanes);
    cat::verify(split_by_count[1u] == upper_half_lanes);
 
@@ -1563,9 +1578,8 @@ $test(simd_split) {
    cat::verify(split_mask.second()[1u]);
    cat::verify(split_mask.second()[3u]);
 
-   auto split_mask_array =
-      cat::simd_split<int4x4::mask_type>(int4x8::mask_type{
-         true, false, true, false, false, true, false, true});
+   auto split_mask_array = cat::simd_split<int4x4::mask_type>(
+      int4x8::mask_type{true, false, true, false, false, true, false, true});
    static_assert(cat::is_same<decltype(split_mask_array),
                               cat::array<int4x4::mask_type, 2u>>);
    cat::verify(split_mask_array[0u][2u]);
@@ -1685,9 +1699,8 @@ $test(simd_load_from_store_to) {
    cat::int4 contiguous_int_source[8] = {100, 101, 102, 103,
                                          104, 105, 106, 107};
    int4x4 gather_index_lanes{0, 2, 4, 1};
-   auto gathered_int_lanes =
-      cat::simd_load_from<cat::int4, int4x4::abi_type>(contiguous_int_source,
-                                                       gather_index_lanes);
+   auto gathered_int_lanes = cat::simd_load_from<cat::int4, int4x4::abi_type>(
+      contiguous_int_source, gather_index_lanes);
    cat::verify(gathered_int_lanes[0] == 100);
    cat::verify(gathered_int_lanes[1] == 102);
    cat::verify(gathered_int_lanes[2] == 104);
@@ -1730,7 +1743,7 @@ $test(simd_load_from_store_to) {
       cat::make_simd_mask_from_count<int4x4>(2u);
    int4x4 const masked_gather_lanes =
       cat::simd_load_from<cat::int4, int4x4::abi_type>[gather_active_lane_mask](
-      gather_masked_passthrough, contiguous_int_source, gather_index_lanes);
+         gather_masked_passthrough, contiguous_int_source, gather_index_lanes);
    cat::verify(masked_gather_lanes[0] == 100 && masked_gather_lanes[1] == 102
                && masked_gather_lanes[2] == 3 && masked_gather_lanes[3] == 4);
 
@@ -1873,10 +1886,96 @@ $test(simd_reduce_assoc_and_in_order_fadd) {
    cat::verify(v.reduce_in_order_fadd(0_f4)[0u] == 10_f4);
    cat::verify(cat::simd_reduce_in_order_fadd(v, 0_f4)[0u] == 10_f4);
    cat::verify(v.reduce_in_order_fadd(100_f4)[0u] == 110_f4);
+   cat::verify(v.reduce_add()[0u] == v.reduce_in_order_fadd(0_f4)[0u]);
+   cat::verify(cat::simd_reduce_add(v)[0u] == v.reduce_in_order_fadd(0_f4)[0u]);
+   cat::verify(v.sum() == v.reduce_in_order_fadd(0_f4)[0u]);
 
    float8x2 const d = {1.5, 2.5};
    cat::verify(d.reduce_assoc_fadd()[0u] == 4.0);
    cat::verify(d.reduce_in_order_fadd(10.0)[0u] == 14.0);
+
+   float4_fastx4 const fast = {1.0f, 2.0f, 3.0f, 4.0f};
+   cat::verify(fast.reduce_add()[0u] == fast.reduce_assoc_fadd()[0u]);
+   cat::verify(cat::simd_reduce_add(fast)[0u] == fast.reduce_assoc_fadd()[0u]);
+   cat::verify(fast.sum() == fast.reduce_assoc_fadd()[0u]);
+}
+
+$test(simd_precision_reference_accessors) {
+   float4x4 value = {1_f4, 2_f4, 3_f4, 4_f4};
+   float4x4 const increment(1_f4);
+
+   auto fast_sum = value.fast() + increment;
+   static_assert(cat::is_same<decltype(fast_sum), float4_fastx4>);
+   cat::verify(fast_sum[0u] == 2_f4);
+   cat::verify(fast_sum[3u] == 5_f4);
+
+   value.fast() += increment;
+   cat::verify(value[0u] == 2_f4);
+   cat::verify(value[3u] == 5_f4);
+
+   auto precise_product = value.precise() * 2_f4;
+   static_assert(cat::is_same<decltype(precise_product), float4x4>);
+   cat::verify(precise_product[0u] == 4_f4);
+   cat::verify(precise_product[3u] == 10_f4);
+
+   float4x4 const stable = value;
+   auto precise_quotient = stable.precise() / 2_f4;
+   cat::verify(precise_quotient[0u] == 1_f4);
+   cat::verify(precise_quotient[3u] == 2.5_f4);
+
+   float4_fastx4 fast_value = {1.0f, 2.0f, 3.0f, 4.0f};
+   auto precise_sum = fast_value.precise() + fast_value;
+   static_assert(cat::is_same<decltype(precise_sum), float4x4>);
+   cat::verify(precise_sum[0u] == 2_f4);
+   cat::verify(precise_sum[3u] == 8_f4);
+
+   auto direct_precise_sum = value + fast_value;
+   static_assert(cat::is_same<decltype(direct_precise_sum), float4x4>);
+   cat::verify(direct_precise_sum[0u] == 3_f4);
+   cat::verify(direct_precise_sum[3u] == 9_f4);
+
+   auto direct_fast_sum = fast_value + value;
+   static_assert(cat::is_same<decltype(direct_fast_sum), float4_fastx4>);
+   cat::verify(direct_fast_sum[0u] == 3_f4);
+   cat::verify(direct_fast_sum[3u] == 9_f4);
+
+   auto precise_left_sum = value + fast_value.fast();
+   static_assert(cat::is_same<decltype(precise_left_sum), float4_fastx4>);
+   cat::verify(precise_left_sum[0u] == 3_f4);
+   cat::verify(precise_left_sum[3u] == 9_f4);
+
+   auto fast_left_sum = fast_value + value.precise();
+   static_assert(cat::is_same<decltype(fast_left_sum), float4x4>);
+   cat::verify(fast_left_sum[0u] == 3_f4);
+   cat::verify(fast_left_sum[3u] == 9_f4);
+
+   auto precise_comparison = value < fast_value;
+   static_assert(
+      cat::is_same<decltype(precise_comparison), float4x4::mask_type>);
+   cat::verify(!precise_comparison[0u]);
+   cat::verify(!precise_comparison[3u]);
+
+   auto fast_comparison = fast_value < value;
+   static_assert(
+      cat::is_same<decltype(fast_comparison), float4_fastx4::mask_type>);
+   cat::verify(fast_comparison[0u]);
+   cat::verify(fast_comparison[3u]);
+
+   auto reference_comparison = value.fast() <= fast_value;
+   static_assert(
+      cat::is_same<decltype(reference_comparison), float4_fastx4::mask_type>);
+   cat::verify(!reference_comparison[0u]);
+   cat::verify(!reference_comparison[3u]);
+
+   auto reverse_reference_comparison = value <= fast_value.precise();
+   static_assert(cat::is_same<decltype(reverse_reference_comparison),
+                              float4x4::mask_type>);
+   cat::verify(!reverse_reference_comparison[0u]);
+   cat::verify(!reverse_reference_comparison[3u]);
+
+   auto fast_root = cat::simd_sqrt(fast_value);
+   static_assert(cat::is_same<decltype(fast_root), float4_fastx4>);
+   cat::verify(cat::abs(fast_root[0u] - 1_f4) < 0.001_f4);
 }
 
 $test(simd_mask_reduce_integral) {

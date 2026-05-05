@@ -43,6 +43,7 @@
 
 #include "cat/detail/simd_avx2.hpp"
 #include "cat/detail/simd_broadcast_traits.hpp"
+#include "cat/detail/simd_precision_policy.hpp"
 #include "cat/detail/simd_range_iterator.hpp"
 #include "cat/detail/simd_sse42.hpp"
 
@@ -60,9 +61,6 @@ struct mask_all_of;
 template <typename T, typename Abi>
 struct mask_any_of;
 }  // namespace cat::detail::simd_abi
-
-// TODO: Implement `cat::container_interface` on `cat::simd` and
-// `cat::simd_mask`?
 
 namespace cat {
 
@@ -239,9 +237,8 @@ struct deduce_from_candidates<T, lane_count, Abi, Abis...> {
 
 template <typename T, idx lane_count, typename... Abis>
 struct deduce_impl {
-   using type =
-      deduce_from_candidates<T, lane_count, Abis..., native_abi<T>,
-                             x64::sse2_abi<T>, scalar_abi<T>>::type;
+   using type = deduce_from_candidates<T, lane_count, Abis..., native_abi<T>,
+                                       x64::sse2_abi<T>, scalar_abi<T>>::type;
 };
 
 }  // namespace detail
@@ -430,27 +427,35 @@ namespace detail {
 template <typename T, typename Abi, overflow_policies>
 class simd_overflow_reference;
 
+template <typename WrappedQual, precision_policies>
+class simd_precision_reference;
+
 template <typename T, typename Abi>
+   requires(is_integral<T> && !is_bool<T>)
 constexpr auto
 simd_integral_add_follow_storage(simd<T, Abi> const& left,
                                  simd<T, Abi> const& right) -> simd<T, Abi>;
 
 template <typename T, typename Abi>
+   requires(is_integral<T> && !is_bool<T>)
 constexpr auto
 simd_integral_sub_follow_storage(simd<T, Abi> const& left,
                                  simd<T, Abi> const& right) -> simd<T, Abi>;
 
 template <typename T, typename Abi>
+   requires(is_integral<T> && !is_bool<T>)
 constexpr auto
 simd_integral_mul_follow_storage(simd<T, Abi> const& left,
                                  simd<T, Abi> const& right) -> simd<T, Abi>;
 
 template <typename T, typename Abi>
+   requires(is_integral<T> && !is_bool<T>)
 constexpr auto
 simd_integral_shl_follow_storage(simd<T, Abi> const& left,
                                  simd<T, Abi> const& right) -> simd<T, Abi>;
 
 template <typename T, typename Abi>
+   requires(is_integral<T> && !is_bool<T>)
 constexpr auto
 simd_integral_shr_follow_storage(simd<T, Abi> const& left,
                                  simd<T, Abi> const& right) -> simd<T, Abi>;
@@ -502,8 +507,9 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // `gnu::vector_size` is a Clang attribute that represents SIMD data-types.
    // `gnu::aligned` is a Clang attribute that guarantees alignment for all
    // instances of a type. We can use this to conditionally under-align SIMD.
-   using raw_type [[gnu::vector_size(Abi::size.raw),
-                    gnu::aligned(Abi::alignment.raw)]] = mapped_type;
+   using raw_type
+      [[gnu::vector_size(Abi::size.raw), gnu::aligned(Abi::alignment.raw)]] =
+         mapped_type;
 
    constexpr simd() = default;
 
@@ -598,8 +604,8 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
                && OtherAbi::lanes == abi_type::lanes)
    explicit constexpr
    operator simd<U, OtherAbi>() const {
-      return __builtin_convertvector(
-         this->raw, typename simd<U, OtherAbi>::raw_type);
+      return __builtin_convertvector(this->raw,
+                                     typename simd<U, OtherAbi>::raw_type);
    }
 
    // Copy-assign the raw value of a `simd` to this.
@@ -628,6 +634,10 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    [[nodiscard]]
    constexpr auto
    operator>(simd const& operand) const -> simd_mask<T, abi_type> {
+      if constexpr (is_floating_point<T>) {
+         return detail::simd_float_greater<
+            detail::simd_float_precision_policy<T>>(this->raw, operand.raw);
+      }
       return this->raw > operand.raw;
    }
 
@@ -636,6 +646,10 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    [[nodiscard]]
    constexpr auto
    operator>=(simd const& operand) const -> simd_mask<T, abi_type> {
+      if constexpr (is_floating_point<T>) {
+         return detail::simd_float_greater_equal<
+            detail::simd_float_precision_policy<T>>(this->raw, operand.raw);
+      }
       return this->raw >= operand.raw;
    }
 
@@ -644,6 +658,10 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    [[nodiscard]]
    constexpr auto
    operator<(simd const& operand) const -> simd_mask<T, abi_type> {
+      if constexpr (is_floating_point<T>) {
+         return detail::simd_float_less<detail::simd_float_precision_policy<T>>(
+            this->raw, operand.raw);
+      }
       return this->raw < operand.raw;
    }
 
@@ -652,7 +670,65 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    [[nodiscard]]
    constexpr auto
    operator<=(simd const& operand) const -> simd_mask<T, abi_type> {
+      if constexpr (is_floating_point<T>) {
+         return detail::simd_float_less_equal<
+            detail::simd_float_precision_policy<T>>(this->raw, operand.raw);
+      }
       return this->raw <= operand.raw;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   operator>(simd<U, OtherAbi> const& operand) const -> simd_mask<T, abi_type> {
+      return detail::simd_float_greater<detail::simd_float_precision_policy<T>>(
+         this->raw, operand.raw);
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   operator>=(simd<U, OtherAbi> const& operand) const
+      -> simd_mask<T, abi_type> {
+      return detail::simd_float_greater_equal<
+         detail::simd_float_precision_policy<T>>(this->raw, operand.raw);
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   operator<(simd<U, OtherAbi> const& operand) const -> simd_mask<T, abi_type> {
+      return detail::simd_float_less<detail::simd_float_precision_policy<T>>(
+         this->raw, operand.raw);
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   operator<=(simd<U, OtherAbi> const& operand) const
+      -> simd_mask<T, abi_type> {
+      return detail::simd_float_less_equal<
+         detail::simd_float_precision_policy<T>>(this->raw, operand.raw);
    }
 
    // Overflow accessors mirror `cat::basic_int`. `undef` and `wrap` both
@@ -660,17 +736,34 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // lanes with `T::policy == saturate` use the same by default on `simd`
    // without an accessor.
    constexpr auto
-   undef() & -> detail::simd_overflow_reference<T, Abi,
-                                                overflow_policies::wrap>
-      requires(!is_bool<T>);
+   undef() & -> detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>
+      requires(is_integral<T> && !is_bool<T>);
    constexpr auto
-   wrap() & -> detail::simd_overflow_reference<T, Abi,
-                                               overflow_policies::wrap>
-      requires(!is_bool<T>);
+   wrap() & -> detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>
+      requires(is_integral<T> && !is_bool<T>);
    constexpr auto
    sat() & -> detail::simd_overflow_reference<T, Abi,
                                               overflow_policies::saturate>
-      requires(!is_bool<T>);
+      requires(is_integral<T> && !is_bool<T>);
+
+   constexpr auto
+   precise() & -> detail::simd_precision_reference<simd,
+                                                   precision_policies::precise>
+      requires(is_floating_point<T>);
+
+   constexpr auto
+   precise() const& -> detail::simd_precision_reference<
+      simd const, precision_policies::precise>
+      requires(is_floating_point<T>);
+
+   constexpr auto
+   fast() & -> detail::simd_precision_reference<simd, precision_policies::fast>
+      requires(is_floating_point<T>);
+
+   constexpr auto
+   fast() const& -> detail::simd_precision_reference<simd const,
+                                                     precision_policies::fast>
+      requires(is_floating_point<T>);
 
    // TODO: These should be `friend`.
 
@@ -679,14 +772,53 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    operator+(simd const& operand) const -> simd
       requires(!is_bool<T>)
    {
-      return detail::simd_integral_add_follow_storage(*this, operand);
+      if constexpr (is_floating_point<T>) {
+         return simd(detail::float_add<detail::simd_float_precision_policy<T>>(
+            this->raw, operand.raw));
+      } else {
+         return detail::simd_integral_add_follow_storage(*this, operand);
+      }
    }
 
    constexpr auto
    operator+=(simd const& operand) -> simd&
       requires(!is_bool<T>)
    {
-      *this = detail::simd_integral_add_follow_storage(*this, operand);
+      *this = *this + operand;
+      return *this;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   operator+(simd<U, OtherAbi> const& operand) const {
+      using result_scalar = detail::simd_precision_scalar<
+         T, detail::simd_float_precision_policy<T>>::type;
+      using result_type =
+         simd<result_scalar,
+              typename abi_type::template make_abi_type<result_scalar>>;
+      // Rebind wrapper precision while preserving the raw lane bits.
+      result_type const left(
+         __builtin_bit_cast(typename result_type::raw_type, this->raw));
+      result_type const right(
+         __builtin_bit_cast(typename result_type::raw_type, operand.raw));
+      return left + right;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   constexpr auto
+   operator+=(simd<U, OtherAbi> const& operand) -> simd& {
+      *this = *this + operand;
       return *this;
    }
 
@@ -695,14 +827,54 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    operator-(simd const& operand) const -> simd
       requires(!is_bool<T>)
    {
-      return detail::simd_integral_sub_follow_storage(*this, operand);
+      if constexpr (is_floating_point<T>) {
+         return simd(
+            detail::float_subtract<detail::simd_float_precision_policy<T>>(
+               this->raw, operand.raw));
+      } else {
+         return detail::simd_integral_sub_follow_storage(*this, operand);
+      }
    }
 
    constexpr auto
    operator-=(simd const& operand) -> simd&
       requires(!is_bool<T>)
    {
-      *this = detail::simd_integral_sub_follow_storage(*this, operand);
+      *this = *this - operand;
+      return *this;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   operator-(simd<U, OtherAbi> const& operand) const {
+      using result_scalar = detail::simd_precision_scalar<
+         T, detail::simd_float_precision_policy<T>>::type;
+      using result_type =
+         simd<result_scalar,
+              typename abi_type::template make_abi_type<result_scalar>>;
+      // Rebind wrapper precision while preserving the raw lane bits.
+      result_type const left(
+         __builtin_bit_cast(typename result_type::raw_type, this->raw));
+      result_type const right(
+         __builtin_bit_cast(typename result_type::raw_type, operand.raw));
+      return left - right;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   constexpr auto
+   operator-=(simd<U, OtherAbi> const& operand) -> simd& {
+      *this = *this - operand;
       return *this;
    }
 
@@ -711,14 +883,54 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    operator*(simd const& operand) const -> simd
       requires(!is_bool<T>)
    {
-      return detail::simd_integral_mul_follow_storage(*this, operand);
+      if constexpr (is_floating_point<T>) {
+         return simd(
+            detail::float_multiply<detail::simd_float_precision_policy<T>>(
+               this->raw, operand.raw));
+      } else {
+         return detail::simd_integral_mul_follow_storage(*this, operand);
+      }
    }
 
    constexpr auto
    operator*=(simd const& operand) -> simd&
       requires(!is_bool<T>)
    {
-      *this = detail::simd_integral_mul_follow_storage(*this, operand);
+      *this = *this * operand;
+      return *this;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   operator*(simd<U, OtherAbi> const& operand) const {
+      using result_scalar = detail::simd_precision_scalar<
+         T, detail::simd_float_precision_policy<T>>::type;
+      using result_type =
+         simd<result_scalar,
+              typename abi_type::template make_abi_type<result_scalar>>;
+      // Rebind wrapper precision while preserving the raw lane bits.
+      result_type const left(
+         __builtin_bit_cast(typename result_type::raw_type, this->raw));
+      result_type const right(
+         __builtin_bit_cast(typename result_type::raw_type, operand.raw));
+      return left * right;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   constexpr auto
+   operator*=(simd<U, OtherAbi> const& operand) -> simd& {
+      *this = *this * operand;
       return *this;
    }
 
@@ -727,14 +939,54 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    operator/(simd const& operand) const -> simd
       requires(!is_bool<T>)
    {
-      return this->raw / operand.raw;
+      if constexpr (is_floating_point<T>) {
+         return simd(
+            detail::float_divide<detail::simd_float_precision_policy<T>>(
+               this->raw, operand.raw));
+      } else {
+         return simd(this->raw / operand.raw);
+      }
    }
 
    constexpr auto
    operator/=(simd const& operand) -> simd&
       requires(!is_bool<T>)
    {
-      this->raw = this->raw / operand.raw;
+      *this = *this / operand;
+      return *this;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   operator/(simd<U, OtherAbi> const& operand) const {
+      using result_scalar = detail::simd_precision_scalar<
+         T, detail::simd_float_precision_policy<T>>::type;
+      using result_type =
+         simd<result_scalar,
+              typename abi_type::template make_abi_type<result_scalar>>;
+      // Rebind wrapper precision while preserving the raw lane bits.
+      result_type const left(
+         __builtin_bit_cast(typename result_type::raw_type, this->raw));
+      result_type const right(
+         __builtin_bit_cast(typename result_type::raw_type, operand.raw));
+      return left / right;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   constexpr auto
+   operator/=(simd<U, OtherAbi> const& operand) -> simd& {
+      *this = *this / operand;
       return *this;
    }
 
@@ -915,7 +1167,25 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    [[nodiscard]]
    constexpr auto
    equal_lanes(simd const& operand) const -> simd_mask<T, abi_type> {
+      if constexpr (is_floating_point<T>) {
+         return detail::simd_float_equal<
+            detail::simd_float_precision_policy<T>>(this->raw, operand.raw);
+      }
       return this->raw == operand.raw;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   equal_lanes(simd<U, OtherAbi> const& operand) const
+      -> simd_mask<T, abi_type> {
+      return detail::simd_float_equal<detail::simd_float_precision_policy<T>>(
+         this->raw, operand.raw);
    }
 
    // Per-lane inequality producing a `simd_mask`. Use `operator!=` for value
@@ -923,7 +1193,25 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    [[nodiscard]]
    constexpr auto
    unequal_lanes(simd const& operand) const -> simd_mask<T, abi_type> {
+      if constexpr (is_floating_point<T>) {
+         return detail::simd_float_unequal<
+            detail::simd_float_precision_policy<T>>(this->raw, operand.raw);
+      }
       return this->raw != operand.raw;
+   }
+
+   template <typename U, typename OtherAbi>
+      requires(is_floating_point<T> && is_floating_point<U>
+               && !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+               && OtherAbi::lanes == abi_type::lanes
+               && sizeof(raw_arithmetic_type<U>)
+                     == sizeof(raw_arithmetic_type<T>))
+   [[nodiscard]]
+   constexpr auto
+   unequal_lanes(simd<U, OtherAbi> const& operand) const
+      -> simd_mask<T, abi_type> {
+      return detail::simd_float_unequal<detail::simd_float_precision_policy<T>>(
+         this->raw, operand.raw);
    }
 
    constexpr auto
@@ -957,20 +1245,29 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    [[nodiscard]]
    constexpr auto
    reduce_add() const -> simd<T, fixed_size_abi<T, 1u>>
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_arithmetic<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       simd<T, fixed_size_abi<T, 1u>> out{};
-      out.set_lane(0u, static_cast<T>(__builtin_reduce_add(this->raw)));
+      if constexpr (is_floating_point<T>) {
+         out.set_lane(
+            0u, static_cast<T>(detail::simd_reduce_policy_fadd<T>(this->raw)));
+      } else {
+         out.set_lane(0u, static_cast<T>(__builtin_reduce_add(this->raw)));
+      }
       return out;
    }
 
    [[nodiscard]]
    constexpr auto
    sum() const -> T
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_arithmetic<T> && !is_bool<T>)
    {
-      return __builtin_reduce_add(this->raw);
+      if constexpr (is_floating_point<T>) {
+         return detail::simd_reduce_policy_fadd<T>(this->raw);
+      } else {
+         return __builtin_reduce_add(this->raw);
+      }
    }
 
    [[nodiscard]]
@@ -1180,9 +1477,8 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
       if consteval {
          return this->load(p_data);
       } else {
-         this->raw =
-            __builtin_nontemporal_load(__builtin_bit_cast(raw_type const*,
-                                                          p_data));
+         this->raw = __builtin_nontemporal_load(
+            __builtin_bit_cast(raw_type const*, p_data));
          return *this;
       }
    }
@@ -1395,7 +1691,7 @@ template <typename T, typename Abi>
 constexpr auto
 simd<T, Abi>::undef() & -> detail::simd_overflow_reference<
    T, Abi, overflow_policies::wrap>
-   requires(!is_bool<T>)
+   requires(is_integral<T> && !is_bool<T>)
 {
    return detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>(
       *this);
@@ -1406,7 +1702,7 @@ template <typename T, typename Abi>
 constexpr auto
 simd<T, Abi>::wrap() & -> detail::simd_overflow_reference<
    T, Abi, overflow_policies::wrap>
-   requires(!is_bool<T>)
+   requires(is_integral<T> && !is_bool<T>)
 {
    return detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>(
       *this);
@@ -1417,10 +1713,60 @@ template <typename T, typename Abi>
 constexpr auto
 simd<T, Abi>::sat() & -> detail::simd_overflow_reference<
    T, Abi, overflow_policies::saturate>
-   requires(!is_bool<T>)
+   requires(is_integral<T> && !is_bool<T>)
 {
-   return detail::simd_overflow_reference<T, Abi,
-                                          overflow_policies::saturate>(*this);
+   return detail::simd_overflow_reference<T, Abi, overflow_policies::saturate>(
+      *this);
+}
+
+}  // namespace cat
+
+#include <cat/detail/simd_precision_reference.hpp>
+
+namespace cat {
+
+template <typename T, typename Abi>
+   requires(is_same<typename Abi::scalar_type, T>)
+constexpr auto
+simd<T, Abi>::precise() & -> detail::simd_precision_reference<
+   simd<T, Abi>, precision_policies::precise>
+   requires(is_floating_point<T>)
+{
+   return detail::simd_precision_reference<simd<T, Abi>,
+                                           precision_policies::precise>(*this);
+}
+
+template <typename T, typename Abi>
+   requires(is_same<typename Abi::scalar_type, T>)
+constexpr auto
+simd<T, Abi>::precise() const& -> detail::simd_precision_reference<
+   simd<T, Abi> const, precision_policies::precise>
+   requires(is_floating_point<T>)
+{
+   return detail::simd_precision_reference<simd<T, Abi> const,
+                                           precision_policies::precise>(*this);
+}
+
+template <typename T, typename Abi>
+   requires(is_same<typename Abi::scalar_type, T>)
+constexpr auto
+simd<T, Abi>::fast() & -> detail::simd_precision_reference<
+   simd<T, Abi>, precision_policies::fast>
+   requires(is_floating_point<T>)
+{
+   return detail::simd_precision_reference<simd<T, Abi>,
+                                           precision_policies::fast>(*this);
+}
+
+template <typename T, typename Abi>
+   requires(is_same<typename Abi::scalar_type, T>)
+constexpr auto
+simd<T, Abi>::fast() const& -> detail::simd_precision_reference<
+   simd<T, Abi> const, precision_policies::fast>
+   requires(is_floating_point<T>)
+{
+   return detail::simd_precision_reference<simd<T, Abi> const,
+                                           precision_policies::fast>(*this);
 }
 
 }  // namespace cat
@@ -1443,7 +1789,7 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
    simd_mask {
  public:
    using abi_type = Abi;
-   using mask_traits = typename Abi::template simd_mask_lane<T>;
+   using mask_traits = Abi::template simd_mask_lane<T>;
    using mask_type = simd_mask<T, abi_type>;
    using value_type = bool;
    // TODO: Figure out what `reference` should be for logical mask lanes.
@@ -1451,8 +1797,8 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
    using simd_type = simd<T, abi_type>;
    using scalar_type = value_type;
 
-   using lane_scalar = typename mask_traits::lane_scalar;
-   using raw_type = typename mask_traits::raw_type;
+   using lane_scalar = mask_traits::lane_scalar;
+   using raw_type = mask_traits::raw_type;
 
    using iterator = detail::simd_range_stepanov_iterator<mask_type>;
    using const_iterator = detail::simd_range_stepanov_iterator<mask_type const>;
@@ -1532,8 +1878,8 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
                && OtherAbi::alignment <= abi_type::alignment
                && OtherAbi::lanes == abi_type::lanes)
    {
-      return __builtin_convertvector(
-         this->raw, typename simd_mask<U, OtherAbi>::raw_type);
+      return __builtin_convertvector(this->raw,
+                                     typename simd_mask<U, OtherAbi>::raw_type);
    }
 
    // Copy-assign the raw value of a `simd` to this.
@@ -1605,7 +1951,7 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
          return mask_type(this->raw & operand.raw);
       } else {
          using lane_bits = detail::simd_mask_lane_bits_type<lane_scalar>;
-         using bits_abi = typename abi_type::template make_abi_type<lane_bits>;
+         using bits_abi = abi_type::template make_abi_type<lane_bits>;
          using bits_vec = simd<lane_bits, bits_abi>;
          typename bits_vec::raw_type const a =
             __builtin_bit_cast(typename bits_vec::raw_type, this->raw);
@@ -1889,16 +2235,16 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
    [[nodiscard]]
    constexpr auto
    to_uword() const -> uword {
-      typename uword::raw_type bits = 0u;
+      uword bits = 0u;
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          if (i >= word_bits) {
             break;
          }
          if ((*this)[i]) {
-            bits |= (1uz << i.raw);
+            bits |= (1uz << i);
          }
       }
-      return uword(bits);
+      return bits;
    }
 
    template <typename UInt>
@@ -1907,7 +2253,7 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
       this->raw = raw_type{};
       uword const bits = static_cast<uword>(pattern_bits);
       for (idx i = 0u; i < abi_type::lanes; ++i) {
-         this->set_lane(i, ((bits.raw >> i.raw) & 1uz) != 0uz);
+         this->set_lane(i, ((bits >> i) & 1uz) != 0uz);
       }
    }
 
@@ -1928,7 +2274,7 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
    load(bool const* p_lane_bools) -> mask_type& {
       this->raw = raw_type{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
-         this->set_lane(i, p_lane_bools[i.raw]);
+         this->set_lane(i, p_lane_bools[i]);
       }
       return *this;
    }
@@ -1938,7 +2284,7 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
    size() -> idx {
       return abi_type::lanes;
    }
-   
+
    // Make `cat::simd_mask` iterable like a container.
    [[nodiscard]]
    constexpr auto
@@ -1964,7 +2310,7 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
 
    constexpr void
    offset_pos(idx& position, iword offset) const {
-      position = idx(static_cast<idx::raw_type>((position + offset).raw));
+      position = idx(static_cast<idx::raw_type>(position + offset));
    }
 
    [[nodiscard]]
@@ -2054,7 +2400,7 @@ struct simd_reduce_add_impl {
    [[nodiscard]]
    constexpr auto
    operator()(Simd const& v) const -> decltype(v.reduce_add())
-      requires(is_simd<Simd> && is_integral<typename Simd::scalar_type>
+      requires(is_simd<Simd> && is_arithmetic<typename Simd::scalar_type>
                && !is_bool<typename Simd::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -2491,14 +2837,16 @@ struct mask_all_of {
    [[nodiscard]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> bool {
-      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-#pragma clang loop vectorize_predicate(enable)
-      for (idx i = 0u; i < Abi::lanes; ++i) {
-         if (!mask[i]) {
-            return false;
+      if consteval {
+         for (idx i = 0u; i < Abi::lanes; ++i) {
+            if (!mask[i]) {
+               return false;
+            }
          }
+         return true;
       }
-      return true;
+      return __builtin_reduce_and(mask.raw !=
+                                  typename simd_mask<T, Abi>::raw_type{});
    }
 };
 
@@ -2508,14 +2856,16 @@ struct mask_any_of {
    [[nodiscard]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> bool {
-      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-#pragma clang loop vectorize_predicate(enable)
-      for (idx i = 0u; i < Abi::lanes; ++i) {
-         if (mask[i]) {
-            return true;
+      if consteval {
+         for (idx i = 0u; i < Abi::lanes; ++i) {
+            if (mask[i]) {
+               return true;
+            }
          }
+         return false;
       }
-      return false;
+      return __builtin_reduce_or(mask.raw !=
+                                 typename simd_mask<T, Abi>::raw_type{});
    }
 };
 
@@ -2532,11 +2882,10 @@ struct tuple_size<cat::simd<T, Abi>>
 
 template <typename T, typename Abi>
 struct tuple_size<cat::simd_mask<T, Abi>>
-      : cat::constant<cat::simd_mask<T, Abi>::abi_type::lanes.raw> {};
+    : cat::constant<cat::simd_mask<T, Abi>::abi_type::lanes.raw> {};
 
 template <typename T, typename Abi>
-struct tuple_size<cat::simd<T, Abi> const> : tuple_size<cat::simd<T, Abi>> {
-};
+struct tuple_size<cat::simd<T, Abi> const> : tuple_size<cat::simd<T, Abi>> {};
 
 template <typename T, typename Abi>
 struct tuple_size<cat::simd_mask<T, Abi> const>
@@ -2564,6 +2913,5 @@ struct tuple_element<index, cat::simd_mask<T, Abi> const> {
 
 }  // namespace std
 
-#include "cat/detail/simd_width_aliases.hpp"
-
 #include "cat/detail/simd_extras.hpp"
+#include "cat/detail/simd_width_aliases.hpp"

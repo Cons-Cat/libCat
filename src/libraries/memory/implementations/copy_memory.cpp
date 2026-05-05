@@ -129,7 +129,8 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
          p_source_handle += step_size;
 #pragma unroll
          for (idx i = 0u; i < 8u; ++i) {
-            // Store non-temporally because we aren't going to read or write this again.
+            // Store non-temporally because we aren't going to read or write
+            // this again.
             vectors[i].store_non_temporal(
                reinterpret_cast<simd_vector::memory_lane*>(
                   p_destination_handle.get() + (i * sizeof(simd_vector))));

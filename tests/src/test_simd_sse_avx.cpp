@@ -12,7 +12,8 @@ using cat::int4x8;
 // SSE2 hooks (`simd_sse2.hpp`).
 // `unary_full<op_rsqrt>`, plus `mask_to_bitset` via `sse2_abi_mask_to_bitset`
 // in `simd_mask_bitset.tpp`. Reference behavior uses `fixed_size_abi`
-// without ISA hooks, not `native_abi` which may alias `avx2_abi` on this target.
+// without ISA hooks, not `native_abi` which may alias `avx2_abi` on this
+// target.
 $test(simd_sse2_abi_hooks_permute_and_rsqrt) {
    static_assert(cat::scalar_abi<int4>::size == sizeof(int4));
    static_assert(cat::scalar_abi<int4>::alignment == alignof(int4));
@@ -23,10 +24,9 @@ $test(simd_sse2_abi_hooks_permute_and_rsqrt) {
    int4x4 const irev{3u, 2u, 1u, 0u};
    cat::verify(cat::simd_permute(ints, irev)[0u] == 40);
    cat::verify(cat::simd_permute(ints, irev)[3u] == 10);
-   cat::verify(
-      cat::simd_permute(ref_ints, irev)
-      == static_cast<cat::fixed_size_simd<int4, 4u>>(
-         cat::simd_permute(ints, irev)));
+   cat::verify(cat::simd_permute(ref_ints, irev)
+               == static_cast<cat::fixed_size_simd<int4, 4u>>(
+                  cat::simd_permute(ints, irev)));
 
    int4x4 const iid{0u, 1u, 2u, 3u};
    cat::verify(cat::simd_permute(ints, iid) == ints);
@@ -47,8 +47,7 @@ $test(simd_sse2_abi_hooks_permute_and_rsqrt) {
    x64::sse2_simd<float4> const unit{4_f4, 4_f4, 4_f4, 4_f4};
    cat::fixed_size_simd<float4, 4u> const unit_ref{4_f4, 4_f4, 4_f4, 4_f4};
    auto const rr = cat::simd_rsqrt(unit);
-   cat::fixed_size_simd<float4, 4u> const rr_scalar =
-      cat::simd_rsqrt(unit_ref);
+   cat::fixed_size_simd<float4, 4u> const rr_scalar = cat::simd_rsqrt(unit_ref);
    for (idx i = 0u; i < idx{4}; ++i) {
       cat::verify(cat::abs(rr[i] - 0.5_f4) < 0.001_f4);
       cat::verify(cat::abs(rr[i] - rr_scalar[i]) < 0.002_f4);
@@ -80,8 +79,8 @@ $test(simd_avx2_abi_hooks_permute_and_rsqrt) {
    int4x8 const rev_low{3u, 2u, 1u, 0u, 4u, 5u, 6u, 7u};
    auto const perm_avx = cat::simd_permute(fv, rev_low);
    cat::verify(cat::simd_permute(flo, rev4)
-               == cat::fixed_size_simd<float4, 4u>(
-                  perm_avx[0u], perm_avx[1u], perm_avx[2u], perm_avx[3u]));
+               == cat::fixed_size_simd<float4, 4u>(perm_avx[0u], perm_avx[1u],
+                                                   perm_avx[2u], perm_avx[3u]));
 
    int4x8 const fbroadcast{};
    cat::verify(cat::simd_permute(fv, fbroadcast)[7u] == fv[0u]);
@@ -92,10 +91,9 @@ $test(simd_avx2_abi_hooks_permute_and_rsqrt) {
    int4x4 const irev4{3u, 2u, 1u, 0u};
    int4x8 const irev_low{3u, 2u, 1u, 0u, 4u, 5u, 6u, 7u};
    auto const iperm = cat::simd_permute(iv, irev_low);
-   cat::verify(
-      cat::simd_permute(ilo, irev4)
-      == cat::fixed_size_simd<int4, 4u>(iperm[0u], iperm[1u], iperm[2u],
-                                        iperm[3u]));
+   cat::verify(cat::simd_permute(ilo, irev4)
+               == cat::fixed_size_simd<int4, 4u>(iperm[0u], iperm[1u],
+                                                 iperm[2u], iperm[3u]));
 
    x64::avx2_simd<double> const dv{1., 2., 3., 4.};
    int4x4 const did{0u, 1u, 2u, 3u};
@@ -117,8 +115,7 @@ $test(simd_avx2_abi_hooks_permute_and_rsqrt) {
    cat::fixed_size_simd<float4, 4u> ones_ref{};
    ones_ref.fill(4_f4);
    auto const rr = cat::simd_rsqrt(ones);
-   cat::fixed_size_simd<float4, 4u> const rr_scalar =
-      cat::simd_rsqrt(ones_ref);
+   cat::fixed_size_simd<float4, 4u> const rr_scalar = cat::simd_rsqrt(ones_ref);
    for (idx i = 0u; i < idx{8}; ++i) {
       idx const j = idx{static_cast<uword>(i.raw % 4u)};
       cat::verify(cat::abs(rr[i] - 0.5_f4) < 0.001_f4);
