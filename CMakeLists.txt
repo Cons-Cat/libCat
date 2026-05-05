@@ -380,8 +380,6 @@ include(${CMAKE_SOURCE_DIR}/cmake/cat_install.cmake)
 # Optional configure-time `try_compile` negative checks for
 # `cat::basic_int`/`cat::basic_float` / `cat::basic_idx` /
 # `cat::basic_intptr` (see
-# `cmake/cat_arithmetic_negative.cmake`). Off by default; the
-# `arithmetic-negative.yml` workflow opts in via
-# `CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON`. Included after
+# `cmake/cat_arithmetic_negative.cmake`). Off by default. Included after
 # `add_subdirectory(src/)` so include paths are available.
 include(${CMAKE_SOURCE_DIR}/cmake/cat_arithmetic_negative.cmake)

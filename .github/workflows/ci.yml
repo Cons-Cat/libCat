@@ -396,11 +396,8 @@ jobs:
 
       - uses: ./.github/actions/setup-toolchain
 
-      - name: Configure and run arithmetic negative tests
-        run: |
-          cmake -S . -B build-arithmetic-negative -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release
-          ctest --test-dir build-arithmetic-negative -R '^ArithmeticTypeCheck$' --verbose
+      - name: Run arithmetic type check
+        run: just test release arithmetic -v
 
   shared:
     # End-to-end `libcat.so` flow: build, install, then have a
