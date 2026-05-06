@@ -165,6 +165,76 @@ $test(math_sqrt) {
    static_assert(cat::is_same<double, decltype(cat::sqrt(4.))>);
 }
 
+$test(math_rsqrt_cbrt_nroot) {
+   auto near_one = [](float value) {
+      float const diff = value > 1.f ? value - 1.f : 1.f - value;
+      return diff < 1e-3f;
+   };
+
+   // `rsqrt(x) * sqrt(x) == 1`.
+   cat::verify(near_one(cat::rsqrt(1.f) * cat::sqrt(1.f)));
+   cat::verify(near_one(cat::rsqrt(4.f) * cat::sqrt(4.f)));
+   cat::verify(near_one(cat::rsqrt(16.f) * cat::sqrt(16.f)));
+
+   static_assert(cat::is_same<float, decltype(cat::rsqrt(4.f))>);
+   static_assert(cat::is_same<double, decltype(cat::rsqrt(4.))>);
+
+   // `fast`-policy `float` should route through the SSE `rsqrtss` + NR
+   // path. The result must still be within ~1.5e-5 of the precise answer
+   // (one NR step on a ~12-bit hardware estimate is comfortably below
+   // single-precision tolerance).
+   cat::float4_fast const fx = 4.f;
+   cat::float4_fast const fast_r = cat::rsqrt(fx);
+   cat::verify(near_one(fast_r.raw * 2.f));
+   cat::verify(near_one(cat::rsqrt(cat::float4_fast(16.f)).raw * 4.f));
+
+   // `cbrt`. Exact for perfect cubes within float precision tolerance.
+   cat::verify(near_one(cat::cbrt(8.f) / 2.f));
+   cat::verify(near_one(cat::cbrt(27.f) / 3.f));
+   cat::verify(near_one(cat::cbrt(125.f) / 5.f));
+
+   // Negative odd-`n` root keeps the sign.
+   cat::verify(cat::cbrt(-8.f) < 0.f);
+   cat::verify(near_one(-cat::cbrt(-8.f) / 2.f));
+
+   // `nroot(x, n) ** n == x`. `pow` of `cbrt(64)` rebuilds 64.
+   float const cbrt_64 = cat::cbrt(64.f);
+   cat::verify(near_one(cbrt_64 * cbrt_64 * cbrt_64 / 64.f));
+
+   // `nroot(_, 0)` and `nroot(_, 1)` are the identity.
+   cat::verify(cat::nroot(7.f, 0) == 7.f);
+   cat::verify(cat::nroot(7.f, 1) == 7.f);
+
+   // `n == 4` round-trip.
+   float const n4 = cat::nroot(81.f, 4);
+   cat::verify(near_one(n4 / 3.f));
+
+   // Even-`n` root of a negative is `NaN`.
+   cat::verify(__builtin_isnan(cat::nroot(-16.f, 4)));
+}
+
+$test(math_rcbrt_rnroot) {
+   auto near_one = [](float value) {
+      float const diff = value > 1.f ? value - 1.f : 1.f - value;
+      return diff < 1e-3f;
+   };
+
+   // `rcbrt(x) * cbrt(x) == 1`.
+   cat::verify(near_one(cat::rcbrt(8.f) * cat::cbrt(8.f)));
+   cat::verify(near_one(cat::rcbrt(27.f) * cat::cbrt(27.f)));
+
+   // `rnroot(x, 4) * nroot(x, 4) == 1`.
+   cat::verify(near_one(cat::rnroot(81.f, 4) * cat::nroot(81.f, 4)));
+   cat::verify(near_one(cat::rnroot(256.f, 4) * cat::nroot(256.f, 4)));
+
+   // `rnroot(_, 0)` is the identity (not the reciprocal).
+   cat::verify(cat::rnroot(5.f, 0) == 5.f);
+
+   // `rnroot(x, 1) == 1 / x`.
+   cat::verify(cat::rnroot(4.f, 1) == 0.25f);
+   cat::verify(cat::rnroot(2.f, 1) == 0.5f);
+}
+
 $test(math_div_floor) {
    using namespace cat::arithmetic_literals;
 

@@ -11,6 +11,7 @@
 #include "detail/dot.hpp"
 #include "detail/fma.hpp"
 #include "detail/minmax.hpp"
+#include "detail/nroot.hpp"
 #include "detail/pow.hpp"
 #include "detail/predicates.hpp"
 #include "detail/product.hpp"

@@ -203,6 +203,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/math/cat/detail/dot.hpp
   ${CATLIB}/math/cat/detail/fma.hpp
   ${CATLIB}/math/cat/detail/minmax.hpp
+  ${CATLIB}/math/cat/detail/nroot.hpp
   ${CATLIB}/math/cat/detail/pow.hpp
   ${CATLIB}/math/cat/detail/predicates.hpp
   ${CATLIB}/math/cat/detail/product.hpp

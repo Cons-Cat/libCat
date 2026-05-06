@@ -48,4 +48,24 @@ sqrt(T argument) -> T {
    return T(__builtin_elementwise_sqrt(raw_argument));
 }
 
+template <is_floating_point T>
+[[nodiscard]]
+constexpr auto
+rsqrt(T argument) -> T {
+   return T(1) / sqrt(argument);
+}
+
+#if __has_builtin(__builtin_ia32_rsqrtss)
+[[nodiscard]]
+constexpr auto
+rsqrt(float4_fast argument) -> float4_fast {
+   float const approx = __builtin_ia32_rsqrtss({argument.raw})[0];
+   float const minus_half_x = -0.5f * argument.raw;
+   float const three_halves = 1.5f;
+   float const correction =
+      __builtin_fmaf(minus_half_x, approx * approx, three_halves);
+   return approx * correction;
+}
+#endif
+
 }  // namespace cat
