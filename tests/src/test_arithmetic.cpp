@@ -327,8 +327,35 @@ $test(arithmetic_traits_is_safe_arithmetic_comparison) {
    static_assert(!cat::is_safe_arithmetic_comparison<int4, uint4>);
    static_assert(!cat::is_safe_arithmetic_comparison<uint4, int4>);
    static_assert(!cat::is_safe_arithmetic_comparison<int2, uint2>);
+
+   // Same-size float vs int is rejected: 32-bit `float` cannot exactly hold
+   // every value of a 32-bit integer (only 24 mantissa bits).
    static_assert(!cat::is_safe_arithmetic_comparison<int4, float4>);
    static_assert(!cat::is_safe_arithmetic_comparison<float4, uint4>);
+   static_assert(!cat::is_safe_arithmetic_comparison<float4, int4>);
+   static_assert(!cat::is_safe_arithmetic_comparison<uint4, float4>);
+   static_assert(!cat::is_safe_arithmetic_comparison<float8, int8>);
+   static_assert(!cat::is_safe_arithmetic_comparison<float8, uint8>);
+
+   // `float` (4 bytes) accepts any integer strictly smaller than itself.
+   static_assert(cat::is_safe_arithmetic_comparison<float4, int1>);
+   static_assert(cat::is_safe_arithmetic_comparison<float4, int2>);
+   static_assert(cat::is_safe_arithmetic_comparison<float4, uint1>);
+   static_assert(cat::is_safe_arithmetic_comparison<float4, uint2>);
+   static_assert(cat::is_safe_arithmetic_comparison<int1, float4>);
+   static_assert(cat::is_safe_arithmetic_comparison<int2, float4>);
+   static_assert(cat::is_safe_arithmetic_comparison<uint1, float4>);
+   static_assert(cat::is_safe_arithmetic_comparison<uint2, float4>);
+
+   // `double` (8 bytes) extends that to anything up through 4-byte ints.
+   static_assert(cat::is_safe_arithmetic_comparison<float8, int4>);
+   static_assert(cat::is_safe_arithmetic_comparison<float8, uint4>);
+   static_assert(cat::is_safe_arithmetic_comparison<int4, float8>);
+   static_assert(cat::is_safe_arithmetic_comparison<uint4, float8>);
+
+   // Float-vs-float and int-vs-int still follow the original rules.
+   static_assert(cat::is_safe_arithmetic_comparison<float4, float4>);
+   static_assert(cat::is_safe_arithmetic_comparison<int4, int4>);
 }
 
 $test(arithmetic_traits_is_safe_arithmetic_conversion) {
@@ -337,6 +364,22 @@ $test(arithmetic_traits_is_safe_arithmetic_conversion) {
    static_assert(!cat::is_safe_arithmetic_conversion<uint8, uint4>);
    static_assert(!cat::is_safe_arithmetic_conversion<int4, uint4>);
    static_assert(!cat::is_safe_arithmetic_conversion<uint4, int4>);
+
+   // Integer into strictly-larger float widens losslessly. The reverse
+   // (float into any integer) never does, so it stays rejected.
+   static_assert(cat::is_safe_arithmetic_conversion<int1, float4>);
+   static_assert(cat::is_safe_arithmetic_conversion<int2, float4>);
+   static_assert(cat::is_safe_arithmetic_conversion<uint1, float4>);
+   static_assert(cat::is_safe_arithmetic_conversion<uint2, float4>);
+   static_assert(cat::is_safe_arithmetic_conversion<int4, float8>);
+   static_assert(cat::is_safe_arithmetic_conversion<uint4, float8>);
+
+   static_assert(!cat::is_safe_arithmetic_conversion<int4, float4>);
+   static_assert(!cat::is_safe_arithmetic_conversion<int8, float8>);
+   static_assert(!cat::is_safe_arithmetic_conversion<float4, int1>);
+   static_assert(!cat::is_safe_arithmetic_conversion<float4, int4>);
+   static_assert(!cat::is_safe_arithmetic_conversion<float8, int4>);
+   static_assert(!cat::is_safe_arithmetic_conversion<float8, int8>);
 }
 
 $test(arithmetic_traits_is_same) {

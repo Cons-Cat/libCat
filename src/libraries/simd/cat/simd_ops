@@ -383,6 +383,41 @@ struct simd_unary_masked_impl {
    }
 };
 
+// Builds a `simd_mask<T, Abi>` by applying `pred` lane-wise to `input`. The
+// loop is `#pragma clang loop vectorize_predicate(enable)` so a callable that
+// fails to vectorize surfaces a Clang remark instead of silently scalarizing.
+template <typename T, typename Abi, typename Pred>
+[[nodiscard, gnu::always_inline]]
+constexpr auto
+simd_lane_mask_from_predicate(Pred const& pred, simd<T, Abi> input)
+   -> simd_mask<T, Abi> {
+   simd_mask<T, Abi> lane_mask{};
+#pragma clang loop vectorize_predicate(enable)
+   for (idx i = 0u; i < Abi::lanes; ++i) {
+      lane_mask.set_lane(i, static_cast<bool>(pred(input[i])));
+   }
+   return lane_mask;
+}
+
+// Predicate-deferring counterpart of `simd_unary_masked_impl`. Stores the
+// predicate; `T`/`Abi` are deduced on the call. The mask is materialized
+// from `pred(input[i])` and the existing masked path is reused.
+template <typename Derived, typename Pred>
+struct simd_unary_predicate_masked_impl {
+   Derived const& self;
+   Pred pred;
+
+   template <typename T, typename Abi>
+      requires(is_predicate<Pred, T>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input) const -> simd<T, Abi> {
+      auto const mask = simd_lane_mask_from_predicate(pred, input);
+      return simd_unary_masked_impl<Derived, simd_mask<T, Abi>>{self, mask}(
+         input);
+   }
+};
+
 template <typename Derived, typename Mask>
 struct simd_binary_masked_impl {
    Derived const& self;
@@ -392,6 +427,22 @@ struct simd_binary_masked_impl {
    [[nodiscard]]
    constexpr auto
    operator()(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      return self.invoke_masked(left, right, mask);
+   }
+};
+
+// Predicate-deferring counterpart. The mask is built from `pred(left[i])`.
+template <typename Derived, typename Pred>
+struct simd_binary_predicate_masked_impl {
+   Derived const& self;
+   Pred pred;
+
+   template <typename T, typename Abi>
+      requires(is_predicate<Pred, T>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      auto const mask = simd_lane_mask_from_predicate(pred, left);
       return self.invoke_masked(left, right, mask);
    }
 };
@@ -407,6 +458,23 @@ struct simd_ternary_masked_impl {
    constexpr auto
    operator()(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
       -> simd<T, Abi> {
+      return self.invoke_masked(x, y, z, mask);
+   }
+};
+
+// Predicate-deferring counterpart. The mask is built from `pred(x[i])`.
+template <typename Derived, typename Pred>
+struct simd_ternary_predicate_masked_impl {
+   Derived const& self;
+   Pred pred;
+
+   template <typename T, typename Abi>
+      requires(is_predicate<Pred, T>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
+      -> simd<T, Abi> {
+      auto const mask = simd_lane_mask_from_predicate(pred, x);
       return self.invoke_masked(x, y, z, mask);
    }
 };
@@ -1038,6 +1106,18 @@ struct simd_elementwise_interface {
       return {self(), lane_mask};
    }
 
+   // Predicate-bound subscript. `T`/`Abi` are deduced when the returned
+   // functor is invoked, at which point the lane mask is built from
+   // `pred(input[i])`. Predicate parameter must be compatible with the
+   // SIMD lane scalar (constraint enforced on the deferred `operator()`).
+   template <typename Pred>
+   [[nodiscard]]
+   constexpr auto
+   operator[](Pred pred) const
+      -> simd_unary_predicate_masked_impl<Derived, Pred> {
+      return {self(), pred};
+   }
+
  private:
    constexpr simd_elementwise_interface() = default;
    friend Derived;
@@ -1081,6 +1161,15 @@ struct simd_elementwise_binary_interface {
    operator[](simd_mask<T, Abi> lane_mask) const
       -> simd_binary_masked_impl<Derived, simd_mask<T, Abi>> {
       return {self(), lane_mask};
+   }
+
+   // Predicate-bound subscript. The lane mask is built from `pred(left[i])`.
+   template <typename Pred>
+   [[nodiscard]]
+   constexpr auto
+   operator[](Pred pred) const
+      -> simd_binary_predicate_masked_impl<Derived, Pred> {
+      return {self(), pred};
    }
 
    template <typename T, typename Abi>
@@ -1132,6 +1221,15 @@ struct simd_elementwise_ternary_interface {
    operator[](simd_mask<T, Abi> lane_mask) const
       -> simd_ternary_masked_impl<Derived, simd_mask<T, Abi>> {
       return {self(), lane_mask};
+   }
+
+   // Predicate-bound subscript. The lane mask is built from `pred(x[i])`.
+   template <typename Pred>
+   [[nodiscard]]
+   constexpr auto
+   operator[](Pred pred) const
+      -> simd_ternary_predicate_masked_impl<Derived, Pred> {
+      return {self(), pred};
    }
 
    template <typename T, typename Abi>
@@ -2309,7 +2407,7 @@ simd_rsqrt_lane(T x) -> T {
    using R = raw_arithmetic_type<T>;
    R const rx = static_cast<R>(make_raw_arithmetic(x));
    return T(simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1),
-                                                         cat::sqrt(rx)));
+                                                              cat::sqrt(rx)));
 }
 
 struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
@@ -2356,9 +2454,9 @@ simd_nroot_lane(T x, iword n) -> T {
    T const root_magnitude = [&]() -> T {
       auto const abs_raw = make_raw_arithmetic(abs_x);
       if constexpr (is_same<raw_arithmetic_type<T>, float>) {
-         return static_cast<T>(
-            emulated_powf(abs_raw, simd_float_divide<simd_float_precision_policy<T>>(
-                                      1.f, static_cast<float>(n.raw))));
+         return static_cast<T>(emulated_powf(
+            abs_raw, simd_float_divide<simd_float_precision_policy<T>>(
+                        1.f, static_cast<float>(n.raw))));
       } else {
          return static_cast<T>(
             emulated_pow(static_cast<double>(abs_raw),
@@ -2390,13 +2488,13 @@ simd_rnroot_lane(T x, iword n) -> T {
    if (n == 1) {
       using R = raw_arithmetic_type<T>;
       R const rx = static_cast<R>(make_raw_arithmetic(x));
-      return T(
-         simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), rx));
+      return T(simd_float_divide<simd_float_precision_policy<T>>(
+         static_cast<R>(1), rx));
    }
    using R = raw_arithmetic_type<T>;
    R const root = static_cast<R>(make_raw_arithmetic(simd_nroot_lane(x, n)));
-   return T(
-      simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), root));
+   return T(simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1),
+                                                              root));
 }
 
 template <typename T>
@@ -2513,8 +2611,8 @@ struct simd_rnroot_impl
       }
       if (n == 1) {
          simd<T, Abi> const one{T(1)};
-         return simd<T, Abi>(
-            simd_float_divide<simd_float_precision_policy<T>>(one.raw, input.raw));
+         return simd<T, Abi>(simd_float_divide<simd_float_precision_policy<T>>(
+            one.raw, input.raw));
       }
       simd<T, Abi> const root = simd_nroot_impl{}.invoke_full(input, n);
       simd<T, Abi> const one{T(1)};

@@ -47,8 +47,7 @@ class type_list {
    template <typename T, typename U, typename... Remaining>
       requires(sizeof...(Remaining) > 0)
    static consteval auto
-   recurse_for_type() -> bool
-   {
+   recurse_for_type() -> bool {
       return is_same<T, U> ? true : recurse_for_type<T, Remaining...>();
    }
 
@@ -62,8 +61,7 @@ class type_list {
    // Sum the number of occurences of `T` in this type list.
    template <typename T, idx count, typename U, typename... Remaining>
    static consteval auto
-   recurse_for_count() -> idx
-   {
+   recurse_for_count() -> idx {
       return is_same<T, U> ? recurse_for_count<T, count + 1u, Remaining...>()
                            : recurse_for_count<T, count, Remaining...>();
    }
@@ -77,8 +75,7 @@ class type_list {
    template <typename U, typename... Remaining>
       requires(sizeof...(Remaining) > 0)
    static consteval auto
-   recurse_for_unique() -> bool
-   {
+   recurse_for_unique() -> bool {
       return is_unique<U> ? recurse_for_unique<Remaining...>() : false;
    }
 

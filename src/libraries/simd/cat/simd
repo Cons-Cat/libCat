@@ -434,81 +434,81 @@ template <typename T, typename Abi,
           overflow_policies policy = make_overflow_policy<T>>
    requires(is_integral<T> && !is_bool<T>)
 constexpr auto
-simd_integral_add_policy(simd<T, Abi> const& left,
-                         simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_integral_add_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi,
           overflow_policies policy = make_overflow_policy<T>>
    requires(is_integral<T> && !is_bool<T>)
 constexpr auto
-simd_integral_sub_policy(simd<T, Abi> const& left,
-                         simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_integral_sub_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi,
           overflow_policies policy = make_overflow_policy<T>>
    requires(is_integral<T> && !is_bool<T>)
 constexpr auto
-simd_integral_mul_policy(simd<T, Abi> const& left,
-                         simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_integral_mul_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi,
           overflow_policies policy = make_overflow_policy<T>>
    requires(is_integral<T> && !is_bool<T>)
 constexpr auto
-simd_integral_div_policy(simd<T, Abi> const& left,
-                         simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_integral_div_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi,
           overflow_policies policy = make_overflow_policy<T>>
    requires(is_integral<T> && !is_bool<T>)
 constexpr auto
-simd_integral_mod_policy(simd<T, Abi> const& left,
-                         simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_integral_mod_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi,
           overflow_policies policy = make_overflow_policy<T>>
    requires(is_integral<T> && !is_bool<T>)
 constexpr auto
-simd_integral_shl_policy(simd<T, Abi> const& left,
-                         simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_integral_shl_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi,
           overflow_policies policy = make_overflow_policy<T>>
    requires(is_integral<T> && !is_bool<T>)
 constexpr auto
-simd_integral_shr_policy(simd<T, Abi> const& left,
-                         simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_integral_shr_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi>
    requires(is_floating_point<T>)
 constexpr auto
-simd_floating_add_policy(simd<T, Abi> const& left,
-                                 simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_floating_add_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi>
    requires(is_floating_point<T>)
 constexpr auto
-simd_floating_sub_policy(simd<T, Abi> const& left,
-                                 simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_floating_sub_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi>
    requires(is_floating_point<T>)
 constexpr auto
-simd_floating_mul_policy(simd<T, Abi> const& left,
-                                 simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_floating_mul_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi>
    requires(is_floating_point<T>)
 constexpr auto
-simd_floating_div_policy(simd<T, Abi> const& left,
-                                 simd<T, Abi> const& right) -> simd<T, Abi>;
+simd_floating_div_policy(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi>;
 
 template <typename T, typename Abi>
    requires(is_floating_point<T>)
 constexpr auto
 simd_floating_fma_policy(simd<T, Abi> const& multiplicand,
-                                 simd<T, Abi> const& multiplier,
-                                 simd<T, Abi> const& addend) -> simd<T, Abi>;
+                         simd<T, Abi> const& multiplier,
+                         simd<T, Abi> const& addend) -> simd<T, Abi>;
 }  // namespace detail
 
 template <typename T, typename Abi>
@@ -966,8 +966,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
       requires(!is_bool<T>)
    {
       if constexpr (is_floating_point<T>) {
-         return detail::simd_floating_fma_policy(*this, multiplier,
-                                                         addend);
+         return detail::simd_floating_fma_policy(*this, multiplier, addend);
       } else {
          return (*this * multiplier) + addend;
       }
@@ -1124,8 +1123,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    constexpr auto
    operator-() const -> simd
       requires(!is_bool<T>
-               && (is_floating_point<T>
-                   || is_signed<raw_arithmetic_type<T>>))
+               && (is_floating_point<T> || is_signed<raw_arithmetic_type<T>>))
    {
       if constexpr (is_floating_point<T>) {
          return simd(0) - *this;

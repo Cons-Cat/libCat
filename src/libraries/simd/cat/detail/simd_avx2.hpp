@@ -58,6 +58,21 @@ using avx2_unaligned_simd = cat::simd<T, avx2_unaligned_abi<T>>;
 template <typename T>
 using avx2_unaligned_simd_mask = cat::simd_mask<T, avx2_unaligned_abi<T>>;
 
+namespace detail {
+template <typename Abi, typename T>
+inline constexpr bool is_avx2_abi_impl = false;
+
+template <typename T>
+inline constexpr bool is_avx2_abi_impl<avx2_abi<T>, T> = true;
+
+template <typename T>
+inline constexpr bool is_avx2_abi_impl<avx2_unaligned_abi<T>, T> = true;
+}  // namespace detail
+
+// Matches both `avx2_abi<T>` and unaligned `avx2_unaligned_abi<T>`.
+template <typename Abi, typename T>
+concept is_avx2_abi = detail::is_avx2_abi_impl<Abi, T>;
+
 }  // namespace x64
 
 namespace x64 {

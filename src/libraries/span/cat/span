@@ -483,7 +483,7 @@ is_pointer_in_range(T const* p_pointer, span<T const> const range) -> bool {
 
    T const* const p_begin = range.data();
    T const* const p_end = p_begin + range.size();
-   return !less<>{}(p_pointer, p_begin) && less<>{}(p_pointer, p_end);
+   return !is_less(p_pointer, p_begin) && is_less(p_pointer, p_end);
 }
 
 template <typename T>

@@ -123,6 +123,41 @@ $test(simd_avx2_abi_hooks_permute_and_rsqrt) {
    }
 }
 
+// Exercises the hardware `vrsqrtps`/`vrsqrtps256` path with one Newton-Raphson
+// refinement step. Bare hardware is only ~12-bit (<= 1.5 * 2^-12, about
+// 3.7e-4 relative error). After the NR step we expect ~23-bit
+// (single-precision) accuracy. A tolerance of 1e-5 would fail for the
+// unrefined hook and pass with the refined one, so this is a regression check
+// that NR is on.
+$test(simd_sse2_rsqrt_fast_is_nr_refined) {
+   using sse2_fast =
+      cat::simd<cat::float4_fast, x64::sse2_abi<cat::float4_fast>>;
+   sse2_fast const v{cat::float4_fast(4.f), cat::float4_fast(0.25f),
+                     cat::float4_fast(16.f), cat::float4_fast(100.f)};
+   auto const rr = cat::simd_rsqrt(v);
+   float const expected[4] = {0.5f, 2.f, 0.25f, 0.1f};
+   for (cat::idx i = 0u; i < cat::idx{4}; ++i) {
+      float const got = static_cast<float>(rr[i]);
+      cat::verify(cat::abs(got - expected[i.raw]) < 1e-5f * expected[i.raw]);
+   }
+}
+
+$test(simd_avx2_rsqrt_fast_is_nr_refined) {
+   using avx_fast =
+      cat::simd<cat::float4_fast, x64::avx2_abi<cat::float4_fast>>;
+   avx_fast const v{cat::float4_fast(4.f),     cat::float4_fast(0.25f),
+                    cat::float4_fast(16.f),    cat::float4_fast(100.f),
+                    cat::float4_fast(0.0625f), cat::float4_fast(625.f),
+                    cat::float4_fast(2.f),     cat::float4_fast(9.f)};
+   auto const rr = cat::simd_rsqrt(v);
+   float const expected[8] = {0.5f, 2.f,   0.25f,       0.1f,
+                              4.f,  0.04f, 0.70710677f, 1.f / 3.f};
+   for (cat::idx i = 0u; i < cat::idx{8}; ++i) {
+      float const got = static_cast<float>(rr[i]);
+      cat::verify(cat::abs(got - expected[i.raw]) < 1e-5f * expected[i.raw]);
+   }
+}
+
 $test(simd_avx2_rsqrt_times_sqrt_near_one) {
    using avxf = cat::simd<float, x64::avx2_abi<float>>;
    using sxf = cat::fixed_size_simd<float, 4u>;

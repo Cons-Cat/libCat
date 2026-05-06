@@ -2,8 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/arithmetic>
 #include <cat/detail/simd_precision_policy.hpp>
+
+#include <cat/arithmetic>
 
 namespace cat::detail {
 
@@ -67,8 +68,7 @@ simd_from_unsigned_raw(UnsignedRaw const& value) -> cat::simd<T, Abi> {
    return cat::simd<T, Abi>(__builtin_bit_cast(raw_type, value));
 }
 
-template <typename T, typename Abi,
-          overflow_policies policy>
+template <typename T, typename Abi, overflow_policies policy>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -86,8 +86,7 @@ simd_integral_add_policy(cat::simd<T, Abi> const& left,
    }
 }
 
-template <typename T, typename Abi,
-          overflow_policies policy>
+template <typename T, typename Abi, overflow_policies policy>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -105,8 +104,7 @@ simd_integral_sub_policy(cat::simd<T, Abi> const& left,
    }
 }
 
-template <typename T, typename Abi,
-          overflow_policies policy>
+template <typename T, typename Abi, overflow_policies policy>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -123,8 +121,7 @@ simd_integral_mul_policy(cat::simd<T, Abi> const& left,
    }
 }
 
-template <typename T, typename Abi,
-          overflow_policies policy>
+template <typename T, typename Abi, overflow_policies policy>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -149,8 +146,7 @@ simd_integral_div_policy(cat::simd<T, Abi> const& left,
    }
 }
 
-template <typename T, typename Abi,
-          overflow_policies policy>
+template <typename T, typename Abi, overflow_policies policy>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -175,8 +171,7 @@ simd_integral_mod_policy(cat::simd<T, Abi> const& left,
    }
 }
 
-template <typename T, typename Abi,
-          overflow_policies policy>
+template <typename T, typename Abi, overflow_policies policy>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -194,8 +189,7 @@ simd_integral_shl_policy(cat::simd<T, Abi> const& left,
    }
 }
 
-template <typename T, typename Abi,
-          overflow_policies policy>
+template <typename T, typename Abi, overflow_policies policy>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -219,7 +213,8 @@ template <typename T, typename Abi>
 constexpr auto
 simd_floating_add_policy(cat::simd<T, Abi> const& left,
                          cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   if constexpr (simd_float_precision_policy<T> == precision_policies::precise) {
+   if constexpr (simd_float_precision_policy<T>
+                 == precision_policies::precise) {
 #pragma float_control(precise, on)
       return cat::simd<T, Abi>(left.raw + right.raw);
    } else {
@@ -234,7 +229,8 @@ template <typename T, typename Abi>
 constexpr auto
 simd_floating_sub_policy(cat::simd<T, Abi> const& left,
                          cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   if constexpr (simd_float_precision_policy<T> == precision_policies::precise) {
+   if constexpr (simd_float_precision_policy<T>
+                 == precision_policies::precise) {
 #pragma float_control(precise, on)
       return cat::simd<T, Abi>(left.raw - right.raw);
    } else {
@@ -249,7 +245,8 @@ template <typename T, typename Abi>
 constexpr auto
 simd_floating_mul_policy(cat::simd<T, Abi> const& left,
                          cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   if constexpr (simd_float_precision_policy<T> == precision_policies::precise) {
+   if constexpr (simd_float_precision_policy<T>
+                 == precision_policies::precise) {
 #pragma float_control(precise, on)
       return cat::simd<T, Abi>(left.raw * right.raw);
    } else {
@@ -264,7 +261,8 @@ template <typename T, typename Abi>
 constexpr auto
 simd_floating_div_policy(cat::simd<T, Abi> const& left,
                          cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
-   if constexpr (simd_float_precision_policy<T> == precision_policies::precise) {
+   if constexpr (simd_float_precision_policy<T>
+                 == precision_policies::precise) {
 #pragma float_control(precise, on)
       return cat::simd<T, Abi>(left.raw / right.raw);
    } else {

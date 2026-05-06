@@ -2,8 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/arithmetic>
 #include <cat/detail/simd_arithmetic_policies.hpp>
+
+#include <cat/arithmetic>
 
 namespace cat::detail {
 
@@ -167,9 +168,8 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
-      return simd_floating_add_policy(
-         make_simd_value<result_type>(*m_wrapped),
-         make_simd_value<result_type>(rhs));
+      return simd_floating_add_policy(make_simd_value<result_type>(*m_wrapped),
+                                      make_simd_value<result_type>(rhs));
    }
 
    template <is_arithmetic U>
@@ -187,9 +187,8 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
-      return simd_floating_sub_policy(
-         make_simd_value<result_type>(*m_wrapped),
-         make_simd_value<result_type>(rhs));
+      return simd_floating_sub_policy(make_simd_value<result_type>(*m_wrapped),
+                                      make_simd_value<result_type>(rhs));
    }
 
    template <is_arithmetic U>
@@ -209,9 +208,8 @@ class simd_precision_reference
    subtract_from(cat::simd<OtherT, OtherAbi> const& lhs) const
       -> left_result_type<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
-      return simd_floating_sub_policy(
-         make_simd_value<left_type>(lhs),
-         make_simd_value<left_type>(*m_wrapped));
+      return simd_floating_sub_policy(make_simd_value<left_type>(lhs),
+                                      make_simd_value<left_type>(*m_wrapped));
    }
 
    template <is_arithmetic U>
@@ -219,8 +217,8 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U&& lhs) const -> result_type {
-      return simd_floating_sub_policy(
-         result_type($fwd(lhs)), make_simd_value<result_type>(*m_wrapped));
+      return simd_floating_sub_policy(result_type($fwd(lhs)),
+                                      make_simd_value<result_type>(*m_wrapped));
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -230,9 +228,8 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
-      return simd_floating_mul_policy(
-         make_simd_value<result_type>(*m_wrapped),
-         make_simd_value<result_type>(rhs));
+      return simd_floating_mul_policy(make_simd_value<result_type>(*m_wrapped),
+                                      make_simd_value<result_type>(rhs));
    }
 
    template <is_arithmetic U>
@@ -255,10 +252,9 @@ class simd_precision_reference
    constexpr auto
    fma(cat::simd<FactorT, FactorAbi> const& factor,
        cat::simd<AddendT, AddendAbi> const& addend) const -> result_type {
-      return simd_floating_fma_policy(
-         make_simd_value<result_type>(*m_wrapped),
-         make_simd_value<result_type>(factor),
-         make_simd_value<result_type>(addend));
+      return simd_floating_fma_policy(make_simd_value<result_type>(*m_wrapped),
+                                      make_simd_value<result_type>(factor),
+                                      make_simd_value<result_type>(addend));
    }
 
    template <typename Factor, typename Addend>
@@ -280,9 +276,8 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
-      return simd_floating_div_policy(
-         make_simd_value<result_type>(*m_wrapped),
-         make_simd_value<result_type>(rhs));
+      return simd_floating_div_policy(make_simd_value<result_type>(*m_wrapped),
+                                      make_simd_value<result_type>(rhs));
    }
 
    template <is_arithmetic U>
@@ -302,9 +297,8 @@ class simd_precision_reference
    divide_into(cat::simd<OtherT, OtherAbi> const& lhs) const
       -> left_result_type<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
-      return simd_floating_div_policy(
-         make_simd_value<left_type>(lhs),
-         make_simd_value<left_type>(*m_wrapped));
+      return simd_floating_div_policy(make_simd_value<left_type>(lhs),
+                                      make_simd_value<left_type>(*m_wrapped));
    }
 
    template <is_arithmetic U>
@@ -312,8 +306,8 @@ class simd_precision_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_into(U&& lhs) const -> result_type {
-      return simd_floating_div_policy(
-         result_type($fwd(lhs)), make_simd_value<result_type>(*m_wrapped));
+      return simd_floating_div_policy(result_type($fwd(lhs)),
+                                      make_simd_value<result_type>(*m_wrapped));
    }
 
    template <typename OtherT, typename OtherAbi>

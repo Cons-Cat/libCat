@@ -22,11 +22,11 @@
 
 namespace cat::detail::simd_abi {
 
-template <typename T>
-struct mask_to_bitset<T, x64::avx2_abi<T>> {
+template <typename T, x64::is_avx2_abi<T> Abi>
+struct mask_to_bitset<T, Abi> {
    [[nodiscard]]
    static constexpr auto
-   invoke(simd_mask<T, x64::avx2_abi<T>> mask) -> __UINT64_TYPE__ {
+   invoke(simd_mask<T, Abi> mask) -> __UINT64_TYPE__ {
       // P2638R0 pack mask lanes into a lane-bit pattern for `bitset`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       return static_cast<__UINT64_TYPE__>(
@@ -34,35 +34,11 @@ struct mask_to_bitset<T, x64::avx2_abi<T>> {
    }
 };
 
-template <typename T>
-struct mask_to_bitset<T, x64::avx2_unaligned_abi<T>> {
+template <typename T, x64::is_sse2_abi<T> Abi>
+struct mask_to_bitset<T, Abi> {
    [[nodiscard]]
    static constexpr auto
-   invoke(simd_mask<T, x64::avx2_unaligned_abi<T>> mask) -> __UINT64_TYPE__ {
-      // P2638R0 pack mask lanes into a lane-bit pattern for `bitset`.
-      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-      return static_cast<__UINT64_TYPE__>(
-         x64::detail::avx2_abi_mask_to_bitset(mask));
-   }
-};
-
-template <typename T>
-struct mask_to_bitset<T, x64::sse2_abi<T>> {
-   [[nodiscard]]
-   static constexpr auto
-   invoke(simd_mask<T, x64::sse2_abi<T>> mask) -> __UINT64_TYPE__ {
-      // P2638R0 pack mask lanes into a lane-bit pattern for `bitset`.
-      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-      return static_cast<__UINT64_TYPE__>(
-         x64::detail::sse2_abi_mask_to_bitset(mask));
-   }
-};
-
-template <typename T>
-struct mask_to_bitset<T, x64::sse2_unaligned_abi<T>> {
-   [[nodiscard]]
-   static constexpr auto
-   invoke(simd_mask<T, x64::sse2_unaligned_abi<T>> mask) -> __UINT64_TYPE__ {
+   invoke(simd_mask<T, Abi> mask) -> __UINT64_TYPE__ {
       // P2638R0 pack mask lanes into a lane-bit pattern for `bitset`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       return static_cast<__UINT64_TYPE__>(

@@ -397,38 +397,45 @@ using promoted_type = decltype(promoted_arithmetic<remove_constref<Left>,
 
 }  // namespace detail
 
-template <typename Left, typename Right>
-concept is_safe_arithmetic_comparison =
-   // `raw_arithmetic_type` is needed here to prevent a recursive constraint in
-   // evaluating the < operator inside `is_signed`.
-   (  // If both types have the same signed-ness:
-      (is_signed<raw_arithmetic_type<Left>>
-       == is_signed<raw_arithmetic_type<Right>>)
-      // Or, if `left_type` is signed and larger than `right_type`:
-      || (is_signed<raw_arithmetic_type<Left>>
-          && is_unsigned<raw_arithmetic_type<Right>>
-          && (sizeof(Left) > sizeof(Right)))
-      // Or, if `right_type` is signed and larger than `left_type`.
-      || (is_unsigned<raw_arithmetic_type<Left>>
-          && is_signed<raw_arithmetic_type<Right>>
-          && (sizeof(Left) < sizeof(Right))))
-   // And both types have the same floating-point-ness.
-   && (is_floating_point<Left> == is_floating_point<Right>);
-
-// Any arithmetic wrapper can safely convert to a type larger than itself, but
-// not smaller than itself.
-template <typename from_type, typename to_type>
+// One-directional widening safety: every value of `From` can be exactly
+// represented in `To`. `raw_arithmetic_type` is needed here to prevent a
+// recursive constraint in evaluating the < operator inside `is_signed`.
+template <typename From, typename To>
 concept is_safe_arithmetic_conversion =
-   ((detail::integer_promotion_hierarchy<from_type>::order
-     <= detail::integer_promotion_hierarchy<to_type>::order)
-    && is_safe_arithmetic_comparison<from_type, to_type>)
-
+   // From not wider than To in the promotion hierarchy.
+   ((detail::integer_promotion_hierarchy<From>::order
+     <= detail::integer_promotion_hierarchy<To>::order)
+    && (
+       // Same-kind path (float->float or int->int).
+       ((is_floating_point<From> == is_floating_point<To>)
+        && (  // Same signedness widens losslessly.
+           (is_signed<raw_arithmetic_type<From>>
+            == is_signed<raw_arithmetic_type<To>>)
+           // Or `From` is unsigned and `To` is signed strictly larger, so
+           // every `From` value fits in `To`'s positive range.
+           || (is_unsigned<raw_arithmetic_type<From>>
+               && is_signed<raw_arithmetic_type<To>>
+               && (sizeof(From) < sizeof(To)))))
+       // If only `To` is a float, it must be larger so that every value of the
+       // integer type is exactly representable in the float's mantissa. This
+       // mirrors the signed-strictly-larger-than-unsigned rule above. Float to int
+       // is never considered a safe conversion.
+       || (is_integral<From> && is_floating_point<To>
+           && (sizeof(From) < sizeof(To)))))
    // A special-case exception must be made for `basic_idx` -> `iword`. This
    // doesn't work by default because they have different signed-ness. This is
    // only used for `undefined` overflow.
-   || (is_same<from_type, basic_idx<overflow_policies::undefined>>
-       && is_same<to_type,
-                  basic_int<signed long, overflow_policies::undefined>>);
+   || (is_same<From, basic_idx<overflow_policies::undefined>>
+       && is_same<To, basic_int<signed long, overflow_policies::undefined>>);
+
+// Two arithmetic operands can be safely compared if either can be safely
+// converted to the other (i.e., one widens losslessly into the common
+// comparison type). The rule is the symmetric closure of
+// `is_safe_arithmetic_conversion`.
+template <typename Left, typename Right>
+concept is_safe_arithmetic_comparison =
+   is_safe_arithmetic_conversion<Left, Right>
+   || is_safe_arithmetic_conversion<Right, Left>;
 
 namespace detail {
 

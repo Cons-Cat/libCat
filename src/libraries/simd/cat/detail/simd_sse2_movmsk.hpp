@@ -6,45 +6,35 @@
 
 namespace x64::detail {
 
-template <typename T, typename Abi>
-   requires(cat::is_same<typename Abi::scalar_type, T> && Abi::size == 16u
-            && Abi::lanes == cat::idx{Abi::size.raw / sizeof(T)})
-[[nodiscard]] constexpr auto
-   sse2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
-   if constexpr (cat::is_same<T, float>) {
-      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskps(mask.raw));
-   } else if constexpr (cat::is_same<T, double>) {
-      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskpd(mask.raw));
-   } else if constexpr (sizeof(T) == 4 && Abi::lanes == 4) {
-      using float_abi = Abi::template make_abi_type<float>;
-      return static_cast<__UINT32_TYPE__>(
-         __builtin_ia32_movmskps(__builtin_bit_cast(
-            typename cat::simd<float, float_abi>::raw_type, mask.raw)));
-   } else if constexpr (sizeof(T) == 8 && Abi::lanes == 2) {
-      using double_abi = Abi::template make_abi_type<double>;
-      return static_cast<__UINT32_TYPE__>(
-         __builtin_ia32_movmskpd(__builtin_bit_cast(
-            typename cat::simd<double, double_abi>::raw_type, mask.raw)));
-   } else if constexpr (sizeof(T) == 1 && Abi::lanes == 16) {
-      return static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb(mask.raw))
-             & static_cast<__UINT32_TYPE__>(0xFFFF);
+template <typename T, is_sse2_abi<T> Abi>
+[[nodiscard]]
+constexpr auto
+sse2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
+   auto raw =
+      __builtin_bit_cast(typename cat::simd<T, Abi>::raw_type, mask.raw);
+
+   if constexpr (sizeof(T) == 1) {
+      return static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb(raw));
+   } else if constexpr (sizeof(T) == 4) {
+      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskps(raw));
+   } else if constexpr (sizeof(T) == 8) {
+      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskpd(raw));
    } else {
-      __UINT32_TYPE__ const u =
-         static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb(mask.raw))
-         & static_cast<__UINT32_TYPE__>(0xFFFF);
-      constexpr cat::idx lane_count = Abi::lanes;
-      constexpr cat::idx w = sizeof(T);
-      __UINT32_TYPE__ out = 0;
-      for (cat::idx i = 0u; i < lane_count; ++i) {
-         __UINT32_TYPE__ t = 0;
-         for (cat::idx j = 0u; j < w; ++j) {
-            t |= (u >> (i.raw * w + j.raw)) & static_cast<__UINT32_TYPE__>(1);
+      // sizeof(T) == 2, lanes == 8. Collapse the byte-bitmap from `pmovmskb`
+      // into one bit per logical lane.
+      // TODO: Is this the most efficient solution?
+      __UINT32_TYPE__ const bytes{__builtin_ia32_pmovmskb(raw)};
+      __UINT32_TYPE__ lane_bits = 0;
+      for (cat::idx i = 0u; i < Abi::lanes; ++i) {
+         cat::uint4 lane_bitset = 0;
+         for (cat::idx j = 0u; j < sizeof(T); ++j) {
+            lane_bitset |= (bytes >> (i * sizeof(T) + j)) & 1u;
          }
-         if (t != 0) {
-            out |= static_cast<__UINT32_TYPE__>(1) << i.raw;
+         if (lane_bitset != 0) {
+            lane_bits |= 1u << i;
          }
       }
-      return out;
+      return lane_bits;
    }
 }
 

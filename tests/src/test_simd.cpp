@@ -212,14 +212,18 @@ $test(simd_collection) {
    cat::verify(cat::read_at(lanes, 1u) == 2_i4);
    auto lane_tail = lanes | cat::reverse() | cat::take(2u);
    cat::verify(lane_tail.sum() == 7_i4);
-   auto doubled_tail = cat::ref(lanes)
-                          .filter([](int4 lane) -> bool {
-                             return lane > 2_i4;
-                          })
+   auto doubled_evens = cat::ref(lanes)
+                           .filter(cat::is_even)
+                           .transform([](int4 lane) -> int4 {
+                              return lane * 2_i4;
+                           });
+   cat::verify(doubled_evens.sum() == 12_i4);
+   auto trebled_odds = cat::ref(lanes)
+                          .filter(cat::is_odd)
                           .transform([](int4 lane) -> int4 {
-                             return lane * 2_i4;
+                             return lane * 3_i4;
                           });
-   cat::verify(doubled_tail.sum() == 14_i4);
+   cat::verify(trebled_odds.sum() == 12_i4);
 
    cat::fixed_size_simd_mask<int4, 4u> mask{true, false, true, false};
    cat::verify((mask | cat::count()) == 4u);
@@ -2118,6 +2122,69 @@ $test(simd_eve_mask_subscript_min_max_popcount_rotate_left_rotate_right) {
    cat::verify(rotated_right[1] == 2u);
    cat::verify(rotated_right[2] == 2u);
    cat::verify(rotated_right[3] == 1u);
+}
+
+// Predicate subscript: `fn[pred](inputs...)` builds the lane mask by applying
+// `pred` to the first input lane-wise. Inactive lanes pass through (matches
+// the `simd_mask` subscript contract). `cat/math` predicates and the
+// curry-able comparators (e.g. `cat::is_less(0_f4)`) are valid argument
+// shapes.
+$test(simd_eve_predicate_subscript) {
+   using u32x4 = cat::simd<uint_lane, cat::fixed_size_abi<uint_lane, 4u>>;
+
+   // Unary: `simd_popcount[is_odd]` only popcount-s lanes whose value is odd.
+   u32x4 v{1u, 2u, 3u, 4u};
+   u32x4 r = cat::simd_popcount[cat::is_odd](v);
+   cat::verify(r[0] == 1u);
+   cat::verify(r[1] == 2u);
+   cat::verify(r[2] == 2u);
+   cat::verify(r[3] == 4u);
+
+   // Binary: `simd_min[is_odd]` only computes min on odd-left lanes.
+   int4x4 a = {1, 2, 3, 4};
+   int4x4 b = {9, 9, 9, 9};
+   int4x4 lo = cat::simd_min[cat::is_odd](a, b);
+   cat::verify(lo[0] == 1);
+   cat::verify(lo[1] == 2);
+   cat::verify(lo[2] == 3);
+   cat::verify(lo[3] == 4);
+
+   // Binary `simd_max` exercises the predicate-vs-mask overload coexistence.
+   int4x4 hi = cat::simd_max[cat::is_even](a, b);
+   cat::verify(hi[0] == 1);
+   cat::verify(hi[1] == 9);
+   cat::verify(hi[2] == 3);
+   cat::verify(hi[3] == 9);
+
+   // Ternary: `simd_fma[cat::is_less(0_f4)]` computes `x*y + z` only on
+   // positive-x lanes. `cat::is_less(0_f4)` curries to
+   // `[](x) { return 0_f4 < x; }`, i.e. "x is positive", via the new
+   // comparator currying form.
+   float4x4 fx = {2_f4, -3_f4, 4_f4, -5_f4};
+   float4x4 fy = {10_f4, 10_f4, 10_f4, 10_f4};
+   float4x4 fz = {1_f4, 1_f4, 1_f4, 1_f4};
+   float4x4 fma_r = cat::simd_fma[cat::is_less(0_f4)](fx, fy, fz);
+   cat::verify(fma_r[0] == 21_f4);
+   cat::verify(fma_r[1] == -3_f4);
+   cat::verify(fma_r[2] == 41_f4);
+   cat::verify(fma_r[3] == -5_f4);
+
+   // The bound argument can be any type that safely compares against the
+   // SIMD lane scalar. `is_safe_arithmetic_comparison` allows mixing float
+   // with strictly-smaller integers (mantissa-correct), so a `cat::int2 0`
+   // works against a `cat::float4` lane via the same currying. A raw
+   // `float` is also fine since it shares floating-point-ness.
+   float4x4 fma_r_float = cat::simd_fma[cat::is_less(0.f)](fx, fy, fz);
+   float4x4 fma_r_int2 = cat::simd_fma[cat::is_less(0_i2)](fx, fy, fz);
+   for (cat::idx i = 0u; i < float4x4::abi_type::lanes; ++i) {
+      cat::verify(fma_r_float[i] == fma_r[i]);
+      cat::verify(fma_r_int2[i] == fma_r[i]);
+   }
+
+   // The existing mask path still works (overload partial ordering).
+   auto const m = cat::make_simd_mask_from_count<int4x4>(2u);
+   int4x4 mlo = cat::simd_min[m](a, b);
+   cat::verify(mlo[0] == 1 && mlo[1] == 2 && mlo[2] == 3 && mlo[3] == 4);
 }
 
 // `chunked_invoke`, `vectorizable_element`:

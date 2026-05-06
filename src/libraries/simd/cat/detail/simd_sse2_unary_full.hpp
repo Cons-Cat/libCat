@@ -6,25 +6,21 @@
 
 namespace cat::detail::simd_abi {
 
-template <>
-struct unary_full<op_rsqrt, float, x64::sse2_abi<float>> {
-   [[nodiscard]]
+template <x64::is_sse2_abi<float> Abi>
+struct unary_full<op_rsqrt, float, Abi> {
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   invoke(simd<float, x64::sse2_abi<float>> input)
-      -> simd<float, x64::sse2_abi<float>> {
-      return simd<float, x64::sse2_abi<float>>(
-         __builtin_ia32_rsqrtps(input.raw));
-   }
-};
-
-template <>
-struct unary_full<op_rsqrt, float, x64::sse2_unaligned_abi<float>> {
-   [[nodiscard]]
-   static constexpr auto
-   invoke(simd<float, x64::sse2_unaligned_abi<float>> input)
-      -> simd<float, x64::sse2_unaligned_abi<float>> {
-      return simd<float, x64::sse2_unaligned_abi<float>>(
-         __builtin_ia32_rsqrtps(input.raw));
+   invoke(simd<float, Abi> input) -> simd<float, Abi> {
+      using simd_type = simd<float, Abi>;
+      // Hardware `rsqrt` is very imprecise. We correct error with
+      // Newton-Raphson, which is still faster than a precise 1/`sqrt(x)`
+      // method.
+      simd_type const rsqrt = __builtin_ia32_rsqrtps(input.raw);
+      simd_type const minus_half_x = -0.5f * input;
+      simd_type const three_halves = 1.5f;
+      simd_type const correction = __builtin_elementwise_fma(
+         minus_half_x.raw, rsqrt.raw * rsqrt.raw, three_halves.raw);
+      return rsqrt * correction;
    }
 };
 

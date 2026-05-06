@@ -197,18 +197,18 @@ set(CAT_HEADER_FILES
   ${CATLIB}/list/cat/list
   ${CATLIB}/match/cat/match
   ${CATLIB}/math/cat/math
-  ${CATLIB}/math/implementations/abs.tpp
-  ${CATLIB}/math/implementations/clamp.tpp
-  ${CATLIB}/math/implementations/comparators.tpp
-  ${CATLIB}/math/implementations/div.tpp
-  ${CATLIB}/math/implementations/dot.tpp
-  ${CATLIB}/math/implementations/fma.tpp
-  ${CATLIB}/math/implementations/minmax.tpp
-  ${CATLIB}/math/implementations/pow.tpp
-  ${CATLIB}/math/implementations/product.tpp
-  ${CATLIB}/math/implementations/round_to_multiple.tpp
-  ${CATLIB}/math/implementations/sqrt.tpp
-  ${CATLIB}/math/implementations/sum.tpp
+  ${CATLIB}/math/cat/detail/abs.hpp
+  ${CATLIB}/math/cat/detail/clamp.hpp
+  ${CATLIB}/math/cat/detail/div.hpp
+  ${CATLIB}/math/cat/detail/dot.hpp
+  ${CATLIB}/math/cat/detail/fma.hpp
+  ${CATLIB}/math/cat/detail/minmax.hpp
+  ${CATLIB}/math/cat/detail/pow.hpp
+  ${CATLIB}/math/cat/detail/predicates.hpp
+  ${CATLIB}/math/cat/detail/product.hpp
+  ${CATLIB}/math/cat/detail/round_to_multiple.hpp
+  ${CATLIB}/math/cat/detail/sqrt.hpp
+  ${CATLIB}/math/cat/detail/sum.hpp
   ${CATLIB}/maybe/cat/maybe
   ${CATLIB}/maybe/implementations/narrow_cast.tpp
   ${CATLIB}/memory/cat/memory

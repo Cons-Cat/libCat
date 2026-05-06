@@ -60,6 +60,21 @@ using sse2_unaligned_simd = cat::simd<T, sse2_unaligned_abi<T>>;
 template <typename T>
 using sse2_unaligned_simd_mask = cat::simd_mask<T, sse2_unaligned_abi<T>>;
 
+namespace detail {
+template <typename Abi, typename T>
+inline constexpr bool is_sse2_abi_impl = false;
+
+template <typename T>
+inline constexpr bool is_sse2_abi_impl<sse2_abi<T>, T> = true;
+
+template <typename T>
+inline constexpr bool is_sse2_abi_impl<sse2_unaligned_abi<T>, T> = true;
+}  // namespace detail
+
+// Matches both `sse2_abi<T>` and unaligned `sse2_unaligned_abi<T>`.
+template <typename Abi, typename T>
+concept is_sse2_abi = detail::is_sse2_abi_impl<Abi, T>;
+
 enum class string_control : unsigned char {
    unsigned_byte = 0x00,
    unsigned_word = 0x01,
@@ -92,44 +107,23 @@ operator|(string_control flag_1, string_control flag_2) -> string_control {
 
 namespace x64 {
 
-// SSE4.2 `pcmpistri`/`pcmpistric` on `simd` with `sse2_abi` layout (128-bit XMM
-// `raw`). `control_mask` must be a constant suitable for the intrinsics.
-template <string_control control_mask, typename T>
+// SSE4.2 `pcmpistri`/`pcmpistric`. `control_mask` must be a constant suitable
+// for the intrinsics.
+template <string_control control_mask, typename T, is_sse2_abi<T> Abi>
 [[gnu::no_sanitize_address]]
 constexpr auto
-compare_implicit_length_strings(cat::simd<T, sse2_abi<T>> const& vector_1,
-                                cat::simd<T, sse2_abi<T>> const& vector_2)
-   -> bool {
+compare_implicit_length_strings(cat::simd<T, Abi> const& vector_1,
+                                cat::simd<T, Abi> const& vector_2) -> bool {
    return __builtin_ia32_pcmpistric128(
       vector_1.raw, vector_2.raw, static_cast<unsigned char>(control_mask));
 }
 
-template <string_control control_mask, typename T>
+template <string_control control_mask, typename T, is_sse2_abi<T> Abi>
 [[gnu::no_sanitize_address]]
 constexpr auto
-compare_implicit_length_strings(
-   cat::simd<T, sse2_unaligned_abi<T>> const& vector_1,
-   cat::simd<T, sse2_unaligned_abi<T>> const& vector_2) -> bool {
-   return __builtin_ia32_pcmpistric128(
-      vector_1.raw, vector_2.raw, static_cast<unsigned char>(control_mask));
-}
-
-template <string_control control_mask, typename T>
-[[gnu::no_sanitize_address]]
-constexpr auto
-compare_implicit_length_strings_return_index(
-   cat::simd<T, sse2_abi<T>> const& vector_1,
-   cat::simd<T, sse2_abi<T>> const& vector_2) -> cat::uint4 {
-   return cat::uint4(static_cast<unsigned>(__builtin_ia32_pcmpistri128(
-      vector_1.raw, vector_2.raw, static_cast<unsigned char>(control_mask))));
-}
-
-template <string_control control_mask, typename T>
-[[gnu::no_sanitize_address]]
-constexpr auto
-compare_implicit_length_strings_return_index(
-   cat::simd<T, sse2_unaligned_abi<T>> const& vector_1,
-   cat::simd<T, sse2_unaligned_abi<T>> const& vector_2) -> cat::uint4 {
+compare_implicit_length_strings_return_index(cat::simd<T, Abi> const& vector_1,
+                                             cat::simd<T, Abi> const& vector_2)
+   -> cat::uint4 {
    return cat::uint4(static_cast<unsigned>(__builtin_ia32_pcmpistri128(
       vector_1.raw, vector_2.raw, static_cast<unsigned char>(control_mask))));
 }

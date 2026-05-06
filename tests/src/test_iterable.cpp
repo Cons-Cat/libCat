@@ -1,5 +1,6 @@
 #include <cat/debug>
 #include <cat/iterable>
+#include <cat/math>
 #include <cat/utility>
 
 #include "../unit_tests.hpp"
@@ -449,9 +450,7 @@ $test(flux_pipe_collection) {
 
    // Sum of squares of even values: 4 + 16 + 36 = 56.
    int result = arr
-                | cat::filter([](int x) -> bool {
-                     return (x % 2) == 0;
-                  })
+                | cat::filter(cat::is_even)
                 | cat::transform([](int x) -> int {
                      return x * x;
                   })
@@ -479,9 +478,7 @@ $test(flux_pipe_iterable) {
 
    // Sum the odd entries: 1 + 3 + 5 = 9.
    int odd_sum = list
-                 | cat::filter([](int x) -> bool {
-                      return (x % 2) != 0;
-                   })
+                 | cat::filter(cat::is_odd)
                  | cat::sum();
    cat::verify(odd_sum == 9);
 
@@ -823,9 +820,7 @@ $test(flux_fluent_chain) {
       {1, 2, 3, 4, 5, 6}
    };
 
-   int result = arr.filter([](int x) -> bool {
-                      return (x % 2) == 0;
-                   })
+   int result = arr.filter(cat::is_even)
                    .transform([](int x) -> int {
                       return x * x;
                    })
@@ -933,9 +928,7 @@ $test(flux_internal_iterate_chain) {
    };
    int total = 0;
    (arr
-    | cat::filter([](int x) -> bool {
-         return (x % 2) == 0;
-      })
+    | cat::filter(cat::is_even)
     | cat::transform([](int x) -> int {
          return x * 10;
       }))
@@ -1129,7 +1122,7 @@ $test(flux_tpoiasi_filter_transform_invocation_count) {
    // the even numbers): {2, 4} -> doubled -> {4, 8}.
    auto is_even = [&predicate_calls](int n) -> bool {
       ++predicate_calls;
-      return (n % 2) == 0;
+      return cat::is_even(n);
    };
 
    auto results = numbers

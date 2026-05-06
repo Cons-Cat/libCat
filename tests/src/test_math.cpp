@@ -234,6 +234,91 @@ $test(math_round_to_multiple) {
    // TODO: How should rounding functions handle negative inputs?
 }
 
+$test(math_parity) {
+   using namespace cat::arithmetic_literals;
+
+   // Test `is_even()`.
+   static_assert(cat::is_even(0));
+   static_assert(cat::is_even(2));
+   static_assert(cat::is_even(-4));
+   static_assert(!cat::is_even(1));
+   static_assert(!cat::is_even(-3));
+
+   static_assert(cat::is_even(0u));
+   static_assert(cat::is_even(2u));
+   static_assert(!cat::is_even(1u));
+
+   static_assert(cat::is_even(0_i1));
+   static_assert(cat::is_even(2_i2));
+   static_assert(cat::is_even(-4_i4));
+   static_assert(cat::is_even(0_u4));
+   static_assert(cat::is_even(2_u8));
+
+   static_assert(!cat::is_even(1_i1));
+   static_assert(!cat::is_even(-3_i4));
+   static_assert(!cat::is_even(1_u4));
+
+   static_assert(cat::is_same<bool, decltype(cat::is_even(0))>);
+   static_assert(cat::is_same<bool, decltype(cat::is_even(0_i4))>);
+
+   // Test `is_odd()`.
+   static_assert(cat::is_odd(1));
+   static_assert(cat::is_odd(-3));
+   static_assert(!cat::is_odd(0));
+   static_assert(!cat::is_odd(2));
+   static_assert(!cat::is_odd(-4));
+
+   static_assert(cat::is_odd(1u));
+   static_assert(!cat::is_odd(0u));
+
+   static_assert(cat::is_odd(1_i1));
+   static_assert(cat::is_odd(-3_i4));
+   static_assert(cat::is_odd(1_u4));
+   static_assert(!cat::is_odd(0_i4));
+   static_assert(!cat::is_odd(2_u8));
+
+   static_assert(cat::is_same<bool, decltype(cat::is_odd(0))>);
+
+   // `is_even` and `is_odd` partition the integers.
+   static_assert(cat::is_even(7) != cat::is_odd(7));
+   static_assert(cat::is_even(0) != cat::is_odd(0));
+   static_assert(cat::is_even(-1) != cat::is_odd(-1));
+
+   // Test `is_divisible_by()`.
+   static_assert(cat::is_divisible_by(10, 5));
+   static_assert(cat::is_divisible_by(10, 2));
+   static_assert(cat::is_divisible_by(0, 5));
+   static_assert(!cat::is_divisible_by(10, 3));
+   static_assert(!cat::is_divisible_by(7, 4));
+
+   static_assert(cat::is_divisible_by(16, 8));
+   static_assert(cat::is_divisible_by(64u, 8u));
+   static_assert(cat::is_divisible_by(1u, 1u));
+
+   static_assert(cat::is_divisible_by(-10, 5));
+   static_assert(cat::is_divisible_by(-10, -5));
+   static_assert(!cat::is_divisible_by(-7, 4));
+
+   // Only 0 is divisible by 0.
+   static_assert(cat::is_divisible_by(0, 0));
+   static_assert(!cat::is_divisible_by(1, 0));
+   static_assert(!cat::is_divisible_by(-1, 0));
+
+   // `T_min % -1` is undefined behaviour in C++ (the corresponding division
+   // overflows). The signed-divisor `-1` short-circuit makes these well
+   // defined. `cat::deconst()` inhibits the constant-folding `enable_if`
+   // overload so the runtime short-circuit path is exercised.
+   cat::verify(cat::is_divisible_by(cat::int1_min, cat::deconst(-1)));
+   cat::verify(cat::is_divisible_by(cat::int2_min, cat::deconst(-1)));
+   cat::verify(cat::is_divisible_by(cat::int4_min, cat::deconst(-1)));
+   cat::verify(cat::is_divisible_by(cat::int8_min, cat::deconst(-1)));
+   cat::verify(cat::is_divisible_by(0, cat::deconst(-1)));
+   cat::verify(cat::is_divisible_by(7, cat::deconst(-1)));
+   cat::verify(cat::is_divisible_by(-7, cat::deconst(-1)));
+
+   static_assert(cat::is_same<bool, decltype(cat::is_divisible_by(10, 5))>);
+}
+
 $test(math_clamp) {
    // Test `clamp()`.
    cat::verify(cat::clamp(-10, 0, 10) == 0);
@@ -254,36 +339,106 @@ $test(math_clamp) {
 }
 
 $test(math_comparators) {
-   // Test `<functional>`-style comparators.
-   cat::verify(cat::equal_to<int>{}(2, 2));
-   cat::verify(!cat::equal_to<int>{}(2, 3));
+   // Comparators are inline constexpr niebloid instances. Calling with two
+   // arguments performs the comparison directly.
+   cat::verify(cat::is_equal_to(2, 2));
+   cat::verify(!cat::is_equal_to(2, 3));
 
-   cat::verify(cat::not_equal_to<int>{}(2, 3));
-   cat::verify(!cat::not_equal_to<int>{}(2, 2));
+   cat::verify(cat::is_not_equal_to(2, 3));
+   cat::verify(!cat::is_not_equal_to(2, 2));
 
-   cat::verify(cat::less<int>{}(1, 2));
-   cat::verify(!cat::less<int>{}(2, 1));
+   cat::verify(cat::is_less(1, 2));
+   cat::verify(!cat::is_less(2, 1));
 
-   cat::verify(cat::greater<int>{}(2, 1));
-   cat::verify(!cat::greater<int>{}(1, 2));
+   cat::verify(cat::is_greater(2, 1));
+   cat::verify(!cat::is_greater(1, 2));
 
-   cat::verify(cat::less_equal<int>{}(2, 2));
-   cat::verify(cat::less_equal<int>{}(1, 2));
-   cat::verify(!cat::less_equal<int>{}(2, 1));
+   cat::verify(cat::is_less_equal(2, 2));
+   cat::verify(cat::is_less_equal(1, 2));
+   cat::verify(!cat::is_less_equal(2, 1));
 
-   cat::verify(cat::greater_equal<int>{}(2, 2));
-   cat::verify(cat::greater_equal<int>{}(2, 1));
-   cat::verify(!cat::greater_equal<int>{}(1, 2));
+   cat::verify(cat::is_greater_equal(2, 2));
+   cat::verify(cat::is_greater_equal(2, 1));
+   cat::verify(!cat::is_greater_equal(1, 2));
 
-   cat::verify(cat::equal_to<>{}(1, 1l));
-   cat::verify(cat::not_equal_to<>{}(1, 2l));
-   cat::verify(cat::less<>{}(1, 2l));
-   cat::verify(cat::greater<>{}(2, 1l));
-   cat::verify(cat::less_equal<>{}(2, 2l));
-   cat::verify(cat::greater_equal<>{}(2, 2l));
+   // Mixed argument types compose directly (the underlying op deduces).
+   cat::verify(cat::is_equal_to(1, 1l));
+   cat::verify(cat::is_not_equal_to(1, 2l));
+   cat::verify(cat::is_less(1, 2l));
+   cat::verify(cat::is_greater(2, 1l));
+   cat::verify(cat::is_less_equal(2, 2l));
+   cat::verify(cat::is_greater_equal(2, 2l));
 
-   cat::verify(cat::compare_three_way<int>{}(1, 2) < 0);
-   cat::verify(cat::compare_three_way<int>{}(2, 2) == 0);
-   cat::verify(cat::compare_three_way<int>{}(3, 2) > 0);
-   cat::verify(cat::compare_three_way<>{}(1, 2) < 0);
+   cat::verify(cat::compare_three_way(1, 2) < 0);
+   cat::verify(cat::compare_three_way(2, 2) == 0);
+   cat::verify(cat::compare_three_way(3, 2) > 0);
+}
+
+$test(math_comparator_currying) {
+   // One bound argument: `cmp(x)` returns a unary callable that compares
+   // its argument against `x` (the bound left-hand side). Currying binds
+   // the LEFT side, so `is_less(0)(y)` means `0 < y` (i.e. "y is positive").
+   auto positive = cat::is_less(0);
+   cat::verify(positive(1));
+   cat::verify(!positive(0));
+   cat::verify(!positive(-1));
+
+   auto nonzero = cat::is_not_equal_to(0);
+   cat::verify(nonzero(1));
+   cat::verify(nonzero(-1));
+   cat::verify(!nonzero(0));
+
+   auto eq_3 = cat::is_equal_to(3);
+   cat::verify(eq_3(3));
+   cat::verify(eq_3(3l));
+   cat::verify(!eq_3(4));
+
+   // Currying preserves argument types: `cat::is_less(1)(2.5)` compares
+   // `int` against `double` directly.
+   auto greater_than_one = cat::is_less(1);
+   cat::verify(greater_than_one(2));
+   cat::verify(greater_than_one(2.5));
+   cat::verify(!greater_than_one(1));
+
+   auto at_most_five = cat::is_greater_equal(5);
+   cat::verify(at_most_five(0));
+   cat::verify(at_most_five(5));
+   cat::verify(!at_most_five(6));
+
+   auto at_least_five = cat::is_less_equal(5);
+   cat::verify(at_least_five(5));
+   cat::verify(at_least_five(6));
+   cat::verify(!at_least_five(4));
+
+   auto cmp_against_two = cat::compare_three_way(2);
+   cat::verify(cmp_against_two(1) > 0);
+   cat::verify(cmp_against_two(2) == 0);
+   cat::verify(cmp_against_two(3) < 0);
+
+   // The 0-bound niebloid and the 1-bound curried form both compose to the
+   // same result.
+   cat::verify(cat::is_less(1, 2));
+   cat::verify(cat::is_less(1)(2));
+}
+
+$test(math_is_divisible_by_currying) {
+   // Curried first argument fixes the dividend, so `is_divisible_by(12)(n)`
+   // reads "is 12 divisible by n", i.e. "is n a divisor of 12".
+   auto divisors_of_twelve = cat::is_divisible_by(12);
+   cat::verify(divisors_of_twelve(1));
+   cat::verify(divisors_of_twelve(2));
+   cat::verify(divisors_of_twelve(3));
+   cat::verify(divisors_of_twelve(4));
+   cat::verify(divisors_of_twelve(6));
+   cat::verify(divisors_of_twelve(12));
+   cat::verify(!divisors_of_twelve(5));
+   cat::verify(!divisors_of_twelve(7));
+
+   // Signed `-1` short-circuit still applies through the curry.
+   auto divisors_of_int4_min = cat::is_divisible_by(cat::int4_min);
+   cat::verify(divisors_of_int4_min(cat::deconst(-1)));
+
+   // Two-argument call still works on the unbound impl.
+   cat::verify(cat::is_divisible_by(10, 5));
+   cat::verify(!cat::is_divisible_by(10, 3));
 }
