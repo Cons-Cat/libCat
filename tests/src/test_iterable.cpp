@@ -477,9 +477,7 @@ $test(flux_pipe_iterable) {
    list.push_back(5);
 
    // Sum the odd entries: 1 + 3 + 5 = 9.
-   int odd_sum = list
-                 | cat::filter(cat::is_odd)
-                 | cat::sum();
+   int odd_sum = list | cat::filter(cat::is_odd) | cat::sum();
    cat::verify(odd_sum == 9);
 
    // Multiply each by ten then sum: 10 + 20 + 30 + 40 + 50 = 150.
@@ -927,11 +925,9 @@ $test(flux_internal_iterate_chain) {
       {1, 2, 3, 4, 5, 6}
    };
    int total = 0;
-   (arr
-    | cat::filter(cat::is_even)
-    | cat::transform([](int x) -> int {
-         return x * 10;
-      }))
+   (arr | cat::filter(cat::is_even) | cat::transform([](int x) -> int {
+       return x * 10;
+    }))
       .for_each([&total](int x) {
          total += x;
       });

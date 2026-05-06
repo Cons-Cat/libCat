@@ -11,8 +11,9 @@
 #include "detail/dot.hpp"
 #include "detail/fma.hpp"
 #include "detail/minmax.hpp"
-#include "detail/nroot.hpp"
 #include "detail/pow.hpp"
+// `pow` be included before `nroot`.
+#include "detail/nroot.hpp"
 #include "detail/predicates.hpp"
 #include "detail/product.hpp"
 #include "detail/round_to_multiple.hpp"

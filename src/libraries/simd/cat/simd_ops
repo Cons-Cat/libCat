@@ -413,8 +413,8 @@ struct simd_unary_predicate_masked_impl {
    constexpr auto
    operator()(simd<T, Abi> input) const -> simd<T, Abi> {
       auto const mask = simd_lane_mask_from_predicate(pred, input);
-      return simd_unary_masked_impl<Derived, simd_mask<T, Abi>>{self, mask}(
-         input);
+      return simd_unary_masked_impl<Derived, simd_mask<T, Abi>>{self,
+                                                                mask}(input);
    }
 };
 

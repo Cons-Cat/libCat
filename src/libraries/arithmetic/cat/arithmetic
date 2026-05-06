@@ -418,8 +418,8 @@ concept is_safe_arithmetic_conversion =
                && (sizeof(From) < sizeof(To)))))
        // If only `To` is a float, it must be larger so that every value of the
        // integer type is exactly representable in the float's mantissa. This
-       // mirrors the signed-strictly-larger-than-unsigned rule above. Float to int
-       // is never considered a safe conversion.
+       // mirrors the signed-strictly-larger-than-unsigned rule above. Float to
+       // int is never considered a safe conversion.
        || (is_integral<From> && is_floating_point<To>
            && (sizeof(From) < sizeof(To)))))
    // A special-case exception must be made for `basic_idx` -> `iword`. This
