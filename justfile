@@ -144,36 +144,124 @@ tidy-check mode=last_mode verbose="":
 opt-report mode=last_mode verbose="":
     just cmake_target cat-opt-report {{ mode }} {{ verbose }}
 
-intermediary_format(flag) := if flag == "fmt" { "ON" } else { "OFF" }
-
-# Same keyword convention as =just build=: =san= / =nosan=, =fmt= / =no-fmt=, =-v=, optional
-# =bc= / =ll= / =cir= outputs, one =pass= pipeline, one release mode (=debug=, =release=, …), and optional
-# =tests/=, =examples/=, or library-name selectors.
-intermediaries *args:
-    @mode=""; selectors=""; fmt="no-fmt"; verbose=""; san=""; bc="OFF"; ll="OFF"; cir="OFF"; pass=""; set -- "$@"; \
+# Per-TU IR fan-out. The grammar:
+#
+#   just ir <kind>+ <selector>+ [mode] [san|nosan] [fmt|no-fmt] [-v] \
+#           [pass=<pipeline>] [fn=<regex>] [-flag ...] [-- <objdump flags>]
+#
+# Kinds (at least one required): ii s intel att bc ll.
+#   `intel` / `att` are `s` specialised to a particular x86 syntax (Intel by
+#   default).
+# Selectors (at least one required) translate directly to ninja targets:
+#   foo.cpp / foo               -> per-TU `<basename>-<kind>` target
+#   src / tests / examples      -> per-domain `<dom>-<kind>` meta target
+#   full                        -> `full-<kind>` (all domains).
+# Other:
+#   pass=<pipeline>             swaps `<basename>-ll` to `opt -passes=<...>`.
+#   fn=<name>                   narrows every output to functions whose
+#                               demangled name is `<name>` followed by an
+#                               overload `(...)`, template `<...>`, or LTO
+#                               clone (`.cold`, `.0`, ...) suffix. Treated
+#                               as a literal symbol, not a regex; assume the
+#                               user namespace-qualifies it (e.g. `cat::pow`).
+#   -<flag> ...                 forwarded to the underlying CMake compile
+#                               (same as `just build`).
+#   -- <flags...>               forwarded verbatim to `llvm-objdump`. Only
+#                               valid when `s` (or `intel`/`att`) is the
+#                               *sole* requested kind.
+#   fmt / no-fmt                run / skip clang-format on `.ii` (default
+#                               `fmt`).
+ir *args:
+    @set -e; \
+      mode=""; san=""; verbose=""; \
+      kinds=""; selectors=""; cxx_flags=""; \
+      fmt=""; pass=""; fn=""; syntax="intel"; \
+      saw_trailer=false; trailer=""; \
+      add_kind() { case " $kinds " in *" $1 "*) ;; *) kinds="${kinds:+$kinds }$1" ;; esac; }; \
+      add_sel()  { case " $selectors " in *" $1 "*) ;; *) selectors="${selectors:+$selectors }$1" ;; esac; }; \
       while [ $# -gt 0 ]; do \
         case "$1" in \
+          --) shift; saw_trailer=true; \
+            for arg in "$@"; do \
+              if [ -z "$trailer" ]; then trailer="$arg"; \
+              else trailer="${trailer};${arg}"; fi; \
+            done; \
+            break ;; \
           san|nosan) san="$1"; shift ;; \
           fmt|no-fmt) fmt="$1"; shift ;; \
-          bc) bc="ON"; shift ;; \
-          ll) ll="ON"; shift ;; \
-          cir) cir="ON"; shift ;; \
-          pass=*) pass="${1#pass=}"; ll="ON"; shift ;; \
+          ii|bc|ll|s) add_kind "$1"; shift ;; \
+          intel) add_kind s; syntax="intel"; shift ;; \
+          att)   add_kind s; syntax="att";   shift ;; \
+          pass=*) pass="${1#pass=}"; add_kind ll; shift ;; \
+          fn=*)   fn="${1#fn=}"; shift ;; \
           -v) verbose="$1"; shift ;; \
+          -*) cxx_flags="${cxx_flags:+$cxx_flags }$1"; shift ;; \
           debug|release|relwithdebinfo|build|all) \
-            if [ -n "${mode}" ]; then \
-              printf '%s\n' "just intermediaries: multiple build modes: '${mode}' and '$1'" >&2; \
+            if [ -n "$mode" ]; then \
+              printf '%s\n' "just ir: multiple build modes: '$mode' and '$1'" >&2; \
               exit 1; \
             fi; \
             mode="$1"; shift ;; \
-          *) \
-            selector="${1%/}"; \
-            selectors="${selectors:+$selectors,}${selector}"; \
-            shift ;; \
+          src|tests|examples|full) add_sel "$1"; shift ;; \
+          *) raw="${1%/}"; \
+             case "$raw" in \
+               "") printf '%s\n' "just ir: empty selector '$1'" >&2; exit 1 ;; \
+               *.h|*.hh|*.hpp|*.hxx|*.tpp|*.ipp|*.inc) \
+                 printf '%s\n' "just ir: '$1' is a header -- IR is per-TU, pass a .cpp that includes it (optionally narrowed with fn=<symbol>)" >&2; exit 1 ;; \
+               *.cpp) sel="${raw##*/}"; sel="${sel%.cpp}" ;; \
+               */*) printf '%s\n' "just ir: '$1' isn't a .cpp -- pass a source file, a basename, or src/tests/examples/full" >&2; exit 1 ;; \
+               *.*) printf '%s\n' "just ir: '$1' has an unsupported extension -- pass a .cpp source, a basename, or src/tests/examples/full" >&2; exit 1 ;; \
+               *) sel="$raw" ;; \
+             esac; \
+             add_sel "$sel"; shift ;; \
         esac; \
       done; \
-      if [ -z "${mode}" ]; then mode="{{ last_mode }}"; fi; \
-      just _intermediaries-mode "${mode}" "${san}" "${fmt}" "${verbose}" "${bc}" "${ll}" "${cir}" "${selectors}" "${pass}"
+      if [ -z "$kinds" ]; then \
+        printf '%s\n' "just ir: pick at least one IR: ii, s/intel/att, bc, or ll" >&2; \
+        exit 1; \
+      fi; \
+      if [ -z "$selectors" ]; then \
+        printf '%s\n' "just ir: pick at least one selector (filename.cpp, src/tests/examples, full, or a target name)" >&2; \
+        exit 1; \
+      fi; \
+      if [ "$saw_trailer" = true ]; then \
+        case "$kinds" in \
+          s) ;; \
+          *) printf '%s\n' "just ir: '-- <flags>' trailer is forwarded to llvm-objdump and only valid when .s is the sole IR" >&2; exit 1 ;; \
+        esac; \
+      fi; \
+      if [ -z "$mode" ]; then mode="{{ last_mode }}"; fi; \
+      cmake_fmt=ON; if [ "$fmt" = "no-fmt" ]; then cmake_fmt=OFF; fi; \
+      ninja_targets=""; \
+      for sel in $selectors; do \
+        for kind in $kinds; do \
+          ninja_targets="${ninja_targets:+$ninja_targets }${sel}-${kind}"; \
+        done; \
+      done; \
+      CAT_JUST_IR_FN="$fn" \
+        CAT_JUST_IR_PASS="$pass" \
+        CAT_JUST_IR_SYNTAX="$syntax" \
+        CAT_JUST_IR_FMT="$cmake_fmt" \
+        CAT_JUST_IR_TRAILER="$trailer" \
+        just _ir-mode "$mode" "$san" "$verbose" "$cxx_flags" "$ninja_targets"; \
+      configs=""; \
+      case "$mode" in \
+        debug)          configs="Debug" ;; \
+        release)        configs="Release" ;; \
+        relwithdebinfo) configs="RelWithDebInfo" ;; \
+        all)            configs="Debug;Release;RelWithDebInfo" ;; \
+      esac; \
+      if [ -n "$configs" ]; then \
+        cmake_selectors=$(printf '%s' "$selectors" | tr ' ' ';'); \
+        cmake_kinds=$(printf '%s' "$kinds" | tr ' ' ';'); \
+        cmake \
+          "-DBUILD_ROOT=build" \
+          "-DCONFIGS=$configs" \
+          "-DSELECTORS=$cmake_selectors" \
+          "-DKINDS=$cmake_kinds" \
+          "-DFN=$fn" \
+          -P scripts/cat_ir_paths.cmake; \
+      fi
 
 syntax mode=last_mode verbose="":
     @just _syntax-mode {{ mode }} {{ verbose }}
@@ -573,35 +661,45 @@ _clean-config mode=last_mode verbose="":
       || cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
         --target clean {{ build_verbose(verbose) }}
 
-# =san= before =fmt= / =verbose= so we never drop an empty =verbose= and reorders =nosan=.
 [private]
-_intermediaries-mode mode=last_mode san="" fmt="no-fmt" verbose="" bc="OFF" ll="OFF" cir="OFF" selectors="" pass="":
-    @just {{ if debug_config(mode) == "" { "_noop" } else { "_intermediaries-config" } }} \
-      debug "{{ san }}" "{{ fmt }}" "{{ verbose }}" "{{ bc }}" "{{ ll }}" "{{ cir }}" "{{ selectors }}" "{{ pass }}"
+_ir-mode mode=last_mode san="" verbose="" cxx_flags="" targets="":
+    @just {{ if debug_config(mode) == "" { "_noop" } else { "_ir-config" } }} \
+      debug "{{ san }}" "{{ verbose }}" "{{ cxx_flags }}" "{{ targets }}"
 
-    @just {{ if release_config(mode) == "" { "_noop" } else { "_intermediaries-config" } }} \
-      release "{{ san }}" "{{ fmt }}" "{{ verbose }}" "{{ bc }}" "{{ ll }}" "{{ cir }}" "{{ selectors }}" "{{ pass }}"
+    @just {{ if release_config(mode) == "" { "_noop" } else { "_ir-config" } }} \
+      release "{{ san }}" "{{ verbose }}" "{{ cxx_flags }}" "{{ targets }}"
 
-    @just {{ if relwithdebinfo_config(mode) == "" { "_noop" } else { "_intermediaries-config" } }} \
-      relwithdebinfo "{{ san }}" "{{ fmt }}" "{{ verbose }}" "{{ bc }}" "{{ ll }}" "{{ cir }}" "{{ selectors }}" "{{ pass }}"
+    @just {{ if relwithdebinfo_config(mode) == "" { "_noop" } else { "_ir-config" } }} \
+      relwithdebinfo "{{ san }}" "{{ verbose }}" "{{ cxx_flags }}" "{{ targets }}"
 
-    @just {{ if cmake_config(mode) == "" { "_intermediaries-config" } else { "_noop" } }} \
-      {{ mode }} "{{ san }}" "{{ fmt }}" "{{ verbose }}" "{{ bc }}" "{{ ll }}" "{{ cir }}" "{{ selectors }}" "{{ pass }}"
+    @just {{ if cmake_config(mode) == "" { "_ir-config" } else { "_noop" } }} \
+      {{ mode }} "{{ san }}" "{{ verbose }}" "{{ cxx_flags }}" "{{ targets }}"
 
+# Configures the build dir with the cache vars `cat_ir.cmake` reads, then
+# fans out to one `cmake --build --target` per requested ninja target. CMake
+# `--target` accepts multiple targets in one invocation, but splitting them
+# keeps `--verbose` per-target output sane and matches `just build`'s
+# "configure once, build deterministically" shape.
 [private]
-_intermediaries-config mode=last_mode san="" fmt="no-fmt" verbose="" bc="OFF" ll="OFF" cir="OFF" selectors="" pass="":
-    @cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
-      {{ configure_config(mode) }} -DCAT_FORMAT_INTERMEDIARIES={{ intermediary_format(fmt) }} \
-      -DCAT_INTERMEDIARIES_BC={{ bc }} \
-      -DCAT_INTERMEDIARIES_LL={{ ll }} \
-      -DCAT_INTERMEDIARIES_CIR={{ cir }} \
-      -DCAT_INTERMEDIARIES_SELECTORS={{ selectors }} \
-      "-DCAT_INTERMEDIARIES_PASS={{ pass }}" \
-      {{ sanitizer(san) }}
-
+_ir-config mode="release" san="" verbose="" cxx_flags="" targets="":
+    @just _print-build-mode {{ mode }}
+    @bash -c 'set -euo pipefail; cxx_flags=$1; \
+      configure=(cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
+        {{ configure_config(mode) }} {{ sanitizer(san) }} \
+        "-DCAT_IR_FUNCTION=${CAT_JUST_IR_FN:-}" \
+        "-DCAT_IR_PASS=${CAT_JUST_IR_PASS:-}" \
+        "-DCAT_IR_S_SYNTAX=${CAT_JUST_IR_SYNTAX:-intel}" \
+        "-DCAT_IR_FMT=${CAT_JUST_IR_FMT:-ON}" \
+        "-DCAT_IR_OBJDUMP_TRAILER=${CAT_JUST_IR_TRAILER:-}"); \
+      if [[ -n "${cxx_flags}" ]]; then \
+        configure+=("-DCMAKE_CXX_FLAGS=${cxx_flags}"); \
+      fi; \
+      "${configure[@]}"' _ "{{ cxx_flags }}"
     @just status_san {{ mode }} "{{ san }}"
-    cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
-      --target cat-intermediaries {{ build_verbose(verbose) }}
+    @bash -c 'set -euo pipefail; targets=$1; \
+      if [[ -z "${targets}" ]]; then exit 0; fi; \
+      cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
+        --target ${targets} {{ build_verbose(verbose) }}' _ "{{ targets }}"
 
 cmake_target target mode=last_mode verbose="":
     just _cmake_target_mode {{ target }} {{ mode }} {{ verbose }}

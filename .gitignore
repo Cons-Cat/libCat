@@ -1,10 +1,9 @@
 *~
 *#*
-build*/
+*build*/
 compile_commands.json
 .cache/
 .cmake/
-Testing/
 CMakeFiles/
 .gdb_history
 .dir-locals-*.el

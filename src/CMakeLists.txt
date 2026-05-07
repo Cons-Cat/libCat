@@ -20,12 +20,13 @@ set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 target_include_directories(cat INTERFACE
   "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libcat>")
-foreach(_cat_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
-  target_include_directories(cat INTERFACE
-    "$<BUILD_INTERFACE:${CATLIB}/${_cat_subdir}/>"
-    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/${_cat_subdir}>")
-endforeach()
-unset(_cat_subdir)
+block()
+  foreach(_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
+    target_include_directories(cat INTERFACE
+      "$<BUILD_INTERFACE:${CATLIB}/${_subdir}/>"
+      "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/${_subdir}>")
+  endforeach()
+endblock()
 
 # `libcat.ld` defines `__cat_tls_*` symbols against the linkee's own TLS, so
 # `.a` consumers need `-Wl,-T,libcat.ld` at link time. `.so` bakes the same

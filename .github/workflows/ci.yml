@@ -173,7 +173,7 @@ jobs:
 
       - name: Verify unique basenames under src/
         # Every file under `src/` must have a unique name. This makes searching
-        # the codebase easier and is important for the `cat-intermediaries` target.
+        # the codebase easier and is important for the `cat-ir` target.
         run: |
           set -eu
           dups=$(find src -type f \

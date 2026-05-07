@@ -35,17 +35,18 @@ include(CMakePackageConfigHelpers)
 
 # `cat` and `cat-impl` always exist; `cat-impl-shared` only when
 # `CAT_BUILD_SHARED` was on at configure time.
-set(_cat_install_targets cat cat-impl)
-if (TARGET cat-impl-shared)
-  list(APPEND _cat_install_targets cat-impl-shared)
-endif()
-
-install(TARGETS ${_cat_install_targets}
-  EXPORT catTargets
-  LIBRARY  DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-  ARCHIVE  DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-  RUNTIME  DESTINATION "${CMAKE_INSTALL_BINDIR}"
-  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libcat")
+block()
+  set(_targets cat cat-impl)
+  if (TARGET cat-impl-shared)
+    list(APPEND _targets cat-impl-shared)
+  endif()
+  install(TARGETS ${_targets}
+    EXPORT catTargets
+    LIBRARY  DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE  DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME  DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libcat")
+endblock()
 
 # Headers + .tpp files. `src/libraries/<lib>/` is mirrored verbatim under
 # `<prefix>/include/libcat/libraries/<lib>/`. The `INSTALL_INTERFACE` include
@@ -53,23 +54,24 @@ install(TARGETS ${_cat_install_targets}
 # consumer of `cat::cat` resolves `#include <cat/...>` (and the
 # `"./implementations/*.tpp"` relative includes from headers) without any extra
 # flag wrangling.
-foreach(_cat_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
-  install(DIRECTORY "${CMAKE_SOURCE_DIR}/src/libraries/${_cat_subdir}/"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/${_cat_subdir}"
-    FILES_MATCHING
-      PATTERN "*.hpp"
-      PATTERN "*.tpp"
-      # LibCat's public API headers are extension-less (`cat/string`,
-      # `cat/runtime`, ...) so the file pattern alone misses them. They all live
-      # in a `cat/` directory, so a directory-level pattern is the simplest way
-      # to grab them without sweeping in `.cpp` sources.
-      PATTERN "cat/*" EXCLUDE)
-  # The `cat/` directory is installed wholesale: extension-less public API
-  # headers plus subdirectories like `cat/detail/` and `cat/implementations/`.
-  install(DIRECTORY "${CMAKE_SOURCE_DIR}/src/libraries/${_cat_subdir}/cat"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/${_cat_subdir}")
-endforeach()
-unset(_cat_subdir)
+block()
+  foreach(_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/src/libraries/${_subdir}/"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/${_subdir}"
+      FILES_MATCHING
+        PATTERN "*.hpp"
+        PATTERN "*.tpp"
+        # LibCat's public API headers are extension-less (`cat/string`,
+        # `cat/runtime`, ...) so the file pattern alone misses them. They all
+        # live in a `cat/` directory, so a directory-level pattern is the
+        # simplest way to grab them without sweeping in `.cpp` sources.
+        PATTERN "cat/*" EXCLUDE)
+    # The `cat/` directory is installed wholesale: extension-less public API
+    # headers plus subdirectories like `cat/detail/` and `cat/implementations/`.
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/src/libraries/${_subdir}/cat"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/${_subdir}")
+  endforeach()
+endblock()
 
 # `_start.cpp` is on `cat`'s `INTERFACE_SOURCES` (see `src/CMakeLists.txt`), and
 # the `INSTALL_INTERFACE` path expects it to live next to the rest of the
@@ -111,5 +113,3 @@ install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/catConfig.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/catConfigVersion.cmake"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cat")
-
-unset(_cat_install_targets)

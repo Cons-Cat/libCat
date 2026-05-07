@@ -39,35 +39,37 @@
 
 include(GNUInstallDirs)
 
-# Use a major version derived from `CMAKE_CXX_COMPILER_VERSION` to look up
-# `clang-repl-nn`, mirroring the strategy in `llvm_archivers.cmake`.
-string(REGEX MATCH "^[0-9]+" _cat_clang_major "${CMAKE_CXX_COMPILER_VERSION}")
+# Source-list / compiler-rt / CXX_EXTENSIONS probe in one block: every helper
+# (`_clang_major`, `_compiler_rt_builtins`, `_cxx_extensions`, `_impl_sources`)
+# stays scoped. The target itself (`cat-impl-shared`) is a global side-effect.
+block(PROPAGATE _compiler_rt_builtins _clang_major)
+  string(REGEX MATCH "^[0-9]+" _clang_major "${CMAKE_CXX_COMPILER_VERSION}")
+  execute_process(
+    COMMAND "${CMAKE_CXX_COMPILER}" --rtlib=compiler-rt -print-libgcc-file-name
+    OUTPUT_VARIABLE _compiler_rt_builtins
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if (NOT _compiler_rt_builtins OR NOT EXISTS "${_compiler_rt_builtins}")
+    message(WARNING
+      "CAT_BUILD_SHARED: could not locate compiler-rt builtins via "
+      "`${CMAKE_CXX_COMPILER} --rtlib=compiler-rt -print-libgcc-file-name`. "
+      "`libcat.so` will likely fail to link with undefined `__cpu_model`.")
+  endif()
 
-execute_process(
-  COMMAND "${CMAKE_CXX_COMPILER}" --rtlib=compiler-rt -print-libgcc-file-name
-  OUTPUT_VARIABLE _cat_compiler_rt_builtins
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  ERROR_QUIET)
-if (NOT _cat_compiler_rt_builtins OR NOT EXISTS "${_cat_compiler_rt_builtins}")
-  message(WARNING
-    "CAT_BUILD_SHARED: could not locate compiler-rt builtins via "
-    "`${CMAKE_CXX_COMPILER} --rtlib=compiler-rt -print-libgcc-file-name`. "
-    "`libcat.so` will likely fail to link with undefined `__cpu_model`.")
-endif()
+  # Reuse `cat-impl`'s source list verbatim so adding a `.cpp` to the archive
+  # automatically rebuilds it into the shared object too.
+  get_property(_impl_sources TARGET cat-impl PROPERTY SOURCES)
+  add_library(cat-impl-shared SHARED ${_impl_sources})
 
-# Reuse `cat-impl`'s source list verbatim so adding a `.cpp` to the archive
-# automatically rebuilds it into the shared object too.
-get_property(_cat_impl_sources_for_so TARGET cat-impl PROPERTY SOURCES)
-add_library(cat-impl-shared SHARED ${_cat_impl_sources_for_so})
-get_target_property(_cat_cxx_extensions cat CXX_EXTENSIONS)
-if (_cat_cxx_extensions STREQUAL "_cat_cxx_extensions-NOTFOUND")
-  set(_cat_cxx_extensions ON)
-endif()
-set_target_properties(cat-impl-shared PROPERTIES
-  OUTPUT_NAME cat
-  CXX_EXTENSIONS "${_cat_cxx_extensions}"
-  POSITION_INDEPENDENT_CODE ON)
-unset(_cat_cxx_extensions)
+  get_target_property(_cxx_extensions cat CXX_EXTENSIONS)
+  if (_cxx_extensions STREQUAL "_cxx_extensions-NOTFOUND")
+    set(_cxx_extensions ON)
+  endif()
+  set_target_properties(cat-impl-shared PROPERTIES
+    OUTPUT_NAME cat
+    CXX_EXTENSIONS "${_cxx_extensions}"
+    POSITION_INDEPENDENT_CODE ON)
+endblock()
 target_compile_features(cat-impl-shared PUBLIC ${CAT_CXX_STANDARD_FEATURE})
 
 # `PUBLIC` for the props that are usage requirements (essentials, include dirs,
@@ -97,6 +99,14 @@ target_compile_options(cat-impl-shared
 
 target_include_directories(cat-impl-shared PUBLIC
   $<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>)
+
+# Keep `__cpu_model` / `__cpu_features2` / `__cpu_indicator_init` at default
+# visibility for the `.so` and any consumer that links it. `<cat/cpuid>`
+# otherwise pins those symbols to `[[gnu::visibility("hidden")]]` so the
+# static-archive build path can let LTO internalize and DSE the dead writes
+# from `__cpu_indicator_init`. PUBLIC because consumers compile `_start.cpp`
+# (on `cat`'s `INTERFACE_SOURCES`) themselves and need the same ABI choice.
+target_compile_definitions(cat-impl-shared PUBLIC CAT_EXPORT_CPUID_ABI)
 
 target_link_options(cat-impl-shared
   PUBLIC
@@ -151,8 +161,8 @@ target_sources(cat-impl-shared INTERFACE
 set_property(TARGET cat-impl-shared APPEND PROPERTY INTERFACE_LINK_DEPENDS
   "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/libcat.ld>")
 
-if (_cat_compiler_rt_builtins AND EXISTS "${_cat_compiler_rt_builtins}")
-  target_link_libraries(cat-impl-shared PRIVATE "${_cat_compiler_rt_builtins}")
+if (_compiler_rt_builtins AND EXISTS "${_compiler_rt_builtins}")
+  target_link_libraries(cat-impl-shared PRIVATE "${_compiler_rt_builtins}")
 endif()
 
 # Ensure the `.so`'s own relink picks up the script.
@@ -172,9 +182,6 @@ if (CAT_PCH)
   set_target_properties(cat-impl-shared PROPERTIES PCH_WARN_INVALID ON)
 endif()
 
-unset(_cat_compiler_rt_builtins)
-unset(_cat_impl_sources_for_so)
-
 # The wrapper derives its `--Xcc` flag set from `compile_commands.json`, so make
 # sure CMake emits one. Forced because the wrapper hard-fails without it.
 if (NOT CMAKE_EXPORT_COMPILE_COMMANDS)
@@ -185,14 +192,14 @@ if (NOT CMAKE_EXPORT_COMPILE_COMMANDS)
 endif()
 
 find_program(CAT_CLANG_REPL_EXECUTABLE
-  NAMES "clang-repl-${_cat_clang_major}" clang-repl
+  NAMES "clang-repl-${_clang_major}" clang-repl
   DOC "`clang-repl` matching ${CMAKE_CXX_COMPILER}.")
 if (NOT CAT_CLANG_REPL_EXECUTABLE)
   message(WARNING
-    "CAT_BUILD_SHARED: `clang-repl-${_cat_clang_major}` / `clang-repl` not "
+    "CAT_BUILD_SHARED: `clang-repl-${_clang_major}` / `clang-repl` not "
     "found on PATH. The clang-repl-libcat wrapper will be generated but "
     "won't run until clang-repl is installed.")
-  set(CAT_CLANG_REPL_EXECUTABLE "clang-repl-${_cat_clang_major}")
+  set(CAT_CLANG_REPL_EXECUTABLE "clang-repl-${_clang_major}")
 endif()
 
 # When sanitizers are on, `libcat.so` carries unresolved ASan symbols
@@ -230,5 +237,3 @@ add_custom_target(cat-repl
   USES_TERMINAL
   COMMENT "Launching clang-repl with libCat preloaded.")
 add_dependencies(cat-repl cat-impl-shared)
-
-unset(_cat_clang_major)

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.25)
 
 if (NOT DEFINED CMAKE_LINKER_TYPE AND DEFINED ENV{CMAKE_LINKER_TYPE})
   set(CMAKE_LINKER_TYPE "$ENV{CMAKE_LINKER_TYPE}" CACHE STRING
@@ -26,16 +26,17 @@ endif()
 # below, the RPATH block further down, and `cat_shared.cmake`'s REPL preload.
 # `-print-file-name` echoes the bare filename on miss, so `IS_ABSOLUTE` is the
 # "found" test.
-execute_process(
-  COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libclang_rt.asan-x86_64.so
-  OUTPUT_VARIABLE _cat_asan_runtime
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
-if (IS_ABSOLUTE "${_cat_asan_runtime}" AND EXISTS "${_cat_asan_runtime}")
-  set(CAT_ASAN_RUNTIME_PATH "${_cat_asan_runtime}")
-else()
-  set(CAT_ASAN_RUNTIME_PATH "")
-endif()
-unset(_cat_asan_runtime)
+block(PROPAGATE CAT_ASAN_RUNTIME_PATH)
+  execute_process(
+    COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libclang_rt.asan-x86_64.so
+    OUTPUT_VARIABLE _runtime
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (IS_ABSOLUTE "${_runtime}" AND EXISTS "${_runtime}")
+    set(CAT_ASAN_RUNTIME_PATH "${_runtime}")
+  else()
+    set(CAT_ASAN_RUNTIME_PATH "")
+  endif()
+endblock()
 
 option(CAT_USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer." OFF)
 
@@ -54,13 +55,15 @@ endif()
 # `-DCAT_USE_SCCACHE=ON` makes it required. Pairs with `-fno-pch-timestamp`
 # below for ~100% hit rates across build dirs.
 find_program(CAT_SCCACHE_EXECUTABLE sccache DOC "Path to the sccache binary.")
-if (CAT_SCCACHE_EXECUTABLE)
-  set(_cat_sccache_default ON)
-else()
-  set(_cat_sccache_default OFF)
-endif()
-option(CAT_USE_SCCACHE "Use sccache as the compiler launcher for C and C++." ${_cat_sccache_default})
-unset(_cat_sccache_default)
+block()
+  if (CAT_SCCACHE_EXECUTABLE)
+    set(_default ON)
+  else()
+    set(_default OFF)
+  endif()
+  option(CAT_USE_SCCACHE
+    "Use sccache as the compiler launcher for C and C++." ${_default})
+endblock()
 
 if (CAT_USE_SCCACHE)
   if (NOT CAT_SCCACHE_EXECUTABLE)
@@ -201,6 +204,12 @@ list(
   APPEND CAT_LINK_OPTIONS_RELEASE
   # Remove unused symbols.
   -Wl,-z,noseparate-code,--gc-sections
+  # Bump LTO codegen optimization above LLD's default of `-O2`.
+  -Wl,--lto-O3
+  # Eager binding pairs with `--gc-sections` to fold lazy PLT stubs.
+  -Wl,-z,now
+  # Identical-code folding for redundant shims.
+  -Wl,--icf=safe
 )
 
 list(
@@ -237,9 +246,8 @@ if (CAT_USE_SANITIZERS)
   # loader path. RPATH lets every linked executable run from the build tree or
   # shell.
   # `CAT_ASAN_RUNTIME_PATH` was populated and verified at the top of this file.
-  get_filename_component(_cat_asan_rpath_dir "${CAT_ASAN_RUNTIME_PATH}" DIRECTORY)
-  target_link_options(cat INTERFACE "-Wl,-rpath,${_cat_asan_rpath_dir}")
-  unset(_cat_asan_rpath_dir)
+  cmake_path(GET CAT_ASAN_RUNTIME_PATH PARENT_PATH _rpath_dir)
+  target_link_options(cat INTERFACE "-Wl,-rpath,${_rpath_dir}")
 endif()
 
 target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS_ESSENTIAL})
@@ -367,8 +375,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/tidy.cmake)
 # Compiler optimization report target (`cat-opt-report`).
 include(${CMAKE_SOURCE_DIR}/cmake/opt_report.cmake)
 
-# Compiler-intermediaries target (`cat-intermediaries`).
-include(${CMAKE_SOURCE_DIR}/cmake/cat_intermediaries.cmake)
+# Compiler-IR target (`cat-ir`).
+include(${CMAKE_SOURCE_DIR}/cmake/cat_ir.cmake)
 
 # Syntax-only check target (`cat-syntax`).
 include(${CMAKE_SOURCE_DIR}/cmake/cat_syntax.cmake)

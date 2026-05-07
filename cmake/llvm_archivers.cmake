@@ -21,25 +21,26 @@
 # Side-effecting `include()` script. After include, `CMAKE_AR`/`CMAKE_RANLIB`
 # point at a bitcode-aware pair when one is found.
 
-string(REGEX MATCH "^[0-9]+" _cat_clang_major "${CMAKE_CXX_COMPILER_VERSION}")
-if (CMAKE_CXX_COMPILER_AR)
-  set(CMAKE_AR "${CMAKE_CXX_COMPILER_AR}")
-else()
-  find_program(CAT_LLVM_AR
-    NAMES "llvm-ar-${_cat_clang_major}" llvm-ar
-    DOC "`llvm-ar` matching ${CMAKE_CXX_COMPILER}.")
-  if (CAT_LLVM_AR)
-    set(CMAKE_AR "${CAT_LLVM_AR}")
+block(PROPAGATE CMAKE_AR CMAKE_RANLIB)
+  string(REGEX MATCH "^[0-9]+" _clang_major "${CMAKE_CXX_COMPILER_VERSION}")
+  if (CMAKE_CXX_COMPILER_AR)
+    set(CMAKE_AR "${CMAKE_CXX_COMPILER_AR}")
+  else()
+    find_program(CAT_LLVM_AR
+      NAMES "llvm-ar-${_clang_major}" llvm-ar
+      DOC "`llvm-ar` matching ${CMAKE_CXX_COMPILER}.")
+    if (CAT_LLVM_AR)
+      set(CMAKE_AR "${CAT_LLVM_AR}")
+    endif()
   endif()
-endif()
-if (CMAKE_CXX_COMPILER_RANLIB)
-  set(CMAKE_RANLIB "${CMAKE_CXX_COMPILER_RANLIB}")
-else()
-  find_program(CAT_LLVM_RANLIB
-    NAMES "llvm-ranlib-${_cat_clang_major}" llvm-ranlib
-    DOC "`llvm-ranlib` matching ${CMAKE_CXX_COMPILER}.")
-  if (CAT_LLVM_RANLIB)
-    set(CMAKE_RANLIB "${CAT_LLVM_RANLIB}")
+  if (CMAKE_CXX_COMPILER_RANLIB)
+    set(CMAKE_RANLIB "${CMAKE_CXX_COMPILER_RANLIB}")
+  else()
+    find_program(CAT_LLVM_RANLIB
+      NAMES "llvm-ranlib-${_clang_major}" llvm-ranlib
+      DOC "`llvm-ranlib` matching ${CMAKE_CXX_COMPILER}.")
+    if (CAT_LLVM_RANLIB)
+      set(CMAKE_RANLIB "${CAT_LLVM_RANLIB}")
+    endif()
   endif()
-endif()
-unset(_cat_clang_major)
+endblock()

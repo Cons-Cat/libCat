@@ -200,52 +200,102 @@ to render the resulting record into an interactive HTML document. Optview2 is no
 distributed with LLVM, but it may be preferred with this output. CMake attempts to use
 the same version of this script assosciated with your Clang installation.
 
-*** =intermediaries=
+*** =ir=
 #+BEGIN_SRC sh
-  just intermediaries
-  just intermediaries fmt
-  just intermediaries no-fmt
-  just intermediaries bc
-  just intermediaries examples/
-  just intermediaries debug tests/ string
+  just ir ll pow.cpp
+  just ir intel hello.cpp
+  just ir bc test_alloc
+  just ir ll examples/
+  just ir ii s tests/
+  just ir ll full
+  just ir s release fn=cat::pow src/
 #+END_SRC
-Saves compilation byproducts to build directories. By default, this exports =.ii=
-and =.s= files only. Pass =bc= or =ll= to add LLVM bitcode or textual LLVM IR respectively.
-=fmt= additionally runs =clang-format= over the =.ii= files. This is unfortunately slow,
-so it is disabled by default. Passing =examples/=, =tests/=, or one or more cat library names
-restricts output to those paths.
+Generates intermediate representations on demand. Each translation unit gets its
+own =<basename>-<kind>= target (e.g. =pow-ll=, =hello-s=). Domain meta-targets
+=src-<kind>= / =tests-<kind>= / =examples-<kind>= aggregate one IR across a
+directory. =full-<kind>= covers every TU in the project. =just ir= requires both an
+IR kind and a selector. Neither has a default and =just ir= alone is rejected.
 
+IR kinds:
+- =ii= - Preprocessed C++. =fmt= / =no-fmt= toggles =clang-format=
+  post-processing (=fmt= by default since the Ninja-driven runs are parallel).
+- =s= - Disassembled object code via =llvm-objdump= (defaults to Intel
+  syntax). =intel= and =att= are aliases that pin the syntax explicitly and
+  imply =s=.
+- =bc= - LLVM bitcode (the =-save-temps=obj= byproduct).
+- =ll= - Textual LLVM IR (=llvm-dis= over =.bc=), unconditionally normalised
+  to strip absolute paths and the toolchain version string so it diffs
+  cleanly across machines.
+
+Selectors (one or more):
+- =filename.cpp= or =filename= - resolves to the =filename-<kind>= per-TU
+  target.
+- =src= / =tests= / =examples= - the per-domain meta-targets; expands to
+  every libCat / tests / examples TU, respectively.
+- =full= - every TU in the project across all three domains.
+- Any =target-name= already known to CMake (e.g. =unit_tests=, =hello=).
+
+The output layout mirrors the source tree:
 #+BEGIN_SRC
-  build/runtime/_start.ii
-  build/string/memset.ii
-  build/string/memset.s
-  build/linux/syscall0.ii
-  build/tests/test_alloc.ii
-  build/examples/hello.ii
+  build/<lib>/<config>/<basename>[-<func>].<ext>
+  build/runtime/Debug/_start.ii
+  build/string/Release/memset.s
+  build/tests/Debug/test_alloc.ll
+  build/examples/Release/hello.s
 #+END_SRC
 
-- =<file>.ii= - Preprocessed C++ headers and translation units.
-- =<file>.s= - Target textual assembly emitted by codegen.
-- =<file>.bc= - LLVM bitcode saved by Clang's temp pipeline.
-- =<file>.ll= - Textual LLVM IR.
-
-=clang= can be used conventionally to compile or assemble intermediary files afterwards.
+=clang= can still be used conventionally on the byproducts:
 #+BEGIN_SRC sh
-  just intermediaries nosan debug
-  just intermediaries nosan debug bc ll
-  just intermediaries nosan debug examples/ string
-  clang -c build/examples/hello.s -o hello.o
-  clang build/examples/hello.s -Lbuild/Debug -lcat -o hello.o
-  clang++ -std=gnu++26 build/examples/hello.ii -static -Lbuild/Debug -lcat -o hello
+  just ir nosan debug ii s tests/
+  just ir nosan debug examples/ ii
+  clang -c build/examples/Debug/hello.s -o hello.o
+  clang++ -std=gnu++26 build/examples/Debug/hello.ii -static -Lbuild/Debug -lcat -o hello
+#+END_SRC
+
+LLVM optimisation passes can be applied via =pass=...= -- the argument
+implies =ll= and is forwarded to =opt=. =pass=list= prints every available
+pass. See =[[https://llvm.org/docs/NewPassManager.html#invoking-opt][invoking opt]]= in the LLVM docs.
+#+BEGIN_SRC sh
+  just ir examples/ pass=instcombine,loop-unroll
+  just ir examples/ 'pass=function(instcombine),always-inline'
+#+END_SRC
+
+The =fn= argument narrows every requested IR to the matching symbols and
+is appended to the output filename as =<basename>-<func>.<ext>=. =fn= is a
+literal source-level identifier. The driver collects every
+defined symbol whose demangled name is shaped like =<fn>= followed by an
+overload (=(...)=), template parameter list (=<...>=), or LTO clone
+suffix (=.cold=, =.0=, ...) and feeds them to the underlying tool:
+=ll= / =bc= via =llvm-extract --func= for each match. =ii= via a
+best-effort whole-word textual slice. =s= via per-symbol address-range
+disassembly (so weak / function-section symbols don't get silently
+dropped by =llvm-objdump --disassemble-symbols=). The =fn= filter ANDs
+with the selector above.
+#+BEGIN_SRC sh
+  just ir ll fn=cat::memset src/
+  just ir bc tests/ fn=cat::pow
+  just ir examples/ ll fn=cat::pow pass=instcombine
+#+END_SRC
+
+Anything after =--= is forwarded verbatim to =llvm-objdump= and is only
+accepted when =.s= is the sole requested IR (any other kind alongside is
+rejected). Handy for adjusting how the disassembly renders -- dropping
+leading addresses, re-adding raw bytes, ANSI colourisation, etc.
+#+BEGIN_SRC sh
+  just ir intel examples/ fn=main -- --no-leading-addr --disassembler-color=on
+  just ir att examples/ -- --print-imm-hex
 #+END_SRC
 
 This is useful for manually inspecting macro expansion and optimization, among other purposes.
 
 LLVM optimizations can be examined via the =pass= argument. =pass=list= prints every available pass.
-For more info, read [[invoking-opt]][https://llvm.org/docs/NewPassManager.html#invoking-opt] in the LLVM documentation.
+For more info, read [[invoking-opt][https://llvm.org/docs/NewPassManager.html#invoking-opt]]
+in the LLVM documentation.
+
+Clang flags can be forwarded to the underlying compile by writing them
+verbatim with a leading dash (the same way =just build= accepts them):
 #+BEGIN_SRC sh
-  just intermediaries examples/ pass=instcombine,loop-unroll
-  just intermediaries examples/ 'pass=function(instcombine),always-inline'
+  just ir ll pow.cpp -fno-inline -mllvm -inline-threshold=0
 #+END_SRC
 
 *** =syntax=

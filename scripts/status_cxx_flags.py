@@ -121,12 +121,7 @@ LANGUAGE_FLAGS = (
 
 LANGUAGE_FLAG_PREFIXES = ()
 
-LANGUAGE_DIRECT_FLAGS = (
-    "-clangir-disable-passes",
-    "-clangir-disable-verifier",
-    "-clangir-enable-idiom-recognizer",
-    "-emit-cir",
-)
+LANGUAGE_DIRECT_FLAGS = ()
 
 DIAGNOSTIC_FLAGS = (
     "ansi-escape-codes",

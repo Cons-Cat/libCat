@@ -35,53 +35,54 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   # libCat's `.clang-tidy` rules. Prefer the explicitly versioned binary, and
   # fall back to an unversioned `clang-tidy` only if it actually reports the
   # same major.
-  string(REGEX MATCH "^[0-9]+" _cat_ct_major "${CMAKE_CXX_COMPILER_VERSION}")
-  find_program(CAT_CLANG_TIDY_PATH
-    NAMES "clang-tidy-${_cat_ct_major}" clang-tidy
-    DOC "`clang-tidy` binary to use (must match Clang ${_cat_ct_major}).")
-  find_program(CAT_RUN_CLANG_TIDY_PATH
-    NAMES "run-clang-tidy-${_cat_ct_major}" run-clang-tidy
-    DOC "`run-clang-tidy` driver for parallel `cat-tidy` runs.")
+  # `_ct_major` propagates: the function below interpolates it into the
+  # diagnostic-mode `add_custom_target` echo COMMAND.
+  block(PROPAGATE _ct_major)
+    string(REGEX MATCH "^[0-9]+" _ct_major "${CMAKE_CXX_COMPILER_VERSION}")
+    find_program(CAT_CLANG_TIDY_PATH
+      NAMES "clang-tidy-${_ct_major}" clang-tidy
+      DOC "`clang-tidy` binary to use (must match Clang ${_ct_major}).")
+    find_program(CAT_RUN_CLANG_TIDY_PATH
+      NAMES "run-clang-tidy-${_ct_major}" run-clang-tidy
+      DOC "`run-clang-tidy` driver for parallel `cat-tidy` runs.")
 
-  if (CAT_CLANG_TIDY_PATH)
-    execute_process(
-      COMMAND "${CAT_CLANG_TIDY_PATH}" --version
-      OUTPUT_VARIABLE  _cat_ct_version
-      RESULT_VARIABLE  _cat_ct_result
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      ERROR_QUIET)
-    string(REGEX MATCH "version ([0-9]+)" _cat_ct_drop "${_cat_ct_version}")
-    if (NOT _cat_ct_result EQUAL 0 OR NOT CMAKE_MATCH_1 STREQUAL _cat_ct_major)
+    if (CAT_CLANG_TIDY_PATH)
+      execute_process(
+        COMMAND "${CAT_CLANG_TIDY_PATH}" --version
+        OUTPUT_VARIABLE  _version
+        RESULT_VARIABLE  _result
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET)
+      string(REGEX MATCH "version ([0-9]+)" _drop "${_version}")
+      if (NOT _result EQUAL 0 OR NOT CMAKE_MATCH_1 STREQUAL _ct_major)
+        message(WARNING
+          "Found `${CAT_CLANG_TIDY_PATH}` but `--version` reports "
+          "`${_version}`. libCat requires clang-tidy "
+          "${_ct_major} to match `${CMAKE_CXX_COMPILER}`. Install "
+          "`clang-tidy-${_ct_major}` or configure with "
+          "`-DCAT_CLANG_TIDY_PATH=/path/to/clang-tidy-${_ct_major}`. "
+          "`cat-tidy` and `cat-tidy-check` will exit non-zero until this "
+          "is resolved.")
+        unset(CAT_CLANG_TIDY_PATH CACHE)
+      else()
+        message(VERBOSE
+          "clang-tidy: ${CAT_CLANG_TIDY_PATH} (version ${_ct_major})")
+      endif()
+    endif()
+
+    # `run-clang-tidy` parallelizes per-TU `clang-tidy` runs and merges fix-its
+    # via `clang-apply-replacements`. Both scripts ship with the same
+    # clang-tools installation as the matching `clang-tidy`.
+    if (CAT_CLANG_TIDY_PATH AND NOT CAT_RUN_CLANG_TIDY_PATH)
       message(WARNING
-        "Found `${CAT_CLANG_TIDY_PATH}` but `--version` reports "
-        "`${_cat_ct_version}`. libCat requires clang-tidy "
-        "${_cat_ct_major} to match `${CMAKE_CXX_COMPILER}`. Install "
-        "`clang-tidy-${_cat_ct_major}` or configure with "
-        "`-DCAT_CLANG_TIDY_PATH=/path/to/clang-tidy-${_cat_ct_major}`. "
+        "`clang-tidy-${_ct_major}` was found but "
+        "`run-clang-tidy-${_ct_major}` was not. Install "
+        "the matching clang-tools package or configure with "
+        "`-DCAT_RUN_CLANG_TIDY_PATH=/path/to/run-clang-tidy-${_ct_major}`. "
         "`cat-tidy` and `cat-tidy-check` will exit non-zero until this "
         "is resolved.")
-      unset(CAT_CLANG_TIDY_PATH CACHE)
-    else()
-      message(VERBOSE
-        "clang-tidy: ${CAT_CLANG_TIDY_PATH} (version ${_cat_ct_major})")
     endif()
-    unset(_cat_ct_version)
-    unset(_cat_ct_result)
-    unset(_cat_ct_drop)
-  endif()
-
-  # `run-clang-tidy` parallelizes per-TU `clang-tidy` runs and merges fix-its
-  # via `clang-apply-replacements`. Both scripts ship with the same clang-tools
-  # installation as the matching `clang-tidy`.
-  if (CAT_CLANG_TIDY_PATH AND NOT CAT_RUN_CLANG_TIDY_PATH)
-    message(WARNING
-      "`clang-tidy-${_cat_ct_major}` was found but "
-      "`run-clang-tidy-${_cat_ct_major}` was not. Install "
-      "the matching clang-tools package or configure with "
-      "`-DCAT_RUN_CLANG_TIDY_PATH=/path/to/run-clang-tidy-${_cat_ct_major}`. "
-      "`cat-tidy` and `cat-tidy-check` will exit non-zero until this "
-      "is resolved.")
-  endif()
+  endblock()
 
   # `clang-tidy` reads `compile_commands.json` from the build dir, so the tidy
   # targets are only useful if CMake emits that file. Force it on for this
@@ -141,7 +142,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
           ${CMAKE_COMMAND}
           -E
           echo
-          "${target}: cmake did not find clang-tidy ${_cat_ct_major}. Install clang-tidy-${_cat_ct_major} or configure with -DCAT_CLANG_TIDY_PATH=/path/to/clang-tidy-${_cat_ct_major}"
+          "${target}: cmake did not find clang-tidy ${_ct_major}. Install clang-tidy-${_ct_major} or configure with -DCAT_CLANG_TIDY_PATH=/path/to/clang-tidy-${_ct_major}"
         COMMAND ${CMAKE_COMMAND} -E false)
     else()
       add_custom_target(
@@ -150,14 +151,13 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
           ${CMAKE_COMMAND}
           -E
           echo
-          "${target}: cmake did not find run-clang-tidy ${_cat_ct_major}. Install clang-tools-${_cat_ct_major} or configure with -DCAT_RUN_CLANG_TIDY_PATH=/path/to/run-clang-tidy-${_cat_ct_major}"
+          "${target}: cmake did not find run-clang-tidy ${_ct_major}. Install clang-tools-${_ct_major} or configure with -DCAT_RUN_CLANG_TIDY_PATH=/path/to/run-clang-tidy-${_ct_major}"
         COMMAND ${CMAKE_COMMAND} -E false)
     endif()
   endfunction()
 
   _cat_add_tidy_target(cat-tidy       APPLY)
   _cat_add_tidy_target(cat-tidy-check CHECK)
-  unset(_cat_ct_major)
   return()
 endif()
 

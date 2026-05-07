@@ -23,25 +23,23 @@
 # `-fPIC` (no frontend effect), and tests / examples get full coverage from the
 # regular build.
 
-get_property(_cat_impl_sources_for_syntax TARGET cat-impl PROPERTY SOURCES)
-
-add_library(cat-syntax-lib OBJECT EXCLUDE_FROM_ALL ${_cat_impl_sources_for_syntax})
-target_compile_features(cat-syntax-lib PRIVATE ${CAT_CXX_STANDARD_FEATURE})
-set_target_properties(cat-syntax-lib PROPERTIES CXX_EXTENSIONS ON)
-target_include_directories(cat-syntax-lib PRIVATE
-  $<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>)
-target_compile_options(cat-syntax-lib PRIVATE
-  $<TARGET_PROPERTY:cat,INTERFACE_COMPILE_OPTIONS>
-  ${CAT_CXX_FLAGS_INTERNAL}
-  -Wno-unused-command-line-argument
-  -fsyntax-only)
-
-if (CAT_PCH)
-  target_precompile_headers(cat-syntax-lib REUSE_FROM cat-impl)
-endif()
+block()
+  get_property(_impl_sources TARGET cat-impl PROPERTY SOURCES)
+  add_library(cat-syntax-lib OBJECT EXCLUDE_FROM_ALL ${_impl_sources})
+  target_compile_features(cat-syntax-lib PRIVATE ${CAT_CXX_STANDARD_FEATURE})
+  set_target_properties(cat-syntax-lib PROPERTIES CXX_EXTENSIONS ON)
+  target_include_directories(cat-syntax-lib PRIVATE
+    $<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>)
+  target_compile_options(cat-syntax-lib PRIVATE
+    $<TARGET_PROPERTY:cat,INTERFACE_COMPILE_OPTIONS>
+    ${CAT_CXX_FLAGS_INTERNAL}
+    -Wno-unused-command-line-argument
+    -fsyntax-only)
+  if (CAT_PCH)
+    target_precompile_headers(cat-syntax-lib REUSE_FROM cat-impl)
+  endif()
+endblock()
 
 add_custom_target(cat-syntax
   DEPENDS cat-syntax-lib
   COMMENT "Syntax-checked every cat-impl TU with -fsyntax-only.")
-
-unset(_cat_impl_sources_for_syntax)

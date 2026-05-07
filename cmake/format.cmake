@@ -24,37 +24,37 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   # libCat's `.clang-format` rules. Prefer the explicitly versioned binary, and
   # fall back to an unversioned `clang-format` only if it actually reports the
   # same major.
-  string(REGEX MATCH "^[0-9]+" _cat_cf_major "${CMAKE_CXX_COMPILER_VERSION}")
-  find_program(CAT_CLANG_FORMAT_PATH
-    NAMES "clang-format-${_cat_cf_major}" clang-format
-    DOC "`clang-format` binary to use (must match Clang ${_cat_cf_major}).")
-
-  if (CAT_CLANG_FORMAT_PATH)
-    execute_process(
-      COMMAND "${CAT_CLANG_FORMAT_PATH}" --version
-      OUTPUT_VARIABLE  _cat_cf_version
-      RESULT_VARIABLE  _cat_cf_result
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      ERROR_QUIET)
-    string(REGEX MATCH "version ([0-9]+)" _cat_cf_drop "${_cat_cf_version}")
-    if (NOT _cat_cf_result EQUAL 0 OR NOT CMAKE_MATCH_1 STREQUAL _cat_cf_major)
-      message(WARNING
-        "Found `${CAT_CLANG_FORMAT_PATH}` but `--version` reports "
-        "`${_cat_cf_version}`. libCat requires clang-format "
-        "${_cat_cf_major} to match `${CMAKE_CXX_COMPILER}`. Install "
-        "`clang-format-${_cat_cf_major}` or configure with "
-        "`-DCAT_CLANG_FORMAT_PATH=/path/to/clang-format-${_cat_cf_major}`. "
-        "`cat-format` and `cat-format-check` will exit non-zero until this "
-        "is resolved.")
-      unset(CAT_CLANG_FORMAT_PATH CACHE)
-    else()
-      message(VERBOSE
-        "clang-format: ${CAT_CLANG_FORMAT_PATH} (version ${_cat_cf_major})")
+  # `_cf_major` propagates: subsequent `add_custom_target` echo COMMANDs
+  # interpolate it into their human-facing diagnostic strings.
+  block(PROPAGATE _cf_major)
+    string(REGEX MATCH "^[0-9]+" _cf_major "${CMAKE_CXX_COMPILER_VERSION}")
+    find_program(CAT_CLANG_FORMAT_PATH
+      NAMES "clang-format-${_cf_major}" clang-format
+      DOC "`clang-format` binary to use (must match Clang ${_cf_major}).")
+    if (CAT_CLANG_FORMAT_PATH)
+      execute_process(
+        COMMAND "${CAT_CLANG_FORMAT_PATH}" --version
+        OUTPUT_VARIABLE  _version
+        RESULT_VARIABLE  _result
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET)
+      string(REGEX MATCH "version ([0-9]+)" _drop "${_version}")
+      if (NOT _result EQUAL 0 OR NOT CMAKE_MATCH_1 STREQUAL _cf_major)
+        message(WARNING
+          "Found `${CAT_CLANG_FORMAT_PATH}` but `--version` reports "
+          "`${_version}`. libCat requires clang-format "
+          "${_cf_major} to match `${CMAKE_CXX_COMPILER}`. Install "
+          "`clang-format-${_cf_major}` or configure with "
+          "`-DCAT_CLANG_FORMAT_PATH=/path/to/clang-format-${_cf_major}`. "
+          "`cat-format` and `cat-format-check` will exit non-zero until this "
+          "is resolved.")
+        unset(CAT_CLANG_FORMAT_PATH CACHE)
+      else()
+        message(VERBOSE
+          "clang-format: ${CAT_CLANG_FORMAT_PATH} (version ${_cf_major})")
+      endif()
     endif()
-    unset(_cat_cf_version)
-    unset(_cat_cf_result)
-    unset(_cat_cf_drop)
-  endif()
+  endblock()
 
   # `cat-impl` owns most of libCat's `.cpp`s (they compile into `libcat.a`)
   # while `_start.cpp` remains on `cat`'s `INTERFACE_SOURCES`. The format target
@@ -95,7 +95,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
           ${CMAKE_COMMAND}
           -E
           echo
-          "${target}: cmake did not find clang-format ${_cat_cf_major}. Install clang-format-${_cat_cf_major} or configure with -DCAT_CLANG_FORMAT_PATH=/path/to/clang-format-${_cat_cf_major}"
+          "${target}: cmake did not find clang-format ${_cf_major}. Install clang-format-${_cf_major} or configure with -DCAT_CLANG_FORMAT_PATH=/path/to/clang-format-${_cf_major}"
         COMMAND ${CMAKE_COMMAND} -E false)
     elseif (NOT CAT_PYTHON3)
       add_custom_target(
@@ -233,5 +233,4 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
       VERBATIM)
   endif()
 
-  unset(_cat_cf_major)
 endif()

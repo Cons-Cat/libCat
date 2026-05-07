@@ -6,6 +6,12 @@
 # allows as `-fsyntax-only` TUs. `idx` and `basic_intptr` are not a width
 # product. The named probes for those stay in `cat_arithmetic_neg_cases.cmake`.
 # Uses `_cat_neg_expect_illformed` from `cat_arithmetic_negative.cmake`.
+#
+# This file runs inside the `block()` opened by `cat_arithmetic_negative.cmake`
+# right before the `include()` calls, so every loop scratch (`_k`, `_skip`,
+# `_z`, `_src`, `s`, `l`, `_nmid`, `_mxn`, `_cidN`, `_fN`, ...) and every
+# helper list (`_cat_neg_ok_*`, `_cat_neg_narrow`) is auto-disposed when the
+# block exits. No per-loop / end-of-file `unset()` cleanup is needed.
 
 set(_m_hdr [[#include <cat/arithmetic>
 ]])
@@ -59,11 +65,7 @@ foreach(_p IN LISTS _cat_neg_narrow)
   cat::uint@s@ a = w; }"
     _n2 @ONLY)
   _cat_neg_expect_illformed("${_nmid2}" "${_n2}")
-  unset(_nmid)
-  unset(_nmid2)
 endforeach()
-unset(s)
-unset(l)
 
 # Mixed unsigned / signed: every `deconst(intA)` to `uintB` is ill-formed.
 foreach(ia IN ITEMS 1 2 4 8)
@@ -74,11 +76,8 @@ foreach(ia IN ITEMS 1 2 4 8)
   cat::uint@ub@ u = i; }"
       _mx1 @ONLY)
     _cat_neg_expect_illformed("${_mxn}" "${_mx1}")
-    unset(_mxn)
   endforeach()
 endforeach()
-unset(ia)
-unset(ub)
 
 # `uintA` to `deconst(intB)` (skip well-formed).
 set(_cat_neg_ok_uitoi 2-1 4-1 4-2 8-1 8-2 8-4)
@@ -93,7 +92,6 @@ foreach(ib IN ITEMS 1 2 4 8)
   cat::int@ib@ a = w; }"
         _mx2 @ONLY)
       _cat_neg_expect_illformed("${_mxn2}" "${_mx2}")
-      unset(_mxn2)
     endif()
   endforeach()
 endforeach()
@@ -114,8 +112,6 @@ string(CONFIGURE
   cat::float8 f = v; }"
   _f8 @ONLY)
 _cat_neg_expect_illformed("icvt-impl-int-to-float8" "${_f8}")
-unset(ua)
-unset(ib)
 
 # Undefined compound ops that promote (see `!can_{plus,times,minus}_assign`
 # grid).
@@ -156,14 +152,7 @@ foreach(_p IN LISTS _cat_neg_narrow)
     cat::deconst(cat::int@l2@{0}); }"
     _c5 @ONLY)
   _cat_neg_expect_illformed("${_cid5}" "${_c5}")
-  unset(_cid1)
-  unset(_cid2)
-  unset(_cid3)
-  unset(_cid4)
-  unset(_cid5)
 endforeach()
-unset(s2)
-unset(l2)
 
 # `int4 -= iword` (`subtract_by` would widen).
 string(CONFIGURE
@@ -171,31 +160,3 @@ string(CONFIGURE
   a -= cat::deconst(w); }"
   _iwe @ONLY)
 _cat_neg_expect_illformed("minuseq-int4-iword" "${_iwe}")
-unset(_m_hdr)
-unset(_m_hdr2)
-unset(_c1)
-unset(_c2)
-unset(_c3)
-unset(_c4)
-unset(_c5)
-unset(_f2)
-unset(_f4)
-unset(_f8)
-unset(_iwe)
-unset(_k)
-unset(_mx1)
-unset(_mx2)
-unset(_n1)
-unset(_n2)
-unset(_p)
-unset(_src)
-unset(_src2)
-unset(_ij)
-unset(_ij2)
-unset(_skip)
-unset(_skip2)
-unset(_skip3)
-unset(_cat_neg_ok_u_eq_i)
-unset(_cat_neg_ok_i_eq_u)
-unset(_cat_neg_ok_uitoi)
-unset(_cat_neg_narrow)
