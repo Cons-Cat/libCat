@@ -7,7 +7,7 @@
 namespace cat {
 namespace detail {
 template <typename Base>
-struct as_rvalue_view_impl : iterable_interface {
+struct as_rvalue_view_impl : iterable_interface<> {
    Base m_base;
 
    template <typename BaseContext>

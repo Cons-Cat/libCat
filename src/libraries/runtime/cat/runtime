@@ -8,19 +8,17 @@ namespace cat {
 
 namespace detail {
 // Name mangling prevents the linker from finding this symbol.
-extern "C" [[gnu::used
+extern "C" [[gnu::used]]
 #ifndef NO_ARGC_ARGV
-             ,
-             gnu::naked
+[[gnu::naked]]
 #endif
-]]
 void
 _start();  // NOLINT
 }  // namespace detail
 
 // The `cat::exit()` function is provided globally. This streamlines out the
 // existence of `_exit()`.
-[[noreturn]]
+[[noreturn, gnu::leaf]]
 void
 exit(iword exit_code = 0);
 

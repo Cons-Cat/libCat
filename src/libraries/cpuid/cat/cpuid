@@ -232,16 +232,28 @@ struct cpu_model {
    cat::bitset<32> m_cpu_features = default_cpu_features();
 };
 
-extern "C" constinit inline detail::cpu_model __cpu_model{};
+// `CAT_EXPORT_CPUID_ABI` keeps these symbols at default visibility for the
+// `libcat.so` build. Otherwise they stay hidden so LTO can internalize and
+// DSE the writes from `__cpu_indicator_init`.
+extern "C"
+#ifndef CAT_EXPORT_CPUID_ABI
+   [[gnu::visibility("hidden")]]
+#endif
+   constinit inline detail::cpu_model __cpu_model{};  // NOLINT
 
 // Extended x86 feature flags, such as AVX2. This is zero-intialized except for
 // a single bit that expresses baseline x86-64 feature support.
-extern "C" constinit inline cat::array<cat::bitset<32>, 3>
-   __cpu_features2(cat::bitset<32>{}, enable_baseline_feature(),
-                   cat::bitset<32>{});
+extern "C"
+#ifndef CAT_EXPORT_CPUID_ABI
+   [[gnu::visibility("hidden")]]
+#endif
+   constinit inline cat::array<cat::bitset<32>, 3>
+      __cpu_features2(cat::bitset<32>{}, enable_baseline_feature(),  // NOLINT
+                      cat::bitset<32>{});
 
 void
-set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1) {
+set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
+                 cat::array<cat::bitset<32>, 4> const& feature_flags) {
    // Extract bits 4 through 7.
    cat::uint4 cpu_model = (vendor_family_model >> 4u) & 0xfu;
    // Extract bits 8 through 11.
@@ -259,7 +271,7 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1) {
 
    auto has_feature = [&](processor_features const feature) -> bool {
       cat::idx const feature_index = cat::to_underlying(feature);
-      return __cpu_features2[2][feature_index % 32].is_set();
+      return feature_flags[feature_index / 32u][feature_index % 32u].is_set();
    };
 
    // Detecting CPU type and subtype requires special-casing Intel and AMD.
@@ -519,8 +531,13 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1) {
    }
 }
 
-extern "C" inline void
-__cpu_indicator_init() {
+extern "C"
+#ifndef CAT_EXPORT_CPUID_ABI
+   [[gnu::visibility("hidden")]]
+#endif
+   [[gnu::always_inline]]
+   inline void
+   __cpu_indicator_init() {  // NOLINT
    using enum processor_features;
 
    // Get highest values for `%EAX` below and above `0x80000000u`.
@@ -535,8 +552,9 @@ __cpu_indicator_init() {
 
    auto&& [max_extended_leaf, _, _, _] = cpuid(0x80000000u);
 
-   auto&& [vendor_family_model, _, ecx, _] = cpuid(1u);
+   auto&& [vendor_family_model, _, ecx, edx] = cpuid(1u);
    cat::bitset ecx_bits = cat::make_bitset<32>(ecx);
+   cat::bitset edx_bits = cat::make_bitset<32>(edx);
 
    // This is an array of 4 zero-initialized bitsets rather than a single
    // `bitset<128>` to more directly map to LLVM's `__cpu_model` and
@@ -556,6 +574,18 @@ __cpu_indicator_init() {
    // https://en.wikipedia.org/wiki/CPUID
    // As well as in the file:
    // `llvm-project/compiler-rt/lib/builtins/cpu_model/x86.c`.
+   if (edx_bits[15]) {
+      enable_feature(cmov);
+   }
+   if (edx_bits[23]) {
+      enable_feature(mmx);
+   }
+   if (edx_bits[25]) {
+      enable_feature(sse);
+   }
+   if (edx_bits[26]) {
+      enable_feature(sse2);
+   }
    if (ecx_bits[0]) {
       enable_feature(sse3);
    }
@@ -600,10 +630,14 @@ __cpu_indicator_init() {
    if (ecx_bits[29]) {
       enable_feature(f16_c);
    }
+   if (ecx_bits[30]) {
+      enable_feature(rdrnd);
+   }
 
    if (max_extended_leaf >= 0x80000001u) {
-      auto&& [_, _, ecx, _] = cpuid(0x80000001u);
+      auto&& [_, _, ecx, edx] = cpuid(0x80000001u);
       cat::bitset ecx_bits = cat::make_bitset<32>(ecx);
+      cat::bitset edx_bits = cat::make_bitset<32>(edx);
 
       if (ecx_bits[0]) {
          enable_feature(lahf_lm);
@@ -629,7 +663,8 @@ __cpu_indicator_init() {
       if (ecx_bits[21]) {
          enable_feature(tbm);
       }
-      if (ecx_bits[29]) {
+      // ECX bit 29 is `mwaitx` not `lm`. `lm` lives in EDX bit 29.
+      if (edx_bits[29]) {
          enable_feature(lm);
       }
    }
@@ -711,31 +746,35 @@ __cpu_indicator_init() {
       // }
    }
 
-   // The baseline X86-64 is already set by `default_cpu_features()`.
-   if (has_feature(lahf_lm) && has_feature(cmpxchg16_b) && has_feature(popcnt)
-       && has_feature(sse4_2)) {
-      enable_feature(x86_64_v2);
-
-      if (has_feature(avx2) && has_feature(bmi) && has_feature(bmi2)
-          && has_feature(fma) && has_feature(f16_c) && has_feature(lzcnt)
-          && has_feature(movbe)) {
-         enable_feature(x86_64_v3);
-
-         if (has_feature(avx512_bw) && has_feature(avx512_cd)
-             && has_feature(avx512_dq) && has_feature(avx512_vl)) {
-            enable_feature(x86_64_v4);
+   // psABI x86-64 microarchitecture levels. Mirrors compiler-rt's
+   // `setFeature(FEATURE_X86_64_*)` block. Set explicitly at runtime rather
+   // than via the constinit fallback because LTO's GlobalOpt + SROA may
+   // scalarize `__cpu_features2` across the link unit and drop the static
+   // initializer of slot 1.
+   if (has_feature(lm) && has_feature(sse2)) {
+      enable_feature(x86_64_baseline);
+      if (has_feature(lahf_lm) && has_feature(cmpxchg16_b)
+          && has_feature(popcnt) && has_feature(sse4_2)) {
+         enable_feature(x86_64_v2);
+         if (has_feature(avx2) && has_feature(bmi) && has_feature(bmi2)
+             && has_feature(fma) && has_feature(f16_c) && has_feature(lzcnt)
+             && has_feature(movbe)) {
+            enable_feature(x86_64_v3);
+            if (has_feature(avx512_bw) && has_feature(avx512_cd)
+                && has_feature(avx512_dq) && has_feature(avx512_vl)) {
+               enable_feature(x86_64_v4);
+            }
          }
       }
    }
 
-   __cpu_model.m_cpu_features |= feature_flags[0];
+   __cpu_model.m_cpu_features = feature_flags[0];
    __cpu_features2[0] = feature_flags[1];
-   // This is OR'd because it contains `x86_64_baseline` by default:
-   __cpu_features2[1] |= feature_flags[2];
+   __cpu_features2[1] = feature_flags[2];
    __cpu_features2[2] = feature_flags[3];
 
    // Use this information to fill out x86 family model and available features.
-   set_vendor_model(vendor_family_model, vendor1);
+   set_vendor_model(vendor_family_model, vendor1, feature_flags);
 }
 
 }  // namespace detail

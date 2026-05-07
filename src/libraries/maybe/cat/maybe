@@ -1135,10 +1135,8 @@ class [[nodiscard]] maybe {
    {
       if (self.has_value()) [[likely]] {
          return $fwd(self).value();
-      } else {
-         exit(exit_code);
       }
-      __builtin_unreachable();  // This prevents a build warning.
+      exit(exit_code);
    }
 
    // Special discard-able overload for `maybe<void>`.

@@ -87,75 +87,88 @@ iterable_pipe_fold(Self&& self, Callback callback, Init init) -> Init {
 
 }  // namespace detail
 
+template <typename Tag>
 template <typename Self, typename Callback>
 constexpr auto
-iterable_interface::transform(this Self&& self, Callback callback) {
+iterable_interface<Tag>::transform(this Self&& self, Callback callback) {
    return detail::iterable_pipe_transform($fwd(self), move(callback));
 }
 
+template <typename Tag>
 template <typename Self, typename Callback>
 constexpr auto
-iterable_interface::filter(this Self&& self, Callback callback) {
+iterable_interface<Tag>::filter(this Self&& self, Callback callback) {
    return detail::iterable_pipe_filter($fwd(self), move(callback));
 }
 
+template <typename Tag>
 template <typename Self>
 constexpr auto
-iterable_interface::take(this Self&& self, idx count) {
+iterable_interface<Tag>::take(this Self&& self, idx count) {
    return detail::iterable_pipe_take($fwd(self), count);
 }
 
+template <typename Tag>
 template <typename Self>
 constexpr auto
-iterable_interface::reverse(this Self&& self) {
+iterable_interface<Tag>::reverse(this Self&& self) {
    return detail::iterable_pipe_reverse($fwd(self));
 }
 
+template <typename Tag>
 template <typename Self>
 constexpr auto
-iterable_interface::sum(this Self&& self) {
+iterable_interface<Tag>::sum(this Self&& self) {
    return detail::iterable_pipe_sum($fwd(self));
 }
 
+template <typename Tag>
 template <typename Self>
 constexpr auto
-iterable_interface::product(this Self&& self) {
+iterable_interface<Tag>::product(this Self&& self) {
    return detail::iterable_pipe_product($fwd(self));
 }
 
+template <typename Tag>
 template <typename Self>
 constexpr auto
-iterable_interface::min(this Self&& self) {
+iterable_interface<Tag>::min(this Self&& self) {
    return detail::iterable_pipe_min($fwd(self));
 }
 
+template <typename Tag>
 template <typename Self>
 constexpr auto
-iterable_interface::max(this Self&& self) {
+iterable_interface<Tag>::max(this Self&& self) {
    return detail::iterable_pipe_max($fwd(self));
 }
 
+template <typename Tag>
 template <typename Self, typename Other>
 constexpr auto
-iterable_interface::dot(this Self&& self, Other&& other) {
+iterable_interface<Tag>::dot(this Self&& self, Other&& other) {
    return detail::iterable_pipe_dot($fwd(self), $fwd(other));
 }
 
+template <typename Tag>
 template <typename Self>
 constexpr auto
-iterable_interface::count(this Self&& self) -> idx {
+iterable_interface<Tag>::count(this Self&& self) -> idx {
    return detail::iterable_pipe_count($fwd(self));
 }
 
+template <typename Tag>
 template <typename Self, typename Callback>
 constexpr auto
-iterable_interface::for_each(this Self&& self, Callback callback) -> Callback {
+iterable_interface<Tag>::for_each(this Self&& self, Callback callback)
+   -> Callback {
    return detail::iterable_pipe_for_each($fwd(self), move(callback));
 }
 
+template <typename Tag>
 template <typename Self, typename Callback, typename Init>
 constexpr auto
-iterable_interface::fold(this Self&& self, Callback callback, Init init)
+iterable_interface<Tag>::fold(this Self&& self, Callback callback, Init init)
    -> Init {
    return detail::iterable_pipe_fold($fwd(self), move(callback), move(init));
 }

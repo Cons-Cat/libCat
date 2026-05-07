@@ -49,6 +49,13 @@ distance(Collection const& collection, Position const& from, Position const& to)
 // (`data | cat::filter(position) | cat::sum()`) into a fluent API surface
 // (`data.filter(position).sum()`). It is implemented on every adaptor in
 // `<cat/iterable>`.
+//
+// The `Tag` template parameter exists purely for ABI distinctness so that
+// nesting an `iterable_interface`-derived type inside another doesn't trigger
+// a same-type empty-base-subobject collision. Each user of this mixin should
+// pass its own type as the tag (CRTP-style). The `void` default is for simple
+// classes where no nesting could reasonably occur.
+template <typename Tag = void>
 struct iterable_interface {
    // These are implemented in
    // `<cat/iterable/implementations/iterable_interface.tpp>`.
@@ -203,7 +210,7 @@ namespace cat {
 // dot-chaining API.
 template <typename Derived>
 struct contiguous_collection_interface
-    : iterable_interface,
+    : iterable_interface<Derived>,
       detail::contiguous_position_interface<Derived> {};
 
 }  // namespace cat

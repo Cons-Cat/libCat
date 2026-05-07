@@ -7,7 +7,7 @@
 namespace cat {
 namespace detail {
 template <typename Base, typename Callback>
-struct transform_view_impl : iterable_interface {
+struct transform_view_impl : iterable_interface<> {
    Base m_base;
    Callback m_callback;
 

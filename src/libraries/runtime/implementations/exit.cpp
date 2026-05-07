@@ -2,7 +2,7 @@
 
 // Terminate the program. Without arguments, this exits with a success code for
 // the target operating system.
-[[noreturn]]
+[[noreturn, gnu::leaf]]
 void
 cat::exit(iword exit_code) {
    asm("syscall"

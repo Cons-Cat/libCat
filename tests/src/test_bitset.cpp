@@ -3,7 +3,7 @@
 
 #include "../unit_tests.hpp"
 
-$test(bitset) {
+$test(bitset_storage_layout) {
    using namespace cat::arithmetic_literals;
 
    constexpr cat::bitset<7u> bits7{};
@@ -38,7 +38,50 @@ $test(bitset) {
 
    static_assert(sizeof(bits129) == 24u);
    static_assert(bits129.leading_skipped_bits == 63u);
+}
 
+// `__datasizeof` is `sizeof` minus tail padding. `cat::bitset<N>` should always
+// pack tightly to its storage backing array with no tail padding, so the two
+// must agree at every bit count. This guards against a regression where the
+// CRTP `bitwise_interface` base or the storage `cat::array` member introduces
+// padding that would put `cat::bitset` out of step with the C ABI it mirrors
+// (e.g. compiler-rt's `__cpu_features2[N]` layout).
+$test(bitset_layout_data_size) {
+   // Single-word storage. The element type widens to the smallest unsigned
+   // integer that fits the bit count.
+   static_assert(__datasizeof(cat::bitset<1>) == 1u);
+   static_assert(__datasizeof(cat::bitset<7>) == 1u);
+   static_assert(__datasizeof(cat::bitset<8>) == 1u);
+   static_assert(__datasizeof(cat::bitset<9>) == 2u);
+   static_assert(__datasizeof(cat::bitset<15>) == 2u);
+   static_assert(__datasizeof(cat::bitset<16>) == 2u);
+   static_assert(__datasizeof(cat::bitset<17>) == 4u);
+   static_assert(__datasizeof(cat::bitset<31>) == 4u);
+   static_assert(__datasizeof(cat::bitset<32>) == 4u);
+   static_assert(__datasizeof(cat::bitset<33>) == 8u);
+   static_assert(__datasizeof(cat::bitset<63>) == 8u);
+   static_assert(__datasizeof(cat::bitset<64>) == 8u);
+
+   // Multi-word storage uses 8-byte words.
+   static_assert(__datasizeof(cat::bitset<65>) == 16u);
+   static_assert(__datasizeof(cat::bitset<128>) == 16u);
+   static_assert(__datasizeof(cat::bitset<129>) == 24u);
+   static_assert(__datasizeof(cat::bitset<192>) == 24u);
+   static_assert(__datasizeof(cat::bitset<256>) == 32u);
+
+   // No tail padding: `sizeof` always equals `__datasizeof`.
+   static_assert(sizeof(cat::bitset<1>) == __datasizeof(cat::bitset<1>));
+   static_assert(sizeof(cat::bitset<7>) == __datasizeof(cat::bitset<7>));
+   static_assert(sizeof(cat::bitset<32>) == __datasizeof(cat::bitset<32>));
+   static_assert(sizeof(cat::bitset<33>) == __datasizeof(cat::bitset<33>));
+   static_assert(sizeof(cat::bitset<128>) == __datasizeof(cat::bitset<128>));
+   static_assert(sizeof(cat::bitset<129>) == __datasizeof(cat::bitset<129>));
+}
+
+$test(bitset_make_and_predicates) {
+   using namespace cat::arithmetic_literals;
+
+   constexpr cat::bitset<7u> bits7{};
    cat::bitset<7u> bits7_2 = bits7;
    bits7_2 = cat::make_bitset<7u>(0x0_u1);
    cat::verify(!bits7_2.all_of());
@@ -64,10 +107,15 @@ $test(bitset) {
    cat::verify(!bits127.all_of());
    cat::verify(bits127.none_of());
    cat::verify(!bits127.any_of());
+}
 
-   // The 128th bit is off, `all_of` others are on. The lowest bit is off, which
-   // is ignored by a 127-bit bitset.
-   bits127 = cat::make_bitset<127>(cat::uint8_max << 1u, 0xFFFFFFFF'FFFFFFFEul);
+$test(bitset_count_leading_trailing_zero) {
+   using namespace cat::arithmetic_literals;
+
+   // The 128th bit is off, all others are on. The lowest bit is off, which is
+   // ignored by a 127-bit bitset.
+   cat::bitset<127> bits127 = cat::make_bitset<127>(cat::uint8_max << 1u,
+                                                    0xFFFFFFFF'FFFFFFFEul);
    static_assert(bits127.leading_bytes_bits == 63u);
    static_assert(bits127.leading_skipped_bits == 1u);
    cat::verify(!bits127.all_of());
@@ -76,7 +124,7 @@ $test(bitset) {
    cat::verify(bits127.countl_zero() == 0u);
    cat::verify(bits127.countr_zero() == 0u);
 
-   // The 128th bit is off, `all_of` others are on.
+   // The 128th bit is off, all others are on.
    bits127 =
       cat::make_bitset<127>(cat::uint8_max >> 2u, 0xFFFFFFFF'FFFFFFFF_u8 << 1u);
    cat::verify(bits127.countl_zero() == 2u);
@@ -85,8 +133,11 @@ $test(bitset) {
    bits127 = cat::make_bitset<127>(0_u8, cat::uint8_max >> 1u);
    cat::verify(bits127.countl_zero() == 65u);
    cat::verify(bits127.countr_zero() == 0u);
+}
 
-   // Test `const` subscripting.
+$test(bitset_subscript_const) {
+   using namespace cat::arithmetic_literals;
+
    constexpr cat::bitset<15u> bits15 =
       cat::make_bitset<15u>(0b0101'0101'0101'0100_u2);
    static_assert(!bits15[0u]);
@@ -98,8 +149,12 @@ $test(bitset) {
    static_assert(bits15_2[0u]);
    static_assert(!bits15_2[1]);
    static_assert(bits15_2[2]);
+}
 
-   // Test 16-byte bitset's subscript.
+$test(bitset_subscript_multiword) {
+   using namespace cat::arithmetic_literals;
+
+   // 16-byte bitset's subscript.
    constexpr cat::bitset<128> bits128_2 =
       cat::make_bitset<128>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
    // 11111111'11111111'11111111'11111111'11111111'11111111'11111111'11111011.
@@ -110,7 +165,7 @@ $test(bitset) {
    static_assert(bits128_2[126u]);
    static_assert(bits128_2[127u]);
 
-   // Test 16-byte bitset's subscript with bit offset.
+   // 16-byte bitset's subscript with bit offset.
    constexpr cat::bitset<127> bits127_2 =
       cat::make_bitset<127>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
    // 11111111'11111111'11111111'11111111'11111111'11111111'11111111'1111101.
@@ -119,9 +174,13 @@ $test(bitset) {
    static_assert(bits127_2[2u]);
    static_assert(bits127_2[125u]);
    static_assert(bits127_2[126u]);
+}
 
-   // Test mutable subscript.
-   bits127 = cat::make_bitset<127>(cat::uint8_max >> 2u, 0b0000'0100_u8);
+$test(bitset_subscript_mutable) {
+   using namespace cat::arithmetic_literals;
+
+   cat::bitset<127> bits127 =
+      cat::make_bitset<127>(cat::uint8_max >> 2u, 0b0000'0100_u8);
 
    cat::verify(!bits127[0u]);
    cat::verify(bits127[1u]);
@@ -145,22 +204,37 @@ $test(bitset) {
    cat::verify(!bits127[124u]);
    bits127[124u] = true;
    cat::verify(bits127[124u]);
+}
+
+$test(bitset_swap) {
+   using namespace cat::arithmetic_literals;
 
    cat::bitset<8u> swap_left = cat::make_bitset<8u>(0b1010'0000_u1);
    cat::bitset<8u> swap_right = cat::make_bitset<8u>(0b0101'0000_u1);
    cat::swap(swap_left, swap_right);
    cat::verify(swap_left == cat::make_bitset<8u>(0b0101'0000_u1));
    cat::verify(swap_right == cat::make_bitset<8u>(0b1010'0000_u1));
+}
 
-   // Test `const` `.at()`.
+$test(bitset_at) {
+   using namespace cat::arithmetic_literals;
+
+   constexpr cat::bitset<127> bits127_2 =
+      cat::make_bitset<127>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+
+   // `const` `.at()`.
    auto _ = bits127_2.at(0u).verify();
    cat::verify(!bits127_2.at(128u).has_value());
 
-   // Test mutable `.at()`.
+   // Mutable `.at()`.
+   cat::bitset<127> bits127 =
+      cat::make_bitset<127>(cat::uint8_max >> 2u, 0b0000'0100_u8);
    bits127.at(0u).verify() = true;
    cat::verify(bits127.at(0u).has_value());
    cat::verify(!bits127.at(128u).has_value());
+}
 
+$test(bitset_from_string) {
    cat::bitset bitstring("010101");
    cat::verify(bitstring[0] == false);
    cat::verify(bitstring[1] == true);
@@ -168,14 +242,20 @@ $test(bitset) {
    cat::verify(bitstring[3] == true);
    cat::verify(bitstring[4] == false);
    cat::verify(bitstring[5] == true);
+}
 
+$test(bitset_make_filled) {
    cat::bitset fullbits = cat::make_bitset_filled<8>(true);
    cat::verify(fullbits.all_of());
    cat::bitset nonebits = cat::make_bitset_filled<8>(false);
    cat::verify(nonebits.none_of());
+}
 
-   // Test `.rotate_left()` and `.rotate_right()` using the bitstring
-   // constructor so logical index `i` corresponds directly to character `i`.
+$test(bitset_rotate) {
+   using namespace cat::arithmetic_literals;
+
+   // The bitstring constructor maps logical index `i` directly to character
+   // `i`, so this test layout is straightforward to read.
    constexpr cat::bitset<15u> bits15_3("100000000000000");
    static_assert(bits15_3[0u]);
    static_assert(!bits15_3[1u]);
@@ -227,10 +307,9 @@ $test(bitset) {
    // Rotating by `bits_count` returns to the original.
    cat::verify(bits127_4.rotate_left(127) == bits127_4);
    cat::verify(bits127_4.rotate_right(127) == bits127_4);
+}
 
-   // Test `.set_even()`, `.set_odd()`, `.unset_even()`, `.unset_odd()`, and the
-   // `make_bitset_even()`/`make_bitset_odd()` factories.
-
+$test(bitset_set_even_odd) {
    // An even-bits bitset sets logical indices 0, 2, 4, ... to 1 and all
    // odd-index bits to 0.
    constexpr cat::bitset<8u> even8 = cat::make_bitset_even<8u>();
@@ -271,6 +350,21 @@ $test(bitset) {
    cat::verify(even7.countl_zero() == 0u);
    cat::verify(odd7.countl_zero() == 1u);
 
+   // Multi-word case.
+   cat::bitset<129u> even129 = cat::make_bitset_even<129u>();
+   cat::verify(even129[0u]);
+   cat::verify(!even129[1u]);
+   cat::verify(!even129[63u]);
+   cat::verify(even129[64u]);
+   cat::verify(even129[128u]);
+
+   cat::bitset<129u> odd129 = cat::make_bitset_odd<129u>();
+   cat::verify(!odd129[0u]);
+   cat::verify(odd129[1u]);
+   cat::verify(!odd129[128u]);
+}
+
+$test(bitset_unset_even_odd_compose) {
    // `set_*` composes: `set_even().set_odd()` fills every usable bit.
    cat::bitset<17u> all17;
    all17.set_even().set_odd();
@@ -288,29 +382,16 @@ $test(bitset) {
    unset_odd_17.unset_odd();
    cat::verify(unset_odd_17 == cat::make_bitset_even<17u>());
 
-   // Multi-word case.
-   cat::bitset<129u> even129 = cat::make_bitset_even<129u>();
-   cat::verify(even129[0u]);
-   cat::verify(!even129[1u]);
-   cat::verify(!even129[63u]);
-   cat::verify(even129[64u]);
-   cat::verify(even129[128u]);
-
-   cat::bitset<129u> odd129 = cat::make_bitset_odd<129u>();
-   cat::verify(!odd129[0u]);
-   cat::verify(odd129[1u]);
-   cat::verify(!odd129[128u]);
-
-   // Together, `make_bitset_even` and `make_bitset_odd` cover every bit.
+   // Together, `make_bitset_even` and `make_bitset_odd` cover every bit in
+   // the multi-word case.
    cat::bitset<129u> together129;
    together129.set_even().set_odd();
    for (cat::idx i = 0u; i < 129u; ++i) {
       cat::verify(together129[i]);
    }
+}
 
-   // Test bitwise operators generated by `bitwise_interface`, and the explicit
-   // `operator^`/`operator^=` overloads.
-
+$test(bitset_bitwise_operators) {
    // ~ must complement every usable bit and preserve the padding invariant.
    cat::bitset<17u> complement_zero_17 = ~cat::bitset<17u>{};
    for (cat::idx i = 0u; i < 17u; ++i) {
@@ -342,8 +423,10 @@ $test(bitset) {
    cat::bitset<17u> or_accum = cat::make_bitset_even<17u>();
    or_accum |= cat::make_bitset_odd<17u>();
    cat::verify(or_accum == complement_zero_17);
+}
 
-   // Test `.clear()` and `.fill()`.
+$test(bitset_clear_fill) {
+   cat::bitset<17u> const complement_zero_17 = ~cat::bitset<17u>{};
 
    // `.fill()` on a default-constructed bitset sets every usable bit to 1 and
    // preserves the zero-padding invariant.

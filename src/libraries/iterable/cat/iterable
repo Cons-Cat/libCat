@@ -441,7 +441,7 @@ using iterable_value_type = remove_cvref<iterable_element_type<T>>;
 template <typename T>
    requires(is_iterable<T&>)
 struct reference_wrapper<T> : detail::reference_wrapper_impl<T>,
-                              iterable_interface {
+                              iterable_interface<> {
    using detail::reference_wrapper_impl<T>::reference_wrapper_impl;
 };
 

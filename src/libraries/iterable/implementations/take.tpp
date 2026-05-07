@@ -7,7 +7,7 @@
 namespace cat {
 namespace detail {
 template <typename Base>
-struct take_view_impl : iterable_interface {
+struct take_view_impl : iterable_interface<> {
    Base m_base;
    idx m_count;
 

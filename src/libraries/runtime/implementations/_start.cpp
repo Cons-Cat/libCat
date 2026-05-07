@@ -8,6 +8,11 @@ main(...) -> int;  // NOLINT Without K&R, `...` is the only way to do this.
 
 namespace {
 
+// `CAT_NO_STATIC_CONSTRUCTORS` lets a target opt out of walking `.init_array`.
+// The bounds are linker-defined symbols, so LLVM cannot prove the loop is
+// empty even under LTO. Targets that promise no global constructors (e.g. the
+// `hello` example) define it to drop the call entirely.
+#ifndef CAT_NO_STATIC_CONSTRUCTORS
 using constructor_fn = void (*const)();
 extern "C" {
 extern constructor_fn __init_array_start[];
@@ -22,7 +27,10 @@ call_static_constructors() {
       p_ctor();
    }
 }
+}
+#endif
 
+extern "C" {
 #ifndef NO_ARGC_ARGV
 [[noreturn, gnu::used, gnu::no_stack_protector, gnu::no_sanitize_address]]
 void
@@ -33,7 +41,9 @@ call_main_args(int argc, char* const* pp_argv) {
    cat::align_stack_pointer_32();
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
+#  ifndef CAT_NO_STATIC_CONSTRUCTORS
    call_static_constructors();
+#  endif
    cat::exit(main(argc, pp_argv));
 }
 #else
@@ -45,7 +55,9 @@ call_main_noargs() {
    cat::align_stack_pointer_32();
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
+#  ifndef CAT_NO_STATIC_CONSTRUCTORS
    call_static_constructors();
+#  endif
    cat::exit(main());
 }
 #endif
@@ -53,19 +65,15 @@ call_main_noargs() {
 
 }  // namespace
 
-// clang-format off
-extern "C"
-[[gnu::used
+extern "C" [[gnu::used]]
 #ifndef NO_ARGC_ARGV
-   // If arguments are loaded, this must be `naked` to prevent pushing `%rbp`
-   // first, which breaks argument loading. I've tried other solutions, but none
-   // worked yet.
-   , gnu::naked
+// If arguments are loaded, this must be `naked` to prevent pushing `%rbp`
+// first, which breaks argument loading. I've tried other solutions, but none
+// worked yet.
+[[gnu::naked]]
 #endif
-]]
-   // clang-format on
-   void
-   cat::detail::_start() {
+void
+cat::detail::_start() {
    // `NO_ARGC_ARGV` can defined from a CMake target to skip argument loading.
    // The argument loading version must stay in `asm`. `_start` is `gnu::naked`
    // so the prologue won't push `%rbp` before reading `argc`/`argv` off the

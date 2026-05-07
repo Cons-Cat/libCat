@@ -18,15 +18,18 @@ option(CAT_BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)
 option(CAT_BUILD_EXAMPLE_HELLO "Compile hello.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(hello hello.cpp)
-  # `NO_ARGC_ARGV` pinned to `_start.cpp` and gated on the `hello` target so it
-  # doesn't contaminate sibling examples that share `TARGET_DIRECTORY`. See
+  # `NO_ARGC_ARGV` and `CAT_NO_STATIC_CONSTRUCTORS` pinned to `_start.cpp` and
+  # gated on the `hello` target so they don't contaminate sibling examples
+  # that share `TARGET_DIRECTORY`. `CAT_NO_STATIC_CONSTRUCTORS` drops the
+  # `.init_array` walk because `hello` registers no global constructors and
+  # the loop bounds are linker symbols that LLVM cannot fold at LTO time. See
   # `tests/CMakeLists.txt` for the `SKIP_PRECOMPILE_HEADERS` rationale.
   set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
     TARGET_DIRECTORY hello
     PROPERTIES
       COMPILE_DEFINITIONS
-        "$<$<STREQUAL:$<TARGET_PROPERTY:NAME>,hello>:NO_ARGC_ARGV>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:NAME>,hello>:NO_ARGC_ARGV;CAT_NO_STATIC_CONSTRUCTORS>"
       SKIP_PRECOMPILE_HEADERS ON)
   target_link_libraries(hello PRIVATE cat-examples)
   if(CAT_PCH)

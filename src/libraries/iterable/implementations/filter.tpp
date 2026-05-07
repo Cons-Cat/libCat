@@ -7,7 +7,7 @@
 namespace cat {
 namespace detail {
 template <is_iterable Base, is_predicate<iterable_element_type<Base>> Callback>
-struct filter_view_impl : iterable_interface {
+struct filter_view_impl : iterable_interface<> {
    Base m_base;
    Callback m_callback;
 

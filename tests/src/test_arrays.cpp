@@ -1,4 +1,5 @@
 #include <cat/array>
+#include <cat/bitset>
 #include <cat/iterable>
 #include <cat/math>
 #include <cat/meta>
@@ -56,6 +57,54 @@ $test(array_structured_bindings) {
       e0 = 0;
       cat::verify(pair_array[0u] == 0);
    }
+}
+
+// `cat::array<T, N>`'s empty CRTP bases must EBO away so the layout is
+// exactly `sizeof(T) * N` regardless of `T`. This regressed when
+// `iterable_interface` was a single non-template type: a same-type empty-base
+// collision between the outer array and a transitively-derived inner one
+// (`cat::bitset<32>` carries an `iterable_interface` via its storage member,
+// nested `cat::array` carries its own) forced 4 bytes of leading padding.
+// `__datasizeof` is `sizeof` minus tail padding, so checking both pinpoints
+// any future regression that re-introduces padding either before or after
+// `m_data`.
+$test(array_layout_data_size) {
+   // Plain primitive element.
+   static_assert(sizeof(cat::array<int, 1u>) == sizeof(int));
+   static_assert(sizeof(cat::array<int, 4u>) == sizeof(int) * 4);
+   static_assert(__datasizeof(cat::array<int, 4u>) == sizeof(int) * 4);
+
+   // libCat scalar element (single CRTP base via `arithmetic_interface`).
+   static_assert(sizeof(cat::array<cat::uint4, 3u>) == 12u);
+   static_assert(__datasizeof(cat::array<cat::uint4, 3u>) == 12u);
+
+   // CRTP-bearing element: `cat::bitset<N>` was the original repro case.
+   static_assert(sizeof(cat::bitset<32>) == 4u);
+   static_assert(sizeof(cat::array<cat::bitset<32>, 1u>) == 4u);
+   static_assert(sizeof(cat::array<cat::bitset<32>, 3u>) == 12u);
+   static_assert(sizeof(cat::array<cat::bitset<32>, 4u>) == 16u);
+   static_assert(__datasizeof(cat::array<cat::bitset<32>, 3u>) == 12u);
+
+   // Nested `cat::array`. Same regression vector since the inner array
+   // carries the same empty-base chain via `container_interface`.
+   static_assert(sizeof(cat::array<cat::array<int, 2u>, 3u>)
+                 == sizeof(int) * 6);
+   static_assert(__datasizeof(cat::array<cat::array<int, 2u>, 3u>)
+                 == sizeof(int) * 6);
+
+   // Length-1 nested array (smallest payload that still triggered the bug).
+   static_assert(sizeof(cat::array<cat::array<cat::uint4, 1u>, 1u>) == 4u);
+   static_assert(sizeof(cat::array<cat::array<cat::uint4, 1u>, 3u>) == 12u);
+
+   // No tail padding: `sizeof == __datasizeof` for every shape.
+   static_assert(sizeof(cat::array<int, 4u>)
+                 == __datasizeof(cat::array<int, 4u>));
+   static_assert(sizeof(cat::array<cat::uint4, 3u>)
+                 == __datasizeof(cat::array<cat::uint4, 3u>));
+   static_assert(sizeof(cat::array<cat::bitset<32>, 3u>)
+                 == __datasizeof(cat::array<cat::bitset<32>, 3u>));
+   static_assert(sizeof(cat::array<cat::array<int, 2u>, 3u>)
+                 == __datasizeof(cat::array<cat::array<int, 2u>, 3u>));
 }
 
 $test(array_traits) {

@@ -52,7 +52,7 @@ struct tiny_array
 // `capacity` (rather than `count`) names the node-pool size so it doesn't
 // collide with the inherited `count()` member.
 template <typename T, cat::idx capacity>
-class tiny_list : public cat::iterable_interface {
+class tiny_list : public cat::iterable_interface<> {
    struct node {
       T value{};
       // Index of the next node, or `capacity` for end-of-list. Index-based so a
@@ -180,7 +180,7 @@ class tiny_list : public cat::iterable_interface {
 // member-call surface is independent of triviality `operator-` the ownership
 // policy still applies, the member calls just lower to the same pipe
 // expression.
-struct noisy_box : cat::iterable_interface {
+struct noisy_box : cat::iterable_interface<> {
    tiny_array<int, 4u> data;
 
    constexpr noisy_box() = default;

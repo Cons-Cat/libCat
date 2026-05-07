@@ -2,5 +2,6 @@
 
 auto
 main() -> int {
-   cat::print("Hello, world!\n").or_exit();
+   // In a robust `hello`, we would handle incomplete prints with `.or_exit()`.
+   auto _ = cat::print("Meow, world!\n");
 }

@@ -7,7 +7,7 @@
 namespace cat {
 namespace detail {
 template <typename Base>
-struct reverse_view_impl : iterable_interface {
+struct reverse_view_impl : iterable_interface<> {
    Base m_base;
 
    constexpr auto
