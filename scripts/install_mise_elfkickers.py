@@ -12,6 +12,7 @@
 import hashlib
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -36,7 +37,22 @@ ELFKICKERS_PROGRAMS = (
 # Bumped whenever this script's output layout changes (new binaries, new
 # install path, etc.). Bumping forces a re-stage even if the upstream archive
 # hasn't moved.
-PACKAGE_REVISION = "2"
+PACKAGE_REVISION = "3"
+
+
+# Each per-program Makefile in the tarball declares its own
+# `CFLAGS = -Wall -Wextra -I../elfrw` (or similar). A command-line
+# `CFLAGS=-w` override would win, but it would also wipe `-I../elfrw`
+# and break `elfls`/`sstrip`'s include resolution for `elfrw.h`.
+# Patching the line in-place appends `-w` while preserving the include
+# paths the upstream Makefiles set up.
+def _silence_makefile_warnings(source_dir: pathlib.Path) -> None:
+    pattern = re.compile(r"^(CFLAGS\s*=\s*[^\n]*?)\s*$", flags=re.MULTILINE)
+    for mkfile in source_dir.rglob("Makefile"):
+        text = mkfile.read_text(encoding="utf-8")
+        new_text, count = pattern.subn(r"\1 -w", text)
+        if count:
+            mkfile.write_text(new_text, encoding="utf-8")
 
 
 def project_root() -> pathlib.Path:
@@ -139,13 +155,16 @@ def main() -> int:
         raise SystemExit(f"unexpected archive layout: {source_dir}")
 
     cc = find_compiler()
-    print(f"build ELFkickers with CC={cc}", flush=True)
     # `-w` disables all warnings. ELFkickers is third-party C from 2014 and
     # warns liberally on a modern host toolchain. Suppressing keeps CI logs
-    # focused on libCat's own diagnostics. Command-line `CFLAGS=...` wins
-    # over the Makefile's non-`override` assignment.
+    # focused on libCat's own diagnostics. We patch each Makefile rather
+    # than overriding `CFLAGS=` on the command line, because each subdir's
+    # `CFLAGS = -Wall -Wextra -I../elfrw` carries the include path the
+    # actual compile depends on -- a command-line override wipes it.
+    _silence_makefile_warnings(source_dir)
+    print(f"build ELFkickers with CC={cc}", flush=True)
     subprocess.run(
-        ["make", f"CC={cc}", "CFLAGS=-w", "all"],
+        ["make", f"CC={cc}", "all"],
         cwd=source_dir,
         check=True,
     )

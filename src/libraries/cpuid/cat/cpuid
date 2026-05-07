@@ -537,7 +537,7 @@ extern "C"
 #ifndef CAT_NO_CPUID
    [[gnu::visibility("hidden")]]
 #endif
-   [[gnu::always_inline, gnu::target("prefer-vector-width=128")]]
+   [[gnu::always_inline]]
    inline void
    __cpu_indicator_init() {  // NOLINT
    using enum processor_features;

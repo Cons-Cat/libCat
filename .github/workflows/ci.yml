@@ -96,16 +96,21 @@ jobs:
   detect-changes:
     runs-on: ubuntu-24.04
     outputs:
-      compile: ${{ steps.changed.outputs.compile }}
-      gdb_symlink: ${{ steps.changed.outputs.gdb_symlink }}
-      arithmetic_negative: ${{ steps.changed.outputs.arithmetic_negative }}
+      compile: ${{ steps.compile.outputs.compile }}
+      gdb_symlink: ${{ steps.gdb-symlink.outputs.gdb_symlink }}
+      arithmetic_negative: ${{ steps.arithmetic-negative.outputs.arithmetic_negative }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Detect gdb_symlink changes
-        id: changed
+      - name: Resolve diff base and changed files
+        # Materialize the changed-files list once so each detect-* step
+        # below is a small, self-contained grep against
+        # `${CAT_CHANGED_FILES}`. `CAT_FORCE_RUN=true` short-circuits
+        # all detection whenever the diff base cannot be resolved
+        # (initial push, force-push, shallow fetch, missing 0000... base),
+        # preserving the original "run everything" fallback.
         run: |
           set -eu
 
@@ -115,46 +120,65 @@ jobs:
             base="${{ github.event.before }}"
           fi
 
-          if [ -z "${base}" ] || [ "${base}" = "0000000000000000000000000000000000000000" ]; then
-            compile="true"
-            changed="true"
-            arithmetic_negative="true"
-          elif ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
-            echo "::warning title=Missing diff base::Could not find base commit ${base}; running changed-path jobs."
-            compile="true"
-            changed="true"
-            arithmetic_negative="true"
+          changed_files="${RUNNER_TEMP}/cat-changed-files"
+
+          if git rev-parse --verify -q "${base}^{commit}" >/dev/null 2>&1; then
+            force="false"
+            git diff --name-only "${base}" "${{ github.sha }}" > "${changed_files}"
+            printf 'changed files (%d):\n' "$(wc -l < "${changed_files}")"
+            cat "${changed_files}"
           else
-            changed_files=$(git diff --name-only "${base}" "${{ github.sha }}")
-            if printf '%s\n' "${changed_files}" \
-              | grep -Eq '(^|/)CMakeLists\.txt$|^cmake/|^src/|^tests/|^examples/'
-            then
-              compile="true"
-            else
-              compile="false"
-            fi
-
-            if printf '%s\n' "${changed_files}" | grep -qx 'cmake/gdb_symlink.cmake'
-            then
-              changed="true"
-            else
-              changed="false"
-            fi
-
-            if printf '%s\n' "${changed_files}" \
-              | grep -Eq '^src/libraries/(meta|arithmetic)/|^cmake/cat_arithmetic_neg(ative|_cases|_matrix)\.cmake$|^tests/CMakeLists\.txt$|^\.github/workflows/ci\.yml$'
-            then
-              arithmetic_negative="true"
-            else
-              arithmetic_negative="false"
-            fi
+            force="true"
+            echo "::warning title=Missing diff base::Could not resolve base commit '${base}'; running all detect-* steps."
           fi
 
+          {
+            echo "CAT_CHANGED_FILES=${changed_files}"
+            echo "CAT_FORCE_RUN=${force}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Detect compile changes
+        id: compile
+        run: |
+          set -eu
+          if [ "${CAT_FORCE_RUN}" = "true" ] || grep -Eq \
+            '(^|/)CMakeLists\.txt$|^cmake/|^src/|^tests/|^examples/' \
+            "${CAT_CHANGED_FILES}"
+          then
+            compile="true"
+          else
+            compile="false"
+          fi
           echo "compile=${compile}" >> "${GITHUB_OUTPUT}"
-          echo "gdb_symlink=${changed}" >> "${GITHUB_OUTPUT}"
-          echo "arithmetic_negative=${arithmetic_negative}" >> "${GITHUB_OUTPUT}"
           echo "compile changed: ${compile}"
-          echo "gdb_symlink changed: ${changed}"
+
+      - name: Detect gdb_symlink changes
+        id: gdb-symlink
+        run: |
+          set -eu
+          if [ "${CAT_FORCE_RUN}" = "true" ] || grep -qx \
+            'cmake/gdb_symlink.cmake' "${CAT_CHANGED_FILES}"
+          then
+            gdb_symlink="true"
+          else
+            gdb_symlink="false"
+          fi
+          echo "gdb_symlink=${gdb_symlink}" >> "${GITHUB_OUTPUT}"
+          echo "gdb_symlink changed: ${gdb_symlink}"
+
+      - name: Detect arithmetic-negative changes
+        id: arithmetic-negative
+        run: |
+          set -eu
+          if [ "${CAT_FORCE_RUN}" = "true" ] || grep -Eq \
+            '^src/libraries/(meta|arithmetic)/|^cmake/cat_arithmetic_neg(ative|_cases|_matrix)\.cmake$|^tests/CMakeLists\.txt$|^\.github/workflows/ci\.yml$' \
+            "${CAT_CHANGED_FILES}"
+          then
+            arithmetic_negative="true"
+          else
+            arithmetic_negative="false"
+          fi
+          echo "arithmetic_negative=${arithmetic_negative}" >> "${GITHUB_OUTPUT}"
           echo "arithmetic negative changed: ${arithmetic_negative}"
 
   lint:
