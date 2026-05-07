@@ -267,6 +267,89 @@ syntax mode=last_mode verbose="":
     @just _syntax-mode {{ mode }} {{ verbose }}
     @printf '\033[36m%s\033[0m\n' 'No syntax errors! :3'
 
+# Run `sstrip` on libCat-produced executables to drop section headers,
+# symbol tables, and any other non-loadable bytes. Selectors:
+#   <name>          a specific executable (e.g. `hello`, `echo`, `unit_tests`)
+#   examples        every example executable
+#   tests           every test executable
+#   full | all      examples + tests
+# A mode token (`debug`/`release`/`relwithdebinfo`) selects the build dir;
+# defaults to the cached last mode.
+strip *args:
+    @set -eu; modes=""; selectors=""; \
+      add_selector() { \
+        case " $selectors " in \
+          *" $1 "*) ;; \
+          *) selectors="${selectors:+$selectors }$1" ;; \
+        esac; \
+      }; \
+      set -- "$@"; \
+      while [ $# -gt 0 ]; do \
+        case "$1" in \
+          debug|release|relwithdebinfo) \
+            modes="${modes:+$modes }$1"; shift ;; \
+          examples|tests|full|all) add_selector "$1"; shift ;; \
+          -*) printf '%s\n' "just strip: unknown flag '$1'!" >&2; \
+             printf '%s\n' "options: <name>, examples, tests, full, all, debug, release, relwithdebinfo" >&2; \
+             exit 1 ;; \
+          *) add_selector "$1"; shift ;; \
+        esac; \
+      done; \
+      if [ -z "$selectors" ]; then \
+        printf '%s\n' "just strip: pick at least one selector (an executable name, examples, tests, or full)" >&2; \
+        exit 1; \
+      fi; \
+      if [ -z "$modes" ]; then modes="{{ last_mode }}"; fi; \
+      for mode in $modes; do \
+        just _strip-mode "$mode" "$selectors"; \
+      done
+
+[private]
+_strip-mode mode=last_mode selectors="":
+    @set -eu; selectors="{{ selectors }}"; \
+      examples_dir="{{ build_dir(mode) }}/examples"; \
+      tests_dir="{{ build_dir(mode) }}/tests"; \
+      if [ "{{ multi_config }}" = "true" ] && [ -n "{{ cmake_config(mode) }}" ]; then \
+        examples_dir="$examples_dir/{{ cmake_config(mode) }}"; \
+        tests_dir="$tests_dir/{{ cmake_config(mode) }}"; \
+      fi; \
+      paths=""; \
+      add_path() { \
+        case " $paths " in *" $1 "*) ;; *) paths="${paths:+$paths }$1" ;; esac; \
+      }; \
+      collect_dir() { \
+        for f in "$1"/*; do \
+          [ -f "$f" ] || continue; \
+          [ -x "$f" ] || continue; \
+          case "${f##*.}" in bc|o|s|ll|ii|txt|d) continue ;; esac; \
+          [ "$(head -c4 "$f" 2>/dev/null | od -An -tx1 | tr -d " \n")" = "7f454c46" ] || continue; \
+          add_path "$f"; \
+        done; \
+      }; \
+      for sel in $selectors; do \
+        case "$sel" in \
+          examples) collect_dir "$examples_dir" ;; \
+          tests) collect_dir "$tests_dir" ;; \
+          full|all) collect_dir "$examples_dir"; collect_dir "$tests_dir" ;; \
+          *) \
+            if [ -f "$examples_dir/$sel" ]; then add_path "$examples_dir/$sel"; \
+            elif [ -f "$tests_dir/$sel" ]; then add_path "$tests_dir/$sel"; \
+            else \
+              printf 'just strip: %s: not found under %s or %s\n' "$sel" "$examples_dir" "$tests_dir" >&2; \
+              exit 1; \
+            fi ;; \
+        esac; \
+      done; \
+      if [ -z "$paths" ]; then \
+        printf 'just strip: no executables matched\n' >&2; exit 1; \
+      fi; \
+      for p in $paths; do \
+        before="$(wc -c < "$p")"; \
+        sstrip "$p" >/dev/null; \
+        after="$(wc -c < "$p")"; \
+        printf '\033[1m%s\033[0m: %s -> \033[36m%s\033[0m bytes\n' "$p" "$before" "$after"; \
+      done
+
 test *args:
     @san=""; verbose=""; modes=""; tests=""; full="false"; list="false"; \
       unset CAT_JUST_TEST_TOOL_TRAILER_B64; \

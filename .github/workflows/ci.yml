@@ -427,6 +427,28 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+      - name: Verify `hello` is 231 bytes
+        if: ${{ !cancelled() }}
+        # Tripwire on the size of the canonical libCat size-demo example after
+        # `sstrip`. `hello` is the most-stripped libCat binary (no `argc`/
+        # `argv`, no `.init_array`, no cpuid init, single `cat::print`), so any
+        # byte-level regression in the `_start.cpp` plumbing or the linker
+        # flag set in `CAT_LINK_OPTIONS_RELEASE` shows up here. Runs after the
+        # GDB artifact upload so the unstripped `hello` is preserved for the
+        # downstream pretty-printers job. If a libCat change intentionally
+        # changes this size, bump `CAT_HELLO_SSTRIPPED_SIZE` below.
+        run: |
+          set -eu
+          CAT_HELLO_SSTRIPPED_SIZE=231
+          just strip release hello
+          actual=$(wc -c < build-release/examples/hello)
+          if [ "${actual}" -ne "${CAT_HELLO_SSTRIPPED_SIZE}" ]; then
+            echo "::error title=hello size regression::expected ${CAT_HELLO_SSTRIPPED_SIZE} bytes, got ${actual}"
+            echo 'If this change is intentional, update CAT_HELLO_SSTRIPPED_SIZE in .github/workflows/ci.yml.'
+            exit 1
+          fi
+          echo "OK: hello sstripped size = ${actual} bytes."
+
       - name: Verify .gdbinit symlink (Release, Ninja generator non-multi)
         if: ${{ needs.detect-changes.outputs.gdb_symlink == 'true' }}
         run: |

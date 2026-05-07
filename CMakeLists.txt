@@ -225,12 +225,15 @@ list(
   -Wl,-N
 )
 
-# `-static` and `-no-pie` can't be used under any dynamic linking scenario.
+# `-static` and `--no-pie` can't be used under any dynamic linking scenario.
+# `-Wl,--no-pie` is passed straight to `lld` to skip the Clang driver's
+# spurious "argument unused during compilation: '-no-pie'" warning during
+# the link step.
 if (NOT CAT_USE_SHARED AND NOT CAT_USE_SANITIZERS)
   list(
     APPEND CAT_LINK_OPTIONS_RELEASE
     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-static>"
-    "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-no-pie>"
+    "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-Wl,--no-pie>"
   )
 endif()
 
