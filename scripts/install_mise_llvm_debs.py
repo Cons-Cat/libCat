@@ -24,19 +24,17 @@ LLVM_PACKAGE_NAMES = (
     "lld-23",
     "liblld-23",
     "llvm-23",
-    "llvm-23-dev",
     "llvm-23-linker-tools",
     "llvm-23-runtime",
     "llvm-23-tools",
-    "libclang-23-dev",
-    "libclang-common-23-dev",
     "libclang-cpp23",
+    # `libclang-rt-23-dev` is needed for sanitizer runtimes.
     "libclang-rt-23-dev",
-    "libclang1-23",
     "libllvm23",
+    "bolt-23",
 )
 DEBIAN_BASE_URL = "https://deb.debian.org/debian"
-PACKAGE_SET_REVISION = "3"
+PACKAGE_SET_REVISION = "4"
 
 PINNED_DEBIAN_PACKAGES = (
     (
@@ -173,31 +171,39 @@ PINNED_DEBIAN_PACKAGES = (
     ),
 )
 
-WRAPPERS = (
-    ("clang", "usr/lib/llvm-23/bin/clang"),
-    ("clang++", "usr/lib/llvm-23/bin/clang++"),
-    ("clang-cpp", "usr/lib/llvm-23/bin/clang-cpp"),
-    ("clang-format", "usr/lib/llvm-23/bin/clang-format"),
-    ("clangd", "usr/lib/llvm-23/bin/clangd"),
-    ("clang-tidy", "usr/lib/llvm-23/bin/clang-tidy"),
-    ("run-clang-tidy", "usr/lib/llvm-23/bin/run-clang-tidy"),
-    ("clang-apply-replacements", "usr/lib/llvm-23/bin/clang-apply-replacements"),
-    ("clang-repl", "usr/lib/llvm-23/bin/clang-repl"),
-    ("lld", "usr/lib/llvm-23/bin/lld"),
-    ("ld.lld", "usr/lib/llvm-23/bin/ld.lld"),
-    ("opt", "usr/lib/llvm-23/bin/opt"),
-    ("llvm-ar", "usr/lib/llvm-23/bin/llvm-ar"),
-    ("llvm-ranlib", "usr/lib/llvm-23/bin/llvm-ranlib"),
-    ("llvm-symbolizer", "usr/lib/llvm-23/bin/llvm-symbolizer"),
+# `LLVM_BIN_DIR` is the directory in the staged toolchain that ships every
+# `clang*` / `llvm-*` / BOLT executable. `install_wrappers` enumerates it at
+# install time so anything new the upstream debs add (e.g. `llvm-bolt`,
+# `merge-fdata`, future tools) lands on PATH automatically.
+LLVM_BIN_DIR = "usr/lib/llvm-23/bin"
+
+# Required tools verified by `is_current`. The actual wrapper set is the full
+# enumeration of `LLVM_BIN_DIR`; this list just guards against an upstream
+# regression silently dropping something we depend on.
+REQUIRED_WRAPPERS = (
+    "clang",
+    "clang++",
+    "clang-cpp",
+    "clang-format",
+    "clangd",
+    "clang-tidy",
+    "run-clang-tidy",
+    "clang-apply-replacements",
+    "clang-repl",
+    "lld",
+    "ld.lld",
+    "opt",
+    "llvm-ar",
+    "llvm-ranlib",
+    "llvm-symbolizer",
+    "llvm-objdump",
+    "llvm-extract",
+    "llvm-bolt",
 )
 
 RUNTIME_LIBRARIES = (
     "libLLVM-23.so",
     "libLLVM.so.23.0",
-    "libclang-23.so",
-    "libclang-23.so.1",
-    "libclang-23.so.23",
-    "libclang-cpp.so.23.0",
     "libre2.so.11",
     "libre2.so.11.0.0",
     "libstdc++.so.6",
@@ -350,16 +356,36 @@ def install_runtime_libraries(root: pathlib.Path) -> None:
 def install_wrappers(root: pathlib.Path) -> None:
     bin_dir = root / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
-    for command, real_path in WRAPPERS:
-        target = root / real_path
-        if not target.exists():
-            raise SystemExit(f"missing expected tool: {target}")
-        wrapper = bin_dir / command
+    llvm_bin = root / LLVM_BIN_DIR
+    if not llvm_bin.is_dir():
+        raise SystemExit(f"missing LLVM bin dir: {llvm_bin}")
+
+    # Stage a wrapper for every executable shipped by the LLVM debs. Skipping
+    # `<name>-23` siblings keeps Debian's versioned aliases from getting their
+    # own wrappers; we recreate them as symlinks so callers that look for
+    # `clang-23`/`llvm-objdump-23` still resolve.
+    staged: set[str] = set()
+    for entry in sorted(llvm_bin.iterdir()):
+        try:
+            if not entry.is_file() or not os.access(entry, os.X_OK):
+                continue
+        except OSError:
+            continue
+        if entry.name.endswith("-23"):
+            continue
+        real_path = f"{LLVM_BIN_DIR}/{entry.name}"
+        wrapper = bin_dir / entry.name
         wrapper.write_text(wrapper_text(real_path), encoding="utf-8")
         wrapper.chmod(0o755)
-        suffixed = bin_dir / f"{command}-23"
-        if not suffixed.exists():
-            suffixed.symlink_to(command)
+        suffixed = bin_dir / f"{entry.name}-23"
+        if suffixed.is_symlink() or suffixed.exists():
+            suffixed.unlink()
+        suffixed.symlink_to(entry.name)
+        staged.add(entry.name)
+
+    missing = [name for name in REQUIRED_WRAPPERS if name not in staged]
+    if missing:
+        raise SystemExit(f"missing expected tool(s): {', '.join(missing)}")
 
 
 def parse_debian_package_index(index_text: str) -> dict[str, dict[str, str]]:
@@ -415,7 +441,7 @@ def is_current(root: pathlib.Path, stamp_version: str) -> bool:
     return (
         stamp.exists()
         and stamp.read_text(encoding="utf-8").strip() == stamp_version
-        and all((root / "bin" / command).exists() for command, _ in WRAPPERS)
+        and all((root / "bin" / command).exists() for command in REQUIRED_WRAPPERS)
         and all((root / "runtime" / "lib" / library).exists() for library in RUNTIME_LIBRARIES)
         and all((root / "runtime" / "lib" / library).exists() for library in REQUIRED_PREFIX_RUNTIME_LIBRARIES)
     )
