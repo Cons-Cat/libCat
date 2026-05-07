@@ -210,7 +210,29 @@ list(
   -Wl,-z,now
   # Identical-code folding for redundant shims.
   -Wl,--icf=safe
+  # Drop the 36-byte `.note.gnu.build-id` section. Useful for distros that
+  # ship debug symbol packages, but libCat's tests and examples don't.
+  -Wl,--build-id=none
+  # This drops the 4096-byte aligned `GNU_RELRO` segment and `.relro_padding` outright.
+  -Wl,-z,norelro
+  # If a Release link does end up with dynamic symbols (sanitizer or
+  # `CAT_USE_SHARED` builds), `sysv` hashes are smaller than the default `gnu` style for
+  # the small symbol counts libCat consumers produce.
+  -Wl,--hash-style=sysv
+  # Merge the read-only and read+exec LOAD segments into a single read+write+exec LOAD.
+  # Drops one program header (56 bytes) and the page-alignment padding (~10 bytes) between them.
+  # If a consumer needs W^X, she can override with `-Wl,-z,relro -Wl,-z,now` on her own target.
+  -Wl,-N
 )
+
+# `-static` and `-no-pie` can't be used under any dynamic linking scenario.
+if (NOT CAT_USE_SHARED AND NOT CAT_USE_SANITIZERS)
+  list(
+    APPEND CAT_LINK_OPTIONS_RELEASE
+    "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-static>"
+    "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-no-pie>"
+  )
+endif()
 
 list(
   APPEND CAT_LINK_OPTIONS
