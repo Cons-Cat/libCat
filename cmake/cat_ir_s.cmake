@@ -55,6 +55,26 @@ function(_cat_ir_register_s domain basename
     list(APPEND _extra_deps "${_cat_ir_examples_fn_stamp}")
   endif()
 
+  # Decide whether the disasm path will actually consume the candidate execs:
+  # any LTO config (where the shadow `.cpp.o` is bitcode and the script falls
+  # through to a candidate scan), excluding the `src`-no-fn case (the script
+  # bails with an error before opening any binary). When yes, plumb the
+  # candidate file paths into the custom command's `DEPENDS` so ninja
+  # re-runs the disasm whenever a candidate binary is relinked, not only
+  # when the (unchanging) bitcode shadow object is touched. The
+  # `add_dependencies(... ${_candidate_targets})` below only adds
+  # build-order constraints, not file-level invalidation.
+  set(_consume_candidates FALSE)
+  if (_cat_ir_any_lto AND _candidate_targets)
+    set(_consume_candidates TRUE)
+    if (domain STREQUAL "src" AND NOT CAT_IR_FUNCTION)
+      set(_consume_candidates FALSE)
+    endif()
+  endif()
+  if (_consume_candidates)
+    list(APPEND _extra_deps ${_candidates})
+  endif()
+
   add_custom_command(OUTPUT "${dst}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${dst_dir}"
     COMMAND "${CMAKE_COMMAND}"
@@ -77,18 +97,8 @@ function(_cat_ir_register_s domain basename
     add_dependencies(${basename}-s ${owner_target})
   endif()
 
-  # Only force the candidate execs to build when the disasm path actually
-  # consumes them: any LTO config (where the shadow `.cpp.o` is bitcode and
-  # the script falls through to a candidate scan), excluding the `src`-no-fn
-  # case (the script bails with an error before opening any binary).
-  if (_cat_ir_any_lto AND _candidate_targets)
-    set(_need_dep TRUE)
-    if (domain STREQUAL "src" AND NOT CAT_IR_FUNCTION)
-      set(_need_dep FALSE)
-    endif()
-    if (_need_dep)
-      add_dependencies(${basename}-s ${_candidate_targets})
-    endif()
+  if (_consume_candidates)
+    add_dependencies(${basename}-s ${_candidate_targets})
   endif()
 
   set_property(GLOBAL APPEND PROPERTY

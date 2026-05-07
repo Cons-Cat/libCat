@@ -2,9 +2,15 @@
 #include <cat/runtime>
 #include <cat/string>
 
-// Attributes on this prototype would have no effect.
+// We could use a simple K&R `main(...)` but that linkage causes trouble for
+// LTO, so we specify.
+#ifndef NO_ARGC_ARGV
 auto
-main(...) -> int;  // NOLINT Without K&R, `...` is the only way to do this.
+main(int argc, char* const* pp_argv) -> int;
+#else
+auto
+main() -> int;
+#endif
 
 namespace {
 
@@ -32,45 +38,56 @@ call_static_constructors() {
 
 extern "C" {
 #ifndef NO_ARGC_ARGV
-[[noreturn, gnu::used, gnu::no_stack_protector, gnu::no_sanitize_address]]
+[[noreturn, gnu::used, gnu::no_stack_protector, gnu::no_sanitize_address,
+  gnu::force_align_arg_pointer]]
 void
 call_main_args(int argc, char* const* pp_argv) {
-   // Naked `_start` does not align `%rsp` before the `call` here.
-   // `__cpu_indicator_init`, among other things, require 32-byte alignment.
-   // TODO: Make the alignment architecture dependent.
-   cat::align_stack_pointer_32();
+#ifndef CAT_NO_CPUID
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
-#  ifndef CAT_NO_STATIC_CONSTRUCTORS
+#endif
+#ifndef CAT_NO_STATIC_CONSTRUCTORS
    call_static_constructors();
-#  endif
-   cat::exit(main(argc, pp_argv));
+#endif
+   // `[[clang::always_inline]]` overrides LLVM's default bias against
+   // inlining `main` (preserved for atexit ordering / debugger step-in
+   // semantics) at this specific call site, so `main`'s body folds into
+   // `_start`. The same attribute also forces `cat::exit` to inline,
+   // matching what LTO already does today for that call.
+   [[clang::always_inline]] cat::exit(main(argc, pp_argv));
 }
 #else
 [[noreturn, gnu::always_inline, gnu::no_stack_protector,
   gnu::no_sanitize_address]]
 inline void
 call_main_noargs() {
-   // The stack pointer must be aligned to prevent SIMD segfaults.
-   cat::align_stack_pointer_32();
+#ifndef CAT_NO_CPUID
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
-#  ifndef CAT_NO_STATIC_CONSTRUCTORS
+#endif
+#ifndef CAT_NO_STATIC_CONSTRUCTORS
    call_static_constructors();
-#  endif
-   cat::exit(main());
+#endif
+   [[clang::always_inline]] cat::exit(main());
 }
 #endif
 }
 
 }  // namespace
 
-extern "C" [[gnu::used]]
+extern "C" [[gnu::used, gnu::no_stack_protector]]
 #ifndef NO_ARGC_ARGV
 // If arguments are loaded, this must be `naked` to prevent pushing `%rbp`
 // first, which breaks argument loading. I've tried other solutions, but none
 // worked yet.
 [[gnu::naked]]
+#else
+// The kernel hands `_start` a 16-aligned `%rsp` with no return address, so
+// the standard `pushq %rbp` prologue would leave `%rbp` 8-aligned and crash
+// any inlined SIMD load that addresses locals off `%rbp` (e.g. SIMD spills
+// from `__cpu_indicator_init`). `force_align_arg_pointer` emits an alternate
+// prologue that realigns the frame to 16 bytes before establishing `%rbp`.
+[[gnu::force_align_arg_pointer]]
 #endif
 void
 cat::detail::_start() {
@@ -85,6 +102,6 @@ cat::detail::_start() {
           call call_main_args
        )");
 #else
-   call_main_noargs();
+   [[clang::always_inline]] call_main_noargs();
 #endif
 }

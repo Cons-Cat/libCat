@@ -223,9 +223,13 @@ target_compile_options(cat-ir-impl-lib PRIVATE
   -save-temps=obj
   -Wa,--no-warn)
 
-# Tests shadow (only when cat-tests has sources attached).
+# Tests shadow (only when the `unit_tests` exec is actually built. Gating on
+# `cat-tests` alone would falsely match `CAT_BUILD_UNIT_TESTS=OFF` configs,
+# since that target is an unconditional INTERFACE umbrella in
+# `tests/CMakeLists.txt`. Without `unit_tests`, the per-TU `add_dependencies`
+# in the kind submodules below would fail at configure time.).
 set(_cat_ir_tests_lib "")
-if (TARGET cat-tests)
+if (TARGET unit_tests)
   get_property(_cat_ir_tests_sources TARGET cat-tests PROPERTY INTERFACE_SOURCES)
   if (EXISTS "${CMAKE_SOURCE_DIR}/tests/unit_tests.cpp")
     list(APPEND _cat_ir_tests_sources "${CMAKE_SOURCE_DIR}/tests/unit_tests.cpp")

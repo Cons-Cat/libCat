@@ -250,8 +250,12 @@ jobs:
           fi
 
   debug:
-    # Debug build with sanitizers. The build dir is uploaded for the
+    # Debug build, run twice: once with sanitizers and once without. The
+    # `build-debug` artifact (sanitizer-instrumented) is uploaded for the
     # `gdb-pretty-printers` job so that job can reuse this configuration and PCH.
+    # `if: ${{ !cancelled() }}` on the nosan step preserves the matrix-style
+    # behaviour: a failure in the san variant still surfaces results from
+    # the nosan variant.
     runs-on: ubuntu-24.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
@@ -260,7 +264,7 @@ jobs:
 
       - uses: ./.github/actions/setup-toolchain
 
-      - name: Configure, build, and test (Debug)
+      - name: Configure, build, and test (Debug, sanitizers=ON)
         run: |
           cmake -S . -B build-debug -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
@@ -269,6 +273,66 @@ jobs:
           cmake --build build-debug
           ctest --test-dir build-debug -R '^UnitTests$' --verbose --output-on-failure \
             || ctest --test-dir build-debug --rerun-failed --verbose --output-on-failure
+
+      - name: Run example binaries (Debug, sanitizers=ON)
+        if: ${{ !cancelled() }}
+        # End-to-end smoke test of the example binaries on top of the
+        # `_start.cpp` / `<cat/cpuid>` plumbing the unit tests don't exercise:
+        # `hello` runs the `NO_ARGC_ARGV` + `CAT_NO_STATIC_CONSTRUCTORS` +
+        # `CAT_NO_CPUID` minimal `_start` path; `echo` runs the
+        # naked-`_start` argv pickup off the kernel-supplied stack. Same
+        # check is repeated for the nosan and Release configurations so any
+        # one of those breaking surfaces here instead of in users' hands.
+        run: |
+          set -eu
+
+          out=$(build-debug/examples/hello)
+          printf 'hello (Debug+ASan) output: %s\n' "${out}"
+          if [ "${out}" != "Meow, world!" ]; then
+            echo 'FAIL: hello (Debug+ASan) did not produce the expected greeting.'
+            exit 1
+          fi
+          echo 'OK: hello (Debug+ASan)'
+
+          out=$(build-debug/examples/echo foo moooo boo)
+          printf 'echo foo moooo boo (Debug+ASan) output: %s\n' "${out}"
+          if [ "${out}" != "foo moooo boo" ]; then
+            echo 'FAIL: echo (Debug+ASan) output did not match "foo moooo boo".'
+            exit 1
+          fi
+          echo 'OK: echo foo moooo boo (Debug+ASan)'
+
+      - name: Configure, build, and test (Debug, sanitizers=OFF)
+        if: ${{ !cancelled() }}
+        run: |
+          cmake -S . -B build-debug-nosan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCAT_USE_SANITIZERS=OFF \
+            -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
+          cmake --build build-debug-nosan
+          ctest --test-dir build-debug-nosan -R '^UnitTests$' --verbose --output-on-failure \
+            || ctest --test-dir build-debug-nosan --rerun-failed --verbose --output-on-failure
+
+      - name: Run example binaries (Debug, sanitizers=OFF)
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+
+          out=$(build-debug-nosan/examples/hello)
+          printf 'hello (Debug, nosan) output: %s\n' "${out}"
+          if [ "${out}" != "Meow, world!" ]; then
+            echo 'FAIL: hello (Debug, nosan) did not produce the expected greeting.'
+            exit 1
+          fi
+          echo 'OK: hello (Debug, nosan)'
+
+          out=$(build-debug-nosan/examples/echo foo moooo boo)
+          printf 'echo foo moooo boo (Debug, nosan) output: %s\n' "${out}"
+          if [ "${out}" != "foo moooo boo" ]; then
+            echo 'FAIL: echo (Debug, nosan) output did not match "foo moooo boo".'
+            exit 1
+          fi
+          echo 'OK: echo foo moooo boo (Debug, nosan)'
 
       - name: Upload Debug build for GDB pretty printers
         uses: actions/upload-artifact@v4
@@ -308,6 +372,28 @@ jobs:
           cmake --build build-release
           ctest --test-dir build-release -R '^UnitTests$' --verbose --output-on-failure \
             || ctest --test-dir build-release --rerun-failed --verbose --output-on-failure
+
+      - name: Run example binaries (Release)
+        if: ${{ !cancelled() }}
+        # See the Debug job's matching step for what these exercise.
+        run: |
+          set -eu
+
+          out=$(build-release/examples/hello)
+          printf 'hello (Release) output: %s\n' "${out}"
+          if [ "${out}" != "Meow, world!" ]; then
+            echo 'FAIL: hello (Release) did not produce the expected greeting.'
+            exit 1
+          fi
+          echo 'OK: hello (Release)'
+
+          out=$(build-release/examples/echo foo moooo boo)
+          printf 'echo foo moooo boo (Release) output: %s\n' "${out}"
+          if [ "${out}" != "foo moooo boo" ]; then
+            echo 'FAIL: echo (Release) output did not match "foo moooo boo".'
+            exit 1
+          fi
+          echo 'OK: echo foo moooo boo (Release)'
 
       - name: Upload Release build for GDB pretty printers
         uses: actions/upload-artifact@v4

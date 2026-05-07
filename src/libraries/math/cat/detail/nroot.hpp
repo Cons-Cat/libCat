@@ -18,7 +18,7 @@ nroot(T x, iword n) -> T {
    }
 
    T const abs_x = (x < 0u) ? -x : x;
-   T const inv_n = 1 / n;
+   T const inv_n = T(1) / T(n);
    T const root_magnitude = cat::pow(abs_x, inv_n);
 
    if (x < 0u) {

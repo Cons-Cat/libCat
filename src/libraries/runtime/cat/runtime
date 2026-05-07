@@ -8,10 +8,7 @@ namespace cat {
 
 namespace detail {
 // Name mangling prevents the linker from finding this symbol.
-extern "C" [[gnu::used]]
-#ifndef NO_ARGC_ARGV
-[[gnu::naked]]
-#endif
+extern "C" [[gnu::used, gnu::force_align_arg_pointer]]
 void
 _start();  // NOLINT
 }  // namespace detail

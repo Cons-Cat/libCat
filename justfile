@@ -121,28 +121,28 @@ ninja *args:
       exec ninja -C "$dir" $mf_flags $tool_flags "$@"
 
 clean mode=last_mode verbose="":
-    just _clean-mode {{ mode }} {{ verbose }}
+    @just _clean-mode {{ mode }} {{ verbose }}
 
 format mode=last_mode verbose="":
-    just cmake_target cat-format {{ mode }} {{ verbose }}
+    @just cmake_target cat-format {{ mode }} {{ verbose }}
 
 format-check mode=last_mode verbose="":
-    just cmake_target cat-format-check {{ mode }} {{ verbose }}
+    @just cmake_target cat-format-check {{ mode }} {{ verbose }}
 
 restyle-comments mode=last_mode verbose="":
-    just cmake_target cat-restyle-comments {{ mode }} {{ verbose }}
+    @just cmake_target cat-restyle-comments {{ mode }} {{ verbose }}
 
 restyle-comments-check mode=last_mode verbose="":
-    just cmake_target cat-restyle-comments-check {{ mode }} {{ verbose }}
+    @just cmake_target cat-restyle-comments-check {{ mode }} {{ verbose }}
 
 tidy mode=last_mode verbose="":
-    just cmake_target cat-tidy {{ mode }} {{ verbose }}
+    @just cmake_target cat-tidy {{ mode }} {{ verbose }}
 
 tidy-check mode=last_mode verbose="":
-    just cmake_target cat-tidy-check {{ mode }} {{ verbose }}
+    @just cmake_target cat-tidy-check {{ mode }} {{ verbose }}
 
 opt-report mode=last_mode verbose="":
-    just cmake_target cat-opt-report {{ mode }} {{ verbose }}
+    @just cmake_target cat-opt-report {{ mode }} {{ verbose }}
 
 # Per-TU IR fan-out. The grammar:
 #
@@ -702,7 +702,7 @@ _ir-config mode="release" san="" verbose="" cxx_flags="" targets="":
         --target ${targets} {{ build_verbose(verbose) }}' _ "{{ targets }}"
 
 cmake_target target mode=last_mode verbose="":
-    just _cmake_target_mode {{ target }} {{ mode }} {{ verbose }}
+    @just _cmake_target_mode {{ target }} {{ mode }} {{ verbose }}
 
 [private]
 _cmake_target_mode target mode=last_mode verbose="":
@@ -720,7 +720,7 @@ _cmake_target_mode target mode=last_mode verbose="":
 
 [private]
 _cmake_target_config target mode=last_mode verbose="":
-    cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
+    @cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
       --target {{ target }} {{ build_verbose(verbose) }}
 
 [private]

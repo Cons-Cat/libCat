@@ -100,13 +100,17 @@ target_compile_options(cat-impl-shared
 target_include_directories(cat-impl-shared PUBLIC
   $<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>)
 
-# Keep `__cpu_model` / `__cpu_features2` / `__cpu_indicator_init` at default
-# visibility for the `.so` and any consumer that links it. `<cat/cpuid>`
-# otherwise pins those symbols to `[[gnu::visibility("hidden")]]` so the
-# static-archive build path can let LTO internalize and DSE the dead writes
-# from `__cpu_indicator_init`. PUBLIC because consumers compile `_start.cpp`
-# (on `cat`'s `INTERFACE_SOURCES`) themselves and need the same ABI choice.
-target_compile_definitions(cat-impl-shared PUBLIC CAT_EXPORT_CPUID_ABI)
+# `CAT_NO_CPUID` PUBLIC has two coupled effects: it skips the
+# `__cpu_indicator_init()` call in `_start.cpp` (consumers compile that TU
+# themselves through `cat`'s `INTERFACE_SOURCES`), and it leaves
+# `__cpu_model` / `__cpu_features2` / `__cpu_indicator_init` at default
+# visibility instead of the hidden visibility `<cat/cpuid>` otherwise pins.
+# Default visibility is what makes the `.so`'s ABI export the cpuid symbols
+# to consumers; hidden visibility is what lets the static-archive build path
+# DSE the dead writes under LTO. TODO: this currently leaves `__cpu_model`
+# uninitialized in `.so` consumers (nobody calls the init); revisit by having
+# the `.so` itself run `__cpu_indicator_init` from `.init_array`.
+target_compile_definitions(cat-impl-shared PUBLIC CAT_NO_CPUID)
 
 target_link_options(cat-impl-shared
   PUBLIC

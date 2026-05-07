@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-# Download, build, and stage the pinned ELFkickers utilities (`sstrip`,
-# `elfls`, `objres`, `rebind`, `elftoc`, `ebfc`, `infect`) so they're on
-# PATH the same way the bundled Clang nightly is.
+# Download, build, and stage the pinned ELFkickers utilities (`sstrip` and
+# `elfls`) so they're on PATH the same way the bundled Clang nightly is. The
+# upstream `make all` still builds the full set; we only copy the two we use.
 #
 # Modeled after `install_mise_llvm_debs.py`. ELFkickers ships only as a tiny
 # source tarball, so the script downloads it, verifies size + sha256, builds
@@ -30,18 +30,13 @@ ELFKICKERS_SHA256 = (
 )
 ELFKICKERS_PROGRAMS = (
     "elfls",
-    "objres",
-    "rebind",
     "sstrip",
-    "elftoc",
-    "ebfc",
-    "infect",
 )
 
 # Bumped whenever this script's output layout changes (new binaries, new
 # install path, etc.). Bumping forces a re-stage even if the upstream archive
 # hasn't moved.
-PACKAGE_REVISION = "1"
+PACKAGE_REVISION = "2"
 
 
 def project_root() -> pathlib.Path:
@@ -145,8 +140,12 @@ def main() -> int:
 
     cc = find_compiler()
     print(f"build ELFkickers with CC={cc}", flush=True)
+    # `-w` disables all warnings. ELFkickers is third-party C from 2014 and
+    # warns liberally on a modern host toolchain. Suppressing keeps CI logs
+    # focused on libCat's own diagnostics. Command-line `CFLAGS=...` wins
+    # over the Makefile's non-`override` assignment.
     subprocess.run(
-        ["make", f"CC={cc}", "all"],
+        ["make", f"CC={cc}", "CFLAGS=-w", "all"],
         cwd=source_dir,
         check=True,
     )

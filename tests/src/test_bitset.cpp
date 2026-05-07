@@ -114,8 +114,8 @@ $test(bitset_count_leading_trailing_zero) {
 
    // The 128th bit is off, all others are on. The lowest bit is off, which is
    // ignored by a 127-bit bitset.
-   cat::bitset<127> bits127 = cat::make_bitset<127>(cat::uint8_max << 1u,
-                                                    0xFFFFFFFF'FFFFFFFEul);
+   cat::bitset<127> bits127 =
+      cat::make_bitset<127>(cat::uint8_max << 1u, 0xFFFFFFFF'FFFFFFFEul);
    static_assert(bits127.leading_bytes_bits == 63u);
    static_assert(bits127.leading_skipped_bits == 1u);
    cat::verify(!bits127.all_of());

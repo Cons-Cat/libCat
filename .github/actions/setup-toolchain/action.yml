@@ -23,13 +23,15 @@ runs:
         sudo apt-get install -y --no-install-recommends \
           ca-certificates curl python3 tar xz-utils zstd
 
-    - name: Cache mise-pinned Clang toolchain
+    - name: Cache mise-pinned toolchain (Clang + ELFkickers)
       uses: actions/cache@v4
       with:
         path: |
           .cache/cat-llvm
           .cache/cat-llvm-downloads
-        key: cat-llvm-debs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'scripts/install_mise_llvm_debs.py') }}
+          .cache/cat-elfkickers
+          .cache/cat-elfkickers-downloads
+        key: cat-toolchain-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'scripts/install_mise_llvm_debs.py', 'scripts/install_mise_elfkickers.py') }}
 
     - name: Install mise
       uses: jdx/mise-action@v4
@@ -45,6 +47,15 @@ runs:
       env:
         MISE_HTTP_TIMEOUT: 120
       run: mise run install-clang-nightly
+
+    - name: Install ELFkickers
+      # Stages `.cache/cat-elfkickers/bin/{sstrip,elfls,objres,...}`, which the
+      # arithmetic-negative job (and any other job that exercises the
+      # ELF-kickers-backed test machinery) needs on PATH. Mirrors the
+      # explicit `install-clang-nightly` step above so the build is sourced
+      # from the cache instead of being rebuilt per job.
+      shell: bash
+      run: mise run install-elfkickers
 
     - name: Add mise toolchain binaries to PATH
       shell: bash
@@ -93,3 +104,5 @@ runs:
         just --version
         command -v ninja
         ninja --version
+        command -v sstrip
+        command -v elfls
