@@ -159,9 +159,9 @@ PINNED_DEBIAN_PACKAGES = (
     ),
     (
         DEBIAN_BASE_URL,
-        "pool/main/z/z3/libz3-4_4.13.3-1+b1_amd64.deb",
-        8646192,
-        "6d3c96a1cfd28a8bd98647a8668857732b473e4e5281392c6d969314db1f2732",
+        "pool/main/z/z3/libz3-4_4.13.3-1+b2_amd64.deb",
+        8643656,
+        "6e258ebb04d22c66048d66851ebc1684f04bbd40e47658ad2c3d7e7abdb6bde4",
     ),
     (
         DEBIAN_BASE_URL,
