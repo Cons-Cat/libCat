@@ -15,11 +15,18 @@ CMAKE_CXX_FLAGS = "-fdiagnostics-color=always"
 CMAKE_GENERATOR = "Ninja Multi-Config"
 CMAKE_LINKER_TYPE = "LLD"
 CMAKE_EXPORT_COMPILE_COMMANDS = "ON"
-_.path = ".cache/cat-llvm/bin"
+_.path = [".cache/cat-llvm/bin", ".cache/cat-elfkickers/bin"]
 
 [hooks]
-postinstall = { task = "install-clang-nightly" }
+postinstall = [
+   { task = "install-clang-nightly" },
+   { task = "install-elfkickers" },
+]
 
 [tasks.install-clang-nightly]
 description = "Download and extract the pinned Clang 23 nightly toolchain."
 run = "python3 scripts/install_mise_llvm_debs.py"
+
+[tasks.install-elfkickers]
+description = "Download, build, and stage the pinned ELFkickers utilities."
+run = "python3 scripts/install_mise_elfkickers.py"
