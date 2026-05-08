@@ -110,7 +110,9 @@ target_link_options(cat-impl-shared
     $<TARGET_PROPERTY:cat,INTERFACE_LINK_OPTIONS>
     # `libcat.ld` is needed at BOTH ends:
     #   * the `.so`'s own link, so it has internal `__cat_tls_*` for its
-    #     own (typically empty) TLS layout, and
+    #     own (typically empty) TLS layout. `clang-repl` `dlopen`s the
+    #     `.so` standalone and would otherwise see undefined
+    #     `__cat_tls_*` references from `executable_tls.cpp`.
     #   * a downstream executable's link, so its `__cat_tls_*` describe the
     #     executable's `.tdata` / `.tbss` (where `thread_local` data from
     #     consumer TUs lives). At runtime ELF symbol resolution prefers the

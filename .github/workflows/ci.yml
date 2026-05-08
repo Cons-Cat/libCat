@@ -288,13 +288,17 @@ jobs:
 
       - uses: ./.github/actions/setup-toolchain
 
-      - name: Configure, build, and test (Debug, sanitizers=ON)
+      - name: Configure and build (Debug, sanitizers=ON)
         run: |
           cmake -S . -B build-debug -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
           cmake --build build-debug
+
+      - name: Test (Debug, sanitizers=ON)
+        if: ${{ !cancelled() }}
+        run: |
           ctest --test-dir build-debug -R '^UnitTests$' --verbose --output-on-failure \
             --repeat until-pass:2 --timeout 120
 
@@ -326,7 +330,7 @@ jobs:
           fi
           echo 'OK: echo foo moooo boo (Debug+ASan)'
 
-      - name: Configure, build, and test (Debug, sanitizers=OFF)
+      - name: Configure and build (Debug, sanitizers=OFF)
         if: ${{ !cancelled() }}
         run: |
           cmake -S . -B build-debug-nosan -G Ninja \
@@ -334,6 +338,10 @@ jobs:
             -DCAT_USE_SANITIZERS=OFF \
             -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
           cmake --build build-debug-nosan
+
+      - name: Test (Debug, sanitizers=OFF)
+        if: ${{ !cancelled() }}
+        run: |
           ctest --test-dir build-debug-nosan -R '^UnitTests$' --verbose --output-on-failure \
             --repeat until-pass:2 --timeout 120
 
@@ -388,12 +396,16 @@ jobs:
 
       - uses: ./.github/actions/setup-toolchain
 
-      - name: Configure, build, and test (Release)
+      - name: Configure and build (Release)
         run: |
           cmake -S . -B build-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
           cmake --build build-release
+
+      - name: Test (Release)
+        if: ${{ !cancelled() }}
+        run: |
           ctest --test-dir build-release -R '^UnitTests$' --verbose --output-on-failure \
             --repeat until-pass:2 --timeout 120
 
@@ -556,7 +568,7 @@ jobs:
 
       - uses: ./.github/actions/setup-toolchain
 
-      - name: Configure, build, and test (CAT_USE_SHARED=ON, Debug)
+      - name: Configure and build (CAT_USE_SHARED=ON, Debug)
         # `CAT_USE_SHARED=ON` swaps `cat`'s INTERFACE-linked impl to
         # `cat-impl-shared`.
         run: |
@@ -567,12 +579,22 @@ jobs:
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_USE_SHARED=ON
           cmake --build build-shared
+
+      - name: Test (CAT_USE_SHARED=ON, Debug)
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
           ctest --test-dir build-shared -R '^UnitTests$' --verbose --output-on-failure \
             --repeat until-pass:2 --timeout 120
 
-          # Same example smoke as the Debug and Release jobs, run here so a
-          # `CAT_USE_SHARED=ON` regression in `_start.cpp`, the dynamic-loader
-          # `%fs` handoff, or the argv pickup surfaces in this job too.
+      - name: Run example binaries (CAT_USE_SHARED=ON, Debug)
+        if: ${{ !cancelled() }}
+        # Same example smoke as the Debug and Release jobs, run here so a
+        # `CAT_USE_SHARED=ON` regression in `_start.cpp`, the dynamic-loader
+        # `%fs` handoff, or the argv pickup surfaces in this job too.
+        run: |
+          set -eu
+
           out=$(build-shared/examples/hello)
           printf 'hello (Shared+ASan) output: %s\n' "${out}"
           if [ "${out}" != "Meow, world!" ]; then
@@ -592,10 +614,14 @@ jobs:
           # Headline artifact for this configuration.
           test -f build-shared/libcat.so
 
-          # `libcat.so` must not export libCat's libc / libm
-          # substitutes, or it would interpose for any process that
-          # loads it. Pins the `[[gnu::visibility("hidden")]]`
-          # behaviour in `src/libraries/{string,math}/implementations/*.cpp`.
+      - name: Verify libcat.so does not export libc/libm symbols
+        if: ${{ !cancelled() }}
+        # `libcat.so` must not export libCat's libc / libm
+        # substitutes, or it would interpose for any process that
+        # loads it. Pins the `[[gnu::visibility("hidden")]]`
+        # behaviour in `src/libraries/{string,math}/implementations/*.cpp`.
+        run: |
+          set -eu
           if nm -D --defined-only build-shared/libcat.so \
             | grep -E ' T (memset|memcpy|memmove|memcmp|strlen|sqrt|sqrtf|pow|powf)$'
           then
@@ -654,7 +680,7 @@ jobs:
             exit 1
           fi
 
-      - name: cat-repl (Debug, sanitizers=ON)
+      - name: Configure and build (cat-repl Debug, sanitizers=ON)
         # Smoke test the `clang-repl-libcat` wrapper across the
         # {Debug, Release} x {ASan, no ASan} matrix. Catches
         # regressions in the `%lib` injection, the
@@ -663,10 +689,10 @@ jobs:
         # runs libCat code one-shot, so we can grep
         # stdout for the marker the snippet prints.
         #
-        # Was a `repl:` matrix job; folded in here as four
-        # sequential steps so the cached toolchain isn't restored
-        # on four extra runners. `if: ${{ !cancelled() }}` on the
-        # next three preserves the original `fail-fast: false`
+        # Was a `repl:` matrix job; folded in here as four configure-
+        # then-test pairs so the cached toolchain isn't restored on
+        # four extra runners. `if: ${{ !cancelled() }}` on every
+        # subsequent step preserves the original `fail-fast: false`
         # behaviour: a failure in one variant still surfaces
         # results from the rest. Each variant gets its own build
         # dir to avoid CMake reconfiguration churn between runs.
@@ -679,18 +705,29 @@ jobs:
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-debug-asan --target cat-impl-shared
+
+      - name: Test (cat-repl Debug, sanitizers=ON)
+        if: ${{ !cancelled() }}
+        # `|| rc=$?` keeps `clang-repl-libcat`'s exit code without letting
+        # `set -e` abort the step at the assignment, so the captured
+        # stdout / stderr (`[clang-repl-libcat] preloading ...`, ASan
+        # diagnostics, segfault output, ...) gets surfaced in the job log
+        # even when the JIT'd snippet crashes or the wrapper bails.
+        run: |
+          set -eu
+          rc=0
           out=$(./build-repl-debug-asan/clang-repl-libcat \
             '#include <cat/string>
              auto _ = cat::println("Meow world!");' \
-            2>&1)
-          printf 'cat-repl output:\n%s\n' "${out}"
-          if ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
+            2>&1) || rc=$?
+          printf 'cat-repl output (exit=%d):\n%s\n' "${rc}" "${out}"
+          if [ "${rc}" -ne 0 ] || ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
             echo 'FAIL: cat-repl Debug+ASan did not produce the expected marker.'
             exit 1
           fi
           echo 'OK: cat-repl Debug+ASan produced "Meow world!"'
 
-      - name: cat-repl (Debug, sanitizers=OFF)
+      - name: Configure and build (cat-repl Debug, sanitizers=OFF)
         if: ${{ !cancelled() }}
         run: |
           set -eu
@@ -701,18 +738,24 @@ jobs:
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-debug --target cat-impl-shared
+
+      - name: Test (cat-repl Debug, sanitizers=OFF)
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+          rc=0
           out=$(./build-repl-debug/clang-repl-libcat \
             '#include <cat/string>
              auto _ = cat::println("Meow world!");' \
-            2>&1)
-          printf 'cat-repl output:\n%s\n' "${out}"
-          if ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
+            2>&1) || rc=$?
+          printf 'cat-repl output (exit=%d):\n%s\n' "${rc}" "${out}"
+          if [ "${rc}" -ne 0 ] || ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
             echo 'FAIL: cat-repl Debug (no sanitizers) did not produce the expected marker.'
             exit 1
           fi
           echo 'OK: cat-repl Debug (no sanitizers) produced "Meow world!"'
 
-      - name: cat-repl (Release, sanitizers=ON)
+      - name: Configure and build (cat-repl Release, sanitizers=ON)
         if: ${{ !cancelled() }}
         run: |
           set -eu
@@ -723,18 +766,24 @@ jobs:
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-release-asan --target cat-impl-shared
+
+      - name: Test (cat-repl Release, sanitizers=ON)
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+          rc=0
           out=$(./build-repl-release-asan/clang-repl-libcat \
             '#include <cat/string>
              auto _ = cat::println("Meow world!");' \
-            2>&1)
-          printf 'cat-repl output:\n%s\n' "${out}"
-          if ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
+            2>&1) || rc=$?
+          printf 'cat-repl output (exit=%d):\n%s\n' "${rc}" "${out}"
+          if [ "${rc}" -ne 0 ] || ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
             echo 'FAIL: cat-repl Release+ASan did not produce the expected marker.'
             exit 1
           fi
           echo 'OK: cat-repl Release+ASan produced "Meow world!"'
 
-      - name: cat-repl (Release, sanitizers=OFF)
+      - name: Configure and build (cat-repl Release, sanitizers=OFF)
         if: ${{ !cancelled() }}
         run: |
           set -eu
@@ -745,12 +794,18 @@ jobs:
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-release --target cat-impl-shared
+
+      - name: Test (cat-repl Release, sanitizers=OFF)
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+          rc=0
           out=$(./build-repl-release/clang-repl-libcat \
             '#include <cat/string>
              auto _ = cat::println("Meow world!");' \
-            2>&1)
-          printf 'cat-repl output:\n%s\n' "${out}"
-          if ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
+            2>&1) || rc=$?
+          printf 'cat-repl output (exit=%d):\n%s\n' "${rc}" "${out}"
+          if [ "${rc}" -ne 0 ] || ! printf '%s\n' "${out}" | grep -qF 'Meow world!'; then
             echo 'FAIL: cat-repl Release (no sanitizers) did not produce the expected marker.'
             exit 1
           fi

@@ -238,7 +238,11 @@ list(
   # Merge the read-only and read+exec LOAD segments into a single read+write+exec LOAD.
   # Drops one program header (56 bytes) and the page-alignment padding (~10 bytes) between them.
   # If a consumer needs W^X, she can override with `-Wl,-z,relro -Wl,-z,now` on her own target.
-  -Wl,-N
+  # Gated on `EXECUTABLE`: omagic merges PT_LOAD bands in a way that is
+  # incompatible with a `.so`'s required PT_DYNAMIC / PT_TLS / RELRO layout, so
+  # applying it through `cat`'s INTERFACE_LINK_OPTIONS to `cat-impl-shared`
+  # produces a malformed shared object that crashes when `dlopen`'d.
+  "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-Wl,-N>"
 )
 
 # `-static` and `--no-pie` can't be used under any dynamic linking scenario.
