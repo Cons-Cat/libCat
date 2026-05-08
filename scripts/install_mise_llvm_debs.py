@@ -344,10 +344,13 @@ def install_runtime_library(source_dir: pathlib.Path, runtime_dir: pathlib.Path,
 # llvm/llvm-project#98354). lld then warns once per affected member when
 # `--icf=safe` runs against compiler-rt. Removing the broken section silences
 # the warning and is a no-op for ICF (lld treats absent addrsig conservatively).
+# The wrapper in `bin/` is required (not the raw `usr/lib/llvm-23/bin/`
+# binary) because `llvm-objcopy` links against `libLLVM.so.23.0`, and only
+# the wrapper sets `LD_LIBRARY_PATH` to the staged `runtime/lib`.
 def strip_compiler_rt_addrsig(root: pathlib.Path) -> None:
-    objcopy = root / LLVM_BIN_DIR / "llvm-objcopy"
+    objcopy = root / "bin" / "llvm-objcopy"
     if not objcopy.exists():
-        raise SystemExit(f"missing llvm-objcopy: {objcopy}")
+        raise SystemExit(f"missing llvm-objcopy wrapper: {objcopy}")
     rt_dir = root / "usr" / "lib" / "llvm-23" / "lib" / "clang" / "23" / "lib" / "linux"
     archives = sorted(rt_dir.glob("*.a"))
     if not archives:
