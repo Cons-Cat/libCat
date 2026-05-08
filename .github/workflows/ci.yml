@@ -546,8 +546,8 @@ jobs:
         run: just test release arithmetic -v
 
   shared:
-    # End-to-end `libcat.so` flow: build, install, then have a
-    # downstream `find_package(cat)` consumer link it.
+    # `libcat.so` build smoke: configure, build, run unit tests and the
+    # `hello`/`echo` examples against the shared library.
     runs-on: ubuntu-24.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
@@ -556,22 +556,16 @@ jobs:
 
       - uses: ./.github/actions/setup-toolchain
 
-      - name: Configure, build, install, and consume (CAT_USE_SHARED=ON, Debug)
+      - name: Configure, build, and test (CAT_USE_SHARED=ON, Debug)
         # `CAT_USE_SHARED=ON` swaps `cat`'s INTERFACE-linked impl to
-        # `cat-impl-shared`. Install rules from `cmake/cat_install.cmake`
-        # are registered unconditionally, so `cmake --install` just
-        # works. The downstream smoke binary's "Hello from
-        # find_package(cat)!" output confirms `_start.cpp`, `libcat.ld`,
-        # `global_includes.hpp`, headers, and the .so were all installed
-        # and located correctly.
+        # `cat-impl-shared`.
         run: |
           set -eu
 
           cmake -S . -B build-shared -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_USE_SANITIZERS=ON \
-            -DCAT_USE_SHARED=ON \
-            -DCMAKE_INSTALL_PREFIX="${PWD}/install-shared"
+            -DCAT_USE_SHARED=ON
           cmake --build build-shared
           ctest --test-dir build-shared -R '^UnitTests$' --verbose --output-on-failure \
             --repeat until-pass:2 --timeout 120
@@ -608,34 +602,6 @@ jobs:
             echo 'FAIL: libcat.so is exporting libc/libm symbols (would interpose at runtime).'
             exit 1
           fi
-
-          cmake --install build-shared
-
-          # Downstream `find_package(cat)` consumer.
-          mkdir -p consumer-shared
-          cat > consumer-shared/CMakeLists.txt <<'EOF'
-          cmake_minimum_required(VERSION 3.24)
-          project(cat_consumer CXX)
-          find_package(cat REQUIRED)
-          add_executable(consumer_hello consumer_hello.cpp)
-          target_compile_definitions(consumer_hello PRIVATE NO_ARGC_ARGV)
-          target_link_libraries(consumer_hello PRIVATE cat::cat)
-          EOF
-          cat > consumer-shared/consumer_hello.cpp <<'EOF'
-          #include <cat/string>
-
-          auto main() -> int {
-             cat::println("Hello from find_package(cat)!");
-             return 0;
-          }
-          EOF
-          cmake -S consumer-shared -B build-consumer -G Ninja \
-            -DCMAKE_PREFIX_PATH="${PWD}/install-shared"
-          cmake --build build-consumer
-
-          out=$(LD_LIBRARY_PATH="${PWD}/install-shared/lib" build-consumer/consumer_hello)
-          printf 'consumer output: %s\n' "${out}"
-          test "${out}" = "Hello from find_package(cat)!"
 
   tools:
     # Tooling-adjacent invariants:

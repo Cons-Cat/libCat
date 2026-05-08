@@ -2,10 +2,8 @@
 # `../CMakeLists.txt`.
 
 set(CATLIB ${CMAKE_SOURCE_DIR}/src/libraries)
-include(GNUInstallDirs)
 
-# Per-library subdirs on the include path. Hoisted (and re-exposed to parent
-# scope) so `cat_install.cmake`'s `install(DIRECTORY)` uses the same list.
+# Per-library subdirs on the include path.
 set(CAT_INCLUDE_SUBDIRS
   meta compare limits runtime cpuid sanitizer arithmetic
   simd algorithm debug variant scaredy maybe match notype unique container
@@ -14,19 +12,10 @@ set(CAT_INCLUDE_SUBDIRS
   vec ring enum iterable)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
-# Each entry has `BUILD_INTERFACE` (in-tree path) and `INSTALL_INTERFACE`
-# (installed path) so `cat::cat` works for both `add_subdirectory` and
-# `find_package(cat)` consumers.
-target_include_directories(cat INTERFACE
-  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>"
-  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libcat>")
-block()
-  foreach(_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
-    target_include_directories(cat INTERFACE
-      "$<BUILD_INTERFACE:${CATLIB}/${_subdir}/>"
-      "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/${_subdir}>")
-  endforeach()
-endblock()
+target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
+foreach(_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
+  target_include_directories(cat INTERFACE "${CATLIB}/${_subdir}/")
+endforeach()
 
 # `libcat.ld` defines `__cat_tls_*` symbols against the linkee's own TLS, so
 # `.a` consumers need `-Wl,-T,libcat.ld` at link time. `.so` bakes the same
@@ -34,19 +23,15 @@ endblock()
 # `cat-impl` (rather than `cat`) means `CAT_USE_SHARED` automatically swaps the
 # `-T` along with the impl.
 set(LIBCAT_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/src/libcat.ld")
-target_link_options(cat-impl INTERFACE
-  "$<BUILD_INTERFACE:-Wl,-T,${LIBCAT_LINKER_SCRIPT}>"
-  "$<INSTALL_INTERFACE:-Wl,-T,${CMAKE_INSTALL_FULL_DATADIR}/libcat/libcat.ld>")
+target_link_options(cat-impl INTERFACE "-Wl,-T,${LIBCAT_LINKER_SCRIPT}")
 set_property(TARGET cat-impl APPEND PROPERTY INTERFACE_LINK_DEPENDS
-  "$<BUILD_INTERFACE:${LIBCAT_LINKER_SCRIPT}>")
+  "${LIBCAT_LINKER_SCRIPT}")
 
 # `_start.cpp` stays on `cat` `INTERFACE` because consumers select between its
 # argc/argv vs. no-args branches via `NO_ARGC_ARGV`. All other impls are
 # flag-independent and live in `cat-impl` (`libcat.a`).
 target_sources(cat INTERFACE
-  "$<BUILD_INTERFACE:${CATLIB}/runtime/implementations/_start.cpp>"
-  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/runtime/implementations/_start.cpp>"
-)
+  "${CATLIB}/runtime/implementations/_start.cpp")
 
 # TODO: Group and annotate these lines by their corresponding header.
 target_sources(cat-impl PRIVATE

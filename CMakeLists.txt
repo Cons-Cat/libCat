@@ -427,10 +427,6 @@ include(${CMAKE_SOURCE_DIR}/cmake/cat_ir.cmake)
 # Syntax-only check target (`cat-syntax`).
 include(${CMAKE_SOURCE_DIR}/cmake/cat_syntax.cmake)
 
-# Install / export rules (`cmake --install build/` = `find_package(cat)`
-# sysroot).
-include(${CMAKE_SOURCE_DIR}/cmake/cat_install.cmake)
-
 # Optional configure-time `try_compile` negative checks for
 # `cat::basic_int`/`cat::basic_float` / `cat::basic_idx` /
 # `cat::basic_intptr` (see

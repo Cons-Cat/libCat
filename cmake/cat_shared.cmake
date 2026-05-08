@@ -11,8 +11,7 @@
 # `clang-repl` originally motivated the target -- its `%lib` directive uses
 # `dlopen`, which cannot load a static archive. The wrapper script generated at
 # the bottom of this file (`${CMAKE_BINARY_DIR}/clang-repl-libcat`) packages the
-# JIT flow end-to-end, but the `.so` is also independently useful for installed
-# consumers via `find_package(cat) -> cat::cat-impl-shared`.
+# JIT flow end-to-end.
 #
 # Reuses `cat-impl`'s sources and essential flags verbatim, plus four
 # specialisations:
@@ -32,12 +31,6 @@
 # complete build environment with no flag duplication.
 # `CMAKE_EXPORT_COMPILE_COMMANDS` is forced on so the `clang-repl-libcat`
 # wrapper has a flag database to read.
-# `INSTALL_INTERFACE` link options below reference `CMAKE_INSTALL_FULL_DATADIR`,
-# which `GNUInstallDirs` (re)computes from the current `CMAKE_INSTALL_PREFIX`.
-# Re-include here so the value is correct regardless of which subdirectory
-# already pulled the module in.
-
-include(GNUInstallDirs)
 
 # Source-list / compiler-rt / CXX_EXTENSIONS probe in one block: every helper
 # (`_clang_major`, `_compiler_rt_builtins`, `_cxx_extensions`, `_impl_sources`)
@@ -123,16 +116,13 @@ target_link_options(cat-impl-shared
     #     consumer TUs lives). At runtime ELF symbol resolution prefers the
     #     executable's copies, so libCat's `executable_tls.cpp` always
     #     reports the executable's TLS size when called from the `.so`.
-    # `BUILD_INTERFACE`/`INSTALL_INTERFACE` so installed consumers pick up the
-    # script's installed copy under `${CMAKE_INSTALL_DATADIR}/libcat`.
-    "$<BUILD_INTERFACE:-Wl,-T,${CMAKE_SOURCE_DIR}/src/libcat.ld>"
-    "$<INSTALL_INTERFACE:-Wl,-T,${CMAKE_INSTALL_FULL_DATADIR}/libcat/libcat.ld>"
-    # The `INSERT AFTER .text` directive in `libcat.ld` interleaves `.tdata`
-    # between RELRO-backed sections, which `lld` rejects on any link that also
-    # pulls in a `.so` (the `.so`'s `.got` entries widen the RELRO region). The
-    # same flag is added under `CAT_USE_SANITIZERS` in the top-level CMakeLists
-    # for the ASan-runtime `.so`. Repeating it here keeps `CAT_USE_SHARED`
-    # builds working without sanitizers.
+    "-Wl,-T,${CMAKE_SOURCE_DIR}/src/libcat.ld"
+    # libCat's full self-contained `libcat.ld` keeps `.tdata` page-aligned
+    # away from RELRO-backed sections, but `lld` still complains on links
+    # that pull in a `.so` (the `.so`'s `.got` entries widen the RELRO
+    # region). The same flag is added under `CAT_USE_SANITIZERS` in the
+    # top-level CMakeLists for the ASan-runtime `.so`. Repeating it here
+    # keeps `CAT_USE_SHARED` builds working without sanitizers.
     -Wl,-z,norelro
   PRIVATE
     -fno-lto)
@@ -158,12 +148,8 @@ target_link_options(cat-impl-shared PUBLIC
 target_sources(cat-impl-shared INTERFACE
   $<TARGET_PROPERTY:cat,INTERFACE_SOURCES>)
 
-# In-tree consumers relink when the script changes; the installed copy is
-# referenced by absolute path in the `INSTALL_INTERFACE` link option above and
-# CMake does not propagate `LINK_DEPENDS` across the install boundary, so this
-# is `BUILD_INTERFACE`-only.
 set_property(TARGET cat-impl-shared APPEND PROPERTY INTERFACE_LINK_DEPENDS
-  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/libcat.ld>")
+  "${CMAKE_SOURCE_DIR}/src/libcat.ld")
 
 if (_compiler_rt_builtins AND EXISTS "${_compiler_rt_builtins}")
   target_link_libraries(cat-impl-shared PRIVATE "${_compiler_rt_builtins}")
