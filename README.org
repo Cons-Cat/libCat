@@ -92,7 +92,7 @@ libCat provides several developer utilities. They are organized in the =cmake/=
 subdirectory.
 
 The =just= recipes below use the same build modes as the =build= recipe. For many of them,
-build mode is not very relevant. They are implemented as CMake targets, which have the same
+build mode is not very relevant. Most are implemented as CMake targets, which have the same
 names prepended by a =cat-= namespace (e.g. =cat-format=, =cat-syntax=).
 
 *** =test=
@@ -298,6 +298,30 @@ verbatim with a leading dash (the same way =just build= accepts them):
   just ir ll pow.cpp -fno-inline -mllvm -inline-threshold=0
 #+END_SRC
 
+*** =elf=
+#+BEGIN_SRC sh
+  just elf hello
+  just elf unit_tests release
+  just elf hello debug -v
+  just elf path/to/binary
+#+END_SRC
+Inspect a libCat-produced executable. Without =-v=, runs =elfls= for a compact
+program / section header summary. With =-v=, runs =llvm-readelf -a --demangle
+--wide= for the full ELF structure (symbol table, dynamic section, relocations,
+notes). The LLVM demangler is preferred over binutils =c++filt= because it
+recognises the newer Itanium ABI extensions Clang emits for concepts and
+=requires=-clauses, which =readelf -C= still leaves mangled.
+
+The selector is either an executable name -- resolved against the mode's
+=examples/= and =tests/= subdirectories -- or any path. If the named binary
+doesn't yet exist in the build directory, the matching CMake target is built
+automatically before inspection, so =just elf hello= works on a fresh
+checkout. Passing an explicit path skips the build attempt and inspects
+whatever's already there.
+
+A mode token (=debug= / =release= / =relwithdebinfo=) selects the build
+directory. Defaults to the cached last mode.
+
 *** =syntax=
 #+BEGIN_SRC sh
   just syntax
@@ -358,7 +382,7 @@ The =just repl= recipe configures the build with =CAT_BUILD_SHARED=ON= before
 building the wrapper. Pass extra =clang-repl= arguments at the end of the
 command, after a =--=.
 
-** =status=
+*** =status=
 #+BEGIN_SRC sh
   just status
   just status release -v

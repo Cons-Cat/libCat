@@ -350,6 +350,76 @@ _strip-mode mode=last_mode selectors="":
         printf '\033[1m%s\033[0m: %s -> \033[36m%s\033[0m bytes\n' "$p" "$before" "$after"; \
       done
 
+# Run `elfls` on a libCat-produced executable. Selectors:
+#   <name>          a specific executable (e.g. `hello`, `echo`, `unit_tests`)
+#   <path>          a path to any ELF file
+# A mode token (`debug`/`release`/`relwithdebinfo`) selects the build dir.
+# Defaults to the cached last mode. With `-v`, run `readelf -a --demangle`
+# instead of `elfls`.
+elf *args:
+    @set -eu; mode=""; verbose=""; selector=""; set -- "$@"; \
+      while [ $# -gt 0 ]; do \
+        case "$1" in \
+          -v) verbose="-v"; shift ;; \
+          debug|release|relwithdebinfo) \
+            if [ -n "$mode" ]; then \
+              printf '%s\n' "just elf: multiple build modes: '$mode' and '$1'" >&2; \
+              exit 1; \
+            fi; \
+            mode="$1"; shift ;; \
+          -*) printf '%s\n' "just elf: unknown flag '$1'!" >&2; exit 1 ;; \
+          *) \
+            if [ -n "$selector" ]; then \
+              printf '%s\n' "just elf: multiple executables: '$selector' and '$1'" >&2; \
+              exit 1; \
+            fi; \
+            selector="$1"; shift ;; \
+        esac; \
+      done; \
+      if [ -z "$selector" ]; then \
+        printf '%s\n' "just elf: pick an executable name (e.g. hello, echo, unit_tests) or a path" >&2; \
+        exit 1; \
+      fi; \
+      if [ -z "$mode" ]; then mode="{{ last_mode }}"; fi; \
+      just _elf-mode "$mode" "$verbose" "$selector"
+
+[private]
+_elf-mode mode=last_mode verbose="" selector="":
+    @set -eu; selector="{{ selector }}"; verbose="{{ verbose }}"; \
+      examples_dir="{{ build_dir(mode) }}/examples"; \
+      tests_dir="{{ build_dir(mode) }}/tests"; \
+      if [ "{{ multi_config }}" = "true" ] && [ -n "{{ cmake_config(mode) }}" ]; then \
+        examples_dir="$examples_dir/{{ cmake_config(mode) }}"; \
+        tests_dir="$tests_dir/{{ cmake_config(mode) }}"; \
+      fi; \
+      resolve_path() { \
+        if [ -f "$1" ]; then printf '%s' "$1"; \
+        elif [ -f "$examples_dir/$1" ]; then printf '%s' "$examples_dir/$1"; \
+        elif [ -f "$tests_dir/$1" ]; then printf '%s' "$tests_dir/$1"; \
+        fi; \
+      }; \
+      path="$(resolve_path "$selector")"; \
+      if [ -z "$path" ]; then \
+        case "$selector" in \
+          */*) \
+            printf 'just elf: %s: file not found\n' "$selector" >&2; \
+            exit 1 ;; \
+        esac; \
+        just _cmake_target_config "$selector" {{ mode }} "$verbose"; \
+        path="$(resolve_path "$selector")"; \
+        if [ -z "$path" ]; then \
+          printf 'just elf: %s: not found under %s or %s after build\n' \
+            "$selector" "$examples_dir" "$tests_dir" >&2; \
+          exit 1; \
+        fi; \
+      fi; \
+      if [ "$verbose" = "-v" ]; then \
+        llvm-readelf -a --demangle --wide "$path"; \
+      else \
+        elfls "$path"; \
+        printf '\nRun \033[1mjust elf -v\033[0m for `llvm-readelf -a` (demangled) instead.\n'; \
+      fi
+
 test *args:
     @san=""; verbose=""; modes=""; tests=""; full="false"; list="false"; \
       unset CAT_JUST_TEST_TOOL_TRAILER_B64; \
