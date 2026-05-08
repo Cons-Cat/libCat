@@ -6,14 +6,15 @@ CompileFlags:
   Add:
     - -std=gnu++26
 
-# Merged with `.clang-tidy`; clangd config wins on conflict. Stops
-# `readability-magic-numbers` / `cppcoreguidelines-avoid-magic-numbers` if
-# another layer (e.g. user `config.yaml`) re-enables `readability-*`.
+# Merged with `.clang-tidy`. clangd config wins on conflict. Stops unusable
+# lints if another layer (e.g. user `config.yaml`) re-enables them.
 Diagnostics:
   ClangTidy:
     Remove:
       - readability-magic-numbers
       - cppcoreguidelines-avoid-magic-numbers
+      - bugprone-easily-swappable-parameters
   Suppress:
     - readability-magic-numbers
     - cppcoreguidelines-avoid-magic-numbers
+    - bugprone-easily-swappable-parameters
