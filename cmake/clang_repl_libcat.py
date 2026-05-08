@@ -53,6 +53,14 @@ _DROP_EXACT = {
     # CMake PCH leftovers. `-Winvalid-pch` is harmless to keep but pointless once the
     # `-include-pch` it guards is gone.
     "-Winvalid-pch", "-fno-pch-timestamp",
+    # libCat's Release config uses `-fno-plt` to fold lazy PLT stubs into
+    # direct GOT-PC-relative calls in `libcat.{a,so}`, but `clang-repl`'s
+    # JIT can't resolve those `R_X86_64_GOTPCRELX` relocations against a
+    # `dlopen`'d `libcat.so` (the JIT'd caller crashes inside libstdc++ /
+    # libLLVM during the first call into the `.so`). Keep the flag on
+    # the actual library and consumer-executable links; just don't feed
+    # it to the JIT-side parser.
+    "-fno-plt",
 }
 # These flags consume the next logical argument as their value. Drop both.
 _VALUE_TAKING = {"-o", "-MT", "-MF", "-MQ", "-include-pch"}
