@@ -449,6 +449,20 @@ jobs:
           fi
           echo "OK: hello sstripped size = ${actual} bytes."
 
+      - name: Verify `echo` is 335 bytes
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+          CAT_ECHO_SSTRIPPED_SIZE=335
+          just strip release echo
+          actual=$(wc -c < build-release/examples/echo)
+          if [ "${actual}" -ne "${CAT_ECHO_SSTRIPPED_SIZE}" ]; then
+            echo "::error title=echo size regression::expected ${CAT_ECHO_SSTRIPPED_SIZE} bytes, got ${actual}"
+            echo 'If this change is intentional, update CAT_ECHO_SSTRIPPED_SIZE in .github/workflows/ci.yml.'
+            exit 1
+          fi
+          echo "OK: echo sstripped size = ${actual} bytes."
+
       - name: Verify .gdbinit symlink (Release, Ninja generator non-multi)
         if: ${{ needs.detect-changes.outputs.gdb_symlink == 'true' }}
         run: |
@@ -561,6 +575,25 @@ jobs:
           cmake --build build-shared
           ctest --test-dir build-shared -R '^UnitTests$' --verbose --output-on-failure \
             || ctest --test-dir build-shared --rerun-failed --verbose --output-on-failure
+
+          # Same example smoke as the Debug and Release jobs, run here so a
+          # `CAT_USE_SHARED=ON` regression in `_start.cpp`, the dynamic-loader
+          # `%fs` handoff, or the argv pickup surfaces in this job too.
+          out=$(build-shared/examples/hello)
+          printf 'hello (Shared+ASan) output: %s\n' "${out}"
+          if [ "${out}" != "Meow, world!" ]; then
+            echo 'FAIL: hello (Shared+ASan) did not produce the expected greeting.'
+            exit 1
+          fi
+          echo 'OK: hello (Shared+ASan)'
+
+          out=$(build-shared/examples/echo foo moooo boo)
+          printf 'echo foo moooo boo (Shared+ASan) output: %s\n' "${out}"
+          if [ "${out}" != "foo moooo boo" ]; then
+            echo 'FAIL: echo (Shared+ASan) output did not match "foo moooo boo".'
+            exit 1
+          fi
+          echo 'OK: echo foo moooo boo (Shared+ASan)'
 
           # Headline artifact for this configuration.
           test -f build-shared/libcat.so
