@@ -15,7 +15,7 @@ nix::process::spawn(cat::is_allocator auto& allocator,
    // TODO: This should union allocator and linux errors.
    // TODO: Use size feedback.
    cat::idx const thread_local_slab_bytes =
-      nix::detail::clone_thread_local_slab_min_bytes();
+      nix::detail::clone_thread_local_buffer_min_bytes();
    cat::span<cat::byte> memory =
       $prop_as(allocator.template align_alloc_multi<cat::byte>(
                   16u, initial_stack_size + thread_local_slab_bytes),

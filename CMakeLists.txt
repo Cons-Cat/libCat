@@ -40,6 +40,23 @@ endblock()
 
 option(CAT_USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer." OFF)
 
+# `CAT_THREAD_LOCAL_SIZE` controls the `thread_local` storage buffer.
+# It configures or disables the `thread_local` language feature.
+#
+# A value of 0 disables `thread_local` entirely.
+# A value greater than 0 explicitly sets the `thread_local` storage buffer size.
+# If the value is unset (default), the linker solves the correct size.
+set(CAT_THREAD_LOCAL_SIZE "" CACHE STRING
+  "Override the `thread_local` storage buffer size.")
+if (NOT CAT_THREAD_LOCAL_SIZE STREQUAL "")
+  if (NOT CAT_THREAD_LOCAL_SIZE MATCHES "^[0-9]+$")
+    message(FATAL_ERROR
+      "CAT_THREAD_LOCAL_SIZE must be a non-negative integer or empty, not "
+      "`${CAT_THREAD_LOCAL_SIZE}`.")
+  endif()
+  add_compile_definitions(CAT_THREAD_LOCAL_SIZE=${CAT_THREAD_LOCAL_SIZE})
+endif()
+
 if (CAT_USE_SANITIZERS)
   if (NOT CAT_ASAN_RUNTIME_PATH)
     message(FATAL_ERROR

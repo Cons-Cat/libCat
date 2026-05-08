@@ -50,7 +50,7 @@ class page_allocator : public allocator_interface<page_allocator> {
    auto
    allocate(idx allocation_bytes) -> maybe_ptr<void> {
       scaredy result =
-         nix::sys_mmap(0u, allocation_bytes,
+         nix::sys_mmap(nullptr, allocation_bytes,
                        // TODO: Fix bit flags operators.
                        static_cast<nix::memory_protection_flags>(
                           to_underlying(nix::memory_protection_flags::read)

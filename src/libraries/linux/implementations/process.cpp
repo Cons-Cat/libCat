@@ -1,6 +1,22 @@
 #include <cat/linux>
 
+extern "C" {
+// Supplied by `src/libcat.ld`. Decoded via `link_absolute_symbol`.
+extern char __cat_tls_memory_size[];  // NOLINT(bugprone-reserved-identifier)
+extern char __cat_tls_alignment[];    // NOLINT(bugprone-reserved-identifier)
+}
+
 namespace {
+
+// Linker absolute symbols use the "address = constant" encoding, so reading
+// them requires a `reinterpret_cast` from the symbol's pointer back to the
+// underlying integer. `T` is the libCat integer type the caller wants.
+template <typename T>
+[[nodiscard, gnu::always_inline]]
+inline auto
+link_absolute_symbol(char const* const p_symbol_address) -> T {
+   return reinterpret_cast<__UINTPTR_TYPE__>(p_symbol_address);
+}
 
 [[nodiscard]]
 auto
@@ -86,30 +102,38 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
    m_stack_size = initial_stack_size;
    m_p_stack_bottom = stack.get();
 
+   cat::uintptr<void> stack_top;
+
+#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
+#ifdef CAT_THREAD_LOCAL_SIZE
+   // Fixed-size override from the `CAT_THREAD_LOCAL_SIZE` CMake variable.
+   // The clone-time slab matches the main thread's `init_main_thread_tls`.
+   cat::idx const thread_local_slab_bytes{CAT_THREAD_LOCAL_SIZE};
+   cat::idx const tls_memory_size{CAT_THREAD_LOCAL_SIZE};
+#else
    cat::idx const thread_local_slab_bytes =
-      nix::detail::clone_thread_local_slab_min_bytes();
+      nix::detail::clone_thread_local_buffer_min_bytes();
+   cat::idx const tls_memory_size =
+      link_absolute_symbol<cat::idx>(__cat_tls_memory_size);
+#endif
 
    cat::uintptr<void> const stack_and_thread_local_buffer_end_exclusive =
       stack + m_stack_size + thread_local_slab_bytes;
-
-   cat::idx const tls_memory_size = nix::detail::executable_tls_memory_bytes();
 
    cat::uintptr<void> tls_thread_pointer =
       stack_and_thread_local_buffer_end_exclusive;
 
    if (tls_memory_size > 0u) {
-      cat::uword align_want = nix::detail::executable_tls_alignment_bytes();
-      if (align_want < 32u) {
-         align_want = 32u;
-      }
+      cat::uword const minimum_alignment =
+         cat::max(32u, link_absolute_symbol<cat::uword>(__cat_tls_alignment));
       // The buffer end (exclusive) can be a multiple of the requested
       // alignment. Rounding that end down with `align_down` can return the same
-      // address. The TCB self slot at that address is then one past the span.
-      // Take the last in-bounds address and round that down.
+      // address. The thread-pointer self-slot at that address is then one past
+      // the span. Take the last in-bounds address and round that down.
       cat::uintptr<void> const stack_region_last_inclusive =
          stack_and_thread_local_buffer_end_exclusive - cat::uword{1u};
       tls_thread_pointer =
-         cat::align_down(stack_region_last_inclusive, align_want);
+         cat::align_down(stack_region_last_inclusive, minimum_alignment);
       cat::uintptr<void> const tls_slab_low = stack + m_stack_size;
       if (tls_thread_pointer - tls_memory_size < tls_slab_low) {
          return nix::linux_error::inval;
@@ -119,14 +143,25 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
       // Local-exec TLS lowering loads the thread pointer from `%fs:0`. The
       // copied executable TLS image only covers `.tdata/.tbss` strictly below
-      // `tls_tp`. The word at `tls_tp` is the TCB self slot and must equal
-      // `tls_tp` after `clone_flags::set_tls` installs that base in `%fs`.
+      // `tls_thread_pointer`. The 8 bytes at `tls_thread_pointer` are the
+      // thread-pointer self-slot and must equal `tls_tp` after
+      // `clone_flags::set_tls` installs that base in `%fs`. libCat has no
+      // thread control block; the slot exists only to satisfy the SysV
+      // `thread_local` ABI's `mov %fs:0, %reg` lowering.
       *reinterpret_cast<void**>(tls_thread_pointer.get()) =
          tls_thread_pointer.get();
    }
 
-   cat::uintptr<void> stack_top = tls_thread_pointer;
+   stack_top = tls_thread_pointer;
    stack_top -= thread_local_slab_bytes;
+#else
+   // `CAT_THREAD_LOCAL_SIZE == 0`. Consumer promises no `thread_local` in
+   // the executable: skip the clone-time `thread_local` buffer carve-out, the
+   // `clone_flags::set_tls` arm, and the `tls_thread_pointer` fixup
+   // entirely. Pairs with `_start.cpp`'s matching skip of
+   // `init_main_thread_tls`.
+   stack_top = stack + m_stack_size;
+#endif
 
    // 32-byte alignment is required for AVX2 support.
    stack_top = cat::align_down(stack_top, 32u);
@@ -147,9 +182,11 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
    // the `mov` into `clone_result` (`asm goto`). The child jumps away before
    // that store.
    nix::clone_flags active_clone_flags = m_flags;
+#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
    if (tls_memory_size > 0u) {
       active_clone_flags |= nix::clone_flags::set_tls;
    }
+#endif
 
    void const* p_clear_tid_for_clone = nullptr;
    if (cat::to_underlying(m_flags & nix::clone_flags::child_set_tid) != 0u) {
@@ -167,8 +204,14 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
          mov %%rax, %[parent_rax]
          jmp %l[clone_parent])"
       : [parent_rax] "=m"(clone_result)
-      : "a"(56), "D"(active_clone_flags), "S"(stack_top),
-        "d"(&(m_id)), [tls] "r"(tls_thread_pointer.get()),
+      : "a"(56), "D"(active_clone_flags), "S"(stack_top), "d"(&(m_id)),
+#if defined(CAT_THREAD_LOCAL_SIZE) && (CAT_THREAD_LOCAL_SIZE) == 0
+        // No TLS slab was carved, so `clone_flags::set_tls` is never set in
+        // `active_clone_flags` and the kernel ignores R8. Pass `nullptr`.
+        [tls] "r"(nullptr),
+#else
+        [tls] "r"(tls_thread_pointer.get()),
+#endif
         [cleartid] "r"(p_clear_tid_for_clone)
       : "rcx", "r11", "memory"
       : clone_child, clone_parent);

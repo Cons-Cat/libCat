@@ -989,9 +989,9 @@ sys_fstat(file_descriptor file_descriptor)
 
 // Syscall 9.
 auto
-sys_mmap(cat::uword beginning_address, cat::uword bytes_size,
+sys_mmap(void* p_start_address, cat::uword bytes_size,
          memory_protection_flags protections, memory_flags flags,
-         file_descriptor file_descriptor, cat::uword pages_offset)
+         file_descriptor file_descriptor, cat::uword page_offset)
    -> scaredy_nix<void*>;
 
 // TODO: `sys_mprotect()`.
@@ -1560,27 +1560,18 @@ enum class arch_prctl_request : int {
 };
 
 namespace detail {
-[[nodiscard]]
-auto
-executable_tls_memory_bytes() -> cat::idx;
-
-[[nodiscard]]
-auto
-executable_tls_file_bytes() -> cat::idx;
-
-[[nodiscard]]
-auto
-executable_tls_alignment_bytes() -> cat::uword;
-
 // Minimum bytes reserved above the stack for `clone_flags::set_tls` TLS setup.
 // Covers `p_memsz`, thread-pointer alignment, and a 64-byte line round-up.
 [[nodiscard]]
 auto
-clone_thread_local_slab_min_bytes() -> cat::idx;
+clone_thread_local_buffer_min_bytes() -> cat::idx;
 
 void
 install_executable_tls_image_at_thread_pointer(
-   cat::uintptr<void> thread_pointer);
+   cat::uintptr<void> p_process_address);
+
+void
+init_parent_process_tls();
 }  // namespace detail
 
 [[nodiscard]]

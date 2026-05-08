@@ -1,6 +1,6 @@
 #include <cat/cpuid>
+#include <cat/linux>
 #include <cat/runtime>
-#include <cat/string>
 
 // We could use a simple K&R `main(...)` but that linkage causes trouble for
 // LTO, so we specify.
@@ -14,15 +14,12 @@ main() -> int;
 
 namespace {
 
-// `CAT_NO_STATIC_CONSTRUCTORS` lets a target opt out of walking `.init_array`.
-// The bounds are linker-defined symbols, so LLVM cannot prove the loop is
-// empty even under LTO. Targets that promise no global constructors (e.g. the
-// `hello` example) define it to drop the call entirely.
 #ifndef CAT_NO_STATIC_CONSTRUCTORS
 using constructor_fn = void (*const)();
 extern "C" {
-extern constructor_fn __init_array_start[];
-extern constructor_fn __init_array_end[];
+
+extern constructor_fn __init_array_start[];  // NOLINT
+extern constructor_fn __init_array_end[];    // NOLINT
 
 void
 call_static_constructors() {
@@ -37,49 +34,44 @@ call_static_constructors() {
 #endif
 
 extern "C" {
+[[noreturn, gnu::no_stack_protector, gnu::no_sanitize_address]]
 #ifndef NO_ARGC_ARGV
-[[noreturn, gnu::used, gnu::no_stack_protector, gnu::no_sanitize_address,
-  gnu::force_align_arg_pointer]]
+[[gnu::used]]
 void
-call_main_args(int argc, char* const* pp_argv) {
-#ifndef CAT_NO_CPUID
-   // Initialize `__cpu_model` and `__cpu_features2` for later use.
-   x64::detail::__cpu_indicator_init();
-#endif
-#ifndef CAT_NO_STATIC_CONSTRUCTORS
-   call_static_constructors();
-#endif
-   // `[[clang::always_inline]]` overrides LLVM's default bias against
-   // inlining `main` (preserved for atexit ordering / debugger step-in
-   // semantics) at this specific call site, so `main`'s body folds into
-   // `_start`. The same attribute also forces `cat::exit` to inline,
-   // matching what LTO already does today for that call.
-   [[clang::always_inline]] cat::exit(main(argc, pp_argv));
-}
+call_main(int argc, char* const* pp_argv)
 #else
-[[noreturn, gnu::always_inline, gnu::no_stack_protector,
-  gnu::no_sanitize_address]]
-inline void
-call_main_noargs() {
+void
+call_main()
+#endif
+{
 #ifndef CAT_NO_CPUID
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
 #endif
+#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
+   // Set up `%fs` so the parent process can access `thread_local` values. Must
+   // run before `call_static_constructors` because a constructor body
+   // could touch a `thread_local`. The buffer is intentionally leaked
+   // (kernel reclaims at `_exit`).
+   nix::detail::init_parent_process_tls();
+#endif
 #ifndef CAT_NO_STATIC_CONSTRUCTORS
    call_static_constructors();
 #endif
+#ifdef NO_ARGC_ARGV
    [[clang::always_inline]] cat::exit(main());
-}
+#else
+   [[clang::always_inline]] cat::exit(main(argc, pp_argv));
 #endif
 }
+}  // extern "C"
 
 }  // namespace
 
 extern "C" [[gnu::used, gnu::no_stack_protector]]
 #ifndef NO_ARGC_ARGV
 // If arguments are loaded, this must be `naked` to prevent pushing `%rbp`
-// first, which breaks argument loading. I've tried other solutions, but none
-// worked yet.
+// first, which misaligns argument loading.
 [[gnu::naked]]
 #else
 // The kernel hands `_start` a 16-aligned `%rsp` with no return address, so
@@ -99,9 +91,9 @@ cat::detail::_start() {
    asm(R"(.att_syntax prefix ; # rmsbolt requires this. Try `-masm=att`
           pop %rdi        # Load `int4 argc`.
           mov %rsp, %rsi  # Load `char* argv[]`.
-          call call_main_args
+          call call_main
        )");
 #else
-   [[clang::always_inline]] call_main_noargs();
+   [[clang::always_inline]] call_main();
 #endif
 }

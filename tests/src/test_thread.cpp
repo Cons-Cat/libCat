@@ -10,6 +10,7 @@
 
 namespace {
 
+// NOLINTNEXTLINE
 constinit cat::atomic<int> atomic{};
 
 thread_local int tls1 = 1;
@@ -39,9 +40,6 @@ function_2() {
 $test(thread) {
    cat::thread threads[5];
    cat::page_allocator allocator;
-
-   cat::verify(nix::detail::clone_thread_local_slab_min_bytes()
-               >= nix::detail::executable_tls_memory_bytes());
 
    threads[0].spawn(allocator, 2_uki, function_1).verify();
    threads[1].spawn(allocator, 2_uki, &function_2).verify();
