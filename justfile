@@ -605,7 +605,8 @@ _build-mode mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
 # We need a shell script to handle my fairly complex flags passing logic.
 # Everything that looks like a flag should be forwarded through to
 # `CMAKE_CXX_FLAGS`, but `-w` specifically is a *non-stateful* sugar for
-# `-Wno-everything`.
+# `-Wno-everything -Wl,--no-warnings` (so both compiler and linker
+# warnings are silenced).
 [private]
 _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
     @just _print-build-mode {{ mode }}
@@ -613,7 +614,7 @@ _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
     @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; clear_cached=false; \
       cache={{ build_dir(mode) }}/CMakeCache.txt; \
       if [[ "${no_warnings}" == true ]]; then \
-        cxx_flags="${cxx_flags:+${cxx_flags} }-Wno-everything"; \
+        cxx_flags="${cxx_flags:+${cxx_flags} }-Wno-everything -Wl,--no-warnings"; \
       elif [[ -z "${cxx_flags}" && -f "${cache}" ]]; then \
         cached_flags=""; \
         while IFS= read -r line; do \
@@ -623,7 +624,10 @@ _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
         done < "${cache}"; \
         if [[ " ${cached_flags} " == *" -Wno-everything "* ]]; then \
           for flag in ${cached_flags}; do \
-            [[ "${flag}" == "-Wno-everything" ]] || cxx_flags="${cxx_flags:+${cxx_flags} }${flag}"; \
+            case "${flag}" in \
+              -Wno-everything|-Wl,--no-warnings) ;; \
+              *) cxx_flags="${cxx_flags:+${cxx_flags} }${flag}" ;; \
+            esac; \
           done; \
           clear_cached=true; \
         fi; \
@@ -663,7 +667,7 @@ _build-custom mode="" san="" verbose="" no_warnings="false" cxx_flags="":
     @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; clear_cached=false; \
       cache={{ build_dir(mode) }}/CMakeCache.txt; \
       if [[ "${no_warnings}" == true ]]; then \
-        cxx_flags="${cxx_flags:+${cxx_flags} }-Wno-everything"; \
+        cxx_flags="${cxx_flags:+${cxx_flags} }-Wno-everything -Wl,--no-warnings"; \
       elif [[ -z "${cxx_flags}" && -f "${cache}" ]]; then \
         cached_flags=""; \
         while IFS= read -r line; do \
@@ -673,7 +677,10 @@ _build-custom mode="" san="" verbose="" no_warnings="false" cxx_flags="":
         done < "${cache}"; \
         if [[ " ${cached_flags} " == *" -Wno-everything "* ]]; then \
           for flag in ${cached_flags}; do \
-            [[ "${flag}" == "-Wno-everything" ]] || cxx_flags="${cxx_flags:+${cxx_flags} }${flag}"; \
+            case "${flag}" in \
+              -Wno-everything|-Wl,--no-warnings) ;; \
+              *) cxx_flags="${cxx_flags:+${cxx_flags} }${flag}" ;; \
+            esac; \
           done; \
           clear_cached=true; \
         fi; \

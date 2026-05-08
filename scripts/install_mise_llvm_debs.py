@@ -34,7 +34,7 @@ LLVM_PACKAGE_NAMES = (
     "bolt-23",
 )
 DEBIAN_BASE_URL = "https://deb.debian.org/debian"
-PACKAGE_SET_REVISION = "4"
+PACKAGE_SET_REVISION = "5"
 
 PINNED_DEBIAN_PACKAGES = (
     (
@@ -339,6 +339,27 @@ def install_runtime_library(source_dir: pathlib.Path, runtime_dir: pathlib.Path,
         target.symlink_to(os.path.relpath(source, runtime_dir))
 
 
+# Debian's `strip` invocation on `libclang-rt-23-dev` clears `sh_link` on the
+# `SHT_LLVM_ADDRSIG` sections embedded in every compiler-rt archive (upstream
+# llvm/llvm-project#98354). lld then warns once per affected member when
+# `--icf=safe` runs against compiler-rt. Removing the broken section silences
+# the warning and is a no-op for ICF (lld treats absent addrsig conservatively).
+def strip_compiler_rt_addrsig(root: pathlib.Path) -> None:
+    objcopy = root / LLVM_BIN_DIR / "llvm-objcopy"
+    if not objcopy.exists():
+        raise SystemExit(f"missing llvm-objcopy: {objcopy}")
+    rt_dir = root / "usr" / "lib" / "llvm-23" / "lib" / "clang" / "23" / "lib" / "linux"
+    archives = sorted(rt_dir.glob("*.a"))
+    if not archives:
+        return
+    print(f"strip .llvm_addrsig from {len(archives)} compiler-rt archives", flush=True)
+    for archive in archives:
+        subprocess.run(
+            [str(objcopy), "--remove-section=.llvm_addrsig", str(archive)],
+            check=True,
+        )
+
+
 def install_runtime_libraries(root: pathlib.Path) -> None:
     source_dir = root / "usr" / "lib" / "x86_64-linux-gnu"
     runtime_dir = root / "runtime" / "lib"
@@ -475,6 +496,7 @@ def main() -> int:
 
     install_runtime_libraries(root)
     install_wrappers(root)
+    strip_compiler_rt_addrsig(root)
     (root / "VERSION").write_text(stamp_version + "\n", encoding="utf-8")
 
     subprocess.run([str(root / "bin" / "clang++"), "--version"], check=True)
