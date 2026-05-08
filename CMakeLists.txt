@@ -251,6 +251,11 @@ if (NOT CAT_USE_SHARED AND NOT CAT_USE_SANITIZERS)
     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-static>"
     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-Wl,--no-pie>"
   )
+  # Some code, such as `thread_local` initialization, depends on this.
+  list(
+    APPEND CAT_CXX_FLAGS_ESSENTIAL
+    "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-DCAT_STATIC_LINKED>"
+  )
 endif()
 
 list(

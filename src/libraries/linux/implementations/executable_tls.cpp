@@ -78,7 +78,7 @@ install_executable_tls_image_at_thread_pointer(
 // If `thread_local` storage is enabled, `mmap()` a buffer of either
 // the link-time determined size or the user's hard-coded
 // `CAT_THREAD_LOCAL_SIZE`.
-[[gnu::no_stack_protector, disable_sanitizer_instrumentation]]
+[[gnu::no_stack_protector, clang::disable_sanitizer_instrumentation]]
 void
 init_parent_process_tls() {
 #ifdef CAT_THREAD_LOCAL_SIZE

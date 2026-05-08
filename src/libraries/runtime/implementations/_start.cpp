@@ -48,11 +48,14 @@ call_main()
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
 #endif
-#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
+#if defined(CAT_STATIC_LINKED) \
+   && (!defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0)
    // Set up `%fs` so the parent process can access `thread_local` values. Must
    // run before `call_static_constructors` because a constructor body
    // could touch a `thread_local`. The buffer is intentionally leaked
-   // (kernel reclaims at `_exit`).
+   // (kernel reclaims at `_exit`). Only emitted under static, non-PIE
+   // links where no dynamic loader has set `%fs` for us first.
+   // `CAT_STATIC_LINKED` is set by the top-level `CMakeLists.txt`.
    nix::detail::init_parent_process_tls();
 #endif
 #ifndef CAT_NO_STATIC_CONSTRUCTORS
