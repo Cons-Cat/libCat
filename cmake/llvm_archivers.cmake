@@ -3,9 +3,9 @@
 
 # LLVM archiver / ranlib selection.
 #
-# `libcat.a` is a bitcode archive whenever LTO is on (see `-flto=auto` /
-# `-flto=thin` in the top-level CMakeLists), so the archiver and ranlib must
-# both understand LLVM bitcode. The same archive is what `clang-repl` loads to
+# `libcat.a` is a bitcode archive whenever LTO is on (see `-flto=auto` in
+# the top-level CMakeLists), so the archiver and ranlib must both understand
+# LLVM bitcode. The same archive is what `clang-repl` loads to
 # pull libCat's out-of-line implementations into its JIT session, and that path
 # likewise needs a valid bitcode symbol table. GNU `ar` without the gold plugin
 # silently drops those indices, leaving an archive that neither the LTO linker

@@ -75,8 +75,8 @@ target_compile_options(cat-impl-shared
     $<TARGET_PROPERTY:cat,INTERFACE_COMPILE_OPTIONS>
   PRIVATE
     ${CAT_CXX_FLAGS_INTERNAL}
-    # Override `-flto=auto`/`-flto=thin` from `CAT_CXX_FLAGS_INTERNAL` so
-    # LLD does not internalise the public API at link time.
+    # Override `-flto=auto` from `CAT_CXX_FLAGS_INTERNAL` so LLD does not
+    # internalise the public API at link time.
     -fno-lto
     # Release-without-sanitizers adds `-fvisibility=hidden`
     # `-fvisibility-inlines-hidden` (in the top-level CMakeLists, alongside
