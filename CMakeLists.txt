@@ -102,7 +102,6 @@ list(
   -mlzcnt
   -mbmi
   -mbmi2
-  -mfsgsbase
 )
 
 list(
