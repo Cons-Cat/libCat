@@ -7,5 +7,4 @@ extern "C" [[noreturn]]
 void
 cat::__stack_chk_fail() {
    cat::exit(1);
-   __builtin_unreachable();
 }

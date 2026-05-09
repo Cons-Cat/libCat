@@ -42,14 +42,35 @@ align_stack_pointer_32() {
 
 extern "C" [[noreturn]]
 void
+// NOLINTNEXTLINE
 __stack_chk_fail();
 
 extern "C" void
+// NOLINTNEXTLINE
 __cxa_atexit(void (*p_invocable)(void*), void* p_arg, void* p_dso_handle);
 
 extern "C" [[gnu::used]]
 void
+// NOLINTNEXTLINE
 __cxa_pure_virtual();
+
+// Itanium C++ ABI 3.3.2 thread-safe static initialisation. The compiler
+// emits a fast `if (guard_byte_0 == 0)` check at the call site, then
+// only calls `__cxa_guard_acquire` when the static hasn't been
+// initialised yet. The guard is a 64-bit object whose byte 0 tracks
+// "init complete" and whose byte 1 we use as a spin lock.
+extern "C" [[nodiscard]]
+auto
+// NOLINTNEXTLINE
+__cxa_guard_acquire(cat::uword* p_guard) -> int;
+
+extern "C" void
+// NOLINTNEXTLINE
+__cxa_guard_release(cat::uword* p_guard);
+
+extern "C" void
+// NOLINTNEXTLINE
+__cxa_guard_abort(cat::uword* p_guard);
 
 class jmp_buffer {
    // This buffer layout should vary by all ISAs.
@@ -57,10 +78,10 @@ class jmp_buffer {
  private:
    // %rbx, %rbp, %r12, %r13, %r14, %r15.
    [[maybe_unused]]
-   unsigned long m_registers[6];
+   cat::uword m_registers[6];
    // %rsp:
    [[maybe_unused]]
-   unsigned long m_stack_pointer;
+   cat::uword m_stack_pointer;
 };
 
 [[gnu::naked, gnu::returns_twice]]
@@ -73,19 +94,11 @@ longjmp(jmp_buffer& jump_point, int8 return_value);
 
 }  // namespace cat
 
+// NOLINTNEXTLINE
 inline void* __dso_handle = nullptr;
 
 extern "C" [[gnu::used]]
 inline void
+// NOLINTNEXTLINE
 __cxx_global_var_init() {
-}
-
-extern "C" [[gnu::used]]
-inline void
-__cxa_guard_acquire() {
-}
-
-extern "C" [[gnu::used]]
-inline void
-__cxa_guard_release() {
 }
