@@ -1,0 +1,816 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/array>
+#include <cat/string>
+#include <cat/utility>
+
+// `$simd_switch` is a SIMD variant selector. Entries are declared by
+// `$abi(arch, body)` and dispatched at runtime. The best-fitting ABI is
+// selected at runtime in constant time. A `default:` case is required when an
+// ISA baseline is not provided. It runs when no `$abi` entry otherwise matches.
+// `cat::` namespace qualification MUST NOT be used within `$abi` bodies!
+//
+// `$abi(ssse3, ...)` and `$abi(avx2, ...)` in any order, `avx2` still
+// wins on a CPU that supports it.
+//
+//    int result = $simd_switch(
+//       $abi(avx512,
+//          int8x_ v = simd_iota<int8x_>();
+//          return v.sum(); // 7! = 5040
+//       ),
+//       $abi((avx2, sse4_2),        // multi-arch. one body per arch.
+//          int8x_ v = simd_iota<int8x_>();
+//          return v.sum(); // 3! or 1! = 6 or 1
+//       ),
+//       default: cat::simd_iota<cat::int8x2>().sum(); // SSE2, so 1! = 1
+//    );
+//
+// Each `$abi(arch, ...)` body is wrapped in a `[&]`-capturing lambda
+// annotated with `[[gnu::target(...)]]` and an implicit
+// `using namespace ::cat::detail::simd_[arch]` that shadows `simd_abi::native`,
+// `deduce`, and `[type][sz]x_` (e.g. `int8x_`) so that most SIMD code
+// compiles with this ABI selector. Because the lambda is constructed and
+// invoked in place at the dispatch site, it can capture surrounding locals
+// without needing `std::function`-style type erasure. The `default:`
+// clause is emitted verbatim into the surrounding switch body, so its
+// statements can read and write the same captures.
+//
+// Compile-time diagnostics enforce that:
+//   * the last argument is a `default:` clause OR one of the listed
+//     `$abi(arch, ...)` entries has `CAT_PRI_<arch> <= CAT_BASELINE_PRI`
+//     (i.e. the build's `-m<arch>` baseline statically guarantees that
+//     arch is supported on every host capable of running the binary, so
+//     no fallback is reachable).
+//   * at most one `default:` clause is provided.
+//   * no two entries share the same arch tag.
+//
+// Adding support for a new arch only requires defining `CAT_TGT_<arch>`,
+// `CAT_SUP_<arch>`, `CAT_PRI_<arch>` macros below and an (optionally empty)
+// `cat::detail::simd_<arch>` namespace.
+//
+// `<cat/simd_dispatch>` is intentionally *not* re-included by `<cat/simd>`,
+// because pulling `<cat/array>` and `<cat/string>` mid-`<cat/simd>` parse
+// would precede the default `idx fixed_extent` forward-declaration of
+// `cat::span` in `<cat/memory>` and break `<cat/container>`. Include it
+// explicitly after `<cat/simd>`.
+//
+// The implementation of this macro is unfortunately complex. But the value
+// of this feature is huge, and there are no elegant implementations for it in
+// C++ today.
+
+namespace cat::detail {
+
+// Per-arch lookup namespaces. These are extension points. Helpers placed in
+// `cat::detail::simd_<arch>` become visible inside the matching `$abi(arch,
+// ...)` body via the macro-injected `using namespace`. These must match the
+// arch identifiers accepted by `[[gnu::target(arch)]]`.
+
+namespace simd_avx512 {}  // namespace simd_avx512
+
+namespace simd_avx2 {}  // namespace simd_avx2
+
+namespace simd_avx {}  // namespace simd_avx
+
+namespace simd_sse4_2 {}  // namespace simd_sse4_2
+
+namespace simd_sse4_1 {}  // namespace simd_sse4_1
+
+namespace simd_ssse3 {}  // namespace simd_ssse3
+
+namespace simd_sse2 {}  // namespace simd_sse2
+
+// Compile-time-only metadata for one entry. There is no function pointer
+// here, because each `$abi` body is invoked inline at the dispatch site,
+// not stored. That is what lets `$abi` lambdas use `[&]` capture without
+// pulling in a `copyable_function`-style type-erased callable.
+struct simd_dispatch_meta {
+   str_view arch;  // empty string indicates the default fallback.
+   int4 priority;  // -1 indicates the default fallback.
+};
+
+template <idx n>
+consteval auto
+simd_dispatch_last_is_default(array<simd_dispatch_meta, n> const& meta)
+   -> bool {
+   if constexpr (n == 0u) {
+      return false;
+   } else {
+      return meta[idx(n - 1u)].arch.size() == 0u;
+   }
+}
+
+template <idx n>
+consteval auto
+simd_dispatch_default_count(array<simd_dispatch_meta, n> const& meta) -> idx {
+   idx defaults = 0u;
+   for (auto const& entry : meta) {
+      if (entry.arch.size() == 0u) {
+         ++defaults;
+      }
+   }
+   return defaults;
+}
+
+template <idx n>
+consteval auto
+simd_dispatch_has_duplicate_arch(array<simd_dispatch_meta, n> const& meta)
+   -> bool {
+   for (idx i = 0u; i < n; ++i) {
+      for (idx j = i + 1u; j < n; ++j) {
+         if (meta[i].arch.size() != 0u && meta[i].arch == meta[j].arch) {
+            return true;
+         }
+      }
+   }
+   return false;
+}
+
+// True when at least one entry's priority is at or below the build baseline
+// (e.g. `$abi(sse2, ...)` against an x86_64 baseline of 40, or
+// `$abi(avx2, ...)` against a `-mavx2` baseline of 80). When this holds, the
+// runtime `__builtin_cpu_supports("<arch>")` predicate for that entry must
+// return true on any host capable of executing the binary. The binary already
+// uses unconditional `<arch>` instructions everywhere else, so the dispatch
+// loop is guaranteed to find a match before reaching its
+// `__builtin_unreachable()` tail. That is what lets `$simd_switch` accept
+// callers with no trailing `default:` clause.
+template <idx n>
+consteval auto
+simd_dispatch_baseline_covers(array<simd_dispatch_meta, n> const& meta,
+                              int baseline_priority) -> bool {
+   for (auto const& entry : meta) {
+      if (entry.priority != -1 && entry.priority <= baseline_priority) {
+         return true;
+      }
+   }
+   return false;
+}
+
+// Get the permutation of source-position indices that orders entries
+// by descending priority (the default lambda's priority is `-1`, so it
+// always lands at the tail). The runtime selector walks this permutation
+// instead of the raw source order, which is what makes `$simd_switch` dispatch
+// independent of the user's source ordering of `$abi(...)` entries.
+template <idx n>
+consteval auto
+simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
+   -> array<idx, n> {
+   array<idx, n> permutation{};
+   for (idx i = 0u; i < n; ++i) {
+      permutation[i] = i;
+   }
+
+   // Bubble-sort the ABI entries.
+   for (idx i = 0u; i < n; ++i) {
+      idx best = i;
+      for (idx j = i + 1u; j < n; ++j) {
+         if (meta[permutation[j]].priority > meta[permutation[best]].priority) {
+            best = j;
+         }
+      }
+
+      if (best != i) {
+         idx const swap = permutation[i];
+         permutation[i] = permutation[best];
+         permutation[best] = swap;
+      }
+   }
+
+   return permutation;
+}
+
+}  // namespace cat::detail
+
+// Per-arch hooks. Each supported arch defines:
+//    CAT_TGT_<arch>   GNU target attribute string (comma-separated features).
+//    CAT_SUP_<arch>   captureless lambda returning bool (runtime support).
+//    CAT_PRI_<arch>   integer priority. higher is preferred.
+// Adding a new arch is purely additive here.
+//
+// `CAT_TGT_<arch>` and `CAT_PRI_<arch>` look like `constexpr` constants to
+// clang-tidy's `cppcoreguidelines-macro-usage` check, but they have to stay
+// macros so `CAT_CONCAT(CAT_TGT_, arch)` / `CAT_CONCAT(CAT_PRI_, arch)`
+// can build their names by token paste, `[[gnu::target("...")]]` gets a
+// literal at the call site, and `CAT_BASELINE_PRI` arithmetic works inside
+// `#if`. Suppress the check for the whole block.
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#define CAT_TGT_avx512 "avx512f,avx512cd,avx512bw,avx512dq,avx512vl"
+#define CAT_SUP_avx512                              \
+   []() -> bool {                                   \
+      return __builtin_cpu_supports("avx512f")      \
+             && __builtin_cpu_supports("avx512cd")  \
+             && __builtin_cpu_supports("avx512bw")  \
+             && __builtin_cpu_supports("avx512dq")  \
+             && __builtin_cpu_supports("avx512vl"); \
+   }
+#define CAT_PRI_avx512 90
+
+#define CAT_TGT_avx2 "avx2"
+#define CAT_SUP_avx2                         \
+   []() -> bool {                            \
+      return __builtin_cpu_supports("avx2"); \
+   }
+#define CAT_PRI_avx2 80
+
+#define CAT_TGT_avx "avx"
+#define CAT_SUP_avx                         \
+   []() -> bool {                           \
+      return __builtin_cpu_supports("avx"); \
+   }
+#define CAT_PRI_avx 70
+
+#define CAT_TGT_sse4_2 "sse4.2"
+#define CAT_SUP_sse4_2                         \
+   []() -> bool {                              \
+      return __builtin_cpu_supports("sse4.2"); \
+   }
+#define CAT_PRI_sse4_2 60
+
+#define CAT_TGT_sse4_1 "sse4.1"
+#define CAT_SUP_sse4_1                         \
+   []() -> bool {                              \
+      return __builtin_cpu_supports("sse4.1"); \
+   }
+#define CAT_PRI_sse4_1 55
+
+#define CAT_TGT_ssse3 "ssse3"
+#define CAT_SUP_ssse3                         \
+   []() -> bool {                             \
+      return __builtin_cpu_supports("ssse3"); \
+   }
+#define CAT_PRI_ssse3 50
+
+#define CAT_TGT_sse2 "sse2"
+#define CAT_SUP_sse2                         \
+   []() -> bool {                            \
+      return __builtin_cpu_supports("sse2"); \
+   }
+#define CAT_PRI_sse2 40
+// NOLINTEND(cppcoreguidelines-macro-usage)
+
+// File baseline tier inferred from compiler-defined `__<feature>__` macros.
+// `-mavx2` defines `__AVX2__`, `-mavx` defines `__AVX__`, etc. The highest
+// matching tier wins. `0` is "below sse2".
+//
+// The numeric values mirror `CAT_PRI_<arch>` so they're directly comparable.
+#if defined(__AVX512F__) && defined(__AVX512CD__) && defined(__AVX512BW__) \
+   && defined(__AVX512DQ__) && defined(__AVX512VL__)
+#define CAT_BASELINE_PRI 90
+#elifdef __AVX2__
+#define CAT_BASELINE_PRI 80
+#elifdef __AVX__
+#define CAT_BASELINE_PRI 70
+#elifdef __SSE4_2__
+#define CAT_BASELINE_PRI 60
+#elifdef __SSE4_1__
+#define CAT_BASELINE_PRI 55
+#elifdef __SSSE3__
+#define CAT_BASELINE_PRI 50
+#elifdef __SSE2__
+#define CAT_BASELINE_PRI 40
+#else
+#define CAT_BASELINE_PRI 0
+#endif
+
+// `$abi(arch, ...)` entries below the build baseline are silently kept,
+// not warned about. Library authors typically want to declare entries for
+// every arch they care about (e.g. `$abi(sse2, ...)` and `$abi(avx2, ...)`),
+// even though a downstream user that builds them with `-mavx2` will never
+// reach the SSE2 entry at runtime. Treating those entries as warnings would
+// punish library code for being portable, so the dispatch silently picks
+// the highest-priority supported arch and ignores the rest.
+//
+// Note: Clang treats `[[gnu::target("X")]]` as ADDITIVE. It adds
+// features but never restricts them. So an `$abi(sse2, ...)` in a TU
+// compiled with `-mavx2` baseline still gets AVX2-class codegen. The
+// per-arch dispatch table just routes around that entry on hosts that meet
+// a higher tier. Lower the build baseline if true per-arch codegen matters.
+
+// Preprocessor plumbing.
+#define CAT_CONCAT(a, b) CAT_CONCAT_(a, b)
+#define CAT_CONCAT_(a, b) a##b
+
+#define CAT_UNPAREN(...) CAT_UNPAREN_ __VA_ARGS__
+#define CAT_UNPAREN_(...) __VA_ARGS__
+
+#define CAT_CHECK_N(x, n, ...) n
+#define CAT_CHECK(...) CAT_CHECK_N(__VA_ARGS__, 0, )
+#define CAT_PROBE(x) x, 1,
+#define CAT_IS_PAREN(x) CAT_CHECK(CAT_IS_PAREN_PROBE x)
+#define CAT_IS_PAREN_PROBE(...) CAT_PROBE(~)
+
+// `$abi(arch, body)` expands to a paren-wrapped `(arch, body)` tuple. For
+// multi-arch `$abi((a, b), body)` it expands to multiple tuples
+// comma-separated, so each arch becomes its own top-level argument to the
+// surrounding `$simd_switch(...)`. The body text is duplicated once per arch.
+#define CAT_SIMD_ABI(first, ...) \
+   CAT_CONCAT(CAT_SIMD_ABI_, CAT_IS_PAREN(first))(first, __VA_ARGS__)
+
+// `CAT_SIMD_ABI` should never be `#undef`'d. The redefinable macro
+// `$abi` exists to make this macro more ergonomic.
+#pragma clang final(CAT_SIMD_ABI)
+
+#define $abi CAT_SIMD_ABI
+
+#define CAT_SIMD_ABI_0(arch, ...) CAT_MK_TUPLE(arch, __VA_ARGS__)
+#define CAT_SIMD_ABI_1(archs, ...) \
+   CAT_SIMD_ABI_DISPATCH archs(archs, __VA_ARGS__)
+
+#define CAT_SIMD_ABI_DISPATCH(...) \
+   CAT_CONCAT(CAT_SIMD_ABI_N_, CAT_GET_9TH(__VA_ARGS__, 8, 7, 6, 5, 4, 3, 2, 1))
+#define CAT_GET_9TH(_1, _2, _3, _4, _5, _6, _7, _8, N, ...) N
+
+// `CAT_SIMD_INVOKE_N` expands its variadic before substituting it into
+// `M(...)`. Without it, `CAT_UNPAREN(archs)` would be substituted as a single
+// arg holding the comma-separated archs, instead of splitting them across
+// `CAT_MK_TUPLE_N`'s parameters.
+#define CAT_SIMD_INVOKE_N(M, ...) M(__VA_ARGS__)
+#define CAT_SIMD_ABI_N_1(archs, ...) \
+   CAT_SIMD_INVOKE_N(CAT_MK_TUPLE_1, CAT_UNPAREN(archs), __VA_ARGS__)
+#define CAT_SIMD_ABI_N_2(archs, ...) \
+   CAT_SIMD_INVOKE_N(CAT_MK_TUPLE_2, CAT_UNPAREN(archs), __VA_ARGS__)
+#define CAT_SIMD_ABI_N_3(archs, ...) \
+   CAT_SIMD_INVOKE_N(CAT_MK_TUPLE_3, CAT_UNPAREN(archs), __VA_ARGS__)
+#define CAT_SIMD_ABI_N_4(archs, ...) \
+   CAT_SIMD_INVOKE_N(CAT_MK_TUPLE_4, CAT_UNPAREN(archs), __VA_ARGS__)
+#define CAT_SIMD_ABI_N_5(archs, ...) \
+   CAT_SIMD_INVOKE_N(CAT_MK_TUPLE_5, CAT_UNPAREN(archs), __VA_ARGS__)
+#define CAT_SIMD_ABI_N_6(archs, ...) \
+   CAT_SIMD_INVOKE_N(CAT_MK_TUPLE_6, CAT_UNPAREN(archs), __VA_ARGS__)
+#define CAT_SIMD_ABI_N_7(archs, ...) \
+   CAT_SIMD_INVOKE_N(CAT_MK_TUPLE_7, CAT_UNPAREN(archs), __VA_ARGS__)
+#define CAT_SIMD_ABI_N_8(archs, ...) \
+   CAT_SIMD_INVOKE_N(CAT_MK_TUPLE_8, CAT_UNPAREN(archs), __VA_ARGS__)
+
+#define CAT_MK_TUPLE(arch, ...) (arch, __VA_ARGS__)
+
+#define CAT_MK_TUPLE_1(a, ...) CAT_MK_TUPLE(a, __VA_ARGS__)
+
+#define CAT_MK_TUPLE_2(a, b, ...) \
+   CAT_MK_TUPLE(a, __VA_ARGS__), CAT_MK_TUPLE(b, __VA_ARGS__)
+
+#define CAT_MK_TUPLE_3(a, b, c, ...)                           \
+   CAT_MK_TUPLE(a, __VA_ARGS__), CAT_MK_TUPLE(b, __VA_ARGS__), \
+      CAT_MK_TUPLE(c, __VA_ARGS__)
+
+#define CAT_MK_TUPLE_4(a, b, c, d, ...)                        \
+   CAT_MK_TUPLE(a, __VA_ARGS__), CAT_MK_TUPLE(b, __VA_ARGS__), \
+      CAT_MK_TUPLE(c, __VA_ARGS__), CAT_MK_TUPLE(d, __VA_ARGS__)
+
+#define CAT_MK_TUPLE_5(a, b, c, d, e, ...)                        \
+   CAT_MK_TUPLE(a, __VA_ARGS__), CAT_MK_TUPLE(b, __VA_ARGS__),    \
+      CAT_MK_TUPLE(c, __VA_ARGS__), CAT_MK_TUPLE(d, __VA_ARGS__), \
+      CAT_MK_TUPLE(e, __VA_ARGS__)
+
+#define CAT_MK_TUPLE_6(a, b, c, d, e, f, ...)                     \
+   CAT_MK_TUPLE(a, __VA_ARGS__), CAT_MK_TUPLE(b, __VA_ARGS__),    \
+      CAT_MK_TUPLE(c, __VA_ARGS__), CAT_MK_TUPLE(d, __VA_ARGS__), \
+      CAT_MK_TUPLE(e, __VA_ARGS__), CAT_MK_TUPLE(f, __VA_ARGS__)
+
+#define CAT_MK_TUPLE_7(a, b, c, d, e, f, g, ...)                  \
+   CAT_MK_TUPLE(a, __VA_ARGS__), CAT_MK_TUPLE(b, __VA_ARGS__),    \
+      CAT_MK_TUPLE(c, __VA_ARGS__), CAT_MK_TUPLE(d, __VA_ARGS__), \
+      CAT_MK_TUPLE(e, __VA_ARGS__), CAT_MK_TUPLE(f, __VA_ARGS__), \
+      CAT_MK_TUPLE(g, __VA_ARGS__)
+
+#define CAT_MK_TUPLE_8(a, b, c, d, e, f, g, h, ...)               \
+   CAT_MK_TUPLE(a, __VA_ARGS__), CAT_MK_TUPLE(b, __VA_ARGS__),    \
+      CAT_MK_TUPLE(c, __VA_ARGS__), CAT_MK_TUPLE(d, __VA_ARGS__), \
+      CAT_MK_TUPLE(e, __VA_ARGS__), CAT_MK_TUPLE(f, __VA_ARGS__), \
+      CAT_MK_TUPLE(g, __VA_ARGS__), CAT_MK_TUPLE(h, __VA_ARGS__)
+
+// META pass extracts arch + priority from each entry. `(arch, body)` tuples
+// (from `$abi`) yield a populated `simd_dispatch_meta`. Bare lambdas (the
+// default) yield the empty `("", -1)` sentinel.
+#define CAT_META_ENTRY(x) CAT_CONCAT(CAT_META_, CAT_IS_PAREN(x))(x)
+#define CAT_META_0(x) ::cat::detail::simd_dispatch_meta{"", -1}
+#define CAT_META_1(x) CAT_META_FROM_TUPLE x
+#define CAT_META_FROM_TUPLE(arch, ...)  \
+   ::cat::detail::simd_dispatch_meta {  \
+      #arch, CAT_CONCAT(CAT_PRI_, arch) \
+   }
+
+// SUPPORT pass emits one captureless lambda per entry, decayed to a
+// `bool(*)()` so all entries fit in the same `cat::array`. `(arch, body)`
+// tuples reuse the per-arch `CAT_SUP_<arch>` predicate; the bare default
+// lambda gets a trivial always-supported predicate. The selector reads
+// this table indirectly via the priority permutation, so an `if`-chain
+// over source order is no longer enough.
+#define CAT_SUP_ENTRY(x) CAT_CONCAT(CAT_SUP_E_, CAT_IS_PAREN(x))(x)
+#define CAT_SUP_E_0(x) \
+   (+[]() -> bool {    \
+      return true;     \
+   })
+#define CAT_SUP_E_1(x) CAT_SUP_FROM_TUPLE x
+#define CAT_SUP_FROM_TUPLE(arch, ...) (+CAT_CONCAT(CAT_SUP_, arch))
+
+// SIMD_DISPATCH pass emits one switch case per entry. `(arch, body)` tuples
+// become:
+//    `case INDEX: return [&] [[gnu::target(...)]] { body }();`
+//
+// Inside the body, the arch namespace's `native_simd` / `deduce_simd` /
+// etc. aliases must shadow `cat::arithmetic`'s defaults so the user
+// writes portable names that resolve to arch-pinned types. A bare
+// `using namespace simd_<arch>` is not enough. The `inline namespace`
+// arithmetic aliases tie with the using-directive's contributions and
+// the lookup is ambiguous. `CAT_SIMD_ARCH_USINGS(NS)` opens the arch
+// namespace and then adds a per-name using-declaration for each alias,
+// and those shadow.
+#define CAT_SIMD_DISPATCH_ENTRY(idx, x) \
+   CAT_CONCAT(CAT_SIMD_DISPATCH_, CAT_IS_PAREN(x))(idx, x)
+// Non-paren args are emitted verbatim. The user's trailing `default: ...;`
+// text becomes the switch's default label and statements directly.
+#define CAT_SIMD_DISPATCH_0(idx, x) x
+#define CAT_SIMD_DISPATCH_1(idx, x) \
+   CAT_SIMD_INVOKE_N(CAT_SIMD_DISPATCH_TUPLE_, idx, CAT_UNPAREN(x))
+#define CAT_SIMD_DISPATCH_TUPLE_(idx, arch, ...)                             \
+   case idx:                                                                 \
+      return                                                                 \
+         [&] [[gnu::target(CAT_CONCAT(CAT_TGT_, arch))]] -> decltype(auto) { \
+            CAT_SIMD_ARCH_USINGS(::cat::detail::simd_##arch)                 \
+            __VA_ARGS__                                                      \
+         }();
+
+// Per-alias using-declarations for an arch namespace. The
+// `using namespace NS;` opens the arch namespace for unqualified names that
+// aren't covered by the explicit declarations below. Each `using NS::name;`
+// then shadows `cat::arithmetic`'s same-named alias to break the
+// inline-`namespace` ambiguity tie. Must list every name `CAT_SIMD_ALIASES`
+// declares in `<cat/detail/simd_aliases.hpp>`.
+#define CAT_SIMD_ARCH_USINGS(NS)                                       \
+   using namespace NS;                                                 \
+   /* Family templates. */                                             \
+   using NS::fixed_size_simd;                                          \
+   using NS::fixed_size_simd_mask;                                     \
+   using NS::deduce_simd;                                              \
+   using NS::deduce_simd_mask;                                         \
+   using NS::native_simd;                                              \
+   using NS::native_simd_mask;                                         \
+   using NS::scalar_simd;                                              \
+   using NS::scalar_simd_mask;                                         \
+   using NS::fixed_size_unaligned_simd;                                \
+   using NS::fixed_size_unaligned_simd_mask;                           \
+   using NS::deduce_unaligned_simd;                                    \
+   using NS::deduce_unaligned_simd_mask;                               \
+   using NS::native_unaligned_simd;                                    \
+   using NS::native_unaligned_simd_mask;                               \
+   using NS::compatible_unaligned_simd;                                \
+   using NS::compatible_unaligned_simd_mask;                           \
+   using NS::scalar_unaligned_simd;                                    \
+   using NS::scalar_unaligned_simd_mask;                               \
+   /* Per-element aliases. Mirrors `CAT_SIMD_ALIASES`'s lower half. */ \
+   using NS::int1x2;                                                   \
+   using NS::int1x4;                                                   \
+   using NS::int1x8;                                                   \
+   using NS::int1x16;                                                  \
+   using NS::int1x32;                                                  \
+   using NS::int1x_;                                                   \
+   using NS::uint1x2;                                                  \
+   using NS::uint1x4;                                                  \
+   using NS::uint1x8;                                                  \
+   using NS::uint1x16;                                                 \
+   using NS::uint1x32;                                                 \
+   using NS::uint1x_;                                                  \
+   using NS::int_unalign_1x2;                                          \
+   using NS::int_unalign_1x4;                                          \
+   using NS::int_unalign_1x8;                                          \
+   using NS::int_unalign_1x16;                                         \
+   using NS::int_unalign_1x32;                                         \
+   using NS::int_unalign_1x_;                                          \
+   using NS::uint_unalign_1x2;                                         \
+   using NS::uint_unalign_1x4;                                         \
+   using NS::uint_unalign_1x8;                                         \
+   using NS::uint_unalign_1x16;                                        \
+   using NS::uint_unalign_1x32;                                        \
+   using NS::uint_unalign_1x_;                                         \
+   using NS::char1x16;                                                 \
+   using NS::char1x32;                                                 \
+   using NS::char1x_;                                                  \
+   using NS::char_unalign_1x16;                                        \
+   using NS::char_unalign_1x32;                                        \
+   using NS::char_unalign_1x_;                                         \
+   using NS::int2x2;                                                   \
+   using NS::int2x4;                                                   \
+   using NS::int2x8;                                                   \
+   using NS::int2x16;                                                  \
+   using NS::int2x_;                                                   \
+   using NS::uint2x2;                                                  \
+   using NS::uint2x4;                                                  \
+   using NS::uint2x8;                                                  \
+   using NS::uint2x16;                                                 \
+   using NS::uint2x_;                                                  \
+   using NS::int_unalign_2x2;                                          \
+   using NS::int_unalign_2x4;                                          \
+   using NS::int_unalign_2x8;                                          \
+   using NS::int_unalign_2x16;                                         \
+   using NS::int_unalign_2x_;                                          \
+   using NS::uint_unalign_2x2;                                         \
+   using NS::uint_unalign_2x4;                                         \
+   using NS::uint_unalign_2x8;                                         \
+   using NS::uint_unalign_2x16;                                        \
+   using NS::uint_unalign_2x_;                                         \
+   using NS::int4x2;                                                   \
+   using NS::int4x4;                                                   \
+   using NS::int4x8;                                                   \
+   using NS::int4x_;                                                   \
+   using NS::uint4x2;                                                  \
+   using NS::uint4x4;                                                  \
+   using NS::uint4x8;                                                  \
+   using NS::uint4x_;                                                  \
+   using NS::int_unalign_4x2;                                          \
+   using NS::int_unalign_4x4;                                          \
+   using NS::int_unalign_4x8;                                          \
+   using NS::int_unalign_4x_;                                          \
+   using NS::uint_unalign_4x2;                                         \
+   using NS::uint_unalign_4x4;                                         \
+   using NS::uint_unalign_4x8;                                         \
+   using NS::uint_unalign_4x_;                                         \
+   using NS::int8x2;                                                   \
+   using NS::int8x4;                                                   \
+   using NS::int8x_;                                                   \
+   using NS::uint8x2;                                                  \
+   using NS::uint8x4;                                                  \
+   using NS::uint8x_;                                                  \
+   using NS::int_unalign_8x2;                                          \
+   using NS::int_unalign_8x4;                                          \
+   using NS::int_unalign_8x_;                                          \
+   using NS::uint_unalign_8x2;                                         \
+   using NS::uint_unalign_8x4;                                         \
+   using NS::uint_unalign_8x_;                                         \
+   using NS::float4x2;                                                 \
+   using NS::float4x4;                                                 \
+   using NS::float4x8;                                                 \
+   using NS::float4x_;                                                 \
+   using NS::float8x2;                                                 \
+   using NS::float8x4;                                                 \
+   using NS::float8x_;                                                 \
+   using NS::float_unalign_4x2;                                        \
+   using NS::float_unalign_4x4;                                        \
+   using NS::float_unalign_4x8;                                        \
+   using NS::float_unalign_4x_;                                        \
+   using NS::float_unalign_8x2;                                        \
+   using NS::float_unalign_8x4;                                        \
+   using NS::float_unalign_8x_;                                        \
+   using NS::float4_fastx2;                                            \
+   using NS::float4_fastx4;                                            \
+   using NS::float4_fastx8;                                            \
+   using NS::float4_fastx_;                                            \
+   using NS::float8_fastx2;                                            \
+   using NS::float8_fastx4;                                            \
+   using NS::float8_fastx_;                                            \
+   using NS::float_fast_unalign_4x2;                                   \
+   using NS::float_fast_unalign_4x4;                                   \
+   using NS::float_fast_unalign_4x8;                                   \
+   using NS::float_fast_unalign_4x_;                                   \
+   using NS::float_fast_unalign_8x2;                                   \
+   using NS::float_fast_unalign_8x4;                                   \
+   using NS::float_fast_unalign_8x_;
+#pragma clang final(CAT_SIMD_ARCH_USINGS)
+
+// Variadic FOR_EACH (up to 16 entries). `_COMMA` joins outputs with commas
+// (used to build the meta `cat::array` initializer). `_INDEXED` invokes
+// `M(index, entry)` for each entry with no separator (used to build the
+// selector if-chain and the switch cases).
+#define CAT_FE_C_1(M, x) M(x)
+#define CAT_FE_C_2(M, x, ...) M(x), CAT_FE_C_1(M, __VA_ARGS__)
+#define CAT_FE_C_3(M, x, ...) M(x), CAT_FE_C_2(M, __VA_ARGS__)
+#define CAT_FE_C_4(M, x, ...) M(x), CAT_FE_C_3(M, __VA_ARGS__)
+#define CAT_FE_C_5(M, x, ...) M(x), CAT_FE_C_4(M, __VA_ARGS__)
+#define CAT_FE_C_6(M, x, ...) M(x), CAT_FE_C_5(M, __VA_ARGS__)
+#define CAT_FE_C_7(M, x, ...) M(x), CAT_FE_C_6(M, __VA_ARGS__)
+#define CAT_FE_C_8(M, x, ...) M(x), CAT_FE_C_7(M, __VA_ARGS__)
+#define CAT_FE_C_9(M, x, ...) M(x), CAT_FE_C_8(M, __VA_ARGS__)
+#define CAT_FE_C_10(M, x, ...) M(x), CAT_FE_C_9(M, __VA_ARGS__)
+#define CAT_FE_C_11(M, x, ...) M(x), CAT_FE_C_10(M, __VA_ARGS__)
+#define CAT_FE_C_12(M, x, ...) M(x), CAT_FE_C_11(M, __VA_ARGS__)
+#define CAT_FE_C_13(M, x, ...) M(x), CAT_FE_C_12(M, __VA_ARGS__)
+#define CAT_FE_C_14(M, x, ...) M(x), CAT_FE_C_13(M, __VA_ARGS__)
+#define CAT_FE_C_15(M, x, ...) M(x), CAT_FE_C_14(M, __VA_ARGS__)
+#define CAT_FE_C_16(M, x, ...) M(x), CAT_FE_C_15(M, __VA_ARGS__)
+
+#define CAT_FE_I_1(M, x0) M(0, x0)
+#define CAT_FE_I_2(M, x0, x1) M(0, x0) M(1, x1)
+#define CAT_FE_I_3(M, x0, x1, x2) M(0, x0) M(1, x1) M(2, x2)
+#define CAT_FE_I_4(M, x0, x1, x2, x3) M(0, x0) M(1, x1) M(2, x2) M(3, x3)
+#define CAT_FE_I_5(M, x0, x1, x2, x3, x4) \
+   M(0, x0) M(1, x1) M(2, x2) M(3, x3) M(4, x4)
+#define CAT_FE_I_6(M, x0, x1, x2, x3, x4, x5) \
+   M(0, x0) M(1, x1) M(2, x2) M(3, x3) M(4, x4) M(5, x5)
+#define CAT_FE_I_7(M, x0, x1, x2, x3, x4, x5, x6) \
+   M(0, x0) M(1, x1) M(2, x2) M(3, x3) M(4, x4) M(5, x5) M(6, x6)
+#define CAT_FE_I_8(M, x0, x1, x2, x3, x4, x5, x6, x7) \
+   M(0, x0) M(1, x1) M(2, x2) M(3, x3) M(4, x4) M(5, x5) M(6, x6) M(7, x7)
+#define CAT_FE_I_9(M, x0, x1, x2, x3, x4, x5, x6, x7, x8) \
+   M(0, x0)                                               \
+   M(1, x1) M(2, x2) M(3, x3) M(4, x4) M(5, x5) M(6, x6) M(7, x7) M(8, x8)
+#define CAT_FE_I_10(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) \
+   M(0, x0)                                                    \
+   M(1, x1)                                                    \
+   M(2, x2) M(3, x3) M(4, x4) M(5, x5) M(6, x6) M(7, x7) M(8, x8) M(9, x9)
+#define CAT_FE_I_11(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10) \
+   M(0, x0)                                                         \
+   M(1, x1)                                                         \
+   M(2, x2)                                                         \
+   M(3, x3) M(4, x4) M(5, x5) M(6, x6) M(7, x7) M(8, x8) M(9, x9) M(10, x10)
+#define CAT_FE_I_12(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11) \
+   M(0, x0)                                                              \
+   M(1, x1)                                                              \
+   M(2, x2)                                                              \
+   M(3, x3)                                                              \
+   M(4, x4) M(5, x5) M(6, x6) M(7, x7) M(8, x8) M(9, x9) M(10, x10) M(11, x11)
+#define CAT_FE_I_13(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12) \
+   M(0, x0)                                                                   \
+   M(1, x1)                                                                   \
+   M(2, x2)                                                                   \
+   M(3, x3)                                                                   \
+   M(4, x4)                                                                   \
+   M(5, x5) M(6, x6) M(7, x7) M(8, x8) M(9, x9) M(10, x10) M(11, x11) M(12, x12)
+#define CAT_FE_I_14(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, \
+                    x13)                                                      \
+   M(0, x0)                                                                   \
+   M(1, x1)                                                                   \
+   M(2, x2)                                                                   \
+   M(3, x3)                                                                   \
+   M(4, x4)                                                                   \
+   M(5, x5)                                                                   \
+   M(6, x6)                                                                   \
+   M(7, x7) M(8, x8) M(9, x9) M(10, x10) M(11, x11) M(12, x12) M(13, x13)
+#define CAT_FE_I_15(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, \
+                    x13, x14)                                                 \
+   M(0, x0)                                                                   \
+   M(1, x1)                                                                   \
+   M(2, x2)                                                                   \
+   M(3, x3)                                                                   \
+   M(4, x4)                                                                   \
+   M(5, x5)                                                                   \
+   M(6, x6)                                                                   \
+   M(7, x7)                                                                   \
+   M(8, x8) M(9, x9) M(10, x10) M(11, x11) M(12, x12) M(13, x13) M(14, x14)
+#define CAT_FE_I_16(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, \
+                    x13, x14, x15)                                            \
+   M(0, x0)                                                                   \
+   M(1, x1)                                                                   \
+   M(2, x2)                                                                   \
+   M(3, x3)                                                                   \
+   M(4, x4)                                                                   \
+   M(5, x5)                                                                   \
+   M(6, x6)                                                                   \
+   M(7, x7)                                                                   \
+   M(8, x8)                                                                   \
+   M(9, x9) M(10, x10) M(11, x11) M(12, x12) M(13, x13) M(14, x14) M(15, x15)
+
+#define CAT_GET_FE(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, \
+                   _14, _15, _16, NAME, ...)                               \
+   NAME
+
+#define CAT_FOR_EACH_COMMA(M, ...)                                             \
+   CAT_GET_FE(__VA_ARGS__, CAT_FE_C_16, CAT_FE_C_15, CAT_FE_C_14, CAT_FE_C_13, \
+              CAT_FE_C_12, CAT_FE_C_11, CAT_FE_C_10, CAT_FE_C_9, CAT_FE_C_8,   \
+              CAT_FE_C_7, CAT_FE_C_6, CAT_FE_C_5, CAT_FE_C_4, CAT_FE_C_3,      \
+              CAT_FE_C_2, CAT_FE_C_1)                                          \
+   (M, __VA_ARGS__)
+
+#define CAT_FOR_EACH_INDEXED(M, ...)                                           \
+   CAT_GET_FE(__VA_ARGS__, CAT_FE_I_16, CAT_FE_I_15, CAT_FE_I_14, CAT_FE_I_13, \
+              CAT_FE_I_12, CAT_FE_I_11, CAT_FE_I_10, CAT_FE_I_9, CAT_FE_I_8,   \
+              CAT_FE_I_7, CAT_FE_I_6, CAT_FE_I_5, CAT_FE_I_4, CAT_FE_I_3,      \
+              CAT_FE_I_2, CAT_FE_I_1)                                          \
+   (M, __VA_ARGS__)
+
+// Extract the last argument of a variadic by dispatching on arity. Used by
+// `$simd_switch` to peek at whether the user-supplied trailing entry is a
+// `default:` clause (non-paren) or a `$abi(...)` tuple (paren-wrapped after
+// `$abi` expands). Caps at 16 to match the `CAT_FE_*` family.
+#define CAT_LAST_ARG(...)                                                 \
+   CAT_LAST_ARG_DISPATCH_(__VA_ARGS__, CAT_LAST_OF_16, CAT_LAST_OF_15,    \
+                          CAT_LAST_OF_14, CAT_LAST_OF_13, CAT_LAST_OF_12, \
+                          CAT_LAST_OF_11, CAT_LAST_OF_10, CAT_LAST_OF_9,  \
+                          CAT_LAST_OF_8, CAT_LAST_OF_7, CAT_LAST_OF_6,    \
+                          CAT_LAST_OF_5, CAT_LAST_OF_4, CAT_LAST_OF_3,    \
+                          CAT_LAST_OF_2, CAT_LAST_OF_1)                   \
+   (__VA_ARGS__)
+#define CAT_LAST_ARG_DISPATCH_(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, \
+                               _12, _13, _14, _15, _16, NAME, ...)           \
+   NAME
+#define CAT_LAST_OF_1(_1) _1
+#define CAT_LAST_OF_2(_1, _2) _2
+#define CAT_LAST_OF_3(_1, _2, _3) _3
+#define CAT_LAST_OF_4(_1, _2, _3, _4) _4
+#define CAT_LAST_OF_5(_1, _2, _3, _4, _5) _5
+#define CAT_LAST_OF_6(_1, _2, _3, _4, _5, _6) _6
+#define CAT_LAST_OF_7(_1, _2, _3, _4, _5, _6, _7) _7
+#define CAT_LAST_OF_8(_1, _2, _3, _4, _5, _6, _7, _8) _8
+#define CAT_LAST_OF_9(_1, _2, _3, _4, _5, _6, _7, _8, _9) _9
+#define CAT_LAST_OF_10(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10) _10
+#define CAT_LAST_OF_11(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11) _11
+#define CAT_LAST_OF_12(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12) _12
+#define CAT_LAST_OF_13(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13) \
+   _13
+#define CAT_LAST_OF_14(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, \
+                       _14)                                                    \
+   _14
+#define CAT_LAST_OF_15(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, \
+                       _14, _15)                                               \
+   _15
+#define CAT_LAST_OF_16(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, \
+                       _14, _15, _16)                                          \
+   _16
+
+// `default: __builtin_unreachable();`, but only when the user did NOT
+// already supply a `default:` clause. That holds when the last
+// `$simd_switch` argument is a paren-wrapped `(arch, body)` tuple from
+// `$abi(...)`. The `simd_dispatch_baseline_covers` `static_assert` in
+// `$simd_switch` guarantees that one of the listed entries' runtime
+// predicates always holds, so the switch never actually reaches this
+// synthetic arm. It exists so the optimizer gets an explicit "no other
+// case is possible" hint and so clang-tidy's
+// `bugprone-switch-missing-default-case` doesn't flag the expansion.
+#define CAT_SIMD_SYNTH_DEFAULT(...) \
+   CAT_CONCAT(CAT_SIMD_SYNTH_DEFAULT_, CAT_IS_PAREN(CAT_LAST_ARG(__VA_ARGS__)))
+#define CAT_SIMD_SYNTH_DEFAULT_0  // user-supplied `default:` already present.
+#define CAT_SIMD_SYNTH_DEFAULT_1 \
+   default:                      \
+      __builtin_unreachable();
+
+// SIMD dispatch for different ABIs. See the `simd_dispatch` file masthead
+// comment for API usage. The trailing `default:` clause is the user's
+// own switch-style fallback (verbatim text, not a lambda); it runs when
+// no `$abi(...)` entry's CPU-support check passes. The selector walks
+// arch entries in priority order, never picks the default sentinel
+// (whose `_PRI` is -1), and falls through to the user's `default:` only
+// when every `$abi` entry rejects the host, which can only happen if
+// the file baseline is below all listed archs.
+//
+// `CAT_NO_CPUID` opts a target out of runtime CPU feature detection
+// (see `<cat/cpuid>`), which `$simd_switch` depends on to pick a
+// `$abi(...)` entry. Calling `$simd_switch` in that configuration is a
+// programming error, so the macro expands to a `_Pragma("GCC error ...")`
+// at the call site instead of silently no-oping.
+#ifdef CAT_NO_CPUID
+// `_Pragma` takes a *single* string-literal argument (consumed in translation
+// phase 4). Adjacent-literal concatenation only happens later in phase 6, so
+// keep the message on one line.
+#define CAT_SIMD_SWITCH(...)                                                   \
+   _Pragma("GCC error \"`$simd_switch` is unavailable when `CAT_NO_CPUID` is " \
+           "defined! Re-enable CPUID to use this.\"")
+#else
+#define CAT_SIMD_SWITCH(...)                                                   \
+   ([&]() -> decltype(auto) {                                                  \
+      /* Compile-time entry metadata. The user's trailing `default:` text is   \
+         tracked via a sentinel meta entry (empty arch, priority -1). */       \
+      static constexpr ::cat::array meta{                                      \
+         CAT_FOR_EACH_COMMA(CAT_META_ENTRY, __VA_ARGS__)};                     \
+      static_assert(                                                           \
+         ::cat::detail::simd_dispatch_last_is_default(meta)                    \
+            || ::cat::detail::simd_dispatch_baseline_covers(meta,              \
+                                                            CAT_BASELINE_PRI), \
+         "`$simd_switch` requires a `default:` clause as its last argument, "  \
+         "unless one of the listed `$abi(arch, ...)` entries has "             \
+         "`CAT_PRI_<arch> <= CAT_BASELINE_PRI` (i.e. the build's `-m<arch>` "  \
+         "baseline already guarantees that arch is supported).");              \
+      static_assert(::cat::detail::simd_dispatch_default_count(meta) <= 1u,    \
+                    "`$simd_switch` has multiple `default:` clauses!");        \
+      static_assert(                                                           \
+         !::cat::detail::simd_dispatch_has_duplicate_arch(meta),               \
+         "`$simd_switch` has duplicate target archs! Every `$abi` must be "    \
+         "unique.");                                                           \
+      /* Per-entry CPU-support predicate, decayed to `bool(*)()`. The default  \
+         sentinel (when present) gets a trivial `+[]() -> bool { return true;  \
+         }` predicate, so it is picked last-resort and the switch falls        \
+         through to the user's `default:`. When no `default:` is present, the  \
+         baseline-coverage `static_assert` above guarantees that at least one  \
+         listed `$abi(arch, ...)`'s runtime predicate must return true. */     \
+      static constexpr ::cat::array<bool (*)(), meta.size()>                   \
+         cat_$simd_support_table{                                              \
+            CAT_FOR_EACH_COMMA(CAT_SUP_ENTRY, __VA_ARGS__)};                   \
+      /* Source-index walk order, sorted descending by `_PRI_<arch>`. */       \
+      static constexpr auto cat_$simd_priority_order =                         \
+         ::cat::detail::simd_dispatch_priority_permutation(meta);              \
+      /* `static const` caches the first supported entry. */                   \
+      static ::cat::idx const cat_$simd_selected = []() -> ::cat::idx {        \
+         for (::cat::idx i = 0u; i < cat_$simd_priority_order.size(); ++i) {   \
+            ::cat::idx const source_index = cat_$simd_priority_order[i];       \
+            if (cat_$simd_support_table[source_index]()) {                     \
+               return source_index;                                            \
+            }                                                                  \
+         }                                                                     \
+         __builtin_unreachable();                                              \
+      }();                                                                     \
+      /* `case`s for each `$abi` entry. `CAT_SIMD_SYNTH_DEFAULT` adds an       \
+         implicit `default: __builtin_unreachable();` iff the user omitted     \
+         their own `default:` (the baseline-coverage `static_assert` above     \
+         guarantees the synthetic arm is never reached). */                    \
+      switch (cat_$simd_selected.raw) {                                        \
+         CAT_FOR_EACH_INDEXED(CAT_SIMD_DISPATCH_ENTRY, __VA_ARGS__)            \
+         CAT_SIMD_SYNTH_DEFAULT(__VA_ARGS__)                                   \
+      }                                                                        \
+   }())
+#endif
+
+// `CAT_SIMD_SWITCH` should never be `#undef`'d. The redefinable macro
+// `$simd_switch` exists to make this macro more ergonomic.
+#pragma clang final(CAT_SIMD_SWITCH)
+
+#define $simd_switch CAT_SIMD_SWITCH

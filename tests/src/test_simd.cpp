@@ -4,6 +4,7 @@
 #include <cat/math>
 #include <cat/page_allocator>
 #include <cat/simd>
+#include <cat/simd_dispatch>
 #include <cat/simd_iterator>
 #include <cat/simd_ops>
 #include <cat/tuple>
@@ -11,12 +12,8 @@
 
 #include "../unit_tests.hpp"
 
-using cat::compatible_abi;
-using cat::fixed_size_abi;
 using cat::is_simd_array_like;
-using cat::native_abi;
-using cat::scalar_abi;
-using cat::unaligned_abi;
+namespace simd_abi = cat::simd_abi;
 
 using namespace cat::arithmetic;
 using namespace cat::literals;
@@ -242,7 +239,7 @@ $test(simd_collection) {
 }
 
 $test(simd_size_data_and_mask_size_data) {
-   using int_vec = cat::simd<int, cat::fixed_size_abi<int, 4u>>;
+   using int_vec = cat::simd<int, cat::simd_abi::fixed_size<int, 4u>>;
    int_vec vi = {10, 20, 30, 40};
    cat::verify(int_vec::size() == 4u);
    cat::verify(vi.size() == 4u);
@@ -260,39 +257,39 @@ $test(simd_size_data_and_mask_size_data) {
 }
 
 $test(fixed_size_simd_alignment) {
-   using cat::fixed_size_abi;
    using cat::fixed_size_simd;
    using cat::float4;
    using cat::float8;
    using cat::int4;
    using cat::uword;
+   using cat::simd_abi::fixed_size;
 
    // `x64::avx2_abi` cap is 32 bytes. Alignment is the largest power of two not
    // exceeding `min(size, 32)`, at least `alignof(T)`.
-   static_assert(fixed_size_abi<float4, 1u>::size == 4u);
-   static_assert(fixed_size_abi<float4, 1u>::alignment == 4u);
-   static_assert(fixed_size_abi<float4, 2u>::size == 8u);
-   static_assert(fixed_size_abi<float4, 2u>::alignment == 8u);
-   static_assert(fixed_size_abi<float4, 3u>::size == 12u);
-   static_assert(fixed_size_abi<float4, 3u>::alignment == 8u);
-   static_assert(fixed_size_abi<float4, 4u>::size == 16u);
-   static_assert(fixed_size_abi<float4, 4u>::alignment == 16u);
-   static_assert(fixed_size_abi<float4, 6u>::size == 24u);
-   static_assert(fixed_size_abi<float4, 6u>::alignment == 16u);
-   static_assert(fixed_size_abi<float4, 8u>::size == 32u);
-   static_assert(fixed_size_abi<float4, 8u>::alignment == 32u);
-   static_assert(fixed_size_abi<float4, 16u>::size == 64u);
-   static_assert(fixed_size_abi<float4, 16u>::alignment == 32u);
+   static_assert(simd_abi::fixed_size<float4, 1u>::size == 4u);
+   static_assert(simd_abi::fixed_size<float4, 1u>::alignment == 4u);
+   static_assert(simd_abi::fixed_size<float4, 2u>::size == 8u);
+   static_assert(simd_abi::fixed_size<float4, 2u>::alignment == 8u);
+   static_assert(simd_abi::fixed_size<float4, 3u>::size == 12u);
+   static_assert(simd_abi::fixed_size<float4, 3u>::alignment == 8u);
+   static_assert(simd_abi::fixed_size<float4, 4u>::size == 16u);
+   static_assert(simd_abi::fixed_size<float4, 4u>::alignment == 16u);
+   static_assert(simd_abi::fixed_size<float4, 6u>::size == 24u);
+   static_assert(simd_abi::fixed_size<float4, 6u>::alignment == 16u);
+   static_assert(simd_abi::fixed_size<float4, 8u>::size == 32u);
+   static_assert(simd_abi::fixed_size<float4, 8u>::alignment == 32u);
+   static_assert(simd_abi::fixed_size<float4, 16u>::size == 64u);
+   static_assert(simd_abi::fixed_size<float4, 16u>::alignment == 32u);
 
-   static_assert(fixed_size_abi<float8, 2u>::size == 16u);
-   static_assert(fixed_size_abi<float8, 2u>::alignment == 16u);
-   static_assert(fixed_size_abi<float8, 4u>::size == 32u);
-   static_assert(fixed_size_abi<float8, 4u>::alignment == 32u);
+   static_assert(simd_abi::fixed_size<float8, 2u>::size == 16u);
+   static_assert(simd_abi::fixed_size<float8, 2u>::alignment == 16u);
+   static_assert(simd_abi::fixed_size<float8, 4u>::size == 32u);
+   static_assert(simd_abi::fixed_size<float8, 4u>::alignment == 32u);
 
-   static_assert(fixed_size_abi<int4, 4u>::size == 16u);
-   static_assert(fixed_size_abi<int4, 4u>::alignment == 16u);
-   static_assert(fixed_size_abi<int4, 8u>::size == 32u);
-   static_assert(fixed_size_abi<int4, 8u>::alignment == 32u);
+   static_assert(simd_abi::fixed_size<int4, 4u>::size == 16u);
+   static_assert(simd_abi::fixed_size<int4, 4u>::alignment == 16u);
+   static_assert(simd_abi::fixed_size<int4, 8u>::size == 32u);
+   static_assert(simd_abi::fixed_size<int4, 8u>::alignment == 32u);
 
    static_assert(alignof(fixed_size_simd<float4, 1u>) == 4u);
    static_assert(alignof(fixed_size_simd<float4, 2u>) == 8u);
@@ -310,64 +307,69 @@ $test(fixed_size_simd_alignment) {
 }
 
 $test(simd_is_array_like_v) {
-   // P3983R1 mandates array-like layout for `cat::native_abi` satisfies it for
-   // every supported lane type today.
-   static_assert(is_simd_array_like<int1, native_abi<int1>>);
-   static_assert(is_simd_array_like<int2, native_abi<int2>>);
-   static_assert(is_simd_array_like<int4, native_abi<int4>>);
-   static_assert(is_simd_array_like<int8, native_abi<int8>>);
-   static_assert(is_simd_array_like<uint1, native_abi<uint1>>);
-   static_assert(is_simd_array_like<uint4, native_abi<uint4>>);
-   static_assert(is_simd_array_like<float4, native_abi<float4>>);
-   static_assert(is_simd_array_like<float8, native_abi<float8>>);
-   static_assert(is_simd_array_like<bool, native_abi<bool>>);
-   static_assert(is_simd_array_like<char, native_abi<char>>);
+   // P3983R1 mandates array-like layout for `cat::simd_abi::native` satisfies
+   // it for every supported lane type today.
+   static_assert(is_simd_array_like<int1, simd_abi::native<int1>>);
+   static_assert(is_simd_array_like<int2, simd_abi::native<int2>>);
+   static_assert(is_simd_array_like<int4, simd_abi::native<int4>>);
+   static_assert(is_simd_array_like<int8, simd_abi::native<int8>>);
+   static_assert(is_simd_array_like<uint1, simd_abi::native<uint1>>);
+   static_assert(is_simd_array_like<uint4, simd_abi::native<uint4>>);
+   static_assert(is_simd_array_like<float4, simd_abi::native<float4>>);
+   static_assert(is_simd_array_like<float8, simd_abi::native<float8>>);
+   static_assert(is_simd_array_like<bool, simd_abi::native<bool>>);
+   static_assert(is_simd_array_like<char, simd_abi::native<char>>);
 
-   // `compatible_abi` shares `native_abi` storage today.
-   static_assert(is_simd_array_like<int4, compatible_abi<int4>>);
-   static_assert(is_simd_array_like<float4, compatible_abi<float4>>);
+   // `simd_abi::compatible` shares `simd_abi::native` storage today.
+   static_assert(is_simd_array_like<int4, simd_abi::compatible<int4>>);
+   static_assert(is_simd_array_like<float4, simd_abi::compatible<float4>>);
 
-   // `scalar_abi` is one lane.
-   static_assert(cat::scalar_abi<int1>::lanes == 1u);
-   static_assert(cat::scalar_abi<int4>::lanes == 1u);
-   static_assert(cat::scalar_abi<int8>::lanes == 1u);
-   static_assert(cat::scalar_abi<float4>::lanes == 1u);
-   static_assert(is_simd_array_like<int1, scalar_abi<int1>>);
-   static_assert(is_simd_array_like<int4, scalar_abi<int4>>);
-   static_assert(is_simd_array_like<int8, scalar_abi<int8>>);
-   static_assert(is_simd_array_like<float4, scalar_abi<float4>>);
+   // `simd_abi::scalar` is one lane.
+   static_assert(cat::simd_abi::scalar<int1>::lanes == 1u);
+   static_assert(cat::simd_abi::scalar<int4>::lanes == 1u);
+   static_assert(cat::simd_abi::scalar<int8>::lanes == 1u);
+   static_assert(cat::simd_abi::scalar<float4>::lanes == 1u);
+   static_assert(is_simd_array_like<int1, simd_abi::scalar<int1>>);
+   static_assert(is_simd_array_like<int4, simd_abi::scalar<int4>>);
+   static_assert(is_simd_array_like<int8, simd_abi::scalar<int8>>);
+   static_assert(is_simd_array_like<float4, simd_abi::scalar<float4>>);
 
-   // `fixed_size_abi` where lanes * sizeof(`T`) is itself a power of two has no
-   // trailing padding.
-   static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 1u>>);
-   static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 2u>>);
-   static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 4u>>);
-   static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 8u>>);
-   static_assert(is_simd_array_like<float8, fixed_size_abi<float8, 2u>>);
-   static_assert(is_simd_array_like<float8, fixed_size_abi<float8, 4u>>);
-   static_assert(is_simd_array_like<int4, fixed_size_abi<int4, 4u>>);
-   static_assert(is_simd_array_like<int4, fixed_size_abi<int4, 8u>>);
-   static_assert(is_simd_array_like<int8, fixed_size_abi<int8, 2u>>);
-   static_assert(is_simd_array_like<int8, fixed_size_abi<int8, 4u>>);
-   static_assert(is_simd_array_like<int1, fixed_size_abi<int1, 16u>>);
-   static_assert(is_simd_array_like<int1, fixed_size_abi<int1, 32u>>);
+   // `simd_abi::fixed_size` where lanes * sizeof(`T`) is itself a power of two
+   // has no trailing padding.
+   static_assert(is_simd_array_like<float4, simd_abi::fixed_size<float4, 1u>>);
+   static_assert(is_simd_array_like<float4, simd_abi::fixed_size<float4, 2u>>);
+   static_assert(is_simd_array_like<float4, simd_abi::fixed_size<float4, 4u>>);
+   static_assert(is_simd_array_like<float4, simd_abi::fixed_size<float4, 8u>>);
+   static_assert(is_simd_array_like<float8, simd_abi::fixed_size<float8, 2u>>);
+   static_assert(is_simd_array_like<float8, simd_abi::fixed_size<float8, 4u>>);
+   static_assert(is_simd_array_like<int4, simd_abi::fixed_size<int4, 4u>>);
+   static_assert(is_simd_array_like<int4, simd_abi::fixed_size<int4, 8u>>);
+   static_assert(is_simd_array_like<int8, simd_abi::fixed_size<int8, 2u>>);
+   static_assert(is_simd_array_like<int8, simd_abi::fixed_size<int8, 4u>>);
+   static_assert(is_simd_array_like<int1, simd_abi::fixed_size<int1, 16u>>);
+   static_assert(is_simd_array_like<int1, simd_abi::fixed_size<int1, 32u>>);
 
-   // `fixed_size_abi` where lanes * sizeof(`T`) is not a power of two: Clang
-   // `gnu::vector_size` rounds the storage up which leaves trailing padding, so
-   // the layout is not array-like. P3983R1 anticipates this for `fixed_size`.
-   static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 3u>>);
-   static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 5u>>);
-   static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 6u>>);
-   static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 7u>>);
-   static_assert(!is_simd_array_like<int8, fixed_size_abi<int8, 3u>>);
+   // `simd_abi::fixed_size` where lanes * sizeof(`T`) is not a power of two:
+   // Clang `gnu::vector_size` rounds the storage up which leaves trailing
+   // padding, so the layout is not array-like. P3983R1 anticipates this for
+   // `fixed_size`.
+   static_assert(!is_simd_array_like<float4, simd_abi::fixed_size<float4, 3u>>);
+   static_assert(!is_simd_array_like<float4, simd_abi::fixed_size<float4, 5u>>);
+   static_assert(!is_simd_array_like<float4, simd_abi::fixed_size<float4, 6u>>);
+   static_assert(!is_simd_array_like<float4, simd_abi::fixed_size<float4, 7u>>);
+   static_assert(!is_simd_array_like<int8, simd_abi::fixed_size<int8, 3u>>);
 
    // The unaligned wrapper preserves the base ABI's storage size, so it
    // inherits its array-likeness.
-   static_assert(is_simd_array_like<float4, unaligned_abi<native_abi<float4>>>);
    static_assert(
-      is_simd_array_like<float4, unaligned_abi<fixed_size_abi<float4, 4u>>>);
+      is_simd_array_like<float4,
+                         simd_abi::unaligned<simd_abi::native<float4>>>);
    static_assert(
-      !is_simd_array_like<float4, unaligned_abi<fixed_size_abi<float4, 3u>>>);
+      is_simd_array_like<
+         float4, simd_abi::unaligned<simd_abi::fixed_size<float4, 4u>>>);
+   static_assert(
+      !is_simd_array_like<
+         float4, simd_abi::unaligned<simd_abi::fixed_size<float4, 3u>>>);
 
    // P3983R1 note: when the trait is `true`, `bit_cast` between `simd<T, Abi>`
    // and the corresponding `array<T, N>` is well-defined and preserves lane
@@ -388,42 +390,45 @@ $test(simd_is_array_like_v) {
 $test(simd_abi_compatible_alias) {
    static_assert(!cat::is_same<cat::simd_abi::compatible<int>,
                                cat::simd_abi::native<int>>);
-   cat::verify(cat::simd<int, cat::compatible_abi<int>>::abi_type::lanes
-               == cat::simd<int, cat::native_abi<int>>::abi_type::lanes);
+   cat::verify(cat::simd<int, cat::simd_abi::compatible<int>>::abi_type::lanes
+               == cat::simd<int, cat::simd_abi::native<int>>::abi_type::lanes);
 }
 
 $test(simd_abi_deduce) {
    using native_float =
-      cat::simd_abi::deduce<float, cat::native_abi<float>::lanes>;
-   static_assert(cat::is_same<native_float, cat::native_abi<float>>);
+      cat::simd_abi::deduce<float, cat::simd_abi::native<float>::lanes>;
+   static_assert(cat::is_same<native_float, cat::simd_abi::native<float>>);
 
    using sse2_float = cat::simd_abi::deduce<float, x64::sse2_abi<float>::lanes>;
    static_assert(cat::is_same<sse2_float, x64::sse2_abi<float>>);
    static_assert(cat::is_same<float4x4::abi_type, x64::sse2_abi<float4>>);
-   static_assert(cat::is_same<float4x8::abi_type, cat::native_abi<float4>>);
+   static_assert(
+      cat::is_same<float4x8::abi_type, cat::simd_abi::native<float4>>);
 
    using scalar_float =
-      cat::simd_abi::deduce<float, cat::scalar_abi<float>::lanes>;
-   static_assert(cat::is_same<scalar_float, cat::scalar_abi<float>>);
+      cat::simd_abi::deduce<float, cat::simd_abi::scalar<float>::lanes>;
+   static_assert(cat::is_same<scalar_float, cat::simd_abi::scalar<float>>);
 
    using fixed_float = cat::simd_abi::deduce<float, 3u>;
-   static_assert(cat::is_same<fixed_float, cat::fixed_size_abi<float, 3u>>);
+   static_assert(
+      cat::is_same<fixed_float, cat::simd_abi::fixed_size<float, 3u>>);
 
    using compatible_float =
-      cat::simd_abi::deduce<float, cat::compatible_abi<float>::lanes,
-                            cat::compatible_abi<float>>;
-   static_assert(cat::is_same<compatible_float, cat::compatible_abi<float>>);
+      cat::simd_abi::deduce<float, cat::simd_abi::compatible<float>::lanes,
+                            cat::simd_abi::compatible<float>>;
+   static_assert(
+      cat::is_same<compatible_float, cat::simd_abi::compatible<float>>);
 
    using unaligned_double = cat::simd_abi::deduce<
-      double, cat::simd_abi::unaligned<cat::native_abi<double>>::lanes,
-      cat::simd_abi::unaligned<cat::native_abi<float>>>;
+      double, cat::simd_abi::unaligned<cat::simd_abi::native<double>>::lanes,
+      cat::simd_abi::unaligned<cat::simd_abi::native<float>>>;
    static_assert(
       cat::is_same<unaligned_double,
-                   cat::simd_abi::unaligned<cat::native_abi<double>>>);
+                   cat::simd_abi::unaligned<cat::simd_abi::native<double>>>);
 }
 
 $test(simdu) {
-   using idx_abi = cat::native_abi<cat::idx>;
+   using idx_abi = cat::simd_abi::native<cat::idx>;
    using idxv = cat::simd<cat::idx, idx_abi>;
    static_assert(cat::is_simd<idxv>);
    constexpr idx lane_count = idx_abi::lanes;
@@ -465,7 +470,7 @@ $test(simdu) {
 
 $test(simd_uintptr_intptr) {
    using u_ptr = cat::uintptr<void>;
-   using u_abi = cat::native_abi<u_ptr>;
+   using u_abi = cat::simd_abi::native<u_ptr>;
    using upv = cat::simd<u_ptr, u_abi>;
    static_assert(cat::is_simd<upv>);
    constexpr idx ulanes = u_abi::lanes;
@@ -485,7 +490,7 @@ $test(simd_uintptr_intptr) {
    cat::verify(uramp.equal_lanes(uramp).all_of());
 
    using i_ptr = cat::intptr<void>;
-   using i_abi = cat::native_abi<i_ptr>;
+   using i_abi = cat::simd_abi::native<i_ptr>;
    using ipv = cat::simd<i_ptr, i_abi>;
    static_assert(cat::is_simd<ipv>);
    constexpr idx ilanes = i_abi::lanes;
@@ -504,19 +509,20 @@ $test(simd_uintptr_intptr) {
 }
 
 $test(simd_rebind_and_resize_traits) {
-   using floatv = cat::simd<float, cat::native_abi<float>>;
+   using floatv = cat::simd<float, cat::simd_abi::native<float>>;
    using doublev = cat::rebind_simd<double, floatv>;
    static_assert(
-      cat::is_same<doublev, cat::simd<double, cat::native_abi<double>>>);
+      cat::is_same<doublev, cat::simd<double, cat::simd_abi::native<double>>>);
 
    using float4 = cat::fixed_size_simd<float, 4u>;
    using float2 = cat::resize_simd<2u, float4>;
    static_assert(cat::is_same<float2, cat::fixed_size_simd<float, 2u>>);
 
-   using maskf = cat::simd_mask<float, cat::native_abi<float>>;
+   using maskf = cat::simd_mask<float, cat::simd_abi::native<float>>;
    using maskd = cat::rebind_simd<double, maskf>;
    static_assert(
-      cat::is_same<maskd, cat::simd_mask<double, cat::native_abi<double>>>);
+      cat::is_same<maskd,
+                   cat::simd_mask<double, cat::simd_abi::native<double>>>);
 }
 
 $test(simd_resize_insert_extract) {
@@ -880,18 +886,19 @@ $test(simd_non_temporal_load_store) {
 $test(simd_byte_lane_load_store_dispatch_misaligned) {
    alignas(128) char backing[128]{};
    char* const p_mis = backing + 7;
-   idx const lanes = cat::char1x_::abi_type::lanes;
+   idx const lanes = cat::char1x16::abi_type::lanes;
    for (idx i = 0u; i < lanes; ++i) {
       p_mis[i] = static_cast<char>('A' + (i % 26));
    }
 
-   cat::char1x_ loaded{};
+   cat::char1x16 loaded{};
    loaded.load(p_mis);
    idx const last_idx = lanes.raw - 1u;
    cat::verify(loaded[0u] == p_mis[0]);
    cat::verify(loaded[last_idx] == p_mis[last_idx.raw]);
 
-   cat::char1x_ const from_loaded = cat::make_simd_loaded<cat::char1x_>(p_mis);
+   cat::char1x16 const from_loaded =
+      cat::make_simd_loaded<cat::char1x16>(p_mis);
    cat::verify(from_loaded.equal_lanes(loaded).all_of());
 
    cat::native_unaligned_simd<char> loose{};
@@ -2009,8 +2016,8 @@ $test(simd_mask_reduce_integral) {
 // left, rotate right):
 
 $test(simd_popcount_rotate_left_rotate_right) {
-   cat::simd<uint_lane, cat::fixed_size_abi<uint_lane, 4u>> v{0u, 3u, 15u,
-                                                              0xffffffffu};
+   cat::simd<uint_lane, cat::simd_abi::fixed_size<uint_lane, 4u>> v{
+      0u, 3u, 15u, 0xffffffffu};
    auto pc = cat::simd_popcount(v);
    cat::verify(v.popcount() == pc);
    cat::verify(pc[0] == 0u);
@@ -2024,7 +2031,8 @@ $test(simd_popcount_rotate_left_rotate_right) {
    // cat::verify(pc[2] == 4u);
    // cat::verify(pc[3] == 32u);
 
-   using mi4 = cat::simd_mask<cat::int4, cat::fixed_size_abi<cat::int4, 4u>>;
+   using mi4 =
+      cat::simd_mask<cat::int4, cat::simd_abi::fixed_size<cat::int4, 4u>>;
    mi4 mb{true, false, true, false};
    cat::verify(cat::popcount(mb) == 2);
 
@@ -2097,7 +2105,7 @@ $test(simd_eve_mask_subscript_min_max_popcount_rotate_left_rotate_right) {
    cat::verify(hi[2] == 3);
    cat::verify(hi[3] == 8);
 
-   using u32x4 = cat::simd<uint_lane, cat::fixed_size_abi<uint_lane, 4u>>;
+   using u32x4 = cat::simd<uint_lane, cat::simd_abi::fixed_size<uint_lane, 4u>>;
    u32x4 w{0u, 3u, 15u, 0xffffffffu};
    cat::verify(w.popcount() == cat::simd_popcount(w));
    auto mu = cat::make_simd_mask_from_count<u32x4>(2u);
@@ -2128,7 +2136,7 @@ $test(simd_eve_mask_subscript_min_max_popcount_rotate_left_rotate_right) {
 // curry-able comparators (e.g. `cat::is_less(0_f4)`) are valid argument
 // shapes.
 $test(simd_eve_predicate_subscript) {
-   using u32x4 = cat::simd<uint_lane, cat::fixed_size_abi<uint_lane, 4u>>;
+   using u32x4 = cat::simd<uint_lane, cat::simd_abi::fixed_size<uint_lane, 4u>>;
 
    // Unary: `simd_popcount[is_odd]` only popcount-s lanes whose value is odd.
    u32x4 v{1u, 2u, 3u, 4u};
@@ -2613,9 +2621,9 @@ $test(simd_iota) {
 
 $test(simd_sub_sat_masked_native_int1) {
    // TODO: Something in here isn't vectorizing, and we get warnings.
-   cat::int1x_ a{};
-   cat::int1x_ b{};
-   constexpr cat::idx n = cat::int1x_::abi_type::lanes;
+   cat::int1x16 a{};
+   cat::int1x16 b{};
+   constexpr cat::idx n = cat::int1x16::abi_type::lanes;
    for (cat::idx i = 0; i < n; ++i) {
       a.set_lane(i, 10);
       b.set_lane(i, 20);
@@ -2627,11 +2635,11 @@ $test(simd_sub_sat_masked_native_int1) {
    a.set_lane(2u, 120);
    b.set_lane(2u, -20);
    auto const m = a >= 0;
-   cat::int1x_ const r = cat::simd_sub_sat[m](a, b);
+   cat::int1x16 const r = cat::simd_sub_sat[m](a, b);
    cat::verify(r[0] == 50);
    cat::verify(r[1] == -40);
    cat::verify(r[2] == 127);
-   cat::int1x_ const add_r = cat::simd_add_sat[m](a, b);
+   cat::int1x16 const add_r = cat::simd_add_sat[m](a, b);
    cat::verify(add_r[0] == 127);
    cat::verify(add_r[1] == -40);
    cat::verify(add_r[2] == 100);
@@ -3043,4 +3051,131 @@ $test(simd_signed_wrap_add_sub_mul_well_defined) {
    }
    i4x4 const wmul = maxes.wrap() * twos;
    cat::verify(wmul[0] == i4(-2));
+}
+
+$test(simd_dispatch_default_only) {
+   // Dispatch with no `$abi` entries always falls through to the
+   // `default:` clause.
+   int const result = $simd_switch(default : return -1;);
+   cat::verify(result == -1);
+}
+
+$test(simd_dispatch_returns_non_int) {
+   // The dispatched return type follows the body, not just `int`.
+   // Every entry (including `default:`) must agree on the result type.
+   float const result =
+      $simd_switch($abi(avx2, return 2.5f;), default : return 1.5f;);
+   bool const has_avx2 = __builtin_cpu_supports("avx2");
+   cat::verify(result == (has_avx2 ? 2.5f : 1.5f));
+}
+
+$test(simd_dispatch_statement_form_default_only) {
+   // Default-only fallback also works in statement form.
+   int sink = 0;
+   $simd_switch(default : sink = 99;);
+   cat::verify(sink == 99);
+}
+
+$test(simd_dispatch_aliases_native_per_arch) {
+   // Inside `$abi(arch, ...)`, the arch-namespace `using namespace`
+   // injection makes `native_simd<T>` and `native_simd_mask<T>` resolve
+   // to that arch's vector. Compile-time `is_same` only -- no math.
+   $simd_switch(
+      $abi(avx2,
+           {
+              static_assert(
+                 cat::is_same<native_simd<cat::int4>,
+                              cat::simd<cat::int4, x64::avx2_abi<cat::int4>>>);
+              static_assert(
+                 cat::is_same<
+                    native_simd_mask<cat::int4>,
+                    cat::simd_mask<cat::int4, x64::avx2_abi<cat::int4>>>);
+              static_assert(
+                 cat::is_same<
+                    native_unaligned_simd<cat::int4>,
+                    cat::simd<cat::int4, x64::avx2_unaligned_abi<cat::int4>>>);
+           }),
+      $abi(sse2,
+           {
+              static_assert(
+                 cat::is_same<native_simd<cat::int4>,
+                              cat::simd<cat::int4, x64::sse2_abi<cat::int4>>>);
+              static_assert(
+                 cat::is_same<
+                    native_simd_mask<cat::int4>,
+                    cat::simd_mask<cat::int4, x64::sse2_abi<cat::int4>>>);
+           }),
+      default : {
+         // Default lane: `cat::simd_abi::native<T>`.
+         static_assert(cat::is_same<
+                       native_simd<cat::int4>,
+                       cat::simd<cat::int4, cat::simd_abi::native<cat::int4>>>);
+         cat::verify(
+            false);  // This is redundant with sse2 so it is unreachable.
+      });
+}
+
+$test(simd_dispatch_aliases_deduce_per_arch) {
+   // `deduce_simd<T, lanes>` passes the arch ABI to `simd_abi::deduce`
+   // as a candidate. The deducer also walks `simd_abi::native`, `sse2_abi`,
+   // and `simd_abi::scalar` after the explicit candidate, so a lane count
+   // the arch can't represent falls through to whichever candidate
+   // does match -- not necessarily `simd_abi::fixed_size`.
+   $simd_switch(
+      $abi(avx2,
+           // AVX2 vector for `int4` is 8 lanes; arch candidate wins.
+           static_assert(
+              cat::is_same<deduce_simd<cat::int4, 8u>,
+                           cat::simd<cat::int4, x64::avx2_abi<cat::int4>>>);),
+      $abi(sse2,
+           // SSE2 vector for `int4` is 4 lanes. Arch candidate wins.
+           static_assert(
+              cat::is_same<deduce_simd<cat::int4, 4u>,
+                           cat::simd<cat::int4, x64::sse2_abi<cat::int4>>>);));
+}
+
+$test(simd_dispatch_aliases_scalar_unchanged) {
+   // `scalar_simd<T>` and `fixed_size_simd<T, lanes>` are independent
+   // of the arch ABI parameter; the macro substitutes only the
+   // "native" tag, so these resolve identically inside every `$abi`.
+   $simd_switch(
+      $abi(avx2, static_assert(
+                    cat::is_same<
+                       scalar_simd<cat::int4>,
+                       cat::simd<cat::int4, cat::simd_abi::scalar<cat::int4>>>);
+           static_assert(
+              cat::is_same<fixed_size_simd<cat::int4, 4u>,
+                           cat::simd<cat::int4, cat::simd_abi::fixed_size<
+                                                   cat::int4, 4u>>>);),
+      default : __builtin_unreachable(););
+}
+
+$test(simd_dispatch_native_aliases) {
+   $simd_switch($abi(avx2,
+                     {
+                        // AVX2 vectors are 32 bytes, so the masks should
+                        // divide into that.
+                        using mask = native_simd<cat::int4>::mask_type;
+                        auto const bits = mask{}.to_bitset();
+                        static_assert(bits.size() == 8);
+
+                        auto const bits2 = int2x_::mask_type{}.to_bitset();
+                        static_assert(bits2.size() == 16);
+
+                        auto const bits3 = int1x_::mask_type{}.to_bitset();
+                        static_assert(bits3.size() == 32);
+                     }),
+                $abi(sse2, {
+                   // SSE2 vectors are 16 bytes, so the masks should
+                   // divide into that.
+                   using mask = native_simd<cat::int4>::mask_type;
+                   auto const bits = mask{}.to_bitset();
+                   static_assert(bits.size() == 4);
+
+                   auto const bits2 = int2x_::mask_type{}.to_bitset();
+                   static_assert(bits2.size() == 8);
+
+                   auto const bits3 = int1x_::mask_type{}.to_bitset();
+                   static_assert(bits3.size() == 16);
+                }));
 }

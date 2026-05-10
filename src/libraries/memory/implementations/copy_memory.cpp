@@ -11,7 +11,7 @@ namespace cat::detail {
 void
 copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
    iword bytes_remaining = bytes;
-   using simd_vector = uint8x_;
+   using simd_vector = uint8x2;
 
    cat::uintptr<unsigned char> p_source_handle{
       const_cast<unsigned char*>(static_cast<unsigned char const*>(p_source))};

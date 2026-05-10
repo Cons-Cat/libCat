@@ -24,7 +24,7 @@ IntegerLiteralSeparator:
 SeparateDefinitionBlocks: Always
 
 Cpp11BracedListStyle: true
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: BlockIndent
 AlignConsecutiveTableGenCondOperatorColons: None
 AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
 AlignEscapedNewlines: Left

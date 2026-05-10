@@ -9,7 +9,7 @@ cat::detail::compare_strings_detail(str_view const string_1,
       return false;
    }
 
-   using vector = char1x_;
+   using vector = char1x16;
 
    array<vector, 4u> vectors_1;
    array<vector, 4u> vectors_2;

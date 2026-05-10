@@ -50,7 +50,7 @@ template <typename T>
 using avx2_simd_mask = cat::simd_mask<T, avx2_abi<T>>;
 
 template <typename T>
-using avx2_unaligned_abi = cat::unaligned_abi<avx2_abi<T>>;
+using avx2_unaligned_abi = cat::simd_abi::unaligned<avx2_abi<T>>;
 
 template <typename T>
 using avx2_unaligned_simd = cat::simd<T, avx2_unaligned_abi<T>>;
@@ -75,8 +75,14 @@ concept is_avx2_abi = detail::is_avx2_abi_impl<Abi, T>;
 
 }  // namespace x64
 
-namespace x64 {
+// `cat::detail::simd_avx2`'s `native_simd<T>` / `deduce_simd<T, lanes>`
+// / etc. aliases are populated via `CAT_SIMD_ALIASES(::x64::avx2_abi)`
+// in `<cat/detail/simd_aliases.hpp>`, after the `cat::simd` template is
+// fully declared. `$simd_switch($abi(avx2, ...))` injects this namespace into
+// the body via `using namespace`, so `native_simd<T>` etc. resolve to
+// the AVX2-pinned vector for that arch lane.
 
+namespace x64 {
 // Store fence. Use after non-temporal (`movnt*`) stores so later loads see
 // them.
 [[gnu::always_inline]]
@@ -93,8 +99,8 @@ mfence() {
    __builtin_ia32_mfence();
 }
 
-// Load fence. Orders prior loads against later loads (and with `lfence/mfence`
-// pairs).
+// Load fence. Orders prior loads against later loads (and with
+// `lfence/mfence` pairs).
 [[gnu::always_inline]]
 inline void
 lfence() {

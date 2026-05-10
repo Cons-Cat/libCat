@@ -18,11 +18,13 @@ option(CAT_BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)
 option(CAT_BUILD_EXAMPLE_HELLO "Compile hello.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(hello hello.cpp)
-  set_property(SOURCE
-    ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
-    APPEND PROPERTY COMPILE_DEFINITIONS
-    # `hello` is compiled with aggressive feature flags so that the binary is as small as possible.
-    "$<$<STREQUAL:$<TARGET_PROPERTY:NAME>,hello>:NO_ARGC_ARGV;CAT_NO_STATIC_CONSTRUCTORS;CAT_NO_CPUID;CAT_THREAD_LOCAL_SIZE=0>")
+  # `hello` is compiled with aggressive feature flags so that the binary is as
+  # small as possible.
+  target_compile_definitions(hello PRIVATE
+    NO_ARGC_ARGV
+    CAT_NO_STATIC_CONSTRUCTORS
+    CAT_NO_CPUID
+    CAT_THREAD_LOCAL_SIZE=0)
   set_property(SOURCE
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
     PROPERTY SKIP_PRECOMPILE_HEADERS ON)
@@ -35,13 +37,15 @@ endif()
 option(CAT_BUILD_EXAMPLE_ECHO "Compile echo.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_ECHO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(echo echo.cpp)
-  # `echo` uses only `cat::print` (a thin `sys_write` wrapper). No CPU
-  # feature dispatch, no global constructors, no `thread_local`. Skip all
-  # three to reduce binary size.
+  # `echo` is compiled with aggressive feature flags so that the binary is as
+  # small as possible.
+  target_compile_definitions(echo PRIVATE
+    CAT_NO_STATIC_CONSTRUCTORS
+    CAT_NO_CPUID
+    CAT_THREAD_LOCAL_SIZE=0)
   set_property(SOURCE
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
-    APPEND PROPERTY COMPILE_DEFINITIONS
-    "$<$<STREQUAL:$<TARGET_PROPERTY:NAME>,echo>:CAT_NO_STATIC_CONSTRUCTORS;CAT_NO_CPUID;CAT_THREAD_LOCAL_SIZE=0>")
+    PROPERTY SKIP_PRECOMPILE_HEADERS ON)
   target_link_libraries(echo PRIVATE cat-examples)
   if(CAT_PCH)
     target_precompile_headers(echo REUSE_FROM cat-impl)

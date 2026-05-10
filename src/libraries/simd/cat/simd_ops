@@ -2661,7 +2661,8 @@ struct simd_bit_cast_as_impl {
    constexpr auto
    operator()(simd<T, Abi> const& input) const {
       using out_abi =
-         fixed_size_abi<NewT, idx{Abi::lanes.raw * sizeof(T) / sizeof(NewT)}>;
+         cat::simd_abi::fixed_size<NewT, idx{Abi::lanes.raw * sizeof(T)
+                                             / sizeof(NewT)}>;
       return simd<NewT, out_abi>(
          __builtin_bit_cast(typename simd<NewT, out_abi>::raw_type, input.raw));
    }
@@ -2687,7 +2688,7 @@ struct simd_permute_impl {
          }
          return result;
       } else {
-         simd<T, fixed_size_abi<T, IdxAbi::lanes>> result{};
+         simd<T, cat::simd_abi::fixed_size<T, IdxAbi::lanes>> result{};
          idx::raw_type const width = Abi::lanes.raw;
 
 #pragma clang loop vectorize(enable)

@@ -264,7 +264,8 @@ basic_str_span : public span<CharT> {
       idx i;
       for (i = from_position; i < size && i + lanes < size; i += lanes) {
          // TODO: Consider aligning this load?
-         char1x_ const storage = make_simd_loaded<char1x_>(this->m_p_data + i);
+         char1x16 const storage =
+            make_simd_loaded<char1x16>(this->m_p_data + i);
          // TODO: Support a native ABI mask here.
          auto const mask = storage.equal_lanes(character);
          if (mask.any_of()) {
@@ -272,7 +273,7 @@ basic_str_span : public span<CharT> {
          }
       }
 
-      // The last chunk of this string, smaller than `char1x_::lanes`, is
+      // The last chunk of this string, smaller than `char1x16::lanes`, is
       // stepped through one character at a time.
       return this->find_small(character, i);
    }

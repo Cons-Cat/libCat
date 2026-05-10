@@ -11,13 +11,13 @@ using cat::int4x8;
 
 // SSE2 hooks (`simd_sse2.hpp`).
 // `unary_full<op_rsqrt>`, plus `mask_to_bitset` via `sse2_abi_mask_to_bitset`
-// in `simd_mask_bitset.tpp`. Reference behavior uses `fixed_size_abi`
-// without ISA hooks, not `native_abi` which may alias `avx2_abi` on this
+// in `simd_mask_bitset.tpp`. Reference behavior uses `simd_abi::fixed_size`
+// without ISA hooks, not `simd_abi::native` which may alias `avx2_abi` on this
 // target.
 $test(simd_sse2_abi_hooks_permute_and_rsqrt) {
-   static_assert(cat::scalar_abi<int4>::size == sizeof(int4));
-   static_assert(cat::scalar_abi<int4>::alignment == alignof(int4));
-   static_assert(cat::scalar_abi<float4>::lanes == 1u);
+   static_assert(cat::simd_abi::scalar<int4>::size == sizeof(int4));
+   static_assert(cat::simd_abi::scalar<int4>::alignment == alignof(int4));
+   static_assert(cat::simd_abi::scalar<float4>::lanes == 1u);
 
    x64::sse2_simd<int4> const ints{10, 20, 30, 40};
    cat::fixed_size_simd<int4, 4u> const ref_ints{10, 20, 30, 40};
@@ -182,19 +182,19 @@ $test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
    x64::avx2_simd_mask<float4> const sparse{false, false, true,  false,
                                             false, true,  false, true};
    // Eight `float4` lanes need 32 bytes. Compare against
-   // `fixed_size_abi<float4, 8>` instead of `native_abi<float4>` which aliases
-   // `avx2_abi<float4>` here. No AVX2 mask hook specializations apply to
-   // `fixed_size_abi`.
-   cat::simd_mask<float4, cat::fixed_size_abi<float4, 8>> const sparse_ref{
-      false, false, true, false, false, true, false, true};
+   // `simd_abi::fixed_size<float4, 8>` instead of `simd_abi::native<float4>`
+   // which aliases `avx2_abi<float4>` here. No AVX2 mask hook specializations
+   // apply to `simd_abi::fixed_size`.
+   cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 8>> const
+      sparse_ref{false, false, true, false, false, true, false, true};
    cat::verify(sparse.count_if_true() == sparse_ref.count_if_true());
    cat::verify(sparse.find_if_true() == sparse_ref.find_if_true());
    cat::verify(sparse.find_last_if_true() == sparse_ref.find_last_if_true());
 
    x64::avx2_simd_mask<float4> const all_true{true, true, true, true,
                                               true, true, true, true};
-   cat::simd_mask<float4, cat::fixed_size_abi<float4, 8>> const all_true_ref{
-      true, true, true, true, true, true, true, true};
+   cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 8>> const
+      all_true_ref{true, true, true, true, true, true, true, true};
    cat::verify(all_true.count_if_true() == all_true_ref.count_if_true());
    cat::verify(cat::simd_all_of(all_true) == cat::simd_all_of(all_true_ref));
    cat::verify(all_true.find_if_true() == all_true_ref.find_if_true());
@@ -203,22 +203,22 @@ $test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
 
    x64::avx2_simd_mask<float4> const none{false, false, false, false,
                                           false, false, false, false};
-   cat::simd_mask<float4, cat::fixed_size_abi<float4, 8>> const none_ref{
+   cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 8>> const none_ref{
       false, false, false, false, false, false, false, false};
    cat::verify(none.count_if_true() == none_ref.count_if_true());
    cat::verify(cat::simd_any_of(none) == cat::simd_any_of(none_ref));
 
    x64::avx2_simd_mask<float4> const one{false, false, false, true,
                                          false, false, false, false};
-   cat::simd_mask<float4, cat::fixed_size_abi<float4, 8>> const one_ref{
+   cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 8>> const one_ref{
       false, false, false, true, false, false, false, false};
    cat::verify(one.find_if_true() == one_ref.find_if_true());
    cat::verify(one.find_last_if_true() == one_ref.find_last_if_true());
 
-   cat::simd_mask<float4, cat::fixed_size_abi<float4, 4u>> const sparse_lo{
-      sparse[0u], sparse[1u], sparse[2u], sparse[3u]};
-   cat::simd_mask<float4, cat::fixed_size_abi<float4, 4u>> const sparse_hi{
-      sparse[4u], sparse[5u], sparse[6u], sparse[7u]};
+   cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 4u>> const
+      sparse_lo{sparse[0u], sparse[1u], sparse[2u], sparse[3u]};
+   cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 4u>> const
+      sparse_hi{sparse[4u], sparse[5u], sparse[6u], sparse[7u]};
    cat::verify(sparse.count_if_true()
                == sparse_lo.count_if_true() + sparse_hi.count_if_true());
 
@@ -362,16 +362,16 @@ $test(simd_sse2_and_unaligned_abi_mask) {
 
 $test(simd_unaligned_abi_adaptor) {
    static_assert(cat::is_same<x64::avx2_unaligned_abi<float>,
-                              cat::unaligned_abi<x64::avx2_abi<float>>>);
+                              cat::simd_abi::unaligned<x64::avx2_abi<float>>>);
    static_assert(cat::is_same<x64::sse2_unaligned_abi<float>,
-                              cat::unaligned_abi<x64::sse2_abi<float>>>);
+                              cat::simd_abi::unaligned<x64::sse2_abi<float>>>);
 
-   static_assert(cat::simd_abi::unaligned<cat::native_abi<float>>::lanes
-                 == cat::native_abi<float>::lanes);
-   static_assert(cat::simd_abi::unaligned<cat::native_abi<float>>::size
-                 == cat::native_abi<float>::size);
-   static_assert(cat::simd_abi::unaligned<cat::native_abi<float>>::alignment
-                 == 1u);
+   static_assert(cat::simd_abi::unaligned<cat::simd_abi::native<float>>::lanes
+                 == cat::simd_abi::native<float>::lanes);
+   static_assert(cat::simd_abi::unaligned<cat::simd_abi::native<float>>::size
+                 == cat::simd_abi::native<float>::size);
+   static_assert(
+      cat::simd_abi::unaligned<cat::simd_abi::native<float>>::alignment == 1u);
 
    static_assert(alignof(cat::native_unaligned_simd<float>) == 1u);
    static_assert(alignof(cat::fixed_size_unaligned_simd<cat::float4, 4u>)

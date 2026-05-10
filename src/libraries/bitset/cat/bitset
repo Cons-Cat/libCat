@@ -75,6 +75,12 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    operator=(bitset&&) -> bitset& = default;
 
    [[nodiscard]]
+   static constexpr auto
+   size() -> idx {
+      return bits_count;
+   }
+
+   [[nodiscard]]
    constexpr auto
    begin_pos() const -> idx {
       return 0u;

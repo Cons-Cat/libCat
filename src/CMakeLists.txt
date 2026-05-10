@@ -44,17 +44,6 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/longjmp.cpp
   ${CATLIB}/runtime/implementations/load_base_stack_pointer.cpp
   ${CATLIB}/new/implementations/new.cpp
-  ${CATLIB}/simd/implementations/is_avx2_supported.cpp
-  ${CATLIB}/simd/implementations/is_avx512f_supported.cpp
-  ${CATLIB}/simd/implementations/is_avx512vl_supported.cpp
-  ${CATLIB}/simd/implementations/is_avx_supported.cpp
-  ${CATLIB}/simd/implementations/is_mmx_supported.cpp
-  ${CATLIB}/simd/implementations/is_sse1_supported.cpp
-  ${CATLIB}/simd/implementations/is_sse2_supported.cpp
-  ${CATLIB}/simd/implementations/is_sse3_supported.cpp
-  ${CATLIB}/simd/implementations/is_ssse3_supported.cpp
-  ${CATLIB}/simd/implementations/is_sse4_1_supported.cpp
-  ${CATLIB}/simd/implementations/is_sse4_2_supported.cpp
   ${CATLIB}/math/implementations/pow.cpp
   ${CATLIB}/math/implementations/sqrt.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
@@ -224,7 +213,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_range_iterator.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_mask_ops.hpp
-  ${CATLIB}/simd/cat/detail/simd_width_aliases.hpp
+  ${CATLIB}/simd/cat/detail/simd_aliases.hpp
   ${CATLIB}/simd/cat/detail/simd_unaligned_abi.hpp
   ${CATLIB}/simd/cat/detail/simd_mask_lane_sseavx.hpp
   ${CATLIB}/simd/cat/detail/simd_sse42.hpp
@@ -232,6 +221,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_sse2_movmsk.hpp
   ${CATLIB}/simd/cat/detail/simd_sse2_unary_full.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_unary_full.hpp
+  ${CATLIB}/simd/cat/simd_dispatch
   ${CATLIB}/socket/cat/socket
   ${CATLIB}/span/cat/span
   ${CATLIB}/span/implementations/span.tpp

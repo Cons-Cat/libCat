@@ -18,33 +18,27 @@
 
 namespace x64::detail {
 
-// Movmsk-derived lane-bit map for `cat::bitset`. Bit `i` matches
-// `simd_mask::operator[](i)` for masks from elementwise compares. The same word
-// feeds mask reductions below after masking to active lanes. Consumed by
-// `mask_to_bitset` in `implementations/simd_mask_bitset.tpp`.
+// `movmsk`-derived lane-bit map for `cat::bitset`. Bit `i` matches
+// `simd_mask[i]` for masks from elementwise compares. The same word feeds mask
+// reductions below after masking to active lanes. Consumed by `mask_to_bitset`
+// in `implementations/simd_mask_bitset.tpp`.
 
 template <typename T, x64::is_avx2_abi<T> Abi>
 [[nodiscard]]
 inline auto
 avx2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
-   auto raw =
-      __builtin_bit_cast(typename cat::simd<T, Abi>::raw_type, mask.raw);
-
-   if constexpr (cat::is_same<T, float>) {
-      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskps256(raw));
-   } else if constexpr (cat::is_same<T, double>) {
-      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskpd256(raw));
-   } else if constexpr (sizeof(T) == 1) {
-      return static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb256(raw));
+   if constexpr (sizeof(T) == 1) {
+      return static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb256(mask.raw));
    } else if constexpr (sizeof(T) == 4) {
-      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskps256(raw));
+      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskps256(mask.raw));
    } else if constexpr (sizeof(T) == 8) {
-      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskpd256(raw));
+      return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskpd256(mask.raw));
    } else {
       // sizeof(T) == 2, lanes == 16. Collapse the byte-bitmap from `pmovmskb`
       // into one bit per logical lane.
       // TODO: Is this the most efficient solution?
-      __UINT32_TYPE__ const bytes{__builtin_ia32_pmovmskb256(raw)};
+      __UINT32_TYPE__ const bytes =
+         static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb256(mask.raw));
       __UINT32_TYPE__ lane_bits = 0;
       for (cat::idx i = 0u; i < Abi::lanes; ++i) {
          cat::uint4 lane_bitset = 0;
@@ -74,7 +68,7 @@ avx2_movmsk_full_lane_mask(cat::idx lane_count) -> __UINT32_TYPE__ {
 // lane layouts.
 template <typename T, x64::is_avx2_abi<T> Abi>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
-inline constexpr auto
+constexpr auto
 avx2_abi_masked_lane_bits(cat::simd_mask<T, Abi> const& mask)
    -> __UINT32_TYPE__ {
    return avx2_abi_mask_to_bitset(mask)

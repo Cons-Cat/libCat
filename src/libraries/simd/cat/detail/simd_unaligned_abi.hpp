@@ -2,32 +2,24 @@
 
 #include <cat/arithmetic>
 
-namespace cat {
+namespace cat::simd_abi {
 
-template <typename BaseAbi>
-struct unaligned_abi;
-
-namespace simd_abi {
 template <typename AbiTag, typename ElementT>
 struct mask_lane;
 
-template <typename BaseAbi>
-using unaligned = unaligned_abi<BaseAbi>;
-}
-
 // Unaligned view of a base `simd` ABI. Same `size` and `lanes` as `BaseAbi` but
 // `alignment` is 1 so `gnu::vector_size` storage is not over-aligned (mirrors
-// `x64::avx2_unaligned_abi`/`x64::sse2_unaligned_abi` before the generic
+// `x64::avx2_unaligned_abi` / `x64::sse2_unaligned_abi` before the generic
 // spelling).
 template <typename BaseAbi>
-struct [[clang::preferred_name(simd_abi::unaligned<BaseAbi>)]] unaligned_abi {
-   using scalar_type = typename BaseAbi::scalar_type;
+struct unaligned {
+   using scalar_type = BaseAbi::scalar_type;
 
    template <typename U>
    using make_abi_type =
-      unaligned_abi<typename BaseAbi::template make_abi_type<U>>;
+      simd_abi::unaligned<typename BaseAbi::template make_abi_type<U>>;
 
-   constexpr unaligned_abi() = delete;
+   constexpr unaligned() = delete;
 
    static constexpr idx size = BaseAbi::size;
    static constexpr idx lanes = BaseAbi::lanes;
@@ -35,8 +27,9 @@ struct [[clang::preferred_name(simd_abi::unaligned<BaseAbi>)]] unaligned_abi {
 
    template <typename ElementT>
    using simd_mask_lane = simd_abi::mask_lane<
-      unaligned_abi<typename BaseAbi::template make_abi_type<ElementT>>,
+      simd_abi::unaligned<typename BaseAbi::template make_abi_type<ElementT>>,
       ElementT>;
 };
 
-}  // namespace cat
+} // namespace cat::simd_abi
+

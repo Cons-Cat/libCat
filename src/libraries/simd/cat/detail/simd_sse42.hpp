@@ -52,7 +52,7 @@ template <typename T>
 using sse2_simd_mask = cat::simd_mask<T, sse2_abi<T>>;
 
 template <typename T>
-using sse2_unaligned_abi = cat::unaligned_abi<sse2_abi<T>>;
+using sse2_unaligned_abi = cat::simd_abi::unaligned<sse2_abi<T>>;
 
 template <typename T>
 using sse2_unaligned_simd = cat::simd<T, sse2_unaligned_abi<T>>;
