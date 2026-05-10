@@ -1527,7 +1527,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
 
    // Load a vector from `data` with any alignment (gather). This may be slower
    // than `.loaded_aligned()`.
-   [[gnu::no_sanitize_address, gnu::always_inline]]
+   [[gnu::always_inline]]
    constexpr auto
    load_unaligned(memory_lane const* p_data) -> simd& {
       if consteval {

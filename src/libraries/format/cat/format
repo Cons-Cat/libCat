@@ -837,8 +837,7 @@ vfmt(Allocator& allocator, str_view const format, detail::format_args arguments)
       return result.template error<format_errors>();
    }
 
-   idx const length = string_length(into_buffer.data());
-   return str_view(into_buffer.p_storage, length);
+   return str_view(into_buffer.data(), into_buffer.size());
 }
 
 // Store `arguments` in a compacted variant object. Then format a sequence of

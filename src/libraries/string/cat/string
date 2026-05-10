@@ -634,4 +634,4 @@ cat::maybe<T>::or_exit(cat::str_view const error_message,
    }
 }
 
-#include "../implementations/string_length.tpp"
+#include "../implementations/string_ops.tpp"

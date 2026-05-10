@@ -9,7 +9,7 @@ struct alloc_huge_object {
    uint1 storage[cat::inline_buffer_size.raw + 1];
 };
 
-constinit int4 alloc_counter = 0;
+constinit int4 alloc_counter = 0;  // NOLINT
 
 struct alloc_non_trivial {
    char storage;
@@ -75,12 +75,12 @@ $test(alloc) {
    auto allocator = cat::make_linear_allocator(page);
 
    // Test `alloc`.
-   auto _ = allocator.alloc<int4>().value();
+   auto* _ = allocator.alloc<int4>().value();
    auto* p_alloc = allocator.alloc<int4>(1).value();
    cat::verify(*p_alloc == 1);
 
    // Test `xalloc`.
-   auto _ = allocator.xalloc<int4>();
+   auto* _ = allocator.xalloc<int4>();
    auto* p_xalloc = allocator.xalloc<int4>(1);
    cat::verify(*p_xalloc == 1);
 
@@ -93,24 +93,24 @@ $test(alloc) {
    cat::verify(alloc_multi.size() == 5);
 
    // Test `align_alloc`.
-   auto _ = allocator.align_alloc<int4>(8u).value();
+   auto* _ = allocator.align_alloc<int4>(8u).value();
    auto* p_align_alloc = allocator.align_alloc<int4>(8u, 1).value();
    cat::verify(*p_align_alloc == 1);
    cat::verify(cat::is_aligned(p_align_alloc, 8u));
 
    // Test `align_xalloc`.
-   auto _ = allocator.align_xalloc<int4>(8u);
+   auto* _ = allocator.align_xalloc<int4>(8u);
    auto* p_align_xalloc = allocator.align_xalloc<int4>(8u, 1);
    cat::verify(*p_align_xalloc == 1);
    cat::verify(cat::is_aligned(p_align_xalloc, 8u));
 
    // Test `unalign_alloc`.
-   auto _ = allocator.unalign_alloc<int4>(8u).value();
+   auto* _ = allocator.unalign_alloc<int4>(8u).value();
    auto* p_unalign_alloc = allocator.unalign_alloc<int4>(1).value();
    cat::verify(*p_unalign_alloc == 1);
 
    // Test `unalign_xalloc`.
-   auto _ = allocator.unalign_xalloc<int4>(8u);
+   auto* _ = allocator.unalign_xalloc<int4>(8u);
    auto* p_unalign_xalloc = allocator.unalign_xalloc<int4>(1);
    cat::verify(*p_unalign_xalloc == 1);
 
@@ -589,13 +589,13 @@ $test(alloc) {
    cat::verify(!inline_unalign_xsalloc_multi_big.is_inline());
 
    // Test `xcalloc`.
-   auto _ = allocator.xcalloc<int4>();
+   auto* _ = allocator.xcalloc<int4>();
 
    // Test `align_xcalloc`.
-   auto _ = allocator.align_xcalloc<int4>(8u);
+   auto* _ = allocator.align_xcalloc<int4>(8u);
 
    // Test `unalign_xcalloc`.
-   auto _ = allocator.unalign_xcalloc<int1>();
+   auto* _ = allocator.unalign_xcalloc<int1>();
 
    // Test `inline_calloc`.
    auto _ = allocator.inline_calloc<int4>().value();
@@ -616,13 +616,13 @@ $test(alloc) {
    auto _ = allocator.inline_unalign_xcalloc<int4>();
 
    // Test `xscalloc`.
-   auto _ = allocator.xscalloc<int4>().first();
+   auto* _ = allocator.xscalloc<int4>().first();
 
    // Test `align_xscalloc`.
-   auto _ = allocator.align_xscalloc<int4>(8u).first();
+   auto* _ = allocator.align_xscalloc<int4>(8u).first();
 
    // Test `unalign_xscalloc`.
-   auto _ = allocator.unalign_xscalloc<int1>().first();
+   auto* _ = allocator.unalign_xscalloc<int1>().first();
 
    // Test `inline_scalloc`.
    auto _ = allocator.inline_scalloc<int4>().value().first();

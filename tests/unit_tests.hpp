@@ -10,6 +10,7 @@
 using namespace cat::literals;
 using namespace cat::arithmetic;
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 [[gnu::used]]
 constinit inline cat::page_allocator pager;
 
@@ -18,6 +19,7 @@ constinit inline cat::atomic<cat::idx> tests_failed{};
 
 using constructor_fn = void (*const)();
 constinit inline cat::maybe<cat::vec<void*, cat::page_allocator>> test_fns;
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 [[noreturn]]
 void

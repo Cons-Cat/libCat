@@ -49,6 +49,8 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_simd_sse_avx.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_string_length.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_str_inplace.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_str_view_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp

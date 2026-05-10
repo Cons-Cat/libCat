@@ -51,7 +51,6 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/string/implementations/memcpy.cpp
   ${CATLIB}/string/implementations/memset.cpp
   ${CATLIB}/string/implementations/strlen.cpp
-  ${CATLIB}/string/implementations/compare_strings.cpp
   ${CATLIB}/string/implementations/print.cpp
   ${CATLIB}/string/implementations/println.cpp
   ${CATLIB}/string/implementations/eprint.cpp
@@ -240,7 +239,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/linux/implementations/futex.tpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp
   ${CATLIB}/meta/implementations/common_reference.tpp
-  ${CATLIB}/string/implementations/string_length.tpp
+  ${CATLIB}/string/implementations/string_ops.tpp
   ${CATLIB}/bit/implementations/is_aligned.tpp
   ${CATLIB}/bit/implementations/align_up.tpp
   ${CATLIB}/bit/implementations/align_down.tpp

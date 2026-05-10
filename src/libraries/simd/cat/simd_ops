@@ -749,7 +749,7 @@ struct make_simd_loaded_aligned_impl
 
    constexpr make_simd_loaded_aligned_impl() = default;
 
-   [[nodiscard]]
+   [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
    invoke(Simd::memory_lane const* p_source) const -> maybe<Simd> {
       if (!is_aligned(unconst(p_source), Simd::abi_type::alignment)) {
@@ -780,7 +780,7 @@ struct make_simd_loaded_unaligned_impl
 
    constexpr make_simd_loaded_unaligned_impl() = default;
 
-   [[nodiscard, gnu::no_sanitize_address]]
+   [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
    invoke(Simd::memory_lane const* p_source) const -> Simd {
       Simd result{};
@@ -807,7 +807,7 @@ struct make_simd_loaded_impl
 
    constexpr make_simd_loaded_impl() = default;
 
-   [[nodiscard]]
+   [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
    invoke(Simd::memory_lane const* p_source) const -> Simd {
       Simd result{};
