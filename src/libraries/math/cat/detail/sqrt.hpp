@@ -56,7 +56,7 @@ rsqrt(T argument) -> T {
 }
 
 #if __has_builtin(__builtin_ia32_rsqrtss)
-[[nodiscard]]
+[[nodiscard, gnu::target("sse"), gnu::always_inline]]
 constexpr auto
 rsqrt(float4_fast argument) -> float4_fast {
    float const approx = __builtin_ia32_rsqrtss({argument.raw})[0];

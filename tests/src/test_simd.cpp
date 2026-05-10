@@ -264,7 +264,7 @@ $test(fixed_size_simd_alignment) {
    using cat::uword;
    using cat::simd_abi::fixed_size;
 
-   // `x64::avx2_abi` cap is 32 bytes. Alignment is the largest power of two not
+   // `x64::avx_abi` cap is 32 bytes. Alignment is the largest power of two not
    // exceeding `min(size, 32)`, at least `alignof(T)`.
    static_assert(simd_abi::fixed_size<float4, 1u>::size == 4u);
    static_assert(simd_abi::fixed_size<float4, 1u>::alignment == 4u);
@@ -399,9 +399,9 @@ $test(simd_abi_deduce) {
       cat::simd_abi::deduce<float, cat::simd_abi::native<float>::lanes>;
    static_assert(cat::is_same<native_float, cat::simd_abi::native<float>>);
 
-   using sse2_float = cat::simd_abi::deduce<float, x64::sse2_abi<float>::lanes>;
-   static_assert(cat::is_same<sse2_float, x64::sse2_abi<float>>);
-   static_assert(cat::is_same<float4x4::abi_type, x64::sse2_abi<float4>>);
+   using sse_float = cat::simd_abi::deduce<float, x64::sse_abi<float>::lanes>;
+   static_assert(cat::is_same<sse_float, x64::sse_abi<float>>);
+   static_assert(cat::is_same<float4x4::abi_type, x64::sse_abi<float4>>);
    static_assert(
       cat::is_same<float4x8::abi_type, cat::simd_abi::native<float4>>);
 
@@ -3085,25 +3085,25 @@ $test(simd_dispatch_aliases_native_per_arch) {
            {
               static_assert(
                  cat::is_same<native_simd<cat::int4>,
-                              cat::simd<cat::int4, x64::avx2_abi<cat::int4>>>);
+                              cat::simd<cat::int4, x64::avx_abi<cat::int4>>>);
               static_assert(
                  cat::is_same<
                     native_simd_mask<cat::int4>,
-                    cat::simd_mask<cat::int4, x64::avx2_abi<cat::int4>>>);
+                    cat::simd_mask<cat::int4, x64::avx_abi<cat::int4>>>);
               static_assert(
                  cat::is_same<
                     native_unaligned_simd<cat::int4>,
-                    cat::simd<cat::int4, x64::avx2_unaligned_abi<cat::int4>>>);
+                    cat::simd<cat::int4, x64::avx_unaligned_abi<cat::int4>>>);
            }),
       $abi(sse2,
            {
               static_assert(
                  cat::is_same<native_simd<cat::int4>,
-                              cat::simd<cat::int4, x64::sse2_abi<cat::int4>>>);
+                              cat::simd<cat::int4, x64::sse_abi<cat::int4>>>);
               static_assert(
                  cat::is_same<
                     native_simd_mask<cat::int4>,
-                    cat::simd_mask<cat::int4, x64::sse2_abi<cat::int4>>>);
+                    cat::simd_mask<cat::int4, x64::sse_abi<cat::int4>>>);
            }),
       default : {
          // Default lane: `cat::simd_abi::native<T>`.
@@ -3117,7 +3117,7 @@ $test(simd_dispatch_aliases_native_per_arch) {
 
 $test(simd_dispatch_aliases_deduce_per_arch) {
    // `deduce_simd<T, lanes>` passes the arch ABI to `simd_abi::deduce`
-   // as a candidate. The deducer also walks `simd_abi::native`, `sse2_abi`,
+   // as a candidate. The deducer also walks `simd_abi::native`, `sse_abi`,
    // and `simd_abi::scalar` after the explicit candidate, so a lane count
    // the arch can't represent falls through to whichever candidate
    // does match -- not necessarily `simd_abi::fixed_size`.
@@ -3126,12 +3126,12 @@ $test(simd_dispatch_aliases_deduce_per_arch) {
            // AVX2 vector for `int4` is 8 lanes; arch candidate wins.
            static_assert(
               cat::is_same<deduce_simd<cat::int4, 8u>,
-                           cat::simd<cat::int4, x64::avx2_abi<cat::int4>>>);),
+                           cat::simd<cat::int4, x64::avx_abi<cat::int4>>>);),
       $abi(sse2,
            // SSE2 vector for `int4` is 4 lanes. Arch candidate wins.
            static_assert(
               cat::is_same<deduce_simd<cat::int4, 4u>,
-                           cat::simd<cat::int4, x64::sse2_abi<cat::int4>>>);));
+                           cat::simd<cat::int4, x64::sse_abi<cat::int4>>>);));
 }
 
 $test(simd_dispatch_aliases_scalar_unchanged) {
@@ -3153,8 +3153,8 @@ $test(simd_dispatch_aliases_scalar_unchanged) {
 $test(simd_dispatch_native_aliases) {
    $simd_switch($abi(avx2,
                      {
-                        // AVX2 vectors are 32 bytes, so the masks should
-                        // divide into that.
+                        // AVX2 vectors are 32 bytes, so the masks should divide
+                        // into that.
                         using mask = native_simd<cat::int4>::mask_type;
                         auto const bits = mask{}.to_bitset();
                         static_assert(bits.size() == 8);
@@ -3166,8 +3166,8 @@ $test(simd_dispatch_native_aliases) {
                         static_assert(bits3.size() == 32);
                      }),
                 $abi(sse2, {
-                   // SSE2 vectors are 16 bytes, so the masks should
-                   // divide into that.
+                   // SSE2 vectors are 16 bytes, so the masks should divide into
+                   // that.
                    using mask = native_simd<cat::int4>::mask_type;
                    auto const bits = mask{}.to_bitset();
                    static_assert(bits.size() == 4);

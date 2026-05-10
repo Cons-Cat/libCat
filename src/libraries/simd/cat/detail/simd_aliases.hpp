@@ -239,8 +239,8 @@ CAT_SIMD_ALIASES(::cat::simd_abi::native)
 
 namespace detail::simd_sse2 {
 
-CAT_SIMD_ALIASES(::x64::sse2_abi)
-CAT_SIMD_PLACEHOLDER_ALIASES(::x64::sse2_abi)
+CAT_SIMD_ALIASES(::x64::sse_abi)
+CAT_SIMD_PLACEHOLDER_ALIASES(::x64::sse_abi)
 
 }  // namespace detail::simd_sse2
 
@@ -274,7 +274,7 @@ using namespace simd_sse2;
 
 namespace detail::simd_avx2 {
 
-CAT_SIMD_ALIASES(::x64::avx2_abi)
-CAT_SIMD_PLACEHOLDER_ALIASES(::x64::avx2_abi)
+CAT_SIMD_ALIASES(::x64::avx_abi)
+CAT_SIMD_PLACEHOLDER_ALIASES(::x64::avx_abi)
 
 }  // namespace detail::simd_avx2

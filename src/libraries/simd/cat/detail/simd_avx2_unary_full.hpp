@@ -6,9 +6,9 @@
 
 namespace cat::detail::simd_abi {
 
-template <x64::is_avx2_abi<float> Abi>
+template <x64::is_avx_abi<float> Abi>
 struct unary_full<op_rsqrt, float, Abi> {
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::target("avx"), gnu::nodebug]]
    static constexpr auto
    invoke(simd<float, Abi> input) -> simd<float, Abi> {
       using simd_type = simd<float, Abi>;

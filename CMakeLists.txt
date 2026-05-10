@@ -113,8 +113,6 @@ list(
 
   # Enable CPU intrinsics required by the SIMD headers:
   # TODO: These should be optional.
-  -msse4.2
-  -mavx2
   -mfma
   -mlzcnt
   -mbmi

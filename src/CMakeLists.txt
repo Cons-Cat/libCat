@@ -217,9 +217,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_unaligned_abi.hpp
   ${CATLIB}/simd/cat/detail/simd_mask_lane_sseavx.hpp
   ${CATLIB}/simd/cat/detail/simd_sse42.hpp
-  ${CATLIB}/simd/cat/detail/simd_sse2.hpp
-  ${CATLIB}/simd/cat/detail/simd_sse2_movmsk.hpp
-  ${CATLIB}/simd/cat/detail/simd_sse2_unary_full.hpp
+  ${CATLIB}/simd/cat/detail/simd_sse.hpp
+  ${CATLIB}/simd/cat/detail/simd_sse_movmsk.hpp
+  ${CATLIB}/simd/cat/detail/simd_sse_unary_full.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_unary_full.hpp
   ${CATLIB}/simd/cat/simd_dispatch
   ${CATLIB}/socket/cat/socket

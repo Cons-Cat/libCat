@@ -24,17 +24,16 @@ struct mask_lane;
 
 namespace x64 {
 
-// 16-byte XMM layout (`movaps`-aligned). Used for baseline 128-bit SIMD and for
-// code paths that call SSE4.2 string intrinsics at runtime while still typing
-// vectors as this ABI.
+// 16-byte XMM layout (`movaps`-aligned). Used for baseline 16-byte SIMD and
+// for code paths that call SSE4.2 string intrinsics at runtime while.
 template <typename T>
-struct sse2_abi {
+struct sse_abi {
    using scalar_type = T;
 
    template <typename U>
-   using make_abi_type = sse2_abi<U>;
+   using make_abi_type = sse_abi<U>;
 
-   constexpr sse2_abi() = delete;
+   constexpr sse_abi() = delete;
 
    static constexpr cat::idx size = 16u;
    static constexpr cat::idx lanes{size.raw / sizeof(T)};
@@ -42,38 +41,38 @@ struct sse2_abi {
 
    template <typename ElementT>
    using simd_mask_lane =
-      cat::simd_abi::mask_lane<sse2_abi<ElementT>, ElementT>;
+      cat::simd_abi::mask_lane<sse_abi<ElementT>, ElementT>;
 };
 
 template <typename T>
-using sse2_simd = cat::simd<T, sse2_abi<T>>;
+using sse_simd = cat::simd<T, sse_abi<T>>;
 
 template <typename T>
-using sse2_simd_mask = cat::simd_mask<T, sse2_abi<T>>;
+using sse_simd_mask = cat::simd_mask<T, sse_abi<T>>;
 
 template <typename T>
-using sse2_unaligned_abi = cat::simd_abi::unaligned<sse2_abi<T>>;
+using sse_unaligned_abi = cat::simd_abi::unaligned<sse_abi<T>>;
 
 template <typename T>
-using sse2_unaligned_simd = cat::simd<T, sse2_unaligned_abi<T>>;
+using sse_unaligned_simd = cat::simd<T, sse_unaligned_abi<T>>;
 
 template <typename T>
-using sse2_unaligned_simd_mask = cat::simd_mask<T, sse2_unaligned_abi<T>>;
+using sse_unaligned_simd_mask = cat::simd_mask<T, sse_unaligned_abi<T>>;
 
 namespace detail {
 template <typename Abi, typename T>
-inline constexpr bool is_sse2_abi_impl = false;
+inline constexpr bool is_sse_abi_impl = false;
 
 template <typename T>
-inline constexpr bool is_sse2_abi_impl<sse2_abi<T>, T> = true;
+inline constexpr bool is_sse_abi_impl<sse_abi<T>, T> = true;
 
 template <typename T>
-inline constexpr bool is_sse2_abi_impl<sse2_unaligned_abi<T>, T> = true;
+inline constexpr bool is_sse_abi_impl<sse_unaligned_abi<T>, T> = true;
 }  // namespace detail
 
-// Matches both `sse2_abi<T>` and unaligned `sse2_unaligned_abi<T>`.
+// Matches both `sse_abi<T>` and unaligned `sse_unaligned_abi<T>`.
 template <typename Abi, typename T>
-concept is_sse2_abi = detail::is_sse2_abi_impl<Abi, T>;
+concept is_sse_abi = detail::is_sse_abi_impl<Abi, T>;
 
 enum class string_control : unsigned char {
    unsigned_byte = 0x00,
@@ -109,8 +108,8 @@ namespace x64 {
 
 // SSE4.2 `pcmpistri`/`pcmpistric`. `control_mask` must be a constant suitable
 // for the intrinsics.
-template <string_control control_mask, typename T, is_sse2_abi<T> Abi>
-[[gnu::no_sanitize_address]]
+template <string_control control_mask, typename T, is_sse_abi<T> Abi>
+[[gnu::target("sse4.2"), gnu::no_sanitize_address]]
 constexpr auto
 compare_implicit_length_strings(cat::simd<T, Abi> const& vector_1,
                                 cat::simd<T, Abi> const& vector_2) -> bool {
@@ -118,8 +117,8 @@ compare_implicit_length_strings(cat::simd<T, Abi> const& vector_1,
       vector_1.raw, vector_2.raw, static_cast<unsigned char>(control_mask));
 }
 
-template <string_control control_mask, typename T, is_sse2_abi<T> Abi>
-[[gnu::no_sanitize_address]]
+template <string_control control_mask, typename T, is_sse_abi<T> Abi>
+[[gnu::target("sse4.2"), gnu::no_sanitize_address]]
 constexpr auto
 compare_implicit_length_strings_return_index(cat::simd<T, Abi> const& vector_1,
                                              cat::simd<T, Abi> const& vector_2)

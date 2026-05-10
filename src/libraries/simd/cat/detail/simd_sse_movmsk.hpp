@@ -6,8 +6,8 @@
 
 namespace x64::detail {
 
-template <typename T, is_sse2_abi<T> Abi>
-[[nodiscard]]
+template <typename T, is_sse_abi<T> Abi>
+[[nodiscard, gnu::target("sse2"), gnu::nodebug]]
 constexpr auto
 sse2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
    if constexpr (sizeof(T) == 1) {

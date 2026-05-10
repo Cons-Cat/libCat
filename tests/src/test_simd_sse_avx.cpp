@@ -9,17 +9,17 @@ using cat::float4x4;
 using cat::int4x4;
 using cat::int4x8;
 
-// SSE2 hooks (`simd_sse2.hpp`).
+// SSE hooks (`simd_sse.hpp`).
 // `unary_full<op_rsqrt>`, plus `mask_to_bitset` via `sse2_abi_mask_to_bitset`
 // in `simd_mask_bitset.tpp`. Reference behavior uses `simd_abi::fixed_size`
-// without ISA hooks, not `simd_abi::native` which may alias `avx2_abi` on this
+// without ISA hooks, not `simd_abi::native` which may alias `avx_abi` on this
 // target.
-$test(simd_sse2_abi_hooks_permute_and_rsqrt) {
+$test(simd_sse_abi_hooks_permute_and_rsqrt) {
    static_assert(cat::simd_abi::scalar<int4>::size == sizeof(int4));
    static_assert(cat::simd_abi::scalar<int4>::alignment == alignof(int4));
    static_assert(cat::simd_abi::scalar<float4>::lanes == 1u);
 
-   x64::sse2_simd<int4> const ints{10, 20, 30, 40};
+   x64::sse_simd<int4> const ints{10, 20, 30, 40};
    cat::fixed_size_simd<int4, 4u> const ref_ints{10, 20, 30, 40};
    int4x4 const irev{3u, 2u, 1u, 0u};
    cat::verify(cat::simd_permute(ints, irev)[0u] == 40);
@@ -32,7 +32,7 @@ $test(simd_sse2_abi_hooks_permute_and_rsqrt) {
    cat::verify(cat::simd_permute(ints, iid) == ints);
    cat::verify(cat::simd_permute(ref_ints, iid) == ref_ints);
 
-   x64::sse2_simd<float4> const floats{10_f4, 20_f4, 30_f4, 40_f4};
+   x64::sse_simd<float4> const floats{10_f4, 20_f4, 30_f4, 40_f4};
    cat::fixed_size_simd<float4, 4u> const ref_floats{10_f4, 20_f4, 30_f4,
                                                      40_f4};
    float4x4 const frev{3_f4, 2_f4, 1_f4, 0_f4};
@@ -44,7 +44,7 @@ $test(simd_sse2_abi_hooks_permute_and_rsqrt) {
    float4x4 const fid{0_f4, 1_f4, 2_f4, 3_f4};
    cat::verify(cat::simd_permute(floats, fid) == floats);
 
-   x64::sse2_simd<float4> const unit{4_f4, 4_f4, 4_f4, 4_f4};
+   x64::sse_simd<float4> const unit{4_f4, 4_f4, 4_f4, 4_f4};
    cat::fixed_size_simd<float4, 4u> const unit_ref{4_f4, 4_f4, 4_f4, 4_f4};
    auto const rr = cat::simd_rsqrt(unit);
    cat::fixed_size_simd<float4, 4u> const rr_scalar = cat::simd_rsqrt(unit_ref);
@@ -54,9 +54,9 @@ $test(simd_sse2_abi_hooks_permute_and_rsqrt) {
    }
 }
 
-$test(simd_sse2_abi_hooks_mask_to_bitset) {
-   x64::sse2_simd<float> const v{1.f, 2.f, 3.f, 4.f};
-   auto const m = v > x64::sse2_simd<float>{2.f, 2.f, 2.f, 2.f};
+$test(simd_sse_abi_hooks_mask_to_bitset) {
+   x64::sse_simd<float> const v{1.f, 2.f, 3.f, 4.f};
+   auto const m = v > x64::sse_simd<float>{2.f, 2.f, 2.f, 2.f};
    cat::bitset<4u> const bits = m.to_bitset();
    cat::verify(bits[0u] == false);
    cat::verify(bits[1u] == false);
@@ -64,13 +64,13 @@ $test(simd_sse2_abi_hooks_mask_to_bitset) {
    cat::verify(bits[3u] == true);
 }
 
-// AVX2 hooks (`simd_avx2.hpp`).
+// AVX hooks (`simd_avx2.hpp`).
 // `unary_full<op_rsqrt>`, plus mask reductions via `simd_avx2_mask_ops.hpp` and
 // `simd_avx2_mask_ops.hpp` mask reductions. `mask_to_bitset` via
 // `avx2_abi_mask_to_bitset`.
-$test(simd_avx2_abi_hooks_permute_and_rsqrt) {
-   x64::avx2_simd<float4> const fv{10_f4, 20_f4, 30_f4, 40_f4,
-                                   50_f4, 60_f4, 70_f4, 80_f4};
+$test(simd_avx_abi_hooks_permute_and_rsqrt) {
+   x64::avx_simd<float4> const fv{10_f4, 20_f4, 30_f4, 40_f4,
+                                  50_f4, 60_f4, 70_f4, 80_f4};
    int4x8 const fid{0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u};
    cat::verify(cat::simd_permute(fv, fid) == fv);
 
@@ -85,7 +85,7 @@ $test(simd_avx2_abi_hooks_permute_and_rsqrt) {
    int4x8 const fbroadcast{};
    cat::verify(cat::simd_permute(fv, fbroadcast)[7u] == fv[0u]);
 
-   x64::avx2_simd<int4> const iv{1, 2, 3, 4, 5, 6, 7, 8};
+   x64::avx_simd<int4> const iv{1, 2, 3, 4, 5, 6, 7, 8};
    cat::verify(cat::simd_permute(iv, fid) == iv);
    cat::fixed_size_simd<int4, 4u> const ilo{1, 2, 3, 4};
    int4x4 const irev4{3u, 2u, 1u, 0u};
@@ -95,7 +95,7 @@ $test(simd_avx2_abi_hooks_permute_and_rsqrt) {
                == cat::fixed_size_simd<int4, 4u>(iperm[0u], iperm[1u],
                                                  iperm[2u], iperm[3u]));
 
-   x64::avx2_simd<double> const dv{1., 2., 3., 4.};
+   x64::avx_simd<double> const dv{1., 2., 3., 4.};
    int4x4 const did{0u, 1u, 2u, 3u};
    cat::verify(cat::simd_permute(dv, did) == dv);
 
@@ -110,7 +110,7 @@ $test(simd_avx2_abi_hooks_permute_and_rsqrt) {
    cat::verify(swapped[2u] == pair_back[0u]);
    cat::verify(swapped[3u] == pair_back[1u]);
 
-   x64::avx2_simd<float4> ones{};
+   x64::avx_simd<float4> ones{};
    ones.fill(4_f4);
    cat::fixed_size_simd<float4, 4u> ones_ref{};
    ones_ref.fill(4_f4);
@@ -129,11 +129,11 @@ $test(simd_avx2_abi_hooks_permute_and_rsqrt) {
 // (single-precision) accuracy. A tolerance of 1e-5 would fail for the
 // unrefined hook and pass with the refined one, so this is a regression check
 // that NR is on.
-$test(simd_sse2_rsqrt_fast_is_nr_refined) {
-   using sse2_fast =
-      cat::simd<cat::float4_fast, x64::sse2_abi<cat::float4_fast>>;
-   sse2_fast const v{cat::float4_fast(4.f), cat::float4_fast(0.25f),
-                     cat::float4_fast(16.f), cat::float4_fast(100.f)};
+$test(simd_sse_rsqrt_fast_is_nr_refined) {
+   using sse_fast =
+      cat::simd<cat::float4_fast, x64::sse_abi<cat::float4_fast>>;
+   sse_fast const v{cat::float4_fast(4.f), cat::float4_fast(0.25f),
+                    cat::float4_fast(16.f), cat::float4_fast(100.f)};
    auto const rr = cat::simd_rsqrt(v);
    float const expected[4] = {0.5f, 2.f, 0.25f, 0.1f};
    for (cat::idx i = 0u; i < cat::idx{4}; ++i) {
@@ -142,9 +142,9 @@ $test(simd_sse2_rsqrt_fast_is_nr_refined) {
    }
 }
 
-$test(simd_avx2_rsqrt_fast_is_nr_refined) {
+$test(simd_avx_rsqrt_fast_is_nr_refined) {
    using avx_fast =
-      cat::simd<cat::float4_fast, x64::avx2_abi<cat::float4_fast>>;
+      cat::simd<cat::float4_fast, x64::avx_abi<cat::float4_fast>>;
    avx_fast const v{cat::float4_fast(4.f),     cat::float4_fast(0.25f),
                     cat::float4_fast(16.f),    cat::float4_fast(100.f),
                     cat::float4_fast(0.0625f), cat::float4_fast(625.f),
@@ -158,8 +158,8 @@ $test(simd_avx2_rsqrt_fast_is_nr_refined) {
    }
 }
 
-$test(simd_avx2_rsqrt_times_sqrt_near_one) {
-   using avxf = cat::simd<float, x64::avx2_abi<float>>;
+$test(simd_avx_rsqrt_times_sqrt_near_one) {
+   using avxf = cat::simd<float, x64::avx_abi<float>>;
    using sxf = cat::fixed_size_simd<float, 4u>;
    avxf wide{};
    wide.fill(4.f);
@@ -178,12 +178,12 @@ $test(simd_avx2_rsqrt_times_sqrt_near_one) {
    }
 }
 
-$test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
-   x64::avx2_simd_mask<float4> const sparse{false, false, true,  false,
-                                            false, true,  false, true};
+$test(simd_avx_abi_hooks_mask_reductions_and_bitset) {
+   x64::avx_simd_mask<float4> const sparse{false, false, true,  false,
+                                           false, true,  false, true};
    // Eight `float4` lanes need 32 bytes. Compare against
    // `simd_abi::fixed_size<float4, 8>` instead of `simd_abi::native<float4>`
-   // which aliases `avx2_abi<float4>` here. No AVX2 mask hook specializations
+   // which aliases `avx_abi<float4>` here. No AVX2 mask hook specializations
    // apply to `simd_abi::fixed_size`.
    cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 8>> const
       sparse_ref{false, false, true, false, false, true, false, true};
@@ -191,8 +191,8 @@ $test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
    cat::verify(sparse.find_if_true() == sparse_ref.find_if_true());
    cat::verify(sparse.find_last_if_true() == sparse_ref.find_last_if_true());
 
-   x64::avx2_simd_mask<float4> const all_true{true, true, true, true,
-                                              true, true, true, true};
+   x64::avx_simd_mask<float4> const all_true{true, true, true, true,
+                                             true, true, true, true};
    cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 8>> const
       all_true_ref{true, true, true, true, true, true, true, true};
    cat::verify(all_true.count_if_true() == all_true_ref.count_if_true());
@@ -201,15 +201,15 @@ $test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
    cat::verify(all_true.find_last_if_true()
                == all_true_ref.find_last_if_true());
 
-   x64::avx2_simd_mask<float4> const none{false, false, false, false,
-                                          false, false, false, false};
+   x64::avx_simd_mask<float4> const none{false, false, false, false,
+                                         false, false, false, false};
    cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 8>> const none_ref{
       false, false, false, false, false, false, false, false};
    cat::verify(none.count_if_true() == none_ref.count_if_true());
    cat::verify(cat::simd_any_of(none) == cat::simd_any_of(none_ref));
 
-   x64::avx2_simd_mask<float4> const one{false, false, false, true,
-                                         false, false, false, false};
+   x64::avx_simd_mask<float4> const one{false, false, false, true,
+                                        false, false, false, false};
    cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 8>> const one_ref{
       false, false, false, true, false, false, false, false};
    cat::verify(one.find_if_true() == one_ref.find_if_true());
@@ -232,9 +232,9 @@ $test(simd_avx2_abi_hooks_mask_reductions_and_bitset) {
    }
 }
 
-$test(simd_avx2_unaligned_abi) {
-   static_assert(x64::avx2_unaligned_simd<float>::size() == 8u);
-   static_assert(alignof(x64::avx2_unaligned_simd<float>) == 1);
+$test(simd_avx_unaligned_abi) {
+   static_assert(x64::avx_unaligned_simd<float>::size() == 8u);
+   static_assert(alignof(x64::avx_unaligned_simd<float>) == 1);
 
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
@@ -247,7 +247,7 @@ $test(simd_avx2_unaligned_abi) {
    auto* _ = allocator.alloc<short>().verify();
    // Allocate unaligned SIMD.
    auto* p_unaligned =
-      allocator.unalign_alloc<x64::avx2_unaligned_simd<float>>().verify();
+      allocator.unalign_alloc<x64::avx_unaligned_simd<float>>().verify();
 
    cat::verify(!cat::is_aligned(p_unaligned, 32_uz));
    cat::verify(!cat::is_aligned(p_unaligned, 16_uz));
@@ -265,9 +265,9 @@ $test(simd_avx2_unaligned_abi) {
    cat::verify(cat::abs(rr[0u] - 0.5_f4) < 0.001_f4);
 }
 
-$test(simd_sse2_and_unaligned_abi) {
-   static_assert(x64::sse2_unaligned_simd<float>::size() == 4u);
-   static_assert(alignof(x64::sse2_unaligned_simd<float>) == 1);
+$test(simd_sse_and_unaligned_abi) {
+   static_assert(x64::sse_unaligned_simd<float>::size() == 4u);
+   static_assert(alignof(x64::sse_unaligned_simd<float>) == 1);
 
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
@@ -280,7 +280,7 @@ $test(simd_sse2_and_unaligned_abi) {
    auto* _ = allocator.alloc<short>().verify();
    // Allocate unaligned SIMD.
    auto* p_unaligned =
-      allocator.unalign_alloc<x64::sse2_unaligned_simd<float>>().verify();
+      allocator.unalign_alloc<x64::sse_unaligned_simd<float>>().verify();
 
    cat::verify(!cat::is_aligned(p_unaligned, 16_uz));
    cat::verify(cat::is_aligned(p_unaligned, 2_uz));
@@ -296,9 +296,9 @@ $test(simd_sse2_and_unaligned_abi) {
    cat::verify(cat::abs(rr[0u] - 0.5_f4) < 0.001_f4);
 }
 
-$test(simd_avx2_unaligned_abi_mask) {
-   static_assert(x64::avx2_unaligned_simd_mask<float>::size() == 8u);
-   static_assert(alignof(x64::avx2_unaligned_simd_mask<float>) == 1);
+$test(simd_avx_unaligned_abi_mask) {
+   static_assert(x64::avx_unaligned_simd_mask<float>::size() == 8u);
+   static_assert(alignof(x64::avx_unaligned_simd_mask<float>) == 1);
 
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
@@ -311,7 +311,7 @@ $test(simd_avx2_unaligned_abi_mask) {
    auto* _ = allocator.alloc<short>().verify();
    // Allocate unaligned mask.
    auto* p_unaligned =
-      allocator.unalign_alloc<x64::avx2_unaligned_simd_mask<float>>().verify();
+      allocator.unalign_alloc<x64::avx_unaligned_simd_mask<float>>().verify();
 
    cat::verify(!cat::is_aligned(p_unaligned, 32_uz));
    cat::verify(!cat::is_aligned(p_unaligned, 16_uz));
@@ -329,9 +329,9 @@ $test(simd_avx2_unaligned_abi_mask) {
    cat::verify(!cat::simd_any_of(*p_unaligned));
 }
 
-$test(simd_sse2_and_unaligned_abi_mask) {
-   static_assert(x64::sse2_unaligned_simd_mask<float>::size() == 4u);
-   static_assert(alignof(x64::sse2_unaligned_simd_mask<float>) == 1);
+$test(simd_sse_and_unaligned_abi_mask) {
+   static_assert(x64::sse_unaligned_simd_mask<float>::size() == 4u);
+   static_assert(alignof(x64::sse_unaligned_simd_mask<float>) == 1);
 
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
@@ -344,7 +344,7 @@ $test(simd_sse2_and_unaligned_abi_mask) {
    auto* _ = allocator.alloc<short>().verify();
    // Allocate unaligned mask.
    auto* p_unaligned =
-      allocator.unalign_alloc<x64::sse2_unaligned_simd_mask<float>>().verify();
+      allocator.unalign_alloc<x64::sse_unaligned_simd_mask<float>>().verify();
 
    cat::verify(!cat::is_aligned(p_unaligned, 16_uz));
    cat::verify(cat::is_aligned(p_unaligned, 2_uz));
@@ -361,10 +361,10 @@ $test(simd_sse2_and_unaligned_abi_mask) {
 }
 
 $test(simd_unaligned_abi_adaptor) {
-   static_assert(cat::is_same<x64::avx2_unaligned_abi<float>,
-                              cat::simd_abi::unaligned<x64::avx2_abi<float>>>);
-   static_assert(cat::is_same<x64::sse2_unaligned_abi<float>,
-                              cat::simd_abi::unaligned<x64::sse2_abi<float>>>);
+   static_assert(cat::is_same<x64::avx_unaligned_abi<float>,
+                              cat::simd_abi::unaligned<x64::avx_abi<float>>>);
+   static_assert(cat::is_same<x64::sse_unaligned_abi<float>,
+                              cat::simd_abi::unaligned<x64::sse_abi<float>>>);
 
    static_assert(cat::simd_abi::unaligned<cat::simd_abi::native<float>>::lanes
                  == cat::simd_abi::native<float>::lanes);

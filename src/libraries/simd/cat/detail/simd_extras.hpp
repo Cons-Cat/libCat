@@ -343,7 +343,7 @@ simd_chunked_invoke(Fn&& fn, simd<T, Abi> const& pack, Args&&... arguments) {
 
 }  // namespace cat
 
-// x86 helpers ship with `<cat/simd>` (`simd_sse2_movmsk.hpp`,
+// x86 helpers ship with `<cat/simd>` (`simd_sse_movmsk.hpp`,
 // `simd_avx2_mask_ops.hpp`, ...). SSE4.2 string helpers live in
 // `simd_sse42.hpp`.
 #include <cat/detail/simd_sse42.hpp>

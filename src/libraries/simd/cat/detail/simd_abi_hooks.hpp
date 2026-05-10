@@ -32,7 +32,7 @@
 // adds one, so the elementwise path stays available. `simd::popcount()` remains
 // the member and elementwise builtin story. There is no elementwise full-vector
 // rotate builtin. `op_rsqrt` pairs with `simd_rsqrt` (see `simd_avx2.hpp` and
-// `simd_sse2.hpp`). `op_rotate_*` pairs with `unary_int` overrides or lane
+// `simd_sse.hpp`). `op_rotate_*` pairs with `unary_int` overrides or lane
 // loops in `simd_extras.hpp`.
 //
 // `binary_masked` and `has_simd_abi_binary_masked` cover blends with packed ops

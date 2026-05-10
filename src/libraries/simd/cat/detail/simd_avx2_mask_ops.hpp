@@ -23,8 +23,8 @@ namespace x64::detail {
 // reductions below after masking to active lanes. Consumed by `mask_to_bitset`
 // in `implementations/simd_mask_bitset.tpp`.
 
-template <typename T, x64::is_avx2_abi<T> Abi>
-[[nodiscard]]
+template <typename T, x64::is_avx_abi<T> Abi>
+[[nodiscard, gnu::target("avx2")]]
 inline auto
 avx2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
    if constexpr (sizeof(T) == 1) {
@@ -66,8 +66,8 @@ avx2_movmsk_full_lane_mask(cat::idx lane_count) -> __UINT32_TYPE__ {
 // word rather than reopening movmsk separately because sharing
 // `avx2_abi_mask_to_bitset` matches normal practice and keeps one place for odd
 // lane layouts.
-template <typename T, x64::is_avx2_abi<T> Abi>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
+template <typename T, x64::is_avx_abi<T> Abi>
+[[nodiscard, gnu::target("avx2"), gnu::always_inline, gnu::nodebug]]
 constexpr auto
 avx2_abi_masked_lane_bits(cat::simd_mask<T, Abi> const& mask)
    -> __UINT32_TYPE__ {
@@ -84,9 +84,9 @@ namespace cat::detail::simd_abi {
 // same customary AVX2 approach as MOVMSKPS plus BSF or BSR style operations in
 // assembly references.
 
-template <typename T, x64::is_avx2_abi<T> Abi>
+template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_count_if_true<T, Abi> {
-   [[nodiscard]]
+   [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> idx {
       // `popcount` on the movmsk lane-bit map.
@@ -96,9 +96,9 @@ struct mask_count_if_true<T, Abi> {
    }
 };
 
-template <typename T, x64::is_avx2_abi<T> Abi>
+template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_find_if_true<T, Abi> {
-   [[nodiscard]]
+   [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> idx {
       // At least one true lane (`ctz` is well-defined when the movmsk word is
@@ -110,9 +110,9 @@ struct mask_find_if_true<T, Abi> {
    }
 };
 
-template <typename T, x64::is_avx2_abi<T> Abi>
+template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_find_last_if_true<T, Abi> {
-   [[nodiscard]]
+   [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> idx {
       // At least one true lane (lane-bit word is non-zero).
@@ -123,9 +123,9 @@ struct mask_find_last_if_true<T, Abi> {
    }
 };
 
-template <typename T, x64::is_avx2_abi<T> Abi>
+template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_all_of<T, Abi> {
-   [[nodiscard]]
+   [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
    invoke(simd_mask<T, Abi> mask) -> bool {
       // Movmsk lane bits equal the active-lane mask iff every lane is true.
@@ -134,9 +134,9 @@ struct mask_all_of<T, Abi> {
    }
 };
 
-template <typename T, x64::is_avx2_abi<T> Abi>
+template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_any_of<T, Abi> {
-   [[nodiscard]]
+   [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
    invoke(simd_mask<T, Abi> mask) -> bool {
       return ::x64::detail::avx2_abi_masked_lane_bits(mask) != 0u;

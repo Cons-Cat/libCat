@@ -19,11 +19,11 @@ cat::string_length(char const* p_string) -> idx {
       }
    } else {
       // TODO: Implement with portable SIMD, and tune performance.
-      constexpr x64::sse2_unaligned_simd<char> zeros = '\0';
+      constexpr x64::sse_unaligned_simd<char> zeros = '\0';
 
       for (idx i;; i += 16u) {
-         x64::sse2_unaligned_simd<char> const data =
-            make_simd_loaded<x64::sse2_unaligned_simd<char>>(p_string + i);
+         x64::sse_unaligned_simd<char> const data =
+            make_simd_loaded<x64::sse_unaligned_simd<char>>(p_string + i);
          constexpr x64::string_control mask =
             x64::string_control::unsigned_byte
             | x64::string_control::compare_equal_each

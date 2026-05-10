@@ -129,7 +129,7 @@ struct simd_abi::fixed_size {
    constexpr fixed_size() = delete;
 
    // TODO: Select `target_abi` portably.
-   using target_abi = x64::avx2_abi<T>;
+   using target_abi = x64::avx_abi<T>;
    static constexpr idx lanes = in_lanes;
    static constexpr idx size = idx(lanes.raw * sizeof(T));
    static constexpr uword alignment =
@@ -157,7 +157,7 @@ struct simd_abi::native {
    constexpr native() = delete;
 
    // TODO: Select `target_abi` portably.
-   using target_abi = x64::avx2_abi<T>;
+   using target_abi = x64::avx_abi<T>;
    static constexpr idx size = target_abi::size;
    static constexpr idx lanes = target_abi::lanes;
    static constexpr uword alignment = target_abi::alignment;
@@ -180,7 +180,7 @@ struct simd_abi::compatible {
 
    constexpr compatible() = delete;
 
-   using target_abi = x64::avx2_abi<T>;
+   using target_abi = x64::avx_abi<T>;
    static constexpr idx size = target_abi::size;
    static constexpr idx lanes = target_abi::lanes;
    static constexpr uword alignment = target_abi::alignment;
@@ -231,7 +231,7 @@ template <typename T, idx lane_count, typename... Abis>
 struct deduce_impl {
    using type =
       deduce_from_candidates<T, lane_count, Abis..., cat::simd_abi::native<T>,
-                             x64::sse2_abi<T>, cat::simd_abi::scalar<T>>::type;
+                             x64::sse_abi<T>, cat::simd_abi::scalar<T>>::type;
 };
 
 }  // namespace detail
@@ -447,8 +447,8 @@ template <typename T, typename Abi>
 class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
         clang::preferred_name(native_simd<T>),
         clang::preferred_name(scalar_simd<T>),
-        clang::preferred_name(x64::avx2_simd<T>),
-        clang::preferred_name(x64::sse2_simd<T>),
+        clang::preferred_name(x64::avx_simd<T>),
+        clang::preferred_name(x64::sse_simd<T>),
         clang::preferred_name(fixed_size_unaligned_simd<T, Abi::lanes>),
         clang::preferred_name(native_unaligned_simd<T>),
         clang::preferred_name(compatible_unaligned_simd<T>),
@@ -1863,8 +1863,8 @@ template <typename T, typename Abi>
 class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
         clang::preferred_name(native_simd_mask<T>),
         clang::preferred_name(scalar_simd_mask<T>),
-        clang::preferred_name(x64::avx2_simd_mask<T>),
-        clang::preferred_name(x64::sse2_simd_mask<T>),
+        clang::preferred_name(x64::avx_simd_mask<T>),
+        clang::preferred_name(x64::sse_simd_mask<T>),
         clang::preferred_name(fixed_size_unaligned_simd_mask<T, Abi::lanes>),
         clang::preferred_name(native_unaligned_simd_mask<T>),
         clang::preferred_name(compatible_unaligned_simd_mask<T>),
@@ -2184,7 +2184,7 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
    // Deliberately NOT `[[gnu::always_inline]]`: at -O3 + LTO Clang folds the
    // inlined `decode_lane(raw, i)` into a wider load that ignores the
    // `gnu::aligned(1)` annotation on the unaligned mask's `raw_type`, which
-   // segfaults `simd_avx2_unaligned_abi_mask` on a 2-byte-misaligned
+   // segfaults `simd_avx_unaligned_abi_mask` on a 2-byte-misaligned
    // simd_mask. (See `tests/src/test_simd_sse_avx.cpp`'s unaligned mask
    // test and the file-level policy comment on `cat::simd`.) Codegen on
    // an aligned mask is already fine without the attribute -- Clang
@@ -2819,7 +2819,7 @@ simd_all_of(simd_mask<T, simd_abi::native<T>> mask) -> bool {
 #include <cat/simd_ops>
 
 #include "cat/detail/simd_avx2_unary_full.hpp"
-#include "cat/detail/simd_sse2_unary_full.hpp"
+#include "cat/detail/simd_sse_unary_full.hpp"
 
 namespace cat {
 
@@ -2950,7 +2950,7 @@ struct mask_any_of {
 }  // namespace cat::detail::simd_abi
 
 #include "cat/detail/simd_avx2_mask_ops.hpp"
-#include "cat/detail/simd_sse2_movmsk.hpp"
+#include "cat/detail/simd_sse_movmsk.hpp"
 
 namespace std {
 
