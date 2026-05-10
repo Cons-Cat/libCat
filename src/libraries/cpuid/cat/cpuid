@@ -10,7 +10,7 @@
 
 namespace x64 {
 
-auto
+inline auto
 cpuid(cat::uint4 leaf, cat::uint4 subleaf = 0u) -> cat::array<cat::uint4, 4> {
    cat::uint4 ebx;
    cat::uint4 edx;
@@ -253,7 +253,27 @@ extern "C"
       __cpu_features2(cat::bitset<32>{}, enable_baseline_feature(),  // NOLINT
                       cat::bitset<32>{});
 
-void
+}  // namespace detail
+}  // namespace x64
+
+#ifndef CAT_NO_CPUID
+namespace cat::detail {
+
+// Highest `CAT_PRI_<arch>` tier (mirroring the hierarchy in
+// `<cat/simd_dispatch>`) that the host CPU supports.
+// `__cpu_indicator_init()` sets this once at startup. `$simd_switch` reads it
+// to pick the highest-priority listed `$abi(arch, ...)` entry whose priority
+// is `<= simd_dispatch_priority`. Defaults to `40` (SSE2), which the
+// x86-64 PSABI guarantees on every host.
+extern "C" [[gnu::visibility("hidden")]] constinit inline cat::int4
+   simd_dispatch_priority = 40;
+
+}  // namespace cat::detail
+#endif
+
+namespace x64::detail {
+
+inline void
 set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
                  cat::array<cat::bitset<32>, 4> const& feature_flags) {
    // Extract bits 4 through 7.
@@ -775,9 +795,36 @@ extern "C"
    __cpu_features2[1] = feature_flags[2];
    __cpu_features2[2] = feature_flags[3];
 
+#ifndef CAT_NO_CPUID
+   // Compute the highest `$simd_switch` priority tier supported by the host.
+   // The numeric values mirror `<cat/simd_dispatch>`'s `CAT_PRI_<arch>` ladder.
+   cat::int4 priority = 40;  // sse2 baseline.
+   if (has_feature(ssse3)) {
+      priority = 50;
+   }
+   if (has_feature(sse4_1)) {
+      priority = 55;
+   }
+   if (has_feature(sse4_2)) {
+      priority = 60;
+   }
+   if (has_feature(avx)) {
+      priority = 70;
+   }
+   if (has_feature(avx2)) {
+      priority = 80;
+   }
+   if (has_feature(avx512_f) && has_feature(avx512_cd)
+       && has_feature(avx512_bw) && has_feature(avx512_dq)
+       && has_feature(avx512_vl)) {
+      priority = 90;
+   }
+   cat::detail::simd_dispatch_priority = priority;
+#endif
+
    // Use this information to fill out x86 family model and available features.
    set_vendor_model(vendor_family_model, vendor1, feature_flags);
 }
 
-}  // namespace detail
-}  // namespace x64
+} // namespace x64::detail
+

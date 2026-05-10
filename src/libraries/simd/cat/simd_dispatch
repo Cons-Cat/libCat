@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/array>
+#include <cat/cpuid>
 #include <cat/string>
 #include <cat/utility>
 
@@ -185,9 +186,10 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 
 // Per-arch hooks. Each supported arch defines:
 //    CAT_TGT_<arch>   GNU target attribute string (comma-separated features).
-//    CAT_SUP_<arch>   captureless lambda returning bool (runtime support).
 //    CAT_PRI_<arch>   integer priority. higher is preferred.
-// Adding a new arch is purely additive here.
+// Adding a new arch is purely additive here. The numeric `CAT_PRI_<arch>`
+// values must mirror the priority ladder in `<cat/cpuid>` (which writes
+// `cat::detail::simd_dispatch_priority` from the same numbers).
 //
 // `CAT_TGT_<arch>` and `CAT_PRI_<arch>` look like `constexpr` constants to
 // clang-tidy's `cppcoreguidelines-macro-usage` check, but they have to stay
@@ -197,56 +199,24 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 // `#if`. Suppress the check for the whole block.
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define CAT_TGT_avx512 "avx512f,avx512cd,avx512bw,avx512dq,avx512vl"
-#define CAT_SUP_avx512                              \
-   []() -> bool {                                   \
-      return __builtin_cpu_supports("avx512f")      \
-             && __builtin_cpu_supports("avx512cd")  \
-             && __builtin_cpu_supports("avx512bw")  \
-             && __builtin_cpu_supports("avx512dq")  \
-             && __builtin_cpu_supports("avx512vl"); \
-   }
 #define CAT_PRI_avx512 90
 
 #define CAT_TGT_avx2 "avx2"
-#define CAT_SUP_avx2                         \
-   []() -> bool {                            \
-      return __builtin_cpu_supports("avx2"); \
-   }
 #define CAT_PRI_avx2 80
 
 #define CAT_TGT_avx "avx"
-#define CAT_SUP_avx                         \
-   []() -> bool {                           \
-      return __builtin_cpu_supports("avx"); \
-   }
 #define CAT_PRI_avx 70
 
 #define CAT_TGT_sse4_2 "sse4.2"
-#define CAT_SUP_sse4_2                         \
-   []() -> bool {                              \
-      return __builtin_cpu_supports("sse4.2"); \
-   }
 #define CAT_PRI_sse4_2 60
 
 #define CAT_TGT_sse4_1 "sse4.1"
-#define CAT_SUP_sse4_1                         \
-   []() -> bool {                              \
-      return __builtin_cpu_supports("sse4.1"); \
-   }
 #define CAT_PRI_sse4_1 55
 
 #define CAT_TGT_ssse3 "ssse3"
-#define CAT_SUP_ssse3                         \
-   []() -> bool {                             \
-      return __builtin_cpu_supports("ssse3"); \
-   }
 #define CAT_PRI_ssse3 50
 
 #define CAT_TGT_sse2 "sse2"
-#define CAT_SUP_sse2                         \
-   []() -> bool {                            \
-      return __builtin_cpu_supports("sse2"); \
-   }
 #define CAT_PRI_sse2 40
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
@@ -391,20 +361,6 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
    ::cat::detail::simd_dispatch_meta {  \
       #arch, CAT_CONCAT(CAT_PRI_, arch) \
    }
-
-// SUPPORT pass emits one captureless lambda per entry, decayed to a
-// `bool(*)()` so all entries fit in the same `cat::array`. `(arch, body)`
-// tuples reuse the per-arch `CAT_SUP_<arch>` predicate; the bare default
-// lambda gets a trivial always-supported predicate. The selector reads
-// this table indirectly via the priority permutation, so an `if`-chain
-// over source order is no longer enough.
-#define CAT_SUP_ENTRY(x) CAT_CONCAT(CAT_SUP_E_, CAT_IS_PAREN(x))(x)
-#define CAT_SUP_E_0(x) \
-   (+[]() -> bool {    \
-      return true;     \
-   })
-#define CAT_SUP_E_1(x) CAT_SUP_FROM_TUPLE x
-#define CAT_SUP_FROM_TUPLE(arch, ...) (+CAT_CONCAT(CAT_SUP_, arch))
 
 // SIMD_DISPATCH pass emits one switch case per entry. `(arch, body)` tuples
 // become:
@@ -776,28 +732,26 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
          !::cat::detail::simd_dispatch_has_duplicate_arch(meta),               \
          "`$simd_switch` has duplicate target archs! Every `$abi` must be "    \
          "unique.");                                                           \
-      /* Per-entry CPU-support predicate, decayed to `bool(*)()`. The default  \
-         sentinel (when present) gets a trivial `+[]() -> bool { return true;  \
-         }` predicate, so it is picked last-resort and the switch falls        \
-         through to the user's `default:`. When no `default:` is present, the  \
-         baseline-coverage `static_assert` above guarantees that at least one  \
-         listed `$abi(arch, ...)`'s runtime predicate must return true. */     \
-      static constexpr ::cat::array<bool (*)(), meta.size()>                   \
-         cat_$simd_support_table{                                              \
-            CAT_FOR_EACH_COMMA(CAT_SUP_ENTRY, __VA_ARGS__)};                   \
       /* Source-index walk order, sorted descending by `_PRI_<arch>`. */       \
       static constexpr auto cat_$simd_priority_order =                         \
          ::cat::detail::simd_dispatch_priority_permutation(meta);              \
-      /* `static const` caches the first supported entry. */                   \
-      static ::cat::idx const cat_$simd_selected = []() -> ::cat::idx {        \
-         for (::cat::idx i = 0u; i < cat_$simd_priority_order.size(); ++i) {   \
-            ::cat::idx const source_index = cat_$simd_priority_order[i];       \
-            if (cat_$simd_support_table[source_index]()) {                     \
-               return source_index;                                            \
-            }                                                                  \
+      /* Pick the highest-priority listed entry whose priority is supported    \
+         by the host. `cat::detail::simd_dispatch_priority` is set once at     \
+         startup by `__cpu_indicator_init` in `<cat/cpuid>`. The default       \
+         sentinel's priority is -1, so it always compares `<=` and is reached  \
+         only when no real entry's priority is below the host's tier. When no  \
+         `default:` is present, the baseline-coverage `static_assert` above    \
+         guarantees at least one listed entry's priority is `<=` the host's   \
+         tier. */                                                              \
+      ::cat::idx cat_$simd_selected{};                                         \
+      for (::cat::idx i = 0u; i < cat_$simd_priority_order.size(); ++i) {      \
+         ::cat::idx const source_index = cat_$simd_priority_order[i];          \
+         if (meta[source_index].priority                                       \
+             <= ::cat::detail::simd_dispatch_priority) {                       \
+            cat_$simd_selected = source_index;                                 \
+            break;                                                             \
          }                                                                     \
-         __builtin_unreachable();                                              \
-      }();                                                                     \
+      }                                                                        \
       /* `case`s for each `$abi` entry. `CAT_SIMD_SYNTH_DEFAULT` adds an       \
          implicit `default: __builtin_unreachable();` iff the user omitted     \
          their own `default:` (the baseline-coverage `static_assert` above     \
