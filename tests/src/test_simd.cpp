@@ -1233,6 +1233,51 @@ $test(simd_mask_ctors_fill) {
    cat::verify(gf.none_of());
 }
 
+// `simd_mask` broadcast-from-`bool` constructor (P3844R2 semantics). Mirrors
+// `cat::simd`'s broadcast and replaces the previous `simd_mask(bool) = delete`
+// trap. The complementary trap now lives on `simd_ops` functors as a deleted
+// `operator[](bool)` overload (exercised in `test_simd_simd_ops_compile_fail`).
+$test(simd_mask_broadcast_from_bool) {
+   using mask_int = int4x4::mask_type;
+   using mask_float = float4x4::mask_type;
+
+   mask_int const all_true_int(true);
+   cat::verify(all_true_int.all_of());
+   mask_int const all_false_int(false);
+   cat::verify(all_false_int.none_of());
+
+   mask_float const all_true_float(true);
+   cat::verify(all_true_float.all_of());
+   mask_float const all_false_float(false);
+   cat::verify(all_false_float.none_of());
+
+   // Copy-initialization works, i.e. the constructor is non-explicit.
+   mask_int const implicit_true = true;
+   cat::verify(implicit_true.all_of());
+   mask_float const implicit_false = false;
+   cat::verify(implicit_false.none_of());
+
+   // Agrees lane-by-lane with `make_simd_mask_filled` and
+   // `true_mask` / `false_mask`.
+   mask_int const filled_true = cat::make_simd_mask_filled<mask_int>(true);
+   mask_int const filled_false = cat::make_simd_mask_filled<mask_int>(false);
+   for (cat::idx i = 0u; i < mask_int::abi_type::lanes; ++i) {
+      cat::verify(all_true_int[i] == filled_true[i]);
+      cat::verify(all_false_int[i] == filled_false[i]);
+      cat::verify(all_true_int[i] == cat::true_mask<int4, int4x4::abi_type>[i]);
+      cat::verify(all_false_int[i]
+                  == cat::false_mask<int4, int4x4::abi_type>[i]);
+   }
+
+   // The 1-lane scalar ABI also broadcasts. The variadic ctor cannot
+   // match here because it requires `sizeof...(args) > 1`.
+   using scalar_mask = cat::scalar_simd_mask<int4>;
+   scalar_mask const scalar_true(true);
+   cat::verify(static_cast<bool>(scalar_true));
+   scalar_mask const scalar_false(false);
+   cat::verify(!static_cast<bool>(scalar_false));
+}
+
 $test(simd_mask_bitwise_ops) {
    using M = int4x4::mask_type;
    M a{true, true, false, false};

@@ -1106,6 +1106,15 @@ struct simd_elementwise_interface {
       return {self(), lane_mask};
    }
 
+   constexpr auto
+   operator[](bool) const
+      = delete ("A SIMD functor was subscripted with a `bool`! This may "
+                "mean `==` or `!=` was used to compare two `cat::simd` "
+                "values, which yields a scalar `bool` rather than a lane "
+                "mask. Use `.equal_lanes()` / `.unequal_lanes()` on the "
+                "operands, a lane-wise comparison (e.g. `lhs < rhs`), or "
+                "pass a unary predicate.");
+
    // Predicate-bound subscript. `T`/`Abi` are deduced when the returned
    // functor is invoked, at which point the lane mask is built from
    // `pred(input[i])`. Predicate parameter must be compatible with the
@@ -1162,6 +1171,15 @@ struct simd_elementwise_binary_interface {
       -> simd_binary_masked_impl<Derived, simd_mask<T, Abi>> {
       return {self(), lane_mask};
    }
+
+   constexpr auto
+   operator[](bool) const
+      = delete ("A SIMD functor was subscripted with a `bool`! This may "
+                "mean `==` or `!=` was used to compare two `cat::simd` "
+                "values, which yields a scalar `bool` rather than a lane "
+                "mask. Use `.equal_lanes()` / `.unequal_lanes()` on the "
+                "operands, a lane-wise comparison (e.g. `lhs < rhs`), or "
+                "pass a unary predicate.");
 
    // Predicate-bound subscript. The lane mask is built from `pred(left[i])`.
    template <typename Pred>
@@ -1222,6 +1240,15 @@ struct simd_elementwise_ternary_interface {
       -> simd_ternary_masked_impl<Derived, simd_mask<T, Abi>> {
       return {self(), lane_mask};
    }
+
+   constexpr auto
+   operator[](bool) const
+      = delete ("A SIMD functor was subscripted with a `bool`! This may "
+                "mean `==` or `!=` was used to compare two `cat::simd` "
+                "values, which yields a scalar `bool` rather than a lane "
+                "mask. Use `.equal_lanes()` / `.unequal_lanes()` on the "
+                "operands, a lane-wise comparison (e.g. `lhs < rhs`), or "
+                "pass a unary predicate.");
 
    // Predicate-bound subscript. The lane mask is built from `pred(x[i])`.
    template <typename Pred>

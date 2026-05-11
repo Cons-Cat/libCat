@@ -1900,14 +1900,10 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
    constexpr simd_mask(raw_type value) : raw(value) {
    }
 
-   // `std::simd` permits *explicit* construction from a `bool`, but I'm not
-   // sure how to give that a good error message.
-   constexpr simd_mask(bool) = delete (
-      "A `cat::simd_mask` was constructed from a `bool`! This may mean == or "
-      "!= was used to compare `cat::simd` or `cat::simd_mask`."
-      "Use `.equal_lanes()` / `.unequal_lanes()` instead. To broadcast one "
-      "bool to every lane, use `make_simd_mask_filled()` or the"
-      "`true_mask<T, Abi>` or `false_mask<T, Abi>` helpers.");
+   constexpr simd_mask(bool value) {
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3844r2.pdf
+      this->fill(value);
+   }
 
    // Implicitly convert to `bool` under the `scalar` ABI so that `cat::simd`
    // can be a drop-in replacement to `cat::basic_int` or `cat::basic_float`.
