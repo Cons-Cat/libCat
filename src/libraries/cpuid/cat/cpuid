@@ -237,8 +237,14 @@ struct cpu_model {
 // stay at default visibility because nobody runs `__cpu_indicator_init` to
 // touch them; otherwise they're hidden so LTO can internalize and DSE the
 // dead writes the always-inlined init would otherwise produce.
+//
+// `CAT_BUILD_SHARED` (PUBLIC on `cat-impl-shared`) also forces default
+// visibility: with `libcat.so` in the link, the `.so`'s code reads the
+// consumer executable's `__cpu_model` via standard ELF symbol preemption, so
+// the executable's `_start.cpp`-driven `__cpu_indicator_init` populates a
+// single canonical copy that both modules see.
 extern "C"
-#ifndef CAT_NO_CPUID
+#if !defined(CAT_NO_CPUID) && !defined(CAT_BUILD_SHARED)
    [[gnu::visibility("hidden")]]
 #endif
    constinit inline detail::cpu_model __cpu_model{};  // NOLINT
@@ -246,7 +252,7 @@ extern "C"
 // Extended x86 feature flags, such as AVX2. This is zero-intialized except for
 // a single bit that expresses baseline x86-64 feature support.
 extern "C"
-#ifndef CAT_NO_CPUID
+#if !defined(CAT_NO_CPUID) && !defined(CAT_BUILD_SHARED)
    [[gnu::visibility("hidden")]]
 #endif
    constinit inline cat::array<cat::bitset<32>, 3>
@@ -265,8 +271,11 @@ namespace cat::detail {
 // to pick the highest-priority listed `$abi(arch, ...)` entry whose priority
 // is `<= simd_dispatch_priority`. Defaults to `40` (SSE2), which the
 // x86-64 PSABI guarantees on every host.
-extern "C" [[gnu::visibility("hidden")]] constinit inline cat::int4
-   simd_dispatch_priority = 40;
+extern "C"
+#ifndef CAT_BUILD_SHARED
+   [[gnu::visibility("hidden")]]
+#endif
+   constinit inline cat::int4 simd_dispatch_priority = 40;
 
 }  // namespace cat::detail
 #endif
@@ -554,7 +563,7 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
 }
 
 extern "C"
-#ifndef CAT_NO_CPUID
+#if !defined(CAT_NO_CPUID) && !defined(CAT_BUILD_SHARED)
    [[gnu::visibility("hidden")]]
 #endif
    [[gnu::always_inline]]

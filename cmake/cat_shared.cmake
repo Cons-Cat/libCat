@@ -32,6 +32,16 @@
 # `CMAKE_EXPORT_COMPILE_COMMANDS` is forced on so the `clang-repl-libcat`
 # wrapper has a flag database to read.
 
+# Reject `CAT_NO_CPUID` outright in shared builds. The shared path needs a
+# populated `__cpu_model` so the `.so`'s own `$simd_switch` picks the right tier.
+if (CAT_NO_CPUID OR CMAKE_CXX_FLAGS MATCHES "(^|[ \t])-DCAT_NO_CPUID([ \t=]|$)")
+  message(FATAL_ERROR
+    "CAT_BUILD_SHARED is incompatible with CAT_NO_CPUID. The shared library "
+    "needs runtime CPU-feature detection to dispatch its own SIMD code paths. "
+    "Drop `-DCAT_NO_CPUID` (cache or CMAKE_CXX_FLAGS), or build `cat-impl` "
+    "(the static archive) instead of `cat-impl-shared`.")
+endif()
+
 # Source-list / compiler-rt / CXX_EXTENSIONS probe in one block: every helper
 # (`_clang_major`, `_compiler_rt_builtins`, `_cxx_extensions`, `_impl_sources`)
 # stays scoped. The target itself (`cat-impl-shared`) is a global side-effect.
@@ -93,17 +103,16 @@ target_compile_options(cat-impl-shared
 target_include_directories(cat-impl-shared PUBLIC
   $<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>)
 
-# `CAT_NO_CPUID` PUBLIC has two coupled effects: it skips the
-# `__cpu_indicator_init()` call in `_start.cpp` (consumers compile that TU
-# themselves through `cat`'s `INTERFACE_SOURCES`), and it leaves
-# `__cpu_model` / `__cpu_features2` / `__cpu_indicator_init` at default
-# visibility instead of the hidden visibility `<cat/cpuid>` otherwise pins.
-# Default visibility is what makes the `.so`'s ABI export the cpuid symbols
-# to consumers; hidden visibility is what lets the static-archive build path
-# DSE the dead writes under LTO. TODO: this currently leaves `__cpu_model`
-# uninitialized in `.so` consumers (nobody calls the init); revisit by having
-# the `.so` itself run `__cpu_indicator_init` from `.init_array`.
-target_compile_definitions(cat-impl-shared PUBLIC CAT_NO_CPUID)
+# `CAT_BUILD_SHARED` PUBLIC switches the cpuid globals (`__cpu_model`,
+# `__cpu_features2`, `cat::detail::simd_dispatch_priority`, and
+# `__cpu_indicator_init` itself) from hidden to default visibility (see
+# `<cat/cpuid>`). The static-archive path keeps hidden visibility so LTO can
+# DSE the dead writes the always-inlined init produces; the shared path
+# instead relies on standard ELF symbol preemption to unify the `.so`'s and
+# the consumer executable's copies onto the executable's `__cpu_model`. The
+# consumer's `_start.cpp` runs the single canonical `__cpu_indicator_init` as
+# part of `call_main`, before any `.so` code that reads cpuid runs.
+target_compile_definitions(cat-impl-shared PUBLIC CAT_BUILD_SHARED)
 
 target_link_options(cat-impl-shared
   PUBLIC
