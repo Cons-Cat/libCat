@@ -1278,6 +1278,83 @@ $test(simd_mask_broadcast_from_bool) {
    cat::verify(!static_cast<bool>(scalar_false));
 }
 
+// `.for_each` member iteration on `simd` and `simd_mask`. The implementation
+// uses `#pragma clang loop vectorize_predicate(enable)` so a callable that
+// fails to vectorize surfaces a Clang remark instead of silently scalarizing.
+$test(simd_for_each) {
+   int4x4 const v{1_i4, 2_i4, 3_i4, 4_i4};
+
+   int4 sum = 0_i4;
+   v.for_each([&sum](int4 lane) {
+      sum = sum + lane;
+   });
+   cat::verify(sum == 10_i4);
+
+   // Two-argument callback receives `(lane, idx)`.
+   int4 indexed_sum = 0_i4;
+   cat::idx seen_lanes = 0u;
+   v.for_each([&](int4 lane, cat::idx i) {
+      cat::verify(lane == v[i]);
+      indexed_sum = indexed_sum + lane;
+      ++seen_lanes;
+   });
+   cat::verify(indexed_sum == 10_i4);
+   cat::verify(seen_lanes == int4x4::abi_type::lanes);
+
+   // Visit order matches lane order.
+   int4 expected[] = {1_i4, 2_i4, 3_i4, 4_i4};
+   cat::idx pos = 0u;
+   v.for_each([&](int4 lane) {
+      cat::verify(lane == expected[pos.raw]);
+      ++pos;
+   });
+   cat::verify(pos == int4x4::abi_type::lanes);
+
+   float4x4 const fv{1_f4, 2_f4, 3_f4, 4_f4};
+   float4 fsum = 0_f4;
+   fv.for_each([&fsum](float4 lane) {
+      fsum = fsum + lane;
+   });
+   cat::verify(fsum == 10_f4);
+}
+
+$test(simd_mask_for_each) {
+   using mask_int = int4x4::mask_type;
+   mask_int const m{true, false, true, false};
+
+   cat::idx true_count = 0u;
+   m.for_each([&true_count](bool lane) {
+      if (lane) {
+         ++true_count;
+      }
+   });
+   cat::verify(true_count == 2u);
+
+   // Two-argument callback receives `(lane, idx)`. Verify lanes line up.
+   m.for_each([&](bool lane, cat::idx i) {
+      cat::verify(lane == m[i]);
+   });
+
+   // Visit order matches lane order.
+   bool expected[] = {true, false, true, false};
+   cat::idx pos = 0u;
+   m.for_each([&](bool lane) {
+      cat::verify(lane == expected[pos.raw]);
+      ++pos;
+   });
+   cat::verify(pos == mask_int::abi_type::lanes);
+
+   // The 1-lane scalar mask still iterates once.
+   using scalar_mask = cat::scalar_simd_mask<int4>;
+   scalar_mask const scalar{true};
+   cat::idx scalar_visits = 0u;
+   scalar.for_each([&](bool lane) {
+      cat::verify(lane);
+      ++scalar_visits;
+   });
+   cat::verify(scalar_visits == 1u);
+}
+
 $test(simd_mask_bitwise_ops) {
    using M = int4x4::mask_type;
    M a{true, true, false, false};

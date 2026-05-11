@@ -1725,6 +1725,26 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
       return __builtin_bit_cast(T const*, &raw);
    }
 
+   // Invoke `callback` on each lane in order, with a Clang vectorization
+   // hint on the surrounding loop. A callable that fails to vectorize
+   // surfaces a Clang remark instead of silently scalarizing. The callback
+   // may take a single lane value, or a lane value and its `idx`.
+   template <typename Callback>
+      requires(is_invocable<Callback, scalar_type>
+               || is_invocable<Callback, scalar_type, idx>)
+   [[gnu::always_inline]]
+   constexpr void
+   for_each(Callback callback) const {
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < abi_type::lanes; ++i) {
+         if constexpr (is_invocable<Callback, scalar_type, idx>) {
+            callback((*this)[i], i);
+         } else {
+            callback((*this)[i]);
+         }
+      }
+   }
+
    raw_type raw;
 };
 
@@ -2462,6 +2482,22 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
    constexpr auto
    data() const [[clang::lifetimebound]] -> lane_scalar const* {
       return __builtin_bit_cast(lane_scalar const*, &raw);
+   }
+
+   template <typename Callback>
+      requires(is_invocable<Callback, scalar_type>
+               || is_invocable<Callback, scalar_type, idx>)
+   [[gnu::always_inline]]
+   constexpr void
+   for_each(Callback callback) const {
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < abi_type::lanes; ++i) {
+         if constexpr (is_invocable<Callback, scalar_type, idx>) {
+            callback((*this)[i], i);
+         } else {
+            callback((*this)[i]);
+         }
+      }
    }
 
    raw_type raw;
