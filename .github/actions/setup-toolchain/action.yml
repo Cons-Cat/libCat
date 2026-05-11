@@ -14,6 +14,15 @@ runs:
       run: echo "::add-matcher::${{ github.workspace }}/.github/problem-matchers/clang.json"
 
     - name: Install extraction dependencies
+      # `gdb` rides on the same `apt-get update` as the extraction tools
+      # (one round-trip, no extra cache key) so every job that uses this
+      # action has a working `gdb` on PATH. This is what `find_program(...
+      # gdb ...)` in `tests/CMakeLists.txt` picks up, and is what the
+      # `gdb-pretty-printers` job runs via the `check-gdb-pretty-printers`
+      # custom target. Previously each job that needed gdb installed it
+      # ad-hoc (or, for jobs that didn't, emitted a CMake warning at
+      # configure time saying `gdb` was missing). Folding it in here
+      # removes that surface entirely.
       shell: bash
       env:
         DEBIAN_FRONTEND: noninteractive
@@ -21,7 +30,7 @@ runs:
         set -eu
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
-          ca-certificates curl python3 tar xz-utils zstd
+          ca-certificates curl gdb python3 tar xz-utils zstd
 
     - name: Cache mise-pinned toolchain (Clang + ELFkickers)
       uses: actions/cache@v4
@@ -104,5 +113,7 @@ runs:
         just --version
         command -v ninja
         ninja --version
+        command -v gdb
+        gdb --version | head -1
         command -v sstrip
         command -v elfls
