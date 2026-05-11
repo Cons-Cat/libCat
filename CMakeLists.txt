@@ -232,25 +232,21 @@ list(
   # `CAT_USE_SHARED` builds), `sysv` hashes are smaller than the default `gnu` style for
   # the small symbol counts libCat consumers produce.
   -Wl,--hash-style=sysv
-  # Merge the read-only and read+exec LOAD segments into a single read+write+exec LOAD.
-  # Drops one program header (56 bytes) and the page-alignment padding (~10 bytes) between them.
-  # If a consumer needs W^X, she can override with `-Wl,-z,relro -Wl,-z,now` on her own target.
-  # Gated on `EXECUTABLE`: omagic merges PT_LOAD bands in a way that is
-  # incompatible with a `.so`'s required PT_DYNAMIC / PT_TLS / RELRO layout, so
-  # applying it through `cat`'s INTERFACE_LINK_OPTIONS to `cat-impl-shared`
-  # produces a malformed shared object that crashes when `dlopen`'d.
-  "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-Wl,-N>"
 )
 
-# `-static` and `--no-pie` can't be used under any dynamic linking scenario.
-# `-Wl,--no-pie` is passed straight to `lld` to skip the Clang driver's
-# spurious "argument unused during compilation: '-no-pie'" warning during
-# the link step.
+# `-static`, `--no-pie`, and `-Wl,-N` (omagic) can't be used under any
+# dynamic linking scenario.
 if (NOT CAT_USE_SHARED AND NOT CAT_USE_SANITIZERS)
   list(
     APPEND CAT_LINK_OPTIONS_RELEASE
     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-static>"
     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-Wl,--no-pie>"
+    # Merge the read-only and read+exec LOAD segments into a single
+    # read+write+exec LOAD. Drops one program header (56 bytes) and the
+    # page-alignment padding. A consumer that needs W^X can override with
+    # `-Wl,-z,relro -Wl,-z,now` on her own target.
+    # https://stackoverflow.com/questions/60657147/linker-what-is-nmagic-section-of-linked-file-and-what-is-the-aim-of-section-a
+    "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-Wl,-N>"
   )
   # Some code, such as `thread_local` initialization, depends on this.
   list(

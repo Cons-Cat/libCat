@@ -486,6 +486,64 @@ jobs:
           fi
           echo "OK: build-release/.gdbinit"
 
+      - name: Configure and build (Release, sanitizers=ON)
+        if: ${{ !cancelled() }}
+        # Release + ASan is *the* combo that exercises Release-only link
+        # options on a dynamic-PIE executable.
+        run: |
+          cmake -S . -B build-release-asan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCAT_USE_SANITIZERS=ON \
+            -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
+          cmake --build build-release-asan
+
+      - name: Verify Release+ASan executable has PT_INTERP
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+          if ! readelf -l build-release-asan/tests/unit_tests \
+            | grep -q INTERP; then
+            echo 'FAIL: Release+ASan unit_tests is missing PT_INTERP.'
+            echo 'Likely cause: a Release-only link option (e.g. omagic'
+            echo '`-Wl,-N`) is being applied to dynamic-PIE binaries.'
+            readelf -l build-release-asan/tests/unit_tests
+            exit 1
+          fi
+          echo 'OK: Release+ASan unit_tests has PT_INTERP.'
+
+      - name: Test (Release, sanitizers=ON)
+        if: ${{ !cancelled() }}
+        run: |
+          ctest --test-dir build-release-asan -R '^UnitTests$' --verbose --output-on-failure \
+            --repeat until-pass:2 --timeout 120
+
+      - name: Run example binaries (Release, sanitizers=ON)
+        if: ${{ !cancelled() }}
+        # Same example smoke as the Debug+ASan and Release jobs. The
+        # `_start.cpp` + `<cat/cpuid>` plumbing crosses the most config
+        # combinations here (Release link option set, asan runtime
+        # loaded by `ld.so`, `BIND_NOW` eager binding active), so any
+        # regression in that surface shows up in this step in addition
+        # to the unit-tests step above.
+        run: |
+          set -eu
+
+          out=$(build-release-asan/examples/hello)
+          printf 'hello (Release+ASan) output: %s\n' "${out}"
+          if [ "${out}" != "Meow, world!" ]; then
+            echo 'FAIL: hello (Release+ASan) did not produce the expected greeting.'
+            exit 1
+          fi
+          echo 'OK: hello (Release+ASan)'
+
+          out=$(build-release-asan/examples/echo foo moooo boo)
+          printf 'echo foo moooo boo (Release+ASan) output: %s\n' "${out}"
+          if [ "${out}" != "foo moooo boo" ]; then
+            echo 'FAIL: echo (Release+ASan) output did not match "foo moooo boo".'
+            exit 1
+          fi
+          echo 'OK: echo foo moooo boo (Release+ASan)'
+
   gdb-pretty-printers:
     # GDB checks run after Debug and Release so they can reuse those build dirs
     # and their PCH outputs instead of configuring separate GDB-only builds.
