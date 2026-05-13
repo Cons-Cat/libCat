@@ -2359,9 +2359,13 @@ struct file_status {
    time_spec creation_time;
 
  private:
+   // The kernel's trailing `long __unused[3]` (24 bytes on x86-64), not 4-byte
+   // ints. A 12-byte deficit here lets `stat`/`fstat` overrun callers' stacks.
    [[maybe_unused]]
-   cat::int4 _[3];
+   cat::iword _[3];
 };
+
+static_assert(sizeof(file_status) == 144);
 
 // `process` handles an asynchronous task multitasked by the Linux kernel.
 // TODO: Extract this to an implementation file.

@@ -7,6 +7,7 @@
 #include <cat/string>
 #include <cat/utility>
 
+[[clang::no_builtin("strlen")]]
 constexpr auto
 cat::string_length(char const* p_string) -> idx {
    idx result;
