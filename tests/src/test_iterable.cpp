@@ -1273,8 +1273,7 @@ $test(flux_for_each_perfect_forward) {
    for_each_fat_callable::moves = 0u;
    for_each_fat_callable cb_member;
    auto&& back_member = arr.for_each(cb_member);
-   static_assert(
-      cat::is_same<decltype(back_member), for_each_fat_callable&>);
+   static_assert(cat::is_same<decltype(back_member), for_each_fat_callable&>);
    cat::verify(&back_member == &cb_member);
    cat::verify(cb_member.sum == 10);
    cat::verify(for_each_fat_callable::copies == 0u);

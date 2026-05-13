@@ -122,18 +122,18 @@ struct futex_plain {};
 
 struct futex_robust {};
 
-template <class kind = futex_plain>
+template <class Kind = futex_plain>
 class basic_futex;
 
 using futex = basic_futex<futex_plain>;
 using robust_futex = basic_futex<futex_robust>;
 
-template <class kind>
+template <class Kind>
 class [[clang::preferred_name(futex), clang::preferred_name(robust_futex)]]
 basic_futex : public futex_word {
  public:
-   // Block only if `value` still equals `expected` (futex_command::wait);
-   // otherwise returns `linux_error::again` without sleeping.
+   // Block only if `value` still equals `expected` (futex_command::wait).
+   // Otherwise returns `linux_error::again` without sleeping.
    [[nodiscard]]
    auto
    wait(cat::uint4 expected, futex_timespec const* p_timeout = nullptr)
@@ -166,7 +166,7 @@ basic_futex : public futex_word {
    [[nodiscard]]
    static constexpr auto
    unlocked() -> cat::uint4
-      requires(cat::is_same<kind, futex_robust>)
+      requires(cat::is_same<Kind, futex_robust>)
    {
       return 0u;
    }
@@ -174,7 +174,7 @@ basic_futex : public futex_word {
    [[nodiscard]]
    static constexpr auto
    decode_owner_thread_id(cat::uint4 lock_word) -> cat::uint4
-      requires(cat::is_same<kind, futex_robust>)
+      requires(cat::is_same<Kind, futex_robust>)
    {
       return lock_word & futex_tid_mask;
    }
@@ -182,7 +182,7 @@ basic_futex : public futex_word {
    [[nodiscard]]
    static constexpr auto
    has_waiters(cat::uint4 lock_word) -> bool
-      requires(cat::is_same<kind, futex_robust>)
+      requires(cat::is_same<Kind, futex_robust>)
    {
       return (lock_word & futex_waiters_flag) != 0u;
    }
@@ -190,7 +190,7 @@ basic_futex : public futex_word {
    [[nodiscard]]
    static constexpr auto
    owner_exited_abnormally(cat::uint4 lock_word) -> bool
-      requires(cat::is_same<kind, futex_robust>)
+      requires(cat::is_same<Kind, futex_robust>)
    {
       return (lock_word & futex_owner_died_flag) != 0u;
    }
@@ -2422,7 +2422,7 @@ struct process {
    process_id m_id{0};
    // `clone_flags::child_clear_tid` must not use `m_id` as the clear-tid word.
    // The kernel stores the child tid here, clears it to zero at thread exit,
-   // and wakes waiters with `futex_command::wake` and `futex_options::none`;
+   // and wakes waiters with `futex_command::wake` and `futex_options::none`.
    // `wait()` uses `futex_command::wait` with `futex_options::none` on this
    // word when `clone_flags::thread` and `clone_flags::child_set_tid` are set.
    alignas(8) futex_word m_clone_child_clear_tid_for_kernel{};

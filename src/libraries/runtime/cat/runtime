@@ -103,4 +103,3 @@ inline void
 __cxx_global_var_init() {
    // TODO: Fill this out.
 }
-

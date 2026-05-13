@@ -566,14 +566,13 @@ $test(syscall_memory) {
    // modified or unmapped, so probe it on a throwaway mapping rather than
    // `p_mapping`.
    if (nix::has_sys_mseal()) {
-      void* p_sealed =
-         nix::sys_mmap(
-            nullptr, bytes,
-            nix::memory_protection_flags::read
-               | nix::memory_protection_flags::write,
-            nix::memory_flags::privately | nix::memory_flags::anonymous,
-            nix::file_descriptor{-1}, 0)
-            .verify();
+      void* p_sealed = nix::sys_mmap(nullptr, bytes,
+                                     nix::memory_protection_flags::read
+                                        | nix::memory_protection_flags::write,
+                                     nix::memory_flags::privately
+                                        | nix::memory_flags::anonymous,
+                                     nix::file_descriptor{-1}, 0)
+                          .verify();
       auto mseal_result = nix::sys_mseal(p_sealed, bytes);
       cat::verify(mseal_result.has_value()
                   || is_denied_or_invalid(mseal_result.error()));
