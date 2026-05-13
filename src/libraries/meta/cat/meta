@@ -234,9 +234,9 @@ struct constant {
    static constexpr auto value = constant_value;
    using type = decltype(constant_value);
 
-   consteval
-   operator type(this auto&& self) {
-      return $fwd(self).value;
+   constexpr
+   operator type() const {
+      return value;
    }
 };
 
@@ -283,6 +283,37 @@ concept is_implicitly_convertible =
    || __is_convertible(From, To) || __is_same(To, From);
 
 // TODO: Add `__is_nothrow_convertible()`.
+
+namespace detail {
+// One-element aggregate used by `is_convertible_without_narrowing` as the
+// narrowing-conversion probe. Aggregate initialization of `T x[1] = {expr}`
+// is ill-formed when `expr` would narrow.
+template <typename T>
+struct narrowing_detector {
+   T x[1];  // NOLINT
+};
+}  // namespace detail
+
+// P0870R7 `is_convertible_without_narrowing<From, To>`. Holds when `From`
+// is implicitly convertible to `To` and that conversion sequence does not
+// require a narrowing conversion.
+//
+// The narrowing probe uses a `requires`-expression rather than
+// `cat::declval`. Per P3146R2, this lets the constant-expression narrowing
+// exception apply: for example,
+// `is_convertible_without_narrowing<integral_constant<int, 42>, float>`
+// holds because the conversion sequence is itself a constant expression
+// that round-trips losslessly. A plain `int` source does not satisfy the
+// trait when converting to `float` because the source value is not a
+// constant expression in the concept's hypothetical frame.
+//
+// https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p0870r7.html
+template <typename From, typename To>
+concept is_convertible_without_narrowing =
+   is_convertible<From, To>
+   && requires(From&& from) {
+         detail::narrowing_detector<To>{{static_cast<From&&>(from)}};
+      };
 
 namespace detail {
 template <typename T>

@@ -425,6 +425,79 @@ $test(meta_common_comparison) {
       is_same<std::common_comparison_category_t<std::strong_ordering,
                                                 std::partial_ordering>,
               std::partial_ordering>);
+
+}
+
+// P0870R7 `is_convertible_without_narrowing<From, To>`. Holds when `From`
+// is implicitly convertible to `To` and the conversion is not narrowing.
+$test(meta_is_convertible_without_narrowing) {
+   using namespace cat;
+
+   // Widening within a category is non-narrowing.
+   static_assert(is_convertible_without_narrowing<short, int>);
+   static_assert(is_convertible_without_narrowing<int, long>);
+   static_assert(is_convertible_without_narrowing<float, double>);
+
+   // Narrowing within a category.
+   static_assert(!is_convertible_without_narrowing<long, int>);
+   static_assert(!is_convertible_without_narrowing<double, float>);
+
+   // Crossing the integer / floating-point boundary is narrowing unless
+   // the source is a constant expression that round-trips.
+   static_assert(!is_convertible_without_narrowing<double, int>);
+   static_assert(!is_convertible_without_narrowing<int, double>);
+
+   // Unrelated types fail the `is_convertible` precondition.
+   static_assert(!is_convertible_without_narrowing<float, char const*>);
+
+   // P3146 motivating case. The conversion through `cat::constant<42>`'s
+   // `constexpr operator int()` is a constant expression that round-trips
+   // losslessly into `float`, so the trait holds.
+   static_assert(is_convertible_without_narrowing<constant<42>, float>);
+
+   // libCat safe-integer widenings within the same signedness.
+   static_assert(is_convertible_without_narrowing<int1, int2>);
+   static_assert(is_convertible_without_narrowing<int2, int4>);
+   static_assert(is_convertible_without_narrowing<int4, int8>);
+   static_assert(is_convertible_without_narrowing<uint1, uint2>);
+   static_assert(is_convertible_without_narrowing<uint2, uint4>);
+   static_assert(is_convertible_without_narrowing<uint4, uint8>);
+
+   // Same-type identity conversions never narrow.
+   static_assert(is_convertible_without_narrowing<int4, int4>);
+   static_assert(is_convertible_without_narrowing<uint4, uint4>);
+   static_assert(is_convertible_without_narrowing<float4, float4>);
+
+   // libCat safe-integer narrowings: rejected either at the
+   // `is_convertible` precondition (when the converting constructor is
+   // `explicit`) or by the narrowing check itself. Either way the trait
+   // is `false`.
+   static_assert(!is_convertible_without_narrowing<int8, int4>);
+   static_assert(!is_convertible_without_narrowing<int4, int2>);
+   static_assert(!is_convertible_without_narrowing<int2, int1>);
+   static_assert(!is_convertible_without_narrowing<uint8, uint4>);
+   static_assert(!is_convertible_without_narrowing<uint4, uint2>);
+   static_assert(!is_convertible_without_narrowing<uint2, uint1>);
+
+   // Signedness mismatch at the same width is narrowing in either
+   // direction.
+   static_assert(!is_convertible_without_narrowing<int4, uint4>);
+   static_assert(!is_convertible_without_narrowing<uint4, int4>);
+
+   // libCat safe-float cross-precision conversions are `explicit` in
+   // either direction (basic_float intentionally never converts a runtime
+   // float between widths implicitly), so the `is_convertible`
+   // precondition fails and the trait is `false` regardless of the
+   // narrowing rule.
+   static_assert(!is_convertible_without_narrowing<float4, float8>);
+   static_assert(!is_convertible_without_narrowing<float8, float4>);
+
+   // Integer / floating-point boundary in either direction is narrowing
+   // without a constant-expression source.
+   static_assert(!is_convertible_without_narrowing<int4, float4>);
+   static_assert(!is_convertible_without_narrowing<float4, int4>);
+   static_assert(!is_convertible_without_narrowing<int8, float8>);
+   static_assert(!is_convertible_without_narrowing<float8, int8>);
 }
 
 $test(meta_member_pointer) {
