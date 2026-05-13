@@ -101,7 +101,7 @@ struct iterable_interface {
 
    template <typename Self, typename Callback>
    constexpr auto
-   for_each(this Self&& self, Callback callback) -> Callback;
+   for_each(this Self&& self, Callback&& callback) -> Callback;
 
    template <typename Self, typename Callback, typename Init>
    constexpr auto

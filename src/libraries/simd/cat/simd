@@ -1714,13 +1714,13 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
                || is_invocable<Callback, scalar_type, idx>)
    [[gnu::always_inline]]
    constexpr void
-   for_each(Callback callback) const {
+   for_each(Callback&& callback) const {
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          if constexpr (is_invocable<Callback, scalar_type, idx>) {
-            callback((*this)[i], i);
+            $fwd(callback)((*this)[i], i);
          } else {
-            callback((*this)[i]);
+            $fwd(callback)((*this)[i]);
          }
       }
    }
@@ -2464,18 +2464,21 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
       return __builtin_bit_cast(lane_scalar const*, &raw);
    }
 
+   // Invoke `callback` on each lane in order. Unlike `std::for_each`, the
+   // callback is perfect-forwarded. The callback may take a single lane
+   // value, or a lane value and its `idx`.
    template <typename Callback>
       requires(is_invocable<Callback, scalar_type>
                || is_invocable<Callback, scalar_type, idx>)
    [[gnu::always_inline]]
    constexpr void
-   for_each(Callback callback) const {
+   for_each(Callback&& callback) const {
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          if constexpr (is_invocable<Callback, scalar_type, idx>) {
-            callback((*this)[i], i);
+            $fwd(callback)((*this)[i], i);
          } else {
-            callback((*this)[i]);
+            $fwd(callback)((*this)[i]);
          }
       }
    }

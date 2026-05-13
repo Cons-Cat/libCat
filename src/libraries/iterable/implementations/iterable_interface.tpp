@@ -75,8 +75,8 @@ iterable_pipe_count(Self&& self) -> idx {
 
 template <typename Self, typename Callback>
 constexpr auto
-iterable_pipe_for_each(Self&& self, Callback callback) -> Callback {
-   return $fwd(self) | for_each(move(callback));
+iterable_pipe_for_each(Self&& self, Callback&& callback) -> Callback {
+   return $fwd(self) | for_each($fwd(callback));
 }
 
 template <typename Self, typename Callback, typename Init>
@@ -160,9 +160,9 @@ iterable_interface<Tag>::count(this Self&& self) -> idx {
 template <typename Tag>
 template <typename Self, typename Callback>
 constexpr auto
-iterable_interface<Tag>::for_each(this Self&& self, Callback callback)
+iterable_interface<Tag>::for_each(this Self&& self, Callback&& callback)
    -> Callback {
-   return detail::iterable_pipe_for_each($fwd(self), move(callback));
+   return detail::iterable_pipe_for_each($fwd(self), $fwd(callback));
 }
 
 template <typename Tag>

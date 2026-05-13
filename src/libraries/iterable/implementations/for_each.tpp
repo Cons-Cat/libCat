@@ -20,16 +20,17 @@ struct for_each_impl {
          return true;
       });
 
-      return move(self.callback);
+      return $fwd(self).callback;
    }
 };
 }  // namespace detail
 
-// Invoke a callback on every element. This is a terminal algorithm.
+// Invoke a perfect-forwarded callback on every element. This is a terminal
+// algorithm.
 template <typename Callback>
 constexpr auto
-for_each(Callback callback) -> detail::for_each_impl<Callback> {
-   return detail::for_each_impl<Callback>{move(callback)};
+for_each(Callback&& callback) -> detail::for_each_impl<Callback> {
+   return detail::for_each_impl<Callback>{$fwd(callback)};
 }
 
 }  // namespace cat

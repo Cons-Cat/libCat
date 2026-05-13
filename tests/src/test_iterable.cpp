@@ -1189,6 +1189,105 @@ $test(flux_pipe_terminal_closures) {
    cat::verify(piped_fold == 4 + 16 + 36 + 64);
 }
 
+// `cat::for_each` perfect-forwards its callback, unlike `std::for_each` which
+// always takes the callable by value. This lets l-value `std::function`-sized
+// callables flow through the pipe without an extra copy, and lets r-value
+// `std::move_only_function`-shaped callables compile at all.
+//
+// Fixture mimics a fat copyable callable (think `std::function` with its small
+// buffer eclipsed) and counts copies and moves on every special-member call.
+struct for_each_fat_callable {
+   char padding[64]{};
+   int sum = 0;
+
+   static inline cat::idx copies = 0u;
+   static inline cat::idx moves = 0u;
+
+   constexpr for_each_fat_callable() = default;
+
+   for_each_fat_callable(for_each_fat_callable const& other) : sum(other.sum) {
+      ++copies;
+   }
+
+   for_each_fat_callable(for_each_fat_callable&& other) noexcept
+       : sum(other.sum) {
+      ++moves;
+   }
+
+   auto
+   operator=(for_each_fat_callable const&) -> for_each_fat_callable& = delete;
+   auto
+   operator=(for_each_fat_callable&&) -> for_each_fat_callable& = delete;
+
+   constexpr void
+   operator()(int x) {
+      sum += x;
+   }
+};
+
+// Fixture mimics `std::move_only_function`: copy is forbidden outright, move
+// is the only way to pass it through the pipe.
+struct for_each_move_only_callable {
+   int sum = 0;
+
+   constexpr for_each_move_only_callable() = default;
+
+   for_each_move_only_callable(for_each_move_only_callable const&) = delete;
+   auto
+   operator=(for_each_move_only_callable const&)
+      -> for_each_move_only_callable& = delete;
+
+   constexpr for_each_move_only_callable(
+      for_each_move_only_callable&&) noexcept = default;
+   constexpr auto
+   operator=(for_each_move_only_callable&&) noexcept
+      -> for_each_move_only_callable& = default;
+
+   constexpr void
+   operator()(int x) {
+      sum += x;
+   }
+};
+
+$test(flux_for_each_perfect_forward) {
+   tiny_array<int, 4u> arr = {
+      {},
+      {1, 2, 3, 4}
+   };
+
+   // L-value fat callable: deduction stores a reference, so the original is
+   // mutated in place and the chain performs zero copies and zero moves of
+   // the callable itself.
+   for_each_fat_callable::copies = 0u;
+   for_each_fat_callable::moves = 0u;
+   for_each_fat_callable cb;
+   auto&& back = arr | cat::for_each(cb);
+   static_assert(cat::is_same<decltype(back), for_each_fat_callable&>);
+   cat::verify(&back == &cb);
+   cat::verify(cb.sum == 10);
+   cat::verify(for_each_fat_callable::copies == 0u);
+   cat::verify(for_each_fat_callable::moves == 0u);
+
+   // Member-surface form (`.for_each(...)`) follows the same forwarding rule.
+   for_each_fat_callable::copies = 0u;
+   for_each_fat_callable::moves = 0u;
+   for_each_fat_callable cb_member;
+   auto&& back_member = arr.for_each(cb_member);
+   static_assert(
+      cat::is_same<decltype(back_member), for_each_fat_callable&>);
+   cat::verify(&back_member == &cb_member);
+   cat::verify(cb_member.sum == 10);
+   cat::verify(for_each_fat_callable::copies == 0u);
+   cat::verify(for_each_fat_callable::moves == 0u);
+
+   // R-value move-only callable: must compile and run. Before the perfect-
+   // forwarding fix, the by-value parameter would have required a copy and
+   // failed to compile.
+   for_each_move_only_callable produced =
+      arr | cat::for_each(for_each_move_only_callable{});
+   cat::verify(produced.sum == 10);
+}
+
 // `to<Container>()` materialises into the destination through its `push_back`
 // (here `tiny_vector::push_back`) without needing `as_rvalue` when the source
 // elements are cheap to copy.

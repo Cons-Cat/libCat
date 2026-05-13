@@ -216,10 +216,10 @@ tuple_transform_impl(Self&& self, Callback&& callback,
 
 template <typename Self, typename Callback, idx... indices>
 constexpr auto
-tuple_for_each_impl(Self&& self, Callback callback,
+tuple_for_each_impl(Self&& self, Callback&& callback,
                     index_list_type<indices...> /*unused*/) -> Callback {
-   (callback($fwd(self).template get<indices>()), ...);
-   return callback;
+   ($fwd(callback)($fwd(self).template get<indices>()), ...);
+   return $fwd(callback);
 }
 
 template <typename Self, typename... Arguments, idx... indices>
@@ -381,8 +381,8 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
 
    template <typename Callback>
    constexpr auto
-   for_each(this auto&& self, Callback callback) -> Callback {
-      return detail::tuple_for_each_impl($fwd(self), move(callback),
+   for_each(this auto&& self, Callback&& callback) -> Callback {
+      return detail::tuple_for_each_impl($fwd(self), $fwd(callback),
                                          make_index_sequence<types::size>{});
    }
 
@@ -427,8 +427,8 @@ get(Tuple&& tuple) -> decltype(auto) {
 template <typename Tuple, typename Callback>
    requires(is_tuple<Tuple>)
 constexpr auto
-for_each(Tuple&& tuple, Callback callback) -> Callback {
-   return $fwd(tuple).for_each(move(callback));
+for_each(Tuple&& tuple, Callback&& callback) -> Callback {
+   return $fwd(tuple).for_each($fwd(callback));
 }
 
 // `tuple<types&...>`. Only l-value references, each element aliases an
