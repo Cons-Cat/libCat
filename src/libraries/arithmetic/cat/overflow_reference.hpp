@@ -155,7 +155,15 @@ class overflow_reference
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
    operator U() const {
-      return static_cast<U>(*m_wrapped);
+      // The accessor's policy decides the cast: `.sat()` clamps to `U`'s
+      // range regardless of the wrapped type's own policy.
+      if constexpr (overflow_policy == overflow_policies::saturate
+                    && is_integral<U>) {
+         return static_cast<U>(
+            cat::sat_cast<raw_arithmetic_type<U>>(m_wrapped->raw));
+      } else {
+         return static_cast<U>(*m_wrapped);
+      }
    }
 
    template <is_integral U>

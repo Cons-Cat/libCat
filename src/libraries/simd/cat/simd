@@ -2964,6 +2964,7 @@ struct mask_any_of {
 
 }  // namespace cat::detail::simd_abi
 
+#include "cat/detail/simd_avx2_compress.hpp"
 #include "cat/detail/simd_avx2_mask_ops.hpp"
 #include "cat/detail/simd_sse_movmsk.hpp"
 

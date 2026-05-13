@@ -344,6 +344,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_sse_movmsk.hpp
   ${CATLIB}/simd/cat/detail/simd_sse_unary_full.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_unary_full.hpp
+  ${CATLIB}/simd/cat/detail/simd_avx2_compress.hpp
   ${CATLIB}/simd/cat/simd_dispatch
   ${CATLIB}/socket/cat/socket
   ${CATLIB}/span/cat/span

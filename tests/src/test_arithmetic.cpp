@@ -4874,13 +4874,71 @@ $test(arithmetic_saturating_and_wrapping_narrowing_casts) {
    static_assert(cat::sat_cast<int>(1L) == 1);
    static_assert(cat::sat_cast<__INT8_TYPE__>(1'000'000L) == 127);
    static_assert(cat::sat_cast<__INT8_TYPE__>(-1'000'000L) == -128);
+   // Same-signedness widening / same-width round-trips do not need a bounds
+   // check. `static_cast<U>(limits<T>::max())` would truncate the destination
+   // max into `U` and break the comparison if it ran.
+   static_assert(
+      cat::sat_cast<__INT64_TYPE__>(static_cast<__INT32_TYPE__>(10'000))
+      == 10'000);
+   static_assert(
+      cat::sat_cast<__INT64_TYPE__>(cat::limits<__INT32_TYPE__>::max())
+      == cat::limits<__INT32_TYPE__>::max());
+   static_assert(
+      cat::sat_cast<__UINT64_TYPE__>(cat::limits<__UINT32_TYPE__>::max())
+      == cat::limits<__UINT32_TYPE__>::max());
+
    // Signed -> unsigned: negative clamps to 0, large clamps to max.
    static_assert(cat::sat_cast<__UINT8_TYPE__>(-50) == 0u);
    static_assert(cat::sat_cast<__UINT8_TYPE__>(1'000'000) == 255u);
+   // Signed -> unsigned, widening: non-negative round-trips and the
+   // `limits<T>::max()` boundary survives because the size-based fast path
+   // skips the bogus narrow-and-compare.
+   static_assert(cat::sat_cast<__UINT64_TYPE__>(static_cast<__INT8_TYPE__>(42))
+                 == 42u);
+   static_assert(
+      cat::sat_cast<__UINT64_TYPE__>(static_cast<__INT32_TYPE__>(2'000'000'000))
+      == 2'000'000'000u);
+   static_assert(cat::sat_cast<__UINT64_TYPE__>(static_cast<__INT64_TYPE__>(-1))
+                 == 0u);
+   static_assert(
+      cat::sat_cast<__UINT64_TYPE__>(cat::limits<__INT64_TYPE__>::min()) == 0u);
+   static_assert(
+      cat::sat_cast<__UINT64_TYPE__>(cat::limits<__INT64_TYPE__>::max())
+      == static_cast<__UINT64_TYPE__>(cat::limits<__INT64_TYPE__>::max()));
+   // Signed -> unsigned, same width: max signed fits, negative clamps to 0.
+   static_assert(
+      cat::sat_cast<__UINT32_TYPE__>(cat::limits<__INT32_TYPE__>::max())
+      == 2'147'483'647u);
+   static_assert(cat::sat_cast<__UINT32_TYPE__>(static_cast<__INT32_TYPE__>(-1))
+                 == 0u);
+   // Signed -> unsigned, narrowing: clamp top, in-range round-trip, and the
+   // most-negative source clamps to 0.
+   static_assert(cat::sat_cast<__UINT8_TYPE__>(static_cast<__INT32_TYPE__>(255))
+                 == 255u);
+   static_assert(cat::sat_cast<__UINT8_TYPE__>(static_cast<__INT32_TYPE__>(256))
+                 == 255u);
+   static_assert(cat::sat_cast<__UINT8_TYPE__>(static_cast<__INT32_TYPE__>(0))
+                 == 0u);
+   static_assert(
+      cat::sat_cast<__UINT8_TYPE__>(cat::limits<__INT64_TYPE__>::min()) == 0u);
+
    // Unsigned -> signed: any value above signed max clamps to signed max.
    static_assert(cat::sat_cast<__INT8_TYPE__>(1'000'000u) == 127);
    static_assert(cat::sat_cast<__INT32_TYPE__>(static_cast<unsigned int>(-1))
                  == cat::int4_max.raw);
+   // Unsigned -> signed, widening: every value fits a strictly wider signed
+   // destination.
+   static_assert(
+      cat::sat_cast<__INT64_TYPE__>(cat::limits<__UINT32_TYPE__>::max())
+      == static_cast<__INT64_TYPE__>(cat::limits<__UINT32_TYPE__>::max()));
+   // Unsigned -> signed, same width: at the boundary clamps to signed max.
+   static_assert(cat::sat_cast<__INT32_TYPE__>(static_cast<__UINT32_TYPE__>(
+                    cat::limits<__INT32_TYPE__>::max()))
+                 == cat::limits<__INT32_TYPE__>::max());
+   static_assert(
+      cat::sat_cast<__INT32_TYPE__>(
+         static_cast<__UINT32_TYPE__>(cat::limits<__INT32_TYPE__>::max()) + 1u)
+      == cat::limits<__INT32_TYPE__>::max());
 
    // Saturating implicit construction at runtime.
    {
@@ -5321,6 +5379,93 @@ $test(arithmetic_semantics_implicit_construction_into_wrap_sat) {
 
    // `undefined` narrowing is still explicit.
    static_assert(!cat::is_convertible<cat::int4, int1>);
+}
+
+// Explicit cast FROM a saturating source clamps to the destination's range
+// instead of wrapping, regardless of the destination's policy. Picking a
+// `sat_*` source is itself the opt-in to that semantics on the cast site.
+$test(arithmetic_semantics_explicit_cast_from_sat_saturates) {
+   // sat -> undefined integral target.
+   static_assert(static_cast<int1>(sat_int4{500}) == cat::int1::max());
+   static_assert(static_cast<int1>(sat_int4{-500}) == cat::int1::min());
+   static_assert(static_cast<uint1>(sat_int4{-1}) == 0_u1);
+   static_assert(static_cast<uint1>(sat_int4{500}) == cat::uint1::max());
+
+   // sat -> raw integral target.
+   static_assert(static_cast<signed char>(sat_int4{500}) == 127);
+   static_assert(static_cast<unsigned char>(sat_int4{-7}) == 0u);
+
+   // sat -> wider integral target round-trips.
+   static_assert(static_cast<cat::int8>(sat_int4{42}) == 42_i8);
+
+   // sat -> sat narrowing still saturates.
+   static_assert(static_cast<sat_int1>(sat_int4{500}) == sat_int1::max());
+   static_assert(static_cast<sat_int1>(sat_int4{-500}) == sat_int1::min());
+
+   // Runtime paths likewise saturate.
+   sat_int4 wide = sat_int4{10'000};
+   cat::verify(static_cast<int1>(wide) == cat::int1::max());
+   cat::verify(static_cast<uint1>(wide) == cat::uint1::max());
+
+   sat_int4 negative = sat_int4{-10'000};
+   cat::verify(static_cast<int1>(negative) == cat::int1::min());
+   cat::verify(static_cast<uint1>(negative) == 0_u1);
+
+   // `undefined` and `wrap` sources keep their existing semantics. The
+   // compile-time `consteval = delete` still rejects out-of-range constants
+   // into an `undefined` destination, so only the runtime path is observable.
+   // 500 is 0x1F4. Truncating to `signed char` yields 0xF4 == -12.
+   wrap_int4 wide_wrap = wrap_int4{500};
+   cat::verify(static_cast<int1>(wide_wrap) == cat::int1{-12});
+}
+
+// `.sat()` opts a non-saturating source INTO saturation for the cast site
+// itself, without changing the source type's stored policy. R-value `.sat()`
+// produces a saturating `basic_int`. Lvalue `.sat()` produces a saturating
+// `overflow_reference` over the same storage.
+$test(arithmetic_semantics_explicit_cast_through_sat_accessor) {
+   using cat::int1;
+   using cat::int4;
+   using cat::int8;
+   using cat::uint1;
+
+   // R-value `.sat()` on an `undefined` source -> `basic_int<T, saturate>`.
+   // The cast then goes through the same saturating `operator U()` exercised
+   // above.
+   static_assert(static_cast<int1>(int4{500}.sat()) == int1::max());
+   static_assert(static_cast<int1>(int4{-500}.sat()) == int1::min());
+   static_assert(static_cast<uint1>(int4{-1}.sat()) == 0_u1);
+   static_assert(static_cast<int8>(int4{42}.sat()) == 42_i8);
+
+   // R-value `.sat()` on a `wrap` source likewise saturates the cast.
+   static_assert(static_cast<int1>(wrap_int4{500}.sat()) == int1::max());
+
+   // L-value `.sat()` returns an `overflow_reference` whose own policy is
+   // `saturate`. Casts through that reference clamp to the destination,
+   // independent of the wrapped value's policy.
+   {
+      int4 wide = int4{10'000};
+      cat::verify(static_cast<int1>(wide.sat()) == int1::max());
+      cat::verify(static_cast<uint1>(wide.sat()) == cat::uint1::max());
+
+      int4 negative = int4{-10'000};
+      cat::verify(static_cast<int1>(negative.sat()) == int1::min());
+      cat::verify(static_cast<uint1>(negative.sat()) == 0_u1);
+
+      // The wrapped value itself is untouched.
+      cat::verify(wide == 10'000);
+      cat::verify(negative == -10'000);
+
+      // Wider target round-trips through the reference.
+      cat::verify(static_cast<int8>(wide.sat()) == 10'000_i8);
+   }
+
+   // Const lvalue `.sat()` produces a saturating reference over the const
+   // wrapper. The cast must still saturate.
+   {
+      int4 const wide = int4{10'000};
+      cat::verify(static_cast<int1>(wide.sat()) == int1::max());
+   }
 }
 
 // Arithmetic propagates the LHS overflow policy through the result. `wrap` LHS
@@ -5916,7 +6061,7 @@ consteval auto
 expected_promoted_arithmetic() {
    using L = cat::remove_constref<Left>;
    using R = cat::remove_constref<Right>;
-   constexpr cat::overflow_policies policy = cat::detail::overflow_policy_of<L>;
+   constexpr cat::overflow_policies policy = cat::make_overflow_policy<L>;
 
    if constexpr (policy != cat::overflow_policies::undefined) {
       // Overflow policies never promote. Always return LHS shape.

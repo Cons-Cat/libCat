@@ -2770,6 +2770,18 @@ struct simd_compress_impl {
          return result;
       }
    }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input, simd_mask<T, Abi> selector,
+              T fill_value) const -> simd<T, Abi> {
+      simd<T, Abi> const zero_filled = (*this)(input, selector);
+      idx const active_count = selector.count_if_true();
+      simd_mask<T, Abi> const active_lanes =
+         make_simd_mask_from_count_impl<simd<T, Abi>>{}(active_count);
+      return simd_select(active_lanes, zero_filled, simd<T, Abi>(fill_value));
+   }
 };
 
 struct simd_expand_impl {

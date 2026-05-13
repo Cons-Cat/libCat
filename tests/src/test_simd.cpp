@@ -1826,6 +1826,92 @@ $test(simd_compress_expand) {
    cat::verify(float_expanded_lanes[2] == 9_f4);
 }
 
+// `simd_compress` is a pure permutation, so it must preserve the overflow
+// policy of the lane scalar type as the bit pattern of selected lanes flows
+// to the low end of the output. The three-argument fill-value overload
+// constructs the broadcast through the scalar type's normal conversion, so
+// a saturating cast at the call site still clamps correctly before reaching
+// the simd.
+$test(simd_compress_saturating_lanes) {
+   using sat4 = cat::sat_int4;
+   using usat4 = cat::sat_uint4;
+   using sat4x4 = cat::fixed_size_simd<sat4, 4u>;
+   using usat4x4 = cat::fixed_size_simd<usat4, 4u>;
+
+   sat4 const lane_max = sat4::max();
+   sat4 const lane_min = sat4::min();
+   sat4x4 source{};
+   source.set_lane(0u, lane_max);
+   source.set_lane(1u, sat4(10));
+   source.set_lane(2u, lane_min);
+   source.set_lane(3u, sat4(-7));
+
+   auto const first_three = cat::make_simd_mask_from_count<sat4x4>(3u);
+   sat4x4 const packed = cat::simd_compress(source, first_three);
+   cat::verify(packed[0u] == lane_max);
+   cat::verify(packed[1u] == sat4(10));
+   cat::verify(packed[2u] == lane_min);
+   cat::verify(packed[3u] == sat4(0));
+
+   // Saturation policy survives the permute: lane 0 is still `sat4::max()`,
+   // so a saturating `+1` clamps instead of wrapping.
+   sat4x4 const bump = packed + sat4x4(sat4(1));
+   cat::verify(bump[0u] == lane_max);
+   cat::verify(bump[1u] == sat4(11));
+   // Lane 2 holds `sat4::min()`, so a saturating `-1` stays at the floor.
+   sat4x4 const drop = packed - sat4x4(sat4(1));
+   cat::verify(drop[2u] == lane_min);
+
+   // Three-argument fill: the wider `int8` literal exceeds `sat4`'s range
+   // and goes through `sat4`'s saturating-cast constructor at the call site
+   // (2^40 -> `sat4::max()`), so the inactive trailing lanes receive the
+   // clamped value, not a wrapped bit pattern.
+   sat4x4 const filled = cat::simd_compress(source, first_three,
+                                            sat4(cat::int8(1LL << 40)));
+   cat::verify(filled[0u] == lane_max);
+   cat::verify(filled[1u] == sat4(10));
+   cat::verify(filled[2u] == lane_min);
+   cat::verify(filled[3u] == lane_max);
+
+   // Negative-saturating fill clamps to `sat4::min()`.
+   sat4x4 const filled_neg = cat::simd_compress(
+      source, first_three, sat4(cat::int8(-(1LL << 40))));
+   cat::verify(filled_neg[3u] == lane_min);
+
+   // Unsigned saturation clamps a too-wide value to `usat4::max()` at the
+   // call site. The inactive tail then sees the clamped fill.
+   usat4 const u_max = usat4::max();
+   usat4x4 usource{};
+   usource.set_lane(0u, u_max);
+   usource.set_lane(1u, usat4(2u));
+   usource.set_lane(2u, usat4(3u));
+   usource.set_lane(3u, usat4(4u));
+
+   auto const first_two_u = cat::make_simd_mask_from_count<usat4x4>(2u);
+   usat4x4 const u_filled = cat::simd_compress(
+      usource, first_two_u,
+      // `__UINT64_TYPE__` value `2^33` exceeds `usat4`'s range and is
+      // clamped to `usat4::max()` by the constructor.
+      usat4(static_cast<__UINT64_TYPE__>(1ull << 33)));
+   cat::verify(u_filled[0u] == u_max);
+   cat::verify(u_filled[1u] == usat4(2u));
+   cat::verify(u_filled[2u] == u_max);
+   cat::verify(u_filled[3u] == u_max);
+
+   // Narrow 1-byte saturating cast: a `1000` literal saturates to
+   // `sat_int1::max()` (127) before broadcasting into the fill slot.
+   using sat1 = cat::sat_int1;
+   using sat1x4 = cat::fixed_size_simd<sat1, 4u>;
+   sat1x4 narrow_source{sat1(1), sat1(2), sat1(3), sat1(4)};
+   auto const first_two_narrow = cat::make_simd_mask_from_count<sat1x4>(2u);
+   sat1x4 const narrow_filled =
+      cat::simd_compress(narrow_source, first_two_narrow, sat1(int{1000}));
+   cat::verify(narrow_filled[0u] == sat1(1));
+   cat::verify(narrow_filled[1u] == sat1(2));
+   cat::verify(narrow_filled[2u] == sat1::max());
+   cat::verify(narrow_filled[3u] == sat1::max());
+}
+
 $test(simd_load_from_store_to) {
    cat::int4 contiguous_int_source[8] = {100, 101, 102, 103,
                                          104, 105, 106, 107};

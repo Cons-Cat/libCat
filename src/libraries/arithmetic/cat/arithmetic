@@ -246,30 +246,59 @@ template <typename T>
 concept is_safe_floating_point =
    is_floating_point<T> && !is_raw_floating_point<T>;
 
+// The overflow policy associated with an arithmetic-like type. Fundamental
+// integers (and any other type) default to `undefined`. `basic_int`,
+// `basic_idx`, and `basic_intptr` forward their `policy` template parameter.
+template <typename T>
+inline constexpr overflow_policies make_overflow_policy =
+   overflow_policies::undefined;
+
 template <typename T, overflow_policies policy>
-basic_int(basic_int<T, policy>) -> basic_int<T, policy>;
+inline constexpr overflow_policies make_overflow_policy<basic_int<T, policy>> =
+   policy;
 
-template <is_raw_integral T>
-basic_int(T) -> basic_int<T, overflow_policies::undefined>;
+template <overflow_policies policy>
+inline constexpr overflow_policies make_overflow_policy<basic_idx<policy>> =
+   policy;
 
-template <typename T, precision_policies policy>
-basic_float(basic_float<T, policy>) -> basic_float<T, policy>;
+template <typename T, typename Storage, overflow_policies policy>
+inline constexpr overflow_policies
+   make_overflow_policy<basic_intptr<T, Storage, policy>> = policy;
 
-basic_float(float) -> basic_float<float, precision_policies::precise>;
-basic_float(double) -> basic_float<double, precision_policies::precise>;
+template <typename T>
+inline constexpr overflow_policies make_overflow_policy<T const> =
+   make_overflow_policy<T>;
 
-template <is_integral T>
-inline constexpr overflow_policies make_overflow_policy = [] {
-   if constexpr (requires { T::policy; }) {
-      return T::policy;
-   } else {
-      return basic_int(T{}).policy;
-   }
-}();
+template <typename T>
+inline constexpr overflow_policies make_overflow_policy<T&> =
+   make_overflow_policy<T>;
 
-template <is_floating_point T>
+template <typename T>
+inline constexpr overflow_policies make_overflow_policy<T&&> =
+   make_overflow_policy<T>;
+
+// Same shape as `make_overflow_policy` for the float precision axis. Raw
+// `float`/`double` (and any other type) default to `precise`. `basic_float`
+// forwards its `precision` parameter.
+template <typename T>
 inline constexpr precision_policies make_precision_policy =
-   basic_float(T{}).precision_policy;
+   precision_policies::precise;
+
+template <typename T, precision_policies precision>
+inline constexpr precision_policies
+   make_precision_policy<basic_float<T, precision>> = precision;
+
+template <typename T>
+inline constexpr precision_policies make_precision_policy<T const> =
+   make_precision_policy<T>;
+
+template <typename T>
+inline constexpr precision_policies make_precision_policy<T&> =
+   make_precision_policy<T>;
+
+template <typename T>
+inline constexpr precision_policies make_precision_policy<T&&> =
+   make_precision_policy<T>;
 
 namespace detail {
 // The larger the `order` in this hierarchy is, the greater its precedence is in
@@ -296,35 +325,6 @@ struct integer_promotion_hierarchy<basic_intptr<T, Storage, policy>> {
    // promote to `basic_intptr`.
    static constexpr unsigned long order = 9;
 };
-
-// Extract the overflow policy from a type.
-template <typename T>
-struct overflow_policy_for_impl {
-   // Fundamental types default to `undefined` overflow.
-   static constexpr overflow_policies value = overflow_policies::undefined;
-};
-
-template <typename T, overflow_policies policy>
-struct overflow_policy_for_impl<basic_int<T, policy>> {
-   static constexpr overflow_policies value = policy;
-};
-
-template <overflow_policies policy>
-struct overflow_policy_for_impl<basic_idx<policy>> {
-   static constexpr overflow_policies value = policy;
-};
-
-template <typename T, typename Storage, overflow_policies policy>
-struct overflow_policy_for_impl<basic_intptr<T, Storage, policy>> {
-   static constexpr overflow_policies value = policy;
-};
-
-template <typename T>
-struct overflow_policy_for : overflow_policy_for_impl<remove_cvref<T>> {};
-
-template <typename T>
-inline constexpr overflow_policies overflow_policy_of =
-   overflow_policy_for<T>::value;
 
 // Rebind the overflow policy of an arithmetic-like type. Raw integers become
 // `basic_int<T, new_policy>`. `basic_float` keeps its shape because precision
@@ -371,7 +371,7 @@ struct rebind_overflow_policy<basic_intptr<T, Storage, old_policy>,
 template <typename Left, typename Right>
 consteval auto
 promoted_arithmetic() {
-   constexpr overflow_policies policy = overflow_policy_of<Left>;
+   constexpr overflow_policies policy = make_overflow_policy<Left>;
 
    if constexpr (policy != overflow_policies::undefined) {
       // Wrap / sat / trap. Never promote, always return LHS shape.
@@ -704,7 +704,7 @@ sat_div(T lhs, U rhs) -> remove_constref<T> {
 // Divide two integers with wrapping overflow.
 //
 // Division can only overflow at signed `min() / -1` (mathematically `-min() ==
-// max() + 1`); two's-complement wrap of that result is `min()` itself. Every
+// max() + 1`). Two's-complement wrap of that result is `min()` itself. Every
 // other division is in range, so just compute it in the wider operand's space
 // (preserving signed-ness so a negative result keeps its sign) and narrow back
 // to the LHS storage.
@@ -918,27 +918,41 @@ template <is_raw_integral T, is_raw_integral U>
 constexpr auto
 sat_cast(U value) -> T {
    if constexpr (is_signed<T> == is_signed<U>) {
-      if (value > static_cast<U>(limits<T>::max())) {
-         return limits<T>::max();
+      if constexpr (sizeof(T) >= sizeof(U)) {
+         // Widening or same-width within the same signedness fits exactly,
+         // so no bounds check is needed. (`static_cast<U>(limits<T>::max())`
+         // would truncate the destination's max into `U` and break the
+         // comparison.)
+         return static_cast<T>(value);
+      } else {
+         if (value > static_cast<U>(limits<T>::max())) {
+            return limits<T>::max();
+         }
+         if (value < static_cast<U>(limits<T>::min())) {
+            return limits<T>::min();
+         }
+         return static_cast<T>(value);
       }
-      if (value < static_cast<U>(limits<T>::min())) {
-         return limits<T>::min();
-      }
-      return static_cast<T>(value);
    } else if constexpr (is_unsigned<T>) {
       // `T` unsigned, `U` signed.
       if (value < 0) {
          return T(0);
       }
-      using unsigned_U = make_unsigned_type<U>;
-      if (static_cast<unsigned_U>(value)
-          > static_cast<unsigned_U>(limits<T>::max())) {
+      using unsigned_to = make_unsigned_type<U>;
+      if constexpr (sizeof(T) >= sizeof(U)) {
+         // Non-negative `U` always fits an equal-or-wider unsigned `T`.
+         return static_cast<T>(value);
+      } else if (static_cast<unsigned_to>(value)
+                 > static_cast<unsigned_to>(limits<T>::max())) {
          return limits<T>::max();
       }
       return static_cast<T>(value);
    } else {
       // `T` signed, `U` unsigned.
-      if (value > static_cast<U>(limits<T>::max())) {
+      if constexpr (sizeof(T) > sizeof(U)) {
+         // Any unsigned `U` fits a strictly wider signed `T`.
+         return static_cast<T>(value);
+      } else if (value > static_cast<U>(limits<T>::max())) {
          return limits<T>::max();
       }
       return static_cast<T>(value);
@@ -947,19 +961,23 @@ sat_cast(U value) -> T {
 
 namespace detail {
 
-// Convert `value` to `T` using the semantics of `policy`. Saturating policies
-// clamp out-of-range values. Wrapping policies (and `undefined`) reuse
-// `static_cast`'s well-defined two's-complement modular reduction.
-template <typename T, overflow_policies policy, typename U>
-   requires(policy != overflow_policies::undefined)
+// Convert `value` to `T` using the combined semantics of `dest_policy` and
+// `src_policy`. If either side is `saturate`, the result is clamped into `T`'s
+// range. Otherwise both `wrap` and `undefined` reuse `static_cast`'s
+// well-defined two's-complement modular reduction. `src_policy` defaults to
+// `make_overflow_policy<U>`, so callers can pass the original arithmetic value
+// (raw or `basic_*`) and have its source policy picked up automatically.
+template <typename T, overflow_policies dest_policy, typename U,
+          overflow_policies src_policy = make_overflow_policy<U>>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 policy_cast(U value) -> T {
-   if constexpr (policy == overflow_policies::saturate
+   if constexpr ((dest_policy == overflow_policies::saturate
+                  || src_policy == overflow_policies::saturate)
                  && is_integral<T> && is_integral<U>) {
-      return cat::sat_cast<T>(value);
+      return cat::sat_cast<T>(make_raw_arithmetic(value));
    } else {
-      return static_cast<T>(value);
+      return static_cast<T>(make_raw_arithmetic(value));
    }
 }
 
@@ -1245,6 +1263,12 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    }
 };
 
+template <typename T, precision_policies policy>
+basic_float(basic_float<T, policy>) -> basic_float<T, policy>;
+
+basic_float(float) -> basic_float<float, precision_policies::precise>;
+basic_float(double) -> basic_float<double, precision_policies::precise>;
+
 }  // namespace cat
 
 #include <cat/precision_reference.hpp>
@@ -1338,10 +1362,12 @@ basic_int :
    // being deleted, it shadows the explicit catch-all below for compile-time
    // unsound operands so that no silent truncation occurs. Runtime operands are
    // unaffected (the predicate is not a constant expression, so this overload
-   // is not viable).
+   // is not viable). Saturating sources opt out. A `sat_*` source is itself the
+   // opt-in to clamping during the narrow.
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_conversion<U, T>
-               && overflow_policy == overflow_policies::undefined)
+               && overflow_policy == overflow_policies::undefined
+               && make_overflow_policy<U> != overflow_policies::saturate)
    [[gnu::always_inline, gnu::nodebug]]
    consteval basic_int(U other) __attribute__((
       enable_if(!detail::raw_source_fits_implicit_storage<T>(other),
@@ -1357,14 +1383,17 @@ basic_int :
        : raw(static_cast<T>(make_raw_arithmetic(other))) {
    }
 
-   // Runtime catch-all for `undefined` overflow policy. Unsafe operands must be
-   // cast explicitly, since at runtime we cannot prove the value fits.
+   // Runtime catch-all for `undefined` overflow policy. Unsafe operands must
+   // be cast explicitly, since at runtime we cannot prove the value fits.
+   // A saturating source clamps to `T`'s range instead of wrapping. The cast
+   // remains explicit so that implicit assignment into an `undefined`
+   // destination still requires the user to write a `static_cast`.
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit basic_int(U other)
-       : raw(static_cast<T>(make_raw_arithmetic(other))) {
+       : raw(detail::policy_cast<T, overflow_policies::undefined>(other)) {
    }
 
    // Catch-all for `saturate`/`wrap` overflow policies. Saturating destinations
@@ -1373,21 +1402,28 @@ basic_int :
    // implicit -- choosing a sat/wrap type is itself an explicit opt-in to these
    // semantics. This overload covers compile-time and runtime operands alike,
    // including out-of-range constants which are honored through `policy_cast`
-   // (instead of being silently truncated).
+   // (instead of being silently truncated). A saturating source clamps even
+   // when the destination is `wrap`, since the source's policy declares the
+   // values are already in its representable range.
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy != overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_int(U other)
-       : raw(detail::policy_cast<T, overflow_policy>(
-            make_raw_arithmetic(other))) {
+       : raw(detail::policy_cast<T, overflow_policy>(other)) {
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
    operator U() const {
-      return static_cast<U>(raw);
+      // When this integer is saturating, a narrow cast saturates.
+      if constexpr (overflow_policy == overflow_policies::saturate
+                    && is_integral<U>) {
+         return static_cast<U>(cat::sat_cast<raw_arithmetic_type<U>>(raw));
+      } else {
+         return static_cast<U>(raw);
+      }
    }
 
    template <is_arithmetic U>
@@ -1931,6 +1967,12 @@ basic_int :
 
    // `basic_int` derives public storage from `detail::arithmetic_storage`.
 };
+
+template <typename T, overflow_policies policy>
+basic_int(basic_int<T, policy>) -> basic_int<T, policy>;
+
+template <is_raw_integral T>
+basic_int(T) -> basic_int<T, overflow_policies::undefined>;
 
 }  // namespace cat
 

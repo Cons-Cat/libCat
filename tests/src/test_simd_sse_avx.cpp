@@ -9,6 +9,30 @@ using cat::float4x4;
 using cat::int4x4;
 using cat::int4x8;
 
+namespace {
+
+// Differential check helper for the AVX2 `simd_compress` hooks. The AVX path
+// in `simd_avx2_compress.hpp` runs against the scalar fallback from
+// `simd_compress_impl` on a same-width `fixed_size` reference vector, lane by
+// lane. Any divergence (mask bit pattern, LUT index, BMI2 `pext` byte
+// offset, tail zero) surfaces as a lane mismatch.
+template <typename AvxSimd, typename AvxMask, typename RefSimd,
+          typename RefMask>
+[[gnu::always_inline]]
+auto
+verify_avx2_compress_matches_reference(AvxSimd const& avx_input,
+                                       RefSimd const& ref_input,
+                                       AvxMask const& avx_mask,
+                                       RefMask const& ref_mask) -> void {
+   auto const avx_packed = cat::simd_compress(avx_input, avx_mask);
+   auto const ref_packed = cat::simd_compress(ref_input, ref_mask);
+   for (cat::idx i = 0u; i < AvxSimd::abi_type::lanes; ++i) {
+      cat::verify(avx_packed[i] == ref_packed[i]);
+   }
+}
+
+}  // namespace
+
 // SSE hooks (`simd_sse.hpp`).
 // `unary_full<op_rsqrt>`, plus `mask_to_bitset` via `sse2_abi_mask_to_bitset`
 // in `simd_mask_bitset.tpp`. Reference behavior uses `simd_abi::fixed_size`
@@ -376,4 +400,349 @@ $test(simd_unaligned_abi_adaptor) {
                  == 1u);
    static_assert(alignof(cat::scalar_unaligned_simd<cat::float4>) == 1u);
    static_assert(alignof(cat::compatible_unaligned_simd<float>) == 1u);
+}
+
+// AVX2 `simd_compress` hooks (`simd_avx2_compress.hpp`). One test per lane
+// width covers the four specializations: 32-bit and 64-bit go through the
+// `vpermd`/`vpermps` permutation-table path, 16-bit and 8-bit go through the
+// BMI2 `pdep`/`pext` per-chunk path. Each test exercises a small bank of
+// mask patterns and compares lane-by-lane against the scalar fallback on a
+// `fixed_size` reference of the same width.
+
+$test(simd_avx2_compress_dword) {
+   using int_avx = x64::avx_simd<cat::int4>;
+   using int_avx_mask = x64::avx_simd_mask<cat::int4>;
+   using int_ref = cat::fixed_size_simd<cat::int4, 8u>;
+   using int_ref_mask =
+      cat::simd_mask<cat::int4, cat::simd_abi::fixed_size<cat::int4, 8u>>;
+
+   int_avx const int_input{1, 2, 3, 4, 5, 6, 7, 8};
+   int_ref const int_input_ref{1, 2, 3, 4, 5, 6, 7, 8};
+
+   for (cat::idx active = 0u; active <= 8u; ++active) {
+      verify_avx2_compress_matches_reference(
+         int_input, int_input_ref,
+         cat::make_simd_mask_from_count<int_avx>(active),
+         cat::make_simd_mask_from_count<int_ref>(active));
+   }
+
+   int_avx_mask const sparse{false, true,  false, true,
+                             true,  false, true,  false};
+   int_ref_mask const sparse_ref{false, true,  false, true,
+                                 true,  false, true,  false};
+   verify_avx2_compress_matches_reference(int_input, int_input_ref, sparse,
+                                          sparse_ref);
+
+   int_avx_mask const last_only{false, false, false, false,
+                                false, false, false, true};
+   int_ref_mask const last_only_ref{false, false, false, false,
+                                    false, false, false, true};
+   verify_avx2_compress_matches_reference(int_input, int_input_ref, last_only,
+                                          last_only_ref);
+
+   auto const all_true = cat::simd_compress(
+      int_input, cat::make_simd_mask_from_count<int_avx>(8u));
+   cat::verify(all_true[0u] == 1);
+   cat::verify(all_true[7u] == 8);
+
+   auto const sparse_packed = cat::simd_compress(int_input, sparse);
+   cat::verify(sparse_packed[0u] == 2);
+   cat::verify(sparse_packed[1u] == 4);
+   cat::verify(sparse_packed[2u] == 5);
+   cat::verify(sparse_packed[3u] == 7);
+   cat::verify(sparse_packed[4u] == 0);
+   cat::verify(sparse_packed[7u] == 0);
+
+   using float_avx = x64::avx_simd<cat::float4>;
+   using float_avx_mask = x64::avx_simd_mask<cat::float4>;
+   using float_ref = cat::fixed_size_simd<cat::float4, 8u>;
+   using float_ref_mask =
+      cat::simd_mask<cat::float4, cat::simd_abi::fixed_size<cat::float4, 8u>>;
+
+   float_avx const float_input{1_f4, 2_f4, 3_f4, 4_f4, 5_f4, 6_f4, 7_f4, 8_f4};
+   float_ref const float_input_ref{1_f4, 2_f4, 3_f4, 4_f4,
+                                   5_f4, 6_f4, 7_f4, 8_f4};
+
+   for (cat::idx active = 0u; active <= 8u; ++active) {
+      verify_avx2_compress_matches_reference(
+         float_input, float_input_ref,
+         cat::make_simd_mask_from_count<float_avx>(active),
+         cat::make_simd_mask_from_count<float_ref>(active));
+   }
+
+   float_avx_mask const float_sparse{true,  false, false, true,
+                                     false, true,  true,  false};
+   float_ref_mask const float_sparse_ref{true,  false, false, true,
+                                         false, true,  true,  false};
+   verify_avx2_compress_matches_reference(float_input, float_input_ref,
+                                          float_sparse, float_sparse_ref);
+
+   auto const float_packed = cat::simd_compress(float_input, float_sparse);
+   cat::verify(float_packed[0u] == 1_f4);
+   cat::verify(float_packed[1u] == 4_f4);
+   cat::verify(float_packed[2u] == 6_f4);
+   cat::verify(float_packed[3u] == 7_f4);
+   cat::verify(float_packed[4u] == 0_f4);
+}
+
+$test(simd_avx2_compress_qword) {
+   using int_avx = x64::avx_simd<cat::int8>;
+   using int_avx_mask = x64::avx_simd_mask<cat::int8>;
+   using int_ref = cat::fixed_size_simd<cat::int8, 4u>;
+   using int_ref_mask =
+      cat::simd_mask<cat::int8, cat::simd_abi::fixed_size<cat::int8, 4u>>;
+
+   int_avx const int_input{10, 20, 30, 40};
+   int_ref const int_input_ref{10, 20, 30, 40};
+
+   for (cat::idx active = 0u; active <= 4u; ++active) {
+      verify_avx2_compress_matches_reference(
+         int_input, int_input_ref,
+         cat::make_simd_mask_from_count<int_avx>(active),
+         cat::make_simd_mask_from_count<int_ref>(active));
+   }
+
+   int_avx_mask const checker{true, false, true, false};
+   int_ref_mask const checker_ref{true, false, true, false};
+   verify_avx2_compress_matches_reference(int_input, int_input_ref, checker,
+                                          checker_ref);
+
+   int_avx_mask const high_only{false, false, false, true};
+   int_ref_mask const high_only_ref{false, false, false, true};
+   verify_avx2_compress_matches_reference(int_input, int_input_ref, high_only,
+                                          high_only_ref);
+
+   auto const checker_packed = cat::simd_compress(int_input, checker);
+   cat::verify(checker_packed[0u] == 10);
+   cat::verify(checker_packed[1u] == 30);
+   cat::verify(checker_packed[2u] == 0);
+   cat::verify(checker_packed[3u] == 0);
+
+   using double_avx = x64::avx_simd<cat::float8>;
+   using double_avx_mask = x64::avx_simd_mask<cat::float8>;
+   using double_ref = cat::fixed_size_simd<cat::float8, 4u>;
+   using double_ref_mask =
+      cat::simd_mask<cat::float8, cat::simd_abi::fixed_size<cat::float8, 4u>>;
+
+   double_avx const double_input{1.5, 2.5, 3.5, 4.5};
+   double_ref const double_input_ref{1.5, 2.5, 3.5, 4.5};
+
+   for (cat::idx active = 0u; active <= 4u; ++active) {
+      verify_avx2_compress_matches_reference(
+         double_input, double_input_ref,
+         cat::make_simd_mask_from_count<double_avx>(active),
+         cat::make_simd_mask_from_count<double_ref>(active));
+   }
+
+   double_avx_mask const inner{false, true, true, false};
+   double_ref_mask const inner_ref{false, true, true, false};
+   verify_avx2_compress_matches_reference(double_input, double_input_ref, inner,
+                                          inner_ref);
+   auto const inner_packed = cat::simd_compress(double_input, inner);
+   cat::verify(inner_packed[0u] == 2.5);
+   cat::verify(inner_packed[1u] == 3.5);
+   cat::verify(inner_packed[2u] == 0.0);
+}
+
+$test(simd_avx2_compress_word) {
+   using word_avx = x64::avx_simd<cat::int2>;
+   using word_avx_mask = x64::avx_simd_mask<cat::int2>;
+   using word_ref = cat::fixed_size_simd<cat::int2, 16u>;
+   using word_ref_mask =
+      cat::simd_mask<cat::int2, cat::simd_abi::fixed_size<cat::int2, 16u>>;
+
+   word_avx const input{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+   word_ref const input_ref{1, 2,  3,  4,  5,  6,  7,  8,
+                            9, 10, 11, 12, 13, 14, 15, 16};
+
+   for (cat::idx active = 0u; active <= 16u; ++active) {
+      verify_avx2_compress_matches_reference(
+         input, input_ref, cat::make_simd_mask_from_count<word_avx>(active),
+         cat::make_simd_mask_from_count<word_ref>(active));
+   }
+
+   // Alternating: each 4-lane `pext` chunk holds two active words.
+   word_avx_mask const alternating{true, false, true, false, true, false,
+                                   true, false, true, false, true, false,
+                                   true, false, true, false};
+   word_ref_mask const alternating_ref{true, false, true, false, true, false,
+                                       true, false, true, false, true, false,
+                                       true, false, true, false};
+   verify_avx2_compress_matches_reference(input, input_ref, alternating,
+                                          alternating_ref);
+
+   // Cross-chunk: only the second chunk (lanes 4..7) is active.
+   word_avx_mask const second_chunk{false, false, false, false, true,  true,
+                                    true,  true,  false, false, false, false,
+                                    false, false, false, false};
+   word_ref_mask const second_chunk_ref{
+      false, false, false, false, true,  true,  true,  true,
+      false, false, false, false, false, false, false, false};
+   verify_avx2_compress_matches_reference(input, input_ref, second_chunk,
+                                          second_chunk_ref);
+
+   // Single late lane: stresses the running byte-offset propagation.
+   word_avx_mask const sparse_late{false, false, false, false, false, false,
+                                   false, false, false, false, false, true,
+                                   false, false, false, false};
+   word_ref_mask const sparse_late_ref{false, false, false, false, false, false,
+                                       false, false, false, false, false, true,
+                                       false, false, false, false};
+   verify_avx2_compress_matches_reference(input, input_ref, sparse_late,
+                                          sparse_late_ref);
+
+   auto const alt_packed = cat::simd_compress(input, alternating);
+   cat::verify(alt_packed[0u] == 1);
+   cat::verify(alt_packed[1u] == 3);
+   cat::verify(alt_packed[7u] == 15);
+   cat::verify(alt_packed[8u] == 0);
+   cat::verify(alt_packed[15u] == 0);
+
+   auto const late_packed = cat::simd_compress(input, sparse_late);
+   cat::verify(late_packed[0u] == 12);
+   cat::verify(late_packed[1u] == 0);
+   cat::verify(late_packed[15u] == 0);
+}
+
+$test(simd_avx2_compress_byte) {
+   using byte_avx = x64::avx_simd<cat::int1>;
+   using byte_avx_mask = x64::avx_simd_mask<cat::int1>;
+   using byte_ref = cat::fixed_size_simd<cat::int1, 32u>;
+   using byte_ref_mask =
+      cat::simd_mask<cat::int1, cat::simd_abi::fixed_size<cat::int1, 32u>>;
+
+   byte_avx input{};
+   byte_ref input_ref{};
+   for (cat::idx i = 0u; i < 32u; ++i) {
+      input.set_lane(i, static_cast<cat::int1>(i + 1));
+      input_ref.set_lane(i, static_cast<cat::int1>(i + 1));
+   }
+
+   for (cat::idx active : {
+           cat::idx{0u},
+           cat::idx{1u},
+           cat::idx{7u},
+           cat::idx{8u},
+           cat::idx{15u},
+           cat::idx{16u},
+           cat::idx{23u},
+           cat::idx{31u},
+           cat::idx{32u},
+        }) {
+      verify_avx2_compress_matches_reference(
+         input, input_ref, cat::make_simd_mask_from_count<byte_avx>(active),
+         cat::make_simd_mask_from_count<byte_ref>(active));
+   }
+
+   // Alternating across every 8-lane `pext` chunk.
+   byte_avx_mask alternating{};
+   byte_ref_mask alternating_ref{};
+   for (cat::idx i = 0u; i < 32u; ++i) {
+      bool const bit = (i.raw % 2u) == 0u;
+      alternating.set_lane(i, bit);
+      alternating_ref.set_lane(i, bit);
+   }
+   verify_avx2_compress_matches_reference(input, input_ref, alternating,
+                                          alternating_ref);
+
+   // Only the third 8-byte chunk (lanes 16..23) is active.
+   byte_avx_mask third_chunk{};
+   byte_ref_mask third_chunk_ref{};
+   for (cat::idx i = 16u; i < 24u; ++i) {
+      third_chunk.set_lane(i, true);
+      third_chunk_ref.set_lane(i, true);
+   }
+   verify_avx2_compress_matches_reference(input, input_ref, third_chunk,
+                                          third_chunk_ref);
+
+   // One active lane in the final chunk: exercises the maximum byte offset.
+   byte_avx_mask tail_only{};
+   byte_ref_mask tail_only_ref{};
+   tail_only.set_lane(31u, true);
+   tail_only_ref.set_lane(31u, true);
+   verify_avx2_compress_matches_reference(input, input_ref, tail_only,
+                                          tail_only_ref);
+
+   auto const alt_packed = cat::simd_compress(input, alternating);
+   cat::verify(alt_packed[0u] == cat::int1{1});
+   cat::verify(alt_packed[1u] == cat::int1{3});
+   cat::verify(alt_packed[15u] == cat::int1{31});
+   cat::verify(alt_packed[16u] == cat::int1{0});
+   cat::verify(alt_packed[31u] == cat::int1{0});
+
+   auto const tail_packed = cat::simd_compress(input, tail_only);
+   cat::verify(tail_packed[0u] == cat::int1{32});
+   cat::verify(tail_packed[1u] == cat::int1{0});
+   cat::verify(tail_packed[31u] == cat::int1{0});
+}
+
+// C++26 `[simd.permute.mask]` three-argument compress (P2664). The trailing
+// inactive slots are filled with the caller-provided scalar instead of the
+// two-argument form's zero. Covers the dword and qword AVX2 hooks where the
+// tail comes from a SIMD AND-mask, and the word/byte BMI2 hooks where the
+// tail comes from `pext` zero-padding. Both must blend correctly when the
+// hook is dispatched through the `simd_select` step inside
+// `simd_compress_impl`.
+$test(simd_avx2_compress_with_fill_value) {
+   using int_avx = x64::avx_simd<cat::int4>;
+   using int_avx_mask = x64::avx_simd_mask<cat::int4>;
+   int_avx const dword_input{1, 2, 3, 4, 5, 6, 7, 8};
+   int_avx_mask const dword_first_three =
+      cat::make_simd_mask_from_count<int_avx>(3u);
+   auto const dword_filled =
+      cat::simd_compress(dword_input, dword_first_three, cat::int4{-1});
+   cat::verify(dword_filled[0u] == 1);
+   cat::verify(dword_filled[1u] == 2);
+   cat::verify(dword_filled[2u] == 3);
+   cat::verify(dword_filled[3u] == -1);
+   cat::verify(dword_filled[7u] == -1);
+
+   using float_avx = x64::avx_simd<cat::float4>;
+   using float_avx_mask = x64::avx_simd_mask<cat::float4>;
+   float_avx const float_input{1_f4, 2_f4, 3_f4, 4_f4, 5_f4, 6_f4, 7_f4, 8_f4};
+   float_avx_mask const float_sparse{true,  false, false, true,
+                                     false, true,  true,  false};
+   auto const float_filled =
+      cat::simd_compress(float_input, float_sparse, 99_f4);
+   cat::verify(float_filled[0u] == 1_f4);
+   cat::verify(float_filled[1u] == 4_f4);
+   cat::verify(float_filled[2u] == 6_f4);
+   cat::verify(float_filled[3u] == 7_f4);
+   cat::verify(float_filled[4u] == 99_f4);
+   cat::verify(float_filled[7u] == 99_f4);
+
+   using qword_avx = x64::avx_simd<cat::int8>;
+   qword_avx const qword_input{10, 20, 30, 40};
+   auto const qword_filled = cat::simd_compress(
+      qword_input, cat::make_simd_mask_from_count<qword_avx>(1u),
+      cat::int8{777});
+   cat::verify(qword_filled[0u] == 10);
+   cat::verify(qword_filled[1u] == 777);
+   cat::verify(qword_filled[3u] == 777);
+
+   using word_avx = x64::avx_simd<cat::int2>;
+   using word_avx_mask = x64::avx_simd_mask<cat::int2>;
+   word_avx const word_input{1, 2,  3,  4,  5,  6,  7,  8,
+                             9, 10, 11, 12, 13, 14, 15, 16};
+   word_avx_mask const word_alternating{true, false, true, false, true, false,
+                                        true, false, true, false, true, false,
+                                        true, false, true, false};
+   auto const word_filled =
+      cat::simd_compress(word_input, word_alternating, cat::int2{-5});
+   cat::verify(word_filled[0u] == 1);
+   cat::verify(word_filled[7u] == 15);
+   cat::verify(word_filled[8u] == -5);
+   cat::verify(word_filled[15u] == -5);
+
+   using byte_avx = x64::avx_simd<cat::int1>;
+   byte_avx byte_input{};
+   for (cat::idx i = 0u; i < 32u; ++i) {
+      byte_input.set_lane(i, static_cast<cat::int1>(i + 1));
+   }
+   auto const byte_filled = cat::simd_compress(
+      byte_input, cat::make_simd_mask_from_count<byte_avx>(5u), cat::int1{42});
+   cat::verify(byte_filled[0u] == cat::int1{1});
+   cat::verify(byte_filled[4u] == cat::int1{5});
+   cat::verify(byte_filled[5u] == cat::int1{42});
+   cat::verify(byte_filled[31u] == cat::int1{42});
 }
