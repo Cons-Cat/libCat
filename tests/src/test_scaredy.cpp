@@ -272,3 +272,25 @@ $test(scaredy) {
    cat::scaredy fail2 = scaredy_try_fail_2();
    cat::verify(!fail2.has_value());
 }
+
+// `.get_ptr()` on `cat::scaredy`: address-of when engaged, `nullptr` otherwise.
+$test(scaredy_get_ptr) {
+   cat::scaredy<int4, error_type_one> ok = int4{42};
+   cat::verify(ok.has_value());
+
+   int4* p_active = ok.get_ptr();
+   cat::verify(p_active != nullptr);
+   cat::verify(*p_active == 42);
+   cat::verify(p_active == &ok.value());
+
+   cat::scaredy<int4, error_type_one> bad = error_type_one{-1};
+   cat::verify(!bad.has_value());
+   cat::verify(bad.get_ptr() == nullptr);
+
+   // For a pointer-typed value the held pointer is forwarded directly.
+   int4 referent = 7;
+   cat::scaredy<int4*, error_type_one> ok_ptr = &referent;
+   cat::verify(ok_ptr.get_ptr() == &referent);
+   cat::scaredy<int4*, error_type_one> bad_ptr = error_type_one{1};
+   cat::verify(bad_ptr.get_ptr() == nullptr);
+}

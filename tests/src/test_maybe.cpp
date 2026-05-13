@@ -326,7 +326,7 @@ $test(maybe_ptr_basic) {
    cat::verify(opt_ptr.has_value());
    cat::verify(opt_ptr.value() == &get_addr);
    cat::verify(*opt_ptr.value() == 0);
-   cat::verify(opt_ptr.p_value() == &get_addr);
+   cat::verify(opt_ptr.get_ptr() == &get_addr);
 
    opt_ptr = cat::nullopt;
    cat::verify(!opt_ptr.has_value());
@@ -337,7 +337,7 @@ $test(maybe_ptr_basic) {
 // Implicit conversions on assignment. `int4` accepts `int` and `short`.
 $test(maybe_converting_assign) {
    cat::maybe<int4> foo;
-   foo = int{1};
+   foo = 1;
    cat::verify(foo.value() == 1);
    foo = short{2};
    cat::verify(foo.value() == 2);
@@ -495,14 +495,23 @@ $test(maybe_copy) {
    cat::verify(opt_copy_2.value() == 10);
 }
 
-// `p_value()` returns the address of the held value (and equals
-// `__builtin_addressof(value())`).
+// `get_ptr()` returns the address of the held value when engaged, or
+// `nullptr` when disengaged (P4189).
 $test(maybe_pointer_access) {
    cat::maybe<int4> foo = 1;
    int4 const& ref_foo = foo.value();
    cat::verify(&ref_foo == &foo.value());
-   cat::verify(foo.p_value() == &foo.value());
-   cat::verify(foo.p_value() == __builtin_addressof(foo.value()));
+   cat::verify(foo.get_ptr() == &foo.value());
+   cat::verify(foo.get_ptr() == __builtin_addressof(foo.value()));
+
+   cat::maybe<int4> empty;
+   cat::verify(empty.get_ptr() == nullptr);
+
+   int4 referent = 7;
+   cat::maybe<int4&> ref_opt = referent;
+   cat::verify(ref_opt.get_ptr() == &referent);
+   cat::maybe<int4&> empty_ref;
+   cat::verify(empty_ref.get_ptr() == nullptr);
 }
 
 // All const/mut combinations of `maybe<T&>` over a non-trivially-destructible

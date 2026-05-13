@@ -677,13 +677,15 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
       // Bit-cast these `idx` to `iword`, which is essentially -1.
 
       maybe<idx> const maybe_open_brace = remainder.find('{');
-      iword const to_open_brace = maybe_open_brace.value();
+      // `.value_or_niche()` gets either an `idx` or an 8-byte -1. Both convert
+      // to `iword`.
+      iword const to_open_brace = maybe_open_brace.value_or_niche();
       if (!maybe_open_brace.has_value()) {
          assert(to_open_brace == -1);
       }
 
       maybe<idx> const maybe_close_brace = remainder.find('}');
-      iword const to_close_brace = maybe_close_brace.value();
+      iword const to_close_brace = maybe_close_brace.value_or_niche();
       if (!maybe_close_brace.has_value()) {
          assert(to_close_brace == -1);
       }
