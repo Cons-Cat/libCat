@@ -1,0 +1,18 @@
+#include <cat/linux>
+
+[[gnu::no_sanitize_address]]
+auto
+nix::syscall4_volatile(cat::iword call, cat::no_type arg1, cat::no_type arg2,
+                       cat::no_type arg3, cat::no_type arg4) -> cat::iword {
+   register cat::no_type const r10 asm("r10") = arg4;
+
+   cat::iword result;
+   asm volatile("syscall"
+                : "=a"(result)
+                : "a"(call), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10)
+                // `memory` is clobbered because the kernel may write through
+                // any pointer the caller passed.
+                // `cc` is clobbered because the kernel may set the carry flag.
+                : "rcx", "r11", "memory", "cc");
+   return result;
+}

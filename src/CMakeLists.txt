@@ -64,49 +64,172 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/syscall4.cpp
   ${CATLIB}/linux/implementations/syscall5.cpp
   ${CATLIB}/linux/implementations/syscall6.cpp
+  ${CATLIB}/linux/implementations/syscall0_volatile.cpp
+  ${CATLIB}/linux/implementations/syscall1_volatile.cpp
+  ${CATLIB}/linux/implementations/syscall2_volatile.cpp
+  ${CATLIB}/linux/implementations/syscall3_volatile.cpp
+  ${CATLIB}/linux/implementations/syscall4_volatile.cpp
+  ${CATLIB}/linux/implementations/syscall5_volatile.cpp
+  ${CATLIB}/linux/implementations/syscall6_volatile.cpp
   ${CATLIB}/linux/implementations/sys_read.cpp
   ${CATLIB}/linux/implementations/sys_write.cpp
-  ${CATLIB}/linux/implementations/sys_close.cpp
-  ${CATLIB}/linux/implementations/clonearguments.cpp
   ${CATLIB}/linux/implementations/sys_open.cpp
-  ${CATLIB}/linux/implementations/sys_creat.cpp
-  ${CATLIB}/linux/implementations/sys_rt_sigprocmask.cpp
-  ${CATLIB}/linux/implementations/sys_unlink.cpp
-  ${CATLIB}/linux/implementations/sys_getrlimit.cpp
-  ${CATLIB}/linux/implementations/sys_setrlimit.cpp
+  ${CATLIB}/linux/implementations/sys_close.cpp
+  ${CATLIB}/linux/implementations/sys_stat.cpp
+  ${CATLIB}/linux/implementations/sys_fstat.cpp
+  ${CATLIB}/linux/implementations/sys_lstat.cpp
+  ${CATLIB}/linux/implementations/sys_lseek.cpp
   ${CATLIB}/linux/implementations/sys_mmap.cpp
+  ${CATLIB}/linux/implementations/sys_mprotect.cpp
   ${CATLIB}/linux/implementations/sys_munmap.cpp
-  ${CATLIB}/linux/implementations/sys_wait4.cpp
-  ${CATLIB}/linux/implementations/wait_pid.cpp
-  ${CATLIB}/linux/implementations/sys_waitid.cpp
-  ${CATLIB}/linux/implementations/sys_clone.cpp
-  ${CATLIB}/linux/implementations/executable_tls.cpp
+  ${CATLIB}/linux/implementations/sys_brk.cpp
+  ${CATLIB}/linux/implementations/sys_rt_sigaction.cpp
+  ${CATLIB}/linux/implementations/sys_rt_sigprocmask.cpp
+  ${CATLIB}/linux/implementations/sys_ioctl.cpp
+  ${CATLIB}/linux/implementations/sys_pread64.cpp
+  ${CATLIB}/linux/implementations/sys_pwrite64.cpp
+  ${CATLIB}/linux/implementations/sys_readv.cpp
+  ${CATLIB}/linux/implementations/sys_writev.cpp
+  ${CATLIB}/linux/implementations/sys_access.cpp
+  ${CATLIB}/linux/implementations/sys_pipe.cpp
+  ${CATLIB}/linux/implementations/sys_sched_yield.cpp
+  ${CATLIB}/linux/implementations/sys_dup.cpp
+  ${CATLIB}/linux/implementations/sys_dup2.cpp
+  ${CATLIB}/linux/implementations/sys_getpid.cpp
   ${CATLIB}/linux/implementations/sys_socket.cpp
+  ${CATLIB}/linux/implementations/sys_connect.cpp
+  ${CATLIB}/linux/implementations/sys_accept.cpp
+  ${CATLIB}/linux/implementations/sys_sendto.cpp
+  ${CATLIB}/linux/implementations/sys_recv.cpp
+  ${CATLIB}/linux/implementations/sys_sendmsg.cpp
+  ${CATLIB}/linux/implementations/sys_recvmsg.cpp
+  ${CATLIB}/linux/implementations/sys_shutdown.cpp
+  ${CATLIB}/linux/implementations/sys_bind.cpp
+  ${CATLIB}/linux/implementations/sys_listen.cpp
+  ${CATLIB}/linux/implementations/sys_getsockname.cpp
+  ${CATLIB}/linux/implementations/sys_getpeername.cpp
+  ${CATLIB}/linux/implementations/sys_socketpair.cpp
+  ${CATLIB}/linux/implementations/sys_setsockopt.cpp
+  ${CATLIB}/linux/implementations/sys_getsockopt.cpp
+  ${CATLIB}/linux/implementations/sys_clone.cpp
+  ${CATLIB}/linux/implementations/sys_exit.cpp
+  ${CATLIB}/linux/implementations/sys_wait4.cpp
+  ${CATLIB}/linux/implementations/sys_uname.cpp
+  ${CATLIB}/linux/implementations/sys_fcntl.cpp
+  ${CATLIB}/linux/implementations/sys_flock.cpp
+  ${CATLIB}/linux/implementations/sys_fsync.cpp
+  ${CATLIB}/linux/implementations/sys_fdatasync.cpp
+  ${CATLIB}/linux/implementations/sys_truncate.cpp
+  ${CATLIB}/linux/implementations/sys_ftruncate.cpp
+  ${CATLIB}/linux/implementations/sys_getdents.cpp
+  ${CATLIB}/linux/implementations/sys_getcwd.cpp
+  ${CATLIB}/linux/implementations/sys_chdir.cpp
+  ${CATLIB}/linux/implementations/sys_fchdir.cpp
+  ${CATLIB}/linux/implementations/sys_rename.cpp
+  ${CATLIB}/linux/implementations/sys_mkdir.cpp
+  ${CATLIB}/linux/implementations/sys_rmdir.cpp
+  ${CATLIB}/linux/implementations/sys_creat.cpp
+  ${CATLIB}/linux/implementations/sys_link.cpp
+  ${CATLIB}/linux/implementations/sys_unlink.cpp
+  ${CATLIB}/linux/implementations/sys_symlink.cpp
+  ${CATLIB}/linux/implementations/sys_readlink.cpp
+  ${CATLIB}/linux/implementations/sys_chmod.cpp
+  ${CATLIB}/linux/implementations/sys_fchmod.cpp
+  ${CATLIB}/linux/implementations/sys_chown.cpp
+  ${CATLIB}/linux/implementations/sys_fchown.cpp
+  ${CATLIB}/linux/implementations/sys_lchown.cpp
+  ${CATLIB}/linux/implementations/sys_umask.cpp
+  ${CATLIB}/linux/implementations/sys_getrlimit.cpp
+  ${CATLIB}/linux/implementations/sys_getuid.cpp
+  ${CATLIB}/linux/implementations/sys_getgid.cpp
+  ${CATLIB}/linux/implementations/sys_setuid.cpp
+  ${CATLIB}/linux/implementations/sys_setgid.cpp
+  ${CATLIB}/linux/implementations/sys_geteuid.cpp
+  ${CATLIB}/linux/implementations/sys_getegid.cpp
+  ${CATLIB}/linux/implementations/sys_setpgid.cpp
+  ${CATLIB}/linux/implementations/sys_getppid.cpp
+  ${CATLIB}/linux/implementations/sys_getpgrp.cpp
+  ${CATLIB}/linux/implementations/sys_setsid.cpp
+  ${CATLIB}/linux/implementations/sys_setreuid.cpp
+  ${CATLIB}/linux/implementations/sys_setregid.cpp
+  ${CATLIB}/linux/implementations/sys_getgroups.cpp
+  ${CATLIB}/linux/implementations/sys_setgroups.cpp
+  ${CATLIB}/linux/implementations/sys_setresuid.cpp
+  ${CATLIB}/linux/implementations/sys_getresuid.cpp
+  ${CATLIB}/linux/implementations/sys_setresgid.cpp
+  ${CATLIB}/linux/implementations/sys_getresgid.cpp
+  ${CATLIB}/linux/implementations/sys_getpgid.cpp
+  ${CATLIB}/linux/implementations/sys_setfsuid.cpp
+  ${CATLIB}/linux/implementations/sys_setfsgid.cpp
+  ${CATLIB}/linux/implementations/sys_getsid.cpp
+  ${CATLIB}/linux/implementations/sys_rt_sigpending.cpp
+  ${CATLIB}/linux/implementations/sys_rt_sigtimedwait.cpp
+  ${CATLIB}/linux/implementations/sys_rt_sigqueueinfo.cpp
+  ${CATLIB}/linux/implementations/sys_rt_sigsuspend.cpp
+  ${CATLIB}/linux/implementations/sys_sigaltstack.cpp
+  ${CATLIB}/linux/implementations/sys_utime.cpp
+  ${CATLIB}/linux/implementations/sys_statfs.cpp
+  ${CATLIB}/linux/implementations/sys_fstatfs.cpp
+  ${CATLIB}/linux/implementations/sys_mlock.cpp
+  ${CATLIB}/linux/implementations/sys_munlock.cpp
+  ${CATLIB}/linux/implementations/sys_mlockall.cpp
+  ${CATLIB}/linux/implementations/sys_munlockall.cpp
+  ${CATLIB}/linux/implementations/sys_arch_prctl.cpp
+  ${CATLIB}/linux/implementations/sys_setrlimit.cpp
+  ${CATLIB}/linux/implementations/sys_gettid.cpp
+  ${CATLIB}/linux/implementations/sys_tkill.cpp
+  ${CATLIB}/linux/implementations/sys_futex.cpp
+  ${CATLIB}/linux/implementations/sys_sched_setaffinity.cpp
+  ${CATLIB}/linux/implementations/sys_sched_getaffinity.cpp
+  ${CATLIB}/linux/implementations/sys_getdents64.cpp
+  ${CATLIB}/linux/implementations/sys_set_tid_address.cpp
+  ${CATLIB}/linux/implementations/sys_exit_group.cpp
+  ${CATLIB}/linux/implementations/sys_tgkill.cpp
+  ${CATLIB}/linux/implementations/sys_waitid.cpp
+  ${CATLIB}/linux/implementations/sys_openat.cpp
+  ${CATLIB}/linux/implementations/sys_mkdirat.cpp
+  ${CATLIB}/linux/implementations/sys_fchownat.cpp
+  ${CATLIB}/linux/implementations/sys_newfstatat.cpp
+  ${CATLIB}/linux/implementations/sys_unlinkat.cpp
+  ${CATLIB}/linux/implementations/sys_renameat.cpp
+  ${CATLIB}/linux/implementations/sys_linkat.cpp
+  ${CATLIB}/linux/implementations/sys_symlinkat.cpp
+  ${CATLIB}/linux/implementations/sys_readlinkat.cpp
+  ${CATLIB}/linux/implementations/sys_fchmodat.cpp
+  ${CATLIB}/linux/implementations/sys_faccessat.cpp
+  ${CATLIB}/linux/implementations/sys_set_robust_list.cpp
+  ${CATLIB}/linux/implementations/sys_get_robust_list.cpp
+  ${CATLIB}/linux/implementations/sys_utimensat.cpp
+  ${CATLIB}/linux/implementations/sys_fallocate.cpp
+  ${CATLIB}/linux/implementations/sys_accept4.cpp
+  ${CATLIB}/linux/implementations/sys_dup3.cpp
+  ${CATLIB}/linux/implementations/sys_pipe2.cpp
+  ${CATLIB}/linux/implementations/sys_rt_tgsigqueueinfo.cpp
+  ${CATLIB}/linux/implementations/sys_renameat2.cpp
+  ${CATLIB}/linux/implementations/sys_getrandom.cpp
+  ${CATLIB}/linux/implementations/sys_mlock2.cpp
+  ${CATLIB}/linux/implementations/sys_statx.cpp
+  ${CATLIB}/linux/implementations/sys_io_uring_setup.cpp
+  ${CATLIB}/linux/implementations/sys_io_uring_enter.cpp
+  ${CATLIB}/linux/implementations/sys_io_uring_register.cpp
+  ${CATLIB}/linux/implementations/sys_openat2.cpp
+  ${CATLIB}/linux/implementations/sys_futex_waitv.cpp
+  ${CATLIB}/linux/implementations/sys_cachestat.cpp
+  ${CATLIB}/linux/implementations/sys_fchmodat2.cpp
+  ${CATLIB}/linux/implementations/sys_map_shadow_stack.cpp
+  ${CATLIB}/linux/implementations/sys_futex_wake.cpp
+  ${CATLIB}/linux/implementations/sys_futex_wait.cpp
+  ${CATLIB}/linux/implementations/sys_futex_requeue.cpp
+  ${CATLIB}/linux/implementations/sys_mseal.cpp
+  ${CATLIB}/linux/implementations/has_syscall.cpp
+  ${CATLIB}/linux/implementations/wait_pid.cpp
+  ${CATLIB}/linux/implementations/clonearguments.cpp
+  ${CATLIB}/linux/implementations/executable_tls.cpp
   ${CATLIB}/linux/implementations/create_socket_local.cpp
   ${CATLIB}/linux/implementations/is_a_tty.cpp
   ${CATLIB}/linux/implementations/tty_get_attributes.cpp
   ${CATLIB}/linux/implementations/tty_set_attributes.cpp
-  ${CATLIB}/linux/implementations/sys_ioctl.cpp
-  ${CATLIB}/linux/implementations/sys_getpid.cpp
   ${CATLIB}/linux/implementations/read_char.cpp
-  ${CATLIB}/linux/implementations/sys_accept.cpp
-  ${CATLIB}/linux/implementations/sys_arch_prctl.cpp
-  ${CATLIB}/linux/implementations/sys_bind.cpp
-  ${CATLIB}/linux/implementations/sys_connect.cpp
-  ${CATLIB}/linux/implementations/sys_listen.cpp
-  ${CATLIB}/linux/implementations/sys_recv.cpp
-  ${CATLIB}/linux/implementations/sys_sendto.cpp
-  ${CATLIB}/linux/implementations/sys_writev.cpp
-  ${CATLIB}/linux/implementations/sys_readv.cpp
-  ${CATLIB}/linux/implementations/sys_stat.cpp
-  ${CATLIB}/linux/implementations/sys_fstat.cpp
-  ${CATLIB}/linux/implementations/sys_tkill.cpp
-  ${CATLIB}/linux/implementations/sys_sched_yield.cpp
-  ${CATLIB}/linux/implementations/sys_tgkill.cpp
-  ${CATLIB}/linux/implementations/sys_futex.cpp
-  ${CATLIB}/linux/implementations/sys_set_robust_list.cpp
-  ${CATLIB}/linux/implementations/sys_get_robust_list.cpp
-  ${CATLIB}/linux/implementations/sys_futex_waitv.cpp
   ${CATLIB}/linux/implementations/block_all_signals.cpp
   ${CATLIB}/linux/implementations/raise.cpp
   ${CATLIB}/linux/implementations/raise_here.cpp
@@ -169,6 +292,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/stepanov/cat/insert_iterators
   ${CATLIB}/limits/cat/limits
   ${CATLIB}/linux/cat/linux
+  ${CATLIB}/linux/cat/detail/syscalls.hpp
   ${CATLIB}/list/cat/list
   ${CATLIB}/match/cat/match
   ${CATLIB}/math/cat/math

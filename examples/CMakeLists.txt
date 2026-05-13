@@ -18,12 +18,13 @@ option(CAT_BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)
 option(CAT_BUILD_EXAMPLE_HELLO "Compile hello.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(hello hello.cpp)
-  # `hello` is compiled with aggressive feature flags so that the binary is as
-  # small as possible.
+  # `hello` is compiled with aggressive optimization flags so that the binary is
+  # as small as possible.
   target_compile_definitions(hello PRIVATE
     NO_ARGC_ARGV
     CAT_NO_STATIC_CONSTRUCTORS
     CAT_NO_CPUID
+    CAT_NO_SYSCALL_PROBES
     CAT_THREAD_LOCAL_SIZE=0)
   set_property(SOURCE
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
@@ -37,11 +38,12 @@ endif()
 option(CAT_BUILD_EXAMPLE_ECHO "Compile echo.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_ECHO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(echo echo.cpp)
-  # `echo` is compiled with aggressive feature flags so that the binary is as
-  # small as possible.
+  # `echo` is compiled with aggressive optimization flags so that the binary is
+  # as small as possible.
   target_compile_definitions(echo PRIVATE
     CAT_NO_STATIC_CONSTRUCTORS
     CAT_NO_CPUID
+    CAT_NO_SYSCALL_PROBES
     CAT_THREAD_LOCAL_SIZE=0)
   set_property(SOURCE
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp

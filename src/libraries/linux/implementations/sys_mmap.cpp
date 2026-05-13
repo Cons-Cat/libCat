@@ -9,7 +9,8 @@ nix::sys_mmap(void* p_start_address, cat::uword bytes_size,
               nix::file_descriptor file_descriptor, cat::uword page_offset)
    -> nix::scaredy_nix<void*> {
    // TODO: Consider `__builtin_assume_aligned()`.
-   return nix::syscall<void*>(9, p_start_address, bytes_size, protections,
-                              flags, file_descriptor,
-                              page_offset * cat::page_size);
+   // https://filippo.io/linux-syscall-table/
+   return nix::syscall_volatile<void*>(9, p_start_address, bytes_size,
+                                       protections, flags, file_descriptor,
+                                       page_offset * cat::page_size);
 }

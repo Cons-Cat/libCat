@@ -130,8 +130,7 @@ $test(simd_avx_abi_hooks_permute_and_rsqrt) {
 // unrefined hook and pass with the refined one, so this is a regression check
 // that NR is on.
 $test(simd_sse_rsqrt_fast_is_nr_refined) {
-   using sse_fast =
-      cat::simd<cat::float4_fast, x64::sse_abi<cat::float4_fast>>;
+   using sse_fast = cat::simd<cat::float4_fast, x64::sse_abi<cat::float4_fast>>;
    sse_fast const v{cat::float4_fast(4.f), cat::float4_fast(0.25f),
                     cat::float4_fast(16.f), cat::float4_fast(100.f)};
    auto const rr = cat::simd_rsqrt(v);
@@ -143,8 +142,7 @@ $test(simd_sse_rsqrt_fast_is_nr_refined) {
 }
 
 $test(simd_avx_rsqrt_fast_is_nr_refined) {
-   using avx_fast =
-      cat::simd<cat::float4_fast, x64::avx_abi<cat::float4_fast>>;
+   using avx_fast = cat::simd<cat::float4_fast, x64::avx_abi<cat::float4_fast>>;
    avx_fast const v{cat::float4_fast(4.f),     cat::float4_fast(0.25f),
                     cat::float4_fast(16.f),    cat::float4_fast(100.f),
                     cat::float4_fast(0.0625f), cat::float4_fast(625.f),

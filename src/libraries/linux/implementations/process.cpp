@@ -204,6 +204,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
          mov %%rax, %[parent_rax]
          jmp %l[clone_parent])"
       : [parent_rax] "=m"(clone_result)
+      // https://filippo.io/linux-syscall-table/
       : "a"(56), "D"(active_clone_flags), "S"(stack_top), "d"(&(m_id)),
 #if defined(CAT_THREAD_LOCAL_SIZE) && (CAT_THREAD_LOCAL_SIZE) == 0
         // No TLS slab was carved, so `clone_flags::set_tls` is never set in
@@ -218,6 +219,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
 clone_child:
    asm volatile(
+      // https://filippo.io/linux-syscall-table/
       R"(pop %%rax
          pop %%rdi
          call *%%rax

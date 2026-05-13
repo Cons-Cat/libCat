@@ -31,5 +31,4 @@ struct unaligned {
       ElementT>;
 };
 
-} // namespace cat::simd_abi
-
+}  // namespace cat::simd_abi

@@ -41,8 +41,7 @@ struct avx_abi {
    // Physical storage and lane truth encoding for `simd_mask` (see
    // `simd_abi::mask_lane` and `simd_mask_lane_sseavx.hpp`).
    template <typename ElementT>
-   using simd_mask_lane =
-      cat::simd_abi::mask_lane<avx_abi<ElementT>, ElementT>;
+   using simd_mask_lane = cat::simd_abi::mask_lane<avx_abi<ElementT>, ElementT>;
 };
 
 template <typename T>

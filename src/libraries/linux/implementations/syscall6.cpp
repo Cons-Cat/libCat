@@ -10,10 +10,12 @@ nix::syscall6(cat::iword call, cat::no_type arg1, cat::no_type arg2,
    register cat::no_type const r9 asm("r9") = arg6;
 
    cat::iword result;
-   asm volatile("syscall"
-                : "=a"(result)
-                : "a"(call), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10), "r"(r8),
-                  "r"(r9)
-                : "rcx", "r11", "memory", "cc");
+   asm("syscall"
+       : "=a"(result)
+       : "a"(call), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10), "r"(r8), "r"(r9)
+       // `memory` is clobbered because the kernel may write through any
+       // pointer the caller passed.
+       // `cc` is clobbered because the kernel may set the carry flag.
+       : "rcx", "r11", "memory", "cc");
    return result;
 }

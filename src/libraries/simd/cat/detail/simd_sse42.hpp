@@ -40,8 +40,7 @@ struct sse_abi {
    static constexpr cat::uword alignment = 16u;
 
    template <typename ElementT>
-   using simd_mask_lane =
-      cat::simd_abi::mask_lane<sse_abi<ElementT>, ElementT>;
+   using simd_mask_lane = cat::simd_abi::mask_lane<sse_abi<ElementT>, ElementT>;
 };
 
 template <typename T>

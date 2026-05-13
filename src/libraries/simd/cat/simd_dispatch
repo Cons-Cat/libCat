@@ -741,7 +741,7 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
          sentinel's priority is -1, so it always compares `<=` and is reached  \
          only when no real entry's priority is below the host's tier. When no  \
          `default:` is present, the baseline-coverage `static_assert` above    \
-         guarantees at least one listed entry's priority is `<=` the host's   \
+         guarantees at least one listed entry's priority is `<=` the host's    \
          tier. */                                                              \
       ::cat::idx cat_$simd_selected{};                                         \
       for (::cat::idx i = 0u; i < cat_$simd_priority_order.size(); ++i) {      \

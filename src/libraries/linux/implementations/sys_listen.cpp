@@ -4,5 +4,6 @@
 auto
 nix::sys_listen(nix::file_descriptor socket_descriptor, cat::int8 backlog)
    -> nix::scaredy_nix<void> {
-   return nix::syscall<void>(50, socket_descriptor, backlog);
+   // https://filippo.io/linux-syscall-table/
+   return nix::syscall_volatile<void>(50, socket_descriptor, backlog);
 }

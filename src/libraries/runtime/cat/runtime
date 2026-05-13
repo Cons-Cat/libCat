@@ -101,4 +101,6 @@ extern "C" [[gnu::used]]
 inline void
 // NOLINTNEXTLINE
 __cxx_global_var_init() {
+   // TODO: Fill this out.
 }
+

@@ -4,15 +4,16 @@
 
 #include <cat/linux>
 
+// Default wrapper. The compiler may reorder, hoist, or fold duplicate calls.
+// Use only for syscalls without externally observable side effects.
 template <typename T, typename... Args>
 auto
 nix::syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
    requires(sizeof...(Args) < 7)
 {
-   static constexpr unsigned long length = sizeof...(Args);
-   cat::no_type arguments[length] = {parameters...};
+   constexpr cat::idx length = sizeof...(Args);
+   cat::array<cat::no_type, length> arguments{parameters...};
 
-   // TODO: Make this a `union` of reasonable types.
    cat::no_type result;
 
    if constexpr (length == 0) {
@@ -32,6 +33,51 @@ nix::syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
    } else {
       result = nix::syscall6(call, arguments[0], arguments[1], arguments[2],
                              arguments[3], arguments[4], arguments[5]);
+   }
+
+   if (static_cast<cat::iword>(result) < 0) {
+      return static_cast<linux_error>(result);
+   }
+   if constexpr (cat::is_void<T>) {
+      return cat::monostate;
+   } else {
+      return static_cast<T>(result);
+   }
+}
+
+// Volatile wrapper. The compiler must emit each call exactly once at its
+// source position. Required for syscalls with externally observable side
+// effects.
+template <typename T, typename... Args>
+auto
+nix::syscall_volatile(cat::iword call, Args... parameters)
+   -> nix::scaredy_nix<T>
+   requires(sizeof...(Args) < 7)
+{
+   constexpr cat::idx length = sizeof...(Args);
+   cat::array<cat::no_type, length> arguments{parameters...};
+
+   cat::no_type result;
+
+   if constexpr (length == 0) {
+      result = nix::syscall0_volatile(call);
+   } else if constexpr (length == 1) {
+      result = nix::syscall1_volatile(call, arguments[0]);
+   } else if constexpr (length == 2) {
+      result = nix::syscall2_volatile(call, arguments[0], arguments[1]);
+   } else if constexpr (length == 3) {
+      result =
+         nix::syscall3_volatile(call, arguments[0], arguments[1], arguments[2]);
+   } else if constexpr (length == 4) {
+      result = nix::syscall4_volatile(call, arguments[0], arguments[1],
+                                      arguments[2], arguments[3]);
+   } else if constexpr (length == 5) {
+      result = nix::syscall5_volatile(call, arguments[0], arguments[1],
+                                      arguments[2], arguments[3], arguments[4]);
+   } else {
+      result =
+         nix::syscall6_volatile(call, arguments[0], arguments[1], arguments[2],
+                                arguments[3], arguments[4], arguments[5]);
    }
 
    if (static_cast<cat::iword>(result) < 0) {

@@ -4,5 +4,7 @@
 auto
 nix::sys_read(file_descriptor file_descriptor, char* p_string_buffer,
               cat::iword length) -> nix::scaredy_nix<cat::iword> {
-   return nix::syscall<cat::iword>(0, file_descriptor, p_string_buffer, length);
+   // https://filippo.io/linux-syscall-table/
+   return nix::syscall_volatile<cat::iword>(0, file_descriptor, p_string_buffer,
+                                            length);
 }

@@ -568,7 +568,8 @@ extern "C"
 #endif
    [[gnu::always_inline]]
    inline void
-   __cpu_indicator_init() {  // NOLINT
+   // NOLINTNEXTLINE
+   __cpu_indicator_init() {
    using enum processor_features;
 
    // Get highest values for `%EAX` below and above `0x80000000u`.
@@ -823,9 +824,8 @@ extern "C"
    if (has_feature(avx2)) {
       priority = 80;
    }
-   if (has_feature(avx512_f) && has_feature(avx512_cd)
-       && has_feature(avx512_bw) && has_feature(avx512_dq)
-       && has_feature(avx512_vl)) {
+   if (has_feature(avx512_f) && has_feature(avx512_cd) && has_feature(avx512_bw)
+       && has_feature(avx512_dq) && has_feature(avx512_vl)) {
       priority = 90;
    }
    cat::detail::simd_dispatch_priority = priority;
@@ -835,5 +835,4 @@ extern "C"
    set_vendor_model(vendor_family_model, vendor1, feature_flags);
 }
 
-} // namespace x64::detail
-
+}  // namespace x64::detail

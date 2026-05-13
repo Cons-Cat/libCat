@@ -472,26 +472,6 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    using unaligned_vector = simd<T, unaligned_abi>;
 
  public:
-   // Member functions that touch `.raw` -- portable GNU vector operators,
-   // `__builtin_elementwise_*`, `__builtin_reduce_*`,
-   // `__builtin_convertvector`,
-   // `__builtin_shufflevector`, `__builtin_bit_cast`,
-   // `__builtin_nontemporal_*`, subscript / set-lane -- are tagged
-   // `[[gnu::always_inline]]`. That is sufficient for an outer
-   // `[[gnu::target("...")]]` on a `$simd_switch`'s
-   // `$abi(arch, ...)` lambda to propagate into the inlined body and produce
-   // optimal arch-specialized codegen. No per-arch wrapper is needed for these.
-   // Empirically validated under `.cache/simd-target-probe/` (probe.cpp +
-   // analyze.py) at `-msse4.2 -mno-avx -mno-avx2 -mno-fma`: every probe's
-   // avx2-tagged caller emits the same arch-optimal sequence (vex_ymm /
-   // avx2-only mnemonics like `vpsllvd`, `vpermd`, `vpbroadcastd`) as if the
-   // wrapper itself were tagged avx2.
-   //
-   // ISA-locked `__builtin_ia32_*` intrinsics (e.g. `pmovmskb128` vs
-   // `pmovmskb256`) cannot be expressed by one wrapper and still need
-   // per-arch specialization. Those live under `cat::detail::simd_<arch>_*`
-   // headers and dispatch via the `simd_abi::*::invoke` hooks, not as
-   // member functions here.
    using value_type = T;
    // TODO: Figure out what `reference` should be for lane values.
    // using reference = T&;
