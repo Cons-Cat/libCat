@@ -562,11 +562,29 @@ $test(syscall_memory) {
       nix::sys_munlockall().verify();
    }
 
-   // `mseal` is Linux 6.10+. Only attempt when the kernel is new enough.
+   // `mseal` is Linux 6.10+ and permanently blocks the mapping from being
+   // modified or unmapped, so probe it on a throwaway mapping rather than
+   // `p_mapping`.
    if (nix::has_sys_mseal()) {
-      auto mseal_result = nix::sys_mseal(p_mapping, bytes);
+      void* p_sealed =
+         nix::sys_mmap(
+            nullptr, bytes,
+            nix::memory_protection_flags::read
+               | nix::memory_protection_flags::write,
+            nix::memory_flags::privately | nix::memory_flags::anonymous,
+            nix::file_descriptor{-1}, 0)
+            .verify();
+      auto mseal_result = nix::sys_mseal(p_sealed, bytes);
       cat::verify(mseal_result.has_value()
                   || is_denied_or_invalid(mseal_result.error()));
+      if (mseal_result.has_value()) {
+         // A sealed mapping rejects `munmap` with `linux_error::perm`.
+         auto munmap_sealed = nix::sys_munmap(p_sealed, bytes);
+         cat::verify(!munmap_sealed.has_value()
+                     && munmap_sealed.error() == nix::linux_error::perm);
+      } else {
+         nix::sys_munmap(p_sealed, bytes).verify();
+      }
    }
 
    // `map_shadow_stack` requires Intel CET. Just probe the support query.
