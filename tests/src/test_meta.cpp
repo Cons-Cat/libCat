@@ -426,6 +426,47 @@ $test(meta_common_comparison) {
                                                 std::partial_ordering>,
               std::partial_ordering>);
 
+   // Reduces across three or more arguments. The fold weakens
+   // pairwise from the left.
+   static_assert(
+      is_same<
+         std::common_comparison_category_t<
+            std::strong_ordering, std::strong_ordering, std::strong_ordering>,
+         std::strong_ordering>);
+
+   static_assert(
+      is_same<
+         std::common_comparison_category_t<
+            std::strong_ordering, std::weak_ordering, std::strong_ordering>,
+         std::weak_ordering>);
+
+   static_assert(
+      is_same<
+         std::common_comparison_category_t<
+            std::strong_ordering, std::partial_ordering, std::weak_ordering>,
+         std::partial_ordering>);
+
+   // Empty pack: identity for the weakening operation is the strongest
+   // category. Matches `std::common_comparison_category_t<>`.
+   static_assert(
+      is_same<std::common_comparison_category_t<>, std::strong_ordering>);
+
+   // Single comparison-category argument is itself.
+   static_assert(
+      is_same<std::common_comparison_category_t<std::strong_ordering>,
+              std::strong_ordering>);
+   static_assert(is_same<std::common_comparison_category_t<std::weak_ordering>,
+                         std::weak_ordering>);
+   static_assert(
+      is_same<std::common_comparison_category_t<std::partial_ordering>,
+              std::partial_ordering>);
+
+   // `[cmp.common]`: any non-comparison-category argument collapses the
+   // result to `void`, matching `std::common_comparison_category`.
+   static_assert(is_same<std::common_comparison_category_t<int>, void>);
+   static_assert(
+      is_same<std::common_comparison_category_t<std::strong_ordering, int>,
+              void>);
 }
 
 // P0870R7 `is_convertible_without_narrowing<From, To>`. Holds when `From`

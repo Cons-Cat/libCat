@@ -4,6 +4,10 @@
 
 #include <cat/meta>
 
+// We need to implement this in the `std` namespace for
+// `operator<=>() = default` to generate.
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
 namespace std {
 
 namespace detail {
@@ -13,7 +17,7 @@ enum class order : signed char {
    equal = 0,
    greater = 1,
    nonequivalent = 1,
-   nonequal = 1
+   nonequal = 1,
 };
 
 enum class unordered : signed char {
@@ -23,14 +27,14 @@ enum class unordered : signed char {
 }  // namespace detail
 
 class partial_ordering {
-   signed int order;
+   signed int m_order;
 
    constexpr explicit partial_ordering(detail::order in_order)
-       : order(static_cast<signed int>(in_order)) {
+       : m_order(static_cast<signed int>(in_order)) {
    }
 
    constexpr explicit partial_ordering(detail::unordered in_order)
-       : order(static_cast<signed int>(in_order)) {
+       : m_order(static_cast<signed int>(in_order)) {
    }
 
    friend class weak_ordering;
@@ -47,22 +51,22 @@ class partial_ordering {
 
    friend constexpr auto
    operator<(partial_ordering lhs, partial_ordering rhs) -> bool {
-      return lhs.order < rhs.order;
+      return lhs.m_order < rhs.m_order;
    }
 
    friend constexpr auto
    operator<=(partial_ordering lhs, partial_ordering rhs) -> bool {
-      return lhs.order <= rhs.order;
+      return lhs.m_order <= rhs.m_order;
    }
 
    friend constexpr auto
    operator>(partial_ordering lhs, partial_ordering rhs) -> bool {
-      return lhs.order > rhs.order;
+      return lhs.m_order > rhs.m_order;
    }
 
    friend constexpr auto
    operator>=(partial_ordering lhs, partial_ordering rhs) -> bool {
-      return lhs.order >= rhs.order;
+      return lhs.m_order >= rhs.m_order;
    }
 
    // 0 is the only integer literal which can implicitly convert to `nullptr`.
@@ -70,67 +74,67 @@ class partial_ordering {
    // Check equality with a 0 literal.
    friend constexpr auto
    operator==(partial_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order == 0;
+      return partial.m_order == 0;
    }
 
    friend constexpr auto
    operator==(decltype(nullptr), partial_ordering partial) -> bool {
-      return partial.order == 0;
+      return partial.m_order == 0;
    }
 
    // Check inequality with a 0 literal.
    friend constexpr auto
    operator!=(partial_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order != 0;
+      return partial.m_order != 0;
    }
 
    friend constexpr auto
    operator!=(decltype(nullptr), partial_ordering partial) -> bool {
-      return partial.order != 0;
+      return partial.m_order != 0;
    }
 
    // Check less-than with a 0 literal.
    friend constexpr auto
    operator<(partial_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order < 0;
+      return partial.m_order < 0;
    }
 
    friend constexpr auto
    operator<(decltype(nullptr), partial_ordering partial) -> bool {
-      return 0 < partial.order;
+      return 0 < partial.m_order;
    }
 
    // Check less-than-or-equal with a 0 literal.
    friend constexpr auto
    operator<=(partial_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order <= 0;
+      return partial.m_order <= 0;
    }
 
    friend constexpr auto
    operator<=(decltype(nullptr), partial_ordering partial) -> bool {
-      return 0 <= partial.order;
+      return 0 <= partial.m_order;
    }
 
    // Check greater-than with a 0 literal.
    friend constexpr auto
    operator>(partial_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order > 0;
+      return partial.m_order > 0;
    }
 
    friend constexpr auto
    operator>(decltype(nullptr), partial_ordering partial) -> bool {
-      return 0 > partial.order;
+      return 0 > partial.m_order;
    }
 
    // Check greater-than with a 0 literal.
    friend constexpr auto
    operator>=(partial_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order >= 0;
+      return partial.m_order >= 0;
    }
 
    friend constexpr auto
    operator>=(decltype(nullptr), partial_ordering partial) -> bool {
-      return 0 >= partial.order;
+      return 0 >= partial.m_order;
    }
 
    // Check threeway-comparison with a 0 literal.
@@ -146,7 +150,7 @@ class partial_ordering {
    // `greater`, then this should return `less`.
    friend constexpr auto
    operator<=>(decltype(nullptr), partial_ordering rhs) -> partial_ordering {
-      return partial_ordering{static_cast<detail::order>(-rhs.order)};
+      return partial_ordering{static_cast<detail::order>(-rhs.m_order)};
    }
 };
 
@@ -162,10 +166,10 @@ inline constexpr partial_ordering
    partial_ordering::unordered(detail::unordered::unordered);
 
 class weak_ordering {
-   signed int order;
+   signed int m_order;
 
    constexpr explicit weak_ordering(detail::order in_order)
-       : order(static_cast<signed int>(in_order)) {
+       : m_order(static_cast<signed int>(in_order)) {
    }
 
    friend class strong_ordering;
@@ -178,7 +182,7 @@ class weak_ordering {
    // `weak_ordering` must implicitly cast into `partial_ordering`.
    constexpr
    operator partial_ordering() const {
-      return partial_ordering{static_cast<detail::order>(this->order)};
+      return partial_ordering{static_cast<detail::order>(this->m_order)};
    }
 
    friend constexpr auto
@@ -186,22 +190,22 @@ class weak_ordering {
 
    friend constexpr auto
    operator<(weak_ordering lhs, weak_ordering rhs) -> bool {
-      return lhs.order < rhs.order;
+      return lhs.m_order < rhs.m_order;
    }
 
    friend constexpr auto
    operator<=(weak_ordering lhs, weak_ordering rhs) -> bool {
-      return lhs.order <= rhs.order;
+      return lhs.m_order <= rhs.m_order;
    }
 
    friend constexpr auto
    operator>(weak_ordering lhs, weak_ordering rhs) -> bool {
-      return lhs.order > rhs.order;
+      return lhs.m_order > rhs.m_order;
    }
 
    friend constexpr auto
    operator>=(weak_ordering lhs, weak_ordering rhs) -> bool {
-      return lhs.order >= rhs.order;
+      return lhs.m_order >= rhs.m_order;
    }
 
    // 0 is the only integer literal which can implicitly convert to `nullptr`.
@@ -209,67 +213,67 @@ class weak_ordering {
    // Check equality with a 0 literal.
    friend constexpr auto
    operator==(weak_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order == 0;
+      return partial.m_order == 0;
    }
 
    friend constexpr auto
    operator==(decltype(nullptr), weak_ordering partial) -> bool {
-      return partial.order == 0;
+      return partial.m_order == 0;
    }
 
    // Check inequality with a 0 literal.
    friend constexpr auto
    operator!=(weak_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order != 0;
+      return partial.m_order != 0;
    }
 
    friend constexpr auto
    operator!=(decltype(nullptr), weak_ordering partial) -> bool {
-      return partial.order != 0;
+      return partial.m_order != 0;
    }
 
    // Check less-than with a 0 literal.
    friend constexpr auto
    operator<(weak_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order < 0;
+      return partial.m_order < 0;
    }
 
    friend constexpr auto
    operator<(decltype(nullptr), weak_ordering partial) -> bool {
-      return 0 < partial.order;
+      return 0 < partial.m_order;
    }
 
    // Check less-than-or-equal with a 0 literal.
    friend constexpr auto
    operator<=(weak_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order <= 0;
+      return partial.m_order <= 0;
    }
 
    friend constexpr auto
    operator<=(decltype(nullptr), weak_ordering partial) -> bool {
-      return 0 <= partial.order;
+      return 0 <= partial.m_order;
    }
 
    // Check greater-than with a 0 literal.
    friend constexpr auto
    operator>(weak_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order > 0;
+      return partial.m_order > 0;
    }
 
    friend constexpr auto
    operator>(decltype(nullptr), weak_ordering partial) -> bool {
-      return 0 > partial.order;
+      return 0 > partial.m_order;
    }
 
    // Check greater-than with a 0 literal.
    friend constexpr auto
    operator>=(weak_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order >= 0;
+      return partial.m_order >= 0;
    }
 
    friend constexpr auto
    operator>=(decltype(nullptr), weak_ordering partial) -> bool {
-      return 0 >= partial.order;
+      return 0 >= partial.m_order;
    }
 
    // Check threeway-comparison with a 0 literal.
@@ -285,7 +289,7 @@ class weak_ordering {
    // `greater`, then this should return `less`.
    friend constexpr auto
    operator<=>(decltype(nullptr), weak_ordering rhs) -> weak_ordering {
-      return weak_ordering{static_cast<detail::order>(-rhs.order)};
+      return weak_ordering{static_cast<detail::order>(-rhs.m_order)};
    }
 };
 
@@ -461,81 +465,82 @@ inline constexpr strong_ordering
    strong_ordering::greater(detail::order::greater);
 
 namespace detail {
-template <typename T>
-inline constexpr int comparison_category_strength = 0;
-template <>
-inline constexpr int comparison_category_strength<partial_ordering> = 1;
-template <>
-inline constexpr int comparison_category_strength<weak_ordering> = 2;
-template <>
-inline constexpr int comparison_category_strength<strong_ordering> = 3;
-
-template <typename T, typename U, typename... Remaining>
-struct weakest_comparison_category {
-   using weaker = cat::conditional<(comparison_category_strength<T>
-                                    <= comparison_category_strength<U>),
-                                   T, U>;
-
-   using type =
-      cat::conditional<(sizeof...(Remaining) > 0) && (!cat::is_void<U>),
-                       // Recurse through `weakest_comparison_category` to find
-                       // the strongest type in this list.
-                       weakest_comparison_category<
-                          // Set the next recursion's `T` to the weaker of `T`
-                          // and `U`.
-                          weaker,
-                          // Recurse with the remaining types. Appending `void`
-                          // is required, because this branch is not
-                          // short-circuited by `conditional`, and there must be
-                          // at least two template arguments.
-                          Remaining..., void>,
-                       // The base case, when there are no types left in
-                       // `Remaining`, is the weaker of `T` and `U`.
-                       weaker>;
+// Classification used by `common_comparison_category`. Any value other
+// than `none` is the ordering's "strength rank": larger means weaker.
+// Mirrors libc++'s `__comp_detail::_ClassifyCompCategory`.
+enum class comp_category_kind : unsigned char {
+   none = 0,
+   strong = 1,
+   weak = 2,
+   partial = 3,
 };
+
+template <typename T>
+consteval auto
+classify_comp_category() -> comp_category_kind {
+   if constexpr (cat::is_same<T, partial_ordering>) {
+      return comp_category_kind::partial;
+   } else if constexpr (cat::is_same<T, weak_ordering>) {
+      return comp_category_kind::weak;
+   } else if constexpr (cat::is_same<T, strong_ordering>) {
+      return comp_category_kind::strong;
+   } else {
+      return comp_category_kind::none;
+   }
+}
+
+template <__SIZE_TYPE__ size>
+consteval auto
+fold_comp_category(comp_category_kind const (&kinds)[size])
+   -> comp_category_kind {
+   comp_category_kind result = comp_category_kind::strong;
+   for (comp_category_kind k : kinds) {
+      if (k == comp_category_kind::none) {
+         return comp_category_kind::none;
+      }
+      if (static_cast<unsigned char>(k) > static_cast<unsigned char>(result)) {
+         result = k;
+      }
+   }
+   return result;
+}
+
+// Computes the common comparison category of `Ts...` and returns a value
+// of that type, or `void()` when any argument is not a comparison
+// category. The actual type is recovered by `decltype` in the trait
+// below. The `strong_ordering` identity for the empty pack is folded in
+// here by prepending it to the classification array.
+template <typename... Ts>
+consteval auto
+common_comp_value() {
+   constexpr comp_category_kind kinds[] = {comp_category_kind::strong,
+                                           classify_comp_category<Ts>()...};
+   constexpr comp_category_kind result = fold_comp_category(kinds);
+   if constexpr (result == comp_category_kind::partial) {
+      return partial_ordering::equivalent;
+   } else if constexpr (result == comp_category_kind::weak) {
+      return weak_ordering::equivalent;
+   } else if constexpr (result == comp_category_kind::strong) {
+      return strong_ordering::equivalent;
+   } else {
+      return;
+   }
+}
 }  // namespace detail
 
-template <typename... types>
-// Every type in `types` must be a comparison category.
-   requires((cat::is_same<types, partial_ordering>
-             || cat::is_same<types, weak_ordering>
-             || cat::is_same<types, strong_ordering>)
-            && ...)
+// `[cmp.common]` common comparison category type. When every `Ts` is a
+// comparison category, `type` is the weakest among them (with
+// `strong_ordering` as the identity for an empty pack). When any `Ts` is
+// not a comparison category, `type` is `void`. Mirrors libc++'s approach
+// of computing the result through a `constexpr` fold function and
+// recovering the type via `decltype`.
+template <typename... Ts>
 struct common_comparison_category {
-   using type = detail::weakest_comparison_category<types...>::type;
+   using type = decltype(detail::common_comp_value<Ts...>());
 };
 
-template <typename T>
-struct common_comparison_category<T> {
-   using type = void;
-};
-
-// These partial-specializations short-circuit single-argument specializations
-// for faster compilation:
-
-template <>
-struct common_comparison_category<partial_ordering> {
-   using type = partial_ordering;
-};
-
-template <>
-struct common_comparison_category<weak_ordering> {
-   using type = weak_ordering;
-};
-
-template <>
-struct common_comparison_category<strong_ordering> {
-   using type = strong_ordering;
-};
-
-template <>
-struct common_comparison_category<> {
-   using type = strong_ordering;
-};
-
-template <typename... types>
-using common_comparison_category_t =
-   typename common_comparison_category<types...>::type;
+template <typename... Ts>
+using common_comparison_category_t = common_comparison_category<Ts...>::type;
 
 }  // namespace std
 
@@ -550,3 +555,5 @@ concept is_common_comparison_category =
    is_either<T, strong_ordering, weak_ordering, partial_ordering>;
 
 }  // namespace cat
+
+// NOLINTEND(bugprone-std-namespace-modification)

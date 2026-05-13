@@ -14,7 +14,9 @@ Diagnostics:
       - readability-magic-numbers
       - cppcoreguidelines-avoid-magic-numbers
       - bugprone-easily-swappable-parameters
+      - modernize-type-traits
   Suppress:
     - readability-magic-numbers
     - cppcoreguidelines-avoid-magic-numbers
     - bugprone-easily-swappable-parameters
+    - modernize-type-traits
