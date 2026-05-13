@@ -264,6 +264,14 @@ concept is_enum = __is_enum(T);
 template <typename T, typename U>
 concept is_same = __is_same(T, U);
 
+// Holds if `T` is the same as any one of `Us...`.
+template <typename T, typename... Us>
+concept is_either = (__is_same(T, Us) || ...);
+
+// Holds if `T` is the same as none of `Us...`.
+template <typename T, typename... Us>
+concept is_neither = (!__is_same(T, Us) && ...);
+
 template <typename From, typename To>
 concept is_convertible = __is_convertible(From, To);
 

@@ -46,6 +46,20 @@ $test(meta_fundamental) {
    static_assert(is_same<int, int>);
    static_assert(!is_same<int, unsigned int>);
 
+   static_assert(is_either<int, int>);
+   static_assert(is_either<int, unsigned int, int>);
+   static_assert(is_either<int, char, short, int, long>);
+   static_assert(!is_either<int, unsigned int>);
+   static_assert(!is_either<int, char, short, long>);
+   static_assert(!is_either<int>);
+
+   static_assert(is_neither<int, unsigned int>);
+   static_assert(is_neither<int, char, short, long>);
+   static_assert(is_neither<int>);
+   static_assert(!is_neither<int, int>);
+   static_assert(!is_neither<int, unsigned int, int>);
+   static_assert(!is_neither<int, char, short, int, long>);
+
    enum enum_type : int {
    };
 
