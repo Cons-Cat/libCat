@@ -495,6 +495,42 @@ template <typename LeftTuple, typename RightTuple, typename... Remaining>
             && (is_tuple<Remaining> && ...))
 constexpr auto
 tuple_cat(LeftTuple&& left, RightTuple&& right, Remaining&&... remaining);
+
+namespace detail {
+// Compile-time lookup of `T`'s position in `Tuple::types`. Walks the list
+// via `type_list::get<index>` rather than partial-specializing on
+// `tuple<Types...>`, matching the variable-template shape used by libCat
+// type traits.
+template <typename T, idx index, typename Tuple>
+consteval auto
+tuple_index_of() -> idx {
+   if constexpr (is_same<T, typename Tuple::types::template get<index>>) {
+      return index;
+   } else {
+      return tuple_index_of<T, index + 1u, Tuple>();
+   }
+}
+}  // namespace detail
+
+// P2527R3 `tuple_element_index<T, Tuple>`: the inverse of
+// `tuple_element<index, Tuple>`. Yields the zero-based `cat::idx` of `T`
+// in `Tuple`'s elements.
+//
+// Strict semantics per P2527:
+//
+//   - Hard error if `T` does not appear exactly once in `Tuple`'s elements.
+//   - Hard error if `Tuple` is not exactly `cat::tuple<Types...>` (derived
+//     classes do not satisfy `is_specialization<Tuple, tuple>`).
+//   - Hard error if `Tuple` is const-qualified (the same reason).
+//   - Constness of `T` must match an element exactly.
+//
+// https://open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2527r3.html
+template <typename T, typename Tuple>
+   requires(is_specialization<Tuple, tuple>
+            && Tuple::types::template count_type<T> == 1u)
+inline constexpr idx tuple_element_index =
+   detail::tuple_index_of<T, 0u, Tuple>();
+
 }  // namespace cat
 
 // Implement tuple protocol for `cat::tuple`.

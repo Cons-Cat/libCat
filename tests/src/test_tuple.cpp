@@ -477,3 +477,18 @@ $test(tuple_for_each) {
       static_assert(cat::is_same<decltype(value), int&&>);
    });
 }
+
+// P2527R3 `tuple_element_index<T, Tuple>`. Strict semantics: only the
+// `cat::tuple<...>` specialization itself is accepted (not derived classes
+// or `const` tuples); the element type must appear exactly once.
+$test(tuple_element_index_trait) {
+   using t_t = cat::tuple<int, char, double>;
+
+   static_assert(cat::tuple_element_index<int, t_t> == 0u);
+   static_assert(cat::tuple_element_index<char, t_t> == 1u);
+   static_assert(cat::tuple_element_index<double, t_t> == 2u);
+
+   // The trait is a `cat::idx`, usable directly in constant expressions.
+   constexpr cat::idx i = cat::tuple_element_index<double, t_t>;
+   static_assert(i == 2u);
+}

@@ -1866,16 +1866,16 @@ $test(simd_compress_saturating_lanes) {
    // and goes through `sat4`'s saturating-cast constructor at the call site
    // (2^40 -> `sat4::max()`), so the inactive trailing lanes receive the
    // clamped value, not a wrapped bit pattern.
-   sat4x4 const filled = cat::simd_compress(source, first_three,
-                                            sat4(cat::int8(1LL << 40)));
+   sat4x4 const filled =
+      cat::simd_compress(source, first_three, sat4(cat::int8(1LL << 40)));
    cat::verify(filled[0u] == lane_max);
    cat::verify(filled[1u] == sat4(10));
    cat::verify(filled[2u] == lane_min);
    cat::verify(filled[3u] == lane_max);
 
    // Negative-saturating fill clamps to `sat4::min()`.
-   sat4x4 const filled_neg = cat::simd_compress(
-      source, first_three, sat4(cat::int8(-(1LL << 40))));
+   sat4x4 const filled_neg =
+      cat::simd_compress(source, first_three, sat4(cat::int8(-(1LL << 40))));
    cat::verify(filled_neg[3u] == lane_min);
 
    // Unsigned saturation clamps a too-wide value to `usat4::max()` at the
@@ -1905,7 +1905,7 @@ $test(simd_compress_saturating_lanes) {
    sat1x4 narrow_source{sat1(1), sat1(2), sat1(3), sat1(4)};
    auto const first_two_narrow = cat::make_simd_mask_from_count<sat1x4>(2u);
    sat1x4 const narrow_filled =
-      cat::simd_compress(narrow_source, first_two_narrow, sat1(int{1000}));
+      cat::simd_compress(narrow_source, first_two_narrow, sat1(int{1'000}));
    cat::verify(narrow_filled[0u] == sat1(1));
    cat::verify(narrow_filled[1u] == sat1(2));
    cat::verify(narrow_filled[2u] == sat1::max());
