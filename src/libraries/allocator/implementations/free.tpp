@@ -46,7 +46,7 @@ template <typename Derived>
 template <typename T>
 constexpr void
 allocator_interface<Derived>::free(T* p_memory) {
-   if constexpr (detail::has_max_allocation_bytes<Derived>) {
+   if constexpr (has_max_allocation_bytes) {
       static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
    }
@@ -68,7 +68,7 @@ template <typename Derived>
 template <typename T>
 constexpr void
 allocator_interface<Derived>::free_multi(T* p_memory, idx count) {
-   if constexpr (detail::has_max_allocation_bytes<Derived>) {
+   if constexpr (has_max_allocation_bytes) {
       static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
       assert((count * sizeof(T)) <= Derived::max_allocation_bytes,
@@ -126,7 +126,7 @@ template <typename Derived>
 template <typename T>
 constexpr void
 allocator_interface<Derived>::cfree(T* p_memory) {
-   if constexpr (detail::has_max_allocation_bytes<Derived>) {
+   if constexpr (has_max_allocation_bytes) {
       static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
    }
@@ -151,7 +151,7 @@ template <typename Derived>
 template <typename T>
 constexpr void
 allocator_interface<Derived>::cfree_multi(T* p_memory, idx count) {
-   if constexpr (detail::has_max_allocation_bytes<Derived>) {
+   if constexpr (has_max_allocation_bytes) {
       static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
       assert((count * sizeof(T)) <= Derived::max_allocation_bytes,

@@ -258,32 +258,6 @@ concept is_allocator = requires(T allocator) {
                           //     sizeof(Allocation))){});
                        };
 
-namespace detail {
-template <typename Allocator>
-concept has_allocate =
-   requires(Allocator allocator) { allocator.allocate(1u); };
-
-template <typename Allocator>
-concept has_aligned_allocate =
-   requires(Allocator allocator) { allocator.aligned_allocate(1u, 1u); };
-
-template <typename Allocator>
-concept has_allocation_bytes =
-   requires(Allocator allocator) { allocator.allocation_bytes(1u, 1u); };
-
-template <typename Allocator>
-concept has_allocate_feedback =
-   requires(Allocator allocator) { allocator.allocate_feedback(1u); };
-
-template <typename Allocator>
-concept has_aligned_allocate_feedback = requires(
-   Allocator allocator) { allocator.aligned_allocate_feedback(1u, 1u); };
-
-template <typename Allocator>
-concept has_max_allocation_bytes =
-   requires(Allocator allocator) { allocator.max_allocation_bytes; };
-}  // namespace detail
-
 template <is_pointer T>
 using sized_allocation = tuple<T, idx>;
 
@@ -296,6 +270,19 @@ class allocator_interface {
  private:
    constexpr allocator_interface() = default;
    friend Derived;
+
+   static constexpr bool has_allocate =
+      requires(Derived& allocator) { allocator.allocate(1u); };
+   static constexpr bool has_aligned_allocate =
+      requires(Derived& allocator) { allocator.aligned_allocate(1u, 1u); };
+   static constexpr bool has_allocation_bytes =
+      requires(Derived& allocator) { allocator.allocation_bytes(1u, 1u); };
+   static constexpr bool has_allocate_feedback =
+      requires(Derived& allocator) { allocator.allocate_feedback(1u); };
+   static constexpr bool has_aligned_allocate_feedback = requires(
+      Derived& allocator) { allocator.aligned_allocate_feedback(1u, 1u); };
+   static constexpr bool has_max_allocation_bytes =
+      requires { Derived::max_allocation_bytes; };
 
    // `meta_alloc` flags:
    // `is_inline` tries the inline buffer before the heap, `is_fail_safe` maps

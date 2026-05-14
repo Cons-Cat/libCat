@@ -58,8 +58,7 @@ variant<Alternatives...>::get_ptr(this auto&& self)
    using key =
       conditional<types::template has_type<T>, T, add_lvalue_reference<T>>;
    auto&& base = as_base($fwd(self));
-   using result_type =
-      decltype(__builtin_addressof(base.template get<key>()));
+   using result_type = decltype(__builtin_addressof(base.template get<key>()));
    if (base.template is<key>()) {
       return __builtin_addressof(base.template get<key>());
    }

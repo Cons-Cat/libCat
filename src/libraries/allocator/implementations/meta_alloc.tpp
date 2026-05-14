@@ -145,11 +145,11 @@ allocator_interface<Derived>::
       -> maybe_sized_allocation<void*> {
    maybe_sized_allocation<void*> maybe_memory;
 
-   if constexpr (detail::has_aligned_allocate_feedback<Derived>) {
+   if constexpr (has_aligned_allocate_feedback) {
       maybe_memory = this->self().aligned_allocate_feedback(
          allocation_alignment, allocation_bytes);
    } else {
-      if constexpr (detail::has_allocation_bytes<Derived>) {
+      if constexpr (has_allocation_bytes) {
          maybe actual_allocation_bytes = this->self().allocation_bytes(
             allocation_alignment, allocation_bytes);
 
@@ -191,7 +191,7 @@ allocator_interface<Derived>::
       uword allocation_alignment, idx allocation_bytes) -> maybe_ptr<void> {
    maybe_ptr<void> maybe_memory;
 
-   if constexpr (detail::has_aligned_allocate<Derived>) {
+   if constexpr (has_aligned_allocate) {
       maybe_memory =
          this->self().aligned_allocate(allocation_alignment, allocation_bytes);
    } else {
@@ -214,13 +214,13 @@ allocator_interface<Derived>::
       -> maybe_sized_allocation<void*> {
    maybe_sized_allocation<void*> maybe_memory;
 
-   if constexpr (detail::has_allocate_feedback<Derived>) {
+   if constexpr (has_allocate_feedback) {
       maybe_memory = this->self().allocate_feedback(allocation_bytes);
    } else {
-      if constexpr (detail::has_aligned_allocate_feedback<Derived>) {
+      if constexpr (has_aligned_allocate_feedback) {
          maybe_memory =
             this->self().aligned_allocate_feedback(1u, allocation_bytes);
-      } else if constexpr (detail::has_allocation_bytes<Derived>) {
+      } else if constexpr (has_allocation_bytes) {
          maybe size = this->self().allocation_bytes(1u, allocation_bytes);
 
          if (size.has_value()) {
@@ -252,7 +252,7 @@ allocator_interface<Derived>::
       -> maybe_ptr<void> {
    maybe_ptr<void> maybe_memory;
 
-   if constexpr (detail::has_allocate<Derived>) {
+   if constexpr (has_allocate) {
       maybe_memory = this->self().allocate(allocation_bytes);
    } else {
       maybe_memory = this->self().aligned_allocate(1u, allocation_bytes);
@@ -486,7 +486,7 @@ constexpr auto
 allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
                                          idx allocation_count,
                                          Args&&... arguments) {
-   if constexpr (detail::has_max_allocation_bytes<Derived>) {
+   if constexpr (has_max_allocation_bytes) {
       static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
       assert((allocation_count * sizeof(T)) <= Derived::max_allocation_bytes,
