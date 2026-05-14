@@ -22,7 +22,7 @@ constexpr auto
 forward_tuple(Tuple&& input_tuple) {
    using tuple_decay = decay<Tuple>;
    return forward_tuple_impl($fwd(input_tuple),
-                             make_index_sequence<tuple_decay::types::size>{});
+                             make_index_sequence<tuple_decay::types::size()>{});
 }
 
 template <typename LeftTuple, typename RightTuple, idx... left_index,
@@ -47,8 +47,8 @@ tuple_cat_two(LeftTuple&& left, RightTuple&& right) {
    using left_decay = decay<LeftTuple>;
    using right_decay = decay<RightTuple>;
    return tuple_cat_two_impl($fwd(left), $fwd(right),
-                             make_index_sequence<left_decay::types::size>{},
-                             make_index_sequence<right_decay::types::size>{});
+                             make_index_sequence<left_decay::types::size()>{},
+                             make_index_sequence<right_decay::types::size()>{});
 }
 }  // namespace detail
 

@@ -39,4 +39,24 @@ $test(typelist) {
 
    using fill_types = cat::type_list_filled<int, 3u>;
    static_assert(cat::is_same<fill_types, cat::type_list<int, int, int>>);
+
+   // Reference-aware list-level predicates.
+   using all_refs = cat::type_list<int&, char const&, double&&>;
+   using no_refs = cat::type_list<int, char, double>;
+   using mixed = cat::type_list<int, char&, double>;
+   using empty = cat::type_list<>;
+
+   static_assert(all_refs::is_all_references);
+   static_assert(all_refs::is_any_reference);
+
+   static_assert(!no_refs::is_all_references);
+   static_assert(!no_refs::is_any_reference);
+
+   static_assert(!mixed::is_all_references);
+   static_assert(mixed::is_any_reference);
+
+   // The empty list is vacuously all-references and trivially has no
+   // reference element.
+   static_assert(empty::is_all_references);
+   static_assert(!empty::is_any_reference);
 }

@@ -2,91 +2,346 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/compare>
 #include <cat/match>
 #include <cat/maybe>
 #include <cat/memory>
+#include <cat/tuple>
 #include <cat/type_list>
 
+// `cat::variant<Ts...>` is primarily based upon C++26 `std::variant` but
+// implements several proposed extensions and useful features/optimizations from
+// variant-like libraries. It supports reference-type alternatives and an
+// empty-state.
+//
+// `cat::variant` visitation can be done either by `cat::match()` or its
+// member-function `.match()`. Alternatively, a conventional `cat::visit()` is
+// supported for single and multi-variant visitation. A member-`.visit()` is
+// also provided for "upside-down polymorphism".
+//
+// `cat::variant` is empty upon default-construction. Its emptiness can be
+// queried by `.has_value()`, like other libCat sum-types. It can similarly be
+// made empty by `.reset()` or assigning `cat::nullopt`.
+//
+// Selected papers informing the design:
+//
+// P2162R3   Inheriting from `std::variant`. A type that publicly and
+//           unambiguously derives from `cat::variant<Ts...>` is itself
+//           variant-like to `cat::visit`, `cat::get`, and `cat::get_if`.
+//           The "upside-down inheritance" idiom uses this to replace
+//           virtual dispatch with value semantics.
+//
+// P4198R0   `variant<T&>`. When every alternative is a reference type the
+//           active alternative is fixed at construction. Assignment writes
+//           through the held reference instead of swapping the active type.
+//           Tuple integration is intentionally not extended.
+//           `get_ptr()` on optional and variant. `.get_ptr<T>()` returns a
+//           pointer to the held value when `T` is active, otherwise
+//           `nullptr`. `.get_ptr<index>()` is the index-typed overload.
+//
+// P3561R2   Index-based coproduct operations. `cat::invoke_cases(fs...)`,
+//           `cat::visit_invoke_cases(v, fs...)`, `cat::apply_cases(fs...)`,
+//           `cat::visit_apply_cases(v, fs...)`, and `cat::visit_apply(v, fs)`
+//           dispatch each alternative to a positionally-matched callable
+//           rather than to an overload set, so variants with duplicate
+//           alternative types route to the correct branch.
+//
+// P3664R0   SFINAE-friendly `variant_size`. The free `cat::variant_size<T>`
+//           class template has a `value` member only when `T` is
+//           variant-like; otherwise the primary specialization is empty so
+//           concept-detection machinery can probe `variant_size<not_a_variant>`
+//           without a hard error.
+//
+// `cat::variant` also takes inspiration from `mpark::variant` and
+// `ts::basic_variant`.
+
+// TODO: Provide a policy for supporting non-empty variants.
+
 namespace cat {
+
 namespace detail {
+
+// Recursive `union` storage for value-typed `variant`. A `monostate_type`
+// dummy member is required to constant-evaluate this union without
+// initializing one of the alternatives when those alternatives are
+// non-trivial.
 template <typename...>
 struct variant_node {};
 
-template <typename T>
-struct variant_node<T> {
-   template <idx>
-   constexpr auto
-   get() & -> T& {
-      return this->storage;
-   }
-
-   template <idx>
-   constexpr auto
-   get() const& -> T const& {
-      return this->storage;
-   }
-
-   T storage;
-};
-
-template <typename T, typename... Remaining>
-struct variant_node<T, Remaining...> {
+template <typename Alternative>
+struct variant_node<Alternative> {
    constexpr variant_node() : dummy() {
    }
 
-   // `.get()` is provided an alternative type's index. It then recurses through
-   // the alternative types that many times. Then it returns a reference to the
-   // storage of this node it has reached.
+   // Trivial destructor when the alternative is trivial. Otherwise an empty
+   // user-declared destructor: the enclosing `cat::variant` destroys the
+   // active alternative through its own discriminant before the node's
+   // destructor runs.
+   constexpr ~variant_node() = default;
 
-   template <idx remaining_recursions>
-   constexpr auto
-   get() & -> auto& {
-      if constexpr (remaining_recursions == 0) {
-         return this->storage;
-      } else {
-         // The `else` branch means `remaining_recursions` is not zero, so the
-         // unsigned decrement cannot wrap before indexing the tail node.
-         return this->remaining_nodes.template get<
-            narrow_cast<idx>(remaining_recursions - 1u).value()>();
-      }
+   constexpr ~variant_node()
+      requires(!is_trivially_destructible<Alternative>)
+   {
    }
 
-   template <idx remaining_recursions>
+   template <idx index>
    constexpr auto
-   get() const& -> auto& {
-      if constexpr (remaining_recursions == 0) {
-         return this->storage;
+   get(this auto&& self) -> auto&& {
+      static_assert(index == 0u,
+                    "`variant_node` leaf only owns the index-`0` slot.");
+      return $fwd(self).storage;
+   }
+
+   union {
+      monostate_type dummy;
+      Alternative storage;
+   };
+};
+
+template <typename Alternative, typename... Remaining>
+struct variant_node<Alternative, Remaining...> {
+   constexpr variant_node() : dummy() {
+   }
+
+   constexpr ~variant_node() = default;
+
+   constexpr ~variant_node()
+      requires(!is_trivially_destructible<Alternative>
+               || (!is_trivially_destructible<Remaining> || ...))
+   {
+   }
+
+   // `.get<index>()` is the position-typed accessor. When `index == 0` yield
+   // this node's storage, otherwise recurse into the tail with `index - 1`.
+   // The `else` branch only fires when `index > 0`, so the unsigned decrement
+   // cannot wrap below zero.
+   template <idx index>
+   constexpr auto
+   get(this auto&& self) -> auto&& {
+      if constexpr (index == 0u) {
+         return $fwd(self).storage;
       } else {
-         // Same recursion depth reasoning as the non-`const` overload.
-         return this->remaining_nodes.template get<
-            narrow_cast<idx>(remaining_recursions - 1u).value()>();
+         return $fwd(self)
+            .remaining.template get<narrow_cast<idx>(index - 1u).value()>();
       }
    }
 
    union {
-      T storage;
-      variant_node<Remaining...> remaining_nodes;
-      // A dummy member is required to constant-evaluate this union without
-      // initializing it if `T` is a non-trivial class.
       monostate_type dummy;
+      Alternative storage;
+      variant_node<Remaining...> remaining;
    };
 };
+
+// Tagged-pointer storage for reference-typed `variant`. Every alternative is
+// a reference, so each slot is one pointer wide. The whole union is one
+// pointer wide regardless of how many alternatives there are.
+template <typename...>
+union variant_ref_union;
+
+template <typename Alternative>
+union variant_ref_union<Alternative> {
+   constexpr variant_ref_union() : dummy(nullptr) {
+   }
+
+   void* dummy;
+   remove_reference<Alternative>* head;
+};
+
+template <typename Alternative, typename... Remaining>
+union variant_ref_union<Alternative, Remaining...> {
+   constexpr variant_ref_union() : dummy(nullptr) {
+   }
+
+   void* dummy;
+   remove_reference<Alternative>* head;
+   variant_ref_union<Remaining...> tail;
+};
+
+// Position-typed accessor for `variant_ref_union`. Yields the active slot
+// (a pointer) rather than the pointee.
+template <idx index, typename... Ts>
+constexpr auto
+variant_ref_slot(variant_ref_union<Ts...>& u) -> auto& {
+   if constexpr (index == 0u) {
+      return u.head;
+   } else {
+      return variant_ref_slot<narrow_cast<idx>(index - 1u).value()>(u.tail);
+   }
+}
+
+template <idx index, typename... Ts>
+constexpr auto
+variant_ref_slot(variant_ref_union<Ts...> const& u) -> auto& {
+   if constexpr (index == 0u) {
+      return u.head;
+   } else {
+      return variant_ref_slot<narrow_cast<idx>(index - 1u).value()>(u.tail);
+   }
+}
+
+// Reconstruction of the per-alternative overload set described in
+// `[variant.ctor]/14` (the standard wording calls it `FUN(Ti)`). Each
+// `fun_alt<Alternative>` contributes one `invoke(From)` overload that is
+// viable only when `From` converts to `Alternative` without narrowing.
+// Pulling them all into `fun_set` via using-declarations lets ordinary
+// overload resolution pick the best `Alternative`.
+template <typename Alternative>
+struct fun_alt {
+   template <typename From>
+      requires(is_convertible_without_narrowing<From, Alternative>)
+   static auto
+   invoke(From&&) -> Alternative;
+};
+
+// Deduplicate the alternative pack so each unique alternative contributes
+// exactly one `fun_alt<T>` base. The recursive accumulator walks the
+// input list and appends each type only when it isn't already in the
+// accumulator. This avoids the duplicate-base-class error that
+// `fun_set : fun_alt<Alts>...` would otherwise produce on
+// `variant<int, int>`-style packs.
+template <typename Accumulator, typename Remaining>
+struct fun_set_unique_pack;
+
+template <typename... Acc>
+struct fun_set_unique_pack<type_list<Acc...>, type_list<>> {
+   using type = type_list<Acc...>;
+};
+
+template <typename... Acc, typename Head, typename... Rest>
+struct fun_set_unique_pack<type_list<Acc...>, type_list<Head, Rest...>> {
+   using type = conditional<
+      (is_same<Head, Acc> || ...),
+      typename fun_set_unique_pack<type_list<Acc...>, type_list<Rest...>>::type,
+      typename fun_set_unique_pack<type_list<Acc..., Head>,
+                                   type_list<Rest...>>::type>;
+};
+
+template <typename UniquePack>
+struct fun_set_impl;
+
+template <typename... UniqueAlts>
+struct fun_set_impl<type_list<UniqueAlts...>> : fun_alt<UniqueAlts>... {
+   using fun_alt<UniqueAlts>::invoke...;
+};
+
+template <>
+struct fun_set_impl<type_list<>> {
+   // Sentinel for the empty-pack variant: never selected because every
+   // real call passes one argument and this overload takes none.
+   static void
+   invoke();
+};
+
+template <typename... Alts>
+using fun_set = fun_set_impl<
+   typename fun_set_unique_pack<type_list<>, type_list<Alts...>>::type>;
+
+// The alternative selected by the `fun_set` overload set for `From`. Yields
+// substitution failure when no overload is viable and a hard error when
+// the call is ambiguous, mirroring `std::variant<Ts...>::variant(T&&)`.
+template <typename From, typename... Alts>
+using fun_selected_type = decltype(fun_set<Alts...>::invoke(declval<From>()));
+
 }  // namespace detail
 
-// TODO: Support reference types in a `variant`.
+// Tag type used to disambiguate construction by alternative index. Mirrors
+// `std::in_place_index_t<I>`. The variable template `cat::in_place_index<I>`
+// below is the corresponding constant.
+template <idx alternative_index>
+struct in_place_index_type {
+   static constexpr idx value = alternative_index;
+};
 
-template <typename... alternative_types>
-   requires(type_list<alternative_types...>::is_unique_list)
+template <idx alternative_index>
+inline constexpr in_place_index_type<alternative_index> in_place_index;
+
+template <typename... Alternatives>
+   requires(type_list<Alternatives...>::is_all_references
+            || !type_list<Alternatives...>::is_any_reference)
 class variant {
  public:
-   using types = type_list<alternative_types...>;
-   using alternative_index_type =
-      conditional<types::size <= uint4_max, uint4, idx>;
-   alternative_index_type discriminant;
+   using types = type_list<Alternatives...>;
+   static constexpr bool is_reference_variant = types::is_all_references;
 
-   // The number of alternatives in this `variant`.
+   // Discriminant grows in three tiers: `uint1` for variants whose
+   // alternative count fits in `uint1_max - 1`, `uint4` up to
+   // `uint4_max - 1`, and `idx` (libCat's canonical 63-bit signed index
+   // type) for the unbounded case. The max value of each tier is reserved
+   // as the empty-state niche, so active indices are always strictly less
+   // than the max. `uint2` is intentionally skipped because it pessimizes
+   // codegen on x86-64.
+   using alternative_index_type =
+      conditional<(types::size() < uint1_max), uint1,
+                  conditional<(types::size() < uint4_max), uint4, idx>>;
+
    static constexpr alternative_index_type variant_size =
-      static_cast<alternative_index_type>(sizeof...(alternative_types));
+      static_cast<alternative_index_type>(sizeof...(Alternatives));
+
+   // The discriminant uses each tier's natural niche optimization. For
+   // `uint1` and `uint4` the maximum representable value is reserved as
+   // the empty sentinel via `cat::sentinel`. For `idx` we delegate to
+   // `maybe`'s default-compact specialization, which niches `idx` using the
+   // high-bit-set bit pattern (equivalent to -1). Active indices are
+   // `0..variant_size-1`, which never collide with the niche in any tier.
+   using maybe_discriminant =
+      conditional<is_same<alternative_index_type, idx>, maybe<idx>,
+                  maybe<sentinel<alternative_index_type,
+                                 limits<alternative_index_type>::max()>>>;
+
+   maybe_discriminant discriminant;
+
+   // Comparison operators are declared near the top of the class to match
+   // the layout used by `cat::tuple` and the other libCat sum-types.
+   template <typename T>
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(variant const& self, T other) -> bool {
+      return self.template recurse_converting_equality<T>(other);
+   }
+
+   // Variant-vs-variant equality. Two variants are equal when they are
+   // both empty or when their active alternatives match and the held
+   // values compare equal.
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(variant const& a, variant const& b) -> bool {
+      if (a.discriminant.value_or_niche() != b.discriminant.value_or_niche()) {
+         return false;
+      }
+      if (!a.has_value()) {
+         return true;
+      }
+      return a.template recurse_compare_eq_indexed<>(b);
+   }
+
+   // Variant-vs-variant three-way comparison. The empty state orders
+   // before every active alternative, an active alternative with a lower
+   // index orders before one with a higher index, and two variants with
+   // the same active alternative are ordered by their stored values.
+   [[nodiscard]]
+   friend constexpr auto
+   operator<=>(variant const& a, variant const& b)
+      requires((is_threeway_comparable<Alternatives> && ...))
+   {
+      using result = std::common_comparison_category_t<
+         decltype(declval<Alternatives const&>()
+                  <=> declval<Alternatives const&>())...>;
+      if (!a.has_value()) {
+         return static_cast<result>(b.has_value()
+                                       ? std::strong_ordering::less
+                                       : std::strong_ordering::equivalent);
+      }
+      if (!b.has_value()) {
+         return static_cast<result>(std::strong_ordering::greater);
+      }
+      auto const a_index = a.discriminant.value_or_niche();
+      auto const b_index = b.discriminant.value_or_niche();
+      if (a_index != b_index) {
+         return static_cast<result>(a_index <=> b_index);
+      }
+      return a.template recurse_compare_threeway_indexed<>(b);
+   }
 
  private:
    template <typename T, alternative_index_type index>
@@ -102,315 +357,615 @@ class variant {
    }
 
  public:
-   template <typename U, typename... Us>
-      requires(sizeof...(Us) >= 0)
+   // The index of an alternative looked up by type. Requires `T` to appear
+   // exactly once in the alternative pack. For duplicate-type variants,
+   // callers must use `cat::in_place_index<I>` / index-keyed accessors
+   // instead.
+   template <typename T>
+      requires(types::template is_unique<T>)
+   static constexpr auto alternative_index = recurse_for_index_of_type<T, 0u>();
+
+   template <alternative_index_type index>
+      requires(index < variant_size)
+   using alternative_type = types::template get<index>;
+
+   // Reference variants are tagged-pointer unions, value variants are
+   // recursive `union` storage.
+   using storage_type = conditional<is_reference_variant,
+                                    detail::variant_ref_union<Alternatives...>,
+                                    detail::variant_node<Alternatives...>>;
+
+ private:
+   template <typename Self>
+   [[gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   as_base(Self&& self) -> copy_cvref_from<Self&&, variant> {
+      return (copy_cvref_from<Self&&, variant>)$fwd(self);
+   }
+
+   // Index-based dispatch helpers. These walk the alternative pack by index
+   // and inspect `discriminant.value_or_niche()` directly, so they work for
+   // any alternative pack, including ones with duplicate types. The
+   // type-based converting helpers below them only handle subset-conversion
+   // between variants whose alternative types are all unique.
+
+   template <idx index_value = 0u>
    constexpr void
-   hard_reset() {
-      if (this->is<U>()) {
-         this->get<U>().~U();
-      } else {
-         if constexpr (sizeof...(Us) > 0) {
-            this->hard_reset<Us...>();
+   hard_reset_indexed()
+      requires(!is_reference_variant)
+   {
+      if constexpr (index_value < variant_size) {
+         if (this->discriminant.value_or_niche() == index_value) {
+            using active = types::template get<index_value>;
+            if constexpr (!is_trivially_destructible<active>) {
+               m_storage.template get<index_value>().~active();
+            }
+            this->discriminant = nullopt;
+            return;
          }
+         this->template hard_reset_indexed<index_value + 1u>();
       }
    }
 
-   // constexpr void hard_reset() {
-   //     this->hard_reset<alternative_types...>();
-   // }
-
-   template <typename U, typename... Us>
-      requires(sizeof...(Us) >= 0)
+   template <idx index_value = 0u>
    constexpr void
-   construct_from_other_variant(auto const& variant) {
-      if constexpr (remove_reference<
-                       decltype(variant)>::types::template has_type<U>) {
-         if (variant.template is<U>()) {
+   copy_construct_indexed(variant const& other)
+      requires(!is_reference_variant)
+   {
+      if constexpr (index_value < variant_size) {
+         if (other.discriminant.value_or_niche() == index_value) {
+            using active = types::template get<index_value>;
+            new (__builtin_addressof(m_storage.template get<index_value>()))
+               active(other.m_storage.template get<index_value>());
+            this->discriminant = alternative_index_type{index_value};
+            return;
+         }
+         this->template copy_construct_indexed<index_value + 1u>(other);
+      }
+   }
+
+   template <idx index_value = 0u>
+   constexpr void
+   move_construct_indexed(variant&& other)
+      requires(!is_reference_variant)
+   {
+      if constexpr (index_value < variant_size) {
+         if (other.discriminant.value_or_niche() == index_value) {
+            using active = types::template get<index_value>;
+            new (__builtin_addressof(m_storage.template get<index_value>()))
+               active(cat::move(other).m_storage.template get<index_value>());
+            this->discriminant = alternative_index_type{index_value};
+            return;
+         }
+         this->template move_construct_indexed<index_value + 1u>(
+            cat::move(other));
+      }
+   }
+
+   template <idx index_value = 0u>
+   constexpr void
+   copy_assign_indexed(variant const& other)
+      requires(!is_reference_variant)
+   {
+      if constexpr (index_value < variant_size) {
+         if (other.discriminant.value_or_niche() == index_value) {
+            using active = types::template get<index_value>;
+            if (this->discriminant.value_or_niche() == index_value) {
+               m_storage.template get<index_value>() =
+                  other.m_storage.template get<index_value>();
+            } else {
+               this->template hard_reset_indexed<>();
+               new (__builtin_addressof(m_storage.template get<index_value>()))
+                  active(other.m_storage.template get<index_value>());
+               this->discriminant = alternative_index_type{index_value};
+            }
+            return;
+         }
+         this->template copy_assign_indexed<index_value + 1u>(other);
+      } else {
+         this->template hard_reset_indexed<>();
+      }
+   }
+
+   template <idx index_value = 0u>
+   constexpr void
+   move_assign_indexed(variant&& other)
+      requires(!is_reference_variant)
+   {
+      if constexpr (index_value < variant_size) {
+         if (other.discriminant.value_or_niche() == index_value) {
+            using active = types::template get<index_value>;
+            if (this->discriminant.value_or_niche() == index_value) {
+               m_storage.template get<index_value>() =
+                  cat::move(other).m_storage.template get<index_value>();
+            } else {
+               this->template hard_reset_indexed<>();
+               new (__builtin_addressof(m_storage.template get<index_value>()))
+                  active(
+                     cat::move(other).m_storage.template get<index_value>());
+               this->discriminant = alternative_index_type{index_value};
+            }
+            return;
+         }
+         this->template move_assign_indexed<index_value + 1u>(cat::move(other));
+      } else {
+         this->template hard_reset_indexed<>();
+      }
+   }
+
+   // Type-keyed converting helpers used by the cross-variant copy/move
+   // overloads below. Each source alternative must either be absent from
+   // this variant's alternative pack or appear in it exactly once, so
+   // variants whose destination pack contains duplicates of any reachable
+   // source type cannot be converted into.
+   template <typename U, typename... Us>
+      requires(!is_reference_variant && sizeof...(Us) >= 0
+               && (!types::template has_type<U>
+                   || types::template is_unique<U>))
+   constexpr void
+   construct_from_other_variant(auto&& other) {
+      if constexpr (remove_reference<decltype(other)>::types::template has_type<
+                       U>) {
+         if (other.template is<U>()) {
+            new (__builtin_addressof(this->template get<U>()))
+               U($fwd(other).template get<U>());
             this->discriminant = this->alternative_index<U>;
-            this->get<U>() = variant.template get<U>();
             return;
          }
       }
       if constexpr (sizeof...(Us) > 0) {
-         return this->construct_from_other_variant<Us...>(variant);
+         return this->template construct_from_other_variant<Us...>($fwd(other));
       }
    }
 
    template <typename U, typename... Us>
-      requires(sizeof...(Us) >= 0)
+      requires(!is_reference_variant && sizeof...(Us) >= 0
+               && (!types::template has_type<U>
+                   || types::template is_unique<U>))
    constexpr void
-   assign_other_variant(auto const& variant) {
-      if constexpr (remove_reference<
-                       decltype(variant)>::types::template has_type<U>) {
-         if (variant.template is<U>()) {
-            if (!this->is<U>()) {
-               this->hard_reset<alternative_types...>();
+   assign_other_variant(auto&& other) {
+      if constexpr (remove_reference<decltype(other)>::types::template has_type<
+                       U>) {
+         if (other.template is<U>()) {
+            if (this->template is<U>()) {
+               this->template get<U>() = $fwd(other).template get<U>();
+            } else {
+               this->template hard_reset_indexed<>();
+               new (__builtin_addressof(this->template get<U>()))
+                  U($fwd(other).template get<U>());
                this->discriminant = this->alternative_index<U>;
-               return;
             }
-            this->get<U>() = variant.template get<U>();
+            return;
          }
       }
       if constexpr (sizeof...(Us) > 0) {
-         return this->assign_other_variant<Us...>(variant);
+         return this->template assign_other_variant<Us...>($fwd(other));
+      } else {
+         this->template hard_reset_indexed<>();
       }
    }
 
-   // Get the index of an alternative from its type.
-   template <typename T>
-      requires(types::template has_type<T>)
-   static constexpr auto alternative_index = recurse_for_index_of_type<T, 0u>();
-
-   // Get the type of an alternative from its index.
-   template <alternative_index_type index>
-   using alternative_t = types::template get<idx(index)>;
-
+ public:
+   // Default-construct a value variant in the empty state.
    constexpr variant() = default;
 
-   constexpr variant(variant<alternative_types...> const& variant) {
-      this->construct_from_other_variant<alternative_types...>(variant);
-   };
+   // Reference variants are never valueless (P4198), so default-construction is
+   // forbidden for them. Callers must bind to an l-value alternative at the
+   // call site.
+   constexpr variant()
+      requires(is_reference_variant)
+   = delete ("A reference `cat::variant` must be constructed with an active "
+             "alternative! It has no valueless state to default into.");
 
-   constexpr variant(variant<alternative_types...>&& variant) {
-      this->construct_from_other_variant<alternative_types...>(move(variant));
-   };
+   // Destructor: destroy the active alternative if any. Trivially-destructible
+   // alternatives use the implicitly-generated trivial destructor.
+   constexpr ~variant() = default;
 
-   // Consume any type within the alternatives list.
+   constexpr ~variant()
+      requires(!is_reference_variant
+               && (!is_trivially_destructible<Alternatives> || ...))
+   {
+      this->template hard_reset_indexed<>();
+   }
+
+   // Empty-state construction via `cat::nullopt`. Mirrors `cat::maybe`.
+   constexpr variant(detail::nullopt_type /*nullopt*/)
+      requires(!is_reference_variant)
+   {
+   }
+
+   // In-place construction at a known alternative index. Required for
+   // disambiguating variants with duplicate alternative types: callers
+   // write `cat::variant<int, int>{cat::in_place_index<1>, 7}` to select
+   // the second `int` slot.
+   template <idx index_value, typename... Args>
+      requires(!is_reference_variant && index_value < variant_size
+               && is_constructible<typename types::template get<index_value>,
+                                   Args...>)
+   constexpr variant(in_place_index_type<index_value> /*in_place_index*/,
+                     Args&&... args) {
+      using active = types::template get<index_value>;
+      new (__builtin_addressof(m_storage.template get<index_value>()))
+         active($fwd(args)...);
+      this->discriminant = alternative_index_type{index_value};
+   }
+
+   constexpr variant(variant const& other)
+      requires(!is_reference_variant)
+   {
+      this->template copy_construct_indexed<>(other);
+   }
+
+   constexpr variant(variant&& other)
+      requires(!is_reference_variant)
+   {
+      this->template move_construct_indexed<>(cat::move(other));
+   }
+
+   // Value-variant alternative construction. Exact-match overload: when the
+   // input's decayed type is itself a unique alternative, construct that
+   // alternative directly without consulting the converting-constructor
+   // overload set. Duplicate-type alternatives are unreachable via this
+   // overload and must use `cat::in_place_index<I>` instead.
    template <typename T>
-      requires(types::template has_type<T>)
+      requires(!is_reference_variant && types::template is_unique<T>)
    constexpr variant(T const& input) {
-      // Construct a new `T` at the address where it will be gotten from.
-      new (__builtin_addressof(this->get<T>())) T(input);
+      new (__builtin_addressof(this->template get<T>())) T(input);
       this->discriminant = this->alternative_index<T>;
-   };
+   }
 
    template <rvalue T>
-      requires(types::template has_type<T>)
+      requires(!is_reference_variant && types::template is_unique<T>)
    // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
    constexpr variant(T&& input) {
-      // Construct a new `T` at the address where it will be gotten from.
-      new (__builtin_addressof(this->get<T>())) T($fwd(input));
+      // NOLINTNEXTLINE
+      new (__builtin_addressof(this->template get<T>())) T(move(input));
       this->discriminant = this->alternative_index<T>;
-   };
+   }
 
-   // Subsume a `variant` that holds a subset of this one's alternatives.
+   // Converting construction. When the input's decayed type is not itself
+   // an alternative but converts to one of the alternatives without
+   // narrowing, route through the `fun_set` overload set (modeled on
+   // `std::variant`'s `[variant.ctor]/14`) to pick the best alternative.
+   //
+   // P3146R2 alignment: because `is_convertible_without_narrowing` is a
+   // brace-init `requires`-expression rather than a `std::declval` check,
+   // the constant-expression narrowing exception is observed, so e.g.
+   // `variant<float>{cat::constant<42>{}}` selects `float` and holds `42.0f`.
+   //
+   // https://open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3146r2.html
+   template <typename T>
+      requires(
+         !is_reference_variant && !types::template has_type<remove_cvref<T>>
+         && requires { typename detail::fun_selected_type<T&&, Alternatives...>; })
+   constexpr variant(T&& input) {
+      using selected = detail::fun_selected_type<T&&, Alternatives...>;
+      new (__builtin_addressof(this->template get<selected>()))
+         selected(static_cast<selected>($fwd(input)));
+      this->discriminant = this->alternative_index<selected>;
+   }
+
+   // Subsume a `variant` whose alternatives are a subset of this one's
+   // (value variants only).
    template <typename... Us>
-   constexpr variant(variant<Us...> variant) {
-      this->construct_from_other_variant<Us...>(variant);
-   };
+      requires(!is_reference_variant)
+   constexpr variant(variant<Us...> other) {
+      this->template construct_from_other_variant<Us...>(other);
+   }
+
+   // Reference-variant copy and move: trivial. The held pointer is rebound
+   // but no value is mutated.
+   constexpr variant(variant const&)
+      requires(is_reference_variant)
+   = default;
+
+   constexpr variant(variant&&)
+      requires(is_reference_variant)
+   = default;
+
+   // Reference-variant construction. The active alternative is fixed for
+   // the lifetime of the `variant`. Binding to a temporary is rejected.
+   template <typename T>
+      requires(is_reference_variant && types::template is_unique<T&>
+               && !__reference_constructs_from_temporary(T&, T&))
+   constexpr variant(T& input) {
+      detail::variant_ref_slot<alternative_index<T&>>(m_storage) =
+         __builtin_addressof(input);
+      this->discriminant = this->alternative_index<T&>;
+   }
 
    template <typename T>
-      requires(types::template has_type<T>)
+      requires(is_reference_variant && types::template is_unique<T const&>
+               && !__reference_constructs_from_temporary(T const&, T const&))
+   constexpr variant(T const& input) {
+      detail::variant_ref_slot<alternative_index<T const&>>(m_storage) =
+         __builtin_addressof(input);
+      this->discriminant = this->alternative_index<T const&>;
+   }
+
+   // Reject r-value binding for reference variants. The l-value-binding
+   // constructors above are constrained on `has_type<T&>` and
+   // `has_type<T const&>`, so this deleted overload only wins when no
+   // viable l-value constructor exists.
+   template <typename T>
+      requires(is_reference_variant
+               && __reference_constructs_from_temporary(T &&, T))
+   constexpr variant(T&&) =
+      delete ("A reference `cat::variant` cannot bind to a temporary; the "
+              "referent would dangle immediately.");
+
+   // Value-variant assignment. When the active alternative is already `T`
+   // we assign in place. Otherwise the held value (whichever type it is)
+   // is destroyed via `hard_reset`, then `T` is placement-new'd into the
+   // alternative slot. The previous implementation destroyed the slot as
+   // if it already held `T` and assigned to uninitialized storage when the
+   // active alternative was different, which is UB for non-trivial `T`.
+   template <typename T>
+      requires(!is_reference_variant && types::template is_unique<T>)
    constexpr auto
-   operator=(T const& operand) -> variant<alternative_types...>& {
-      if (!this->is<T>()) {
-         if constexpr (!is_trivially_destructible<T>) {
-            this->get<T>().~T();
-         }
-         this->get<T>() = operand;
-         this->discriminant = this->alternative_index<T>;
+   operator=(T const& operand) -> variant& {
+      if (this->template is<T>()) {
+         this->template get<T>() = operand;
       } else {
-         this->get<T>() = operand;
+         this->template hard_reset_indexed<>();
+         new (__builtin_addressof(this->template get<T>())) T(operand);
+         this->discriminant = this->alternative_index<T>;
       }
       return *this;
    }
 
    template <rvalue T>
-      requires(types::template has_type<T>)
+      requires(!is_reference_variant && types::template is_unique<T>)
    constexpr auto
-   operator=(T&& operand) -> variant<alternative_types...>& {
-      if (!this->is<T>()) {
-         if constexpr (!is_trivially_destructible<T>) {
-            this->get<T>().~T();
-         }
-         this->get<T>() = $fwd(operand);
-         this->discriminant = this->alternative_index<T>;
+   operator=(T&& operand) -> variant& {
+      if (this->template is<T>()) {
+         this->template get<T>() = $fwd(operand);
       } else {
-         this->get<T>() = $fwd(operand);
+         this->template hard_reset_indexed<>();
+         new (__builtin_addressof(this->template get<T>())) T($fwd(operand));
+         this->discriminant = this->alternative_index<T>;
       }
       return *this;
    }
 
+   // Assigning `cat::nullopt` empties the variant.
    constexpr auto
-   operator=(variant<alternative_types...> const& operand)
-      -> variant<alternative_types...>& {
-      this->assign_other_variant<alternative_types...>(operand);
+   operator=(detail::nullopt_type /*nullopt*/) -> variant&
+      requires(!is_reference_variant)
+   {
+      this->reset();
       return *this;
    }
 
-   // constexpr auto operator=(variant<alternative_types...>&& operand) ->
-   // variant<alternative_types...>& {
-   //     this->assign_other_variant<alternative_types...>(
-   //         forward<variant<alternative_types...>>(operand));
-   //     return *this;
-   // }
+   constexpr auto
+   operator=(variant const& operand) -> variant&
+      requires(!is_reference_variant)
+   {
+      this->template copy_assign_indexed<>(operand);
+      return *this;
+   }
+
+   constexpr auto
+   operator=(variant&& operand) -> variant&
+      requires(!is_reference_variant)
+   {
+      this->template move_assign_indexed<>(cat::move(operand));
+      return *this;
+   }
 
    template <typename... Us>
+      requires(!is_reference_variant)
    constexpr auto
-   operator=(variant<Us...> const& operand) -> variant<alternative_types...>& {
-      this->assign_other_variant<Us...>(operand);
+   operator=(variant<Us...> const& operand) -> variant& {
+      this->template assign_other_variant<Us...>(operand);
       return *this;
    }
 
    template <typename... Us>
+      requires(!is_reference_variant)
    constexpr auto
-   operator=(variant<Us...>&& operand) -> variant<alternative_types...>& {
-      this->assign_other_variant<Us...>($mov operand);
+   operator=(variant<Us...>&& operand) -> variant& {
+      this->template assign_other_variant<Us...>(cat::move(operand));
       return *this;
    }
 
-   // TODO: Deduplicate member functions with an object parameter.
-
+   // Reference-variant assignment writes through the held reference. The
+   // active alternative is fixed, so `T` must match the active type.
    template <typename T>
-      requires(types::template has_type<T>)
-   [[nodiscard]]
+      requires(is_reference_variant && types::template is_unique<T&>)
    constexpr auto
-   get() & -> T& {
-      return m_storage.template get<alternative_index<T>>();
+   operator=(T const& operand) -> variant& {
+      *detail::variant_ref_slot<alternative_index<T&>>(m_storage) = operand;
+      return *this;
    }
 
-   template <typename T>
-      requires(types::template has_type<T>)
+   constexpr auto
+   operator=(variant const&) -> variant&
+      requires(is_reference_variant)
+   = default;
+
+   // The `get`/`get_if`/`get_ptr` family is forward-declared here and
+   // defined out-of-line in `implementations/variant_get.tpp`. The
+   // per-function `requires`-clauses are trailing so the class-scope
+   // names (`types`, `is_reference_variant`, ...) resolve identically
+   // in the out-of-line definitions.
+   //
+   // Position-typed accessor by index. For reference variants this
+   // yields the referent type, not the slot's pointer.
+   template <idx index>
    [[nodiscard]]
    constexpr auto
-   get() const& -> T const& {
-      return m_storage.template get<alternative_index<T>>();
-   }
+   get(this auto&& self) -> decltype(auto)
+      requires(index < sizeof...(Alternatives));
+
+   // Type-keyed accessor. The alternative type must appear exactly once
+   // in the alternative pack. Duplicate-type variants must use the
+   // index-keyed accessor.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   get(this auto&& self) -> decltype(auto)
+      requires(types::template is_unique<T>
+               || (is_reference_variant
+                   && types::template is_unique<add_lvalue_reference<T>>));
+
+   // P4189 `.get_ptr<T>()`: a pointer to the held value if `T` is
+   // active, otherwise `nullptr`. Type-keyed and so requires a unique
+   // alternative.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   get_ptr(this auto&& self)
+      requires(types::template is_unique<T>
+               || (is_reference_variant
+                   && types::template is_unique<add_lvalue_reference<T>>));
 
    template <idx index>
-      requires(index < sizeof...(alternative_types))
    [[nodiscard]]
    constexpr auto
-   get() & {
-      return m_storage.template get<index>();
-   }
+   get_ptr(this auto&& self)
+      requires(index < sizeof...(Alternatives));
 
-   template <idx index>
-      requires(index < sizeof...(alternative_types))
-   [[nodiscard]]
-   constexpr auto
-   get() const& -> decltype(auto) {
-      return m_storage.template get<index>();
-   }
-
+   // Type-keyed `get_if`. Engaged when `T` is the active alternative.
+   // The returned reference's const-qualification mirrors `this`'s (via
+   // deducing-this).
    template <typename T>
-      requires(types::template has_type<T>)
    [[nodiscard]]
    constexpr auto
-   get_if() & -> maybe<T&> {
-      if (this->is<T>()) {
-         return this->get<T>();
-      }
-      return nullopt;
-   }
+   get_if(this auto&& self)
+      requires(types::template is_unique<T> && !is_reference<T>);
 
+   // Reference-variant `get_if`: queried by the bare type and yields
+   // the matching reference alternative.
    template <typename T>
-      requires(types::template has_type<T>)
    [[nodiscard]]
    constexpr auto
-   get_if() const& -> maybe<T&> {
-      if (this->is<T>()) {
-         return this->get<T>();
-      }
-      return nullopt;
-   }
+   get_if(this auto&& self) -> maybe<add_lvalue_reference<T>>
+      requires(is_reference_variant && !types::template has_type<T>
+               && types::template is_unique<add_lvalue_reference<T>>);
 
+   // Index-keyed `get_if`. The returned reference's const-qualification
+   // mirrors `this`'s. Reference-typed alternatives yield `maybe<T&>`
+   // (the alternative is already a reference), value-typed alternatives
+   // yield `maybe<T&>` / `maybe<T const&>` depending on `this`'s
+   // constness.
    template <idx index>
-      requires(index < sizeof...(alternative_types))
    [[nodiscard]]
    constexpr auto
-   get_if() & {
-      using T = types::template get<index>;
-      if (this->is<T>()) {
-         return maybe<T>{this->get<T>()};
-      }
-      return maybe<T>{nullopt};
-   }
+   get_if(this auto&& self)
+      requires(index < sizeof...(Alternatives));
 
-   template <idx index>
-      requires(index < sizeof...(alternative_types))
+   // `.index()` exposes the active alternative as a `maybe_discriminant`,
+   // so the empty (valueless) state is observable as `nullopt` and is
+   // encoded in the same register as the index via the sentinel niche.
+   // Mirrors `std::variant::index()` but uses the empty `maybe` state in
+   // place of `std::variant_npos`.
    [[nodiscard]]
    constexpr auto
-   get_if() const& {
-      using T = types::template get<index>;
-      if (this->is<T>()) {
-         return maybe<T>{this->get<T>()};
-      }
-      return maybe<T>{nullopt};
-   }
-
-   // Support signed integers as the index, because they cannot implicitly
-   // convert to `uint4`.
-   template <is_signed_integral index>
-   [[nodiscard]]
-   constexpr auto
-   get_if(this auto&& self) -> decltype(auto) {
-      return $fwd(self).template get_if<idx(index)>();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   alternative() const -> alternative_index_type {
+   index() const -> maybe_discriminant {
       return this->discriminant;
    }
 
-   // Holds true if this `variant` currently has some value of the type `T`.
-   // This method allows `variant` to be used in `match` statements.
+   // `.is<T>()` is `true` when the current alternative is `T`. Accepts any
+   // `T` that is either absent from the alternatives or appears exactly
+   // once (returns `false` when `T` is not an alternative), so `variant`
+   // is well-formed inside `cat::match` predicates. Querying a type that
+   // appears more than once is ill-formed: the user must use the
+   // index-keyed form instead.
    template <typename T>
+      requires(!types::template has_type<T> || types::template is_unique<T>
+               || (is_reference_variant
+                   && types::template is_unique<add_lvalue_reference<T>>))
    [[nodiscard]]
    constexpr auto
    is() const -> bool {
-      if constexpr (types::template has_type<T>) {
-         return this->discriminant == this->alternative_index<T>;
+      if constexpr (types::template is_unique<T>) {
+         return this->discriminant.value_or_niche()
+                == this->alternative_index<T>;
+      } else if constexpr (is_reference_variant
+                           && types::template is_unique<
+                              add_lvalue_reference<T>>) {
+         return this->discriminant.value_or_niche()
+                == this->alternative_index<add_lvalue_reference<T>>;
       } else {
          return false;
       }
    }
 
  private:
-   // Base case.
-   template <alternative_index_type index, typename T>
+   // Index-based converting equality. Walks the alternative pack and, when
+   // the active alternative is convertible-from `T`, compares the value
+   // against `in_value`. Works uniformly for duplicate alternative types.
+   template <typename T, idx index_value = 0u>
    constexpr auto
-   recurse_converting_equality(auto const& in_value) const -> bool {
-      if (this->holds_alternative(index)) {
-         return static_cast<T>(in_value) == this->get<T>();
+   recurse_converting_equality(T const& in_value) const -> bool {
+      if constexpr (index_value < variant_size) {
+         using alternative = types::template get<index_value>;
+         if constexpr (is_implicitly_convertible<remove_cvref<T>,
+                                                 remove_cvref<alternative>>) {
+            if (this->discriminant.value_or_niche() == index_value) {
+               using compare_type = remove_cvref<alternative>;
+               return static_cast<compare_type>(in_value)
+                      == m_storage.template get<index_value>();
+            }
+         }
+         return this->template recurse_converting_equality<T, index_value + 1u>(
+            in_value);
+      } else {
+         return false;
       }
-      return false;
    }
 
-   // Recurse through every alternative type, and if it is currently the active
-   // alternative, convert `in_value` to that type, then check if it is equal to
-   // this `variant`'s value.
-   template <alternative_index_type index, typename T, typename... Remaining>
-      requires(sizeof...(Remaining) > 0)
+   // Dispatch helper for variant-vs-variant `==`. Precondition: `this` and
+   // `other` agree on the active alternative.
+   template <idx index_value = 0u>
    constexpr auto
-   recurse_converting_equality(auto const& in_value) const -> bool {
-      if (this->holds_alternative(index)) {
-         return static_cast<T>(in_value) == this->get<T>();
+   recurse_compare_eq_indexed(variant const& other) const -> bool {
+      if constexpr (index_value < variant_size) {
+         if (this->discriminant.value_or_niche() == index_value) {
+            return m_storage.template get<index_value>()
+                   == other.m_storage.template get<index_value>();
+         }
+         return this->template recurse_compare_eq_indexed<index_value + 1u>(
+            other);
+      } else {
+         return false;
       }
-      return recurse_converting_equality<index + 1u, Remaining...>(in_value);
+   }
+
+   // Dispatch helper for variant-vs-variant `<=>`. Precondition: `this`
+   // and `other` agree on the active alternative.
+   template <idx index_value = 0u>
+   constexpr auto
+   recurse_compare_threeway_indexed(variant const& other) const {
+      using result = std::common_comparison_category_t<
+         decltype(declval<Alternatives const&>()
+                  <=> declval<Alternatives const&>())...>;
+      if constexpr (index_value < variant_size) {
+         if (this->discriminant.value_or_niche() == index_value) {
+            return static_cast<result>(
+               m_storage.template get<index_value>()
+               <=> other.m_storage.template get<index_value>());
+         }
+         return this
+            ->template recurse_compare_threeway_indexed<index_value + 1u>(
+               other);
+      } else {
+         return static_cast<result>(std::strong_ordering::equivalent);
+      }
    }
 
  public:
-   // Holds true if this `variant` currently has some value convertible to
-   // `in_value`. This method allows `variant` to be used in `match` statements.
    template <typename T>
-      requires(is_implicitly_convertible<T, alternative_types> && ...)
+      requires((is_implicitly_convertible<T, remove_cvref<Alternatives>>
+                && ...))
    [[nodiscard]]
    constexpr auto
    is(T const& in_value) const -> bool {
-      return this->recurse_converting_equality<0u, alternative_types...>(
-         in_value);
+      return this->template recurse_converting_equality<T>(in_value);
    }
 
-   template <typename T>
-   [[nodiscard]]
-   friend constexpr auto
-   operator==(variant<alternative_types...> const& self, T other) -> bool {
-      return self.recurse_converting_equality<0u, alternative_types...>(other);
-   }
-
-   // Member access syntax pattern matching for `cat::match()`.
+   // Member access pattern matching via `<cat/match>`.
    template <typename... Patterns>
       requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
@@ -418,28 +973,110 @@ class variant {
       detail::match_patterns (*this)($fwd(patterns)...);
    }
 
-   // Holds true if this `variant` currently has some value of the type `T`.
-   // Unlike `.is()`, this only accepts types that are potentially valid
-   // alternatives.
+   // `.visit(callback)` is a member shortcut for `cat::visit(callback, *this)`.
+   // Defined out-of-line below to avoid forward-referring `cat::visit`.
+   template <typename Callback>
+   constexpr auto
+   visit(this auto&& self, Callback&& callback) -> decltype(auto);
+
    template <typename T>
-      requires(types::template has_type<T>)
+      requires(types::template is_unique<T>)
    [[nodiscard]]
    constexpr auto
    holds_alternative() const -> bool {
-      return this->discriminant == this->alternative_index<T>;
+      return this->discriminant.value_or_niche() == this->alternative_index<T>;
    }
 
-   // Holds true if this `variant` currently holds the type of index
-   // `alternative`, which can be retrieved from `.alternative()` or
-   // `.alternative_index<T>`.
    [[nodiscard]]
    constexpr auto
    holds_alternative(alternative_index_type alternative) const -> bool {
-      return this->discriminant == alternative;
+      return this->discriminant.value_or_niche() == alternative;
+   }
+
+   // `.has_value()` is `false` iff this variant is in the empty (valueless)
+   // state. Reference variants are never empty (P4198), but the predicate is
+   // still exposed for consistency and is constant-`true` for them.
+   [[nodiscard]]
+   constexpr auto
+   has_value() const -> bool {
+      return this->discriminant.has_value();
+   }
+
+   // Destroy the active alternative (if any) and return to the empty state.
+   // Available only for value variants. Reference variants are immutable in
+   // their active type (P4198).
+   constexpr void
+   reset()
+      requires(!is_reference_variant)
+   {
+      this->template hard_reset_indexed<>();
    }
 
  private:
-   detail::variant_node<alternative_types...> m_storage;
+   storage_type m_storage;
 };
 
+// `is_variant_like` is satisfied by `cat::variant<Ts...>`, by every type
+// that publicly and unambiguously inherits from one (P2162), and by any
+// other type that models the variant protocol used for pattern matching.
+// The protocol comes from P3527R1 / P3664R0 - the static traits
+// `variant_size` and `alternative_type<I>` (`std::variant_alternative`'s
+// analogue), the `.index()` observer, an index-keyed `.get<I>()`
+// accessor, and a type-keyed `.is<T>()` predicate - plus libCat's
+// `types` type_list for the alternative pack. Probing `.is<T>()` with
+// the variant's own type sidesteps `.is<T>()`'s uniqueness constraint:
+// a variant never lists itself as an alternative, so the predicate
+// falls through to the constant-`false` branch and is always
+// well-formed.
+//
+// https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3527r1.html#design
+template <typename T>
+concept is_variant_like =
+   requires(remove_cvref<T> const& v) {
+      typename remove_cvref<T>::types;
+      remove_cvref<T>::variant_size;
+      typename remove_cvref<T>::template alternative_type<idx{0u}>;
+      v.index();
+      v.template get<idx{0u}>();
+      { v.template is<remove_cvref<T>>() } -> is_same<bool>;
+   };
+
+// P2527R3 `variant_alternative_index<T, Variant>`: the inverse of
+// `variant_alternative<index, Variant>`. Yields the zero-based index of `T`
+// in `Variant`'s alternatives.
+//
+// Strict semantics per P2527:
+//
+//   - Hard error if `T` does not appear exactly once in `Variant`'s
+//     alternatives.
+//   - Hard error if `Variant` is not exactly `cat::variant<Ts...>` (derived
+//     classes do not satisfy `is_specialization<Variant, variant>`).
+//   - Hard error if `Variant` is const-qualified (the same reason).
+//   - Constness of `T` must match an alternative exactly.
+//
+// `cat::variant<...>::alternative_index<T>` remains the more permissive
+// member form that works through P2162 inheritance.
+//
+// https://open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2527r3.html
+template <typename T, typename Variant>
+   requires(is_specialization<Variant, variant>
+            && Variant::types::template count_type<T> == 1u)
+inline constexpr idx variant_alternative_index =
+   Variant::template alternative_index<T>;
+
+// P3664R0 SFINAE-friendly `variant_size<T>`. A constrained variable
+// template - probing it for a non-variant `T` is a substitution failure
+// on the `requires`-clause rather than a hard error, which is what P3664
+// asks for so concept-detection machinery (P2688R5 pattern matching,
+// etc.) can ask "is this a variant?" without provoking a diagnostic.
+// Mirrors `cat::variant_alternative_index<T, V>`'s shape.
+//
+// https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3664r0.html
+template <typename T>
+   requires(is_variant_like<T>)
+inline constexpr idx variant_size = remove_cvref<T>::variant_size;
+
 }  // namespace cat
+
+#include "implementations/variant_get.tpp"
+#include "implementations/visit.tpp"

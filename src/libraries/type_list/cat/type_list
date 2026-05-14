@@ -111,8 +111,14 @@ class type_list {
    template <typename T>
    static constexpr bool has_type = recurse_for_type<T, Types...>();
 
-   // The number of types in this list.
-   static constexpr idx size = sizeof...(Types);
+   // The number of types in this list. Mirrors `cat::tuple::size()`'s
+   // member-function shape so callers don't have to know whether they are
+   // looking at a runtime container or its compile-time type list.
+   [[nodiscard]]
+   static consteval auto
+   size() -> idx {
+      return sizeof...(Types);
+   }
 
    // The size of the largest type in this list.
    static constexpr idx largest_size = max(sizeof(Types)...);
@@ -137,6 +143,14 @@ class type_list {
 
    // Evaluate `true` if every type in this type list is unique.
    static constexpr bool is_unique_list = recurse_for_unique<Types...>();
+
+   // Evaluate `true` if every type in this type list is a reference type.
+   // Vacuously `true` for an empty list.
+   static constexpr bool is_all_references = (is_reference<Types> && ...);
+
+   // Evaluate `true` if any type in this type list is a reference type.
+   // Vacuously `false` for an empty list.
+   static constexpr bool is_any_reference = (is_reference<Types> || ...);
 };
 
 namespace detail {

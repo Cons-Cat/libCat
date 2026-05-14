@@ -130,25 +130,28 @@ struct is_a_value_type : pattern {
    template <typename Callback>
    constexpr auto
    then_do(Callback&& callback) {
-      return pattern_invocable{[&](auto& matching) -> bool {
-         using unqualified_matching = remove_cvref<decltype(matching)>;
-         if constexpr (has_member_is_value<unqualified_matching>) {
-            // If `matching` currently holds a value equivalent to
-            // `this->value`, then invoke `callback`.
-            if (matching.is(this->value)) {
-               $fwd(callback)();
-               return true;
+      return pattern_invocable{
+         [&](auto& matching) -> bool {
+            using unqualified_matching = remove_cvref<decltype(matching)>;
+            if constexpr (has_member_is_value<unqualified_matching>) {
+               // If `matching` currently holds a value equivalent to
+               // `this->value`, then invoke `callback`.
+               if (matching.is(this->value)) {
+                  $fwd(callback)();
+                  return true;
+               }
+            } else if constexpr (is_weakly_equality_comparable_with<
+                                    unqualified_matching, T>) {
+               // If there is no `.is()` method for `matching`, fall back to a
+               // trivial == check.
+               if (static_cast<unqualified_matching>(matching) == value) {
+                  $fwd(callback)();
+                  return true;
+               }
             }
-         } else {
-            // If there is no `.is()` method for `matching`, fall back to a
-            // trivial == check.
-            if (static_cast<unqualified_matching>(matching) == value) {
-               $fwd(callback)();
-               return true;
-            }
-         }
-         return false;
-      }};
+            return false;
+         },
+      };
    }
 
    T value;
@@ -186,7 +189,7 @@ struct match_patterns {
    // Base case.
    template <typename U>
    constexpr void
-   call_pattern(U&& pattern) {
+   invoke_pattern(U&& pattern) {
       auto _ = !$fwd(pattern)(this->matching);
    }
 
@@ -194,12 +197,12 @@ struct match_patterns {
    template <typename U, typename... Remaining>
       requires(sizeof...(Remaining) > 0)
    constexpr void
-   call_pattern(U&& pattern, Remaining&&... remaining) {
+   invoke_pattern(U&& pattern, Remaining&&... remaining) {
       if ($fwd(pattern)(this->matching)) {
          // Short circuit the remaining patterns if this one returns true.
          return;
       }
-      return call_pattern($fwd(remaining)...);
+      return invoke_pattern($fwd(remaining)...);
    }
 
    // Every pattern must be either an `is_a` or `one_of`.
@@ -207,10 +210,24 @@ struct match_patterns {
       requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
    operator()(Patterns&&... patterns) {
-      // Recurse through `patterns` in order. Invoke the call operator on each
-      // of them with `this->matching` as an argument. When one pattern holds
-      // true, invoke its invocable and stop recursing.
-      this->call_pattern($fwd(patterns)...);
+      // Variant-like targets get a single-switch dispatch. `cat::visit`
+      // resolves the active alternative in a jump table.
+      if constexpr (requires {
+                       this->matching.visit([](auto&) {
+                       });
+                    }) {
+         this->matching.visit([&](auto& active) {
+            // Unary left-fold so the patterns evaluate top-to-bottom and
+            // short-circuit on the first match. The
+            // compile-time-resolvable predicates collapse to constant
+            // branches at each visit case, so the compiler keeps only
+            // the firing pattern's callback.
+            auto _ = (... || $fwd(patterns)(active));
+         });
+      } else {
+         // Non-variant target: recurse sequentially.
+         this->invoke_pattern($fwd(patterns)...);
+      }
    }
 
    T& matching;
