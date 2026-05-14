@@ -302,10 +302,10 @@ inline constexpr weak_ordering
 inline constexpr weak_ordering weak_ordering::greater(detail::order::greater);
 
 class strong_ordering {
-   signed int order;
+   signed int m_order;
 
    constexpr explicit strong_ordering(detail::order in_order)
-       : order(static_cast<signed int>(in_order)) {
+       : m_order(static_cast<signed int>(in_order)) {
    }
 
  public:
@@ -318,14 +318,14 @@ class strong_ordering {
    [[gnu::always_inline]]
    constexpr
    operator partial_ordering() const {
-      return partial_ordering{static_cast<detail::order>(this->order)};
+      return partial_ordering{static_cast<detail::order>(this->m_order)};
    }
 
    // `strong_ordering` must implicitly cast into `weak_ordering`.
    [[gnu::always_inline]]
    constexpr
    operator weak_ordering() const {
-      return weak_ordering{static_cast<detail::order>(this->order)};
+      return weak_ordering{static_cast<detail::order>(this->m_order)};
    }
 
    [[gnu::always_inline]]
@@ -335,25 +335,25 @@ class strong_ordering {
    [[gnu::always_inline]]
    friend constexpr auto
    operator<(strong_ordering lhs, strong_ordering rhs) -> bool {
-      return lhs.order < rhs.order;
+      return lhs.m_order < rhs.m_order;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
    operator<=(strong_ordering lhs, strong_ordering rhs) -> bool {
-      return lhs.order <= rhs.order;
+      return lhs.m_order <= rhs.m_order;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
    operator>(strong_ordering lhs, strong_ordering rhs) -> bool {
-      return lhs.order > rhs.order;
+      return lhs.m_order > rhs.m_order;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
    operator>=(strong_ordering lhs, strong_ordering rhs) -> bool {
-      return lhs.order >= rhs.order;
+      return lhs.m_order >= rhs.m_order;
    }
 
    // 0 is the only integer literal which can implicitly convert to `nullptr`.
@@ -361,78 +361,78 @@ class strong_ordering {
    // Check equality with a 0 literal.
    friend constexpr auto
    operator==(strong_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order == 0;
+      return partial.m_order == 0;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
    operator==(decltype(nullptr), strong_ordering partial) -> bool {
-      return partial.order == 0;
+      return partial.m_order == 0;
    }
 
    // Check inequality with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator!=(strong_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order != 0;
+      return partial.m_order != 0;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
    operator!=(decltype(nullptr), strong_ordering partial) -> bool {
-      return partial.order != 0;
+      return partial.m_order != 0;
    }
 
    // Check less-than with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator<(strong_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order < 0;
+      return partial.m_order < 0;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
    operator<(decltype(nullptr), strong_ordering partial) -> bool {
-      return 0 < partial.order;
+      return 0 < partial.m_order;
    }
 
    // Check less-than-or-equal with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator<=(strong_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order <= 0;
+      return partial.m_order <= 0;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
    operator<=(decltype(nullptr), strong_ordering partial) -> bool {
-      return 0 <= partial.order;
+      return 0 <= partial.m_order;
    }
 
    // Check greater-than with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator>(strong_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order > 0;
+      return partial.m_order > 0;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
    operator>(decltype(nullptr), strong_ordering partial) -> bool {
-      return 0 > partial.order;
+      return 0 > partial.m_order;
    }
 
    // Check greater-than with a 0 literal.
    [[gnu::always_inline]]
    friend constexpr auto
    operator>=(strong_ordering partial, decltype(nullptr)) -> bool {
-      return partial.order >= 0;
+      return partial.m_order >= 0;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
    operator>=(decltype(nullptr), strong_ordering partial) -> bool {
-      return 0 >= partial.order;
+      return 0 >= partial.m_order;
    }
 
    // Check threeway-comparison with a 0 literal.
@@ -450,7 +450,7 @@ class strong_ordering {
    [[gnu::always_inline]]
    friend constexpr auto
    operator<=>(decltype(nullptr), strong_ordering rhs) -> strong_ordering {
-      return strong_ordering{static_cast<detail::order>(-rhs.order)};
+      return strong_ordering{static_cast<detail::order>(-rhs.m_order)};
    }
 };
 

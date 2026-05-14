@@ -16,7 +16,7 @@ struct filter_view_impl : iterable_interface<> {
       BaseContext incoming_context;
       HeldCallback* callback_pointer;
 
-      using element_type = typename BaseContext::element_type;
+      using element_type = BaseContext::element_type;
 
       template <is_predicate<element_type> LoopBody>
       constexpr auto
@@ -37,7 +37,9 @@ struct filter_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base>;
       return context_type<incoming_iteration_context_type, Callback>{
-         ::cat::iterate(m_base), &m_callback};
+         ::cat::iterate(m_base),
+         &m_callback,
+      };
    }
 
    constexpr auto
@@ -47,7 +49,9 @@ struct filter_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base const>;
       return context_type<incoming_iteration_context_type, Callback const>{
-         ::cat::iterate(m_base), &m_callback};
+         ::cat::iterate(m_base),
+         &m_callback,
+      };
    }
 
    constexpr auto
@@ -57,7 +61,9 @@ struct filter_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          decltype(::cat::reverse_iterate(m_base));
       return context_type<incoming_iteration_context_type, Callback>{
-         ::cat::reverse_iterate(m_base), &m_callback};
+         ::cat::reverse_iterate(m_base),
+         &m_callback,
+      };
    }
 
    constexpr auto
@@ -67,7 +73,9 @@ struct filter_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          decltype(::cat::reverse_iterate(m_base));
       return context_type<incoming_iteration_context_type, Callback const>{
-         ::cat::reverse_iterate(m_base), &m_callback};
+         ::cat::reverse_iterate(m_base),
+         &m_callback,
+      };
    }
 };
 
@@ -88,9 +96,13 @@ struct filter_impl : view_interface<filter_impl<Callback>> {
    constexpr auto
    apply(Iterable&& incoming) && -> filter_view<Iterable, Callback> {
       return filter_view<Iterable, Callback>{
-         {}, $fwd(incoming), move(callback)};
+         {},
+         $fwd(incoming),
+         move(callback),
+      };
    }
 };
+
 }  // namespace detail
 
 // Lazy predicate filter. Iterable-only (not a multipass collection).

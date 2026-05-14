@@ -144,22 +144,20 @@ $test(simd_broadcast_traits) {
 }
 
 $test(simd_lane_stepanov_iterator) {
-   using Simd = int4x4;
-   using lane_iter = Simd::iterator;
-   static_assert(cat::is_same<typename lane_iter::iterator_concept,
+   using simd_t = int4x4;
+   using lane_iter = simd_t::iterator;
+   static_assert(cat::is_same<lane_iter::iterator_concept,
                               cat::random_access_iterator_tag>);
-   static_assert(cat::is_same<typename lane_iter::reference,
-                              typename lane_iter::value_type>);
-   static_assert(
-      cat::is_same<typename lane_iter::pointer,
-                   cat::proxy_arrow_result<typename lane_iter::value_type>>);
+   static_assert(cat::is_same<lane_iter::reference, lane_iter::value_type>);
+   static_assert(cat::is_same<lane_iter::pointer,
+                              cat::proxy_arrow_result<lane_iter::value_type>>);
 
-   Simd v = {10, 20, 30, 40};
+   simd_t v = {10, 20, 30, 40};
    auto b = v.begin();
    cat::verify(b.lane_index() == 0u);
    cat::verify(*b == v[0u]);
 
-   Simd const& cv = v;
+   simd_t const& cv = v;
    cat::verify(*cv.begin() == v[0u]);
 
    auto p_post = b++;
@@ -172,7 +170,7 @@ $test(simd_lane_stepanov_iterator) {
 
    cat::verify(b[iword(1)] == v[2u]);
 
-   auto end_it = v.begin() + iword(Simd::size());
+   auto end_it = v.begin() + iword(simd_t::size());
    cat::verify(b != cat::default_sentinel);
    cat::verify(end_it == cat::default_sentinel);
    cat::verify(cat::default_sentinel == end_it);
@@ -819,17 +817,18 @@ $test(simd_load_aligned_and_loaded_aligned) {
 $test(simd_aligned_load_returns_nullopt_when_misaligned) {
    alignas(int4x4::abi_type::alignment.raw)
       int_lane block[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-   int_lane const* const mis = block + 1;
+   int_lane const* const p_mis = block + 1;
    cat::verify(
-      !cat::is_aligned(cat::unconst(mis), int4x4::abi_type::alignment));
-   auto const full = cat::make_simd_loaded_aligned<int4x4>(mis);
+      !cat::is_aligned(cat::unconst(p_mis), int4x4::abi_type::alignment));
+   auto const full = cat::make_simd_loaded_aligned<int4x4>(p_mis);
    cat::verify(!full.has_value());
 
    int4x4 const pass = {10, 20, 30, 40};
    auto const m = cat::make_simd_mask_from_count<int4x4>(2u);
-   auto const masked_make = cat::make_simd_loaded_aligned<int4x4>[m](pass, mis);
+   auto const masked_make =
+      cat::make_simd_loaded_aligned<int4x4>[m](pass, p_mis);
    cat::verify(!masked_make.has_value());
-   auto const masked_load = cat::simd_load_aligned[m](pass, mis);
+   auto const masked_load = cat::simd_load_aligned[m](pass, p_mis);
    cat::verify(!masked_load.has_value());
 }
 
@@ -1905,7 +1904,7 @@ $test(simd_compress_saturating_lanes) {
    sat1x4 narrow_source{sat1(1), sat1(2), sat1(3), sat1(4)};
    auto const first_two_narrow = cat::make_simd_mask_from_count<sat1x4>(2u);
    sat1x4 const narrow_filled =
-      cat::simd_compress(narrow_source, first_two_narrow, sat1(int{1'000}));
+      cat::simd_compress(narrow_source, first_two_narrow, sat1(1'000));
    cat::verify(narrow_filled[0u] == sat1(1));
    cat::verify(narrow_filled[1u] == sat1(2));
    cat::verify(narrow_filled[2u] == sat1::max());
@@ -1913,8 +1912,9 @@ $test(simd_compress_saturating_lanes) {
 }
 
 $test(simd_load_from_store_to) {
-   cat::int4 contiguous_int_source[8] = {100, 101, 102, 103,
-                                         104, 105, 106, 107};
+   cat::int4 contiguous_int_source[8] = {
+      100, 101, 102, 103, 104, 105, 106, 107,
+   };
    int4x4 gather_index_lanes{0, 2, 4, 1};
    auto gathered_int_lanes = cat::simd_load_from<cat::int4, int4x4::abi_type>(
       contiguous_int_source, gather_index_lanes);
@@ -1933,8 +1933,9 @@ $test(simd_load_from_store_to) {
    cat::verify(scatter_destination_int[1] == 33);
    cat::verify(scatter_destination_int[6] == 44);
 
-   cat::float4 contiguous_float_source[8] = {100_f4, 101_f4, 102_f4, 103_f4,
-                                             104_f4, 105_f4, 106_f4, 107_f4};
+   cat::float4 contiguous_float_source[8] = {
+      100_f4, 101_f4, 102_f4, 103_f4, 104_f4, 105_f4, 106_f4, 107_f4,
+   };
    float4x4 float_gather_index_lanes{0_f4, 2_f4, 4_f4, 1_f4};
    auto gathered_float_lanes =
       cat::simd_load_from<cat::float4, float4x4::abi_type>(
@@ -2089,9 +2090,9 @@ $test(simd_reduce_min_max_maximum_minimum_float) {
    // `reduce_maximum`/`reduce_minimum` follow `maximumNumber`/`minimumNumber`
    // and can propagate `NaN` from a lane.
    cat::verify(
-      __builtin_isnan(make_raw_arithmetic(nanish.reduce_maximum()[0u])));
+      bool(__builtin_isnan(make_raw_arithmetic(nanish.reduce_maximum()[0u]))));
    cat::verify(
-      __builtin_isnan(make_raw_arithmetic(nanish.reduce_minimum()[0u])));
+      bool(__builtin_isnan(make_raw_arithmetic(nanish.reduce_minimum()[0u]))));
 }
 
 $test(simd_reduce_assoc_and_in_order_fadd) {
@@ -2547,10 +2548,10 @@ $test(simd_as_vectorized_random_access_and_mutation) {
       cat::verify(sum4(*cur) == sum4(ref));
    }
 
-   float_lane const* cbuf = buf;
+   float_lane const* p_cbuf = buf;
    float_lane ref_c = float_lane(static_cast<float>(k_extent.raw)) + 1.f;
-   for (auto cit = cat::as_vectorized<float4, 4u>(cbuf),
-             cend = cat::as_vectorized<float4, 4u>(cbuf + k_extent.raw);
+   for (auto cit = cat::as_vectorized<float4, 4u>(p_cbuf),
+             cend = cat::as_vectorized<float4, 4u>(p_cbuf + k_extent.raw);
         cit != cend; ++cit, ref_c -= float_lane(4.f)) {
       float4x4 x = *cit;
       float4x4 const ref = float4x4(ref_c) - cat::iota<float4x4>(0_f4);
@@ -2651,6 +2652,7 @@ $test(simd_as_vectorized_over_vec_float_data) {
 }
 
 // TODO: Claude is too dumb to write this. Do it yourself.
+// NOLINTBEGIN(readability-avoid-unconditional-preprocessor-if)
 #if 0
 $test(simd_list_stepanov_iterator_vectorization_float) {
    // Mirrors Vc `list_iterator_vectorization` (`float` `std::list` block).
@@ -2703,6 +2705,7 @@ $test(simd_list_stepanov_iterator_vectorization_float) {
    }
 }
 #endif
+// NOLINTEND(readability-avoid-unconditional-preprocessor-if)
 
 // EVE-style conditionals:
 
@@ -2866,8 +2869,7 @@ $test(simd_overflow_accessor_views) {
    cat::verify((vmax + 1)[0] == lane_max);
    cat::verify((vmax.sat() + 1)[0] == lane_max);
 
-   sat4 const lane_wrap =
-      sat4(cat::wrap_add(lane_max.raw, typename sat4::raw_type(1)));
+   sat4 const lane_wrap = sat4(cat::wrap_add(lane_max.raw, sat4::raw_type(1)));
    cat::verify((vmax.undef() + 1)[0] == lane_wrap);
    cat::verify((vmax.wrap() + 1)[0] == lane_wrap);
 
@@ -2896,6 +2898,7 @@ $test(simd_bool_lanes) {
    cat::verify(f[0u] && !f[1u] && f[2u] && !f[3u]);
    cat::verify(!g[0u] && !g[1u] && g[2u] && g[3u]);
 
+   // NOLINTNEXTLINE(misc-redundant-expression) Self-equality is the test.
    cat::verify(f == f);
    cat::verify(!(f == g));
 
@@ -2959,9 +2962,11 @@ $test(simd_bool2_bool4_lanes_match_bool) {
    verify_widened_bool_simd_matches_bool4(g, g2);
    verify_widened_bool_simd_matches_bool4(g, g4);
 
+   // NOLINTBEGIN(misc-redundant-expression) Self-equality is the test.
    cat::verify(f == f);
    cat::verify(f2 == f2);
    cat::verify(f4 == f4);
+   // NOLINTEND(misc-redundant-expression)
    cat::verify(!(f == g));
 
    simd_four_bool const lane_and = f & g;
