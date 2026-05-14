@@ -110,7 +110,7 @@ struct one_of_types : pattern {
          } else {
             // If there is no `.is()` method for `matching`, fall back to a
             // trivial `is_same` check.
-            if ((is_same<unqualified_matching, Types> || ...)) {
+            if (is_either<unqualified_matching, Types...>) {
                $fwd(callback)();
                return true;
             }
@@ -140,7 +140,7 @@ struct is_a_value_type : pattern {
                   $fwd(callback)();
                   return true;
                }
-            } else if constexpr (is_weakly_equality_comparable_with<
+            } else if constexpr (is_weakly_equality_comparable<
                                     unqualified_matching, T>) {
                // If there is no `.is()` method for `matching`, fall back to a
                // trivial == check.

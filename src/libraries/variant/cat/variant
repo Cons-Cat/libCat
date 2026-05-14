@@ -211,7 +211,7 @@ struct fun_set_unique_pack<type_list<Acc...>, type_list<>> {
 template <typename... Acc, typename Head, typename... Rest>
 struct fun_set_unique_pack<type_list<Acc...>, type_list<Head, Rest...>> {
    using type = conditional<
-      (is_same<Head, Acc> || ...),
+      is_either<Head, Acc...>,
       typename fun_set_unique_pack<type_list<Acc...>, type_list<Rest...>>::type,
       typename fun_set_unique_pack<type_list<Acc..., Head>,
                                    type_list<Rest...>>::type>;

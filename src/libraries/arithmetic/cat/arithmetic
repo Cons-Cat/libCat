@@ -1962,8 +1962,7 @@ basic_int :
    constexpr auto
    to_idx() const
       requires(is_integral<T> && overflow_policy == overflow_policies::undefined
-               && (is_same<T, __SIZE_TYPE__>
-                   || is_same<T, make_signed_type<__SIZE_TYPE__>>));
+               && is_either<T, __SIZE_TYPE__, make_signed_type<__SIZE_TYPE__>>);
 
    // `basic_int` derives public storage from `detail::arithmetic_storage`.
 };
