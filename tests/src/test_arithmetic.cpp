@@ -1,6 +1,7 @@
 #include <cat/arithmetic>
 #include <cat/bit>
 #include <cat/match>
+#include <cat/maybe>
 #include <cat/type_list>
 
 #include "../unit_tests.hpp"
@@ -5299,6 +5300,59 @@ $test(arithmetic_idx_operations_traits_and_word_conversions) {
 
    uword add_uword_idx = 1_uz + idx2;
    add_uword_idx += idx2;
+}
+
+// `cat::idx` provides its own `default_compact_trait` specialization that
+// niches the empty state into the high-bit-set bit pattern
+// (`uword::max()` reinterpreted as a signed `idx`). Plain
+// `cat::maybe<cat::idx>` therefore uses compact storage with no extra
+// engaged-flag byte, which is the precise representation the variant's
+// `idx`-tier discriminant relies on.
+$test(arithmetic_idx_maybe_default_compact) {
+   using maybe_idx = cat::maybe<cat::idx>;
+
+   // The default compact specialization fires, so the storage is the
+   // same width as `idx` itself with no separate engaged-flag.
+   static_assert(maybe_idx::uses_compact_storage);
+   static_assert(sizeof(maybe_idx) == sizeof(cat::idx));
+
+   // Default construction is empty.
+   maybe_idx empty;
+   cat::verify(!empty.has_value());
+
+   // `.value_or_niche()` returns the `common_type` of the engaged
+   // `basic_idx` (unsigned size-t) and the niche `iword` (signed long) -
+   // i.e. a signed view that can carry the all-bits-set niche bit
+   // pattern without pretending to be a valid (non-negative) `idx`. The
+   // niche decodes as `-1` through the signed view.
+   auto const empty_bits = empty.value_or_niche();
+   cat::verify(empty_bits == -1);
+
+   // Engage with a non-negative value and verify both the engaged
+   // accessor and the raw-bit view.
+   maybe_idx engaged = cat::idx{7u};
+   cat::verify(engaged.has_value());
+   cat::verify(engaged.value() == 7u);
+   cat::verify(engaged.value_or_niche() == 7u);
+
+   // Reassigning to `nullopt` returns to the niche bit pattern.
+   engaged = cat::nullopt;
+   cat::verify(!engaged.has_value());
+   cat::verify(engaged.value_or_niche() == empty_bits);
+
+   // A user-provided non-default compact still works alongside the
+   // default specialization. `sentinel<idx, 0>` says "0 is the empty
+   // state", which is incompatible with the default but useful for
+   // domain-specific encodings.
+   cat::maybe<cat::sentinel<cat::idx, cat::idx{0u}>> nonzero_idx;
+   cat::verify(!nonzero_idx.has_value());
+
+   nonzero_idx = cat::idx{1u};
+   cat::verify(nonzero_idx.has_value());
+   cat::verify(nonzero_idx.value() == 1u);
+
+   nonzero_idx = cat::idx{0u};
+   cat::verify(!nonzero_idx.has_value());
 }
 
 // Helpers for the semantics tests below. `requires { T{V}; }` inside a

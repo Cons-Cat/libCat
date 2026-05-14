@@ -436,7 +436,11 @@ struct maybe_reference_storage {
 // `T` is a `compact<T, predicate, nullopt_value>`.
 template <typename T>
 struct maybe_compact_storage {
-   using value_type = decltype(T::nullopt_state());
+   using value_type = T::value_type;
+
+   // The `niche_type` may differ from `value_type` when its bit pattern is
+   // outside the domain of `value_type`.
+   using niche_type = decltype(T::nullopt_state());
 
    constexpr maybe_compact_storage() = default;
 
@@ -501,8 +505,20 @@ struct maybe_compact_storage {
       }
    }
 
+   // When `value_type` and `niche_type` agree (the sentinel-style
+   // compact) the niche scalar lands in storage directly via the member
+   // init list. When they differ (e.g. `basic_idx` engaged / `iword`
+   // niche).
    constexpr maybe_compact_storage(detail::nullopt_type /*nullopt*/)
+      requires(is_same<value_type, niche_type>
+               && is_copy_constructible<value_type>)
        : m_storage(T::nullopt_state()) {
+   }
+
+   constexpr maybe_compact_storage(detail::nullopt_type /*nullopt*/)
+      requires(!is_same<value_type, niche_type>
+               && is_copy_constructible<value_type>)
+       : m_storage(__builtin_bit_cast(value_type, T::nullopt_state())) {
    }
 
    // If other assignment operators are not conditionally specialized by their
@@ -580,8 +596,8 @@ struct maybe_compact_storage {
    // the storage is disengaged.
    [[nodiscard]]
    constexpr auto
-   value_or_niche(this auto&& self) -> auto&& {
-      return $fwd(self).m_storage;
+   value_or_niche() const -> common_type<value_type, niche_type> {
+      return m_storage;
    }
 
    [[nodiscard]]
@@ -590,11 +606,20 @@ struct maybe_compact_storage {
       return T::has_value(m_storage);
    }
 
-   // Destroy the storage unconditionally.
+   // Destroy the storage unconditionally and overwrite it with the
+   // niche bit pattern. The `bit_cast` branch handles cross-type niches
+   // (e.g. `basic_idx` engaged / `iword` niche) whose values aren't
+   // legally `static_cast`-able. `bit_cast` is disallowed at compile
+   // time for pointer types, which is why the same-type path stays a
+   // plain copy.
    constexpr void
    hard_reset() {
       m_storage.~value_type();
-      m_storage = T::nullopt_state();
+      if constexpr (is_same<value_type, niche_type>) {
+         m_storage = T::nullopt_state();
+      } else {
+         m_storage = __builtin_bit_cast(value_type, T::nullopt_state());
+      }
    }
 
    // Construct an object at the address of the held `storage`.
@@ -1006,10 +1031,10 @@ class [[nodiscard]] maybe {
    // a known alternative index where the niche never collides).
    [[nodiscard]]
    constexpr auto
-   value_or_niche(this auto&& self) -> decltype(auto)
+   value_or_niche() const
       requires(uses_compact_storage)
    {
-      return as_base($fwd(self)).m_storage.value_or_niche();
+      return m_storage.value_or_niche();
    }
 
    // Returns a pointer to the held value when this `maybe` is engaged, or

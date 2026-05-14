@@ -677,8 +677,7 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
       // Bit-cast these `idx` to `iword`, which is essentially -1.
 
       maybe<idx> const maybe_open_brace = remainder.find('{');
-      // `.value_or_niche()` gets either an `idx` or an 8-byte -1. Both convert
-      // to `iword`.
+      // `.value_or_niche()` is either in range of `idx` or an 8-byte -1.
       iword const to_open_brace = maybe_open_brace.value_or_niche();
       if (!maybe_open_brace.has_value()) {
          assert(to_open_brace == -1);

@@ -2920,7 +2920,7 @@ basic_idx :
       auto const rhs_raw = make_raw_arithmetic(other);
       auto const rhs_unsigned = static_cast<raw_type>(rhs_raw);
       auto const rhs_abs =
-         (rhs_raw < 0) ? static_cast<raw_type>(-rhs_unsigned) : rhs_unsigned;
+         (rhs_raw < 0) ? (-rhs_unsigned) : rhs_unsigned;
       return basic_idx(raw % rhs_abs);
    }
 
@@ -3069,7 +3069,7 @@ basic_idx :
 // niche value.
 template <overflow_policies overflow_policy>
 constexpr auto
-basic_idx_maybe_has_value(basic_idx<overflow_policy> value) -> bool {
+basic_idx_maybe_has_value(iword value) -> bool {
    return (value.raw & limits<__SIZE_TYPE__>::high_bit) == 0u;
 }
 
@@ -3079,8 +3079,15 @@ struct default_compact_trait<basic_idx<overflow_policy>>
     : identity_trait<
          compact<basic_idx<overflow_policy>,
                  &basic_idx_maybe_has_value<overflow_policy>,
-                 __builtin_bit_cast(basic_idx<overflow_policy>,
-                                    limits<__SIZE_TYPE__>::max())>> {};
+                 [] constexpr -> iword {
+                    // All bits set: `-1` as a signed `iword`,
+                    // `size_t::max()` as an unsigned `basic_idx`. The
+                    // predicate accepts the high bit being set, so this
+                    // bit pattern decodes as the empty state for either
+                    // signedness.
+                    return __builtin_bit_cast(iword,
+                                              limits<__SIZE_TYPE__>::max());
+                 }>> {};
 
 template <overflow_policies overflow_policy>
 constexpr auto

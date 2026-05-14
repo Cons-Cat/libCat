@@ -122,13 +122,28 @@ template <typename T, auto predicate, is_invocable auto get_nullopt>
    requires(is_predicate<remove_cvref<decltype(predicate)>, T const&>
             && !predicate(get_nullopt()))
 struct compact<T, predicate, get_nullopt> {
+   // The engaged value type. `maybe_compact_storage<compact<...>>` exposes
+   // this as `value_type` so the surrounding `maybe<T>` machinery can
+   // talk about the engaged type independently from `nullopt_state`'s
+   // (potentially different) return type.
+   using value_type = T;
+
    static constexpr auto
    has_value(T const& value) -> bool {
       return predicate(value);
    }
 
+   // `nullopt_state` is permitted to return a type distinct from `T` as
+   // long as that type is convertible to `T` (the predicate takes
+   // `T const&`, so the `requires`-clause above will already reject any
+   // niche value that can't make it into `T`). Returning a different
+   // type is useful when the niche bit pattern wouldn't be a meaningful
+   // value of `T` - for example, `default_compact_trait<basic_idx>` can
+   // return the raw `__SIZE_TYPE__` so the niche doesn't pretend to be a
+   // valid `idx`. `maybe::value_or_niche` then surfaces the result as
+   // `common_type<value_type, decltype(nullopt_state())>`.
    static constexpr auto
-   nullopt_state() -> T {
+   nullopt_state() {
       return get_nullopt();
    }
 
