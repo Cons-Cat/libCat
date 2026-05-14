@@ -32,7 +32,10 @@
 //           pointer layout and is trivially copyable.
 //
 // P3168R1   Range support for `std::optional`. `cat::maybe<T>` models a
-//           contiguous range of size 0 or 1 via `begin()` and `end()`.
+//           contiguous range of size 0 or 1 via `data()`, `size()`,
+//           `begin()`, and `end()`. It is also an iterable, so it
+//           participates in `cat::iterate` and the ranges machinery from
+//           `<cat/iterable>`.
 //
 // Rather than use partial template specializations, `cat::maybe` storage is
 // selected internally, and supports:
@@ -68,15 +71,18 @@
 // the held value when engaged or `nullptr` when disengaged. Checked
 // observers are `.assert()`, `.verify()`, and `.or_exit()`.
 //
-// `cat::maybe` intentionally not provide `operator*`, `operator->`, or implicit
-// conversion to `bool`. Truthiness testing can be replaced by `.has_value()`,
-// and it otherwise causes many subtle type safety concerns, such as:
-// https://brevzin.github.io/c++/2023/01/18/optional-construction/
+// `cat::maybe` intentionally does not provide `operator*`, `operator->`, or
+// implicit conversion to `bool`. Truthiness testing can be replaced by
+// `.has_value()`, and that otherwise causes many subtle type safety concerns,
+// such as: https://brevzin.github.io/c++/2023/01/18/optional-construction/
 //
 // Construct a `maybe` directly with the wrapped type's constructors, with
 // `cat::nullopt`, with `cat::monostate` (for `maybe<void>`), with the
 // `cat::in_place` tag, or via the `cat::make_maybe(value)` and
 // `cat::make_maybe<T>(arguments...)` factories.
+//
+// `maybe<void>` is not iterable, because it cannot be dereferenced, so
+// it lacks container methods `.size()`, `.data()`, and `.is_empty()`.
 
 namespace cat {
 namespace detail {
@@ -93,6 +99,11 @@ inline constexpr detail::nullopt_type nullopt;
 #include <cat/memory>
 #include <cat/runtime>
 #include <cat/utility>
+
+// `<cat/detail/iterable_interface.hpp>` carries the
+// `contiguous_position_interface` mixin. Including it here breaks a circular
+// dependency.
+#include <cat/detail/iterable_interface.hpp>
 
 namespace cat {
 // Forward declarations.
@@ -682,7 +693,11 @@ struct maybe_storage_selector<T, false, false> {
 }  // namespace detail
 
 template <typename T>
-class [[nodiscard]] maybe {
+class [[nodiscard]] maybe
+    // Inherit the random-access position protocol so `cat::iterate(maybe)`
+    // auto-derives a `collection_iteration_context`. The mixin holds no
+    // storage, so `sizeof(maybe<T&>)` stays pointer-sized.
+    : public detail::contiguous_position_interface<maybe<T>> {
  private:
    using storage_type = detail::maybe_storage_selector<T>::type;
 
@@ -904,20 +919,122 @@ class [[nodiscard]] maybe {
       return *this;
    }
 
-   // TODO: Consider and test this API more carefully.
-   // https://brevzin.github.io/c++/2018/12/09/mixed-comparisons/ Comparison
-   // operator.
-   template <typename U>
-      requires(is_implicitly_convertible<U, value_type>)
+   // `maybe<T>` <=> `maybe<U>`. The return type follows the held-value ordering
+   // category.
+   template <is_threeway_comparable<value_type> U>
+      requires(!is_void<T> && !is_void<U>)
    [[nodiscard]]
    constexpr auto
-   operator==(U const& other) const {
-      return m_storage.value() == static_cast<T>(other);
+   operator<=>(maybe<U> const& other) const
+      -> decltype(declval<value_type const&>() <=> declval<U const&>()) {
+      using result_type =
+         decltype(declval<value_type const&>() <=> declval<U const&>());
+      if (this->has_value() && other.has_value()) {
+         return m_storage.value() <=> other.value();
+      }
+      return static_cast<result_type>(this->has_value() <=> other.has_value());
    }
 
+   // `maybe<void>` <=> `maybe<void>`. Ordering only compares engagement.
+   // This is morally equivalent to `bool <=> bool`.
    [[nodiscard]]
    constexpr auto
-   operator==(detail::nullopt_type /*nullopt*/) const {
+   operator<=>(maybe<void> const& other) const -> std::strong_ordering
+      requires(is_void<T>)
+   {
+      return this->has_value() <=> other.has_value();
+   }
+
+   // `maybe<T>` <=> `U`. `nullopt` is the least element, so a disengaged maybe
+   // is always less than any value.
+   template <is_threeway_comparable<value_type> U>
+      requires(!is_void<T> && !is_maybe<U>
+               && !is_same<remove_cvref<U>, detail::nullopt_type>)
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(U const& value) const
+      -> decltype(declval<value_type const&>() <=> value) {
+      using result_type = decltype(declval<value_type const&>() <=> value);
+      if (this->has_value()) {
+         return m_storage.value() <=> value;
+      }
+      return static_cast<result_type>(std::strong_ordering::less);
+   }
+
+   // `maybe<T>` <=> `nullopt`. `nullopt` is the least element, so a
+   // disengaged maybe is equivalent and an engaged maybe is greater.
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(detail::nullopt_type /*nullopt*/) const -> std::strong_ordering {
+      return this->has_value() <=> false;
+   }
+
+   // Two `maybe`s are equal iff they agree on engagement and (when both are
+   // engaged) the held values compare equal.
+   //
+   // `maybe == nullopt` is true iff the `maybe` is disengaged.
+   //
+   // `maybe == U` is true iff the `maybe` is engaged and the held value
+   // compares equal to `U`.
+   //
+   // The `!is_maybe<U>` and
+   // `!is_same<..., nullopt_type>` guards keep the bare-value overload from
+   // stealing the `maybe == maybe` and `maybe == nullopt` overloads.
+   //
+   // Ordering treats `nullopt` as the least element, so a disengaged `maybe` is
+   // less than any engaged `maybe` and less than any bare value, but equal to
+   // `nullopt`.
+   //
+   // `maybe<void>` only orders/compares on engagement state because
+   // its `void` has no meaningful value comparison.
+   //
+   // See also Barry Revzin, "Mixed comparisons":
+   // https://brevzin.github.io/c++/2018/12/09/mixed-comparisons/
+
+   // `maybe<T>` == `maybe<U>`. Uses the weakly form so cross-element-type
+   // comparisons don't require a `common_reference` between unrelated value
+   // types - we only care that `value_type == U` is well-formed for the body.
+   template <typename U>
+      requires(!is_void<T> && !is_void<U>
+               && is_weakly_equality_comparable<value_type, U>)
+   [[nodiscard]]
+   constexpr auto
+   operator==(maybe<U> const& other) const -> bool {
+      if (this->has_value() != other.has_value()) {
+         return false;
+      }
+      return !this->has_value() || m_storage.value() == other.value();
+   }
+
+   // Engagement-only equality for `maybe<void>` pairs.
+   [[nodiscard]]
+   constexpr auto
+   operator==(maybe<void> const& other) const -> bool
+      requires(is_void<T>)
+   {
+      return this->has_value() == other.has_value();
+   }
+
+   // `maybe<T>` == `U`. The `!is_maybe<U>` and
+   // `!is_same<..., detail::nullopt_type>` short-circuits must come before the
+   // `is_weakly_equality_comparable_with` check, otherwise looking up
+   // `maybe<T> == maybe<T>` would re-enter overload resolution to evaluate
+   // `is_weakly_equality_comparable_with<maybe<T>, value_type>` and recurse
+   // forever.
+   template <typename U>
+      requires(!is_void<T> && !is_maybe<U>
+               && !is_same<remove_cvref<U>, detail::nullopt_type>
+               && is_weakly_equality_comparable<value_type, U>)
+   [[nodiscard]]
+   constexpr auto
+   operator==(U const& value) const -> bool {
+      return this->has_value() && m_storage.value() == value;
+   }
+
+   // Maybe-vs-nullopt equality.
+   [[nodiscard]]
+   constexpr auto
+   operator==(detail::nullopt_type /*nullopt*/) const -> bool {
       return !this->has_value();
    }
 
@@ -1322,18 +1439,24 @@ class [[nodiscard]] maybe {
 
    // Range support. A `maybe<T>` models a contiguous range of size 0 or 1, so
    // iteration is just a bare pointer pair. `maybe<void>` has no traversable
-   // value and therefore no `begin`/`end`.
+   // value and therefore exposes none of these. `data()` and `size()` are the
+   // ground truth: `begin()`/`end()` derive from them, and the inherited
+   // `contiguous_position_interface` reads through them to satisfy
+   // `is_random_access_collection<maybe<T>>`, which in turn drives
+   // `cat::iterate(maybe)`.
+   //
+   // The guards key on `is_void<T>` (the engaging type) instead of
+   // `is_void<value_type>`, because `maybe<void>` uses a `monostate_type`
+   // storage slot for shape-uniformity and `monostate_type` is not `void`.
+   // Pinning on `T` keeps `maybe<void>` cleanly out of the range protocol.
    //
    // P3168R1 Give `std::optional` range support.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3168r1.html
-   //
-   // TODO: When the ranges library lands, add the deferred operators:
-   // `operator==` / <=> between two `maybe`s, the range pipe `operator|`, and
-   // the view-adapter `operator&`.
+
    [[nodiscard]]
    constexpr auto
-   begin(this auto&& self)
-      requires(!is_void<value_type>)
+   data(this auto&& self)
+      requires(!is_void<T>)
    {
       auto&& base = as_base($fwd(self));
       using ptr_type = decltype(__builtin_addressof(base.m_storage.value()));
@@ -1345,15 +1468,37 @@ class [[nodiscard]] maybe {
 
    [[nodiscard]]
    constexpr auto
-   end(this auto&& self)
-      requires(!is_void<value_type>)
+   size() const -> idx
+      requires(!is_void<T>)
    {
-      auto&& base = as_base($fwd(self));
-      using ptr_type = decltype(__builtin_addressof(base.m_storage.value()));
-      if (base.m_storage.has_value()) {
-         return __builtin_addressof(base.m_storage.value()) + 1;
-      }
-      return ptr_type{nullptr};
+      return has_value() ? 1u : 0u;
+   }
+
+   // Mirrors `cat::container_interface::is_empty` so generic container-shaped
+   // code can ask the same question of a `maybe`. Equivalent to
+   // `size() == 0u`, i.e. the negation of `has_value()`.
+   [[nodiscard]]
+   constexpr auto
+   is_empty() const -> bool
+      requires(!is_void<T>)
+   {
+      return !this->has_value();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   begin(this auto&& self)
+      requires(!is_void<T>)
+   {
+      return $fwd(self).data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end(this auto&& self)
+      requires(!is_void<T>)
+   {
+      return $fwd(self).data() + self.size().raw;
    }
 
  private:
@@ -1409,6 +1554,54 @@ template <typename T>
 auto
 propagate_error(maybe<T> const& /*maybe*/) -> detail::nullopt_type {
    return nullopt;
+}
+
+namespace detail {
+// Pipe closure for `cat::or_else`. Kept out of `view_interface` deliberately:
+// inheriting it would re-purpose this closure for the iterable pipe (the same
+// surface that drives `maybe | cat::transform(f)` against the contiguous
+// 0-or-1 range view), and overload resolution on `maybe | ...` would become
+// ambiguous. By staying off the view ladder, ADL only finds the free
+// `operator|` overloads below.
+template <typename Callback>
+struct or_else_view {
+   [[no_unique_address]]
+   Callback callback;
+};
+}  // namespace detail
+
+// `cat::or_else(callback)` returns a pipe adaptor that calls `.or_else` on its
+// `maybe` source:
+//
+//    auto result = my_maybe | cat::or_else([] {
+//       return cat::maybe<int>{42};
+//    });
+//
+// is equivalent to `my_maybe.or_else(...)`. The callback must take no
+// arguments and return either `void` or a `cat::maybe<U>` (enforced by the
+// `.or_else` member). When `my_maybe` is engaged, `*this` is propagated
+// unchanged; otherwise the callback fires and its result becomes the value.
+//
+// This complements the existing iterable pipe surface
+// (`maybe | cat::transform(...)`) by exposing monadic recovery directly,
+// without dropping out of the pipeline.
+template <is_invocable Callback>
+[[nodiscard]]
+constexpr auto
+or_else(Callback&& callback) -> detail::or_else_view<remove_cvref<Callback>> {
+   return {$fwd(callback)};
+}
+
+template <is_maybe Maybe, typename Callback>
+constexpr auto
+operator|(Maybe&& source, detail::or_else_view<Callback>&& adaptor) {
+   return $fwd(source).or_else($fwd(adaptor).callback);
+}
+
+template <is_maybe Maybe, typename Callback>
+constexpr auto
+operator|(Maybe&& source, detail::or_else_view<Callback> const& adaptor) {
+   return $fwd(source).or_else($fwd(adaptor).callback);
 }
 
 // TODO: Support `void*`.

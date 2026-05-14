@@ -315,31 +315,6 @@ concept is_convertible_without_narrowing =
          detail::narrowing_detector<To>{{static_cast<From&&>(from)}};
       };
 
-// `boolean_testable` is adapted from the exposition-only concept
-// boolean-testable.
-template <typename T>
-concept is_boolean_testable = is_convertible<T, bool>
-                              && requires(T&& b) {
-                                    {
-                                       !forward<T>(b)
-                                    } -> is_convertible<bool>;
-                                 };
-
-namespace detail {
-template <typename T, typename U>
-concept is_partially_ordered_with =
-   requires(remove_reference<T> const& t, remove_reference<U> const& u) {
-      { t < u } -> is_boolean_testable;
-      { t > u } -> is_boolean_testable;
-      { t <= u } -> is_boolean_testable;
-      { t >= u } -> is_boolean_testable;
-      { u < t } -> is_boolean_testable;
-      { u > t } -> is_boolean_testable;
-      { u <= t } -> is_boolean_testable;
-      { u >= t } -> is_boolean_testable;
-   };
-}  // namespace detail
-
 template <typename T, typename U = T>
 concept is_less_than_comparable = requires(T t, U u) { t < u; };
 
@@ -384,7 +359,6 @@ template <template <typename...> typename Template, typename... Args>
 inline constexpr bool is_specialization<Template<Args...>, Template> = true;
 
 namespace detail {
-// TODO: Ignore reference in value categories here.
 // TODO: Include halfs, `_Float16`, `__fp16`, `__bf16`, etc.
 template <typename T>
 inline constexpr bool is_floating_point_detail =
@@ -1092,13 +1066,8 @@ concept is_reference_wrapper =
 
 }  // namespace cat
 
-// `clang-format` 12 sorts `common_reference` before `common_type` for some
-// reason.
-// clang-format off
 #include "implementations/common_reference.tpp"
 #include "implementations/constant_evaluate.tpp"
-
-// clang-format on
 
 namespace cat {
 
@@ -1107,6 +1076,29 @@ concept has_common_reference_with =
    is_same<common_reference<T, U>, common_reference<U, T>>
    && is_convertible<T, common_reference<T, U>>
    && is_convertible<U, common_reference<T, U>>;
+
+// `boolean_testable` is adapted from the exposition-only concept
+// boolean-testable.
+template <typename T>
+concept is_boolean_testable =
+   is_convertible<T, bool> && requires(T&& b) {
+                                 { !forward<T>(b) } -> is_convertible<bool>;
+                              };
+
+namespace detail {
+template <typename T, typename U>
+concept is_partially_ordered_with =
+   requires(remove_reference<T> const& t, remove_reference<U> const& u) {
+      { t < u } -> is_boolean_testable;
+      { t > u } -> is_boolean_testable;
+      { t <= u } -> is_boolean_testable;
+      { t >= u } -> is_boolean_testable;
+      { u < t } -> is_boolean_testable;
+      { u > t } -> is_boolean_testable;
+      { u <= t } -> is_boolean_testable;
+      { u >= t } -> is_boolean_testable;
+   };
+}  // namespace detail
 
 // Both orientations of `==`/`!=` must be well-formed and truthy or falsy.
 template <typename T, typename U = T>
@@ -1136,7 +1128,7 @@ concept is_equality_comparable =
    && is_weakly_equality_comparable<
       common_reference<remove_reference<T> const&, remove_reference<U> const&>,
       common_reference<remove_reference<T> const&, remove_reference<U> const&>>
-   && detail::is_weakly_equality_comparable_detail<T, U>;
+   && is_weakly_equality_comparable<T, U>;
 
 // clang-format off
 template <typename T, typename U>

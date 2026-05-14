@@ -1,3 +1,4 @@
+#include <cat/iterable>
 #include <cat/maybe>
 #include <cat/memory>
 #include <cat/tuple>
@@ -38,13 +39,15 @@ struct maybe_non_trivial {
 };
 
 struct maybe_const_non_trivial {
-   constexpr maybe_const_non_trivial() {  // NOLINT
+   // NOLINTNEXTLINE
+   constexpr maybe_const_non_trivial() {
    }
 
-   constexpr maybe_const_non_trivial(
-      maybe_const_non_trivial const&) {  // NOLINT
+   // NOLINTNEXTLINE
+   constexpr maybe_const_non_trivial(maybe_const_non_trivial const&) {
    }
 
+   // NOLINTNEXTLINE
    constexpr maybe_const_non_trivial(maybe_const_non_trivial&&) {
    }
 };
@@ -1158,4 +1161,302 @@ $test(maybe_nested_construction) {
    widened_assigned = src;
    cat::verify(widened_assigned.has_value());
    cat::verify(widened_assigned.value() == 99l);
+}
+
+// `cat::maybe<T>` participates in the cat iterable / collection protocol as a
+// contiguous range of size 0 or 1, mirroring the C++26 `std::optional` view
+// from P3168R1. `maybe<void>` has no traversable value and is intentionally
+// not iterable.
+//
+// P3168R1 Give `std::optional` range support.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3168r1.html
+
+// Concept-level sanity. Engaged or disengaged, the type is what matters.
+static_assert(cat::is_iterable<cat::maybe<int4>>);
+static_assert(cat::is_iterable<cat::maybe<int4&>>);
+static_assert(cat::is_iterable<cat::maybe_ptr<int4>>);
+static_assert(cat::is_iterable<cat::maybe<int4> const>);
+static_assert(cat::is_collection<cat::maybe<int4>>);
+static_assert(cat::is_bidirectional_collection<cat::maybe<int4>>);
+static_assert(cat::is_random_access_collection<cat::maybe<int4>>);
+static_assert(cat::is_reverse_iterable<cat::maybe<int4>>);
+// `maybe<void>` has no traversable element type, so it is excluded.
+static_assert(!cat::is_iterable<cat::maybe<void>>);
+static_assert(!cat::is_collection<cat::maybe<void>>);
+
+// `.data()` and `.size()` are the contiguous-range ground truth.
+$test(maybe_data_and_size) {
+   cat::maybe<int4> engaged = 42;
+   cat::verify(engaged.size() == 1u);
+   cat::verify(engaged.data() != nullptr);
+   cat::verify(*engaged.data() == 42);
+   cat::verify(engaged.end() - engaged.begin() == 1);
+
+   cat::maybe<int4> empty;
+   cat::verify(empty.size() == 0u);
+   cat::verify(empty.data() == nullptr);
+   cat::verify(empty.end() - empty.begin() == 0);
+
+   // `maybe<T&>` exposes the referent through `data()`/iteration.
+   int4 referent = 7;
+   cat::maybe<int4&> ref = referent;
+   cat::verify(ref.size() == 1u);
+   cat::verify(ref.data() == &referent);
+   cat::verify(*ref.data() == 7);
+}
+
+// Direct `cat::iterate` against an engaged and a disengaged `maybe`.
+$test(maybe_iterate_run_while) {
+   cat::maybe<int4> engaged = 11;
+   int4 sum = 0;
+   auto ctx = cat::iterate(engaged);
+   ctx.run_while([&sum](int4 const& x) -> bool {
+      sum = sum + x;
+      return true;
+   });
+   cat::verify(sum == 11);
+
+   cat::maybe<int4> empty;
+   int4 calls = 0;
+   auto empty_ctx = cat::iterate(empty);
+   auto const result = empty_ctx.run_while([&calls](int4 const&) -> bool {
+      ++calls;
+      return true;
+   });
+   cat::verify(result == cat::iteration_result::complete);
+   cat::verify(calls == 0);
+}
+
+// Terminal algorithms over a `maybe` collapse a 0-or-1 range to a scalar.
+$test(maybe_terminal_algorithms) {
+   cat::maybe<int4> engaged = 5;
+   cat::maybe<int4> empty;
+
+   cat::verify((engaged | cat::sum()) == 5);
+   cat::verify((empty | cat::sum()) == 0);
+
+   cat::verify((engaged | cat::count()) == 1u);
+   cat::verify((empty | cat::count()) == 0u);
+
+   int4 total = 0;
+   engaged | cat::for_each([&total](int4 x) {
+      total = total + x;
+   });
+   cat::verify(total == 5);
+
+   total = 0;
+   empty | cat::for_each([&total](int4 x) {
+      total = total + x;
+   });
+   cat::verify(total == 0);
+}
+
+// Pipe-and-view composition. The transform fires only when the source is
+// engaged.
+$test(maybe_pipe_views) {
+   cat::maybe<int4> engaged = 6;
+   int4 result = engaged
+                 | cat::transform([](int4 x) -> int4 {
+                      return x * x;
+                   })
+                 | cat::sum();
+   cat::verify(result == 36);
+
+   cat::maybe<int4> empty;
+   int4 nothing = empty
+                  | cat::transform([](int4 x) -> int4 {
+                       return x * x;
+                    })
+                  | cat::sum();
+   cat::verify(nothing == 0);
+
+   // The `filter` view also composes. An engaged value that fails the
+   // predicate collapses to an empty pipeline.
+   cat::maybe<int4> three = 3;
+   int4 filtered = three | cat::filter(cat::is_even) | cat::sum();
+   cat::verify(filtered == 0);
+
+   cat::maybe<int4> four = 4;
+   filtered = four | cat::filter(cat::is_even) | cat::sum();
+   cat::verify(filtered == 4);
+}
+
+// Reverse iteration over a `maybe` is the same single-element walk. It just
+// has to be well-formed because the type is bidirectional / random-access.
+$test(maybe_reverse_iterable) {
+   cat::maybe<int4> engaged = 9;
+   int4 from_reverse = engaged | cat::reverse() | cat::sum();
+   cat::verify(from_reverse == 9);
+
+   cat::maybe<int4> empty;
+   from_reverse = empty | cat::reverse() | cat::sum();
+   cat::verify(from_reverse == 0);
+}
+
+// `cat::next_element` peels a single element off an iteration context and
+// hands back a `maybe`, exhausting the context for the second call.
+$test(maybe_next_element) {
+   cat::maybe<int4> engaged = 21;
+   auto ctx = cat::iterate(engaged);
+   auto first = cat::next_element(ctx);
+   cat::verify(first.has_value());
+   cat::verify(first.value() == 21);
+
+   auto second = cat::next_element(ctx);
+   cat::verify(!second.has_value());
+}
+
+// `cat::or_else(callback)` is a pipe adaptor that dispatches to
+// `maybe<T>::or_else(callback)`. An engaged source is propagated unchanged,
+// a disengaged source falls through to `callback()`.
+$test(maybe_or_else_pipe) {
+   cat::maybe<int4> engaged = 5;
+   cat::maybe<int4> empty;
+
+   // Engaged sources skip the fallback.
+   cat::maybe<int4> kept = engaged | cat::or_else([]() -> cat::maybe<int4> {
+                              return 99;
+                           });
+   cat::verify(kept.has_value());
+   cat::verify(kept.value() == 5);
+
+   // Disengaged sources fire the fallback.
+   cat::maybe<int4> recovered = empty | cat::or_else([] -> cat::maybe<int4> {
+                                   return 99;
+                                });
+   cat::verify(recovered.has_value());
+   cat::verify(recovered.value() == 99);
+
+   // The fallback can return `nullopt` to leave the source disengaged.
+   cat::maybe<int4> still_empty = empty | cat::or_else([] -> cat::maybe<int4> {
+                                     return cat::nullopt;
+                                  });
+   cat::verify(!still_empty.has_value());
+
+   // A `void`-returning fallback runs the side effect on an empty source and
+   // does not run on an engaged source.
+   int4 side_effect = 0;
+   engaged | cat::or_else([&side_effect] {
+      side_effect = 1;
+   });
+   cat::verify(side_effect == 0);
+
+   empty | cat::or_else([&side_effect] {
+      side_effect = 1;
+   });
+   cat::verify(side_effect == 1);
+}
+
+// The `or_else` adaptor composes inside a larger pipeline. The recovered
+// value continues into the next stage just like a regular `maybe`.
+$test(maybe_or_else_pipe_chain) {
+   cat::maybe<int4> empty;
+   cat::maybe<int4> recovered = empty
+                                | cat::or_else([] -> cat::maybe<int4> {
+                                     return 10;
+                                  })
+                                | cat::or_else([] -> cat::maybe<int4> {
+                                     return 999;
+                                  });
+   cat::verify(recovered.has_value());
+   // First fallback engaged the maybe at 10, so the second never fires.
+   cat::verify(recovered.value() == 10);
+}
+
+// Equality and ordering on `maybe`, mirroring `std::optional`'s comparison
+// operators (https://en.cppreference.com/w/cpp/utility/optional/operator_cmp).
+$test(maybe_equality) {
+   cat::maybe<int4> a = 5;
+   cat::maybe<int4> b = 5;
+   cat::maybe<int4> c = 6;
+   cat::maybe<int4> empty;
+   cat::maybe<int4> empty2;
+
+   // Maybe-vs-maybe.
+   cat::verify(a == b);
+   cat::verify(!(a == c));
+   cat::verify(empty == empty2);
+   cat::verify(!(a == empty));
+   cat::verify(!(empty == a));
+
+   // C++20 synthesises `!=`.
+   cat::verify(a != c);
+   cat::verify(a != empty);
+   cat::verify(!(a != b));
+
+   // Maybe-vs-value (both orientations via C++20 synthesis).
+   cat::verify(a == 5);
+   cat::verify(5 == a);
+   cat::verify(!(a == 6));
+   cat::verify(!(empty == 5));
+   cat::verify(empty != 5);
+
+   // Maybe-vs-nullopt.
+   cat::verify(empty == cat::nullopt);
+   cat::verify(cat::nullopt == empty);
+   cat::verify(!(a == cat::nullopt));
+   cat::verify(a != cat::nullopt);
+
+   // Cross-type maybe-vs-maybe still goes through the value comparison.
+   cat::maybe<int8> wide = 5;
+   cat::verify(a == wide);
+}
+
+$test(maybe_ordering) {
+   cat::maybe<int4> a = 5;
+   cat::maybe<int4> bigger = 10;
+   cat::maybe<int4> empty;
+
+   // Maybe-vs-maybe. Both engaged: compare values.
+   cat::verify((a <=> bigger) < 0);
+   cat::verify(a < bigger);
+   cat::verify(bigger > a);
+   cat::verify(a <= bigger);
+
+   // Engagement asymmetry: disengaged is less than engaged.
+   cat::verify(empty < a);
+   cat::verify(a > empty);
+   cat::verify((empty <=> a) < 0);
+
+   // Both empty: equal.
+   cat::maybe<int4> empty2;
+   cat::verify((empty <=> empty2) == 0);
+
+   // Maybe-vs-value: `nullopt` is the least element, so an empty maybe is
+   // less than any value.
+   cat::verify(a == 5);
+   cat::verify(empty < 5);
+   cat::verify(!(empty > 0));
+   cat::verify((empty <=> 0) < 0);
+   cat::verify((a <=> 5) == 0);
+   cat::verify((a <=> 4) > 0);
+
+   // Maybe-vs-nullopt: nullopt is the least element.
+   cat::verify((empty <=> cat::nullopt) == 0);
+   cat::verify((a <=> cat::nullopt) > 0);
+   cat::verify(a > cat::nullopt);
+   cat::verify(!(empty > cat::nullopt));
+}
+
+// `maybe<void>` only orders/compares on engagement state.
+$test(maybe_void_comparison) {
+   cat::maybe<void> engaged = cat::monostate;
+   cat::maybe<void> engaged2 = cat::monostate;
+   cat::maybe<void> empty;
+   cat::maybe<void> empty2;
+
+   cat::verify(engaged == engaged2);
+   cat::verify(empty == empty2);
+   cat::verify(!(engaged == empty));
+   cat::verify(engaged != empty);
+
+   cat::verify(empty == cat::nullopt);
+   cat::verify(!(engaged == cat::nullopt));
+
+   cat::verify((engaged <=> engaged2) == 0);
+   cat::verify((empty <=> empty2) == 0);
+   cat::verify(empty < engaged);
+   cat::verify(engaged > empty);
+   cat::verify((empty <=> cat::nullopt) == 0);
+   cat::verify((engaged <=> cat::nullopt) > 0);
 }
