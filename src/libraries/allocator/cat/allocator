@@ -3859,14 +3859,12 @@ class allocator_interface {
 
    // Get a pointer to an allocated non-`const` `mem`.
    template <mem T>
-      requires(Derived::has_pointer_stability)
    [[nodiscard]]
    constexpr auto
    p_get(T& memory) [[clang::lifetimebound]] -> auto;
 
    // Get a `const` pointer to an allocated `mem`.
    template <mem T>
-      requires(Derived::has_pointer_stability)
    [[nodiscard]]
    constexpr auto
    p_get(T const& memory) [[clang::lifetimebound]] -> auto;

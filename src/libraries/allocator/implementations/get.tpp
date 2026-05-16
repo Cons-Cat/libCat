@@ -75,7 +75,6 @@ allocator_interface<Derived>::get(T const* p_handle) & [[clang::lifetimebound]]
 template <typename Derived>
 // Get a pointer to an allocated non-`const` `mem`.
 template <mem T>
-   requires(Derived::has_pointer_stability)
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::p_get(T& memory) [[clang::lifetimebound]]
@@ -95,7 +94,6 @@ allocator_interface<Derived>::p_get(T& memory) [[clang::lifetimebound]]
 template <typename Derived>
 // Get a `const` pointer to an allocated `mem`.
 template <mem T>
-   requires(Derived::has_pointer_stability)
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::p_get(T const& memory) [[clang::lifetimebound]]

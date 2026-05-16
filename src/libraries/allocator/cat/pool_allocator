@@ -117,8 +117,6 @@ class pool_allocator
    }
 
  public:
-   static constexpr bool has_pointer_stability = true;
-
    // Do not allocate larger than this size of one node.
    static constexpr idx max_allocation_bytes = max_node_bytes;
 

@@ -154,8 +154,9 @@ allocator_interface<Derived>::
                   .value();
 
             maybe_memory = maybe_sized_allocation<void*>{
-               sized_allocation<void*>{p_allocation,
-                                       actual_allocation_bytes.value()}
+               sized_allocation<void*>{
+                                       p_allocation, actual_allocation_bytes.value(),
+                                       }
             };
          } else {
             maybe_memory = nullopt;
@@ -409,7 +410,9 @@ allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
          if constexpr (has_feedback) {
             if constexpr (is_multiple) {
                return return_handle(tuple{
-                  span<T>(p_allocation, allocation_count), prepared_bytes});
+                  span<T>(p_allocation, allocation_count),
+                  prepared_bytes,
+               });
             } else {
                return return_handle(
                   sized_allocation<T*>{p_allocation, prepared_bytes});

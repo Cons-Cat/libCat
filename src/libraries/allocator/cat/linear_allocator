@@ -119,7 +119,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    // In general, memory cannot be deallocated in a linear allocator, so this
    // function is no-op.
    void
-   deallocate(void const*, uword) {
+   deallocate(void const* /*unused*/, uword /*unused*/) {
    }
 
    // Produce a handle to allocated memory.
@@ -142,10 +142,6 @@ class linear_allocator : public allocator_interface<linear_allocator> {
       return memory.p_storage;
    }
 
- public:
-   static constexpr bool has_pointer_stability = true;
-
- private:
    uintptr<void> const m_p_arena_begin;
    uintptr<void> const m_p_arena_end;
    uintptr<void> m_p_arena_current = m_p_arena_begin;

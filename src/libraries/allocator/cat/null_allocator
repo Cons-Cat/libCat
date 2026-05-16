@@ -59,9 +59,6 @@ class null_allocator : public allocator_interface<null_allocator> {
    access(null_memory_handle<T> const&) const -> T const* {
       return nullptr;
    }
-
- private:
-   static constexpr bool has_pointer_stability = true;
 };
 
 [[nodiscard]]
