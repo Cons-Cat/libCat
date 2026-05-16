@@ -9,7 +9,7 @@ set(CAT_INCLUDE_SUBDIRS
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string tui format memory allocator utility file
   linux thread atomic socket x11 bit bitset stepanov math type_list tuple
-  vec ring enum iterable)
+  vec ring enum iterable dyn)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -243,6 +243,7 @@ target_sources(cat-impl PRIVATE
 set(CAT_HEADER_FILES
   ${CMAKE_SOURCE_DIR}/src/global_includes.hpp
   ${CATLIB}/algorithm/cat/algorithm
+  ${CATLIB}/dyn/cat/dyn
   ${CATLIB}/allocator/cat/allocator
   ${CATLIB}/allocator/implementations/meta_alloc.tpp
   ${CATLIB}/allocator/implementations/get.tpp

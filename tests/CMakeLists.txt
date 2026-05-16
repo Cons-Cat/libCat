@@ -38,6 +38,7 @@ if(CAT_BUILD_UNIT_TESTS)
   # Specifying each source file individually makes disabling tests convenient.
   target_sources(
     cat-tests INTERFACE
+    ${CMAKE_SOURCE_DIR}/tests/src/test_dyn.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_utility.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_atomic.cpp
