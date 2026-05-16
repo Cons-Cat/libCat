@@ -858,42 +858,6 @@ namespace cat {
 using std::forward;
 using std::move;
 
-namespace detail {
-constinit inline struct mover {
-   // Move a mutable l-value reference.
-   template <typename T>
-   [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
-     gnu::nodebug]]
-   friend constexpr auto
-   operator*(mover /*mover*/, T& x) -> decltype(auto) {
-      return move(x);
-   }
-
-   // Move an r-value reference.
-   template <is_rvalue_reference T>
-   [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
-     gnu::nodebug]]
-   friend constexpr auto
-   operator*(mover /*mover*/, T&& x) -> T&& {
-      return static_cast<cat::remove_reference<T>&&>(x);
-   }
-
-   // Prevent moving an immutable l-value reference.
-   template <typename T>
-   friend constexpr auto
-   operator*(mover, T const& x) =
-      delete ("The `$mov` macro cannot move a `const` qualifed operand. "
-              "Either copy instead, or call `cat::move()`!");
-
-   // Prevent redundant `$mov $mov value;` syntax.
-   friend constexpr void
-   operator*(mover, mover) =
-      delete ("`$mov $mov ...` syntax is meaningless. Use `$mov ...` instead!");
-} const mover;
-}  // namespace detail
-
-#define $mov ::cat::detail::mover*
-
 #define $fwd(x) ::cat::forward<decltype(x)>(x)
 
 // `rvalue` binds r-value references and excludes any other references. This is

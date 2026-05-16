@@ -118,7 +118,7 @@ $test(list) {
    list_1.push_front(2).verify();
    list_1.push_front(1).verify();
    list_1.push_front(0).verify();
-   cat::list list_4 = $mov list_1;
+   cat::list list_4 = cat::move(list_1);
    cat::verify(list_4.size() == 3);
    cat::verify(list_4.front() == 0);
    cat::verify(*(list_4.begin() + 1u) == 1);

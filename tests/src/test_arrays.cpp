@@ -141,7 +141,7 @@ $test(array_move_only_element) {
    [[maybe_unused]]
    cat::array array_move_only = {move_only()};
    [[maybe_unused]]
-   cat::array array_3 = $mov array_move_only;
+   cat::array array_3 = cat::move(array_move_only);
 }
 
 $test(array_const_element_access) {

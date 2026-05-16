@@ -899,7 +899,7 @@ $test(variant_empty_state) {
    cat::verify(!copied.has_value());
 
    // Move of an empty variant remains empty.
-   cat::variant<int, char, float4> moved = $mov v;
+   cat::variant<int, char, float4> moved = cat::move(v);
    cat::verify(!moved.has_value());
 };
 
@@ -1015,7 +1015,7 @@ $test(variant_duplicate_alternatives) {
    cat::verify(copy_of_second.get_ptr<1u>() == nullptr);
 
    // Same-variant move is index-aware too.
-   dup moved = $mov second;
+   dup moved = cat::move(second);
    cat::verify(*moved.get_ptr<1u>() == 11);
 
    // Visit observes the active slot's value.

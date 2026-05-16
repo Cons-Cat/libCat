@@ -578,7 +578,7 @@ $test(maybe_const_references) {
 $test(maybe_move_only) {
    movable test_move;
    [[maybe_unused]]
-   cat::maybe<movable> maybe_movs($mov test_move);
+   cat::maybe<movable> maybe_movs(cat::move(test_move));
 }
 
 // Non-trivial destructor must run when a wrapped value goes out of scope.
