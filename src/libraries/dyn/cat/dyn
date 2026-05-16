@@ -111,7 +111,7 @@ struct dyn_invoker;
 template <typename T, typename Method, typename Return, typename... Args>
 struct dyn_invoker<T, Method, Return(Args...)> {
    [[gnu::always_inline, gnu::nodebug]]
-   static auto
+   static constexpr auto
    call(void* p_self, Args... arguments) -> Return {
       return Method::template do_invoke<T>(*static_cast<T*>(p_self),
                                            $fwd(arguments)...);
@@ -121,7 +121,7 @@ struct dyn_invoker<T, Method, Return(Args...)> {
 template <typename T, typename Method, typename Return, typename... Args>
 struct dyn_invoker<T, Method, Return(Args...) const> {
    [[gnu::always_inline, gnu::nodebug]]
-   static auto
+   static constexpr auto
    call(void const* p_self, Args... arguments) -> Return {
       return Method::template do_invoke<T>(*static_cast<T const*>(p_self),
                                            $fwd(arguments)...);
@@ -323,7 +323,18 @@ narrow_vtable(vtable<Superset...> const* p_superset)
    }
 }
 
+template <typename T>
+struct dyn_cast_impl;
+template <typename Method>
+struct dyn_invoke_impl;
+
 }  // namespace detail
+
+// Pull the dispatcher templates into `cat::` so the in-class `friend struct`
+// declarations below can name them unqualified.
+// TODO: Find a way to hide these better.
+using detail::dyn_cast_impl;
+using detail::dyn_invoke_impl;
 
 template <typename Method>
 concept is_method = is_class<Method> && is_default_constructible<Method>
@@ -337,8 +348,7 @@ struct destructor {
    using signature = void();
 
    template <typename T>
-
-   static void
+   static constexpr void
    do_invoke(T& self) {
       self.~T();
    }
@@ -351,7 +361,7 @@ struct move_constructor {
 
    template <typename T>
       requires(is_move_constructible<T>)
-   static void
+   static constexpr void
    do_invoke(T& self, void* p_dst) {
       new (p_dst) T(cat::move(self));
       self.~T();
@@ -366,16 +376,11 @@ struct copy_constructor {
 
    template <typename T>
       requires(is_copy_constructible<T>)
-   static void
+   static constexpr void
    do_invoke(T const& self, void* p_dst) {
       new (p_dst) T(self);
    }
 };
-
-template <typename T>
-struct dyn_cast_dispatcher;
-template <typename Method>
-struct dispatch_fn;
 
 // `dyn_ref<Methods...>` is a non-owning, non-null view of any object that
 // satisfies `Methods...`. Trivially copyable. Same-type assignment is
@@ -398,17 +403,17 @@ class [[gsl::Pointer]] dyn_ref {
    template <typename...>
    friend class dyn_inplace;
    template <typename T>
-   friend struct dyn_cast_dispatcher;
+   friend struct dyn_cast_impl;
    template <typename Method>
-   friend struct dispatch_fn;
+   friend struct dyn_invoke_impl;
 
    vtable<Methods...> const* m_p_vtable;
-   dyn_type_id_ptr m_type_descriptor;
+   dyn_type_id_ptr m_p_type_id;
    void* m_p_value;
 
    constexpr dyn_ref(vtable<Methods...> const* p_vt, dyn_type_id_ptr p_td,
                      void* p_v)
-       : m_p_vtable(p_vt), m_type_descriptor(p_td), m_p_value(p_v) {
+       : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
 
  public:
@@ -433,7 +438,7 @@ class [[gsl::Pointer]] dyn_ref {
    constexpr dyn_ref(T& value [[clang::lifetimebound]]
                      )
        : m_p_vtable(p_vtable_for<T, Methods...>),
-         m_type_descriptor(p_dyn_type_id_for<T>),
+         m_p_type_id(p_dyn_type_id_for<T>),
          m_p_value(__builtin_addressof(value)) {
    }
 
@@ -446,14 +451,14 @@ class [[gsl::Pointer]] dyn_ref {
                                          type_list<Superset...>>)
    constexpr dyn_ref(dyn_ref<Superset...> other)
        : m_p_vtable(detail::narrow_vtable<Methods...>(other.m_p_vtable)),
-         m_type_descriptor(other.m_type_descriptor),
+         m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
    }
 
    [[nodiscard]]
    constexpr auto
-   type_descriptor() const -> dyn_type_id_ptr {
-      return m_type_descriptor;
+   p_type_id() const -> dyn_type_id_ptr {
+      return m_p_type_id;
    }
 
    [[nodiscard]]
@@ -472,17 +477,17 @@ class [[gsl::Pointer]] const_dyn_ref {
    template <typename...>
    friend class dyn_inplace;
    template <typename T>
-   friend struct dyn_cast_dispatcher;
+   friend struct dyn_cast_impl;
    template <typename Method>
-   friend struct dispatch_fn;
+   friend struct dyn_invoke_impl;
 
    vtable<Methods...> const* m_p_vtable;
-   dyn_type_id_ptr m_type_descriptor;
+   dyn_type_id_ptr m_p_type_id;
    void const* m_p_value;
 
    constexpr const_dyn_ref(vtable<Methods...> const* p_vt, dyn_type_id_ptr p_td,
                            void const* p_v)
-       : m_p_vtable(p_vt), m_type_descriptor(p_td), m_p_value(p_v) {
+       : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
 
  public:
@@ -506,13 +511,13 @@ class [[gsl::Pointer]] const_dyn_ref {
    constexpr const_dyn_ref(T const& value [[clang::lifetimebound]]
                            )
        : m_p_vtable(p_vtable_for<T, Methods...>),
-         m_type_descriptor(p_dyn_type_id_for<T>),
+         m_p_type_id(p_dyn_type_id_for<T>),
          m_p_value(__builtin_addressof(value)) {
    }
 
    constexpr const_dyn_ref(dyn_ref<Methods...> other)
        : m_p_vtable(other.m_p_vtable),
-         m_type_descriptor(other.m_type_descriptor),
+         m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
    }
 
@@ -526,7 +531,7 @@ class [[gsl::Pointer]] const_dyn_ref {
                                          type_list<Superset...>>)
    constexpr const_dyn_ref(const_dyn_ref<Superset...> other)
        : m_p_vtable(detail::narrow_vtable<Methods...>(other.m_p_vtable)),
-         m_type_descriptor(other.m_type_descriptor),
+         m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
    }
 
@@ -536,14 +541,14 @@ class [[gsl::Pointer]] const_dyn_ref {
                                          type_list<Superset...>>)
    constexpr const_dyn_ref(dyn_ref<Superset...> other)
        : m_p_vtable(detail::narrow_vtable<Methods...>(other.m_p_vtable)),
-         m_type_descriptor(other.m_type_descriptor),
+         m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
    }
 
    [[nodiscard]]
    constexpr auto
-   type_descriptor() const -> dyn_type_id_ptr {
-      return m_type_descriptor;
+   p_type_id() const -> dyn_type_id_ptr {
+      return m_p_type_id;
    }
 
    [[nodiscard]]
@@ -567,17 +572,17 @@ class [[gsl::Pointer]] dyn_ptr {
    template <typename...>
    friend class dyn_inplace;
    template <typename T>
-   friend struct dyn_cast_dispatcher;
+   friend struct dyn_cast_impl;
    template <typename Method>
-   friend struct dispatch_fn;
+   friend struct dyn_invoke_impl;
 
    vtable<Methods...> const* m_p_vtable = nullptr;
-   dyn_type_id_ptr m_type_descriptor = p_dyn_type_id_for<void>;
+   dyn_type_id_ptr m_p_type_id = p_dyn_type_id_for<void>;
    void* m_p_value = nullptr;
 
    constexpr dyn_ptr(vtable<Methods...> const* p_vt, dyn_type_id_ptr p_td,
                      void* p_v)
-       : m_p_vtable(p_vt), m_type_descriptor(p_td), m_p_value(p_v) {
+       : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
 
  public:
@@ -595,7 +600,7 @@ class [[gsl::Pointer]] dyn_ptr {
    constexpr auto
    operator=(decltype(nullptr)) -> dyn_ptr& {
       m_p_vtable = nullptr;
-      m_type_descriptor = p_dyn_type_id_for<void>;
+      m_p_type_id = p_dyn_type_id_for<void>;
       m_p_value = nullptr;
       return *this;
    }
@@ -606,8 +611,8 @@ class [[gsl::Pointer]] dyn_ptr {
    constexpr dyn_ptr(T* p_value [[clang::lifetimebound]]
                      )
        : m_p_vtable(p_value != nullptr ? p_vtable_for<T, Methods...> : nullptr),
-         m_type_descriptor(p_value != nullptr ? p_dyn_type_id_for<T>
-                                              : p_dyn_type_id_for<void>),
+         m_p_type_id(p_value != nullptr ? p_dyn_type_id_for<T>
+                                        : p_dyn_type_id_for<void>),
          m_p_value(p_value) {
    }
 
@@ -628,7 +633,7 @@ class [[gsl::Pointer]] dyn_ptr {
        : m_p_vtable(other.has_value()
                        ? detail::narrow_vtable<Methods...>(other.m_p_vtable)
                        : nullptr),
-         m_type_descriptor(other.m_type_descriptor),
+         m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
    }
 
@@ -653,15 +658,15 @@ class [[gsl::Pointer]] dyn_ptr {
    // Returns `p_dyn_type_id_for<void>` if `*this == nullptr`.
    [[nodiscard]]
    constexpr auto
-   type_descriptor() const -> dyn_type_id_ptr {
-      return m_type_descriptor;
+   type_id_ptr() const -> dyn_type_id_ptr {
+      return m_p_type_id;
    }
 
    [[nodiscard]]
    constexpr auto
    operator*() const -> dyn_ref<Methods...> {
       cat::assert(this->has_value());
-      return dyn_ref<Methods...>{m_p_vtable, m_type_descriptor, m_p_value};
+      return dyn_ref<Methods...>{m_p_vtable, m_p_type_id, m_p_value};
    }
 };
 
@@ -676,9 +681,9 @@ class [[gsl::Pointer]] const_dyn_ptr {
    template <typename...>
    friend class dyn_inplace;
    template <typename T>
-   friend struct dyn_cast_dispatcher;
+   friend struct dyn_cast_impl;
    template <typename Method>
-   friend struct dispatch_fn;
+   friend struct dyn_invoke_impl;
 
    vtable<Methods...> const* m_p_vtable = nullptr;
    dyn_type_id_ptr m_p_type_id = p_dyn_type_id_for<void>;
@@ -729,7 +734,7 @@ class [[gsl::Pointer]] const_dyn_ptr {
 
    constexpr const_dyn_ptr(dyn_ptr<Methods...> p_other)
        : m_p_vtable(p_other.m_p_vtable),
-         m_p_type_id(p_other.m_type_descriptor),
+         m_p_type_id(p_other.m_p_type_id),
          m_p_value(p_other.m_p_value) {
    }
 
@@ -757,7 +762,7 @@ class [[gsl::Pointer]] const_dyn_ptr {
        : m_p_vtable(other.has_value()
                        ? detail::narrow_vtable<Methods...>(other.m_p_vtable)
                        : nullptr),
-         m_p_type_id(other.m_type_descriptor),
+         m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
    }
 
@@ -800,13 +805,13 @@ class [[gsl::Pointer]] const_dyn_ptr {
 template <typename... Methods>
 constexpr auto
 dyn_ref<Methods...>::operator&() const -> dyn_ptr<Methods...> {
-   return dyn_ptr<Methods...>{m_p_vtable, m_type_descriptor, m_p_value};
+   return dyn_ptr<Methods...>{m_p_vtable, m_p_type_id, m_p_value};
 }
 
 template <typename... Methods>
 constexpr auto
 const_dyn_ref<Methods...>::operator&() const -> const_dyn_ptr<Methods...> {
-   return const_dyn_ptr<Methods...>{m_p_vtable, m_type_descriptor, m_p_value};
+   return const_dyn_ptr<Methods...>{m_p_vtable, m_p_type_id, m_p_value};
 }
 
 // `basic_dyn<Allocator, inline_storage_size, Methods...>` is the owning
@@ -824,9 +829,9 @@ basic_dyn {
    template <typename...>
    friend class const_dyn_ptr;
    template <typename T>
-   friend struct dyn_cast_dispatcher;
+   friend struct dyn_cast_impl;
    template <typename Method>
-   friend struct dispatch_fn;
+   friend struct dyn_invoke_impl;
 
  public:
    using methods = type_list<Methods...>;
@@ -934,7 +939,7 @@ basic_dyn {
          m_handle = cat::move(allocation).value();
          m_p_value = static_cast<void*>(m_allocator.get(m_handle).data());
          other.m_p_vtable->template fun<move_constructor>()(other.m_p_value,
-                                                           m_p_value);
+                                                            m_p_value);
          m_p_vtable = other.m_p_vtable;
          m_type_descriptor = other.m_type_descriptor;
          other.m_p_vtable = nullptr;
@@ -1004,7 +1009,7 @@ basic_dyn {
       m_handle = cat::move(allocation).value();
       m_p_value = static_cast<void*>(m_allocator.get(m_handle).data());
       other.m_p_vtable->template fun<copy_constructor>()(other.m_p_value,
-                                                        m_p_value);
+                                                         m_p_value);
       m_p_vtable = other.m_p_vtable;
       m_type_descriptor = other.m_type_descriptor;
    }
@@ -1133,9 +1138,9 @@ class [[gsl::Owner]] dyn_inplace {
    template <typename...>
    friend class const_dyn_ptr;
    template <typename T>
-   friend struct dyn_cast_dispatcher;
+   friend struct dyn_cast_impl;
    template <typename Method>
-   friend struct dispatch_fn;
+   friend struct dyn_invoke_impl;
 
  public:
    using methods = type_list<Methods...>;
@@ -1163,15 +1168,44 @@ class [[gsl::Owner]] dyn_inplace {
    static constexpr bool has_copyable =
       detail::contains_method<copy_constructor, Methods...>;
 
-   alignas(storage_alignment.raw) unsigned char m_storage[inline_size];
+   // This `union` exists to split runtime and `constexpr` code. In runtime
+   // code, `dyn_inplace` *only* accesses `inline_bytes`. That holds the class
+   // members that we type-erase.
+   //
+   // In a `constexpr`-context, it cannot `reinterpret_cast` that, so instead it
+   // allocates the data with `constexpr operator new` and stores the pointer
+   // in place of class member storage. Even when the runtime storage would be
+   // smaller than a pointer, the necessary 16-byte alignment means this has
+   // union has no overhead.
+   union storage {
+      alignas(storage_alignment.raw) unsigned char inline_bytes[inline_size];
+      void (*disposer)(void*);
+
+      constexpr storage() : disposer(nullptr) {
+      }
+   } m_storage;
+
    vtable<Methods...> m_vtable{};
    dyn_type_id_ptr m_type_descriptor = p_dyn_type_id_for<void>;
    void* m_p_value = nullptr;
 
-   void
+   template <typename T>
+   static constexpr void
+   consteval_dispose(void* p_storage) {
+      delete static_cast<T*>(p_storage);
+   }
+
+   constexpr void
    destroy_held() {
       if (m_p_value != nullptr) {
-         m_vtable.template fun<destructor>()(m_p_value);
+         if consteval {
+            // Run the held `T`'s destructor and free the typed heap
+            // allocation made by `emplace`'s consteval branch.
+            m_storage.disposer(m_p_value);
+            m_storage.disposer = nullptr;
+         } else {
+            m_vtable.template fun<destructor>()(m_p_value);
+         }
          m_p_value = nullptr;
          m_type_descriptor = p_dyn_type_id_for<void>;
       }
@@ -1179,13 +1213,21 @@ class [[gsl::Owner]] dyn_inplace {
 
    // Steal `other`'s held value into `*this`. Caller guarantees `*this` is
    // empty and `other.has_value()` is true.
-   void
+   constexpr void
    adopt_from(dyn_inplace& other) {
-      other.m_vtable.template fun<move_constructor>()(other.m_p_value,
-                                                     m_storage);
+      if consteval {
+         // Heap allocations made by `emplace`'s consteval branch are
+         // pointer-stable, so adopting is just a pointer transfer.
+         m_p_value = other.m_p_value;
+         m_storage.disposer = other.m_storage.disposer;
+         other.m_storage.disposer = nullptr;
+      } else {
+         other.m_vtable.template fun<move_constructor>()(
+            other.m_p_value, m_storage.inline_bytes);
+         m_p_value = m_storage.inline_bytes;
+      }
       m_vtable = other.m_vtable;
       m_type_descriptor = other.m_type_descriptor;
-      m_p_value = m_storage;
       other.m_p_value = nullptr;
       other.m_type_descriptor = p_dyn_type_id_for<void>;
    }
@@ -1219,11 +1261,11 @@ class [[gsl::Owner]] dyn_inplace {
       requires(has_copyable)
    {
       if (other.m_p_value != nullptr) {
-         other.m_vtable.template fun<copy_constructor>()(other.m_p_value,
-                                                        m_storage);
+         other.m_vtable.template fun<copy_constructor>()(
+            other.m_p_value, m_storage.inline_bytes);
          m_vtable = other.m_vtable;
          m_type_descriptor = other.m_type_descriptor;
-         m_p_value = m_storage;
+         m_p_value = m_storage.inline_bytes;
       }
    }
 
@@ -1270,14 +1312,25 @@ class [[gsl::Owner]] dyn_inplace {
    template <typename T, typename... Args>
       requires(detail::methods_support_type<T, Methods...>
                && is_constructible<T, Args...>)
-   auto
+   constexpr auto
    emplace(Args&&... arguments) -> T& {
       static_assert(
          fits_inline<T>,
          "`T`'s size or alignment exceeds this `dyn_inplace`'s inline "
          "storage!");
       destroy_held();
-      m_p_value = ::new (static_cast<void*>(m_storage)) T($fwd(arguments)...);
+      if consteval {
+         // Inline `unsigned char` storage is not transparently replaceable
+         // with `T`, so placement-new into `inline_bytes` is ill-formed under
+         // P2747R2. Allocate `T` directly and round-trip through `void*` via
+         // P2738R1; the union's `disposer` slot remembers the type so the
+         // matching `delete` can run in `destroy_held`.
+         m_p_value = ::new T($fwd(arguments)...);
+         m_storage.disposer = &consteval_dispose<T>;
+      } else {
+         m_p_value = ::new (static_cast<void*>(m_storage.inline_bytes))
+            T($fwd(arguments)...);
+      }
       m_vtable = vtable_for<T, Methods...>;
       m_type_descriptor = p_dyn_type_id_for<T>;
       return *static_cast<T*>(m_p_value);
@@ -1326,7 +1379,7 @@ constexpr dyn_ptr<Methods...>::dyn_ptr(
    basic_dyn<Allocator, inline_size, Methods...>* p_dyn) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = p_dyn->m_p_vtable;
-      m_type_descriptor = p_dyn->m_type_descriptor;
+      m_p_type_id = p_dyn->m_type_descriptor;
       m_p_value = p_dyn->m_p_value;
    }
 }
@@ -1346,7 +1399,7 @@ template <typename... Methods>
 constexpr dyn_ptr<Methods...>::dyn_ptr(dyn_inplace<Methods...>* p_dyn) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = &p_dyn->m_vtable;
-      m_type_descriptor = p_dyn->m_type_descriptor;
+      m_p_type_id = p_dyn->m_type_descriptor;
       m_p_value = p_dyn->m_p_value;
    }
 }
@@ -1361,13 +1414,15 @@ constexpr const_dyn_ptr<Methods...>::const_dyn_ptr(
    }
 }
 
+namespace detail {
+
 // `cat::dyn_invoke<Method>(holder, args...)` dispatches `Method` through any
 // polymorphic holder. Each overload is `always_inline` so the dispatch
 // inlines and exposes the constant `vtable_for<T, Methods...>` address to
 // the caller, which is what enables devirtualization through `dyn_ref` and
 // `dyn_ptr`.
 template <typename Method>
-struct dispatch_fn {
+struct dyn_invoke_impl {
    template <is_allocator Allocator, idx inline_size, typename... Methods,
              typename... Args>
       requires(detail::contains_method<Method, Methods...>)
@@ -1375,9 +1430,11 @@ struct dispatch_fn {
    constexpr auto
    operator()(basic_dyn<Allocator, inline_size, Methods...>& dyn,
               Args&&... arguments) const {
-      cat::assert(dyn.has_value());
+      if !consteval {
+         cat::assert(dyn.has_value());
+      }
       return dyn.m_p_vtable->template fun<Method>()(dyn.m_p_value,
-                                                   $fwd(arguments)...);
+                                                    $fwd(arguments)...);
    }
 
    template <is_allocator Allocator, idx inline_size, typename... Methods,
@@ -1388,9 +1445,11 @@ struct dispatch_fn {
    constexpr auto
    operator()(basic_dyn<Allocator, inline_size, Methods...> const& dyn,
               Args&&... arguments) const {
-      cat::assert(dyn.has_value());
+      if !consteval {
+         cat::assert(dyn.has_value());
+      }
       return dyn.m_p_vtable->template fun<Method>()(dyn.m_p_value,
-                                                   $fwd(arguments)...);
+                                                    $fwd(arguments)...);
    }
 
    template <typename... Methods, typename... Args>
@@ -1398,9 +1457,11 @@ struct dispatch_fn {
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator()(dyn_inplace<Methods...>& dyn, Args&&... arguments) const {
-      cat::assert(dyn.has_value());
+      if !consteval {
+         cat::assert(dyn.has_value());
+      }
       return dyn.m_vtable.template fun<Method>()(dyn.m_p_value,
-                                                $fwd(arguments)...);
+                                                 $fwd(arguments)...);
    }
 
    template <typename... Methods, typename... Args>
@@ -1409,9 +1470,11 @@ struct dispatch_fn {
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator()(dyn_inplace<Methods...> const& dyn, Args&&... arguments) const {
-      cat::assert(dyn.has_value());
+      if !consteval {
+         cat::assert(dyn.has_value());
+      }
       return dyn.m_vtable.template fun<Method>()(dyn.m_p_value,
-                                                $fwd(arguments)...);
+                                                 $fwd(arguments)...);
    }
 
    template <typename... Methods, typename... Args>
@@ -1420,7 +1483,7 @@ struct dispatch_fn {
    constexpr auto
    operator()(dyn_ref<Methods...> ref, Args&&... arguments) const {
       return ref.m_p_vtable->template fun<Method>()(ref.m_p_value,
-                                                   $fwd(arguments)...);
+                                                    $fwd(arguments)...);
    }
 
    template <typename... Methods, typename... Args>
@@ -1430,17 +1493,14 @@ struct dispatch_fn {
    constexpr auto
    operator()(const_dyn_ref<Methods...> ref, Args&&... arguments) const {
       return ref.m_p_vtable->template fun<Method>()(ref.m_p_value,
-                                                   $fwd(arguments)...);
+                                                    $fwd(arguments)...);
    }
 };
-
-template <typename Method>
-inline constexpr dispatch_fn<Method> dyn_invoke;
 
 // `cat::dyn_cast<T>(holder)` returns a typed pointer to the held value when
 // its dynamic type matches `T`, otherwise `nullptr`.
 template <typename T>
-struct dyn_cast_dispatcher {
+struct dyn_cast_impl {
    static_assert(!is_reference<T>,
                  "`cat::dyn_cast` returns a pointer! Strip the reference.");
 
@@ -1487,8 +1547,7 @@ struct dyn_cast_dispatcher {
    template <typename... Methods>
    constexpr auto
    operator()(dyn_ptr<Methods...> p_ptr [[clang::lifetimebound]]) const -> T* {
-      return (p_ptr.has_value()
-              && p_ptr.type_descriptor() == p_dyn_type_id_for<T>)
+      return (p_ptr.has_value() && p_ptr.type_id_ptr() == p_dyn_type_id_for<T>)
                 ? static_cast<T*>(p_ptr.m_p_value)
                 : nullptr;
    }
@@ -1506,7 +1565,7 @@ struct dyn_cast_dispatcher {
    template <typename... Methods>
    constexpr auto
    operator()(dyn_ref<Methods...> ref [[clang::lifetimebound]]) const -> T* {
-      return ref.type_descriptor() == p_dyn_type_id_for<T>
+      return ref.p_type_id() == p_dyn_type_id_for<T>
                 ? static_cast<T*>(ref.m_p_value)
                 : nullptr;
    }
@@ -1515,14 +1574,19 @@ struct dyn_cast_dispatcher {
    constexpr auto
    operator()(const_dyn_ref<Methods...> ref [[clang::lifetimebound]]) const
       -> T const* {
-      return ref.type_descriptor() == p_dyn_type_id_for<T>
+      return ref.p_type_id() == p_dyn_type_id_for<T>
                 ? static_cast<T const*>(ref.m_p_value)
                 : nullptr;
    }
 };
 
+}  // namespace detail
+
+template <typename Method>
+inline constexpr detail::dyn_invoke_impl<Method> dyn_invoke;
+
 template <typename T>
-inline constexpr dyn_cast_dispatcher<T> dyn_cast;
+inline constexpr detail::dyn_cast_impl<T> dyn_cast;
 
 // Convenience alias of `basic_dyn` defaulting `inline_storage_size` to
 // `64u`. The full form `basic_dyn<Allocator, inline_size,

@@ -34,16 +34,22 @@ struct kitty {
    }
 
    constexpr kitty(kitty const& other) : treats(other.treats) {
-      ++copy_count;
+      if !consteval {
+         ++copy_count;
+      }
    }
 
    constexpr kitty(kitty&& other) noexcept : treats(other.treats) {
       other.treats = 0;
-      ++move_count;
+      if !consteval {
+         ++move_count;
+      }
    }
 
-   ~kitty() {
-      ++destruct_count;
+   constexpr ~kitty() {
+      if !consteval {
+         ++destruct_count;
+      }
    }
 
    [[nodiscard]]
@@ -58,7 +64,7 @@ struct kitty {
       return treats;
    }
 
-   void
+   constexpr void
    feed(cat::int4 amount) {
       treats = treats + amount;
    }
@@ -80,7 +86,9 @@ struct puppy {
       for (cat::idx i = 0u; i < 16u; ++i) {
          toys[i] = other.toys[i];
       }
-      ++copy_count;
+      if !consteval {
+         ++copy_count;
+      }
    }
 
    constexpr puppy(puppy&& other) noexcept : toys{}, treats(other.treats) {
@@ -89,11 +97,15 @@ struct puppy {
          other.toys[i] = 0;
       }
       other.treats = 0;
-      ++move_count;
+      if !consteval {
+         ++move_count;
+      }
    }
 
-   ~puppy() {
-      ++destruct_count;
+   constexpr ~puppy() {
+      if !consteval {
+         ++destruct_count;
+      }
    }
 
    [[nodiscard]]
@@ -108,7 +120,7 @@ struct puppy {
       return treats;
    }
 
-   void
+   constexpr void
    feed(cat::int4 amount) {
       treats = treats + amount;
    }
@@ -120,7 +132,7 @@ struct say {
 
    template <typename T>
       requires(requires(T const& t) { t.say(); })
-   static auto
+   static constexpr auto
    do_invoke(T const& self) -> voice {
       return self.say();
    }
@@ -133,7 +145,7 @@ struct treat_count {
 
    template <typename T>
       requires(requires(T const& t) { t.treat_count(); })
-   static auto
+   static constexpr auto
    do_invoke(T const& self) -> cat::int4 {
       return self.treat_count();
    }
@@ -145,7 +157,7 @@ struct feed {
 
    template <typename T>
       requires(requires(T& t, cat::int4 v) { t.feed(v); })
-   static void
+   static constexpr void
    do_invoke(T& self, cat::int4 amount) {
       self.feed(amount);
    }
@@ -441,6 +453,19 @@ $test(dyn_emplace) {
 
    cat::dyn_invoke<feed>(dyn, 7_i4);
    cat::verify(cat::dyn_invoke<treat_count>(dyn) == 57);
+
+   // The same flow at compile time. This additionally exercises the
+   // `if consteval` fallback in `dyn_inplace`'s `emplace`/`destroy_held`:
+   // at constant evaluation the held `T` lives on the heap (P2747R2 forbids
+   // placement-new into the inline `unsigned char` buffer for non-char `T`)
+   // and a typed disposer in the storage union runs `delete` from the
+   // destructor.
+   static_assert([] consteval {
+      dyn_treat_count_feed dyn{kitty{0}};
+      dyn.template emplace<kitty>(50_i4);
+      cat::dyn_invoke<feed>(dyn, 7_i4);
+      return cat::dyn_invoke<treat_count>(dyn);
+   }() == 57);
 }
 
 // `reset` empties the dyn and runs the held value's destructor.
@@ -460,18 +485,33 @@ $test(dyn_reset) {
 $test(dyn_ref_basic) {
    kitty v{55};
    cat::dyn_ref<treat_count, feed> ref{v};
-   cat::verify(ref.type_descriptor() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(ref.p_type_id() == cat::p_dyn_type_id_for<kitty>);
    cat::verify(cat::dyn_invoke<treat_count>(ref) == 55);
    cat::dyn_invoke<feed>(ref, 3_i4);
    cat::verify(cat::dyn_invoke<treat_count>(ref) == 58);
    cat::verify(v.treats == 58);
+
+   // The same dispatch path at compile time. If the trampoline through
+   // `vtable_for<T, Methods...>` did not constant-fold to a direct call on
+   // `Method::do_invoke<T>`, this `static_assert` would not compile.
+   //
+   // `dyn_ref` subset-narrowing (`dyn_ref<wide...>` to `dyn_ref<narrow...>`)
+   // is intentionally not exercised: `detail::narrow_vtable` reads the
+   // narrower vtable out of the wider one via `reinterpret_cast`, which is
+   // not a constant expression even in C++26.
+   static_assert([] consteval {
+      kitty v{55};
+      cat::dyn_ref<treat_count, feed> ref{v};
+      cat::dyn_invoke<feed>(ref, 3_i4);
+      return cat::dyn_invoke<treat_count>(ref);
+   }() == 58);
 }
 
 // `const_dyn_ref` only allows const Methods.
 $test(dyn_const_ref_basic) {
    kitty const v{99};
    cat::const_dyn_ref<treat_count> cref{v};
-   cat::verify(cref.type_descriptor() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(cref.p_type_id() == cat::p_dyn_type_id_for<kitty>);
    cat::verify(cat::dyn_invoke<treat_count>(cref) == 99);
 
    // Conversion from non-const dyn_ref to const_dyn_ref.
@@ -486,13 +526,13 @@ $test(dyn_ptr_basic) {
    cat::dyn_ptr<treat_count, feed> empty;
    cat::verify(!empty.has_value());
    cat::verify(empty == nullptr);
-   cat::verify(empty.type_descriptor() == cat::p_dyn_type_id_for<void>);
+   cat::verify(empty.type_id_ptr() == cat::p_dyn_type_id_for<void>);
 
    kitty v{12};
    cat::dyn_ptr<treat_count, feed> ptr{&v};
    cat::verify(ptr.has_value());
    cat::verify(ptr != nullptr);
-   cat::verify(ptr.type_descriptor() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(ptr.type_id_ptr() == cat::p_dyn_type_id_for<kitty>);
 
    auto ref = *ptr;
    cat::verify(cat::dyn_invoke<treat_count>(ref) == 12);
@@ -585,10 +625,10 @@ $test(dyn_type_descriptors) {
    cat::dyn_ref<treat_count> rb{b};
    cat::dyn_ref<treat_count> rc{c};
 
-   cat::verify(ra.type_descriptor() == rb.type_descriptor());
-   cat::verify(ra.type_descriptor() != rc.type_descriptor());
-   cat::verify(ra.type_descriptor() == cat::p_dyn_type_id_for<kitty>);
-   cat::verify(rc.type_descriptor() == cat::p_dyn_type_id_for<puppy>);
+   cat::verify(ra.p_type_id() == rb.p_type_id());
+   cat::verify(ra.p_type_id() != rc.p_type_id());
+   cat::verify(ra.p_type_id() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(rc.p_type_id() == cat::p_dyn_type_id_for<puppy>);
 }
 
 // `cat::dispatch<Method>` works with const-qualified Methods on const holders.
@@ -753,6 +793,15 @@ $test(dyn_inplace_inline_size) {
       cat::dyn_inplace<cat::destructor, cat::move_constructor,
                        cat::copy_constructor, say, treat_count, feed>;
    static_assert(wide_t::inline_size > dyn_say::inline_size);
+
+   // The consteval-only disposer pointer lives in a union with the inline
+   // storage, so it costs zero runtime bytes. Total layout is just:
+   // `inline_size` (storage) + `sizeof(vtable)` + `dyn_type_id_ptr` +
+   // `void*`.
+   static_assert(sizeof(dyn_say)
+                 == dyn_say::inline_size
+                       + sizeof(cat::vtable<cat::destructor, say>)
+                       + sizeof(cat::dyn_type_id_ptr) + sizeof(void*));
 }
 
 // `dyn_ref<Methods...>` narrows to `dyn_ref<Subset...>` when `Subset` is a
@@ -839,7 +888,7 @@ $test(dyn_narrowing_preserves_descriptor) {
    kitty cat{77};
    cat::dyn_ref<say, treat_count, feed> wide{cat};
    cat::dyn_ref<treat_count> narrow = wide;
-   cat::verify(narrow.type_descriptor() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(narrow.p_type_id() == cat::p_dyn_type_id_for<kitty>);
 
    cat::dyn_ptr<say, treat_count, feed> wide_p{&cat};
    cat::dyn_ptr<treat_count> narrow_p = wide_p;
