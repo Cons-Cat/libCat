@@ -11,10 +11,11 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
    // Friend factory functions.
    friend constexpr auto
-      make_linear_allocator(uintptr<void>, idx) -> linear_allocator;
+   make_linear_allocator(uintptr<void> p_address, idx arena_bytes)
+      -> linear_allocator;
 
    friend constexpr auto
-   make_linear_allocator(span<byte>&) -> linear_allocator;
+   make_linear_allocator(span<byte>& span) -> linear_allocator;
 
  private:
    // Initialize a `linear_allocator`. This should only be called from
@@ -123,7 +124,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
    // Produce a handle to allocated memory.
    template <typename T>
-   auto
+   constexpr auto
    make_handle(T* p_handle_storage) -> linear_memory_handle<T> {
       return linear_memory_handle<T>{{}, p_handle_storage};
    }

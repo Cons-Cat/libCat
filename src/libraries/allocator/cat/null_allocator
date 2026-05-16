@@ -42,7 +42,7 @@ class null_allocator : public allocator_interface<null_allocator> {
 
    // Produce a handle to allocated memory.
    template <typename T>
-   auto
+   constexpr auto
    make_handle(T* p_handle_storage) -> null_memory_handle<T> {
       return null_memory_handle<T>{{}, p_handle_storage};
    }

@@ -90,7 +90,7 @@ class page_allocator : public allocator_interface<page_allocator> {
 
    // Produce a handle to allocated memory.
    template <typename T>
-   auto
+   constexpr auto
    make_handle(T* p_handle_storage) -> page_memory_handle<T> {
       return page_memory_handle<T>{{}, p_handle_storage};
    }

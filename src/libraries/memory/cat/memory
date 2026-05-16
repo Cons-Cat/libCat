@@ -82,7 +82,8 @@ set_memory_scalar_explicit(T* p_source, T value, idx size) {
 
 constexpr void
 zero_memory_scalar(void* p_source, idx bytes) {
-   set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
+   set_memory_scalar(static_cast<unsigned char*>(p_source), (unsigned char)0,
+                     bytes);
 }
 
 // This function cannot be constant-folded out by a compiler. The
@@ -90,7 +91,8 @@ zero_memory_scalar(void* p_source, idx bytes) {
 [[gnu::noinline]]
 constexpr void
 zero_memory_scalar_explicit(void* p_source, idx bytes) {
-   set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
+   set_memory_scalar(static_cast<unsigned char*>(p_source), (unsigned char)0,
+                     bytes);
 }
 
 namespace detail {
@@ -121,18 +123,22 @@ set_memory_detail(void* p_source, T value, idx const size) {
          p_current += sizeof(T);
       }
    } else {
-      // Fill until `p_current` has proper SIMD alignment.
-      while (!is_aligned(p_current, cat::simd_abi::native<T>::alignment)) {
+      // Fill until `p_current` has proper SIMD alignment. Bounded by
+      // `remaining_bytes` so a small `size` cannot overshoot when the
+      // starting pointer is misaligned by more bytes than `size`.
+      while (remaining_bytes > 0
+             && !is_aligned(p_current, cat::simd_abi::native<T>::alignment)) {
          *p_current = value;
          p_current += sizeof(T);
          remaining_bytes -= sizeof(T);
       }
 
+      // TODO: Optimize this with a tiled loop and proper SIMD widths.
+
       // Non-type template parameters are not allowed in a lambda's template
       // parameter list, so the lanes are passed through a `constant`.
-      auto vectorized_fill = [&]<typename lanes_constant>(lanes_constant) {
+      auto vectorized_fill = [&]<idx lanes> {
          // TODO: Consider optimizing this by tiling the loop.
-         constexpr idx lanes = lanes_constant::value;
          using vector_type = fixed_size_simd<T, lanes>;
          while (remaining_bytes >= sizeof(vector_type)) {
             auto* p_vector = __builtin_bit_cast(vector_type*, p_current);
@@ -144,13 +150,13 @@ set_memory_detail(void* p_source, T value, idx const size) {
 
       // Fill out 32-byte portion.
       if constexpr (cat::simd_abi::native<T>::size >= 32u) {
-         vectorized_fill(constant<32_idx>{});
+         vectorized_fill.template operator()<32u>();
       }
 
       // TODO: Support `fill()` on 16-byte x86-64 SIMD.
       // // Fill out 16-byte portion.
       // if constexpr (cat::simd_abi::native<T>::size >= 16) {
-      //     vectorized_fill(constant<16_idx>{});
+      //     vectorized_fill.template operator()<16u>();
       // }
 
       // Fill out remaining portion one byte at a time.

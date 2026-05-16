@@ -13,12 +13,13 @@ class pool_allocator
 
    // Friend factory functions.
    template <idx in_max_node_bytes>
-   friend constexpr auto make_pool_allocator(uintptr<void>, idx)
+   friend constexpr auto
+   make_pool_allocator(uintptr<void> p_address, idx arena_bytes)
       -> pool_allocator<in_max_node_bytes>;
 
    template <idx in_max_node_bytes>
    friend constexpr auto
-   make_pool_allocator(span<byte>&) -> pool_allocator<in_max_node_bytes>;
+   make_pool_allocator(span<byte>& span) -> pool_allocator<in_max_node_bytes>;
 
  private:
    // Initialize a `pool_allocator`. This should only be called from
@@ -97,7 +98,7 @@ class pool_allocator
 
    // Produce a handle to allocated memory.
    template <typename T>
-   auto
+   constexpr auto
    make_handle(T* p_handle_storage) -> pool_memory_handle<T> {
       return pool_memory_handle<T>{{}, p_handle_storage};
    }

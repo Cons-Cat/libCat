@@ -10,6 +10,15 @@
 
 namespace cat {
 
+// Every allocator inherits from `allocator_interface<Self>` via CRTP.
+template <typename T>
+concept is_allocator = requires {
+                          // `allocator_interface` contains this tag. The
+                          // `is_base_of` trait compiles slowly here, so this
+                          // shortcut is taken instead.
+                          typename T::allocator_interface_tag;
+                       };
+
 template <typename T>
 concept mem = requires(T handle) {
                  handle.is_inline_handle;
@@ -19,10 +28,9 @@ concept mem = requires(T handle) {
                  handle.is_inline();
               };
 
-inline constexpr idx inline_buffer_size = 256u;
-
 // TODO: Handles' `.get()` should be only visible to allocators.
 namespace detail {
+
 // `base_memory_handle` is an opaque memory handle. allocators are to define and
 // produce a memory handle type which derives from this. These handles contain
 // absolutely arbitrary storage (such as a `T*`, or an `ssize` address offset).
@@ -31,6 +39,8 @@ template <typename T>
 struct base_memory_handle {
    static constexpr bool is_inline_handle = false;
    static constexpr bool is_multi_handle = false;
+   // Non-inline handles have no inline buffer size.
+   static constexpr idx inline_size = 0;
    using allocation_type = T;
 
    // Number of `T`s allocated. This is always 1 if the call is not intercepted
@@ -44,7 +54,7 @@ struct base_memory_handle {
    // If `.set_count()` is no-op if it is not intercepted by a
    // `multi_memory_handle`.
    constexpr void
-   set_count(iword) {
+   set_count(iword /*unused*/) {
    }
 
    // Number of bytes allocated. This is always the size of `T` if the call is
@@ -65,21 +75,22 @@ struct base_memory_handle {
 };
 
 // A `multi_memory_handle` wraps another memory handle for `*_multi`
-// allocations. It effectively overrides `handle_type`'s `.size()` and
+// allocations. It effectively overrides `Handle`'s `.size()` and
 // `.raw_size()` methods with the length of an allocated array.
-template <typename handle_type>
+template <typename Handle>
 struct multi_memory_handle {
-   static constexpr bool is_inline_handle = handle_type::is_inline_handle;
+   static constexpr bool is_inline_handle = Handle::is_inline_handle;
    static constexpr bool is_multi_handle = true;
-   using allocation_type = handle_type::allocation_type;
-   handle_type handle;
+   static constexpr idx inline_size = Handle::inline_size;
+   using allocation_type = Handle::allocation_type;
+   Handle handle;
 
    // How large this allocation was, in terms of `allocation_type`.
    idx array_length;
 
    multi_memory_handle() = default;
 
-   multi_memory_handle(handle_type input_handle) : handle(input_handle) {
+   multi_memory_handle(Handle input_handle) : handle(input_handle) {
    }
 
    // TODO: Variadic emplace.
@@ -144,22 +155,23 @@ struct multi_memory_handle {
 };
 
 // An `inline_memory_handle` wraps another memory handle for `inline_*`
-// allocations. It extends the storage of this handle to at least 256 bytes, and
-// if the memory allocated is smaller than that, it is stored inside the handle
-// instead of inside an allocator. It effectively overrides the `.is_inline()`
-// method of the handle that it wraps.
-template <typename handle_type>
+// allocations. It extends the storage of this handle to at least
+// `inline_size_param` bytes, and if the memory allocated fits within that, it
+// is stored inside the handle instead of inside an allocator. It effectively
+// overrides the `.is_inline()` method of the handle that it wraps.
+template <typename Handle, idx inline_size_param>
 struct inline_memory_handle {
    static constexpr bool is_inline_handle = true;
-   static constexpr bool is_multi_handle = handle_type::is_multi_handle;
-   using allocation_type = handle_type::allocation_type;
+   static constexpr bool is_multi_handle = Handle::is_multi_handle;
+   static constexpr idx inline_size = inline_size_param;
+   using allocation_type = Handle::allocation_type;
 
    union {
-      handle_type handle;
+      Handle handle;
       allocation_type inline_storage;
-      // Reserve `inline_buffer_size` bytes to make the size of this handle
-      // predictible.
-      byte empty[inline_buffer_size];
+      // Reserve `inline_size` bytes to make the size of this handle
+      // predictable.
+      byte empty[inline_size];
    };
 
    bool is_on_stack;
@@ -169,7 +181,7 @@ struct inline_memory_handle {
    constexpr inline_memory_handle() : handle(), is_on_stack(false) {
    }
 
-   constexpr inline_memory_handle(handle_type input_handle)
+   constexpr inline_memory_handle(Handle input_handle)
        : handle(input_handle), is_on_stack(handle.is_inline()) {
    }
 
@@ -239,24 +251,8 @@ struct inline_memory_handle {
       return inline_storage;
    }
 };
+
 }  // namespace detail
-
-template <typename T, typename Allocation = void*>
-concept is_allocator = requires(T allocator) {
-                          // Every allocator has a  `.alloc()` method.
-                          allocator.template alloc<Allocation>();
-
-                          // TODO: It would be nice if these could make the
-                          // concept more precise:
-                          // allocator.free(decltype(allocator.template
-                          // make_handle<Allocation>(
-                          //     Allocation(),
-                          //     sizeof(Allocation))){});
-                          // allocator.get(decltype(allocator.template
-                          // make_handle<Allocation>(
-                          //     Allocation(),
-                          //     sizeof(Allocation))){});
-                       };
 
 template <is_pointer T>
 using sized_allocation = tuple<T, idx>;
@@ -267,6 +263,11 @@ using maybe_sized_allocation =
 
 template <typename Derived>
 class allocator_interface {
+ public:
+   // Marker that `is_allocator<T>` looks for. Inherited by every concrete
+   // allocator via CRTP without forcing the base to be fully instantiated.
+   using allocator_interface_tag = void;
+
  private:
    constexpr allocator_interface() = default;
    friend Derived;
@@ -285,14 +286,15 @@ class allocator_interface {
       requires { Derived::max_allocation_bytes; };
 
    // `meta_alloc` flags:
-   // `is_inline` tries the inline buffer before the heap, `is_fail_safe` maps
-   // allocation failure to maybe-style results, `is_aligned` selects aligned
-   // allocation entry points, `is_multiple` allocates arrays (span handles)
-   // instead of one `T`, `is_zeroed` uses implicit-lifetime zeroing instead of
-   // constructor args, `has_feedback` returns sized byte counts when the
-   // allocator supports them.
-   template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
-             bool is_multiple, bool is_zeroed, bool has_feedback,
+   // `is_fail_safe` maps allocation failure to maybe-style results,
+   // `is_aligned` selects aligned allocation entry points, `is_multiple`
+   // allocates arrays (span handles) instead of one `T`, `is_zeroed` uses
+   // implicit-lifetime zeroing instead of constructor args, `has_feedback`
+   // returns sized byte counts when the allocator supports them. `inline_size`
+   // is the inline-buffer size in bytes -- nonzero enables SBO (try the inline
+   // buffer before the heap), zero disables it.
+   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+             bool is_zeroed, bool has_feedback, idx inline_size = 0,
              typename... Args>
       requires((!is_multiple || (sizeof...(Args) <= 0))
                // Multi-allocations must be default-constructed. Zeroed-out
@@ -305,8 +307,8 @@ class allocator_interface {
               Args&&... arguments);
 
    // Handle and return types implied by the same flags as `meta_alloc`.
-   template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
-             bool is_multiple, bool is_zeroed, bool has_feedback>
+   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+             bool is_zeroed, bool has_feedback, idx inline_size = 0>
    struct meta_alloc_alias_types;
 
    template <bool has_feedback>
@@ -314,18 +316,12 @@ class allocator_interface {
       conditional<has_feedback, maybe_sized_allocation<void*>, maybe_ptr<void>>;
 
    template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
-             bool is_zeroed, bool has_feedback, typename... Args>
+             bool is_zeroed, bool has_feedback, idx inline_size = 64u,
+             typename... Args>
    [[gnu::no_sanitize_address]]
    constexpr auto
    meta_alloc_inline_stack_allocate(idx allocation_bytes, idx allocation_count,
                                     Args&&... arguments);
-
-   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
-             bool is_zeroed, bool has_feedback, typename... Args>
-   consteval auto
-   meta_alloc_consteval_inline_allocate(idx allocation_bytes,
-                                        idx allocation_count,
-                                        Args&&... arguments);
 
    [[gnu::no_sanitize_address]]
    constexpr auto
@@ -349,27 +345,19 @@ class allocator_interface {
    meta_alloc_obtain_maybe_memory_unaligned_no_feedback(idx allocation_bytes)
       -> maybe_ptr<void>;
 
+   // Finish a runtime allocation: unpoison, optionally zero, placement-new the
+   // elements, and wrap into the requested return shape. When `inline_size`
+   // is non-0 this is the inline-overflow path (heap-backed `inline_*` call)
+   // and the result is wrapped in an `inline_memory_handle`. Otherwise the
+   // raw span/pointer/sized shape is returned.
    template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
-             bool is_zeroed, bool has_feedback, typename... Args>
+             bool is_zeroed, bool has_feedback, idx inline_size = 0,
+             typename... Args>
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_finish_non_inline(meta_alloc_raw_maybe_allocation<has_feedback>,
-                                idx allocation_bytes, idx allocation_count,
-                                Args&&... arguments);
-
-   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
-             bool is_zeroed, bool has_feedback, typename... Args>
-   [[gnu::no_sanitize_address]]
-   constexpr auto
-   meta_alloc_finish_inline_overflow(
-      meta_alloc_raw_maybe_allocation<has_feedback>, idx allocation_bytes,
-      idx allocation_count, Args&&... arguments);
-
-   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
-             bool is_zeroed, bool has_feedback, typename... Args>
-   consteval auto
-   meta_alloc_consteval_allocate(uword allocation_alignment,
-                                 idx allocation_count, Args&&... arguments);
+   meta_alloc_finish_runtime(meta_alloc_raw_maybe_allocation<has_feedback>,
+                             idx allocation_bytes, idx allocation_count,
+                             Args&&... arguments);
 
  public:
    // If this allocator has pointer stability, try to allocate a `T`, and
@@ -378,7 +366,7 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   alloc(Args&&... arguments) {
+   alloc(Args&&... arguments) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
@@ -394,7 +382,7 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   xalloc(Args&&... arguments) {
+   xalloc(Args&&... arguments) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
@@ -409,7 +397,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   alloc_multi(idx count) {
+   alloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
@@ -424,7 +412,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   xalloc_multi(idx count) {
+   xalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
@@ -440,9 +428,9 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   align_alloc(uword alignment, Args&&... arguments) {
-      return meta_alloc<T, false, true, true, false, false, false>(
-         alignment, 1u, $fwd(arguments)...);
+   align_alloc(uword alignment, Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, false, false, false>(alignment, 1u,
+                                                            $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, allocate a `T` with an alignment
@@ -451,8 +439,8 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   align_xalloc(uword alignment, Args&&... arguments) {
-      return meta_alloc<T, false, false, true, false, false, false>(
+   align_xalloc(uword alignment, Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, false, false, false>(
          alignment, 1u, $fwd(arguments)...);
    }
 
@@ -462,8 +450,8 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   unalign_alloc(Args&&... arguments) {
-      return meta_alloc<T, false, true, false, false, false, false>(
+   unalign_alloc(Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, false, false, false>(
          1u, 1u, $fwd(arguments)...);
    }
 
@@ -473,8 +461,8 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   unalign_xalloc(Args&&... arguments) {
-      return meta_alloc<T, false, false, false, false, false, false>(
+   unalign_xalloc(Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, false, false, false>(
          1u, 1u, $fwd(arguments)...);
    }
 
@@ -483,9 +471,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   align_alloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, false, true, true, true, false, false>(alignment,
-                                                                  count);
+   align_alloc_multi(uword alignment, idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, true, false, false>(alignment, count);
    }
 
    // If this allocator has pointer stability, allocate an array of `T` with an
@@ -493,9 +480,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   align_xalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, false, false, true, true, false, false>(alignment,
-                                                                   count);
+   align_xalloc_multi(uword alignment, idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, true, false, false>(alignment, count);
    }
 
    // If this allocator has pointer stability, try to allocate an array of `T`
@@ -503,8 +489,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   unalign_alloc_multi(idx count) {
-      return meta_alloc<T, false, true, false, true, false, false>(1u, count);
+   unalign_alloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, true, false, false>(1u, count);
    }
 
    // If this allocator has pointer stability, allocate an array of `T` with no
@@ -512,138 +498,147 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   unalign_xalloc_multi(idx count) {
-      return meta_alloc<T, false, false, false, true, false, false>(1u, count);
+   unalign_xalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, true, false, false>(1u, count);
    }
 
-   // Try to allocate a small-size optimized `T`.
-   template <typename T, typename... Args>
+   // Try to allocate a small-size optimized `T`. `inline_size` is the
+   // inline-buffer size; defaults to `64u`.
+   template <typename T, idx inline_size = 64u, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   inline_alloc(Args&&... arguments) {
+   inline_alloc(Args&&... arguments) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
-         return inline_align_alloc<T>(alignof(T), $fwd(arguments)...);
+         return inline_align_alloc<T, inline_size>(alignof(T),
+                                                   $fwd(arguments)...);
       } else {
-         return inline_unalign_alloc<T>($fwd(arguments)...);
+         return inline_unalign_alloc<T, inline_size>($fwd(arguments)...);
       }
    }
 
    // Allocate a small-size optimized `T`.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   inline_xalloc(Args&&... arguments) {
+   inline_xalloc(Args&&... arguments) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
-         return inline_align_xalloc<T>(alignof(T), $fwd(arguments)...);
+         return inline_align_xalloc<T, inline_size>(alignof(T),
+                                                    $fwd(arguments)...);
       } else {
-         return inline_unalign_xalloc<T>($fwd(arguments)...);
+         return inline_unalign_xalloc<T, inline_size>($fwd(arguments)...);
       }
    }
 
    // Try to allocate a small-size optimized array of `T`.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_alloc_multi(idx count) {
+   inline_alloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
-         return inline_align_alloc_multi<T>(alignof(T), count);
+         return inline_align_alloc_multi<T, inline_size>(alignof(T), count);
       } else {
-         return inline_unalign_alloc_multi<T>(count);
+         return inline_unalign_alloc_multi<T, inline_size>(count);
       }
    }
 
    // Allocate a small-size optimized array of `T`.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_xalloc_multi(idx count) {
+   inline_xalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          // If the alignment of `T` is greater than 1, it should have implied
          // strong alignment guarantees.
-         return inline_align_xalloc_multi<T>(alignof(T), count);
+         return inline_align_xalloc_multi<T, inline_size>(alignof(T), count);
       } else {
-         return inline_unalign_xalloc_multi<T>(count);
+         return inline_unalign_xalloc_multi<T, inline_size>(count);
       }
    }
 
    // Try to allocate a small-size optimized `T` with an alignment guarantee.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
    [[nodiscard]]
    constexpr auto
-   inline_align_alloc(uword alignment, Args&&... arguments) {
-      return meta_alloc<T, true, true, true, false, false, false>(
+   inline_align_alloc(uword alignment, Args&&... arguments)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, false, false, false, inline_size>(
          alignment, 1u, $fwd(arguments)...);
    }
 
    // Allocate a small-size optimized `T` with an alignment guarantee.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
    [[nodiscard]]
    constexpr auto
-   inline_align_xalloc(uword alignment, Args&&... arguments) {
-      return meta_alloc<T, true, false, true, false, false, false>(
+   inline_align_xalloc(uword alignment, Args&&... arguments)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, false, false, false, inline_size>(
          alignment, 1u, $fwd(arguments)...);
    }
 
    // Try to allocate a small-size optimized `T` with no alignment guarantee.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_alloc(Args&&... arguments) {
-      return meta_alloc<T, true, true, false, false, false, false>(
+   inline_unalign_alloc(Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, false, false, false, inline_size>(
          1u, 1u, $fwd(arguments)...);
    }
 
    // Allocate a small-size optimized `T` with no alignment guarantee.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xalloc(Args&&... arguments) {
-      return meta_alloc<T, true, false, false, false, false, false>(
+   inline_unalign_xalloc(Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, false, false, false, inline_size>(
          1u, 1u, $fwd(arguments)...);
    }
 
    // Try to allocate a small-size optimized array of `T` with an alignment
    // guarantee.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_alloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, true, true, true, true, false, false>(alignment,
-                                                                 count);
+   inline_align_alloc_multi(uword alignment, idx count)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, true, false, false, inline_size>(
+         alignment, count);
    }
 
    // Allocate a small-size optimized array of `T` with an alignment guarantee.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_xalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, true, false, true, true, false, false>(alignment,
-                                                                  count);
+   inline_align_xalloc_multi(uword alignment, idx count)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, true, false, false, inline_size>(
+         alignment, count);
    }
 
    // Try to allocate a small-size optimized array of `T` with no alignment
    // guarantee.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_alloc_multi(idx count) {
-      return meta_alloc<T, true, true, false, true, false, false>(1u, count);
+   inline_unalign_alloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, true, false, false, inline_size>(1u,
+                                                                         count);
    }
 
    // Allocate a small-size optimized array of `T` with no alignment guarantee.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xalloc_multi(idx count) {
-      return meta_alloc<T, true, false, false, true, false, false>(1u, count);
+   inline_unalign_xalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, true, false, false, inline_size>(
+         1u, count);
    }
 
    // Try to get the number of bytes that allocating a `T` would reserve.
@@ -755,118 +750,119 @@ class allocator_interface {
 
    // Try to get the number of bytes that allocating a small-size optimized `T`
    // would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_nalloc() -> maybe_non_zero<idx> {
-      return inline_align_nalloc<T>(alignof(T));
+      return inline_align_nalloc<T, inline_size>(alignof(T));
    }
 
    // Get the number of bytes that allocating a small-size optimized `T` would
    // reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_xnalloc() -> idx {
-      return inline_align_xnalloc<T>(alignof(T));
+      return inline_align_xnalloc<T, inline_size>(alignof(T));
    }
 
    // Try to get the number of bytes that allocating a small-size optimized
    // array of `T` would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_nalloc_multi(idx count) -> maybe_non_zero<idx> {
-      return inline_align_nalloc_multi<T>(alignof(T), count);
+      return inline_align_nalloc_multi<T, inline_size>(alignof(T), count);
    }
 
    // Get the number of bytes that allocating a small-size optimized array of
    // `T` would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_xnalloc_multi(idx count) -> idx {
-      return inline_align_xnalloc_multi<T>(alignof(T), count);
+      return inline_align_xnalloc_multi<T, inline_size>(alignof(T), count);
    }
 
    // Try to get the number of bytes that allocating a small-size optimized `T`
    // with an alignment guarantee would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_align_nalloc(uword alignment) -> maybe_non_zero<idx> {
-      if constexpr (sizeof(T) > inline_buffer_size) {
+      if constexpr (sizeof(T) > inline_size) {
          return this->self().allocation_bytes(alignment, sizeof(T));
       } else {
-         return inline_buffer_size;
+         return inline_size;
       }
    }
 
    // Get the number of bytes that allocating a small-size optimized `T` with an
    // alignment guarantee would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_align_xnalloc(uword alignment) -> idx {
-      return inline_align_nalloc<T>(alignment).value();
+      return inline_align_nalloc<T, inline_size>(alignment).value();
    }
 
    // Try to get the number of bytes that allocating a small-size optimized `T`
    // with no alignment guarantee would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_unalign_nalloc() -> maybe_non_zero<idx> {
-      return inline_align_nalloc<T>(1u);
+      return inline_align_nalloc<T, inline_size>(1u);
    }
 
    // Get the number of bytes that allocating a small-size optimized `T` with no
    // alignment guarantee would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xnalloc() -> idx {
-      return inline_align_xnalloc<T>(1u);
+      return inline_align_xnalloc<T, inline_size>(1u);
    }
 
    // Try to get the number of bytes that allocating a small-size optimized
    // array of `T` with an alignment guarantee would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_align_nalloc_multi(uword alignment, idx count)
       -> maybe_non_zero<idx> {
-      if (count * sizeof(T) > inline_buffer_size) {
+      if (count * sizeof(T) > inline_size) {
          return this->self().allocation_bytes(alignment, count * sizeof(T));
       }
-      return inline_buffer_size;
+      return inline_size;
    }
 
    // Get the number of bytes that allocating a small-size optimized array of
    // `T` with an alignment guarantee would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_align_xnalloc_multi(uword alignment, idx count) -> idx {
-      return inline_align_nalloc_multi<T>(alignment, count).value();
+      return inline_align_nalloc_multi<T, inline_size>(alignment, count)
+         .value();
    }
 
    // Try to get the number of bytes that allocating a small-size optimized
    // array of `T` with no alignment guarantee would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_unalign_nalloc_multi(idx count) -> maybe_non_zero<idx> {
-      return inline_align_nalloc_multi<T>(1u, count);
+      return inline_align_nalloc_multi<T, inline_size>(1u, count);
    }
 
    // Get the number of bytes that allocating a small-size optimized array of
    // `T` with no alignment guarantee would reserve.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xnalloc_multi(idx count) -> idx {
-      return inline_align_xnalloc_multi<T>(1u, count);
+      return inline_align_xnalloc_multi<T, inline_size>(1u, count);
    }
 
    // If this allocator has pointer stability, try to allocate a `T`, and return
@@ -875,7 +871,7 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   salloc(Args&&... arguments) {
+   salloc(Args&&... arguments) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_salloc<T>(alignof(T), $fwd(arguments)...);
       } else {
@@ -889,7 +885,7 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   xsalloc(Args&&... arguments) {
+   xsalloc(Args&&... arguments) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_xsalloc<T>(alignof(T), $fwd(arguments)...);
       } else {
@@ -902,7 +898,7 @@ class allocator_interface {
    template <typename T, typename... Args>
    [[nodiscard]]
    constexpr auto
-   salloc_multi(idx count) {
+   salloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_salloc_multi<T>(alignof(T), count);
       } else {
@@ -915,7 +911,7 @@ class allocator_interface {
    template <typename T, typename... Args>
    [[nodiscard]]
    constexpr auto
-   xsalloc_multi(idx count) {
+   xsalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_xsalloc_multi<T>(alignof(T), count);
       } else {
@@ -929,9 +925,9 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   align_salloc(uword alignment, Args&&... arguments) {
-      return meta_alloc<T, false, true, true, false, false, true>(
-         alignment, 1u, $fwd(arguments)...);
+   align_salloc(uword alignment, Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, false, false, true>(alignment, 1u,
+                                                           $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, allocate a `T` with an alignment
@@ -940,9 +936,10 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   align_xsalloc(uword alignment, Args&&... arguments) {
-      return meta_alloc<T, false, false, true, false, false, true>(
-         alignment, 1u, $fwd(arguments)...);
+   align_xsalloc(uword alignment, Args&&... arguments)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, false, false, true>(alignment, 1u,
+                                                            $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, try to allocate a `T` with no
@@ -951,9 +948,9 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   unalign_salloc(Args&&... arguments) {
-      return meta_alloc<T, false, true, false, false, false, true>(
-         1u, 1u, $fwd(arguments)...);
+   unalign_salloc(Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, false, false, true>(1u, 1u,
+                                                            $fwd(arguments)...);
    }
 
    // If this allocator has pointer stability, allocate a `T` with no alignment
@@ -962,8 +959,8 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   unalign_xsalloc(Args&&... arguments) {
-      return meta_alloc<T, false, false, false, false, false, true>(
+   unalign_xsalloc(Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, false, false, true>(
          1u, 1u, $fwd(arguments)...);
    }
 
@@ -973,9 +970,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   align_salloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, false, true, true, true, false, true>(alignment,
-                                                                 count);
+   align_salloc_multi(uword alignment, idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, true, false, true>(alignment, count);
    }
 
    // If this allocator has pointer stability, allocate an array of `T` with an
@@ -983,9 +979,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   align_xsalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, false, false, true, true, false, true>(alignment,
-                                                                  count);
+   align_xsalloc_multi(uword alignment, idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, true, false, true>(alignment, count);
    }
 
    // If this allocator has pointer stability, try to allocate an array of `T`
@@ -994,8 +989,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   unalign_salloc_multi(idx count) {
-      return meta_alloc<T, false, true, false, true, false, true>(1u, count);
+   unalign_salloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, true, false, true>(1u, count);
    }
 
    // If this allocator has pointer stability, allocate an array of `T` with no
@@ -1003,144 +998,152 @@ class allocator_interface {
    template <typename T, typename... Args>
    [[nodiscard]]
    constexpr auto
-   unalign_xsalloc_multi(idx count) {
-      return meta_alloc<T, false, false, false, true, false, true>(1u, count);
+   unalign_xsalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, true, false, true>(1u, count);
    }
 
    // Try to allocate a small-size optimized `T`, and return the number of bytes
    // that were allocated.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   inline_salloc(Args&&... arguments) {
+   inline_salloc(Args&&... arguments) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_salloc<T>(alignof(T), $fwd(arguments)...);
+         return inline_align_salloc<T, inline_size>(alignof(T),
+                                                    $fwd(arguments)...);
       } else {
-         return inline_unalign_salloc<T>($fwd(arguments)...);
+         return inline_unalign_salloc<T, inline_size>($fwd(arguments)...);
       }
    }
 
    // Allocate a small-size optimized `T`, and return the number of bytes that
    // were allocated.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   inline_xsalloc(Args&&... arguments) {
+   inline_xsalloc(Args&&... arguments) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_xsalloc<T>(alignof(T), $fwd(arguments)...);
+         return inline_align_xsalloc<T, inline_size>(alignof(T),
+                                                     $fwd(arguments)...);
       } else {
-         return inline_unalign_xsalloc<T>($fwd(arguments)...);
+         return inline_unalign_xsalloc<T, inline_size>($fwd(arguments)...);
       }
    }
 
    // Try to allocate a small-size optimized array of `T`, and return the number
    // of bytes that were allocated.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_salloc_multi(idx count) {
+   inline_salloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_salloc_multi<T>(alignof(T), count);
+         return inline_align_salloc_multi<T, inline_size>(alignof(T), count);
       } else {
-         return inline_unalign_salloc_multi<T>(count);
+         return inline_unalign_salloc_multi<T, inline_size>(count);
       }
    }
 
    // Allocate a small-size optimized array of `T`, and return the number of
    // bytes that were allocated.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_xsalloc_multi(idx count) {
+   inline_xsalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_xsalloc_multi<T>(alignof(T), count);
+         return inline_align_xsalloc_multi<T, inline_size>(alignof(T), count);
       } else {
-         return inline_unalign_xsalloc_multi<T>(count);
+         return inline_unalign_xsalloc_multi<T, inline_size>(count);
       }
    }
 
    // Try to allocate a small-size optimized `T` with an alignment guarantee,
    // and return the number of bytes that were allocated.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   inline_align_salloc(uword alignment, Args&&... arguments) {
-      return meta_alloc<T, true, true, true, false, false, true>(
+   inline_align_salloc(uword alignment, Args&&... arguments)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, false, false, true, inline_size>(
          alignment, 1u, $fwd(arguments)...);
    }
 
    // Allocate a small-size optimized `T` with an alignment guarantee, and
    // return the number of bytes that were allocated.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   inline_align_xsalloc(uword alignment, Args&&... arguments) {
-      return meta_alloc<T, true, false, true, false, false, true>(
+   inline_align_xsalloc(uword alignment, Args&&... arguments)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, false, false, true, inline_size>(
          alignment, 1u, $fwd(arguments)...);
    }
 
    // Try to allocate a small-size optimized `T` with no alignment guarantee,
    // and return the number of bytes that were allocated.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   inline_unalign_salloc(Args&&... arguments) {
-      return meta_alloc<T, true, true, false, false, false, true>(
+   inline_unalign_salloc(Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, false, false, true, inline_size>(
          1u, 1u, $fwd(arguments)...);
    }
 
    // Allocate a small-size optimized `T` with no alignment guarantee, and
    // return the number of bytes that were allocated.
-   template <typename T, typename... Args>
+   template <typename T, idx inline_size = 64u, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xsalloc(Args&&... arguments) {
-      return meta_alloc<T, true, false, false, false, false, true>(
+   inline_unalign_xsalloc(Args&&... arguments) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, false, false, true, inline_size>(
          1u, 1u, $fwd(arguments)...);
    }
 
    // Try to allocate a small-size optimized array of `T` with an alignment
    // guarantee, and return the number of bytes that were allocated.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_salloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, true, true, true, true, false, true>(alignment,
-                                                                count);
+   inline_align_salloc_multi(uword alignment, idx count)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, true, false, true, inline_size>(
+         alignment, count);
    }
 
    // Allocate a small-size optimized array of `T` with an alignment guarantee,
    // and return the number of bytes that were allocated.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_xsalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, true, false, true, true, false, true>(alignment,
-                                                                 count);
+   inline_align_xsalloc_multi(uword alignment, idx count)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, true, false, true, inline_size>(
+         alignment, count);
    }
 
    // Try to allocate a small-size optimized array of `T` with no alignment
    // guarantee, and return the number of bytes that were allocated.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_salloc_multi(idx count) {
-      return meta_alloc<T, true, true, false, true, false, true>(1u, count);
+   inline_unalign_salloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, true, false, true, inline_size>(1u,
+                                                                        count);
    }
 
    // Allocate a small-size optimized array of `T` with no alignment guarantee,
    // and return the number of bytes that were allocated.
-   template <typename T>
+   template <typename T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xsalloc_multi(idx count) {
-      return meta_alloc<T, true, false, false, true, false, true>(1u, count);
+   inline_unalign_xsalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, true, false, true, inline_size>(1u,
+                                                                         count);
    }
 
    // If this allocator has pointer stability, try to allocate a `T`, and
@@ -1148,7 +1151,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   calloc() {
+   calloc() [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_calloc<T>(alignof(T));
       } else {
@@ -1161,7 +1164,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xcalloc() {
+   xcalloc() [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_xcalloc<T>(alignof(T));
       } else {
@@ -1174,7 +1177,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   calloc_multi(idx count) {
+   calloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_calloc_multi<T>(alignof(T), count);
       } else {
@@ -1187,7 +1190,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xcalloc_multi(idx count) {
+   xcalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_xcalloc_multi<T>(alignof(T), count);
       } else {
@@ -1201,9 +1204,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   align_calloc(uword alignment) {
-      return meta_alloc<T, false, true, true, false, true, false>(alignment,
-                                                                  1u);
+   align_calloc(uword alignment) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, false, true, false>(alignment, 1u);
    }
 
    // If this allocator has pointer stability, allocate a `T` with an alignment
@@ -1212,9 +1214,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   align_xcalloc(uword alignment) {
-      return meta_alloc<T, false, false, true, false, true, false>(alignment,
-                                                                   1u);
+   align_xcalloc(uword alignment) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, false, true, false>(alignment, 1u);
    }
 
    // If this allocator has pointer stability, try to allocate a `T` with no
@@ -1223,8 +1224,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   unalign_calloc() {
-      return meta_alloc<T, false, true, false, false, true, false>(1u, 1u);
+   unalign_calloc() [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, false, true, false>(1u, 1u);
    }
 
    // If this allocator has pointer stability, allocate a `T` with no alignment
@@ -1233,8 +1234,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   unalign_xcalloc() {
-      return meta_alloc<T, false, false, false, false, true, false>(1u, 1u);
+   unalign_xcalloc() [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, false, true, false>(1u, 1u);
    }
 
    // If this allocator has pointer stability, try to allocate an array of `T`
@@ -1243,9 +1244,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   align_calloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, false, true, true, true, true, false>(alignment,
-                                                                 count);
+   align_calloc_multi(uword alignment, idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, true, true, false>(alignment, count);
    }
 
    // If this allocator has pointer stability, allocate an array of `T` with an
@@ -1254,9 +1254,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   align_xcalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, false, false, true, true, true, false>(alignment,
-                                                                  count);
+   align_xcalloc_multi(uword alignment, idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, true, true, false>(alignment, count);
    }
 
    // If this allocator has pointer stability, try to allocate an array of `T`
@@ -1265,8 +1264,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   unalign_calloc_multi(idx count) {
-      return meta_alloc<T, false, true, false, true, true, false>(1u, count);
+   unalign_calloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, true, true, false>(1u, count);
    }
 
    // If this allocator has pointer stability, allocate an array of `T` with no
@@ -1275,134 +1274,141 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   unalign_xcalloc_multi(idx count) {
-      return meta_alloc<T, false, false, false, true, true, false>(1u, count);
+   unalign_xcalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, true, true, false>(1u, count);
    }
 
    // Try to allocate a small-size optimized `T`, and zero-out the allocated
    // memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_calloc() {
+   inline_calloc() [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_calloc<T>(alignof(T));
+         return inline_align_calloc<T, inline_size>(alignof(T));
       } else {
-         return inline_unalign_calloc<T>();
+         return inline_unalign_calloc<T, inline_size>();
       }
    }
 
    // Allocate a small-size optimized `T`, and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_xcalloc() {
+   inline_xcalloc() [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_xcalloc<T>(alignof(T));
+         return inline_align_xcalloc<T, inline_size>(alignof(T));
       } else {
-         return inline_unalign_xcalloc<T>();
+         return inline_unalign_xcalloc<T, inline_size>();
       }
    }
 
    // Try to allocate a small-size optimized array of `T`, and zero-out the
    // allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_calloc_multi(idx count) {
+   inline_calloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_calloc_multi<T>(alignof(T), count);
+         return inline_align_calloc_multi<T, inline_size>(alignof(T), count);
       } else {
-         return inline_unalign_calloc_multi<T>(count);
+         return inline_unalign_calloc_multi<T, inline_size>(count);
       }
    }
 
    // Allocate a small-size optimized array of `T`, and zero-out the allocated
    // memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_xcalloc_multi(idx count) {
+   inline_xcalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_xcalloc_multi<T>(alignof(T), count);
+         return inline_align_xcalloc_multi<T, inline_size>(alignof(T), count);
       } else {
-         return inline_unalign_xcalloc_multi<T>(count);
+         return inline_unalign_xcalloc_multi<T, inline_size>(count);
       }
    }
 
    // Try to allocate a small-size optimized `T` with an alignment guarantee,
    // and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_calloc(uword alignment) {
-      return meta_alloc<T, true, true, true, false, true, false>(alignment, 1u);
+   inline_align_calloc(uword alignment) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, false, true, false, inline_size>(
+         alignment, 1u);
    }
 
    // Allocate a small-size optimized `T` with an alignment guarantee, and
    // zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_xcalloc(uword alignment) {
-      return meta_alloc<T, true, false, true, false, true, false>(alignment,
-                                                                  1u);
+   inline_align_xcalloc(uword alignment) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, false, true, false, inline_size>(
+         alignment, 1u);
    }
 
    // Try to allocate a small-size optimized `T` with no alignment guarantee,
    // and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_calloc() {
-      return meta_alloc<T, true, true, false, false, true, false>(1u, 1u);
+   inline_unalign_calloc() [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, false, true, false, inline_size>(1u,
+                                                                         1u);
    }
 
    // Allocate a small-size optimized `T` with no alignment guarantee, and
    // zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xcalloc() {
-      return meta_alloc<T, true, false, false, false, true, false>(1u, 1u);
+   inline_unalign_xcalloc() [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, false, true, false, inline_size>(1u,
+                                                                          1u);
    }
 
    // Try to allocate a small-size optimized array of `T` with an alignment
    // guarantee, and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_calloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, true, true, true, true, true, false>(alignment,
-                                                                count);
+   inline_align_calloc_multi(uword alignment, idx count)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, true, true, false, inline_size>(
+         alignment, count);
    }
 
    // Allocate a small-size optimized array of `T` with an alignment guarantee,
    // and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_xcalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, true, false, true, true, true, false>(alignment,
-                                                                 count);
+   inline_align_xcalloc_multi(uword alignment, idx count)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, true, true, false, inline_size>(
+         alignment, count);
    }
 
    // Try to allocate a small-size optimized array of `T` with no alignment
    // guarantee, and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_calloc_multi(idx count) {
-      return meta_alloc<T, true, true, false, true, true, false>(1u, count);
+   inline_unalign_calloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, true, true, false, inline_size>(1u,
+                                                                        count);
    }
 
    // Allocate a small-size optimized array of `T` with no alignment guarantee,
    // and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xcalloc_multi(idx count) {
-      return meta_alloc<T, true, false, false, true, true, false>(1u, count);
+   inline_unalign_xcalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, true, true, false, inline_size>(1u,
+                                                                         count);
    }
 
    // If this allocator has pointer stability, try to allocate a `T`, and return
@@ -1411,7 +1417,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   scalloc() {
+   scalloc() [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_scalloc<T>(alignof(T));
       } else {
@@ -1424,7 +1430,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xscalloc() {
+   xscalloc() [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_xscalloc<T>(alignof(T));
       } else {
@@ -1438,7 +1444,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   scalloc_multi(idx count) {
+   scalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_scalloc_multi<T>(alignof(T), count);
       } else {
@@ -1452,7 +1458,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xscalloc_multi(idx count) {
+   xscalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
          return align_xscalloc_multi<T>(alignof(T), count);
       } else {
@@ -1466,8 +1472,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   align_scalloc(uword alignment) {
-      return meta_alloc<T, false, true, true, false, true, true>(alignment, 1u);
+   align_scalloc(uword alignment) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, false, true, true>(alignment, 1u);
    }
 
    // If this allocator has pointer stability, allocate a `T` with an alignment
@@ -1476,9 +1482,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   align_xscalloc(uword alignment) {
-      return meta_alloc<T, false, false, true, false, true, true>(alignment,
-                                                                  1u);
+   align_xscalloc(uword alignment) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, false, true, true>(alignment, 1u);
    }
 
    // If this allocator has pointer stability, try to allocate a `T` with no
@@ -1487,8 +1492,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   unalign_scalloc() {
-      return meta_alloc<T, false, true, false, false, true, true>(1u, 1u);
+   unalign_scalloc() [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, false, true, true>(1u, 1u);
    }
 
    // If this allocator has pointer stability, allocate a `T` with no alignment
@@ -1497,8 +1502,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   unalign_xscalloc() {
-      return meta_alloc<T, false, false, false, false, true, true>(1u, 1u);
+   unalign_xscalloc() [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, false, true, true>(1u, 1u);
    }
 
    // If this allocator has pointer stability, try to allocate an array of `T`
@@ -1507,9 +1512,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   align_scalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, false, true, true, true, true, true>(alignment,
-                                                                count);
+   align_scalloc_multi(uword alignment, idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, true, true, true>(alignment, count);
    }
 
    // If this allocator has pointer stability, allocate an array of `T` with an
@@ -1518,9 +1522,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   align_xscalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, false, false, true, true, true, true>(alignment,
-                                                                 count);
+   align_xscalloc_multi(uword alignment, idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, true, true, true>(alignment, count);
    }
 
    // If this allocator has pointer stability, try to allocate an array of `T`
@@ -1529,8 +1532,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   unalign_scalloc_multi(idx count) {
-      return meta_alloc<T, false, true, false, true, true, true>(1u, count);
+   unalign_scalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, true, true, true>(1u, count);
    }
 
    // If this allocator has pointer stability, allocate an array of `T` with no
@@ -1539,149 +1542,156 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   unalign_xscalloc_multi(idx count) {
-      return meta_alloc<T, false, false, false, true, true, true>(1u, count);
+   unalign_xscalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, true, true, true>(1u, count);
    }
 
    // Try to allocate a small-size optimized `T`, and return the number of bytes
    // that were allocated, and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_scalloc() {
+   inline_scalloc() [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_scalloc<T>(alignof(T));
+         return inline_align_scalloc<T, inline_size>(alignof(T));
       } else {
-         return inline_unalign_scalloc<T>();
+         return inline_unalign_scalloc<T, inline_size>();
       }
    }
 
    // Allocate a small-size optimized `T`, and return the number of bytes that
    // were allocated, and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_xscalloc() {
+   inline_xscalloc() [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_xscalloc<T>(alignof(T));
+         return inline_align_xscalloc<T, inline_size>(alignof(T));
       } else {
-         return inline_unalign_xscalloc<T>();
+         return inline_unalign_xscalloc<T, inline_size>();
       }
    }
 
    // Try to allocate a small-size optimized array of `T`, and return the number
    // of bytes that were allocated, and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_scalloc_multi(idx count) {
+   inline_scalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_scalloc_multi<T>(alignof(T), count);
+         return inline_align_scalloc_multi<T, inline_size>(alignof(T), count);
       } else {
-         return inline_unalign_scalloc_multi<T>(count);
+         return inline_unalign_scalloc_multi<T, inline_size>(count);
       }
    }
 
    // Allocate a small-size optimized array of `T`, and return the number of
    // bytes that were allocated, and zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_xscalloc_multi(idx count) {
+   inline_xscalloc_multi(idx count) [[clang::lifetimebound]] {
       if constexpr (alignof(T) > 1) {
-         return inline_align_xscalloc_multi<T>(alignof(T), count);
+         return inline_align_xscalloc_multi<T, inline_size>(alignof(T), count);
       } else {
-         return inline_unalign_xscalloc_multi<T>(count);
+         return inline_unalign_xscalloc_multi<T, inline_size>(count);
       }
    }
 
    // Try to allocate a small-size optimized `T` with an alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_scalloc(uword alignment) {
-      return meta_alloc<T, true, true, true, false, true, true>(alignment, 1u);
+   inline_align_scalloc(uword alignment) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, false, true, true, inline_size>(
+         alignment, 1u);
    }
 
    // Allocate a small-size optimized `T` with an alignment guarantee, and
    // return the number of bytes that were allocated, and zero-out the allocated
    // memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_xscalloc(uword alignment) {
-      return meta_alloc<T, true, false, true, false, true, true>(alignment, 1u);
+   inline_align_xscalloc(uword alignment) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, false, true, true, inline_size>(
+         alignment, 1u);
    }
 
    // Try to allocate a small-size optimized `T` with no alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_scalloc() {
-      return meta_alloc<T, true, true, false, false, true, true>(1u, 1u);
+   inline_unalign_scalloc() [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, false, true, true, inline_size>(1u, 1u);
    }
 
    // Allocate a small-size optimized `T` with no alignment guarantee, and
    // return the number of bytes that were allocated, and zero-out the allocated
    // memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xscalloc() {
-      return meta_alloc<T, true, false, false, false, true, true>(1u, 1u);
+   inline_unalign_xscalloc() [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, false, true, true, inline_size>(1u,
+                                                                         1u);
    }
 
    // Try to allocate a small-size optimized array of `T` with an alignment
    // guarantee, and return the number of bytes that were allocated, and
    // zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_scalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, true, true, true, true, true, true>(alignment,
-                                                               count);
+   inline_align_scalloc_multi(uword alignment, idx count)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, true, true, true, true, true, inline_size>(alignment,
+                                                                      count);
    }
 
    // Allocate a small-size optimized array of `T` with an alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_align_xscalloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, true, false, true, true, true, true>(alignment,
-                                                                count);
+   inline_align_xscalloc_multi(uword alignment, idx count)
+      [[clang::lifetimebound]] {
+      return meta_alloc<T, false, true, true, true, true, inline_size>(
+         alignment, count);
    }
 
    // Try to allocate a small-size optimized array of `T` with no alignment
    // guarantee, and return the number of bytes that were allocated, and
    // zero-out the allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_scalloc_multi(idx count) {
-      return meta_alloc<T, true, true, false, true, true, true>(1u, count);
+   inline_unalign_scalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, true, false, true, true, true, inline_size>(1u,
+                                                                       count);
    }
 
    // Allocate a small-size optimized array of `T` with no alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <is_implicit_lifetime T>
+   template <is_implicit_lifetime T, idx inline_size = 64u>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xscalloc_multi(idx count) {
-      return meta_alloc<T, true, false, false, true, true, true>(1u, count);
+   inline_unalign_xscalloc_multi(idx count) [[clang::lifetimebound]] {
+      return meta_alloc<T, false, false, true, true, true, inline_size>(1u,
+                                                                        count);
    }
 
    // Try to move a pointer handle from this allocator into another.
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   realloc_to(auto& allocator, T* p_handle) {
+   realloc_to(auto& allocator, T* p_handle) [[clang::lifetimebound]] {
       return meta_realloc<&allocator_interface<Derived>::alloc<T, T>, true,
                           false>(allocator, p_handle);
    }
@@ -1690,7 +1700,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   realloc(T* p_handle) {
+   realloc(T* p_handle) [[clang::lifetimebound]] {
       return realloc_to(*this, p_handle);
    }
 
@@ -1698,7 +1708,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   xrealloc_to(auto& allocator, T* p_handle) {
+   xrealloc_to(auto& allocator, T* p_handle) [[clang::lifetimebound]] {
       return meta_realloc<&allocator_interface<Derived>::xalloc<T, T>, false,
                           false>(allocator, p_handle);
    }
@@ -1707,7 +1717,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   xrealloc(T* p_handle) {
+   xrealloc(T* p_handle) [[clang::lifetimebound]] {
       return xrealloc_to(*this, p_handle);
    }
 
@@ -1715,7 +1725,8 @@ class allocator_interface {
    // alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   align_realloc_to(auto& allocator, auto* p_handle, uword alignment) {
+   align_realloc_to(auto& allocator, auto* p_handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::align_alloc<T, T>,
                           true, false>(allocator, p_handle, alignment);
@@ -1725,7 +1736,7 @@ class allocator_interface {
    // alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   align_realloc(auto* p_handle, uword alignment) {
+   align_realloc(auto* p_handle, uword alignment) [[clang::lifetimebound]] {
       return align_realloc_to(*this, p_handle, alignment);
    }
 
@@ -1733,7 +1744,8 @@ class allocator_interface {
    // guarantee.
    [[nodiscard]]
    constexpr auto
-   align_xrealloc_to(auto& allocator, auto* p_handle, uword alignment) {
+   align_xrealloc_to(auto& allocator, auto* p_handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::align_xalloc<T, T>,
                           false, false>(allocator, p_handle, alignment);
@@ -1751,7 +1763,8 @@ class allocator_interface {
    // alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   unalign_realloc_to(auto& allocator, auto* p_handle) {
+   unalign_realloc_to(auto& allocator, auto* p_handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::unalign_alloc<T, T>,
                           true, false>(allocator, p_handle);
@@ -1761,7 +1774,7 @@ class allocator_interface {
    // alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   unalign_realloc(auto* p_handle) {
+   unalign_realloc(auto* p_handle) [[clang::lifetimebound]] {
       return unalign_realloc_to(*this, p_handle);
    }
 
@@ -1769,7 +1782,8 @@ class allocator_interface {
    // guarantee.
    [[nodiscard]]
    constexpr auto
-   unalign_xrealloc_to(auto& allocator, auto* p_handle) {
+   unalign_xrealloc_to(auto& allocator, auto* p_handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::unalign_xalloc<T, T>,
                           false, false>(allocator, p_handle);
@@ -1787,8 +1801,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   realloc_multi_to(auto& allocator, T* p_handle, idx old_count,
-                    idx new_count) {
+   realloc_multi_to(auto& allocator, T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return meta_realloc_multi<&allocator_interface<Derived>::alloc_multi<T>,
                                 true, false>(allocator, p_handle, old_count,
                                              new_count);
@@ -1799,7 +1813,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   realloc_multi(T* p_handle, idx old_count, idx new_count) {
+   realloc_multi(T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return realloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -1807,8 +1822,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   xrealloc_multi_to(auto& allocator, T* p_handle, idx old_count,
-                     idx new_count) {
+   xrealloc_multi_to(auto& allocator, T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return meta_realloc_multi<&allocator_interface<Derived>::xalloc_multi<T>,
                                 false, false>(allocator, p_handle, old_count,
                                               new_count);
@@ -1818,7 +1833,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   xrealloc_multi(T* p_handle, idx old_count, idx new_count) {
+   xrealloc_multi(T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return xrealloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -1827,7 +1843,8 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_realloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
-                          idx old_count, idx new_count) {
+                          idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_alloc_multi<T>, true, false>(
@@ -1839,7 +1856,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_realloc_multi(auto* p_handle, uword alignment, idx old_count,
-                       idx new_count) {
+                       idx new_count) [[clang::lifetimebound]] {
       return align_realloc_multi_to(*this, p_handle, alignment, old_count,
                                     new_count);
    }
@@ -1849,7 +1866,8 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_xrealloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
-                           idx old_count, idx new_count) {
+                           idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_xalloc_multi<T>, false, false>(
@@ -1871,7 +1889,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_realloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
-                            idx new_count) {
+                            idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_alloc_multi<T>, true, false>(
@@ -1882,7 +1900,8 @@ class allocator_interface {
    // itself with no alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   unalign_realloc_multi(auto* p_handle, idx old_count, idx new_count) {
+   unalign_realloc_multi(auto* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return unalign_realloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -1891,7 +1910,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_xrealloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
-                             idx new_count) {
+                             idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_xalloc_multi<T>, false, false>(
@@ -1911,7 +1930,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   recalloc_to(auto& allocator, T* p_handle) {
+   recalloc_to(auto& allocator, T* p_handle) [[clang::lifetimebound]] {
       return meta_realloc<&allocator_interface<Derived>::calloc<T>, true, false,
                           false>(allocator, p_handle);
    }
@@ -1921,7 +1940,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   recalloc(T* p_handle) {
+   recalloc(T* p_handle) [[clang::lifetimebound]] {
       return this->recalloc_to(*this, p_handle);
    }
 
@@ -1930,7 +1949,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xrecalloc_to(auto& allocator, T* p_handle) {
+   xrecalloc_to(auto& allocator, T* p_handle) [[clang::lifetimebound]] {
       return meta_realloc<&allocator_interface<Derived>::xcalloc<T>, false,
                           false, false>(allocator, p_handle);
    }
@@ -1940,7 +1959,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xrecalloc(T* p_handle) {
+   xrecalloc(T* p_handle) [[clang::lifetimebound]] {
       return this->xrecalloc_to(*this, p_handle);
    }
 
@@ -1948,7 +1967,8 @@ class allocator_interface {
    // alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   align_recalloc_to(auto& allocator, auto* p_handle, uword alignment) {
+   align_recalloc_to(auto& allocator, auto* p_handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::align_calloc<T>, true,
                           false, false>(allocator, p_handle, alignment);
@@ -1958,7 +1978,7 @@ class allocator_interface {
    // alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   align_recalloc(auto* p_handle, uword alignment) {
+   align_recalloc(auto* p_handle, uword alignment) [[clang::lifetimebound]] {
       return align_recalloc_to(*this, p_handle, alignment);
    }
 
@@ -1966,7 +1986,8 @@ class allocator_interface {
    // guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   align_xrecalloc_to(auto& allocator, auto* p_handle, uword alignment) {
+   align_xrecalloc_to(auto& allocator, auto* p_handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::align_xcalloc<T>,
                           false, false, false>(allocator, p_handle, alignment);
@@ -1984,7 +2005,8 @@ class allocator_interface {
    // alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   unalign_recalloc_to(auto& allocator, auto* p_handle) {
+   unalign_recalloc_to(auto& allocator, auto* p_handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::unalign_calloc<T>,
                           true, false, false>(allocator, p_handle);
@@ -1994,7 +2016,7 @@ class allocator_interface {
    // alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   unalign_recalloc(auto* p_handle) {
+   unalign_recalloc(auto* p_handle) [[clang::lifetimebound]] {
       return unalign_recalloc_to(*this, p_handle);
    }
 
@@ -2002,7 +2024,8 @@ class allocator_interface {
    // guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   unalign_xrecalloc_to(auto& allocator, auto* p_handle) {
+   unalign_xrecalloc_to(auto& allocator, auto* p_handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::unalign_xcalloc<T>,
                           false, false, false>(allocator, p_handle);
@@ -2021,8 +2044,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   recalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
-                     idx new_count) {
+   recalloc_multi_to(auto& allocator, T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return meta_realloc_multi<&allocator_interface<Derived>::calloc_multi<T>,
                                 true, false>(allocator, p_handle, old_count,
                                              new_count);
@@ -2033,7 +2056,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   recalloc_multi(T* p_handle, idx old_count, idx new_count) {
+   recalloc_multi(T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return this->recalloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -2043,7 +2067,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrecalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
-                      idx new_count) {
+                      idx new_count) [[clang::lifetimebound]] {
       return meta_realloc_multi<&allocator_interface<Derived>::xcalloc_multi<T>,
                                 false, false>(allocator, p_handle, old_count,
                                               new_count);
@@ -2054,7 +2078,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xrecalloc_multi(T* p_handle, idx old_count, idx new_count) {
+   xrecalloc_multi(T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return this->xrecalloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -2063,7 +2088,8 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_recalloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
-                           idx old_count, idx new_count) {
+                           idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_calloc_multi<T>, true, false>(
@@ -2075,7 +2101,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_recalloc_multi(auto* p_handle, uword alignment, idx old_count,
-                        idx new_count) {
+                        idx new_count) [[clang::lifetimebound]] {
       return align_recalloc_multi_to(*this, p_handle, alignment, old_count,
                                      new_count);
    }
@@ -2085,7 +2111,8 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_xrecalloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
-                            idx old_count, idx new_count) {
+                            idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_xcalloc_multi<T>, false, false>(
@@ -2107,7 +2134,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_recalloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
-                             idx new_count) {
+                             idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_calloc_multi<T>, true, false>(
@@ -2118,7 +2145,8 @@ class allocator_interface {
    // itself with no alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   unalign_recalloc_multi(auto* p_handle, idx old_count, idx new_count) {
+   unalign_recalloc_multi(auto* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return unalign_recalloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -2127,7 +2155,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_xrecalloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
-                              idx new_count) {
+                              idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_xcalloc_multi<T>, false, false>(
@@ -2143,35 +2171,41 @@ class allocator_interface {
    }
 
    // Try to move a small-size optimized handle from this allocator into
-   // another.
+   // another. The new allocation reuses the SBO size of the old handle.
    [[nodiscard]]
    constexpr auto
-   inline_realloc_to(auto& allocator, mem auto& handle) {
+   inline_realloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<&allocator_interface<Derived>::inline_alloc<T, T>,
-                          true, false>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_alloc<T, inline_size, T>, true,
+         false>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself.
    [[nodiscard]]
    constexpr auto
-   inline_realloc(mem auto& handle) {
+   inline_realloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_realloc_to(*this, handle);
    }
 
    // Move a small-size optimized handle from this allocator into another.
    [[nodiscard]]
    constexpr auto
-   inline_xrealloc_to(auto& allocator, mem auto& handle) {
+   inline_xrealloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<&allocator_interface<Derived>::inline_xalloc<T, T>,
-                          false, false>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_xalloc<T, inline_size, T>, false,
+         false>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself.
    [[nodiscard]]
    constexpr auto
-   inline_xrealloc(mem auto& handle) {
+   inline_xrealloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_xrealloc_to(*this, handle);
    }
 
@@ -2179,18 +2213,21 @@ class allocator_interface {
    // with an alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_align_realloc_to(auto& allocator, mem auto& handle, uword alignment) {
+   inline_align_realloc_to(auto& allocator, mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_align_alloc<T, T>, true, false>(
-         allocator, handle, alignment);
+         &allocator_interface<Derived>::inline_align_alloc<T, inline_size, T>,
+         true, false>(allocator, handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
    // with an alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_align_realloc(mem auto& handle, uword alignment) {
+   inline_align_realloc(mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       return inline_align_realloc_to(*this, handle, alignment);
    }
 
@@ -2198,12 +2235,13 @@ class allocator_interface {
    // an alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_align_xrealloc_to(auto& allocator, mem auto& handle,
-                            uword alignment) {
+   inline_align_xrealloc_to(auto& allocator, mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_align_xalloc<T, T>, false,
-         false>(allocator, handle, alignment);
+         &allocator_interface<Derived>::inline_align_xalloc<T, inline_size, T>,
+         false, false>(allocator, handle, alignment);
    }
 
    // Move a small-size optimized handle from this allocator into itself with an
@@ -2218,18 +2256,20 @@ class allocator_interface {
    // with no alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_realloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_realloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_unalign_alloc<T, T>, true,
-         false>(allocator, handle);
+         &allocator_interface<Derived>::inline_unalign_alloc<T, inline_size, T>,
+         true, false>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
    // with no alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_realloc(mem auto& handle) {
+   inline_unalign_realloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_unalign_realloc_to(*this, handle);
    }
 
@@ -2237,11 +2277,13 @@ class allocator_interface {
    // no alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xrealloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_xrealloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<Derived>::inline_unalign_xalloc<T, T>, false,
-         false>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<&allocator_interface<Derived>::inline_unalign_xalloc<
+                             T, inline_size, T>,
+                          false, false>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself with no
@@ -2256,18 +2298,21 @@ class allocator_interface {
    // another.
    [[nodiscard]]
    constexpr auto
-   inline_realloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_realloc_multi_to(auto& allocator, mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_alloc_multi<T>, true, false>(
-         allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_alloc_multi<T, inline_size>,
+         true, false>(allocator, handle, new_count);
    }
 
    // Try to move a small-size optimized array memory handle from this allocator
    // into itself.
    [[nodiscard]]
    constexpr auto
-   inline_realloc_multi(mem auto& handle, idx new_count) {
+   inline_realloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_realloc_multi_to(*this, handle, new_count);
    }
 
@@ -2275,18 +2320,21 @@ class allocator_interface {
    // allocator into another.
    [[nodiscard]]
    constexpr auto
-   inline_xrealloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_xrealloc_multi_to(auto& allocator, mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_xalloc_multi<T>, false, false>(
-         allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_xalloc_multi<T, inline_size>,
+         false, false>(allocator, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
    // allocator into itself.
    [[nodiscard]]
    constexpr auto
-   inline_xrealloc_multi(mem auto& handle, idx new_count) {
+   inline_xrealloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_xrealloc_multi_to(*this, handle, new_count);
    }
 
@@ -2295,19 +2343,22 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_realloc_multi_to(auto& allocator, mem auto& handle,
-                                 uword alignment, idx new_count) {
+                                 uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_align_alloc_multi<T>, true,
-         false>(allocator, handle, new_count, alignment);
+         &allocator_interface<Derived>::inline_align_alloc_multi<T,
+                                                                 inline_size>,
+         true, false>(allocator, handle, new_count, alignment);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
    // this allocator into itself with an alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_align_realloc_multi(mem auto& handle, uword alignment,
-                              idx new_count) {
+   inline_align_realloc_multi(mem auto& handle, uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_align_realloc_multi_to(*this, handle, alignment, new_count);
    }
 
@@ -2316,11 +2367,14 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_xrealloc_multi_to(auto& allocator, mem auto& handle,
-                                  uword alignment, idx new_count) {
+                                  uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_align_xalloc_multi<T>, false,
-         false>(allocator, handle, new_count, alignment);
+         &allocator_interface<Derived>::inline_align_xalloc_multi<T,
+                                                                  inline_size>,
+         false, false>(allocator, handle, new_count, alignment);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -2338,18 +2392,21 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_realloc_multi_to(auto& allocator, mem auto& handle,
-                                   idx new_count) {
+                                   idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_unalign_alloc_multi<T>, true,
-         false>(allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_unalign_alloc_multi<T,
+                                                                   inline_size>,
+         true, false>(allocator, handle, new_count);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
    // this allocator into itself with no alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_realloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_realloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_unalign_realloc_multi_to(*this, handle, new_count);
    }
 
@@ -2358,11 +2415,13 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_xrealloc_multi_to(auto& allocator, mem auto& handle,
-                                    idx new_count) {
+                                    idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_unalign_xalloc_multi<T>, false,
-         false>(allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_unalign_xalloc_multi<
+            T, inline_size>,
+         false, false>(allocator, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -2377,17 +2436,20 @@ class allocator_interface {
    // another, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_recalloc_to(auto& allocator, mem auto& handle) {
+   inline_recalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<&allocator_interface<Derived>::inline_calloc<T>, true,
-                          false, false>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_calloc<T, inline_size>, true,
+         false, false>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself,
    // and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_recalloc(mem auto& handle) {
+   inline_recalloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_recalloc_to(*this, handle);
    }
 
@@ -2395,17 +2457,20 @@ class allocator_interface {
    // zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_xrecalloc_to(auto& allocator, mem auto& handle) {
+   inline_xrecalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<&allocator_interface<Derived>::inline_xcalloc<T>,
-                          false, false, false>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_xcalloc<T, inline_size>, false,
+         false, false>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself, and
    // zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_xrecalloc(mem auto& handle) {
+   inline_xrecalloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_xrecalloc_to(*this, handle);
    }
 
@@ -2413,18 +2478,21 @@ class allocator_interface {
    // with an alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_align_recalloc_to(auto& allocator, mem auto& handle,
-                            uword alignment) {
+   inline_align_recalloc_to(auto& allocator, mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<&allocator_interface<Derived>::inline_align_calloc<T>,
-                          true, false, false>(allocator, handle, alignment);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_align_calloc<T, inline_size>,
+         true, false, false>(allocator, handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
    // with an alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_align_recalloc(mem auto& handle, uword alignment) {
+   inline_align_recalloc(mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       return inline_align_recalloc_to(*this, handle, alignment);
    }
 
@@ -2432,12 +2500,13 @@ class allocator_interface {
    // an alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_align_xrecalloc_to(auto& allocator, mem auto& handle,
-                             uword alignment) {
+   inline_align_xrecalloc_to(auto& allocator, mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_align_xcalloc<T>, false, false,
-         false>(allocator, handle, alignment);
+         &allocator_interface<Derived>::inline_align_xcalloc<T, inline_size>,
+         false, false, false>(allocator, handle, alignment);
    }
 
    // Move a small-size optimized handle from this allocator into itself with an
@@ -2452,18 +2521,20 @@ class allocator_interface {
    // with no alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_recalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_recalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_unalign_calloc<T>, true, false,
-         false>(allocator, handle);
+         &allocator_interface<Derived>::inline_unalign_calloc<T, inline_size>,
+         true, false, false>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
    // with no alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_recalloc(mem auto& handle) {
+   inline_unalign_recalloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_unalign_recalloc_to(*this, handle);
    }
 
@@ -2471,11 +2542,13 @@ class allocator_interface {
    // no alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xrecalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_xrecalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_unalign_xcalloc<T>, false, false,
-         false>(allocator, handle);
+         &allocator_interface<Derived>::inline_unalign_xcalloc<T, inline_size>,
+         false, false, false>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself with no
@@ -2490,18 +2563,21 @@ class allocator_interface {
    // another, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_recalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_recalloc_multi_to(auto& allocator, mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_calloc_multi<T>, true, false>(
-         allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_calloc_multi<T, inline_size>,
+         true, false>(allocator, handle, new_count);
    }
 
    // Try to move a small-size optimized array memory handle from this allocator
    // into itself, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_recalloc_multi(mem auto& handle, idx new_count) {
+   inline_recalloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_recalloc_multi_to(*this, handle, new_count);
    }
 
@@ -2509,18 +2585,21 @@ class allocator_interface {
    // allocator into another, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_xrecalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_xrecalloc_multi_to(auto& allocator, mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_xcalloc_multi<T>, false, false>(
-         allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_xcalloc_multi<T, inline_size>,
+         false, false>(allocator, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
    // allocator into itself, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_xrecalloc_multi(mem auto& handle, idx new_count) {
+   inline_xrecalloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_xrecalloc_multi_to(*this, handle, new_count);
    }
 
@@ -2529,11 +2608,14 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_recalloc_multi_to(auto& allocator, mem auto& handle,
-                                  uword alignment, idx new_count) {
+                                  uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_align_calloc_multi<T>, true,
-         false>(allocator, handle, new_count, alignment);
+         &allocator_interface<Derived>::inline_align_calloc_multi<T,
+                                                                  inline_size>,
+         true, false>(allocator, handle, new_count, alignment);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -2541,8 +2623,8 @@ class allocator_interface {
    // allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_align_recalloc_multi(mem auto& handle, uword alignment,
-                               idx new_count) {
+   inline_align_recalloc_multi(mem auto& handle, uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_align_recalloc_multi_to(*this, handle, alignment,
                                             new_count);
    }
@@ -2553,11 +2635,14 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_xrecalloc_multi_to(auto& allocator, mem auto& handle,
-                                   uword alignment, idx new_count) {
+                                   uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_align_xcalloc_multi<T>, false,
-         false>(allocator, handle, new_count, alignment);
+         &allocator_interface<Derived>::inline_align_xcalloc_multi<T,
+                                                                   inline_size>,
+         false, false>(allocator, handle, new_count, alignment);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -2577,11 +2662,13 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_recalloc_multi_to(auto& allocator, mem auto& handle,
-                                    idx new_count) {
+                                    idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_unalign_calloc_multi<T>, true,
-         false>(allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_unalign_calloc_multi<
+            T, inline_size>,
+         true, false>(allocator, handle, new_count);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -2589,7 +2676,8 @@ class allocator_interface {
    // allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_recalloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_recalloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_unalign_recalloc_multi_to(*this, handle, new_count);
    }
 
@@ -2599,11 +2687,13 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_xrecalloc_multi_to(auto& allocator, mem auto& handle,
-                                     idx new_count) {
+                                     idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_unalign_xcalloc_multi<T>, false,
-         false>(allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_unalign_xcalloc_multi<
+            T, inline_size>,
+         false, false>(allocator, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -2620,7 +2710,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   resalloc_to(auto& allocator, T* p_handle) {
+   resalloc_to(auto& allocator, T* p_handle) [[clang::lifetimebound]] {
       return meta_realloc<&allocator_interface<Derived>::salloc<T, T>, true,
                           true>(allocator, p_handle);
    }
@@ -2630,7 +2720,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   resalloc(T* p_handle) {
+   resalloc(T* p_handle) [[clang::lifetimebound]] {
       return this->resalloc_to(*this, p_handle);
    }
 
@@ -2639,7 +2729,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   xresalloc_to(auto& allocator, T* p_handle) {
+   xresalloc_to(auto& allocator, T* p_handle) [[clang::lifetimebound]] {
       return meta_realloc<&allocator_interface<Derived>::xsalloc<T, T>, false,
                           true>(allocator, p_handle);
    }
@@ -2649,7 +2739,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   xresalloc(T* p_handle) {
+   xresalloc(T* p_handle) [[clang::lifetimebound]] {
       return this->xresalloc_to(*this, p_handle);
    }
 
@@ -2657,7 +2747,8 @@ class allocator_interface {
    // alignment guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   align_resalloc_to(auto& allocator, auto* p_handle, uword alignment) {
+   align_resalloc_to(auto& allocator, auto* p_handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::align_salloc<T, T>,
                           true, true>(allocator, p_handle, alignment);
@@ -2667,7 +2758,7 @@ class allocator_interface {
    // alignment guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   align_resalloc(auto* p_handle, uword alignment) {
+   align_resalloc(auto* p_handle, uword alignment) [[clang::lifetimebound]] {
       return align_resalloc_to(*this, p_handle, alignment);
    }
 
@@ -2675,7 +2766,8 @@ class allocator_interface {
    // guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   align_xresalloc_to(auto& allocator, auto* p_handle, uword alignment) {
+   align_xresalloc_to(auto& allocator, auto* p_handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::align_xsalloc<T, T>,
                           false, true>(allocator, p_handle, alignment);
@@ -2693,7 +2785,8 @@ class allocator_interface {
    // alignment guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   unalign_resalloc_to(auto& allocator, auto* p_handle) {
+   unalign_resalloc_to(auto& allocator, auto* p_handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::unalign_salloc<T, T>,
                           true, true>(allocator, p_handle);
@@ -2703,7 +2796,7 @@ class allocator_interface {
    // alignment guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   unalign_resalloc(auto* p_handle) {
+   unalign_resalloc(auto* p_handle) [[clang::lifetimebound]] {
       return unalign_resalloc_to(*this, p_handle);
    }
 
@@ -2711,7 +2804,8 @@ class allocator_interface {
    // guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   unalign_xresalloc_to(auto& allocator, auto* p_handle) {
+   unalign_xresalloc_to(auto& allocator, auto* p_handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::unalign_xsalloc<T, T>,
                           false, true>(allocator, p_handle);
@@ -2730,8 +2824,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   resalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
-                     idx new_count) {
+   resalloc_multi_to(auto& allocator, T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return meta_realloc_multi<&allocator_interface<Derived>::salloc_multi<T>,
                                 true, true>(allocator, p_handle, old_count,
                                             new_count);
@@ -2742,7 +2836,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   resalloc_multi(T* p_handle, idx old_count, idx new_count) {
+   resalloc_multi(T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return this->resalloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -2752,7 +2847,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xresalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
-                      idx new_count) {
+                      idx new_count) [[clang::lifetimebound]] {
       return meta_realloc_multi<&allocator_interface<Derived>::xsalloc_multi<T>,
                                 false, true>(allocator, p_handle, old_count,
                                              new_count);
@@ -2763,7 +2858,8 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   xresalloc_multi(T* p_handle, idx old_count, idx new_count) {
+   xresalloc_multi(T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return this->xresalloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -2773,7 +2869,8 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_resalloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
-                           idx old_count, idx new_count) {
+                           idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_salloc_multi<T>, true, true>(
@@ -2786,7 +2883,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_resalloc_multi(auto* p_handle, uword alignment, idx old_count,
-                        idx new_count) {
+                        idx new_count) [[clang::lifetimebound]] {
       return align_resalloc_multi_to(*this, p_handle, alignment, old_count,
                                      new_count);
    }
@@ -2797,7 +2894,8 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_xresalloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
-                            idx old_count, idx new_count) {
+                            idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_xsalloc_multi<T>, false, true>(
@@ -2821,7 +2919,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_resalloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
-                             idx new_count) {
+                             idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_salloc_multi<T>, true, true>(
@@ -2833,7 +2931,8 @@ class allocator_interface {
    // were allocated.
    [[nodiscard]]
    constexpr auto
-   unalign_resalloc_multi(auto* p_handle, idx old_count, idx new_count) {
+   unalign_resalloc_multi(auto* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return unalign_resalloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -2843,7 +2942,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_xresalloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
-                              idx new_count) {
+                              idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_xsalloc_multi<T>, false, true>(
@@ -2864,7 +2963,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   rescalloc_to(auto& allocator, T* p_handle) {
+   rescalloc_to(auto& allocator, T* p_handle) [[clang::lifetimebound]] {
       return meta_realloc<&allocator_interface<Derived>::scalloc<T>, true, true,
                           false>(allocator, p_handle);
    }
@@ -2874,7 +2973,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   rescalloc(T* p_handle) {
+   rescalloc(T* p_handle) [[clang::lifetimebound]] {
       return this->rescalloc_to(*this, p_handle);
    }
 
@@ -2883,7 +2982,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xrescalloc_to(auto& allocator, T* p_handle) {
+   xrescalloc_to(auto& allocator, T* p_handle) [[clang::lifetimebound]] {
       return meta_realloc<&allocator_interface<Derived>::xscalloc<T>, false,
                           true, false>(allocator, p_handle);
    }
@@ -2893,7 +2992,7 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xrescalloc(T* p_handle) {
+   xrescalloc(T* p_handle) [[clang::lifetimebound]] {
       return this->xrescalloc_to(*this, p_handle);
    }
 
@@ -2902,7 +3001,8 @@ class allocator_interface {
    // of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   align_rescalloc_to(auto& allocator, auto* p_handle, uword alignment) {
+   align_rescalloc_to(auto& allocator, auto* p_handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::align_scalloc<T>, true,
                           true, false>(allocator, p_handle, alignment);
@@ -2913,7 +3013,7 @@ class allocator_interface {
    // of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   align_rescalloc(auto* p_handle, uword alignment) {
+   align_rescalloc(auto* p_handle, uword alignment) [[clang::lifetimebound]] {
       return align_rescalloc_to(*this, p_handle, alignment);
    }
 
@@ -2922,7 +3022,8 @@ class allocator_interface {
    // that were allocated.
    [[nodiscard]]
    constexpr auto
-   align_xrescalloc_to(auto& allocator, auto* p_handle, uword alignment) {
+   align_xrescalloc_to(auto& allocator, auto* p_handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::align_xscalloc<T>,
                           false, true, false>(allocator, p_handle, alignment);
@@ -2941,7 +3042,8 @@ class allocator_interface {
    // of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   unalign_rescalloc_to(auto& allocator, auto* p_handle) {
+   unalign_rescalloc_to(auto& allocator, auto* p_handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::unalign_scalloc<T>,
                           true, true, false>(allocator, p_handle);
@@ -2952,7 +3054,7 @@ class allocator_interface {
    // of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   unalign_rescalloc(auto* p_handle) {
+   unalign_rescalloc(auto* p_handle) [[clang::lifetimebound]] {
       return unalign_rescalloc_to(*this, p_handle);
    }
 
@@ -2961,7 +3063,8 @@ class allocator_interface {
    // that were allocated.
    [[nodiscard]]
    constexpr auto
-   unalign_xrescalloc_to(auto& allocator, auto* p_handle) {
+   unalign_xrescalloc_to(auto& allocator, auto* p_handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<&allocator_interface<Derived>::unalign_xscalloc<T>,
                           false, true, false>(allocator, p_handle);
@@ -2982,7 +3085,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    rescalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
-                      idx new_count) {
+                      idx new_count) [[clang::lifetimebound]] {
       return meta_realloc_multi<&allocator_interface<Derived>::scalloc_multi<T>,
                                 true, true>(allocator, p_handle, old_count,
                                             new_count);
@@ -2994,7 +3097,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   rescalloc_multi(T* p_handle, idx old_count, idx new_count) {
+   rescalloc_multi(T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return this->rescalloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -3005,7 +3109,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrescalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
-                       idx new_count) {
+                       idx new_count) [[clang::lifetimebound]] {
       return meta_realloc_multi<
          &allocator_interface<Derived>::xscalloc_multi<T>, false, true>(
          allocator, p_handle, old_count, new_count);
@@ -3017,7 +3121,8 @@ class allocator_interface {
    template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
-   xrescalloc_multi(T* p_handle, idx old_count, idx new_count) {
+   xrescalloc_multi(T* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return this->xrescalloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -3027,7 +3132,8 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_rescalloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
-                            idx old_count, idx new_count) {
+                            idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_scalloc_multi<T>, true, true>(
@@ -3040,7 +3146,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_rescalloc_multi(auto* p_handle, uword alignment, idx old_count,
-                         idx new_count) {
+                         idx new_count) [[clang::lifetimebound]] {
       return align_rescalloc_multi_to(*this, p_handle, alignment, old_count,
                                       new_count);
    }
@@ -3051,7 +3157,8 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_xrescalloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
-                             idx old_count, idx new_count) {
+                             idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_xscalloc_multi<T>, false, true>(
@@ -3075,7 +3182,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_rescalloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
-                              idx new_count) {
+                              idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_scalloc_multi<T>, true, true>(
@@ -3087,7 +3194,8 @@ class allocator_interface {
    // return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   unalign_rescalloc_multi(auto* p_handle, idx old_count, idx new_count) {
+   unalign_rescalloc_multi(auto* p_handle, idx old_count, idx new_count)
+      [[clang::lifetimebound]] {
       return unalign_rescalloc_multi_to(*this, p_handle, old_count, new_count);
    }
 
@@ -3097,7 +3205,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_xrescalloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
-                               idx new_count) {
+                               idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_xscalloc_multi<T>, false, true>(
@@ -3117,17 +3225,20 @@ class allocator_interface {
    // another, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_resalloc_to(auto& allocator, mem auto& handle) {
+   inline_resalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<&allocator_interface<Derived>::inline_salloc<T, T>,
-                          true, true>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_salloc<T, inline_size, T>, true,
+         true>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself,
    // and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_resalloc(mem auto& handle) {
+   inline_resalloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_resalloc_to(*this, handle);
    }
 
@@ -3135,17 +3246,20 @@ class allocator_interface {
    // return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xresalloc_to(auto& allocator, mem auto& handle) {
+   inline_xresalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<&allocator_interface<Derived>::inline_xsalloc<T, T>,
-                          false, true>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_xsalloc<T, inline_size, T>,
+         false, true>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself, and
    // return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xresalloc(mem auto& handle) {
+   inline_xresalloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_xresalloc_to(*this, handle);
    }
 
@@ -3154,12 +3268,13 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_resalloc_to(auto& allocator, mem auto& handle,
-                            uword alignment) {
+   inline_align_resalloc_to(auto& allocator, mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_align_salloc<T, T>, true, true>(
-         allocator, handle, alignment);
+         &allocator_interface<Derived>::inline_align_salloc<T, inline_size, T>,
+         true, true>(allocator, handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
@@ -3167,7 +3282,8 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_resalloc(mem auto& handle, uword alignment) {
+   inline_align_resalloc(mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       return inline_align_resalloc_to(*this, handle, alignment);
    }
 
@@ -3176,12 +3292,13 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_xresalloc_to(auto& allocator, mem auto& handle,
-                             uword alignment) {
+   inline_align_xresalloc_to(auto& allocator, mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_align_xsalloc<T, T>, false,
-         true>(allocator, handle, alignment);
+         &allocator_interface<Derived>::inline_align_xsalloc<T, inline_size, T>,
+         false, true>(allocator, handle, alignment);
    }
 
    // Move a small-size optimized handle from this allocator into itself with an
@@ -3197,11 +3314,13 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_resalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_resalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<Derived>::inline_unalign_salloc<T, T>, true,
-         true>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<&allocator_interface<Derived>::inline_unalign_salloc<
+                             T, inline_size, T>,
+                          true, true>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
@@ -3209,7 +3328,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_resalloc(mem auto& handle) {
+   inline_unalign_resalloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_unalign_resalloc_to(*this, handle);
    }
 
@@ -3218,11 +3337,13 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xresalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_xresalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<Derived>::inline_unalign_xsalloc<T, T>, false,
-         true>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<&allocator_interface<Derived>::inline_unalign_xsalloc<
+                             T, inline_size, T>,
+                          false, true>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself with no
@@ -3238,18 +3359,21 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_resalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_resalloc_multi_to(auto& allocator, mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_salloc_multi<T>, true, true>(
-         allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_salloc_multi<T, inline_size>,
+         true, true>(allocator, handle, new_count);
    }
 
    // Try to move a small-size optimized array memory handle from this allocator
    // into itself, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_resalloc_multi(mem auto& handle, idx new_count) {
+   inline_resalloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_resalloc_multi_to(*this, handle, new_count);
    }
 
@@ -3258,18 +3382,21 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xresalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_xresalloc_multi_to(auto& allocator, mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_xsalloc_multi<T>, false, true>(
-         allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_xsalloc_multi<T, inline_size>,
+         false, true>(allocator, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
    // allocator into itself, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xresalloc_multi(mem auto& handle, idx new_count) {
+   inline_xresalloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_xresalloc_multi_to(*this, handle, new_count);
    }
 
@@ -3279,11 +3406,14 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_resalloc_multi_to(auto& allocator, mem auto& handle,
-                                  uword alignment, idx new_count) {
+                                  uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_align_salloc_multi<T>, true,
-         true>(allocator, handle, new_count, alignment);
+         &allocator_interface<Derived>::inline_align_salloc_multi<T,
+                                                                  inline_size>,
+         true, true>(allocator, handle, new_count, alignment);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -3291,8 +3421,8 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_resalloc_multi(mem auto& handle, uword alignment,
-                               idx new_count) {
+   inline_align_resalloc_multi(mem auto& handle, uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_align_resalloc_multi_to(*this, handle, alignment,
                                             new_count);
    }
@@ -3303,11 +3433,14 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_xresalloc_multi_to(auto& allocator, mem auto& handle,
-                                   uword alignment, idx new_count) {
+                                   uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_align_xsalloc_multi<T>, false,
-         true>(allocator, handle, new_count, alignment);
+         &allocator_interface<Derived>::inline_align_xsalloc_multi<T,
+                                                                   inline_size>,
+         false, true>(allocator, handle, new_count, alignment);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3327,11 +3460,13 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_resalloc_multi_to(auto& allocator, mem auto& handle,
-                                    idx new_count) {
+                                    idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_unalign_salloc_multi<T>, true,
-         true>(allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_unalign_salloc_multi<
+            T, inline_size>,
+         true, true>(allocator, handle, new_count);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -3339,7 +3474,8 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_resalloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_resalloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_unalign_resalloc_multi_to(*this, handle, new_count);
    }
 
@@ -3349,11 +3485,13 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_xresalloc_multi_to(auto& allocator, mem auto& handle,
-                                     idx new_count) {
+                                     idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_unalign_xsalloc_multi<T>, false,
-         true>(allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_unalign_xsalloc_multi<
+            T, inline_size>,
+         false, true>(allocator, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3370,10 +3508,13 @@ class allocator_interface {
    // that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_rescalloc_to(auto& allocator, mem auto& handle) {
+   inline_rescalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<&allocator_interface<Derived>::inline_scalloc<T>,
-                          true, true, false>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_scalloc<T, inline_size>, true,
+         true, false>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself,
@@ -3381,7 +3522,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_rescalloc(mem auto& handle) {
+   inline_rescalloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_rescalloc_to(*this, handle);
    }
 
@@ -3390,10 +3531,13 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xrescalloc_to(auto& allocator, mem auto& handle) {
+   inline_xrescalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<&allocator_interface<Derived>::inline_xscalloc<T>,
-                          false, true, false>(allocator, handle);
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_xscalloc<T, inline_size>, false,
+         true, false>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself,
@@ -3401,7 +3545,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xrescalloc(mem auto& handle) {
+   inline_xrescalloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_xrescalloc_to(*this, handle);
    }
 
@@ -3410,12 +3554,13 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_rescalloc_to(auto& allocator, mem auto& handle,
-                             uword alignment) {
+   inline_align_rescalloc_to(auto& allocator, mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_align_scalloc<T>, true, true,
-         false>(allocator, handle, alignment);
+         &allocator_interface<Derived>::inline_align_scalloc<T, inline_size>,
+         true, true, false>(allocator, handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
@@ -3423,7 +3568,8 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_rescalloc(mem auto& handle, uword alignment) {
+   inline_align_rescalloc(mem auto& handle, uword alignment)
+      [[clang::lifetimebound]] {
       return inline_align_rescalloc_to(*this, handle, alignment);
    }
 
@@ -3433,11 +3579,12 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_xrescalloc_to(auto& allocator, mem auto& handle,
-                              uword alignment) {
+                              uword alignment) [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_align_xscalloc<T>, false, true,
-         false>(allocator, handle, alignment);
+         &allocator_interface<Derived>::inline_align_xscalloc<T, inline_size>,
+         false, true, false>(allocator, handle, alignment);
    }
 
    // Move a small-size optimized handle from this allocator into itself with an
@@ -3454,11 +3601,13 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_rescalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_rescalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_unalign_scalloc<T>, true, true,
-         false>(allocator, handle);
+         &allocator_interface<Derived>::inline_unalign_scalloc<T, inline_size>,
+         true, true, false>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
@@ -3466,7 +3615,7 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_rescalloc(mem auto& handle) {
+   inline_unalign_rescalloc(mem auto& handle) [[clang::lifetimebound]] {
       return inline_unalign_rescalloc_to(*this, handle);
    }
 
@@ -3475,11 +3624,13 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xrescalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_xrescalloc_to(auto& allocator, mem auto& handle)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return meta_realloc<
-         &allocator_interface<Derived>::inline_unalign_xscalloc<T>, false, true,
-         false>(allocator, handle);
+         &allocator_interface<Derived>::inline_unalign_xscalloc<T, inline_size>,
+         false, true, false>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself with no
@@ -3496,11 +3647,13 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_rescalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_rescalloc_multi_to(auto& allocator, mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_scalloc_multi<T>, true, true>(
-         allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_scalloc_multi<T, inline_size>,
+         true, true>(allocator, handle, new_count);
    }
 
    // Try to move a small-size optimized array memory handle from this allocator
@@ -3508,7 +3661,8 @@ class allocator_interface {
    // that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_rescalloc_multi(mem auto& handle, idx new_count) {
+   inline_rescalloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_rescalloc_multi_to(*this, handle, new_count);
    }
 
@@ -3517,12 +3671,13 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xrescalloc_multi_to(auto& allocator, mem auto& handle,
-                              idx new_count) {
+   inline_xrescalloc_multi_to(auto& allocator, mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_xscalloc_multi<T>, false, true>(
-         allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_xscalloc_multi<T, inline_size>,
+         false, true>(allocator, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3530,7 +3685,8 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xrescalloc_multi(mem auto& handle, idx new_count) {
+   inline_xrescalloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_xrescalloc_multi_to(*this, handle, new_count);
    }
 
@@ -3540,11 +3696,14 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_rescalloc_multi_to(auto& allocator, mem auto& handle,
-                                   uword alignment, idx new_count) {
+                                   uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_align_scalloc_multi<T>, true,
-         true>(allocator, handle, new_count, alignment);
+         &allocator_interface<Derived>::inline_align_scalloc_multi<T,
+                                                                   inline_size>,
+         true, true>(allocator, handle, new_count, alignment);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -3553,7 +3712,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_rescalloc_multi(mem auto& handle, uword alignment,
-                                idx new_count) {
+                                idx new_count) [[clang::lifetimebound]] {
       return inline_align_rescalloc_multi_to(*this, handle, alignment,
                                              new_count);
    }
@@ -3564,11 +3723,14 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_xrescalloc_multi_to(auto& allocator, mem auto& handle,
-                                    uword alignment, idx new_count) {
+                                    uword alignment, idx new_count)
+      [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_align_xscalloc_multi<T>, false,
-         true>(allocator, handle, new_count, alignment);
+         &allocator_interface<Derived>::inline_align_xscalloc_multi<
+            T, inline_size>,
+         false, true>(allocator, handle, new_count, alignment);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3588,11 +3750,13 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_rescalloc_multi_to(auto& allocator, mem auto& handle,
-                                     idx new_count) {
+                                     idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_unalign_scalloc_multi<T>, true,
-         true>(allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_unalign_scalloc_multi<
+            T, inline_size>,
+         true, true>(allocator, handle, new_count);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -3600,7 +3764,8 @@ class allocator_interface {
    // allocated memory, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_rescalloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_rescalloc_multi(mem auto& handle, idx new_count)
+      [[clang::lifetimebound]] {
       return inline_unalign_rescalloc_multi_to(*this, handle, new_count);
    }
 
@@ -3610,11 +3775,13 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_xrescalloc_multi_to(auto& allocator, mem auto& handle,
-                                      idx new_count) {
+                                      idx new_count) [[clang::lifetimebound]] {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+      constexpr idx inline_size = remove_cvref<decltype(handle)>::inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_unalign_xscalloc_multi<T>, false,
-         true>(allocator, handle, new_count);
+         &allocator_interface<Derived>::inline_unalign_xscalloc_multi<
+            T, inline_size>,
+         false, true>(allocator, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3667,42 +3834,44 @@ class allocator_interface {
    template <mem T>
    [[nodiscard]]
    constexpr auto
-   get(T& handle [[clang::lifetimebound]]) & -> decltype(auto);
+   get(T& handle [[clang::lifetimebound]]) & [[clang::lifetimebound]]
+   -> decltype(auto);
 
    // Get a `const` handle to the data in any memory handle. If that memory
    // handle is to a multi-allocation, this returns a `span`.
    template <mem T>
    [[nodiscard]]
    constexpr auto
-   get(T const& memory [[clang::lifetimebound]]) & -> decltype(auto);
+   get(T const& memory [[clang::lifetimebound]]) & [[clang::lifetimebound]]
+   -> decltype(auto);
 
    // Get a non-`const` reference to the data in any pointer handle.
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get(T* p_handle) & -> T&;
+   get(T* p_handle) & [[clang::lifetimebound]] -> T&;
 
    // Get a `const` reference to the data in any pointer handle.
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get(T const* p_handle) & -> T&;
+   get(T const* p_handle) & [[clang::lifetimebound]] -> T&;
 
    // Get a pointer to an allocated non-`const` `mem`.
    template <mem T>
       requires(Derived::has_pointer_stability)
    [[nodiscard]]
    constexpr auto
-   p_get(T& memory) -> auto;
+   p_get(T& memory) [[clang::lifetimebound]] -> auto;
 
    // Get a `const` pointer to an allocated `mem`.
    template <mem T>
       requires(Derived::has_pointer_stability)
    [[nodiscard]]
    constexpr auto
-   p_get(T const& memory) -> auto;
+   p_get(T const& memory) [[clang::lifetimebound]] -> auto;
 
-   // If the allocator does not over-ride a `.reset()` method, produce a no-op.
+   // If the allocator does not override a `.reset()` method, produce a no-op.
    constexpr void
    reset() {
    }
@@ -3801,8 +3970,7 @@ class allocator_interface {
    // interface supply non-overlapping destination storage for this transfer.
    constexpr void
    relocate_inline_handle(mem auto& handle, mem auto& allocation) {
-      using allocation_type =
-         typename remove_cvref<decltype(handle)>::allocation_type;
+      using allocation_type = remove_cvref<decltype(handle)>::allocation_type;
       if !consteval {
          verify(!is_memory_overlapping(this->p_get(handle), handle.raw_size(),
                                        this->p_get(allocation),
