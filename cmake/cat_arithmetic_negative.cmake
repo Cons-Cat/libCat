@@ -20,25 +20,15 @@
 # expressed as TUs: they are not an ill-formed *constructor or `operator*` in
 # user code.
 #
-# Each probe is also registered as an `EXCLUDE_FROM_ALL` object target. The
+# Each probe is registered as an `EXCLUDE_FROM_ALL` object target. The
 # `ArithmeticTypeCheck` CTest uses launcher-wrapped check targets that invert
-# compiler results and build in parallel. The target path reuses `cat-impl`'s PCH
-# when `CAT_PCH=ON`.
+# compiler results and build in parallel. The target path reuses `cat-impl`'s
+# PCH when `CAT_PCH=ON`.
 #
-# When `CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON`, the same probes additionally run
-# at configure time. Full compiler text for each configure-time probe is written
-# to `CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log` in the build tree.
-# A final verbose message reports counts and points at that file.
-#
-# Local:
-#   cmake -S . -B build-neg -G Ninja -DCMAKE_CXX_COMPILER=clang++ \
-#     -DCAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON
-# or:
+# Run via:
 #   just test arithmetic
-
-option(CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS
-  "Also run -fsyntax-only checks for cat arithmetic wrapper ill-formed probes at configure time."
-  OFF)
+# or:
+#   ctest -L arithmetic
 
 find_program(CAT_PYTHON3
   NAMES python3
@@ -50,39 +40,9 @@ endif()
 
 if (NOT DEFINED CAT_INCLUDE_SUBDIRS)
   message(FATAL_ERROR
-    "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: include `cat_arithmetic_negative.cmake` "
-    "after `add_subdirectory(src/)` so `CAT_INCLUDE_SUBDIRS` is set.")
+    "cat_arithmetic_negative.cmake: include this file after "
+    "`add_subdirectory(src/)` so `CAT_INCLUDE_SUBDIRS` is set.")
 endif()
-
-# Match `cat` include layout (one `-I` per list entry) plus this directory for
-# CMake-generated probe includes. `block(PROPAGATE)` keeps the loop scratch
-# (`_d`, `_includes`) from leaking into the rest of the file.
-block(PROPAGATE _cat_neg_compile_args)
-  set(_includes "${CMAKE_SOURCE_DIR}/src")
-  foreach(_d IN LISTS CAT_INCLUDE_SUBDIRS)
-    list(APPEND _includes "${CMAKE_SOURCE_DIR}/src/libraries/${_d}")
-  endforeach()
-  list(APPEND _includes "${CMAKE_SOURCE_DIR}/cmake")
-
-  set(_cat_neg_compile_args
-    -std=gnu++26
-    -Wno-everything # This test is not about warnings.
-    -fsyntax-only)
-  foreach(_d IN LISTS _includes)
-    list(APPEND _cat_neg_compile_args "-I${_d}")
-  endforeach()
-
-  # Match normal libCat TUs: `global_includes.hpp` forward-declares
-  # `default_compact_trait`/`compact` before `<cat/maybe>` pulls
-  # `<cat/arithmetic>`, so arithmetic's `default_compact_trait<basic_idx<...>>`
-  # specialization is valid.
-  list(APPEND _cat_neg_compile_args
-    -nostdlib
-    -nostdlib++
-    -fno-exceptions
-    -fno-rtti
-    "-include" "${CMAKE_SOURCE_DIR}/src/global_includes.hpp")
-endblock()
 
 # Macro (not `function`) so per-probe counters in this file stay visible.
 macro(_cat_neg_expect_illformed _name _src)
@@ -120,80 +80,17 @@ macro(_cat_neg_expect_illformed _name _src)
     PROPERTY CAT_NEG_REPORT_TARGET "${_cat_n_target}")
   list(APPEND _cat_neg_check_targets "${_cat_n_check_target}")
   math(EXPR _cat_neg_n_cases "${_cat_neg_n_cases} + 1")
-
-  if (CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS)
-    execute_process(
-      COMMAND
-        "${CMAKE_CXX_COMPILER}"
-        ${_cat_neg_compile_args}
-        "${_cat_n_path}"
-      RESULT_VARIABLE _neg_rc
-      OUTPUT_VARIABLE _neg_out
-      ERROR_VARIABLE _neg_err
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      ERROR_STRIP_TRAILING_WHITESPACE
-    )
-    if (_neg_rc EQUAL 0)
-      set(_neg_log "${_neg_err}")
-      if (NOT _neg_log)
-        set(_neg_log "${_neg_out}")
-      endif()
-      if (NOT _neg_log)
-        set(_neg_log "(no output)")
-      endif()
-      message(SEND_ERROR
-        "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: case '${_name}' compiled successfully. Expected a type error! Output:\n"
-        "${_neg_log}")
-    else()
-      file(
-        APPEND
-        "${_cat_neg_diag_path}"
-        "==== ${_name} (expected failure, exit code ${_neg_rc}) ====\n"
-      )
-      if (_neg_err)
-        file(APPEND
-          "${_cat_neg_diag_path}" "stderr:\n${_neg_err}\n"
-        )
-      endif()
-      if (_neg_out)
-        file(APPEND
-          "${_cat_neg_diag_path}" "stdout:\n${_neg_out}\n"
-        )
-      endif()
-      if (NOT _neg_err AND NOT _neg_out)
-        file(
-          APPEND
-          "${_cat_neg_diag_path}" "(no stderr/stdout from compiler)\n"
-        )
-      endif()
-      file(
-        APPEND
-        "${_cat_neg_diag_path}" "\n"
-      )
-      math(EXPR _cat_neg_n_illformed_ok
-        "${_cat_neg_n_illformed_ok} + 1")
-    endif()
-  endif()
 endmacro()
 
 # Everything below operates on file-internal accumulators (`_cat_neg_targets`,
-# `_cat_neg_check_targets`, `_cat_neg_n_cases`, `_cat_neg_n_illformed_ok`)
-# that aren't read outside this file. Wrap the whole bottom in a single
-# `block()` so loop scratch (`n`, `_il`, plus everything dropped by
-# `cat_arithmetic_neg_matrix.cmake`) and the macro's leaked locals
-# (`_cat_n_path`, `_cat_n_target`, `_cat_n_check_target`) all stay scoped --
-# no per-loop `unset()` cleanup needed.
+# `_cat_neg_check_targets`, `_cat_neg_n_cases`) that aren't read outside this
+# file. Wrap the whole bottom in a single `block()` so loop scratch (`n`,
+# `_il`, plus everything dropped by `cat_arithmetic_neg_matrix.cmake`) and the
+# macro's leaked locals (`_cat_n_path`, `_cat_n_target`, `_cat_n_check_target`)
+# all stay scoped -- no per-loop `unset()` cleanup needed.
 block()
-  set(_cat_neg_diag_path
-    "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log")
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg")
-  file(WRITE
-    "${_cat_neg_diag_path}"
-    "cat arithmetic wrapper negative -fsyntax-only (must-reject stderr/stdout)\n"
-    "Compiler: ${CMAKE_CXX_COMPILER}\n"
-    "-----\n")
 
-  set(_cat_neg_n_illformed_ok 0)
   set(_cat_neg_n_cases 0)
   set(_cat_neg_targets)
   set(_cat_neg_check_targets)
@@ -375,17 +272,10 @@ set_tests_properties(
   list(LENGTH _cat_neg_glob _cat_neg_n_glob)
   if (NOT _cat_neg_n_glob EQUAL _cat_neg_n_cases)
     message(WARNING
-      "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: probe .cpp on disk count "
+      "cat_arithmetic_negative: probe .cpp on disk count "
       "(${_cat_neg_n_glob}) != ill+must total (${_cat_neg_n_cases}) (glob check)")
   endif()
   message(VERBOSE
     "CAT_ARITHMETIC_NEGATIVE_CTEST: registered ${_cat_neg_n_cases} "
     "must-reject build target(s) as `ArithmeticTypeCheck`")
-  if (CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS)
-    message(VERBOSE
-      "CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS: OK - compiler `${CMAKE_CXX_COMPILER}` "
-      "(${_cat_neg_n_illformed_ok} must-reject) "
-      "matches ${_cat_neg_n_glob} -fsyntax-only .cpp. "
-      "Per-probe compiler output: ${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log")
-  endif()
 endblock()

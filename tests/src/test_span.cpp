@@ -658,7 +658,8 @@ $test(span_as_writable_bytes) {
 // in `span_ext`'s `$test.cxx`. A `cat::span` is equality-comparable and
 // orderable with any random-access range whose element type matches.
 $test(span_compare_concepts_random_access_match) {
-   static_assert(is_span_equality_comparable<cat::span<int4>, cat::array<int4, 3u>>);
+   static_assert(
+      is_span_equality_comparable<cat::span<int4>, cat::array<int4, 3u>>);
    static_assert(
       is_totally_ordered_with<cat::span<int4>, cat::array<int4, 3u>>);
 }
@@ -690,24 +691,25 @@ $test(span_compare_concepts_element_type_mismatch) {
 // elements share a base.
 $test(span_compare_concepts_only_equality_element) {
    static_assert(is_span_equality_comparable<cat::span<only_equality>,
-                                        cat::span<only_equality>>);
+                                             cat::span<only_equality>>);
    static_assert(!is_totally_ordered_with<cat::span<only_equality>,
                                           cat::span<only_equality>>);
 
    static_assert(is_span_equality_comparable<cat::span<derived_only_equality>,
-                                        cat::span<derived_only_equality>>);
+                                             cat::span<derived_only_equality>>);
    static_assert(!is_totally_ordered_with<cat::span<derived_only_equality>,
                                           cat::span<derived_only_equality>>);
 
-   static_assert(!is_span_equality_comparable<cat::span<only_equality>,
-                                         cat::span<derived_only_equality>>);
+   static_assert(
+      !is_span_equality_comparable<cat::span<only_equality>,
+                                   cat::span<derived_only_equality>>);
 }
 
 // Mirrors `not equality_comparable_with<std::span<NonComparable>, ...>` from
 // `span_ext`: an element type with no comparison operators disables both forms.
 $test(span_compare_concepts_uncomparable_element) {
    static_assert(!is_span_equality_comparable<cat::span<uncomparable>,
-                                         cat::span<uncomparable>>);
+                                              cat::span<uncomparable>>);
    static_assert(!is_totally_ordered_with<cat::span<uncomparable>,
                                           cat::span<uncomparable>>);
 }
