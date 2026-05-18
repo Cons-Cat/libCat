@@ -16,7 +16,17 @@
 //
 // P0883R2  Atomic initialization.
 // P2689R3  Bound atomic references and accessors.
+// P2835R7  Expose std::atomic_ref's object address.
+// P3008R6  Atomic floating-point min/max.
+// P3111R8  Atomic reduction operations.
+// P3181R1  Atomic stores and object lifetimes (specification only).
+// P3255R2  Expose whether atomic notifying operations are lock-free.
 // P3309R3  Make atomic operations `constexpr`.
+// P3323R1  const-qualified types in atomic and atomic_ref.
+// P3366R1  Remove deprecated atomic initialization API from C++26.
+// P3860R1  atomic_ref converting constructor between cv variants.
+// P3936R0  Safer atomic_ref::address (void* return).
+// P4221R0  Atomic compare.
 //
 // Waiting on spin-polls and notifications are currently no-ops. Fences are host
 // fences for now.
@@ -101,6 +111,89 @@ assert_store_order(memory_order order) {
 inline void
 atomic_pause_once() {
    __builtin_ia32_pause();
+}
+
+// P3008R6 helpers. These mirror IEEE 754-2019 minimum/maximum and
+// minimumNumber/maximumNumber, with `-0 < +0` and quiet-NaN handling per the
+// paper's recommended semantics.
+template <typename Fp>
+constexpr auto
+fp_maximum(Fp a, Fp b) -> Fp {
+   auto const ra = make_raw_arithmetic(a);
+   auto const rb = make_raw_arithmetic(b);
+   if (__builtin_isnan(ra)) {
+      return a;
+   }
+   if (__builtin_isnan(rb)) {
+      return b;
+   }
+   if (ra < rb) {
+      return b;
+   }
+   if (rb < ra) {
+      return a;
+   }
+   return __builtin_signbit(rb) ? a : b;
+}
+
+template <typename Fp>
+constexpr auto
+fp_minimum(Fp a, Fp b) -> Fp {
+   auto const ra = make_raw_arithmetic(a);
+   auto const rb = make_raw_arithmetic(b);
+   if (__builtin_isnan(ra)) {
+      return a;
+   }
+   if (__builtin_isnan(rb)) {
+      return b;
+   }
+   if (ra < rb) {
+      return a;
+   }
+   if (rb < ra) {
+      return b;
+   }
+   return __builtin_signbit(ra) ? a : b;
+}
+
+template <typename Fp>
+constexpr auto
+fp_maximum_num(Fp a, Fp b) -> Fp {
+   auto const ra = make_raw_arithmetic(a);
+   auto const rb = make_raw_arithmetic(b);
+   if (__builtin_isnan(ra)) {
+      return b;
+   }
+   if (__builtin_isnan(rb)) {
+      return a;
+   }
+   if (ra < rb) {
+      return b;
+   }
+   if (rb < ra) {
+      return a;
+   }
+   return __builtin_signbit(rb) ? a : b;
+}
+
+template <typename Fp>
+constexpr auto
+fp_minimum_num(Fp a, Fp b) -> Fp {
+   auto const ra = make_raw_arithmetic(a);
+   auto const rb = make_raw_arithmetic(b);
+   if (__builtin_isnan(ra)) {
+      return b;
+   }
+   if (__builtin_isnan(rb)) {
+      return a;
+   }
+   if (ra < rb) {
+      return a;
+   }
+   if (rb < ra) {
+      return b;
+   }
+   return __builtin_signbit(ra) ? a : b;
 }
 
 template <typename T>
@@ -234,6 +327,28 @@ class atomic_overflow_reference {
       return sub_fetch(operand);
    }
 
+   // P3111R8 reduction operations on the wrap/saturate overflow view. These
+   // forward to the corresponding `fetch_*`, discarding the prior value.
+   constexpr void
+   store_add(auto operand, memory_order order = memory_order::seq_cst)
+      requires(!is_same<value_type, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_add(operand, order);
+   }
+
+   constexpr void
+   store_sub(auto operand, memory_order order = memory_order::seq_cst)
+      requires(!is_same<value_type, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_sub(operand, order);
+   }
+
  private:
    template <bool return_new, typename Operation>
    constexpr auto
@@ -291,6 +406,11 @@ class atomic_flag {
    static constexpr bool is_always_lock_free =
       __atomic_always_lock_free(sizeof(bool), nullptr);
 
+   // P3255R2: libCat's `notify_*` are no-ops (trivially lock-free) and `wait`
+   // is a `pause`-based spin (signal-safe).
+   static constexpr bool notify_is_always_lock_free = true;
+   static constexpr bool wait_is_always_signal_safe = true;
+
    constexpr atomic_flag() = default;
    ~atomic_flag() = default;
    atomic_flag(atomic_flag const&) = delete;
@@ -332,6 +452,18 @@ class atomic_flag {
    notify_all() {
    }
 
+   [[nodiscard]]
+   static constexpr auto
+   notify_is_lock_free() noexcept -> bool {
+      return notify_is_always_lock_free;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   wait_is_signal_safe() noexcept -> bool {
+      return wait_is_always_signal_safe;
+   }
+
  private:
    bool m_value = false;
 };
@@ -355,6 +487,11 @@ class atomic<T> {
                                                           : alignof(T);
    static constexpr bool is_always_lock_free =
       __atomic_always_lock_free(sizeof(raw_value), nullptr);
+
+   // P3255R2: libCat's `notify_*` are no-ops (trivially lock-free) and `wait`
+   // is a `pause`-based spin (signal-safe).
+   static constexpr bool notify_is_always_lock_free = true;
+   static constexpr bool wait_is_always_signal_safe = true;
 
    constexpr atomic() = default;
 
@@ -480,6 +617,18 @@ class atomic<T> {
       return __atomic_is_lock_free(sizeof(raw_value), storage_ptr());
    }
 
+   [[nodiscard]]
+   static constexpr auto
+   notify_is_lock_free() noexcept -> bool {
+      return notify_is_always_lock_free;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   wait_is_signal_safe() noexcept -> bool {
+      return wait_is_always_signal_safe;
+   }
+
    constexpr void
    store(auto storing, memory_order operand = memory_order::seq_cst) {
       if consteval {
@@ -542,11 +691,23 @@ class atomic<T> {
       assert(test_value2 <= test_value1);
 
       raw_value observed = make_raw_arithmetic(operand);
-      raw_value const desired = make_raw_arithmetic(success_value);
-      bool const result = __atomic_compare_exchange_n(
-         storage_ptr(), &observed, desired, 1, success_order, failure_order);
-      operand = T(observed);
-      return result;
+      // The `_n` builtin requires integer or pointer storage; floating-point
+      // storage uses the generic `__atomic_compare_exchange` form that does
+      // bytewise comparison of the value representation.
+      if constexpr (is_floating_point<T>) {
+         raw_value desired = make_raw_arithmetic(success_value);
+         bool const result =
+            __atomic_compare_exchange(storage_ptr(), &observed, &desired, 1,
+                                      success_order, failure_order);
+         operand = T(observed);
+         return result;
+      } else {
+         raw_value const desired = make_raw_arithmetic(success_value);
+         bool const result = __atomic_compare_exchange_n(
+            storage_ptr(), &observed, desired, 1, success_order, failure_order);
+         operand = T(observed);
+         return result;
+      }
    }
 
    constexpr auto
@@ -577,11 +738,20 @@ class atomic<T> {
       assert(test_value2 <= test_value1);
 
       raw_value observed = make_raw_arithmetic(operand);
-      raw_value const desired = make_raw_arithmetic(success_value);
-      bool const result = __atomic_compare_exchange_n(
-         storage_ptr(), &observed, desired, 0, success_order, failure_order);
-      operand = T(observed);
-      return result;
+      if constexpr (is_floating_point<T>) {
+         raw_value desired = make_raw_arithmetic(success_value);
+         bool const result =
+            __atomic_compare_exchange(storage_ptr(), &observed, &desired, 0,
+                                      success_order, failure_order);
+         operand = T(observed);
+         return result;
+      } else {
+         raw_value const desired = make_raw_arithmetic(success_value);
+         bool const result = __atomic_compare_exchange_n(
+            storage_ptr(), &observed, desired, 0, success_order, failure_order);
+         operand = T(observed);
+         return result;
+      }
    }
 
    constexpr auto
@@ -589,6 +759,63 @@ class atomic<T> {
                            memory_order order = memory_order::seq_cst) -> bool {
       return compare_exchange_strong(operand, success_value, order,
                                      detail::cmpexch_failure_order(order));
+   }
+
+   // P4221R0: bitwise compare without writing back. The two-order overload
+   // mirrors `compare_exchange_strong` requirements on success and failure
+   // orderings, both restricted to load orderings.
+   [[nodiscard]]
+   constexpr auto
+   compare(T expected, memory_order success, memory_order failure) const
+      -> bool {
+      if consteval {
+         return m_value == expected;
+      }
+
+      detail::assert_load_order(success);
+      detail::assert_load_order(failure);
+      assert((failure & detail::mask) <= (success & detail::mask));
+
+      raw_value const observed = __atomic_load_n(storage_ptr(), success);
+      return observed == make_raw_arithmetic(expected);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   compare(T expected, memory_order order = memory_order::seq_cst) const
+      -> bool {
+      return compare(expected, order, order);
+   }
+
+   // P4221R0: like `compare`, but writes the observed value into `expected`
+   // on failure (matching `compare_exchange_strong`'s failure path).
+   constexpr auto
+   compare_load(T& expected, memory_order success, memory_order failure) const
+      -> bool {
+      if consteval {
+         if (m_value == expected) {
+            return true;
+         }
+         expected = m_value;
+         return false;
+      }
+
+      detail::assert_load_order(success);
+      detail::assert_load_order(failure);
+      assert((failure & detail::mask) <= (success & detail::mask));
+
+      raw_value const observed = __atomic_load_n(storage_ptr(), success);
+      if (observed == make_raw_arithmetic(expected)) {
+         return true;
+      }
+      expected = T(observed);
+      return false;
+   }
+
+   constexpr auto
+   compare_load(T& expected, memory_order order = memory_order::seq_cst) const
+      -> bool {
+      return compare_load(expected, order, order);
    }
 
    constexpr auto
@@ -708,6 +935,129 @@ class atomic<T> {
          order);
    }
 
+   // P3008R6 IEEE 754-2019 floating-point min/max. `fmaximum`/`fminimum`
+   // propagate NaN, while `*_num` treat NaN as missing data. All four order
+   // `-0 < +0`.
+   constexpr auto
+   fetch_fmaximum(T operand, memory_order order = memory_order::seq_cst) -> T
+      requires(is_floating_point<T>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return detail::fp_maximum(observed, operand);
+         },
+         order);
+   }
+
+   constexpr auto
+   fetch_fminimum(T operand, memory_order order = memory_order::seq_cst) -> T
+      requires(is_floating_point<T>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return detail::fp_minimum(observed, operand);
+         },
+         order);
+   }
+
+   constexpr auto
+   fetch_fmaximum_num(T operand, memory_order order = memory_order::seq_cst)
+      -> T
+      requires(is_floating_point<T>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return detail::fp_maximum_num(observed, operand);
+         },
+         order);
+   }
+
+   constexpr auto
+   fetch_fminimum_num(T operand, memory_order order = memory_order::seq_cst)
+      -> T
+      requires(is_floating_point<T>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return detail::fp_minimum_num(observed, operand);
+         },
+         order);
+   }
+
+   // P3111R8 atomic reduction operations: same effect as `fetch_<key>` but
+   // return `void`, allowing hardware that supports "far" or destination-less
+   // RMW (PTX `red`, Arm `STADD`, x86 RAO `AADD/AAND/AOR/AXOR`) to skip the
+   // read-back. The conservative implementation forwards to `fetch_<key>`.
+   constexpr void
+   store_add(auto operand, memory_order order = memory_order::seq_cst)
+      requires(!is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_add(operand, order);
+   }
+
+   constexpr void
+   store_sub(auto operand, memory_order order = memory_order::seq_cst)
+      requires(!is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_sub(operand, order);
+   }
+
+   constexpr void
+   store_and(auto operand, memory_order order = memory_order::seq_cst)
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_and(operand, order);
+   }
+
+   constexpr void
+   store_or(auto operand, memory_order order = memory_order::seq_cst)
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_or(operand, order);
+   }
+
+   constexpr void
+   store_xor(auto operand, memory_order order = memory_order::seq_cst)
+      requires(is_integral<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_xor(operand, order);
+   }
+
+   constexpr void
+   store_max(T operand, memory_order order = memory_order::seq_cst)
+      requires(!is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_max(operand, order);
+   }
+
+   constexpr void
+   store_min(T operand, memory_order order = memory_order::seq_cst)
+      requires(!is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_min(operand, order);
+   }
+
    constexpr void
    wait(T old, memory_order order = memory_order::seq_cst) const {
       detail::assert_load_order(order);
@@ -793,11 +1143,13 @@ class atomic<T> {
    alignas(required_alignment) T m_value{};
 };
 
+// P3323R1: `atomic<T&>` supports `const T`. Only load, wait, compare, and
+// read-only introspection are available.
 template <typename T>
-   requires(!is_const<T> && !is_volatile<T>)
+   requires(!is_volatile<T>)
 class atomic<T&> {
  public:
-   using value_type = T;
+   using value_type = remove_cv<T>;
    using raw_value = raw_arithmetic_type<T>;
    using difference_type =
       conditional<is_pointer<T>, __PTRDIFF_TYPE__, value_type>;
@@ -808,6 +1160,11 @@ class atomic<T&> {
    static constexpr bool is_always_lock_free =
       __atomic_always_lock_free(sizeof(raw_value), nullptr);
 
+   // P3255R2: libCat's `notify_*` are no-ops (trivially lock-free) and `wait`
+   // is a `pause`-based spin (signal-safe).
+   static constexpr bool notify_is_always_lock_free = true;
+   static constexpr bool wait_is_always_signal_safe = true;
+
    atomic() = delete;
    ~atomic() = default;
 
@@ -815,17 +1172,29 @@ class atomic<T&> {
    }
 
    atomic(atomic const&) = default;
+
+   // P3860R1: cv-conversion constructor. Allows e.g. `atomic<int const&>` to
+   // be constructed from `atomic<int&>` when the underlying pointer conversion
+   // is well-formed (cv-similar types with a valid `U* -> T*` conversion).
+   template <typename U>
+      requires(is_same<remove_cv<U>, remove_cv<T>> && is_convertible<U*, T*>)
+   constexpr atomic(atomic<U&> const& other) noexcept
+       : m_p_value(static_cast<T*>(other.m_p_value)) {
+   }
+
    auto
    operator=(atomic const&)
       -> atomic& = delete ("`cat::atomic` references cannot be rebound!");
 
    constexpr
-   operator T() const {
+   operator value_type() const {
       return load();
    }
 
    constexpr auto
-   operator=(T operand) -> T {
+   operator=(value_type operand) -> value_type
+      requires(!is_const<T>)
+   {
       store(operand);
       return operand;
    }
@@ -833,7 +1202,7 @@ class atomic<T&> {
    constexpr auto
    undef() & -> detail::atomic_overflow_reference<atomic,
                                                   overflow_policies::undefined>
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return detail::atomic_overflow_reference<atomic,
                                                overflow_policies::undefined>(
@@ -843,7 +1212,7 @@ class atomic<T&> {
    constexpr auto
    wrap() & -> detail::atomic_overflow_reference<atomic,
                                                  overflow_policies::wrap>
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return detail::atomic_overflow_reference<atomic, overflow_policies::wrap>(
          *this);
@@ -852,7 +1221,7 @@ class atomic<T&> {
    constexpr auto
    sat() & -> detail::atomic_overflow_reference<atomic,
                                                 overflow_policies::saturate>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       return detail::atomic_overflow_reference<atomic,
                                                overflow_policies::saturate>(
@@ -861,49 +1230,49 @@ class atomic<T&> {
 
    constexpr auto
    operator++(int) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return fetch_add(1);
    }
 
    constexpr auto
    operator++() -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return add_fetch(1);
    }
 
    constexpr auto
    operator--(int) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return fetch_sub(1);
    }
 
    constexpr auto
    operator--() -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return sub_fetch(1);
    }
 
    constexpr auto
    operator+=(auto operand) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return add_fetch(operand);
    }
 
    constexpr auto
    operator-=(auto operand) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return sub_fetch(operand);
    }
 
    constexpr auto
    operator&=(auto operand) -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       return T(__atomic_and_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
@@ -911,7 +1280,7 @@ class atomic<T&> {
 
    constexpr auto
    operator|=(auto operand) -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       return T(__atomic_or_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                  int(memory_order::seq_cst)));
@@ -919,7 +1288,7 @@ class atomic<T&> {
 
    constexpr auto
    operator^=(auto operand) -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       return T(__atomic_xor_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
@@ -931,8 +1300,32 @@ class atomic<T&> {
       return __atomic_is_lock_free(sizeof(raw_value), storage_ptr());
    }
 
+   [[nodiscard]]
+   static constexpr auto
+   notify_is_lock_free() noexcept -> bool {
+      return notify_is_always_lock_free;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   wait_is_signal_safe() noexcept -> bool {
+      return wait_is_always_signal_safe;
+   }
+
+   // P2835R7 (introduced) + P3936R0 (return type fixed to `void*`): expose
+   // the referenced object's address for hashing, contention-aware data
+   // structures, and indexing without leaking a typed pointer that would
+   // tempt non-atomic access. P3323R1 propagates cv to the return type.
+   [[nodiscard]]
+   constexpr auto
+   address() const noexcept -> copy_cv_from<T, void>* {
+      return m_p_value;
+   }
+
    constexpr void
-   store(auto storing, memory_order operand = memory_order::seq_cst) {
+   store(auto storing, memory_order operand = memory_order::seq_cst)
+      requires(!is_const<T>)
+   {
       if consteval {
          *m_p_value = T(storing);
          return;
@@ -947,7 +1340,7 @@ class atomic<T&> {
    }
 
    constexpr auto
-   load(memory_order order = memory_order::seq_cst) const -> T {
+   load(memory_order order = memory_order::seq_cst) const -> value_type {
       if consteval {
          return *m_p_value;
       }
@@ -957,25 +1350,30 @@ class atomic<T&> {
       assert(test_value != memory_order::release);
       assert(test_value != memory_order::acq_rel);
 
-      return T(__atomic_load_n(storage_ptr(), order));
+      return value_type(__atomic_load_n(storage_ptr(), order));
    }
 
    constexpr auto
-   exchange(T operand, memory_order order = memory_order::seq_cst) -> T {
+   exchange(value_type operand, memory_order order = memory_order::seq_cst)
+      -> value_type
+      requires(!is_const<T>)
+   {
       if consteval {
-         T observed = *m_p_value;
+         value_type observed = *m_p_value;
          *m_p_value = operand;
          return observed;
       }
 
-      return T(__atomic_exchange_n(storage_ptr(), make_raw_arithmetic(operand),
-                                   order));
+      return value_type(__atomic_exchange_n(
+         storage_ptr(), make_raw_arithmetic(operand), order));
    }
 
    constexpr auto
-   compare_exchange_weak(T& operand, T success_value,
+   compare_exchange_weak(value_type& operand, value_type success_value,
                          memory_order success_order, memory_order failure_order)
-      -> bool {
+      -> bool
+      requires(!is_const<T>)
+   {
       if consteval {
          if (*m_p_value == operand) {
             *m_p_value = success_value;
@@ -993,24 +1391,37 @@ class atomic<T&> {
       assert(test_value2 <= test_value1);
 
       raw_value observed = make_raw_arithmetic(operand);
-      raw_value const desired = make_raw_arithmetic(success_value);
-      bool const result = __atomic_compare_exchange_n(
-         storage_ptr(), &observed, desired, 1, success_order, failure_order);
-      operand = T(observed);
-      return result;
+      if constexpr (is_floating_point<T>) {
+         raw_value desired = make_raw_arithmetic(success_value);
+         bool const result =
+            __atomic_compare_exchange(storage_ptr(), &observed, &desired, 1,
+                                      success_order, failure_order);
+         operand = value_type(observed);
+         return result;
+      } else {
+         raw_value const desired = make_raw_arithmetic(success_value);
+         bool const result = __atomic_compare_exchange_n(
+            storage_ptr(), &observed, desired, 1, success_order, failure_order);
+         operand = value_type(observed);
+         return result;
+      }
    }
 
    constexpr auto
-   compare_exchange_weak(T& operand, T success_value,
-                         memory_order order = memory_order::seq_cst) -> bool {
+   compare_exchange_weak(value_type& operand, value_type success_value,
+                         memory_order order = memory_order::seq_cst) -> bool
+      requires(!is_const<T>)
+   {
       return compare_exchange_weak(operand, success_value, order,
                                    detail::cmpexch_failure_order(order));
    }
 
    constexpr auto
-   compare_exchange_strong(T& operand, T success_value,
+   compare_exchange_strong(value_type& operand, value_type success_value,
                            memory_order success_order,
-                           memory_order failure_order) -> bool {
+                           memory_order failure_order) -> bool
+      requires(!is_const<T>)
+   {
       if consteval {
          if (*m_p_value == operand) {
             *m_p_value = success_value;
@@ -1028,23 +1439,91 @@ class atomic<T&> {
       assert(test_value2 <= test_value1);
 
       raw_value observed = make_raw_arithmetic(operand);
-      raw_value const desired = make_raw_arithmetic(success_value);
-      bool const result = __atomic_compare_exchange_n(
-         storage_ptr(), &observed, desired, 0, success_order, failure_order);
-      operand = T(observed);
-      return result;
+      if constexpr (is_floating_point<T>) {
+         raw_value desired = make_raw_arithmetic(success_value);
+         bool const result =
+            __atomic_compare_exchange(storage_ptr(), &observed, &desired, 0,
+                                      success_order, failure_order);
+         operand = value_type(observed);
+         return result;
+      } else {
+         raw_value const desired = make_raw_arithmetic(success_value);
+         bool const result = __atomic_compare_exchange_n(
+            storage_ptr(), &observed, desired, 0, success_order, failure_order);
+         operand = value_type(observed);
+         return result;
+      }
    }
 
    constexpr auto
-   compare_exchange_strong(T& operand, T success_value,
-                           memory_order order = memory_order::seq_cst) -> bool {
+   compare_exchange_strong(value_type& operand, value_type success_value,
+                           memory_order order = memory_order::seq_cst) -> bool
+      requires(!is_const<T>)
+   {
       return compare_exchange_strong(operand, success_value, order,
                                      detail::cmpexch_failure_order(order));
    }
 
+   // P4221R0: bitwise compare without writing back. Matches the requirements
+   // of `compare_exchange_strong` minus the write, restricted to load
+   // orderings on both success and failure paths.
+   [[nodiscard]]
+   constexpr auto
+   compare(value_type expected, memory_order success,
+           memory_order failure) const -> bool {
+      if consteval {
+         return *m_p_value == expected;
+      }
+
+      detail::assert_load_order(success);
+      detail::assert_load_order(failure);
+      assert((failure & detail::mask) <= (success & detail::mask));
+
+      raw_value const observed = __atomic_load_n(storage_ptr(), success);
+      return observed == make_raw_arithmetic(expected);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   compare(value_type expected,
+           memory_order order = memory_order::seq_cst) const -> bool {
+      return compare(expected, order, order);
+   }
+
+   // P4221R0: like `compare`, but writes the observed value into `expected`
+   // on failure (matching `compare_exchange_strong`'s failure path).
+   constexpr auto
+   compare_load(value_type& expected, memory_order success,
+                memory_order failure) const -> bool {
+      if consteval {
+         if (*m_p_value == expected) {
+            return true;
+         }
+         expected = *m_p_value;
+         return false;
+      }
+
+      detail::assert_load_order(success);
+      detail::assert_load_order(failure);
+      assert((failure & detail::mask) <= (success & detail::mask));
+
+      raw_value const observed = __atomic_load_n(storage_ptr(), success);
+      if (observed == make_raw_arithmetic(expected)) {
+         return true;
+      }
+      expected = value_type(observed);
+      return false;
+   }
+
+   constexpr auto
+   compare_load(value_type& expected,
+                memory_order order = memory_order::seq_cst) const -> bool {
+      return compare_load(expected, order, order);
+   }
+
    constexpr auto
    fetch_add(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       if consteval {
          T observed = *m_p_value;
@@ -1069,7 +1548,7 @@ class atomic<T&> {
 
    constexpr auto
    fetch_sub(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       if consteval {
          T observed = *m_p_value;
@@ -1094,7 +1573,7 @@ class atomic<T&> {
 
    constexpr auto
    fetch_and(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       if consteval {
          T observed = *m_p_value;
@@ -1109,7 +1588,7 @@ class atomic<T&> {
 
    constexpr auto
    fetch_or(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       if consteval {
          T observed = *m_p_value;
@@ -1124,7 +1603,7 @@ class atomic<T&> {
 
    constexpr auto
    fetch_xor(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       if consteval {
          T observed = *m_p_value;
@@ -1139,7 +1618,7 @@ class atomic<T&> {
 
    constexpr auto
    fetch_max(T operand, memory_order order = memory_order::seq_cst) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return fetch_update(
          [operand](T observed) {
@@ -1150,7 +1629,7 @@ class atomic<T&> {
 
    constexpr auto
    fetch_min(T operand, memory_order order = memory_order::seq_cst) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return fetch_update(
          [operand](T observed) {
@@ -1159,8 +1638,127 @@ class atomic<T&> {
          order);
    }
 
+   // P3008R6 IEEE 754-2019 floating-point min/max. See the primary template
+   // for notes.
+   constexpr auto
+   fetch_fmaximum(T operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_const<T> && is_floating_point<T>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return detail::fp_maximum(observed, operand);
+         },
+         order);
+   }
+
+   constexpr auto
+   fetch_fminimum(T operand, memory_order order = memory_order::seq_cst) -> T
+      requires(!is_const<T> && is_floating_point<T>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return detail::fp_minimum(observed, operand);
+         },
+         order);
+   }
+
+   constexpr auto
+   fetch_fmaximum_num(T operand, memory_order order = memory_order::seq_cst)
+      -> T
+      requires(!is_const<T> && is_floating_point<T>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return detail::fp_maximum_num(observed, operand);
+         },
+         order);
+   }
+
+   constexpr auto
+   fetch_fminimum_num(T operand, memory_order order = memory_order::seq_cst)
+      -> T
+      requires(!is_const<T> && is_floating_point<T>)
+   {
+      return fetch_update(
+         [operand](T observed) {
+            return detail::fp_minimum_num(observed, operand);
+         },
+         order);
+   }
+
+   // P3111R8 atomic reduction operations. See the primary template for notes.
    constexpr void
-   wait(T old, memory_order order = memory_order::seq_cst) const {
+   store_add(auto operand, memory_order order = memory_order::seq_cst)
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_add(operand, order);
+   }
+
+   constexpr void
+   store_sub(auto operand, memory_order order = memory_order::seq_cst)
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_sub(operand, order);
+   }
+
+   constexpr void
+   store_and(auto operand, memory_order order = memory_order::seq_cst)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_and(operand, order);
+   }
+
+   constexpr void
+   store_or(auto operand, memory_order order = memory_order::seq_cst)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_or(operand, order);
+   }
+
+   constexpr void
+   store_xor(auto operand, memory_order order = memory_order::seq_cst)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_xor(operand, order);
+   }
+
+   constexpr void
+   store_max(T operand, memory_order order = memory_order::seq_cst)
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_max(operand, order);
+   }
+
+   constexpr void
+   store_min(T operand, memory_order order = memory_order::seq_cst)
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      if !consteval {
+         detail::assert_store_order(order);
+      }
+      (void)fetch_min(operand, order);
+   }
+
+   constexpr void
+   wait(value_type old, memory_order order = memory_order::seq_cst) const {
       detail::assert_load_order(order);
       while (load(order) == old) {
          detail::atomic_pause_once();
@@ -1168,20 +1766,28 @@ class atomic<T&> {
    }
 
    constexpr void
-   notify_one() const {
+   notify_one() const
+      requires(!is_const<T>)
+   {
    }
 
    constexpr void
-   notify_all() const {
+   notify_all() const
+      requires(!is_const<T>)
+   {
    }
 
  private:
    template <typename AtomicQual, overflow_policies overflow_policy>
    friend class detail::atomic_overflow_reference;
 
+   // P3860R1 converting ctor needs access to other cv-specializations' state.
+   template <typename>
+   friend class atomic;
+
    constexpr auto
    add_fetch(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       if constexpr (detail::atomic_default_overflow_policy<T>()
                     == overflow_policies::saturate) {
@@ -1197,7 +1803,7 @@ class atomic<T&> {
 
    constexpr auto
    sub_fetch(auto operand, memory_order order = memory_order::seq_cst) -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       if constexpr (detail::atomic_default_overflow_policy<T>()
                     == overflow_policies::saturate) {
@@ -1212,7 +1818,9 @@ class atomic<T&> {
    }
 
    constexpr auto
-   fetch_update(auto&& operation, memory_order order) -> T {
+   fetch_update(auto&& operation, memory_order order) -> T
+      requires(!is_const<T>)
+   {
       if consteval {
          T observed = *m_p_value;
          *m_p_value = operation(observed);
@@ -1248,10 +1856,12 @@ using atomic_signed_lock_free = atomic<iword>;
 using atomic_unsigned_lock_free = atomic<uword>;
 
 namespace detail {
+// P3323R1: `atomic_ref_bound` mirrors `atomic<T&>` const handling.
 template <typename T, memory_order memory_order_value>
+   requires(!is_volatile<T>)
 class atomic_ref_bound {
  public:
-   using value_type = T;
+   using value_type = remove_cv<T>;
    using raw_value = raw_arithmetic_type<T>;
    using difference_type = atomic<T&>::difference_type;
 
@@ -1262,11 +1872,26 @@ class atomic_ref_bound {
    static constexpr bool is_always_lock_free =
       __atomic_always_lock_free(sizeof(raw_value), nullptr);
 
+   // P3255R2: libCat's `notify_*` are no-ops (trivially lock-free) and `wait`
+   // is a `pause`-based spin (signal-safe).
+   static constexpr bool notify_is_always_lock_free = true;
+   static constexpr bool wait_is_always_signal_safe = true;
+
    explicit constexpr atomic_ref_bound(T& value [[clang::lifetimebound]])
        : m_reference(value) {
    }
 
    atomic_ref_bound(atomic_ref_bound const&) = default;
+
+   // P3860R1: cv-conversion constructor between bound atomic refs of the same
+   // memory ordering and cv-similar `T`.
+   template <typename U>
+      requires(is_same<remove_cv<U>, remove_cv<T>> && is_convertible<U*, T*>)
+   constexpr atomic_ref_bound(
+      atomic_ref_bound<U, memory_order_value> const& other) noexcept
+       : m_reference(other.m_reference) {
+   }
+
    auto
    operator=(atomic_ref_bound const&) -> atomic_ref_bound& = delete;
 
@@ -1276,48 +1901,92 @@ class atomic_ref_bound {
       return m_reference.is_lock_free();
    }
 
+   [[nodiscard]]
+   static constexpr auto
+   notify_is_lock_free() noexcept -> bool {
+      return notify_is_always_lock_free;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   wait_is_signal_safe() noexcept -> bool {
+      return wait_is_always_signal_safe;
+   }
+
+   // P2835R7 + P3936R0: see the `atomic<T&>` overload for rationale.
+   // P3323R1 propagates cv to the return type.
+   [[nodiscard]]
+   constexpr auto
+   address() const noexcept -> copy_cv_from<T, void>* {
+      return m_reference.address();
+   }
+
    constexpr void
-   store(T desired) const {
+   store(value_type desired) const
+      requires(!is_const<T>)
+   {
       m_reference.store(desired, store_ordering);
    }
 
    constexpr auto
-   operator=(T desired) const -> T {
+   operator=(value_type desired) const -> value_type
+      requires(!is_const<T>)
+   {
       store(desired);
       return desired;
    }
 
    [[nodiscard]]
    constexpr auto
-   load() const -> T {
+   load() const -> value_type {
       return m_reference.load(load_ordering);
    }
 
    constexpr
-   operator T() const {
+   operator value_type() const {
       return load();
    }
 
    constexpr auto
-   exchange(T desired) const -> T {
+   exchange(value_type desired) const -> value_type
+      requires(!is_const<T>)
+   {
       return m_reference.exchange(desired, memory_ordering);
    }
 
    constexpr auto
-   compare_exchange_weak(T& expected, T desired) const -> bool {
+   compare_exchange_weak(value_type& expected, value_type desired) const -> bool
+      requires(!is_const<T>)
+   {
       return m_reference.compare_exchange_weak(expected, desired,
                                                memory_ordering, load_ordering);
    }
 
    constexpr auto
-   compare_exchange_strong(T& expected, T desired) const -> bool {
+   compare_exchange_strong(value_type& expected, value_type desired) const
+      -> bool
+      requires(!is_const<T>)
+   {
       return m_reference.compare_exchange_strong(
          expected, desired, memory_ordering, load_ordering);
    }
 
+   // P4221R0: bitwise compare without writing back, using the bound load
+   // ordering since `compare`/`compare_load` are load operations.
+   [[nodiscard]]
+   constexpr auto
+   compare(value_type expected) const -> bool {
+      return m_reference.compare(expected, load_ordering);
+   }
+
+   constexpr auto
+   compare_load(value_type& expected) const -> bool {
+      return m_reference.compare_load(expected, load_ordering);
+   }
+
    constexpr auto
    fetch_add(auto operand) const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       if constexpr (atomic_default_overflow_policy<T>()
                     == overflow_policies::saturate) {
@@ -1329,7 +1998,7 @@ class atomic_ref_bound {
 
    constexpr auto
    fetch_sub(auto operand) const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       if constexpr (atomic_default_overflow_policy<T>()
                     == overflow_policies::saturate) {
@@ -1341,28 +2010,28 @@ class atomic_ref_bound {
 
    constexpr auto
    fetch_and(auto operand) const -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       return m_reference.fetch_and(operand, memory_ordering);
    }
 
    constexpr auto
    fetch_or(auto operand) const -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       return m_reference.fetch_or(operand, memory_ordering);
    }
 
    constexpr auto
    fetch_xor(auto operand) const -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       return m_reference.fetch_xor(operand, memory_ordering);
    }
 
    constexpr auto
    fetch_max(T operand) const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return fetch_update([operand](T observed) {
          return observed < operand ? operand : observed;
@@ -1371,58 +2040,147 @@ class atomic_ref_bound {
 
    constexpr auto
    fetch_min(T operand) const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return fetch_update([operand](T observed) {
          return operand < observed ? operand : observed;
       });
    }
 
+   // P3008R6 IEEE 754-2019 floating-point min/max.
+   constexpr auto
+   fetch_fmaximum(T operand) const -> T
+      requires(!is_const<T> && is_floating_point<T>)
+   {
+      return fetch_update([operand](T observed) {
+         return detail::fp_maximum(observed, operand);
+      });
+   }
+
+   constexpr auto
+   fetch_fminimum(T operand) const -> T
+      requires(!is_const<T> && is_floating_point<T>)
+   {
+      return fetch_update([operand](T observed) {
+         return detail::fp_minimum(observed, operand);
+      });
+   }
+
+   constexpr auto
+   fetch_fmaximum_num(T operand) const -> T
+      requires(!is_const<T> && is_floating_point<T>)
+   {
+      return fetch_update([operand](T observed) {
+         return detail::fp_maximum_num(observed, operand);
+      });
+   }
+
+   constexpr auto
+   fetch_fminimum_num(T operand) const -> T
+      requires(!is_const<T> && is_floating_point<T>)
+   {
+      return fetch_update([operand](T observed) {
+         return detail::fp_minimum_num(observed, operand);
+      });
+   }
+
+   // P3111R8 atomic reduction operations. See the primary template for notes.
+   // The bound ordering is used for stores when it is a valid store order, and
+   // downgraded to `release` for `acq_rel`.
+   constexpr void
+   store_add(auto operand) const
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      (void)m_reference.fetch_add(operand, store_ordering);
+   }
+
+   constexpr void
+   store_sub(auto operand) const
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      (void)m_reference.fetch_sub(operand, store_ordering);
+   }
+
+   constexpr void
+   store_and(auto operand) const
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
+   {
+      (void)m_reference.fetch_and(operand, store_ordering);
+   }
+
+   constexpr void
+   store_or(auto operand) const
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
+   {
+      (void)m_reference.fetch_or(operand, store_ordering);
+   }
+
+   constexpr void
+   store_xor(auto operand) const
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
+   {
+      (void)m_reference.fetch_xor(operand, store_ordering);
+   }
+
+   constexpr void
+   store_max(T operand) const
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      (void)m_reference.fetch_max(operand, store_ordering);
+   }
+
+   constexpr void
+   store_min(T operand) const
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      (void)m_reference.fetch_min(operand, store_ordering);
+   }
+
    constexpr auto
    operator++(int) const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return fetch_add(1);
    }
 
    constexpr auto
    operator++() const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return add_fetch(1);
    }
 
    constexpr auto
    operator--(int) const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return fetch_sub(1);
    }
 
    constexpr auto
    operator--() const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return sub_fetch(1);
    }
 
    constexpr auto
    operator+=(auto operand) const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return add_fetch(operand);
    }
 
    constexpr auto
    operator-=(auto operand) const -> T
-      requires(!is_same<T, bool>)
+      requires(!is_const<T> && !is_same<T, bool>)
    {
       return sub_fetch(operand);
    }
 
    constexpr auto
    operator&=(auto operand) const -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       raw_value const observed = make_raw_arithmetic(fetch_and(operand));
       raw_value const raw_operand =
@@ -1432,7 +2190,7 @@ class atomic_ref_bound {
 
    constexpr auto
    operator|=(auto operand) const -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       raw_value const observed = make_raw_arithmetic(fetch_or(operand));
       raw_value const raw_operand =
@@ -1442,7 +2200,7 @@ class atomic_ref_bound {
 
    constexpr auto
    operator^=(auto operand) const -> T
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       raw_value const observed = make_raw_arithmetic(fetch_xor(operand));
       raw_value const raw_operand =
@@ -1451,21 +2209,30 @@ class atomic_ref_bound {
    }
 
    constexpr void
-   wait(T old) const {
+   wait(value_type old) const {
       m_reference.wait(old, load_ordering);
    }
 
    constexpr void
-   notify_one() const {
+   notify_one() const
+      requires(!is_const<T>)
+   {
       m_reference.notify_one();
    }
 
    constexpr void
-   notify_all() const {
+   notify_all() const
+      requires(!is_const<T>)
+   {
       m_reference.notify_all();
    }
 
  private:
+   // P3860R1 converting ctor needs access to other cv-specializations' state.
+   template <typename U, memory_order other_order>
+      requires(!is_volatile<U>)
+   friend class atomic_ref_bound;
+
    static constexpr memory_order store_ordering =
       memory_order_value == memory_order::acq_rel ? memory_order::release
                                                   : memory_order_value;
@@ -1474,7 +2241,9 @@ class atomic_ref_bound {
                                                   : memory_order_value;
 
    constexpr auto
-   add_fetch(auto operand) const -> T {
+   add_fetch(auto operand) const -> T
+      requires(!is_const<T>)
+   {
       if constexpr (atomic_default_overflow_policy<T>()
                     == overflow_policies::saturate) {
          return m_reference.sat().add_fetch(operand, memory_ordering);
@@ -1484,7 +2253,9 @@ class atomic_ref_bound {
    }
 
    constexpr auto
-   sub_fetch(auto operand) const -> T {
+   sub_fetch(auto operand) const -> T
+      requires(!is_const<T>)
+   {
       if constexpr (atomic_default_overflow_policy<T>()
                     == overflow_policies::saturate) {
          return m_reference.sat().sub_fetch(operand, memory_ordering);
@@ -1494,7 +2265,9 @@ class atomic_ref_bound {
    }
 
    constexpr auto
-   fetch_update(auto&& operation) const -> T {
+   fetch_update(auto&& operation) const -> T
+      requires(!is_const<T>)
+   {
       T observed = load();
       for (;;) {
          T desired = operation(observed);
