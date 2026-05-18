@@ -4,10 +4,15 @@
 
 #include <cat/allocator>
 
+// TODO: Should we remove deriving from `allocator_interface` and require
+// wrapping in `allocator_ref` to reduce template monomorphization?
 namespace cat {
 
 class linear_allocator : public allocator_interface<linear_allocator> {
    friend allocator_interface<linear_allocator>;
+   friend struct dyn_allocator_friend;
+   template <typename>
+   friend class allocator_ref;
 
    // Friend factory functions.
    friend constexpr auto
@@ -49,6 +54,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    constexpr linear_allocator(linear_allocator&&) = default;
 
    // Reset the bumped pointer to the beginning of this arena.
+   // NOLINTNEXTLINE
    constexpr void
    reset() {
       __asan_poison_memory_region(static_cast<void const*>(m_p_arena_end),

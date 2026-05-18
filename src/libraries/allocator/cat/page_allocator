@@ -6,12 +6,17 @@
 #include <cat/linux>
 #include <cat/maybe>
 
+// TODO: Should we remove deriving from `allocator_interface` and require
+// wrapping in `allocator_ref` to reduce template monomorphization?
 namespace cat {
 
 // TODO: Support forcibly allocating huge pages.
 // Allocate pages from the kernel in userspace.
 class page_allocator : public allocator_interface<page_allocator> {
    friend allocator_interface<page_allocator>;
+   friend struct dyn_allocator_friend;
+   template <typename>
+   friend class allocator_ref;
 
  private:
    template <typename T>
@@ -107,6 +112,8 @@ class page_allocator : public allocator_interface<page_allocator> {
    access(page_memory_handle<T> const& memory) const -> T const* {
       return memory.p_storage;
    }
+
+   // `reset()` is a no-op provided by `allocator_interface`.
 };
 
 [[nodiscard]]

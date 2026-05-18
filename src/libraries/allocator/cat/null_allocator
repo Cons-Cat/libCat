@@ -4,10 +4,14 @@
 
 #include <cat/allocator>
 
+// TODO: Should we remove deriving from `allocator_interface` and require
+// wrapping in `allocator_ref` to reduce template monomorphization?
 namespace cat {
 
 class null_allocator : public allocator_interface<null_allocator> {
    friend allocator_interface<null_allocator>;
+   template <typename>
+   friend class allocator_ref;
 
  private:
    template <typename T>
@@ -37,7 +41,7 @@ class null_allocator : public allocator_interface<null_allocator> {
 
    // Deallocation is no-op.
    void
-   deallocate(void const*, idx) {
+   deallocate(void const* /*unused*/, idx /*unused*/) {
    }
 
    // Produce a handle to allocated memory.
@@ -59,6 +63,8 @@ class null_allocator : public allocator_interface<null_allocator> {
    access(null_memory_handle<T> const&) const -> T const* {
       return nullptr;
    }
+
+   // `reset()` is a no-op provided by `allocator_interface`.
 };
 
 [[nodiscard]]

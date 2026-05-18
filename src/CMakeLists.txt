@@ -248,6 +248,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/implementations/meta_alloc.tpp
   ${CATLIB}/allocator/implementations/get.tpp
   ${CATLIB}/allocator/implementations/free.tpp
+  ${CATLIB}/allocator/cat/allocator_parameters
   ${CATLIB}/allocator/cat/linear_allocator
   ${CATLIB}/allocator/cat/null_allocator
   ${CATLIB}/allocator/cat/page_allocator

@@ -4104,6 +4104,12 @@ class allocator_interface {
    }
 };
 
+struct dyn_allocator_friend;
+class dyn_allocator;
+
+template <typename Allocator>
+class allocator_ref;
+
 }  // namespace cat
 
 #include "../implementations/free.tpp"

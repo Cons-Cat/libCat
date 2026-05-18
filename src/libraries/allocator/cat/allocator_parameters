@@ -1,0 +1,423 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+#include <cat/dyn>
+
+// `dyn_allocator` and `allocator_ref` are the primary interfaces for function
+// parameters to consume libCat allocators. They enable functions to support
+// both dynamic and static dispatch on memory allocators while encouraging
+// overload resolution to default to dynamic dispatch to minimize code
+// generation.
+//
+// They can be used in parameters as:
+//    template<is_allocator A>
+//    auto function(allocator_ref<A> allocator) -> span<int4> {
+//       return allocator.alloc<int4>(1024).verify();
+//    }
+//
+//    auto function(dyn_allocator allocator) -> span<int4> {
+//       // Wrap the `function` specialization in `dyn_allocator`.
+//       return function<dyn_allocator>(allocator);
+//    }
+//
+// When `function` is called as `function(allocator)`, the call resolves to the
+// `dyn_allocator` overload, which specializes the static-dispatch overload with
+// one pointer indirection.
+//
+// When `function` is called as `function<A>(allocator)`, the call resolves to
+// the static-dispatch overload, which directly calls `allocator`'s member
+// functions with no indirection.
+//
+// This design is largely inspired by Zig's success defaulting to
+// dynamic-dispatch memory allocation. The `dyn_allocator` can often
+// devirtualize function calls, but unlike Zig, we trivially support opt-in
+// static-dispatch as well with that very simple pattern.
+
+namespace cat {
+
+// Grants `dyn_allocator`'s `Method` tags access to potentially `private`
+// underlying allocator hooks. Allocator implementations should `friend` this
+// type. If the allocator's members are `public`, that is not required.
+struct dyn_allocator_friend {
+   template <typename T>
+   static auto
+   allocate(T& self, idx allocation_bytes)
+      -> decltype(self.allocate(allocation_bytes)) {
+      return self.allocate(allocation_bytes);
+   }
+
+   template <typename T>
+   static auto
+   deallocate(T& self, void const* p_storage, idx allocation_bytes)
+      -> decltype(self.deallocate(p_storage, allocation_bytes)) {
+      return self.deallocate(p_storage, allocation_bytes);
+   }
+
+   template <typename T>
+   static auto
+   reset(T& self) -> decltype(self.reset()) {
+      return self.reset();
+   }
+
+   template <typename T>
+   static auto
+   aligned_allocate(T& self, uword alignment, idx allocation_bytes)
+      -> decltype(self.aligned_allocate(alignment, allocation_bytes)) {
+      return self.aligned_allocate(alignment, allocation_bytes);
+   }
+
+   template <typename T>
+   static auto
+   allocate_feedback(T& self, idx allocation_bytes)
+      -> decltype(self.allocate_feedback(allocation_bytes)) {
+      return self.allocate_feedback(allocation_bytes);
+   }
+
+   template <typename T>
+   static auto
+   aligned_allocate_feedback(T& self, uword alignment, idx allocation_bytes)
+      -> decltype(self.aligned_allocate_feedback(alignment, allocation_bytes)) {
+      return self.aligned_allocate_feedback(alignment, allocation_bytes);
+   }
+};
+
+namespace detail {
+
+// Per-hook capability predicates. The `dyn_allocator` `Method` tags pivot on
+// these to pick the native dispatch path when the underlying allocator
+// implements the hook, and to fall back to a synthesised shim otherwise.
+// They route through `dyn_allocator_friend` so the predicate is satisfied iff
+// the friend can reach the hook, even when it is `private`.
+template <typename T>
+concept has_allocate =
+   requires(T& a, idx n) { dyn_allocator_friend::allocate(a, n); };
+
+template <typename T>
+concept has_deallocate = requires(T& a, void const* p_storage, idx n) {
+                            dyn_allocator_friend::deallocate(a, p_storage, n);
+                         };
+
+template <typename T>
+concept has_reset = requires(T& a) { dyn_allocator_friend::reset(a); };
+
+template <typename T>
+concept has_aligned_allocate = requires(
+   T& a, uword w, idx n) { dyn_allocator_friend::aligned_allocate(a, w, n); };
+
+template <typename T>
+concept has_allocate_feedback =
+   requires(T& a, idx n) { dyn_allocator_friend::allocate_feedback(a, n); };
+
+template <typename T>
+concept has_aligned_allocate_feedback =
+   requires(T& a, uword w, idx n) {
+      dyn_allocator_friend::aligned_allocate_feedback(a, w, n);
+   };
+
+struct dyn_allocate {
+   using signature = auto(idx) -> maybe_ptr<void>;
+
+   template <has_allocate T>
+   static auto
+   do_invoke(T& self, idx allocation_bytes) -> maybe_ptr<void> {
+      return dyn_allocator_friend::allocate(self, allocation_bytes);
+   }
+};
+
+struct dyn_deallocate {
+   using signature = void(void const*, idx);
+
+   template <has_deallocate T>
+   static void
+   do_invoke(T& self, void const* p_storage, idx allocation_bytes) {
+      dyn_allocator_friend::deallocate(self, p_storage, allocation_bytes);
+   }
+};
+
+struct dyn_reset {
+   using signature = void();
+
+   template <has_reset T>
+   static void
+   do_invoke(T& self) {
+      dyn_allocator_friend::reset(self);
+   }
+};
+
+struct dyn_aligned_allocate {
+   using signature = auto(uword, idx) -> maybe_ptr<void>;
+
+   template <has_allocate T>
+   static auto
+   do_invoke(T& self, uword alignment, idx allocation_bytes)
+      -> maybe_ptr<void> {
+      if constexpr (has_aligned_allocate<T>) {
+         return dyn_allocator_friend::aligned_allocate(self, alignment,
+                                                       allocation_bytes);
+      } else {
+         // If the allocator doesn't implement `aligned_allocate`, we generate a
+         // shim.
+         maybe_ptr<void> result =
+            dyn_allocator_friend::allocate(self, allocation_bytes);
+         if (result.has_value()
+             && !cat::is_aligned(result.value(), alignment)) {
+            dyn_allocator_friend::deallocate(self, result.value(),
+                                             allocation_bytes);
+            return nullopt;
+         }
+         return result;
+      }
+   }
+};
+
+struct dyn_allocate_feedback {
+   using signature = auto(idx) -> maybe_sized_allocation<void*>;
+
+   template <has_allocate T>
+   static auto
+   do_invoke(T& self, idx allocation_bytes) -> maybe_sized_allocation<void*> {
+      if constexpr (has_allocate_feedback<T>) {
+         return dyn_allocator_friend::allocate_feedback(self, allocation_bytes);
+      } else {
+         // If the allocator doesn't implement `allocate_feedback`, we generate
+         // a shim.
+         maybe_ptr<void> result =
+            dyn_allocator_friend::allocate(self, allocation_bytes);
+         if (!result.has_value()) {
+            return nullopt;
+         }
+         return maybe_sized_allocation<void*>(
+            tuple{result.value(), allocation_bytes});
+      }
+   }
+};
+
+struct dyn_aligned_allocate_feedback {
+   using signature = auto(uword, idx) -> maybe_sized_allocation<void*>;
+
+   template <has_allocate T>
+   static auto
+   do_invoke(T& self, uword alignment, idx allocation_bytes)
+      -> maybe_sized_allocation<void*> {
+      if constexpr (has_aligned_allocate_feedback<T>) {
+         return dyn_allocator_friend::aligned_allocate_feedback(
+            self, alignment, allocation_bytes);
+      } else {
+         // If the allocator doesn't implement `aligned_allocate_feedback`, we
+         // generate a shim.
+         maybe_ptr<void> result;
+         if constexpr (has_aligned_allocate<T>) {
+            result = dyn_allocator_friend::aligned_allocate(self, alignment,
+                                                            allocation_bytes);
+         } else {
+            result = dyn_allocator_friend::allocate(self, allocation_bytes);
+            if (result.has_value()
+                && !cat::is_aligned(result.value(), alignment)) {
+               dyn_allocator_friend::deallocate(self, result.value(),
+                                                allocation_bytes);
+               return nullopt;
+            }
+         }
+         if (!result.has_value()) {
+            return nullopt;
+         }
+         return maybe_sized_allocation<void*>(
+            tuple{result.value(), allocation_bytes});
+      }
+   }
+};
+
+}  // namespace detail
+
+// Non-owning, dynamic-dispatch handle to an `Allocator`. This erases the type
+// of underlying allocators to minimize code generation. Functions' overloads
+// are encouraged to resolve this parameter unless explicitly specified.
+class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
+   friend allocator_interface<dyn_allocator>;
+   friend struct dyn_allocator_friend;
+
+ private:
+   template <typename T>
+   struct dyn_memory_handle : detail::base_memory_handle<T> {
+      T* p_storage;
+
+      auto
+      get() -> decltype(auto) {
+         return *this;
+      }
+
+      auto
+      get() const -> decltype(auto) {
+         return *this;
+      }
+   };
+
+   dyn_ptr<detail::dyn_allocate, detail::dyn_deallocate, detail::dyn_reset,
+           detail::dyn_aligned_allocate, detail::dyn_allocate_feedback,
+           detail::dyn_aligned_allocate_feedback>
+      m_p_allocator;
+
+   auto
+   allocate(idx allocation_bytes) -> maybe_ptr<void> {
+      return dyn_invoke<detail::dyn_allocate>(*m_p_allocator, allocation_bytes);
+   }
+
+   void
+   deallocate(void const* p_storage, idx allocation_bytes) {
+      dyn_invoke<detail::dyn_deallocate>(*m_p_allocator, p_storage,
+                                         allocation_bytes);
+   }
+
+   auto
+   aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
+      return dyn_invoke<detail::dyn_aligned_allocate>(*m_p_allocator, alignment,
+                                                      allocation_bytes);
+   }
+
+   auto
+   allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*> {
+      return dyn_invoke<detail::dyn_allocate_feedback>(*m_p_allocator,
+                                                       allocation_bytes);
+   }
+
+   auto
+   aligned_allocate_feedback(uword alignment, idx allocation_bytes)
+      -> maybe_sized_allocation<void*> {
+      return dyn_invoke<detail::dyn_aligned_allocate_feedback>(
+         *m_p_allocator, alignment, allocation_bytes);
+   }
+
+   template <typename T>
+   constexpr auto
+   make_handle(T* p_handle_storage) -> dyn_memory_handle<T> {
+      return dyn_memory_handle<T>{{}, p_handle_storage};
+   }
+
+   template <typename T>
+   auto
+   access(dyn_memory_handle<T>& memory) -> T* {
+      return memory.p_storage;
+   }
+
+   template <typename T>
+   auto
+   access(dyn_memory_handle<T> const& memory) const -> T const* {
+      return memory.p_storage;
+   }
+
+ public:
+   dyn_allocator() = delete ("`dyn_allocator` cannot be default-constructed! "
+                             "Pass an allocator l-value instead.");
+
+   // Bind to any concrete allocator. Constructing a `dyn_allocator` from
+   // another `dyn_allocator` would otherwise add superfluous indirections.
+   template <is_allocator Allocator>
+      requires(is_neither<Allocator, dyn_allocator>)
+   dyn_allocator(Allocator& allocator)
+       : m_p_allocator(__builtin_addressof(allocator)) {
+   }
+
+   dyn_allocator(dyn_allocator const&) = default;
+
+   // Dispatches to the held allocator's `reset`, which is either its own
+   // override or the inherited `allocator_interface` no-op default.
+   // NOLINTNEXTLINE
+   void
+   reset() {
+      dyn_invoke<detail::dyn_reset>(*m_p_allocator);
+   }
+};
+
+// Non-owning, static-dispatch handle to an `Allocator`. Functions are
+// encouraged to consume this type rather than `Allocator&` to reduce
+// `.template alloc<>()` syntactic noise and to encourage overload resolution
+// towards `dyn_allocator` when not explicitly specified.
+template <typename Allocator>
+class [[gsl::Pointer]] allocator_ref
+    : public allocator_interface<allocator_ref<Allocator>> {
+ private:
+   friend allocator_interface<allocator_ref<Allocator>>;
+
+   Allocator* m_p_allocator;
+
+   auto
+   allocate(idx allocation_bytes) -> maybe_ptr<void>
+      requires(detail::has_allocate<Allocator>)
+   {
+      return m_p_allocator->allocate(allocation_bytes);
+   }
+
+   void
+   deallocate(void const* p_storage, idx allocation_bytes)
+      requires(detail::has_deallocate<Allocator>)
+   {
+      m_p_allocator->deallocate(p_storage, allocation_bytes);
+   }
+
+   auto
+   aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void>
+      requires(detail::has_aligned_allocate<Allocator>)
+   {
+      return m_p_allocator->aligned_allocate(alignment, allocation_bytes);
+   }
+
+   auto
+   allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*>
+      requires(detail::has_allocate_feedback<Allocator>)
+   {
+      return m_p_allocator->allocate_feedback(allocation_bytes);
+   }
+
+   auto
+   aligned_allocate_feedback(uword alignment, idx allocation_bytes)
+      -> maybe_sized_allocation<void*>
+      requires(detail::has_aligned_allocate_feedback<Allocator>)
+   {
+      return m_p_allocator->aligned_allocate_feedback(alignment,
+                                                      allocation_bytes);
+   }
+
+   template <typename T>
+   constexpr auto
+   make_handle(T* p_handle_storage) {
+      return m_p_allocator->template make_handle<T>(p_handle_storage);
+   }
+
+   template <typename Handle>
+   auto
+   access(Handle& memory) -> decltype(auto) {
+      return m_p_allocator->access(memory);
+   }
+
+   template <typename Handle>
+   auto
+   access(Handle const& memory) const -> decltype(auto) {
+      return m_p_allocator->access(memory);
+   }
+
+ public:
+   allocator_ref() = delete ("`allocator_ref` cannot be default-constructed! "
+                             "Pass an allocator l-value instead.");
+
+   allocator_ref(Allocator& allocator)
+       : m_p_allocator(__builtin_addressof(allocator)) {
+   }
+
+   allocator_ref(allocator_ref const&) = default;
+
+   // Forward `reset` to the held allocator, which is either its own override or
+   // the inherited `allocator_interface` no-op default.
+   void
+   reset() {
+      m_p_allocator->reset();
+   }
+};
+
+// `allocator_ref{allocator_ref<Allocator>}` should deduce to
+// `allocator_ref<Allocator>`, not `allocator_ref<allocator_ref<Allocator>>`.
+template <typename Allocator>
+allocator_ref(allocator_ref<Allocator>&) -> allocator_ref<Allocator>;
+
+}  // namespace cat
