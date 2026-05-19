@@ -120,54 +120,75 @@ struct contiguous_position_interface {
    template <typename Collection>
    friend constexpr auto ::cat::begin_pos(Collection const& collection)
       -> decltype(collection.begin_pos());
+
    template <typename Collection>
    friend constexpr auto ::cat::end_pos(Collection const& collection)
       -> decltype(collection.end_pos());
+
    template <typename Collection, typename Position>
    friend constexpr auto ::cat::inc_pos(Collection const& collection,
                                         Position& position)
       -> decltype(collection.inc_pos(position));
+
    template <typename Collection, typename Position>
    friend constexpr auto ::cat::dec_pos(Collection const& collection,
                                         Position& position)
       -> decltype(collection.dec_pos(position));
+
    template <typename Collection, typename Position>
    friend constexpr auto ::cat::read_at_unchecked(Collection& collection,
                                                   Position const& position)
       -> decltype(collection.read_at_unchecked(position));
+
    template <typename Collection, typename Position>
    friend constexpr auto ::cat::read_at_unchecked(Collection const& collection,
                                                   Position const& position)
       -> decltype(collection.read_at_unchecked(position));
+
    template <typename Collection, typename Position>
    friend constexpr auto ::cat::offset_pos(Collection const& collection,
                                            Position& position, iword offset)
       -> decltype(collection.offset_pos(position, offset));
+
    template <typename Collection, typename Position>
    friend constexpr auto ::cat::distance(Collection const& collection,
                                          Position const& from,
                                          Position const& to)
       -> decltype(collection.distance(from, to));
 
+   // Each hook below requires `Derived` to expose `.data()`, so non-array-like
+   // collections (e.g. `basic_list`) inherit this protocol harmlessly without
+   // satisfying it. The requires-clauses are evaluated lazily, when the
+   // friend free functions in `<cat/iterable>` try to deduce their return
+   // type from `collection.<hook>()`, by which point `Derived` is complete.
+
    [[nodiscard]]
    constexpr auto
-   begin_pos() const -> idx {
+   begin_pos() const -> idx
+      requires(requires(Derived const& collection) { collection.data(); })
+   {
       return 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   end_pos(this Derived const& self) -> idx {
+   end_pos(this Derived const& self) -> idx
+      requires(requires(Derived const& collection) { collection.data(); })
+   {
       return self.size();
    }
 
    constexpr void
-   inc_pos(idx& position) const {
+   inc_pos(idx& position) const
+      requires(requires(Derived const& collection) { collection.data(); })
+   {
       ++position;
    }
 
    constexpr void
-   dec_pos(idx& position) const {
+   dec_pos(idx& position) const
+      requires(requires(Derived const& collection) { collection.data(); })
+   {
       // `cat::idx` deletes `operator--` to forbid silent underflow. `dec_pos`'s
       // invariant is that `position > begin_pos`, so we can cast back to `idx`
       // after subtraction.
@@ -175,13 +196,17 @@ struct contiguous_position_interface {
    }
 
    constexpr void
-   offset_pos(idx& position, iword offset) const {
+   offset_pos(idx& position, iword offset) const
+      requires(requires(Derived const& collection) { collection.data(); })
+   {
       position = idx(static_cast<idx::raw_type>((position + offset).raw));
    }
 
    [[nodiscard]]
    constexpr auto
-   distance(idx left, idx right) const -> iword {
+   distance(idx left, idx right) const -> iword
+      requires(requires(Derived const& collection) { collection.data(); })
+   {
       return right - left;
    }
 

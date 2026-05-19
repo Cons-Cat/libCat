@@ -234,9 +234,6 @@ class random_access_stepanov_iterable_interface
     : public stepanov_iterable_interface<
          random_access_stepanov_iterable_interface<T>,
          detail::container_stepanov_iterator, T> {
- private:
-   using iterator_t = detail::container_stepanov_iterator<T>;
-
  public:
    [[nodiscard]]
    constexpr auto

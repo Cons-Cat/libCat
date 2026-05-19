@@ -177,13 +177,21 @@ distance(Collection const& collection, Position const& from, Position const& to)
 }
 
 namespace detail {
+// `is_contiguous_position_model<T>` determines if `T` gets the position
+// protocol from `contiguous_position_interface`. `is_base_of` is not sufficient
+// because non-array-like collections (e.g. `cat::basic_list`) inherit the
+// mixin but its hooks SFINAE off when `T` lacks `.data()`.
 template <typename T>
 concept is_contiguous_position_model =
-   is_base_of<contiguous_position_interface<remove_cv<T>>, remove_cv<T>>;
+   is_base_of<contiguous_position_interface<remove_cv<T>>, remove_cv<T>>
+   && requires(T const& c) {
+         begin_pos(c);
+         end_pos(c);
+      };
 
-// Private hooks on the contiguous default are not `requires` able as members,
-// so that model is detected by base-class. All other collections still use the
-// public `begin_pos`/`end_pos` member spellings here.
+// The hooks on the contiguous default are `private`, so direct member access
+// (`c.begin_pos()`) cannot be probed. Friend free functions in `<cat/iterable>`
+// can, so all collections are detected through them here.
 template <typename T>
 concept has_position_protocol =
    is_contiguous_position_model<T> || (requires(T const& c) {
