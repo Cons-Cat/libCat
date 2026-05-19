@@ -6,11 +6,13 @@
 
 // TODO: Should we remove deriving from `allocator_interface` and require
 // wrapping in `allocator_ref` to reduce template monomorphization?
+
 namespace cat {
 
 template <idx max_node_bytes>
 class pool_allocator
     : public allocator_interface<pool_allocator<max_node_bytes>> {
+ private:
    friend allocator_interface<pool_allocator>;
    friend struct dyn_allocator_friend;
    template <typename>
@@ -40,7 +42,7 @@ class pool_allocator
 
    template <typename T>
    struct pool_memory_handle : detail::base_memory_handle<T> {
-      T* p_storage;
+      T* _Nonnull p_storage;
 
       // TODO: Simplify with CRTP or deducing-this.
       auto
@@ -78,13 +80,14 @@ class pool_allocator
       return max_node_bytes;
    }
 
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx) -> maybe_ptr<void> {
+   allocate(idx) -> void* _Nullable {
       // If there is a next node in the free list, make that the head and
       // allocate the current head to the user. Otherwise, do not allocate
       // anything.
       if (m_p_head == nullptr) {
-         return nullopt;
+         return nullptr;
       }
 
       node_union* p_alloc = m_p_head;
@@ -93,8 +96,9 @@ class pool_allocator
       return static_cast<void*>(p_alloc);
    }
 
+   [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* p_allocation, idx) {
+   deallocate(void const* _Nonnull p_allocation, idx) {
       // Swap the head for this newly freed allocation.
       node_union* p_new_head = __builtin_bit_cast(node_union*, p_allocation);
       p_new_head->p_next = m_p_head;
@@ -103,21 +107,24 @@ class pool_allocator
 
    // Produce a handle to allocated memory.
    template <typename T>
+   [[clang::ownership_holds(libcat, 2)]]
    constexpr auto
-   make_handle(T* p_handle_storage) -> pool_memory_handle<T> {
+   make_handle(T* _Nonnull p_handle_storage) -> pool_memory_handle<T> {
       return pool_memory_handle<T>{{}, p_handle_storage};
    }
 
    // Access some memory.
    template <typename T>
+   [[gnu::returns_nonnull]]
    auto
-   access(pool_memory_handle<T>& memory) -> T* {
+   access(pool_memory_handle<T>& memory) -> T* _Nonnull {
       return memory.p_storage;
    }
 
    template <typename T>
+   [[gnu::returns_nonnull]]
    auto
-   access(pool_memory_handle<T> const& memory) const -> T const* {
+   access(pool_memory_handle<T> const& memory) const -> T const* _Nonnull {
       return memory.p_storage;
    }
 
@@ -126,13 +133,13 @@ class pool_allocator
    static constexpr idx max_allocation_bytes = max_node_bytes;
 
    union node_union {
-      node_union* p_next = nullptr;
+      node_union* _Nullable p_next = nullptr;
       byte storage[max_node_bytes.raw];
    };
 
  private:
    span<node_union> m_nodes;
-   node_union* m_p_head;
+   node_union* _Nullable m_p_head;
 };
 
 template <idx max_node_bytes>

@@ -34,6 +34,7 @@ $test(meta_fundamental) {
    };
 
    class non_structural_type {
+    private:
       [[maybe_unused]]
       int _;
    };

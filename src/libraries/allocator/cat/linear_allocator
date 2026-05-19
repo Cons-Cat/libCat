@@ -6,9 +6,11 @@
 
 // TODO: Should we remove deriving from `allocator_interface` and require
 // wrapping in `allocator_ref` to reduce template monomorphization?
+
 namespace cat {
 
 class linear_allocator : public allocator_interface<linear_allocator> {
+ private:
    friend allocator_interface<linear_allocator>;
    friend struct dyn_allocator_friend;
    template <typename>
@@ -22,7 +24,6 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    friend constexpr auto
    make_linear_allocator(span<byte>& span) -> linear_allocator;
 
- private:
    // Initialize a `linear_allocator`. This should only be called from
    // `cat::make_linear_allocator`.
    constexpr linear_allocator(uintptr<void> p_address, idx arena_bytes)
@@ -32,7 +33,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
    template <typename T>
    struct linear_memory_handle : detail::base_memory_handle<T> {
-      T* p_storage;
+      T* _Nonnull p_storage;
 
       // TODO: Simplify with CRTP or deducing-this.
       auto
@@ -78,19 +79,21 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    }
 
    // Try to allocate memory and bump the pointer down.
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx allocation_bytes) -> maybe_ptr<void> {
+   allocate(idx allocation_bytes) -> void* _Nullable {
       if (m_p_arena_current - allocation_bytes >= m_p_arena_end) {
          m_p_arena_current -= allocation_bytes;
          // Return a pointer that is then used to in-place construct a `T`.
-         return m_p_arena_current;
+         return static_cast<void*>(m_p_arena_current);
       }
       return nullptr;
    }
 
    // Try to allocate memory aligned to some boundary and bump the pointer down.
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
+   aligned_allocate(uword alignment, idx allocation_bytes) -> void* _Nullable {
       uintptr<void> allocation =
          align_down(m_p_arena_current - allocation_bytes, alignment);
 
@@ -124,27 +127,31 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
    // In general, memory cannot be deallocated in a linear allocator, so this
    // function is no-op.
+   [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* /*unused*/, uword /*unused*/) {
+   deallocate(void const* _Nonnull /*unused*/, uword /*unused*/) {
    }
 
    // Produce a handle to allocated memory.
    template <typename T>
+   [[clang::ownership_holds(libcat, 2)]]
    constexpr auto
-   make_handle(T* p_handle_storage) -> linear_memory_handle<T> {
+   make_handle(T* _Nonnull p_handle_storage) -> linear_memory_handle<T> {
       return linear_memory_handle<T>{{}, p_handle_storage};
    }
 
    // Access some memory.
    template <typename T>
+   [[gnu::returns_nonnull]]
    auto
-   access(linear_memory_handle<T>& memory) -> T* {
+   access(linear_memory_handle<T>& memory) -> T* _Nonnull {
       return memory.p_storage;
    }
 
    template <typename T>
+   [[gnu::returns_nonnull]]
    auto
-   access(linear_memory_handle<T> const& memory) const -> T const* {
+   access(linear_memory_handle<T> const& memory) const -> T const* _Nonnull {
       return memory.p_storage;
    }
 

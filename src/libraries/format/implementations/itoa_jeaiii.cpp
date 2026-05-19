@@ -19,6 +19,7 @@
 
 // I don't want to edit the macros in this code, so I'm disabling the Clang
 // warning.
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-braces"
 

@@ -5,8 +5,8 @@
 // `write()` forwards its arguments to a failable stdout syscall. It returns the
 // number of bytes that it wrote.
 auto
-nix::sys_write(nix::file_descriptor file_descriptor,
-               char const* p_string_buffer, cat::iword length)
+nix::sys_write(file_descriptor file_descriptor,
+               char const* _Nonnull p_string_buffer, cat::iword length)
    -> nix::scaredy_nix<cat::idx> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<cat::idx>(1, file_descriptor, p_string_buffer,
@@ -16,7 +16,7 @@ nix::sys_write(nix::file_descriptor file_descriptor,
 // `write()` forwards its arguments to a failable stdout syscall. It returns the
 // number of bytes that it wrote.
 auto
-nix::sys_write(nix::file_descriptor file_descriptor, cat::str_view const string)
+nix::sys_write(file_descriptor file_descriptor, cat::str_view string)
    -> nix::scaredy_nix<cat::idx> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<cat::idx>(1, file_descriptor, string.data(),

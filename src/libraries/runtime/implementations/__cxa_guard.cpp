@@ -11,14 +11,14 @@ namespace {
 
 [[gnu::always_inline]]
 inline auto
-done_ref(cat::uword* p_guard) -> cat::uint1& {
-   return reinterpret_cast<cat::uint1*>(p_guard)[0];
+done_ref(cat::uword* _Nonnull p_guard) -> cat::uint1& {
+   return reinterpret_cast<cat::uint1* _Nonnull>(p_guard)[0];
 }
 
 [[gnu::always_inline]]
 inline auto
-lock_ref(cat::uword* p_guard) -> cat::uint1& {
-   return reinterpret_cast<cat::uint1*>(p_guard)[1];
+lock_ref(cat::uword* _Nonnull p_guard) -> cat::uint1& {
+   return reinterpret_cast<cat::uint1* _Nonnull>(p_guard)[1];
 }
 
 }  // namespace
@@ -26,7 +26,7 @@ lock_ref(cat::uword* p_guard) -> cat::uint1& {
 extern "C" [[nodiscard]]
 auto
 // NOLINTNEXTLINE
-__cxa_guard_acquire(cat::uword* p_guard) -> int {
+__cxa_guard_acquire(cat::uword* _Nonnull p_guard) -> int {
    cat::atomic<cat::uint1&> done{done_ref(p_guard)};
    cat::atomic<cat::uint1&> lock{lock_ref(p_guard)};
 
@@ -52,7 +52,7 @@ __cxa_guard_acquire(cat::uword* p_guard) -> int {
 
 extern "C" void
 // NOLINTNEXTLINE
-__cxa_guard_release(cat::uword* p_guard) {
+__cxa_guard_release(cat::uword* _Nonnull p_guard) {
    cat::atomic<cat::uint1&>{done_ref(p_guard)}.store(
       1u, cat::memory_order::release);
    cat::atomic<cat::uint1&>{lock_ref(p_guard)}.store(
@@ -61,7 +61,7 @@ __cxa_guard_release(cat::uword* p_guard) {
 
 extern "C" void
 // NOLINTNEXTLINE
-__cxa_guard_abort(cat::uword* p_guard) {
+__cxa_guard_abort(cat::uword* _Nonnull p_guard) {
    cat::atomic<cat::uint1&>{lock_ref(p_guard)}.store(
       0u, cat::memory_order::release);
 }

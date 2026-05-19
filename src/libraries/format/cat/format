@@ -285,13 +285,14 @@ struct format_type_constant {
 // container for `vfmt_to()`.
 struct format_string_vector : container_interface<format_string_vector, char>,
                               random_access_stepanov_iterable_interface<char> {
-   format_string_vector(char* p_in_storage, idx in_length, idx in_max_length)
+   format_string_vector(char* _Nonnull p_in_storage, idx in_length,
+                        idx in_max_length)
        : p_storage(p_in_storage), length(in_length), max_length(in_max_length) {
    }
 
-   [[nodiscard]]
+   [[nodiscard, gnu::returns_nonnull]]
    auto
-   data() const [[clang::lifetimebound]] -> char* {
+   data() const [[clang::lifetimebound]] -> char* _Nonnull {
       return this->p_storage;
    }
 
@@ -332,7 +333,7 @@ struct format_string_vector : container_interface<format_string_vector, char>,
       return monostate;
    }
 
-   char* p_storage;
+   char* _Nonnull p_storage;
    idx length;
    idx max_length;
 };
@@ -427,7 +428,7 @@ struct format_args {
       return *reinterpret_cast<T const*>(p_data);
    }
 
-   format_argument_compact_index const* p_args_indices;
+   format_argument_compact_index const* _Nonnull p_args_indices;
    uword const argument_count;
 };
 
@@ -438,13 +439,14 @@ template <is_allocator Allocator>
 struct format_buffer_base
     : container_interface<format_buffer_base<Allocator>, char>,
       random_access_stepanov_iterable_interface<char> {
-   format_buffer_base(char* p_in_string, uword in_length, uword in_max_length)
+   format_buffer_base(char* _Nonnull p_in_string, uword in_length,
+                      uword in_max_length)
        : p_string(p_in_string), length(in_length), max_length(in_max_length) {
    }
 
-   [[nodiscard]]
+   [[nodiscard, gnu::returns_nonnull]]
    auto
-   data() const -> char* {
+   data() const -> char* _Nonnull {
       return this->p_string;
    }
 
@@ -484,7 +486,7 @@ struct format_buffer_base
       return monostate;
    }
 
-   char* p_string;
+   char* _Nonnull p_string;
    uword length;
    uword max_length;
 };

@@ -9,14 +9,20 @@ namespace cat::detail {
 
 // Vectorized implementation of `cat::copy_memory` for runtime.
 void
-copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
+copy_memory_impl(void const* _Nonnull __restrict p_source,
+                 void* _Nonnull __restrict p_destination, idx bytes) {
+   // The casts to `uintptr` below can hide the `__restrict` guarantee from
+   // the optimizer. Restate the non-aliasing contract explicitly.
+   __builtin_assume_separate_storage(p_source, p_destination);
+
    iword bytes_remaining = bytes;
    using simd_vector = uint8x2;
 
    cat::uintptr<unsigned char> p_source_handle{
-      const_cast<unsigned char*>(static_cast<unsigned char const*>(p_source))};
+      const_cast<unsigned char* _Nonnull>(
+         static_cast<unsigned char const* _Nonnull>(p_source))};
    cat::uintptr<unsigned char> p_destination_handle{
-      static_cast<unsigned char*>(p_destination)};
+      static_cast<unsigned char* _Nonnull>(p_destination)};
    constexpr idx l3_cache_size = 2_umi;
    constexpr idx step_size = sizeof(simd_vector) * 8u;
    uword const simd_align = alignof(simd_vector);
@@ -82,10 +88,11 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
          // Load 8 vectors, then increment the source pointer by that size.
 #pragma unroll 8
          for (idx i = 0u; i < 8u; ++i) {
-            unsigned char const* const p_byte =
+            unsigned char const* _Nonnull const p_byte =
                p_source_handle.get() + (i * sizeof(simd_vector));
-            simd_vector::memory_lane const* const p_chunk =
-               reinterpret_cast<simd_vector::memory_lane const*>(p_byte);
+            simd_vector::memory_lane const* _Nonnull const p_chunk =
+               reinterpret_cast<simd_vector::memory_lane const* _Nonnull>(
+                  p_byte);
             vectors[i].load_aligned(p_chunk);
          }
          prefetch_for_one_read(p_source_handle.get() + (step_size * 2u));
@@ -93,14 +100,14 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
          if (dest_simd_aligned) {
 #pragma unroll 8
             for (idx i = 0u; i < 8u; ++i) {
-               __builtin_bit_cast(simd_vector*, p_destination_handle.get())[i] =
-                  vectors[i];
+               __builtin_bit_cast(simd_vector* _Nonnull,
+                                  p_destination_handle.get())[i] = vectors[i];
             }
          } else {
 #pragma unroll 8
             for (idx i = 0u; i < 8u; ++i) {
                vectors[i].store_unaligned(
-                  reinterpret_cast<simd_vector::memory_lane*>(
+                  reinterpret_cast<simd_vector::memory_lane* _Nonnull>(
                      p_destination_handle.get() + (i * sizeof(simd_vector))));
             }
          }
@@ -119,10 +126,11 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
       while (bytes_remaining >= step_size) {
 #pragma unroll
          for (idx i = 0u; i < 8u; ++i) {
-            unsigned char const* const p_byte =
+            unsigned char const* _Nonnull const p_byte =
                p_source_handle.get() + (i * sizeof(simd_vector));
-            simd_vector::memory_lane const* const p_chunk =
-               reinterpret_cast<simd_vector::memory_lane const*>(p_byte);
+            simd_vector::memory_lane const* _Nonnull const p_chunk =
+               reinterpret_cast<simd_vector::memory_lane const* _Nonnull>(
+                  p_byte);
             vectors[i].load_aligned(p_chunk);
          }
          prefetch_for_one_read(p_source_handle.get() + (step_size * 2u));
@@ -132,7 +140,7 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
             // Store non-temporally because we aren't going to read or write
             // this again.
             vectors[i].store_non_temporal(
-               reinterpret_cast<simd_vector::memory_lane*>(
+               reinterpret_cast<simd_vector::memory_lane* _Nonnull>(
                   p_destination_handle.get() + (i * sizeof(simd_vector))));
          }
          p_destination_handle += step_size;
@@ -145,10 +153,11 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
       while (bytes_remaining >= step_size) {
 #pragma unroll 8
          for (idx i = 0u; i < 8u; ++i) {
-            unsigned char const* const p_byte =
+            unsigned char const* _Nonnull const p_byte =
                p_source_handle.get() + (i * sizeof(simd_vector));
-            simd_vector::memory_lane const* const p_chunk =
-               reinterpret_cast<simd_vector::memory_lane const*>(p_byte);
+            simd_vector::memory_lane const* _Nonnull const p_chunk =
+               reinterpret_cast<simd_vector::memory_lane const* _Nonnull>(
+                  p_byte);
             vectors[i].load_aligned(p_chunk);
          }
          prefetch_for_one_read(p_source_handle.get() + (step_size * 2u));
@@ -156,7 +165,7 @@ copy_memory_impl(void const* p_source, void* p_destination, idx bytes) {
 #pragma unroll 8
          for (idx i = 0u; i < 8u; ++i) {
             vectors[i].store_unaligned(
-               reinterpret_cast<simd_vector::memory_lane*>(
+               reinterpret_cast<simd_vector::memory_lane* _Nonnull>(
                   p_destination_handle.get() + (i * sizeof(simd_vector))));
          }
          p_source_handle += step_size;

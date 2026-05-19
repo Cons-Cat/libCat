@@ -15,25 +15,30 @@ namespace std {
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // `memcpy()` exists to enable some Clang optimizations.
 extern "C" [[deprecated("`std::memcpy()` should not be used directly! Consider "
-                        "`cat::copy_memory()` instead.")]]
+                        "`cat::copy_memory()` instead."),
+             gnu::returns_nonnull]]
 auto
-memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes) -> void*;
+memcpy(void* _Nonnull __restrict p_destination,
+       void const* _Nonnull __restrict p_source, __SIZE_TYPE__ bytes)
+   -> void* _Nonnull;
 
 // Deprecated call to `memset()`. Consider using `cat::set_memory() or
 // cat::zero_memory()` instead. `memset()` exists to enable some Clang
 // optimizations.
 extern "C" [[deprecated("`std::memset()` should not be used directly! Consider "
                         "`cat::set_memory()` or "
-                        "`cat::zero_memory()` instead.")]]
+                        "`cat::zero_memory()` instead."),
+             gnu::returns_nonnull]]
 auto
-memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
+memset(void* _Nonnull p_source, int byte_value, __SIZE_TYPE__ bytes)
+   -> void* _Nonnull;
 
 }  // namespace std
 
 namespace cat {
 
 constexpr auto
-string_length(char const* p_string) -> idx;
+string_length(char const* _Nonnull p_string) -> idx;
 
 template <typename CharT, idx length, bool is_null_terminated>
 class basic_str_inplace;
@@ -65,15 +70,13 @@ basic_str_span : public span<CharT> {
 
    constexpr basic_str_span(basic_str_span const& string) = default;
 
-   constexpr basic_str_span(CharT* p_string, idx in_length)
+   constexpr basic_str_span(CharT* _Nonnull p_string, idx in_length)
        : span<CharT>(p_string, in_length) {
    }
 
    // This weird template deduces lower than the string literal constructor.
-   template <typename T>
-      requires(is_pointer<T>)
-   constexpr basic_str_span(T p_string [[clang::lifetimebound]]
-                            )
+   template <is_pointer T>
+   constexpr basic_str_span(T _Nonnull p_string [[clang::lifetimebound]])
        : span<CharT>(p_string, string_length(p_string) + is_null_terminated) {
    }
 
@@ -281,7 +284,8 @@ basic_str_span : public span<CharT> {
  private:
    // `basic_str_span` inherits:
    //
-   // `char_type* m_p_data;` `iword m_size;`
+   // char_type* _Nullable m_p_data;
+   // idx m_size;
 };
 
 template <typename CharT, idx length, bool is_null_terminated>
@@ -356,14 +360,15 @@ basic_str_inplace
       }
    }
 
+   [[gnu::returns_nonnull]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> char* {
+   data() [[clang::lifetimebound]] -> char* _Nonnull {
       return m_data;
    }
 
-   [[nodiscard]]
+   [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> char const* {
+   data() const [[clang::lifetimebound]] -> char const* _Nonnull {
       return m_data;
    }
 
@@ -443,7 +448,7 @@ basic_str_inplace
 
  private:
    constexpr void
-   copy_string_data(CharT const* p_source) {
+   copy_string_data(CharT const* _Nonnull p_source) {
       if consteval {
          for (idx i = 0u; i < length; ++i) {
             this->m_data[i] = p_source[i];

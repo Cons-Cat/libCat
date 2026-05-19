@@ -441,7 +441,7 @@ struct maybe_reference_storage {
       }
    }
 
-   remove_reference<T>* p_storage = nullptr;
+   remove_reference<T>* _Nullable p_storage = nullptr;
 };
 
 // `T` is a `compact<T, predicate, nullopt_value>`.
@@ -452,6 +452,16 @@ struct maybe_compact_storage {
    // The `niche_type` may differ from `value_type` when its bit pattern is
    // outside the domain of `value_type`.
    using niche_type = decltype(T::nullopt_state());
+
+   // True when `nullptr` is outside the compact storage's engaged domain. Used
+   // to return `_Nonnull` from `.value()` for `maybe_ptr<T>` and similar.
+   static constexpr bool is_nonnull = []() {
+      if constexpr (is_pointer<value_type>) {
+         return !T::has_value(nullptr);
+      } else {
+         return false;
+      }
+   }();
 
    constexpr maybe_compact_storage() = default;
 
@@ -703,22 +713,34 @@ class [[nodiscard]] maybe
 
    template <typename Self>
    [[gnu::always_inline, gnu::nodebug]]
-   static constexpr auto
-   as_base(Self&& self) -> copy_cvref_from<Self&&, maybe> {
+   constexpr auto
+   as_base(this Self&& self) -> copy_cvref_from<Self&&, maybe> {
       // C-cast preserves cvref while upcasting through the inheritance
       // chain, so callers reach `maybe`'s overload set instead of a
-      // derived class's shadowing overloads (P2162).
+      // derived class's shadowing overloads.
+      // NOLINTNEXTLINE
       return (copy_cvref_from<Self&&, maybe>)$fwd(self);
    }
-
- public:
-   using value_type = storage_type::value_type;
 
    // True iff this `maybe` uses compact (niche-value) storage. Only
    // niche-using `maybe`s expose `.value_or_niche()` because it relies on
    // reading the underlying scalar regardless of engagement.
    static constexpr bool uses_compact_storage =
       is_specialization<storage_type, maybe_compact_storage>;
+
+   // True iff the engaged value is a raw pointer whose niche is `nullptr`
+   // (e.g. `maybe_ptr<T>`). When true, the checked observers `value()`,
+   // `assert()`, and `verify()` return `_Nonnull`.
+   static constexpr bool is_nonnull = []() {
+      if constexpr (uses_compact_storage) {
+         return storage_type::is_nonnull;
+      } else {
+         return false;
+      }
+   }();
+
+ public:
+   using value_type = storage_type::value_type;
 
    // All `maybe`s are default-constructed as empty.
    constexpr maybe() : m_storage(nullopt) {
@@ -1095,15 +1117,29 @@ class [[nodiscard]] maybe
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> decltype(auto)
-      requires(!is_void<T>)
+      requires(!is_void<T> && !is_nonnull)
    {
-      return as_base($fwd(self)).m_storage.value();
+      return $fwd(self).as_base().m_storage.value();
    }
+
+   // Overload for `maybe_ptr<T>` and other compact pointer storages whose
+   // niche is `nullptr`. Engagement implies non-null, so the pointer is
+   // returned by value as `_Nonnull` to lift the guarantee into the type.
+   // The `remove_pointer<remove_cvref<value_type>>*` spelling keeps the
+   // return type syntactically a pointer type across all `value_type`
+   // instantiations (references and non-pointers included) so the
+   // `_Nonnull` qualifier check passes during overload substitution.
+   // `gnu::returns_nonnull` also lets the optimizer elide null checks on
+   // the result and warns if the body ever regresses to `return nullptr`.
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   value(this auto const& self)
+      -> remove_pointer<remove_cvref<value_type>>* _Nonnull requires(
+         !is_void<T> && is_nonnull) { return self.as_base().m_storage.value(); }
 
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
-   constexpr auto
-   value() const -> monostate_type
+   constexpr auto value() const -> monostate_type
       requires(is_void<T>)
    {
       return monostate;
@@ -1121,7 +1157,7 @@ class [[nodiscard]] maybe
    value_or(this auto&& self, value_type fallback) -> value_type
       requires(!is_reference<value_type> && !is_void<value_type>)
    {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if (base.m_storage.has_value()) {
          return $fwd(base).m_storage.value();
       }
@@ -1134,7 +1170,7 @@ class [[nodiscard]] maybe
    [[nodiscard]]
    constexpr auto
    value_or(this auto&& self, U&& fallback) -> remove_cvref<value_type> {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if (base.m_storage.has_value()) {
          return $fwd(base).m_storage.value();
       }
@@ -1166,7 +1202,7 @@ class [[nodiscard]] maybe
    get_ptr(this auto&& self)
       requires(!is_void<value_type>)
    {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if constexpr (is_pointer<value_type>) {
          if (base.m_storage.has_value()) {
             return $fwd(base).m_storage.value();
@@ -1189,12 +1225,13 @@ class [[nodiscard]] maybe
    // value.
    auto
    assert(this auto&& self,
-          void (*p_assert_handler)(source_location const&) = assert_handler,
+          void (*_Nonnull p_assert_handler)(source_location const&) =
+             assert_handler,
           source_location const& callsite = source_location::current())
       -> decltype(auto)
       requires(!is_void<value_type>)
    {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       cat::assert(base.has_value(), p_assert_handler, callsite);
       return $fwd(base).value();
    }
@@ -1202,7 +1239,8 @@ class [[nodiscard]] maybe
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
-   assert(void (*p_assert_handler)(source_location const&) = assert_handler,
+   assert(void (*_Nonnull p_assert_handler)(source_location const&) =
+             assert_handler,
           source_location const& callsite = source_location::current()) const
       -> monostate_type
       requires(is_void<value_type>)
@@ -1215,19 +1253,21 @@ class [[nodiscard]] maybe
    // value.
    auto
    verify(this auto&& self,
-          void (*p_assert_handler)(source_location const&) = assert_handler,
+          void (*_Nonnull p_assert_handler)(source_location const&) =
+             assert_handler,
           source_location const& callsite = source_location::current())
       -> decltype(auto)
       requires(!is_void<value_type>)
    {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       cat::verify(base.has_value(), p_assert_handler, callsite);
       return $fwd(base).value();
    }
 
    // Special discard-able overload for `maybe<void>`.
    auto
-   verify(void (*p_assert_handler)(source_location const&) = assert_handler,
+   verify(void (*_Nonnull p_assert_handler)(source_location const&) =
+             assert_handler,
           source_location const& callsite = source_location::current()) const
       -> monostate_type
       requires(is_void<value_type>)
@@ -1248,7 +1288,7 @@ class [[nodiscard]] maybe
    [[nodiscard]]
    constexpr auto
    transform(this auto&& self, Callback&& callback) -> decltype(auto) {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if constexpr (is_void<T>) {
          using U = decltype(callback());
          static_assert(!is_specialization<U, maybe>);
@@ -1290,7 +1330,7 @@ class [[nodiscard]] maybe
    template <typename Callback>
    constexpr auto
    and_then(this auto&& self, Callback&& callback) {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if constexpr (is_void<T>) {
          using ret = decltype(callback());
          static_assert(is_specialization<ret, maybe>,
@@ -1326,7 +1366,7 @@ class [[nodiscard]] maybe
                     "The callback parameter of `.or_else()` must return either "
                     "`void` or a specialization of `cat::maybe`.");
 
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if constexpr (is_void<return_type>) {
          if (!base.has_value()) {
             $fwd(callback)();
@@ -1346,7 +1386,7 @@ class [[nodiscard]] maybe
    or_exit(this auto&& self, iword exit_code = 1)
       requires(!is_void<T>)
    {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if (base.has_value()) [[likely]] {
          return $fwd(base).value();
       }
@@ -1458,7 +1498,7 @@ class [[nodiscard]] maybe
    data(this auto&& self)
       requires(!is_void<T>)
    {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       using ptr_type = decltype(__builtin_addressof(base.m_storage.value()));
       if (base.m_storage.has_value()) {
          return __builtin_addressof(base.m_storage.value());

@@ -1,7 +1,7 @@
 #include <cat/linux>
 
 auto
-nix::sys_newfstatat(file_descriptor dirfd, char const* p_file_path,
+nix::sys_newfstatat(file_descriptor dirfd, char const* _Nonnull p_file_path,
                     file_status& out, atfile_flags flags)
    -> nix::scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/

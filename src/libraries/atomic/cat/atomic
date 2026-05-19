@@ -217,6 +217,9 @@ class atomic_overflow_reference {
        : m_p_atomic(__builtin_addressof(atomic)) {
    }
 
+   // `std::atomic_ref` is not rebindable. Keep this disabled until we have
+   // matching evidence.
+
    constexpr auto
    fetch_add(auto operand, memory_order order = memory_order::seq_cst)
       -> value_type
@@ -386,7 +389,7 @@ class atomic_overflow_reference {
       return value_type(cat::sat_sub(raw_observed, raw_operand));
    }
 
-   AtomicQual* m_p_atomic;
+   AtomicQual* _Nonnull m_p_atomic;
 };
 }  // namespace detail
 
@@ -1179,7 +1182,7 @@ class atomic<T&> {
    template <typename U>
       requires(is_same<remove_cv<U>, remove_cv<T>> && is_convertible<U*, T*>)
    constexpr atomic(atomic<U&> const& other) noexcept
-       : m_p_value(static_cast<T*>(other.m_p_value)) {
+       : m_p_value(static_cast<T* _Nonnull>(other.m_p_value)) {
    }
 
    auto
@@ -1316,9 +1319,9 @@ class atomic<T&> {
    // the referenced object's address for hashing, contention-aware data
    // structures, and indexing without leaking a typed pointer that would
    // tempt non-atomic access. P3323R1 propagates cv to the return type.
-   [[nodiscard]]
+   [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   address() const noexcept -> copy_cv_from<T, void>* {
+   address() const noexcept -> copy_cv_from<T, void>* _Nonnull {
       return m_p_value;
    }
 
@@ -1849,7 +1852,7 @@ class atomic<T&> {
       }
    }
 
-   T* m_p_value;
+   T* _Nonnull m_p_value;
 };
 
 using atomic_signed_lock_free = atomic<iword>;
@@ -1915,9 +1918,9 @@ class atomic_ref_bound {
 
    // P2835R7 + P3936R0: see the `atomic<T&>` overload for rationale.
    // P3323R1 propagates cv to the return type.
-   [[nodiscard]]
+   [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   address() const noexcept -> copy_cv_from<T, void>* {
+   address() const noexcept -> copy_cv_from<T, void>* _Nonnull {
       return m_reference.address();
    }
 
@@ -2298,25 +2301,27 @@ class basic_atomic_accessor {
    using offset_policy = basic_atomic_accessor;
    using element_type = ElementType;
    using reference = ReferenceType;
-   using data_handle_type = ElementType*;
+   using data_handle_type = ElementType* _Nonnull;
 
    constexpr basic_atomic_accessor() = default;
 
    template <typename OtherElementType>
-      requires is_convertible<OtherElementType (*)[], element_type (*)[]>
+      requires is_convertible<OtherElementType (*_Nonnull)[],
+                              element_type (*_Nonnull)[]>
    constexpr basic_atomic_accessor(
       basic_atomic_accessor<OtherElementType, ReferenceType> other) {
       static_cast<void>(other);
    }
 
    constexpr auto
-   access(data_handle_type p_data, __SIZE_TYPE__ index) const -> reference {
+   access(data_handle_type _Nonnull p_data, __SIZE_TYPE__ index) const
+      -> reference {
       return reference(p_data[index]);
    }
 
    constexpr auto
-   offset(data_handle_type p_data, __SIZE_TYPE__ index) const
-      -> data_handle_type {
+   offset(data_handle_type _Nonnull p_data, __SIZE_TYPE__ index) const
+      -> data_handle_type _Nonnull {
       return p_data + index;
    }
 };

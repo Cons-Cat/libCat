@@ -46,7 +46,8 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
    copy_to_new_storage(is_allocator auto& allocator, iword new_capacity)
       -> maybe<void> {
       // TODO: `.resalloc_multi()`.
-      T* p_new = $prop(allocator.template alloc_multi<T>(new_capacity));
+      T* _Nonnull p_new =
+         $prop(allocator.template alloc_multi<T>(new_capacity));
 
       if constexpr (is_trivially_relocatable<T>) {
          copy_memory(this->p_storage, p_new,
@@ -57,7 +58,7 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
          }
       }
 
-      allocator.free_multi(this->p_storage, this->current_size);
+      allocator.free_multi(span<T>(this->p_storage, this->current_size));
 
       this->p_storage = p_new;
       this->current_capacity = new_capacity;
@@ -91,7 +92,7 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
       if (new_capacity > this->current_capacity) {
          // TODO: Can this be simplified with iterators?
          // TODO: `.resalloc_multi()`.
-         T* p_new =
+         T* _Nonnull p_new =
             $prop(allocator.template alloc_multi<T>(new_capacity)).data();
 
          // TODO: Generalize copying from one collectian to another.
@@ -105,7 +106,7 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
             }
          }
 
-         allocator.free_multi(this->p_storage, this->current_size);
+         allocator.free_multi(span<T>(this->p_storage, this->current_size));
 
          this->p_storage = p_new;
          this->current_capacity = new_capacity;
@@ -142,17 +143,17 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
    clone([[maybe_unused]] is_allocator auto& allocator) -> maybe<ring<T>> {
    }
 
-   // Get the non-`const` address of this `vec`'s internal array.
+   // Returns `nullptr` when this `ring` is default-constructed or moved-from.
    [[nodiscard]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> T* {
+   data() [[clang::lifetimebound]] -> T* _Nullable {
       return &(this->p_storage[0]);
    }
 
-   // Get the `const` address of this `vec`'s internal array.
+   // Returns `nullptr` when this `ring` is default-constructed or moved-from.
    [[nodiscard]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> T const* {
+   data() const [[clang::lifetimebound]] -> T const* _Nullable {
       return &(this->p_storage[0]);
    }
 
@@ -189,7 +190,7 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
    }
 
  private:
-   T* p_storage;
+   T* _Nullable p_storage;
    iword current_index;
    iword current_size;
    iword current_capacity;

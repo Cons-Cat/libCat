@@ -229,7 +229,8 @@ concept is_random_access_collection =
 // hoisted out of its parent's scope.
 template <typename T>
 class collection_iteration_context {
-   T* m_p_collection;
+ private:
+   T* _Nonnull m_p_collection;
    position_type<T> m_position;
    position_type<T> m_stop;
 
@@ -237,7 +238,7 @@ class collection_iteration_context {
    using element_type = decltype(read_at_unchecked(
       declval<T&>(), declval<position_type<T> const&>()));
 
-   constexpr collection_iteration_context(T* p_collection,
+   constexpr collection_iteration_context(T* _Nonnull p_collection,
                                           position_type<T> begin_position,
                                           position_type<T> end_position)
        : m_p_collection(p_collection),
@@ -276,7 +277,8 @@ class collection_iteration_context {
 // requires `.dec_pos(p)` from `T`. It never needs to step "before begin".
 template <typename T>
 class reverse_collection_iteration_context {
-   T* m_p_collection;
+ private:
+   T* _Nonnull m_p_collection;
    position_type<T> m_position;
    position_type<T> m_stop;
 
@@ -285,7 +287,7 @@ class reverse_collection_iteration_context {
       declval<T&>(), declval<position_type<T> const&>()));
 
    constexpr reverse_collection_iteration_context(
-      T* p_collection, position_type<T> begin_position,
+      T* _Nonnull p_collection, position_type<T> begin_position,
       position_type<T> end_position)
        : m_p_collection(p_collection),
          m_position(begin_position),

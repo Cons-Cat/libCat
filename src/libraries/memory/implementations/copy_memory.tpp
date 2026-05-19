@@ -10,7 +10,8 @@ namespace cat {
 
 // Copy non-overlapping memory ranges.
 constexpr void
-copy_memory(void const* p_source, void* p_destination, idx bytes) {
+copy_memory(void const* _Nonnull __restrict p_source,
+            void* _Nonnull __restrict p_destination, idx bytes) {
    if (bytes == 0u) {
       return;
    }
@@ -25,10 +26,12 @@ copy_memory(void const* p_source, void* p_destination, idx bytes) {
 
 [[clang::no_builtin("memcpy")]]
 constexpr void
-copy_memory_scalar(void const* p_source, void* p_destination, idx bytes) {
-   unsigned char const* const p_src =
-      static_cast<unsigned char const*>(p_source);
-   unsigned char* const p_dest = static_cast<unsigned char*>(p_destination);
+copy_memory_scalar(void const* _Nonnull __restrict p_source,
+                   void* _Nonnull __restrict p_destination, idx bytes) {
+   unsigned char const* _Nonnull __restrict const p_src =
+      static_cast<unsigned char const* _Nonnull>(p_source);
+   unsigned char* _Nonnull __restrict const p_dest =
+      static_cast<unsigned char* _Nonnull>(p_destination);
 
 #pragma clang loop vectorize(disable)
 #pragma unroll 4

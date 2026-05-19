@@ -9,7 +9,7 @@ extern "C" {
 [[gnu::visibility("hidden")]]
 #endif
 auto
-strlen(char const* p_string) -> __SIZE_TYPE__ {
+strlen(char const* _Nonnull p_string) -> __SIZE_TYPE__ {
    return static_cast<__SIZE_TYPE__>(cat::string_length(p_string));
 }
 

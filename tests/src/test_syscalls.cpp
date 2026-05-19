@@ -1,4 +1,5 @@
 #include <cat/linux>
+#include <cat/socket>
 
 #include "../unit_tests.hpp"
 
@@ -89,13 +90,13 @@ $test(syscall_identity) {
    nix::user_id ruid;
    nix::user_id eu;
    nix::user_id su;
-   nix::sys_getresuid(&ruid, &eu, &su).verify();
+   nix::sys_getresuid(ruid, eu, su).verify();
    cat::verify(ruid.value == uid.value);
 
    nix::group_id rgid;
    nix::group_id eg;
    nix::group_id sg;
-   nix::sys_getresgid(&rgid, &eg, &sg).verify();
+   nix::sys_getresgid(rgid, eg, sg).verify();
    cat::verify(rgid.value == gid.value);
 
    // `getgroups(0, nullptr)` returns the count without filling.
@@ -600,11 +601,11 @@ $test(syscall_memory) {
 
 $test(syscall_resource) {
    nix::rlimit limits{};
-   nix::sys_getrlimit(nix::rlimit_resource::max_open_files, &limits).verify();
+   nix::sys_getrlimit(nix::rlimit_resource::max_open_files, limits).verify();
    cat::verify(limits.soft > 0u);
 
    // Setting the limit to its current value is always permitted.
-   nix::sys_setrlimit(nix::rlimit_resource::max_open_files, &limits).verify();
+   nix::sys_setrlimit(nix::rlimit_resource::max_open_files, limits).verify();
 
    // `sched_yield` always returns 0.
    nix::sys_sched_yield().verify();
@@ -681,6 +682,25 @@ $test(syscall_socket_pair) {
    cat::iword got = nix::sys_recv(b, buffer, sizeof(buffer)).verify();
    cat::verify(got == 2);
    cat::verify(buffer[0] == 'h');
+   sent = nix::sys_sendto(a, payload_two.data(), payload_two_length.raw, 0)
+             .verify();
+   cat::verify(sent == cat::iword(payload_two_length));
+   char explicit_null_buffer[8] = {};
+   got = nix::sys_recv(b, explicit_null_buffer, sizeof(explicit_null_buffer),
+                       nullptr, nullptr)
+            .verify();
+   cat::verify(got == 2);
+   cat::verify(explicit_null_buffer[0] == 'h');
+   sent = nix::sys_sendto(a, payload_two.data(), payload_two_length.raw, 0)
+             .verify();
+   cat::verify(sent == cat::iword(payload_two_length));
+   cat::socket_unix<cat::socket_type::stream> socket_receiver(b);
+   char socket_buffer[8] = {};
+   got = socket_receiver
+            .recieve(socket_buffer, sizeof(socket_buffer), nullptr, nullptr)
+            .value();
+   cat::verify(got == 2);
+   cat::verify(socket_buffer[0] == 'h');
 
    // `sendmsg` / `recvmsg` round trip.
    nix::io_vector iov_send[1] = {
@@ -733,7 +753,7 @@ $test(syscall_socket_options) {
 
    cat::int4 read_back = 0;
    cat::int4 length = sizeof(read_back);
-   nix::sys_getsockopt(sock, 1, 8, &read_back, &length).verify();
+   nix::sys_getsockopt(sock, 1, 8, &read_back, length).verify();
    cat::verify(read_back >= 4'096);
 
    nix::sys_close(sock).verify();
@@ -816,7 +836,7 @@ $test(syscall_optional_six_x) {
    // the queries and the syscalls are dispatchable.
    if (nix::has_sys_futex_wake()) {
       nix::futex_word word{};
-      auto wake = nix::sys_futex_wake(&word, ~0ul, 0, 2u);
+      auto wake = nix::sys_futex_wake(word, ~0ul, 0, 2u);
       cat::verify(wake.has_value() || wake.error() == nix::linux_error::inval
                   || wake.error() == nix::linux_error::nosys);
    }

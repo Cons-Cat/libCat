@@ -35,5 +35,5 @@ $test(reallocation_disjoint_linear_ptr_realloc) {
    cat::verify(row[0] == int4{1});
    cat::verify(row[3] == int4{9});
 
-   allocator.free_multi(row.data(), idx{4u});
+   allocator.free_multi(row);
 }

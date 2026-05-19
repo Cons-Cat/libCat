@@ -29,11 +29,12 @@ div_floor(T dividend, U divisor) -> T {
    raw_type quotient = raw_dividend / raw_divisor;
    raw_type const remainder = raw_dividend % raw_divisor;
 
+   // NOLINTBEGIN(bugprone-branch-clone)
    if constexpr (is_signed<raw_type>) {
       if (remainder != raw_type(0)
-      && ((remainder < raw_type(0)) != (raw_divisor < raw_type(0)))) {
-   --quotient;
-}
+          && ((remainder < raw_type(0)) != (raw_divisor < raw_type(0)))) {
+         --quotient;
+      }
    }
 
    return T(quotient);
@@ -48,8 +49,7 @@ div_ceil(T dividend, U divisor) -> T {
    using raw_type = raw_arithmetic_type<T>;
    raw_type const raw_dividend = make_raw_arithmetic(dividend);
    raw_type const raw_divisor =
-   static_cast<raw_type>(make_raw_arithmetic(divisor));
-   // NOLINTBEGIN(bugprone-branch-clone)
+      static_cast<raw_type>(make_raw_arithmetic(divisor));
    if constexpr (make_precision_policy<T> == precision_policies::precise) {
 #pragma float_control(precise, on)
       return T(__builtin_elementwise_ceil(raw_dividend / raw_divisor));

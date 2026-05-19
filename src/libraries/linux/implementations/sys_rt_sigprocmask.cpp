@@ -1,10 +1,10 @@
 #include <cat/linux>
 
 auto
-nix::sys_rt_sigprocmask(signal_action action,
-                        signals_mask_set const* __restrict p_other_set,
-                        signals_mask_set* __restrict p_current_set)
-   -> scaredy_nix<void> {
+nix::sys_rt_sigprocmask(
+   signal_action action,
+   signals_mask_set const* _Nullable __restrict p_other_set,
+   signals_mask_set* _Nullable __restrict p_current_set) -> scaredy_nix<void> {
    scaredy_nix<void> result =
       // https://filippo.io/linux-syscall-table/
       syscall4_volatile(14, action, p_other_set, p_current_set,

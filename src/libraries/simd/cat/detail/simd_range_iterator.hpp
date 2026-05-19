@@ -37,6 +37,7 @@ class simd_range_stepanov_iterator
     : public proxy_stepanov_iterator_interface<
          random_access_iterator_tag, typename remove_const<Pack>::value_type,
          typename remove_const<Pack>::value_type, iword> {
+ private:
    using pack_type = remove_const<Pack>;
    using self_type = simd_range_stepanov_iterator<Pack>;
 
@@ -44,7 +45,7 @@ class simd_range_stepanov_iterator
    using value_type = typename pack_type::value_type;
 
  private:
-   Pack* m_data = nullptr;
+   Pack* _Nullable m_data = nullptr;
    idx m_offset = 0u;
 
  public:
@@ -53,7 +54,8 @@ class simd_range_stepanov_iterator
    constexpr simd_range_stepanov_iterator(simd_range_stepanov_iterator const&) =
       default;
 
-   constexpr simd_range_stepanov_iterator(Pack* p_data_in, idx offset_in)
+   constexpr simd_range_stepanov_iterator(Pack* _Nullable p_data_in,
+                                          idx offset_in)
        : m_data(p_data_in), m_offset(offset_in) {
    }
 

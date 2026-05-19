@@ -49,6 +49,7 @@
 
 // Forward declarations for ABI hook templates (partial specializations in
 // target headers supply fast paths). Primary template definitions live below.
+
 namespace cat::detail::simd_abi {
 template <typename T, typename Abi>
 struct mask_count_if_true;
@@ -1494,7 +1495,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // "gather").
    [[gnu::always_inline]]
    constexpr auto
-   load_aligned(memory_lane const* p_data) -> simd& {
+   load_aligned(memory_lane const* _Nonnull p_data) -> simd& {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             this->set_lane(i, static_cast<T>(p_data[i]));
@@ -1509,7 +1510,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // than `.loaded_aligned()`.
    [[gnu::always_inline]]
    constexpr auto
-   load_unaligned(memory_lane const* p_data) -> simd& {
+   load_unaligned(memory_lane const* _Nonnull p_data) -> simd& {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             this->set_lane(i, static_cast<T>(p_data[i]));
@@ -1523,7 +1524,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // Load a vector from `data` (gather, aligned vs unaligned chosen from ABI).
    [[gnu::always_inline]]
    constexpr auto
-   load(memory_lane const* p_data) -> simd& {
+   load(memory_lane const* _Nonnull p_data) -> simd& {
       if constexpr (abi_type::alignment > alignof(T) && alignof(T) > 1uz) {
          return this->load_aligned(p_data);
       } else {
@@ -1533,7 +1534,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
 
    [[gnu::always_inline]]
    constexpr auto
-   load_non_temporal(memory_lane const* p_data) -> simd& {
+   load_non_temporal(memory_lane const* _Nonnull p_data) -> simd& {
       if consteval {
          return this->load(p_data);
       } else {
@@ -1548,7 +1549,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // Write lanes to aligned memory (also called a "scatter").
    [[gnu::always_inline]]
    constexpr void
-   store_aligned(memory_lane* p_data) const {
+   store_aligned(memory_lane* _Nonnull p_data) const {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             p_data[i] = simd_lane_to_storage((*this)[i]);
@@ -1561,7 +1562,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // Write lanes to arbitrarily aligned memory (scatter).
    [[gnu::always_inline]]
    constexpr void
-   store_unaligned(memory_lane* p_data) const {
+   store_unaligned(memory_lane* _Nonnull p_data) const {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             p_data[i] = simd_lane_to_storage((*this)[i]);
@@ -1574,7 +1575,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // Write lanes to memory (scatter, aligned vs unaligned chosen from ABI).
    [[gnu::always_inline]]
    constexpr void
-   store(memory_lane* p_data) const {
+   store(memory_lane* _Nonnull p_data) const {
       if constexpr (abi_type::alignment > alignof(T) && alignof(T) > 1uz) {
          this->store_aligned(p_data);
       } else {
@@ -1584,7 +1585,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
 
    [[gnu::always_inline]]
    constexpr void
-   store_non_temporal(memory_lane* p_data) const {
+   store_non_temporal(memory_lane* _Nonnull p_data) const {
       if consteval {
          this->store(p_data);
       } else {
@@ -1597,7 +1598,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // `count..lanes-1` are zero-filled. If `count` exceeds `lanes`, only `lanes`
    // scalars are read.
    constexpr auto
-   partial_load(memory_lane const* p_data, idx count) -> simd& {
+   partial_load(memory_lane const* _Nonnull p_data, idx count) -> simd& {
       this->fill(scalar_type{});
       idx const n = count < abi_type::lanes ? count : abi_type::lanes;
       for (idx i = 0u; i < n; ++i) {
@@ -1609,7 +1610,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // Write min(`count`, `lanes`) scalars to `p_data` (partial scatter).
    // Trailing elements are untouched.
    constexpr void
-   partial_store(memory_lane* p_data, idx count) const {
+   partial_store(memory_lane* _Nonnull p_data, idx count) const {
       idx const n = count < abi_type::lanes ? count : abi_type::lanes;
       for (idx i = 0u; i < n; ++i) {
          p_data[i] = simd_lane_to_storage((*this)[i]);
@@ -1693,15 +1694,17 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
       return end();
    }
 
-   [[nodiscard, gnu::always_inline]]
+   [[nodiscard, gnu::always_inline, gnu::returns_nonnull,
+     gnu::assume_aligned(Abi::alignment.raw)]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> T* {
+   data() [[clang::lifetimebound]] -> T* _Nonnull {
       return __builtin_bit_cast(T*, &raw);
    }
 
-   [[nodiscard, gnu::always_inline]]
+   [[nodiscard, gnu::always_inline, gnu::returns_nonnull,
+     gnu::assume_aligned(Abi::alignment.raw)]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> T* {
+   data() const [[clang::lifetimebound]] -> T* _Nonnull {
       return __builtin_bit_cast(T const*, &raw);
    }
 
@@ -2367,7 +2370,7 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
    // from memory into mask lanes. Not a `raw_type` object representation. Use
    // `raw` assignment for that).
    constexpr auto
-   load(bool const* p_lane_bools) -> mask_type& {
+   load(bool const* _Nonnull p_lane_bools) -> mask_type& {
       this->raw = raw_type{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          this->set_lane(i, p_lane_bools[i]);
@@ -2452,15 +2455,17 @@ class [[clang::preferred_name(fixed_size_simd_mask<T, Abi::lanes>),
       return end();
    }
 
-   [[nodiscard, gnu::always_inline]]
+   [[nodiscard, gnu::always_inline, gnu::returns_nonnull,
+     gnu::assume_aligned(Abi::alignment.raw)]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> lane_scalar* {
+   data() [[clang::lifetimebound]] -> lane_scalar* _Nonnull {
       return __builtin_bit_cast(lane_scalar*, &raw);
    }
 
-   [[nodiscard, gnu::always_inline]]
+   [[nodiscard, gnu::always_inline, gnu::returns_nonnull,
+     gnu::assume_aligned(Abi::alignment.raw)]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> lane_scalar const* {
+   data() const [[clang::lifetimebound]] -> lane_scalar const* _Nonnull {
       return __builtin_bit_cast(lane_scalar const*, &raw);
    }
 
@@ -2753,33 +2758,33 @@ enum class prefetch_hint : int {
 
 template <prefetch_hint hint>
 void
-prefetch(void const* p_source) {
+prefetch(void const* _Nonnull p_source) {
    __builtin_prefetch(p_source, static_cast<int>(hint) & 0x4 >> 2,
                       static_cast<int>(hint) & 0x3);
 }
 
 void
-prefetch_for_one_read(auto const* p_vector) {
+prefetch_for_one_read(auto const* _Nonnull p_vector) {
    prefetch<prefetch_hint::non_temporal>(p_vector);
 }
 
 void
-prefetch_close(auto const* p_vector) {
+prefetch_close(auto const* _Nonnull p_vector) {
    prefetch<prefetch_hint::temporal_0>(p_vector);
 }
 
 void
-prefetch_mid(auto const* p_vector) {
+prefetch_mid(auto const* _Nonnull p_vector) {
    prefetch<prefetch_hint::temporal_1>(p_vector);
 }
 
 void
-prefetch_far(auto const* p_vector) {
+prefetch_far(auto const* _Nonnull p_vector) {
    prefetch<prefetch_hint::temporal_2>(p_vector);
 }
 
 void
-prefetch_for_modify(auto const* p_vector) {
+prefetch_for_modify(auto const* _Nonnull p_vector) {
    prefetch<prefetch_hint::temporal_0>(p_vector);
 }
 

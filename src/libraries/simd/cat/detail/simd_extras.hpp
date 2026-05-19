@@ -296,15 +296,15 @@ simd_ctz(simd<T, Abi> x, simd<T, Abi> if_zero) -> simd<T, Abi> {
 // `simd`.
 template <is_simd Simd>
 constexpr auto
-simd_partial_load(Simd& v, typename Simd::memory_lane const* p_source, idx n)
-   -> Simd& {
+simd_partial_load(Simd& v, typename Simd::memory_lane const* _Nonnull p_source,
+                  idx n) -> Simd& {
    return v.partial_load(p_source, n);
 }
 
 template <is_simd Simd>
 constexpr void
-simd_partial_store(Simd const& v, typename Simd::memory_lane* p_destination,
-                   idx n) {
+simd_partial_store(Simd const& v,
+                   typename Simd::memory_lane* _Nonnull p_destination, idx n) {
    v.partial_store(p_destination, n);
 }
 
@@ -346,4 +346,5 @@ simd_chunked_invoke(Fn&& fn, simd<T, Abi> const& pack, Args&&... arguments) {
 // x86 helpers ship with `<cat/simd>` (`simd_sse_movmsk.hpp`,
 // `simd_avx2_mask_ops.hpp`, ...). SSE4.2 string helpers live in
 // `simd_sse42.hpp`.
+
 #include <cat/detail/simd_sse42.hpp>

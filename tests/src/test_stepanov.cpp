@@ -1,4 +1,6 @@
 #include <cat/array>
+#include <cat/list>
+#include <cat/simd_iterator>
 #include <cat/stepanov>
 
 #include "../unit_tests.hpp"
@@ -38,4 +40,16 @@ $test(iterator_concepts_std_parity_container_stepanov_iterator) {
    static_assert(cat::is_bidirectional_stepanov_iterator<iter>);
    static_assert(cat::is_random_access_stepanov_iterator<iter>);
    static_assert(!cat::is_contiguous_stepanov_iterator<iter>);
+}
+
+$test(iterator_nullable_constructors) {
+   cat::detail::simd_range_stepanov_iterator<cat::int4x4> simd_first(nullptr,
+                                                                     0u);
+   cat::detail::simd_range_stepanov_iterator<cat::int4x4> simd_second(nullptr,
+                                                                      0u);
+   cat::verify(simd_first.equal_to(simd_second));
+
+   cat::detail::list_stepanov_iterator<cat::int4, true> list_first(nullptr);
+   cat::detail::list_stepanov_iterator<cat::int4, true> list_second(nullptr);
+   cat::verify(list_first.equal_to(list_second));
 }

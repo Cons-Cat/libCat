@@ -75,16 +75,16 @@ array : public container_interface<array<T, length>, T>,
    }
 
    // Get the non-`const` address of this `array`'s internal array.
-   [[nodiscard]]
+   [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> T* {
+   data() [[clang::lifetimebound]] -> T* _Nonnull {
       return this->m_data;
    }
 
    // Get the `const` address of this `array`'s internal array.
-   [[nodiscard]]
+   [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> T const* {
+   data() const [[clang::lifetimebound]] -> T const* _Nonnull {
       return this->m_data;
    }
 

@@ -12,6 +12,7 @@ template <typename WrappedQual, precision_policies precision>
 class simd_precision_reference
     : public arithmetic_interface<
          simd_precision_reference<WrappedQual, precision>> {
+ private:
    using wrapper_type = remove_cvref<WrappedQual>;
    using T = wrapper_type::value_type;
    using abi_type = wrapper_type::abi_type;
@@ -39,7 +40,7 @@ class simd_precision_reference
                      typename LeftAbi::template make_abi_type<
                         left_result_scalar<LeftT, LeftAbi>>>;
 
-   WrappedQual* m_wrapped;
+   WrappedQual* _Nonnull m_wrapped;
 
    template <typename Result, typename Value>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -60,6 +61,11 @@ class simd_precision_reference
  public:
    constexpr explicit simd_precision_reference(WrappedQual& w)
        : m_wrapped(__builtin_addressof(w)) {
+   }
+
+   constexpr void
+   rebind(WrappedQual& w [[clang::lifetime_capture_by(this)]]) {
+      m_wrapped = __builtin_addressof(w);
    }
 
    template <typename OtherT, typename OtherAbi>

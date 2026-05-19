@@ -275,7 +275,7 @@ template <typename Callback>
 constexpr auto
 variant<Alternatives...>::visit(this auto&& self, Callback&& callback)
    -> decltype(auto) {
-   return cat::visit($fwd(callback), as_base($fwd(self)));
+   return cat::visit($fwd(callback), $fwd(self).as_base());
 }
 
 }  // namespace cat

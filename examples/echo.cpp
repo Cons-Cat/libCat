@@ -6,7 +6,7 @@
 // With linker optimizations, we actually get 355 bytes.
 
 auto
-main(int argc, char* p_argv[]) -> int {
+main(int argc, char* _Nonnull p_argv[]) -> int {
    if (argc <= 1) {
       auto _ = cat::println();
       return 0;
@@ -16,7 +16,7 @@ main(int argc, char* p_argv[]) -> int {
    // with spaces and the final null with a newline, then print the whole
    // string in a single string.
    // TODO: Replace this with a substring replace function.
-   char* p_end = p_argv[1];
+   char* _Nonnull p_end = p_argv[1];
    for (cat::idx i = 1; i < argc; ++i) {
       while (*p_end != 0) {
          ++p_end;

@@ -12,13 +12,13 @@ namespace cat {
 // at an endpoint as non-overlapping for `memcpy`-class use).
 [[nodiscard]]
 constexpr auto
-is_memory_overlapping(void const* p_first, idx first_bytes,
-                      void const* p_second, idx second_bytes) -> bool {
+is_memory_overlapping(void const* _Nonnull p_first, idx first_bytes,
+                      void const* _Nonnull p_second, idx second_bytes) -> bool {
    if (first_bytes == 0u || second_bytes == 0u) {
       return false;
    }
-   cat::uintptr const a{const_cast<void*>(p_first)};
-   cat::uintptr const b{const_cast<void*>(p_second)};
+   cat::uintptr const a{const_cast<void* _Nonnull>(p_first)};
+   cat::uintptr const b{const_cast<void* _Nonnull>(p_second)};
    auto const a_end = a.raw + first_bytes;
    auto const b_end = b.raw + second_bytes;
    return b < a_end && a < b_end;

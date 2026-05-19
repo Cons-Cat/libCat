@@ -84,14 +84,14 @@ struct method_signature_traits;
 template <typename Return, typename... Args>
 struct method_signature_traits<Return(Args...)> {
    using result_type = Return;
-   using erased_fn_type = Return (*)(void*, Args...);
+   using erased_fn_type = Return (*_Nonnull)(void* _Nonnull, Args...);
    static constexpr bool is_const = false;
 };
 
 template <typename Return, typename... Args>
 struct method_signature_traits<Return(Args...) const> {
    using result_type = Return;
-   using erased_fn_type = Return (*)(void const*, Args...);
+   using erased_fn_type = Return (*_Nonnull)(void const* _Nonnull, Args...);
    static constexpr bool is_const = true;
 };
 
@@ -112,7 +112,7 @@ template <typename T, typename Method, typename Return, typename... Args>
 struct dyn_invoker<T, Method, Return(Args...)> {
    [[gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   call(void* p_self, Args... arguments) -> Return {
+   call(void* _Nonnull p_self, Args... arguments) -> Return {
       return Method::template do_invoke<T>(*static_cast<T*>(p_self),
                                            $fwd(arguments)...);
    }
@@ -122,7 +122,7 @@ template <typename T, typename Method, typename Return, typename... Args>
 struct dyn_invoker<T, Method, Return(Args...) const> {
    [[gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   call(void const* p_self, Args... arguments) -> Return {
+   call(void const* _Nonnull p_self, Args... arguments) -> Return {
       return Method::template do_invoke<T>(*static_cast<T const*>(p_self),
                                            $fwd(arguments)...);
    }
@@ -141,7 +141,7 @@ concept methods_support_type = (method_supports_type<Methods, T> && ...);
 template <typename T>
 inline constexpr unsigned char type_anchor = 0;
 template <typename T>
-inline constexpr void const* p_dyn_type_id_for = &type_anchor<T>;
+inline constexpr void const* _Nonnull p_dyn_type_id_for = &type_anchor<T>;
 template <typename Needle, typename... Haystack>
 inline constexpr bool contains_method = is_either<Needle, Haystack...>;
 
@@ -248,7 +248,7 @@ inline constexpr idx subset_offset_impl =
 
 }  // namespace detail
 
-using dyn_type_id_ptr = void const*;
+using dyn_type_id_ptr = void const* _Nonnull;
 
 template <typename T>
 inline constexpr dyn_type_id_ptr p_dyn_type_id_for =
@@ -287,7 +287,7 @@ template <typename T, typename... Methods>
 inline constexpr vtable<Methods...> vtable_for{
    &detail::dyn_invoker<T, Methods>::call...};
 template <typename T, typename... Methods>
-inline constexpr vtable<Methods...> const* p_vtable_for =
+inline constexpr vtable<Methods...> const* _Nonnull p_vtable_for =
    &vtable_for<remove_cvref<T>, Methods...>;
 
 template <>
@@ -301,9 +301,10 @@ namespace detail {
 // vtable. Layout compatibility comes from the indexed-tuple representation.
 template <typename... Subset, typename... Superset>
    requires(is_subset_impl<type_list<Subset...>, type_list<Superset...>>)
+[[gnu::returns_nonnull]]
 constexpr auto
-narrow_vtable(vtable<Superset...> const* p_superset)
-   -> vtable<Subset...> const* {
+narrow_vtable(vtable<Superset...> const* _Nonnull p_superset)
+   -> vtable<Subset...> const* _Nonnull {
    if constexpr (sizeof...(Subset) == 0u) {
       static constexpr vtable<> empty{};
       return &empty;
@@ -341,9 +342,11 @@ concept is_method = is_class<Method> && is_default_constructible<Method>
                     && requires { typename Method::signature; }
                     && requires { typename detail::method_traits<Method>; };
 
-// Destructor method. Required in every Methods list of `basic_dyn` and
-// `dyn_inplace`. The non-owning views (`dyn_ref`, `dyn_ptr`) do not
-// need it.
+// Destructor method. Required in the Methods list of `basic_dyn` and
+// `dyn_inplace` whenever they construct or assign from a type that is not
+// trivially destructible. Holders configured without this method silently
+// skip destruction, which is sound only for trivially destructible types.
+// The non-owning views (`dyn_ref`, `dyn_ptr`) do not need it.
 struct destructor {
    using signature = void();
 
@@ -357,12 +360,12 @@ struct destructor {
 // Move constructor method. Optional. Including it enables move construction
 // and move assignment of the owning holders.
 struct move_constructor {
-   using signature = void(void*);
+   using signature = void(void* _Nonnull);
 
    template <typename T>
       requires(is_move_constructible<T>)
    static constexpr void
-   do_invoke(T& self, void* p_dst) {
+   do_invoke(T& self, void* _Nonnull p_dst) {
       new (p_dst) T(cat::move(self));
       self.~T();
    }
@@ -372,12 +375,12 @@ struct move_constructor {
 // and (when `move_constructor` is also present) copy assignment of the
 // owning holders.
 struct copy_constructor {
-   using signature = void(void*) const;
+   using signature = void(void* _Nonnull) const;
 
    template <typename T>
       requires(is_copy_constructible<T>)
    static constexpr void
-   do_invoke(T const& self, void* p_dst) {
+   do_invoke(T const& self, void* _Nonnull p_dst) {
       new (p_dst) T(self);
    }
 };
@@ -407,12 +410,12 @@ class [[gsl::Pointer]] dyn_ref {
    template <typename Method>
    friend struct dyn_invoke_impl;
 
-   vtable<Methods...> const* m_p_vtable;
-   dyn_type_id_ptr m_p_type_id;
-   void* m_p_value;
+   vtable<Methods...> const* _Nonnull m_p_vtable;
+   dyn_type_id_ptr _Nonnull m_p_type_id;
+   void* _Nonnull m_p_value;
 
-   constexpr dyn_ref(vtable<Methods...> const* p_vt, dyn_type_id_ptr p_td,
-                     void* p_v)
+   constexpr dyn_ref(vtable<Methods...> const* _Nonnull p_vt,
+                     dyn_type_id_ptr p_td, void* _Nonnull p_v)
        : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
 
@@ -429,7 +432,7 @@ class [[gsl::Pointer]] dyn_ref {
       requires(!is_same<remove_cvref<T>, dyn_ref>)
    void
    operator=(T&&) = delete ("`cat::dyn_ref` cannot rebind via assignment! "
-                            "Consider `cat::dyn_ptr` instead.");
+                            "Call `.rebind(value)` to rebind explicitly.");
 
    template <typename T>
       requires(!is_const<T>
@@ -453,6 +456,19 @@ class [[gsl::Pointer]] dyn_ref {
        : m_p_vtable(detail::narrow_vtable<Methods...>(other.m_p_vtable)),
          m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
+   }
+
+   // Explicit rebind. The deleted `operator=(T&&)` above forces users to spell
+   // this out, so the lifetime change is visible at the call site.
+   template <typename T>
+      requires(!is_const<T>
+               && detail::methods_support_type<remove_cvref<T>, Methods...>
+               && !is_same<remove_cvref<T>, dyn_ref>)
+   constexpr void
+   rebind(T& value [[clang::lifetime_capture_by(this)]]) {
+      m_p_vtable = p_vtable_for<T, Methods...>;
+      m_p_type_id = p_dyn_type_id_for<T>;
+      m_p_value = __builtin_addressof(value);
    }
 
    [[nodiscard]]
@@ -481,12 +497,12 @@ class [[gsl::Pointer]] const_dyn_ref {
    template <typename Method>
    friend struct dyn_invoke_impl;
 
-   vtable<Methods...> const* m_p_vtable;
-   dyn_type_id_ptr m_p_type_id;
-   void const* m_p_value;
+   vtable<Methods...> const* _Nonnull m_p_vtable;
+   dyn_type_id_ptr _Nonnull m_p_type_id;
+   void const* _Nonnull m_p_value;
 
-   constexpr const_dyn_ref(vtable<Methods...> const* p_vt, dyn_type_id_ptr p_td,
-                           void const* p_v)
+   constexpr const_dyn_ref(vtable<Methods...> const* _Nonnull p_vt,
+                           dyn_type_id_ptr p_td, void const* _Nonnull p_v)
        : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
 
@@ -503,7 +519,8 @@ class [[gsl::Pointer]] const_dyn_ref {
       requires(is_neither<remove_cvref<T>, const_dyn_ref, dyn_ref<Methods...>>)
    void
    operator=(T&&) =
-      delete ("`cat::const_dyn_ref` cannot rebind via assignment!");
+      delete ("`cat::const_dyn_ref` cannot rebind via assignment! "
+              "Call `.rebind(value)` to rebind explicitly.");
 
    template <typename T>
       requires(detail::methods_support_type<remove_cvref<T>, Methods...>
@@ -545,6 +562,18 @@ class [[gsl::Pointer]] const_dyn_ref {
          m_p_value(other.m_p_value) {
    }
 
+   // Explicit rebind. The deleted `operator=(T&&)` above forces users to spell
+   // this out, so the lifetime change is visible at the call site.
+   template <typename T>
+      requires(detail::methods_support_type<remove_cvref<T>, Methods...>
+               && !is_same<remove_cvref<T>, const_dyn_ref>)
+   constexpr void
+   rebind(T const& value [[clang::lifetime_capture_by(this)]]) {
+      m_p_vtable = p_vtable_for<T, Methods...>;
+      m_p_type_id = p_dyn_type_id_for<T>;
+      m_p_value = __builtin_addressof(value);
+   }
+
    [[nodiscard]]
    constexpr auto
    p_type_id() const -> dyn_type_id_ptr {
@@ -576,12 +605,12 @@ class [[gsl::Pointer]] dyn_ptr {
    template <typename Method>
    friend struct dyn_invoke_impl;
 
-   vtable<Methods...> const* m_p_vtable = nullptr;
+   vtable<Methods...> const* _Nullable m_p_vtable = nullptr;
    dyn_type_id_ptr m_p_type_id = p_dyn_type_id_for<void>;
-   void* m_p_value = nullptr;
+   void* _Nullable m_p_value = nullptr;
 
-   constexpr dyn_ptr(vtable<Methods...> const* p_vt, dyn_type_id_ptr p_td,
-                     void* p_v)
+   constexpr dyn_ptr(vtable<Methods...> const* _Nonnull p_vt,
+                     dyn_type_id_ptr p_td, void* _Nullable p_v)
        : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
 
@@ -608,8 +637,7 @@ class [[gsl::Pointer]] dyn_ptr {
    template <typename T>
       requires(!is_const<T>
                && detail::methods_support_type<remove_cvref<T>, Methods...>)
-   constexpr dyn_ptr(T* p_value [[clang::lifetimebound]]
-                     )
+   constexpr dyn_ptr(T* _Nonnull p_value [[clang::lifetimebound]])
        : m_p_vtable(p_value != nullptr ? p_vtable_for<T, Methods...> : nullptr),
          m_p_type_id(p_value != nullptr ? p_dyn_type_id_for<T>
                                         : p_dyn_type_id_for<void>),
@@ -617,10 +645,12 @@ class [[gsl::Pointer]] dyn_ptr {
    }
 
    template <is_allocator Allocator, idx inline_size>
-   constexpr dyn_ptr(basic_dyn<Allocator, inline_size, Methods...>* p_dyn
-                     [[clang::lifetimebound]]);
+   constexpr dyn_ptr(
+      basic_dyn<Allocator, inline_size, Methods...>* _Nonnull p_dyn
+      [[clang::lifetimebound]]);
 
-   constexpr dyn_ptr(dyn_inplace<Methods...>* p_dyn [[clang::lifetimebound]]);
+   constexpr dyn_ptr(dyn_inplace<Methods...>* _Nonnull p_dyn
+                     [[clang::lifetimebound]]);
 
    // Narrowing converting constructor: a `dyn_ptr<Superset...>` is convertible
    // to `dyn_ptr<Methods...>` whenever `Methods...` is a contiguous
@@ -637,9 +667,10 @@ class [[gsl::Pointer]] dyn_ptr {
          m_p_value(other.m_p_value) {
    }
 
+   // Returns `nullptr` when this `dyn_ptr` is empty.
    [[nodiscard]]
    constexpr auto
-   raw() const -> void* {
+   raw() const -> void* _Nullable {
       return m_p_value;
    }
 
@@ -685,12 +716,13 @@ class [[gsl::Pointer]] const_dyn_ptr {
    template <typename Method>
    friend struct dyn_invoke_impl;
 
-   vtable<Methods...> const* m_p_vtable = nullptr;
+   vtable<Methods...> const* _Nullable m_p_vtable = nullptr;
    dyn_type_id_ptr m_p_type_id = p_dyn_type_id_for<void>;
-   void const* m_p_value = nullptr;
+   void const* _Nullable m_p_value = nullptr;
 
-   constexpr const_dyn_ptr(vtable<Methods...> const* p_vtable,
-                           dyn_type_id_ptr p_type_id, void const* p_value)
+   constexpr const_dyn_ptr(vtable<Methods...> const* _Nonnull p_vtable,
+                           dyn_type_id_ptr p_type_id,
+                           void const* _Nullable p_value)
        : m_p_vtable(p_vtable), m_p_type_id(p_type_id), m_p_value(p_value) {
    }
 
@@ -716,8 +748,7 @@ class [[gsl::Pointer]] const_dyn_ptr {
 
    template <typename T>
       requires(detail::methods_support_type<remove_cvref<T>, Methods...>)
-   constexpr const_dyn_ptr(T const* p_value [[clang::lifetimebound]]
-                           )
+   constexpr const_dyn_ptr(T const* _Nonnull p_value [[clang::lifetimebound]])
        : m_p_vtable(p_value != nullptr ? p_vtable_for<T, Methods...> : nullptr),
          m_p_type_id(p_value != nullptr ? p_dyn_type_id_for<T>
                                         : p_dyn_type_id_for<void>),
@@ -726,10 +757,10 @@ class [[gsl::Pointer]] const_dyn_ptr {
 
    template <is_allocator Allocator, idx inline_size>
    constexpr const_dyn_ptr(
-      basic_dyn<Allocator, inline_size, Methods...> const* p_dyn
+      basic_dyn<Allocator, inline_size, Methods...> const* _Nonnull p_dyn
       [[clang::lifetimebound]]);
 
-   constexpr const_dyn_ptr(dyn_inplace<Methods...> const* p_dyn
+   constexpr const_dyn_ptr(dyn_inplace<Methods...> const* _Nonnull p_dyn
                            [[clang::lifetimebound]]);
 
    constexpr const_dyn_ptr(dyn_ptr<Methods...> p_other)
@@ -766,9 +797,10 @@ class [[gsl::Pointer]] const_dyn_ptr {
          m_p_value(other.m_p_value) {
    }
 
+   // Returns `nullptr` when this `const_dyn_ptr` is empty.
    [[nodiscard]]
    constexpr auto
-   raw() const -> void const* {
+   raw() const -> void const* _Nullable {
       return m_p_value;
    }
 
@@ -844,7 +876,17 @@ basic_dyn {
       detail::contains_method<move_constructor, Methods...>;
    static constexpr bool has_copyable =
       detail::contains_method<copy_constructor, Methods...>;
+   static constexpr bool has_destructor =
+      detail::contains_method<destructor, Methods...>;
    static constexpr idx inline_size = inline_storage_size;
+
+   // A `T` is storable when its construction can be type-erased, and either
+   // the holder carries a `destructor` method or `T` is trivially
+   // destructible (no destructor call is needed).
+   template <typename T>
+   static constexpr bool can_hold =
+      detail::methods_support_type<T, Methods...>
+      && (has_destructor || is_trivially_destructible<T>);
 
  private:
    // Handle returned by
@@ -874,16 +916,18 @@ basic_dyn {
    // Field order: every member has 8-byte alignment, so layout is already
    // tight. The handle is placed last because it is by far the largest member
    // and the small pointer-sized fields are the hot path.
-   vtable<Methods...> const* m_p_vtable = nullptr;
+   vtable<Methods...> const* _Nullable m_p_vtable = nullptr;
    dyn_type_id_ptr m_type_descriptor = p_dyn_type_id_for<void>;
-   void* m_p_value = nullptr;
+   void* _Nullable m_p_value = nullptr;
    Allocator& m_allocator;
    handle_type m_handle{};
 
    void
    destroy_held() {
       if (m_p_vtable != nullptr) {
-         m_p_vtable->template fun<destructor>()(m_p_value);
+         if constexpr (has_destructor) {
+            m_p_vtable->template fun<destructor>()(m_p_value);
+         }
          m_p_vtable = nullptr;
          m_type_descriptor = p_dyn_type_id_for<void>;
       }
@@ -968,7 +1012,7 @@ basic_dyn {
 
    template <typename T>
       requires(!is_same<remove_cvref<T>, basic_dyn>
-               && detail::methods_support_type<remove_cvref<T>, Methods...>)
+               && can_hold<remove_cvref<T>>)
    constexpr basic_dyn(Allocator& allocator [[clang::lifetimebound]]
                        ,
                        T&& value)
@@ -977,8 +1021,7 @@ basic_dyn {
    }
 
    template <typename T, typename... Args>
-      requires(detail::methods_support_type<T, Methods...>
-               && is_constructible<T, Args...>)
+      requires(can_hold<T> && is_constructible<T, Args...>)
    constexpr basic_dyn(Allocator& allocator [[clang::lifetimebound]]
                        ,
                        in_place_type_for<T> /*tag*/, Args&&... arguments)
@@ -1050,7 +1093,7 @@ basic_dyn {
 
    template <typename T>
       requires(!is_same<remove_cvref<T>, basic_dyn>
-               && detail::methods_support_type<remove_cvref<T>, Methods...>)
+               && can_hold<remove_cvref<T>>)
    auto
    operator=(T&& value) -> basic_dyn& {
       emplace<remove_cvref<T>>($fwd(value));
@@ -1059,8 +1102,7 @@ basic_dyn {
 
    // Replace the held value with a fresh `T`. Returns a reference to it.
    template <typename T, typename... Args>
-      requires(detail::methods_support_type<T, Methods...>
-               && is_constructible<T, Args...>)
+      requires(can_hold<T> && is_constructible<T, Args...>)
    auto
    emplace(Args&&... arguments) -> T& {
       destroy_held();
@@ -1167,6 +1209,16 @@ class [[gsl::Owner]] dyn_inplace {
       detail::contains_method<move_constructor, Methods...>;
    static constexpr bool has_copyable =
       detail::contains_method<copy_constructor, Methods...>;
+   static constexpr bool has_destructor =
+      detail::contains_method<destructor, Methods...>;
+
+   // A `T` is storable when its construction can be type-erased, and either
+   // the holder carries a `destructor` method or `T` is trivially
+   // destructible (no destructor call is needed).
+   template <typename T>
+   static constexpr bool can_hold =
+      detail::methods_support_type<T, Methods...>
+      && (has_destructor || is_trivially_destructible<T>);
 
    // This `union` exists to split runtime and `constexpr` code. In runtime
    // code, `dyn_inplace` *only* accesses `inline_bytes`. That holds the class
@@ -1179,7 +1231,7 @@ class [[gsl::Owner]] dyn_inplace {
    // union has no overhead.
    union storage {
       alignas(storage_alignment.raw) unsigned char inline_bytes[inline_size];
-      void (*disposer)(void*);
+      void (*_Nullable disposer)(void* _Nonnull);
 
       constexpr storage() : disposer(nullptr) {
       }
@@ -1187,11 +1239,11 @@ class [[gsl::Owner]] dyn_inplace {
 
    vtable<Methods...> m_vtable{};
    dyn_type_id_ptr m_type_descriptor = p_dyn_type_id_for<void>;
-   void* m_p_value = nullptr;
+   void* _Nullable m_p_value = nullptr;
 
    template <typename T>
    static constexpr void
-   consteval_dispose(void* p_storage) {
+   consteval_dispose(void* _Nonnull p_storage) {
       delete static_cast<T*>(p_storage);
    }
 
@@ -1200,11 +1252,15 @@ class [[gsl::Owner]] dyn_inplace {
       if (m_p_value != nullptr) {
          if consteval {
             // Run the held `T`'s destructor and free the typed heap
-            // allocation made by `emplace`'s consteval branch.
+            // allocation made by `emplace`'s consteval branch. The disposer
+            // is always set during `emplace` so the heap allocation can be
+            // released even when no `destructor` method is in `Methods...`.
             m_storage.disposer(m_p_value);
             m_storage.disposer = nullptr;
          } else {
-            m_vtable.template fun<destructor>()(m_p_value);
+            if constexpr (has_destructor) {
+               m_vtable.template fun<destructor>()(m_p_value);
+            }
          }
          m_p_value = nullptr;
          m_type_descriptor = p_dyn_type_id_for<void>;
@@ -1237,14 +1293,13 @@ class [[gsl::Owner]] dyn_inplace {
 
    template <typename T>
       requires(!is_same<remove_cvref<T>, dyn_inplace>
-               && detail::methods_support_type<remove_cvref<T>, Methods...>)
+               && can_hold<remove_cvref<T>>)
    constexpr dyn_inplace(T&& value) {
       emplace<remove_cvref<T>>($fwd(value));
    }
 
    template <typename T, typename... Args>
-      requires(detail::methods_support_type<T, Methods...>
-               && is_constructible<T, Args...>)
+      requires(can_hold<T> && is_constructible<T, Args...>)
    constexpr dyn_inplace(in_place_type_for<T> /*tag*/, Args&&... arguments) {
       emplace<T>($fwd(arguments)...);
    }
@@ -1301,7 +1356,7 @@ class [[gsl::Owner]] dyn_inplace {
 
    template <typename T>
       requires(!is_same<remove_cvref<T>, dyn_inplace>
-               && detail::methods_support_type<remove_cvref<T>, Methods...>)
+               && can_hold<remove_cvref<T>>)
    auto
    operator=(T&& value) -> dyn_inplace& {
       emplace<remove_cvref<T>>($fwd(value));
@@ -1310,8 +1365,7 @@ class [[gsl::Owner]] dyn_inplace {
 
    // Replace the held value with a fresh `T`. Returns a reference to it.
    template <typename T, typename... Args>
-      requires(detail::methods_support_type<T, Methods...>
-               && is_constructible<T, Args...>)
+      requires(can_hold<T> && is_constructible<T, Args...>)
    constexpr auto
    emplace(Args&&... arguments) -> T& {
       static_assert(
@@ -1376,7 +1430,7 @@ class [[gsl::Owner]] dyn_inplace {
 template <typename... Methods>
 template <is_allocator Allocator, idx inline_size>
 constexpr dyn_ptr<Methods...>::dyn_ptr(
-   basic_dyn<Allocator, inline_size, Methods...>* p_dyn) {
+   basic_dyn<Allocator, inline_size, Methods...>* _Nonnull p_dyn) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = p_dyn->m_p_vtable;
       m_p_type_id = p_dyn->m_type_descriptor;
@@ -1387,7 +1441,7 @@ constexpr dyn_ptr<Methods...>::dyn_ptr(
 template <typename... Methods>
 template <is_allocator Allocator, idx inline_size>
 constexpr const_dyn_ptr<Methods...>::const_dyn_ptr(
-   basic_dyn<Allocator, inline_size, Methods...> const* p_dyn) {
+   basic_dyn<Allocator, inline_size, Methods...> const* _Nonnull p_dyn) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = p_dyn->m_p_vtable;
       m_p_type_id = p_dyn->m_type_descriptor;
@@ -1396,7 +1450,8 @@ constexpr const_dyn_ptr<Methods...>::const_dyn_ptr(
 }
 
 template <typename... Methods>
-constexpr dyn_ptr<Methods...>::dyn_ptr(dyn_inplace<Methods...>* p_dyn) {
+constexpr dyn_ptr<Methods...>::dyn_ptr(
+   dyn_inplace<Methods...>* _Nonnull p_dyn) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = &p_dyn->m_vtable;
       m_p_type_id = p_dyn->m_type_descriptor;
@@ -1406,7 +1461,7 @@ constexpr dyn_ptr<Methods...>::dyn_ptr(dyn_inplace<Methods...>* p_dyn) {
 
 template <typename... Methods>
 constexpr const_dyn_ptr<Methods...>::const_dyn_ptr(
-   dyn_inplace<Methods...> const* p_dyn) {
+   dyn_inplace<Methods...> const* _Nonnull p_dyn) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = &p_dyn->m_vtable;
       m_p_type_id = p_dyn->m_type_descriptor;
@@ -1506,8 +1561,8 @@ struct dyn_cast_impl {
 
    template <is_allocator Allocator, idx inline_size, typename... Methods>
    constexpr auto
-   operator()(basic_dyn<Allocator, inline_size, Methods...>* p_dyn
-              [[clang::lifetimebound]]) const -> T* {
+   operator()(basic_dyn<Allocator, inline_size, Methods...>* _Nullable p_dyn
+              [[clang::lifetimebound]]) const -> T* _Nullable {
       return (p_dyn != nullptr
               && p_dyn->type_descriptor() == p_dyn_type_id_for<T>)
                 ? static_cast<T*>(p_dyn->m_p_value)
@@ -1516,8 +1571,9 @@ struct dyn_cast_impl {
 
    template <is_allocator Allocator, idx inline_size, typename... Methods>
    constexpr auto
-   operator()(basic_dyn<Allocator, inline_size, Methods...> const* p_dyn
-              [[clang::lifetimebound]]) const -> T const* {
+   operator()(
+      basic_dyn<Allocator, inline_size, Methods...> const* _Nullable p_dyn
+      [[clang::lifetimebound]]) const -> T const* _Nullable {
       return (p_dyn != nullptr
               && p_dyn->type_descriptor() == p_dyn_type_id_for<T>)
                 ? static_cast<T const*>(p_dyn->m_p_value)
@@ -1526,8 +1582,8 @@ struct dyn_cast_impl {
 
    template <typename... Methods>
    constexpr auto
-   operator()(dyn_inplace<Methods...>* p_dyn [[clang::lifetimebound]]) const
-      -> T* {
+   operator()(dyn_inplace<Methods...>* _Nullable p_dyn
+              [[clang::lifetimebound]]) const -> T* _Nullable {
       return (p_dyn != nullptr
               && p_dyn->type_descriptor() == p_dyn_type_id_for<T>)
                 ? static_cast<T*>(p_dyn->m_p_value)
@@ -1536,8 +1592,8 @@ struct dyn_cast_impl {
 
    template <typename... Methods>
    constexpr auto
-   operator()(dyn_inplace<Methods...> const* p_dyn
-              [[clang::lifetimebound]]) const -> T const* {
+   operator()(dyn_inplace<Methods...> const* _Nullable p_dyn
+              [[clang::lifetimebound]]) const -> T const* _Nullable {
       return (p_dyn != nullptr
               && p_dyn->type_descriptor() == p_dyn_type_id_for<T>)
                 ? static_cast<T const*>(p_dyn->m_p_value)
@@ -1546,7 +1602,8 @@ struct dyn_cast_impl {
 
    template <typename... Methods>
    constexpr auto
-   operator()(dyn_ptr<Methods...> p_ptr [[clang::lifetimebound]]) const -> T* {
+   operator()(dyn_ptr<Methods...> p_ptr [[clang::lifetimebound]]) const
+      -> T* _Nullable {
       return (p_ptr.has_value() && p_ptr.type_id_ptr() == p_dyn_type_id_for<T>)
                 ? static_cast<T*>(p_ptr.m_p_value)
                 : nullptr;
@@ -1555,7 +1612,7 @@ struct dyn_cast_impl {
    template <typename... Methods>
    constexpr auto
    operator()(const_dyn_ptr<Methods...> p_ptr [[clang::lifetimebound]]) const
-      -> T const* {
+      -> T const* _Nullable {
       return (p_ptr.has_value()
               && p_ptr.type_descriptor() == p_dyn_type_id_for<T>)
                 ? static_cast<T const*>(p_ptr.m_p_value)
@@ -1564,7 +1621,8 @@ struct dyn_cast_impl {
 
    template <typename... Methods>
    constexpr auto
-   operator()(dyn_ref<Methods...> ref [[clang::lifetimebound]]) const -> T* {
+   operator()(dyn_ref<Methods...> ref [[clang::lifetimebound]]) const
+      -> T* _Nullable {
       return ref.p_type_id() == p_dyn_type_id_for<T>
                 ? static_cast<T*>(ref.m_p_value)
                 : nullptr;
@@ -1573,7 +1631,7 @@ struct dyn_cast_impl {
    template <typename... Methods>
    constexpr auto
    operator()(const_dyn_ref<Methods...> ref [[clang::lifetimebound]]) const
-      -> T const* {
+      -> T const* _Nullable {
       return ref.p_type_id() == p_dyn_type_id_for<T>
                 ? static_cast<T const*>(ref.m_p_value)
                 : nullptr;
@@ -1601,7 +1659,9 @@ using dyn = basic_dyn<Allocator, 64u, Methods...>;
 // overridden as the first explicit template argument.
 template <typename... Methods, is_allocator Allocator, typename T,
           idx inline_storage_size = 64u>
-   requires(detail::methods_support_type<remove_cvref<T>, Methods...>)
+   requires(detail::methods_support_type<remove_cvref<T>, Methods...>
+            && (detail::contains_method<destructor, Methods...>
+                || is_trivially_destructible<remove_cvref<T>>))
 [[nodiscard]]
 constexpr auto
 make_basic_dyn(Allocator& allocator [[clang::lifetimebound]], T&& value) {

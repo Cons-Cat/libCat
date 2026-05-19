@@ -15,7 +15,7 @@ main() -> int;
 namespace {
 
 #ifndef CAT_NO_STATIC_CONSTRUCTORS
-using constructor_fn = void (*const)();
+using constructor_fn = void (*_Nonnull const)();
 extern "C" {
 
 extern constructor_fn __init_array_start[];  // NOLINT

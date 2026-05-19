@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <cstring>
 
+
+
 auto
 main() -> int32_t {
    std::array<int32_t, 200'000> source_2000;

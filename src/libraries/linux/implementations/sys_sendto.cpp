@@ -2,9 +2,10 @@
 
 // Returns the number of characters sent to `p_destination_socket`.
 auto
-nix::sys_sendto(nix::file_descriptor socket_descriptor,
-                void const* p_message_buffer, cat::iword buffer_length,
-                cat::int8 flags, cat::Socket const* p_destination_socket,
+nix::sys_sendto(file_descriptor socket_descriptor,
+                void const* _Nonnull p_message_buffer, cat::iword buffer_length,
+                cat::int8 flags,
+                cat::Socket const* _Nullable p_destination_socket,
                 cat::iword addr_length) -> nix::scaredy_nix<cat::iword> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<cat::iword>(

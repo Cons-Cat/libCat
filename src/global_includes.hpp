@@ -11,6 +11,7 @@
 namespace cat::detail {
 template <typename F>
 class deferrer_callback {
+ private:
    F m_callback;
 
  public:
@@ -191,7 +192,7 @@ sentinel_predicate(T value) -> bool {
    return value != in_sentinel;
 }
 
-template <typename T, T (*get_nullopt)()>
+template <typename T, T (*_Nonnull get_nullopt)()>
 constexpr auto
 sentinel_predicate_for_callable(T value) -> bool {
    return value != get_nullopt();
@@ -203,7 +204,7 @@ using sentinel =
    compact<T, detail::sentinel_predicate<T, static_cast<T>(value)>,
            static_cast<T>(value)>;
 
-template <typename T, T (*get_nullopt)()>
+template <typename T, T (*_Nonnull get_nullopt)()>
 using sentinel_fn =
    compact<T, &detail::sentinel_predicate_for_callable<T, get_nullopt>,
            get_nullopt>;
@@ -310,27 +311,28 @@ enum class align_val_t : __SIZE_TYPE__ {
 
 #define $prop_as CAT_PROPAGATE_AS
 
+[[gnu::returns_nonnull]]
 auto
-operator new(unsigned long, void* p_address) -> void*;
+operator new(unsigned long, void* _Nonnull p_address) -> void* _Nonnull;
 
 // `new[]` and `delete[]` are defined for use in a `constexpr` context.
-[[nodiscard]]
+[[nodiscard, gnu::returns_nonnull]]
 auto
-operator new[](unsigned long, void* p_address) -> void*;
+operator new[](unsigned long, void* _Nonnull p_address) -> void* _Nonnull;
 
-[[nodiscard]]
+[[nodiscard, gnu::returns_nonnull]]
 auto
-operator new[](unsigned long) -> void*;
+operator new[](unsigned long) -> void* _Nonnull;
 
 void
-operator delete[](void*);
+operator delete[](void* _Nullable);
 
 void
-operator delete[](void*, unsigned long);
+operator delete[](void* _Nullable, unsigned long);
 
 void
-operator delete[](void*, unsigned long, std::align_val_t);
+operator delete[](void* _Nullable, unsigned long, std::align_val_t);
 
-[[nodiscard]]
+[[nodiscard, gnu::returns_nonnull]]
 auto
-operator new[](unsigned long, std::align_val_t align) -> void*;
+operator new[](unsigned long, std::align_val_t align) -> void* _Nonnull;

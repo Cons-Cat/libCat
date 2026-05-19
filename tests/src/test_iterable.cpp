@@ -53,6 +53,7 @@ struct tiny_array
 // collide with the inherited `count()` member.
 template <typename T, cat::idx capacity>
 class tiny_list : public cat::iterable_interface<> {
+ private:
    struct node {
       T value{};
       // Index of the next node, or `capacity` for end-of-list. Index-based so a
@@ -83,6 +84,7 @@ class tiny_list : public cat::iterable_interface<> {
    }
 
    class iteration_context {
+    private:
       tiny_list const* m_p_list;
       cat::idx m_current;
 
@@ -120,6 +122,7 @@ class tiny_list : public cat::iterable_interface<> {
    }
 
    class reverse_iteration_context {
+    private:
       tiny_list const* m_p_list;
       // List of indices, reversed, kept by value. We resolve the chain up front
       // because singly-linked lists cannot walk backwards in place. This is the

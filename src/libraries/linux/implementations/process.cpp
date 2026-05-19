@@ -60,7 +60,7 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
                return nix::scaredy_nix<nix::process_id>(child_id);
             }
             nix::scaredy_nix<cat::idx> const slept =
-               nix::sys_futex(p_clear_tid,
+               nix::sys_futex(*p_clear_tid,
                               nix::make_futex_op(nix::futex_command::wait,
                                                  nix::futex_options::none),
                               word, nullptr, nullptr, cat::uint4{});
@@ -166,14 +166,16 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
    // 32-byte alignment is required for AVX2 support.
    stack_top = cat::align_down(stack_top, 32u);
 
-   // Place a pointer to function arguments on the new stack:
+   // Place a pointer to function arguments on the new stack. Use the inline
+   // form so no libc call sneaks in between this and the inline-asm syscall
+   // below.
    stack_top -= 8;
-   __builtin_memcpy(stack_top.get(), &p_args_struct, 8);  // NOLINT
+   __builtin_memcpy_inline(stack_top.get(), &p_args_struct, 8);  // NOLINT
 
    // Place a pointer to function on the new stack. 8 is the size of a pointer,
    // such as `p_function`.
    stack_top -= 8;
-   __builtin_memcpy(stack_top.get(), &p_function, 8);  // NOLINT
+   __builtin_memcpy_inline(stack_top.get(), &p_function, 8);  // NOLINT
 
    // This syscall is made manually here because it's important to be careful
    // with the stack and registers and not introduce a new stack frame. Parent

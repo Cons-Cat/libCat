@@ -1072,6 +1072,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
       common const lhs_common = common(raw);
       common const rhs_common = common(make_raw_arithmetic(rhs));
+      // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
          return lhs_common <=> rhs_common;
@@ -1079,6 +1080,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
 #pragma float_control(precise, off)
          return lhs_common <=> rhs_common;
       }
+      // NOLINTEND(bugprone-branch-clone)
    }
 
    template <is_arithmetic U>
@@ -1089,6 +1091,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
       common const lhs_common = common(lhs.raw);
       common const rhs_common = common(make_raw_arithmetic(rhs));
+      // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
          return lhs_common == rhs_common;
@@ -1096,6 +1099,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
 #pragma float_control(precise, off)
          return lhs_common == rhs_common;
       }
+      // NOLINTEND(bugprone-branch-clone)
    }
 
    constexpr auto
@@ -1146,6 +1150,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
       -> basic_float<common_type<T, raw_arithmetic_type<U>>, precision> {
       using result_type =
          basic_float<common_type<T, raw_arithmetic_type<U>>, precision>;
+      // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
          return result_type(raw + make_raw_arithmetic(other));
@@ -1153,6 +1158,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
 #pragma float_control(precise, off)
          return result_type(raw + make_raw_arithmetic(other));
       }
+      // NOLINTEND(bugprone-branch-clone)
    }
 
    template <is_arithmetic U>
@@ -1160,6 +1166,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U operand) const -> basic_float {
+      // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
          return basic_float(raw - make_raw_arithmetic(operand));
@@ -1167,6 +1174,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
 #pragma float_control(precise, off)
          return basic_float(raw - make_raw_arithmetic(operand));
       }
+      // NOLINTEND(bugprone-branch-clone)
    }
 
    template <is_arithmetic U>
@@ -1175,6 +1183,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    constexpr auto
    subtract_from(U operand) const -> remove_constref<U> {
       using result_type = remove_constref<U>;
+      // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
          return result_type(make_raw_arithmetic(operand) - raw);
@@ -1182,6 +1191,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
 #pragma float_control(precise, off)
          return result_type(make_raw_arithmetic(operand) - raw);
       }
+      // NOLINTEND(bugprone-branch-clone)
    }
 
    template <is_arithmetic U>
@@ -1192,6 +1202,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
       -> basic_float<common_type<T, raw_arithmetic_type<U>>, precision> {
       using result_type =
          basic_float<common_type<T, raw_arithmetic_type<U>>, precision>;
+      // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
          return result_type(raw * make_raw_arithmetic(operand));
@@ -1199,6 +1210,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
 #pragma float_control(precise, off)
          return result_type(raw * make_raw_arithmetic(operand));
       }
+      // NOLINTEND(bugprone-branch-clone)
    }
 
    template <is_arithmetic U>
@@ -1206,6 +1218,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(U operand) const -> basic_float {
+      // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
          return basic_float(raw / make_raw_arithmetic(operand));
@@ -1213,6 +1226,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
 #pragma float_control(precise, off)
          return basic_float(raw / make_raw_arithmetic(operand));
       }
+      // NOLINTEND(bugprone-branch-clone)
    }
 
    template <is_raw_arithmetic U>
@@ -1221,6 +1235,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    constexpr auto
    divide_into(U operand) const -> remove_constref<U> {
       using result_type = remove_constref<U>;
+      // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
          return result_type(make_raw_arithmetic(operand) / raw);
@@ -1228,6 +1243,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
 #pragma float_control(precise, off)
          return result_type(make_raw_arithmetic(operand) / raw);
       }
+      // NOLINTEND(bugprone-branch-clone)
    }
 
    template <is_arithmetic U, is_arithmetic V>
@@ -1239,6 +1255,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
    fma(U multiplier, V addend) const -> basic_float<T, precision> {
       T const raw_multiplier = static_cast<T>(make_raw_arithmetic(multiplier));
       T const raw_addend = static_cast<T>(make_raw_arithmetic(addend));
+      // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
          return basic_float<T, precision>(
@@ -1248,6 +1265,7 @@ basic_float : public arithmetic_interface<basic_float<T, precision>> {
          return basic_float<T, precision>(
             __builtin_elementwise_fma(raw, raw_multiplier, raw_addend));
       }
+      // NOLINTEND(bugprone-branch-clone)
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -1521,9 +1539,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   add(U* p_operand) const -> U* {
+   add(U* _Nonnull p_operand) const -> U* _Nonnull {
       return raw + p_operand;
    }
 
@@ -1616,9 +1634,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   subtract_by(U* p_operand) -> U* {
+   subtract_by(U* _Nonnull p_operand) -> U* _Nonnull {
       return raw - p_operand;
    }
 
@@ -1631,9 +1649,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   subtract_from(U* p_operand) -> U* {
+   subtract_from(U* _Nonnull p_operand) -> U* _Nonnull {
       return p_operand - raw;
    }
 
@@ -1675,9 +1693,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   multiply(U* p_operand) const -> U* {
+   multiply(U* _Nonnull p_operand) const -> U* _Nonnull {
       return raw * p_operand;
    }
 
@@ -1720,9 +1738,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   divide_by(U* p_operand) const -> U* {
+   divide_by(U* _Nonnull p_operand) const -> U* _Nonnull {
       return raw / p_operand;
    }
 
@@ -1739,9 +1757,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   divide_into(U* p_operand) const -> U* {
+   divide_into(U* _Nonnull p_operand) const -> U* _Nonnull {
       return p_operand / raw;
    }
 
@@ -1794,9 +1812,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   modulo_by(U* p_operand) const -> U* {
+   modulo_by(U* _Nonnull p_operand) const -> U* _Nonnull {
       return raw % p_operand;
    }
 
@@ -1814,9 +1832,9 @@ basic_int :
 
    template <typename U>
       requires(is_unsigned_integral<T>)
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   bit_and(U* p_operand) const -> U* {
+   bit_and(U* _Nonnull p_operand) const -> U* _Nonnull {
       return p_operand & raw;
    }
 
@@ -1831,9 +1849,9 @@ basic_int :
 
    template <typename U>
       requires(is_unsigned_integral<T>)
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   bit_or(U* p_operand) const -> U* {
+   bit_or(U* _Nonnull p_operand) const -> U* _Nonnull {
       return p_operand | raw;
    }
 
@@ -2083,7 +2101,7 @@ basic_intptr :
    }
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_intptr(T* p_input)
+   constexpr basic_intptr(T* _Nullable p_input)
        : raw(__builtin_bit_cast(Storage, p_input)) {
    }
 
@@ -2099,14 +2117,14 @@ basic_intptr :
    // Only allow casting back into the original pointer type.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator T*() {
+   operator T* _Nullable() {
       return __builtin_bit_cast(T*, raw);
    }
 
    // Only allow casting back into the original pointer type.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator T*() const {
+   operator T* _Nullable() const {
       return __builtin_bit_cast(T const*, raw);
    }
 
@@ -2115,7 +2133,7 @@ basic_intptr :
    // disable this to disambiguate.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator T const*() const
+   operator T const* _Nullable() const
       requires(!is_same<T*, T const*>)
    {
       return __builtin_bit_cast(T const*, raw);
@@ -2143,16 +2161,11 @@ basic_intptr :
       return *get();
    }
 
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   operator->() const -> T*
-      requires(!is_void<T>)
-   {
-      return get();
-   }
+   operator->() const -> T* _Nonnull requires(!is_void<T>) { return get(); }
 
-   constexpr auto
-   operator=(basic_intptr const&) -> basic_intptr& = default;
+   constexpr auto operator=(basic_intptr const&) -> basic_intptr& = default;
 
    constexpr auto
    operator=(basic_intptr&&) -> basic_intptr& = default;
@@ -2210,7 +2223,7 @@ basic_intptr :
    }
 
    constexpr auto
-   get() const -> T* {
+   get() const -> T* _Nullable {
       return __builtin_bit_cast(T*, raw);
    }
 
@@ -2222,9 +2235,9 @@ basic_intptr :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   add(U* p_operand) const -> U* {
+   add(U* _Nonnull p_operand) const -> U* _Nonnull {
       return basic_intptr<U, Storage, overflow_policy>(p_operand)
          .add(*this)
          .get();
@@ -2264,9 +2277,9 @@ basic_intptr :
    // Subtraction as the right-hand operand on a left-hand pointer does integer
    // arithmetic, not pointer arithmetic. This does not widen the pointer type.
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   subtract_by(U* p_operand) const -> U* {
+   subtract_by(U* _Nonnull p_operand) const -> U* _Nonnull {
       return basic_intptr<U, Storage, overflow_policy>(p_operand)
          .subtract_by(*this)
          .get();
@@ -2282,9 +2295,9 @@ basic_intptr :
    // Subtraction as the left-hand operand by a right-hand pointer does integer
    // arithmetic, not pointer arithmetic. This does not widen the pointer type.
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   subtract_from(U* p_operand) const -> U* {
+   subtract_from(U* _Nonnull p_operand) const -> U* _Nonnull {
       return basic_intptr<U, Storage, overflow_policy>(p_operand)
          .subtract_by(raw)
          .get();
@@ -2305,7 +2318,7 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U* p_operand) const -> basic_intptr {
+   multiply(U* _Nonnull p_operand) const -> basic_intptr {
       return basic_intptr(
          raw * basic_intptr<U, Storage, overflow_policy>(p_operand).raw);
    }
@@ -2320,7 +2333,7 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U* p_operand) const -> basic_intptr {
+   divide_by(U* _Nonnull p_operand) const -> basic_intptr {
       return this->divide_by(
          basic_intptr<U, Storage, overflow_policy>(p_operand));
    }
@@ -2335,7 +2348,7 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U* p_operand) const -> basic_intptr {
+   divide_into(U* _Nonnull p_operand) const -> basic_intptr {
       return basic_intptr<U, Storage, overflow_policy>(p_operand).divide_into(
          raw);
    }
@@ -2354,7 +2367,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U* p_operand) const -> basic_intptr {
+   bit_and(U* _Nonnull p_operand) const -> basic_intptr {
       return this->bit_and(
          basic_intptr<U, Storage, overflow_policy>(p_operand));
    }
@@ -2372,7 +2385,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U* p_operand) const -> basic_intptr {
+   bit_or(U* _Nonnull p_operand) const -> basic_intptr {
       return this->bit_or(basic_intptr<U, Storage, overflow_policy>(p_operand));
    }
 
@@ -2386,7 +2399,7 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U* p_operand) const -> basic_intptr {
+   modulo_by(U* _Nonnull p_operand) const -> basic_intptr {
       return this->modulo_by(
          basic_intptr<U, Storage, overflow_policy>(p_operand));
    }
@@ -2505,7 +2518,7 @@ basic_intptr :
 //    cat::intptr i = &address;
 // Only one may exist. Since unsigned is far more common, default to that.
 template <typename T>
-basic_intptr(T*) -> basic_intptr<T, __UINTPTR_TYPE__>;
+basic_intptr(T* _Nonnull) -> basic_intptr<T, __UINTPTR_TYPE__>;
 
 template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
@@ -2708,9 +2721,9 @@ basic_idx :
 
    // Generate `operator+` for pointer arithmetic.
    template <typename T>
-   [[gnu::always_inline, gnu::nodebug]]
+   [[gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   add(T* p_other) const -> T* {
+   add(T* _Nonnull p_other) const -> T* _Nonnull {
       return p_other + raw;
    }
 
@@ -2785,9 +2798,9 @@ basic_idx :
 
    // Generate `operator-` for pointer arithmetic.
    template <typename T>
-   [[gnu::always_inline, gnu::nodebug]]
+   [[gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   subtract_from(T* p_other) const -> T* {
+   subtract_from(T* _Nonnull p_other) const -> T* _Nonnull {
       return p_other - raw;
    }
 
@@ -2834,9 +2847,9 @@ basic_idx :
 
    // Generate `operator*` for pointer arithmetic.
    template <typename T>
-   [[gnu::always_inline, gnu::nodebug]]
+   [[gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   multiply(T* p_other) const -> T* {
+   multiply(T* _Nonnull p_other) const -> T* _Nonnull {
       return p_other * raw;
    }
 
@@ -2898,9 +2911,9 @@ basic_idx :
 
    // Generate `operator/` for pointer arithmetic.
    template <typename T>
-   [[gnu::always_inline, gnu::nodebug]]
+   [[gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   divide_into(T* p_other) const -> T* {
+   divide_into(T* _Nonnull p_other) const -> T* _Nonnull {
       return p_other / raw;
    }
 

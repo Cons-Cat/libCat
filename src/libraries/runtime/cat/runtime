@@ -19,8 +19,9 @@ _start();  // NOLINT
 void
 exit(iword exit_code = 0);
 
+[[gnu::returns_nonnull]]
 auto
-load_base_stack_pointer() -> void*;
+load_base_stack_pointer() -> void* _Nonnull;
 
 // This must be inlined to align the stack pointer on the stack frame it is
 // called from.
@@ -47,7 +48,8 @@ __stack_chk_fail();
 
 extern "C" void
 // NOLINTNEXTLINE
-__cxa_atexit(void (*p_invocable)(void*), void* p_arg, void* p_dso_handle);
+__cxa_atexit(void (*_Nonnull p_invocable)(void* _Nullable),
+             void* _Nullable p_arg, void* _Nullable p_dso_handle);
 
 extern "C" [[gnu::used]]
 void
@@ -62,15 +64,15 @@ __cxa_pure_virtual();
 extern "C" [[nodiscard]]
 auto
 // NOLINTNEXTLINE
-__cxa_guard_acquire(cat::uword* p_guard) -> int;
+__cxa_guard_acquire(cat::uword* _Nonnull p_guard) -> int;
 
 extern "C" void
 // NOLINTNEXTLINE
-__cxa_guard_release(cat::uword* p_guard);
+__cxa_guard_release(cat::uword* _Nonnull p_guard);
 
 extern "C" void
 // NOLINTNEXTLINE
-__cxa_guard_abort(cat::uword* p_guard);
+__cxa_guard_abort(cat::uword* _Nonnull p_guard);
 
 class jmp_buffer {
    // This buffer layout should vary by all ISAs.
@@ -95,7 +97,7 @@ longjmp(jmp_buffer& jump_point, int8 return_value);
 }  // namespace cat
 
 // NOLINTNEXTLINE
-inline void* __dso_handle = nullptr;
+inline void* _Nullable __dso_handle = nullptr;
 
 extern "C" [[gnu::used]]
 inline void

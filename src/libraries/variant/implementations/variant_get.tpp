@@ -38,9 +38,10 @@ variant<Alternatives...>::get(this auto&& self) -> decltype(auto)
                 && types::template is_unique<add_lvalue_reference<T>>))
 {
    if constexpr (types::template has_type<T>) {
-      return as_base($fwd(self)).template get<alternative_index<T>>();
+      return $fwd(self).as_base().template get<alternative_index<T>>();
    } else {
-      return as_base($fwd(self))
+      return $fwd(self)
+         .as_base()
          .template get<alternative_index<add_lvalue_reference<T>>>();
    }
 }
@@ -57,7 +58,7 @@ variant<Alternatives...>::get_ptr(this auto&& self)
 {
    using key =
       conditional<types::template has_type<T>, T, add_lvalue_reference<T>>;
-   auto&& base = as_base($fwd(self));
+   auto&& base = $fwd(self).as_base();
    using result_type = decltype(__builtin_addressof(base.template get<key>()));
    if (base.template is<key>()) {
       return __builtin_addressof(base.template get<key>());
@@ -73,7 +74,7 @@ constexpr auto
 variant<Alternatives...>::get_ptr(this auto&& self)
    requires(index < sizeof...(Alternatives))
 {
-   auto&& base = as_base($fwd(self));
+   auto&& base = $fwd(self).as_base();
    using result_type =
       decltype(__builtin_addressof(base.template get<index>()));
    // `.value_or_niche()` reads the raw discriminant bits including the
@@ -93,7 +94,7 @@ constexpr auto
 variant<Alternatives...>::get_if(this auto&& self)
    requires(types::template is_unique<T> && !is_reference<T>)
 {
-   auto&& base = as_base($fwd(self));
+   auto&& base = $fwd(self).as_base();
    using maybe_type = maybe<decltype(base.template get<T>())>;
    if (base.template is<T>()) {
       return maybe_type{base.template get<T>()};
@@ -112,7 +113,7 @@ variant<Alternatives...>::get_if(this auto&& self)
             && types::template is_unique<add_lvalue_reference<T>>)
 {
    using key = add_lvalue_reference<T>;
-   auto&& base = as_base($fwd(self));
+   auto&& base = $fwd(self).as_base();
    if (base.template is<key>()) {
       return base.template get<key>();
    }
@@ -128,7 +129,7 @@ variant<Alternatives...>::get_if(this auto&& self)
    requires(index < sizeof...(Alternatives))
 {
    using key = types::template get<index>;
-   auto&& base = as_base($fwd(self));
+   auto&& base = $fwd(self).as_base();
    // `.value_or_niche()` reads the raw discriminant bits including the
    // niche when empty. The niche never matches a valid alternative
    // index, so the comparison handles both states.

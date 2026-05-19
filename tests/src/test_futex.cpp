@@ -42,7 +42,7 @@ $test(futex_syscalls) {
    cat::verify(nix::robust_futex::owner_exited_abnormally(owner_died));
 
    auto const woken =
-      nix::sys_futex(&futex_word,
+      nix::sys_futex(futex_word,
                      nix::make_futex_op(futex_command::wake,
                                         futex_options::private_process),
                      1u, nullptr, nullptr, 0u)
@@ -61,11 +61,11 @@ $test(futex_syscalls) {
    head.head.p_next = &head.head;
    head.futex_offset = 0u;
    head.p_list_op_pending = nullptr;
-   nix::sys_set_robust_list(&head, sizeof(head)).verify();
+   nix::sys_set_robust_list(head, sizeof(head)).verify();
 
    nix::robust_list_head* p_retrieved = nullptr;
    cat::idx length{};
-   nix::sys_get_robust_list(nix::process_id{0}, &p_retrieved, &length).verify();
+   nix::sys_get_robust_list(nix::process_id{0}, p_retrieved, length).verify();
    cat::verify(p_retrieved == &head);
    cat::verify(length == sizeof(head));
 

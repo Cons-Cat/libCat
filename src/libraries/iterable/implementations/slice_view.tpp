@@ -8,7 +8,7 @@ namespace cat {
 namespace detail {
 template <typename T>
 struct slice_view : iterable_interface<> {
-   T* m_p_collection;
+   T* _Nonnull m_p_collection;
    position_type<T> m_begin;
    position_type<T> m_end;
 

@@ -6,14 +6,15 @@
 
 // TODO: Should we remove deriving from `allocator_interface` and require
 // wrapping in `allocator_ref` to reduce template monomorphization?
+
 namespace cat {
 
 class null_allocator : public allocator_interface<null_allocator> {
+ private:
    friend allocator_interface<null_allocator>;
    template <typename>
    friend class allocator_ref;
 
- private:
    template <typename T>
    struct null_memory_handle : detail::base_memory_handle<T> {
       // TODO: Simplify with CRTP or deducing-this.
@@ -34,33 +35,43 @@ class null_allocator : public allocator_interface<null_allocator> {
    constexpr null_allocator(null_allocator&&) = default;
 
    // This allocation always fails.
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(iword) -> maybe_ptr<void> {
+   allocate(iword allocation_bytes) -> void* _Nullable {
+      static_cast<void>(allocation_bytes);
       return nullptr;
    }
 
    // Deallocation is no-op.
+   [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* /*unused*/, idx /*unused*/) {
+   deallocate(void const* _Nullable p_storage, idx allocation_bytes) {
+      static_cast<void>(p_storage);
+      static_cast<void>(allocation_bytes);
    }
 
    // Produce a handle to allocated memory.
    template <typename T>
+   [[clang::ownership_holds(libcat, 2)]]
    constexpr auto
-   make_handle(T* p_handle_storage) -> null_memory_handle<T> {
+   make_handle(T* _Nonnull p_handle_storage) -> null_memory_handle<T> {
       return null_memory_handle<T>{{}, p_handle_storage};
    }
 
    // Access a page(s) of virtual memory.
    template <typename T>
+   [[gnu::returns_nonnull]]
    auto
-   access(null_memory_handle<T>& memory) -> T* {
+   access(null_memory_handle<T>& memory) -> T* _Nonnull {
       return memory.p_storage;
    }
 
+   // TODO: This unconditionally returns `nullptr` instead of mirroring the
+   // non-`const` overload's `memory.p_storage`. Confirm intent.
    template <typename T>
    auto
-   access(null_memory_handle<T> const&) const -> T const* {
+   access(null_memory_handle<T> const& memory) const -> T const* _Nullable {
+      static_cast<void>(memory);
       return nullptr;
    }
 

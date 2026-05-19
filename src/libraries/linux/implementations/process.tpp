@@ -39,7 +39,7 @@ nix::process::spawn(cat::is_allocator auto& allocator,
       static cat::tuple tuple_args{$fwd(callback), $fwd(arguments)...};
 
       // Unary + converts this lambda to function pointer.
-      static auto* p_entry =
+      static auto* _Nonnull p_entry =
          +[] [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
           (cat::tuple<Callback, Args...>* p_arguments) {
              auto&& [fn, ... pack_args] = *p_arguments;

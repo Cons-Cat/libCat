@@ -144,8 +144,8 @@ union variant_ref_union<Alternative> {
    constexpr variant_ref_union() : dummy(nullptr) {
    }
 
-   void* dummy;
-   remove_reference<Alternative>* head;
+   void* _Nullable dummy;
+   remove_reference<Alternative>* _Nonnull head;
 };
 
 template <typename Alternative, typename... Remaining>
@@ -153,8 +153,8 @@ union variant_ref_union<Alternative, Remaining...> {
    constexpr variant_ref_union() : dummy(nullptr) {
    }
 
-   void* dummy;
-   remove_reference<Alternative>* head;
+   void* _Nullable dummy;
+   remove_reference<Alternative>* _Nonnull head;
    variant_ref_union<Remaining...> tail;
 };
 
@@ -378,8 +378,12 @@ class variant {
  private:
    template <typename Self>
    [[gnu::always_inline, gnu::nodebug]]
-   static constexpr auto
-   as_base(Self&& self) -> copy_cvref_from<Self&&, variant> {
+   constexpr auto
+   as_base(this Self&& self) -> copy_cvref_from<Self&&, variant> {
+      // C-cast preserves cvref while upcasting through the inheritance
+      // chain, so callers reach `variant`'s overload set instead of a
+      // derived class's shadowing overloads.
+      // NOLINTNEXTLINE
       return (copy_cvref_from<Self&&, variant>)$fwd(self);
    }
 

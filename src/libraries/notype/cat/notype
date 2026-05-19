@@ -66,12 +66,11 @@ class no_type_ptr {
    constexpr no_type_ptr(decltype(nullptr)) : m_p_storage(nullptr) {
    }
 
-   constexpr no_type_ptr(auto const* p_input)
+   constexpr no_type_ptr(auto const* _Nonnull p_input)
        : m_p_storage(const_cast<void*>(static_cast<void const*>(p_input))) {
    }
 
-   template <typename T>
-      requires(is_pointer<T>)
+   template <is_pointer T>
    [[nodiscard]]
    constexpr
    operator T() const {
@@ -79,7 +78,7 @@ class no_type_ptr {
    }
 
  private:
-   void* m_p_storage;
+   void* _Nullable m_p_storage;
 };
 
 }  // namespace cat

@@ -44,8 +44,9 @@ template <typename Derived>
 // TODO: This needs unit tests.
 // Invalidate a pointer handle to a `T`, and call its destructor.
 template <typename T>
+[[clang::ownership_takes(libcat, 2)]]
 constexpr void
-allocator_interface<Derived>::free(T* p_memory) {
+allocator_interface<Derived>::free(T* _Nonnull p_memory) {
    if constexpr (has_max_allocation_bytes) {
       static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
@@ -67,28 +68,29 @@ template <typename Derived>
 // Invalidate a pointer handle to an array of `T`, and call its destructors.
 template <typename T>
 constexpr void
-allocator_interface<Derived>::free_multi(T* p_memory, idx count) {
+allocator_interface<Derived>::free_multi(span<T> handle) {
    if constexpr (has_max_allocation_bytes) {
       static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
-      assert((count * sizeof(T)) <= Derived::max_allocation_bytes,
+      assert((handle.size() * sizeof(T)) <= Derived::max_allocation_bytes,
              "This allocation is too large for this allocator!");
    }
 
+   T* _Nonnull p_memory = handle.data();
    if consteval {
       // if (count > 0) {
       delete[] p_memory;
       // }
    } else {
       if constexpr (!is_trivially_destructible<T>) {
-         for (idx i = 0u; i < count; ++i) {
+         for (idx i = 0u; i < handle.size(); ++i) {
             p_memory[i].~T();
          }
       }
       this->self().deallocate(static_cast<void const*>(p_memory),
-                              count * sizeof(T));
+                              handle.size() * sizeof(T));
 
-      poison_memory_region(p_memory, sizeof(T) * count);
+      poison_memory_region(p_memory, sizeof(T) * handle.size());
    }
 }
 
@@ -124,8 +126,9 @@ allocator_interface<Derived>::cfree(T& handle) {
 
 template <typename Derived>
 template <typename T>
+[[clang::ownership_takes(libcat, 2)]]
 constexpr void
-allocator_interface<Derived>::cfree(T* p_memory) {
+allocator_interface<Derived>::cfree(T* _Nonnull p_memory) {
    if constexpr (has_max_allocation_bytes) {
       static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
@@ -150,32 +153,35 @@ allocator_interface<Derived>::cfree(T* p_memory) {
 template <typename Derived>
 template <typename T>
 constexpr void
-allocator_interface<Derived>::cfree_multi(T* p_memory, idx count) {
+allocator_interface<Derived>::cfree_multi(span<T> handle) {
    if constexpr (has_max_allocation_bytes) {
       static_assert(sizeof(T) <= Derived::max_allocation_bytes,
                     "This allocation is too large for this allocator!");
-      assert((count * sizeof(T)) <= Derived::max_allocation_bytes,
+      assert((handle.size() * sizeof(T)) <= Derived::max_allocation_bytes,
              "This allocation is too large for this allocator!");
    }
 
+   T* _Nonnull p_memory = handle.data();
    if consteval {
       if constexpr (!is_trivially_destructible<T>) {
-         for (idx i = 0u; i < count; ++i) {
+         for (idx i = 0u; i < handle.size(); ++i) {
             p_memory[i].~T();
          }
       }
-      zero_memory_explicit(p_memory, static_cast<uword>(count * sizeof(T)));
+      zero_memory_explicit(p_memory,
+                           static_cast<uword>(handle.size() * sizeof(T)));
       delete[] p_memory;
    } else {
       if constexpr (!is_trivially_destructible<T>) {
-         for (idx i = 0u; i < count; ++i) {
+         for (idx i = 0u; i < handle.size(); ++i) {
             p_memory[i].~T();
          }
       }
-      zero_memory_explicit(p_memory, static_cast<uword>(count * sizeof(T)));
+      zero_memory_explicit(p_memory,
+                           static_cast<uword>(handle.size() * sizeof(T)));
       this->self().deallocate(static_cast<void const*>(p_memory),
-                              count * sizeof(T));
-      poison_memory_region(p_memory, sizeof(T) * count);
+                              handle.size() * sizeof(T));
+      poison_memory_region(p_memory, sizeof(T) * handle.size());
    }
 }
 
@@ -183,14 +189,14 @@ template <typename Derived>
 template <typename T>
 constexpr void
 allocator_interface<Derived>::free(span<T> handle) {
-   this->free_multi(handle.data(), handle.size());
+   this->free_multi(handle);
 }
 
 template <typename Derived>
 template <typename T>
 constexpr void
 allocator_interface<Derived>::cfree(span<T> handle) {
-   this->cfree_multi(handle.data(), handle.size());
+   this->cfree_multi(handle);
 }
 
 }  // namespace cat

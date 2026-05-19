@@ -11,6 +11,7 @@
 #include <cat/utility>
 
 // Forward declarations.
+
 namespace cat {
 struct Socket;
 }
@@ -395,8 +396,8 @@ enum class signal_action : unsigned char {
    set_mask = 2
 };
 
-// `clone_flags` is widely referenced (the `process` struct's default flags,
-// `sys_clone()`, etc.) so it lives alongside the other foundational types.
+// `clone_flags` is widely referenced by the process and thread APIs, so it
+// lives alongside the other foundational types.
 // TODO: Write comments for these, and simplifiy names.
 // https://linux.die.net/man/2/clone
 enum class clone_flags : unsigned int {

@@ -14,7 +14,7 @@ struct filter_view_impl : iterable_interface<> {
    template <typename BaseContext, typename HeldCallback>
    struct context_type {
       BaseContext incoming_context;
-      HeldCallback* callback_pointer;
+      HeldCallback* _Nonnull callback_pointer;
 
       using element_type = BaseContext::element_type;
 

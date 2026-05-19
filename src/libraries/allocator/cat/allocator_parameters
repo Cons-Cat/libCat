@@ -49,8 +49,9 @@ struct dyn_allocator_friend {
    }
 
    template <typename T>
+   [[clang::ownership_takes(libcat, 2)]]
    static auto
-   deallocate(T& self, void const* p_storage, idx allocation_bytes)
+   deallocate(T& self, void const* _Nonnull p_storage, idx allocation_bytes)
       -> decltype(self.deallocate(p_storage, allocation_bytes)) {
       return self.deallocate(p_storage, allocation_bytes);
    }
@@ -95,7 +96,7 @@ concept has_allocate =
    requires(T& a, idx n) { dyn_allocator_friend::allocate(a, n); };
 
 template <typename T>
-concept has_deallocate = requires(T& a, void const* p_storage, idx n) {
+concept has_deallocate = requires(T& a, void const* _Nonnull p_storage, idx n) {
                             dyn_allocator_friend::deallocate(a, p_storage, n);
                          };
 
@@ -127,11 +128,12 @@ struct dyn_allocate {
 };
 
 struct dyn_deallocate {
-   using signature = void(void const*, idx);
+   using signature = void(void const* _Nonnull, idx);
 
    template <has_deallocate T>
+   [[clang::ownership_takes(libcat, 2)]]
    static void
-   do_invoke(T& self, void const* p_storage, idx allocation_bytes) {
+   do_invoke(T& self, void const* _Nonnull p_storage, idx allocation_bytes) {
       dyn_allocator_friend::deallocate(self, p_storage, allocation_bytes);
    }
 };
@@ -241,7 +243,7 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
  private:
    template <typename T>
    struct dyn_memory_handle : detail::base_memory_handle<T> {
-      T* p_storage;
+      T* _Nonnull p_storage;
 
       auto
       get() -> decltype(auto) {
@@ -264,8 +266,9 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
       return dyn_invoke<detail::dyn_allocate>(*m_p_allocator, allocation_bytes);
    }
 
+   [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* p_storage, idx allocation_bytes) {
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes) {
       dyn_invoke<detail::dyn_deallocate>(*m_p_allocator, p_storage,
                                          allocation_bytes);
    }
@@ -290,20 +293,23 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    }
 
    template <typename T>
+   [[clang::ownership_holds(libcat, 2)]]
    constexpr auto
-   make_handle(T* p_handle_storage) -> dyn_memory_handle<T> {
+   make_handle(T* _Nonnull p_handle_storage) -> dyn_memory_handle<T> {
       return dyn_memory_handle<T>{{}, p_handle_storage};
    }
 
    template <typename T>
+   [[gnu::returns_nonnull]]
    auto
-   access(dyn_memory_handle<T>& memory) -> T* {
+   access(dyn_memory_handle<T>& memory) -> T* _Nonnull {
       return memory.p_storage;
    }
 
    template <typename T>
+   [[gnu::returns_nonnull]]
    auto
-   access(dyn_memory_handle<T> const& memory) const -> T const* {
+   access(dyn_memory_handle<T> const& memory) const -> T const* _Nonnull {
       return memory.p_storage;
    }
 
@@ -340,7 +346,7 @@ class [[gsl::Pointer]] allocator_ref
  private:
    friend allocator_interface<allocator_ref<Allocator>>;
 
-   Allocator* m_p_allocator;
+   Allocator* _Nonnull m_p_allocator;
 
    auto
    allocate(idx allocation_bytes) -> maybe_ptr<void>
@@ -349,8 +355,9 @@ class [[gsl::Pointer]] allocator_ref
       return m_p_allocator->allocate(allocation_bytes);
    }
 
+   [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* p_storage, idx allocation_bytes)
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes)
       requires(detail::has_deallocate<Allocator>)
    {
       m_p_allocator->deallocate(p_storage, allocation_bytes);
@@ -380,8 +387,9 @@ class [[gsl::Pointer]] allocator_ref
    }
 
    template <typename T>
+   [[clang::ownership_holds(libcat, 2)]]
    constexpr auto
-   make_handle(T* p_handle_storage) {
+   make_handle(T* _Nonnull p_handle_storage) {
       return m_p_allocator->template make_handle<T>(p_handle_storage);
    }
 

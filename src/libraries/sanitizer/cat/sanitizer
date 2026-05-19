@@ -13,22 +13,25 @@ extern "C" {
 
 // TODO: Comment these with documentation and use safer types.
 void
-__asan_poison_memory_region(void const volatile* p_address, uword size);
+__asan_poison_memory_region(void const volatile* _Nonnull p_address,
+                            uword size);
 void
-__asan_unpoison_memory_region(void const volatile* p_address, uword size);
+__asan_unpoison_memory_region(void const volatile* _Nonnull p_address,
+                              uword size);
 
 // These functions are only for debugging.
 [[gnu::used]]
 void
-__asan_describe_address(void* p_address);
+__asan_describe_address(void* _Nonnull p_address);
 
 [[gnu::used]]
 extern auto
-__asan_address_is_poisoned(void const volatile* p_address) -> int;
+__asan_address_is_poisoned(void const volatile* _Nonnull p_address) -> int;
 
 [[gnu::used]]
 auto
-__asan_region_is_poisoned(void* p_begin, uword size) -> void*;
+__asan_region_is_poisoned(void* _Nonnull p_begin, uword size)
+   -> void* _Nullable;
 
 [[gnu::used]]
 auto
@@ -36,19 +39,19 @@ __asan_report_present() -> int;
 
 [[gnu::used]]
 auto
-__asan_get_report_pc() -> void*;
+__asan_get_report_pc() -> void* _Nullable;
 
 [[gnu::used]]
 auto
-__asan_get_report_bp() -> void*;
+__asan_get_report_bp() -> void* _Nullable;
 
 [[gnu::used]]
 auto
-__asan_get_report_sp() -> void*;
+__asan_get_report_sp() -> void* _Nullable;
 
 [[gnu::used]]
 auto
-__asan_get_report_address() -> void*;
+__asan_get_report_address() -> void* _Nullable;
 
 [[gnu::used]]
 auto
@@ -60,43 +63,47 @@ __asan_get_report_access_size() -> __SIZE_TYPE__;
 
 [[gnu::used]]
 auto
-__asan_get_report_description() -> char const*;
+__asan_get_report_description() -> char const* _Nullable;
 
 [[gnu::used]]
 auto
-__asan_locate_address(void* p_address, char* p_name, uword name_size,
-                      void** p_region_address, uword* p_region_size)
-   -> char const*;
+__asan_locate_address(void* _Nonnull p_address, char* _Nonnull p_name,
+                      uword name_size,
+                      void* _Nonnull* _Nonnull p_region_address,
+                      uword* _Nonnull p_region_size) -> char const* _Nullable;
 
 [[gnu::used]]
 auto
-__asan_get_alloc_stack(void* p_heap, void** pp_trace, uword size,
-                       int* p_thread_id) -> __SIZE_TYPE__;
+__asan_get_alloc_stack(void* _Nonnull p_heap, void* _Nonnull* _Nonnull pp_trace,
+                       uword size, int* _Nonnull p_thread_id) -> __SIZE_TYPE__;
 
 [[gnu::used]]
 auto
-__asan_get_free_stack(void* p_heap, void** pp_trace, uword size,
-                      int* p_thread_id) -> __SIZE_TYPE__;
+__asan_get_free_stack(void* _Nonnull p_heap, void* _Nonnull* _Nonnull pp_trace,
+                      uword size, int* _Nonnull p_thread_id) -> __SIZE_TYPE__;
 
 [[gnu::used]]
 void
-__asan_get_shadow_mapping(uword* p_shadow_scale, uword* p_shadow_offset);
+__asan_get_shadow_mapping(uword* _Nonnull p_shadow_scale,
+                          uword* _Nonnull p_shadow_offset);
 }
 #else
 // No-op functions are provided when asan is not available.
 inline void
-__asan_poison_memory_region(void const volatile*, uword) {
+__asan_poison_memory_region(void const volatile* _Nonnull /*unused*/,
+                            uword /*unused*/) {
 }
 
 inline void
-__asan_unpoison_memory_region(void const volatile*, uword) {
+__asan_unpoison_memory_region(void const volatile* _Nonnull /*unused*/,
+                              uword /*unused*/) {
 }
 #endif
 
 template <typename T>
 [[gnu::nodebug, gnu::always_inline]]
 constexpr void
-poison_memory_region([[maybe_unused]] T const volatile* p_address,
+poison_memory_region([[maybe_unused]] T const volatile* _Nonnull p_address,
                      [[maybe_unused]] uword size) {
 #if __has_feature(address_sanitizer)
    if !consteval {
@@ -109,7 +116,7 @@ poison_memory_region([[maybe_unused]] T const volatile* p_address,
 template <typename T>
 [[gnu::nodebug, gnu::always_inline]]
 constexpr void
-unpoison_memory_region([[maybe_unused]] T const volatile* p_address,
+unpoison_memory_region([[maybe_unused]] T const volatile* _Nonnull p_address,
                        [[maybe_unused]] uword size) {
 #if __has_feature(address_sanitizer)
    if !consteval {

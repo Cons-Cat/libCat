@@ -10,7 +10,8 @@ namespace cat {
 // Unlinke `cat::copy_memory`, this function allows the source and destination
 // ranges to overlap.
 constexpr void
-copy_memory_backward(void const* p_source, void* p_destination, idx bytes) {
+copy_memory_backward(void const* _Nonnull p_source,
+                     void* _Nonnull p_destination, idx bytes) {
    if (bytes == 0u) {
       return;
    }
@@ -25,10 +26,12 @@ copy_memory_backward(void const* p_source, void* p_destination, idx bytes) {
 
 [[clang::no_builtin("memmove")]]
 constexpr void
-copy_memory_backward_scalar(void const* p_source, void* p_destination,
-                            idx bytes) {
-   auto const* const p_src = static_cast<unsigned char const*>(p_source);
-   auto* const p_dest = static_cast<unsigned char*>(p_destination);
+copy_memory_backward_scalar(void const* _Nonnull p_source,
+                            void* _Nonnull p_destination, idx bytes) {
+   unsigned char const* _Nonnull const p_src =
+      static_cast<unsigned char const* _Nonnull>(p_source);
+   unsigned char* _Nonnull const p_dest =
+      static_cast<unsigned char* _Nonnull>(p_destination);
 
    if (p_dest <= p_src) {
       // When the copy is forwards, we wrap `copy_memory` instead.

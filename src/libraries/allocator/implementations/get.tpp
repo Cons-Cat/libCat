@@ -57,8 +57,8 @@ template <typename Derived>
 template <typename T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::get(T* p_handle) & [[clang::lifetimebound]]
--> T& {
+allocator_interface<Derived>::get(
+   T* _Nonnull p_handle) & [[clang::lifetimebound]] -> T& {
    return *p_handle;
 }
 
@@ -67,8 +67,8 @@ template <typename Derived>
 template <typename T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::get(T const* p_handle) & [[clang::lifetimebound]]
--> T& {
+allocator_interface<Derived>::get(
+   T const* _Nonnull p_handle) & [[clang::lifetimebound]] -> T& {
    return *p_handle;
 }
 

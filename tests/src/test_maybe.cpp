@@ -198,6 +198,7 @@ test_tuple_allocation_sentinel() -> cat::tuple<int4*, cat::idx> {
 }
 
 class non_structural_slot {
+ private:
    int m_state;
 
  public:

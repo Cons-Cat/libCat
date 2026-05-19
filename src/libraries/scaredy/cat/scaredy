@@ -334,11 +334,12 @@ class [[nodiscard]] scaredy {
 
    template <typename Self>
    [[gnu::always_inline, gnu::nodebug]]
-   static constexpr auto
-   as_base(Self&& self) -> copy_cvref_from<Self&&, scaredy> {
+   constexpr auto
+   as_base(this Self&& self) -> copy_cvref_from<Self&&, scaredy> {
       // C-cast preserves cvref while upcasting through the inheritance
       // chain, so callers reach `scaredy`'s overload set instead of a
-      // derived class's shadowing overloads (P2162).
+      // derived class's shadowing overloads.
+      // NOLINTNEXTLINE
       return (copy_cvref_from<Self&&, scaredy>)$fwd(self);
    }
 
@@ -474,7 +475,7 @@ class [[nodiscard]] scaredy {
    value(this auto&& self) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
-      return as_base($fwd(self)).m_storage.value();
+      return $fwd(self).as_base().m_storage.value();
    }
 
    // Special discard-able overload for `maybe<void>`.
@@ -523,7 +524,7 @@ class [[nodiscard]] scaredy {
    [[nodiscard]]
    constexpr auto
    value_or(this auto&& self, value_type fallback) {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if (base.m_storage.has_value()) {
          return $fwd(base).m_storage.value();
       }
@@ -539,7 +540,7 @@ class [[nodiscard]] scaredy {
    get_ptr(this auto&& self)
       requires(!storage_type::is_wrapping_void)
    {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if constexpr (is_pointer<value_type>) {
          if (base.m_storage.has_value()) {
             return $fwd(base).m_storage.value();
@@ -565,7 +566,7 @@ class [[nodiscard]] scaredy {
       -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       cat::assert(base.has_value(), p_assert_handler, callsite);
       return $fwd(base).value();
    }
@@ -589,7 +590,7 @@ class [[nodiscard]] scaredy {
       -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       cat::verify(base.has_value(), p_assert_handler, callsite);
       return $fwd(base).value();
    }
@@ -640,7 +641,7 @@ class [[nodiscard]] scaredy {
    constexpr auto
    transform(this auto&& self, Callback&& callback) {
       using this_type = scaredy<T, error_types...>;
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if (base.has_value()) {
          return this_type($fwd(callback)($fwd(base).value()));
       }
@@ -652,7 +653,7 @@ class [[nodiscard]] scaredy {
    constexpr auto
    and_then(this auto&& self, Callback&& callback) {
       using this_type = scaredy<T, error_types...>;
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       return base.has_value() ? $fwd(callback)($fwd(base).value())
                               : this_type($fwd(base).m_storage);
    }
@@ -663,7 +664,7 @@ class [[nodiscard]] scaredy {
       using U = decltype(callback());
       static_assert(is_void<U> || is_specialization<U, scaredy>);
 
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if (!base.has_value()) {
          if constexpr (is_void<U>) {
             $fwd(callback)();
@@ -681,7 +682,7 @@ class [[nodiscard]] scaredy {
 
    auto
    or_exit(this auto&& self, iword exit_code = 1) {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if (base.has_value()) [[likely]] {
          if constexpr (!is_void<T>) {
             return $fwd(base).value();
@@ -695,7 +696,7 @@ class [[nodiscard]] scaredy {
 
    auto
    or_exit(this auto&& self, str_view error_message, iword exit_code = 1) {
-      auto&& base = as_base($fwd(self));
+      auto&& base = $fwd(self).as_base();
       if (base.has_value()) [[likely]] {
          if constexpr (!is_void<T>) {
             return $fwd(base).value();

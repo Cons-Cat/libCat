@@ -9,13 +9,20 @@ namespace cat::detail {
 template <typename T, typename Abi, overflow_policies semantics>
 class simd_overflow_reference
     : public arithmetic_interface<simd_overflow_reference<T, Abi, semantics>> {
+ private:
    using wrapper_type = cat::simd<T, Abi>;
 
-   wrapper_type* m_wrapped;
+   wrapper_type* _Nonnull m_wrapped;
 
  public:
    constexpr explicit simd_overflow_reference(wrapper_type& w)
        : m_wrapped(__builtin_addressof(w)) {
+   }
+
+   // Rebind this reference wrapper to a different address.
+   constexpr void
+   rebind(wrapper_type& w [[clang::lifetime_capture_by(this)]]) {
+      m_wrapped = __builtin_addressof(w);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]

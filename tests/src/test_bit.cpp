@@ -51,6 +51,24 @@ concept can_rotate_left =
 template <typename T>
 concept can_rotate_right =
    requires(T value) { cat::rotate_right(value, cat::iword(1)); };
+
+template <auto alignment>
+concept can_align_pointer_to_constant = requires(int* p_value) {
+                                           cat::align_down(p_value, alignment);
+                                           cat::align_up(p_value, alignment);
+                                           cat::is_aligned(p_value, alignment);
+                                        };
+
+template <auto alignment>
+concept can_align_intptr_to_constant = requires(cat::uintptr<int> p_value) {
+                                          cat::align_down(p_value, alignment);
+                                          cat::align_up(p_value, alignment);
+                                          cat::is_aligned(p_value, alignment);
+                                       };
+
+template <auto alignment>
+concept can_assume_aligned_to_constant =
+   requires(int* p_value) { cat::assume_aligned<alignment>(p_value); };
 }  // namespace
 
 $test(bit) {
@@ -68,6 +86,22 @@ $test(bit) {
    static_assert(!can_has_single_bit<cat::idx>);
    static_assert(!can_rotate_left<cat::idx>);
    static_assert(!can_rotate_right<cat::idx>);
+   static_assert(can_align_pointer_to_constant<32u>);
+   static_assert(!can_align_pointer_to_constant<12u>);
+   static_assert(can_align_intptr_to_constant<32u>);
+   static_assert(!can_align_intptr_to_constant<12u>);
+   static_assert(can_assume_aligned_to_constant<32u>);
+   static_assert(can_assume_aligned_to_constant<32>);
+   static_assert(!can_assume_aligned_to_constant<12u>);
+   static_assert(!can_assume_aligned_to_constant<12>);
+   static_assert(!can_assume_aligned_to_constant<-32>);
+   alignas(32) int aligned_value = 0;
+   cat::verify(cat::assume_aligned<32u>(&aligned_value) == &aligned_value);
+   cat::verify(cat::assume_aligned<32>(&aligned_value) == &aligned_value);
+   int* p_null_int = nullptr;
+   cat::verify(cat::align_down(p_null_int, 32u) == nullptr);
+   cat::verify(cat::align_up(p_null_int, 32u) == nullptr);
+   cat::verify(cat::is_aligned(p_null_int, 32u));
 
    // Test `clz()`.
    static_assert(cat::countl_zero(0_u4) == 32u);
@@ -264,6 +298,11 @@ $test(bit) {
    number = 1 << 5;
    cat::verify(!bit4.is_set());
    cat::verify(bit5.is_set());
+   unsigned char rebound_number = 0u;
+   bit4.rebind(rebound_number, 0b0000'0001u);
+   bit4.set();
+   cat::verify(rebound_number == 0b0000'0001u);
+   cat::verify(number == 0b0010'0000u);
 
    // Assign a `bit_reference` to a `bit_value`.
    number = 0b10;

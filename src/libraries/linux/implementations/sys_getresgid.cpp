@@ -1,8 +1,8 @@
 #include <cat/linux>
 
 auto
-nix::sys_getresgid(group_id* p_real, group_id* p_effective, group_id* p_saved)
+nix::sys_getresgid(group_id& real, group_id& effective, group_id& saved)
    -> nix::scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/
-   return nix::syscall<void>(120, p_real, p_effective, p_saved);
+   return nix::syscall<void>(120, &real, &effective, &saved);
 }

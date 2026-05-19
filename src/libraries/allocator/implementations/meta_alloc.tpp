@@ -16,17 +16,17 @@ template <typename T, bool is_zeroed, bool has_feedback>
 [[gnu::no_sanitize_address, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 meta_alloc_unpoison_and_zero_memory(
-   conditional<has_feedback, maybe_sized_allocation<void*>,
+   conditional<has_feedback, maybe_sized_allocation<void* _Nonnull>,
                maybe_ptr<void>> const& maybe_memory,
-   idx allocation_bytes) -> tuple<T*, idx> {
-   T* p_allocation;
+   idx allocation_bytes) -> tuple<T* _Nonnull, idx> {
+   T* _Nonnull p_allocation;
    idx prepared_bytes;
    if constexpr (has_feedback) {
       // The `.first()` element of the `sized_allocation` tuple is a `void*`.
-      p_allocation = static_cast<T*>(maybe_memory.value().first());
+      p_allocation = static_cast<T* _Nonnull>(maybe_memory.value().first());
       prepared_bytes = maybe_memory.value().second();
    } else {
-      p_allocation = static_cast<T*>(maybe_memory.value());
+      p_allocation = static_cast<T* _Nonnull>(maybe_memory.value());
       prepared_bytes = allocation_bytes;
    }
    unpoison_memory_region(p_allocation, prepared_bytes);
@@ -34,7 +34,7 @@ meta_alloc_unpoison_and_zero_memory(
       // TODO: Find a way to efficiently and safely leverage SIMD here.
       zero_memory_scalar_explicit(p_allocation, prepared_bytes);
    }
-   return tuple<T*, idx>{p_allocation, prepared_bytes};
+   return tuple<T* _Nonnull, idx>{p_allocation, prepared_bytes};
 }
 
 }  // namespace detail
@@ -48,10 +48,12 @@ struct allocator_interface<Derived>::meta_alloc_alias_types {
    static constexpr bool is_inline = (inline_size != 0);
 
    using underlying_handle =
-      decltype(declval<Derived&>().template make_handle<T>(declval<T*>()));
+      decltype(declval<Derived&>().template make_handle<T>(
+         declval<T* _Nonnull>()));
 
    using maybe_allocation =
-      conditional<has_feedback, maybe_sized_allocation<void*>, maybe_ptr<void>>;
+      conditional<has_feedback, maybe_sized_allocation<void* _Nonnull>,
+                  maybe_ptr<void>>;
 
    using handle_type = conditional<
       is_multiple,
@@ -69,16 +71,16 @@ struct allocator_interface<Derived>::meta_alloc_alias_types {
          !is_inline,
          conditional<has_feedback,
                      conditional<is_multiple, maybe<tuple<span<T>, idx>>,
-                                 maybe_sized_allocation<T*>>,
+                                 maybe_sized_allocation<T* _Nonnull>>,
                      conditional<is_multiple, maybe_span<T>, maybe_ptr<T>>>,
          conditional<has_feedback, maybe<tuple<handle_type, idx>>,
                      maybe<handle_type>>>,
       conditional<
          !is_inline,
-         conditional<
-            has_feedback,
-            conditional<is_multiple, tuple<span<T>, idx>, sized_allocation<T*>>,
-            conditional<is_multiple, span<T>, T*>>,
+         conditional<has_feedback,
+                     conditional<is_multiple, tuple<span<T>, idx>,
+                                 sized_allocation<T* _Nonnull>>,
+                     conditional<is_multiple, span<T>, T* _Nonnull>>,
          conditional<has_feedback, tuple<handle_type, idx>, handle_type>>>;
 };
 
@@ -108,7 +110,7 @@ allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
 
       if constexpr (is_multiple) {
          for (idx i = 0u; i < allocation_count; ++i) {
-            new (reinterpret_cast<T*>(&stack_handle) + i) T;
+            new (reinterpret_cast<T* _Nonnull>(&stack_handle) + i) T;
          }
       } else {
          if constexpr (is_zeroed) {
@@ -135,8 +137,8 @@ constexpr auto
 allocator_interface<Derived>::
    meta_alloc_obtain_maybe_memory_aligned_with_feedback(
       uword allocation_alignment, idx allocation_bytes)
-      -> maybe_sized_allocation<void*> {
-   maybe_sized_allocation<void*> maybe_memory;
+      -> maybe_sized_allocation<void* _Nonnull> {
+   maybe_sized_allocation<void* _Nonnull> maybe_memory;
 
    if constexpr (has_aligned_allocate_feedback) {
       maybe_memory = this->self().aligned_allocate_feedback(
@@ -147,16 +149,14 @@ allocator_interface<Derived>::
             allocation_alignment, allocation_bytes);
 
          if (actual_allocation_bytes.has_value()) {
-            void* p_allocation =
-               this->self()
-                  .aligned_allocate(allocation_alignment,
-                                    actual_allocation_bytes.value())
-                  .value();
+            maybe_ptr<void> const allocation = this->self().aligned_allocate(
+               allocation_alignment, actual_allocation_bytes.value());
 
-            maybe_memory = maybe_sized_allocation<void*>{
-               sized_allocation<void*>{
-                                       p_allocation, actual_allocation_bytes.value(),
-                                       }
+            maybe_memory = maybe_sized_allocation<void* _Nonnull>{
+               sized_allocation<void* _Nonnull>{
+                                                allocation.value(),
+                                                actual_allocation_bytes.value(),
+                                                }
             };
          } else {
             maybe_memory = nullopt;
@@ -165,8 +165,10 @@ allocator_interface<Derived>::
          maybe temp_memory = this->self().aligned_allocate(allocation_alignment,
                                                            allocation_bytes);
          if (temp_memory.has_value()) {
-            maybe_memory = maybe_sized_allocation<void*>{
-               sized_allocation<void*>{temp_memory.value(), allocation_bytes}
+            maybe_memory = maybe_sized_allocation<void* _Nonnull>{
+               sized_allocation<void* _Nonnull>{
+                                                temp_memory.value(),
+                                                allocation_bytes, },
             };
          } else {
             maybe_memory = nullopt;
@@ -205,8 +207,8 @@ constexpr auto
 allocator_interface<Derived>::
    meta_alloc_obtain_maybe_memory_unaligned_with_feedback(
       uword allocation_alignment, idx allocation_bytes)
-      -> maybe_sized_allocation<void*> {
-   maybe_sized_allocation<void*> maybe_memory;
+      -> maybe_sized_allocation<void* _Nonnull> {
+   maybe_sized_allocation<void* _Nonnull> maybe_memory;
 
    if constexpr (has_allocate_feedback) {
       maybe_memory = this->self().allocate_feedback(allocation_bytes);
@@ -218,8 +220,10 @@ allocator_interface<Derived>::
          maybe size = this->self().allocation_bytes(1u, allocation_bytes);
 
          if (size.has_value()) {
-            maybe_memory = maybe_sized_allocation<void*>(tuple{
-               this->self().allocate(allocation_bytes).value(),
+            maybe_ptr<void> const allocation =
+               this->self().allocate(allocation_bytes);
+            maybe_memory = maybe_sized_allocation<void* _Nonnull>(tuple{
+               allocation.value(),
                size.value(),
             });
          } else {
@@ -229,7 +233,7 @@ allocator_interface<Derived>::
          auto temp_memory = this->self().aligned_allocate(allocation_alignment,
                                                           allocation_bytes);
          if (temp_memory.has_value()) {
-            maybe_memory = maybe_sized_allocation<void*>(
+            maybe_memory = maybe_sized_allocation<void* _Nonnull>(
                tuple{temp_memory.value(), allocation_bytes});
          } else {
             maybe_memory = nullopt;
@@ -307,7 +311,7 @@ allocator_interface<Derived>::meta_alloc_finish_runtime(
                tuple{span<T>(p_allocation, allocation_count), prepared_bytes});
          } else {
             return return_handle(
-               sized_allocation<T*>{p_allocation, prepared_bytes});
+               sized_allocation<T* _Nonnull>{p_allocation, prepared_bytes});
          }
       } else {
          if constexpr (is_multiple) {
@@ -372,7 +376,7 @@ allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
    if consteval {
       bool const plain_new_ok = (allocation_alignment == uword(1))
                                 || (allocation_alignment == uword(alignof(T)));
-      T* p_allocation;
+      T* _Nonnull p_allocation;
       if constexpr (is_multiple) {
          p_allocation = plain_new_ok
                            ? new T[allocation_count]
@@ -415,7 +419,7 @@ allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
                });
             } else {
                return return_handle(
-                  sized_allocation<T*>{p_allocation, prepared_bytes});
+                  sized_allocation<T* _Nonnull>{p_allocation, prepared_bytes});
             }
          } else {
             if constexpr (is_multiple) {

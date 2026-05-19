@@ -1,37 +1,41 @@
 // Placement `new`.
-[[nodiscard]]
+
+[[nodiscard, gnu::returns_nonnull]]
 auto
-operator new(unsigned long /*unused*/, void* p_address) -> void* {
+operator new(unsigned long /*unused*/, void* _Nonnull p_address)
+   -> void* _Nonnull {
    return p_address;
 }
 
-[[nodiscard]]
+[[nodiscard, gnu::returns_nonnull]]
 auto
-operator new[](unsigned long /*unused*/, void* p_address) -> void* {
+operator new[](unsigned long /*unused*/, void* _Nonnull p_address)
+   -> void* _Nonnull {
    return p_address;
 }
 
-[[nodiscard]]
+[[nodiscard, gnu::returns_nonnull]]
 auto
-operator new[](unsigned long /*unused*/) -> void* {
+operator new[](unsigned long /*unused*/) -> void* _Nonnull {
    return __builtin_bit_cast(void*, 1ul);
 }
 
-[[nodiscard]]
+[[nodiscard, gnu::returns_nonnull]]
 auto
-operator new[](unsigned long /*unused*/, std::align_val_t align) -> void* {
+operator new[](unsigned long /*unused*/, std::align_val_t align)
+   -> void* _Nonnull {
    return __builtin_bit_cast(void*, align);
 }
 
 void
-operator delete[](void* /*unused*/) {
+operator delete[](void* _Nullable /*unused*/) {
 }
 
 void
-operator delete[](void* /*unused*/, unsigned long /*unused*/) {
+operator delete[](void* _Nullable /*unused*/, unsigned long /*unused*/) {
 }
 
 void
-operator delete[](void* /*unused*/, unsigned long /*unused*/,
+operator delete[](void* _Nullable /*unused*/, unsigned long /*unused*/,
                   std::align_val_t /*unused*/) {
 }

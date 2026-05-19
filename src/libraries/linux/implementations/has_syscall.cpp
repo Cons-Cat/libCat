@@ -2,7 +2,7 @@
 
 namespace {
 auto
-parse_decimal(char const*& p_cursor) -> cat::int4 {
+parse_decimal(char const* _Nonnull& p_cursor) -> cat::int4 {
    cat::int4 result = 0;
    while (*p_cursor >= '0' && *p_cursor <= '9') {
       result = result * 10 + (*p_cursor - '0');
@@ -22,7 +22,7 @@ nix::get_kernel_version() -> kernel_version {
       return {.major = 0, .minor = 0};
    }
 
-   char const* p_cursor = uts.release.data();
+   char const* _Nonnull p_cursor = uts.release.data();
    kernel_version parsed{};
    parsed.major = parse_decimal(p_cursor);
    if (*p_cursor == '.') {

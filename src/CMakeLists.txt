@@ -111,7 +111,6 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_socketpair.cpp
   ${CATLIB}/linux/implementations/sys_setsockopt.cpp
   ${CATLIB}/linux/implementations/sys_getsockopt.cpp
-  ${CATLIB}/linux/implementations/sys_clone.cpp
   ${CATLIB}/linux/implementations/sys_exit.cpp
   ${CATLIB}/linux/implementations/sys_wait4.cpp
   ${CATLIB}/linux/implementations/sys_uname.cpp
@@ -370,6 +369,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bit/implementations/is_aligned.tpp
   ${CATLIB}/bit/implementations/align_up.tpp
   ${CATLIB}/bit/implementations/align_down.tpp
+  ${CATLIB}/bit/implementations/assume_aligned.tpp
   ${CATLIB}/tuple/implementations/tuple_cat.tpp
   ${CATLIB}/tuple/implementations/magic_get.tpp
   ${CATLIB}/variant/implementations/visit.tpp

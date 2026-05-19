@@ -273,7 +273,7 @@ struct event {
 
 // TODO: Make this a span.
 struct io_virtualization {
-   void* p_base;
+   void* _Nullable p_base;
    cat::iword length;
 };
 
@@ -421,12 +421,12 @@ struct visual_packet {
 struct connection {
    nix::file_descriptor socket_descriptor;
    x11::server_reply_header header;
-   x11::connection_response_info* p_setup;
+   x11::connection_response_info* _Nullable p_setup;
    // TODO: A `p_vendor_name` could go here. Consider it?
-   x11::pixel_map_format_packet* p_pixel_map_formats;
-   x11::root_window_packet* p_root_windows;
-   x11::depth_packet* p_depths;
-   x11::visual_packet* p_visuals;
+   x11::pixel_map_format_packet* _Nullable p_pixel_map_formats;
+   x11::root_window_packet* _Nullable p_root_windows;
+   x11::depth_packet* _Nullable p_depths;
+   x11::visual_packet* _Nullable p_visuals;
 };
 
 // TODO: Propagate errors instead of panicking.
@@ -531,7 +531,7 @@ struct create_window_request_info {
    cat::uint4 visual_resource_id;
    cat::uint4 value_mask;  // TODO: Use a `cat::bitset`.
                            // TODO: Confirm that this field should exist.
-   cat::uint4 const* p_values;
+   cat::uint4 const* _Nullable p_values;
 };
 
 }  // namespace x11

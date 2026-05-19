@@ -40,10 +40,10 @@ const_test() {
 
    cat::span<int4> alloc_multi = allocator.alloc_multi<int4>(5u).value();
    // `realloc_multi` is not a constant expression on Clang.
-   allocator.free_multi(alloc_multi.data(), alloc_multi.size());
+   allocator.free_multi(alloc_multi);
 
    cat::span<int4> xalloc_multi = allocator.xalloc_multi<int4>(5u);
-   allocator.free_multi(xalloc_multi.data(), xalloc_multi.size());
+   allocator.free_multi(xalloc_multi);
 }
 
 consteval void

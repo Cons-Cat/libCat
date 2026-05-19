@@ -726,7 +726,8 @@ concept is_implicit_lifetime = __builtin_is_implicit_lifetime(T);
 
 template <typename S1, typename S2, typename M1, typename M2>
 constexpr auto
-is_corresponding_member(M1 S1::* member_1, M2 S2::* member_2) noexcept -> bool {
+is_corresponding_member(M1 S1::* _Nonnull member_1,
+                        M2 S2::* _Nonnull member_2) noexcept -> bool {
    return __builtin_is_corresponding_member(member_1, member_2);
 }
 
@@ -911,13 +912,15 @@ struct proxy_arrow_result {
        : m_value($fwd(value)) {
    }
 
+   [[gnu::returns_nonnull]]
    constexpr auto
-   operator->() const noexcept -> T const* {
+   operator->() const noexcept -> T const* _Nonnull {
       return &m_value;
    }
 
+   [[gnu::returns_nonnull]]
    constexpr auto
-   operator->() noexcept -> T* {
+   operator->() noexcept -> T* _Nonnull {
       return &m_value;
    }
 };
@@ -974,7 +977,7 @@ namespace detail {
 // algorithms.
 template <typename T>
 struct reference_wrapper_impl {
-   T* m_p_target;
+   T* _Nonnull m_p_target;
 
    constexpr reference_wrapper_impl(T& target [[clang::lifetimebound]])
        : m_p_target(__builtin_addressof(target)) {
@@ -983,6 +986,16 @@ struct reference_wrapper_impl {
    constexpr reference_wrapper_impl(T&&) = delete (
       "Assigning an r-value to a `cat::reference_wrapper` would "
       "immediately dangle!");
+
+   constexpr void
+   rebind(T& target [[clang::lifetime_capture_by(this)]]) {
+      m_p_target = __builtin_addressof(target);
+   }
+
+   constexpr void
+   rebind(T&&) =
+      delete ("Rebinding a `cat::reference_wrapper` to an r-value would "
+              "immediately dangle!");
 
    [[nodiscard]]
    constexpr auto

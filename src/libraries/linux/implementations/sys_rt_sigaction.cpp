@@ -1,8 +1,8 @@
 #include <cat/linux>
 
 auto
-nix::sys_rt_sigaction(signal s, sigaction const* __restrict p_act,
-                      sigaction* __restrict p_old_act)
+nix::sys_rt_sigaction(signal s, sigaction const* _Nullable __restrict p_act,
+                      sigaction* _Nullable __restrict p_old_act)
    -> nix::scaredy_nix<void> {
    // The kernel ABI takes `sigsetsize` as the 4th argument and rejects any
    // value other than `sizeof(sigset_t)`. On x86-64 that is 8 bytes.

@@ -9,7 +9,7 @@
 
 [[clang::no_builtin("strlen")]]
 constexpr auto
-cat::string_length(char const* p_string) -> idx {
+cat::string_length(char const* _Nonnull p_string) -> idx {
    idx result;
    while (true) {
       if (p_string[result.raw] == '\0') {
@@ -33,15 +33,15 @@ cat::detail::compare_strings_detail(str_view const string_1,
    array<vector::mask_type, 4u> comparisons;
    idx length_iterator = string_1.size();
    uword vector_size = sizeof(vector);
-   char const* p_string_1_iterator = string_1.data();
-   char const* p_string_2_iterator = string_2.data();
+   char const* _Nonnull p_string_1_iterator = string_1.data();
+   char const* _Nonnull p_string_2_iterator = string_2.data();
 
    auto loop = [&](idx batch_count) -> bool {
       while (length_iterator >= vector_size * batch_count) {
          for (idx i = 0u; i < batch_count; ++i) {
-            char const* const p_chunk_1 =
+            char const* _Nonnull const p_chunk_1 =
                p_string_1_iterator + (i.raw * vector_size.raw);
-            char const* const p_chunk_2 =
+            char const* _Nonnull const p_chunk_2 =
                p_string_2_iterator + (i.raw * vector_size.raw);
             vectors_1[i].load_unaligned(p_chunk_1);
             vectors_2[i].load_unaligned(p_chunk_2);

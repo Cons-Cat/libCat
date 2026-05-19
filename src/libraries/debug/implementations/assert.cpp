@@ -3,6 +3,7 @@
 
 // Because `assert()`'s arguments are not passed into `verify()` when `NDEBUG`
 // is defined, the compiler should not warn when they are unused.
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
 

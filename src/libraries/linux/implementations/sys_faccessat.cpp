@@ -1,7 +1,7 @@
 #include <cat/linux>
 
 auto
-nix::sys_faccessat(file_descriptor dirfd, char const* p_file_path,
+nix::sys_faccessat(file_descriptor dirfd, char const* _Nonnull p_file_path,
                    access_mode mode, atfile_flags flags)
    -> nix::scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/

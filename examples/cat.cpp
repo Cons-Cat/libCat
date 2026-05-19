@@ -24,14 +24,15 @@ void
 output_to_console(nix::io_vector io_vector) {
    // TODO: Create a mutable string type to prevent this undefined behavior.
    // TODO: Make this buffered output to reduce syscalls.
-   cat::byte const* p_buffer = io_vector.data();
+   cat::byte const* _Nonnull p_buffer = io_vector.data();
    ++p_buffer;
    auto _ = nix::sys_write(
-      nix::stdout, __builtin_bit_cast(char const*, p_buffer), io_vector.size());
+      nix::stdout, __builtin_bit_cast(char const* _Nonnull, p_buffer),
+      io_vector.size());
 }
 
 void
-read_and_print_file(char* p_file_name) {
+read_and_print_file(char* _Nonnull p_file_name) {
    nix::file_descriptor file_descriptor =
       nix::sys_open(p_file_name, nix::open_mode::read_only)
          .or_exit("No such file or directory!", 2);
@@ -49,7 +50,7 @@ read_and_print_file(char* p_file_name) {
       pager.alloc_multi<nix::io_vector>(blocks).or_exit(
          "Failed to allocate memory!", 3);
    $defer {
-      pager.free_multi(io_vectors.data(), io_vectors.size());
+      pager.free_multi(io_vectors);
    };
 
    while (bytes_remaining > 0) {
@@ -76,7 +77,7 @@ read_and_print_file(char* p_file_name) {
 // TODO: This example segfaults when running without sanitizers. This happens
 // with and without optimizations.
 auto
-main(int argc, char* p_argv[]) -> int {
+main(int argc, char* _Nonnull p_argv[]) -> int {
    if (argc == 1) {
       cat::eprint("At least one file path must be provided!").or_exit();
       cat::exit(1);

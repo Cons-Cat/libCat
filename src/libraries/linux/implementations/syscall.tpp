@@ -6,6 +6,7 @@
 
 // Default wrapper. The compiler may reorder, hoist, or fold duplicate calls.
 // Use only for syscalls without externally observable side effects.
+
 template <typename T, typename... Args>
 auto
 nix::syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>

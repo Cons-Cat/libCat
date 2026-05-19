@@ -65,7 +65,7 @@ span
    constexpr span(span<T, fixed_extent>&&) = default;
 
    // Construct a `span` as `{address, length}`.
-   constexpr span(T* p_in_data [[clang::lifetimebound]], idx in_length)
+   constexpr span(T* _Nonnull p_in_data [[clang::lifetimebound]], idx in_length)
        : m_p_data(p_in_data), m_size(in_length) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(in_length == fixed_extent);
@@ -99,7 +99,8 @@ span
    // is managed by the deduction guides below.
    template <is_random_access U>
    constexpr span(U& container [[clang::lifetimebound]])
-      requires(is_convertible<typename U::value_type (*)[], T (*)[]>)
+      requires(is_convertible<typename U::value_type (* _Nonnull)[],
+                              T (* _Nonnull)[]>)
        : m_p_data(container.data()), m_size(container.size()) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(container.size() == fixed_extent);
@@ -109,7 +110,7 @@ span
    template <typename U, idx other_extent>
       requires((fixed_extent == dynamic_extent || other_extent == dynamic_extent
                 || fixed_extent == other_extent)
-               && is_convertible<U (*)[], T (*)[]>)
+               && is_convertible<U (* _Nonnull)[], T (* _Nonnull)[]>)
    constexpr span(span<U, other_extent> const& other [[clang::lifetimebound]]
                   )
        : m_p_data(other.data()), m_size(other.size()) {
@@ -147,7 +148,8 @@ span
    template <is_random_access U>
    auto
    operator=(U& container [[clang::lifetimebound]]) -> span<T, fixed_extent>&
-      requires(is_convertible<typename U::value_type (*)[], T (*)[]>)
+      requires(is_convertible<typename U::value_type (* _Nonnull)[],
+                              T (* _Nonnull)[]>)
    {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(container.size() == fixed_extent);
@@ -169,10 +171,10 @@ span
       cat::swap(m_size, other.m_size);
    }
 
-   // Get the non-`const` address that this `span` starts at.
+   // Returns `nullptr` when this `span` is default-constructed (empty).
    [[nodiscard]]
    constexpr auto
-   data() -> T* {
+   data() -> T* _Nullable {
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wreturn-stack-address` false positives on `get(memory).data()` when
       // `get` returns a pr-value `span` while the pointer still names handle
@@ -180,10 +182,10 @@ span
       return m_p_data;
    }
 
-   // Get the `const` address that this `span` starts at.
+   // Returns `nullptr` when this `span` is default-constructed (empty).
    [[nodiscard]]
    constexpr auto
-   data() const -> T const* {
+   data() const -> T const* _Nullable {
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wreturn-stack-address` false positives on `get(memory).data()` when
       // `get` returns a pr-value `span` while the pointer still names handle
@@ -323,7 +325,7 @@ span
    // This is arranged as pointer, then size, to follow the ABI of Linux
    // standard `iovec`s. Unfortunately, that is opposite of Windows' standard
    // `WSABUF`.
-   T* m_p_data;
+   T* _Nullable m_p_data;
    idx m_size;
 };
 
@@ -355,7 +357,8 @@ as_bytes(span<T, fixed_extent> source) noexcept {
                                     ? dynamic_extent
                                     : fixed_extent * sizeof(T);
    return span<cat::byte const, result_extent>(
-      __builtin_bit_cast(cat::byte const*, source.data()), source.size_bytes());
+      __builtin_bit_cast(cat::byte const* _Nullable, source.data()),
+      source.size_bytes());
 }
 
 // Reinterpret a non-`const` `cat::span` as a writable view of its underlying
@@ -370,13 +373,14 @@ as_writable_bytes(span<T, fixed_extent> source) noexcept {
                                     ? dynamic_extent
                                     : fixed_extent * sizeof(T);
    return span<cat::byte, result_extent>(
-      __builtin_bit_cast(cat::byte*, source.data()), source.size_bytes());
+      __builtin_bit_cast(cat::byte* _Nullable, source.data()),
+      source.size_bytes());
 }
 
 // Create a span between two addresses.
 template <typename T>
 constexpr auto
-make_span_between(T* p_start, T* p_end) {
+make_span_between(T* _Nonnull p_start, T* _Nonnull p_end) {
    return span(p_start, p_end - p_start);
 }
 
@@ -464,9 +468,14 @@ namespace cat {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_pointer_in_range(T const* p_pointer, span<T const> const range) -> bool {
+is_pointer_in_range(T const* _Nullable p_pointer, span<T const> const range)
+   -> bool {
    static_assert(!is_function<T>,
                  "`is_pointer_in_range` does not accept function types.");
+
+   if (p_pointer == nullptr) {
+      return false;
+   }
 
    if consteval {
       for (T const& entry : range) {
@@ -481,8 +490,8 @@ is_pointer_in_range(T const* p_pointer, span<T const> const range) -> bool {
       return false;
    }
 
-   T const* const p_begin = range.data();
-   T const* const p_end = p_begin + range.size();
+   T const* _Nullable const p_begin = range.data();
+   T const* _Nullable const p_end = p_begin + range.size();
    return !is_less(p_pointer, p_begin) && is_less(p_pointer, p_end);
 }
 

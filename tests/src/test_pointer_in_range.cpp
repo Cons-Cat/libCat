@@ -19,6 +19,9 @@ test_constexpr_pointer_in_range() -> bool {
    if (cat::is_pointer_in_range(values.data() + values.size(), range)) {
       return false;
    }
+   if (cat::is_pointer_in_range(static_cast<int4 const*>(nullptr), range)) {
+      return false;
+   }
 
    int4 const separate_value = 123;
    return !cat::is_pointer_in_range(&separate_value, range);
@@ -44,4 +47,8 @@ $test(pointer_in_range) {
 
    cat::span<int4 const> const empty{};
    cat::verify(!cat::is_pointer_in_range(values.data(), empty));
+   cat::verify(
+      !cat::is_pointer_in_range(static_cast<int4 const*>(nullptr), range));
+   cat::verify(
+      !cat::is_pointer_in_range(static_cast<int4 const*>(nullptr), empty));
 }

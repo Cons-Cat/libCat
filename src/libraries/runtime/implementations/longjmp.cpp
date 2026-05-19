@@ -1,6 +1,7 @@
 #include <cat/runtime>
 
 // TODO: Should `__builtin_setjmp_reciever()` be used here?
+
 [[noreturn, gnu::naked]]
 void
 cat::longjmp(jmp_buffer& /* jump_buffer */, int8 /* return_value */) {

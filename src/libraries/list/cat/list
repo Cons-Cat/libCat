@@ -14,14 +14,14 @@ namespace cat {
 namespace detail {
 template <typename T>
 struct list_node {
-   list_node<T>* p_next_node = nullptr;
-   list_node<T>* p_previous_node = nullptr;
+   list_node<T>* _Nullable p_next_node = nullptr;
+   list_node<T>* _Nullable p_previous_node = nullptr;
    T storage;
 };
 
 template <typename T>
 struct slist_node {
-   slist_node<T>* p_next_node = nullptr;
+   slist_node<T>* _Nullable p_next_node = nullptr;
    T storage;
 };
 
@@ -32,8 +32,8 @@ template <typename T>
 struct list_storage {
    using node = list_node<T>;
 
-   detail::list_node<T>* m_p_head = nullptr;
-   detail::list_node<T>* m_p_tail = nullptr;
+   detail::list_node<T>* _Nullable m_p_head = nullptr;
+   detail::list_node<T>* _Nullable m_p_tail = nullptr;
 
    void
    reset() {
@@ -46,7 +46,7 @@ template <typename T>
 struct slist_storage {
    using node = slist_node<T>;
 
-   detail::slist_node<T>* m_p_head = nullptr;
+   detail::slist_node<T>* _Nullable m_p_head = nullptr;
 
    void
    reset() {
@@ -295,7 +295,7 @@ basic_list
 
    template <typename U>
    auto
-   append_new_node(node_type*& p_tail, U&& value) -> maybe<iterator> {
+   append_new_node(node_type* _Nullable& p_tail, U&& value) -> maybe<iterator> {
       node_type* p_node = $prop(m_allocator.template alloc<node_type>());
       p_node->p_next_node = nullptr;
       if constexpr (is_doubly_linked) {
@@ -317,14 +317,15 @@ basic_list
    }
 
    auto
-   append_new_nodes([[maybe_unused]] node_type*& p_tail) -> maybe<void> {
+   append_new_nodes([[maybe_unused]] node_type* _Nullable& p_tail)
+      -> maybe<void> {
       return monostate;
    }
 
    template <typename U, typename... Args>
    auto
-   append_new_nodes(node_type*& p_tail, U&& value, Args&&... remaining)
-      -> maybe<void> {
+   append_new_nodes(node_type* _Nullable& p_tail, U&& value,
+                    Args&&... remaining) -> maybe<void> {
       // Previously, this was implemented by a singular multi-allocation to
       // reduce the number of allocator calls. That caused issues during
       // cleanup, when every node necessarily has its own `free()`, resulting in
@@ -376,7 +377,7 @@ basic_list
    template <typename... Args>
    auto
    emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
-      auto* p_node = $prop(m_allocator.template alloc<node_type>());
+      auto* _Nonnull p_node = $prop(m_allocator.template alloc<node_type>());
       node_type& node = *p_node;
       new (&node.storage) T($fwd(arguments)...);
 
@@ -437,7 +438,7 @@ basic_list
       requires(is_implicitly_convertible<U, T>)
    auto
    push_front(U const& value) -> maybe<iterator> {
-      auto* p_node = $prop(m_allocator.template alloc<node_type>());
+      auto* _Nonnull p_node = $prop(m_allocator.template alloc<node_type>());
       node_type& node = *p_node;
       node.storage = static_cast<T>(value);
       this->place_node_front(node);
@@ -449,7 +450,7 @@ basic_list
    template <typename... Args>
    auto
    emplace_front(Args&&... arguments) -> maybe<iterator> {
-      auto* p_node = $prop(m_allocator.template alloc<node_type>());
+      auto* _Nonnull p_node = $prop(m_allocator.template alloc<node_type>());
       node_type& node = *p_node;
       new (&node.storage) T($fwd(arguments)...);
       this->place_node_front(node);
@@ -500,7 +501,7 @@ basic_list
       requires(is_doubly_linked)
    auto
    emplace_back(Args&&... arguments) -> maybe<iterator> {
-      auto* p_node = $prop(m_allocator.template alloc<node_type>());
+      auto* _Nonnull p_node = $prop(m_allocator.template alloc<node_type>());
       node_type& node = *p_node;
       new (&node.storage) T($fwd(arguments)...);
       this->place_node_back(node);
@@ -574,12 +575,13 @@ basic_list
 
    template <typename Node, typename Element>
    class list_iteration_context {
-      Node* m_p_node;
+    private:
+      Node* _Nonnull m_p_node;
 
     public:
       using element_type = Element&;
 
-      constexpr explicit list_iteration_context(Node* p_node)
+      constexpr explicit list_iteration_context(Node* _Nonnull p_node)
           : m_p_node(p_node) {
       }
 
@@ -607,12 +609,13 @@ basic_list
 
    template <typename Node, typename Element>
    class list_reverse_iteration_context {
-      Node* m_p_node;
+    private:
+      Node* _Nonnull m_p_node;
 
     public:
       using element_type = Element&;
 
-      constexpr explicit list_reverse_iteration_context(Node* p_node)
+      constexpr explicit list_reverse_iteration_context(Node* _Nonnull p_node)
           : m_p_node(p_node) {
       }
 
@@ -701,7 +704,7 @@ class list_stepanov_iterator
    // constructor. Should this still exist?
    //    iterator(iterator const&) = default;
 
-   list_stepanov_iterator(node_type* p_input) : m_p_node(p_input) {
+   list_stepanov_iterator(node_type* _Nullable p_input) : m_p_node(p_input) {
    }
 
    auto
@@ -729,7 +732,7 @@ class list_stepanov_iterator
       return it.m_p_node == m_p_node;
    }
 
-   node_type* m_p_node;
+   node_type* _Nullable m_p_node;
 };
 
 }  // namespace detail

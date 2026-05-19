@@ -1,7 +1,7 @@
 #include <cat/linux>
 
 auto
-nix::sys_openat2(file_descriptor dirfd, char const* p_file_path,
+nix::sys_openat2(file_descriptor dirfd, char const* _Nonnull p_file_path,
                  open_how const& how) -> nix::scaredy_nix<file_descriptor> {
    // The kernel takes `sizeof(open_how)` so it can detect callers built
    // against an older / newer struct layout.

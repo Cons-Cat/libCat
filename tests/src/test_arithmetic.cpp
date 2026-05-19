@@ -242,6 +242,32 @@ $test(arithmetic_precision_reference_accessors) {
                == std::partial_ordering::unordered);
 }
 
+$test(arithmetic_precision_reference_rebind) {
+   float4 first = 1_f4;
+   float4 second = 10_f4;
+   auto ref = first.fast();
+   ref += 2_f4;
+   cat::verify(first == 3_f4);
+   cat::verify(second == 10_f4);
+   ref.rebind(second);
+   ref += 5_f4;
+   cat::verify(first == 3_f4);
+   cat::verify(second == 15_f4);
+}
+
+$test(arithmetic_overflow_reference_rebind) {
+   int4 first = 1_i4;
+   int4 second = 10_i4;
+   auto ref = first.wrap();
+   ref += 2_i4;
+   cat::verify(first == 3_i4);
+   cat::verify(second == 10_i4);
+   ref.rebind(second);
+   ref += 5_i4;
+   cat::verify(first == 3_i4);
+   cat::verify(second == 15_i4);
+}
+
 #ifdef CAT_ENABLE_FMA_TESTS
 $test(arithmetic_fma_members) {
    int4 integer = 5_i4;
@@ -5311,9 +5337,8 @@ $test(arithmetic_idx_operations_traits_and_word_conversions) {
 $test(arithmetic_idx_maybe_default_compact) {
    using maybe_idx = cat::maybe<cat::idx>;
 
-   // The default compact specialization fires, so the storage is the
-   // same width as `idx` itself with no separate engaged-flag.
-   static_assert(maybe_idx::uses_compact_storage);
+   // The default compact specialization stores the empty state with no
+   // separate engaged-flag.
    static_assert(sizeof(maybe_idx) == sizeof(cat::idx));
 
    // Default construction is empty.

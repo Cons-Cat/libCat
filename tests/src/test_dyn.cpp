@@ -298,7 +298,7 @@ $test(dyn_construct_empty) {
    cat::verify(!dyn.has_value());
    cat::verify(dyn.type_descriptor() == cat::p_dyn_type_id_for<void>);
 
-   dyn.template emplace<kitty>(99_i4);
+   dyn.emplace<kitty>(99_i4);
    cat::verify(dyn.has_value());
    cat::verify(cat::dyn_invoke<treat_count>(dyn) == 99);
 }
@@ -447,7 +447,7 @@ $test(dyn_copy_assign) {
 $test(dyn_emplace) {
    dyn_treat_count_feed dyn{kitty{0}};
 
-   kitty& ref = dyn.template emplace<kitty>(50_i4);
+   kitty& ref = dyn.emplace<kitty>(50_i4);
    cat::verify(ref.treats == 50);
    cat::verify(cat::dyn_invoke<treat_count>(dyn) == 50);
 
@@ -462,7 +462,7 @@ $test(dyn_emplace) {
    // destructor.
    static_assert([] consteval {
       dyn_treat_count_feed dyn{kitty{0}};
-      dyn.template emplace<kitty>(50_i4);
+      dyn.emplace<kitty>(50_i4);
       cat::dyn_invoke<feed>(dyn, 7_i4);
       return cat::dyn_invoke<treat_count>(dyn);
    }() == 57);
@@ -752,6 +752,38 @@ $test(dyn_ref_no_rebind) {
    // Cross-type rebind via `r = other` is rejected by the deleted operator=.
 }
 
+// `dyn_ref::rebind` is the explicit form of the cross-type rebind that the
+// deleted `operator=(T&&)` directs users towards. It updates all three view
+// pointers in one shot, so the next dispatch dispatches on the new value's
+// type.
+$test(dyn_ref_rebind) {
+   kitty cat{7};
+   puppy dog{20};
+
+   cat::dyn_ref<treat_count> ref{cat};
+   cat::verify(ref.p_type_id() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(cat::dyn_invoke<treat_count>(ref) == 7);
+
+   // Rebind to a different value of the same type.
+   kitty other{11};
+   ref.rebind(other);
+   cat::verify(ref.p_type_id() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(cat::dyn_invoke<treat_count>(ref) == 11);
+
+   // Rebind to a different concrete type that also satisfies `Methods`.
+   ref.rebind(dog);
+   cat::verify(ref.p_type_id() == cat::p_dyn_type_id_for<puppy>);
+   cat::verify(cat::dyn_invoke<treat_count>(ref) == 20);
+
+   // `const_dyn_ref` rebinds the same way.
+   kitty const cv1{3};
+   kitty const cv2{4};
+   cat::const_dyn_ref<treat_count> cref{cv1};
+   cat::verify(cat::dyn_invoke<treat_count>(cref) == 3);
+   cref.rebind(cv2);
+   cat::verify(cat::dyn_invoke<treat_count>(cref) == 4);
+}
+
 // Assigning a value via `operator=` uses emplace under the hood.
 $test(dyn_assign_value) {
    dyn_treat_count dyn;
@@ -924,4 +956,55 @@ $test(dyn_holder_ptr_narrowing) {
    cat::dyn_ptr<say, treat_count> wide = &dyn;
    cat::dyn_ptr<treat_count> narrow = wide;
    cat::verify(cat::dyn_invoke<treat_count>(*narrow) == 30);
+}
+
+namespace {
+
+// A trivially destructible animal. The default destructor is implicit so
+// `is_trivially_destructible<triv_kitty>` holds, which is what allows it
+// into holders that omit `cat::destructor`.
+struct triv_kitty {
+   cat::int4 treats = 0;
+
+   [[nodiscard]]
+   constexpr auto
+   treat_count() const -> cat::int4 {
+      return treats;
+   }
+};
+
+static_assert(cat::is_trivially_destructible<triv_kitty>);
+static_assert(!cat::is_trivially_destructible<kitty>);
+
+}  // namespace
+
+// Holders without `cat::destructor` accept trivially destructible types and
+// reject types that need a runtime destructor call.
+$test(dyn_destructor_optional_for_trivial_types) {
+   using dyn_no_dtor = cat::dyn_inplace<treat_count>;
+
+   static_assert(cat::is_constructible<dyn_no_dtor, triv_kitty>);
+   static_assert(!cat::is_constructible<dyn_no_dtor, kitty>);
+
+   dyn_no_dtor dyn{triv_kitty{17}};
+   cat::verify(cat::dyn_invoke<treat_count>(dyn) == 17);
+
+   dyn.emplace<triv_kitty>(99_i4);
+   cat::verify(cat::dyn_invoke<treat_count>(dyn) == 99);
+
+   cat::page_allocator local_pager;
+   cat::span page = local_pager.alloc_multi<cat::byte>(4_uki).or_exit();
+   $defer {
+      local_pager.free(page);
+   };
+   auto allocator = cat::make_linear_allocator(page);
+
+   using basic_no_dtor = cat::dyn<cat::linear_allocator, treat_count>;
+   static_assert(
+      cat::is_constructible<basic_no_dtor, cat::linear_allocator&, triv_kitty>);
+   static_assert(
+      !cat::is_constructible<basic_no_dtor, cat::linear_allocator&, kitty>);
+
+   basic_no_dtor heap_dyn{allocator, triv_kitty{42}};
+   cat::verify(cat::dyn_invoke<treat_count>(heap_dyn) == 42);
 }

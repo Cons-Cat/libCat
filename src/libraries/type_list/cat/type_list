@@ -9,6 +9,7 @@ namespace cat {
 
 template <typename... Types>
 class type_list {
+ private:
    template <typename>
    struct get_first_element;
 

@@ -24,6 +24,7 @@ using precision_reference_reverse_result =
 
 template <typename WrappedQual, precision_policies precision>
 class precision_reference {
+ private:
    template <typename, precision_policies>
    friend class precision_reference;
 
@@ -36,8 +37,14 @@ class precision_reference {
 
    static constexpr precision_policies precision_policy = precision;
 
+   // Rebind this reference wrapper to a different address.
+   constexpr void
+   rebind(WrappedQual& w [[clang::lifetime_capture_by(this)]]) {
+      m_wrapped = __builtin_addressof(w);
+   }
+
  private:
-   WrappedQual* m_wrapped;
+   WrappedQual* _Nonnull m_wrapped;
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto

@@ -63,7 +63,8 @@ namespace to_chars_detail {
 // explanation.
 
 JKJ_FORCEINLINE static void
-print_9_digits(uint4::raw_type s32, int& exponent, char*& buffer) noexcept {
+print_9_digits(uint4::raw_type s32, int& exponent,
+               char* _Nonnull& buffer) noexcept {
    if (s32 < 100) {
       if (s32 < 10) {
          // 1 digit.

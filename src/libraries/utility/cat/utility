@@ -54,8 +54,9 @@ unconst(T const& value) -> T& {
 }
 
 template <typename T>
+[[gnu::returns_nonnull]]
 constexpr auto
-unconst(T const* p_value) -> T* {
+unconst(T const* _Nonnull p_value) -> T* _Nonnull {
    return const_cast<T*>(p_value);
 }
 

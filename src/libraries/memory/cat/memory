@@ -10,9 +10,11 @@ namespace cat {
 
 // `memcpy`-class copy. The `[p_source, p_source+bytes)` and
 // `[p_destination, p_destination+bytes)` intervals must not overlap (including
-// a single shared byte). Violations are rejected by `assert`.
+// a single shared byte). Violations are rejected by `assert`. The `__restrict`
+// qualifiers communicate the non-overlap to the optimizer.
 constexpr void
-copy_memory(void const* p_source, void* p_destination, idx bytes);
+copy_memory(void const* _Nonnull __restrict p_source,
+            void* _Nonnull __restrict p_destination, idx bytes);
 
 template <typename T, idx extent = idx::max()>
 class span;
@@ -21,12 +23,12 @@ class span;
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_pointer_in_range(T const* p_pointer, span<T const> range) -> bool;
+is_pointer_in_range(T const* _Nullable p_pointer, span<T const> range) -> bool;
 
 [[nodiscard]]
 constexpr auto
-is_memory_overlapping(void const* p_first, idx first_bytes,
-                      void const* p_second, idx second_bytes) -> bool;
+is_memory_overlapping(void const* _Nonnull p_first, idx first_bytes,
+                      void const* _Nonnull p_second, idx second_bytes) -> bool;
 
 // This is implemented in `<cat/span>`.
 template <typename T>
@@ -35,7 +37,8 @@ constexpr auto
 is_memory_overlapping(span<T const> first, span<T const> second) -> bool;
 
 constexpr void
-copy_memory_scalar(void const* p_source, void* p_destination, idx bytes);
+copy_memory_scalar(void const* _Nonnull __restrict p_source,
+                   void* _Nonnull __restrict p_destination, idx bytes);
 
 // This is implemented in `<cat/span>`.
 template <typename T>
@@ -52,19 +55,20 @@ copy_memory_backward(span<T const> source, span<T> destination);
 // overlap, copies forward when `p_destination <= p_source` and backward
 // otherwise so every source byte is read before it can be overwritten.
 constexpr void
-copy_memory_backward_scalar(void const* p_source, void* p_destination,
-                            idx bytes);
+copy_memory_backward_scalar(void const* _Nonnull p_source,
+                            void* _Nonnull p_destination, idx bytes);
 
 // `memmove`-class copy for arbitrary length. Overlapping source and destination
 // intervals are allowed.
 constexpr void
-copy_memory_backward(void const* p_source, void* p_destination, idx bytes);
+copy_memory_backward(void const* _Nonnull p_source,
+                     void* _Nonnull p_destination, idx bytes);
 
 template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
 [[clang::no_builtin]]
 constexpr void
-set_memory_scalar(T* p_source, T value, idx size) {
+set_memory_scalar(T* _Nonnull p_source, T value, idx size) {
    for (idx i = 0u; i < size; ++i) {
       p_source[i] = value;
    }
@@ -76,12 +80,12 @@ template <typename T = unsigned char>
 // `[[gnu::noinline]]` attribute prevents this.
 [[gnu::noinline]]
 constexpr void
-set_memory_scalar_explicit(T* p_source, T value, idx size) {
+set_memory_scalar_explicit(T* _Nonnull p_source, T value, idx size) {
    set_memory_scalar(p_source, value, size);
 }
 
 constexpr void
-zero_memory_scalar(void* p_source, idx bytes) {
+zero_memory_scalar(void* _Nonnull p_source, idx bytes) {
    set_memory_scalar(static_cast<unsigned char*>(p_source), (unsigned char)0,
                      bytes);
 }
@@ -90,7 +94,7 @@ zero_memory_scalar(void* p_source, idx bytes) {
 // `[[gnu::noinline]]` attribute prevents this.
 [[gnu::noinline]]
 constexpr void
-zero_memory_scalar_explicit(void* p_source, idx bytes) {
+zero_memory_scalar_explicit(void* _Nonnull p_source, idx bytes) {
    set_memory_scalar(static_cast<unsigned char*>(p_source), (unsigned char)0,
                      bytes);
 }
@@ -98,10 +102,12 @@ zero_memory_scalar_explicit(void* p_source, idx bytes) {
 namespace detail {
 
 void
-copy_memory_impl(void const* p_source, void* p_destination, idx bytes);
+copy_memory_impl(void const* _Nonnull __restrict p_source,
+                 void* _Nonnull __restrict p_destination, idx bytes);
 
 void
-copy_memory_backward_impl(void const* p_source, void* p_destination, idx bytes);
+copy_memory_backward_impl(void const* _Nonnull p_source,
+                          void* _Nonnull p_destination, idx bytes);
 
 // Type-erased `set_memory` function.
 template <typename T>
@@ -109,7 +115,7 @@ template <typename T>
 // Clang may still replace this loop with `memset`. `memset` can call back into
 // this route, which makes a circular reference some linkers reject.
 constexpr void
-set_memory_detail(void* p_source, T value, idx const size) {
+set_memory_detail(void* _Nonnull p_source, T value, idx const size) {
    // TODO: Assert that these parameters do not index out of bounds or loop
    // infinitely.
 
@@ -141,7 +147,8 @@ set_memory_detail(void* p_source, T value, idx const size) {
          // TODO: Consider optimizing this by tiling the loop.
          using vector_type = fixed_size_simd<T, lanes>;
          while (remaining_bytes >= sizeof(vector_type)) {
-            auto* p_vector = __builtin_bit_cast(vector_type*, p_current);
+            auto* _Nonnull p_vector =
+               __builtin_bit_cast(vector_type*, p_current);
             p_vector->fill(value);
             p_current += lanes;
             remaining_bytes -= lanes;
@@ -170,7 +177,7 @@ set_memory_detail(void* p_source, T value, idx const size) {
 template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
 constexpr void
-set_memory(void* p_source, T value, idx size) {
+set_memory(void* _Nonnull p_source, T value, idx size) {
    detail::set_memory_detail(p_source, make_raw_arithmetic(value), size);
 }
 
@@ -181,13 +188,13 @@ template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
 [[gnu::noinline]]
 constexpr void
-set_memory_explicit(void* p_source, T value, idx size) {
+set_memory_explicit(void* _Nonnull p_source, T value, idx size) {
    set_memory(p_source, value, size);
 }
 
 // Set all bytes at this address to zero.
 constexpr void
-zero_memory(void* p_source, idx size) {
+zero_memory(void* _Nonnull p_source, idx size) {
    detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), size);
 }
 
@@ -196,7 +203,7 @@ zero_memory(void* p_source, idx size) {
 // constant-folded out.
 [[gnu::noinline]]
 constexpr void
-zero_memory_explicit(void* p_source, idx bytes) {
+zero_memory_explicit(void* _Nonnull p_source, idx bytes) {
    zero_memory(p_source, bytes);
 }
 
@@ -244,32 +251,38 @@ zero_object_explicit(T& object) {
 // when it shares its location in memory with, but has distinct lifetime from, a
 // separate `const`-qualified object.
 template <typename T>
-[[nodiscard]]
+[[nodiscard, gnu::returns_nonnull]]
 constexpr auto
-launder(T* p_object) -> T* {
+launder(T* _Nonnull p_object) -> T* _Nonnull {
    return __builtin_launder(p_object);
 }
 
 // `launder` cannot be used on functions.
 template <typename FunctionPtrReturn, typename... Args>
-constexpr void launder(FunctionPtrReturn (*)(Args...)) = delete;
+constexpr void launder(FunctionPtrReturn (*_Nonnull)(Args...)) = delete;
 
 template <typename FunctionPtrReturn, typename... Args>
-constexpr void launder(FunctionPtrReturn (*)(Args..., ...)) = delete;
+constexpr void launder(FunctionPtrReturn (*_Nonnull)(Args..., ...)) = delete;
 
 // `launder` cannot be used on `void*`.
 constexpr void
-launder(void*) = delete;
+launder(void* _Nullable) = delete;
 constexpr void
-launder(void const*) = delete;
+launder(void const* _Nullable) = delete;
 constexpr void
-launder(void volatile*) = delete;
+launder(void volatile* _Nullable) = delete;
 constexpr void
-launder(void const volatile*) = delete;
+launder(void const volatile* _Nullable) = delete;
+
+// `launder` cannot be used on `nullptr`. Without this overload the call is
+// ambiguous between the deleted `void*` cv-overloads.
+constexpr void
+launder(decltype(nullptr)) = delete;
 
 template <typename T>
+[[gnu::returns_nonnull]]
 auto
-relocate_at(T* p_source, T* p_destination) -> T* {
+relocate_at(T* _Nonnull p_source, T* _Nonnull p_destination) -> T* _Nonnull {
    if constexpr (is_trivially_relocatable<T>) {
       if (p_source == p_destination) {
          return launder(p_destination);
@@ -277,15 +290,16 @@ relocate_at(T* p_source, T* p_destination) -> T* {
       __builtin_memcpy_inline(p_destination, p_source, sizeof(T));
       return launder(p_destination);
    } else {
-      T* p_new = new (p_destination) T(move(*p_source));
+      T* _Nonnull p_new = new (p_destination) T(move(*p_source));
       p_source->~T();
       return p_new;
    }
 }
 
 template <typename T>
+[[gnu::returns_nonnull]]
 auto
-relocate(T& source, T* p_destination) -> T* {
+relocate(T& source, T* _Nonnull p_destination) -> T* _Nonnull {
    return relocate_at(__builtin_addressof(source), p_destination);
 }
 

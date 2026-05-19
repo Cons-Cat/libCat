@@ -99,7 +99,7 @@ $test(thread_clone_failure) {
    nix::rlimit original{};
    cat::verify(nix::sys_getrlimit(
                   nix::rlimit_resource::max_processes_and_threads_per_real_user,
-                  &original)
+                  original)
                   .has_value());
 
    // Lower only the soft limit so the hard ceiling stays high enough to restore
@@ -110,7 +110,7 @@ $test(thread_clone_failure) {
    };
    cat::verify(
       nix::sys_setrlimit(
-         nix::rlimit_resource::max_processes_and_threads_per_real_user, &narrow)
+         nix::rlimit_resource::max_processes_and_threads_per_real_user, narrow)
          .has_value());
 
    // `cat::thread::spawn` maps errors to `nullopt`. `nix::process` with the
@@ -124,7 +124,7 @@ $test(thread_clone_failure) {
 
    cat::verify(nix::sys_setrlimit(
                   nix::rlimit_resource::max_processes_and_threads_per_real_user,
-                  &original)
+                  original)
                   .has_value());
 
    cat::verify(!spawn_result.has_value());

@@ -241,7 +241,6 @@ $test(simd_size_data_and_mask_size_data) {
    int_vec vi = {10, 20, 30, 40};
    cat::verify(int_vec::size() == 4u);
    cat::verify(vi.size() == 4u);
-   cat::verify(vi.data() != nullptr);
    vi.set_lane(0u, 99);
    cat::verify(vi[0u] == 99);
 
@@ -251,7 +250,6 @@ $test(simd_size_data_and_mask_size_data) {
    mi.load(pattern);
    cat::verify(int_vec_mask::size() == 4u);
    cat::verify(mi.size() == 4u);
-   cat::verify(mi.data() != nullptr);
 }
 
 $test(fixed_size_simd_alignment) {
@@ -2211,6 +2209,31 @@ $test(simd_precision_reference_accessors) {
    auto fast_root = cat::simd_sqrt(fast_value);
    static_assert(cat::is_same<decltype(fast_root), float4_fastx4>);
    cat::verify(cat::abs(fast_root[0u] - 1_f4) < 0.001_f4);
+}
+
+$test(simd_precision_reference_rebind) {
+   float4x4 first = {1_f4, 2_f4, 3_f4, 4_f4};
+   float4x4 second = {10_f4, 20_f4, 30_f4, 40_f4};
+   float4x4 const increment(1_f4);
+   auto ref = first.fast();
+   ref += increment;
+   cat::verify(first[0u] == 2_f4);
+   cat::verify(second[0u] == 10_f4);
+   ref.rebind(second);
+   ref += increment;
+   cat::verify(first[0u] == 2_f4);
+   cat::verify(second[0u] == 11_f4);
+}
+
+$test(simd_overflow_reference_rebind) {
+   int4x4 first = {1_i4, 2_i4, 3_i4, 4_i4};
+   int4x4 second = {10_i4, 20_i4, 30_i4, 40_i4};
+   int4x4 const increment(1_i4);
+   auto ref = first.wrap();
+   cat::verify((ref + increment)[0u] == 2_i4);
+   ref.rebind(second);
+   cat::verify((ref + increment)[0u] == 11_i4);
+   cat::verify(first[0u] == 1_i4);
 }
 
 $test(simd_mask_reduce_integral) {

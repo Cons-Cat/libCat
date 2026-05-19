@@ -526,7 +526,8 @@ struct simd_load_blend_masked_impl {
    [[nodiscard]]
    constexpr auto
    operator()(simd<T, Abi> passthrough,
-              simd<T, Abi>::memory_lane const* p_source) const -> simd<T, Abi> {
+              simd<T, Abi>::memory_lane const* _Nonnull p_source) const
+      -> simd<T, Abi> {
       simd<T, Abi> result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
@@ -544,7 +545,8 @@ struct simd_load_blend_masked_impl {
    [[nodiscard]]
    constexpr auto
    operator()(U&& passthrough_fill,
-              simd<T, Abi>::memory_lane const* p_source) const -> simd<T, Abi> {
+              simd<T, Abi>::memory_lane const* _Nonnull p_source) const
+      -> simd<T, Abi> {
       return (*this)(simd<T, Abi>($fwd(passthrough_fill)), p_source);
    }
 };
@@ -557,7 +559,7 @@ struct simd_load_aligned_blend_masked_impl {
    [[nodiscard]]
    constexpr auto
    operator()(simd<T, Abi> passthrough,
-              simd<T, Abi>::memory_lane const* p_source) const
+              simd<T, Abi>::memory_lane const* _Nonnull p_source) const
       -> maybe<simd<T, Abi>> {
       if (!is_aligned(unconst(p_source), simd<T, Abi>::abi_type::alignment)) {
          return maybe<simd<T, Abi>>{};
@@ -579,7 +581,7 @@ struct simd_load_aligned_blend_masked_impl {
    [[nodiscard]]
    constexpr auto
    operator()(U&& passthrough_fill,
-              simd<T, Abi>::memory_lane const* p_source) const
+              simd<T, Abi>::memory_lane const* _Nonnull p_source) const
       -> maybe<simd<T, Abi>> {
       return (*this)(simd<T, Abi>($fwd(passthrough_fill)), p_source);
    }
@@ -597,7 +599,7 @@ struct simd_store_to_masked_impl {
    template <typename T, typename Abi>
    constexpr void
    operator()(simd<T, Abi> values,
-              simd<T, Abi>::memory_lane* p_destination) const {
+              simd<T, Abi>::memory_lane* _Nonnull p_destination) const {
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
          if (mask[i]) {
@@ -608,7 +610,8 @@ struct simd_store_to_masked_impl {
 
    template <typename T, typename Abi, typename IdxAbi, typename Idx>
    constexpr void
-   operator()(T* p_base, simd<Idx, IdxAbi> indices, simd<T, Abi> values) const {
+   operator()(T* _Nonnull p_base, simd<Idx, IdxAbi> indices,
+              simd<T, Abi> values) const {
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
          if (mask[i]) {
@@ -626,8 +629,8 @@ struct simd_partial_load_blend_masked_impl {
    [[nodiscard]]
    constexpr auto
    operator()(simd<T, Abi> passthrough,
-              simd<T, Abi>::memory_lane const* p_source, idx count) const
-      -> simd<T, Abi> {
+              simd<T, Abi>::memory_lane const* _Nonnull p_source,
+              idx count) const -> simd<T, Abi> {
       simd<T, Abi> result = passthrough;
       idx const active_lane_count = count < Abi::lanes ? count : Abi::lanes;
 #pragma clang loop vectorize_predicate(enable)
@@ -696,7 +699,7 @@ struct simd_load_from_blend_masked_impl {
    template <typename T, typename Abi, typename IdxAbi, typename Idx>
    [[nodiscard]]
    constexpr auto
-   operator()(simd<T, Abi> passthrough, T const* p_base,
+   operator()(simd<T, Abi> passthrough, T const* _Nonnull p_base,
               simd<Idx, IdxAbi> indices) const -> simd<T, Abi> {
       simd<T, Abi> result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
@@ -717,6 +720,7 @@ struct simd_load_from_blend_masked_impl {
 // base so signatures do not depend on `Derived` while it is incomplete.
 template <typename Derived, is_simd Simd>
 class simd_elementwise_factory_interface {
+ private:
    friend Derived;
 
  public:
@@ -724,7 +728,8 @@ class simd_elementwise_factory_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator()(Simd::memory_lane const* p_source) const -> decltype(auto) {
+   operator()(Simd::memory_lane const* _Nonnull p_source) const
+      -> decltype(auto) {
       return static_cast<Derived const*>(this)->invoke(p_source);
    }
 
@@ -751,7 +756,7 @@ struct make_simd_loaded_aligned_impl
 
    [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
-   invoke(Simd::memory_lane const* p_source) const -> maybe<Simd> {
+   invoke(Simd::memory_lane const* _Nonnull p_source) const -> maybe<Simd> {
       if (!is_aligned(unconst(p_source), Simd::abi_type::alignment)) {
          return maybe<Simd>{};
       }
@@ -782,7 +787,7 @@ struct make_simd_loaded_unaligned_impl
 
    [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
-   invoke(Simd::memory_lane const* p_source) const -> Simd {
+   invoke(Simd::memory_lane const* _Nonnull p_source) const -> Simd {
       Simd result{};
       result.load_unaligned(p_source);
       return result;
@@ -809,7 +814,7 @@ struct make_simd_loaded_impl
 
    [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
-   invoke(Simd::memory_lane const* p_source) const -> Simd {
+   invoke(Simd::memory_lane const* _Nonnull p_source) const -> Simd {
       Simd result{};
       result.load(p_source);
       return result;
@@ -830,7 +835,7 @@ template <is_simd Simd>
 struct make_simd_loaded_non_temporal_impl {
    [[nodiscard]]
    constexpr auto
-   operator()(Simd::memory_lane const* p_source) const -> Simd {
+   operator()(Simd::memory_lane const* _Nonnull p_source) const -> Simd {
       Simd result{};
       result.load_non_temporal(p_source);
       return result;
@@ -842,7 +847,8 @@ template <is_simd Simd>
 struct make_simd_partial_loaded_impl {
    [[nodiscard]]
    constexpr auto
-   operator()(Simd::memory_lane const* p_source, idx count) const -> Simd {
+   operator()(Simd::memory_lane const* _Nonnull p_source, idx count) const
+      -> Simd {
       Simd result{};
       result.partial_load(p_source, count);
       return result;
@@ -911,8 +917,8 @@ struct simd_mask_load_blend_masked_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator()(simd_mask<T, Abi> passthrough, bool const* p_lane_bools) const
-      -> simd_mask<T, Abi> {
+   operator()(simd_mask<T, Abi> passthrough,
+              bool const* _Nonnull p_lane_bools) const -> simd_mask<T, Abi> {
       simd_mask<T, Abi> result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < simd_mask<T, Abi>::abi_type::lanes; ++i) {
@@ -949,6 +955,7 @@ struct simd_mask_fill_blend_masked_impl {
 // `make_simd_mask_loaded`.
 template <typename Derived, is_simd_mask M>
 class simd_elementwise_mask_factory_interface {
+ private:
    friend Derived;
 
  public:
@@ -956,7 +963,7 @@ class simd_elementwise_mask_factory_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator()(bool const* p_lane_bools) const -> decltype(auto) {
+   operator()(bool const* _Nonnull p_lane_bools) const -> decltype(auto) {
       return static_cast<Derived const*>(this)->invoke(p_lane_bools);
    }
 
@@ -998,7 +1005,7 @@ struct make_simd_mask_loaded_impl
 
    [[nodiscard]]
    constexpr auto
-   invoke(bool const* p_data) const -> M {
+   invoke(bool const* _Nonnull p_data) const -> M {
       M mask{};
       mask.load(p_data);
       return mask;
@@ -1048,7 +1055,7 @@ struct simd_load_from_impl {
    template <typename IdxAbi, typename Idx>
    [[nodiscard]]
    constexpr auto
-   operator()(T const* p_base, simd<Idx, IdxAbi> indices) const
+   operator()(T const* _Nonnull p_base, simd<Idx, IdxAbi> indices) const
       -> simd<T, Abi> {
       simd<T, Abi> result{};
       for (idx i = 0u; i < Abi::lanes; ++i) {
@@ -1071,7 +1078,8 @@ template <typename T, typename Abi>
 struct simd_store_to_impl {
    template <typename IdxAbi, typename Idx>
    constexpr void
-   operator()(T* p_base, simd<Idx, IdxAbi> indices, simd<T, Abi> values) const {
+   operator()(T* _Nonnull p_base, simd<Idx, IdxAbi> indices,
+              simd<T, Abi> values) const {
       for (idx i = 0u; i < Abi::lanes; ++i) {
          p_base[idx(static_cast<idx::raw_type>(indices[i]))] = values[i];
       }
