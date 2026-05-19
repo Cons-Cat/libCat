@@ -213,6 +213,7 @@ template <typename T, typename Abi>
 constexpr auto
 simd_floating_add_policy(cat::simd<T, Abi> const& left,
                          cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
+   // NOLINTBEGIN(bugprone-branch-clone)
    if constexpr (simd_float_precision_policy<T>
                  == precision_policies::precise) {
 #pragma float_control(precise, on)
@@ -221,6 +222,7 @@ simd_floating_add_policy(cat::simd<T, Abi> const& left,
 #pragma float_control(precise, off)
       return cat::simd<T, Abi>(left.raw + right.raw);
    }
+   // NOLINTEND(bugprone-branch-clone)
 }
 
 template <typename T, typename Abi>
@@ -229,6 +231,7 @@ template <typename T, typename Abi>
 constexpr auto
 simd_floating_sub_policy(cat::simd<T, Abi> const& left,
                          cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
+   // NOLINTBEGIN(bugprone-branch-clone)
    if constexpr (simd_float_precision_policy<T>
                  == precision_policies::precise) {
 #pragma float_control(precise, on)
@@ -237,6 +240,7 @@ simd_floating_sub_policy(cat::simd<T, Abi> const& left,
 #pragma float_control(precise, off)
       return cat::simd<T, Abi>(left.raw - right.raw);
    }
+   // NOLINTEND(bugprone-branch-clone)
 }
 
 template <typename T, typename Abi>
@@ -245,6 +249,7 @@ template <typename T, typename Abi>
 constexpr auto
 simd_floating_mul_policy(cat::simd<T, Abi> const& left,
                          cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
+   // NOLINTBEGIN(bugprone-branch-clone)
    if constexpr (simd_float_precision_policy<T>
                  == precision_policies::precise) {
 #pragma float_control(precise, on)
@@ -253,6 +258,7 @@ simd_floating_mul_policy(cat::simd<T, Abi> const& left,
 #pragma float_control(precise, off)
       return cat::simd<T, Abi>(left.raw * right.raw);
    }
+   // NOLINTEND(bugprone-branch-clone)
 }
 
 template <typename T, typename Abi>
@@ -261,6 +267,7 @@ template <typename T, typename Abi>
 constexpr auto
 simd_floating_div_policy(cat::simd<T, Abi> const& left,
                          cat::simd<T, Abi> const& right) -> cat::simd<T, Abi> {
+   // NOLINTBEGIN(bugprone-branch-clone)
    if constexpr (simd_float_precision_policy<T>
                  == precision_policies::precise) {
 #pragma float_control(precise, on)
@@ -269,6 +276,7 @@ simd_floating_div_policy(cat::simd<T, Abi> const& left,
 #pragma float_control(precise, off)
       return cat::simd<T, Abi>(left.raw / right.raw);
    }
+   // NOLINTEND(bugprone-branch-clone)
 }
 
 template <typename T, typename Abi>

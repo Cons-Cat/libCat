@@ -11,12 +11,50 @@ CompileFlags:
 Diagnostics:
   ClangTidy:
     Remove:
+      - bugprone-easily-swappable-parameters
+      - bugprone-reserved-identifier
+      - performance-noexcept-move-constructor
+      - modernize-use-auto
+      - modernize-type-traits
       - readability-magic-numbers
       - cppcoreguidelines-avoid-magic-numbers
-      - bugprone-easily-swappable-parameters
-      - modernize-type-traits
+      - readability-identifier-length
+      - readability-uppercase-literal-suffix
+      - readability-convert-member-functions-to-static
+      - readability-static-accessed-through-instance
+      - readability-function-cognitive-complexity
+      - readability-redundant-parentheses
+      - readability-redundant-declaration
+      - cppcoreguidelines-pro-type-union-access
+      - cppcoreguidelines-pro-bounds-pointer-arithmetic
+      - cppcoreguidelines-pro-type-reinterpret-cast
+      - misc-non-private-member-variables-in-classes
+      - misc-unused-using-decls
+      - misc-unconventional-assign-operator
+      - misc-use-internal-linkage
+      - misc-header-include-cycle
+      - misc-include-cleaner
   Suppress:
+    - bugprone-easily-swappable-parameters
+    - bugprone-reserved-identifier
+    - performance-noexcept-move-constructor
+    - modernize-use-auto
+    - modernize-type-traits
     - readability-magic-numbers
     - cppcoreguidelines-avoid-magic-numbers
-    - bugprone-easily-swappable-parameters
-    - modernize-type-traits
+    - readability-identifier-length
+    - readability-uppercase-literal-suffix
+    - readability-convert-member-functions-to-static
+    - readability-static-accessed-through-instance
+    - readability-function-cognitive-complexity
+    - readability-redundant-parentheses
+    - readability-redundant-declaration
+    - cppcoreguidelines-pro-type-union-access
+    - cppcoreguidelines-pro-bounds-pointer-arithmetic
+    - cppcoreguidelines-pro-type-reinterpret-cast
+    - misc-non-private-member-variables-in-classes
+    - misc-unused-using-decls
+    - misc-unconventional-assign-operator
+    - misc-use-internal-linkage
+    - misc-header-include-cycle
+    - misc-include-cleaner

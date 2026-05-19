@@ -51,6 +51,7 @@ template <precision_policies precision, typename T, typename U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 simd_float_divide(T lhs, U rhs) {
+   // NOLINTBEGIN(bugprone-branch-clone)
    if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
       return lhs / rhs;
@@ -58,6 +59,7 @@ simd_float_divide(T lhs, U rhs) {
 #pragma float_control(precise, off)
       return lhs / rhs;
    }
+   // NOLINTEND(bugprone-branch-clone)
 }
 
 }  // namespace cat::detail
