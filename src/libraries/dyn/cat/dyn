@@ -670,7 +670,7 @@ class [[gsl::Pointer]] dyn_ptr {
    // Returns `nullptr` when this `dyn_ptr` is empty.
    [[nodiscard]]
    constexpr auto
-   raw() const -> void* _Nullable {
+   get() const -> void* _Nullable {
       return m_p_value;
    }
 

@@ -42,6 +42,7 @@ namespace cat {
 // type. If the allocator's members are `public`, that is not required.
 struct dyn_allocator_friend {
    template <typename T>
+   [[gnu::always_inline, gnu::nodebug]]
    static auto
    allocate(T& self, idx allocation_bytes)
       -> decltype(self.allocate(allocation_bytes)) {
@@ -49,7 +50,7 @@ struct dyn_allocator_friend {
    }
 
    template <typename T>
-   [[clang::ownership_takes(libcat, 2)]]
+   [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
    static auto
    deallocate(T& self, void const* _Nonnull p_storage, idx allocation_bytes)
       -> decltype(self.deallocate(p_storage, allocation_bytes)) {
@@ -57,12 +58,14 @@ struct dyn_allocator_friend {
    }
 
    template <typename T>
+   [[gnu::always_inline, gnu::nodebug]]
    static auto
    reset(T& self) -> decltype(self.reset()) {
       return self.reset();
    }
 
    template <typename T>
+   [[gnu::always_inline, gnu::nodebug]]
    static auto
    aligned_allocate(T& self, uword alignment, idx allocation_bytes)
       -> decltype(self.aligned_allocate(alignment, allocation_bytes)) {
@@ -70,6 +73,7 @@ struct dyn_allocator_friend {
    }
 
    template <typename T>
+   [[gnu::always_inline, gnu::nodebug]]
    static auto
    allocate_feedback(T& self, idx allocation_bytes)
       -> decltype(self.allocate_feedback(allocation_bytes)) {
@@ -77,6 +81,7 @@ struct dyn_allocator_friend {
    }
 
    template <typename T>
+   [[gnu::always_inline, gnu::nodebug]]
    static auto
    aligned_allocate_feedback(T& self, uword alignment, idx allocation_bytes)
       -> decltype(self.aligned_allocate_feedback(alignment, allocation_bytes)) {
@@ -121,6 +126,7 @@ struct dyn_allocate {
    using signature = auto(idx) -> maybe_ptr<void>;
 
    template <has_allocate T>
+   [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(T& self, idx allocation_bytes) -> maybe_ptr<void> {
       return dyn_allocator_friend::allocate(self, allocation_bytes);
@@ -131,7 +137,7 @@ struct dyn_deallocate {
    using signature = void(void const* _Nonnull, idx);
 
    template <has_deallocate T>
-   [[clang::ownership_takes(libcat, 2)]]
+   [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
    static void
    do_invoke(T& self, void const* _Nonnull p_storage, idx allocation_bytes) {
       dyn_allocator_friend::deallocate(self, p_storage, allocation_bytes);
@@ -142,6 +148,7 @@ struct dyn_reset {
    using signature = void();
 
    template <has_reset T>
+   [[gnu::always_inline, gnu::nodebug]]
    static void
    do_invoke(T& self) {
       dyn_allocator_friend::reset(self);
@@ -152,6 +159,7 @@ struct dyn_aligned_allocate {
    using signature = auto(uword, idx) -> maybe_ptr<void>;
 
    template <has_allocate T>
+   [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(T& self, uword alignment, idx allocation_bytes)
       -> maybe_ptr<void> {
@@ -178,6 +186,7 @@ struct dyn_allocate_feedback {
    using signature = auto(idx) -> maybe_sized_allocation<void*>;
 
    template <has_allocate T>
+   [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(T& self, idx allocation_bytes) -> maybe_sized_allocation<void*> {
       if constexpr (has_allocate_feedback<T>) {
@@ -200,6 +209,7 @@ struct dyn_aligned_allocate_feedback {
    using signature = auto(uword, idx) -> maybe_sized_allocation<void*>;
 
    template <has_allocate T>
+   [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(T& self, uword alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
@@ -239,6 +249,8 @@ struct dyn_aligned_allocate_feedback {
 class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    friend allocator_interface<dyn_allocator>;
    friend struct dyn_allocator_friend;
+   template <typename>
+   friend class allocator_ref;
 
  private:
    template <typename T>
@@ -261,30 +273,34 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
            detail::dyn_aligned_allocate_feedback>
       m_p_allocator;
 
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    allocate(idx allocation_bytes) -> maybe_ptr<void> {
       return dyn_invoke<detail::dyn_allocate>(*m_p_allocator, allocation_bytes);
    }
 
-   [[clang::ownership_takes(libcat, 2)]]
+   [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
    void
    deallocate(void const* _Nonnull p_storage, idx allocation_bytes) {
       dyn_invoke<detail::dyn_deallocate>(*m_p_allocator, p_storage,
                                          allocation_bytes);
    }
 
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
       return dyn_invoke<detail::dyn_aligned_allocate>(*m_p_allocator, alignment,
                                                       allocation_bytes);
    }
 
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*> {
       return dyn_invoke<detail::dyn_allocate_feedback>(*m_p_allocator,
                                                        allocation_bytes);
    }
 
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    aligned_allocate_feedback(uword alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
@@ -293,21 +309,21 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    }
 
    template <typename T>
-   [[clang::ownership_holds(libcat, 2)]]
+   [[gnu::always_inline, gnu::nodebug, clang::ownership_holds(libcat, 2)]]
    constexpr auto
    make_handle(T* _Nonnull p_handle_storage) -> dyn_memory_handle<T> {
       return dyn_memory_handle<T>{{}, p_handle_storage};
    }
 
    template <typename T>
-   [[gnu::returns_nonnull]]
+   [[gnu::returns_nonnull, gnu::always_inline, gnu::nodebug]]
    auto
    access(dyn_memory_handle<T>& memory) -> T* _Nonnull {
       return memory.p_storage;
    }
 
    template <typename T>
-   [[gnu::returns_nonnull]]
+   [[gnu::returns_nonnull, gnu::always_inline, gnu::nodebug]]
    auto
    access(dyn_memory_handle<T> const& memory) const -> T const* _Nonnull {
       return memory.p_storage;
@@ -321,15 +337,23 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    // another `dyn_allocator` would otherwise add superfluous indirections.
    template <is_allocator Allocator>
       requires(is_neither<Allocator, dyn_allocator>)
+   [[gnu::always_inline, gnu::nodebug]]
    dyn_allocator(Allocator& allocator)
        : m_p_allocator(__builtin_addressof(allocator)) {
    }
 
    dyn_allocator(dyn_allocator const&) = default;
 
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   auto
+   operator==(dyn_allocator const& other) const -> bool {
+      return m_p_allocator.get() == other.m_p_allocator.get();
+   }
+
    // Dispatches to the held allocator's `reset`, which is either its own
    // override or the inherited `allocator_interface` no-op default.
    // NOLINTNEXTLINE
+   [[gnu::always_inline, gnu::nodebug]]
    void
    reset() {
       dyn_invoke<detail::dyn_reset>(*m_p_allocator);
@@ -348,6 +372,7 @@ class [[gsl::Pointer]] allocator_ref
 
    Allocator* _Nonnull m_p_allocator;
 
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    allocate(idx allocation_bytes) -> maybe_ptr<void>
       requires(detail::has_allocate<Allocator>)
@@ -355,7 +380,7 @@ class [[gsl::Pointer]] allocator_ref
       return m_p_allocator->allocate(allocation_bytes);
    }
 
-   [[clang::ownership_takes(libcat, 2)]]
+   [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
    void
    deallocate(void const* _Nonnull p_storage, idx allocation_bytes)
       requires(detail::has_deallocate<Allocator>)
@@ -363,6 +388,7 @@ class [[gsl::Pointer]] allocator_ref
       m_p_allocator->deallocate(p_storage, allocation_bytes);
    }
 
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void>
       requires(detail::has_aligned_allocate<Allocator>)
@@ -370,6 +396,7 @@ class [[gsl::Pointer]] allocator_ref
       return m_p_allocator->aligned_allocate(alignment, allocation_bytes);
    }
 
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*>
       requires(detail::has_allocate_feedback<Allocator>)
@@ -377,6 +404,7 @@ class [[gsl::Pointer]] allocator_ref
       return m_p_allocator->allocate_feedback(allocation_bytes);
    }
 
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    aligned_allocate_feedback(uword alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*>
@@ -387,19 +415,21 @@ class [[gsl::Pointer]] allocator_ref
    }
 
    template <typename T>
-   [[clang::ownership_holds(libcat, 2)]]
+   [[gnu::always_inline, gnu::nodebug, clang::ownership_holds(libcat, 2)]]
    constexpr auto
    make_handle(T* _Nonnull p_handle_storage) {
       return m_p_allocator->template make_handle<T>(p_handle_storage);
    }
 
    template <typename Handle>
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    access(Handle& memory) -> decltype(auto) {
       return m_p_allocator->access(memory);
    }
 
    template <typename Handle>
+   [[gnu::always_inline, gnu::nodebug]]
    auto
    access(Handle const& memory) const -> decltype(auto) {
       return m_p_allocator->access(memory);
@@ -409,17 +439,113 @@ class [[gsl::Pointer]] allocator_ref
    allocator_ref() = delete ("`allocator_ref` cannot be default-constructed! "
                              "Pass an allocator l-value instead.");
 
-   allocator_ref(Allocator& allocator)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr allocator_ref(Allocator& allocator)
        : m_p_allocator(__builtin_addressof(allocator)) {
    }
 
    allocator_ref(allocator_ref const&) = default;
 
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator==(allocator_ref const& other) const -> bool {
+      return m_p_allocator == other.m_p_allocator;
+   }
+
    // Forward `reset` to the held allocator, which is either its own override or
    // the inherited `allocator_interface` no-op default.
+   [[gnu::always_inline, gnu::nodebug]]
    void
    reset() {
       m_p_allocator->reset();
+   }
+};
+
+// By default, `allocator_ref<dyn_allocator>` would hold a `dyn_allocator*`,
+// which itself wraps a `dyn_ptr`. That means allocator_ref expresses a double
+// indirection in that case. `allocator_ref` and `dyn_allocator` are both
+// references, so it's specialized to hold the dyn_allocator by value instead.
+template <>
+class [[gsl::Pointer]] allocator_ref<dyn_allocator>
+    : public allocator_interface<allocator_ref<dyn_allocator>> {
+ private:
+   friend allocator_interface<allocator_ref<dyn_allocator>>;
+
+   dyn_allocator m_allocator;
+
+   [[gnu::always_inline, gnu::nodebug]]
+   auto
+   allocate(idx allocation_bytes) -> maybe_ptr<void> {
+      return m_allocator.allocate(allocation_bytes);
+   }
+
+   [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
+   void
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes) {
+      m_allocator.deallocate(p_storage, allocation_bytes);
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   auto
+   aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
+      return m_allocator.aligned_allocate(alignment, allocation_bytes);
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   auto
+   allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*> {
+      return m_allocator.allocate_feedback(allocation_bytes);
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   auto
+   aligned_allocate_feedback(uword alignment, idx allocation_bytes)
+      -> maybe_sized_allocation<void*> {
+      return m_allocator.aligned_allocate_feedback(alignment, allocation_bytes);
+   }
+
+   template <typename T>
+   [[gnu::always_inline, gnu::nodebug, clang::ownership_holds(libcat, 2)]]
+   constexpr auto
+   make_handle(T* _Nonnull p_handle_storage) {
+      return m_allocator.template make_handle<T>(p_handle_storage);
+   }
+
+   template <typename Handle>
+   [[gnu::always_inline, gnu::nodebug]]
+   auto
+   access(Handle& memory) -> decltype(auto) {
+      return m_allocator.access(memory);
+   }
+
+   template <typename Handle>
+   [[gnu::always_inline, gnu::nodebug]]
+   auto
+   access(Handle const& memory) const -> decltype(auto) {
+      return m_allocator.access(memory);
+   }
+
+ public:
+   allocator_ref() = delete ("`allocator_ref` cannot be default-constructed! "
+                             "Pass an allocator l-value instead.");
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr allocator_ref(dyn_allocator allocator)
+       : m_allocator(allocator) {
+   }
+
+   allocator_ref(allocator_ref const&) = default;
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator==(allocator_ref const& other) const -> bool {
+      return m_allocator == other.m_allocator;
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   void
+   reset() {
+      m_allocator.reset();
    }
 };
 

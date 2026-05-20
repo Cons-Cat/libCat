@@ -318,19 +318,19 @@ struct maybe_value_storage {
    constexpr void
    assign(value_type const& maybe) {
       if (this->has_value()) {
-         this->hard_reset();
+         m_storage = maybe;
+      } else {
+         this->construct(maybe);
       }
-      m_storage = maybe;
-      m_has_some = true;
    }
 
    constexpr void
    assign(value_type&& maybe) {
       if (this->has_value()) {
-         this->hard_reset();
+         m_storage = move(maybe);
+      } else {
+         this->construct(move(maybe));
       }
-      m_storage = move(maybe);
-      m_has_some = true;
    }
 
    // If this is assigned an `maybe` which wraps a type that can be converted to
@@ -528,11 +528,12 @@ struct maybe_compact_storage {
 
    // When `value_type` and `niche_type` agree (the sentinel-style
    // compact) the niche scalar lands in storage directly via the member
-   // init list. When they differ (e.g. `basic_idx` engaged / `iword`
-   // niche).
+   // init list. Mandatory C++17 copy elision lets this work even for
+   // move-only `value_type`s like `cat::basic_vec`. When the types
+   // differ (e.g. `basic_idx` engaged / `iword` niche) the bit-cast
+   // overload below takes over.
    constexpr maybe_compact_storage(detail::nullopt_type /*nullopt*/)
-      requires(is_same<value_type, niche_type>
-               && is_copy_constructible<value_type>)
+      requires(is_same<value_type, niche_type>)
        : m_storage(T::nullopt_state()) {
    }
 
@@ -629,17 +630,16 @@ struct maybe_compact_storage {
 
    // Destroy the storage unconditionally and overwrite it with the
    // niche bit pattern. The `bit_cast` branch handles cross-type niches
-   // (e.g. `basic_idx` engaged / `iword` niche) whose values aren't
-   // legally `static_cast`-able. `bit_cast` is disallowed at compile
-   // time for pointer types, which is why the same-type path stays a
-   // plain copy.
+   // whose values aren't convertible. `bit_cast` is disallowed at compile
+   // time for pointer types, se the same-type path copies.
    constexpr void
    hard_reset() {
       m_storage.~value_type();
       if constexpr (is_same<value_type, niche_type>) {
-         m_storage = T::nullopt_state();
+         new (__builtin_addressof(m_storage)) value_type(T::nullopt_state());
       } else {
-         m_storage = __builtin_bit_cast(value_type, T::nullopt_state());
+         new (__builtin_addressof(m_storage))
+            value_type(__builtin_bit_cast(value_type, T::nullopt_state()));
       }
    }
 

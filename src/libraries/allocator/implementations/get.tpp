@@ -15,8 +15,7 @@ template <mem T>
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::get(
-   T& handle [[clang::lifetimebound]]) & [[clang::lifetimebound]]
--> decltype(auto) {
+   T& handle [[clang::lifetimebound]]) & -> decltype(auto) {
    using allocation_type = T::allocation_type;
    if constexpr (T::is_inline_handle) {
       // Get small-size optimized data:
@@ -47,8 +46,7 @@ template <mem T>
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::get(
-   T const& memory [[clang::lifetimebound]]) & [[clang::lifetimebound]]
--> decltype(auto) {
+   T const& memory [[clang::lifetimebound]]) & -> decltype(auto) {
    return unconst(this)->get(unconst(memory));
 }
 
@@ -57,8 +55,7 @@ template <typename Derived>
 template <typename T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::get(
-   T* _Nonnull p_handle) & [[clang::lifetimebound]] -> T& {
+allocator_interface<Derived>::get(T* _Nonnull p_handle) & -> T& {
    return *p_handle;
 }
 
@@ -67,8 +64,7 @@ template <typename Derived>
 template <typename T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::get(
-   T const* _Nonnull p_handle) & [[clang::lifetimebound]] -> T& {
+allocator_interface<Derived>::get(T const* _Nonnull p_handle) & -> T& {
    return *p_handle;
 }
 
@@ -77,8 +73,7 @@ template <typename Derived>
 template <mem T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::p_get(T& memory) [[clang::lifetimebound]]
--> auto {
+allocator_interface<Derived>::p_get(T& memory) -> auto {
    // Omitting `[[clang::lifetimebound]]` on this parameter avoids Clang 23
    // `-Wreturn-stack-address` false positives on the `cat::span` branch when
    // `get(memory).data()` still refers to storage owned by `memory`.
@@ -96,8 +91,7 @@ template <typename Derived>
 template <mem T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::p_get(T const& memory) [[clang::lifetimebound]]
--> auto {
+allocator_interface<Derived>::p_get(T const& memory) -> auto {
    // Omitting `[[clang::lifetimebound]]` on this parameter avoids Clang 23
    // `-Wreturn-stack-address` false positives on the `cat::span` branch when
    // `get(memory).data()` still refers to storage owned by `memory`.

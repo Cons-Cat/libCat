@@ -2,6 +2,7 @@
 #include <cat/iterable>
 #include <cat/linear_allocator>
 #include <cat/list>
+#include <cat/null_allocator>
 #include <cat/page_allocator>
 
 #include "../unit_tests.hpp"

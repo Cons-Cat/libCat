@@ -812,7 +812,7 @@ $test(dyn_inplace_vtable_is_inline) {
    cat::dyn_ptr<cat::destructor, say> pb = &b;
    cat::verify(pa.has_value());
    cat::verify(pb.has_value());
-   cat::verify(pa.raw() != pb.raw());
+   cat::verify(pa.get() != pb.get());
    cat::verify(cat::dyn_invoke<say>(*pa) == voice::meow);
    cat::verify(cat::dyn_invoke<say>(*pb) == voice::meow);
 }
@@ -892,7 +892,7 @@ $test(dyn_ptr_narrowing) {
    cat::dyn_ptr<say, treat_count, feed> wide{&cat};
    cat::dyn_ptr<treat_count, feed> narrow = wide;
    cat::verify(narrow.has_value());
-   cat::verify(narrow.raw() == wide.raw());
+   cat::verify(narrow.get() == wide.get());
    cat::verify(cat::dyn_invoke<treat_count>(*narrow) == 20);
 }
 
