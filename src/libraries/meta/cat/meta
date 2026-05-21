@@ -861,15 +861,29 @@ using std::move;
 
 #define $fwd(x) ::cat::forward<decltype(x)>(x)
 
-// `rvalue` binds r-value references and excludes any other references. This is
-// useful for perfect-forwarding parameter functions which could otherwise hide
-// `const&` or && overloads.
+// `is_forwarding_move` matches types that can move. Those are non-`const`
+// r-value references. This is used to bind forwarding-reference parameters that
+// must move. It can be used to prevent `const&&` footguns like:
+//
+//    type(is_forwarding_move auto&& other) {
+//       // This constructor cannot shadow a copy constructor.
+//    }
+//
+//    void func(this is_forwarding_move auto&& self) {
+//       // `self` is a non-`const r-value reference.
+//       // This is always a move.
+//    }
+//
+//    auto non_danglng(this is_lvalue_reference auto&& self) -> T* {
+//       // `self` is an l-value reference.
+//       // This is never a move.
+//    }
 template <typename T>
-concept rvalue = is_rvalue_reference<T&&> && !is_const<T>;
+concept is_forwarding_move = is_rvalue_reference<T&&> && !is_const<T>;
 
 template <typename Callback, typename... Args>
 concept is_invocable =
-// Clang 23 does not support `__is_invocable`.
+// Clang 23 does not support `__is_invocable` yet, unlike GCC.
 #if __has_builtin(__is_invocable)
    __is_invocable(Callback, Args...);
 #else
@@ -880,7 +894,7 @@ concept is_invocable =
 
 template <typename Callback, typename... Args>
 concept is_nothrow_invocable =
-// Clang 23 does not support `__is_nothrow_invocable`.
+// Clang 23 does not support `__is_nothrow_invocable` yet, unlike GCC.
 #if __has_builtin(__is_nothrow_invocable)
    __is_nothrow_invocable(Callback, Args...);
 #else

@@ -240,14 +240,18 @@ $test(array_class_template_argument_deduction) {
 $test(array_subspan_first_last) {
    cat::array array_1{5, 6, 7, 8, 9};
    cat::span span = array_1;
-   span = array_1.first(1u);
-   auto _ = array_1.subspan(0u, 2u);
-   auto _ = array_1.last(2u);
+   span = array_1.first(1u).value();
+   auto _ = array_1.subspan(0u, 2u).value();
+   auto _ = array_1.last(2u).value();
 
    cat::array<int4, 3u> const array_const = {0, 1, 2};
-   cat::span const span_const = array_1.first(1u);
-   auto _ = array_const.subspan(0u, 2u);
-   auto _ = array_const.last(2u);
+   cat::span const span_const = array_1.first(1u).value();
+   auto _ = array_const.subspan(0u, 2u).value();
+   auto _ = array_const.last(2u).value();
+
+   cat::verify(!array_1.first(99u).has_value());
+   cat::verify(!array_1.last(99u).has_value());
+   cat::verify(!array_1.subspan(0u, 99u).has_value());
 }
 
 $test(array_copy_assignment) {

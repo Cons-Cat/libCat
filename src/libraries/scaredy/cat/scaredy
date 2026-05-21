@@ -46,9 +46,9 @@ struct scaredy_variant_storage {
    }
 
    // Convert and move-construct a value.
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_value<U>)
-   // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
    constexpr scaredy_variant_storage(U&& input) : m_storage(move(input)) {
    }
 
@@ -60,10 +60,10 @@ struct scaredy_variant_storage {
    }
 
    // Convert and move-construct an error.
-   template <rvalue error_type>
+   template <is_forwarding_move error_type>
       requires(is_error<error_type>)
    constexpr scaredy_variant_storage(error_type&& error)
-       // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+       // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
        : m_storage(move(error)) {
    }
 
@@ -82,11 +82,11 @@ struct scaredy_variant_storage {
    }
 
    // Move-assign and convert a value to `storage`.
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_value<U>)
    constexpr auto
    operator=(U&& operand) -> scaredy_variant_storage<T, error_types...>& {
-      // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+      // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
       m_storage = move(operand);
       return *this;
    }
@@ -102,12 +102,12 @@ struct scaredy_variant_storage {
    }
 
    // Move-assign and convert a value to `storage`.
-   template <rvalue error_type>
+   template <is_forwarding_move error_type>
       requires(is_error<error_type>)
    constexpr auto
    operator=(error_type&& operand)
       -> scaredy_variant_storage<T, error_types...>& {
-      // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+      // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
       m_storage = move(operand);
       return *this;
    }
@@ -184,7 +184,7 @@ struct scaredy_compact_storage {
        : m_storage(static_cast<value_type>(input)) {
    }
 
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_value<U>)
    constexpr scaredy_compact_storage(U&& input) : m_storage($fwd(input)) {
    }
@@ -376,9 +376,9 @@ class [[nodiscard]] scaredy {
    constexpr scaredy(U const& input) : m_storage(input) {
    }
 
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_value<U>)
-   // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
    constexpr scaredy(U&& input) : m_storage(input) {
    }
 
@@ -389,9 +389,9 @@ class [[nodiscard]] scaredy {
    }
 
    // Forward an error into the storage.
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_error<U>)
-   // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
    constexpr scaredy(U&& error) : m_storage($fwd(error)) {
    }
 
@@ -432,7 +432,7 @@ class [[nodiscard]] scaredy {
    }
 
    // Move-assign and convert a value to `storage`.
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_value<U>)
    [[clang::reinitializes]]
    constexpr auto
@@ -452,12 +452,12 @@ class [[nodiscard]] scaredy {
    }
 
    // Move-assign and convert an error to `storage`.
-   template <rvalue error_type>
+   template <is_forwarding_move error_type>
       requires(is_error<error_type>)
    [[clang::reinitializes]]
    constexpr auto
    operator=(error_type&& operand) -> scaredy& {
-      // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+      // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
       m_storage = move(operand);
       return *this;
    }

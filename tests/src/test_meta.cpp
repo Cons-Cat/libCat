@@ -22,9 +22,10 @@ class templated_one {};
 
 template <typename T>
 class templated_two {};
+
 }
 
-$test(meta_fundamental) {
+$test(meta_is_structural) {
    using namespace cat;
 
    struct structural_type {
@@ -43,6 +44,10 @@ $test(meta_fundamental) {
    static_assert(is_structural<int*>);
    static_assert(is_structural<structural_type>);
    static_assert(!is_structural<non_structural_type>);
+}
+
+$test(meta_is_same_either_neither) {
+   using namespace cat;
 
    static_assert(is_same<int, int>);
    static_assert(!is_same<int, unsigned int>);
@@ -60,6 +65,10 @@ $test(meta_fundamental) {
    static_assert(!is_neither<int, int>);
    static_assert(!is_neither<int, unsigned int, int>);
    static_assert(!is_neither<int, char, short, int, long>);
+}
+
+$test(meta_enum_class_union) {
+   using namespace cat;
 
    enum enum_type : int {
    };
@@ -100,11 +109,27 @@ $test(meta_fundamental) {
    static_assert(!is_union<enum_class_type>);
    static_assert(!is_union<struct_type>);
    static_assert(!is_union<class_type>);
+}
+
+$test(meta_is_pointer) {
+   using namespace cat;
 
    static_assert(is_pointer<int*>);
    static_assert(is_pointer<int* const>);
    static_assert(!is_pointer<int>);
    static_assert(!is_pointer<int*&>);
+}
+
+$test(meta_is_arithmetic) {
+   using namespace cat;
+
+   static_assert(is_arithmetic<int>);
+   static_assert(is_arithmetic<float>);
+   static_assert(!is_arithmetic<void>);
+}
+
+$test(meta_reference_traits) {
+   using namespace cat;
 
    static_assert(is_reference<int&>);
    static_assert(is_reference<int const&>);
@@ -114,10 +139,6 @@ $test(meta_fundamental) {
    static_assert(is_referenceable<int&>);
    static_assert(is_referenceable<int&&>);
    static_assert(!is_referenceable<void>);
-
-   static_assert(is_arithmetic<int>);
-   static_assert(is_arithmetic<float>);
-   static_assert(!is_arithmetic<void>);
 
    // TODO: Use `is_same`:
    static_assert(!is_reference<remove_reference<int>>);
@@ -161,6 +182,107 @@ $test(meta_fundamental) {
    // This is supposed to hold false, even with `std::add_rvalue_reference_t`:
    static_assert(!is_rvalue_reference<add_rvalue_reference<int&>>);
    static_assert(is_rvalue_reference<add_rvalue_reference<int&&>>);
+}
+
+$test(meta_value_category) {
+   using namespace cat;
+
+   // `is_forwarding_move` matches rvalue-ref types (after `T&&`
+   // collapsing) and top-level non-const value types (which deduce as
+   // rvalue arguments under perfect-forwarding). Const value types are
+   // excluded so a `is_forwarding_move auto&&` parameter cannot shadow
+   // a `T const&` overload.
+   static_assert(is_forwarding_move<int>);
+   static_assert(!is_forwarding_move<int const>);
+   static_assert(!is_forwarding_move<int&>);
+   static_assert(!is_forwarding_move<int const&>);
+   static_assert(is_forwarding_move<int&&>);
+   static_assert(is_forwarding_move<int const&&>);
+}
+
+// Used by `meta_value_category_forwarding`. A local class cannot declare
+// member templates, so the templated forwarding ctor forces this type to
+// live at file scope.
+namespace {
+struct forwarding_sink {
+   int kind = 0;
+   forwarding_sink() = default;
+
+   forwarding_sink(forwarding_sink const& /*other*/) : kind(1) {
+   }
+
+   // This should constrain move constructor so that it doesn't shadow non-const
+   // `forwarding_sink&`.
+   forwarding_sink(cat::is_forwarding_move auto&& /*other*/) : kind(2) {
+   }
+
+   constexpr auto
+   access(this cat::is_lvalue_reference auto&& self) -> int {
+      return self.kind + 10;
+   }
+
+   constexpr auto
+   access(this cat::is_forwarding_move auto&& self) -> int {
+      return self.kind + 20;
+   }
+};
+}  // namespace
+
+$test(meta_value_category_forwarding) {
+   using namespace cat;
+
+   // `is_lvalue_reference` constraining a forwarding-reference parameter
+   // binds only to l-value callers, r-value arguments (including const
+   // r-values, which can still dangle a returned view) are rejected via
+   // SFINAE. This is the canonical "borrowing observer" pattern that
+   // `cat::container::subspan` and friends use to refuse to return a view
+   // into an r-value. Generic lambdas are the closure exception to the
+   // local-class member-template ban, so this fits inside the test.
+   auto borrow = []<is_lvalue_reference T>(T&& /*x*/) {
+   };
+
+   static_assert(is_invocable<decltype(borrow), int&>);
+   static_assert(is_invocable<decltype(borrow), int const&>);
+   static_assert(!is_invocable<decltype(borrow), int>);
+   static_assert(!is_invocable<decltype(borrow), int const>);
+   static_assert(!is_invocable<decltype(borrow), int&&>);
+   static_assert(!is_invocable<decltype(borrow), int const&&>);
+
+   int x = 5;
+   borrow(x);
+
+   // `is_forwarding_move` keeps the templated forwarding ctor from
+   // hijacking the copy ctor: l-value arguments route to the copy ctor
+   // (kind 1), r-values route to the forwarding ctor (kind 2). Without the
+   // constraint, the template's identity reference binding would beat the
+   // copy ctor's cv-adjusted binding for l-values.
+   forwarding_sink a;
+   forwarding_sink lcopy(a);
+   cat::verify(lcopy.kind == 1);
+
+   forwarding_sink const b;
+   forwarding_sink lconstcopy(b); // NOLINT
+   cat::verify(lconstcopy.kind == 1);
+
+   forwarding_sink rmove(cat::move(a));
+   cat::verify(rmove.kind == 2);
+
+   forwarding_sink rconstmove(cat::move(b)); // NOLINT
+   cat::verify(rconstmove.kind == 1);
+
+   forwarding_sink other(42);
+   cat::verify(other.kind == 2);
+
+   // The same constraints work on member function parameters via deducing
+   // `this`. Two `access` overloads partition l-value and non-const
+   // r-value callers: l-value calls dispatch to the `is_lvalue_reference`
+   // overload (`kind + 10`) and non-const r-value calls dispatch to the
+   // `is_forwarding_move` overload (`kind + 20`). Const r-values
+   // (`cat::move(b)`) deliberately fall in the gap and are ill-formed,
+   // mirroring the dangling-prevention behavior of `subspan`.
+   cat::verify(lcopy.access() == 11);
+   cat::verify(b.access() == 10);
+   cat::verify(cat::move(rmove).access() == 22);
 }
 
 $test(meta_const_volatile) {

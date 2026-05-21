@@ -262,7 +262,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bit/implementations/bit_raw.tpp
   ${CATLIB}/bitset/cat/bitset
   ${CATLIB}/container/cat/container
-  ${CATLIB}/container/detail/initializer_list.hpp
+  ${CATLIB}/container/cat/detail/initializer_list.hpp
+  ${CATLIB}/container/implementations/container_interface.tpp
   ${CATLIB}/compare/cat/compare
   ${CATLIB}/cpuid/cat/cpuid
   ${CATLIB}/debug/cat/debug

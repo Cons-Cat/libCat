@@ -19,6 +19,19 @@ void
 __asan_unpoison_memory_region(void const volatile* _Nonnull p_address,
                               uword size);
 
+// Annotate a contiguous container's live element range. ASan poisons every
+// byte outside `[p_begin, p_new_mid)` and unpoisons everything inside it,
+// while reporting accesses into `[p_new_mid, p_end)` as out-of-bounds.
+// `p_old_mid` is the previous live boundary so ASan can transition state
+// efficiently. Used by `cat::vec` and other contiguous containers to
+// distinguish live elements from raw capacity inside an allocator-owned
+// buffer.
+void
+__sanitizer_annotate_contiguous_container(void const* _Nonnull p_begin,
+                                          void const* _Nonnull p_end,
+                                          void const* _Nonnull p_old_mid,
+                                          void const* _Nonnull p_new_mid);
+
 // These functions are only for debugging.
 [[gnu::used]]
 void
@@ -98,6 +111,13 @@ inline void
 __asan_unpoison_memory_region(void const volatile* _Nonnull /*unused*/,
                               uword /*unused*/) {
 }
+
+inline void
+__sanitizer_annotate_contiguous_container(void const* _Nonnull /*unused*/,
+                                          void const* _Nonnull /*unused*/,
+                                          void const* _Nonnull /*unused*/,
+                                          void const* _Nonnull /*unused*/) {
+}
 #endif
 
 template <typename T>
@@ -122,6 +142,25 @@ unpoison_memory_region([[maybe_unused]] T const volatile* _Nonnull p_address,
    if !consteval {
       __asan_unpoison_memory_region(
          reinterpret_cast<void const volatile*>(p_address), size);
+   }
+#endif
+}
+
+template <typename T>
+[[gnu::nodebug, gnu::always_inline]]
+constexpr void
+annotate_contiguous_container([[maybe_unused]] T const* _Nullable p_begin,
+                              [[maybe_unused]] T const* _Nullable p_end,
+                              [[maybe_unused]] T const* _Nullable p_old_mid,
+                              [[maybe_unused]] T const* _Nullable p_new_mid) {
+#if __has_feature(address_sanitizer)
+   if !consteval {
+      if (p_begin != nullptr) {
+         __sanitizer_annotate_contiguous_container(
+            static_cast<void const*>(p_begin), static_cast<void const*>(p_end),
+            static_cast<void const*>(p_old_mid),
+            static_cast<void const*>(p_new_mid));
+      }
    }
 #endif
 }

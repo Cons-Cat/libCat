@@ -48,7 +48,7 @@ class unique {
    }
 
    // Move-construct from any type convertible into `T`.
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_implicitly_convertible<U, T>)
    // NOLINTNEXTLINE
    constexpr unique(U&& value) : storage($fwd(value)) {
@@ -61,7 +61,7 @@ class unique {
    }
 
    // Allow move-assignment.
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_implicitly_convertible<U, T>)
    auto
    operator=(U&& value) -> unique& {
@@ -140,7 +140,7 @@ class unique_weak {
    constexpr unique_weak(U const& value) : storage(static_cast<T>(value)) {
    }
 
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_implicitly_convertible<U, T>)
    constexpr unique_weak(U&& value)  // NOLINT
        : storage(static_cast<T>($fwd(value))) {
@@ -158,7 +158,7 @@ class unique_weak {
    }
 
    // Allow move-assignment.
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_implicitly_convertible<U, T>)
    auto
    operator=(U&& value) -> unique_weak<T>& {

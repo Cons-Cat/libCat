@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/initializer_list.hpp>
 #include <cat/detail/iterable_interface.hpp>
 
 #include <cat/algorithm>
@@ -86,7 +87,7 @@ concept has_stepanov_cend = requires(T t) { t.cend(); };
 // same `iterator` type, so long as they have the same `value_type`.
 //
 // This iterator's type can be accessed as:
-//    cat::vec<int4, allocator>::iterator
+//    cat::vec<int4>::iterator
 template <typename T>
 class container_stepanov_iterator
     : public stepanov_iterator_interface<random_access_iterator_tag, T> {
@@ -336,11 +337,12 @@ class container_interface : public contiguous_collection_interface<Derived> {
    // Index into this container with bounds-checking.
    [[nodiscard]]
    constexpr auto
-   at(this auto&& self [[clang::lifetimebound]], idx index) -> maybe<T&>
-      requires(is_array_like && !is_const_ref<decltype(self)>)
+   at(idx index) & [[clang::lifetimebound]] -> maybe<T&>
+      requires(is_array_like)
    {
-      if (index < $fwd(self).size()) {
-         return $fwd(self).data()[index.raw];
+      Derived& self = static_cast<Derived&>(*this);
+      if (index < self.size()) {
+         return self.data()[index.raw];
       }
       return nullopt;
    }
@@ -348,127 +350,223 @@ class container_interface : public contiguous_collection_interface<Derived> {
    // Index into this container with bounds-checking.
    [[nodiscard]]
    constexpr auto
-   at(this Derived const& self [[clang::lifetimebound]], idx index)
-      -> maybe<T&> {
+   at(idx index) const& [[clang::lifetimebound]] -> maybe<T&>
+      requires(is_array_like)
+   {
+      Derived const& self = static_cast<Derived const&>(*this);
       // `unconst()` allows `.at()` to be safely called in a `const` context.
       return unconst(self).at(index);
    }
 
+   // R-value overloads return a prvalue (by value) to avoid dangling
+   // references into the temporary container.
    [[nodiscard]]
    constexpr auto
-   front(this auto&& self) -> T&
-      requires(is_array_like && !is_const_ref<decltype(self)>)
+   at(idx index) && -> maybe<T>
+      requires(is_array_like)
    {
-      cat::assert($fwd(self).size() > 0);
-      return $fwd(self).data()[0];
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   front(this Derived const& self) -> T const& {
-      cat::assert(self.size() > 0);
-      return unconst(self).front();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   back(this auto&& self) -> T&
-      requires(is_array_like && !is_const_ref<decltype(self)>)
-   {
-      cat::assert($fwd(self).size() > 0);
-      return $fwd(self).data()[$fwd(self).size().raw - 1u];
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   back(this Derived const& self) -> T const& {
-      cat::assert(self.size() > 0);
-      return unconst(self).back();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   subspan(this auto&& self, idx start_index, idx end_index) -> span<T>
-      requires(is_array_like && !is_const_ref<decltype(self)>)
-   {
-      if !consteval {
-         assert(end_index <= $fwd(self).capacity());
+      Derived& self = static_cast<Derived&>(*this);
+      if (index < self.size()) {
+         return cat::move(self.data()[index.raw]);
       }
-
-      return span<T>($fwd(self).data() + start_index,
-                     idx(end_index - start_index));
+      return nullopt;
    }
 
    [[nodiscard]]
    constexpr auto
-   subspan(this Derived const& self, idx start_index, idx end_index)
-      -> span<T const>
+   at(idx index) const&& -> maybe<T>
       requires(is_array_like)
    {
-      if !consteval {
-         assert(end_index <= self.capacity());
+      Derived const& self = static_cast<Derived const&>(*this);
+      if (index < self.size()) {
+         return self.data()[index.raw];
       }
-
-      return span<T const>(self.data() + start_index,
-                           idx(end_index - start_index));
+      return nullopt;
    }
 
    [[nodiscard]]
    constexpr auto
-   first(this auto&& self, idx count) -> span<T>
-      requires(is_array_like && !is_const_ref<decltype(self)>)
-   {
-      return $fwd(self).subspan(0u, count);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   first(this Derived const& self, idx count) -> span<T const>
+   front() & [[clang::lifetimebound]] -> T&
       requires(is_array_like)
    {
-      return self.subspan(0u, count);
+      Derived& self = static_cast<Derived&>(*this);
+      cat::assert(self.size() > 0);
+      return self.data()[0];
    }
 
    [[nodiscard]]
    constexpr auto
-   last(this auto&& self, idx count) -> span<T>
-      requires(is_array_like && !is_const_ref<decltype(self)>)
-   {
-      return $fwd(self).subspan(idx($fwd(self).size() - count),
-                                $fwd(self).size());
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   last(this Derived const& self, idx count) -> span<T const>
+   front() const& [[clang::lifetimebound]] -> T const&
       requires(is_array_like)
    {
-      return self.subspan(idx(self.size() - count), self.size());
+      Derived const& self = static_cast<Derived const&>(*this);
+      cat::assert(self.size() > 0);
+      return self.data()[0];
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](this auto&& self [[clang::lifetimebound]], idx index) -> T&
-      requires(is_array_like && !is_const_ref<decltype(self)>)
+   front() && -> T
+      requires(is_array_like)
    {
+      Derived& self = static_cast<Derived&>(*this);
+      cat::assert(self.size() > 0);
+      return cat::move(self.data()[0]);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   front() const&& -> T
+      requires(is_array_like)
+   {
+      Derived const& self = static_cast<Derived const&>(*this);
+      cat::assert(self.size() > 0);
+      return self.data()[0];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   back() & [[clang::lifetimebound]] -> T&
+      requires(is_array_like)
+   {
+      Derived& self = static_cast<Derived&>(*this);
+      cat::assert(self.size() > 0);
+      return self.data()[self.size().raw - 1u];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   back() const& [[clang::lifetimebound]] -> T const&
+      requires(is_array_like)
+   {
+      Derived const& self = static_cast<Derived const&>(*this);
+      cat::assert(self.size() > 0);
+      return self.data()[self.size().raw - 1u];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   back() && -> T
+      requires(is_array_like)
+   {
+      Derived& self = static_cast<Derived&>(*this);
+      cat::assert(self.size() > 0);
+      return cat::move(self.data()[self.size().raw - 1u]);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   back() const&& -> T
+      requires(is_array_like)
+   {
+      Derived const& self = static_cast<Derived const&>(*this);
+      cat::assert(self.size() > 0);
+      return self.data()[self.size().raw - 1u];
+   }
+
+   // Slice methods. Definitions live out-of-line in
+   // `container/implementations/container_interface.tpp`, included after
+   // `<cat/span>` is fully loaded so that `maybe_span<T>` is available as a
+   // return type here.
+
+   [[nodiscard]]
+   constexpr auto
+   subspan(idx start_index, idx end_index) &
+      requires(is_array_like);
+
+   [[nodiscard]]
+   constexpr auto
+   subspan(idx start_index, idx end_index) const&
+      requires(is_array_like);
+
+   constexpr auto
+   subspan(idx, idx) && = delete (
+      "Making a `cat::span` over a temporary would immediately dangle!");
+   constexpr auto
+   subspan(idx, idx) const&& = delete (
+      "Making a `cat::span` over a temporary would immediately dangle!");
+
+   [[nodiscard]]
+   constexpr auto
+   first(idx count) &
+      requires(is_array_like);
+
+   [[nodiscard]]
+   constexpr auto
+   first(idx count) const&
+      requires(is_array_like);
+
+   constexpr auto
+   first(idx) && = delete (
+      "Placing a `cat::span` over an r-value would immediately dangle!");
+   constexpr auto
+   first(idx) const&& = delete (
+      "Placing a `cat::span` over an r-value would immediately dangle!");
+
+   [[nodiscard]]
+   constexpr auto
+   last(idx count) &
+      requires(is_array_like);
+
+   [[nodiscard]]
+   constexpr auto
+   last(idx count) const&
+      requires(is_array_like);
+
+   constexpr auto
+   last(idx) && = delete (
+      "Placing a `cat::span` over an r-value would immediately dangle!");
+   constexpr auto
+   last(idx) const&& = delete (
+      "Placing a `cat::span` over an r-value would immediately dangle!");
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index) & [[clang::lifetimebound]] -> T&
+      requires(is_array_like)
+   {
+      Derived& self = static_cast<Derived&>(*this);
       if !consteval {
-         assert(index < $fwd(self).size(),
+         assert(index < self.size(),
                 "A container was indexed out of bounds!");
       }
-
-      return $fwd(self).data()[make_raw_arithmetic(index)];
+      return self.data()[make_raw_arithmetic(index)];
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](this Derived const& self [[clang::lifetimebound]], idx index)
-      -> T const&
+   operator[](idx index) const& [[clang::lifetimebound]] -> T const&
       requires(is_array_like)
    {
+      Derived const& self = static_cast<Derived const&>(*this);
       if !consteval {
          assert(index < self.size());
       }
+      return self.data()[make_raw_arithmetic(index)];
+   }
 
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index) && -> T
+      requires(is_array_like)
+   {
+      Derived& self = static_cast<Derived&>(*this);
+      if !consteval {
+         assert(index < self.size(),
+                "A container was indexed out of bounds!");
+      }
+      return cat::move(self.data()[make_raw_arithmetic(index)]);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index) const&& -> T
+      requires(is_array_like)
+   {
+      Derived const& self = static_cast<Derived const&>(*this);
+      if !consteval {
+         assert(index < self.size());
+      }
       return self.data()[make_raw_arithmetic(index)];
    }
 
@@ -476,24 +574,41 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    template <is_stepanov_container Other>
    auto
-   copy_to(this auto const& self, Other& destination) {
-      assert(destination.capacity() >= self.capacity());
+   copy_to(Other& destination) const {
+      Derived const& self = static_cast<Derived const&>(*this);
+      if !consteval {
+         assert(destination.capacity() >= self.capacity());
+      }
       return cat::copy(self.begin(), self.end(), destination.begin());
    }
 
    template <is_stepanov_container Other>
    auto
-   move_to(this auto const& self, Other& destination) {
-      assert(destination.capacity() >= self.capacity());
+   move_to(Other& destination) const {
+      Derived const& self = static_cast<Derived const&>(*this);
+      if !consteval {
+         assert(destination.capacity() >= self.capacity());
+      }
       return cat::move(self.begin(), self.end(), destination.begin());
    }
 
    template <is_stepanov_container Other>
    auto
-   relocate_to(this auto const& self, Other& destination) {
-      assert(destination.capacity() >= self.capacity());
+   relocate_to(Other& destination) const {
+      Derived const& self = static_cast<Derived const&>(*this);
+      if !consteval {
+         assert(destination.capacity() >= self.capacity());
+      }
       return cat::relocate(self.begin(), self.end(), destination.begin());
    }
 };
 
 }  // namespace cat
+
+// `<cat/span>` defines `span<T>` and `maybe_span<T>`, which the slice and
+// getter methods of `container_interface` return. It transitively reincludes
+// this header but the cycle is harmless thanks to `#pragma once`. Bringing in
+// `<cat/span>` here also pulls in `container_interface.tpp`, providing the
+// out-of-line method definitions to every translation unit that includes
+// `<cat/container>`.
+#include <cat/span>

@@ -30,8 +30,6 @@
 // `[[gsl::Pointer(T)]]` so it participates in Clang's lifetime analysis. It
 // matches the ABI of `nix::io_vector` for trivial syscall compatibility.
 
-#include <detail/initializer_list.hpp>
-
 #include <cat/bit>
 #include <cat/compare>
 #include <cat/container>
@@ -108,21 +106,17 @@ span
    }
 
    template <typename U, idx other_extent>
-      requires((fixed_extent == dynamic_extent || other_extent == dynamic_extent
-                || fixed_extent == other_extent)
-               && is_convertible<U (* _Nonnull)[], T (* _Nonnull)[]>)
-   constexpr span(span<U, other_extent> const& other [[clang::lifetimebound]]
-                  )
-       : m_p_data(other.data()), m_size(other.size()) {
-      if constexpr (fixed_extent != dynamic_extent) {
-         assert(other.size() == fixed_extent);
-      }
-   }
+   constexpr span(span<U, other_extent> const&) =
+      delete ("A `cat::span<T>` cannot be constructed from a `span<U>`. "
+              "Type-punning `U*` as `T*` is not safe even when "
+              "`U(*)[]` converts to `T(*)[]`. Construct a fresh span from "
+              "the source's `data()` and `size()` if the conversion is "
+              "intentional.");
 
    template <typename U>
    constexpr span(U&& container) =
       delete ("A `cat::span` cannot alias a temporary, because the span would"
-              "immediately dangle.");
+              "immediately dangle!");
 
    constexpr auto
    operator=(span<T, fixed_extent> const&) -> span<T, fixed_extent>& = default;
@@ -175,10 +169,6 @@ span
    [[nodiscard]]
    constexpr auto
    data() -> T* _Nullable {
-      // Omitting `[[clang::lifetimebound]]` avoids Clang 23
-      // `-Wreturn-stack-address` false positives on `get(memory).data()` when
-      // `get` returns a pr-value `span` while the pointer still names handle
-      // storage.
       return m_p_data;
    }
 
@@ -186,10 +176,6 @@ span
    [[nodiscard]]
    constexpr auto
    data() const -> T const* _Nullable {
-      // Omitting `[[clang::lifetimebound]]` avoids Clang 23
-      // `-Wreturn-stack-address` false positives on `get(memory).data()` when
-      // `get` returns a pr-value `span` while the pointer still names handle
-      // storage.
       return m_p_data;
    }
 
@@ -212,10 +198,18 @@ span
    }
 
    // Runtime `first(count)`. Returns the first `count` elements as a
-   // dynamic-extent span. Mirrors `std::span::first(size_type)`.
+   // dynamic-extent span. Mirrors `std::span::first(size_type)`. The
+   // returned span's lifetime is bound to the underlying container, not
+   // to `*this`, so no `[[clang::lifetimebound]]` is applied here.
    [[nodiscard]]
    constexpr auto
-   first(idx count) const [[clang::lifetimebound]] -> span<T> {
+   first(idx count) -> span<T> {
+      return subspan(0u, count);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   first(idx count) const -> span<T const> {
       return subspan(0u, count);
    }
 
@@ -223,7 +217,16 @@ span
    // dynamic-extent span. Mirrors `std::span::last(size_type)`.
    [[nodiscard]]
    constexpr auto
-   last(idx count) const [[clang::lifetimebound]] -> span<T> {
+   last(idx count) -> span<T> {
+      if !consteval {
+         assert(count <= size());
+      }
+      return subspan(idx(size() - count), count);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   last(idx count) const -> span<T const> {
       if !consteval {
          assert(count <= size());
       }
@@ -234,8 +237,7 @@ span
    // `dynamic_extent` the resulting span extends to the end of this one.
    [[nodiscard]]
    constexpr auto
-   subspan(idx offset, idx count = dynamic_extent) const
-      [[clang::lifetimebound]] -> span<T> {
+   subspan(idx offset, idx count = dynamic_extent) -> span<T> {
       if !consteval {
          assert(offset <= size());
          if (count != dynamic_extent) {
@@ -247,17 +249,42 @@ span
       return span<T>(m_p_data + offset.raw, result_size);
    }
 
+   [[nodiscard]]
+   constexpr auto
+   subspan(idx offset, idx count = dynamic_extent) const -> span<T const> {
+      if !consteval {
+         assert(offset <= size());
+         if (count != dynamic_extent) {
+            assert(count <= size() - offset);
+         }
+      }
+      idx const result_size =
+         (count != dynamic_extent) ? count : idx(size() - offset);
+      return span<T const>(m_p_data + offset.raw, result_size);
+   }
+
    // Compile-time `first<N>()` returns a fixed-extent subview of the first
    // `count` elements. Mirrors `std::span::first<count>()`.
    template <idx count>
       requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   first() const [[clang::lifetimebound]] -> span<T, count> {
+   first() -> span<T, count> {
       if constexpr (fixed_extent == dynamic_extent) {
          assert(count <= size());
       }
       return span<T, count>(m_p_data, count);
+   }
+
+   template <idx count>
+      requires(fixed_extent == dynamic_extent || count <= fixed_extent)
+   [[nodiscard]]
+   constexpr auto
+   first() const -> span<T const, count> {
+      if constexpr (fixed_extent == dynamic_extent) {
+         assert(count <= size());
+      }
+      return span<T const, count>(m_p_data, count);
    }
 
    // Compile-time `last<N>()` returns a fixed-extent subview of the last
@@ -266,11 +293,23 @@ span
       requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   last() const [[clang::lifetimebound]] -> span<T, count> {
+   last() -> span<T, count> {
       if constexpr (fixed_extent == dynamic_extent) {
          assert(count <= size());
       }
       return span<T, count>(m_p_data + (size().raw - count.raw), count);
+   }
+
+   template <idx count>
+      requires(fixed_extent == dynamic_extent || count <= fixed_extent)
+   [[nodiscard]]
+   constexpr auto
+   last() const -> span<T const, count> {
+      if constexpr (fixed_extent == dynamic_extent) {
+         assert(count <= size());
+      }
+      return span<T const, count>(m_p_data + (size().raw - count.raw),
+                                  count);
    }
 
    // Compile-time `subspan<offset, count>()`. Mirrors `std::span`'s template
@@ -283,16 +322,8 @@ span
                        || count <= fixed_extent - offset)))
    [[nodiscard]]
    constexpr auto
-   subspan() const [[clang::lifetimebound]] {
-      constexpr idx result_extent = []() consteval {
-         if constexpr (count != dynamic_extent) {
-            return count;
-         } else if constexpr (fixed_extent != dynamic_extent) {
-            return idx(fixed_extent.raw - offset.raw);
-         } else {
-            return dynamic_extent;
-         }
-      }();
+   subspan() {
+      constexpr idx result_extent = subspan_extent<offset, count>();
       if constexpr (fixed_extent == dynamic_extent) {
          assert(offset <= size());
          if constexpr (count != dynamic_extent) {
@@ -303,6 +334,44 @@ span
          (count != dynamic_extent) ? count : idx(size() - offset);
       return span<T, result_extent>(m_p_data + offset.raw, result_size);
    }
+
+   template <idx offset, idx count = dynamic_extent>
+      requires(fixed_extent == dynamic_extent
+               || (offset <= fixed_extent
+                   && (count == dynamic_extent
+                       || count <= fixed_extent - offset)))
+   [[nodiscard]]
+   constexpr auto
+   subspan() const {
+      constexpr idx result_extent = subspan_extent<offset, count>();
+      if constexpr (fixed_extent == dynamic_extent) {
+         assert(offset <= size());
+         if constexpr (count != dynamic_extent) {
+            assert(count <= size() - offset);
+         }
+      }
+      idx const result_size =
+         (count != dynamic_extent) ? count : idx(size() - offset);
+      return span<T const, result_extent>(m_p_data + offset.raw, result_size);
+   }
+
+ private:
+   // Shared computation for the templated `subspan<offset, count>()`'s
+   // result extent. Kept private because only the two `subspan()` overloads
+   // need it.
+   template <idx offset, idx count>
+   static consteval auto
+   subspan_extent() -> idx {
+      if constexpr (count != dynamic_extent) {
+         return count;
+      } else if constexpr (fixed_extent != dynamic_extent) {
+         return idx(fixed_extent.raw - offset.raw);
+      } else {
+         return dynamic_extent;
+      }
+   }
+
+ public:
 
    template <is_random_access R>
       requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
@@ -522,4 +591,5 @@ copy_memory_backward(span<T const> const source, span<T> destination) {
 
 }  // namespace cat
 
+#include "../../container/implementations/container_interface.tpp"
 #include "../implementations/span.tpp"

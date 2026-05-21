@@ -75,7 +75,7 @@ inline constexpr idx char_bits = sizeof(unsigned char) * 8u;
 inline constexpr idx word_bits = sizeof(uword) * 8u;
 inline constexpr idx word_bytes = sizeof(uword);
 
-inline constexpr idx page_size = idx(4'096_uki);
+inline constexpr idx page_size = 4_uki;
 
 // Count the number of leading zero bits (counting "leftwards") before the first
 // found zero bit. When the input is zero, this returns the bit width of `T`.

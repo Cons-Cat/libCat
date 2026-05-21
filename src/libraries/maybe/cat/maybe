@@ -804,10 +804,10 @@ class [[nodiscard]] maybe
    constexpr maybe(U&&) = delete;
 
    // Move constructor.
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(!is_reference<value_type>
                && is_implicitly_convertible<U, value_type>)
-   // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
    constexpr maybe(U&& input) : m_storage(move(input)) {
    }
 
@@ -829,7 +829,7 @@ class [[nodiscard]] maybe
       m_storage.assign(input);
    }
 
-   template <rvalue U>
+   template <is_forwarding_move U>
       requires(is_implicitly_convertible<U, value_type>
                && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
    constexpr maybe(maybe<U>&& input) {
@@ -850,7 +850,7 @@ class [[nodiscard]] maybe
    template <typename U>
       requires(!is_same<U, T> && is_implicitly_convertible<value_type, U>)
    constexpr
-   operator maybe<U>() {
+   operator maybe<U>() const {
       if (this->has_value()) {
          if constexpr (is_same<U, void>) {
             return monostate;

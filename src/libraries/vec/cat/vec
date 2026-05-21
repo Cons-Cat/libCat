@@ -4,115 +4,145 @@
 
 #include <cat/algorithm>
 #include <cat/allocator>
+#include <cat/allocator_parameters>
 #include <cat/array>
 #include <cat/container>
 #include <cat/math>
-#include <cat/null_allocator>
+#include <cat/sanitizer>
 #include <cat/utility>
 
 namespace cat {
 
-// TODO: Support `__sanitizer_annotate_contiguous_container`.
+template <is_allocator Allocator>
+constexpr auto
+allocators_equal(Allocator const& left, Allocator const& right) -> bool {
+   if constexpr (requires { Allocator::is_always_equal::value; }) {
+      return Allocator::is_always_equal::value;
+   } else if constexpr (requires(Allocator const& a, Allocator const& b) {
+                           a == b;
+                        }) {
+      return left == right;
+   } else {
+      return __builtin_addressof(left) == __builtin_addressof(right);
+   }
+}
 
-template <typename T, is_allocator Allocator>
-class [[gsl::Owner]]
-vec : public container_interface<vec<T, Allocator>, T>,
+inline namespace manual {
+
+template <typename T>
+class basic_vec;
+
+template <typename T>
+using vec = basic_vec<T>;
+
+}  // namespace manual
+
+namespace detail {
+// `maybe_vec<T>`'s is disengaged when `data() == nullptr` and `size() != 0`.
+// Every `basic_vec<T>` value either has a non-null buffer or a zero
+// size, so this bit pattern is unambiguously the empty state.
+template <typename T>
+constexpr auto
+maybe_vec_has_value(basic_vec<T> const& value) -> bool;
+
+template <typename T>
+constexpr auto
+maybe_vec_nullopt() -> basic_vec<T>;
+}  // namespace detail
+
+inline namespace manual {
+
+template <typename T>
+class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
+    : public container_interface<basic_vec<T>, T>,
       public random_access_stepanov_iterable_interface<T> {
-   template <typename U, is_allocator A, typename... Us>
-      requires(sizeof...(Us) > 0u)
-   friend constexpr auto
-   make_vec(A&, Us&&...) -> maybe<vec<U, A>>;
-
-   template <typename U, is_allocator A>
-   friend constexpr auto
-   make_vec(A&) -> vec<U, A>;
-
-   template <typename U, is_allocator A>
-   friend constexpr auto
-   make_vec_reserved(A&, idx) -> maybe<vec<U, A>>;
-
-   template <typename U, is_allocator A>
-   friend constexpr auto
-   make_vec_filled(A&, idx, U const&) -> maybe<vec<U, A>>;
-
  public:
-   constexpr vec() = delete ("`cat::vec` cannot be created without an "
-                             "allocator. Call `cat::make_vec()` instead!");
+   constexpr basic_vec()
+       : m_p_data(nullptr), m_current_size(0), m_current_capacity(0) {
+   }
 
-   // Empty a vector upon move.
-   constexpr vec(vec&& other)
+   constexpr basic_vec(basic_vec&& other)
        : m_p_data(other.m_p_data),
          m_current_size(other.m_current_size),
-         m_current_capacity(other.m_current_capacity),
-         m_allocator(other.m_allocator) {
+         m_current_capacity(other.m_current_capacity) {
       other.m_p_data = nullptr;
       other.m_current_size = 0;
       other.m_current_capacity = 0;
    }
 
-   auto
-   operator=(vec const&)
-      -> vec& = delete ("Implicit copying of `cat::vec` is forbidden. Call "
-                        "`.clone() or move instead!");
+   constexpr basic_vec(basic_vec const&) = delete (
+      "Implicit copying of `cat::basic_vec` is forbidden. Call "
+      "`.clone()` or move instead!");
 
-   // Empty a vector upon move.
+   auto
+   operator=(basic_vec const&)
+      -> basic_vec& = delete ("Implicit copying of `cat::basic_vec` is "
+                              "forbidden. Call `.clone()` or move instead!");
+
    [[clang::reinitializes]]
    constexpr auto
-   operator=(vec&& other) -> vec& {
+   operator=(basic_vec&& other) -> basic_vec& {
+      if (this == &other) {
+         return *this;
+      }
+      if !consteval {
+         cat::assert(m_p_data == nullptr,
+                     "basic_vec move-assigned over while still owning storage. "
+                     "Call .free(allocator) first.");
+      }
       m_p_data = other.m_p_data;
       m_current_size = other.m_current_size;
       m_current_capacity = other.m_current_capacity;
-      // TODO: This line doesn't rebind the allocator reference!
-      // m_allocator = other.m_allocator;
       other.m_p_data = nullptr;
       other.m_current_size = 0;
       other.m_current_capacity = 0;
       return *this;
    }
 
-   constexpr ~vec() {
-      hard_reset();
+   // The manual `basic_vec` does not own its storage, so its destructor
+   // only invokes element destructors via `.reset()`. To deallocate
+   // immediately, call `.free(allocator)`. This is strongly encouraged for
+   // non-trivially-destructible `T`.
+   constexpr ~basic_vec() {
+      if consteval {
+         delete[] m_p_data;
+      } else {
+         reset();
+      }
    }
 
    constexpr void
-   swap(vec& other) {
-      // TODO: Figure out the semantics of container allocator interoperability.
-      assert(&m_allocator == &other.m_allocator);
+   swap(basic_vec& other) {
       cat::swap(m_p_data, other.m_p_data);
       cat::swap(m_current_size, other.m_current_size);
       cat::swap(m_current_capacity, other.m_current_capacity);
    }
 
- protected:
-   // Being `protected:` permits derived classes and friends to call these.
-
-   constexpr vec(Allocator& allocator [[clang::lifetimebound]])
-       : m_p_data(nullptr),
-         m_current_size(0),
-         m_current_capacity(0),
-         m_allocator(allocator) {
-   }
-
-   [[deprecated(
-      "Implicit copying of `cat::vec` is forbidden. Call `.clone() or move"
-      "instead!")]]
-   constexpr vec(vec const& other_vector) = default;
-
+ private:
    // Reallocate memory, or make an initial allocation.
+   template <is_allocator Allocator>
    [[clang::optnone]]
    constexpr auto
-   internal_allocate(idx minimum_capacity) {
+   internal_allocate(allocator_ref<Allocator> allocator, idx minimum_capacity) {
       if (m_p_data == nullptr) {
-         return m_allocator.template salloc_multi<T>(minimum_capacity);
+         return allocator.template salloc_multi<T>(minimum_capacity);
       }
-      return m_allocator.resalloc_multi(m_p_data, m_current_capacity,
-                                        minimum_capacity);
+      return allocator.resalloc_multi(m_p_data, m_current_capacity,
+                                      minimum_capacity);
    }
 
-   // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
+   constexpr void
+   annotate_size_change(idx old_size, idx new_size) const {
+      annotate_contiguous_container(m_p_data, m_p_data + m_current_capacity.raw,
+                                    m_p_data + old_size.raw,
+                                    m_p_data + new_size.raw);
+   }
+
+   // Reallocate this `vec`'s memory if it is exceeded, in a non-`constexpr`
    // context.
+   template <is_allocator Allocator>
    constexpr auto
-   increase_storage() -> maybe<void> {
+   increase_storage(allocator_ref<Allocator> allocator) -> maybe<void> {
       idx const minimum_capacity =
          (m_current_capacity > 0u)
             ? m_current_capacity * 2u
@@ -132,12 +162,15 @@ vec : public container_interface<vec<T, Allocator>, T>,
          m_p_data = p_new;
          m_current_capacity = minimum_capacity;
       } else {
-         // Make a new allocation with size feedback.
+         // TODO: When allocators gain `.resize()` or `.try_grow()`, try it here
+         // first. Fall back when it returns false.
+         annotate_size_change(m_current_size, m_current_capacity);
          auto [alloc_span, alloc_bytes] =
-            $prop(internal_allocate(minimum_capacity));
+            $prop(internal_allocate(allocator, minimum_capacity));
 
-         m_current_capacity = alloc_bytes / sizeof(T);
          m_p_data = alloc_span.data();
+         m_current_capacity = alloc_bytes / sizeof(T);
+         annotate_size_change(m_current_capacity, m_current_size);
       }
 
       return monostate;
@@ -170,31 +203,36 @@ vec : public container_interface<vec<T, Allocator>, T>,
       return m_current_capacity;
    }
 
-   // Destroy, but do not de-allocate, the elements of this `vec`.
+   // Destroy every element of this `vec`. Storage is left allocated, the
+   // capacity is unchanged, and the size is reset to zero. Memory must be
+   // deallocated separately through `.free(allocator)`.
    [[clang::reinitializes]]
-   void
-   clear() {
+   constexpr void
+   reset() {
       if constexpr (!is_trivially_destructible<T>) {
          for (idx i = 0; i < m_current_size; ++i) {
             m_p_data[i].~T();
          }
       }
-
+      annotate_size_change(m_current_size, 0u);
       m_current_size = 0;
    }
 
-   // Deallocate this vector.
+   // Deallocate this `vec`'s storage from `allocator`.
+   template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void
-   hard_reset() {
+   free(allocator_ref<Allocator> allocator) {
       if consteval {
          delete[] m_p_data;
       } else {
-         // TODO: This should de-allocate `m_current_capacity`, but because
-         // `free_multi` calls their destructors, and `m_p_data` contains
-         // potentially un-initialized data, that would be unsafe.
-         m_allocator.free_multi(span<T>(m_p_data, m_current_size));
-         poison_memory_region(m_p_data, m_current_capacity);
+         if (m_p_data != nullptr) {
+            annotate_size_change(m_current_size, m_current_capacity);
+            // TODO: This should deallocate `m_current_capacity`, but
+            // `free_multi` calls destructors for the whole span.
+            allocator.free_multi(span<T>(m_p_data, m_current_size));
+            poison_memory_region(m_p_data, m_current_capacity);
+         }
       }
 
       m_p_data = nullptr;
@@ -202,10 +240,19 @@ vec : public container_interface<vec<T, Allocator>, T>,
       m_current_capacity = 0;
    }
 
+   // Deallocate this `vec`'s storage from `allocator`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   free(dyn_allocator allocator) {
+      return free<dyn_allocator>(allocator);
+   }
+
    // Try to allocate storage for at least `minimum_capacity` number of `T`s.
+   template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   reserve(idx minimum_capacity) -> maybe<void> {
+   reserve(allocator_ref<Allocator> allocator, idx minimum_capacity)
+      -> maybe<void> {
       if (minimum_capacity > m_current_capacity) {
          if consteval {
             delete[] m_p_data;
@@ -216,11 +263,16 @@ vec : public container_interface<vec<T, Allocator>, T>,
                new (m_p_data + i) T();
             }
          } else {
+            // TODO: When allocators gain `.resize()` or `.try_grow()`, try it
+            // here first. Fall back when it returns false, like Zig allocator
+            // resize.
+            annotate_size_change(m_current_size, m_current_capacity);
             auto [alloc_span, alloc_bytes] =
-               $prop(internal_allocate(minimum_capacity));
+               $prop(internal_allocate(allocator, minimum_capacity));
 
             m_p_data = alloc_span.data();
             m_current_capacity = idx(alloc_bytes / sizeof(T));
+            annotate_size_change(m_current_capacity, m_current_size);
          }
       }
 
@@ -228,126 +280,814 @@ vec : public container_interface<vec<T, Allocator>, T>,
       return monostate;
    }
 
+   // Try to allocate storage for at least `minimum_capacity` number of `T`s.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   reserve(dyn_allocator allocator, idx minimum_capacity) -> maybe<void> {
+      return reserve<dyn_allocator>(allocator, minimum_capacity);
+   }
+
    // Try to change the size of this `vec`.
+   template <is_allocator Allocator>
+      requires(is_default_constructible<T>)
    [[nodiscard]]
    constexpr auto
-   resize(idx size) -> maybe<void> {
+   resize(allocator_ref<Allocator> allocator, idx size) -> maybe<void> {
       if (size > m_current_capacity) {
          // This sets `this->current_capacity` and `this->p_storage`.
-         $prop(this->reserve(size));
+         $prop(this->reserve(allocator, size));
       }
 
-      // TODO: Initialize the values.
+      if !consteval {
+         if (size > m_current_size) {
+            annotate_size_change(m_current_size, size);
+            for (idx i = m_current_size; i < size; ++i) {
+               new (m_p_data + i.raw) T();
+            }
+         } else if constexpr (!is_trivially_destructible<T>) {
+            for (idx i = size; i < m_current_size; ++i) {
+               m_p_data[i.raw].~T();
+            }
+            annotate_size_change(m_current_size, size);
+         } else if (size < m_current_size) {
+            annotate_size_change(m_current_size, size);
+         }
+      }
 
-      // If the new size is not larger, simply shrink size and maintain
-      // capacity.
       m_current_size = size;
       return monostate;
+   }
+
+   // Try to change the size of this `vec`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   resize(dyn_allocator allocator, idx size) -> maybe<void> {
+      return resize<dyn_allocator>(allocator, size);
+   }
+
+   // Try to change the size of this `vec`, copy-constructing any new
+   // elements from `value`.
+   template <is_allocator Allocator>
+      requires(is_copy_constructible<T>)
+   [[nodiscard]]
+   constexpr auto
+   resize(allocator_ref<Allocator> allocator, idx size,
+          T const& value) -> maybe<void> {
+      if (size > m_current_capacity) {
+         $prop(this->reserve(allocator, size));
+      }
+
+      if (size > m_current_size) {
+         annotate_size_change(m_current_size, size);
+         for (idx i = m_current_size; i < size; ++i) {
+            if !consteval {
+               new (m_p_data + i.raw) T(value);
+            } else {
+               m_p_data[i.raw] = value;
+            }
+         }
+      } else if constexpr (!is_trivially_destructible<T>) {
+         if !consteval {
+            for (idx i = size; i < m_current_size; ++i) {
+               m_p_data[i.raw].~T();
+            }
+            annotate_size_change(m_current_size, size);
+         }
+      } else if (size < m_current_size) {
+         annotate_size_change(m_current_size, size);
+      }
+
+      m_current_size = size;
+      return monostate;
+   }
+
+   // Try to change the size of this `vec`, copy-constructing any new
+   // elements from `value`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   resize(dyn_allocator allocator, idx size, T const& value) -> maybe<void> {
+      return resize<dyn_allocator>(allocator, size, value);
+   }
+
+   // De-allocate excess storage.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   shrink_to_fit(allocator_ref<Allocator> allocator) -> maybe<void> {
+      if (m_current_capacity == m_current_size) {
+         return monostate;
+      }
+
+      if consteval {
+         T* _Nonnull p_new = new T[m_current_size.raw];
+         for (idx i = 0u; i < m_current_size; ++i) {
+            new (p_new + i) T(move(m_p_data[i]));
+         }
+         delete[] m_p_data;
+         m_p_data = p_new;
+         m_current_capacity = m_current_size;
+      } else {
+         annotate_size_change(m_current_size, m_current_capacity);
+         auto [alloc_span, alloc_bytes] = $prop(
+            allocator.resalloc_multi(m_p_data, m_current_size, m_current_size));
+         m_p_data = alloc_span.data();
+         m_current_capacity = idx(alloc_bytes / sizeof(T));
+         annotate_size_change(m_current_capacity, m_current_size);
+      }
+
+      return monostate;
+   }
+
+   // De-allocate excess storage.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shrink_to_fit(dyn_allocator allocator) -> maybe<void> {
+      return shrink_to_fit<dyn_allocator>(allocator);
    }
 
    // Deep-copy the contents of this `vec`.
    template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(NewAllocator& allocator
-         [[clang::lifetimebound]]) const& -> maybe<vec<T, NewAllocator>> {
-      vec<T, NewAllocator> new_vector =
+   clone(allocator_ref<NewAllocator> allocator) const& -> maybe<basic_vec<T>> {
+      // TODO: When allocators gain .remap(), prefer it when allocators compare
+      // equal and the allocator can do better than allocate then copy.
+      basic_vec<T> new_vector =
          $prop(make_vec_reserved<T>(allocator, m_current_capacity));
+      new_vector.annotate_size_change(0u, m_current_size);
       new_vector.m_current_size = m_current_size;
       relocate(this->begin(), this->end(), new_vector.begin());
 
       return move(new_vector);
    }
 
-   // TODO: rval-ref overload of `.push_back()`.
-   // TODO: `.emplace_back()`.
+   // Deep-copy the contents of this `vec`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(dyn_allocator allocator) const& -> maybe<basic_vec<T>> {
+      return clone<dyn_allocator>(allocator);
+   }
 
-   template <typename U>
-      requires(is_implicitly_convertible<U, T>)
+   template <is_allocator Allocator>
+      requires(is_copy_constructible<T>)
    [[nodiscard]]
    constexpr auto
-   push_back(U&& value) -> maybe<void> {
+   push_back(allocator_ref<Allocator> allocator, T const& value)
+      -> maybe<void> {
       if (m_current_size + 1 > m_current_capacity) {
-         $prop(this->increase_storage());
+         $prop(this->increase_storage(allocator));
       }
 
-      m_p_data[m_current_size.raw] = static_cast<T>($fwd(value));
+      annotate_size_change(m_current_size, m_current_size + 1u);
+      m_p_data[m_current_size.raw] = value;
       ++(m_current_size);
       return monostate;
    }
 
+   template <is_allocator Allocator>
+      requires(is_move_constructible<T>)
+   [[nodiscard]]
+   constexpr auto
+   push_back(allocator_ref<Allocator> allocator, T&& value) -> maybe<void> {
+      if (m_current_size + 1 > m_current_capacity) {
+         $prop(this->increase_storage(allocator));
+      }
+
+      annotate_size_change(m_current_size, m_current_size + 1u);
+      m_p_data[m_current_size.raw] = cat::move(value);
+      ++(m_current_size);
+      return monostate;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_back(dyn_allocator allocator, T const& value) -> maybe<void> {
+      return push_back<dyn_allocator>(allocator, value);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_back(dyn_allocator allocator, T&& value) -> maybe<void> {
+      return push_back<dyn_allocator>(allocator, cat::move(value));
+   }
+
+   template <is_allocator Allocator, typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard]]
+   constexpr auto
+   emplace_back(allocator_ref<Allocator> allocator, Args&&... arguments)
+      [[clang::lifetimebound]] -> maybe<T&> {
+      if (m_current_size + 1 > m_current_capacity) {
+         $prop(this->increase_storage(allocator));
+      }
+
+      annotate_size_change(m_current_size, m_current_size + 1u);
+      T* _Nonnull const p_slot = m_p_data + m_current_size.raw;
+      if consteval {
+         p_slot->~T();
+      }
+      new (p_slot) T($fwd(arguments)...);
+      ++m_current_size;
+      return *p_slot;
+   }
+
+   template <typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   emplace_back(dyn_allocator allocator, Args&&... arguments)
+      [[clang::lifetimebound]] -> maybe<T&> {
+      return emplace_back<dyn_allocator>(allocator, $fwd(arguments)...);
+   }
+
+   // Remove and return the last element. Returns `nullopt` when the vec
+   // is empty.
+   [[nodiscard]]
+   constexpr auto
+   pop_back() -> maybe<T>
+      requires(is_move_constructible<T>) {
+      if (m_current_size == 0u) {
+         return nullopt;
+      }
+      m_current_size.raw -= 1u;
+      T result = cat::move(m_p_data[m_current_size.raw]);
+      if constexpr (!is_trivially_destructible<T>) {
+         m_p_data[m_current_size.raw].~T();
+      }
+      annotate_size_change(m_current_size + 1u, m_current_size);
+      return result;
+   }
+
+   // Destroy every element of this `vec`. Storage is left allocated and the
+   // capacity is unchanged. Equivalent to `.reset()`, named for std parity.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() {
+      reset();
+   }
+
+   // Remove the element at `index`, shifting subsequent elements left.
+   constexpr void
+   erase(idx index)
+      requires(is_move_assignable<T>) {
+      if !consteval {
+         cat::assert(index < m_current_size);
+      }
+      T* _Nonnull const p_dst = m_p_data + index.raw;
+      T* _Nonnull const p_src = p_dst + 1;
+      T* _Nonnull const p_end = m_p_data + m_current_size.raw;
+      cat::move(p_src, p_end, p_dst);
+      m_current_size.raw -= 1u;
+      if constexpr (!is_trivially_destructible<T>) {
+         m_p_data[m_current_size.raw].~T();
+      }
+      annotate_size_change(m_current_size + 1u, m_current_size);
+   }
+
+   // Remove the elements in the half-open range `[start, end)`, shifting
+   // subsequent elements left.
+   constexpr void
+   erase(idx start, idx end)
+      requires(is_move_assignable<T>) {
+      if !consteval {
+         cat::assert(start <= end);
+         cat::assert(end <= m_current_size);
+      }
+      auto const count = end.raw - start.raw;
+      if (count == 0u) {
+         return;
+      }
+
+      T* _Nonnull const p_dst = m_p_data + start.raw;
+      T* _Nonnull const p_src = m_p_data + end.raw;
+      T* _Nonnull const p_data_end = m_p_data + m_current_size.raw;
+      cat::move(p_src, p_data_end, p_dst);
+      if constexpr (!is_trivially_destructible<T>) {
+         for (auto i = m_current_size.raw - count; i < m_current_size.raw;
+              ++i) {
+            m_p_data[i].~T();
+         }
+      }
+      idx const old_size = m_current_size;
+      m_current_size.raw -= count;
+      annotate_size_change(old_size, m_current_size);
+   }
+
+   // Append every element of `range` to the end of this `vec`.
+   template <is_allocator Allocator, typename Range>
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator,
+                Range const& range) -> maybe<void> {
+      if constexpr (requires { range.size(); }) {
+         $prop(this->reserve(allocator, m_current_size + idx(range.size())));
+      }
+      for (T const& value : range) {
+         $prop(this->push_back(allocator, value));
+      }
+      return monostate;
+   }
+
+   // Append every element of `range` to the end of this `vec`.
+   template <typename Range>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   append_range(dyn_allocator allocator,
+                Range const& range) -> maybe<void> {
+      return append_range<dyn_allocator>(allocator, range);
+   }
+
+   // Maximum number of elements this `vec` can theoretically hold, bounded
+   // by the address space rather than any allocator's actual ceiling.
+   [[nodiscard]]
+   static constexpr auto
+   max_size() -> idx {
+      return idx::max() / sizeof(T);
+   }
+
  private:
-   T* _Nonnull m_p_data;
+   // TODO: Optimize `maybe<raii:vec>`.
+   // Tag used to construct a `basic_vec` in the `maybe_vec<T>` niche
+   // state. Private so that user code cannot accidentally summon a vec
+   // with a non-null buffer expectation and a null data pointer; only
+   // the niche helpers below may produce one.
+   struct niche_tag {};
+
+   constexpr basic_vec(niche_tag /*unused*/) : m_p_data(nullptr), m_current_size(1u) {
+   }
+
+   template <typename U>
+   friend constexpr auto
+   detail::maybe_vec_nullopt() -> basic_vec<U>;
+
+   T* _Nullable m_p_data;
    idx m_current_size;
    idx m_current_capacity;
-   Allocator& m_allocator;
 };
 
-// TODO: Implement this factory function when I implement
-// `std::initializer_list`.
-
-// These factory functions require access to the `protected` constructor, which
-// is marked `[[deprecated]]`.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+}  // namespace manual
 
 namespace detail {
-template <idx i>
-void
-initialize_vec(auto& vec, auto&& current, auto&&... next) {
-   vec[i] = $fwd(current);
-   if constexpr (sizeof...(next) > 0u) {
-      initialize_vec<i + 1u>(vec, $fwd(next)...);
+template <typename T>
+constexpr auto
+maybe_vec_has_value(basic_vec<T> const& value) -> bool {
+   // Engaged iff not in the `data == nullptr && size != 0` niche.
+   // A default-constructed empty vec (`data == nullptr && size == 0`)
+   // and any populated vec (`data != nullptr`) are both engaged.
+   return value.data() != nullptr || value.size() == 0u;
+}
+
+template <typename T>
+constexpr auto
+maybe_vec_nullopt() -> basic_vec<T> {
+   return basic_vec<T>(typename basic_vec<T>::niche_tag{});
+}
+
+}  // namespace detail
+
+// `maybe<basic_vec<T>>` opts into compact storage by default: the niche
+// state is `data == nullptr && size != 0`, which no engaged `basic_vec`
+// can produce. This mirrors `default_compact_trait<basic_idx>` so a
+// bare `maybe<vec<T>>` stays the size of `vec<T>` itself.
+template <typename T>
+struct default_compact_trait<basic_vec<T>>
+    : identity_trait<compact<basic_vec<T>, detail::maybe_vec_has_value<T>,
+                             detail::maybe_vec_nullopt<T>>> {};
+
+inline namespace manual {
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_vec(allocator_ref<Allocator> /*unused*/) -> maybe<basic_vec<T>> {
+   return basic_vec<T>{};
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_vec(dyn_allocator allocator) -> maybe<basic_vec<T>> {
+   return make_vec<T, dyn_allocator>(allocator);
+}
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_vec(allocator_ref<Allocator> allocator, initializer_list<T> values)
+   -> maybe<basic_vec<T>> {
+   basic_vec<T> new_vector;
+   $prop(new_vector.reserve(allocator, max(values.size(), 4u)));
+   for (T const& value : values) {
+      $prop(new_vector.push_back(allocator, value));
    }
-}
+   return new_vector;
 }
 
-template <typename T, is_allocator Allocator, typename... Us>
-   requires(sizeof...(Us) > 0u)
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_vec(dyn_allocator allocator, initializer_list<T> values)
+   -> maybe<basic_vec<T>> {
+   return make_vec<T, dyn_allocator>(allocator, values);
+}
+
+template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_vec(Allocator& allocator [[clang::lifetimebound]], Us&&... arguments)
-   -> maybe<vec<T, Allocator>> {
-   vec<T, Allocator> new_vector(allocator);
-   $prop(new_vector.reserve(sizeof...(Us)));
-   new_vector.m_current_size = sizeof...(Us);
-   detail::initialize_vec<0u>(new_vector, $fwd(arguments)...);
+make_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
+   -> maybe<basic_vec<T>> {
+   basic_vec<T> new_vector;
+   $prop(new_vector.reserve(allocator, max(capacity, 4u)));
+   return new_vector;
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_vec_reserved(dyn_allocator allocator, idx capacity)
+   -> maybe<basic_vec<T>> {
+   return make_vec_reserved<T, dyn_allocator>(allocator, capacity);
+}
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_vec_filled(allocator_ref<Allocator> allocator, idx count, T const& value)
+   -> maybe<basic_vec<T>> {
+   basic_vec<T> new_vector = $prop(make_vec_reserved<T>(allocator, count));
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_vector.push_back(allocator, value));
+   }
+   return new_vector;
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_vec_filled(dyn_allocator allocator, idx count, T const& value)
+   -> maybe<basic_vec<T>> {
+   return make_vec_filled<T, dyn_allocator>(allocator, count, value);
+}
+
+}  // namespace manual
+
+namespace raii {
+
+template <typename T, is_allocator Allocator = dyn_allocator>
+class basic_vec;
+
+// `vec<T, Allocator>` is the user-facing alias for the managed
+// `raii::basic_vec<T, Allocator>`. Declared above the class definition so
+// the `[[clang::preferred_name]]` attribute can reference it.
+template <typename T, is_allocator Allocator = dyn_allocator>
+using vec = basic_vec<T, Allocator>;
+
+template <typename T, is_allocator Allocator>
+class [[clang::preferred_name(vec<T, Allocator>), gsl::Owner]]
+basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
+            public random_access_stepanov_iterable_interface<T> {
+   template <typename, is_allocator>
+   friend class basic_vec;
+
+ public:
+   constexpr basic_vec() = delete ("`cat::raii::basic_vec` cannot be created "
+                                   "without an allocator.");
+
+   constexpr basic_vec(allocator_ref<Allocator> allocator
+                       [[clang::lifetimebound]])
+       : m_core(), m_allocator(allocator) {
+   }
+
+   constexpr basic_vec(basic_vec&&) = default;
+
+   constexpr basic_vec(basic_vec const&) = delete (
+      "Implicit copying of `cat::raii::basic_vec` is forbidden. Call "
+      "`.clone()` or move instead!");
+
+   auto
+   operator=(basic_vec const&)
+      -> basic_vec& = delete ("Implicit copying of `cat::raii::basic_vec` is "
+                              "forbidden. Call `.clone()` or move instead!");
+
+   [[clang::reinitializes]]
+   constexpr auto
+   operator=(basic_vec&& other) -> basic_vec& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+
+      m_core.free(m_allocator);
+      if (cat::allocators_equal(m_allocator, other.m_allocator)) {
+         m_core = cat::move(other.m_core);
+      } else {
+         // TODO: Implement element-wise move across non-equal allocators.
+         if !consteval {
+            cat::assert(false,
+                        "raii::basic_vec move-assign across non-equal "
+                        "allocators is not yet implemented.");
+         }
+      }
+      return *this;
+   }
+
+   constexpr ~basic_vec() {
+      reset();
+   }
+
+   // [[nodiscard]]
+   // constexpr auto
+   // operator[](this basic_vec self, idx index)
+   // __attribute__((enable_if(index >= self.size(),
+   //                          ""))) = delete ("This `index` is out of
+   //                          bounds!");
+
+   constexpr void
+   swap(basic_vec& other) {
+      if !consteval {
+         cat::assert(cat::allocators_equal(m_allocator, other.m_allocator));
+      }
+      m_core.swap(other.m_core);
+   }
+
+   // Returns `nullptr` when this `vec` is default-constructed or moved-from.
+   [[nodiscard]]
+   constexpr auto
+   data() [[clang::lifetimebound]] -> T* _Nullable {
+      return m_core.data();
+   }
+
+   // Returns `nullptr` when this `vec` is default-constructed or moved-from.
+   [[nodiscard]]
+   constexpr auto
+   data() const [[clang::lifetimebound]] -> T const* _Nullable {
+      return m_core.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_core.size();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_core.capacity();
+   }
+
+   // Deallocate this `vec`'s storage through its owned allocator.
+   [[clang::reinitializes]]
+   constexpr void
+   free() {
+      m_core.free(m_allocator);
+   }
+
+   // Destroy every element of this `vec` and deallocate its storage.
+   [[clang::reinitializes]]
+   constexpr void
+   reset() {
+      this->free();
+   }
+
+   // Try to allocate storage for at least `minimum_capacity` number of `T`s.
+   [[nodiscard]]
+   constexpr auto
+   reserve(idx minimum_capacity) -> maybe<void> {
+      return m_core.reserve(m_allocator, minimum_capacity);
+   }
+
+   // Try to change the size of this `vec`.
+   [[nodiscard]]
+   constexpr auto
+   resize(idx size) -> maybe<void>
+      requires(is_default_constructible<T>) {
+      return m_core.resize(m_allocator, size);
+   }
+
+   // Try to change the size of this `vec`, copy-constructing any new
+   // elements from `value`.
+   [[nodiscard]]
+   constexpr auto
+   resize(idx size, T const& value) -> maybe<void>
+      requires(is_copy_constructible<T>) {
+      return m_core.resize(m_allocator, size, value);
+   }
+
+   // De-allocate excess storage.
+   [[nodiscard]]
+   constexpr auto
+   shrink_to_fit() -> maybe<void> {
+      return m_core.shrink_to_fit(m_allocator);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   push_back(T const& value) -> maybe<void>
+      requires(is_copy_constructible<T>) {
+      return m_core.push_back(m_allocator, value);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   push_back(T&& value) -> maybe<void>
+      requires(is_move_constructible<T>) {
+      return m_core.push_back(m_allocator, cat::move(value));
+   }
+
+   template <typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard]]
+   constexpr auto
+   emplace_back(Args&&... arguments) [[clang::lifetimebound]] -> maybe<T&> {
+      return m_core.emplace_back(m_allocator, $fwd(arguments)...);
+   }
+
+   // Remove and return the last element. Returns `nullopt` when the vec
+   // is empty.
+   [[nodiscard]]
+   constexpr auto
+   pop_back() -> maybe<T>
+      requires(is_move_constructible<T>) {
+      return m_core.pop_back();
+   }
+
+   // Destroy every element of this `vec`. Storage is left allocated and the
+   // capacity is unchanged. Equivalent to std `.clear()`. Use `.reset()` to
+   // also release the allocation.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() {
+      m_core.reset();
+   }
+
+   // Remove the element at `index`, shifting subsequent elements left.
+   constexpr void
+   erase(idx index)
+      requires(is_move_assignable<T>) {
+      m_core.erase(index);
+   }
+
+   // Remove the elements in the half-open range `[start, end)`, shifting
+   // subsequent elements left.
+   constexpr void
+   erase(idx start, idx end)
+      requires(is_move_assignable<T>) {
+      m_core.erase(start, end);
+   }
+
+   // Append every element of `range` to the end of this `vec`.
+   template <typename Range>
+   [[nodiscard]]
+   constexpr auto
+   append_range(Range const& range) -> maybe<void> {
+      return m_core.append_range(m_allocator, range);
+   }
+
+   // Maximum number of elements this `vec` can theoretically hold, bounded
+   // by the address space rather than any allocator's actual ceiling.
+   [[nodiscard]]
+   static constexpr auto
+   max_size() -> idx {
+      return cat::basic_vec<T>::max_size();
+   }
+
+   // Deep-copy the contents of this `vec`.
+   [[nodiscard]]
+   constexpr auto
+   clone() const& -> maybe<basic_vec> {
+      return clone(m_allocator);
+   }
+
+   // Deep-copy the contents of this `vec`.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(allocator_ref<NewAllocator> allocator)
+      const& -> maybe<basic_vec<T, NewAllocator>> {
+      basic_vec<T, NewAllocator> new_vector(allocator);
+      new_vector.m_core = $prop(m_core.clone(allocator));
+      return new_vector;
+   }
+
+   // Deep-copy the contents of this `vec`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(dyn_allocator allocator) const& -> maybe<basic_vec<T, dyn_allocator>> {
+      basic_vec<T, dyn_allocator> new_vector(allocator);
+      new_vector.m_core = $prop(m_core.clone(allocator));
+      return new_vector;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   allocator(this auto&& self) -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
+   // Move ownership of this `vec`'s owned array. The returned manual
+   // `vec` is responsible for being `.free()`'d elsewhere.
+   [[nodiscard, clang::reinitializes]]
+   constexpr auto
+   release() && -> cat::basic_vec<T> {
+      return cat::move(m_core);
+   }
+
+ private:
+   cat::basic_vec<T> m_core;
+   allocator_ref<Allocator> m_allocator;
+};
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_vec(allocator_ref<Allocator> allocator)
+   -> maybe<basic_vec<T, Allocator>> {
+   return basic_vec<T, Allocator>(allocator);
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_vec(dyn_allocator allocator) -> maybe<basic_vec<T, dyn_allocator>> {
+   return basic_vec<T, dyn_allocator>(allocator);
+}
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_vec(allocator_ref<Allocator> allocator, initializer_list<T> values)
+   -> maybe<basic_vec<T, Allocator>> {
+   basic_vec<T, Allocator> new_vector(allocator);
+   $prop(new_vector.reserve(max(values.size(), 4u)));
+   for (T const& value : values) {
+      $prop(new_vector.push_back(value));
+   }
+   return new_vector;
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_vec(dyn_allocator allocator, initializer_list<T> values)
+   -> maybe<basic_vec<T, dyn_allocator>> {
+   basic_vec<T, dyn_allocator> new_vector(allocator);
+   $prop(new_vector.reserve(max(values.size(), 4u)));
+   for (T const& value : values) {
+      $prop(new_vector.push_back(value));
+   }
    return new_vector;
 }
 
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_vec(Allocator& allocator [[clang::lifetimebound]]) -> vec<T, Allocator> {
-   return vec<T, Allocator>(allocator);
+make_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
+   -> maybe<basic_vec<T, Allocator>> {
+   basic_vec<T, Allocator> new_vector(allocator);
+   $prop(new_vector.reserve(max(capacity, 4u)));
+   return new_vector;
 }
 
-template <typename T, is_allocator Allocator>
-[[nodiscard]]
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_vec_reserved(Allocator& allocator [[clang::lifetimebound]], idx capacity)
-   -> maybe<vec<T, Allocator>> {
-   vec<T, Allocator> new_vector(allocator);
-   $prop(new_vector.reserve(capacity));
+make_vec_reserved(dyn_allocator allocator, idx capacity)
+   -> maybe<basic_vec<T, dyn_allocator>> {
+   basic_vec<T, dyn_allocator> new_vector(allocator);
+   $prop(new_vector.reserve(max(capacity, 4u)));
    return new_vector;
 }
 
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_vec_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
-                T const& value) -> maybe<vec<T, Allocator>> {
-   vec<T, Allocator> new_vector(allocator);
-   $prop(new_vector.reserve(count));
-   new_vector.m_current_size = count;
+make_vec_filled(allocator_ref<Allocator> allocator, idx count, T const& value)
+   -> maybe<basic_vec<T, Allocator>> {
+   basic_vec<T, Allocator> new_vector =
+      $prop(raii::make_vec_reserved<T>(allocator, count));
    // TODO: Call a vectorized fill memory function.
    // TODO: Forward from the last `value`.
-   for (T& element : new_vector) {
-      element = value;
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_vector.push_back(value));
    }
    return new_vector;
 }
 
-#pragma clang diagnostic pop
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_vec_filled(dyn_allocator allocator, idx count, T const& value)
+   -> maybe<basic_vec<T, dyn_allocator>> {
+   basic_vec<T, dyn_allocator> new_vector =
+      $prop(raii::make_vec_reserved<T>(allocator, count));
+   // TODO: Call a vectorized fill memory function.
+   // TODO: Forward from the last `value`.
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_vector.push_back(value));
+   }
+   return new_vector;
+}
+
+}  // namespace raii
 
 }  // namespace cat
