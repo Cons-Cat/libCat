@@ -4,80 +4,37 @@
 
 #include <cat/bit>
 
-// Returns a value rounded up from `p_value` to the nearest `alignment`
-// boundary.
-
-namespace cat::detail {
-
-template <typename PointerInteger>
-[[nodiscard]]
-constexpr auto
-align_up_basic_intptr(PointerInteger p_value, uword alignment)
-   -> PointerInteger {
-   using raw_type = PointerInteger::raw_type;
-   using unsigned_raw_type = make_unsigned_type<raw_type>;
-   unsigned_raw_type const raw = static_cast<unsigned_raw_type>(p_value.raw);
-   unsigned_raw_type const align_less_one =
-      static_cast<unsigned_raw_type>((alignment - 1u).raw);
-   unsigned_raw_type const mask =
-      static_cast<unsigned_raw_type>(~align_less_one);
-   return PointerInteger(
-      __builtin_bit_cast(raw_type, (raw + align_less_one) & mask));
-}
-
-}  // namespace cat::detail
-
 namespace cat {
 
-template <typename U>
+template <typename T>
 [[nodiscard]]
-constexpr U* _Nullable align_up(U* _Nullable p_value, uword alignment)
-   __attribute__((enable_if(has_single_bit(alignment),
-                            "`alignment` must be a power of two!"))) {
-   uintptr<U> const p_integer{__builtin_bit_cast(__UINTPTR_TYPE__, p_value)};
-   return __builtin_bit_cast(
-      U*, detail::align_up_basic_intptr(p_integer, alignment).raw);
-}
-
-template <typename U>
-[[nodiscard]]
-constexpr U* _Nullable align_up(U* _Nullable, uword alignment)
+constexpr T* _Nullable align_up(T* _Nullable, uword alignment)
    __attribute__((enable_if(!has_single_bit(alignment),
                             "`alignment` must be a power of two!"))) = delete;
-
-template <typename U>
-[[nodiscard]]
-constexpr auto
-align_up(U* _Nullable p_value, uword alignment) -> U* _Nullable {
-   uintptr<U> const p_integer{__builtin_bit_cast(__UINTPTR_TYPE__, p_value)};
-   return __builtin_bit_cast(
-      U*, detail::align_up_basic_intptr(p_integer, alignment).raw);
-}
 
 // Returns a value rounded up from `p_value` to the nearest `alignment`
 // boundary.
-template <typename U, typename Storage, overflow_policies policy>
+template <typename T>
 [[nodiscard]]
-constexpr basic_intptr<U, Storage, policy>
-align_up(basic_intptr<U, Storage, policy> p_value, uword alignment)
-   __attribute__((enable_if(has_single_bit(alignment),
-                            "`alignment` must be a power of two!"))) {
-   return detail::align_up_basic_intptr(p_value, alignment);
+constexpr auto
+align_up(T* _Nullable p_value, uword alignment) -> T* _Nullable {
+   return __builtin_align_up(p_value, alignment.raw);
 }
 
-template <typename U, typename Storage, overflow_policies policy>
+template <is_arithmetic T>
 [[nodiscard]]
-constexpr basic_intptr<U, Storage, policy>
-align_up(basic_intptr<U, Storage, policy>, uword alignment)
+constexpr T
+align_up(T, uword alignment)
    __attribute__((enable_if(!has_single_bit(alignment),
                             "`alignment` must be a power of two!"))) = delete;
 
-template <typename U, typename Storage, overflow_policies policy>
+// Returns a value rounded up from `value` to the nearest `alignment`
+// boundary.
+template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-align_up(basic_intptr<U, Storage, policy> p_value, uword alignment)
-   -> basic_intptr<U, Storage, policy> {
-   return detail::align_up_basic_intptr(p_value, alignment);
+align_up(T value, uword alignment) -> T {
+   return __builtin_align_up(make_raw_arithmetic(value), alignment.raw);
 }
 
 }  // namespace cat

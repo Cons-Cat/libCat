@@ -3813,7 +3813,7 @@ class allocator_interface {
    relocate_disjoint_reserved_storage(T* _Nonnull p_destination, T& source) {
       if !consteval {
          uword const extent{sizeof(T)};
-         verify(!is_memory_overlapping(__builtin_addressof(source), extent,
+         assert(!is_memory_overlapping(__builtin_addressof(source), extent,
                                        p_destination, extent));
       }
       if constexpr (is_trivially_relocatable<T>) {
@@ -3895,7 +3895,7 @@ class allocator_interface {
    relocate_inline_handle(mem auto& handle, mem auto& allocation) {
       using allocation_type = remove_cvref<decltype(handle)>::allocation_type;
       if !consteval {
-         verify(!is_memory_overlapping(this->p_get(handle), handle.raw_size(),
+         assert(!is_memory_overlapping(this->p_get(handle), handle.raw_size(),
                                        this->p_get(allocation),
                                        allocation.raw_size()));
       }
@@ -3919,7 +3919,7 @@ class allocator_interface {
       if !consteval {
          assert(p_new_handle != nullptr);
          idx const transfer_bytes = old_count * sizeof(T);
-         verify(!is_memory_overlapping(p_old_handle, transfer_bytes,
+         assert(!is_memory_overlapping(p_old_handle, transfer_bytes,
                                        p_new_handle, transfer_bytes));
          if constexpr (is_trivially_relocatable<T>) {
             copy_memory(p_old_handle, p_new_handle, transfer_bytes);
@@ -3944,7 +3944,7 @@ class allocator_interface {
          assert(new_handle.data() != nullptr);
 
          idx const transfer_bytes = old_count * sizeof(T);
-         verify(!is_memory_overlapping(p_old_handle, transfer_bytes,
+         assert(!is_memory_overlapping(p_old_handle, transfer_bytes,
                                        new_handle.data(), transfer_bytes));
 
          unpoison_memory_region(p_old_handle, transfer_bytes);

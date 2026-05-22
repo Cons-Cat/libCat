@@ -832,42 +832,35 @@ invert_endianess(T value) -> T {
 // TODO: Aligned pointer types and alignment casts.
 // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4201.html
 
-template <typename U>
+template <typename T>
 [[nodiscard]]
 constexpr auto
-is_aligned(U* _Nullable p_value, uword alignment) -> bool;
+is_aligned(T* _Nullable p_value, uword alignment) -> bool;
 
-template <typename U, typename Storage, overflow_policies policy>
+template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-is_aligned(basic_intptr<U, Storage, policy> p_value, uword alignment) -> bool;
+is_aligned(T value, uword alignment) -> bool;
 
-template <cat::overflow_policies policy>
+template <typename T>
 [[nodiscard]]
 constexpr auto
-is_aligned(basic_idx<policy> value, uword alignment) -> bool;
+align_up(T* _Nullable p_value, uword alignment) -> T* _Nullable;
 
-template <typename U>
+template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-align_up(U* _Nullable p_value, uword alignment) -> U* _Nullable;
+align_up(T value, uword alignment) -> T;
 
-template <typename U, typename Storage, overflow_policies policy>
+template <typename T>
 [[nodiscard]]
 constexpr auto
-align_up(basic_intptr<U, Storage, policy> p_value, uword alignment)
-   -> basic_intptr<U, Storage, policy>;
+align_down(T* _Nullable p_value, uword alignment) -> T* _Nullable;
 
-template <typename U>
+template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-align_down(U* _Nullable p_value, uword alignment) -> U* _Nullable;
-
-template <typename U, typename Storage, overflow_policies policy>
-[[nodiscard]]
-constexpr auto
-align_down(basic_intptr<U, Storage, policy> p_value, uword alignment)
-   -> basic_intptr<U, Storage, policy>;
+align_down(T value, uword alignment) -> T;
 
 // `byte` is a storage type which enables bitwise operations but not arithmetic.
 // TODO: Add some member functions.

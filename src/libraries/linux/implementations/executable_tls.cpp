@@ -66,12 +66,14 @@ install_executable_tls_image_at_thread_pointer(
    // bytes.
    cat::uintptr<void> const tls_image_low = p_process_address - memory_size;
    // Copy `.tdata` (initialised TLS).
-   cat::copy_memory(__cat_tls_initial_image, tls_image_low.get(), file_size);
+   // TODO: This shouldn't be a scalar copy, but we should hint it's small-ish.
+   cat::copy_memory_scalar(__cat_tls_initial_image, tls_image_low.get(),
+                           file_size);
    if (memory_size > file_size) {
       // Zero `.tbss` (the trailing uninitialised tail).
       cat::idx const zero_initialized_size = cat::idx(memory_size - file_size);
-      cat::zero_memory((tls_image_low + file_size).get(),
-                       zero_initialized_size);
+      cat::zero_memory_scalar((tls_image_low + file_size).get(),
+                              zero_initialized_size);
    }
 }
 
@@ -119,7 +121,7 @@ init_parent_process_tls() {
                     nix::file_descriptor(-1), 0u)
          // In the unlikely event that the kernel refused to map the slab, fail
          // fast
-         .verify();
+         .assert();
 
    cat::uintptr const buffer_end_inclusive =
       cat::uintptr(p_slab) + slab_bytes - sizeof(void*);

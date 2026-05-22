@@ -173,6 +173,12 @@ SECTIONS {
    `SIZEOF(.tdata)` etc. would be evaluated at the cursor position
    inside SECTIONS rather than after the layout is finalised. */
 __cat_tls_file_size    = SIZEOF(.tdata);
-__cat_tls_memory_size  = SIZEOF(.tdata) + SIZEOF(.tbss);
-__cat_tls_alignment    = MAX(ALIGNOF(.tdata), 32);
+/* `.tbss` may sit at a higher offset than `ADDR(.tdata) + SIZEOF(.tdata)`
+   because lld pads the output cursor up to `ALIGNOF(.tbss)` between the
+   two sections. `SIZEOF(.tdata) + SIZEOF(.tbss)` silently drops that
+   pad, which then under-sizes the slab in
+   `nix::process::spawn_impl` and `init_parent_process_tls`. Compute
+   the actual extent the linker materialised for PT_TLS. */
+__cat_tls_memory_size  = (ADDR(.tbss) + SIZEOF(.tbss)) - ADDR(.tdata);
+__cat_tls_alignment    = MAX(MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)), 32);
 __cat_tls_initial_image = ADDR(.tdata);
