@@ -364,7 +364,10 @@ $test(vec_self_move_assign) {
    idx const original_size = v.size();
    idx const original_capacity = v.capacity();
 
-   v = cat::move(v); // NOLINT
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-move"
+   v = cat::move(v);
+#pragma clang diagnostic pop
 
    cat::verify(v.data() == p_original_data);
    cat::verify(v.size() == original_size);
@@ -639,7 +642,10 @@ $test(raii_vec_self_move_assign) {
    idx const original_size = v.size();
    idx const original_capacity = v.capacity();
 
-   v = cat::move(v); // NOLINT
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-move"
+   v = cat::move(v);  // NOLINT
+#pragma clang diagnostic pop
 
    cat::verify(v.data() == p_original_data);
    cat::verify(v.size() == original_size);

@@ -27,6 +27,7 @@ $test(typelist) {
    using types2 = cat::type_list<int, int, char>;
    static_assert(types::is_unique_list);
    static_assert(!types2::is_unique_list);
+   static_assert(cat::type_list<>::is_unique_list);
    static_assert(types2::count_type<int> == 2);
 
    using concat_types = types::concat_types<types2>;

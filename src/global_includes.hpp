@@ -33,8 +33,8 @@ inline constinit struct {
 } const deferrer [[maybe_unused]];
 }  // namespace cat::detail
 
-// `$defer` is a macro that instantiates a scoped object which executes some
-// arbitrary closure in its destructor.
+// `$defer` is a macro that evaluates its body at the end of its scope
+// to perform resource cleanup.
 // For example:
 //    void* p_mem1 = allocator.alloc();
 //    void* p_mem2 = allocator.alloc();
@@ -72,10 +72,10 @@ template <typename T, T constant_state>
 struct monotype_storage {
    constexpr monotype_storage() = default;
 
-   constexpr monotype_storage(monostate_type&) : m_storage(constant_state) {
+   constexpr monotype_storage(monostate_type& /*unused*/) : m_storage(constant_state) {
    }
 
-   constexpr monotype_storage(monostate_type const&)
+   constexpr monotype_storage(monostate_type const& /*unused*/)
        : m_storage(constant_state) {
    }
 
@@ -88,7 +88,7 @@ struct monotype_storage {
    };
 
    constexpr auto
-   operator=(monostate_type) -> monotype_storage<T, constant_state>& {
+   operator=(monostate_type /*unused*/) -> monotype_storage<T, constant_state>& {
       return *this;
    }
 
@@ -126,7 +126,7 @@ struct compact<T, predicate, get_nullopt> {
    // The engaged value type. `maybe_compact_storage<compact<...>>` exposes
    // this as `value_type` so the surrounding `maybe<T>` machinery can
    // talk about the engaged type independently from `nullopt_state`'s
-   // (potentially different) return type.
+   // potentially different return type.
    using value_type = T;
 
    static constexpr auto
@@ -137,11 +137,10 @@ struct compact<T, predicate, get_nullopt> {
    // `nullopt_state` is permitted to return a type distinct from `T` as
    // long as that type is convertible to `T` (the predicate takes
    // `T const&`, so the `requires`-clause above will already reject any
-   // niche value that can't make it into `T`). Returning a different
+   // niche value that can't be stored in `T`). Returning a different
    // type is useful when the niche bit pattern wouldn't be a meaningful
-   // value of `T` - for example, `default_compact_trait<basic_idx>` can
-   // return the raw `__SIZE_TYPE__` so the niche doesn't pretend to be a
-   // valid `idx`. `maybe::value_or_niche` then surfaces the result as
+   // value of `T`.
+   // `maybe::value_or_niche` then exposes the result as
    // `common_type<value_type, decltype(nullopt_state())>`.
    static constexpr auto
    nullopt_state() {
@@ -222,6 +221,7 @@ inline constexpr bool is_monostate =
 
 }  // namespace cat
 
+// NOLINTBEGIN(bugprone-std-namespace-modification)
 namespace std {
 
 template <typename>
@@ -240,6 +240,7 @@ using tuple_element_t = tuple_element<index, T>::type;
 enum class align_val_t : __SIZE_TYPE__ {
 };
 }  // namespace std
+// NOLINTEND(bugprone-std-namespace-modification)
 
 // Including the `<cat/runtime>` library is required to link a libCat program,
 // because it contains the `_start` symbol.

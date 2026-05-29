@@ -67,6 +67,14 @@ class type_list {
                            : recurse_for_count<T, count, Remaining...>();
    }
 
+   template <typename... Empty>
+   requires(sizeof...(Empty) == 0)
+   static consteval auto
+   recurse_for_unique() -> bool {
+      // When the `type_list` is empty, short-circuit to `true`.
+      return true;
+   }
+
    template <typename U>
    static consteval auto
    recurse_for_unique() -> bool {

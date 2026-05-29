@@ -53,16 +53,16 @@ struct scaredy_variant_storage {
    }
 
    // Convert and copy-construct an error.
-   template <typename error_type>
-      requires(is_error<error_type>)
-   constexpr scaredy_variant_storage(error_type const& error)
+   template <typename Error>
+      requires(is_error<Error>)
+   constexpr scaredy_variant_storage(Error const& error)
        : m_storage(error) {
    }
 
    // Convert and move-construct an error.
-   template <is_forwarding_move error_type>
-      requires(is_error<error_type>)
-   constexpr scaredy_variant_storage(error_type&& error)
+   template <is_forwarding_move Error>
+      requires(is_error<Error>)
+   constexpr scaredy_variant_storage(Error&& error)
        // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
        : m_storage(move(error)) {
    }
@@ -92,20 +92,20 @@ struct scaredy_variant_storage {
    }
 
    // Copy-assign and convert an error to `storage`.
-   template <typename error_type>
-      requires(is_error<error_type>)
+   template <typename Error>
+      requires(is_error<Error>)
    constexpr auto
-   operator=(error_type const& operand)
+   operator=(Error const& operand)
       -> scaredy_variant_storage<T, error_types...>& {
       m_storage = operand;
       return *this;
    }
 
    // Move-assign and convert a value to `storage`.
-   template <is_forwarding_move error_type>
-      requires(is_error<error_type>)
+   template <is_forwarding_move Error>
+      requires(is_error<Error>)
    constexpr auto
-   operator=(error_type&& operand)
+   operator=(Error&& operand)
       -> scaredy_variant_storage<T, error_types...>& {
       // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
       m_storage = move(operand);
@@ -125,16 +125,16 @@ struct scaredy_variant_storage {
       return $fwd(self).m_storage.template get<value_type>();
    }
 
-   template <typename error_type>
+   template <typename Error>
    constexpr auto
-   error() -> error_type {
-      return m_storage.template get<error_type>();
+   error() -> Error {
+      return m_storage.template get<Error>();
    }
 
-   template <typename error_type>
+   template <typename Error>
    constexpr auto
-   error() const -> error_type {
-      return m_storage.template get<error_type>();
+   error() const -> Error {
+      return m_storage.template get<Error>();
    }
 
    template <typename U>
@@ -154,7 +154,7 @@ struct scaredy_variant_storage {
 };
 
 // `T` is a `compact_scaredy<type, predicate>`.
-template <typename T, typename error_type>
+template <typename T, typename Error>
 struct scaredy_compact_storage {
    using value_type = T::type;
 
@@ -167,14 +167,14 @@ struct scaredy_compact_storage {
       // `U` must be converted to the value type.
       is_implicitly_convertible<U, value_type> &&
       // `U` must not be one of the errors.
-      !is_same<error_type, U>;
+      !is_same<Error, U>;
 
    template <typename U>
    static constexpr bool is_error =
       // `U` must not be the value type.
       !is_same<U, value_type> &&
       // `U` must be one of the errors.
-      is_same<error_type, U>;
+      is_same<Error, U>;
 
    constexpr scaredy_compact_storage() = default;
 
@@ -189,11 +189,11 @@ struct scaredy_compact_storage {
    constexpr scaredy_compact_storage(U&& input) : m_storage($fwd(input)) {
    }
 
-   constexpr scaredy_compact_storage(error_type const& error)
+   constexpr scaredy_compact_storage(Error const& error)
        : m_error_code(error) {
    }
 
-   constexpr scaredy_compact_storage(error_type&& error)
+   constexpr scaredy_compact_storage(Error&& error)
        : m_error_code(move(error)) {
    }
 
@@ -217,13 +217,13 @@ struct scaredy_compact_storage {
    }
 
    constexpr auto
-   operator=(error_type const& operand) -> scaredy_compact_storage& {
+   operator=(Error const& operand) -> scaredy_compact_storage& {
       m_error_code = operand;
       return *this;
    }
 
    constexpr auto
-   operator=(error_type&& operand) -> scaredy_compact_storage& {
+   operator=(Error&& operand) -> scaredy_compact_storage& {
       m_error_code = move(operand);
       return *this;
    }
@@ -237,7 +237,7 @@ struct scaredy_compact_storage {
    // `scaredy`'s.
    template <typename...>
    constexpr auto
-   error() -> error_type {
+   error() -> Error {
       return m_error_code;
    }
 
@@ -245,7 +245,7 @@ struct scaredy_compact_storage {
    // `scaredy`'s.
    template <typename...>
    constexpr auto
-   error() const -> error_type {
+   error() const -> Error {
       return m_error_code;
    }
 
@@ -262,7 +262,7 @@ struct scaredy_compact_storage {
    is() const -> bool {
       if constexpr (is_same<U, value_type>) {
          return this->has_value();
-      } else if constexpr (is_same<U, error_type>) {
+      } else if constexpr (is_same<U, Error>) {
          return !this->has_value();
       } else {
          // Any type besides `value_type` and `error_type` can never hold true.
@@ -277,7 +277,7 @@ struct scaredy_compact_storage {
       if (this->has_value()) {
          return static_cast<value_type>($fwd(in_value)) == m_storage;
       }
-      return static_cast<error_type>($fwd(in_value)) == m_error_code;
+      return static_cast<Error>($fwd(in_value)) == m_error_code;
    }
 
    constexpr auto
@@ -290,29 +290,44 @@ struct scaredy_compact_storage {
 
    union {
       value_type m_storage;
-      error_type m_error_code;
+      Error m_error_code;
    };
 };
 }  // namespace detail
 
 // TODO: Support reference types in a `scaredy`.
 
-template <typename T, typename... error_types>
+namespace detail {
+// Flipped to `true` by `<cat/errfat>` for `errfat::error_id`. Gates
+// `error_str()` so the hook is only callable when an errfat marker is
+// in the error pack.
+template <typename T>
+inline constexpr bool is_errfat_error_marker = false;
+}  // namespace detail
+
+namespace errfat::detail {
+// Defined in `<cat/errfat>`. Including that header is required at any
+// call site of `error_str()`.
+auto
+current_error_str_view() -> ::cat::str_view;
+}  // namespace errfat::detail
+
+template <typename T, typename... Errors>
    requires(
       // `scaredy` cannot hold C arrays.
-      (!is_array<error_types> && ...) &&
+      (!is_array<Errors> && ...) &&
       // `scaredy` should have at least one error type.
-      sizeof...(error_types) > 0)
+      sizeof...(Errors) > 0)
 class [[nodiscard]] scaredy {
  private:
    using storage_type =
       conditional<requires { T::predicate_function; },
-                  detail::scaredy_compact_storage<T, error_types...[0]>,
-                  detail::scaredy_variant_storage<T, error_types...>>;
+                  detail::scaredy_compact_storage<T, Errors...[0]>,
+                  detail::scaredy_variant_storage<T, Errors...>>;
 
  public:
    using value_type = storage_type::value_type;
-   using errors_list = type_list<error_types...>;
+   using errors_list = type_list<Errors...>;
 
  private:
    // These two templates must be declared here to be used in the below atomic
@@ -323,14 +338,14 @@ class [[nodiscard]] scaredy {
       // `U` must be converted to the value type.
       is_implicitly_convertible<U, value_type> &&
       // `U` must not be one of the errors.
-      !type_list<error_types...>::template has_type<U>;
+      !type_list<Errors...>::template has_type<U>;
 
    template <typename U>
    static constexpr bool is_error =
       // `U` must not be the value type.
       !is_same<U, value_type> &&
       // `U` must be one of the errors.
-      type_list<error_types...>::template has_type<U>;
+      type_list<Errors...>::template has_type<U>;
 
    template <typename Self>
    [[gnu::always_inline, gnu::nodebug]]
@@ -359,14 +374,14 @@ class [[nodiscard]] scaredy {
    // Copy and convert the storage of a convertible `scaredy`.
    template <typename U>
       requires(is_implicitly_convertible<U, value_type>)
-   constexpr scaredy(scaredy<U, error_types...> const& scaredy)
+   constexpr scaredy(scaredy<U, Errors...> const& scaredy)
        : m_storage(scaredy.m_storage) {
    }
 
    // Move and convert the storage of a convertible `scaredy`.
    template <typename U>
       requires(is_implicitly_convertible<U, value_type>)
-   constexpr scaredy(scaredy<U, error_types...>&& scaredy)
+   constexpr scaredy(scaredy<U, Errors...>&& scaredy)
        : m_storage(move(scaredy).storage) {
    }
 
@@ -402,21 +417,21 @@ class [[nodiscard]] scaredy {
    }
 
    // Copy-assign and convert a `scaredy`.
-   template <typename U, typename... Othererror_types>
-      requires(is_value<U> && (is_error<Othererror_types> && ...))
+   template <typename U, typename... OtherErrors>
+      requires(is_value<U> && (is_error<OtherErrors> && ...))
    [[clang::reinitializes]]
    constexpr auto
-   operator=(scaredy<U, error_types...> const& operand) -> scaredy& {
+   operator=(scaredy<U, Errors...> const& operand) -> scaredy& {
       m_storage = operand.m_storage;
       return *this;
    }
 
    // Move-assign and convert a `scaredy`.
-   template <typename U, typename... Othererror_types>
-      requires(is_value<U> && (is_error<Othererror_types> && ...))
+   template <typename U, typename... OtherErrors>
+      requires(is_value<U> && (is_error<OtherErrors> && ...))
    [[clang::reinitializes]]
    constexpr auto
-   operator=(scaredy<U, error_types...>&& operand) -> scaredy& {
+   operator=(scaredy<U, Errors...>&& operand) -> scaredy& {
       m_storage = operand.m_storage;
       return *this;
    }
@@ -442,21 +457,21 @@ class [[nodiscard]] scaredy {
    }
 
    // Copy-assign and convert an error to `storage`.
-   template <typename error_type>
-      requires(is_error<error_type>)
+   template <typename Error>
+      requires(is_error<Error>)
    [[clang::reinitializes]]
    constexpr auto
-   operator=(error_type const& operand) -> scaredy& {
+   operator=(Error const& operand) -> scaredy& {
       m_storage = operand;
       return *this;
    }
 
    // Move-assign and convert an error to `storage`.
-   template <is_forwarding_move error_type>
-      requires(is_error<error_type>)
+   template <is_forwarding_move Error>
+      requires(is_error<Error>)
    [[clang::reinitializes]]
    constexpr auto
-   operator=(error_type&& operand) -> scaredy& {
+   operator=(Error&& operand) -> scaredy& {
       // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
       m_storage = move(operand);
       return *this;
@@ -488,36 +503,39 @@ class [[nodiscard]] scaredy {
    }
 
    // Get the value of some error when its type is known to the caller.
-   template <typename error_type>
+   template <typename Error>
    [[nodiscard]]
    constexpr auto
    error() {
-      return m_storage.template error<error_type>();
+      return m_storage.template error<Error>();
    }
 
    // Get the value of some error when its type is known to the caller.
-   template <typename error_type>
+   template <typename Error>
    [[nodiscard]]
    constexpr auto
    error() const {
-      return m_storage.template error<error_type>();
+      return m_storage.template error<Error>();
    }
 
    // If there is only one error type, a template argument is not required.
    [[nodiscard]]
    constexpr auto
    error()
-      requires(sizeof...(error_types) == 1)
+      requires(sizeof...(Errors) == 1)
    {
-      return m_storage.template error<error_types...>();
+      return m_storage.template error<Errors...>();
    }
 
    // If there is only one error type, a template argument is not required.
    [[nodiscard]]
    constexpr auto
    error() const
-      requires(sizeof...(error_types) == 1)
+      requires(sizeof...(Errors) == 1)
    {
+      return m_storage.template error<Errors...>();
+   }
+
       return m_storage.template error<error_types...>();
    }
 
@@ -640,7 +658,7 @@ class [[nodiscard]] scaredy {
    [[nodiscard]]
    constexpr auto
    transform(this auto&& self, Callback&& callback) {
-      using this_type = scaredy<T, error_types...>;
+      using this_type = scaredy<T, Errors...>;
       auto&& base = $fwd(self).as_base();
       if (base.has_value()) {
          return this_type($fwd(callback)($fwd(base).value()));
@@ -652,7 +670,7 @@ class [[nodiscard]] scaredy {
    [[nodiscard]]
    constexpr auto
    and_then(this auto&& self, Callback&& callback) {
-      using this_type = scaredy<T, error_types...>;
+      using this_type = scaredy<T, Errors...>;
       auto&& base = $fwd(self).as_base();
       return base.has_value() ? $fwd(callback)($fwd(base).value())
                               : this_type($fwd(base).m_storage);

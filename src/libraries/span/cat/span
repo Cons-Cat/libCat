@@ -476,8 +476,8 @@ template <idx index, typename T, idx fixed_extent>
    requires(fixed_extent != dynamic_extent && index < fixed_extent)
 [[nodiscard]]
 constexpr auto
-get(span<T, fixed_extent> s) -> T& {
-   return s[index];
+get(span<T, fixed_extent> in_span [[clang::lifetimebound]]) -> T& {
+   return in_span.data()[index.raw];
 }
 
 }  // namespace cat

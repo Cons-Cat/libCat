@@ -173,12 +173,13 @@ SECTIONS {
    `SIZEOF(.tdata)` etc. would be evaluated at the cursor position
    inside SECTIONS rather than after the layout is finalised. */
 __cat_tls_file_size    = SIZEOF(.tdata);
-/* `.tbss` may sit at a higher offset than `ADDR(.tdata) + SIZEOF(.tdata)`
-   because lld pads the output cursor up to `ALIGNOF(.tbss)` between the
-   two sections. `SIZEOF(.tdata) + SIZEOF(.tbss)` silently drops that
-   pad, which then under-sizes the slab in
-   `nix::process::spawn_impl` and `init_parent_process_tls`. Compute
-   the actual extent the linker materialised for PT_TLS. */
-__cat_tls_memory_size  = (ADDR(.tbss) + SIZEOF(.tbss)) - ADDR(.tdata);
+/* Must match the thread pointer lld picks for `R_X86_64_TPOFF32`: end of
+   `.tbss` rounded up to the TLS template alignment (the natural max of
+   the two section alignments, not the over-aligned 32 below). Skipping
+   either the inter-section pad or this trailing pad mis-places the
+   runtime image and every `thread_local` reads the wrong byte. */
+__cat_tls_memory_size  =
+  ALIGN(ADDR(.tbss) + SIZEOF(.tbss), MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)))
+  - ADDR(.tdata);
 __cat_tls_alignment    = MAX(MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)), 32);
 __cat_tls_initial_image = ADDR(.tdata);
