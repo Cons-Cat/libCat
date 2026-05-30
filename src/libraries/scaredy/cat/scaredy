@@ -297,21 +297,6 @@ struct scaredy_compact_storage {
 
 // TODO: Support reference types in a `scaredy`.
 
-namespace detail {
-// Flipped to `true` by `<cat/errfat>` for `errfat::error_id`. Gates
-// `error_str()` so the hook is only callable when an errfat marker is
-// in the error pack.
-template <typename T>
-inline constexpr bool is_errfat_error_marker = false;
-}  // namespace detail
-
-namespace errfat::detail {
-// Defined in `<cat/errfat>`. Including that header is required at any
-// call site of `error_str()`.
-auto
-current_error_str_view() -> ::cat::str_view;
-}  // namespace errfat::detail
-
 template <typename T, typename... Errors>
    requires(
       // `scaredy` cannot hold C arrays.
@@ -534,9 +519,6 @@ class [[nodiscard]] scaredy {
       requires(sizeof...(Errors) == 1)
    {
       return m_storage.template error<Errors...>();
-   }
-
-      return m_storage.template error<error_types...>();
    }
 
    [[nodiscard]]

@@ -242,6 +242,77 @@ enum class align_val_t : __SIZE_TYPE__ {
 }  // namespace std
 // NOLINTEND(bugprone-std-namespace-modification)
 
+// `<cat/arithmetic>` depends on `default_compact_trait` declared above.
+#include <cat/arithmetic>
+
+#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
+
+namespace cat::detail {
+
+// Per-thread failure flag. Set by `$prop`-family macros on the failure
+// path. Each `err_deferrer_callback` clears it on construction and
+// re-reads it on destruction, so the flag is always interpreted relative
+// to the guard's own scope.
+// NOLINTNEXTLINE
+inline thread_local uint4 active_failure_serial = 0u;
+
+template <typename Callback>
+class err_deferrer_callback {
+ private:
+   Callback m_callback;
+
+ public:
+   constexpr explicit err_deferrer_callback(Callback callback)
+       : m_callback(move(callback)) {
+      active_failure_serial = 0u;
+   }
+
+   err_deferrer_callback(err_deferrer_callback const&) = delete;
+   err_deferrer_callback(err_deferrer_callback&&) = delete;
+   auto
+   operator=(err_deferrer_callback const&) -> err_deferrer_callback& = delete;
+   auto
+   operator=(err_deferrer_callback&&) -> err_deferrer_callback& = delete;
+
+   ~err_deferrer_callback() {
+      if (active_failure_serial != 0u) {
+         m_callback();
+      }
+   }
+};
+
+inline constinit struct {
+   template <typename F>
+   constexpr auto
+   operator<<(F&& callback) const -> err_deferrer_callback<F> {
+      return err_deferrer_callback<F>($fwd(callback));
+   }
+} const err_deferrer [[maybe_unused]];
+
+}  // namespace cat::detail
+
+// `$errdefer` is a macro that evaluates its body iff a libCat failure
+// propagates out of the enclosing scope, to perform emergency resource
+// cleanup.
+// For example:
+//    auto open_kittens() -> cat::maybe<kittens> {
+//       auto kittens = adopt_kittens();
+//       $errdefer {
+//          kittens.release();
+//       };
+//       return $prop(name_kittens(kittens));
+//    }
+//
+// The flag lives in `thread_local` storage, so `$errdefer` only
+// compiles when `CAT_THREAD_LOCAL_SIZE` is not 0.
+#define CAT_ERRDEFER auto _ = ::cat::detail::err_deferrer << [&]->void
+
+#pragma clang final(CAT_ERRDEFER)
+
+#define $errdefer CAT_ERRDEFER
+
+#endif  // CAT_THREAD_LOCAL_SIZE != 0
+
 // Including the `<cat/runtime>` library is required to link a libCat program,
 // because it contains the `_start` symbol.
 #include <cat/maybe>
@@ -262,7 +333,20 @@ enum class align_val_t : __SIZE_TYPE__ {
 
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds a value, otherwise propagate it up the call stack, using a statement
-// expression.
+// expression. On the failure path, the per-thread failure flag is raised
+// so any `$errdefer` whose scope is exiting fires. The flag write
+// compiles out on `CAT_THREAD_LOCAL_SIZE=0` targets.
+#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
+#define CAT_PROPAGATE(container)                                       \
+   ({                                                                  \
+      auto libcat_temp_expr = (container);                             \
+      if (!libcat_temp_expr.has_value()) {                             \
+         ++::cat::detail::active_failure_serial;                       \
+         return ::cat::propagate_error(::cat::move(libcat_temp_expr)); \
+      }                                                                \
+      ::cat::move(libcat_temp_expr).value();                           \
+   })
+#else
 #define CAT_PROPAGATE(container)                                       \
    ({                                                                  \
       auto libcat_temp_expr = (container);                             \
@@ -271,6 +355,7 @@ enum class align_val_t : __SIZE_TYPE__ {
       }                                                                \
       ::cat::move(libcat_temp_expr).value();                           \
    })
+#endif
 
 // `CAT_PROPAGATE` should never be `#undef`'d. The redefinable macro `$prop`
 // exists to make this macro more ergonomic.
@@ -280,6 +365,18 @@ enum class align_val_t : __SIZE_TYPE__ {
 
 // Propagate error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds an error, otherwise evaluate to a non-error state `or_value`.
+// Raises the failure flag on the failure path, mirroring `$prop`.
+#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
+#define CAT_PROPAGATE_OR(container, or_value)                          \
+   ({                                                                  \
+      auto libcat_temp_expr = (container);                             \
+      if (!libcat_temp_expr.has_value()) {                             \
+         ++::cat::detail::active_failure_serial;                       \
+         return ::cat::propagate_error(::cat::move(libcat_temp_expr)); \
+      }                                                                \
+      (or_value);                                                      \
+   })
+#else
 #define CAT_PROPAGATE_OR(container, or_value)                          \
    ({                                                                  \
       auto libcat_temp_expr = (container);                             \
@@ -288,6 +385,7 @@ enum class align_val_t : __SIZE_TYPE__ {
       }                                                                \
       (or_value);                                                      \
    })
+#endif
 
 // `CAT_PROPAGATE_OR` should never be `#undef`'d. The redefinable macro
 // `$prop_or` exists to make this macro more ergonomic.
@@ -297,6 +395,18 @@ enum class align_val_t : __SIZE_TYPE__ {
 
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds a value, otherwise propagate an error-state `error_value`.
+// Raises the failure flag on the failure path, mirroring `$prop`.
+#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
+#define CAT_PROPAGATE_AS(container, or_value)         \
+   ({                                                 \
+      auto libcat_temp_expr = (container);            \
+      if (!libcat_temp_expr.has_value()) {            \
+         ++::cat::detail::active_failure_serial;      \
+         return (or_value);                           \
+      }                                               \
+      ::cat::move(libcat_temp_expr).value();          \
+   })
+#else
 #define CAT_PROPAGATE_AS(container, or_value) \
    ({                                         \
       auto libcat_temp_expr = (container);    \
@@ -305,6 +415,7 @@ enum class align_val_t : __SIZE_TYPE__ {
       }                                       \
       ::cat::move(libcat_temp_expr).value();  \
    })
+#endif
 
 // `CAT_PROPAGATE_AS` should never be `#undef`'d. The redefinable macro
 // `$prop_as` exists to make this macro more ergonomic.

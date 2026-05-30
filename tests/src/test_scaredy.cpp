@@ -294,3 +294,34 @@ $test(scaredy_get_ptr) {
    cat::scaredy<int4*, error_type_one> bad_ptr = error_type_one{1};
    cat::verify(bad_ptr.get_ptr() == nullptr);
 }
+
+// `$errdefer` semantics across `$prop` variants are exercised by
+// `maybe_errdefer`. This checks the integration with `scaredy`'s
+// `propagate_error` overload.
+$test(scaredy_errdefer) {
+   int4 success_fired = 0;
+   int4 fail_fired = 0;
+
+   auto succeed = [&]() -> cat::scaredy<int4, error_type_one> {
+      $errdefer {
+         ++success_fired;
+      };
+      cat::scaredy<int4, error_type_one> ok = 11_i4;
+      return $prop(ok);
+   };
+   auto fail = [&]() -> cat::scaredy<int4, error_type_one> {
+      $errdefer {
+         ++fail_fired;
+      };
+      cat::scaredy<int4, error_type_one> failed = error_type_one{42};
+      return $prop(failed);
+   };
+
+   cat::verify(succeed().value() == 11);
+   cat::verify(success_fired == 0);
+
+   cat::scaredy<int4, error_type_one> result = fail();
+   cat::verify(!result.has_value());
+   cat::verify(result.is<error_type_one>());
+   cat::verify(fail_fired == 1);
+}
