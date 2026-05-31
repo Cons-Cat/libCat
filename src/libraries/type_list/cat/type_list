@@ -68,7 +68,7 @@ class type_list {
    }
 
    template <typename... Empty>
-   requires(sizeof...(Empty) == 0)
+      requires(sizeof...(Empty) == 0)
    static consteval auto
    recurse_for_unique() -> bool {
       // When the `type_list` is empty, short-circuit to `true`.

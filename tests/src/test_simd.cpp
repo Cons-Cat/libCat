@@ -2656,7 +2656,8 @@ $test(simd_as_vectorized_over_vec_float_data) {
    };
    auto allocator = cat::make_linear_allocator(page);
    cat::raii::vec<float_lane, cat::linear_allocator> storage =
-      cat::raii::make_vec<float_lane, cat::linear_allocator>(allocator).verify();
+      cat::raii::make_vec<float_lane, cat::linear_allocator>(allocator)
+         .verify();
    storage.reserve(k_extent).or_exit();
    for (idx i = 0u; i < k_extent; ++i) {
       storage.push_back(float_lane(static_cast<float>(k_extent.raw - i.raw)))

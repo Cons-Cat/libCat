@@ -8,7 +8,7 @@
 
 namespace cat {
 namespace detail {
-template <typename T, typename... error_types>
+template <typename T, typename... Errors>
 struct scaredy_variant_storage {
    using value_type = conditional<is_void<T>, monostate_type, T>;
 
@@ -21,14 +21,14 @@ struct scaredy_variant_storage {
       // `U` must be converted to the value type.
       is_implicitly_convertible<U, value_type> &&
       // `U` must not be one of the errors.
-      !type_list<error_types...>::template has_type<U>;
+      !type_list<Errors...>::template has_type<U>;
 
    template <typename U>
    static constexpr bool is_error =
       // `U` must not be the value type.
       !is_same<U, value_type> &&
       // `U` must be one of the errors.
-      type_list<error_types...>::template has_type<U>;
+      type_list<Errors...>::template has_type<U>;
 
    // `value_type` and error types must have separate constructors and
    // operators, because `cat::variant` cannot have implicit conversions in its
@@ -48,23 +48,23 @@ struct scaredy_variant_storage {
    // Convert and move-construct a value.
    template <is_forwarding_move U>
       requires(is_value<U>)
-   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
+   // `is_forwarding_move` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE
    constexpr scaredy_variant_storage(U&& input) : m_storage(move(input)) {
    }
 
    // Convert and copy-construct an error.
    template <typename Error>
       requires(is_error<Error>)
-   constexpr scaredy_variant_storage(Error const& error)
-       : m_storage(error) {
+   constexpr scaredy_variant_storage(Error const& error) : m_storage(error) {
    }
 
    // Convert and move-construct an error.
    template <is_forwarding_move Error>
       requires(is_error<Error>)
-   constexpr scaredy_variant_storage(Error&& error)
-       // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
-       : m_storage(move(error)) {
+   // `is_forwarding_move` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE
+   constexpr scaredy_variant_storage(Error&& error) : m_storage(move(error)) {
    }
 
    // Forward `monostate` into `storage`.
@@ -76,7 +76,7 @@ struct scaredy_variant_storage {
    template <typename U>
       requires(is_value<U>)
    constexpr auto
-   operator=(U const& operand) -> scaredy_variant_storage<T, error_types...>& {
+   operator=(U const& operand) -> scaredy_variant_storage<T, Errors...>& {
       m_storage = static_cast<T>(operand);
       return *this;
    }
@@ -85,8 +85,9 @@ struct scaredy_variant_storage {
    template <is_forwarding_move U>
       requires(is_value<U>)
    constexpr auto
-   operator=(U&& operand) -> scaredy_variant_storage<T, error_types...>& {
-      // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
+   operator=(U&& operand) -> scaredy_variant_storage<T, Errors...>& {
+      // `is_forwarding_move` sufficiently constrains this constructor.
+      // NOLINTNEXTLINE
       m_storage = move(operand);
       return *this;
    }
@@ -95,8 +96,7 @@ struct scaredy_variant_storage {
    template <typename Error>
       requires(is_error<Error>)
    constexpr auto
-   operator=(Error const& operand)
-      -> scaredy_variant_storage<T, error_types...>& {
+   operator=(Error const& operand) -> scaredy_variant_storage<T, Errors...>& {
       m_storage = operand;
       return *this;
    }
@@ -105,9 +105,9 @@ struct scaredy_variant_storage {
    template <is_forwarding_move Error>
       requires(is_error<Error>)
    constexpr auto
-   operator=(Error&& operand)
-      -> scaredy_variant_storage<T, error_types...>& {
-      // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
+   operator=(Error&& operand) -> scaredy_variant_storage<T, Errors...>& {
+      // `is_forwarding_move` sufficiently constrains this constructor.
+      // NOLINTNEXTLINE
       m_storage = move(operand);
       return *this;
    }
@@ -150,7 +150,7 @@ struct scaredy_variant_storage {
       return m_storage.template is<U>($fwd(in_value));
    }
 
-   variant<value_type, error_types...> m_storage;
+   variant<value_type, Errors...> m_storage;
 };
 
 // `T` is a `compact_scaredy<type, predicate>`.
@@ -189,8 +189,7 @@ struct scaredy_compact_storage {
    constexpr scaredy_compact_storage(U&& input) : m_storage($fwd(input)) {
    }
 
-   constexpr scaredy_compact_storage(Error const& error)
-       : m_error_code(error) {
+   constexpr scaredy_compact_storage(Error const& error) : m_error_code(error) {
    }
 
    constexpr scaredy_compact_storage(Error&& error)
@@ -297,21 +296,6 @@ struct scaredy_compact_storage {
 
 // TODO: Support reference types in a `scaredy`.
 
-namespace detail {
-// Flipped to `true` by `<cat/errfat>` for `errfat::error_id`. Gates
-// `error_str()` so the hook is only callable when an errfat marker is
-// in the error pack.
-template <typename T>
-inline constexpr bool is_errfat_error_marker = false;
-}  // namespace detail
-
-namespace errfat::detail {
-// Defined in `<cat/errfat>`. Including that header is required at any
-// call site of `error_str()`.
-auto
-current_error_str_view() -> ::cat::str_view;
-}  // namespace errfat::detail
-
 template <typename T, typename... Errors>
    requires(
       // `scaredy` cannot hold C arrays.
@@ -369,7 +353,7 @@ class [[nodiscard]] scaredy {
  public:
    constexpr scaredy() = default;
 
-   // TODO: Construct from a subset of `error_types`.
+   // TODO: Construct from a subset of `Errors`.
 
    // Copy and convert the storage of a convertible `scaredy`.
    template <typename U>
@@ -393,7 +377,8 @@ class [[nodiscard]] scaredy {
 
    template <is_forwarding_move U>
       requires(is_value<U>)
-   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
+   // `is_forwarding_move` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE
    constexpr scaredy(U&& input) : m_storage(input) {
    }
 
@@ -406,7 +391,8 @@ class [[nodiscard]] scaredy {
    // Forward an error into the storage.
    template <is_forwarding_move U>
       requires(is_error<U>)
-   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
+   // `is_forwarding_move` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE
    constexpr scaredy(U&& error) : m_storage($fwd(error)) {
    }
 
@@ -472,7 +458,8 @@ class [[nodiscard]] scaredy {
    [[clang::reinitializes]]
    constexpr auto
    operator=(Error&& operand) -> scaredy& {
-      // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
+      // `is_forwarding_move` sufficiently constrains this constructor.
+      // NOLINTNEXTLINE
       m_storage = move(operand);
       return *this;
    }
@@ -534,9 +521,6 @@ class [[nodiscard]] scaredy {
       requires(sizeof...(Errors) == 1)
    {
       return m_storage.template error<Errors...>();
-   }
-
-      return m_storage.template error<error_types...>();
    }
 
    [[nodiscard]]
@@ -652,8 +636,8 @@ class [[nodiscard]] scaredy {
       detail::match_patterns (*this)($fwd(patterns)...);
    }
 
-   // If this non-`const`-qualified `scaredy` holds a value, transform it with a
-   // callback. Otherwise, propagate the error value.
+   // If this non-`const`-qualified `scaredy` holds a value, transform it with
+   // a callback. Otherwise, propagate the error value.
    template <is_invocable<value_type> Callback>
    [[nodiscard]]
    constexpr auto
@@ -734,7 +718,7 @@ class [[nodiscard]] scaredy {
 template <typename T>
 concept is_scaredy = requires(T t) {
                         // T::value_type;
-                        // T::error_types;
+                        // T::Errors;
                         cat::maybe<decltype(t.value())>();
                      } && !requires(T t) { t = cat::nullopt; };
 

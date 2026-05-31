@@ -261,13 +261,13 @@ $test(meta_value_category_forwarding) {
    cat::verify(lcopy.kind == 1);
 
    forwarding_sink const b;
-   forwarding_sink lconstcopy(b); // NOLINT
+   forwarding_sink lconstcopy(b);  // NOLINT
    cat::verify(lconstcopy.kind == 1);
 
    forwarding_sink rmove(cat::move(a));
    cat::verify(rmove.kind == 2);
 
-   forwarding_sink rconstmove(cat::move(b)); // NOLINT
+   forwarding_sink rconstmove(cat::move(b));  // NOLINT
    cat::verify(rconstmove.kind == 1);
 
    forwarding_sink other(42);

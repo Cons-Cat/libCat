@@ -331,8 +331,8 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       requires(is_copy_constructible<T>)
    [[nodiscard]]
    constexpr auto
-   resize(allocator_ref<Allocator> allocator, idx size,
-          T const& value) -> maybe<void> {
+   resize(allocator_ref<Allocator> allocator, idx size, T const& value)
+      -> maybe<void> {
       if (size > m_current_capacity) {
          $prop(this->reserve(allocator, size));
       }
@@ -505,7 +505,8 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
    [[nodiscard]]
    constexpr auto
    pop_back() -> maybe<T>
-      requires(is_move_constructible<T>) {
+      requires(is_move_constructible<T>)
+   {
       if (m_current_size == 0u) {
          return nullopt;
       }
@@ -529,7 +530,8 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
    // Remove the element at `index`, shifting subsequent elements left.
    constexpr void
    erase(idx index)
-      requires(is_move_assignable<T>) {
+      requires(is_move_assignable<T>)
+   {
       if !consteval {
          cat::assert(index < m_current_size);
       }
@@ -548,7 +550,8 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
    // subsequent elements left.
    constexpr void
    erase(idx start, idx end)
-      requires(is_move_assignable<T>) {
+      requires(is_move_assignable<T>)
+   {
       if !consteval {
          cat::assert(start <= end);
          cat::assert(end <= m_current_size);
@@ -577,8 +580,8 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
    template <is_allocator Allocator, typename Range>
    [[nodiscard]]
    constexpr auto
-   append_range(allocator_ref<Allocator> allocator,
-                Range const& range) -> maybe<void> {
+   append_range(allocator_ref<Allocator> allocator, Range const& range)
+      -> maybe<void> {
       if constexpr (requires { range.size(); }) {
          $prop(this->reserve(allocator, m_current_size + idx(range.size())));
       }
@@ -592,8 +595,7 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
    template <typename Range>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append_range(dyn_allocator allocator,
-                Range const& range) -> maybe<void> {
+   append_range(dyn_allocator allocator, Range const& range) -> maybe<void> {
       return append_range<dyn_allocator>(allocator, range);
    }
 
@@ -613,7 +615,8 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
    // the niche helpers below may produce one.
    struct niche_tag {};
 
-   constexpr basic_vec(niche_tag /*unused*/) : m_p_data(nullptr), m_current_size(1u) {
+   constexpr basic_vec(niche_tag /*unused*/)
+       : m_p_data(nullptr), m_current_size(1u) {
    }
 
    template <typename U>
@@ -782,9 +785,8 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
       } else {
          // TODO: Implement element-wise move across non-equal allocators.
          if !consteval {
-            cat::assert(false,
-                        "raii::basic_vec move-assign across non-equal "
-                        "allocators is not yet implemented.");
+            cat::assert(false, "raii::basic_vec move-assign across non-equal "
+                               "allocators is not yet implemented.");
          }
       }
       return *this;
@@ -860,7 +862,8 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    [[nodiscard]]
    constexpr auto
    resize(idx size) -> maybe<void>
-      requires(is_default_constructible<T>) {
+      requires(is_default_constructible<T>)
+   {
       return m_core.resize(m_allocator, size);
    }
 
@@ -869,7 +872,8 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    [[nodiscard]]
    constexpr auto
    resize(idx size, T const& value) -> maybe<void>
-      requires(is_copy_constructible<T>) {
+      requires(is_copy_constructible<T>)
+   {
       return m_core.resize(m_allocator, size, value);
    }
 
@@ -883,14 +887,16 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    [[nodiscard]]
    constexpr auto
    push_back(T const& value) -> maybe<void>
-      requires(is_copy_constructible<T>) {
+      requires(is_copy_constructible<T>)
+   {
       return m_core.push_back(m_allocator, value);
    }
 
    [[nodiscard]]
    constexpr auto
    push_back(T&& value) -> maybe<void>
-      requires(is_move_constructible<T>) {
+      requires(is_move_constructible<T>)
+   {
       return m_core.push_back(m_allocator, cat::move(value));
    }
 
@@ -907,7 +913,8 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    [[nodiscard]]
    constexpr auto
    pop_back() -> maybe<T>
-      requires(is_move_constructible<T>) {
+      requires(is_move_constructible<T>)
+   {
       return m_core.pop_back();
    }
 
@@ -923,7 +930,8 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    // Remove the element at `index`, shifting subsequent elements left.
    constexpr void
    erase(idx index)
-      requires(is_move_assignable<T>) {
+      requires(is_move_assignable<T>)
+   {
       m_core.erase(index);
    }
 
@@ -931,7 +939,8 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    // subsequent elements left.
    constexpr void
    erase(idx start, idx end)
-      requires(is_move_assignable<T>) {
+      requires(is_move_assignable<T>)
+   {
       m_core.erase(start, end);
    }
 
@@ -1000,8 +1009,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_vec(allocator_ref<Allocator> allocator)
-   -> maybe<basic_vec<T, Allocator>> {
+make_vec(allocator_ref<Allocator> allocator) -> maybe<basic_vec<T, Allocator>> {
    return basic_vec<T, Allocator>(allocator);
 }
 

@@ -807,7 +807,8 @@ class [[nodiscard]] maybe
    template <is_forwarding_move U>
       requires(!is_reference<value_type>
                && is_implicitly_convertible<U, value_type>)
-   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this
+   // constructor.
    constexpr maybe(U&& input) : m_storage(move(input)) {
    }
 

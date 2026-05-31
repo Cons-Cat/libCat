@@ -482,8 +482,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    constexpr auto
    subspan(idx, idx) && = delete (
       "Making a `cat::span` over a temporary would immediately dangle!");
-   constexpr auto
-   subspan(idx, idx) const&& = delete (
+   constexpr auto subspan(idx, idx) const&& = delete (
       "Making a `cat::span` over a temporary would immediately dangle!");
 
    [[nodiscard]]
@@ -499,8 +498,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    constexpr auto
    first(idx) && = delete (
       "Placing a `cat::span` over an r-value would immediately dangle!");
-   constexpr auto
-   first(idx) const&& = delete (
+   constexpr auto first(idx) const&& = delete (
       "Placing a `cat::span` over an r-value would immediately dangle!");
 
    [[nodiscard]]
@@ -516,8 +514,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    constexpr auto
    last(idx) && = delete (
       "Placing a `cat::span` over an r-value would immediately dangle!");
-   constexpr auto
-   last(idx) const&& = delete (
+   constexpr auto last(idx) const&& = delete (
       "Placing a `cat::span` over an r-value would immediately dangle!");
 
    [[nodiscard]]
@@ -527,8 +524,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    {
       Derived& self = static_cast<Derived&>(*this);
       if !consteval {
-         assert(index < self.size(),
-                "A container was indexed out of bounds!");
+         assert(index < self.size(), "A container was indexed out of bounds!");
       }
       return self.data()[make_raw_arithmetic(index)];
    }
@@ -552,8 +548,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    {
       Derived& self = static_cast<Derived&>(*this);
       if !consteval {
-         assert(index < self.size(),
-                "A container was indexed out of bounds!");
+         assert(index < self.size(), "A container was indexed out of bounds!");
       }
       return cat::move(self.data()[make_raw_arithmetic(index)]);
    }

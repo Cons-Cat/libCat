@@ -308,8 +308,7 @@ span
       if constexpr (fixed_extent == dynamic_extent) {
          assert(count <= size());
       }
-      return span<T const, count>(m_p_data + (size().raw - count.raw),
-                                  count);
+      return span<T const, count>(m_p_data + size() - count, count);
    }
 
    // Compile-time `subspan<offset, count>()`. Mirrors `std::span`'s template
@@ -332,7 +331,7 @@ span
       }
       idx const result_size =
          (count != dynamic_extent) ? count : idx(size() - offset);
-      return span<T, result_extent>(m_p_data + offset.raw, result_size);
+      return span<T, result_extent>(m_p_data + offset, result_size);
    }
 
    template <idx offset, idx count = dynamic_extent>
@@ -372,7 +371,6 @@ span
    }
 
  public:
-
    template <is_random_access R>
       requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
                && is_equality_comparable<remove_cv<T>>)

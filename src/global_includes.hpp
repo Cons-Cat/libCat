@@ -72,7 +72,8 @@ template <typename T, T constant_state>
 struct monotype_storage {
    constexpr monotype_storage() = default;
 
-   constexpr monotype_storage(monostate_type& /*unused*/) : m_storage(constant_state) {
+   constexpr monotype_storage(monostate_type& /*unused*/)
+       : m_storage(constant_state) {
    }
 
    constexpr monotype_storage(monostate_type const& /*unused*/)
@@ -88,7 +89,8 @@ struct monotype_storage {
    };
 
    constexpr auto
-   operator=(monostate_type /*unused*/) -> monotype_storage<T, constant_state>& {
+   operator=(monostate_type /*unused*/)
+      -> monotype_storage<T, constant_state>& {
       return *this;
    }
 
@@ -240,6 +242,7 @@ using tuple_element_t = tuple_element<index, T>::type;
 enum class align_val_t : __SIZE_TYPE__ {
 };
 }  // namespace std
+
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // Including the `<cat/runtime>` library is required to link a libCat program,

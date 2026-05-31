@@ -11,28 +11,28 @@ namespace {
 // NOLINTNEXTLINE
 inline constinit idx destructor_count = 0u;
 
-   struct foo {
-      bool live = true;
+struct foo {
+   bool live = true;
 
-      foo() = default;
-      foo(foo const&) = delete;
+   foo() = default;
+   foo(foo const&) = delete;
 
-      foo(foo&& other) {
-         other.live = false;
-      }
+   foo(foo&& other) {
+      other.live = false;
+   }
 
-      auto
-      operator=(foo const&) -> foo& = delete;
+   auto
+   operator=(foo const&) -> foo& = delete;
 
-      auto
-      operator=(foo&& other) -> foo& {
-         other.live = false;
-         return *this;
-      }
+   auto
+   operator=(foo&& other) -> foo& {
+      other.live = false;
+      return *this;
+   }
 
-      ~foo() {
-         if (live) {
-            ++destructor_count;
+   ~foo() {
+      if (live) {
+         ++destructor_count;
          live = false;
       }
    }
@@ -109,10 +109,8 @@ $test(vec_iterator_typedefs) {
    static_assert(cat::is_same<const_iterator, decltype(v.cend())>);
    static_assert(cat::is_same<reverse_iterator, decltype(v.rbegin())>);
    static_assert(cat::is_same<reverse_iterator, decltype(v.rend())>);
-   static_assert(
-      cat::is_same<const_reverse_iterator, decltype(v.crbegin())>);
-   static_assert(
-      cat::is_same<const_reverse_iterator, decltype(v.crend())>);
+   static_assert(cat::is_same<const_reverse_iterator, decltype(v.crbegin())>);
+   static_assert(cat::is_same<const_reverse_iterator, decltype(v.crend())>);
 }
 
 $test(vec_constexpr_usage) {
@@ -635,8 +633,7 @@ $test(raii_vec_move_assign) {
 
 $test(raii_vec_self_move_assign) {
    linear_arena arena;
-   cat::raii::vec v =
-      cat::raii::make_vec_filled(arena.alloc, 3, 9_i4).verify();
+   cat::raii::vec v = cat::raii::make_vec_filled(arena.alloc, 3, 9_i4).verify();
 
    int4 const* const p_original_data = v.data();
    idx const original_size = v.size();

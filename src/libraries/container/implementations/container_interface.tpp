@@ -22,22 +22,21 @@ container_interface<Derived, T>::subspan(idx start_index, idx end_index) &
    if (start_index > end_index || end_index > self.capacity()) {
       return maybe_span<T>(nullopt);
    }
-   return maybe_span<T>(span<T>(self.data() + start_index,
-                                idx(end_index - start_index)));
+   return maybe_span<T>(
+      span<T>(self.data() + start_index, idx(end_index - start_index)));
 }
 
 template <typename Derived, typename T>
 constexpr auto
-container_interface<Derived, T>::subspan(idx start_index,
-                                         idx end_index) const&
+container_interface<Derived, T>::subspan(idx start_index, idx end_index) const&
    requires(container_interface<Derived, T>::is_array_like)
 {
    Derived const& self = static_cast<Derived const&>(*this);
    if (start_index > end_index || end_index > self.capacity()) {
       return maybe_span<T const>(nullopt);
    }
-   return maybe_span<T const>(span<T const>(self.data() + start_index,
-                                            idx(end_index - start_index)));
+   return maybe_span<T const>(
+      span<T const>(self.data() + start_index, idx(end_index - start_index)));
 }
 
 template <typename Derived, typename T>

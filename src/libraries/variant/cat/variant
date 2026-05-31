@@ -620,7 +620,8 @@ class variant {
 
    template <is_forwarding_move T>
       requires(!is_reference_variant && types::template is_unique<T>)
-   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this constructor.
+   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this
+   // constructor.
    constexpr variant(T&& input) {
       // NOLINTNEXTLINE
       new (__builtin_addressof(this->template get<T>())) T(move(input));

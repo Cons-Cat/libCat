@@ -549,7 +549,8 @@ $test(arithmetic_traits_is_raw_arithmetic) {
 
 $test(arithmetic_traits_rvalue) {
    int4 const constant_int4 = 0;
-   static_assert(cat::is_forwarding_move<decltype(constant_int4.wrap().undef())>);
+   static_assert(
+      cat::is_forwarding_move<decltype(constant_int4.wrap().undef())>);
    static_assert(cat::is_forwarding_move<decltype(int4{0}.wrap().undef())>);
 
    static_assert(cat::is_forwarding_move<decltype(constant_int4.wrap())>);
@@ -560,7 +561,8 @@ $test(arithmetic_traits_rvalue) {
 
    idx const constant_idx = 0;
 
-   static_assert(cat::is_forwarding_move<decltype(constant_idx.wrap().undef())>);
+   static_assert(
+      cat::is_forwarding_move<decltype(constant_idx.wrap().undef())>);
    static_assert(cat::is_forwarding_move<decltype(idx{0}.wrap().undef())>);
 
    static_assert(cat::is_forwarding_move<decltype(constant_idx.wrap())>);
@@ -571,8 +573,10 @@ $test(arithmetic_traits_rvalue) {
 
    uintptr<void> const constant_uptr = nullptr;
 
-   static_assert(cat::is_forwarding_move<decltype(constant_uptr.wrap().undef())>);
-   static_assert(cat::is_forwarding_move<decltype(uintptr<void>{0}.wrap().undef())>);
+   static_assert(
+      cat::is_forwarding_move<decltype(constant_uptr.wrap().undef())>);
+   static_assert(
+      cat::is_forwarding_move<decltype(uintptr<void>{0}.wrap().undef())>);
 
    static_assert(cat::is_forwarding_move<decltype(constant_uptr.wrap())>);
    static_assert(cat::is_forwarding_move<decltype(uintptr<void>{0}.wrap())>);
