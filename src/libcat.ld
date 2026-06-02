@@ -86,23 +86,36 @@ SECTIONS {
    .plt              : { *(.plt) }
 
    /* Read-write band ===================================================
-      Same page-alignment story: keep the trailing page of `.text`
-      and `.plt` out of the RW LOAD that `ld.so` eventually mprotects
-      RELRO. */
+      Close to lld's x86-64 default, with two deliberate deviations
+      forced by `-T` semantics:
+
+        1. The TLS template lives below the RELRO band rather than
+           above it. lld's own driver places `.tdata` inside
+           `PT_GNU_RELRO` via internal logic that the script syntax
+           cannot reproduce. Putting `.tdata` above RELRO under `-T`
+           trips lld's RELRO contiguity check on large links
+           because `.tbss` separates `.tdata` from the rest of the
+           band. Putting `.tdata` below RELRO is only accepted
+           while no explicit `.relro_padding` section is present
+           (see point 2). With one, lld switches to strict mode and
+           rejects `.tdata` as non-contiguous.
+
+        2. No `.relro_padding`. lld emits one in its default layout
+           to round RELRO up to a page boundary. Under `-T` adding
+           it forces strict RELRO-contiguity checks that conflict
+           with point 1. `ld.so` still mprotects whole RELRO pages
+           without it, just stopping at the last full page.
+
+      The leading page alignment keeps the trailing page of
+      `.text`/`.plt` out of the RW LOAD that `ld.so` mprotects
+      for RELRO. */
    . = ALIGN(CONSTANT(MAXPAGESIZE));
 
-   /* TLS template first. `lld`'s default puts `.tdata` here too.
-      Placing it later (next to `.data.rel.ro`) trips lld's
-      `not contiguous with other relro sections` diagnostic, and
-      placing it adjacent to `.text` mixes WAT into a R+E LOAD and
-      forces an unwanted band split. PT_TLS describes both `.tdata`
-      and `.tbss`. The `__cat_tls_*` linker symbols at the bottom of
-      this script expose SIZEOF/ADDR of these sections to libCat at
-      runtime via `link_absolute_symbol`. */
-   .tdata            : { *(.tdata .tdata.*) }
-   .tbss (NOLOAD)    : { *(.tbss .tbss.*) }
-
-   /* Static-init plumbing. `KEEP` survives `--gc-sections`. */
+   /* RELRO band. `.preinit_array`, `.init_array`, `.fini_array`,
+      `.data.rel.ro`, `.dynamic`, and `.got` all carry dynamic
+      relocations that `ld.so` resolves once at startup, after which
+      `PT_GNU_RELRO` mprotects the band back to read-only. `KEEP`
+      survives `--gc-sections`. */
    .preinit_array    : { KEEP(*(.preinit_array)) }
    .init_array       : {
       __init_array_start = .;
@@ -119,8 +132,6 @@ SECTIONS {
       every instrumented global with the ASan runtime. */
    asan_globals      : { *(asan_globals) }
 
-   /* RELRO data: things `ld.so` writes once and then mprotects back to
-      read-only via `PT_GNU_RELRO`. */
    .data.rel.ro      : { *(.data.rel.ro .data.rel.ro.*) }
    .dynamic          : { *(.dynamic) }
    .got              : { *(.got) }
@@ -128,6 +139,17 @@ SECTIONS {
    /* `.got.plt` is excluded from RELRO because the dynamic loader
       writes lazy PLT resolutions there at first call. */
    .got.plt          : { *(.got.plt) }
+
+   /* TLS template. PT_TLS describes both `.tdata` and `.tbss`. The
+      `__cat_tls_*` linker symbols at the bottom of this script
+      expose SIZEOF/ADDR of these sections to libCat at runtime via
+      `link_absolute_symbol`. The explicit ALIGN keeps `ADDR(.tdata)
+      mod MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)) == 0` so the
+      `__cat_tls_memory_size` formula below stays invariant when
+      `.tbss` is more strictly aligned than `.tdata`. */
+   . = ALIGN(MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)));
+   .tdata            : { *(.tdata .tdata.*) }
+   .tbss (NOLOAD)    : { *(.tbss .tbss.*) }
 
    /* Mutable data. */
    .data             : { *(.data .data.*) }

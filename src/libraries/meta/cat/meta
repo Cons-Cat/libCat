@@ -187,10 +187,10 @@ template <typename T>
 using add_rvalue_reference = __add_rvalue_reference(T);
 
 template <typename T>
-concept is_lvalue_reference = __is_same(T, remove_reference<T>&);
+concept is_lvalue_reference = __is_lvalue_reference(T);
 
 template <typename T>
-concept is_rvalue_reference = __is_same(T, remove_reference<T>&&);
+concept is_rvalue_reference = __is_rvalue_reference(T);
 
 template <typename From, typename To>
 using copy_const_from = conditional<is_const_ref<From>,
