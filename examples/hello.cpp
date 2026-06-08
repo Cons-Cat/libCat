@@ -1,4 +1,3 @@
-#include <cat/simd_dispatch>
 #include <cat/string>
 
 auto

@@ -983,20 +983,25 @@ operator&(T flag_1, T flag_2) -> T {
    return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
 }
 
-// TODO: Fix bit flag operators.
-// template <EnumFlag T>
-//[[nodiscard]] constexpr auto operator&(T flag_1,underlying_type<T>
-// flag_2) -> T {
-//     using U =underlying_type<T>;
-//     return static_cast<T>(static_cast<U>(flag_1) & flag_2);
-// }
-
 template <cat::is_enum_flag T>
 constexpr auto
 operator&=(T& self, T other) -> T& {
    self = self & other;
    return self;
 }
+
+// Re-introduce the global enum-flag operators inside `cat::` so unqualified
+// lookup from inside `cat::` finds them alongside other `cat::operator|`.
+// Without the using-declarations the namespace-scoped overload would shadow the
+// global one and these would never resolve.
+//
+// TODO: This is still a problem in user namespaces.
+namespace cat {
+using ::operator|;
+using ::operator|=;
+using ::operator&;
+using ::operator&=;
+}  // namespace cat
 
 #include "./implementations/align_down.tpp"
 #include "./implementations/align_up.tpp"

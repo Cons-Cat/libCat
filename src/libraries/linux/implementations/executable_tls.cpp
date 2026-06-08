@@ -116,7 +116,7 @@ init_parent_process_tls() {
    using enum nix::memory_flags;
 
    void* const p_slab =
-      nix::sys_mmap(nullptr, slab_bytes, read | write, privately | anonymous,
+      nix::sys_mmap(nullptr, slab_bytes, read_write, privately | anonymous,
                     // Anonymous mappings require fd = -1 and offset = 0.
                     nix::file_descriptor(-1), 0u)
          // In the unlikely event that the kernel refused to map the slab, fail

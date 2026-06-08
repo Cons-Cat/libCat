@@ -11,10 +11,11 @@
 namespace nix {
 
 enum class memory_protection_flags : unsigned char {
-   none = 0b000,     // Data cannot be accessed at all.
-   read = 0b001,     // Data is readable.
-   write = 0b010,    // Data is writable.
-   execute = 0b100,  // Data can be executed.
+   none = 0b000,        // Data cannot be accessed at all.
+   read = 0b001,        // Data is readable.
+   write = 0b010,       // Data is writable.
+   read_write = 0b011,  // Data is writable and readable.
+   execute = 0b100,     // Data can be executed.
 };
 
 enum class memory_flags : unsigned int {
@@ -42,7 +43,7 @@ enum class wait_id : unsigned char {
    all = 0,
    process_id = 1,
    process_group = 2,
-   file_descriptor = 3
+   file_descriptor = 3,
 };
 
 enum class wait_options_flags : unsigned int {
@@ -2521,6 +2522,25 @@ init_parent_process_tls();
 auto
 sys_arch_prctl(arch_prctl_request request, void* _Nonnull p_address)
    -> scaredy_nix<void>;
+
+// Fields of `/proc/self/statm` in page units.
+struct self_statm {
+   cat::uword total_pages;
+   cat::uword resident_pages;
+   cat::uword shared_pages;
+   cat::uword text_pages;
+   cat::uword _;  // Unused since Linux 2.6.
+   cat::uword data_pages;
+};
+
+// Read every field of `/proc/self/statm`. Propagates the originating
+// `linux_error` if the file cannot be opened or read. The result is
+// process-wide and is not idempotent: consecutive calls may disagree as
+// the kernel updates its accounting in response to allocations elsewhere
+// in the process.
+[[nodiscard]]
+auto
+read_self_statm() -> cat::scaredy<self_statm, nix::linux_error>;
 
 }  // namespace nix
 

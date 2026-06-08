@@ -525,9 +525,7 @@ $test(syscall_fs_at_variants) {
 $test(syscall_memory) {
    constexpr cat::uword bytes = 4'096;
    void* p_mapping =
-      nix::sys_mmap(nullptr, bytes,
-                    nix::memory_protection_flags::read
-                       | nix::memory_protection_flags::write,
+      nix::sys_mmap(nullptr, bytes, nix::memory_protection_flags::read_write,
                     nix::memory_flags::privately | nix::memory_flags::anonymous,
                     nix::file_descriptor{-1}, 0)
          .verify();
@@ -539,9 +537,7 @@ $test(syscall_memory) {
       .verify();
 
    // `mlock`/`mlockall` need RLIMIT_MEMLOCK or CAP_IPC_LOCK. Tolerate denial.
-   nix::sys_mprotect(
-      p_mapping, bytes,
-      nix::memory_protection_flags::read | nix::memory_protection_flags::write)
+   nix::sys_mprotect(p_mapping, bytes, nix::memory_protection_flags::read_write)
       .verify();
    auto mlock_result = nix::sys_mlock(p_mapping, bytes);
    cat::verify(mlock_result.has_value()
@@ -567,13 +563,12 @@ $test(syscall_memory) {
    // modified or unmapped, so probe it on a throwaway mapping rather than
    // `p_mapping`.
    if (nix::has_sys_mseal()) {
-      void* p_sealed = nix::sys_mmap(nullptr, bytes,
-                                     nix::memory_protection_flags::read
-                                        | nix::memory_protection_flags::write,
-                                     nix::memory_flags::privately
-                                        | nix::memory_flags::anonymous,
-                                     nix::file_descriptor{-1}, 0)
-                          .verify();
+      void* p_sealed =
+         nix::sys_mmap(
+            nullptr, bytes, nix::memory_protection_flags::read_write,
+            nix::memory_flags::privately | nix::memory_flags::anonymous,
+            nix::file_descriptor{-1}, 0)
+            .verify();
       auto mseal_result = nix::sys_mseal(p_sealed, bytes);
       cat::verify(mseal_result.has_value()
                   || is_denied_or_invalid(mseal_result.error()));
@@ -594,6 +589,39 @@ $test(syscall_memory) {
    auto* p_brk = nix::sys_brk(nullptr).verify();
    cat::verify(p_brk != nullptr);
 
+   nix::sys_munmap(p_mapping, bytes).verify();
+}
+
+// `/proc/self/statm` parsing.
+
+$test(syscall_read_self_statm) {
+   nix::self_statm statm = nix::read_self_statm().verify();
+
+   // The process must have a non-zero virtual size and a non-zero RSS.
+   cat::verify(statm.total_pages > 0u);
+   cat::verify(statm.resident_pages > 0u);
+   // RSS is a subset of the total mapped pages.
+   cat::verify(statm.resident_pages <= statm.total_pages);
+   // Shared pages are a subset of resident pages.
+   cat::verify(statm.shared_pages <= statm.resident_pages);
+   // The text segment is always present and resident for a running binary.
+   cat::verify(statm.text_pages > 0u);
+   // The fifth field is `lib`, unused since Linux 2.6 and always 0.
+   cat::verify(statm._ == 0u);
+   // Data + stack always occupies at least one page.
+   cat::verify(statm.data_pages > 0u);
+
+   // The kernel updates the accounting on each allocation, so a second
+   // call after a fresh mapping should report at least as much total VM.
+   cat::uword const before = statm.total_pages;
+   constexpr cat::uword bytes = 64u * 4'096u;
+   void* p_mapping =
+      nix::sys_mmap(nullptr, bytes, nix::memory_protection_flags::read_write,
+                    nix::memory_flags::privately | nix::memory_flags::anonymous,
+                    nix::file_descriptor{-1}, 0)
+         .verify();
+   nix::self_statm after = nix::read_self_statm().verify();
+   cat::verify(after.total_pages >= before);
    nix::sys_munmap(p_mapping, bytes).verify();
 }
 

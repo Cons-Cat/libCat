@@ -291,7 +291,6 @@ $test(math_div_ceil) {
 }
 
 $test(math_round_to_multiple) {
-
    // Test `round_up_to_multiple_of()`.
    static_assert(cat::round_up_to_multiple_of(5u, 2u) == 6u);
    static_assert(cat::round_up_to_multiple_of(5u, 1u) == 5u);
@@ -345,8 +344,9 @@ $test(math_round_to_multiple) {
                  == cat::uint2(256));
    static_assert(cat::round_up_to_multiple_of(cat::uint1(1), cat::uint2(300))
                  == cat::uint2(300));
-   static_assert(cat::round_down_to_multiple_of(cat::uint1(200), cat::uint2(256))
-                 == cat::uint2(0));
+   static_assert(
+      cat::round_down_to_multiple_of(cat::uint1(200), cat::uint2(256))
+      == cat::uint2(0));
    static_assert(cat::is_same<decltype(cat::round_down_to_multiple_of(
                                  cat::uint1(200), cat::uint2(256))),
                               cat::uint2>);
