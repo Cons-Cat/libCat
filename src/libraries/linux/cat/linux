@@ -5,6 +5,7 @@
 #include <cat/allocator>
 #include <cat/atomic>
 #include <cat/bit>
+#include <cat/maybe>
 #include <cat/notype>
 #include <cat/scaredy>
 #include <cat/span>

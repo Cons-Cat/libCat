@@ -291,17 +291,67 @@ $test(math_div_ceil) {
 }
 
 $test(math_round_to_multiple) {
+
    // Test `round_up_to_multiple_of()`.
-   static_assert(cat::round_up_to_multiple_of(5, 2) == 6);
-   static_assert(cat::round_up_to_multiple_of(5u, 1) == 5u);
-   static_assert(cat::round_up_to_multiple_of(5, 8) == 8);
-
+   static_assert(cat::round_up_to_multiple_of(5u, 2u) == 6u);
+   static_assert(cat::round_up_to_multiple_of(5u, 1u) == 5u);
+   static_assert(cat::round_up_to_multiple_of(5u, 8u) == 8u);
+   static_assert(cat::round_up_to_multiple_of(cat::idx(5), cat::idx(2))
+                 == cat::idx(6));
+   static_assert(cat::round_up_to_multiple_of(cat::idx(5), cat::idx(3))
+                 == cat::idx(6));
+   static_assert(cat::round_up_to_multiple_of(cat::idx(8), cat::idx(4))
+                 == cat::idx(8));
    // Test `round_down_to_multiple_of()`.
-   static_assert(cat::round_down_to_multiple_of(5, 2) == 4);
-   static_assert(cat::round_down_to_multiple_of(5u, 1) == 5u);
-   static_assert(cat::round_down_to_multiple_of(5, 8) == 0);
+   static_assert(cat::round_down_to_multiple_of(5u, 2u) == 4u);
+   static_assert(cat::round_down_to_multiple_of(5u, 1u) == 5u);
+   static_assert(cat::round_down_to_multiple_of(5u, 8u) == 0u);
+   static_assert(cat::round_down_to_multiple_of(cat::idx(5), cat::idx(2))
+                 == cat::idx(4));
+   static_assert(cat::round_down_to_multiple_of(cat::idx(7), cat::idx(3))
+                 == cat::idx(6));
+   static_assert(cat::round_down_to_multiple_of(cat::idx(8), cat::idx(4))
+                 == cat::idx(8));
 
-   // TODO: How should rounding functions handle negative inputs?
+   // `round_down_to_multiple_of()` floors signed values toward negative
+   // infinity.
+   static_assert(cat::round_down_to_multiple_of(-5, 2) == -6);
+   static_assert(cat::round_down_to_multiple_of(-5, 8) == -8);
+   static_assert(cat::round_down_to_multiple_of(-5, 3) == -6);
+   static_assert(cat::round_down_to_multiple_of(-6, 3) == -6);
+   static_assert(cat::round_down_to_multiple_of(-1, 4) == -4);
+   static_assert(cat::round_down_to_multiple_of(3, 4) == 0);
+
+   // `round_to_multiple_of()` picks the nearer multiple, with ties rounding
+   // toward positive infinity, for both unsigned and signed inputs.
+   static_assert(cat::round_to_multiple_of(5u, 2u) == 6u);
+   static_assert(cat::round_to_multiple_of(4u, 3u) == 3u);
+   static_assert(cat::round_to_multiple_of(5u, 3u) == 6u);
+   static_assert(cat::round_to_multiple_of(cat::idx(4), cat::idx(3))
+                 == cat::idx(3));
+   static_assert(cat::round_to_multiple_of(-4, 3) == -3);
+   static_assert(cat::round_to_multiple_of(-5, 3) == -6);
+   static_assert(cat::round_to_multiple_of(-5, 2) == -4);
+   static_assert(cat::round_to_multiple_of(-6, 3) == -6);
+
+   // When `multiple` is a wider type than `value`, the result widens to the
+   // common type so it can hold a multiple that overflows `value`'s type.
+   // `round_up_to_multiple_of(uint1{1}, uint2{256})` is `256`, which does not
+   // fit in a `uint1`.
+   static_assert(cat::is_same<decltype(cat::round_up_to_multiple_of(
+                                 cat::uint1(1), cat::uint2(256))),
+                              cat::uint2>);
+   static_assert(cat::round_up_to_multiple_of(cat::uint1(1), cat::uint2(256))
+                 == cat::uint2(256));
+   static_assert(cat::round_up_to_multiple_of(cat::uint1(1), cat::uint2(300))
+                 == cat::uint2(300));
+   static_assert(cat::round_down_to_multiple_of(cat::uint1(200), cat::uint2(256))
+                 == cat::uint2(0));
+   static_assert(cat::is_same<decltype(cat::round_down_to_multiple_of(
+                                 cat::uint1(200), cat::uint2(256))),
+                              cat::uint2>);
+   static_assert(cat::round_to_multiple_of(cat::uint1(200), cat::uint2(256))
+                 == cat::uint2(256));
 }
 
 $test(math_parity) {

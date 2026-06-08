@@ -83,7 +83,7 @@ $test(bit) {
    static_assert(can_countr_one<cat::idx>);
    static_assert(can_countr_one_raw<cat::idx>);
    static_assert(can_popcount<cat::idx>);
-   static_assert(!can_has_single_bit<cat::idx>);
+   static_assert(can_has_single_bit<cat::idx>);
    static_assert(!can_rotate_left<cat::idx>);
    static_assert(!can_rotate_right<cat::idx>);
    static_assert(can_align_pointer_to_constant<32u>);

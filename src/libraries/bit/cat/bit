@@ -181,7 +181,6 @@ popcount(T value) -> uint1 {
 
 // Returns whether `value` has exactly one set bit. For zero, returns false.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
 [[nodiscard]]
 constexpr auto
 has_single_bit(T value) -> bool {
