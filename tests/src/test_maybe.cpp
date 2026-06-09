@@ -819,6 +819,21 @@ $test(maybe_reference_dangling) {
    static_assert(!cat::is_constructible<cat::maybe<int const&>, int>);
    // `int&` cannot bind a pr-value at all (also rejected).
    static_assert(!cat::is_constructible<cat::maybe<int&>, int>);
+
+   // Converting between `maybe`s applies the same protection (both the
+   // converting constructors and the `operator maybe<U>()` conversion).
+   // Rebinding a reference `maybe` from another reference `maybe` is safe.
+   static_assert(
+      cat::is_constructible<cat::maybe<int const&>, cat::maybe<int&>&>);
+   static_assert(
+      cat::is_constructible<cat::maybe<int const&>, cat::maybe<int&>&&>);
+   // Binding a reference `maybe` to the storage owned by a value `maybe` would
+   // dangle, so it is rejected for both value categories.
+   static_assert(
+      !cat::is_constructible<cat::maybe<int const&>, cat::maybe<int>&>);
+   static_assert(
+      !cat::is_constructible<cat::maybe<int const&>, cat::maybe<int>&&>);
+   static_assert(!cat::is_constructible<cat::maybe<int&>, cat::maybe<int>&&>);
 }
 
 // `swap` exchanges held pointers, not the referents. P2988R12 `optional<T&>`.

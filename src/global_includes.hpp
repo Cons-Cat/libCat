@@ -315,11 +315,13 @@ enum class align_val_t : __SIZE_TYPE__ {
 
 #define $prop_as CAT_PROPAGATE_AS
 
+// `new` and `delete` are defined for use in a `constexpr` context.
+// P2013R5 permits these to be no-op.
+
 [[gnu::returns_nonnull]]
 auto
 operator new(unsigned long, void* _Nonnull p_address) -> void* _Nonnull;
 
-// `new[]` and `delete[]` are defined for use in a `constexpr` context.
 [[nodiscard, gnu::returns_nonnull]]
 auto
 operator new[](unsigned long, void* _Nonnull p_address) -> void* _Nonnull;

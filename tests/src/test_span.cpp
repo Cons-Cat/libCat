@@ -157,7 +157,9 @@ $test(span_initializer_list_constraints) {
    cat::span<bool const> span_const{p_values, count};
    cat::verify(span_const.size() == count);
 
-   cat::span<bool const> from_list{true, false, true};
+   // TODO: Simplify with P2752R3, this could be simplified.
+   std::initializer_list<bool> const bool_list = {true, false, true};
+   cat::span<bool const> from_list(bool_list);
    cat::verify(from_list.size() == 3u);
    cat::verify(from_list[0] && !from_list[1] && from_list[2]);
 

@@ -380,7 +380,13 @@ $test(tuple_tie_make_forward) {
    {
       int lvalue = 10;
       int by_ref = 20;
-      auto f = cat::forward_as_tuple(lvalue, 1, 2, by_ref, 3);
+      // The `int&&` members must refer to named ints, not literal temporaries
+      // that would dangle once this statement ends.
+      int second = 1;
+      int third = 2;
+      int fifth = 3;
+      auto f = cat::forward_as_tuple(
+         lvalue, cat::move(second), cat::move(third), by_ref, cat::move(fifth));
       static_assert(cat::is_same<decltype(f),
                                  cat::tuple<int&, int&&, int&&, int&, int&&>>);
       cat::verify(f.first() == 10);
@@ -397,7 +403,8 @@ $test(tuple_tie_make_forward) {
    {
       int lvalue = 10;
       int const const_lvalue = 20;
-      auto c = cat::forward_as_tuple(lvalue, const_lvalue, 30);
+      int third = 30;
+      auto c = cat::forward_as_tuple(lvalue, const_lvalue, cat::move(third));
       static_assert(
          cat::is_same<decltype(c), cat::tuple<int&, int const&, int&&>>);
       cat::verify(c.first() == 10);

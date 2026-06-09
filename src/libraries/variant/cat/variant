@@ -671,8 +671,7 @@ class variant {
    // Reference-variant construction. The active alternative is fixed for
    // the lifetime of the `variant`. Binding to a temporary is rejected.
    template <typename T>
-      requires(is_reference_variant && types::template is_unique<T&>
-               && !__reference_constructs_from_temporary(T&, T&))
+      requires(is_reference_variant && types::template is_unique<T&>)
    constexpr variant(T& input) {
       detail::variant_ref_slot<alternative_index<T&>>(m_storage) =
          __builtin_addressof(input);
@@ -680,8 +679,7 @@ class variant {
    }
 
    template <typename T>
-      requires(is_reference_variant && types::template is_unique<T const&>
-               && !__reference_constructs_from_temporary(T const&, T const&))
+      requires(is_reference_variant && types::template is_unique<T const&>)
    constexpr variant(T const& input) {
       detail::variant_ref_slot<alternative_index<T const&>>(m_storage) =
          __builtin_addressof(input);
@@ -1077,8 +1075,7 @@ inline constexpr idx variant_alternative_index =
 // Mirrors `cat::variant_alternative_index<T, V>`'s shape.
 //
 // https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3664r0.html
-template <typename T>
-   requires(is_variant_like<T>)
+template <is_variant_like T>
 inline constexpr idx variant_size = remove_cvref<T>::variant_size;
 
 }  // namespace cat

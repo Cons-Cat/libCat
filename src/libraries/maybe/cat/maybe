@@ -818,21 +818,33 @@ class [[nodiscard]] maybe
    // where the value constructor should win.
    template <typename U>
       requires(is_implicitly_convertible<U, value_type>
-               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
+               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
+               && (!is_reference<value_type>
+                   || (is_reference<U>
+                       && !__reference_constructs_from_temporary(
+                          value_type, add_lvalue_reference<U>))))
    constexpr maybe(maybe<U>& input) {
       m_storage.assign(input);
    }
 
    template <typename U>
       requires(is_implicitly_convertible<U, value_type>
-               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
+               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
+               && (!is_reference<value_type>
+                   || (is_reference<U>
+                       && !__reference_constructs_from_temporary(
+                          value_type, add_lvalue_reference<U>))))
    constexpr maybe(maybe<U> const& input) {
       m_storage.assign(input);
    }
 
    template <is_forwarding_move U>
       requires(is_implicitly_convertible<U, value_type>
-               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>)
+               && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
+               && (!is_reference<value_type>
+                   || (is_reference<U>
+                       && !__reference_constructs_from_temporary(
+                          value_type, add_lvalue_reference<U>))))
    constexpr maybe(maybe<U>&& input) {
       m_storage.assign(move(input));
    }
@@ -847,9 +859,16 @@ class [[nodiscard]] maybe
        : m_storage(value_type()) {
    }
 
-   // Any `maybe` can convert into another.
+   // Any `maybe` can convert into another. Converting into a reference
+   // `maybe<U>` is only allowed from another reference `maybe` (and without a
+   // temporary-materializing conversion). Otherwise the produced reference
+   // would bind to this `maybe`'s own storage and dangle.
    template <typename U>
-      requires(!is_same<U, T> && is_implicitly_convertible<value_type, U>)
+      requires(!is_same<U, T> && is_implicitly_convertible<value_type, U>
+               && (!is_reference<U>
+                   || (is_reference<value_type>
+                       && !__reference_constructs_from_temporary(U,
+                                                                 value_type))))
    constexpr
    operator maybe<U>() const {
       if (this->has_value()) {

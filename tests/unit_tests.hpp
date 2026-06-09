@@ -30,7 +30,6 @@ test_fail(cat::source_location const& source_location);
 // Attributes can be placed before an instantiation of the macro to modify its
 // behavior.
 #define CAT_TEST(test_name)                                                 \
-   [[clang::optnone]]                                                       \
    void test_##test_name();                                                 \
    void test_##test_name##_prologue();                                      \
                                                                             \

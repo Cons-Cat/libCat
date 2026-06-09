@@ -80,7 +80,9 @@ span
    // Construct a span from a static `initializer_list`.
    template <typename InitListValueType>
       requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
-   constexpr span(initializer_list<InitListValueType> initializers)
+   constexpr span(initializer_list<InitListValueType> initializers
+                  [[clang::lifetimebound]]
+                  )
        : m_p_data(initializers.begin()), m_size(initializers.size()) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(initializers.size() == fixed_extent);
