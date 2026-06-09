@@ -416,25 +416,23 @@ class allocator_interface {
 
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_aligned_feedback(
-      uword allocation_alignment, idx allocation_bytes)
+   meta_alloc_aligned_feedback(uword allocation_alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void* _Nonnull>;
 
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_aligned(
-      uword allocation_alignment, idx allocation_bytes) -> maybe_ptr<void>;
-
-   [[gnu::no_sanitize_address]]
-   constexpr auto
-   meta_alloc_unaligned_feedback(
-      uword allocation_alignment, idx allocation_bytes)
-      -> maybe_sized_allocation<void* _Nonnull>;
-
-   [[gnu::no_sanitize_address]]
-   constexpr auto
-   meta_alloc_unaligned(idx allocation_bytes)
+   meta_alloc_aligned(uword allocation_alignment, idx allocation_bytes)
       -> maybe_ptr<void>;
+
+   [[gnu::no_sanitize_address]]
+   constexpr auto
+   meta_alloc_unaligned_feedback(uword allocation_alignment,
+                                 idx allocation_bytes)
+      -> maybe_sized_allocation<void* _Nonnull>;
+
+   [[gnu::no_sanitize_address]]
+   constexpr auto
+   meta_alloc_unaligned(idx allocation_bytes) -> maybe_ptr<void>;
 
    // Finish a runtime allocation: unpoison, optionally zero, placement-new the
    // elements, and wrap into the requested return shape. When `inline_size`

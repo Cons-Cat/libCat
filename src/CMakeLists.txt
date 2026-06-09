@@ -249,11 +249,14 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/implementations/meta_alloc.tpp
   ${CATLIB}/allocator/implementations/get.tpp
   ${CATLIB}/allocator/implementations/free.tpp
+  ${CATLIB}/allocator/implementations/resizable_allocator.tpp
   ${CATLIB}/allocator/cat/allocator_parameters
   ${CATLIB}/allocator/cat/linear_allocator
+  ${CATLIB}/allocator/cat/named_allocator
   ${CATLIB}/allocator/cat/null_allocator
   ${CATLIB}/allocator/cat/page_allocator
   ${CATLIB}/allocator/cat/pool_allocator
+  ${CATLIB}/allocator/cat/resizable_allocator
   ${CATLIB}/arithmetic/cat/arithmetic
   ${CATLIB}/arithmetic/cat/overflow_reference.hpp
   ${CATLIB}/arithmetic/cat/precision_reference.hpp
@@ -362,6 +365,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/utility/cat/utility
   ${CATLIB}/variant/cat/variant
   ${CATLIB}/vec/cat/vec
+  ${CATLIB}/vec/cat/raii_vec
   ${CATLIB}/x11/cat/x11
   ${CATLIB}/linux/implementations/syscall.tpp
   ${CATLIB}/linux/implementations/process.tpp
