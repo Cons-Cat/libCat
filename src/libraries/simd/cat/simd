@@ -1463,9 +1463,6 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
    // Fill all lanes with `value`. This is also known as a "splat" operation.
    template <typename U>
       requires(is_constructible<scalar_type, U>)
-   // This impedes correct codegen.
-   // TODO: Why?
-   [[gnu::no_sanitize_address]]
    constexpr auto
    fill(U value) -> simd& {
       scalar_type const fill_value = static_cast<scalar_type>(value);
