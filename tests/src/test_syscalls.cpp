@@ -625,6 +625,43 @@ $test(syscall_read_self_statm) {
    nix::sys_munmap(p_mapping, bytes).verify();
 }
 
+$test(syscall_mremap) {
+   // Map two pages and write a sentinel into the first.
+   void* p_old =
+      nix::sys_mmap(nullptr, 2 * cat::page_size,
+                    nix::memory_protection_flags::read_write,
+                    nix::memory_flags::privately | nix::memory_flags::anonymous,
+                    nix::file_descriptor{-1}, 0)
+         .verify();
+   static_cast<unsigned char*>(p_old)[0] = 42u;
+
+   // Grow to four pages, allowing the kernel to relocate the mapping. The
+   // contents move with it, so the sentinel survives at the (possibly new)
+   // address.
+   void* p_grown = nix::sys_mremap(p_old, 2 * cat::page_size, 4 * cat::page_size,
+                                   nix::mremap_flags::may_move)
+                      .verify();
+   cat::verify(p_grown != nullptr);
+   cat::verify(static_cast<unsigned char*>(p_grown)[0] == 42u);
+
+   // Shrink in place: a shrink never needs to relocate, so even without
+   // `may_move` it succeeds at the same address.
+   void* p_shrunk = nix::sys_mremap(p_grown, 4 * cat::page_size, cat::page_size,
+                                    nix::mremap_flags::none)
+                       .verify();
+   cat::verify(p_shrunk == p_grown);
+   cat::verify(static_cast<unsigned char*>(p_shrunk)[0] == 42u);
+
+   // A same-size remap without `may_move` is a no-op that returns the same
+   // address.
+   void* p_same = nix::sys_mremap(p_shrunk, cat::page_size, cat::page_size,
+                                  nix::mremap_flags::none)
+                     .verify();
+   cat::verify(p_same == p_shrunk);
+
+   nix::sys_munmap(p_shrunk, cat::page_size).verify();
+}
+
 // Scheduling / rlimit.
 
 $test(syscall_resource) {

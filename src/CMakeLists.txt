@@ -75,6 +75,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_write.cpp
   ${CATLIB}/linux/implementations/sys_open.cpp
   ${CATLIB}/linux/implementations/sys_close.cpp
+  ${CATLIB}/linux/implementations/read_self_statm.cpp
   ${CATLIB}/linux/implementations/sys_stat.cpp
   ${CATLIB}/linux/implementations/sys_fstat.cpp
   ${CATLIB}/linux/implementations/sys_lstat.cpp
@@ -82,6 +83,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_mmap.cpp
   ${CATLIB}/linux/implementations/sys_mprotect.cpp
   ${CATLIB}/linux/implementations/sys_munmap.cpp
+  ${CATLIB}/linux/implementations/sys_mremap.cpp
   ${CATLIB}/linux/implementations/sys_brk.cpp
   ${CATLIB}/linux/implementations/sys_rt_sigaction.cpp
   ${CATLIB}/linux/implementations/sys_rt_sigprocmask.cpp

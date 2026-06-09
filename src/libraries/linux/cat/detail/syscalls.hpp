@@ -39,6 +39,13 @@ enum class memory_flags : unsigned int {
                                 // underlying mapping.
 };
 
+enum class mremap_flags : unsigned int {
+   none = 0,            // Resize in place only. Fail if it cannot.
+   may_move = 0b1,      // Allow relocating the mapping to a new address.
+   fixed = 0b10,        // Relocate to a fixed address (requires `may_move`).
+   dont_unmap = 0b100,  // Keep the old mapping mapped (Linux 5.7+).
+};
+
 enum class wait_id : unsigned char {
    all = 0,
    process_id = 1,
@@ -997,6 +1004,9 @@ template <>
 struct cat::enum_flag_trait<nix::memory_flags> : cat::true_trait {};
 
 template <>
+struct cat::enum_flag_trait<nix::mremap_flags> : cat::true_trait {};
+
+template <>
 struct cat::enum_flag_trait<nix::open_flags> : cat::true_trait {};
 
 template <>
@@ -1335,6 +1345,12 @@ auto sys_pipe(cat::int4 (&pipefd)[2]) -> scaredy_nix<void>;
 // Syscall 24.
 auto
 sys_sched_yield() -> scaredy_nix<void>;
+
+// Syscall 25. Resize the mapping at `p_old_address` from `old_size` to
+// `new_size`.
+auto
+sys_mremap(void* _Nonnull p_old_address, cat::idx old_size, cat::idx new_size,
+           mremap_flags flags) -> scaredy_nix<void*>;
 
 // Syscall 32. Duplicate a file descriptor onto the lowest available number.
 auto
