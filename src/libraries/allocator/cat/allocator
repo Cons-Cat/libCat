@@ -3929,6 +3929,14 @@ class allocator_interface {
       }
    }
 
+   // Optional debug name for this allocator. Default is empty. Used for
+   // profiling and diagnostics only -- decoupled from error-reporting.
+   [[nodiscard]]
+   constexpr auto
+   name() const -> str_view {
+      return {};
+   }
+
    // Value-equality hook. Two allocators are considered equal when each
    // can correctly deallocate or reset memory handed out by the other. The
    // default recognizes stateless allocators via `__is_empty` and otherwise

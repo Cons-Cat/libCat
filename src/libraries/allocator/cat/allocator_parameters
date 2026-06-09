@@ -183,6 +183,13 @@ struct dyn_allocator_friend {
       return self.is_equivalent(other);
    }
 
+   template <typename T>
+   [[gnu::always_inline, gnu::nodebug]]
+   static auto
+   name(T const& self) -> decltype(self.name()) {
+      return self.name();
+   }
+
    template <typename T, typename Storage>
    [[gnu::always_inline, gnu::nodebug, clang::ownership_holds(libcat, 2)]]
    static auto
