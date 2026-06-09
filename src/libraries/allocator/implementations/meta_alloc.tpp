@@ -8,14 +8,14 @@ namespace cat {
 
 namespace detail {
 
-// Extract the typed `T*` from a raw `meta_alloc` result, unpoison its prepared
-// range, and optionally zero-initialize it. Returns the pointer paired with the
-// prepared byte count. The feedback size when `has_feedback`, otherwise the
-// requested `allocation_bytes`.
-template <typename T, bool is_zeroed, bool has_feedback>
+// Extract the typed `T*` from a raw `meta_alloc` result and unpoison its
+// prepared range. Returns the pointer paired with the prepared byte count. The
+// feedback size when `has_feedback`, otherwise the requested
+// `allocation_bytes`.
+template <typename T, bool has_feedback>
 [[gnu::no_sanitize_address, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-meta_alloc_unpoison_and_zero_memory(
+meta_alloc_unpoison_memory(
    conditional<has_feedback, maybe_sized_allocation<void* _Nonnull>,
                maybe_ptr<void>> const& maybe_memory,
    idx allocation_bytes) -> tuple<T* _Nonnull, idx> {
@@ -30,10 +30,6 @@ meta_alloc_unpoison_and_zero_memory(
       prepared_bytes = allocation_bytes;
    }
    unpoison_memory_region(p_allocation, prepared_bytes);
-   if constexpr (is_zeroed) {
-      // TODO: Find a way to efficiently and safely leverage SIMD here.
-      zero_memory_scalar_explicit(p_allocation, prepared_bytes);
-   }
    return tuple<T* _Nonnull, idx>{p_allocation, prepared_bytes};
 }
 
@@ -42,8 +38,8 @@ meta_alloc_unpoison_and_zero_memory(
 template <typename Derived>
 // Handle and return types implied by the same flags as `meta_alloc`. Non-0
 // `inline_size` enables small buffer optimization. Passing 0 disables it.
-template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
-          bool is_zeroed, bool has_feedback, idx inline_size>
+template <typename T, bool is_fail_safe, bool is_multiple, bool has_feedback,
+          idx inline_size>
 struct allocator_interface<Derived>::meta_alloc_alias_types {
    static constexpr bool is_inline = (inline_size != 0);
 
@@ -92,9 +88,8 @@ template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
 constexpr auto
 allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
    idx allocation_bytes, idx allocation_count, Args&&... arguments) {
-   using alias_types =
-      meta_alloc_alias_types<T, is_fail_safe, is_aligned, is_multiple,
-                             is_zeroed, has_feedback, inline_size>;
+   using alias_types = meta_alloc_alias_types<T, is_fail_safe, is_multiple,
+                                              has_feedback, inline_size>;
    using return_handle = alias_types::return_handle;
    using handle_type = alias_types::handle_type;
 
@@ -105,7 +100,7 @@ allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
       stack_handle.set_count(allocation_count);
 
       if constexpr (is_zeroed) {
-         zero_memory(__builtin_addressof(stack_handle), inline_size);
+         zero_memory_explicit(__builtin_addressof(stack_handle), inline_size);
       }
 
       if constexpr (is_multiple) {
@@ -134,10 +129,9 @@ allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
 template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
-allocator_interface<Derived>::
-   meta_alloc_obtain_maybe_memory_aligned_with_feedback(
-      uword allocation_alignment, idx allocation_bytes)
-      -> maybe_sized_allocation<void* _Nonnull> {
+allocator_interface<Derived>::meta_alloc_aligned_feedback(
+   uword allocation_alignment, idx allocation_bytes)
+   -> maybe_sized_allocation<void* _Nonnull> {
    maybe_sized_allocation<void* _Nonnull> maybe_memory;
 
    if constexpr (has_aligned_allocate_feedback) {
@@ -182,9 +176,9 @@ allocator_interface<Derived>::
 template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
-allocator_interface<Derived>::
-   meta_alloc_obtain_maybe_memory_aligned_no_feedback(
-      uword allocation_alignment, idx allocation_bytes) -> maybe_ptr<void> {
+allocator_interface<Derived>::meta_alloc_aligned(uword allocation_alignment,
+                                                 idx allocation_bytes)
+   -> maybe_ptr<void> {
    maybe_ptr<void> maybe_memory;
 
    if constexpr (has_aligned_allocate) {
@@ -204,10 +198,9 @@ allocator_interface<Derived>::
 template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
-allocator_interface<Derived>::
-   meta_alloc_obtain_maybe_memory_unaligned_with_feedback(
-      uword allocation_alignment, idx allocation_bytes)
-      -> maybe_sized_allocation<void* _Nonnull> {
+allocator_interface<Derived>::meta_alloc_unaligned_feedback(
+   uword allocation_alignment, idx allocation_bytes)
+   -> maybe_sized_allocation<void* _Nonnull> {
    maybe_sized_allocation<void* _Nonnull> maybe_memory;
 
    if constexpr (has_allocate_feedback) {
@@ -247,9 +240,8 @@ allocator_interface<Derived>::
 template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
-allocator_interface<Derived>::
-   meta_alloc_obtain_maybe_memory_unaligned_no_feedback(idx allocation_bytes)
-      -> maybe_ptr<void> {
+allocator_interface<Derived>::meta_alloc_unaligned(idx allocation_bytes)
+   -> maybe_ptr<void> {
    maybe_ptr<void> maybe_memory;
 
    if constexpr (has_allocate) {
@@ -266,18 +258,24 @@ template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
           bool is_zeroed, bool has_feedback, idx inline_size, typename... Args>
 [[gnu::no_sanitize_address]]
 constexpr auto
-allocator_interface<Derived>::meta_alloc_finish_runtime(
+allocator_interface<Derived>::meta_alloc_construct(
    meta_alloc_raw_maybe_allocation<has_feedback> maybe_memory,
    idx allocation_bytes, idx allocation_count, Args&&... arguments) {
    constexpr bool is_inline = (inline_size != 0);
-   using alias_types =
-      meta_alloc_alias_types<T, is_fail_safe, is_aligned, is_multiple,
-                             is_zeroed, has_feedback, inline_size>;
+   using alias_types = meta_alloc_alias_types<T, is_fail_safe, is_multiple,
+                                              has_feedback, inline_size>;
    using return_handle = alias_types::return_handle;
 
    auto [p_allocation, prepared_bytes] =
-      detail::meta_alloc_unpoison_and_zero_memory<T, is_zeroed, has_feedback>(
-         maybe_memory, allocation_bytes);
+      detail::meta_alloc_unpoison_memory<T, has_feedback>(maybe_memory,
+                                                          allocation_bytes);
+
+   // Zero-fill for the `calloc` family, unless the allocator already served the
+   // request through the matching zeroed allocate hook.
+   if constexpr (is_zeroed && !has_zeroed_hook<is_aligned, has_feedback>) {
+      // TODO: Find a way to efficiently and safely leverage SIMD here.
+      zero_memory_scalar_explicit(p_allocation, prepared_bytes);
+   }
 
    // Construct the `T`s inside the allocator.
    for (auto i = 0ull; i < allocation_count; ++i) {
@@ -368,9 +366,8 @@ allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
       }
    }
 
-   using alias_types =
-      meta_alloc_alias_types<T, is_fail_safe, is_aligned, is_multiple,
-                             is_zeroed, has_feedback, inline_size>;
+   using alias_types = meta_alloc_alias_types<T, is_fail_safe, is_multiple,
+                                              has_feedback, inline_size>;
    using return_handle = alias_types::return_handle;
 
    if consteval {
@@ -432,36 +429,55 @@ allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
    } else {
       meta_alloc_raw_maybe_allocation<has_feedback> maybe_memory;
 
-      if constexpr (is_aligned) {
-         if constexpr (has_feedback) {
-            maybe_memory =
-               this->meta_alloc_obtain_maybe_memory_aligned_with_feedback(
+      if constexpr (is_zeroed && has_zeroed_hook<is_aligned, has_feedback>) {
+         // The `calloc` family looks for optional zeroed allocation
+         // optimization hooks.
+         if constexpr (is_aligned) {
+            if constexpr (has_feedback) {
+               maybe_memory = this->self().aligned_allocate_zeroed_feedback(
                   allocation_alignment, allocation_bytes);
+            } else {
+               maybe_memory = this->self().aligned_allocate_zeroed(
+                  allocation_alignment, allocation_bytes);
+            }
          } else {
-            maybe_memory =
-               this->meta_alloc_obtain_maybe_memory_aligned_no_feedback(
-                  allocation_alignment, allocation_bytes);
+            if constexpr (has_feedback) {
+               maybe_memory =
+                  this->self().allocate_zeroed_feedback(allocation_bytes);
+            } else {
+               maybe_memory = this->self().allocate_zeroed(allocation_bytes);
+            }
          }
       } else {
+         // If the requested alignment is <= this allocator's minimum alignment,
+         // we can skip explicit alignment hooks.
+         bool const over_aligned =
+            is_aligned && (allocation_alignment > Derived::min_alignment);
          if constexpr (has_feedback) {
-            maybe_memory =
-               this->meta_alloc_obtain_maybe_memory_unaligned_with_feedback(
-                  allocation_alignment, allocation_bytes);
+            maybe_memory = over_aligned
+                              ? this->meta_alloc_aligned_feedback(
+                                   allocation_alignment, allocation_bytes)
+                              : this->meta_alloc_unaligned_feedback(
+                                   allocation_alignment, allocation_bytes);
          } else {
-            maybe_memory =
-               this->meta_alloc_obtain_maybe_memory_unaligned_no_feedback(
-                  allocation_bytes);
+            maybe_memory = over_aligned
+                              ? this->meta_alloc_aligned(allocation_alignment,
+                                                         allocation_bytes)
+                              : this->meta_alloc_unaligned(allocation_bytes);
          }
       }
+
       if constexpr (is_fail_safe) {
          if (!maybe_memory.has_value()) {
             return return_handle(nullopt);
          }
       }
-      return this->template meta_alloc_finish_runtime<
-         T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback,
-         inline_size>(move(maybe_memory), allocation_bytes, allocation_count,
-                      $fwd(arguments)...);
+
+      return this->template meta_alloc_construct<T, is_fail_safe, is_aligned,
+                                                 is_multiple, is_zeroed,
+                                                 has_feedback, inline_size>(
+         move(maybe_memory), allocation_bytes, allocation_count,
+         $fwd(arguments)...);
    }
 }
 

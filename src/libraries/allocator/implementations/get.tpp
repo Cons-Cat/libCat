@@ -4,7 +4,7 @@
 
 #include <cat/allocator>
 
-// Member `.get()`/`.p_get()` definitions for `allocator_interface`.
+// Member `.get()`/`.get_ptr()` definitions for `allocator_interface`.
 
 namespace cat {
 
@@ -73,7 +73,7 @@ template <typename Derived>
 template <mem T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::p_get(T& memory) -> auto {
+allocator_interface<Derived>::get_ptr(T& memory) -> auto {
    // Omitting `[[clang::lifetimebound]]` on this parameter avoids Clang 23
    // `-Wreturn-stack-address` false positives on the `cat::span` branch when
    // `get(memory).data()` still refers to storage owned by `memory`.
@@ -91,7 +91,7 @@ template <typename Derived>
 template <mem T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::p_get(T const& memory) -> auto {
+allocator_interface<Derived>::get_ptr(T const& memory) -> auto {
    // Omitting `[[clang::lifetimebound]]` on this parameter avoids Clang 23
    // `-Wreturn-stack-address` false positives on the `cat::span` branch when
    // `get(memory).data()` still refers to storage owned by `memory`.

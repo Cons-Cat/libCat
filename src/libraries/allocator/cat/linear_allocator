@@ -15,6 +15,11 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    friend struct dyn_allocator_friend;
    template <typename>
    friend class allocator_ref;
+   // `resizable_allocator` constructs `linear_allocator` instances in place
+   // over each chunk's post-header storage and therefore needs access to the
+   // private `(uintptr<void>, idx)` constructor.
+   template <is_allocator, is_allocator, idx, idx>
+   friend class resizable_allocator;
 
    // Friend factory functions.
    friend constexpr auto
@@ -22,7 +27,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
       -> linear_allocator;
 
    friend constexpr auto
-   make_linear_allocator(span<byte>& span) -> linear_allocator;
+   make_linear_allocator(span<byte>& span [[clang::lifetimebound]])
+      -> linear_allocator;
 
    // Initialize a `linear_allocator`. This should only be called from
    // `cat::make_linear_allocator`.
@@ -58,8 +64,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    // NOLINTNEXTLINE
    constexpr void
    reset() {
-      __asan_poison_memory_region(static_cast<void const*>(m_p_arena_end),
-                                  m_p_arena_begin - m_p_arena_end);
+      poison_memory_region(static_cast<void const*>(m_p_arena_end),
+                           m_p_arena_begin - m_p_arena_end);
       m_p_arena_current = m_p_arena_begin;
    }
 
@@ -68,7 +74,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    allocation_bytes(uword alignment, idx allocation_bytes)
       -> maybe_non_zero<idx> {
       uintptr<void> allocation =
-         align_down(m_p_arena_current - uword(allocation_bytes), alignment);
+         align_down(m_p_arena_current - allocation_bytes, alignment);
 
       // The allocation size is the difference between the current pointer and
       // the new pointer.
@@ -117,10 +123,13 @@ class linear_allocator : public allocator_interface<linear_allocator> {
          uword bytes_allocated = m_p_arena_current - allocation;
          m_p_arena_current = allocation;
 
+         // TODO: We shouldn't require the `tuple{}` here, and it seems
+         // `tuple()` form doesn't work either. Likely a `tuple` constructor
+         // bug.
          return maybe_sized_allocation<void*>(tuple{
             // Return a pointer that is then used for in-place construction.
             static_cast<void*>(m_p_arena_current),
-            static_cast<idx>(bytes_allocated)});
+            narrow_cast<idx>(bytes_allocated).assert()});
       }
       return nullopt;
    }
@@ -130,6 +139,35 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    [[clang::ownership_takes(libcat, 2)]]
    void
    deallocate(void const* _Nonnull /*unused*/, uword /*unused*/) {
+   }
+
+   // Address-stable in-place grow. `allocation` is the existing block (pointer
+   // and its byte size). The arena is a downward-growing bump, so an in-place
+   // grow would have to move the allocation's start address to a lower
+   // address, and `grow` cannot signal a new pointer. Grow therefore always
+   // fails and the caller is expected to fall back to allocate + copy +
+   // deallocate.
+   //
+   // Shrink is honored in place. The released tail bytes cannot rejoin
+   // the bump pool without segmenting the arena, so they stay reserved
+   // until `reset()`. The allocation and its first `new_bytes` bytes remain
+   // valid.
+   auto
+   grow(span<byte> allocation, idx new_bytes) -> maybe<void> {
+      if (new_bytes <= allocation.size()) {
+         return monostate;
+      }
+      return nullopt;
+   }
+
+   // Feedback variant of `grow`. Mirrors `grow` but reports the exact number
+   // of bytes the request settled on.
+   auto
+   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx> {
+      if (!this->grow(allocation, new_bytes).has_value()) {
+         return nullopt;
+      }
+      return new_bytes;
    }
 
    // Produce a handle to allocated memory.
@@ -155,6 +193,35 @@ class linear_allocator : public allocator_interface<linear_allocator> {
       return memory.p_storage;
    }
 
+ public:
+   // A bare linear allocator over a `span<byte>` has no special alignment
+   // guarantee beyond the byte boundary the caller asked for.
+   static constexpr uword min_alignment = uword(1u);
+
+   // NOLINTNEXTLINE
+   [[nodiscard]]
+   auto
+   bytes_used() const -> idx {
+      return static_cast<idx>(m_p_arena_begin - m_p_arena_current);
+   }
+
+   // NOLINTNEXTLINE
+   [[nodiscard]]
+   auto
+   bytes_capacity() const -> idx {
+      return static_cast<idx>(m_p_arena_begin - m_p_arena_end);
+   }
+
+   // Two linear allocators are equivalent when they govern the same arena.
+   // NOLINTNEXTLINE
+   [[nodiscard]]
+   auto
+   is_equivalent(linear_allocator const& other) const -> bool {
+      return m_p_arena_begin == other.m_p_arena_begin
+             && m_p_arena_end == other.m_p_arena_end;
+   }
+
+ private:
    uintptr<void> const m_p_arena_begin;
    uintptr<void> const m_p_arena_end;
    uintptr<void> m_p_arena_current = m_p_arena_begin;
@@ -169,7 +236,8 @@ make_linear_allocator(uintptr<void> p_address, idx arena_bytes)
 
 [[nodiscard]]
 constexpr auto
-make_linear_allocator(span<byte>& span) -> linear_allocator {
+make_linear_allocator(span<byte>& span [[clang::lifetimebound]])
+   -> linear_allocator {
    return {span.data(), span.size()};
 }
 

@@ -215,7 +215,8 @@ $test(alloc) {
    // Test `inline_align_alloc_multi`.
    auto inline_align_alloc_multi =
       allocator.inline_align_alloc_multi<int4>(8u, 5u).value();
-   cat::verify(cat::is_aligned(allocator.p_get(inline_align_alloc_multi), 8u));
+   cat::verify(
+      cat::is_aligned(allocator.get_ptr(inline_align_alloc_multi), 8u));
    cat::verify(inline_align_alloc_multi.is_inline());
 
    auto inline_align_alloc_multi_big =
@@ -225,7 +226,8 @@ $test(alloc) {
    // Test `inline_align_xalloc_multi`.
    auto inline_align_xalloc_multi =
       allocator.inline_align_xalloc_multi<int4>(8u, 5u);
-   cat::verify(cat::is_aligned(allocator.p_get(inline_align_xalloc_multi), 8u));
+   cat::verify(
+      cat::is_aligned(allocator.get_ptr(inline_align_xalloc_multi), 8u));
    cat::verify(inline_align_xalloc_multi.is_inline());
 
    // Test `inline_unalign_alloc_multi`.
@@ -2001,7 +2003,7 @@ $test(alloc_inline_sbo16) {
    // Test `inline_align_alloc_multi<T, sbo>`.
    auto h_align_alloc_multi =
       allocator.inline_align_alloc_multi<int4, sbo>(8u, 2u).value();
-   cat::verify(cat::is_aligned(allocator.p_get(h_align_alloc_multi), 8u));
+   cat::verify(cat::is_aligned(allocator.get_ptr(h_align_alloc_multi), 8u));
    cat::verify(h_align_alloc_multi.is_inline());
    auto h_align_alloc_multi_big =
       allocator.inline_align_alloc_multi<int4, sbo>(8u, 5u).value();
@@ -2010,7 +2012,7 @@ $test(alloc_inline_sbo16) {
    // Test `inline_align_xalloc_multi<T, sbo>`.
    auto h_align_xalloc_multi =
       allocator.inline_align_xalloc_multi<int4, sbo>(8u, 2u);
-   cat::verify(cat::is_aligned(allocator.p_get(h_align_xalloc_multi), 8u));
+   cat::verify(cat::is_aligned(allocator.get_ptr(h_align_xalloc_multi), 8u));
    cat::verify(h_align_xalloc_multi.is_inline());
    auto h_align_xalloc_multi_big =
       allocator.inline_align_xalloc_multi<int4, sbo>(8u, 5u);
@@ -2228,7 +2230,7 @@ $test(alloc_inline_sbo16) {
    // Test `inline_align_calloc_multi<T, sbo>`.
    auto h_align_calloc_multi =
       allocator.inline_align_calloc_multi<int4, sbo>(8u, 2u).value();
-   cat::verify(cat::is_aligned(allocator.p_get(h_align_calloc_multi), 8u));
+   cat::verify(cat::is_aligned(allocator.get_ptr(h_align_calloc_multi), 8u));
    cat::verify(h_align_calloc_multi.is_inline());
    auto h_align_calloc_multi_big =
       allocator.inline_align_calloc_multi<int4, sbo>(8u, 5u).value();
@@ -2237,7 +2239,7 @@ $test(alloc_inline_sbo16) {
    // Test `inline_align_xcalloc_multi<T, sbo>`.
    auto h_align_xcalloc_multi =
       allocator.inline_align_xcalloc_multi<int4, sbo>(8u, 2u);
-   cat::verify(cat::is_aligned(allocator.p_get(h_align_xcalloc_multi), 8u));
+   cat::verify(cat::is_aligned(allocator.get_ptr(h_align_xcalloc_multi), 8u));
    cat::verify(h_align_xcalloc_multi.is_inline());
    auto h_align_xcalloc_multi_big =
       allocator.inline_align_xcalloc_multi<int4, sbo>(8u, 5u);

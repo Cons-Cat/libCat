@@ -17,6 +17,12 @@ class null_allocator : public allocator_interface<null_allocator> {
 
    template <typename T>
    struct null_memory_handle : detail::base_memory_handle<T> {
+      // `null_allocator` always fails its allocations, so this stays
+      // `nullptr` for the lifetime of the handle. It is kept to match the
+      // aggregate-init shape used by `make_handle` and `access` in the
+      // other allocators.
+      T* _Nullable p_storage;
+
       // TODO: Simplify with CRTP or deducing-this.
       auto
       get() -> decltype(auto) {
@@ -34,26 +40,33 @@ class null_allocator : public allocator_interface<null_allocator> {
    constexpr null_allocator(null_allocator const&) = default;
    constexpr null_allocator(null_allocator&&) = default;
 
+   // `null_allocator` never hands out memory, so it can claim the strongest
+   // possible static alignment guarantee without ever being wrong. Use
+   // `page_size` since that is the strongest alignment any allocator in the
+   // library produces.
+   static constexpr uword min_alignment = page_size;
+
+   // `null_allocator` is a global allocator with no instance state, so all
+   // dispatch hooks are `static`. `cat::allocator_ref<null_allocator>` folds
+   // to zero size as a result.
+
    // This allocation always fails.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
-   auto
-   allocate(iword allocation_bytes) -> void* _Nullable {
-      static_cast<void>(allocation_bytes);
+   static auto
+   allocate(idx /*unused*/) -> void* _Nullable {
       return nullptr;
    }
 
    // Deallocation is no-op.
-   [[clang::ownership_takes(libcat, 2)]]
-   void
-   deallocate(void const* _Nullable p_storage, idx allocation_bytes) {
-      static_cast<void>(p_storage);
-      static_cast<void>(allocation_bytes);
+   [[clang::ownership_takes(libcat, 1)]]
+   static void
+   deallocate(void const* _Nullable /*unused*/, idx /*unused*/) {
    }
 
    // Produce a handle to allocated memory.
    template <typename T>
-   [[clang::ownership_holds(libcat, 2)]]
-   constexpr auto
+   [[clang::ownership_holds(libcat, 1)]]
+   static constexpr auto
    make_handle(T* _Nonnull p_handle_storage) -> null_memory_handle<T> {
       return null_memory_handle<T>{{}, p_handle_storage};
    }
@@ -61,7 +74,7 @@ class null_allocator : public allocator_interface<null_allocator> {
    // Access a page(s) of virtual memory.
    template <typename T>
    [[gnu::returns_nonnull]]
-   auto
+   static auto
    access(null_memory_handle<T>& memory) -> T* _Nonnull {
       return memory.p_storage;
    }
@@ -69,19 +82,31 @@ class null_allocator : public allocator_interface<null_allocator> {
    // TODO: This unconditionally returns `nullptr` instead of mirroring the
    // non-`const` overload's `memory.p_storage`. Confirm intent.
    template <typename T>
-   auto
-   access(null_memory_handle<T> const& memory) const -> T const* _Nullable {
-      static_cast<void>(memory);
+   static auto
+   access(null_memory_handle<T> const& /*unused*/) -> T const* _Nullable {
       return nullptr;
    }
 
-   // `reset()` is a no-op provided by `allocator_interface`.
+   // `null_allocator` never hands out memory, so it holds and manages nothing.
+   [[nodiscard]]
+   static auto
+   bytes_used() -> idx {
+      return 0u;
+   }
+
+   [[nodiscard]]
+   static auto
+   bytes_capacity() -> idx {
+      return 0u;
+   }
+
+   // `.reset()` is a no-op provided by `allocator_interface`.
 };
 
 [[nodiscard]]
 constexpr auto
 make_null_allocator() -> null_allocator {
-   return null_allocator();
+   return {};
 }
 
 }  // namespace cat

@@ -17,6 +17,8 @@ class pool_allocator
    friend struct dyn_allocator_friend;
    template <typename>
    friend class allocator_ref;
+   template <is_allocator, is_allocator, idx, idx>
+   friend class resizable_allocator;
 
    // Friend factory functions.
    template <idx in_max_node_bytes>
@@ -26,9 +28,9 @@ class pool_allocator
 
    template <idx in_max_node_bytes>
    friend constexpr auto
-   make_pool_allocator(span<byte>& span) -> pool_allocator<in_max_node_bytes>;
+   make_pool_allocator(span<byte>& span [[clang::lifetimebound]])
+      -> pool_allocator<in_max_node_bytes>;
 
- private:
    // Initialize a `pool_allocator`. This should only be called from
    // `cat::make_pool_allocator`.
    constexpr pool_allocator(uintptr<void> p_address, idx arena_bytes)
@@ -82,7 +84,7 @@ class pool_allocator
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx) -> void* _Nullable {
+   allocate(idx /*unused*/) -> void* _Nullable {
       // If there is a next node in the free list, make that the head and
       // allocate the current head to the user. Otherwise, do not allocate
       // anything.
@@ -98,7 +100,7 @@ class pool_allocator
 
    [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* _Nonnull p_allocation, idx) {
+   deallocate(void const* _Nonnull p_allocation, idx /*unused*/) {
       // Swap the head for this newly freed allocation.
       node_union* p_new_head = __builtin_bit_cast(node_union*, p_allocation);
       p_new_head->p_next = m_p_head;
@@ -134,8 +136,36 @@ class pool_allocator
 
    union node_union {
       node_union* _Nullable p_next = nullptr;
-      byte storage[max_node_bytes.raw];
+      array<byte, max_node_bytes> storage;
    };
+
+   static constexpr uword min_alignment = alignof(node_union);
+
+   [[nodiscard]]
+   auto
+   bytes_used() const -> idx {
+      idx free_nodes = 0u;
+      for (node_union const* p_walk = m_p_head; p_walk != nullptr;
+           p_walk = p_walk->p_next) {
+         ++free_nodes;
+      }
+      idx const used_nodes = static_cast<idx>(m_nodes.size() - free_nodes);
+      return used_nodes * max_node_bytes;
+   }
+
+   [[nodiscard]]
+   auto
+   bytes_capacity() const -> idx {
+      return m_nodes.size() * max_node_bytes;
+   }
+
+   // Two pools are equivalent when they alias the same memory.
+   [[nodiscard]]
+   auto
+   is_equivalent(pool_allocator const& other) const -> bool {
+      return m_nodes.data() == other.m_nodes.data()
+             && m_nodes.size() == other.m_nodes.size();
+   }
 
  private:
    span<node_union> m_nodes;
@@ -153,7 +183,8 @@ make_pool_allocator(uintptr<void> p_address, idx arena_bytes)
 template <idx max_node_bytes>
 [[nodiscard]]
 constexpr auto
-make_pool_allocator(span<byte>& span) -> pool_allocator<max_node_bytes> {
+make_pool_allocator(span<byte>& span [[clang::lifetimebound]])
+   -> pool_allocator<max_node_bytes> {
    return pool_allocator<max_node_bytes>(span.data(), span.size());
 }
 

@@ -1,0 +1,434 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+#include <cat/allocator_parameters>
+
+// EASTL-inspired allocator naming. Two flavors:
+//
+//   * `named_allocator<Allocator>` carries a runtime `str_view` name. The name
+//     is stored in one extra pointer-sized slot alongside `Allocator`, and any
+//     caller that does not look it up pays nothing for the storage beyond
+//     the pointer.
+//
+//   * `tagged_allocator<Allocator, Tag>` carries a compile-time string literal.
+//     The wrapper has zero state overhead since the name is recovered from
+//     the type. Useful for profiling categories that are fixed at the call
+//     site.
+//
+// Both wrappers re-export `Allocator`'s static guarantees (`min_alignment`,
+// `max_allocation_bytes` when present) so they compose with `meta_alloc`'s
+// alignment fast path. Equality is forwarded to `Allocator` via `is_equivalent`
+// because two wrappers around the same underlying allocator should still
+// compare equal regardless of the debug label.
+
+namespace cat {
+
+namespace detail {
+
+template <typename T>
+concept inner_has_max_allocation_bytes_for_naming =
+   requires { T::max_allocation_bytes; };
+
+}  // namespace detail
+
+template <is_allocator Allocator>
+class named_allocator : public allocator_interface<named_allocator<Allocator>> {
+ private:
+   using self_type = named_allocator<Allocator>;
+   friend allocator_interface<self_type>;
+   friend struct dyn_allocator_friend;
+   template <typename>
+   friend class allocator_ref;
+
+   Allocator* _Nonnull m_p_inner;
+   str_view m_name;
+
+   auto
+   allocation_bytes(uword alignment, idx requested_bytes) -> maybe_non_zero<idx>
+      requires(requires(Allocator& i, uword w, idx n) {
+                  i.allocation_bytes(w, n);
+               })
+   {
+      return m_p_inner->allocation_bytes(alignment, requested_bytes);
+   }
+
+   auto
+   allocate(idx allocation_bytes) -> decltype(auto)
+      requires(detail::has_allocate<Allocator>)
+   {
+      return dyn_allocator_friend::allocate(*m_p_inner, allocation_bytes);
+   }
+
+   void
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes)
+      requires(detail::has_deallocate<Allocator>)
+   {
+      dyn_allocator_friend::deallocate(*m_p_inner, p_storage, allocation_bytes);
+   }
+
+   auto
+   aligned_allocate(uword alignment, idx allocation_bytes) -> decltype(auto)
+      requires(detail::has_aligned_allocate<Allocator>)
+   {
+      return dyn_allocator_friend::aligned_allocate(*m_p_inner, alignment,
+                                                    allocation_bytes);
+   }
+
+   auto
+   allocate_feedback(idx allocation_bytes) -> decltype(auto)
+      requires(detail::has_allocate_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::allocate_feedback(*m_p_inner,
+                                                     allocation_bytes);
+   }
+
+   auto
+   aligned_allocate_feedback(uword alignment, idx allocation_bytes)
+      -> decltype(auto)
+      requires(detail::has_aligned_allocate_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::aligned_allocate_feedback(
+         *m_p_inner, alignment, allocation_bytes);
+   }
+
+   auto
+   grow(span<byte> allocation, idx new_bytes) -> maybe<void>
+      requires(detail::has_grow<Allocator>)
+   {
+      return dyn_allocator_friend::grow(*m_p_inner, allocation, new_bytes);
+   }
+
+   auto
+   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
+      requires(detail::has_grow_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::grow_feedback(*m_p_inner, allocation,
+                                                 new_bytes);
+   }
+
+   auto
+   reallocate(span<byte> allocation, idx new_bytes) -> maybe_ptr<void>
+      requires(detail::has_reallocate<Allocator>)
+   {
+      return dyn_allocator_friend::reallocate(*m_p_inner, allocation,
+                                              new_bytes);
+   }
+
+   auto
+   reallocate_feedback(span<byte> allocation, idx new_bytes)
+      -> maybe_sized_allocation<void*>
+      requires(detail::has_reallocate_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::reallocate_feedback(*m_p_inner, allocation,
+                                                       new_bytes);
+   }
+
+   auto
+   allocate_zeroed(idx allocation_bytes) -> maybe_ptr<void>
+      requires(detail::has_allocate_zeroed<Allocator>)
+   {
+      return dyn_allocator_friend::allocate_zeroed(*m_p_inner, allocation_bytes);
+   }
+
+   auto
+   allocate_zeroed_feedback(idx allocation_bytes)
+      -> maybe_sized_allocation<void*>
+      requires(detail::has_allocate_zeroed_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::allocate_zeroed_feedback(*m_p_inner,
+                                                            allocation_bytes);
+   }
+
+   auto
+   aligned_allocate_zeroed(uword alignment, idx allocation_bytes)
+      -> maybe_ptr<void>
+      requires(detail::has_aligned_allocate_zeroed<Allocator>)
+   {
+      return dyn_allocator_friend::aligned_allocate_zeroed(*m_p_inner, alignment,
+                                                           allocation_bytes);
+   }
+
+   auto
+   aligned_allocate_zeroed_feedback(uword alignment, idx allocation_bytes)
+      -> maybe_sized_allocation<void*>
+      requires(detail::has_aligned_allocate_zeroed_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::aligned_allocate_zeroed_feedback(
+         *m_p_inner, alignment, allocation_bytes);
+   }
+
+   template <typename T>
+   [[clang::ownership_holds(libcat, 2)]]
+   constexpr auto
+   make_handle(T* _Nonnull p_handle_storage) {
+      return dyn_allocator_friend::make_handle(*m_p_inner, p_handle_storage);
+   }
+
+   template <typename Handle>
+   auto
+   access(Handle& memory) -> decltype(auto) {
+      return dyn_allocator_friend::access(*m_p_inner, memory);
+   }
+
+   template <typename Handle>
+   auto
+   access(Handle const& memory) const -> decltype(auto) {
+      return dyn_allocator_friend::access(*m_p_inner, memory);
+   }
+
+ public:
+   static constexpr uword min_alignment = Allocator::min_alignment;
+
+   constexpr named_allocator(Allocator& inner [[clang::lifetimebound]],
+                             str_view debug_name [[clang::lifetimebound]])
+       : m_p_inner(__builtin_addressof(inner)), m_name(debug_name) {
+   }
+
+   named_allocator(named_allocator const&) = default;
+   named_allocator(named_allocator&&) = default;
+
+   [[nodiscard]]
+   auto
+   name() const -> str_view {
+      return m_name;
+   }
+
+   // Two named wrappers compare equal when they wrap the same underlying
+   // allocator. The label is ignored on purpose -- it is debug-only.
+   [[nodiscard]]
+   auto
+   is_equivalent(named_allocator const& other) const -> bool {
+      return *m_p_inner == *other.m_p_inner;
+   }
+
+   void
+   reset()
+      requires(detail::has_reset<Allocator>)
+   {
+      dyn_allocator_friend::reset(*m_p_inner);
+   }
+
+   auto
+   resize(idx minimum_bytes) -> maybe_non_zero<idx>
+      requires(detail::has_resize<Allocator>)
+   {
+      return dyn_allocator_friend::resize(*m_p_inner, minimum_bytes);
+   }
+
+   [[nodiscard]]
+   auto
+   bytes_used() const -> idx
+      requires(detail::has_bytes_used<Allocator>)
+   {
+      return dyn_allocator_friend::bytes_used(*m_p_inner);
+   }
+
+   [[nodiscard]]
+   auto
+   bytes_capacity() const -> idx
+      requires(detail::has_bytes_capacity<Allocator>)
+   {
+      return dyn_allocator_friend::bytes_capacity(*m_p_inner);
+   }
+};
+
+// Forward `max_allocation_bytes` from `Allocator` when it exists. Modeled as a
+// partial specialization rather than a `requires` member because partial
+// specializations of static-constant-only members keep the header free of
+// `if constexpr` guards at every use-site.
+template <is_allocator Allocator>
+   requires(detail::inner_has_max_allocation_bytes_for_naming<Allocator>)
+inline constexpr idx max_allocation_bytes_of_v =
+   Allocator::max_allocation_bytes;
+
+namespace detail {
+
+// Compile-time string literal wrapper. Stored as a `char` pack so the type
+// itself carries the bytes and no runtime storage is needed.
+template <char... cs>
+struct tag_literal {
+   static constexpr char value[sizeof...(cs) + 1u] = {cs..., '\0'};
+   static constexpr idx size = sizeof...(cs);
+};
+
+template <typename T, T... cs>
+constexpr auto
+operator""_alloc_tag() -> tag_literal<cs...> {
+   return {};
+}
+
+}  // namespace detail
+
+// `tagged_allocator<Allocator, Tag>` is the compile-time-named sibling of
+// `named_allocator`. `Tag` must be a `detail::tag_literal`-style type whose
+// `::value` is a null-terminated character array; use the `_alloc_tag` UDL
+// to construct one from a string literal.
+template <is_allocator Allocator, typename Tag>
+class tagged_allocator
+    : public allocator_interface<tagged_allocator<Allocator, Tag>> {
+ private:
+   using self_type = tagged_allocator<Allocator, Tag>;
+   friend allocator_interface<self_type>;
+   friend struct dyn_allocator_friend;
+   template <typename>
+   friend class allocator_ref;
+
+   Allocator* _Nonnull m_p_inner;
+
+   auto
+   allocate(idx allocation_bytes) -> decltype(auto)
+      requires(detail::has_allocate<Allocator>)
+   {
+      return dyn_allocator_friend::allocate(*m_p_inner, allocation_bytes);
+   }
+
+   void
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes)
+      requires(detail::has_deallocate<Allocator>)
+   {
+      dyn_allocator_friend::deallocate(*m_p_inner, p_storage, allocation_bytes);
+   }
+
+   auto
+   aligned_allocate(uword alignment, idx allocation_bytes) -> decltype(auto)
+      requires(detail::has_aligned_allocate<Allocator>)
+   {
+      return dyn_allocator_friend::aligned_allocate(*m_p_inner, alignment,
+                                                    allocation_bytes);
+   }
+
+   auto
+   allocate_feedback(idx allocation_bytes) -> decltype(auto)
+      requires(detail::has_allocate_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::allocate_feedback(*m_p_inner,
+                                                     allocation_bytes);
+   }
+
+   auto
+   aligned_allocate_feedback(uword alignment, idx allocation_bytes)
+      -> decltype(auto)
+      requires(detail::has_aligned_allocate_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::aligned_allocate_feedback(
+         *m_p_inner, alignment, allocation_bytes);
+   }
+
+   auto
+   grow(span<byte> allocation, idx new_bytes) -> maybe<void>
+      requires(detail::has_grow<Allocator>)
+   {
+      return dyn_allocator_friend::grow(*m_p_inner, allocation, new_bytes);
+   }
+
+   auto
+   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
+      requires(detail::has_grow_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::grow_feedback(*m_p_inner, allocation,
+                                                 new_bytes);
+   }
+
+   auto
+   reallocate(span<byte> allocation, idx new_bytes) -> maybe_ptr<void>
+      requires(detail::has_reallocate<Allocator>)
+   {
+      return dyn_allocator_friend::reallocate(*m_p_inner, allocation,
+                                              new_bytes);
+   }
+
+   auto
+   reallocate_feedback(span<byte> allocation, idx new_bytes)
+      -> maybe_sized_allocation<void*>
+      requires(detail::has_reallocate_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::reallocate_feedback(*m_p_inner, allocation,
+                                                       new_bytes);
+   }
+
+   auto
+   allocate_zeroed(idx allocation_bytes) -> maybe_ptr<void>
+      requires(detail::has_allocate_zeroed<Allocator>)
+   {
+      return dyn_allocator_friend::allocate_zeroed(*m_p_inner, allocation_bytes);
+   }
+
+   auto
+   allocate_zeroed_feedback(idx allocation_bytes)
+      -> maybe_sized_allocation<void*>
+      requires(detail::has_allocate_zeroed_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::allocate_zeroed_feedback(*m_p_inner,
+                                                            allocation_bytes);
+   }
+
+   auto
+   aligned_allocate_zeroed(uword alignment, idx allocation_bytes)
+      -> maybe_ptr<void>
+      requires(detail::has_aligned_allocate_zeroed<Allocator>)
+   {
+      return dyn_allocator_friend::aligned_allocate_zeroed(*m_p_inner, alignment,
+                                                           allocation_bytes);
+   }
+
+   auto
+   aligned_allocate_zeroed_feedback(uword alignment, idx allocation_bytes)
+      -> maybe_sized_allocation<void*>
+      requires(detail::has_aligned_allocate_zeroed_feedback<Allocator>)
+   {
+      return dyn_allocator_friend::aligned_allocate_zeroed_feedback(
+         *m_p_inner, alignment, allocation_bytes);
+   }
+
+   template <typename T>
+   [[clang::ownership_holds(libcat, 2)]]
+   constexpr auto
+   make_handle(T* _Nonnull p_handle_storage) {
+      return dyn_allocator_friend::make_handle(*m_p_inner, p_handle_storage);
+   }
+
+   template <typename Handle>
+   auto
+   access(Handle& memory) -> decltype(auto) {
+      return dyn_allocator_friend::access(*m_p_inner, memory);
+   }
+
+   template <typename Handle>
+   auto
+   access(Handle const& memory) const -> decltype(auto) {
+      return dyn_allocator_friend::access(*m_p_inner, memory);
+   }
+
+ public:
+   static constexpr uword min_alignment = Allocator::min_alignment;
+
+   constexpr tagged_allocator(Allocator& inner [[clang::lifetimebound]])
+       : m_p_inner(__builtin_addressof(inner)) {
+   }
+
+   tagged_allocator(tagged_allocator const&) = default;
+   tagged_allocator(tagged_allocator&&) = default;
+
+   [[nodiscard]]
+   constexpr auto
+   name() const -> str_view {
+      return str_view{Tag::value, Tag::size};
+   }
+
+   [[nodiscard]]
+   auto
+   is_equivalent(tagged_allocator const& other) const -> bool {
+      return *m_p_inner == *other.m_p_inner;
+   }
+
+   auto
+   resize(idx minimum_bytes) -> maybe_non_zero<idx>
+      requires(detail::has_resize<Allocator>)
+   {
+      return dyn_allocator_friend::resize(*m_p_inner, minimum_bytes);
+   }
+};
+
+}  // namespace cat

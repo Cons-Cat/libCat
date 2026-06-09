@@ -638,9 +638,10 @@ $test(syscall_mremap) {
    // Grow to four pages, allowing the kernel to relocate the mapping. The
    // contents move with it, so the sentinel survives at the (possibly new)
    // address.
-   void* p_grown = nix::sys_mremap(p_old, 2 * cat::page_size, 4 * cat::page_size,
-                                   nix::mremap_flags::may_move)
-                      .verify();
+   void* p_grown =
+      nix::sys_mremap(p_old, 2 * cat::page_size, 4 * cat::page_size,
+                      nix::mremap_flags::may_move)
+         .verify();
    cat::verify(p_grown != nullptr);
    cat::verify(static_cast<unsigned char*>(p_grown)[0] == 42u);
 

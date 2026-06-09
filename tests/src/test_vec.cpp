@@ -40,16 +40,16 @@ struct foo {
 
 consteval auto
 const_func() -> int4 {
-   cat::page_allocator allocator;
+   cat::page_allocator pager;
    cat::vec<int> vector;
-   auto _ = vector.resize<cat::page_allocator>(allocator, 8);
+   auto _ = vector.resize<cat::page_allocator>(pager, 8);
 
    vector[0] = 1;
    vector[1] = 2;
    vector[7] = 10;
-   auto _ = vector.push_back<cat::page_allocator>(allocator, 10);
+   auto _ = vector.push_back<cat::page_allocator>(pager, 10);
    int4 result = vector[8];
-   vector.free<cat::page_allocator>(allocator);
+   vector.free<cat::page_allocator>(pager);
    return result;
 }
 
@@ -73,8 +73,6 @@ struct linear_arena {
 };
 
 }  // namespace
-
-// ----- unmanaged `cat::vec` ---------------------------------------------
 
 $test(vec_maybe_niche) {
    // `maybe<vec<T>>` packs the disengaged state into the
@@ -453,6 +451,33 @@ $test(vec_abandon_outlives_allocator) {
    cat::verify(post[0] == 19);
 }
 
+// When the wrapped allocator supports in-place `reallocate`, `shrink_to_fit`
+// must reuse the existing buffer instead of allocating-then-copying. The
+// downward-bump `linear_allocator` honors shrinks in place, so the address
+// returned by `data()` must match before and after the shrink.
+$test(vec_shrink_to_fit_in_place_via_reallocate) {
+   linear_arena arena;
+   cat::vec<int4> v;
+   $defer {
+      v.free(arena.alloc);
+   };
+   v.reserve(arena.alloc, 32u).verify();
+   v.push_back(arena.alloc, 1_i4).verify();
+   v.push_back(arena.alloc, 2_i4).verify();
+   v.push_back(arena.alloc, 3_i4).verify();
+   cat::verify(v.capacity() >= 32);
+
+   int4 const* const p_before = v.data();
+   v.shrink_to_fit(arena.alloc).verify();
+
+   cat::verify(v.data() == p_before);
+   cat::verify(v.capacity() == v.size());
+   cat::verify(v.size() == 3);
+   cat::verify(v[0] == 1);
+   cat::verify(v[1] == 2);
+   cat::verify(v[2] == 3);
+}
+
 $test(vec_shrink_to_fit) {
    // `shrink_to_fit` releases excess capacity left behind by growth
    // patterns and downward `resize`s. Without it, vecs propagate their
@@ -507,8 +532,6 @@ $test(vec_element_destructors) {
    }
    cat::assert(destructor_count == 3);
 }
-
-// ----- managed `cat::raii::vec` ----------------------------------------
 
 $test(raii_vec_make_and_push_back) {
    linear_arena arena;
