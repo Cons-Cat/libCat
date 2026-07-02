@@ -125,9 +125,17 @@ clean mode=last_mode verbose="":
 
 format mode=last_mode verbose="":
     @just cmake_target cat-format {{ mode }} {{ verbose }}
+    @just format-python
 
 format-check mode=last_mode verbose="":
     @just cmake_target cat-format-check {{ mode }} {{ verbose }}
+    @just format-python-check
+
+format-python:
+    ruff format gdb_pretty_printers
+
+format-python-check:
+    ruff format --check gdb_pretty_printers
 
 restyle-comments mode=last_mode verbose="":
     @just cmake_target cat-restyle-comments {{ mode }} {{ verbose }}

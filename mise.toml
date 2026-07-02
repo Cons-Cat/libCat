@@ -2,6 +2,7 @@
 cmake = "4.3.2"
 just = "1.50.0"
 ninja = "1.13.2"
+ruff = "0.15.17"
 sccache = "0.15.0"
 
 [settings]
