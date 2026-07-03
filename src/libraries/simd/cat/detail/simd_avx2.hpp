@@ -36,7 +36,7 @@ struct avx_abi {
 
    static constexpr cat::idx size = 32u;
    static constexpr cat::idx lanes{size.raw / sizeof(T)};
-   static constexpr cat::uword alignment = 32u;
+   static constexpr cat::ualign alignment = 32u;
 
    // Physical storage and lane truth encoding for `simd_mask` (see
    // `simd_abi::mask_lane` and `simd_mask_lane_sseavx.hpp`).

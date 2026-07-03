@@ -67,7 +67,7 @@ struct dyn_allocator_friend {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   aligned_allocate(T& self, uword alignment, idx allocation_bytes)
+   aligned_allocate(T& self, ualign alignment, idx allocation_bytes)
       -> decltype(self.aligned_allocate(alignment, allocation_bytes)) {
       return self.aligned_allocate(alignment, allocation_bytes);
    }
@@ -83,7 +83,7 @@ struct dyn_allocator_friend {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   aligned_allocate_feedback(T& self, uword alignment, idx allocation_bytes)
+   aligned_allocate_feedback(T& self, ualign alignment, idx allocation_bytes)
       -> decltype(self.aligned_allocate_feedback(alignment, allocation_bytes)) {
       return self.aligned_allocate_feedback(alignment, allocation_bytes);
    }
@@ -146,7 +146,7 @@ struct dyn_allocator_friend {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   aligned_allocate_zeroed(T& self, uword alignment, idx allocation_bytes)
+   aligned_allocate_zeroed(T& self, ualign alignment, idx allocation_bytes)
       -> decltype(self.aligned_allocate_zeroed(alignment, allocation_bytes)) {
       return self.aligned_allocate_zeroed(alignment, allocation_bytes);
    }
@@ -154,7 +154,7 @@ struct dyn_allocator_friend {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   aligned_allocate_zeroed_feedback(T& self, uword alignment,
+   aligned_allocate_zeroed_feedback(T& self, ualign alignment,
                                     idx allocation_bytes)
       -> decltype(self.aligned_allocate_zeroed_feedback(alignment,
                                                         allocation_bytes)) {
@@ -240,7 +240,7 @@ concept has_reset =
 
 template <typename T>
 concept has_aligned_allocate =
-   requires(T& allocator, uword alignment, idx allocation_bytes) {
+   requires(T& allocator, ualign alignment, idx allocation_bytes) {
       dyn_allocator_friend::aligned_allocate(allocator, alignment,
                                              allocation_bytes);
    };
@@ -253,7 +253,7 @@ concept has_allocate_feedback =
 
 template <typename T>
 concept has_aligned_allocate_feedback =
-   requires(T& allocator, uword alignment, idx allocation_bytes) {
+   requires(T& allocator, ualign alignment, idx allocation_bytes) {
       dyn_allocator_friend::aligned_allocate_feedback(allocator, alignment,
                                                       allocation_bytes);
    };
@@ -303,14 +303,14 @@ concept has_allocate_zeroed_feedback =
 
 template <typename T>
 concept has_aligned_allocate_zeroed =
-   requires(T& allocator, uword alignment, idx allocation_bytes) {
+   requires(T& allocator, ualign alignment, idx allocation_bytes) {
       dyn_allocator_friend::aligned_allocate_zeroed(allocator, alignment,
                                                     allocation_bytes);
    };
 
 template <typename T>
 concept has_aligned_allocate_zeroed_feedback =
-   requires(T& allocator, uword alignment, idx allocation_bytes) {
+   requires(T& allocator, ualign alignment, idx allocation_bytes) {
       dyn_allocator_friend::aligned_allocate_zeroed_feedback(
          allocator, alignment, allocation_bytes);
    };
@@ -369,12 +369,12 @@ struct dyn_reset {
 };
 
 struct dyn_aligned_allocate {
-   using signature = auto(uword, idx) -> maybe_ptr<void>;
+   using signature = auto(ualign, idx) -> maybe_ptr<void>;
 
    template <has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke(T& self, uword alignment, idx allocation_bytes)
+   do_invoke(T& self, ualign alignment, idx allocation_bytes)
       -> maybe_ptr<void> {
       if constexpr (has_aligned_allocate<T>) {
          return dyn_allocator_friend::aligned_allocate(self, alignment,
@@ -419,12 +419,12 @@ struct dyn_allocate_feedback {
 };
 
 struct dyn_aligned_allocate_feedback {
-   using signature = auto(uword, idx) -> maybe_sized_allocation<void*>;
+   using signature = auto(ualign, idx) -> maybe_sized_allocation<void*>;
 
    template <has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke(T& self, uword alignment, idx allocation_bytes)
+   do_invoke(T& self, ualign alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
       if constexpr (has_aligned_allocate_feedback<T>) {
          return dyn_allocator_friend::aligned_allocate_feedback(
@@ -671,7 +671,7 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
+   aligned_allocate(ualign alignment, idx allocation_bytes) -> maybe_ptr<void> {
       return dyn_invoke<detail::dyn_aligned_allocate>(*m_p_allocator, alignment,
                                                       allocation_bytes);
    }
@@ -685,7 +685,7 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate_feedback(uword alignment, idx allocation_bytes)
+   aligned_allocate_feedback(ualign alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
       return dyn_invoke<detail::dyn_aligned_allocate_feedback>(
          *m_p_allocator, alignment, allocation_bytes);
@@ -862,7 +862,7 @@ class [[gsl::Pointer]] allocator_ref
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void>
+   aligned_allocate(ualign alignment, idx allocation_bytes) -> maybe_ptr<void>
       requires(detail::has_aligned_allocate<Allocator>)
    {
       return get_allocator().aligned_allocate(alignment, allocation_bytes);
@@ -878,7 +878,7 @@ class [[gsl::Pointer]] allocator_ref
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate_feedback(uword alignment, idx allocation_bytes)
+   aligned_allocate_feedback(ualign alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*>
       requires(detail::has_aligned_allocate_feedback<Allocator>)
    {
@@ -951,7 +951,7 @@ class [[gsl::Pointer]] allocator_ref
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate_zeroed(uword alignment, idx allocation_bytes)
+   aligned_allocate_zeroed(ualign alignment, idx allocation_bytes)
       -> maybe_ptr<void>
       requires(detail::has_aligned_allocate_zeroed<Allocator>)
    {
@@ -961,7 +961,7 @@ class [[gsl::Pointer]] allocator_ref
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate_zeroed_feedback(uword alignment, idx allocation_bytes)
+   aligned_allocate_zeroed_feedback(ualign alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*>
       requires(detail::has_aligned_allocate_zeroed_feedback<Allocator>)
    {
@@ -993,7 +993,7 @@ class [[gsl::Pointer]] allocator_ref
  public:
    // Mirror `Allocator::min_alignment` so generic code can query the static
    // alignment guarantee without un-erasing the held allocator type.
-   static constexpr uword min_alignment = Allocator::min_alignment;
+   static constexpr ualign min_alignment = Allocator::min_alignment;
 
    // Empty allocators carry no state, so the ref can be default-constructed
    // for them. Stateful allocators must be bound to a concrete instance.
@@ -1103,7 +1103,7 @@ class [[gsl::Pointer]] allocator_ref<dyn_allocator>
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
+   aligned_allocate(ualign alignment, idx allocation_bytes) -> maybe_ptr<void> {
       return m_allocator.aligned_allocate(alignment, allocation_bytes);
    }
 
@@ -1115,7 +1115,7 @@ class [[gsl::Pointer]] allocator_ref<dyn_allocator>
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate_feedback(uword alignment, idx allocation_bytes)
+   aligned_allocate_feedback(ualign alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
       return m_allocator.aligned_allocate_feedback(alignment, allocation_bytes);
    }
@@ -1175,7 +1175,7 @@ class [[gsl::Pointer]] allocator_ref<dyn_allocator>
  public:
    // `dyn_allocator` erases its held type, so the static alignment guarantee
    // it can promise to callers is the safe lower bound of 1 byte.
-   static constexpr uword min_alignment = uword(1u);
+   static constexpr ualign min_alignment = 1u;
 
    allocator_ref() = delete ("`allocator_ref` cannot be default-constructed! "
                              "Pass an allocator l-value instead.");

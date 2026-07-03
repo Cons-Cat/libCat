@@ -78,7 +78,7 @@ class pool_allocator
 
  private:
    auto
-   allocation_bytes(uword, idx) -> maybe_non_zero<idx> {
+   allocation_bytes(ualign, idx) -> maybe_non_zero<idx> {
       return max_node_bytes;
    }
 
@@ -139,7 +139,7 @@ class pool_allocator
       array<byte, max_node_bytes> storage;
    };
 
-   static constexpr uword min_alignment = alignof(node_union);
+   static constexpr ualign min_alignment = alignof(node_union);
 
    [[nodiscard]]
    auto

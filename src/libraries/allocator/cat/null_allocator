@@ -44,7 +44,7 @@ class null_allocator : public allocator_interface<null_allocator> {
    // possible static alignment guarantee without ever being wrong. Use
    // `page_size` since that is the strongest alignment any allocator in the
    // library produces.
-   static constexpr uword min_alignment = page_size;
+   static constexpr ualign min_alignment = page_size;
 
    // `null_allocator` is a global allocator with no instance state, so all
    // dispatch hooks are `static`. `cat::allocator_ref<null_allocator>` folds

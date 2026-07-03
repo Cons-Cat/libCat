@@ -77,19 +77,19 @@ namespace detail {
 // aligned.
 [[nodiscard]]
 consteval auto
-simd_memory_alignment_for_fixed_size(idx object_size, uword native_cap,
-                                     uword element_align) -> uword {
+simd_memory_alignment_for_fixed_size(idx object_size, ualign native_cap,
+                                     ualign element_align) -> ualign {
    uword const bounded = object_size <= native_cap
                             ? static_cast<uword>(object_size.raw)
-                            : native_cap;
+                            : static_cast<uword>(native_cap);
    if (bounded == 0u) {
       return element_align;
    }
-   uword r = 1u;
-   while (r * 2u <= bounded) {
-      r *= 2u;
+   ualign alignment = 1u;
+   while (alignment * 2u <= bounded) {
+      alignment *= 2u;
    }
-   return r < element_align ? element_align : r;
+   return alignment < element_align ? element_align : alignment;
 }
 
 }  // namespace detail
@@ -133,9 +133,9 @@ struct simd_abi::fixed_size {
    using target_abi = x64::avx_abi<T>;
    static constexpr idx lanes = in_lanes;
    static constexpr idx size = idx(lanes.raw * sizeof(T));
-   static constexpr uword alignment =
+   static constexpr ualign alignment =
       detail::simd_memory_alignment_for_fixed_size(
-         size, target_abi::alignment, static_cast<uword>(alignof(T)));
+         size, target_abi::alignment, alignof(T));
 
    template <typename ElementT>
    using simd_mask_lane = simd_abi::mask_lane<
@@ -161,7 +161,7 @@ struct simd_abi::native {
    using target_abi = x64::avx_abi<T>;
    static constexpr idx size = target_abi::size;
    static constexpr idx lanes = target_abi::lanes;
-   static constexpr uword alignment = target_abi::alignment;
+   static constexpr ualign alignment = target_abi::alignment;
 
    template <typename ElementT>
    using simd_mask_lane =
@@ -184,7 +184,7 @@ struct simd_abi::compatible {
    using target_abi = x64::avx_abi<T>;
    static constexpr idx size = target_abi::size;
    static constexpr idx lanes = target_abi::lanes;
-   static constexpr uword alignment = target_abi::alignment;
+   static constexpr ualign alignment = target_abi::alignment;
 
    template <typename ElementT>
    using simd_mask_lane =
@@ -203,7 +203,7 @@ struct simd_abi::scalar {
 
    static constexpr idx size = sizeof(T);
    static constexpr idx lanes = 1u;
-   static constexpr uword alignment = alignof(T);
+   static constexpr ualign alignment = alignof(T);
 
    template <typename ElementT>
    using simd_mask_lane =
@@ -467,7 +467,7 @@ class [[clang::preferred_name(fixed_size_simd<T, Abi::lanes>),
       // By setting `alignment` to 1 here, and by extension in the definition of
       // `simd::raw_type` produced by this ABI, Clang produces unaligned SIMD
       // instructions for operations on this ABI.
-      static constexpr uword alignment = 1u;
+      static constexpr ualign alignment = 1u;
    };
 
    using unaligned_vector = simd<T, unaligned_abi>;

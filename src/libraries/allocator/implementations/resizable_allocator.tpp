@@ -43,7 +43,7 @@ resizable_allocator<Inner, Backing, node_bytes_param,
    // backing allocation and gives the rest of the slab to `Inner`.
    idx const total_bytes = chunk_bytes_request;
    void* p_backing = nullptr;
-   if constexpr (requires(Backing& backing, uword alignment,
+   if constexpr (requires(Backing& backing, ualign alignment,
                           idx allocation_bytes) {
                     dyn_allocator_friend::aligned_allocate(backing, alignment,
                                                            allocation_bytes);

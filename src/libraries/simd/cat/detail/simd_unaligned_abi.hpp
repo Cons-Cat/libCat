@@ -23,7 +23,7 @@ struct unaligned {
 
    static constexpr idx size = BaseAbi::size;
    static constexpr idx lanes = BaseAbi::lanes;
-   static constexpr uword alignment = 1u;
+   static constexpr ualign alignment = 1u;
 
    template <typename ElementT>
    using simd_mask_lane = simd_abi::mask_lane<

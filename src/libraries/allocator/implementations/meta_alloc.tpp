@@ -130,7 +130,7 @@ template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
 allocator_interface<Derived>::meta_alloc_aligned_feedback(
-   uword allocation_alignment, idx allocation_bytes)
+   ualign allocation_alignment, idx allocation_bytes)
    -> maybe_sized_allocation<void* _Nonnull> {
    maybe_sized_allocation<void* _Nonnull> maybe_memory;
 
@@ -176,7 +176,7 @@ allocator_interface<Derived>::meta_alloc_aligned_feedback(
 template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
-allocator_interface<Derived>::meta_alloc_aligned(uword allocation_alignment,
+allocator_interface<Derived>::meta_alloc_aligned(ualign allocation_alignment,
                                                  idx allocation_bytes)
    -> maybe_ptr<void> {
    maybe_ptr<void> maybe_memory;
@@ -199,7 +199,7 @@ template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
 allocator_interface<Derived>::meta_alloc_unaligned_feedback(
-   uword allocation_alignment, idx allocation_bytes)
+   ualign allocation_alignment, idx allocation_bytes)
    -> maybe_sized_allocation<void* _Nonnull> {
    maybe_sized_allocation<void* _Nonnull> maybe_memory;
 
@@ -343,7 +343,7 @@ template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
             && (!is_zeroed || (sizeof...(Args) == 0))
             && (!is_zeroed || is_implicit_lifetime<T>))
 constexpr auto
-allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
+allocator_interface<Derived>::meta_alloc(ualign allocation_alignment,
                                          idx allocation_count,
                                          Args&&... arguments) {
    constexpr bool is_inline = (inline_size != 0);
@@ -377,16 +377,16 @@ allocator_interface<Derived>::meta_alloc(uword allocation_alignment,
       if constexpr (is_multiple) {
          p_allocation = plain_new_ok
                            ? new T[allocation_count]
-                           : new (std::align_val_t(allocation_alignment))
+                           : new (std::align_val_t(allocation_alignment.raw))
                                 T[allocation_count];
       } else if constexpr (is_zeroed) {
          p_allocation = plain_new_ok
                            ? new T
-                           : new (std::align_val_t(allocation_alignment)) T;
+                           : new (std::align_val_t(allocation_alignment.raw)) T;
       } else {
          p_allocation = plain_new_ok
                            ? new T(arguments...)
-                           : new (std::align_val_t(allocation_alignment))
+                           : new (std::align_val_t(allocation_alignment.raw))
                                 T(arguments...);
       }
       idx const prepared_bytes = allocation_bytes;

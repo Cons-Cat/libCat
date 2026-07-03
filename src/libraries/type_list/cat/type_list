@@ -136,10 +136,10 @@ class type_list {
    static constexpr idx smallest_size = min(sizeof(Types)...);
 
    // The smallest alignment of a type in this list.
-   static constexpr idx smallest_alignment = min(alignof(Types)...);
+   static constexpr ualign smallest_alignment = min(alignof(Types)...);
 
    // The largest alignment of a type in this list.
-   static constexpr idx largest_alignment = max(alignof(Types)...);
+   static constexpr ualign largest_alignment = max(alignof(Types)...);
 
    // Sum the number of times that a type is in this type list.
    template <typename T>

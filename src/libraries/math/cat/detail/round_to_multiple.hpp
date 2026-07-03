@@ -47,8 +47,7 @@ round_down_to_multiple_of(T value, U multiple) -> common_type<T, U> {
 
    // A power-of-two multiple floors with a single mask instead of a modulo.
    if (has_single_bit(wide_multiple)) {
-      // We need to cast because `wide_multiple` could be signed.
-      return align_down(wide_value, uword(wide_multiple));
+      return align_down(wide_value, wide_multiple);
    }
 
    wide const remainder = wide_value % wide_multiple;

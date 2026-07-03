@@ -303,12 +303,12 @@ extract_bits_fallback(T from, cat::uint1 offset, cat::idx length) -> T {
    raw_from >>= offset.raw;
    auto const remaining_bits = bits - offset;
    if (length >= remaining_bits) {
-      return raw_from;
+      return T(raw_from);
    }
 
    using raw_type = cat::raw_arithmetic_type<T>;
    raw_type const mask = (raw_type(1u) << length.raw) - 1u;
-   return raw_from & mask;
+   return T(raw_from & mask);
 }
 
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
@@ -324,7 +324,7 @@ parallel_extract_bits_fallback(T value, U mask) -> T {
    while (raw_mask != 0u) {
       if (raw_mask & 1) {
          result >>= 1;
-         result |= raw_value << ((sizeof(T) * 8u) - 1u);
+         result |= T(raw_value << ((sizeof(T) * 8u) - 1u));
          ++count;
       }
       raw_value >>= 1;
@@ -348,7 +348,7 @@ deposit_bits_mask_fallback(T value, U mask) -> T {
    while (raw_mask != 0u) {
       result >>= 1;
       if (raw_mask & 1) {
-         result |= raw_value << ((sizeof(T) * 8u) - 1u);
+         result |= T(raw_value << ((sizeof(T) * 8u) - 1u));
          raw_value >>= 1;
       }
       raw_mask >>= 1;
@@ -373,7 +373,7 @@ zero_high_bits_at_fallback(T source, cat::uint4 bit_index) -> T {
 
    using raw_type = cat::raw_arithmetic_type<T>;
    raw_type const mask = (raw_type(1u) << bit_index.raw) - 1u;
-   return cat::make_raw_arithmetic(source) & mask;
+   return T(cat::make_raw_arithmetic(source) & mask);
 }
 
 template <cat::is_unsigned T>
@@ -1169,32 +1169,32 @@ invert_endianess(T value) -> T {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_aligned(T* _Nullable p_value, uword alignment) -> bool;
+is_aligned(T* _Nullable p_value, ualign alignment) -> bool;
 
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-is_aligned(T value, uword alignment) -> bool;
+is_aligned(T value, ualign alignment) -> bool;
 
 template <typename T>
 [[nodiscard]]
 constexpr auto
-align_up(T* _Nullable p_value, uword alignment) -> T* _Nullable;
+align_up(T* _Nullable p_value, ualign alignment) -> T* _Nullable;
 
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-align_up(T value, uword alignment) -> T;
+align_up(T value, ualign alignment) -> T;
 
 template <typename T>
 [[nodiscard]]
 constexpr auto
-align_down(T* _Nullable p_value, uword alignment) -> T* _Nullable;
+align_down(T* _Nullable p_value, ualign alignment) -> T* _Nullable;
 
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-align_down(T value, uword alignment) -> T;
+align_down(T value, ualign alignment) -> T;
 
 // `byte` is a storage type which enables bitwise operations but not arithmetic.
 // TODO: Add some member functions.

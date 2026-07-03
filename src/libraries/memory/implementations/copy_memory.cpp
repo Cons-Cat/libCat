@@ -25,9 +25,12 @@ copy_memory_impl(void const* _Nonnull __restrict p_source,
       static_cast<unsigned char* _Nonnull>(p_destination)};
    constexpr idx l3_cache_size = 2_umi;
    constexpr idx step_size = sizeof(simd_vector) * 8u;
-   uword const simd_align = alignof(simd_vector);
-   uword const dest_mod = (p_destination_handle & simd_align) % simd_align;
-   uword const src_mod = (p_source_handle & simd_align) % simd_align;
+   ualign const simd_align = alignof(simd_vector);
+   uword const simd_align_bytes = simd_align;
+   uword const dest_mod =
+      (p_destination_handle & simd_align_bytes) % simd_align_bytes;
+   uword const src_mod =
+      (p_source_handle & simd_align_bytes) % simd_align_bytes;
 
    // If the copy is too short for vector stores, do it scalar.
    if (bytes_remaining <= step_size) {
@@ -42,7 +45,7 @@ copy_memory_impl(void const* _Nonnull __restrict p_source,
    // is aligned for `load_aligned` (stores may then use `store_unaligned`).
    uword const padding =
       src_mod == dest_mod
-         ? (simd_align - dest_mod) % simd_align
+         ? (simd_align_bytes - dest_mod) % simd_align_bytes
          : align_up(p_destination_handle, simd_align) - p_destination_handle;
 
    // We should be in range of `idx` here.
@@ -53,9 +56,9 @@ copy_memory_impl(void const* _Nonnull __restrict p_source,
    bytes_remaining -= padding;
 
    cat::uintptr<unsigned char> const src_after_padding = p_source_handle;
-   idx const src_mis_after_pad{src_after_padding % simd_align};
+   idx const src_mis_after_pad{src_after_padding % simd_align_bytes};
    idx const source_peel{
-      src_mis_after_pad == 0u ? 0u : simd_align - src_mis_after_pad};
+      src_mis_after_pad == 0u ? 0u : simd_align_bytes - src_mis_after_pad};
 
    if (source_peel != 0u) {
       if (bytes_remaining < source_peel) {
@@ -77,7 +80,8 @@ copy_memory_impl(void const* _Nonnull __restrict p_source,
       return;
    }
 
-   bool const dest_simd_aligned = (p_destination_handle % simd_align) == 0u;
+   bool const dest_simd_aligned =
+      (p_destination_handle % simd_align_bytes) == 0u;
 
    simd_vector vectors[8];
 

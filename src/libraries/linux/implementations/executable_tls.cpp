@@ -36,11 +36,12 @@ clone_thread_local_buffer_min_bytes() -> cat::idx {
       return 0u;
    }
 
-   cat::uword const minimum_alignment =
+   cat::ualign const minimum_alignment =
       cat::max(32u, link_absolute_symbol<cat::uword>(__cat_tls_alignment));
+   cat::idx const minimum_alignment_bytes = cat::idx(minimum_alignment);
 
    cat::idx const aligned_image_bytes =
-      cat::idx(tls_memory_size + minimum_alignment - 1u);
+      cat::idx(tls_memory_size.raw + minimum_alignment_bytes.raw - 1u);
    cat::idx const cache_line_padded_bytes =
       (tls_memory_size + 63u).raw & ~63ull;
 
@@ -85,7 +86,7 @@ void
 init_parent_process_tls() {
 #ifdef CAT_THREAD_LOCAL_SIZE
    cat::idx const tls_memory_size = CAT_THREAD_LOCAL_SIZE;
-   cat::uword const minimum_alignment = 32u;
+   cat::ualign const minimum_alignment = 32u;
 #else
    cat::idx const tls_memory_size =
       link_absolute_symbol<cat::idx>(__cat_tls_memory_size);
@@ -94,7 +95,7 @@ init_parent_process_tls() {
       return;
    }
 
-   cat::uword const minimum_alignment =
+   cat::ualign const minimum_alignment =
       cat::max(32u, link_absolute_symbol<cat::uword>(__cat_tls_alignment));
 #endif
 
@@ -110,7 +111,8 @@ init_parent_process_tls() {
    // inside the slab still leaves room for the self-slot above and the full
    // `thread_local` storage image below.
    cat::idx const slab_bytes =
-      tls_memory_size + cat::idx(minimum_alignment + sizeof(void*));
+      cat::idx(tls_memory_size.raw + cat::idx(minimum_alignment).raw
+               + sizeof(void*));
 
    using enum nix::memory_protection_flags;
    using enum nix::memory_flags;

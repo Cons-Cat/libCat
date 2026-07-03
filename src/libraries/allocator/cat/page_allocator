@@ -46,7 +46,7 @@ class page_allocator : public allocator_interface<page_allocator> {
 
    // Allocations are always sized in a multiple of pages.
    static auto
-   allocation_bytes(uword alignment, idx allocation_bytes)
+   allocation_bytes(ualign alignment, idx allocation_bytes)
       -> maybe_non_zero<idx> {
       // Pages cannot be aligned by greater than 4 kibibytes.
       assert(alignment <= 4_uki);
@@ -81,7 +81,7 @@ class page_allocator : public allocator_interface<page_allocator> {
    // power of 2, but less than `4_uki`.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    static auto
-   aligned_allocate(uword alignment, idx allocation_bytes) -> void* _Nullable {
+   aligned_allocate(ualign alignment, idx allocation_bytes) -> void* _Nullable {
       // Pages cannot be aligned by greater than 4 kibibytes.
       // TODO: We can try hint addresses or over-allocation to make this work.
       // Or maybe `MAP_FIXED_NOREPLACE`.
@@ -110,14 +110,14 @@ class page_allocator : public allocator_interface<page_allocator> {
    // Aligned variant of `allocate_zeroed`.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    static auto
-   aligned_allocate_zeroed(uword alignment, idx allocation_bytes)
+   aligned_allocate_zeroed(ualign alignment, idx allocation_bytes)
       -> void* _Nullable {
       return aligned_allocate(alignment, allocation_bytes);
    }
 
    // Aligned feedback variant of `allocate_zeroed`.
    static auto
-   aligned_allocate_zeroed_feedback(uword alignment, idx allocation_bytes)
+   aligned_allocate_zeroed_feedback(ualign alignment, idx allocation_bytes)
       -> sized_allocation<void*> {
       void* _Nullable p_result = aligned_allocate(alignment, allocation_bytes);
       // Propagating nullptr is handled correctly by `maybe_sized_allocation`.
@@ -242,7 +242,7 @@ class page_allocator : public allocator_interface<page_allocator> {
 
    // `mmap` always returns page-aligned memory, so the static alignment
    // guarantee is one full page (4 KiB).
-   static constexpr uword min_alignment = page_size;
+   static constexpr ualign min_alignment = page_size;
 
    // Process-wide private anonymous rw RSS from the detailed memory-map file.
    [[nodiscard]]

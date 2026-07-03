@@ -37,7 +37,7 @@ struct sse_abi {
 
    static constexpr cat::idx size = 16u;
    static constexpr cat::idx lanes{size.raw / sizeof(T)};
-   static constexpr cat::uword alignment = 16u;
+   static constexpr cat::ualign alignment = 16u;
 
    template <typename ElementT>
    using simd_mask_lane = cat::simd_abi::mask_lane<sse_abi<ElementT>, ElementT>;

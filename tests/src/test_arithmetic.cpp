@@ -203,6 +203,39 @@ $test(arithmetic_traits_basic_int_and_basic_float) {
    static_assert(!has_sat_accessor<float4>);
 }
 
+$test(arithmetic_ualign) {
+   static_assert(cat::is_integral<ualign>);
+   static_assert(cat::is_unsigned_integral<ualign>);
+   static_assert(cat::is_same<cat::raw_arithmetic_type<ualign>,
+                              cat::uword::raw_type>);
+   static_assert(cat::is_same<decltype(cat::basic_ualign{uword(16u)}),
+                              cat::basic_ualign<uword>>);
+   static_assert(cat::is_convertible<ualign, uword>);
+
+   constexpr ualign base = 16u;
+   constexpr uword base_bytes = base;
+   constexpr idx base_index = base;
+   constexpr ualign doubled = base * 2u;
+   constexpr ualign halved = doubled / 4u;
+   constexpr ualign added = 8u + halved;
+   constexpr ualign subtracted = base - 8u;
+
+   static_assert(base.raw == 16u);
+   static_assert(base_bytes == 16u);
+   static_assert(base_index == 16u);
+   static_assert(doubled == 32u);
+   static_assert(halved == 8u);
+   static_assert(added == 16u);
+   static_assert(subtracted == 8u);
+
+   uword runtime_factor = cat::deconst(uword(2u));
+   ualign runtime = base * runtime_factor;
+   cat::verify(runtime == 32u);
+
+   runtime /= cat::deconst(2u);
+   cat::verify(runtime == 16u);
+}
+
 $test(arithmetic_precision_reference_accessors) {
    float4 value = 1_f4;
 
@@ -5387,7 +5420,7 @@ $test(arithmetic_idx_maybe_default_compact) {
 // Helpers for the semantics tests below. `requires { T{V}; }` inside a
 // `static_assert` is a hard error if `T`'s constructor is disabled via
 // `enable_if`, so the SFINAE check must be hidden behind a concept.
-namespace semantics_helpers {
+namespace {
 template <typename T, auto value>
 concept can_brace_init = requires { T{value}; };
 
@@ -5397,16 +5430,24 @@ concept can_plus_assign = requires(L lhs, R rhs) { lhs += rhs; };
 template <typename L, typename R>
 concept can_minus_assign = requires(L lhs, R rhs) { lhs -= rhs; };
 
+template <auto value>
+concept can_ualign_multiply_by_constant = requires {
+   ualign{}.multiply(value);
+};
+
+template <auto value>
+concept can_ualign_divide_by_constant = requires {
+   ualign{}.divide_by(value);
+};
+
 template <typename L, typename R>
 concept can_times_assign = requires(L lhs, R rhs) { lhs *= rhs; };
-}  // namespace semantics_helpers
+}  // namespace
 
 // Constructors implicitly accept sound (in-range) integer constants and reject
 // unsound (out-of-range) constants. Non-constant values that may be unsound
 // require an explicit cast.
 $test(arithmetic_semantics_constructor_rejects_unsound_constants) {
-   using semantics_helpers::can_brace_init;
-
    constexpr int1 sound_small = 100;
    cat::verify(sound_small == 100);
    constexpr uint4 sound_unsigned = 42u;
@@ -5435,6 +5476,32 @@ $test(arithmetic_semantics_constructor_rejects_unsound_constants) {
    // works.
    static_assert(!cat::is_convertible<int4, int1>);
    static_assert(cat::is_constructible<int1, int4>);
+}
+
+$test(arithmetic_ualign_rejects_invalid_constants) {
+   static_assert(can_brace_init<ualign, 1u>);
+   static_assert(can_brace_init<ualign, 2u>);
+   static_assert(can_brace_init<ualign, 64u>);
+   static_assert(!can_brace_init<ualign, 0u>);
+   static_assert(!can_brace_init<ualign, 3u>);
+   static_assert(!can_brace_init<ualign, 12u>);
+   static_assert(!can_brace_init<ualign, -1>);
+
+   static_assert(can_ualign_multiply_by_constant<1u>);
+   static_assert(can_ualign_multiply_by_constant<2u>);
+   static_assert(can_ualign_multiply_by_constant<8u>);
+   static_assert(!can_ualign_multiply_by_constant<0u>);
+   static_assert(!can_ualign_multiply_by_constant<3u>);
+   static_assert(!can_ualign_multiply_by_constant<12u>);
+   static_assert(!can_ualign_multiply_by_constant<-2>);
+
+   static_assert(can_ualign_divide_by_constant<1u>);
+   static_assert(can_ualign_divide_by_constant<2u>);
+   static_assert(can_ualign_divide_by_constant<8u>);
+   static_assert(!can_ualign_divide_by_constant<0u>);
+   static_assert(!can_ualign_divide_by_constant<3u>);
+   static_assert(!can_ualign_divide_by_constant<12u>);
+   static_assert(!can_ualign_divide_by_constant<-2>);
 }
 
 // Implicit construction into wrap/sat types is well-defined regardless of the
@@ -5643,10 +5710,6 @@ $test(arithmetic_semantics_promotion_rules) {
 // result on a narrow LHS is rejected. Sound implicit constructors from constant
 // RHS are still allowed.
 $test(arithmetic_semantics_compound_assignment_rejects_narrowing) {
-   using semantics_helpers::can_minus_assign;
-   using semantics_helpers::can_plus_assign;
-   using semantics_helpers::can_times_assign;
-
    // Same-shape compound: always allowed.
    static_assert(can_plus_assign<int4, int4>);
    static_assert(can_minus_assign<uint4, uint4>);
@@ -5679,8 +5742,6 @@ $test(arithmetic_semantics_compound_assignment_rejects_narrowing) {
 // `overflow_reference` (`.undef()`, `.wrap()`, `.sat()`) observes the same
 // rules as the materialized type at its policy.
 $test(arithmetic_semantics_overflow_reference_view_types) {
-   using semantics_helpers::can_minus_assign;
-
    int1 a{};
    int4 b{};
 

@@ -124,7 +124,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
       stack_and_thread_local_buffer_end_exclusive;
 
    if (tls_memory_size > 0u) {
-      cat::uword const minimum_alignment =
+      cat::ualign const minimum_alignment =
          cat::max(32u, link_absolute_symbol<cat::uword>(__cat_tls_alignment));
       // The buffer end (exclusive) can be a multiple of the requested
       // alignment. Rounding that end down with `align_down` can return the same

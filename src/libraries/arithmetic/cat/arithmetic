@@ -101,6 +101,9 @@ template <typename T, typename Storage, overflow_policies>
    requires(sizeof(Storage) == sizeof(void*))
 class basic_intptr;
 
+template <typename Storage>
+class basic_ualign;
+
 template <overflow_policies overflow_policy>
 class basic_idx;
 
@@ -125,6 +128,7 @@ using idx = cat::basic_idx<overflow_policies::undefined>;
 using iword =
    basic_int<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
 using uword = basic_int<__SIZE_TYPE__, overflow_policies::undefined>;
+using ualign = basic_ualign<uword>;
 
 // `__INTPTR_TYPE__` is defined by the Clang compiler.
 template <typename T>
@@ -500,6 +504,61 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
       }
    }
 }
+
+template <is_integral U>
+[[nodiscard]]
+constexpr auto
+positive_power_of_two(U const& value) -> bool {
+   auto const raw = make_raw_arithmetic(value);
+   if constexpr (is_signed_integral<remove_cvref<decltype(raw)>>) {
+      if (raw <= 0) {
+         return false;
+      }
+   }
+   using unsigned_raw = make_unsigned_type<remove_cvref<decltype(raw)>>;
+   unsigned_raw const unsigned_value = static_cast<unsigned_raw>(raw);
+   return unsigned_value != 0u
+          && (unsigned_value & (unsigned_value - 1u)) == 0u;
+}
+
+template <typename Dest, is_integral U>
+[[nodiscard]]
+constexpr auto
+valid_ualign_source(U const& value) -> bool {
+   return raw_source_fits_implicit_storage<Dest>(value)
+          && positive_power_of_two(value);
+}
+
+void
+ualign_consteval_failure();
+
+template <typename Dest, is_integral U>
+constexpr void
+assert_valid_ualign_source(U const& value) {
+   bool const valid = valid_ualign_source<Dest>(value);
+   if consteval {
+      if (!valid) {
+         ualign_consteval_failure();
+      }
+   } else {
+      assert(valid);
+   }
+}
+
+template <is_integral U>
+constexpr void
+assert_positive_power_of_two(U const& value) {
+   bool const valid = positive_power_of_two(value);
+   if consteval {
+      if (!valid) {
+         ualign_consteval_failure();
+      }
+   } else {
+      assert(valid);
+   }
+}
+
+struct unchecked_ualign {};
 
 template <typename From, typename ToRaw>
 concept is_basic_float_widening =
@@ -1990,6 +2049,229 @@ basic_int(basic_int<T, policy>) -> basic_int<T, policy>;
 
 template <is_raw_integral T>
 basic_int(T) -> basic_int<T, overflow_policies::undefined>;
+
+template <typename Storage>
+class [[clang::preferred_name(ualign)]] basic_ualign {
+   static_assert(is_unsigned_integral<Storage>);
+
+ public:
+   using storage_type = Storage;
+   using raw_type = raw_arithmetic_type<Storage>;
+
+   raw_type raw;
+
+   constexpr basic_ualign() = default;
+   constexpr basic_ualign(basic_ualign const&) = default;
+   constexpr basic_ualign(basic_ualign&&) = default;
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr basic_ualign(detail::unchecked_ualign, raw_type value)
+       : raw(value) {
+   }
+
+   template <is_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   consteval basic_ualign(U value) __attribute__((
+      enable_if(detail::valid_ualign_source<raw_type>(value),
+                "alignment must fit storage and be a power of two")))
+       : raw(static_cast<raw_type>(make_raw_arithmetic(value))) {
+   }
+
+   template <is_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   consteval basic_ualign(U value) __attribute__((
+      enable_if(!detail::valid_ualign_source<raw_type>(value),
+                "alignment must fit storage and be a power of two"))) = delete;
+
+   template <is_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr basic_ualign(U value)
+       : raw(static_cast<raw_type>(make_raw_arithmetic(value))) {
+      detail::assert_valid_ualign_source<raw_type>(value);
+   }
+
+   constexpr auto
+   operator=(basic_ualign const&) -> basic_ualign& = default;
+
+   constexpr auto
+   operator=(basic_ualign&&) -> basic_ualign& = default;
+
+   template <is_raw_integral U>
+      requires(is_safe_arithmetic_conversion<raw_type, U>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr
+   operator U() const {
+      return U(raw);
+   }
+
+   template <is_integral U>
+      requires(!is_raw_integral<U>
+               || !is_safe_arithmetic_conversion<raw_type, U>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit
+   operator U() const {
+      return U(raw);
+   }
+
+   template <is_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator<=>(basic_ualign lhs, U rhs) {
+      using raw_rhs = raw_arithmetic_type<U>;
+      if constexpr (is_signed_integral<raw_rhs>) {
+         return detail::raw_mixed_integral_spaceship(lhs.raw,
+                                                     make_raw_arithmetic(rhs));
+      } else {
+         using common = common_type<raw_type, raw_rhs>;
+         return common(lhs.raw) <=> common(make_raw_arithmetic(rhs));
+      }
+   }
+
+   template <is_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator==(basic_ualign lhs, U rhs) -> bool {
+      using raw_rhs = raw_arithmetic_type<U>;
+      if constexpr (is_signed_integral<raw_rhs>) {
+         return detail::raw_mixed_integral_equals(lhs.raw,
+                                                  make_raw_arithmetic(rhs));
+      } else {
+         return lhs.raw == make_raw_arithmetic(rhs);
+      }
+   }
+
+   template <is_unsigned_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   add(U value) const -> basic_ualign {
+      auto const result = raw + make_raw_arithmetic(value);
+      detail::assert_valid_ualign_source<raw_type>(result);
+      return basic_ualign(detail::unchecked_ualign{}, result);
+   }
+
+   template <is_unsigned_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   subtract_by(U value) const -> basic_ualign {
+      auto const result = raw - make_raw_arithmetic(value);
+      detail::assert_valid_ualign_source<raw_type>(result);
+      return basic_ualign(detail::unchecked_ualign{}, result);
+   }
+
+   template <is_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr basic_ualign
+   multiply(U value) const
+      __attribute__((enable_if(!detail::positive_power_of_two(value),
+                               "multiplier must be a power of two"))) = delete;
+
+   template <is_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   multiply(U value) const -> basic_ualign {
+      detail::assert_positive_power_of_two(value);
+      auto const result = raw * make_raw_arithmetic(value);
+      detail::assert_valid_ualign_source<raw_type>(result);
+      return basic_ualign(detail::unchecked_ualign{}, result);
+   }
+
+   template <is_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr basic_ualign
+   divide_by(U value) const
+      __attribute__((enable_if(!detail::positive_power_of_two(value),
+                               "divisor must be a power of two"))) = delete;
+
+   template <is_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_by(U value) const -> basic_ualign {
+      detail::assert_positive_power_of_two(value);
+      auto const result = raw / make_raw_arithmetic(value);
+      detail::assert_valid_ualign_source<raw_type>(result);
+      return basic_ualign(detail::unchecked_ualign{}, result);
+   }
+
+   template <is_unsigned_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator+(basic_ualign lhs, U rhs) -> basic_ualign {
+      return lhs.add(rhs);
+   }
+
+   template <is_unsigned_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator+(U lhs, basic_ualign rhs) -> basic_ualign {
+      return rhs.add(lhs);
+   }
+
+   template <is_unsigned_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator+=(basic_ualign& lhs, U rhs) -> basic_ualign& {
+      lhs = lhs.add(rhs);
+      return lhs;
+   }
+
+   template <is_unsigned_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator-(basic_ualign lhs, U rhs) -> basic_ualign {
+      return lhs.subtract_by(rhs);
+   }
+
+   template <is_unsigned_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator-=(basic_ualign& lhs, U rhs) -> basic_ualign& {
+      lhs = lhs.subtract_by(rhs);
+      return lhs;
+   }
+
+   template <is_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator*(basic_ualign lhs, U rhs) -> basic_ualign {
+      return lhs.multiply(rhs);
+   }
+
+   template <is_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator*(U lhs, basic_ualign rhs) -> basic_ualign {
+      return rhs.multiply(lhs);
+   }
+
+   template <is_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator*=(basic_ualign& lhs, U rhs) -> basic_ualign& {
+      lhs = lhs.multiply(rhs);
+      return lhs;
+   }
+
+   template <is_integral U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator/(basic_ualign lhs, U rhs) -> basic_ualign {
+      return lhs.divide_by(rhs);
+   }
+
+   template <is_integral U>
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator/=(basic_ualign& lhs, U rhs) -> basic_ualign& {
+      lhs = lhs.divide_by(rhs);
+      return lhs;
+   }
+};
+
+template <typename Storage>
+basic_ualign(basic_ualign<Storage>) -> basic_ualign<Storage>;
+
+template <is_unsigned_integral Storage>
+basic_ualign(Storage) -> basic_ualign<Storage>;
 
 }  // namespace cat
 

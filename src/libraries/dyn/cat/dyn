@@ -904,7 +904,7 @@ basic_dyn {
    // hold inline. The heap fallback path is asked for `storage_alignment`-
    // aligned memory, so this is also the alignment guarantee for the
    // heap-stored case.
-   static constexpr idx storage_alignment = alignof(handle_type);
+   static constexpr ualign storage_alignment = alignof(handle_type);
 
    // A `T` may be stored inside the inline buffer if it fits both the size
    // budget and the alignment of the underlying handle.
@@ -1196,7 +1196,7 @@ class [[gsl::Owner]] dyn_inplace {
 
    // Worst-case alignment of the inline storage buffer is 16 so that almost
    // any standard-aligned `T` can be stored.
-   static constexpr uword storage_alignment = 16u;
+   static constexpr ualign storage_alignment = 16u;
 
    // A `T` may be stored if it fits both the size budget and the alignment
    // of the inline buffer.
