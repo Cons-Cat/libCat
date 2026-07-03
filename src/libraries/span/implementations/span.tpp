@@ -52,9 +52,8 @@ span<T, fixed_extent>::operator<=>(R const& rhs) const {
    if !consteval {
       if constexpr (is_trivially_lexicographically_comparable<remove_cv<T>>) {
          if (shared_size > 0u) {
-            signed int const comparison =
-               __builtin_memcmp(this->data(), rhs.data(),
-                                (shared_size * sizeof(T)).raw);
+            signed int const comparison = __builtin_memcmp(
+               this->data(), rhs.data(), (shared_size * sizeof(T)).raw);
             if (comparison < 0) {
                return category_type(std::strong_ordering::less);
             }
@@ -88,7 +87,7 @@ span<T, fixed_extent>::operator<=>(R const& rhs) const {
    if (rhs_size < lhs_size) {
       return category_type(std::strong_ordering::greater);
    }
-   
+
    return category_type(std::strong_ordering::equal);
 }
 

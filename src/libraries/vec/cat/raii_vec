@@ -4,9 +4,7 @@
 
 #include <cat/vec>
 
-namespace cat {
-
-namespace raii {
+namespace cat::raii {
 
 template <typename T, is_allocator Allocator = dyn_allocator>
 class basic_vec;
@@ -52,7 +50,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
       }
 
       m_core.free(m_allocator);
-      if (cat::allocators_equal(m_allocator, other.m_allocator)) {
+      if (m_allocator == other.m_allocator) {
          m_core = cat::move(other.m_core);
       } else {
          // TODO: Implement element-wise move across non-equal allocators.
@@ -78,7 +76,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    constexpr void
    swap(basic_vec& other) {
       if !consteval {
-         cat::assert(cat::allocators_equal(m_allocator, other.m_allocator));
+         cat::assert(m_allocator == other.m_allocator);
       }
       m_core.swap(other.m_core);
    }
@@ -377,6 +375,4 @@ make_vec_filled(dyn_allocator allocator, idx count, T const& value)
    return new_vector;
 }
 
-}  // namespace raii
-
-}  // namespace cat
+}  // namespace cat::raii

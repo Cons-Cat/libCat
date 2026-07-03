@@ -13,20 +13,6 @@
 
 namespace cat {
 
-template <is_allocator Allocator>
-constexpr auto
-allocators_equal(Allocator const& left, Allocator const& right) -> bool {
-   if constexpr (requires { Allocator::is_always_equal::value; }) {
-      return Allocator::is_always_equal::value;
-   } else if constexpr (requires(Allocator const& a, Allocator const& b) {
-                           a == b;
-                        }) {
-      return left == right;
-   } else {
-      return __builtin_addressof(left) == __builtin_addressof(right);
-   }
-}
-
 inline namespace manual {
 
 template <typename T>
@@ -123,9 +109,9 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
    constexpr auto
    operator<=>(basic_vec const& rhs) const
       requires(requires(remove_cv<T> const& left, remove_cv<T> const& right) {
-         { left < right } -> is_convertible<bool>;
-         { right < left } -> is_convertible<bool>;
-      })
+                  { left < right } -> is_convertible<bool>;
+                  { right < left } -> is_convertible<bool>;
+               })
    {
       return span<T const>(*this) <=> span<T const>(rhs);
    }
