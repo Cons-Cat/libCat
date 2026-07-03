@@ -213,11 +213,13 @@ $test(bit_x64_helpers) {
    static_assert(x64::parallel_extract_bits(uint8::max(), 0b1ull) == 0b1ull);
    static_assert(x64::parallel_extract_bits(uint4::max(), 0b1u) == 0b1u);
    static_assert(x64::parallel_extract_bits(uint2::max(), 0b1_u2) == 0b1_u2);
+   static_assert(x64::parallel_extract_bits(0b1101_u1, 0b0101_u1) == 0b11_u1);
+   static_assert(x64::deposit_bits_mask(0b11_u1, 0b1010_u1) == 0b1010_u1);
 
-   // Test bzhi.
-   // TODO: These only $test it compiles. Test that it works correctly.
-   cat::assert(x64::zero_high_bits_at(8_u4, 8u) != 0u);
-   cat::assert(x64::zero_high_bits_at(8_u8, 8u) != 0u);
+   static_assert(x64::zero_high_bits_at(0b1111'0000_u1, 4u) == 0u);
+   static_assert(x64::zero_high_bits_at(0b1111'0000_u1, 8u) == 0b1111'0000_u1);
+   cat::verify(x64::zero_high_bits_at(8_u4, 8u) == 8_u4);
+   cat::verify(x64::zero_high_bits_at(8_u8, 8u) == 8_u8);
 }
 
 $test(bit_value) {

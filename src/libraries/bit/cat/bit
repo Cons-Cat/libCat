@@ -288,13 +288,98 @@ rotate_right(T value, iword shift)
 }  // namespace cat
 
 namespace x64 {
-// Extracts `length` number of bits out of `from`, ending at the `offset` of the
-// right-most bit. Those `length` bits are then the right-most bits of the
-// return value.
+namespace detail {
 template <cat::is_unsigned T>
 [[nodiscard]]
 constexpr auto
-extract_bits(T from, cat::uint1 offset, cat::idx length) -> T {
+extract_bits_fallback(T from, cat::uint1 offset, cat::idx length) -> T {
+   constexpr cat::idx bits = sizeof(T) * 8u;
+   auto raw_from = cat::make_raw_arithmetic(from);
+
+   if (offset >= bits || length == 0u) {
+      return 0u;
+   }
+
+   raw_from >>= offset.raw;
+   auto const remaining_bits = bits - offset;
+   if (length >= remaining_bits) {
+      return raw_from;
+   }
+
+   using raw_type = cat::raw_arithmetic_type<T>;
+   raw_type const mask = (raw_type(1u) << length.raw) - 1u;
+   return raw_from & mask;
+}
+
+template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
+   requires(sizeof(T) == sizeof(U))
+[[nodiscard]]
+constexpr auto
+parallel_extract_bits_fallback(T value, U mask) -> T {
+   T result = 0u;
+   auto raw_value = cat::make_raw_arithmetic(value);
+   auto raw_mask = cat::make_raw_arithmetic(mask);
+   cat::raw_arithmetic_type<T> count = 0u;
+
+   while (raw_mask != 0u) {
+      if (raw_mask & 1) {
+         result >>= 1;
+         result |= raw_value << ((sizeof(T) * 8u) - 1u);
+         ++count;
+      }
+      raw_value >>= 1;
+      raw_mask >>= 1;
+   }
+
+   result >>= ((sizeof(T) * 8u) - count) * (count > 0u);
+   return result;
+}
+
+template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
+   requires(sizeof(T) == sizeof(U))
+[[nodiscard]]
+constexpr auto
+deposit_bits_mask_fallback(T value, U mask) -> T {
+   T result = 0u;
+   auto raw_value = cat::make_raw_arithmetic(value);
+   auto raw_mask = cat::make_raw_arithmetic(mask);
+   cat::raw_arithmetic_type<T> count = 0u;
+
+   while (raw_mask != 0u) {
+      result >>= 1;
+      if (raw_mask & 1) {
+         result |= raw_value << ((sizeof(T) * 8u) - 1u);
+         raw_value >>= 1;
+      }
+      raw_mask >>= 1;
+      ++count;
+   }
+
+   result >>= ((sizeof(T) * 8u) - count) * (count > 0u);
+   return result;
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+zero_high_bits_at_fallback(T source, cat::uint4 bit_index) -> T {
+   constexpr cat::idx bits = sizeof(T) * 8u;
+   if (bit_index == 0u) {
+      return 0u;
+   }
+   if (bit_index >= bits) {
+      return source;
+   }
+
+   using raw_type = cat::raw_arithmetic_type<T>;
+   raw_type const mask = (raw_type(1u) << bit_index.raw) - 1u;
+   return cat::make_raw_arithmetic(source) & mask;
+}
+
+template <cat::is_unsigned T>
+[[nodiscard, gnu::target("bmi"), gnu::nodebug]]
+auto
+extract_bits_bmi(T from, cat::uint1 offset, cat::idx length) -> T {
    auto raw_from = cat::make_raw_arithmetic(from);
    auto raw_length = cat::make_raw_arithmetic(length);
 
@@ -303,11 +388,77 @@ extract_bits(T from, cat::uint1 offset, cat::idx length) -> T {
    } else if constexpr (__has_builtin(__builtin_ia32_bextr_u64)
                         && sizeof(T) == 8) {
       return __builtin_ia32_bextr_u64(raw_from, offset.raw | (raw_length << 8));
+   } else {
+      return extract_bits_fallback(from, offset, length);
    }
+}
 
-   constexpr unsigned char bits = sizeof(T) * 8u;
-   auto const mask = ((1u << raw_length) * (raw_length < bits)) - 1u;
-   return T((raw_from >> offset.raw) & (mask * (offset < bits)));
+template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
+   requires(sizeof(T) == sizeof(U))
+[[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
+auto
+parallel_extract_bits_bmi2(T value, U mask) -> T {
+   auto raw_value = cat::make_raw_arithmetic(value);
+   auto raw_mask = cat::make_raw_arithmetic(mask);
+
+   if constexpr (__has_builtin(_pext_u32) && sizeof(T) == 4) {
+      return _pext_u32(raw_value, raw_mask);
+   } else if constexpr (__has_builtin(_pext_u64) && sizeof(T) == 8) {
+      return _pext_u64(raw_value, raw_mask);
+   } else {
+      return parallel_extract_bits_fallback(value, mask);
+   }
+}
+
+template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
+   requires(sizeof(T) == sizeof(U))
+[[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
+auto
+deposit_bits_mask_bmi2(T value, U mask) -> T {
+   auto raw_value = cat::make_raw_arithmetic(value);
+   auto raw_mask = cat::make_raw_arithmetic(mask);
+
+   if constexpr (__has_builtin(_pdep_u32) && sizeof(T) == 4) {
+      return _pdep_u32(raw_value, raw_mask);
+   } else if constexpr (__has_builtin(_pdep_u64) && sizeof(T) == 8) {
+      return _pdep_u64(raw_value, raw_mask);
+   } else {
+      return deposit_bits_mask_fallback(value, mask);
+   }
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
+auto
+zero_high_bits_at_bmi2(T source, cat::uint4 bit_index) -> T {
+   if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
+      return __builtin_ia32_bzhi_si(cat::make_raw_arithmetic(source),
+                                    bit_index.raw);
+   } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di)
+                        && sizeof(T) == 8) {
+      return __builtin_ia32_bzhi_di(cat::make_raw_arithmetic(source),
+                                    bit_index.raw);
+   } else {
+      return zero_high_bits_at_fallback(source, bit_index);
+   }
+}
+}  // namespace detail
+
+// Extracts `length` number of bits out of `from`, ending at the `offset` of the
+// right-most bit. Those `length` bits are then the right-most bits of the
+// return value.
+template <cat::is_unsigned T>
+[[nodiscard]]
+constexpr auto
+extract_bits(T from, cat::uint1 offset, cat::idx length) -> T {
+   if consteval {
+      return detail::extract_bits_fallback(from, offset, length);
+   } else {
+      if (__builtin_cpu_supports("bmi")) {
+         return detail::extract_bits_bmi(from, offset, length);
+      }
+      return detail::extract_bits_fallback(from, offset, length);
+   }
 }
 
 // Extract the 1 bits from `value` which are also 1 at the same index in `mask`.
@@ -316,30 +467,13 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
 [[nodiscard]]
 constexpr auto
 parallel_extract_bits(T value, U mask) -> T {
-   T result = T(0u);
-   auto raw_value = cat::make_raw_arithmetic(value);
-   auto raw_mask = cat::make_raw_arithmetic(mask);
-
-   if constexpr (__has_builtin(_pext_u32) && sizeof(T) == 4) {
-      // `_pext_u32()` is a Clang intrinsic.
-      return T(_pext_u32(raw_value, raw_mask));
-   } else if constexpr (__has_builtin(_pext_u64) && sizeof(T) == 8) {
-      // `_pext_u64()` is a Clang intrinsic.
-      return T(_pext_u64(raw_value, raw_mask));
+   if consteval {
+      return detail::parallel_extract_bits_fallback(value, mask);
    } else {
-      cat::raw_arithmetic_type<T> count = 0u;
-      while (raw_mask != 0u) {
-         if (raw_mask & 1) {
-            result >>= 1;
-            result |= raw_value << T((sizeof(T) * 8u) - 1u);
-            ++count;
-         }
-         raw_value >>= 1;
-         raw_mask >>= 1;
+      if (__builtin_cpu_supports("bmi2")) {
+         return detail::parallel_extract_bits_bmi2(value, mask);
       }
-
-      result >>= ((sizeof(T) * 8u) - count) * (count > 0u);
-      return result;
+      return detail::parallel_extract_bits_fallback(value, mask);
    }
 }
 
@@ -349,30 +483,13 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
 [[nodiscard]]
 constexpr auto
 deposit_bits_mask(T value, U mask) -> T {
-   T result = T(0u);
-   auto raw_value = cat::make_raw_arithmetic(value);
-   auto raw_mask = cat::make_raw_arithmetic(mask);
-
-   if constexpr (__has_builtin(_pdep_u32) && sizeof(T) == 4) {
-      // `_pdep_u32()` is a Clang intrinsic.
-      return T(_pdep_u32(raw_value, raw_mask));
-   } else if constexpr (__has_builtin(_pdep_u64) && sizeof(T) == 8) {
-      // `_pdep_u64()` is a Clang intrinsic.
-      return T(_pdep_u64(raw_value, raw_mask));
+   if consteval {
+      return detail::deposit_bits_mask_fallback(value, mask);
    } else {
-      T count = T(0u);
-      while (raw_mask != 0u) {
-         result >>= 1;
-         if (raw_mask & 1) {
-            result |= raw_value << T((sizeof(T) * 8u) - 1u);
-            raw_value >>= 1;
-         }
-         raw_mask >>= 1;
-         ++count;
+      if (__builtin_cpu_supports("bmi2")) {
+         return detail::deposit_bits_mask_bmi2(value, mask);
       }
-
-      result >>= T((sizeof(T) * 8u) - count) * T(count > 0u);
-      return result;
+      return detail::deposit_bits_mask_fallback(value, mask);
    }
 }
 
@@ -380,18 +497,14 @@ template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
-   // TODO: Make this portable.
-   if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
-      return __builtin_ia32_bzhi_si(cat::make_raw_arithmetic(source),
-                                    bit_index.raw);
-   } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di)
-                        && sizeof(T) == 8) {
-      return __builtin_ia32_bzhi_di(cat::make_raw_arithmetic(source),
-                                    bit_index.raw);
+   if consteval {
+      return detail::zero_high_bits_at_fallback(source, bit_index);
+   } else {
+      if (__builtin_cpu_supports("bmi2")) {
+         return detail::zero_high_bits_at_bmi2(source, bit_index);
+      }
+      return detail::zero_high_bits_at_fallback(source, bit_index);
    }
-
-   // TODO: Implement this.
-   __builtin_unreachable();
 }
 
 }  // namespace x64

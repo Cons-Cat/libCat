@@ -10,15 +10,18 @@
 
 namespace cat {
 
+namespace detail {
+template <typename... Arguments>
+concept are_bitset_arguments_same_size =
+   ((sizeof(Arguments...[0]) == sizeof(Arguments)) && ...);
+}  // namespace detail
+
 template <idx bits_count>
 class [[clang::trivial_abi, gsl::Owner]]
 bitset : public bitwise_interface<bitset<bits_count>> {
  private:
    template <idx, is_unsigned_integral... Arguments>
-   // TODO: Clang had a regression which broke template equivalence here.
-   // Re-enable this constraint when possible.
-
-   // requires((sizeof(arguments...[0]) == sizeof(arguments)) && ...)
+      requires(detail::are_bitset_arguments_same_size<Arguments...>)
    friend constexpr auto
    make_bitset(Arguments... arguments);
 
@@ -309,10 +312,23 @@ bitset : public bitwise_interface<bitset<bits_count>> {
             break;
          }
       }
-      return count;
+      return min(count, bits_count);
    }
 
-   // TODO: `.countl_one()`.
+   [[nodiscard]]
+   constexpr auto
+   countl_one() const -> idx {
+      idx count;
+      for (auto&& bytes : m_data) {
+         idx next_count = cat::countl_one(bytes);
+         count += next_count;
+
+         if (next_count != sizeof(array_type_element) * 8u) {
+            break;
+         }
+      }
+      return min(count, bits_count);
+   }
 
    [[nodiscard]]
    constexpr auto
@@ -331,7 +347,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
          // `array_type` always holds at least one element, so the last storage
          // index is `storage_array_size - 1u` without unsigned wrap.
          count += cat::countr_zero(m_data[storage_array_size - 1u] & mask);
-         count.raw -= leading_skipped_bits.raw;
+         count = (count - leading_skipped_bits).to_idx().value();
 
          // If any zeros were found, return early.
          if (count != storage_element_size * 8u - leading_skipped_bits) {
@@ -342,8 +358,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       // `i` is signed so the prologue case can start at -1 when the backing
       // store is a single element and the first byte was already scanned.
       // `to_idx` is only called after `i >= 0`, so the value fits `idx`.
-      for (iword i = iword(storage_array_size.raw - 1u)
-                     - iword(static_cast<unsigned>(has_prologue));
+      for (iword i = storage_array_size - 1u - has_prologue;
            i >= iword(0); --i) {
          idx const byte_index = i.to_idx().value();
          idx next_count = cat::countr_zero(m_data[byte_index]);
@@ -357,7 +372,35 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       return count;
    }
 
-   // TODO: `.countr_one()`.
+   [[nodiscard]]
+   constexpr auto
+   countr_one() const -> idx {
+      idx count;
+
+      constexpr bool has_prologue = (leading_skipped_bits != 0u);
+      if constexpr (has_prologue) {
+         constexpr array_type_element mask =
+            ~((array_type_element(1u) << leading_skipped_bits) - 1u);
+         count += cat::countr_one(m_data[storage_array_size - 1u] | ~mask);
+         count = (count - leading_skipped_bits).to_idx().value();
+
+         if (count != storage_element_size * 8u - leading_skipped_bits) {
+            return count;
+         }
+      }
+
+      for (iword i = storage_array_size - 1u - has_prologue;
+           i >= 0; --i) {
+         idx const byte_index = i.to_idx().value();
+         idx next_count = cat::countr_one(m_data[byte_index]);
+         count += next_count;
+
+         if (next_count != sizeof(array_type_element) * 8u) {
+            break;
+         }
+      }
+      return count;
+   }
 
    // Clear every bit (all logical indices `0..bits_count`) to 0.
    constexpr auto
@@ -619,7 +662,7 @@ bitset(char const (&bitstring)[bits_count]) -> bitset<idx(bits_count - 1u)>;
 template <idx bits_count, is_unsigned_integral... Arguments>
 // Ensure that all `types` are the same size. e.g., `uint4` and unsigned are
 // compatible here.
-// requires((sizeof(Arguments...[0]) == sizeof(Arguments)) && ...)
+   requires(detail::are_bitset_arguments_same_size<Arguments...>)
 [[nodiscard]]
 constexpr auto
 make_bitset(Arguments... arguments) {

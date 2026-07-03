@@ -122,17 +122,30 @@ $test(bitset_count_leading_trailing_zero) {
    cat::verify(!bits127.none_of());
    cat::verify(bits127.any_of());
    cat::verify(bits127.countl_zero() == 0u);
+   cat::verify(bits127.countl_one() == 63u);
    cat::verify(bits127.countr_zero() == 0u);
+   cat::verify(bits127.countr_one() == 63u);
 
    // The 128th bit is off, all others are on.
    bits127 =
       cat::make_bitset<127>(cat::uint8_max >> 2u, 0xFFFFFFFF'FFFFFFFF_u8 << 1u);
    cat::verify(bits127.countl_zero() == 2u);
+   cat::verify(bits127.countl_one() == 0u);
    cat::verify(bits127.countr_zero() == 0u);
+   cat::verify(bits127.countr_one() == 125u);
 
    bits127 = cat::make_bitset<127>(0_u8, cat::uint8_max >> 1u);
    cat::verify(bits127.countl_zero() == 65u);
+   cat::verify(bits127.countl_one() == 0u);
    cat::verify(bits127.countr_zero() == 0u);
+   cat::verify(bits127.countr_one() == 62u);
+
+   cat::bitset<7u> bits7;
+   cat::verify(bits7.countl_zero() == 7u);
+   cat::verify(bits7.countr_zero() == 7u);
+   bits7.fill();
+   cat::verify(bits7.countl_one() == 7u);
+   cat::verify(bits7.countr_one() == 7u);
 }
 
 $test(bitset_subscript_const) {
