@@ -170,8 +170,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
          bit_offset.raw &= word_bits.raw - 1u;
       }
 
-      return bit_reference<array_type_element>::from_offset(index_byte,
-                                                            bit_offset);
+      return make_bit_reference_from_offset(index_byte, bit_offset);
    }
 
    [[nodiscard]]

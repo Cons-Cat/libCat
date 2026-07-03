@@ -3,55 +3,6 @@
 #include "../unit_tests.hpp"
 
 namespace {
-template <typename T>
-concept can_countl_zero = requires(T value) { cat::countl_zero(value); };
-
-template <typename T>
-concept can_countl_zero_raw =
-   requires(T value) { cat::countl_zero_raw(value); };
-
-template <typename T>
-concept can_countl_one = requires(T value) { cat::countl_one(value); };
-
-template <typename T>
-concept can_countl_one_raw = requires(T value) { cat::countl_one_raw(value); };
-
-template <typename T>
-concept can_countr_zero = requires(T value) { cat::countr_zero(value); };
-
-template <typename T>
-concept can_countr_zero_raw =
-   requires(T value) { cat::countr_zero_raw(value); };
-
-template <typename T>
-concept can_countr_one = requires(T value) { cat::countr_one(value); };
-
-template <typename T>
-concept can_countr_one_raw = requires(T value) { cat::countr_one_raw(value); };
-
-template <typename T>
-concept can_popcount = requires(T value) { cat::popcount(value); };
-
-template <typename T>
-concept can_has_single_bit = requires(T value) { cat::has_single_bit(value); };
-
-template <typename T>
-concept can_bit_floor = requires(T value) { cat::bit_floor(value); };
-
-template <typename T>
-concept can_bit_ceil = requires(T value) { cat::bit_ceil(value); };
-
-template <typename T>
-concept can_bit_ceil_raw = requires(T value) { cat::bit_ceil_raw(value); };
-
-template <typename T>
-concept can_rotate_left =
-   requires(T value) { cat::rotate_left(value, cat::iword(1)); };
-
-template <typename T>
-concept can_rotate_right =
-   requires(T value) { cat::rotate_right(value, cat::iword(1)); };
-
 template <auto alignment>
 concept can_align_pointer_to_constant = requires(int* p_value) {
                                            cat::align_down(p_value, alignment);
@@ -71,21 +22,7 @@ concept can_assume_aligned_to_constant =
    requires(int* p_value) { cat::assume_aligned<alignment>(p_value); };
 }  // namespace
 
-$test(bit) {
-   using namespace cat::arithmetic_literals;
-
-   static_assert(!can_countl_zero<cat::idx>);
-   static_assert(!can_countl_zero_raw<cat::idx>);
-   static_assert(!can_countl_one<cat::idx>);
-   static_assert(!can_countl_one_raw<cat::idx>);
-   static_assert(can_countr_zero<cat::idx>);
-   static_assert(can_countr_zero_raw<cat::idx>);
-   static_assert(can_countr_one<cat::idx>);
-   static_assert(can_countr_one_raw<cat::idx>);
-   static_assert(can_popcount<cat::idx>);
-   static_assert(can_has_single_bit<cat::idx>);
-   static_assert(!can_rotate_left<cat::idx>);
-   static_assert(!can_rotate_right<cat::idx>);
+$test(bit_constraints_and_alignment) {
    static_assert(can_align_pointer_to_constant<32u>);
    static_assert(!can_align_pointer_to_constant<12u>);
    static_assert(can_align_intptr_to_constant<32u>);
@@ -102,8 +39,11 @@ $test(bit) {
    cat::verify(cat::align_down(p_null_int, 32u) == nullptr);
    cat::verify(cat::align_up(p_null_int, 32u) == nullptr);
    cat::verify(cat::is_aligned(p_null_int, 32u));
+}
 
-   // Test `clz()`.
+$test(bit_count_leading) {
+   using namespace cat::arithmetic_literals;
+
    static_assert(cat::countl_zero(0_u4) == 32u);
    static_assert(cat::countl_zero(0_u8) == 64u);
    static_assert(cat::countl_zero(0x7FFFFFFF'FFFFFFFFu) == 1);
@@ -128,8 +68,11 @@ $test(bit) {
 
    static_assert(cat::countl_zero(0x0FFFFFFF_u4) == 4);
    static_assert(cat::countl_zero(0x0FFFFFFF'FFFFFFFF_u8) == 4);
+}
 
-   // Test `ctz()`.
+$test(bit_count_trailing) {
+   using namespace cat::arithmetic_literals;
+
    static_assert(cat::countr_zero(0_u4) == 32u);
    static_assert(cat::countr_zero(0_u8) == 64u);
    static_assert(cat::countr_zero(cat::idx{0u}) == __SIZE_WIDTH__);
@@ -153,8 +96,11 @@ $test(bit) {
    static_assert(cat::countr_one_raw(0xFFFFFFFF'FFFFFFFEu).value() == 0);
    static_assert(cat::countr_one(0xFFFFFFFEu) == 0);
    static_assert(cat::countr_one_raw(0xFFFFFFFEu).value() == 0);
+}
 
-   // Test small integers.
+$test(bit_count_small_integer_wrappers) {
+   using namespace cat::arithmetic_literals;
+
    static_assert(cat::countl_zero(0x0F_u1) == 4);
    cat::verify(cat::countl_zero(0x0F_u1) == 4);
    static_assert(cat::countr_zero(0x0F_u1) == 0);
@@ -170,8 +116,11 @@ $test(bit) {
 
    static_assert(cat::countr_zero(0xFFF0_u2) == 4);
    cat::verify(cat::countr_zero(0xFFF0_u2) == 4);
+}
 
-   // Test popcnt.
+$test(bit_popcount_and_single_bit) {
+   using namespace cat::arithmetic_literals;
+
    static_assert(cat::popcount(0b01'0101'0011u) == 5);
    static_assert(cat::popcount(0b0'1010'1001ull) == 4);
    static_assert(cat::popcount(0b0'1010'1001_u8) == 4);
@@ -189,8 +138,11 @@ $test(bit) {
    cat::verify(cat::has_single_bit(4));
    cat::verify(cat::has_single_bit(8u));
    cat::verify(cat::has_single_bit(256uz));
+}
 
-   // Test `bit_ceil()`.
+$test(bit_floor_and_ceil) {
+   using namespace cat::arithmetic_literals;
+
    static_assert(cat::bit_ceil(0u) == 1u);
    static_assert(cat::bit_ceil(1u) == 1u);
    static_assert(cat::bit_ceil(2u) == 2u);
@@ -218,8 +170,11 @@ $test(bit) {
    static_assert(cat::bit_floor(3u) == 2u);
    static_assert(cat::bit_floor(4u) == 4u);
    static_assert(cat::bit_floor(5u) == 4u);
+}
 
-   // Test rotate.
+$test(bit_rotate) {
+   using namespace cat::arithmetic_literals;
+
    static_assert(cat::rotate_left(0b1000'0001_u1, cat::uword(1u))
                  == 0b0000'0011_u1);
    static_assert(cat::rotate_right(0b1000'0001_u1, cat::uword(1u))
@@ -238,8 +193,11 @@ $test(bit) {
                  == cat::rotate_right(0b1000'0001_u1, cat::uword(1u)));
    static_assert(cat::rotate_right(0b1000'0001_u1, cat::iword(-1))
                  == cat::rotate_left(0b1000'0001_u1, cat::uword(1u)));
+}
 
-   // Test bextr.
+$test(bit_x64_helpers) {
+   using namespace cat::arithmetic_literals;
+
    static_assert(x64::extract_bits(uint1::max() >> 1, 4_u1, 4u) == 0b0111u);
    static_assert(x64::extract_bits(uint1::max(), 4_u1, 4u) == 0b1111u);
    static_assert(x64::extract_bits(uint1::max() >> 1, 0_u1, 4u) == 0b1111u);
@@ -260,8 +218,9 @@ $test(bit) {
    // TODO: These only $test it compiles. Test that it works correctly.
    cat::assert(x64::zero_high_bits_at(8_u4, 8u) != 0u);
    cat::assert(x64::zero_high_bits_at(8_u8, 8u) != 0u);
+}
 
-   // Test `bit_value`.
+$test(bit_value) {
    cat::bit_value bit1 = false;
    bit1 = true;
    cat::verify(bit1.is_set());
@@ -270,11 +229,13 @@ $test(bit) {
    cat::verify(false == ~bit1);
    // NOLINTNEXTLINE
    cat::verify(bit1 == bit1);
+}
 
-   // Test `bit_reference`.
+$test(bit_reference) {
+   cat::bit_value bit1 = true;
    unsigned char number = 0u;
    cat::bit_reference bit2 =
-      cat::bit_reference<unsigned char>::from_mask(number, 0b0000'0010u);
+      cat::make_bit_reference_from_mask(number, 0b0000'0010u);
    bit2 = true;
    cat::verify(bit2.is_set());
    cat::verify(bit2 == true);
@@ -286,10 +247,8 @@ $test(bit) {
    bit3.unset();
    cat::verify(bit3 == false);
 
-   cat::bit_reference bit4 =
-      cat::bit_reference<unsigned char>::from_offset(number, 1u);
-   cat::bit_reference bit5 =
-      cat::bit_reference<unsigned char>::from_offset(number, 5u);
+   cat::bit_reference bit4 = cat::make_bit_reference_from_offset(number, 1u);
+   cat::bit_reference bit5 = cat::make_bit_reference_from_offset(number, 5u);
    cat::verify(bit4.is_set());
    cat::verify(!bit5.is_set());
    number = 0;
@@ -310,8 +269,36 @@ $test(bit) {
    cat::verify(bit1);
    bit1 = bit5;
    cat::verify(!bit1);
+}
 
-   // Test `bit_stepanov_iterator`.
+$test(bit_ptr) {
+   cat::bit_ptr<unsigned char> null_bit = nullptr;
+   cat::verify(null_bit == nullptr);
+   cat::verify(!null_bit);
+   unsigned char bit_words[2]{};
+   cat::bit_ptr bit_pointer = cat::make_bit_ptr_from_offset(bit_words, 1u);
+   *bit_pointer = true;
+   cat::verify(bit_words[0] == 0b0000'0010u);
+   cat::verify(cat::make_bit_ptr_from_mask(bit_words, 0b0000'0010u)
+               == bit_pointer);
+   bit_pointer[7] = true;
+   cat::verify(bit_words[1] == 0b0000'0001u);
+   cat::bit_ptr next_word_bit = bit_pointer + 8;
+   cat::verify(next_word_bit.storage() == bit_words + 1u);
+   cat::verify(next_word_bit.bit_position() == 1u);
+   *next_word_bit = true;
+   cat::verify(bit_words[1] == 0b0000'0011u);
+   cat::verify(next_word_bit - bit_pointer == 8);
+   cat::verify(bit_pointer - next_word_bit == -8);
+   --next_word_bit;
+   cat::verify(next_word_bit == bit_pointer + 7);
+   cat::verify(next_word_bit > bit_pointer);
+   cat::verify(bit_pointer < next_word_bit);
+   next_word_bit -= 7;
+   cat::verify(next_word_bit == bit_pointer);
+}
+
+$test(bit_stepanov_iterator) {
    cat::array<uint4, 4u> array(0u, cat::uint4_max, 0u, 0u);
    cat::bit_stepanov_iterator it(array.begin());
 
