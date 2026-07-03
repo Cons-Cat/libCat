@@ -639,7 +639,8 @@ $test(syscall_read_self_anon_smaps) {
    constexpr cat::uword bytes = 64u * cat::page_size;
    void* p_mapping =
       nix::sys_mmap(nullptr, bytes, nix::memory_protection_flags::read_write,
-                    nix::memory_flags::privately | nix::memory_flags::populate
+                    nix::memory_flags::privately
+                       | nix::memory_flags::populate
                        | nix::memory_flags::anonymous,
                     nix::file_descriptor{-1}, 0)
          .verify();

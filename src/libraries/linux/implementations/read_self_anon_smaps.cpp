@@ -19,7 +19,7 @@ struct smaps_totals {
 struct smaps_region {
    cat::str_view header;
    cat::idx size_kb = 0u;
-   cat::idx rss_kb = 0u; // Resident Set Size
+   cat::idx rss_kb = 0u;  // Resident Set Size
 };
 
 auto
@@ -251,8 +251,7 @@ parse_smaps_buffer(cat::str_view buffer, smaps_totals& totals) {
 // fail with `noent` when `/proc` is not mounted, `mfile`/`nfile` at the fd
 // limit, `nomem`, or `intr` on signal interruption.
 auto
-nix::read_self_anon_smaps()
-   -> cat::scaredy<nix::anon_smaps, nix::linux_error> {
+nix::read_self_anon_smaps() -> cat::scaredy<nix::anon_smaps, nix::linux_error> {
    nix::file_descriptor fd =
       $prop(nix::sys_open("/proc/self/smaps", nix::open_mode::read_only));
 
