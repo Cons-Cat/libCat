@@ -2539,24 +2539,36 @@ auto
 sys_arch_prctl(arch_prctl_request request, void* _Nonnull p_address)
    -> scaredy_nix<void>;
 
-// Fields of `/proc/self/statm` in page units.
-struct self_statm {
-   cat::uword total_pages;
-   cat::uword resident_pages;
-   cat::uword shared_pages;
-   cat::uword text_pages;
-   cat::uword _;  // Unused since Linux 2.6.
-   cat::uword data_pages;
+// Fields of a `/proc/<pid>/statm` file in page units.
+struct statm {
+   cat::idx total_pages;
+   cat::idx resident_pages;
+   cat::idx shared_pages;
+   cat::idx text_pages;
+   cat::idx _;  // Unused since Linux 2.6.
+   cat::idx data_pages;
 };
 
-// Read every field of `/proc/self/statm`. Propagates the originating
-// `linux_error` if the file cannot be opened or read. The result is
-// process-wide and is not idempotent: consecutive calls may disagree as
-// the kernel updates its accounting in response to allocations elsewhere
-// in the process.
+// Process-wide anonymous memory from a proc detailed memory-map file.
+struct anon_smaps {
+   cat::idx resident_bytes;
+   cat::idx mapped_bytes;
+};
+
+// Read every field of `/proc/self/statm`. Propagates `linux_error` from
+// `open(2)`/`read(2)` (`noent`, `mfile`, `nfile`, `nomem`, `intr`, ...).
+// Malformed kernel output aborts via `assert`. Process-wide and not idempotent.
 [[nodiscard]]
 auto
-read_self_statm() -> cat::scaredy<self_statm, nix::linux_error>;
+read_self_statm() -> cat::scaredy<statm, nix::linux_error>;
+
+// Sum private anonymous rw RSS and non-file-backed mapped size from
+// `/proc/self/smaps`, the detailed memory-map file. Propagates `linux_error`
+// from `open(2)`/`read(2)` (`noent`, `mfile`, `nfile`, `nomem`, `intr`, ...).
+// Process-wide and not idempotent.
+[[nodiscard]]
+auto
+read_self_anon_smaps() -> cat::scaredy<anon_smaps, nix::linux_error>;
 
 }  // namespace nix
 

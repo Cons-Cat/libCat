@@ -76,6 +76,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_open.cpp
   ${CATLIB}/linux/implementations/sys_close.cpp
   ${CATLIB}/linux/implementations/read_self_statm.cpp
+  ${CATLIB}/linux/implementations/read_self_anon_smaps.cpp
   ${CATLIB}/linux/implementations/sys_stat.cpp
   ${CATLIB}/linux/implementations/sys_fstat.cpp
   ${CATLIB}/linux/implementations/sys_lstat.cpp

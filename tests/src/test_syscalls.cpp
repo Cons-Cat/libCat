@@ -504,10 +504,10 @@ $test(syscall_fs_at_variants) {
    };
    nix::file_descriptor fd2 =
       nix::sys_openat2(nix::at_fdcwd, tmp_atfile.data(), how).verify();
-   nix::sys_ftruncate(fd2, 4'096).verify();
+   nix::sys_ftruncate(fd2, cat::page_size).verify();
    // `sys_fallocate` may legitimately return `linux_error::opnotsupp` on tmpfs.
    auto fallocate_result =
-      nix::sys_fallocate(fd2, nix::fallocate_flags::none, 0, 4'096);
+      nix::sys_fallocate(fd2, nix::fallocate_flags::none, 0, cat::page_size);
    cat::verify(fallocate_result.has_value()
                || fallocate_result.error() == nix::linux_error::opnotsupp);
 
@@ -523,7 +523,7 @@ $test(syscall_fs_at_variants) {
 // Memory.
 
 $test(syscall_memory) {
-   constexpr cat::uword bytes = 4'096;
+   constexpr cat::uword bytes = cat::page_size;
    void* p_mapping =
       nix::sys_mmap(nullptr, bytes, nix::memory_protection_flags::read_write,
                     nix::memory_flags::privately | nix::memory_flags::anonymous,
@@ -595,7 +595,7 @@ $test(syscall_memory) {
 // `/proc/self/statm` parsing.
 
 $test(syscall_read_self_statm) {
-   nix::self_statm statm = nix::read_self_statm().verify();
+   nix::statm statm = nix::read_self_statm().verify();
 
    // The process must have a non-zero virtual size and a non-zero RSS.
    cat::verify(statm.total_pages > 0u);
@@ -613,15 +613,40 @@ $test(syscall_read_self_statm) {
 
    // The kernel updates the accounting on each allocation, so a second
    // call after a fresh mapping should report at least as much total VM.
-   cat::uword const before = statm.total_pages;
-   constexpr cat::uword bytes = 64u * 4'096u;
+   cat::idx const before = statm.total_pages;
+   constexpr cat::uword bytes = 64u * cat::page_size;
    void* p_mapping =
       nix::sys_mmap(nullptr, bytes, nix::memory_protection_flags::read_write,
                     nix::memory_flags::privately | nix::memory_flags::anonymous,
                     nix::file_descriptor{-1}, 0)
          .verify();
-   nix::self_statm after = nix::read_self_statm().verify();
+   nix::statm after = nix::read_self_statm().verify();
    cat::verify(after.total_pages >= before);
+   nix::sys_munmap(p_mapping, bytes).verify();
+}
+
+$test(syscall_read_self_anon_smaps) {
+   nix::anon_smaps smaps = nix::read_self_anon_smaps().verify();
+
+   cat::verify(smaps.resident_bytes > 0u);
+   cat::verify(smaps.mapped_bytes > 0u);
+   cat::verify(smaps.resident_bytes <= smaps.mapped_bytes);
+   cat::verify(smaps.resident_bytes % cat::page_size == 0u);
+   cat::verify(smaps.mapped_bytes % cat::page_size == 0u);
+
+   cat::idx const mapped_before = smaps.mapped_bytes;
+   cat::idx const resident_before = smaps.resident_bytes;
+   constexpr cat::uword bytes = 64u * cat::page_size;
+   void* p_mapping =
+      nix::sys_mmap(nullptr, bytes, nix::memory_protection_flags::read_write,
+                    nix::memory_flags::privately | nix::memory_flags::populate
+                       | nix::memory_flags::anonymous,
+                    nix::file_descriptor{-1}, 0)
+         .verify();
+   static_cast<unsigned char*>(p_mapping)[0] = 42u;
+   nix::anon_smaps after = nix::read_self_anon_smaps().verify();
+   cat::verify(after.mapped_bytes >= mapped_before);
+   cat::verify(after.resident_bytes >= resident_before);
    nix::sys_munmap(p_mapping, bytes).verify();
 }
 
@@ -814,13 +839,13 @@ $test(syscall_socket_options) {
 
    // `SOL_SOCKET = 1`, `SO_RCVBUF = 8`. The kernel may double the buffer
    // size on set, just verify the call paths execute.
-   cat::int4 buf_size = 4'096;
+   cat::int4 buf_size = cat::int4(cat::page_size.raw);
    nix::sys_setsockopt(sock, 1, 8, &buf_size, sizeof(buf_size)).verify();
 
    cat::int4 read_back = 0;
    cat::int4 length = sizeof(read_back);
    nix::sys_getsockopt(sock, 1, 8, &read_back, length).verify();
-   cat::verify(read_back >= 4'096);
+   cat::verify(read_back >= buf_size);
 
    nix::sys_close(sock).verify();
 }

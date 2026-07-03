@@ -1,7 +1,10 @@
 #include <cat/linux>
 
+// `open(2)`/`read(2)` on `/proc/self/statm` can fail with `noent` when `/proc`
+// is not mounted, `mfile`/`nfile` at the fd limit, `nomem`, or `intr` on
+// signal interruption. Malformed output aborts via `assert`, not `scaredy`.
 auto
-nix::read_self_statm() -> cat::scaredy<nix::self_statm, nix::linux_error> {
+nix::read_self_statm() -> cat::scaredy<nix::statm, nix::linux_error> {
    nix::file_descriptor fd =
       $prop(nix::sys_open("/proc/self/statm", nix::open_mode::read_only));
 
@@ -18,11 +21,11 @@ nix::read_self_statm() -> cat::scaredy<nix::self_statm, nix::linux_error> {
    cat::idx cursor = 0u;
 
    // TODO: Deduplicate this code throughout libCat.
-   auto parse_decimal = [&] -> cat::uword {
-      cat::uword value = 0u;
+   auto parse_decimal = [&] -> cat::idx {
+      cat::idx value = 0u;
       while (cursor < length && buffer[cursor] >= '0'
              && buffer[cursor] <= '9') {
-         value = value * 10u + buffer[cursor] - '0';
+         value = cat::idx{value * 10u + buffer[cursor] - '0'};
          ++cursor;
       }
       return value;
@@ -39,8 +42,8 @@ nix::read_self_statm() -> cat::scaredy<nix::self_statm, nix::linux_error> {
       }
    };
 
-   nix::self_statm result;
-   cat::array<cat::uword*, 6> statm_fields{
+   nix::statm result;
+   cat::array<cat::idx*, 6> statm_fields{
       &result.total_pages,
       &result.resident_pages,
       &result.shared_pages,
