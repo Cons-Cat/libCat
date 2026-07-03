@@ -2,6 +2,10 @@
 #include <cat/array>
 #include <cat/bit>
 #include <cat/bitset>
+#include <cat/linear_allocator>
+#include <cat/named_allocator>
+#include <cat/page_allocator>
+#include <cat/pool_allocator>
 #include <cat/span>
 #include <cat/string>
 
@@ -384,6 +388,53 @@ wrap_idx cat_gdb_wrap_idx_value = 12000000000u;
 [[gnu::used, gnu::retain]]
 sat_idx cat_gdb_sat_idx_value = 12000000000u;
 
+struct cat_gdb_alloc_fixture {
+   cat::page_allocator pager;
+   cat::span<cat::byte> linear_empty_page;
+   cat::linear_allocator linear_empty;
+   cat::span<cat::byte> linear_partial_page;
+   cat::linear_allocator linear_partial;
+   cat::span<cat::byte> linear_full_page;
+   cat::linear_allocator linear_full;
+   cat::span<cat::byte> pool_empty_page;
+   cat::pool_allocator<16> pool_empty;
+   cat::span<cat::byte> pool_partial_page;
+   cat::pool_allocator<16> pool_partial;
+   cat::span<cat::byte> pool_full_page;
+   cat::pool_allocator<16> pool_full;
+   cat::span<cat::byte> named_page;
+   cat::linear_allocator named_inner;
+   cat::named_allocator<cat::linear_allocator> named_partial;
+
+   cat_gdb_alloc_fixture()
+       : linear_empty_page(pager.alloc_multi<cat::byte>(64u).verify()),
+         linear_empty(cat::make_linear_allocator(linear_empty_page)),
+         linear_partial_page(pager.alloc_multi<cat::byte>(64u).verify()),
+         linear_partial(cat::make_linear_allocator(linear_partial_page)),
+         linear_full_page(pager.alloc_multi<cat::byte>(64u).verify()),
+         linear_full(cat::make_linear_allocator(linear_full_page)),
+         pool_empty_page(pager.alloc_multi<cat::byte>(64u).verify()),
+         pool_empty(cat::make_pool_allocator<16u>(pool_empty_page)),
+         pool_partial_page(pager.alloc_multi<cat::byte>(64u).verify()),
+         pool_partial(cat::make_pool_allocator<16u>(pool_partial_page)),
+         pool_full_page(pager.alloc_multi<cat::byte>(64u).verify()),
+         pool_full(cat::make_pool_allocator<16u>(pool_full_page)),
+         named_page(pager.alloc_multi<cat::byte>(64u).verify()),
+         named_inner(cat::make_linear_allocator(named_page)),
+         named_partial(named_inner, cat::str_view{"arena"}) {
+      auto _ = linear_partial.alloc_multi<cat::byte>(16u).verify();
+      auto _ = linear_full.alloc_multi<cat::byte>(64u).verify();
+      auto _ = pool_partial.alloc_multi<cat::byte>(1u).verify();
+      for (cat::idx node = 0; node < 4; ++node) {
+         auto _ = pool_full.alloc_multi<cat::byte>(1u).verify();
+      }
+      auto _ = named_inner.alloc_multi<cat::byte>(16u).verify();
+   }
+};
+
+[[gnu::used, gnu::retain]]
+cat_gdb_alloc_fixture cat_gdb_alloc_fixture{};
+
 extern "C" [[gnu::noinline, clang::optnone]]
 void
 cat_gdb_pretty_printer_breakpoint() {
@@ -414,7 +465,8 @@ cat_gdb_pretty_printer_breakpoint() {
                 "g"(&cat_gdb_bitset64_value),
                 "g"(&cat_gdb_bitset65_value),
                 "g"(&cat_gdb_bitset128_value),
-                "g"(&cat_gdb_arithmetic_matrix_failures)
+                "g"(&cat_gdb_arithmetic_matrix_failures),
+                "g"(&cat_gdb_alloc_fixture)
                 : "memory");
 }
 

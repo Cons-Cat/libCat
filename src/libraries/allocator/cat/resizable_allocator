@@ -1,0 +1,221 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+#include <cat/allocator_parameters>
+
+// `resizable_allocator<Allocator, Backing>` is an adaptor that combines two
+// behaviors atop an otherwise-fixed-size allocator:
+//
+//   Lazy free-list reuse on deallocate. Freed allocations are pushed onto
+//   a shared intrusive singly-linked list (the "head"). The next allocate
+//   pops from this list before consulting the inner allocator.
+//
+//   Chunked growth via a `Backing` allocator. When the free list and the
+//   current chunk are both exhausted, `allocate` requests a fresh
+//   `chunk_bytes`-byte chunk from `Backing` and constructs a new `Allocator`
+//   over it, then serves the request from there. `.resize()` exposes the same
+//   growth step for callers that want to reserve capacity up front. The chunks
+//   are threaded together as a singly-linked list whose nodes live in the
+//   chunk header.
+//
+// No operation ever relocates a live allocation: growth only appends a chunk,
+// freed slots are recycled in place, and there is no in-place `reallocate`
+// hook. A pointer handed out by `allocate` stays valid until it is freed or
+// the whole wrapper is reset/destroyed.
+//
+// Both behaviors are uniform-size on purpose. Free-list entries are pushed
+// and popped as `node_bytes`-sized slots, so wrapping a `linear_allocator`
+// requires a fixed allocation size. When wrapping a `pool_allocator`,
+// `node_bytes` defaults to `Allocator::max_allocation_bytes`.
+//
+// `min_alignment` and `max_allocation_bytes` are re-exported from `Allocator`
+// so the wrapper composes cleanly with `meta_alloc`'s alignment fast path.
+
+namespace cat {
+
+namespace detail {
+
+// Probe whether `Allocator` exposes a `max_allocation_bytes` static. Used to
+// default `node_bytes` to that value when present.
+template <typename T>
+concept inner_has_max_allocation_bytes = requires { T::max_allocation_bytes; };
+
+}  // namespace detail
+
+// `inner_default_node_bytes<Allocator>` is `Allocator::max_allocation_bytes`
+// when that constant exists. Allocators without it (`linear_allocator`,
+// `page_allocator`, ...) require the caller to spell `node_bytes` out.
+template <is_allocator Allocator>
+   requires(detail::inner_has_max_allocation_bytes<Allocator>)
+inline constexpr idx inner_default_node_bytes = Allocator::max_allocation_bytes;
+
+template <is_allocator Allocator, is_allocator Backing,
+          idx node_bytes_param =
+             detail::inner_has_max_allocation_bytes<Allocator>
+                ? Allocator::max_allocation_bytes
+                : idx(0u),
+          idx chunk_bytes_param = idx(64u * 1'024u)>
+class resizable_allocator
+    : public allocator_interface<resizable_allocator<
+         Allocator, Backing, node_bytes_param, chunk_bytes_param>> {
+   static_assert(node_bytes_param >= sizeof(void*),
+                 "`resizable_allocator`'s `node_bytes` must be at least "
+                 "`sizeof(void*)` so each freed slot can host a free-list "
+                 "next pointer.");
+   static_assert(chunk_bytes_param >= node_bytes_param,
+                 "`resizable_allocator`'s `chunk_bytes` must be at least "
+                 "`node_bytes`.");
+
+ private:
+   using self_type = resizable_allocator<Allocator, Backing, node_bytes_param,
+                                         chunk_bytes_param>;
+
+   friend allocator_interface<self_type>;
+   friend struct dyn_allocator_friend;
+   template <typename>
+   friend class allocator_ref;
+
+   // One slab of memory pulled from `Backing`. The header lives inline at
+   // the start of the slab so chunks can be linked without a side table.
+   struct chunk_header {
+      chunk_header* _Nullable p_next;
+      idx chunk_bytes;
+      Allocator inner;
+   };
+
+   // Free-list node overlay. Freed slots are reinterpreted as this type to
+   // form the intrusive stack.
+   struct free_node {
+      free_node* _Nullable p_next;
+   };
+
+   Backing* _Nonnull m_p_backing;
+   chunk_header* _Nullable m_p_chunks = nullptr;
+   free_node* _Nullable m_p_free_head = nullptr;
+
+   // `make_inner_over(span)` is supplied by the caller because not every
+   // allocator constructs uniformly from `(uintptr<void>, idx)`. The default
+   // implementation forwards to `make_<inner>_allocator`-style factories via
+   // ADL; if that is not desired, users can specialize.
+   //
+   // For the worktree-scope minimum, this header only declares the surface
+   // and stubs out the chunk-creation pathway. The detailed `resize` body
+   // is in `../implementations/resizable_allocator.tpp`.
+   constexpr auto
+   acquire_chunk(idx chunk_bytes) -> chunk_header* _Nullable;
+
+ public:
+   // Re-exports so `meta_alloc`'s alignment fast path and bounds checks see
+   // the wrapped allocator's guarantees instead of the interface default.
+   static constexpr uword min_alignment = Allocator::min_alignment;
+   static constexpr idx max_allocation_bytes = node_bytes_param;
+   static constexpr idx node_bytes = node_bytes_param;
+   static constexpr idx chunk_bytes = chunk_bytes_param;
+
+   constexpr resizable_allocator(Backing& backing [[clang::lifetimebound]])
+       : m_p_backing(__builtin_addressof(backing)) {
+   }
+
+   resizable_allocator(resizable_allocator const&) = delete (
+      "`resizable_allocator` owns chunk and free-list state that must not "
+      "alias. Move the wrapper instead of copying.");
+
+   resizable_allocator(resizable_allocator&& other) noexcept
+       : m_p_backing(other.m_p_backing),
+         m_p_chunks(other.m_p_chunks),
+         m_p_free_head(other.m_p_free_head) {
+      other.m_p_chunks = nullptr;
+      other.m_p_free_head = nullptr;
+   }
+
+   ~resizable_allocator();
+
+   // Reset the wrapper: drain the free list (it lives inside chunks that
+   // are about to be released), then return each chunk to `Backing`. This
+   // is what makes `reset` cheap when the user wants to recycle the whole
+   // arena.
+   void
+   reset();
+
+   // Acquire another chunk from `Backing`, growing the wrapper's capacity.
+   // Overrides the `allocator_interface` default that reports no growth.
+   // `allocate` calls this itself on overflow, so this is only needed to
+   // reserve capacity ahead of time.
+   auto
+   resize(idx minimum_bytes) -> maybe_non_zero<idx>;
+
+ private:
+   auto
+   allocation_bytes(uword /*alignment*/, idx /*requested_bytes*/)
+      -> maybe_non_zero<idx> {
+      return node_bytes;
+   }
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   auto
+   allocate(idx allocation_bytes) -> void* _Nullable;
+
+   [[clang::ownership_takes(libcat, 2)]]
+   void
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes);
+
+   template <typename T>
+   struct resizable_memory_handle : detail::base_memory_handle<T> {
+      T* _Nonnull p_storage;
+
+      auto
+      get() -> decltype(auto) {
+         return *this;
+      }
+
+      auto
+      get() const -> decltype(auto) {
+         return *this;
+      }
+   };
+
+   template <typename T>
+   [[clang::ownership_holds(libcat, 2)]]
+   constexpr auto
+   make_handle(T* _Nonnull p_handle_storage) -> resizable_memory_handle<T> {
+      return resizable_memory_handle<T>{{}, p_handle_storage};
+   }
+
+   template <typename T>
+   [[gnu::returns_nonnull]]
+   auto
+   access(resizable_memory_handle<T>& memory) -> T* _Nonnull {
+      return memory.p_storage;
+   }
+
+   template <typename T>
+   [[gnu::returns_nonnull]]
+   auto
+   access(resizable_memory_handle<T> const& memory) const -> T const* _Nonnull {
+      return memory.p_storage;
+   }
+
+ public:
+   [[nodiscard]]
+   auto
+   bytes_used() const -> idx;
+
+   [[nodiscard]]
+   auto
+   bytes_capacity() const -> idx;
+
+   // Two wrappers are equivalent when they share `Backing` and govern the
+   // same chunk list head. Sharing the chunk list head means a freed
+   // allocation routed through either wrapper lands on the same free list.
+   [[nodiscard]]
+   auto
+   is_equivalent(resizable_allocator const& other) const -> bool {
+      return m_p_backing == other.m_p_backing && m_p_chunks == other.m_p_chunks;
+   }
+};
+
+}  // namespace cat
+
+#include "../implementations/resizable_allocator.tpp"

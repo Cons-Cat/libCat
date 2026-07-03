@@ -4288,7 +4288,7 @@ class allocator_ref;
 // Convenience helper that forwards to the allocator's `name()` accessor. The
 // `allocator_interface` default returns an empty `str_view`, so this is safe
 // to call on any allocator regardless of whether it was wrapped in
-// `named_allocator` or `tagged_allocator`.
+// `named_allocator`.
 template <is_allocator Allocator>
 [[nodiscard]]
 constexpr auto

@@ -6,6 +6,30 @@
 
 #include "../unit_tests.hpp"
 
+// TEMPORARY IR probes for exploring linear_allocator fast-path codegen.
+namespace cat {
+[[gnu::used, gnu::noinline]]
+auto
+probe_alloc_int4(linear_allocator& a) -> int4* {
+   maybe m = a.alloc<int4>();
+   return m.has_value() ? m.value() : nullptr;
+}
+
+[[gnu::used, gnu::noinline]]
+auto
+probe_alloc_byte(linear_allocator& a) -> byte* {
+   maybe m = a.alloc<byte>();
+   return m.has_value() ? m.value() : nullptr;
+}
+
+[[gnu::used, gnu::noinline]]
+auto
+probe_alloc_multi_int4(linear_allocator& a, idx n) -> int4* {
+   maybe m = a.alloc_multi<int4>(n);
+   return m.has_value() ? m.value().data() : nullptr;
+}
+}  // namespace cat
+
 $test(linear_allocator) {
    // Initialize an allocator.
    cat::page_allocator pager;

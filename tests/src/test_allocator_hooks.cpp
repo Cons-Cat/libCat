@@ -210,11 +210,10 @@ $test(page_allocator_resize_probes_kernel) {
    cat::verify(grown.value() >= cat::page_size);
 }
 
-// `bytes_used` and `bytes_capacity` read `/proc/self/statm`. The numbers
-// are process-wide rather than `page_allocator`-specific. Any running
-// process has at least one page mapped (its own text), so both values
-// must be strictly positive and page-aligned, and `bytes_used` must not
-// exceed `bytes_capacity`.
+// `bytes_used` and `bytes_capacity` read the detailed memory-map file. The
+// numbers are process-wide rather than `page_allocator`-specific. Any running
+// process has anonymous mappings, so both values must be strictly positive and
+// page-aligned, and `bytes_used` must not exceed `bytes_capacity`.
 $test(page_allocator_introspection_reads_statm) {
    cat::idx const capacity = pager.bytes_capacity();
    cat::idx const used = pager.bytes_used();
@@ -272,6 +271,19 @@ $test(page_allocator_reallocate_grow_is_in_place_or_fails) {
    }
 }
 
+// Allocator names default to an empty `str_view` on bare allocators.
+// The named wrapper adaptors are tested separately.
+$test(default_allocator_name_is_empty) {
+   cat::span page = pager.alloc_multi<cat::byte>(32u).verify();
+   $defer {
+      pager.free(page);
+   };
+   cat::is_allocator auto linear = cat::make_linear_allocator(page);
+
+   cat::verify(linear.name().size() == 0);
+   cat::verify(pager.name().size() == 0);
+}
+
 // `dyn_allocator` forwards introspection through its vtable. The held
 // allocators are stateful, so the values must agree with the underlying
 // objects.
@@ -285,6 +297,7 @@ $test(dyn_allocator_introspection_forwarding) {
    cat::dyn_allocator dyn = linear;
    cat::verify(dyn.bytes_capacity() == linear.bytes_capacity());
    cat::verify(dyn.bytes_used() == linear.bytes_used());
+   cat::verify(dyn.name().size() == 0);
 
    auto* p = dyn.alloc<int4>(5).verify();
    static_cast<void>(p);

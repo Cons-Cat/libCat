@@ -244,24 +244,16 @@ class page_allocator : public allocator_interface<page_allocator> {
    // guarantee is one full page (4 KiB).
    static constexpr uword min_alignment = page_size;
 
-   // Current pages allocated according to `/proc/self/statm`.
+   // Process-wide private anonymous rw RSS from the detailed memory-map file.
    [[nodiscard]]
    static auto
-   bytes_used() -> idx {
-      scaredy const statm = nix::read_self_statm();
-      return idx{statm.has_value() ? statm.value().resident_pages * page_size
-                                   : 0u};
-   }
+   bytes_used() -> idx;
 
-   // Total mapped virtual address space according to `/proc/self/statm`. Note
-   // that this is not idempotent.
+   // Process-wide non-file-backed mapped size from the detailed memory-map
+   // file. Note that this is not idempotent.
    [[nodiscard]]
    static auto
-   bytes_capacity() -> idx {
-      scaredy const statm = nix::read_self_statm();
-      return idx{statm.has_value() ? statm.value().total_pages * page_size
-                                   : 0u};
-   }
+   bytes_capacity() -> idx;
 };
 
 [[nodiscard]]

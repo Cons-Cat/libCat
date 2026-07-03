@@ -42,6 +42,18 @@ def expect_regex(expr, expected_pattern):
             f"{expr}: expected pattern {expected_pattern!r}, got {actual!r}")
 
 
+def expect_page_anon_memory(expr):
+    import cat_allocator
+    expected = cat_allocator._format_anon_memory(
+        *cat_allocator._anon_smaps_from_proc()
+    )
+    actual = str(gdb.parse_and_eval(expr))
+    write_result(expr, actual, actual == expected)
+    if actual != expected:
+        raise gdb.GdbError(
+            f"{expr}: expected {expected!r}, got {actual!r}")
+
+
 def pointer_pattern():
     return r"0x[0-9a-f]+(?: <[^>]+>)?"
 
@@ -152,6 +164,15 @@ expect_exact("cat_gdb_bitset40_value", filled_bitset(40, 24))
 expect_exact("cat_gdb_bitset64_value", filled_bitset(64, 0))
 expect_exact("cat_gdb_bitset65_value", filled_bitset(65, 63, [64, 1]))
 expect_exact("cat_gdb_bitset128_value", filled_bitset(128, 0, [64, 64]))
+expect_regex("cat_gdb_alloc_fixture.linear_empty", r'0 bytes/64 bytes \(0%\)')
+expect_regex("cat_gdb_alloc_fixture.linear_partial", r'16 bytes/64 bytes \(25%\)')
+expect_regex("cat_gdb_alloc_fixture.linear_full", r'64 bytes/64 bytes \(100%\)')
+expect_regex("cat_gdb_alloc_fixture.pool_empty", r'0 bytes/64 bytes \(0%\)')
+expect_regex("cat_gdb_alloc_fixture.pool_partial", r'16 bytes/64 bytes \(25%\)')
+expect_regex("cat_gdb_alloc_fixture.pool_full", r'64 bytes/64 bytes \(100%\)')
+expect_regex("cat_gdb_alloc_fixture.named_partial",
+             r'"arena": 16 bytes/64 bytes \(25%\)')
+expect_page_anon_memory("cat_gdb_alloc_fixture.pager")
 end
 
 quit

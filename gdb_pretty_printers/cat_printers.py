@@ -1,34 +1,26 @@
 import gdb
 import re
+import os
+import sys
+
+_printer_dir = os.path.dirname(os.path.abspath(__file__))
+if _printer_dir not in sys.path:
+    sys.path.insert(0, _printer_dir)
+
+sys.modules.pop('cat_gdb', None)
+from cat_gdb import cat_pretty_printers, cat_type  # noqa: E402
 
 
-class PrinterControl(gdb.printing.PrettyPrinter):
-    def __init__(self, type_name, printer):
-        super().__init__(type_name)
-        self.printer = printer
-
-    def __call__(self, val):
-        return self.printer(val) if val.type.name == self.name else None
-
-
-# `cat_pretty_printers` stores the complete list of libCat pretty printers.
-cat_pretty_printers = gdb.printing.RegexpCollectionPrettyPrinter('libCat')
+def register_user_command(command_class):
+    try:
+        command_class()
+    except gdb.error as error:
+        if 'already exists' not in str(error).lower():
+            raise
 
 
-def append_pretty_printer(namespace: str, type_name: str, printer):
-    cat_pretty_printers.add_printer(
-        namespace + '::' + type_name,
-        '^' + namespace + '::' + type_name + '(<.*>)?$',
-        printer,
-    )
-
-
-def cat_type(type_name: str, namespace: str = 'cat'):
-    # Decorator for pretty printers.
-    def _register_printer(printer):
-        append_pretty_printer(namespace, type_name, printer)
-
-    return _register_printer
+def register_libcat_commands():
+    cat_allocator.register_commands(register_user_command)
 
 
 @cat_type('monostate_type')
@@ -121,7 +113,7 @@ class BytePrinter:
     def to_string(self):
         return str(hex(self.value))
 
-    
+
 @cat_type('span')
 class SpanPrinter:
     "Print a `cat::span`"
@@ -132,32 +124,33 @@ class SpanPrinter:
         return
 
     def to_string(self):
-        p_data = self.m_p_data.cast(self.m_p_data.type
-                                  .target()
-                                  .strip_typedefs()
-                                  .pointer())
+        p_data = self.m_p_data.cast(
+            self.m_p_data.type.target().strip_typedefs().pointer()
+        )
 
-        array: str = ',\n'.join(['  ['  + str(x) + '] = ' + str(p_data[x])
-                                for x
-                                in range(self.m_size)])
-        
-        return '{' + str(p_data) + ', ' + str(self.m_size) + '}' + ' [\n' \
-            + array \
-            + '\n]'
+        array: str = ',\n'.join(
+            ['  [' + str(x) + '] = ' + str(p_data[x]) for x in range(self.m_size)]
+        )
 
-    
+        return (
+            '{' + str(p_data) + ', ' + str(self.m_size) + '}' + ' [\n' + array + '\n]'
+        )
+
+
 @cat_type('array')
 class ArrayPrinter:
     "Print a `cat::array`"
 
     def __init__(self, val: gdb.Value):
         self.m_data: gdb.Value = val['m_data']
-        self.size: int = int(str(re.search('[0-9]+}>$', str(val.type.strip_typedefs())).group(0))[:-2])
+        self.size: int = int(
+            str(re.search('[0-9]+}>$', str(val.type.strip_typedefs())).group(0))[:-2]
+        )
         return
 
     def to_string(self):
         return '[' + str(self.m_data)[1:-1] + '] (size: ' + str(self.size) + ')'
-    
+
 
 @cat_type('basic_str_span')
 class StrSpanPrinter:
@@ -170,22 +163,27 @@ class StrSpanPrinter:
         return
 
     def to_string(self):
-        p_str = self.m_p_data.cast(self.m_p_data.type
-                                  .target()
-                                  .strip_typedefs()
-                                  .pointer())
-        
+        p_str = self.m_p_data.cast(
+            self.m_p_data.type.target().strip_typedefs().pointer()
+        )
+
         # Print null bytes as `\0`.
-        string = p_str.string(length = self.m_size)
-        string = ''.join(["\\0" if i == '\0' else i
-                  for i
-                  in string])
-        
-        zstr_suffix = ", null-terminated" if self.is_null_terminated else ""
-        return ("\"" + string + "\" ("
+        string = p_str.string(length=self.m_size)
+        string = ''.join(['\\0' if i == '\0' else i for i in string])
+
+        zstr_suffix = ', null-terminated' if self.is_null_terminated else ''
+        return (
+            '"'
+            + string
+            + '" ('
             + str(self.m_size)
-            + " chars" + zstr_suffix + ", " + str(hex(self.m_p_data))
-            + ")")
+            + ' chars'
+            + zstr_suffix
+            + ', '
+            + str(hex(self.m_p_data))
+            + ')'
+        )
+
 
 @cat_type('basic_str_inplace')
 class StrInplacePrinter:
@@ -194,33 +192,27 @@ class StrInplacePrinter:
     def __init__(self, val: gdb.Value):
         self.m_data = val['m_data']
         self.is_null_terminated = str(val.type.template_argument(2)) == 'true'
-        
+
         try:
-             self.m_size = val.type.template_argument(1)['raw']
+            self.m_size = val.type.template_argument(1)['raw']
         except:
             # If the template parameter can't be found by GDB, parse out the last
             # integer in the type signature instead.
             type_string = val.type.strip_typedefs().name
-            regex = re.compile(r"[0-9]+", re.MULTILINE)
+            regex = re.compile(r'[0-9]+', re.MULTILINE)
             self.m_size = int(regex.findall(type_string)[-1])
 
         return
 
     def to_string(self):
-        p_str = self.m_data.cast(self.m_data.type
-                                  .target()
-                                  .strip_typedefs()
-                                  .pointer())
-        
-        # Print null bytes as `\0`.
-        string = p_str.string(length = self.m_size)
-        string = ''.join(["\\0" if i == '\0' else i
-                  for i
-                  in string])
+        p_str = self.m_data.cast(self.m_data.type.target().strip_typedefs().pointer())
 
-        zstr_suffix = ", null-terminated" if self.is_null_terminated else ""
-        return ("\"" + string + "\" ("
-                + str(self.m_size) + " chars" + zstr_suffix + ")")
+        # Print null bytes as `\0`.
+        string = p_str.string(length=self.m_size)
+        string = ''.join(['\\0' if i == '\0' else i for i in string])
+
+        zstr_suffix = ', null-terminated' if self.is_null_terminated else ''
+        return '"' + string + '" (' + str(self.m_size) + ' chars' + zstr_suffix + ')'
 
 
 @cat_type('bit_value')
@@ -231,8 +223,8 @@ class BitValuePrinter:
         self.m_value: gdb.Value = val['m_value']
 
     def to_string(self):
-        return "1" if bool(self.m_value) else "0"
-    
+        return '1' if bool(self.m_value) else '0'
+
 
 @cat_type('bitset')
 class BitsetPrinter:
@@ -255,42 +247,55 @@ class BitsetPrinter:
             type_numbers = [int(s) for s in re.findall(r' \d+\b', type)]
             # The last number is the bitset's size.
             bits_count: int = type_numbers[-1]
-            self.leading_skipped_bits: int = \
+            self.leading_skipped_bits: int = (
                 self.array_len * self.element_size_bits - bits_count
+            )
 
         return
 
     def _fmt_int(self, bytes_index: int):
         # Create a bitstring of `element_size_bits` length from the element at
         # `bytes_index`.
-        return format(int(self.m_data[bytes_index]['raw']),
-                      '0' + str(self.element_size_bits) + 'b')
+        return format(
+            int(self.m_data[bytes_index]['raw']),
+            '0' + str(self.element_size_bits) + 'b',
+        )
 
     def _separate_bytes(self, bitstring: str):
         # Insert ' separators between every 8 bits.
-        return '\''.join([bitstring[i:i+8]
-                          for i
-                          in range(0, len(bitstring), 8)])
+        return "'".join([bitstring[i : i + 8] for i in range(0, len(bitstring), 8)])
 
     def to_string(self):
-        bitstrings = [self._fmt_int(x)
-                      for x
-                      in range(self.array_len)]
-        
+        bitstrings = [self._fmt_int(x) for x in range(self.array_len)]
+
         # Truncate right-padding bits from the last bytes in the array.
         if self.leading_skipped_bits > 0:
-            bitstrings[-1] = bitstrings[-1][:-self.leading_skipped_bits]
-        bitstrings = [self._separate_bytes(bitstring)
-                      for bitstring
-                      in bitstrings
-                      if len(bitstring) > 0]
+            bitstrings[-1] = bitstrings[-1][: -self.leading_skipped_bits]
+        bitstrings = [
+            self._separate_bytes(bitstring)
+            for bitstring in bitstrings
+            if len(bitstring) > 0
+        ]
 
         bits_count = self.array_len * self.element_size_bits - self.leading_skipped_bits
         padding_suffix = ''
         if self.leading_skipped_bits > 0:
             padding_suffix = ', ' + str(self.leading_skipped_bits) + ' r-padding'
-        return '[' + str(', '.join(bitstrings)) + '] (' \
-            + str(bits_count) + ' bits' + padding_suffix + ')'
+        return (
+            '['
+            + str(', '.join(bitstrings))
+            + '] ('
+            + str(bits_count)
+            + ' bits'
+            + padding_suffix
+            + ')'
+        )
+
+
+sys.modules.pop('cat_allocator', None)
+import cat_allocator  # noqa: E402
+
+register_libcat_commands()
 
 
 # At the end of the script, register all `cat_pretty_printers` simultaneously.
