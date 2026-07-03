@@ -125,6 +125,23 @@ span
    constexpr auto
    operator=(span<T, fixed_extent>&&) -> span<T, fixed_extent>& = default;
 
+   template <is_random_access R>
+      requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+               && is_equality_comparable<remove_cv<T>>)
+   [[nodiscard]]
+   constexpr auto
+   operator==(R const& rhs) const -> bool;
+
+   template <is_random_access R>
+      requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+               && requires(remove_cv<T> const& left, remove_cv<T> const& right) {
+                     { left < right } -> is_convertible<bool>;
+                     { right < left } -> is_convertible<bool>;
+                  })
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(R const& rhs) const;
+
    // Construct a span from a static `initializer_list`.
    template <typename InitListValueType>
       requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
@@ -357,9 +374,6 @@ span
    }
 
  private:
-   // Shared computation for the templated `subspan<offset, count>()`'s
-   // result extent. Kept private because only the two `subspan()` overloads
-   // need it.
    template <idx offset, idx count>
    static consteval auto
    subspan_extent() -> idx {
@@ -371,24 +385,6 @@ span
          return dynamic_extent;
       }
    }
-
- public:
-   template <is_random_access R>
-      requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
-               && is_equality_comparable<remove_cv<T>>)
-   [[nodiscard]]
-   constexpr auto
-   operator==(R const& rhs) const -> bool;
-
-   template <is_random_access R>
-      requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
-               && requires(remove_cv<T> const& left, remove_cv<T> const& right) {
-                     { left < right } -> is_convertible<bool>;
-                     { right < left } -> is_convertible<bool>;
-                  })
-   [[nodiscard]]
-   constexpr auto
-   operator<=>(R const& rhs) const;
 
  protected:
    // This is arranged as pointer, then size, to follow the ABI of Linux

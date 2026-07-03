@@ -201,6 +201,38 @@ $test(vec_reserve) {
    cat::verify(v.capacity() >= 128);
 }
 
+$test(vec_compare_trivial_equality) {
+   static_assert(cat::is_trivially_equality_comparable<int>);
+
+   linear_arena arena;
+   cat::vec left = cat::make_vec<int>(arena.alloc, {1, 2, 3, 4}).verify();
+   cat::vec same = cat::make_vec<int>(arena.alloc, {1, 2, 3, 4}).verify();
+   cat::vec different = cat::make_vec<int>(arena.alloc, {1, 2, 9, 4}).verify();
+   cat::vec shorter = cat::make_vec<int>(arena.alloc, {1, 2, 3}).verify();
+   cat::vec bytes =
+      cat::make_vec<unsigned char>(arena.alloc, {1u, 2u, 200u}).verify();
+   cat::vec bigger_bytes =
+      cat::make_vec<unsigned char>(arena.alloc, {1u, 2u, 201u}).verify();
+   $defer {
+      left.free(arena.alloc);
+      same.free(arena.alloc);
+      different.free(arena.alloc);
+      shorter.free(arena.alloc);
+      bytes.free(arena.alloc);
+      bigger_bytes.free(arena.alloc);
+   };
+
+   cat::verify(left == same);
+   cat::verify(!(left == different));
+   cat::verify(left != shorter);
+   cat::verify((left <=> same) == 0);
+   cat::verify((left <=> different) < 0);
+   cat::verify((different <=> left) > 0);
+   cat::verify((left <=> shorter) > 0);
+   cat::verify((shorter <=> left) < 0);
+   cat::verify((bytes <=> bigger_bytes) < 0);
+}
+
 $test(vec_make_factories) {
    linear_arena arena;
 

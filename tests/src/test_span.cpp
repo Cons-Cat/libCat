@@ -396,6 +396,19 @@ $test(span_compare_equal_sizes_and_content) {
    cat::verify(view != c);
 }
 
+$test(span_compare_trivial_equality) {
+   static_assert(cat::is_trivially_equality_comparable<int>);
+   static_assert(!cat::is_trivially_equality_comparable<only_equality>);
+
+   cat::array<int, 4u> values{1, 2, 3, 4};
+   cat::array<int, 4u> same{1, 2, 3, 4};
+   cat::array<int, 4u> different{1, 2, 9, 4};
+
+   cat::span<int const> view = values;
+   cat::verify(view == same);
+   cat::verify(!(view == different));
+}
+
 // `operator==` short-circuits to `false` when the sizes differ, while
 // `operator<=>` falls back to the shorter-side-is-less rule.
 $test(span_compare_different_sizes) {
@@ -409,15 +422,24 @@ $test(span_compare_different_sizes) {
 }
 
 $test(span_compare_three_way_orderings) {
+   static_assert(cat::is_trivially_lexicographically_comparable<unsigned char>);
+   static_assert(!cat::is_trivially_lexicographically_comparable<signed char>);
+   static_assert(
+      !cat::is_trivially_lexicographically_comparable<unsigned short>);
+
    cat::array<int4, 3u> base{1_i4, 2_i4, 3_i4};
    cat::array<int4, 3u> equal{1_i4, 2_i4, 3_i4};
    cat::array<int4, 3u> bigger{1_i4, 2_i4, 9_i4};
    cat::array<int4, 3u> smaller{1_i4, 2_i4, 0_i4};
+   cat::array<unsigned char, 3u> bytes{1u, 2u, 200u};
+   cat::array<unsigned char, 3u> bigger_bytes{1u, 2u, 201u};
 
    cat::span<int4 const> view = base;
+   cat::span<unsigned char const> byte_view = bytes;
    cat::verify((view <=> equal) == 0);
    cat::verify((view <=> bigger) < 0);
    cat::verify((view <=> smaller) > 0);
+   cat::verify((byte_view <=> bigger_bytes) < 0);
 }
 
 $test(span_compare_consteval) {

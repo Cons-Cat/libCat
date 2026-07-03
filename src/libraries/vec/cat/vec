@@ -111,6 +111,25 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       }
    }
 
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_vec const& rhs) const -> bool
+      requires(is_equality_comparable<remove_cv<T>>)
+   {
+      return span<T const>(*this) == span<T const>(rhs);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(basic_vec const& rhs) const
+      requires(requires(remove_cv<T> const& left, remove_cv<T> const& right) {
+         { left < right } -> is_convertible<bool>;
+         { right < left } -> is_convertible<bool>;
+      })
+   {
+      return span<T const>(*this) <=> span<T const>(rhs);
+   }
+
    constexpr void
    swap(basic_vec& other) {
       cat::swap(m_p_data, other.m_p_data);

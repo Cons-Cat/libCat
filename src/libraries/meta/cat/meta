@@ -27,6 +27,8 @@ template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
 class basic_intptr;
 
+struct byte;
+
 namespace detail {
 template <typename T, typename U = T&&>
 constexpr auto
@@ -720,6 +722,18 @@ concept is_trivially_move_assignable = __is_trivially_assignable(T, T&&);
 
 template <typename T>
 concept is_trivially_copyable = __is_trivially_copyable(T);
+
+template <typename T>
+concept is_trivially_equality_comparable =
+   __is_trivially_equality_comparable(T);
+
+template <typename T, typename U = T>
+concept is_trivially_lexicographically_comparable =
+   is_same<remove_cv<T>, remove_cv<U>>
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+   && sizeof(T) == 1u
+#endif
+   && (is_unsigned_integral<T> || is_same<remove_cv<T>, byte>);
 
 template <typename T>
 concept is_implicit_lifetime = __builtin_is_implicit_lifetime(T);
