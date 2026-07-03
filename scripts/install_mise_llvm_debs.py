@@ -34,141 +34,32 @@ LLVM_PACKAGE_NAMES = (
     "bolt-23",
 )
 DEBIAN_BASE_URL = "https://deb.debian.org/debian"
-PACKAGE_SET_REVISION = "5"
+DEBIAN_PACKAGES_INDEX_URL = f"{DEBIAN_BASE_URL}/dists/unstable/main/binary-amd64/Packages.gz"
+PACKAGE_SET_REVISION = "6"
 
-PINNED_DEBIAN_PACKAGES = (
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/g/gcc-16/gcc-16-base_16-20260425-1_amd64.deb",
-        35772,
-        "4a7750990b378d0070bddd1b58aeaf9e4ebf7ec4d86340b25c715f36ecd86c6b",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/g/gcc-16/libgcc-s1_16-20260425-1_amd64.deb",
-        74016,
-        "5ec8f55d82cdd8f1e4233010f26db877ec8c0c8fa9170bf91a84cbdef6636d39",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/g/gcc-16/libstdc++6_16-20260425-1_amd64.deb",
-        824052,
-        "fea11955e18830d68c7535e295c638239ced00e8385bf0c5fd2e1d2a8c5ea7ee",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/g/glibc/libc6_2.42-15_amd64.deb",
-        1793792,
-        "c15097e0318c663d076d87070df8352586de522fedf953881b7d0404b41058a9",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/g/glibc/libc-gconv-modules-extra_2.42-15_amd64.deb",
-        1101744,
-        "aa7b969c40c886841b6d70cef3ee7ce13c467fae8e124492d0500ced72d513aa",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/a/abseil/libabsl20260107_20260107.0-5_amd64.deb",
-        549164,
-        "78ff51f81522f068c393f0427d2cadec727508f19654ef1f9928075ad142f181",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/libb/libbsd/libbsd0_0.12.2-2+b2_amd64.deb",
-        131984,
-        "ab3328a6a9c162f7ea4c1013189f4f9ed0596382fafb16e49ba1db8e362b5214",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/libe/libedit/libedit2_3.1-20251016-1+b1_amd64.deb",
-        93280,
-        "1ce11f16c6bbb49481a961bd6ad07a002f1aa9468c8e1cf0c8f58bfe00be80ec",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/libf/libffi/libffi8_3.5.2-4_amd64.deb",
-        25180,
-        "1883c3b720014b5fd7bed17f3a27afdc5af079517d762192f687b8dd407e5820",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/libm/libmd/libmd0_1.1.0-2+b2_amd64.deb",
-        36248,
-        "3cb2308445d53d7e1108c83f0b82eea06e284668a03579d10d59106c31028d42",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/r/re2/libre2-11_20251105-1_amd64.deb",
-        168864,
-        "f04d7a8b2176f9c193ec23053742ba2c29b2028bbc861d54d4ee2dee16084b12",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/g/grpc/libgrpc++1.51t64_1.51.1-9_amd64.deb",
-        498928,
-        "cd9c3d8938b659fdbb57d052a7f24605f010b8396b733e2f0ff997110c7dcd07",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/g/grpc/libgrpc29t64_1.51.1-9_amd64.deb",
-        2892780,
-        "a05fc5bc2621730f129786a947257e9293163766a8f52aa9bb76619c07ec082c",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/p/protobuf/libprotobuf32t64_3.21.12-15+b1_amd64.deb",
-        986364,
-        "b5b6f0f29cc06b598a5d74dd463578ed9a1cf6e28bd61b5871f440780e195953",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/p/protobuf/libprotoc32t64_3.21.12-15+b1_amd64.deb",
-        937456,
-        "672f41ecc298aee1357ddf03555f590870c4d89d4f21f135696dce95ca45ba81",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/c/c-ares/libcares2_1.34.6-1+b1_amd64.deb",
-        99132,
-        "2b7dd3c2b8f34ae1466de09f91722724d9515b495f27ae99d2369aad1da4885d",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/o/openssl/libssl3t64_3.6.2-1_amd64.deb",
-        2482492,
-        "a34acac9b52d64498ce8d98e23597ebbc9883af5f8c4fcf7802450945fb4c2d0",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/libx/libxml2/libxml2-16_2.15.2+dfsg-0.1_amd64.deb",
-        641024,
-        "8571682a07f329bb462569502b57aced4866e5b95c2db3ec7e5414a5b3bbdc14",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/libz/libzstd/libzstd1_1.5.7+dfsg-3+b2_amd64.deb",
-        304640,
-        "5ce884018be1a8bd7a3beb0db95c7b18e1d49246afdfd08889bc9faa48375933",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/n/ncurses/libtinfo6_6.6+20251231-1+b1_amd64.deb",
-        350360,
-        "adc32779d98abd9fc7a0a76569abd114fe74e9fea8fa9da88a246b09295553ff",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/z/z3/libz3-4_4.13.3-1+b2_amd64.deb",
-        8643656,
-        "6e258ebb04d22c66048d66851ebc1684f04bbd40e47658ad2c3d7e7abdb6bde4",
-    ),
-    (
-        DEBIAN_BASE_URL,
-        "pool/main/z/zlib/zlib1g_1.3.dfsg+really1.3.2-3_amd64.deb",
-        90912,
-        "52c585b07bea72ef36df9ddd5d1937f4739d3caec057d827954baec256292651",
-    ),
+DEBIAN_PACKAGE_NAMES = (
+    "gcc-16-base",
+    "libgcc-s1",
+    "libstdc++6",
+    "libc6",
+    "libc-gconv-modules-extra",
+    "libabsl20260107",
+    "libbsd0",
+    "libedit2",
+    "libffi8",
+    "libmd0",
+    "libre2-11",
+    "libgrpc++1.51t64",
+    "libgrpc29t64",
+    "libprotobuf32t64",
+    "libprotoc32t64",
+    "libcares2",
+    "libssl3t64",
+    "libxml2-16",
+    "libzstd1",
+    "libtinfo6",
+    "libz3-4",
+    "zlib1g",
 )
 
 # `LLVM_BIN_DIR` is the directory in the staged toolchain that ships every
@@ -207,11 +98,9 @@ RUNTIME_LIBRARIES = (
     "libre2.so.11",
     "libre2.so.11.0.0",
     "libstdc++.so.6",
-    "libstdc++.so.6.0.35",
     "libcrypto.so.3",
     "libssl.so.3",
     "libxml2.so.16",
-    "libxml2.so.16.1.2",
 )
 
 RUNTIME_LIBRARY_PREFIXES = (
@@ -222,6 +111,8 @@ RUNTIME_LIBRARY_PREFIXES = (
     "libgrpc",
     "libprotobuf",
     "libprotoc",
+    "libstdc++",
+    "libxml2",
     "libupb",
 )
 
@@ -427,29 +318,48 @@ def parse_debian_package_index(index_text: str) -> dict[str, dict[str, str]]:
     return packages
 
 
-def resolve_llvm_packages() -> tuple[str, tuple[tuple[str, str, int, str], ...]]:
-    print(f"resolve {LLVM_PACKAGES_INDEX_URL}", flush=True)
-    with urllib.request.urlopen(LLVM_PACKAGES_INDEX_URL) as response:
+def resolve_package_index(
+    index_url: str,
+    base_url: str,
+    package_names: tuple[str, ...],
+    label: str,
+) -> tuple[tuple[tuple[str, str, int, str], ...], tuple[tuple[str, str], ...]]:
+    print(f"resolve {index_url}", flush=True)
+    with urllib.request.urlopen(index_url) as response:
         packages = parse_debian_package_index(
             gzip.decompress(response.read()).decode("utf-8")
         )
 
     resolved_packages = []
-    resolved_versions = set()
-    for package_name in LLVM_PACKAGE_NAMES:
+    resolved_versions = []
+    for package_name in package_names:
         fields = packages.get(package_name)
         if fields is None:
-            raise SystemExit(f"missing LLVM package metadata: {package_name}")
+            raise SystemExit(f"missing {label} package metadata: {package_name}")
         version = fields["Version"].removeprefix("1:")
-        resolved_versions.add(version)
+        resolved_versions.append((package_name, version))
         resolved_packages.append(
             (
-                LLVM_BASE_URL,
+                base_url,
                 fields["Filename"],
                 int(fields["Size"]),
                 fields["SHA256"],
             )
         )
+
+    return tuple(resolved_packages), tuple(resolved_versions)
+
+
+def resolve_llvm_packages() -> tuple[str, tuple[tuple[str, str, int, str], ...]]:
+    resolved_packages, package_versions = resolve_package_index(
+        LLVM_PACKAGES_INDEX_URL,
+        LLVM_BASE_URL,
+        LLVM_PACKAGE_NAMES,
+        "LLVM",
+    )
+    resolved_versions = set()
+    for package_name, version in package_versions:
+        resolved_versions.add(version)
 
     if len(resolved_versions) != 1:
         versions = ", ".join(sorted(resolved_versions))
@@ -457,7 +367,20 @@ def resolve_llvm_packages() -> tuple[str, tuple[tuple[str, str, int, str], ...]]
 
     llvm_version = resolved_versions.pop()
     print(f"LLVM nightly {llvm_version}", flush=True)
-    return llvm_version, tuple(resolved_packages)
+    return llvm_version, resolved_packages
+
+
+def resolve_debian_packages() -> tuple[str, tuple[tuple[str, str, int, str], ...]]:
+    resolved_packages, package_versions = resolve_package_index(
+        DEBIAN_PACKAGES_INDEX_URL,
+        DEBIAN_BASE_URL,
+        DEBIAN_PACKAGE_NAMES,
+        "Debian",
+    )
+    version_text = "\n".join(f"{name}={version}" for name, version in package_versions)
+    version_hash = hashlib.sha256(version_text.encode()).hexdigest()[:16]
+    print(f"Debian runtime set {version_hash}", flush=True)
+    return version_hash, resolved_packages
 
 
 def is_current(root: pathlib.Path, stamp_version: str) -> bool:
@@ -473,7 +396,8 @@ def is_current(root: pathlib.Path, stamp_version: str) -> bool:
 
 def main() -> int:
     llvm_version, llvm_packages = resolve_llvm_packages()
-    stamp_version = f"{llvm_version}+cat.{PACKAGE_SET_REVISION}"
+    debian_version, debian_packages = resolve_debian_packages()
+    stamp_version = f"{llvm_version}+debian.{debian_version}+cat.{PACKAGE_SET_REVISION}"
     configured_version = os.environ.get("CAT_LLVM_VERSION")
     if configured_version not in (None, "unstable") and configured_version != llvm_version:
         raise SystemExit(
@@ -493,7 +417,7 @@ def main() -> int:
         shutil.rmtree(root)
     root.mkdir(parents=True)
 
-    for base_url, url_path, size, sha256 in llvm_packages + PINNED_DEBIAN_PACKAGES:
+    for base_url, url_path, size, sha256 in llvm_packages + debian_packages:
         package = download_package(downloads, base_url, url_path, size, sha256)
         extract_deb(package, root)
 
