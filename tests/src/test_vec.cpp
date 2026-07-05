@@ -83,6 +83,19 @@ $test(vec_maybe_niche) {
    cat::verify(!empty_vec.has_value());
 }
 
+$test(raii_vec_maybe_niche) {
+   // `maybe<raii::vec<T>>` reuses the manual core's niche, so it stays the
+   // size of `raii::vec<T>` itself just like `maybe<vec<T>>`.
+   static_assert(sizeof(cat::maybe<cat::raii::vec<int4>>)
+                 == sizeof(cat::raii::vec<int4>));
+   cat::maybe<cat::raii::vec<int4>> empty_vec;
+   cat::verify(!empty_vec.has_value());
+
+   linear_arena arena;
+   auto engaged = cat::raii::make_vec<int4>(arena.alloc);
+   cat::verify(engaged.has_value());
+}
+
 $test(vec_iterator_typedefs) {
    using test_vec_t = cat::vec<int4>;
    using iterator = test_vec_t::iterator;

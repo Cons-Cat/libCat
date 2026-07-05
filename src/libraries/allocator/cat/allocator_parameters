@@ -755,9 +755,10 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    // another `dyn_allocator` would otherwise add superfluous indirections.
    template <is_allocator Allocator>
       requires(is_neither<Allocator, dyn_allocator>)
-   [[gnu::always_inline, gnu::nodebug]] dyn_allocator(Allocator& allocator
-                                                      [[clang::lifetimebound]]
-                                                      )
+   [[gnu::always_inline,
+     gnu::nodebug]] constexpr dyn_allocator(Allocator& allocator
+                                            [[clang::lifetimebound]]
+                                            )
        : m_p_allocator(__builtin_addressof(allocator)) {
    }
 

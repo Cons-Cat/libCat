@@ -138,9 +138,8 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
 
    constexpr void
    annotate_size_change(idx old_size, idx new_size) const {
-      annotate_contiguous_container(m_p_data, m_p_data + m_current_capacity.raw,
-                                    m_p_data + old_size.raw,
-                                    m_p_data + new_size.raw);
+      annotate_contiguous_container(m_p_data, m_p_data + m_current_capacity,
+                                    m_p_data + old_size, m_p_data + new_size);
    }
 
    // Reallocate this `vec`'s memory if it is exceeded, in a non-`constexpr`
@@ -156,7 +155,7 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
             : 4u;
 
       if consteval {
-         T* _Nonnull p_new = new T[minimum_capacity.raw];
+         T* _Nonnull p_new = new T[minimum_capacity];
          for (idx i = 0u; i < m_current_size; ++i) {
             new (p_new + i) T(move(m_p_data[i]));
          }
@@ -288,7 +287,7 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       if (minimum_capacity > m_current_capacity) {
          if consteval {
             delete[] m_p_data;
-            m_p_data = new T[minimum_capacity.raw];
+            m_p_data = new T[minimum_capacity];
             m_current_capacity = minimum_capacity;
 
             for (idx i = m_current_size + 1u; i < m_current_capacity; ++i) {
@@ -332,11 +331,11 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
          if (size > m_current_size) {
             annotate_size_change(m_current_size, size);
             for (idx i = m_current_size; i < size; ++i) {
-               new (m_p_data + i.raw) T();
+               new (m_p_data + i) T();
             }
          } else if constexpr (!is_trivially_destructible<T>) {
             for (idx i = size; i < m_current_size; ++i) {
-               m_p_data[i.raw].~T();
+               m_p_data[i].~T();
             }
             annotate_size_change(m_current_size, size);
          } else if (size < m_current_size) {
@@ -371,15 +370,15 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
          annotate_size_change(m_current_size, size);
          for (idx i = m_current_size; i < size; ++i) {
             if !consteval {
-               new (m_p_data + i.raw) T(value);
+               new (m_p_data + i) T(value);
             } else {
-               m_p_data[i.raw] = value;
+               m_p_data[i] = value;
             }
          }
       } else if constexpr (!is_trivially_destructible<T>) {
          if !consteval {
             for (idx i = size; i < m_current_size; ++i) {
-               m_p_data[i.raw].~T();
+               m_p_data[i].~T();
             }
             annotate_size_change(m_current_size, size);
          }
@@ -409,7 +408,7 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       }
 
       if consteval {
-         T* _Nonnull p_new = new T[m_current_size.raw];
+         T* _Nonnull p_new = new T[m_current_size];
          for (idx i = 0u; i < m_current_size; ++i) {
             new (p_new + i) T(move(m_p_data[i]));
          }
@@ -485,7 +484,7 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       }
 
       annotate_size_change(m_current_size, m_current_size + 1u);
-      m_p_data[m_current_size.raw] = value;
+      m_p_data[m_current_size] = value;
       ++(m_current_size);
       return monostate;
    }
@@ -500,7 +499,7 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       }
 
       annotate_size_change(m_current_size, m_current_size + 1u);
-      m_p_data[m_current_size.raw] = cat::move(value);
+      m_p_data[m_current_size] = cat::move(value);
       ++(m_current_size);
       return monostate;
    }
@@ -528,7 +527,7 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       }
 
       annotate_size_change(m_current_size, m_current_size + 1u);
-      T* _Nonnull const p_slot = m_p_data + m_current_size.raw;
+      T* _Nonnull const p_slot = m_p_data + m_current_size;
       if consteval {
          p_slot->~T();
       }
@@ -556,10 +555,10 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       if (m_current_size == 0u) {
          return nullopt;
       }
-      m_current_size.raw -= 1u;
-      T result = cat::move(m_p_data[m_current_size.raw]);
+      m_current_size = idx(m_current_size - 1u);
+      T result = cat::move(m_p_data[m_current_size]);
       if constexpr (!is_trivially_destructible<T>) {
-         m_p_data[m_current_size.raw].~T();
+         m_p_data[m_current_size].~T();
       }
       annotate_size_change(m_current_size + 1u, m_current_size);
       return result;
@@ -581,13 +580,13 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       if !consteval {
          cat::assert(index < m_current_size);
       }
-      T* _Nonnull const p_dst = m_p_data + index.raw;
+      T* _Nonnull const p_dst = m_p_data + index;
       T* _Nonnull const p_src = p_dst + 1;
-      T* _Nonnull const p_end = m_p_data + m_current_size.raw;
+      T* _Nonnull const p_end = m_p_data + m_current_size;
       cat::move(p_src, p_end, p_dst);
-      m_current_size.raw -= 1u;
+      m_current_size = idx(m_current_size - 1u);
       if constexpr (!is_trivially_destructible<T>) {
-         m_p_data[m_current_size.raw].~T();
+         m_p_data[m_current_size].~T();
       }
       annotate_size_change(m_current_size + 1u, m_current_size);
    }
@@ -602,23 +601,22 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
          cat::assert(start <= end);
          cat::assert(end <= m_current_size);
       }
-      auto const count = end.raw - start.raw;
+      auto const count = end - start;
       if (count == 0u) {
          return;
       }
 
-      T* _Nonnull const p_dst = m_p_data + start.raw;
-      T* _Nonnull const p_src = m_p_data + end.raw;
-      T* _Nonnull const p_data_end = m_p_data + m_current_size.raw;
+      T* _Nonnull const p_dst = m_p_data + start;
+      T* _Nonnull const p_src = m_p_data + end;
+      T* _Nonnull const p_data_end = m_p_data + m_current_size;
       cat::move(p_src, p_data_end, p_dst);
+      idx const old_size = m_current_size;
+      m_current_size = idx(m_current_size - count);
       if constexpr (!is_trivially_destructible<T>) {
-         for (auto i = m_current_size.raw - count; i < m_current_size.raw;
-              ++i) {
+         for (idx i = m_current_size; i < old_size; ++i) {
             m_p_data[i].~T();
          }
       }
-      idx const old_size = m_current_size;
-      m_current_size.raw -= count;
       annotate_size_change(old_size, m_current_size);
    }
 
@@ -654,17 +652,6 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
    }
 
  private:
-   // TODO: Optimize `maybe<raii:vec>`.
-   // Tag used to construct a `basic_vec` in the `maybe_vec<T>` niche
-   // state. Private so that user code cannot accidentally summon a vec
-   // with a non-null buffer expectation and a null data pointer; only
-   // the niche helpers below may produce one.
-   struct niche_tag {};
-
-   constexpr basic_vec(niche_tag /*unused*/)
-       : m_p_data(nullptr), m_current_size(1u) {
-   }
-
    template <typename U>
    friend constexpr auto
    detail::maybe_vec_nullopt() -> basic_vec<U>;
@@ -689,7 +676,11 @@ maybe_vec_has_value(basic_vec<T> const& value) -> bool {
 template <typename T>
 constexpr auto
 maybe_vec_nullopt() -> basic_vec<T> {
-   return basic_vec<T>(typename basic_vec<T>::niche_tag{});
+   basic_vec<T> value;
+   value.m_p_data = nullptr;
+   value.m_current_size = 1u;
+   value.m_current_capacity = 0u;
+   return value;
 }
 
 }  // namespace detail

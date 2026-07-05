@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/null_allocator>
 #include <cat/vec>
 
 namespace cat::raii {
@@ -14,6 +15,23 @@ class basic_vec;
 // the `[[clang::preferred_name]]` attribute can reference it.
 template <typename T, is_allocator Allocator = dyn_allocator>
 using vec = basic_vec<T, Allocator>;
+
+}  // namespace cat::raii
+
+namespace cat::detail {
+// The `maybe<raii::vec>` niche reuses the manual core's niche: disengaged
+// when `data() == nullptr && size() != 0`. The owned allocator is a
+// `null_allocator` while empty, which is never dispatched through.
+template <typename T>
+constexpr auto
+raii_vec_has_value(raii::basic_vec<T, dyn_allocator> const& value) -> bool;
+
+template <typename T>
+constexpr auto
+raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator>;
+}  // namespace cat::detail
+
+namespace cat::raii {
 
 template <typename T, is_allocator Allocator>
 class [[clang::preferred_name(vec<T, Allocator>), gsl::Owner]]
@@ -279,6 +297,10 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    }
 
  private:
+   template <typename U>
+   friend constexpr auto
+   detail::raii_vec_nullopt() -> basic_vec<U, dyn_allocator>;
+
    cat::basic_vec<T> m_core;
    [[no_unique_address]]
    allocator_ref<Allocator> m_allocator;
@@ -376,3 +398,41 @@ make_vec_filled(dyn_allocator allocator, idx count, T const& value)
 }
 
 }  // namespace cat::raii
+
+namespace cat::detail {
+
+template <typename T>
+constexpr auto
+raii_vec_has_value(raii::basic_vec<T, dyn_allocator> const& value) -> bool {
+   // Engaged iff not in the `data == nullptr && size != 0` niche, mirroring
+   // the manual `basic_vec` predicate.
+   return value.data() != nullptr || value.size() == 0u;
+}
+
+inline constexpr null_allocator raii_vec_niche_null_allocator{};
+
+template <typename T>
+constexpr auto
+raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator> {
+   raii::basic_vec<T, dyn_allocator> value(
+      allocator_ref<dyn_allocator>(dyn_allocator(
+         const_cast<null_allocator&>(raii_vec_niche_null_allocator))));
+   value.m_core = maybe_vec_nullopt<T>();
+   return value;
+}
+
+}  // namespace cat::detail
+
+namespace cat {
+
+// `maybe<raii::basic_vec<T, Allocator>>` opts into compact storage, packing
+// the disengaged state into the same niche the manual `basic_vec` uses so a
+// bare `maybe<raii::vec<T>>` stays the size of `raii::vec<T>` itself.
+template <typename T>
+struct default_compact_trait<raii::basic_vec<T, dyn_allocator>>
+    : identity_trait<
+         compact<raii::basic_vec<T, dyn_allocator>,
+                 detail::raii_vec_has_value<T>, detail::raii_vec_nullopt<T>>> {
+};
+
+}  // namespace cat
