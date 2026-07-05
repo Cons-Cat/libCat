@@ -43,6 +43,7 @@ enum class cpu_type : unsigned int {
    intel_grandridge,
    intel_clearwaterforest,
    amdfam1_ah,
+   hygonfam18_h,
    // cpu_type_max
 };
 
@@ -83,6 +84,13 @@ enum class cpu_subtype : unsigned char {
    intel_corei7_arrowlake_s,
    intel_corei7_pantherlake,
    amdfam1_ah_znver5,
+   amdfam1_ah_znver6,
+   intel_corei7_diamondrapids,
+   intel_corei7_novalake,
+   hygonfam18_h_c86_4g_m4,
+   hygonfam18_h_c86_4g_m6,
+   hygonfam18_h_c86_4g_m7,
+   hygonfam18_h_c86_4g_m8,
 };
 
 enum class processor_features : unsigned char {
@@ -334,7 +342,8 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
                case 0x0f:
                   [[fallthrough]];
                case 0x16:
-                  [[fallthrough]];
+                  __cpu_model.m_cpu_type = cpu_type::intel_core2;
+                  break;
                case 0x17:
                   [[fallthrough]];
                case 0x1d:
@@ -414,8 +423,6 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
                      cpu_subtype::intel_corei7_rocketlake;
                   break;
                case 0x55:
-                  // TODO: Test that this feature detection actually works on an
-                  // AVX-512 cpu.
                   __cpu_model.m_cpu_type = cpu_type::intel_corei7;
                   if (has_feature(processor_features::avx512_bf16)) {
                      __cpu_model.m_cpu_subtype =
@@ -428,12 +435,17 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
                         cpu_subtype::intel_corei7_skylake_avx512;
                   }
                   break;
+               case 0x66:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_cannonlake;
+                  break;
                case 0x7d:
                   [[fallthrough]];
                case 0x7e:
                   __cpu_model.m_cpu_type = cpu_type::intel_corei7;
                   __cpu_model.m_cpu_subtype =
-                     cpu_subtype::intel_corei7_cannonlake;
+                     cpu_subtype::intel_corei7_icelake_client;
                   break;
                case 0x8c:
                   [[fallthrough]];
@@ -445,35 +457,51 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
                case 0x97:
                   [[fallthrough]];
                case 0x9a:
-                  [[fallthrough]];
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_alderlake;
+                  break;
                case 0xb7:
                   [[fallthrough]];
                case 0xba:
                   [[fallthrough]];
                case 0xbf:
-                  [[fallthrough]];
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_alderlake;
+                  break;
                case 0xaa:
                   [[fallthrough]];
                case 0xac:
-                  [[fallthrough]];
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_alderlake;
+                  break;
                case 0xbe:
                   __cpu_model.m_cpu_type = cpu_type::intel_corei7;
                   __cpu_model.m_cpu_subtype =
                      cpu_subtype::intel_corei7_alderlake;
                   break;
                case 0xc5:
+                  [[fallthrough]];
+               case 0xb5:
                   __cpu_model.m_cpu_type = cpu_type::intel_corei7;
                   __cpu_model.m_cpu_subtype =
                      cpu_subtype::intel_corei7_arrowlake;
                   break;
                case 0xc6:
-                  [[fallthrough]];
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_arrowlake_s;
+                  break;
                case 0xbd:
                   __cpu_model.m_cpu_type = cpu_type::intel_corei7;
                   __cpu_model.m_cpu_subtype =
                      cpu_subtype::intel_corei7_arrowlake_s;
                   break;
                case 0xcc:
+                  [[fallthrough]];
+               case 0xd5:
                   __cpu_model.m_cpu_type = cpu_type::intel_corei7;
                   __cpu_model.m_cpu_subtype =
                      cpu_subtype::intel_corei7_pantherlake;
@@ -486,7 +514,10 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
                      cpu_subtype::intel_corei7_icelake_server;
                   break;
                case 0xcf:
-                  [[fallthrough]];
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_sapphirerapids;
+                  break;
                case 0x8f:
                   __cpu_model.m_cpu_type = cpu_type::intel_corei7;
                   __cpu_model.m_cpu_subtype =
@@ -559,23 +590,155 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
                   __cpu_model.m_cpu_type = cpu_type::intel_knm;
                   break;
                default:
-                  // Unknown CPU.
                   break;
             }
-         // Unknown family.
+            break;
+         case 0x13:
+            switch (cpu_model.raw) {
+               case 1:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_diamondrapids;
+                  break;
+               default:
+                  break;
+            }
+            break;
+         case 0x12:
+            switch (cpu_model.raw) {
+               case 1:
+                  [[fallthrough]];
+               case 3:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_novalake;
+                  break;
+               default:
+                  break;
+            }
+            break;
          default:
             break;
       }
-   } else if (cpu_model == 0x68747541u) {
+   } else if (vendor1 == 0x68747541u) {
       // AMD CPU.
       __cpu_model.m_cpu_vendor_id = 2u;
 
-      // TODO: Fill this out.
-   } else {
-      //  Other manufacturer.
+      switch (cpu_family.raw) {
+         case 0x10:
+            [[fallthrough]];
+         case 0x12:
+            __cpu_model.m_cpu_type = cpu_type::amdfam10_h;
+            switch (cpu_model.raw) {
+               case 2:
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::amdfam10_h_barcelona;
+                  break;
+               case 4:
+                  __cpu_model.m_cpu_subtype = cpu_subtype::amdfam10_h_shanghai;
+                  break;
+               case 8:
+                  __cpu_model.m_cpu_subtype = cpu_subtype::amdfam10_h_istanbul;
+                  break;
+               default:
+                  break;
+            }
+            break;
+         case 0x14:
+            __cpu_model.m_cpu_type = cpu_type::amd_btver1;
+            break;
+         case 0x15:
+            __cpu_model.m_cpu_type = cpu_type::amdfam15_h;
+            if (cpu_model >= 0x60u && cpu_model <= 0x7fu) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam15_h_bdver4;
+            } else if (cpu_model >= 0x30u && cpu_model <= 0x3fu) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam15_h_bdver3;
+            } else if ((cpu_model >= 0x10u && cpu_model <= 0x1fu)
+                       || cpu_model == 0x02u) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam15_h_bdver2;
+            } else if (cpu_model <= 0x0fu) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam15_h_bdver1;
+            }
+            break;
+         case 0x16:
+            __cpu_model.m_cpu_type = cpu_type::amd_btver2;
+            break;
+         case 0x17:
+            __cpu_model.m_cpu_type = cpu_type::amdfam17_h;
+            if ((cpu_model >= 0x30u && cpu_model <= 0x3fu) || cpu_model == 0x47u
+                || (cpu_model >= 0x60u && cpu_model <= 0x67u)
+                || (cpu_model >= 0x68u && cpu_model <= 0x6fu)
+                || (cpu_model >= 0x70u && cpu_model <= 0x7fu)
+                || (cpu_model >= 0x84u && cpu_model <= 0x87u)
+                || (cpu_model >= 0x90u && cpu_model <= 0x97u)
+                || (cpu_model >= 0x98u && cpu_model <= 0x9fu)
+                || (cpu_model >= 0xa0u && cpu_model <= 0xafu)) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam17_h_znver2;
+            } else if ((cpu_model >= 0x10u && cpu_model <= 0x1fu)
+                       || (cpu_model >= 0x20u && cpu_model <= 0x2fu)) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam17_h_znver1;
+            }
+            break;
+         case 0x19:
+            __cpu_model.m_cpu_type = cpu_type::amdfam19_h;
+            if (cpu_model <= 0x0fu
+                || (cpu_model >= 0x20u && cpu_model <= 0x2fu)
+                || (cpu_model >= 0x30u && cpu_model <= 0x3fu)
+                || (cpu_model >= 0x40u && cpu_model <= 0x4fu)
+                || (cpu_model >= 0x50u && cpu_model <= 0x5fu)) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam19_h_znver3;
+            } else if ((cpu_model >= 0x10u && cpu_model <= 0x1fu)
+                       || (cpu_model >= 0x60u && cpu_model <= 0x6fu)
+                       || (cpu_model >= 0x70u && cpu_model <= 0x77u)
+                       || (cpu_model >= 0x78u && cpu_model <= 0x7fu)
+                       || (cpu_model >= 0xa0u && cpu_model <= 0xafu)) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam19_h_znver4;
+            }
+            break;
+         case 0x1a:
+            __cpu_model.m_cpu_type = cpu_type::amdfam1_ah;
+            if (cpu_model <= 0x4fu
+                || (cpu_model >= 0x60u && cpu_model <= 0x77u)
+                || (cpu_model >= 0xd0u && cpu_model <= 0xd7u)) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam1_ah_znver5;
+            } else if ((cpu_model >= 0x50u && cpu_model <= 0x5fu)
+                       || (cpu_model >= 0x80u && cpu_model <= 0xcfu)
+                       || (cpu_model >= 0xd8u && cpu_model <= 0xe7u)) {
+               __cpu_model.m_cpu_subtype = cpu_subtype::amdfam1_ah_znver6;
+            }
+            break;
+         default:
+            break;
+      }
+   } else if (vendor1 == 0x6f677948u) {
+      // Hygon CPU.
       __cpu_model.m_cpu_vendor_id = 3u;
 
-      // TODO: Fill this out.
+      if (cpu_family == 0x18u) {
+         switch (cpu_model.raw) {
+            case 4:
+               __cpu_model.m_cpu_type = cpu_type::hygonfam18_h;
+               __cpu_model.m_cpu_subtype = cpu_subtype::hygonfam18_h_c86_4g_m4;
+               break;
+            case 6:
+               __cpu_model.m_cpu_type = cpu_type::hygonfam18_h;
+               __cpu_model.m_cpu_subtype = cpu_subtype::hygonfam18_h_c86_4g_m6;
+               break;
+            case 7:
+               __cpu_model.m_cpu_type = cpu_type::hygonfam18_h;
+               __cpu_model.m_cpu_subtype = cpu_subtype::hygonfam18_h_c86_4g_m7;
+               break;
+            case 8:
+               __cpu_model.m_cpu_type = cpu_type::hygonfam18_h;
+               __cpu_model.m_cpu_subtype = cpu_subtype::hygonfam18_h_c86_4g_m8;
+               break;
+            default:
+               break;
+         }
+      }
+   } else {
+      //  Other manufacturer.
+      __cpu_model.m_cpu_vendor_id = 4u;
    }
 }
 
