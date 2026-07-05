@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/allocator>
+#include <cat/allocator_parameters>
 #include <cat/container>
 #include <cat/iterable>
 #include <cat/utility>
@@ -20,12 +21,6 @@ struct list_node {
 };
 
 template <typename T>
-struct slist_node {
-   slist_node<T>* _Nullable p_next_node = nullptr;
-   T storage;
-};
-
-template <typename, bool>
 class list_stepanov_iterator;
 
 template <typename T>
@@ -35,253 +30,278 @@ struct list_storage {
    detail::list_node<T>* _Nullable m_p_head = nullptr;
    detail::list_node<T>* _Nullable m_p_tail = nullptr;
 
-   void
+   // Reset storage pointers to empty state.
+   constexpr void
    reset() {
       m_p_head = nullptr;
       m_p_tail = nullptr;
    }
 };
 
-template <typename T>
-struct slist_storage {
-   using node = slist_node<T>;
-
-   detail::slist_node<T>* _Nullable m_p_head = nullptr;
-
-   void
-   reset() {
-      m_p_head = nullptr;
-   }
-};
-
 }  // namespace detail
 
-template <typename T, is_allocator Allocator, bool is_doubly_linked>
+inline namespace manual {
+
+template <typename T>
 class basic_list;
 
-template <typename T, is_allocator Allocator>
-using list = basic_list<T, Allocator, true>;
+template <typename T>
+using list = basic_list<T>;
 
-template <typename T, is_allocator Allocator>
-using slist = basic_list<T, Allocator, false>;
+}  // namespace manual
 
-template <typename T, is_allocator Allocator, bool is_doubly_linked>
-class [[clang::preferred_name(list<T, Allocator>),
-        clang::preferred_name(slist<T, Allocator>), gsl::Owner]]
-basic_list
-    : public container_interface<basic_list<T, Allocator, is_doubly_linked>, T>,
-      public stepanov_iterable_interface<
-         basic_list<T, Allocator, is_doubly_linked>,
-         detail::list_stepanov_iterator, T, is_doubly_linked> {
-   friend detail::list_stepanov_iterator<T, is_doubly_linked>;
+namespace detail {
+template <typename T>
+constexpr auto
+maybe_list_has_value(basic_list<T> const& value) -> bool;
 
-   // Doubly-linked list factory functions:
-   template <typename U, is_allocator A>
-   friend auto
-   make_list(A&) -> maybe<basic_list<U, A, true>>;
+template <typename T>
+constexpr auto
+maybe_list_nullopt() -> basic_list<T>;
+}  // namespace detail
 
-   template <typename U, is_allocator A, is_convertible<U> Arg,
-             is_convertible<U>... Args>
-   friend auto
-   make_list(A&, Arg&&, Args&&...) -> maybe<basic_list<U, A, true>>;
+inline namespace manual {
 
-   template <typename U, is_allocator A>
-   friend auto
-   make_list_filled(A&, idx, U const&) -> maybe<basic_list<U, A, true>>;
+template <typename T>
+class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
+    : public container_interface<basic_list<T>, T>,
+      public stepanov_iterable_interface<basic_list<T>,
+                                         detail::list_stepanov_iterator, T> {
+   friend detail::list_stepanov_iterator<T>;
 
-   // Singly-linked list factory functions:
-   template <typename U, is_allocator A>
-   friend auto
-   make_slist(A&) -> maybe<basic_list<U, A, false>>;
-
-   template <typename U, is_allocator A, is_convertible<U> Arg,
-             is_convertible<U>... Args>
-   friend auto
-   make_slist(A&, Arg&&, Args&&...) -> maybe<basic_list<U, A, false>>;
-
-   template <typename U, is_allocator A>
-   friend auto
-   make_slist_filled(A&, idx, U const&) -> maybe<basic_list<U, A, false>>;
-
-   // TODO: Implement `slist_storage`.
-   using storage_type = conditional<is_doubly_linked, detail::list_storage<T>,
-                                    detail::slist_storage<T>>;
-   using node_type = storage_type::node;
+   using node_type = detail::list_node<T>;
 
  public:
-   using iterator = detail::list_stepanov_iterator<T, is_doubly_linked>;
+   using value_type = T;
+   using size_type = idx;
+   using difference_type = iword;
+   using reference = T&;
+   using const_reference = T const&;
+   using pointer = T*;
+   using const_pointer = T const*;
+   using iterator = detail::list_stepanov_iterator<T>;
+   using const_iterator =
+      const_proxy_stepanov_iterator<detail::list_stepanov_iterator, T>;
+   using reverse_iterator = reverse_proxy_stepanov_iterator<iterator>;
+   using const_reverse_iterator =
+      reverse_proxy_stepanov_iterator<const_iterator>;
 
-   constexpr basic_list() = delete (
-      "`cat::list` cannot be created without an allocator. Call "
-      "`cat::make_list()` instead!");
+   // Default construct an empty `cat::basic_list`.
+   constexpr basic_list() = default;
 
+   // Move construct by taking ownership of other's nodes.
    constexpr basic_list(basic_list&& other_list)
-       : m_storage(other_list.m_storage),
-         m_size(other_list.m_size),
-         m_allocator(other_list.m_allocator) {
+       : m_storage(other_list.m_storage), m_size(other_list.m_size) {
       other_list.m_storage.m_p_head = nullptr;
-      if constexpr (is_doubly_linked) {
-         other_list.m_storage.m_p_tail = nullptr;
-      }
+      other_list.m_storage.m_p_tail = nullptr;
       other_list.m_size = 0u;
    }
 
+   // Copy construction is deleted to prevent implicit copying.
+   constexpr basic_list(basic_list const&) = delete (
+      "Implicit copying of `cat::basic_list` is forbidden. Call "
+      "`.clone()` or move instead!");
+
+   // Copy assignment is deleted to prevent implicit copying.
    auto
    operator=(basic_list const&)
-      -> basic_list& = delete ("Implicit copying of `cat::list` is forbidden. "
-                               "Call `.clone() or move instead!");
+      -> basic_list& = delete ("Implicit copying of `cat::basic_list` is "
+                               "forbidden. Call `.clone()` or move instead!");
 
+   // Move assign by transferring ownership from other_list.
    [[clang::reinitializes]]
    constexpr auto
    operator=(basic_list&& other_list) -> basic_list& {
+      if (this == __builtin_addressof(other_list)) {
+         return *this;
+      }
+      if !consteval {
+         cat::assert(m_storage.m_p_head == nullptr && m_size == 0u,
+                     "basic_list move-assigned over while still owning nodes. "
+                     "Call .free(allocator) first.");
+      }
       m_storage = other_list.m_storage;
       m_size = other_list.m_size;
 
       other_list.m_storage.m_p_head = nullptr;
-      if constexpr (is_doubly_linked) {
-         other_list.m_storage.m_p_tail = nullptr;
-      }
+      other_list.m_storage.m_p_tail = nullptr;
       other_list.m_size = 0u;
       return *this;
    }
 
+   // Destroy the `cat::basic_list` and release contained elements.
    constexpr ~basic_list() {
-      clear();
+      reset();
    }
 
+   // Swap contents with another `cat::basic_list`.
    constexpr void
    swap(basic_list& other) {
-      assert(&m_allocator == &other.m_allocator);
       cat::swap(m_storage, other.m_storage);
       cat::swap(m_size, other.m_size);
    }
 
- protected:
-   // Being `protected:` permits derived classes and friends to call these.
-
-   constexpr basic_list(Allocator& allocator [[clang::lifetimebound]])
-       : m_allocator(allocator) {
-   }
-
-   [[deprecated(
-      "Implicit copying of `cat::list` is forbidden. Call `.clone() or move"
-      "instead!")]]
-   constexpr basic_list(basic_list const&) = default;
-
- public:
-   // Get the count of elements stored in this `List`.
+   // Return current number of elements.
    [[nodiscard]]
-   auto
+   constexpr auto
    size() const -> idx {
       return m_size;
    }
 
-   // Get the maximum possible count of elements stored in a `List`.
+   // Return whether the `cat::basic_list` has no elements.
+   [[nodiscard]]
+   constexpr auto
+   empty() const -> bool {
+      return m_size == 0u;
+   }
+
+   // Return theoretical maximum capacity based on size type.
    [[nodiscard]]
    constexpr auto
    capacity() const -> idx {
       return m_size.max();
    }
 
+   // Return the maximum number of elements supported.
    [[nodiscard]]
-   auto
+   static constexpr auto
+   max_size() -> idx {
+      return idx::max() / sizeof(node_type);
+   }
+
+   // Access the first element.
+   [[nodiscard]]
+   constexpr auto
    front() [[clang::lifetimebound]] -> T& {
       return m_storage.m_p_head->storage;
    }
 
+   // Access the last element.
    [[nodiscard]]
-   auto
-   back() [[clang::lifetimebound]] -> T&
-      requires(is_doubly_linked)
-   {
+   constexpr auto
+   back() [[clang::lifetimebound]] -> T& {
       return m_storage.m_p_tail->storage;
    }
 
+   // Destroy contained elements and set size to zero.
    [[clang::reinitializes]]
    constexpr void
-   clear() {
+   reset() {
+      if constexpr (!is_trivially_destructible<T>) {
+         node_type* p_current = m_storage.m_p_head;
+         for (idx i = 0u; i < m_size; ++i) {
+            p_current->storage.~T();
+            p_current = p_current->p_next_node;
+         }
+      }
+      m_size = 0u;
+   }
+
+   // Free all nodes using the provided allocator and clear storage.
+   template <is_allocator Allocator>
+   [[clang::reinitializes]]
+   constexpr void
+   free(allocator_ref<Allocator> allocator) {
       node_type* p_current = m_storage.m_p_head;
+      idx remaining = m_size;
       while (p_current) {
          node_type* p_next = p_current->p_next_node;
-         m_allocator.free(p_current);
+         if (remaining > 0u) {
+            if constexpr (!is_trivially_destructible<T>) {
+               p_current->storage.~T();
+            }
+            remaining = idx(remaining - 1u);
+         }
+         allocator.free(p_current);
          p_current = p_next;
       }
       m_storage.reset();
       m_size = 0u;
    }
 
+   // Free nodes using `cat::dyn_allocator`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   free(dyn_allocator allocator) {
+      return free<dyn_allocator>(allocator);
+   }
+
+   // Clear the `cat::basic_list` contents without deallocating storage.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() {
+      reset();
+   }
+
+   // Replace contents with count copies of value using allocator.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   assign(allocator_ref<Allocator> allocator, idx count, T const& value)
+      -> maybe<void> {
+      this->free(allocator);
+      for (idx i = 0u; i < count; ++i) {
+         $prop(this->push_back(allocator, value));
+      }
+      return monostate;
+   }
+
+   // Replace contents with elements from the given range.
+   template <is_allocator Allocator, typename Range>
+   [[nodiscard]]
+   constexpr auto
+   assign_range(allocator_ref<Allocator> allocator, Range const& range)
+      -> maybe<void> {
+      this->free(allocator);
+      return this->append_range(allocator, range);
+   }
+
+   // Initialize storage with a single node as head and tail.
+
  private:
-   void
+   constexpr void
    place_initial_node(node_type& node) {
       node.p_next_node = nullptr;
-      if constexpr (is_doubly_linked) {
-         node.p_previous_node = nullptr;
-      }
+      node.p_previous_node = nullptr;
       m_storage.m_p_head = &node;
-      if constexpr (is_doubly_linked) {
-         m_storage.m_p_tail = &node;
-      }
+      m_storage.m_p_tail = &node;
       m_size = 1u;
    }
 
-   void
+   // Insert node at iterator position updating neighbors.
+   constexpr void
    place_node(iterator where, node_type& node) {
-      // `.place_node()` should almost always be used for insertions in the
-      // middle.
-      if (where != this->begin() && where != this->end()) [[likely]] {
-         // Place a node in the middle of this list.
-         node.p_next_node = where.m_p_node;
-         if constexpr (is_doubly_linked) {
-            node.p_previous_node = where.m_p_node->p_previous_node;
-         }
-
-         node.p_next_node->p_previous_node = &node;
-         if constexpr (is_doubly_linked) {
-            node.p_previous_node->p_next_node = &node;
-         }
-      } else if (where == this->begin()) {
-         // Place a node at the front of this list.
+      if (where == this->begin()) {
          node.p_next_node = m_storage.m_p_head;
          node.p_previous_node = nullptr;
-         if constexpr (is_doubly_linked) {
-            m_storage.m_p_head->p_previous_node = &node;
-         }
+         m_storage.m_p_head->p_previous_node = &node;
          m_storage.m_p_head = &node;
       } else {
-         // Place a node at the back of this list.
-         // TODO: Consolidate this.
-         if constexpr (is_doubly_linked) {
-            node.p_previous_node = where.m_p_node->p_previous_node;
-         }
-         node.p_next_node = m_storage.m_p_tail;
-         if constexpr (is_doubly_linked) {
-            node.p_previous_node->p_next_node = &node;
-         }
+         node.p_next_node = where.m_p_node;
+         node.p_previous_node = where.m_p_node->p_previous_node;
+         node.p_next_node->p_previous_node = &node;
+         node.p_previous_node->p_next_node = &node;
       }
-      m_size++;
+      ++m_size;
    }
 
-   // Place a node at the front of this list.
-   void
+   // Insert node at the front of the `cat::basic_list`.
+   constexpr void
    place_node_front(node_type& node) {
       if (m_size > 0) [[likely]] {
          node.p_next_node = m_storage.m_p_head;
-         if constexpr (is_doubly_linked) {
-            node.p_previous_node = nullptr;
-            node.p_next_node->p_previous_node = &node;
-         }
+         node.p_previous_node = nullptr;
+         node.p_next_node->p_previous_node = &node;
          m_storage.m_p_head = &node;
-         m_size++;
+         ++m_size;
       } else {
          this->place_initial_node(node);
       }
    }
 
-   // Place a node at the back of this list.
-   void
-   place_node_back(node_type& node)
-      requires(is_doubly_linked)
-   {
+   // Insert node at the back of the `cat::basic_list`.
+   constexpr void
+   place_node_back(node_type& node) {
       if (m_size == 0) [[unlikely]] {
          this->place_initial_node(node);
       } else {
@@ -289,18 +309,117 @@ basic_list
          node.p_previous_node = m_storage.m_p_tail;
          node.p_previous_node->p_next_node = &node;
          m_storage.m_p_tail = &node;
-         m_size++;
+         ++m_size;
       }
    }
 
-   template <typename U>
-   auto
-   append_new_node(node_type* _Nullable& p_tail, U&& value) -> maybe<iterator> {
-      node_type* p_node = $prop(m_allocator.template alloc<node_type>());
-      p_node->p_next_node = nullptr;
-      if constexpr (is_doubly_linked) {
-         p_node->p_previous_node = p_tail;
+   // Link a contiguous span of nodes into a doubly linked chain.
+   constexpr void
+   link_node_chain(span<node_type> nodes) {
+      if (nodes.size() == 0u) {
+         return;
       }
+      if (nodes.size() == 1u) {
+         nodes.front().p_next_node = nullptr;
+         nodes.front().p_previous_node = nullptr;
+         return;
+      }
+      nodes.front().p_previous_node = nullptr;
+      nodes.back().p_next_node = nullptr;
+      for (idx i = 0u; i + 1u < nodes.size(); ++i) {
+         nodes[i].p_next_node = &nodes[i + 1u];
+         nodes[i + 1u].p_previous_node = &nodes[i];
+      }
+   }
+
+   // Append a chain of nodes to the end of the `cat::basic_list`.
+   constexpr void
+   append_nodes(span<node_type> nodes) {
+      if (nodes.size() == 0u) {
+         return;
+      }
+      node_type& first = nodes.front();
+      node_type& last = nodes.back();
+      if (m_size == 0u) {
+         m_storage.m_p_head = &first;
+         m_storage.m_p_tail = &last;
+         first.p_previous_node = nullptr;
+         last.p_next_node = nullptr;
+      } else {
+         m_storage.m_p_tail->p_next_node = &first;
+         first.p_previous_node = m_storage.m_p_tail;
+         m_storage.m_p_tail = &last;
+         last.p_next_node = nullptr;
+      }
+      m_size += nodes.size();
+   }
+
+   // Prepend a chain of nodes to the front of the `cat::basic_list`.
+   constexpr void
+   prepend_nodes(span<node_type> nodes) {
+      if (nodes.size() == 0u) {
+         return;
+      }
+      node_type& first = nodes.front();
+      node_type& last = nodes.back();
+      if (m_size == 0u) {
+         m_storage.m_p_head = &first;
+         m_storage.m_p_tail = &last;
+      } else {
+         last.p_next_node = m_storage.m_p_head;
+         m_storage.m_p_head->p_previous_node = &last;
+         m_storage.m_p_head = &first;
+      }
+      first.p_previous_node = nullptr;
+      m_size += nodes.size();
+   }
+
+   // Allocate nodes and append range elements sequentially.
+   template <is_allocator Allocator, typename Range>
+   [[nodiscard]]
+   constexpr auto
+   append_range_sequential(allocator_ref<Allocator> allocator,
+                           Range const& range, idx count) -> maybe<void> {
+      span<node_type> nodes =
+         $prop(allocator.template alloc_multi<node_type>(count));
+      idx i = 0u;
+      for (auto const& value : range) {
+         nodes[i].storage = value;
+         ++i;
+      }
+      this->link_node_chain(nodes);
+      this->append_nodes(nodes);
+      return monostate;
+   }
+
+   // Allocate nodes and prepend range elements sequentially.
+   template <is_allocator Allocator, typename Range>
+   [[nodiscard]]
+   constexpr auto
+   prepend_range_sequential(allocator_ref<Allocator> allocator,
+                            Range const& range, idx count) -> maybe<void> {
+      span<node_type> nodes =
+         $prop(allocator.template alloc_multi<node_type>(count));
+      idx i = 0u;
+      for (auto const& value : range) {
+         nodes[i].storage = value;
+         ++i;
+      }
+      this->link_node_chain(nodes);
+      this->prepend_nodes(nodes);
+      return monostate;
+   }
+
+   // Allocate a new node at the end and initialize it with value.
+
+ public:
+   template <is_allocator Allocator, typename U>
+   constexpr auto
+   append_new_node(allocator_ref<Allocator> allocator,
+                   node_type* _Nullable& p_tail, U&& value) -> maybe<iterator> {
+      node_type* p_node = $prop(allocator.template alloc<node_type>());
+      p_node->p_next_node = nullptr;
+      p_node->p_previous_node = p_tail;
       p_node->storage = $fwd(value);
 
       if (m_size == 0u) {
@@ -308,63 +427,64 @@ basic_list
       } else {
          p_tail->p_next_node = p_node;
       }
-      if constexpr (is_doubly_linked) {
-         m_storage.m_p_tail = p_node;
-      }
+      m_storage.m_p_tail = p_node;
       p_tail = p_node;
       ++m_size;
       return iterator(p_node);
    }
 
-   auto
-   append_new_nodes([[maybe_unused]] node_type* _Nullable& p_tail)
+   // Termination overload for variadic append_new_nodes.
+   template <is_allocator Allocator>
+   constexpr auto
+   append_new_nodes(allocator_ref<Allocator> /*unused*/,
+                    [[maybe_unused]] node_type* _Nullable& p_tail)
       -> maybe<void> {
       return monostate;
    }
 
-   template <typename U, typename... Args>
-   auto
-   append_new_nodes(node_type* _Nullable& p_tail, U&& value,
+   // Append multiple new nodes from a parameter pack.
+   template <is_allocator Allocator, typename U, typename... Args>
+   constexpr auto
+   append_new_nodes(allocator_ref<Allocator> allocator,
+                    node_type* _Nullable& p_tail, U&& value,
                     Args&&... remaining) -> maybe<void> {
-      // Previously, this was implemented by a singular multi-allocation to
-      // reduce the number of allocator calls. That caused issues during
-      // cleanup, when every node necessarily has its own `free()`, resulting in
-      // double free errors. Now we recursively append instead.
-      // TODO: We should look into this optimization again.
-      $prop(this->append_new_node(p_tail, $fwd(value)));
-      return this->append_new_nodes(p_tail, $fwd(remaining)...);
+      $prop(this->append_new_node(allocator, p_tail, $fwd(value)));
+      return this->append_new_nodes(allocator, p_tail, $fwd(remaining)...);
    }
 
- public:
-   // Deep-copy the contents of this `list`.
+   // Create a deep copy of the `cat::basic_list` using the given allocator.
    template <is_allocator NewAllocator>
    [[nodiscard]]
-   auto
-   clone(NewAllocator& allocator)
-      -> maybe<basic_list<T, NewAllocator, is_doubly_linked>> {
-      using new_list_type = basic_list<T, NewAllocator, is_doubly_linked>;
-      new_list_type new_list(allocator);
-      typename new_list_type::node_type* p_tail = nullptr;
-      iterator it = this->begin();
-      for (idx i = 0; i < m_size; ++i) {
-         $prop(new_list.append_new_node(p_tail, *it));
-         ++it;
+   constexpr auto
+   clone(allocator_ref<NewAllocator> allocator) const& -> maybe<basic_list<T>> {
+      basic_list<T> new_list;
+      node_type* p_tail = nullptr;
+      node_type* p_node = m_storage.m_p_head;
+      for (idx i = 0u; i < m_size; ++i) {
+         $prop(new_list.append_new_node(allocator, p_tail, p_node->storage));
+         p_node = p_node->p_next_node;
       }
       return new_list;
    }
 
-   // Allocate a node and insert it into this list before the position of
-   // `where`.
-   template <typename U>
+   // Create a deep copy using `cat::dyn_allocator`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(dyn_allocator allocator) const& -> maybe<basic_list<T>> {
+      return clone<dyn_allocator>(allocator);
+   }
+
+   // Insert a new element before the iterator position.
+   template <is_allocator Allocator, typename U>
       requires(is_implicitly_convertible<U, T>)
-   auto
-   insert(iterator where, U&& value) -> maybe<iterator> {
-      node_type* p_node = $prop(m_allocator.template alloc<node_type>());
+   constexpr auto
+   insert(allocator_ref<Allocator> allocator, iterator where, U&& value)
+      -> maybe<iterator> {
+      node_type* p_node = $prop(allocator.template alloc<node_type>());
       node_type& node = *p_node;
       node.storage = $fwd(value);
 
       if (m_size == 0) [[unlikely]] {
-         // If this list has nothing in it, `.insert()` must be special-cased.
          this->place_initial_node(node);
       } else {
          this->place_node(where, node);
@@ -372,17 +492,16 @@ basic_list
       return iterator(p_node);
    }
 
-   // Allocate a node and insert it into this list before the position of
-   // `where`, then construct it with arguments.
-   template <typename... Args>
-   auto
-   emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
-      auto* _Nonnull p_node = $prop(m_allocator.template alloc<node_type>());
+   // Construct an element in place before the iterator position.
+   template <is_allocator Allocator, typename... Args>
+   constexpr auto
+   emplace(allocator_ref<Allocator> allocator, iterator where,
+           Args&&... arguments) -> maybe<iterator> {
+      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
       node_type& node = *p_node;
       new (&node.storage) T($fwd(arguments)...);
 
       if (m_size == 0) [[unlikely]] {
-         // If this list has nothing in it, `.emplace()` must be special-cased.
          this->place_initial_node(node);
       } else {
          this->place_node(where, node);
@@ -390,55 +509,61 @@ basic_list
       return iterator(p_node);
    }
 
-   // Remove and deallocate an element from this list.
-   auto
-   erase(iterator where) -> iterator
-      requires(is_doubly_linked)
-   {
+   // Erase the element at iterator and return the next iterator.
+   template <is_allocator Allocator>
+   constexpr auto
+   erase(allocator_ref<Allocator> allocator, iterator where) -> iterator {
       if (m_size == 0) [[unlikely]] {
-         // Prevent a segfault when the list is empty.
          return iterator(m_storage.m_p_head);
       }
 
       node_type& node = *where.m_p_node;
       iterator next = node.p_next_node;
-      if (&node != m_storage.m_p_head && &node != m_storage.m_p_tail)
+      if (m_size == 1u) [[unlikely]] {
+         m_storage.reset();
+      } else if (&node != m_storage.m_p_head && &node != m_storage.m_p_tail)
          [[likely]] {
-         // Remove a node from the middle of this list.
          node.p_next_node->p_previous_node = node.p_previous_node;
          node.p_previous_node->p_next_node = node.p_next_node;
       } else if (&node == m_storage.m_p_head) {
-         // Remove a node from the front of this list.
          node.p_next_node->p_previous_node = nullptr;
          m_storage.m_p_head = node.p_next_node;
       } else {
-         // Remove a node from the back of this list.
          node.p_previous_node->p_next_node = nullptr;
          m_storage.m_p_tail = node.p_previous_node;
       }
-      m_size.raw -= 1u;
-      m_allocator.free(&node);
+      m_size = idx(m_size - 1u);
+      allocator.free(&node);
       return iterator(next);
    }
 
-   void
-   erase_after(is_allocator auto& allocator, iterator where) {
-      node_type& node = *where.p_node;
+   // Remove the element after the given iterator.
+   template <is_allocator Allocator>
+   constexpr void
+   erase_after(allocator_ref<Allocator> allocator, iterator where) {
+      node_type& node = *where.m_p_node;
       node_type* p_remove = node.p_next_node;
+      if (p_remove == nullptr) {
+         return;
+      }
       node.p_next_node = p_remove->p_next_node;
-      if constexpr (is_doubly_linked) {
+      if (node.p_next_node != nullptr) {
          node.p_next_node->p_previous_node = &node;
+      } else {
+         m_storage.m_p_tail = &node;
       }
 
+      m_size = idx(m_size - 1u);
       allocator.free(p_remove);
    }
 
-   // Allocate a node and insert it at the beginning of this list.
-   template <typename U>
+   // Insert a copy of value at the front and return its iterator.
+   template <is_allocator Allocator, typename U>
       requires(is_implicitly_convertible<U, T>)
-   auto
-   push_front(U const& value) -> maybe<iterator> {
-      auto* _Nonnull p_node = $prop(m_allocator.template alloc<node_type>());
+   constexpr auto
+   push_front(allocator_ref<Allocator> allocator, U const& value)
+      -> maybe<iterator> {
+      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
       node_type& node = *p_node;
       node.storage = static_cast<T>(value);
       this->place_node_front(node);
@@ -446,11 +571,26 @@ basic_list
       return iterator(p_node);
    }
 
-   // Allocate a node and insert it at the beginning of this list.
-   template <typename... Args>
-   auto
-   emplace_front(Args&&... arguments) -> maybe<iterator> {
-      auto* _Nonnull p_node = $prop(m_allocator.template alloc<node_type>());
+   // Insert a moved value at the front and return its iterator.
+   template <is_allocator Allocator>
+      requires(is_move_constructible<T>)
+   constexpr auto
+   push_front(allocator_ref<Allocator> allocator, T&& value)
+      -> maybe<iterator> {
+      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
+      node_type& node = *p_node;
+      node.storage = cat::move(value);
+      this->place_node_front(node);
+
+      return iterator(p_node);
+   }
+
+   // Construct an element at the front and return its iterator.
+   template <is_allocator Allocator, typename... Args>
+   constexpr auto
+   emplace_front(allocator_ref<Allocator> allocator, Args&&... arguments)
+      -> maybe<iterator> {
+      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
       node_type& node = *p_node;
       new (&node.storage) T($fwd(arguments)...);
       this->place_node_front(node);
@@ -458,37 +598,33 @@ basic_list
       return iterator(p_node);
    }
 
-   // Remove an element from the front of this list.
-   void
-   pop_front() {
+   // Remove the first element and free its node via allocator.
+   template <is_allocator Allocator>
+   constexpr void
+   pop_front(allocator_ref<Allocator> allocator) {
       if (m_size > 0) [[likely]] {
          node_type& node = *(this->begin().m_p_node);
-         if constexpr (is_doubly_linked) {
-            if (node.p_next_node != nullptr) [[likely]] {
-               node.p_next_node->p_previous_node = nullptr;
-            }
+         if (node.p_next_node != nullptr) [[likely]] {
+            node.p_next_node->p_previous_node = nullptr;
          }
 
          m_storage.m_p_head = node.p_next_node;
-         m_size.raw -= 1u;
-         m_allocator.free(&node);
+         m_size = idx(m_size - 1u);
+         allocator.free(&node);
       }
 
-      if constexpr (is_doubly_linked) {
-         if (m_size <= 1) {
-            m_storage.m_p_tail = m_storage.m_p_head;
-         }
+      if (m_size <= 1) {
+         m_storage.m_p_tail = m_storage.m_p_head;
       }
    }
 
-   // TODO: rval-ref overload of `.push_back()`.
-
-   // Allocate a node and insert it at the end of this list.
-   template <typename U>
-      requires(is_implicitly_convertible<U, T> && is_doubly_linked)
-   auto
-   push_back(U const& value) -> maybe<iterator> {
-      node_type* p_node = $prop(m_allocator.template alloc<node_type>());
+   // Append a copy of value and return its iterator.
+   template <is_allocator Allocator, typename U>
+      requires(is_implicitly_convertible<U, T>)
+   constexpr auto
+   push_back(allocator_ref<Allocator> allocator, U const& value)
+      -> maybe<iterator> {
+      node_type* p_node = $prop(allocator.template alloc<node_type>());
 
       p_node->storage = static_cast<T>(value);
       this->place_node_back(*p_node);
@@ -496,12 +632,25 @@ basic_list
       return iterator(p_node);
    }
 
-   // Allocate a node and insert it at the end of this list.
-   template <typename... Args>
-      requires(is_doubly_linked)
-   auto
-   emplace_back(Args&&... arguments) -> maybe<iterator> {
-      auto* _Nonnull p_node = $prop(m_allocator.template alloc<node_type>());
+   // Append a moved value and return its iterator.
+   template <is_allocator Allocator>
+      requires(is_move_constructible<T>)
+   constexpr auto
+   push_back(allocator_ref<Allocator> allocator, T&& value) -> maybe<iterator> {
+      node_type* p_node = $prop(allocator.template alloc<node_type>());
+
+      p_node->storage = cat::move(value);
+      this->place_node_back(*p_node);
+
+      return iterator(p_node);
+   }
+
+   // Construct an element at the back and return its iterator.
+   template <is_allocator Allocator, typename... Args>
+   constexpr auto
+   emplace_back(allocator_ref<Allocator> allocator, Args&&... arguments)
+      -> maybe<iterator> {
+      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
       node_type& node = *p_node;
       new (&node.storage) T($fwd(arguments)...);
       this->place_node_back(node);
@@ -509,67 +658,199 @@ basic_list
       return iterator(p_node);
    }
 
-   // Remove and deallocate an element from the back of this list.
-   void
-   pop_back()
-      requires(is_doubly_linked)
+   // Append elements from a range using the allocator.
+   template <is_allocator Allocator, typename Range>
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Range const& range)
+      -> maybe<void> {
+      if constexpr (requires { idx(range.size()); }) {
+         idx const count = idx(range.size());
+         if (count == 0u) {
+            return monostate;
+         }
+         return this->append_range_sequential(allocator, range, count);
+      }
+      for (auto const& value : range) {
+         $prop(this->push_back(allocator, value));
+      }
+      return monostate;
+   }
+
+   // Prepend elements from a range using the allocator.
+   template <is_allocator Allocator, typename Range>
+   [[nodiscard]]
+   constexpr auto
+   prepend_range(allocator_ref<Allocator> allocator, Range const& range)
+      -> maybe<void> {
+      if constexpr (requires { idx(range.size()); }) {
+         idx const count = idx(range.size());
+         if (count == 0u) {
+            return monostate;
+         }
+         return this->prepend_range_sequential(allocator, range, count);
+      }
+      if (this->empty()) {
+         return this->append_range(allocator, range);
+      }
+      iterator const where = this->begin();
+      for (auto const& value : range) {
+         $prop(this->insert(allocator, where, value));
+      }
+      return monostate;
+   }
+
+   // Resize to given size by popping or emplacing default elements.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   resize(allocator_ref<Allocator> allocator, idx size) -> maybe<void>
+      requires(is_default_constructible<T>)
    {
+      while (m_size > size) {
+         this->pop_back(allocator);
+      }
+      while (m_size < size) {
+         $prop(this->emplace_back(allocator));
+      }
+      return monostate;
+   }
+
+   // Resize to given size by popping or appending copies of value.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   resize(allocator_ref<Allocator> allocator, idx size, T const& value)
+      -> maybe<void>
+      requires(is_copy_constructible<T>)
+   {
+      while (m_size > size) {
+         this->pop_back(allocator);
+      }
+      while (m_size < size) {
+         $prop(this->push_back(allocator, value));
+      }
+      return monostate;
+   }
+
+   // Remove the last element and free its node via allocator.
+   template <is_allocator Allocator>
+   constexpr void
+   pop_back(allocator_ref<Allocator> allocator) {
       if (m_size > 0) [[likely]] {
          node_type& node = *(this->end().m_p_node);
-         if (node.p_previous_node != nullptr) [[likely]] {
+         if (m_size == 1u) [[unlikely]] {
+            m_storage.reset();
+         } else if (node.p_previous_node != nullptr) [[likely]] {
             node.p_previous_node->p_next_node = nullptr;
+            m_storage.m_p_tail = node.p_previous_node;
          }
-         m_storage.m_p_tail = node.p_previous_node;
-         m_size.raw -= 1u;
-         m_allocator.free(&node);
+         m_size = idx(m_size - 1u);
+         allocator.free(&node);
       }
    }
 
-   // Providing these four iterator getters generates the remaining eight
-   // through the `container_interface`.
+   // Reverse the order of nodes in the `cat::basic_list`.
+   constexpr void
+   reverse() {
+      node_type* p_current = m_storage.m_p_head;
+      while (p_current != nullptr) {
+         node_type* p_next = p_current->p_next_node;
+         cat::swap(p_current->p_next_node, p_current->p_previous_node);
+         p_current = p_next;
+      }
+      cat::swap(m_storage.m_p_head, m_storage.m_p_tail);
+   }
+
+   // Remove elements satisfying predicate and return removed count.
+   template <is_allocator Allocator, typename Pred>
+   constexpr auto
+   remove_if(allocator_ref<Allocator> allocator, Pred&& pred) -> idx {
+      idx const old_size = m_size;
+      node_type* p_current = m_storage.m_p_head;
+      while (p_current != nullptr) {
+         node_type* p_next = p_current->p_next_node;
+         if (pred(p_current->storage)) {
+            this->erase(allocator, iterator(p_current));
+         }
+         p_current = p_next;
+      }
+      return idx(old_size - m_size);
+   }
+
+   // Remove all elements equal to value and return removed count.
+   template <is_allocator Allocator>
+   constexpr auto
+   remove(allocator_ref<Allocator> allocator, T const& value) -> idx {
+      return this->remove_if(allocator, [&value](T const& element) -> bool {
+         return element == value;
+      });
+   }
+
+   // Remove consecutive duplicate elements based on predicate.
+   template <is_allocator Allocator, typename Pred>
+   constexpr auto
+   unique(allocator_ref<Allocator> allocator, Pred&& pred) -> idx {
+      idx const old_size = m_size;
+      node_type* p_current = m_storage.m_p_head;
+      while (p_current != nullptr && p_current->p_next_node != nullptr) {
+         if (pred(p_current->storage, p_current->p_next_node->storage)) {
+            this->erase(allocator, iterator(p_current->p_next_node));
+         } else {
+            p_current = p_current->p_next_node;
+         }
+      }
+      return idx(old_size - m_size);
+   }
+
+   // Remove consecutive equal elements.
+   template <is_allocator Allocator>
+   constexpr auto
+   unique(allocator_ref<Allocator> allocator) -> idx {
+      return this->unique(allocator, [](T const& left, T const& right) -> bool {
+         return left == right;
+      });
+   }
+
+   // Return iterator to the first node.
    [[nodiscard]]
-   auto
+   constexpr auto
    begin() -> iterator {
       return iterator(m_storage.m_p_head);
    }
 
+   // Return iterator to the last node.
    [[nodiscard]]
-   auto
-   end() -> iterator
-      requires(is_doubly_linked)
-   {
+   constexpr auto
+   end() -> iterator {
       return iterator(m_storage.m_p_tail);
    }
 
+   // Return reverse iterator to the last node.
    [[nodiscard]]
-   auto
-   rbegin()
-      requires(is_doubly_linked)
-   {
+   constexpr auto
+   rbegin() {
       return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_tail};
    }
 
+   // Return reverse iterator to one before the first node.
    [[nodiscard]]
-   auto
-   rend()
-      requires(is_doubly_linked)
-   {
+   constexpr auto
+   rend() {
       return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_head};
    }
 
+   // Return const reverse iterator to the last node.
    [[nodiscard]]
-   auto
-   rbegin() const
-      requires(is_doubly_linked)
-   {
+   constexpr auto
+   rbegin() const {
       return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_tail};
    }
 
+   // Return const reverse iterator to one before the first node.
    [[nodiscard]]
-   auto
-   rend() const
-      requires(is_doubly_linked)
-   {
+   constexpr auto
+   rend() const {
       return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_head};
    }
 
@@ -587,12 +868,13 @@ basic_list
 
       list_iteration_context(list_iteration_context const&) = delete;
       list_iteration_context(list_iteration_context&&) = delete;
-      auto
+      constexpr auto
       operator=(list_iteration_context const&)
          -> list_iteration_context& = delete;
-      auto
+      constexpr auto
       operator=(list_iteration_context&&) -> list_iteration_context& = delete;
 
+      // Iterate while predicate returns true for each element.
       template <typename Pred>
       constexpr auto
       run_while(Pred&& pred) -> iteration_result {
@@ -622,13 +904,14 @@ basic_list
       list_reverse_iteration_context(list_reverse_iteration_context const&) =
          delete;
       list_reverse_iteration_context(list_reverse_iteration_context&&) = delete;
-      auto
+      constexpr auto
       operator=(list_reverse_iteration_context const&)
          -> list_reverse_iteration_context& = delete;
-      auto
+      constexpr auto
       operator=(list_reverse_iteration_context&&)
          -> list_reverse_iteration_context& = delete;
 
+      // Iterate in reverse while predicate returns true for each element.
       template <typename Pred>
       constexpr auto
       run_while(Pred&& pred) -> iteration_result {
@@ -643,12 +926,14 @@ basic_list
       }
    };
 
+   // Return a forward iteration context starting at the head.
    [[nodiscard]]
    constexpr auto
    iterate() -> list_iteration_context<node_type, T> {
       return list_iteration_context<node_type, T>{m_storage.m_p_head};
    }
 
+   // Return a const forward iteration context starting at the head.
    [[nodiscard]]
    constexpr auto
    iterate() const -> list_iteration_context<node_type const, T const> {
@@ -657,77 +942,128 @@ basic_list
       };
    }
 
+   // Return a reverse iteration context starting at the tail.
    [[nodiscard]]
    constexpr auto
-   reverse_iterate() -> list_reverse_iteration_context<node_type, T>
-      requires(is_doubly_linked)
-   {
+   reverse_iterate() -> list_reverse_iteration_context<node_type, T> {
       return list_reverse_iteration_context<node_type, T>{m_storage.m_p_tail};
    }
 
+   // Return a const reverse iteration context starting at the tail.
    [[nodiscard]]
    constexpr auto
    reverse_iterate() const
-      -> list_reverse_iteration_context<node_type const, T const>
-      requires(is_doubly_linked)
-   {
+      -> list_reverse_iteration_context<node_type const, T const> {
       return list_reverse_iteration_context<node_type const, T const>{
          m_storage.m_p_tail,
       };
    }
 
  private:
-   storage_type m_storage;
+   template <typename U>
+   friend constexpr auto
+   detail::maybe_list_has_value(basic_list<U> const&) -> bool;
+
+   template <typename U>
+   friend constexpr auto
+   detail::maybe_list_nullopt() -> basic_list<U>;
+
+   detail::list_storage<T> m_storage;
    idx m_size = 0;
-   Allocator& m_allocator;
 };
+
+// Create an empty `cat::basic_list`.
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_list(allocator_ref<Allocator> /*unused*/) -> maybe<basic_list<T>> {
+   return basic_list<T>{};
+}
+
+// Create a `cat::basic_list` initialized from the given values.
+template <typename T, is_allocator Allocator, is_convertible<T> U,
+          is_convertible<T>... Args>
+[[nodiscard]]
+constexpr auto
+make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+          U&& value, Args&&... remaining) -> maybe<basic_list<T>> {
+   basic_list<T> new_list;
+   detail::list_node<T>* p_tail = nullptr;
+
+   $prop(new_list.append_new_nodes(allocator, p_tail, $fwd(value),
+                                   $fwd(remaining)...));
+
+   return new_list;
+}
+
+// Create a `cat::basic_list` with deduced common element type.
+template <is_allocator Allocator, typename... Args>
+[[nodiscard]]
+constexpr auto
+make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+          Args&&... arguments) {
+   using common = common_type<Args...>;
+   return make_list<common>(allocator, static_cast<common>($fwd(arguments))...);
+}
+
+// Create a `cat::basic_list` filled with count copies of value.
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_list_filled(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+                 idx count, T const& value) -> maybe<basic_list<T>> {
+   basic_list<T> new_list;
+   detail::list_node<T>* p_tail = nullptr;
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_list.append_new_node(allocator, p_tail, value));
+   }
+
+   return new_list;
+}
+
+}  // namespace manual
 
 namespace detail {
 
-template <typename T, bool is_doubly_linked>
+template <typename T>
 class list_stepanov_iterator
-    : public stepanov_iterator_interface<
-         conditional<is_doubly_linked, bidirectional_iterator_tag,
-                     forward_iterator_tag>,
-         T> {
+    : public stepanov_iterator_interface<bidirectional_iterator_tag, T> {
  public:
    using value_type = T;
    using const_value_type = T const;
    using reference = T&;
    using const_reference = T const&;
 
-   using node_type = conditional<is_doubly_linked, list_node<T>, slist_node<T>>;
+   using node_type = list_node<T>;
 
-   // using container_type [[maybe_unused]] = list<T>;
-
-   // TODO: This default constructor is deprecated due to the user-defined
-   // constructor. Should this still exist?
-   //    iterator(iterator const&) = default;
-
-   list_stepanov_iterator(node_type* _Nullable p_input) : m_p_node(p_input) {
+   // Construct iterator from a node pointer.
+   constexpr list_stepanov_iterator(node_type* _Nullable p_input)
+       : m_p_node(p_input) {
    }
 
-   auto
+   // Move iterator to next node.
+   constexpr auto
    increment() -> list_stepanov_iterator& {
       m_p_node = m_p_node->p_next_node;
       return *this;
    }
 
-   auto
-   decrement() -> list_stepanov_iterator&
-      requires(is_doubly_linked)
-   {
+   // Move iterator to previous node.
+   constexpr auto
+   decrement() -> list_stepanov_iterator& {
       m_p_node = m_p_node->p_previous_node;
       return *this;
    }
 
-   auto
+   // Access element referenced by iterator.
+   constexpr auto
    dereference() const -> T& {
       assert(m_p_node);
       return m_p_node->storage;
    }
 
-   auto
+   // Compare iterator equality by node pointer.
+   constexpr auto
    equal_to(list_stepanov_iterator const& it) const -> bool {
       return it.m_p_node == m_p_node;
    }
@@ -735,114 +1071,25 @@ class list_stepanov_iterator
    node_type* _Nullable m_p_node;
 };
 
+// Return true when `cat::basic_list` represents a value or is empty.
+template <typename T>
+constexpr auto
+maybe_list_has_value(basic_list<T> const& value) -> bool {
+   return value.m_storage.m_p_head != nullptr || value.m_size == 0u;
+}
+
+// Construct a nullopt-like `cat::basic_list` sentinel value.
+template <typename T>
+constexpr auto
+maybe_list_nullopt() -> basic_list<T> {
+   basic_list<T> value;
+   value.m_storage.m_p_head = nullptr;
+   value.m_size = 1u;
+   return value;
+}
+
 }  // namespace detail
 
-// These factory functions require access to the `protected` constructor, which
-// is marked `[[deprecated]]`.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-
-// Make an empty `list`.
-template <typename T, is_allocator Allocator>
-[[nodiscard]]
-auto
-make_list(Allocator& allocator [[clang::lifetimebound]])
-   -> maybe<list<T, Allocator>> {
-   return list<T, Allocator>(allocator);
-}
-
-// Make a `list` initialized by a pack.
-template <typename T, is_allocator Allocator, is_convertible<T> U,
-          is_convertible<T>... Args>
-[[nodiscard]]
-auto
-make_list(Allocator& allocator [[clang::lifetimebound]], U&& value,
-          Args&&... remaining) -> maybe<list<T, Allocator>> {
-   list<T, Allocator> new_list(allocator);
-   using node = detail::list_node<T>;
-   node* p_tail = nullptr;
-
-   $prop(new_list.append_new_nodes(p_tail, $fwd(value), $fwd(remaining)...));
-
-   return new_list;
-}
-
-// Make a `list` initialized by a pack.
-template <is_allocator Allocator, typename... Args>
-[[nodiscard]]
-auto
-make_list(Allocator& allocator [[clang::lifetimebound]], Args&&... arguments) {
-   using common = common_type<Args...>;
-   return make_list<common>(allocator, static_cast<common>($fwd(arguments))...);
-}
-
-// Make a `list` initialized to `value`.
-template <typename T, is_allocator Allocator>
-[[nodiscard]]
-auto
-make_list_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
-                 T const& value) -> maybe<list<T, Allocator>> {
-   list<T, Allocator> new_list(allocator);
-   using node = detail::list_node<T>;
-   node* p_tail = nullptr;
-   for (idx i = 0u; i < count; ++i) {
-      $prop(new_list.append_new_node(p_tail, value));
-   }
-
-   return new_list;
-}
-
-// Make an empty `slist`.
-template <typename T, is_allocator Allocator>
-[[nodiscard]]
-auto
-make_slist(Allocator& allocator [[clang::lifetimebound]])
-   -> maybe<slist<T, Allocator>> {
-   return slist<T, Allocator>(allocator);
-}
-
-// Make a `slist` initialized by a pack.
-template <typename T, is_allocator Allocator, is_convertible<T> U,
-          is_convertible<T>... Args>
-[[nodiscard]]
-auto
-make_slist(Allocator& allocator [[clang::lifetimebound]], U&& value,
-           Args&&... remaining) -> maybe<slist<T, Allocator>> {
-   slist<T, Allocator> new_slist(allocator);
-   using node = detail::slist_node<T>;
-   node* p_tail = nullptr;
-
-   $prop(new_slist.append_new_nodes(p_tail, $fwd(value), $fwd(remaining)...));
-
-   return new_slist;
-}
-
-// Make an `slist` initialized by a pack.
-template <is_allocator Allocator, typename... Args>
-[[nodiscard]]
-auto
-make_slist(Allocator& allocator [[clang::lifetimebound]], Args&&... arguments) {
-   using common = common_type<Args...>;
-   return make_slist<common>(allocator,
-                             static_cast<common>($fwd(arguments))...);
-}
-
-// Make an `slist` initialized to `value`.
-template <typename T, is_allocator Allocator>
-[[nodiscard]]
-auto
-make_slist_filled(Allocator& allocator [[clang::lifetimebound]], idx count,
-                  T const& value) -> maybe<slist<T, Allocator>> {
-   slist<T, Allocator> new_slist(allocator);
-   using node = detail::slist_node<T>;
-   node* p_tail = nullptr;
-   for (idx i = 0u; i < count; ++i) {
-      $prop(new_slist.append_new_node(p_tail, value));
-   }
-
-   return new_slist;
-}
-
-#pragma clang diagnostic pop
-
 }  // namespace cat
+
+#include <cat/raii_list>

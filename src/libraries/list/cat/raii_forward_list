@@ -1,0 +1,449 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/forward_list>
+#include <cat/null_allocator>
+
+namespace cat::raii {
+
+template <typename T, is_allocator Allocator = dyn_allocator>
+class basic_forward_list;
+
+template <typename T, is_allocator Allocator = dyn_allocator>
+using forward_list = basic_forward_list<T, Allocator>;
+
+}  // namespace cat::raii
+
+namespace cat::detail {
+template <typename T>
+constexpr auto
+raii_forward_list_has_value(
+   raii::basic_forward_list<T, dyn_allocator> const& value) -> bool;
+
+template <typename T>
+constexpr auto
+raii_forward_list_nullopt() -> raii::basic_forward_list<T, dyn_allocator>;
+}  // namespace cat::detail
+
+namespace cat::raii {
+
+template <typename T, is_allocator Allocator>
+class [[clang::preferred_name(forward_list<T, Allocator>), gsl::Owner]]
+basic_forward_list
+    : public container_interface<basic_forward_list<T, Allocator>, T>,
+      public stepanov_iterable_interface<basic_forward_list<T, Allocator>,
+                                         detail::forward_list_stepanov_iterator,
+                                         T> {
+   template <typename, is_allocator>
+   friend class basic_forward_list;
+
+   template <typename U, is_allocator A>
+   friend constexpr auto
+      make_forward_list(allocator_ref<A>) -> maybe<basic_forward_list<U, A>>;
+
+   template <typename U, is_allocator A, is_convertible<U> Arg,
+             is_convertible<U>... Args>
+   friend constexpr auto
+   make_forward_list(allocator_ref<A>, Arg&&, Args&&...)
+      -> maybe<basic_forward_list<U, A>>;
+
+   template <typename U, is_allocator A>
+   friend constexpr auto
+   make_forward_list_filled(allocator_ref<A>, idx, U const&)
+      -> maybe<basic_forward_list<U, A>>;
+
+ public:
+   using value_type = T;
+   using allocator_type = allocator_ref<Allocator>;
+   using size_type = idx;
+   using difference_type = iword;
+   using reference = T&;
+   using const_reference = T const&;
+   using pointer = T*;
+   using const_pointer = T const*;
+   using iterator = detail::forward_list_stepanov_iterator<T>;
+   using const_iterator =
+      const_proxy_stepanov_iterator<detail::forward_list_stepanov_iterator, T>;
+
+   // Construction without an allocator is not allowed.
+   constexpr basic_forward_list() = delete (
+      "`cat::raii::basic_forward_list` cannot be created without an "
+      "allocator.");
+
+   // Construct a `cat::raii::basic_forward_list` bound to the provided
+   // allocator.
+   constexpr basic_forward_list(allocator_ref<Allocator> allocator
+                                [[clang::lifetimebound]])
+       : m_core(), m_allocator(allocator) {
+   }
+
+   // Default move construct the `cat::raii::basic_forward_list`.
+   constexpr basic_forward_list(basic_forward_list&&) = default;
+
+   constexpr basic_forward_list(basic_forward_list const&) = delete (
+      "Implicit copying of `cat::raii::basic_forward_list` is forbidden. Call "
+      "`.clone()` or move instead!");
+
+   auto
+   operator=(basic_forward_list const&) -> basic_forward_list& = delete (
+      "Implicit copying of `cat::raii::basic_forward_list` is forbidden. "
+      "Call `.clone()` or move instead!");
+
+   // Move assign by transferring core when allocators match.
+   [[clang::reinitializes]]
+   constexpr auto
+   operator=(basic_forward_list&& other) -> basic_forward_list& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+
+      m_core.free(m_allocator);
+      if (m_allocator == other.m_allocator) {
+         m_core = cat::move(other.m_core);
+      } else {
+         if !consteval {
+            cat::assert(false,
+                        "raii::basic_forward_list move-assign across non-equal "
+                        "allocators is not yet implemented.");
+         }
+      }
+      return *this;
+   }
+
+   // Destroy the `cat::raii::basic_forward_list` and release resources using
+   // allocator.
+   constexpr ~basic_forward_list() {
+      reset();
+   }
+
+   // Swap contents; requires matching allocators.
+   constexpr void
+   swap(basic_forward_list& other) {
+      if !consteval {
+         cat::assert(m_allocator == other.m_allocator);
+      }
+      m_core.swap(other.m_core);
+   }
+
+   // Return number of elements.
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_core.size();
+   }
+
+   // Return whether the `cat::raii::basic_forward_list` is empty.
+   [[nodiscard]]
+   constexpr auto
+   empty() const -> bool {
+      return m_core.empty();
+   }
+
+   // Return capacity in elements.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_core.capacity();
+   }
+
+   // Return the maximum number of elements supported.
+   [[nodiscard]]
+   static constexpr auto
+   max_size() -> idx {
+      return manual::basic_forward_list<T>::max_size();
+   }
+
+   // Get the allocator associated with this object.
+   [[nodiscard]]
+   constexpr auto
+   get_allocator(this auto&& self) -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
+   // Access the first element.
+   [[nodiscard]]
+   constexpr auto
+   front() [[clang::lifetimebound]] -> T& {
+      return m_core.front();
+   }
+
+   // Free all nodes using the stored allocator.
+   [[clang::reinitializes]]
+   constexpr void
+   free() {
+      m_core.free(m_allocator);
+   }
+
+   // Reset the `cat::raii::basic_forward_list` and free resources.
+   [[clang::reinitializes]]
+   constexpr void
+   reset() {
+      this->free();
+   }
+
+   // Clear elements without deallocating.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() {
+      m_core.reset();
+   }
+
+   // Create a copy of this `cat::raii::basic_forward_list` using current
+   // allocator.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone() const& -> maybe<basic_forward_list> {
+      return clone(m_allocator);
+   }
+
+   // Clone into a `cat::raii::basic_forward_list` using the provided allocator.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(allocator_ref<NewAllocator> allocator)
+      const& -> maybe<basic_forward_list<T, NewAllocator>> {
+      basic_forward_list<T, NewAllocator> new_list(allocator);
+      new_list.m_core = $prop(m_core.clone(allocator));
+      return new_list;
+   }
+
+   // Clone into a `cat::raii::basic_forward_list` using `cat::dyn_allocator`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(dyn_allocator allocator)
+      const& -> maybe<basic_forward_list<T, dyn_allocator>> {
+      basic_forward_list<T, dyn_allocator> new_list(allocator);
+      new_list.m_core = $prop(m_core.clone(allocator));
+      return new_list;
+   }
+
+   // Insert a value before iterator using the stored allocator.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   constexpr auto
+   insert(iterator where, U&& value) -> maybe<iterator> {
+      return m_core.insert(m_allocator, where, $fwd(value));
+   }
+
+   // Emplace an element before iterator using the stored allocator.
+   template <typename... Args>
+   constexpr auto
+   emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
+      return m_core.emplace(m_allocator, where, $fwd(arguments)...);
+   }
+
+   // Erase the element after iterator.
+   constexpr void
+   erase_after(iterator where) {
+      m_core.erase_after(m_allocator, where);
+   }
+
+   // Insert a copy of value at front and return its iterator.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   constexpr auto
+   push_front(U const& value) -> maybe<iterator> {
+      return m_core.push_front(m_allocator, value);
+   }
+
+   // Insert a moved value at the front and return its iterator.
+   [[nodiscard]]
+   constexpr auto
+   push_front(T&& value) -> maybe<iterator>
+      requires(is_move_constructible<T>)
+   {
+      return m_core.push_front(m_allocator, cat::move(value));
+   }
+
+   // Emplace an element at the front and return its iterator.
+   template <typename... Args>
+   constexpr auto
+   emplace_front(Args&&... arguments) -> maybe<iterator> {
+      return m_core.emplace_front(m_allocator, $fwd(arguments)...);
+   }
+
+   // Remove the first element using the stored allocator.
+   constexpr void
+   pop_front() {
+      m_core.pop_front(m_allocator);
+   }
+
+   // Return iterator to the first element.
+   [[nodiscard]]
+   constexpr auto
+   begin() -> iterator {
+      return m_core.begin();
+   }
+
+   // Return an iteration context for forward traversal.
+   [[nodiscard]]
+   constexpr auto
+   iterate() {
+      return m_core.iterate();
+   }
+
+   // Return a const iteration context for forward traversal.
+   [[nodiscard]]
+   constexpr auto
+   iterate() const {
+      return m_core.iterate();
+   }
+
+   // Access the allocator used by this `cat::raii::basic_forward_list`.
+   [[nodiscard]]
+   constexpr auto
+   allocator(this auto&& self) -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
+   // Release ownership of the underlying `cat::basic_forward_list`.
+   [[nodiscard, clang::reinitializes]]
+   constexpr auto
+   release() -> manual::basic_forward_list<T> {
+      return cat::move(m_core);
+   }
+
+ private:
+   template <typename U>
+   friend constexpr auto
+   detail::raii_forward_list_nullopt() -> basic_forward_list<U, dyn_allocator>;
+
+   template <typename U>
+   friend constexpr auto
+   detail::raii_forward_list_has_value(
+      basic_forward_list<U, dyn_allocator> const&) -> bool;
+
+   manual::basic_forward_list<T> m_core;
+   [[no_unique_address]]
+   allocator_ref<Allocator> m_allocator;
+};
+
+// Create a `cat::raii::basic_forward_list` bound to the given allocator.
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_forward_list(allocator_ref<Allocator> allocator)
+   -> maybe<raii::basic_forward_list<T, Allocator>> {
+   return raii::basic_forward_list<T, Allocator>(allocator);
+}
+
+// Create a `cat::raii::basic_forward_list` using `cat::dyn_allocator`.
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_forward_list(dyn_allocator allocator)
+   -> maybe<raii::basic_forward_list<T, dyn_allocator>> {
+   return raii::basic_forward_list<T, dyn_allocator>(allocator);
+}
+
+// Create a `cat::raii::basic_forward_list` initialized from the given values.
+template <typename T, is_allocator Allocator, is_convertible<T> U,
+          is_convertible<T>... Args>
+[[nodiscard]]
+constexpr auto
+make_forward_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+                  U&& value, Args&&... remaining)
+   -> maybe<raii::basic_forward_list<T, Allocator>> {
+   raii::basic_forward_list<T, Allocator> new_list(allocator);
+   detail::forward_list_node<T>* p_tail = nullptr;
+   $prop(new_list.m_core.append_new_nodes(allocator, p_tail, $fwd(value),
+                                          $fwd(remaining)...));
+   return new_list;
+}
+
+// Create a `cat::raii::basic_forward_list` with deduced common element type.
+template <is_allocator Allocator, typename... Args>
+[[nodiscard]]
+constexpr auto
+make_forward_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+                  Args&&... arguments) {
+   using common = common_type<Args...>;
+   return make_forward_list<common>(allocator,
+                                    static_cast<common>($fwd(arguments))...);
+}
+
+// Create a `cat::raii::basic_forward_list` using `cat::dyn_allocator`.
+template <typename T, is_convertible<T> U, is_convertible<T>... Args>
+[[nodiscard]]
+constexpr auto
+make_forward_list(dyn_allocator allocator, U&& value, Args&&... remaining)
+   -> maybe<raii::basic_forward_list<T, dyn_allocator>> {
+   return cat::raii::make_forward_list<T, dyn_allocator>(
+      allocator_ref<dyn_allocator>(allocator), $fwd(value), $fwd(remaining)...);
+}
+
+// Create a `cat::raii::basic_forward_list` using `cat::dyn_allocator`.
+template <typename... Args>
+[[nodiscard]]
+constexpr auto
+make_forward_list(dyn_allocator allocator, Args&&... arguments) {
+   using common = common_type<Args...>;
+   return cat::raii::make_forward_list<common>(
+      allocator_ref<dyn_allocator>(allocator),
+      static_cast<common>($fwd(arguments))...);
+}
+
+// Create a `cat::raii::basic_forward_list` filled with count copies of value.
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_forward_list_filled(allocator_ref<Allocator> allocator, idx count,
+                         T const& value)
+   -> maybe<raii::basic_forward_list<T, Allocator>> {
+   raii::basic_forward_list<T, Allocator> new_list(allocator);
+   detail::forward_list_node<T>* p_tail = nullptr;
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_list.m_core.append_new_node(allocator, p_tail, value));
+   }
+   return new_list;
+}
+
+// Create a `cat::raii::basic_forward_list` filled using `cat::dyn_allocator`.
+template <typename T>
+[[nodiscard]]
+constexpr auto
+make_forward_list_filled(dyn_allocator allocator, idx count, T const& value)
+   -> maybe<raii::basic_forward_list<T, dyn_allocator>> {
+   return cat::raii::make_forward_list_filled<T, dyn_allocator>(
+      allocator_ref<dyn_allocator>(allocator), count, value);
+}
+
+}  // namespace cat::raii
+
+namespace cat::detail {
+
+// Return whether the `cat::raii::basic_forward_list` contains a value or is
+// empty.
+template <typename T>
+constexpr auto
+raii_forward_list_has_value(
+   raii::basic_forward_list<T, dyn_allocator> const& value) -> bool {
+   return maybe_forward_list_has_value(value.m_core);
+}
+
+inline constexpr null_allocator raii_forward_list_niche_null_allocator{};
+
+// Construct a sentinel `cat::raii::basic_forward_list` representing nullopt.
+template <typename T>
+constexpr auto
+raii_forward_list_nullopt() -> raii::basic_forward_list<T, dyn_allocator> {
+   raii::basic_forward_list<T, dyn_allocator> value(
+      allocator_ref<dyn_allocator>(dyn_allocator(
+         const_cast<null_allocator&>(raii_forward_list_niche_null_allocator))));
+   value.m_core = maybe_forward_list_nullopt<T>();
+   return value;
+}
+
+}  // namespace cat::detail
+
+namespace cat {
+
+template <typename T>
+struct default_compact_trait<raii::basic_forward_list<T, dyn_allocator>>
+    : identity_trait<compact<raii::basic_forward_list<T, dyn_allocator>,
+                             detail::raii_forward_list_has_value<T>,
+                             detail::raii_forward_list_nullopt<T>>> {};
+
+}  // namespace cat

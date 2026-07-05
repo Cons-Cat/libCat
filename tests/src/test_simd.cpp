@@ -2681,7 +2681,7 @@ $test(simd_as_vectorized_over_vec_float_data) {
 $test(simd_list_stepanov_iterator_vectorization_float) {
    // Mirrors Vc `list_iterator_vectorization` (`float` `std::list` block).
    // `list_iter` models `simdize<L::iterator>`. `e` is `++list.end()` because
-   // `cat::list` keeps the last node as `end()` and advancing past the tail
+   // `cat::raii::list` keeps the last node as `end()` and advancing past the tail
    // matches a simdized past-end iterator.
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(32_uki).or_exit();
@@ -2691,7 +2691,7 @@ $test(simd_list_stepanov_iterator_vectorization_float) {
    auto allocator = cat::make_linear_allocator(page);
 
    using L = float_list;
-   L list = cat::make_list<float_lane>(allocator).verify();
+   L list = cat::raii::make_list<float_lane>(allocator).verify();
    for (idx i = 1'024u; i != 0u; i = idx(i.raw - 1u)) {
       list.push_back(float_lane(static_cast<float>(i.raw))).verify();
    }

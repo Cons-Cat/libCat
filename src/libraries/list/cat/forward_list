@@ -1,0 +1,610 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+#include <cat/allocator_parameters>
+#include <cat/container>
+#include <cat/iterable>
+#include <cat/utility>
+
+namespace cat {
+
+namespace detail {
+template <typename T>
+struct forward_list_node {
+   forward_list_node<T>* _Nullable p_next_node = nullptr;
+   T storage;
+};
+
+template <typename T>
+class forward_list_stepanov_iterator;
+
+template <typename T>
+struct forward_list_storage {
+   using node = forward_list_node<T>;
+
+   detail::forward_list_node<T>* _Nullable m_p_head = nullptr;
+
+   // Reset head pointer to empty state.
+   constexpr void
+   reset() {
+      m_p_head = nullptr;
+   }
+};
+
+}  // namespace detail
+
+inline namespace manual {
+
+template <typename T>
+class basic_forward_list;
+
+template <typename T>
+using forward_list = basic_forward_list<T>;
+
+}  // namespace manual
+
+namespace detail {
+template <typename T>
+constexpr auto
+maybe_forward_list_has_value(basic_forward_list<T> const& value) -> bool;
+
+template <typename T>
+constexpr auto
+maybe_forward_list_nullopt() -> basic_forward_list<T>;
+}  // namespace detail
+
+inline namespace manual {
+
+template <typename T>
+class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
+    : public container_interface<basic_forward_list<T>, T>,
+      public stepanov_iterable_interface<
+         basic_forward_list<T>, detail::forward_list_stepanov_iterator, T> {
+   friend detail::forward_list_stepanov_iterator<T>;
+
+   using node_type = detail::forward_list_node<T>;
+
+ public:
+   using value_type = T;
+   using size_type = idx;
+   using difference_type = iword;
+   using reference = T&;
+   using const_reference = T const&;
+   using pointer = T*;
+   using const_pointer = T const*;
+   using iterator = detail::forward_list_stepanov_iterator<T>;
+   using const_iterator =
+      const_proxy_stepanov_iterator<detail::forward_list_stepanov_iterator, T>;
+
+   // Default construct an empty `cat::basic_forward_list`.
+   constexpr basic_forward_list() = default;
+
+   // Move construct by taking ownership of other's nodes.
+   constexpr basic_forward_list(basic_forward_list&& other_list)
+       : m_storage(other_list.m_storage), m_size(other_list.m_size) {
+      other_list.m_storage.m_p_head = nullptr;
+      other_list.m_size = 0u;
+   }
+
+   // Copy construction is deleted to prevent implicit copying.
+   constexpr basic_forward_list(basic_forward_list const&) = delete (
+      "Implicit copying of `cat::basic_forward_list` is forbidden. Call "
+      "`.clone()` or move instead!");
+
+   auto
+   operator=(basic_forward_list const&) -> basic_forward_list& = delete (
+      "Implicit copying of `cat::basic_forward_list` is forbidden. Call "
+      "`.clone()` or move instead!");
+
+   // Move assign by transferring ownership from other_list.
+   [[clang::reinitializes]]
+   constexpr auto
+   operator=(basic_forward_list&& other_list) -> basic_forward_list& {
+      if (this == __builtin_addressof(other_list)) {
+         return *this;
+      }
+      if !consteval {
+         cat::assert(m_storage.m_p_head == nullptr && m_size == 0u,
+                     "basic_forward_list move-assigned over while still owning "
+                     "nodes. Call .free(allocator) first.");
+      }
+      m_storage = other_list.m_storage;
+      m_size = other_list.m_size;
+
+      other_list.m_storage.m_p_head = nullptr;
+      other_list.m_size = 0u;
+      return *this;
+   }
+
+   // Destroy the `cat::basic_forward_list` and release elements.
+   constexpr ~basic_forward_list() {
+      reset();
+   }
+
+   // Swap contents with another `cat::basic_forward_list`.
+   constexpr void
+   swap(basic_forward_list& other) {
+      cat::swap(m_storage, other.m_storage);
+      cat::swap(m_size, other.m_size);
+   }
+
+   // Return number of elements in the `cat::basic_forward_list`.
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_size;
+   }
+
+   // Return whether the `cat::basic_forward_list` is empty.
+   [[nodiscard]]
+   constexpr auto
+   empty() const -> bool {
+      return m_size == 0u;
+   }
+
+   // Return theoretical capacity based on size type.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_size.max();
+   }
+
+   // Return maximum supported number of elements.
+   [[nodiscard]]
+   static constexpr auto
+   max_size() -> idx {
+      return idx::max() / sizeof(node_type);
+   }
+
+   // Access the first element.
+   [[nodiscard]]
+   constexpr auto
+   front() [[clang::lifetimebound]] -> T& {
+      return m_storage.m_p_head->storage;
+   }
+
+   // Destroy contained elements and set size to zero.
+   [[clang::reinitializes]]
+   constexpr void
+   reset() {
+      if constexpr (!is_trivially_destructible<T>) {
+         node_type* p_current = m_storage.m_p_head;
+         for (idx i = 0u; i < m_size; ++i) {
+            p_current->storage.~T();
+            p_current = p_current->p_next_node;
+         }
+      }
+      m_size = 0u;
+   }
+
+   // Free all nodes using the provided allocator and clear storage.
+   template <is_allocator Allocator>
+   [[clang::reinitializes]]
+   constexpr void
+   free(allocator_ref<Allocator> allocator) {
+      node_type* p_current = m_storage.m_p_head;
+      idx remaining = m_size;
+      while (p_current) {
+         node_type* p_next = p_current->p_next_node;
+         if (remaining > 0u) {
+            if constexpr (!is_trivially_destructible<T>) {
+               p_current->storage.~T();
+            }
+            remaining = idx(remaining - 1u);
+         }
+         allocator.free(p_current);
+         p_current = p_next;
+      }
+      m_storage.reset();
+      m_size = 0u;
+   }
+
+   // Free nodes using `cat::dyn_allocator`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   free(dyn_allocator allocator) {
+      return free<dyn_allocator>(allocator);
+   }
+
+   // Clear `cat::basic_forward_list` contents.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() {
+      reset();
+   }
+
+   // Initialize storage with a single head node.
+
+ private:
+   constexpr void
+   place_initial_node(node_type& node) {
+      node.p_next_node = nullptr;
+      m_storage.m_p_head = &node;
+      m_size = 1u;
+   }
+
+   // Insert a node before the iterator position.
+   constexpr void
+   place_node(iterator where, node_type& node) {
+      if (where == this->begin()) {
+         node.p_next_node = m_storage.m_p_head;
+         m_storage.m_p_head = &node;
+      } else {
+         node_type* p_previous = m_storage.m_p_head;
+         while (p_previous->p_next_node != where.m_p_node) {
+            p_previous = p_previous->p_next_node;
+         }
+         node.p_next_node = where.m_p_node;
+         p_previous->p_next_node = &node;
+      }
+      ++m_size;
+   }
+
+   // Insert node at the front of the `cat::basic_forward_list`.
+   constexpr void
+   place_node_front(node_type& node) {
+      if (m_size > 0) [[likely]] {
+         node.p_next_node = m_storage.m_p_head;
+         m_storage.m_p_head = &node;
+         ++m_size;
+      } else {
+         this->place_initial_node(node);
+      }
+   }
+
+   // Allocate and append a new node initialized with value.
+
+ public:
+   template <is_allocator Allocator, typename U>
+   constexpr auto
+   append_new_node(allocator_ref<Allocator> allocator,
+                   node_type* _Nullable& p_tail, U&& value) -> maybe<iterator> {
+      node_type* p_node = $prop(allocator.template alloc<node_type>());
+      p_node->p_next_node = nullptr;
+      p_node->storage = $fwd(value);
+
+      if (m_size == 0u) {
+         m_storage.m_p_head = p_node;
+      } else {
+         p_tail->p_next_node = p_node;
+      }
+      p_tail = p_node;
+      ++m_size;
+      return iterator(p_node);
+   }
+
+   // Variadic append termination overload.
+   template <is_allocator Allocator>
+   constexpr auto
+   append_new_nodes(allocator_ref<Allocator> /*unused*/,
+                    [[maybe_unused]] node_type* _Nullable& p_tail)
+      -> maybe<void> {
+      return monostate;
+   }
+
+   // Append multiple new nodes from parameter pack.
+   template <is_allocator Allocator, typename U, typename... Args>
+   constexpr auto
+   append_new_nodes(allocator_ref<Allocator> allocator,
+                    node_type* _Nullable& p_tail, U&& value,
+                    Args&&... remaining) -> maybe<void> {
+      $prop(this->append_new_node(allocator, p_tail, $fwd(value)));
+      return this->append_new_nodes(allocator, p_tail, $fwd(remaining)...);
+   }
+
+   // Create a deep copy of the `cat::basic_forward_list` using allocator.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(allocator_ref<NewAllocator> allocator)
+      const& -> maybe<basic_forward_list<T>> {
+      basic_forward_list<T> new_list;
+      node_type* p_tail = nullptr;
+      node_type* p_node = m_storage.m_p_head;
+      for (idx i = 0u; i < m_size; ++i) {
+         $prop(new_list.append_new_node(allocator, p_tail, p_node->storage));
+         p_node = p_node->p_next_node;
+      }
+      return new_list;
+   }
+
+   // Create a deep copy using `cat::dyn_allocator`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(dyn_allocator allocator) const& -> maybe<basic_forward_list<T>> {
+      return clone<dyn_allocator>(allocator);
+   }
+
+   // Insert a new element before iterator and return its iterator.
+   template <is_allocator Allocator, typename U>
+      requires(is_implicitly_convertible<U, T>)
+   constexpr auto
+   insert(allocator_ref<Allocator> allocator, iterator where, U&& value)
+      -> maybe<iterator> {
+      node_type* p_node = $prop(allocator.template alloc<node_type>());
+      node_type& node = *p_node;
+      node.storage = $fwd(value);
+
+      if (m_size == 0) [[unlikely]] {
+         this->place_initial_node(node);
+      } else {
+         this->place_node(where, node);
+      }
+      return iterator(p_node);
+   }
+
+   // Construct element in place before iterator and return its iterator.
+   template <is_allocator Allocator, typename... Args>
+   constexpr auto
+   emplace(allocator_ref<Allocator> allocator, iterator where,
+           Args&&... arguments) -> maybe<iterator> {
+      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
+      node_type& node = *p_node;
+      new (&node.storage) T($fwd(arguments)...);
+
+      if (m_size == 0) [[unlikely]] {
+         this->place_initial_node(node);
+      } else {
+         this->place_node(where, node);
+      }
+      return iterator(p_node);
+   }
+
+   // Erase the node following the provided iterator.
+   template <is_allocator Allocator>
+   constexpr void
+   erase_after(allocator_ref<Allocator> allocator, iterator where) {
+      node_type& node = *where.m_p_node;
+      node_type* p_remove = node.p_next_node;
+      node.p_next_node = p_remove->p_next_node;
+
+      m_size = idx(m_size - 1u);
+      allocator.free(p_remove);
+   }
+
+   // Insert a copy of value at front and return its iterator.
+   template <is_allocator Allocator, typename U>
+      requires(is_implicitly_convertible<U, T>)
+   constexpr auto
+   push_front(allocator_ref<Allocator> allocator, U const& value)
+      -> maybe<iterator> {
+      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
+      node_type& node = *p_node;
+      node.storage = static_cast<T>(value);
+      this->place_node_front(node);
+
+      return iterator(p_node);
+   }
+
+   // Insert a moved value at front and return its iterator.
+   template <is_allocator Allocator>
+      requires(is_move_constructible<T>)
+   constexpr auto
+   push_front(allocator_ref<Allocator> allocator, T&& value)
+      -> maybe<iterator> {
+      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
+      node_type& node = *p_node;
+      node.storage = cat::move(value);
+      this->place_node_front(node);
+
+      return iterator(p_node);
+   }
+
+   // Construct an element at the front and return its iterator.
+   template <is_allocator Allocator, typename... Args>
+   constexpr auto
+   emplace_front(allocator_ref<Allocator> allocator, Args&&... arguments)
+      -> maybe<iterator> {
+      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
+      node_type& node = *p_node;
+      new (&node.storage) T($fwd(arguments)...);
+      this->place_node_front(node);
+
+      return iterator(p_node);
+   }
+
+   // Remove the first element and free its node via allocator.
+   template <is_allocator Allocator>
+   constexpr void
+   pop_front(allocator_ref<Allocator> allocator) {
+      if (m_size > 0) [[likely]] {
+         node_type& node = *(this->begin().m_p_node);
+         m_storage.m_p_head = node.p_next_node;
+         m_size = idx(m_size - 1u);
+         allocator.free(&node);
+      }
+   }
+
+   // Return iterator to the first node.
+   [[nodiscard]]
+   constexpr auto
+   begin() -> iterator {
+      return iterator(m_storage.m_p_head);
+   }
+
+   template <typename Node, typename Element>
+   class forward_list_iteration_context {
+    private:
+      Node* _Nonnull m_p_node;
+
+    public:
+      using element_type = Element&;
+
+      constexpr explicit forward_list_iteration_context(Node* _Nonnull p_node)
+          : m_p_node(p_node) {
+      }
+
+      forward_list_iteration_context(forward_list_iteration_context const&) =
+         delete;
+      forward_list_iteration_context(forward_list_iteration_context&&) = delete;
+      constexpr auto
+      operator=(forward_list_iteration_context const&)
+         -> forward_list_iteration_context& = delete;
+      constexpr auto
+      operator=(forward_list_iteration_context&&)
+         -> forward_list_iteration_context& = delete;
+
+      // Iterate while predicate returns true for each element.
+      template <typename Pred>
+      constexpr auto
+      run_while(Pred&& pred) -> iteration_result {
+         while (m_p_node != nullptr) {
+            Node* const p_node = m_p_node;
+            m_p_node = m_p_node->p_next_node;
+            if (!pred(p_node->storage)) {
+               return iteration_result::incomplete;
+            }
+         }
+         return iteration_result::complete;
+      }
+   };
+
+   // Return a forward iteration context starting at the head.
+   [[nodiscard]]
+   constexpr auto
+   iterate() -> forward_list_iteration_context<node_type, T> {
+      return forward_list_iteration_context<node_type, T>{m_storage.m_p_head};
+   }
+
+   // Return a const forward iteration context starting at the head.
+   [[nodiscard]]
+   constexpr auto
+   iterate() const -> forward_list_iteration_context<node_type const, T const> {
+      return forward_list_iteration_context<node_type const, T const>{
+         m_storage.m_p_head,
+      };
+   }
+
+ private:
+   template <typename U>
+   friend constexpr auto
+   detail::maybe_forward_list_has_value(basic_forward_list<U> const&) -> bool;
+
+   template <typename U>
+   friend constexpr auto
+   detail::maybe_forward_list_nullopt() -> basic_forward_list<U>;
+
+   detail::forward_list_storage<T> m_storage;
+   idx m_size = 0;
+};
+
+// Create an empty `cat::basic_forward_list`.
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_forward_list(allocator_ref<Allocator> /*unused*/)
+   -> maybe<basic_forward_list<T>> {
+   return basic_forward_list<T>{};
+}
+
+// Create a `cat::basic_forward_list` initialized from the given values.
+template <typename T, is_allocator Allocator, is_convertible<T> U,
+          is_convertible<T>... Args>
+[[nodiscard]]
+constexpr auto
+make_forward_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+                  U&& value, Args&&... remaining)
+   -> maybe<basic_forward_list<T>> {
+   basic_forward_list<T> new_list;
+   detail::forward_list_node<T>* p_tail = nullptr;
+
+   $prop(new_list.append_new_nodes(allocator, p_tail, $fwd(value),
+                                   $fwd(remaining)...));
+
+   return new_list;
+}
+
+// Create a `cat::basic_forward_list` with deduced common element type.
+template <is_allocator Allocator, typename... Args>
+[[nodiscard]]
+constexpr auto
+make_forward_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+                  Args&&... arguments) {
+   using common = common_type<Args...>;
+   return make_forward_list<common>(allocator,
+                                    static_cast<common>($fwd(arguments))...);
+}
+
+// Create a `cat::basic_forward_list` filled with count copies of value.
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_forward_list_filled(allocator_ref<Allocator> allocator
+                         [[clang::lifetimebound]],
+                         idx count, T const& value)
+   -> maybe<basic_forward_list<T>> {
+   basic_forward_list<T> new_list;
+   detail::forward_list_node<T>* p_tail = nullptr;
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_list.append_new_node(allocator, p_tail, value));
+   }
+
+   return new_list;
+}
+
+}  // namespace manual
+
+namespace detail {
+
+template <typename T>
+class forward_list_stepanov_iterator
+    : public stepanov_iterator_interface<forward_iterator_tag, T> {
+ public:
+   using value_type = T;
+   using const_value_type = T const;
+   using reference = T&;
+   using const_reference = T const&;
+
+   using node_type = forward_list_node<T>;
+
+   constexpr forward_list_stepanov_iterator(node_type* _Nullable p_input)
+       : m_p_node(p_input) {
+   }
+
+   // Advance iterator to the next node.
+   constexpr auto
+   increment() -> forward_list_stepanov_iterator& {
+      m_p_node = m_p_node->p_next_node;
+      return *this;
+   }
+
+   // Access the element at the iterator.
+   constexpr auto
+   dereference() const -> T& {
+      assert(m_p_node);
+      return m_p_node->storage;
+   }
+
+   // Compare iterator equality by node pointer.
+   constexpr auto
+   equal_to(forward_list_stepanov_iterator const& it) const -> bool {
+      return it.m_p_node == m_p_node;
+   }
+
+   node_type* _Nullable m_p_node;
+};
+
+// Return true when `cat::basic_forward_list` represents a value or is empty.
+template <typename T>
+constexpr auto
+maybe_forward_list_has_value(basic_forward_list<T> const& value) -> bool {
+   return value.m_storage.m_p_head != nullptr || value.m_size == 0u;
+}
+
+// Construct a nullopt-like `cat::basic_forward_list` sentinel.
+template <typename T>
+constexpr auto
+maybe_forward_list_nullopt() -> basic_forward_list<T> {
+   basic_forward_list<T> value;
+   value.m_storage.m_p_head = nullptr;
+   value.m_size = 1u;
+   return value;
+}
+
+}  // namespace detail
+
+}  // namespace cat
+
+#include <cat/raii_forward_list>

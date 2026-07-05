@@ -1,0 +1,648 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/list>
+#include <cat/null_allocator>
+
+namespace cat::raii {
+
+template <typename T, is_allocator Allocator = dyn_allocator>
+class basic_list;
+
+template <typename T, is_allocator Allocator = dyn_allocator>
+using list = basic_list<T, Allocator>;
+
+}  // namespace cat::raii
+
+namespace cat::detail {
+template <typename T>
+constexpr auto
+raii_list_has_value(raii::basic_list<T, dyn_allocator> const& value) -> bool;
+
+template <typename T>
+constexpr auto
+raii_list_nullopt() -> raii::basic_list<T, dyn_allocator>;
+}  // namespace cat::detail
+
+namespace cat::raii {
+
+template <typename T, is_allocator Allocator>
+class [[clang::preferred_name(list<T, Allocator>), gsl::Owner]]
+basic_list
+    : public container_interface<basic_list<T, Allocator>, T>,
+      public stepanov_iterable_interface<basic_list<T, Allocator>,
+                                         detail::list_stepanov_iterator, T> {
+   template <typename, is_allocator>
+   friend class basic_list;
+
+   template <typename U, is_allocator A>
+   friend constexpr auto make_list(allocator_ref<A>) -> maybe<basic_list<U, A>>;
+
+   template <typename U, is_allocator A, is_convertible<U> Arg,
+             is_convertible<U>... Args>
+   friend constexpr auto
+   make_list(allocator_ref<A>, Arg&&, Args&&...) -> maybe<basic_list<U, A>>;
+
+   template <typename U, is_allocator A>
+   friend constexpr auto
+   make_list_filled(allocator_ref<A>, idx, U const&) -> maybe<basic_list<U, A>>;
+
+ public:
+   using value_type = T;
+   using allocator_type = allocator_ref<Allocator>;
+   using size_type = idx;
+   using difference_type = iword;
+   using reference = T&;
+   using const_reference = T const&;
+   using pointer = T*;
+   using const_pointer = T const*;
+   using iterator = detail::list_stepanov_iterator<T>;
+   using const_iterator =
+      const_proxy_stepanov_iterator<detail::list_stepanov_iterator, T>;
+   using reverse_iterator = reverse_proxy_stepanov_iterator<iterator>;
+   using const_reverse_iterator =
+      reverse_proxy_stepanov_iterator<const_iterator>;
+
+   // Construction without an allocator is not allowed.
+   constexpr basic_list() = delete ("`cat::raii::basic_list` cannot be created "
+                                    "without an allocator.");
+
+   // Construct a `cat::raii::basic_list` bound to the provided allocator.
+   constexpr basic_list(allocator_ref<Allocator> allocator
+                        [[clang::lifetimebound]])
+       : m_core(), m_allocator(allocator) {
+   }
+
+   // Default move construct the `cat::raii::basic_list`.
+   constexpr basic_list(basic_list&&) = default;
+
+   constexpr basic_list(basic_list const&) = delete (
+      "Implicit copying of `cat::raii::basic_list` is forbidden. Call "
+      "`.clone()` or move instead!");
+
+   auto
+   operator=(basic_list const&)
+      -> basic_list& = delete ("Implicit copying of `cat::raii::basic_list` is "
+                               "forbidden. Call `.clone()` or move instead!");
+
+   // Move assign by transferring core when allocators match.
+   [[clang::reinitializes]]
+   constexpr auto
+   operator=(basic_list&& other) -> basic_list& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+
+      m_core.free(m_allocator);
+      if (m_allocator == other.m_allocator) {
+         m_core = cat::move(other.m_core);
+      } else {
+         if !consteval {
+            cat::assert(false, "raii::basic_list move-assign across non-equal "
+                               "allocators is not yet implemented.");
+         }
+      }
+      return *this;
+   }
+
+   // Destroy the `cat::raii::basic_list` and release resources using its
+   // allocator.
+   constexpr ~basic_list() {
+      reset();
+   }
+
+   // Swap contents; requires matching allocators.
+   constexpr void
+   swap(basic_list& other) {
+      if !consteval {
+         cat::assert(m_allocator == other.m_allocator);
+      }
+      m_core.swap(other.m_core);
+   }
+
+   // Return number of elements.
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_core.size();
+   }
+
+   // Return whether the `cat::raii::basic_list` is empty.
+   [[nodiscard]]
+   constexpr auto
+   empty() const -> bool {
+      return m_core.empty();
+   }
+
+   // Return capacity in elements.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_core.capacity();
+   }
+
+   // Return the maximum number of elements supported.
+   [[nodiscard]]
+   static constexpr auto
+   max_size() -> idx {
+      return manual::basic_list<T>::max_size();
+   }
+
+   // Get the allocator associated with this object.
+   [[nodiscard]]
+   constexpr auto
+   get_allocator(this auto&& self) -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
+   // Access the first element.
+   [[nodiscard]]
+   constexpr auto
+   front() [[clang::lifetimebound]] -> T& {
+      return m_core.front();
+   }
+
+   // Access the last element.
+   [[nodiscard]]
+   constexpr auto
+   back() [[clang::lifetimebound]] -> T& {
+      return m_core.back();
+   }
+
+   // Free all elements using the stored allocator.
+   [[clang::reinitializes]]
+   constexpr void
+   free() {
+      m_core.free(m_allocator);
+   }
+
+   // Reset the `cat::raii::basic_list` and free resources.
+   [[clang::reinitializes]]
+   constexpr void
+   reset() {
+      this->free();
+   }
+
+   // Clear elements without deallocating.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() {
+      m_core.reset();
+   }
+
+   // Create a copy of this `cat::raii::basic_list` using the current allocator.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone() const& -> maybe<basic_list> {
+      return clone(m_allocator);
+   }
+
+   // Clone into a `cat::raii::basic_list` using the provided allocator.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(allocator_ref<NewAllocator> allocator)
+      const& -> maybe<basic_list<T, NewAllocator>> {
+      basic_list<T, NewAllocator> new_list(allocator);
+      new_list.m_core = $prop(m_core.clone(allocator));
+      return new_list;
+   }
+
+   // Clone into a `cat::raii::basic_list` using `cat::dyn_allocator`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(
+      dyn_allocator allocator) const& -> maybe<basic_list<T, dyn_allocator>> {
+      basic_list<T, dyn_allocator> new_list(allocator);
+      new_list.m_core = $prop(m_core.clone(allocator));
+      return new_list;
+   }
+
+   // Insert a value before iterator using the stored allocator.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   constexpr auto
+   insert(iterator where, U&& value) -> maybe<iterator> {
+      return m_core.insert(m_allocator, where, $fwd(value));
+   }
+
+   // Emplace an element before iterator using the stored allocator.
+   template <typename... Args>
+   constexpr auto
+   emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
+      return m_core.emplace(m_allocator, where, $fwd(arguments)...);
+   }
+
+   // Erase element at iterator and return iterator following it.
+   constexpr auto
+   erase(iterator where) -> iterator {
+      return m_core.erase(m_allocator, where);
+   }
+
+   // Erase the element after iterator.
+   constexpr void
+   erase_after(iterator where) {
+      m_core.erase_after(m_allocator, where);
+   }
+
+   // Erase a range of elements and return iterator to last.
+   [[nodiscard]]
+   constexpr auto
+   erase(iterator first, iterator last) -> iterator {
+      while (first != last) {
+         first = this->erase(first);
+      }
+      return last;
+   }
+
+   // Assign count copies of value to the `cat::raii::basic_list`.
+   [[nodiscard]]
+   constexpr auto
+   assign(idx count, T const& value) -> maybe<void> {
+      this->free();
+      for (idx i = 0u; i < count; ++i) {
+         $prop(this->push_back(value));
+      }
+      return monostate;
+   }
+
+   // Assign elements from a range replacing current contents.
+   template <typename Range>
+   [[nodiscard]]
+   constexpr auto
+   assign_range(Range const& range) -> maybe<void> {
+      this->free();
+      return this->append_range(range);
+   }
+
+   // Insert a copy of value at the front and return its iterator.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   constexpr auto
+   push_front(U const& value) -> maybe<iterator> {
+      return m_core.push_front(m_allocator, value);
+   }
+
+   // Insert a moved value at the front and return its iterator.
+   [[nodiscard]]
+   constexpr auto
+   push_front(T&& value) -> maybe<iterator>
+      requires(is_move_constructible<T>)
+   {
+      return m_core.push_front(m_allocator, cat::move(value));
+   }
+
+   // Emplace an element at the front and return its iterator.
+   template <typename... Args>
+   constexpr auto
+   emplace_front(Args&&... arguments) -> maybe<iterator> {
+      return m_core.emplace_front(m_allocator, $fwd(arguments)...);
+   }
+
+   // Remove the first element using the stored allocator.
+   constexpr void
+   pop_front() {
+      m_core.pop_front(m_allocator);
+   }
+
+   // Append a copy of value and return its iterator.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   constexpr auto
+   push_back(U const& value) -> maybe<iterator> {
+      return m_core.push_back(m_allocator, value);
+   }
+
+   // Append a moved value and return its iterator.
+   [[nodiscard]]
+   constexpr auto
+   push_back(T&& value) -> maybe<iterator>
+      requires(is_move_constructible<T>)
+   {
+      return m_core.push_back(m_allocator, cat::move(value));
+   }
+
+   // Emplace an element at the back and return its iterator.
+   template <typename... Args>
+   constexpr auto
+   emplace_back(Args&&... arguments) -> maybe<iterator> {
+      return m_core.emplace_back(m_allocator, $fwd(arguments)...);
+   }
+
+   // Append elements from a range using the stored allocator.
+   template <typename Range>
+   [[nodiscard]]
+   constexpr auto
+   append_range(Range const& range) -> maybe<void> {
+      for (auto const& value : range) {
+         $prop(this->push_back(value));
+      }
+      return monostate;
+   }
+
+   // Prepend elements from a range using the stored allocator.
+   template <typename Range>
+   [[nodiscard]]
+   constexpr auto
+   prepend_range(Range const& range) -> maybe<void> {
+      if (this->empty()) {
+         return this->append_range(range);
+      }
+      iterator const where = this->begin();
+      for (auto const& value : range) {
+         $prop(this->insert(where, value));
+      }
+      return monostate;
+   }
+
+   // Resize to given size by popping or emplacing default elements.
+   [[nodiscard]]
+   constexpr auto
+   resize(idx size) -> maybe<void>
+      requires(is_default_constructible<T>)
+   {
+      while (m_core.size() > size) {
+         this->pop_back();
+      }
+      while (m_core.size() < size) {
+         $prop(this->emplace_back());
+      }
+      return monostate;
+   }
+
+   // Resize to given size by popping or appending copies of value.
+   [[nodiscard]]
+   constexpr auto
+   resize(idx size, T const& value) -> maybe<void>
+      requires(is_copy_constructible<T>)
+   {
+      while (m_core.size() > size) {
+         this->pop_back();
+      }
+      while (m_core.size() < size) {
+         $prop(this->push_back(value));
+      }
+      return monostate;
+   }
+
+   // Remove last element using the stored allocator.
+   constexpr void
+   pop_back() {
+      m_core.pop_back(m_allocator);
+   }
+
+   // Reverse element order.
+   constexpr void
+   reverse() {
+      m_core.reverse();
+   }
+
+   // Remove elements matching predicate and return count removed.
+   template <typename Pred>
+   constexpr auto
+   remove_if(Pred&& pred) -> idx {
+      return m_core.remove_if(m_allocator, $fwd(pred));
+   }
+
+   // Remove elements equal to value and return count removed.
+   constexpr auto
+   remove(T const& value) -> idx {
+      return m_core.remove(m_allocator, value);
+   }
+
+   // Remove consecutive duplicates based on predicate and return removed count.
+   template <typename Pred>
+   constexpr auto
+   unique(Pred&& pred) -> idx {
+      return m_core.unique(m_allocator, $fwd(pred));
+   }
+
+   // Remove consecutive equal elements and return removed count.
+   constexpr auto
+   unique() -> idx {
+      return m_core.unique(m_allocator);
+   }
+
+   // Return iterator to first element.
+   [[nodiscard]]
+   constexpr auto
+   begin() -> iterator {
+      return m_core.begin();
+   }
+
+   // Return iterator to one past the last element.
+   [[nodiscard]]
+   constexpr auto
+   end() -> iterator {
+      return m_core.end();
+   }
+
+   // Return reverse iterator to the last element.
+   [[nodiscard]]
+   constexpr auto
+   rbegin() {
+      return m_core.rbegin();
+   }
+
+   // Return reverse iterator to one before the first element.
+   [[nodiscard]]
+   constexpr auto
+   rend() {
+      return m_core.rend();
+   }
+
+   // Return const reverse iterator to last element.
+   [[nodiscard]]
+   constexpr auto
+   rbegin() const {
+      return m_core.rbegin();
+   }
+
+   // Return const reverse iterator to one before first element.
+   [[nodiscard]]
+   constexpr auto
+   rend() const {
+      return m_core.rend();
+   }
+
+   // Return an iteration context for forward traversal.
+   [[nodiscard]]
+   constexpr auto
+   iterate() {
+      return m_core.iterate();
+   }
+
+   // Return a const iteration context for forward traversal.
+   [[nodiscard]]
+   constexpr auto
+   iterate() const {
+      return m_core.iterate();
+   }
+
+   // Return an iteration context for reverse traversal.
+   [[nodiscard]]
+   constexpr auto
+   reverse_iterate() {
+      return m_core.reverse_iterate();
+   }
+
+   // Return a const iteration context for reverse traversal.
+   [[nodiscard]]
+   constexpr auto
+   reverse_iterate() const {
+      return m_core.reverse_iterate();
+   }
+
+   // Access the allocator used by this `cat::raii::basic_list`.
+   [[nodiscard]]
+   constexpr auto
+   allocator(this auto&& self) -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
+   // Release ownership of the underlying `cat::basic_list`.
+   [[nodiscard, clang::reinitializes]]
+   constexpr auto
+   release() -> manual::basic_list<T> {
+      return cat::move(m_core);
+   }
+
+ private:
+   template <typename U>
+   friend constexpr auto
+   detail::raii_list_nullopt() -> basic_list<U, dyn_allocator>;
+
+   template <typename U>
+   friend constexpr auto
+   detail::raii_list_has_value(basic_list<U, dyn_allocator> const&) -> bool;
+
+   manual::basic_list<T> m_core;
+   [[no_unique_address]]
+   allocator_ref<Allocator> m_allocator;
+};
+
+// Create a `cat::raii::basic_list` bound to the given allocator.
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_list(allocator_ref<Allocator> allocator)
+   -> maybe<raii::basic_list<T, Allocator>> {
+   return raii::basic_list<T, Allocator>(allocator);
+}
+
+// Create a `cat::raii::basic_list` using `cat::dyn_allocator`.
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_list(dyn_allocator allocator)
+   -> maybe<raii::basic_list<T, dyn_allocator>> {
+   return raii::basic_list<T, dyn_allocator>(allocator);
+}
+
+// Create a `cat::raii::basic_list` initialized from the given values.
+template <typename T, is_allocator Allocator, is_convertible<T> U,
+          is_convertible<T>... Args>
+[[nodiscard]]
+constexpr auto
+make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+          U&& value, Args&&... remaining)
+   -> maybe<raii::basic_list<T, Allocator>> {
+   raii::basic_list<T, Allocator> new_list(allocator);
+   detail::list_node<T>* p_tail = nullptr;
+   $prop(new_list.m_core.append_new_nodes(allocator, p_tail, $fwd(value),
+                                          $fwd(remaining)...));
+   return new_list;
+}
+
+// Create a `cat::raii::basic_list` with deduced common element type.
+template <is_allocator Allocator, typename... Args>
+[[nodiscard]]
+constexpr auto
+make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+          Args&&... arguments) {
+   using common = common_type<Args...>;
+   return make_list<common>(allocator, static_cast<common>($fwd(arguments))...);
+}
+
+// Create a `cat::raii::basic_list` using `cat::dyn_allocator` and values.
+template <typename T, is_convertible<T> U, is_convertible<T>... Args>
+[[nodiscard]]
+constexpr auto
+make_list(dyn_allocator allocator, U&& value, Args&&... remaining)
+   -> maybe<raii::basic_list<T, dyn_allocator>> {
+   return cat::raii::make_list<T, dyn_allocator>(
+      allocator_ref<dyn_allocator>(allocator), $fwd(value), $fwd(remaining)...);
+}
+
+// Create a `cat::raii::basic_list` using `cat::dyn_allocator` with deduced type.
+template <typename... Args>
+[[nodiscard]]
+constexpr auto
+make_list(dyn_allocator allocator, Args&&... arguments) {
+   using common = common_type<Args...>;
+   return cat::raii::make_list<common, dyn_allocator>(
+      allocator_ref<dyn_allocator>(allocator),
+      static_cast<common>($fwd(arguments))...);
+}
+
+// Create a `cat::raii::basic_list` filled with count copies of value.
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_list_filled(allocator_ref<Allocator> allocator, idx count, T const& value)
+   -> maybe<raii::basic_list<T, Allocator>> {
+   raii::basic_list<T, Allocator> new_list(allocator);
+   detail::list_node<T>* p_tail = nullptr;
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_list.m_core.append_new_node(allocator, p_tail, value));
+   }
+   return new_list;
+}
+
+// Create a `cat::raii::basic_list` filled using `cat::dyn_allocator`.
+template <typename T>
+[[nodiscard]]
+constexpr auto
+make_list_filled(dyn_allocator allocator, idx count, T const& value)
+   -> maybe<raii::basic_list<T, dyn_allocator>> {
+   return cat::raii::make_list_filled<T, dyn_allocator>(
+      allocator_ref<dyn_allocator>(allocator), count, value);
+}
+
+}  // namespace cat::raii
+
+namespace cat::detail {
+
+// Return whether the `cat::raii::basic_list` contains a value or is empty.
+template <typename T>
+constexpr auto
+raii_list_has_value(raii::basic_list<T, dyn_allocator> const& value) -> bool {
+   return maybe_list_has_value(value.m_core);
+}
+
+inline constexpr null_allocator raii_list_niche_null_allocator{};
+
+// Construct a sentinel `cat::raii::basic_list` representing nullopt.
+template <typename T>
+constexpr auto
+raii_list_nullopt() -> raii::basic_list<T, dyn_allocator> {
+   raii::basic_list<T, dyn_allocator> value(
+      allocator_ref<dyn_allocator>(dyn_allocator(
+         const_cast<null_allocator&>(raii_list_niche_null_allocator))));
+   value.m_core = maybe_list_nullopt<T>();
+   return value;
+}
+
+}  // namespace cat::detail
+
+namespace cat {
+
+template <typename T>
+struct default_compact_trait<raii::basic_list<T, dyn_allocator>>
+    : identity_trait<compact<raii::basic_list<T, dyn_allocator>,
+                             detail::raii_list_has_value<T>,
+                             detail::raii_list_nullopt<T>>> {};
+
+}  // namespace cat

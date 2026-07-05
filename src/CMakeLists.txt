@@ -306,6 +306,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/linux/cat/linux
   ${CATLIB}/linux/cat/detail/syscalls.hpp
   ${CATLIB}/list/cat/list
+  ${CATLIB}/list/cat/raii_list
+  ${CATLIB}/list/cat/forward_list
+  ${CATLIB}/list/cat/raii_forward_list
   ${CATLIB}/match/cat/match
   ${CATLIB}/math/cat/math
   ${CATLIB}/math/cat/detail/abs.hpp
