@@ -1906,6 +1906,15 @@ basic_int :
       return basic_int(raw | static_cast<T>(make_raw_arithmetic(operand)));
    }
 
+   // Generate `operator^`. Wider-or-equal LHS unsigned only. See `bit_and`.
+   template <is_unsigned_integral U>
+      requires(is_unsigned_integral<T> && sizeof(T) >= sizeof(U))
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_xor(U operand) const -> basic_int {
+      return basic_int(raw ^ static_cast<T>(make_raw_arithmetic(operand)));
+   }
+
    template <typename U>
       requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]

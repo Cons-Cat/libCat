@@ -358,8 +358,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       // `i` is signed so the prologue case can start at -1 when the backing
       // store is a single element and the first byte was already scanned.
       // `to_idx` is only called after `i >= 0`, so the value fits `idx`.
-      for (iword i = storage_array_size - 1u - has_prologue;
-           i >= iword(0); --i) {
+      for (iword i = storage_array_size - 1u - has_prologue; i >= 0; --i) {
          idx const byte_index = i.to_idx().value();
          idx next_count = cat::countr_zero(m_data[byte_index]);
          count += next_count;
@@ -389,8 +388,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
          }
       }
 
-      for (iword i = storage_array_size - 1u - has_prologue;
-           i >= 0; --i) {
+      for (iword i = storage_array_size - 1u - has_prologue; i >= 0; --i) {
          idx const byte_index = i.to_idx().value();
          idx next_count = cat::countr_one(m_data[byte_index]);
          count += next_count;

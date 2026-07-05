@@ -916,7 +916,7 @@ concept is_invocable =
    __is_invocable(Callback, Args...);
 #else
    requires(Callback callback, Args&&... arguments) {
-      (void)__builtin_invoke($fwd(callback), $fwd(arguments)...);
+      __builtin_invoke($fwd(callback), $fwd(arguments)...);
    };
 #endif
 

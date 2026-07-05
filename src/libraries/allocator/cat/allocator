@@ -416,7 +416,8 @@ class allocator_interface {
 
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_aligned_feedback(ualign allocation_alignment, idx allocation_bytes)
+   meta_alloc_aligned_feedback(ualign allocation_alignment,
+                               idx allocation_bytes)
       -> maybe_sized_allocation<void* _Nonnull>;
 
    [[gnu::no_sanitize_address]]
@@ -1024,7 +1025,8 @@ class allocator_interface {
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   align_xsalloc(ualign alignment, Args&&... arguments) -> sized_allocation<T*> {
+   align_xsalloc(ualign alignment, Args&&... arguments)
+      -> sized_allocation<T*> {
       return meta_alloc<T, false, true, false, false, true>(alignment, 1u,
                                                             $fwd(arguments)...);
    }
@@ -1955,8 +1957,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    align_xrealloc_multi(auto* _Nonnull p_handle, ualign alignment,
-                        idx old_count,
-                        idx new_count) {
+                        idx old_count, idx new_count) {
       return align_xrealloc_multi_to(*this, p_handle, alignment, old_count,
                                      new_count);
    }

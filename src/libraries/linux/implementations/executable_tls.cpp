@@ -110,9 +110,8 @@ init_parent_process_tls() {
    // `minimum_alignment + 8` so the highest aligned `tls_thread_pointer`
    // inside the slab still leaves room for the self-slot above and the full
    // `thread_local` storage image below.
-   cat::idx const slab_bytes =
-      cat::idx(tls_memory_size.raw + cat::idx(minimum_alignment).raw
-               + sizeof(void*));
+   cat::idx const slab_bytes = cat::idx(
+      tls_memory_size.raw + cat::idx(minimum_alignment).raw + sizeof(void*));
 
    using enum nix::memory_protection_flags;
    using enum nix::memory_flags;

@@ -339,7 +339,7 @@ class atomic_overflow_reference {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_add(operand, order);
+      auto _ = fetch_add(operand, order);
    }
 
    constexpr void
@@ -349,7 +349,7 @@ class atomic_overflow_reference {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_sub(operand, order);
+      auto _ = fetch_sub(operand, order);
    }
 
  private:
@@ -998,7 +998,7 @@ class atomic<T> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_add(operand, order);
+      auto _ = fetch_add(operand, order);
    }
 
    constexpr void
@@ -1008,7 +1008,7 @@ class atomic<T> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_sub(operand, order);
+      auto _ = fetch_sub(operand, order);
    }
 
    constexpr void
@@ -1018,7 +1018,7 @@ class atomic<T> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_and(operand, order);
+      auto _ = fetch_and(operand, order);
    }
 
    constexpr void
@@ -1028,7 +1028,7 @@ class atomic<T> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_or(operand, order);
+      auto _ = fetch_or(operand, order);
    }
 
    constexpr void
@@ -1038,7 +1038,7 @@ class atomic<T> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_xor(operand, order);
+      auto _ = fetch_xor(operand, order);
    }
 
    constexpr void
@@ -1048,7 +1048,7 @@ class atomic<T> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_max(operand, order);
+      auto _ = fetch_max(operand, order);
    }
 
    constexpr void
@@ -1058,7 +1058,7 @@ class atomic<T> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_min(operand, order);
+      auto _ = fetch_min(operand, order);
    }
 
    constexpr void
@@ -1697,7 +1697,7 @@ class atomic<T&> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_add(operand, order);
+      auto _ = fetch_add(operand, order);
    }
 
    constexpr void
@@ -1707,7 +1707,7 @@ class atomic<T&> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_sub(operand, order);
+      auto _ = fetch_sub(operand, order);
    }
 
    constexpr void
@@ -1717,7 +1717,7 @@ class atomic<T&> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_and(operand, order);
+      auto _ = fetch_and(operand, order);
    }
 
    constexpr void
@@ -1727,7 +1727,7 @@ class atomic<T&> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_or(operand, order);
+      auto _ = fetch_or(operand, order);
    }
 
    constexpr void
@@ -1737,7 +1737,7 @@ class atomic<T&> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_xor(operand, order);
+      auto _ = fetch_xor(operand, order);
    }
 
    constexpr void
@@ -1747,7 +1747,7 @@ class atomic<T&> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_max(operand, order);
+      auto _ = fetch_max(operand, order);
    }
 
    constexpr void
@@ -1757,7 +1757,7 @@ class atomic<T&> {
       if !consteval {
          detail::assert_store_order(order);
       }
-      (void)fetch_min(operand, order);
+      auto _ = fetch_min(operand, order);
    }
 
    constexpr void
@@ -2094,49 +2094,49 @@ class atomic_ref_bound {
    store_add(auto operand) const
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      (void)m_reference.fetch_add(operand, store_ordering);
+      auto _ = m_reference.fetch_add(operand, store_ordering);
    }
 
    constexpr void
    store_sub(auto operand) const
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      (void)m_reference.fetch_sub(operand, store_ordering);
+      auto _ = m_reference.fetch_sub(operand, store_ordering);
    }
 
    constexpr void
    store_and(auto operand) const
       requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
-      (void)m_reference.fetch_and(operand, store_ordering);
+      auto _ = m_reference.fetch_and(operand, store_ordering);
    }
 
    constexpr void
    store_or(auto operand) const
       requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
-      (void)m_reference.fetch_or(operand, store_ordering);
+      auto _ = m_reference.fetch_or(operand, store_ordering);
    }
 
    constexpr void
    store_xor(auto operand) const
       requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
-      (void)m_reference.fetch_xor(operand, store_ordering);
+      auto _ = m_reference.fetch_xor(operand, store_ordering);
    }
 
    constexpr void
    store_max(T operand) const
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      (void)m_reference.fetch_max(operand, store_ordering);
+      auto _ = m_reference.fetch_max(operand, store_ordering);
    }
 
    constexpr void
    store_min(T operand) const
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      (void)m_reference.fetch_min(operand, store_ordering);
+      auto _ = m_reference.fetch_min(operand, store_ordering);
    }
 
    constexpr auto

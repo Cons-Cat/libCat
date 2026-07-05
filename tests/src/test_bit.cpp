@@ -118,6 +118,64 @@ $test(bit_count_small_integer_wrappers) {
    cat::verify(cat::countr_zero(0xFFF0_u2) == 4);
 }
 
+$test(byte_bitwise_api) {
+   static_assert(!cat::is_addable<cat::byte>);
+   static_assert(!cat::is_subtractable<cat::byte>);
+   static_assert(!cat::is_multipliable<cat::byte>);
+   static_assert(!cat::is_dividable<cat::byte>);
+   static_assert(!cat::is_modable<cat::byte>);
+   static_assert(!cat::is_unary_plussable<cat::byte>);
+   static_assert(!cat::is_unary_minusable<cat::byte>);
+   static_assert(cat::is_constructible<char, cat::byte>);
+   static_assert(cat::is_constructible<signed char, cat::byte>);
+   static_assert(cat::is_constructible<unsigned char, cat::byte>);
+   static_assert(cat::is_constructible<char8_t, cat::byte>);
+   static_assert(!cat::is_constructible<bool, cat::byte>);
+
+   static_assert((cat::byte(1u) <=> cat::byte(2u)) < 0);
+   static_assert((cat::byte(2u) <=> 1u) > 0);
+   static_assert((1u <=> cat::byte(2u)) < 0);
+   static_assert((cat::byte(1u) <=> -1) > 0);
+   static_assert((-1 <=> cat::byte(1u)) < 0);
+
+   static_assert((cat::byte(0b1010u) & cat::byte(0b1100u)) == 0b1000u);
+   static_assert((cat::byte(0b1010u) | 0b0101u) == 0b1111u);
+   static_assert((0b0101u | cat::byte(0b1010u)) == 0b1111u);
+   static_assert((cat::byte(0b1010u) ^ cat::byte(0b1111u)) == 0b0101u);
+   static_assert((~cat::byte(0xF0u)) == 0x0Fu);
+   static_assert((cat::byte(0b0000'1111u) << 4u) == 0b1111'0000u);
+   static_assert((cat::byte(0b1111'0000u) >> cat::byte(4u)) == 0b0000'1111u);
+
+   static_assert([] {
+      cat::byte value = cat::byte(0b1010u);
+      value &= cat::byte(0b1100u);
+      value |= 0b0011u;
+      value ^= cat::byte(0b0001u);
+      value <<= 1u;
+      value >>= cat::byte(1u);
+      return value == 0b1010u;
+   }());
+
+   static_assert(cat::countl_zero(cat::byte(0x0Fu)) == 4u);
+   static_assert(cat::countl_one(cat::byte(0xF0u)) == 4u);
+   static_assert(cat::countr_zero(cat::byte(0xF0u)) == 4u);
+   static_assert(cat::countr_one(cat::byte(0x0Fu)) == 4u);
+   static_assert(cat::popcount(cat::byte(0b1010'1010u)) == 4u);
+   static_assert(cat::has_single_bit(cat::byte(0b0001'0000u)));
+   static_assert(cat::bit_floor(cat::byte(5u)) == 4u);
+   static_assert(cat::bit_ceil(cat::byte(5u)) == 8u);
+   static_assert(cat::rotate_left(cat::byte(0b1000'0001u), cat::uword(1u))
+                 == 0b0000'0011u);
+   static_assert(cat::rotate_right(cat::byte(0b1000'0001u), cat::uword(1u))
+                 == 0b1100'0000u);
+   static_assert(cat::countl_zero_raw(cat::byte(0x0Fu)).value() == 4u);
+   static_assert(!cat::countl_zero_raw(cat::byte(0u)).has_value());
+
+   auto const byte_bit_ceil = cat::bit_ceil_raw(cat::byte(5u));
+   cat::verify(byte_bit_ceil.has_value());
+   cat::verify(byte_bit_ceil.value() == 8u);
+}
+
 $test(bit_popcount_and_single_bit) {
    using namespace cat::arithmetic_literals;
 

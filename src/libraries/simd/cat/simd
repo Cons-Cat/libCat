@@ -134,8 +134,8 @@ struct simd_abi::fixed_size {
    static constexpr idx lanes = in_lanes;
    static constexpr idx size = idx(lanes.raw * sizeof(T));
    static constexpr ualign alignment =
-      detail::simd_memory_alignment_for_fixed_size(
-         size, target_abi::alignment, alignof(T));
+      detail::simd_memory_alignment_for_fixed_size(size, target_abi::alignment,
+                                                   alignof(T));
 
    template <typename ElementT>
    using simd_mask_lane = simd_abi::mask_lane<

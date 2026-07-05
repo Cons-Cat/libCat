@@ -80,4 +80,40 @@ bit_ceil_raw(T value) -> maybe<T> {
    return T(__builtin_stdc_bit_ceil(make_raw_arithmetic(value)));
 }
 
+// Support `cat::byte`:
+
+[[nodiscard]]
+constexpr auto
+countl_zero_raw(byte value) -> maybe<uint1> {
+   return countl_zero_raw(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+countl_one_raw(byte value) -> maybe<uint1> {
+   return countl_one_raw(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+countr_zero_raw(byte value) -> maybe<uint1> {
+   return countr_zero_raw(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+countr_one_raw(byte value) -> maybe<uint1> {
+   return countr_one_raw(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+bit_ceil_raw(byte value) -> maybe<byte> {
+   unsigned char const raw_value = make_raw_arithmetic(value.value);
+   if (raw_value > static_cast<unsigned char>(1u << 7u)) {
+      return nullopt;
+   }
+   return byte(__builtin_stdc_bit_ceil(raw_value));
+}
+
 }  // namespace cat

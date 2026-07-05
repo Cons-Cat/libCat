@@ -206,8 +206,8 @@ $test(arithmetic_traits_basic_int_and_basic_float) {
 $test(arithmetic_ualign) {
    static_assert(cat::is_integral<ualign>);
    static_assert(cat::is_unsigned_integral<ualign>);
-   static_assert(cat::is_same<cat::raw_arithmetic_type<ualign>,
-                              cat::uword::raw_type>);
+   static_assert(
+      cat::is_same<cat::raw_arithmetic_type<ualign>, cat::uword::raw_type>);
    static_assert(cat::is_same<decltype(cat::basic_ualign{uword(16u)}),
                               cat::basic_ualign<uword>>);
    static_assert(cat::is_convertible<ualign, uword>);
@@ -1469,7 +1469,7 @@ $test(arithmetic_implicit_word_constexpr_const) {
 
 // Compile-time-known cross-signed-ness constant operands work for every
 // arithmetic operator on `iword`/`uword`. Includes the `sizeof(T)` pattern from
-// `set_memory_detail` that originally motivated relaxing `promoted_type` to
+// `fill_memory_detail` that originally motivated relaxing `promoted_type` to
 // allow same-order, opposite-signed-ness pairs.
 $test(arithmetic_word_all_operators_constexpr_const) {
    // Cross-sign compile-time constants used as operands.
@@ -1545,7 +1545,7 @@ $test(arithmetic_word_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(uw_six / long_const_two), uword>);
    static_assert(cat::is_same<decltype(uw_six % signed_const_two), uword>);
 
-   // The `sizeof(T)` motivating case from `set_memory_detail`. `sizeof` yields
+   // The `sizeof(T)` motivating case from `fill_memory_detail`. `sizeof` yields
    // `__SIZE_TYPE__` (an `unsigned long`), which the relaxed `promoted_type`
    // now accepts as the right-hand operand of an `iword` minus.
    iword bytes = 16_sz;
@@ -2901,7 +2901,7 @@ $test(arithmetic_spaceship_three_way_and_inequality) {
 }
 
 $test(arithmetic_cross_sign_comparisons) {
-   // `basic_int` cross-signed-ness at runtime (the case used in `set_memory`
+   // `basic_int` cross-signed-ness at runtime (the case used in `fill_memory`
    // for `iword >= sizeof(...)` where the right operand is `unsigned long`).
    iword runtime_signed = 16;
    unsigned long runtime_unsigned = 8ul;
@@ -2950,7 +2950,7 @@ $test(arithmetic_cross_sign_comparisons) {
    cat::verify(idx_one > -100);
 
    // `basic_idx` runtime comparisons against raw integer types (the
-   // `set_memory` pattern again, this time with an `basic_idx` wrapper).
+   // `fill_memory` pattern again, this time with an `basic_idx` wrapper).
    idx runtime_idx = 16u;
    cat::verify(runtime_idx >= sizeof(unsigned long));
    cat::verify(runtime_idx > 8u);
@@ -4430,13 +4430,15 @@ $test(arithmetic_binary_ops_take_lhs_overflow_policy) {
    // LHS.
    static_assert(is_same<decltype(wrap_idx() + 0ul), wrap_idx>);
 
-   // Bitwise & / | keep the LHS's type (and therefore the LHS's policy). A
+   // Bitwise & / | / ^ keep the LHS's type (and therefore the LHS's policy). A
    // narrower RHS zero-extends into the LHS width, but a wider RHS would have
    // to silently truncate so it is rejected.
    static_assert(
       is_same<decltype(cat::wrap_uint4() & cat::uint4()), cat::wrap_uint4>);
    static_assert(
       is_same<decltype(cat::sat_uint4() | cat::wrap_uint4()), cat::sat_uint4>);
+   static_assert(
+      is_same<decltype(cat::wrap_uint4() ^ cat::uint4()), cat::wrap_uint4>);
 
    // The runtime semantics still come from the LHS.
    {
@@ -4466,9 +4468,9 @@ $test(arithmetic_binary_ops_take_lhs_overflow_policy) {
 }
 
 // + and * promote width to the wider operand (so `narrow + wide` returns the
-// wider type), but -, /, %, <<, >>, &, and | keep the LHS's storage width
+// wider type), but -, /, %, <<, >>, &, |, and ^ keep the LHS's storage width
 // because their results are bounded by the LHS by construction.
-// & and | additionally reject a wider RHS because it would have to silently
+// &, |, and ^ additionally reject a wider RHS because it would have to silently
 // truncate to fit the LHS-shape result.
 $test(arithmetic_binary_ops_width_rules) {
    using cat::is_same;
@@ -4491,26 +4493,39 @@ $test(arithmetic_binary_ops_width_rules) {
    static_assert(is_same<decltype(cat::uint4() << cat::uword()), cat::uint4>);
    static_assert(is_same<decltype(cat::uword() >> cat::uint4()), cat::uword>);
 
-   // & / | accept any RHS that is at most as wide as the LHS. The RHS
+   // & / | / ^ accept any RHS that is at most as wide as the LHS. The RHS
    // zero-extends into the LHS width and the result keeps the LHS's type.
    static_assert(is_same<decltype(cat::uint4() & cat::uint4()), cat::uint4>);
    static_assert(is_same<decltype(cat::uword() | cat::uword()), cat::uword>);
+   static_assert(is_same<decltype(cat::uword() ^ cat::uword()), cat::uword>);
    static_assert(is_same<decltype(cat::uword() & cat::uint4()), cat::uword>);
    static_assert(is_same<decltype(cat::uword() | cat::uint4()), cat::uword>);
+   static_assert(is_same<decltype(cat::uword() ^ cat::uint4()), cat::uword>);
 
-   // Narrower raw integers also widen on the friend reverse `operator,` so a
-   // raw `unsigned char` (or any narrower raw unsigned) & `cat::uword` works
-   // without an explicit cast.
+   // Narrower raw integers also widen on the friend reverse operator, so a raw
+   // `unsigned char` works without an explicit cast.
    static_assert(is_same<decltype(static_cast<unsigned char>(0) & cat::uword()),
                          cat::uword>);
    static_assert(is_same<decltype(cat::uword() & static_cast<unsigned char>(0)),
                          cat::uword>);
+   static_assert(is_same<decltype(static_cast<unsigned char>(0) ^ cat::uword()),
+                         cat::uword>);
+   static_assert(is_same<decltype(cat::uword() ^ static_cast<unsigned char>(0)),
+                         cat::uword>);
+
+   {
+      cat::uword value = 0xf0u;
+      cat::verify((value ^ cat::uint4(0x0fu)) == cat::uword(0xffu));
+      value ^= cat::uint4(0x33u);
+      cat::verify(value == cat::uword(0xc3u));
+   }
 
    // The narrow-LHS direction would have to silently truncate the wider RHS to
-   // fit the LHS-shape result, so it stays rejected at the `bit_and`/`bit_or`
-   // member level.
+   // fit the LHS-shape result, so it stays rejected at the
+   // `bit_and`/`bit_or`/`bit_xor` member level.
    static_assert(!cat::detail::has_binary_bit_and<cat::uint4, cat::uword>);
    static_assert(!cat::detail::has_binary_bit_or<cat::uint4, cat::uword>);
+   static_assert(!cat::detail::has_binary_bit_xor<cat::uint4, cat::uword>);
 
    // += / -= / /= / %= work when the result fits the LHS, which is automatic
    // given the LHS-shape rule above.
@@ -5431,14 +5446,11 @@ template <typename L, typename R>
 concept can_minus_assign = requires(L lhs, R rhs) { lhs -= rhs; };
 
 template <auto value>
-concept can_ualign_multiply_by_constant = requires {
-   ualign{}.multiply(value);
-};
+concept can_ualign_multiply_by_constant =
+   requires { ualign{}.multiply(value); };
 
 template <auto value>
-concept can_ualign_divide_by_constant = requires {
-   ualign{}.divide_by(value);
-};
+concept can_ualign_divide_by_constant = requires { ualign{}.divide_by(value); };
 
 template <typename L, typename R>
 concept can_times_assign = requires(L lhs, R rhs) { lhs *= rhs; };

@@ -19,8 +19,8 @@ is_memory_overlapping(void const* _Nonnull p_first, idx first_bytes,
    }
    cat::uintptr const a{const_cast<void* _Nonnull>(p_first)};
    cat::uintptr const b{const_cast<void* _Nonnull>(p_second)};
-   auto const a_end = a.raw + first_bytes;
-   auto const b_end = b.raw + second_bytes;
+   cat::uintptr const a_end = a + first_bytes;
+   cat::uintptr const b_end = b + second_bytes;
    return b < a_end && a < b_end;
 }
 

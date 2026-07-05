@@ -1197,64 +1197,146 @@ constexpr auto
 align_down(T value, ualign alignment) -> T;
 
 // `byte` is a storage type which enables bitwise operations but not arithmetic.
-// TODO: Add some member functions.
 struct byte : bitwise_interface<byte> {
    constexpr byte() = default;
 
+   template <is_arithmetic T>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr explicit byte(T from)
+       : value(static_cast<unsigned char>(make_raw_arithmetic(from))) {
+   }
+
    uint1 value;
+
+   friend constexpr auto
+   operator==(byte const& left, byte const& right) -> bool {
+      return left.value == right.value;
+   }
+
+   template <is_integral T>
+   friend constexpr auto
+   operator==(byte const& left, T right) -> bool {
+      return left.value == right;
+   }
+
+   template <is_integral T>
+   friend constexpr auto
+   operator==(T left, byte const& right) -> bool {
+      return right == left;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator<=>(byte const& left, byte const& right) {
+      return left.value <=> right.value;
+   }
+
+   template <is_integral T>
+   [[nodiscard]]
+   friend constexpr auto
+   operator<=>(byte const& left, T right) {
+      return detail::raw_mixed_integral_spaceship(
+         make_raw_arithmetic(left.value), make_raw_arithmetic(right));
+   }
+
+   template <is_integral T>
+   [[nodiscard]]
+   friend constexpr auto
+   operator<=>(T left, byte const& right) {
+      return detail::raw_mixed_integral_spaceship(
+         make_raw_arithmetic(left), make_raw_arithmetic(right.value));
+   }
 
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator T()
-      requires(sizeof(T) == 1)
+   operator T() const
+      requires(is_either<remove_cv<T>, char, signed char, unsigned char,
+                         char8_t>)
    {
       return __builtin_bit_cast(T, value);
    }
 
-   // Generate `operator&`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(is_integral auto from) const -> byte {
-      return this->value & from;
+   bit_complement() const -> byte {
+      return byte(~value);
    }
 
-   // Generate `operator|`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(is_integral auto from) const -> byte {
-      return this->value | from;
+   bit_and(byte from) const -> byte {
+      return byte(value & from.value);
    }
 
-   // Generate `operator<<`.
+   template <is_integral T>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_and(T from) const -> byte {
+      return bit_and(byte(from));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_or(byte from) const -> byte {
+      return byte(value | from.value);
+   }
+
+   template <is_integral T>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_or(T from) const -> byte {
+      return bit_or(byte(from));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_xor(byte from) const -> byte {
+      return byte(value ^ from.value);
+   }
+
+   template <is_integral T>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_xor(T from) const -> byte {
+      return bit_xor(byte(from));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shift_left_by(byte operand) const -> byte {
+      return byte(value << operand.value);
+   }
+
    template <is_arithmetic U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
-     gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_by(U operand) const -> byte {
-      return value << operand;
+      return byte(value << operand);
    }
 
    template <is_arithmetic U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
-     gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_into(U other) const -> U {
       return other << value;
    }
 
-   // Generate `operator>>`.
-   template <is_arithmetic U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
-     gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> byte {
-      return value >> operand;
+   shift_right_by(byte operand) const -> byte {
+      return byte(value >> operand.value);
    }
 
    template <is_arithmetic U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
-     gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shift_right_by(U operand) const -> byte {
+      return byte(value >> operand);
+   }
+
+   template <is_arithmetic U>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_into(U other) const -> U {
       return other >> value;
@@ -1268,6 +1350,44 @@ struct byte : bitwise_interface<byte> {
 };
 
 static_assert(is_implicit_lifetime<cat::byte>);
+
+template <typename To, is_integral From>
+   requires(is_same<To, byte>)
+[[nodiscard]]
+constexpr auto
+narrow_cast(From value) -> byte {
+   return byte(value);
+}
+
+[[nodiscard]]
+constexpr auto
+countl_zero(byte value) -> uint1 {
+   return countl_zero(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+countl_one(byte value) -> uint1 {
+   return countl_one(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+countr_zero(byte value) -> uint1 {
+   return countr_zero(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+countr_one(byte value) -> uint1 {
+   return countr_one(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+popcount(byte value) -> uint1 {
+   return popcount(value.value);
+}
 
 template <is_integral T>
    requires(!is_unsigned_integral<T>)
@@ -1283,6 +1403,42 @@ has_single_bit(T value) -> bool {
 constexpr auto
 has_single_bit(byte value) -> bool {
    return value.has_single_bit();
+}
+
+[[nodiscard]]
+constexpr auto
+bit_floor(byte value) -> byte {
+   return byte(bit_floor(value.value));
+}
+
+[[nodiscard]]
+constexpr auto
+bit_ceil(byte value) -> byte {
+   return byte(bit_ceil(value.value));
+}
+
+[[nodiscard]]
+constexpr auto
+rotate_left(byte value, uword shift) -> byte {
+   return byte(rotate_left(value.value, shift));
+}
+
+[[nodiscard]]
+constexpr auto
+rotate_left(byte value, iword shift) -> byte {
+   return byte(rotate_left(value.value, shift));
+}
+
+[[nodiscard]]
+constexpr auto
+rotate_right(byte value, uword shift) -> byte {
+   return byte(rotate_right(value.value, shift));
+}
+
+[[nodiscard]]
+constexpr auto
+rotate_right(byte value, iword shift) -> byte {
+   return byte(rotate_right(value.value, shift));
 }
 
 template <typename>
