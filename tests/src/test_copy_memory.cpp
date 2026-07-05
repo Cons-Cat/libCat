@@ -1,13 +1,13 @@
+#include <cat/detail/movsb.hpp>
+
 #include <cat/arithmetic>
 #include <cat/array>
 #include <cat/bit>
 #include <cat/cpuid>
-#include <cat/detail/movsb.hpp>
 #include <cat/memory>
 #include <cat/page_allocator>
 
 #include "../../src/libraries/memory/implementations/compare_memory_avx2.tpp"
-
 #include "../unit_tests.hpp"
 
 namespace {
@@ -31,8 +31,7 @@ fill_bytes(cat::byte* _Nonnull p_data, cat::idx bytes, cat::byte value) {
 
 void
 verify_copy_result(cat::byte const* _Nonnull p_source,
-                   cat::byte const* _Nonnull p_destination,
-                   cat::idx bytes) {
+                   cat::byte const* _Nonnull p_destination, cat::idx bytes) {
    for (cat::idx i = 0u; i < bytes; ++i) {
       cat::verify(p_destination[i] == p_source[i]);
    }
@@ -93,8 +92,8 @@ void
 large_overlap_case(cat::idx bytes, cat::idx source_offset,
                    cat::idx destination_offset) {
    cat::page_allocator pager;
-   cat::idx const capacity = bytes + max(source_offset, destination_offset)
-                             + 512u;
+   cat::idx const capacity =
+      bytes + max(source_offset, destination_offset) + 512u;
    cat::span page = pager.alloc_multi<cat::byte>(capacity).or_exit();
    cat::span expected = pager.alloc_multi<cat::byte>(capacity).or_exit();
    $defer {
@@ -130,8 +129,7 @@ compare_equal_case(cat::idx bytes, cat::idx left_skew, cat::idx right_skew) {
 }
 
 void
-compare_mismatch_case(cat::idx bytes, cat::idx mismatch_index,
-                      bool left_less) {
+compare_mismatch_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
    cat::array<cat::byte, 8_uki> left{};
    cat::array<cat::byte, 8_uki> right{};
 
@@ -154,8 +152,8 @@ compare_avx2_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
    left[mismatch_index] = cat::byte(left_less ? 1u : 240u);
    right[mismatch_index] = cat::byte(left_less ? 240u : 1u);
 
-   auto const result = cat::detail::compare_memory_avx2(
-      left.data(), right.data(), bytes);
+   auto const result =
+      cat::detail::compare_memory_avx2(left.data(), right.data(), bytes);
    cat::verify(left_less ? result < 0 : result > 0);
 }
 
@@ -176,8 +174,22 @@ $test(copy_memory) {
    using namespace cat::arithmetic;
 
    // Small-copy sizes exercise `copy_memory_small` (Cosmopolitan-style switch).
-   for (idx size : {0_idx, 1_idx, 2_idx, 3_idx, 4_idx, 7_idx, 8_idx, 15_idx,
-                    16_idx, 31_idx, 32_idx, 63_idx, 64_idx, 127_idx,}) {
+   for (idx size : {
+           0_idx,
+           1_idx,
+           2_idx,
+           3_idx,
+           4_idx,
+           7_idx,
+           8_idx,
+           15_idx,
+           16_idx,
+           31_idx,
+           32_idx,
+           63_idx,
+           64_idx,
+           127_idx,
+        }) {
       cat::array<cat::byte, 128> source{};
       cat::array<cat::byte, 128> dest{};
       initialize_bytes(source.data(), source.size(), cat::byte(11u));
@@ -269,9 +281,21 @@ $test(copy_memory_all_size_tiers_and_skews) {
    };
    cat::detail::memory_rep_string_support = {};
 
-   for (cat::idx bytes :
-        {128_idx, 129_idx, 191_idx, 255_idx, 256_idx, 511_idx, 512_idx,
-         513_idx, 1'023_idx, 1'024_idx, 1'057_idx, 2'048_idx, 2'111_idx,}) {
+   for (cat::idx bytes : {
+           128_idx,
+           129_idx,
+           191_idx,
+           255_idx,
+           256_idx,
+           511_idx,
+           512_idx,
+           513_idx,
+           1'023_idx,
+           1'024_idx,
+           1'057_idx,
+           2'048_idx,
+           2'111_idx,
+        }) {
       copy_case(bytes, 0u, 0u);
       copy_case(bytes, 3u, 5u);
       copy_case(bytes, 17u, 1u);
@@ -283,8 +307,10 @@ $test(copy_memory_rep_movsb_path) {
    $defer {
       cat::detail::memory_rep_string_support = saved_rep_support;
    };
-   cat::detail::memory_rep_string_support = {.has_erms = true,
-                                             .has_fsrm = false,};
+   cat::detail::memory_rep_string_support = {
+      .has_erms = true,
+      .has_fsrm = false,
+   };
 
    copy_case(2'048u, 7u, 11u);
 }
@@ -310,9 +336,16 @@ $test(copy_memory_direct_rep_string_helpers) {
 }
 
 $test(copy_memory_overlap_all_size_tiers) {
-   for (cat::idx bytes :
-        {128_idx, 129_idx, 255_idx, 511_idx, 512_idx, 777_idx, 1'024_idx,
-         1'057_idx,}) {
+   for (cat::idx bytes : {
+           128_idx,
+           129_idx,
+           255_idx,
+           511_idx,
+           512_idx,
+           777_idx,
+           1'024_idx,
+           1'057_idx,
+        }) {
       overlap_case(bytes, 256u, 128u);
       overlap_case(bytes, 128u, 256u);
    }
@@ -360,10 +393,25 @@ $test(compare_memory) {
 }
 
 $test(compare_memory_all_size_tiers_and_mismatch_positions) {
-   for (cat::idx bytes :
-        {1_idx, 16_idx, 17_idx, 31_idx, 32_idx, 33_idx, 63_idx, 64_idx,
-         95_idx, 96_idx, 127_idx, 128_idx, 255_idx, 256_idx, 300_idx,
-         1'024_idx, 1'057_idx,}) {
+   for (cat::idx bytes : {
+           1_idx,
+           16_idx,
+           17_idx,
+           31_idx,
+           32_idx,
+           33_idx,
+           63_idx,
+           64_idx,
+           95_idx,
+           96_idx,
+           127_idx,
+           128_idx,
+           255_idx,
+           256_idx,
+           300_idx,
+           1'024_idx,
+           1'057_idx,
+        }) {
       compare_equal_case(bytes, 0u, 0u);
       compare_mismatch_case(bytes, 0u, true);
       compare_mismatch_case(bytes, bytes / 2u, false);
@@ -397,9 +445,17 @@ $test(compare_memory_direct_avx2_paths_when_supported) {
       return;
    }
 
-   for (cat::idx bytes :
-        {17_idx, 32_idx, 33_idx, 63_idx, 64_idx, 95_idx, 96_idx, 127_idx,
-         160_idx,}) {
+   for (cat::idx bytes : {
+           17_idx,
+           32_idx,
+           33_idx,
+           63_idx,
+           64_idx,
+           95_idx,
+           96_idx,
+           127_idx,
+           160_idx,
+        }) {
       compare_avx2_case(bytes, 0u, true);
       compare_avx2_case(bytes, bytes / 2u, false);
       compare_avx2_case(bytes, previous_index(bytes), true);

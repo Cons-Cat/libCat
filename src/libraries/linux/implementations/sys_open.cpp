@@ -1,8 +1,8 @@
 #include <cat/linux>
 
 auto
-nix::sys_open(cat::zstr_view file_path, open_mode file_mode,
-              open_flags flags) -> nix::scaredy_nix<nix::file_descriptor> {
+nix::sys_open(cat::zstr_view file_path, open_mode file_mode, open_flags flags)
+   -> nix::scaredy_nix<nix::file_descriptor> {
    // TODO: Figure out how to best support `close_exec`.
    // TODO: `large_file` should only be enabled on 64-bit targets.
    // https://filippo.io/linux-syscall-table/

@@ -300,15 +300,15 @@ enum class message_flags : unsigned int {
    end_of_record = 128,     // MSG_EOR
    wait_all = 256,          // MSG_WAITALL
    fin = 512,               // MSG_FIN
-   syn = 1024,              // MSG_SYN
-   confirm = 2048,          // MSG_CONFIRM
-   reset = 4096,            // MSG_RST
-   error_queue = 8192,      // MSG_ERRQUEUE
-   no_signal = 16384,       // MSG_NOSIGNAL
-   more = 32768,            // MSG_MORE
-   wait_for_one = 65536,    // MSG_WAITFORONE
-   zerocopy = 67108864,     // MSG_ZEROCOPY
-   fastopen = 536870912,    // MSG_FASTOPEN
+   syn = 1'024,             // MSG_SYN
+   confirm = 2'048,         // MSG_CONFIRM
+   reset = 4'096,           // MSG_RST
+   error_queue = 8'192,     // MSG_ERRQUEUE
+   no_signal = 16'384,      // MSG_NOSIGNAL
+   more = 32'768,           // MSG_MORE
+   wait_for_one = 65'536,   // MSG_WAITFORONE
+   zerocopy = 67'108'864,   // MSG_ZEROCOPY
+   fastopen = 536'870'912,  // MSG_FASTOPEN
 };
 
 // `flags` argument to `sys_accept4()`. Same encoding as the matching
@@ -1111,14 +1111,14 @@ namespace nix {
 
 // Syscall 0.
 auto
-sys_read(file_descriptor file_descriptor, cat::span<char> buffer) -> scaredy_nix<cat::iword>;
+sys_read(file_descriptor file_descriptor, cat::span<char> buffer)
+   -> scaredy_nix<cat::iword>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_read(file_descriptor file_descriptor, char* _Nonnull p_string_buffer,
          cat::idx length) -> scaredy_nix<cat::iword> {
-   return sys_read(file_descriptor,
-                   cat::span<char>(p_string_buffer, length));
+   return sys_read(file_descriptor, cat::span<char>(p_string_buffer, length));
 }
 
 // Syscall 1.
@@ -1128,11 +1128,9 @@ sys_write(file_descriptor file_descriptor, cat::str_view string)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_write(file_descriptor file_descriptor,
-          char const* _Nonnull p_string_buffer, cat::idx length)
-   -> scaredy_nix<cat::idx> {
-   return sys_write(file_descriptor,
-                    cat::str_view(p_string_buffer, length));
+sys_write(file_descriptor file_descriptor, char const* _Nonnull p_string_buffer,
+          cat::idx length) -> scaredy_nix<cat::idx> {
+   return sys_write(file_descriptor, cat::str_view(p_string_buffer, length));
 }
 
 // Syscall 2.
@@ -1235,8 +1233,7 @@ sys_mprotect(void* _Nonnull p_address, cat::uword length,
 
 // Syscall 11.
 auto
-sys_munmap(cat::span<cat::byte const> memory)
-   -> scaredy_nix<void>;
+sys_munmap(cat::span<cat::byte const> memory) -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -1346,7 +1343,8 @@ sys_pread64(file_descriptor file_descriptor, cat::span<char> buffer,
 inline auto
 sys_pread64(file_descriptor file_descriptor, char* _Nonnull p_buffer,
             cat::idx length, cat::iword offset) -> scaredy_nix<cat::iword> {
-   return sys_pread64(file_descriptor, cat::span<char>(p_buffer, length), offset);
+   return sys_pread64(file_descriptor, cat::span<char>(p_buffer, length),
+                      offset);
 }
 
 // Syscall 18.
@@ -1356,10 +1354,10 @@ sys_pwrite64(file_descriptor file_descriptor, cat::str_view buffer,
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_pwrite64(file_descriptor file_descriptor,
-             char const* _Nonnull p_buffer, cat::idx length, cat::iword offset)
-   -> scaredy_nix<cat::idx> {
-   return sys_pwrite64(file_descriptor, cat::str_view(p_buffer, length), offset);
+sys_pwrite64(file_descriptor file_descriptor, char const* _Nonnull p_buffer,
+             cat::idx length, cat::iword offset) -> scaredy_nix<cat::idx> {
+   return sys_pwrite64(file_descriptor, cat::str_view(p_buffer, length),
+                       offset);
 }
 
 struct io_vector : cat::span<cat::byte> {
@@ -1425,8 +1423,7 @@ sys_writev(file_descriptor file_descriptor, io_vector* _Nonnull p_vectors,
 // real user/group id. `mode` is `access_mode::exists` to test for presence,
 // or any combination of the `readable`/`writable`/`executable` bits.
 auto
-sys_access(cat::zstr_view file_path, access_mode mode)
-   -> scaredy_nix<void>;
+sys_access(cat::zstr_view file_path, access_mode mode) -> scaredy_nix<void>;
 
 // Syscall 22. `pipefd[0]` becomes the read end and `pipefd[1]` the write end.
 auto sys_pipe(cat::int4 (&pipefd)[2]) -> scaredy_nix<void>;
@@ -1489,8 +1486,8 @@ sys_sendto(file_descriptor socket_descriptor,
            cat::Socket const* _Nullable p_destination_socket = nullptr,
            cat::iword addr_length = 0) -> scaredy_nix<cat::iword> {
    return sys_sendto(socket_descriptor,
-                     cat::str_view(p_message_buffer, buffer_length),
-                     flags, p_destination_socket, addr_length);
+                     cat::str_view(p_message_buffer, buffer_length), flags,
+                     p_destination_socket, addr_length);
 }
 
 // Syscall 45. Linux names this `recvfrom`. The libCat name follows the BSD
@@ -1508,10 +1505,10 @@ sys_recv(file_descriptor socket_descriptor, void* _Nonnull p_message_buffer,
          cat::Socket const* _Nullable __restrict p_addr = nullptr,
          cat::iword const* _Nullable __restrict p_addr_length = nullptr)
    -> scaredy_nix<cat::iword> {
-   return sys_recv(socket_descriptor,
-                   cat::span<char>(static_cast<char*>(p_message_buffer),
-                                   buffer_length),
-                   p_addr, p_addr_length);
+   return sys_recv(
+      socket_descriptor,
+      cat::span<char>(static_cast<char*>(p_message_buffer), buffer_length),
+      p_addr, p_addr_length);
 }
 
 // `msg_header` is the kernel ABI for `sys_sendmsg()` and `sys_recvmsg()`.
@@ -1541,12 +1538,14 @@ static_assert(sizeof(msg_header) == 56);
 // Syscall 46. Returns the number of bytes sent.
 auto
 sys_sendmsg(file_descriptor socket_descriptor, msg_header const& message,
-            message_flags flags = message_flags::none) -> scaredy_nix<cat::iword>;
+            message_flags flags = message_flags::none)
+   -> scaredy_nix<cat::iword>;
 
 // Syscall 47. Returns the number of bytes received.
 auto
 sys_recvmsg(file_descriptor socket_descriptor, msg_header& message,
-            message_flags flags = message_flags::none) -> scaredy_nix<cat::iword>;
+            message_flags flags = message_flags::none)
+   -> scaredy_nix<cat::iword>;
 
 // Syscall 48. Tear down half or all of a connected socket.
 auto
@@ -1635,8 +1634,7 @@ sys_fdatasync(file_descriptor file_descriptor) -> scaredy_nix<void>;
 
 // Syscall 76.
 auto
-sys_truncate(cat::zstr_view file_path, cat::iword length)
-   -> scaredy_nix<void>;
+sys_truncate(cat::zstr_view file_path, cat::iword length) -> scaredy_nix<void>;
 
 // Syscall 77.
 auto
@@ -1648,13 +1646,13 @@ sys_ftruncate(file_descriptor file_descriptor, cat::iword length)
 // variable-length, advance by `record_length` to reach the next entry. The
 // `linux_dirent64` form (`sys_getdents64()`) is preferred on 64-bit.
 auto
-sys_getdents(file_descriptor file_descriptor, cat::span<char> buffer) -> scaredy_nix<cat::idx>;
+sys_getdents(file_descriptor file_descriptor, cat::span<char> buffer)
+   -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_getdents(file_descriptor file_descriptor,
-             linux_dirent* _Nonnull p_buffer, cat::uword length)
-   -> scaredy_nix<cat::idx> {
+sys_getdents(file_descriptor file_descriptor, linux_dirent* _Nonnull p_buffer,
+             cat::uword length) -> scaredy_nix<cat::idx> {
    return sys_getdents(
       file_descriptor,
       cat::span<char>(__builtin_bit_cast(char* _Nonnull, p_buffer),
@@ -1668,7 +1666,8 @@ sys_getcwd(cat::span<char> buffer) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_getcwd(char* _Nonnull p_buffer, cat::uword length) -> scaredy_nix<cat::idx> {
+sys_getcwd(char* _Nonnull p_buffer, cat::uword length)
+   -> scaredy_nix<cat::idx> {
    return sys_getcwd(cat::span<char>(p_buffer, cat::idx(length)));
 }
 
@@ -1682,13 +1681,12 @@ sys_fchdir(file_descriptor file_descriptor) -> scaredy_nix<void>;
 
 // Syscall 82.
 auto
-sys_rename(cat::zstr_view old_path,
-           cat::zstr_view new_path) -> scaredy_nix<void>;
+sys_rename(cat::zstr_view old_path, cat::zstr_view new_path)
+   -> scaredy_nix<void>;
 
 // Syscall 83.
 auto
-sys_mkdir(cat::zstr_view file_path, file_permissions mode)
-   -> scaredy_nix<void>;
+sys_mkdir(cat::zstr_view file_path, file_permissions mode) -> scaredy_nix<void>;
 
 // Syscall 84.
 auto
@@ -1701,8 +1699,8 @@ sys_creat(cat::zstr_view file_path, open_mode file_mode)
 
 // Syscall 86.
 auto
-sys_link(cat::zstr_view existing_path,
-         cat::zstr_view new_path) -> scaredy_nix<void>;
+sys_link(cat::zstr_view existing_path, cat::zstr_view new_path)
+   -> scaredy_nix<void>;
 
 // Syscall 87.
 auto
@@ -1710,8 +1708,8 @@ sys_unlink(cat::zstr_view path_name) -> scaredy_nix<void>;
 
 // Syscall 88.
 auto
-sys_symlink(cat::zstr_view target_path,
-            cat::zstr_view link_path) -> scaredy_nix<void>;
+sys_symlink(cat::zstr_view target_path, cat::zstr_view link_path)
+   -> scaredy_nix<void>;
 
 // Syscall 89. Returns the number of bytes written to `p_buffer`. The kernel
 // does not append a terminating NUL.
@@ -1723,13 +1721,13 @@ sys_readlink(cat::zstr_view file_path, cat::span<char> buffer)
 inline auto
 sys_readlink(cat::zstr_view file_path, char* _Nonnull __restrict p_buffer,
              cat::uword buffer_length) -> scaredy_nix<cat::idx> {
-   return sys_readlink(file_path, cat::span<char>(p_buffer, cat::idx(buffer_length)));
+   return sys_readlink(file_path,
+                       cat::span<char>(p_buffer, cat::idx(buffer_length)));
 }
 
 // Syscall 90.
 auto
-sys_chmod(cat::zstr_view file_path, file_permissions mode)
-   -> scaredy_nix<void>;
+sys_chmod(cat::zstr_view file_path, file_permissions mode) -> scaredy_nix<void>;
 
 // Syscall 91.
 auto
@@ -1939,8 +1937,7 @@ sys_utime(cat::zstr_view file_path, utimbuf const* _Nullable p_times)
 // Syscall 137. Fill `out` with statistics for the file system that
 // contains `p_file_path`.
 auto
-sys_statfs(cat::zstr_view file_path, statfs_data& out)
-   -> scaredy_nix<void>;
+sys_statfs(cat::zstr_view file_path, statfs_data& out) -> scaredy_nix<void>;
 
 // Syscall 138.
 auto
@@ -1951,8 +1948,7 @@ sys_fstatfs(file_descriptor file_descriptor, statfs_data& out)
 // [`p_address`, `p_address + length`) into RAM so the kernel may not page
 // it out.
 auto
-sys_mlock(cat::span<cat::byte const> memory)
-   -> scaredy_nix<void>;
+sys_mlock(cat::span<cat::byte const> memory) -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -1965,8 +1961,7 @@ sys_mlock(void const* _Nonnull p_address, cat::uword length)
 
 // Syscall 150.
 auto
-sys_munlock(cat::span<cat::byte const> memory)
-   -> scaredy_nix<void>;
+sys_munlock(cat::span<cat::byte const> memory) -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -2094,8 +2089,8 @@ sys_waitid(wait_id type, process_id id, wait_options_flags options)
 // Syscall 257. `dirfd` may be `at_fdcwd` or any other directory descriptor.
 // `mode` is honored only when `flags` includes `open_flags::create`.
 auto
-sys_openat(file_descriptor dirfd, cat::zstr_view file_path,
-           open_mode mode, open_flags flags = open_flags(0),
+sys_openat(file_descriptor dirfd, cat::zstr_view file_path, open_mode mode,
+           open_flags flags = open_flags(0),
            file_permissions permissions = file_permissions::none)
    -> scaredy_nix<file_descriptor>;
 
@@ -2107,9 +2102,9 @@ sys_mkdirat(file_descriptor dirfd, cat::zstr_view file_path,
 // Syscall 260. `flags` accepts `atfile_flags::no_follow` and
 // `atfile_flags::empty_path`.
 auto
-sys_fchownat(file_descriptor dirfd, cat::zstr_view file_path,
-             user_id user, group_id group,
-             atfile_flags flags = atfile_flags::none) -> scaredy_nix<void>;
+sys_fchownat(file_descriptor dirfd, cat::zstr_view file_path, user_id user,
+             group_id group, atfile_flags flags = atfile_flags::none)
+   -> scaredy_nix<void>;
 
 // Syscall 262. The kernel name is `newfstatat`. Resolves `p_file_path`
 // relative to `dirfd` (or `at_fdcwd`) and fills `out`.
@@ -2126,30 +2121,25 @@ sys_unlinkat(file_descriptor dirfd, cat::zstr_view file_path,
 
 // Syscall 264.
 auto
-sys_renameat(file_descriptor old_dirfd,
-             cat::zstr_view old_path,
-             file_descriptor new_dirfd,
-             cat::zstr_view new_path) -> scaredy_nix<void>;
+sys_renameat(file_descriptor old_dirfd, cat::zstr_view old_path,
+             file_descriptor new_dirfd, cat::zstr_view new_path)
+   -> scaredy_nix<void>;
 
 // Syscall 265.
 auto
-sys_linkat(file_descriptor old_dirfd,
-           cat::zstr_view existing_path,
-           file_descriptor new_dirfd,
-           cat::zstr_view new_path,
+sys_linkat(file_descriptor old_dirfd, cat::zstr_view existing_path,
+           file_descriptor new_dirfd, cat::zstr_view new_path,
            atfile_flags flags = atfile_flags::none) -> scaredy_nix<void>;
 
 // Syscall 266.
 auto
-sys_symlinkat(cat::zstr_view target_path,
-              file_descriptor new_dirfd,
+sys_symlinkat(cat::zstr_view target_path, file_descriptor new_dirfd,
               cat::zstr_view link_path) -> scaredy_nix<void>;
 
 // Syscall 267.
 auto
 sys_readlinkat(file_descriptor dirfd, cat::zstr_view file_path,
-               cat::span<char> buffer)
-   -> scaredy_nix<cat::idx>;
+               cat::span<char> buffer) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -2169,9 +2159,8 @@ sys_fchmodat(file_descriptor dirfd, cat::zstr_view file_path,
 // Syscall 269. `flags` accepts `atfile_flags::eaccess` (effective uid/gid
 // instead of real) and `atfile_flags::no_follow`.
 auto
-sys_faccessat(file_descriptor dirfd, cat::zstr_view file_path,
-              access_mode mode, atfile_flags flags = atfile_flags::none)
-   -> scaredy_nix<void>;
+sys_faccessat(file_descriptor dirfd, cat::zstr_view file_path, access_mode mode,
+              atfile_flags flags = atfile_flags::none) -> scaredy_nix<void>;
 
 // Syscall 273.
 auto
@@ -2223,11 +2212,9 @@ sys_rt_tgsigqueueinfo(process_id tgid, process_id tid, signal s,
 
 // Syscall 316. `sys_renameat()` plus `renameat2_flags`.
 auto
-sys_renameat2(file_descriptor old_dirfd,
-              cat::zstr_view old_path,
-              file_descriptor new_dirfd,
-              cat::zstr_view new_path, renameat2_flags flags)
-   -> scaredy_nix<void>;
+sys_renameat2(file_descriptor old_dirfd, cat::zstr_view old_path,
+              file_descriptor new_dirfd, cat::zstr_view new_path,
+              renameat2_flags flags) -> scaredy_nix<void>;
 
 // Syscall 318. Fill `length` bytes of `p_buffer` with kernel-supplied
 // randomness. Returns the number of bytes actually written.
@@ -2248,13 +2235,13 @@ sys_getrandom(void* _Nonnull p_buffer, cat::idx length,
 
 // Syscall 325. `sys_mlock()` plus `mlock2_flags::on_fault`.
 auto
-sys_mlock2(cat::span<cat::byte const> memory,
-           mlock2_flags flags) -> scaredy_nix<void>;
+sys_mlock2(cat::span<cat::byte const> memory, mlock2_flags flags)
+   -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_mlock2(void const* _Nonnull p_address, cat::uword length, mlock2_flags flags)
-   -> scaredy_nix<void> {
+sys_mlock2(void const* _Nonnull p_address, cat::uword length,
+           mlock2_flags flags) -> scaredy_nix<void> {
    return sys_mlock2(
       cat::span(__builtin_bit_cast(cat::byte const* _Nonnull, p_address),
                 cat::idx(length)),
@@ -2265,9 +2252,8 @@ sys_mlock2(void const* _Nonnull p_address, cat::uword length, mlock2_flags flags
 // fill in `out`. `flags` may include `atfile_flags::no_follow` and the
 // statx-only sync controls.
 auto
-sys_statx(file_descriptor dirfd, cat::zstr_view file_path,
-          atfile_flags flags, statx_mask mask, statx_data& out)
-   -> scaredy_nix<void>;
+sys_statx(file_descriptor dirfd, cat::zstr_view file_path, atfile_flags flags,
+          statx_mask mask, statx_data& out) -> scaredy_nix<void>;
 
 // `io_sqring_offsets` is the kernel ABI for the submission-queue offsets
 // that `sys_io_uring_setup()` fills into `io_uring_params::sq_off`.
@@ -2406,8 +2392,8 @@ has_sys_cachestat() -> bool {
 
 // Syscall 452 (Linux 6.6).
 auto
-sys_fchmodat2(file_descriptor dirfd, cat::zstr_view path,
-              cat::uint4 mode, cat::int4 flags) -> scaredy_nix<void>;
+sys_fchmodat2(file_descriptor dirfd, cat::zstr_view path, cat::uint4 mode,
+              cat::int4 flags) -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto

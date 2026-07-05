@@ -1,5 +1,6 @@
-#include <cat/cpuid>
 #include <cat/detail/movsb.hpp>
+
+#include <cat/cpuid>
 #include <cat/memory>
 #include <cat/page_allocator>
 
@@ -62,8 +63,19 @@ $test(fill_memory) {
    // Small memset sizes exercise `fill_memory_small`.
    {
       cat::array<unsigned char, 128> buf{};
-      for (idx size : {0_idx, 1_idx, 2_idx, 3_idx, 4_idx, 7_idx, 8_idx,
-                       15_idx, 16_idx, 31_idx, 32_idx,}) {
+      for (idx size : {
+              0_idx,
+              1_idx,
+              2_idx,
+              3_idx,
+              4_idx,
+              7_idx,
+              8_idx,
+              15_idx,
+              16_idx,
+              31_idx,
+              32_idx,
+           }) {
          cat::fill_memory(buf.data(), 9_u1, size);
          for (idx i = 0u; i < size; ++i) {
             cat::verify(buf[i] == 9_u1);
@@ -119,9 +131,21 @@ $test(fill_memory_all_size_tiers_and_skews) {
    };
    cat::detail::memory_rep_string_support = {};
 
-   for (cat::idx bytes :
-        {33_idx, 63_idx, 64_idx, 65_idx, 127_idx, 128_idx, 129_idx, 511_idx,
-         512_idx, 1'024_idx, 2'047_idx, 2'048_idx, 2'111_idx,}) {
+   for (cat::idx bytes : {
+           33_idx,
+           63_idx,
+           64_idx,
+           65_idx,
+           127_idx,
+           128_idx,
+           129_idx,
+           511_idx,
+           512_idx,
+           1'024_idx,
+           2'047_idx,
+           2'048_idx,
+           2'111_idx,
+        }) {
       fill_case(bytes, 0u, 0x33u);
       fill_case(bytes, 1u, 0x44u);
       fill_case(bytes, 17u, 0x55u);
@@ -133,8 +157,10 @@ $test(fill_memory_rep_stosb_path) {
    $defer {
       cat::detail::memory_rep_string_support = saved_rep_support;
    };
-   cat::detail::memory_rep_string_support = {.has_erms = true,
-                                             .has_fsrm = false,};
+   cat::detail::memory_rep_string_support = {
+      .has_erms = true,
+      .has_fsrm = false,
+   };
 
    fill_case(2'048u, 9u, 0x66u);
 }

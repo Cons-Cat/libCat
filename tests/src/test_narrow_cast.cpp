@@ -15,9 +15,8 @@ namespace {
 static_assert(cat::is_same<decltype(cat::narrow_cast<cat::idx>(cat::uword{0u})),
                            cat::maybe<cat::idx>>);
 
-static_assert(
-   cat::is_same<decltype(cat::narrow_cast<cat::byte>(0u)),
-                cat::maybe<cat::byte>>);
+static_assert(cat::is_same<decltype(cat::narrow_cast<cat::byte>(0u)),
+                           cat::maybe<cat::byte>>);
 
 static_assert(sizeof(cat::maybe<cat::idx>) == sizeof(cat::idx),
               "`maybe<idx>` must not grow past `idx` (high-bit niche in "

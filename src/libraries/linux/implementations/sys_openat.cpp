@@ -1,8 +1,8 @@
 #include <cat/linux>
 
 auto
-nix::sys_openat(file_descriptor dirfd, cat::zstr_view file_path,
-                open_mode mode, open_flags flags, file_permissions permissions)
+nix::sys_openat(file_descriptor dirfd, cat::zstr_view file_path, open_mode mode,
+                open_flags flags, file_permissions permissions)
    -> nix::scaredy_nix<file_descriptor> {
    // Mirrors `sys_open()`'s `large_file` opt-in plus the `open_mode` bits, so
    // both syscalls behave identically aside from `dirfd`.

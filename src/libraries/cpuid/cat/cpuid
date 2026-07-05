@@ -631,8 +631,7 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
             __cpu_model.m_cpu_type = cpu_type::amdfam10_h;
             switch (cpu_model.raw) {
                case 2:
-                  __cpu_model.m_cpu_subtype =
-                     cpu_subtype::amdfam10_h_barcelona;
+                  __cpu_model.m_cpu_subtype = cpu_subtype::amdfam10_h_barcelona;
                   break;
                case 4:
                   __cpu_model.m_cpu_subtype = cpu_subtype::amdfam10_h_shanghai;
@@ -681,8 +680,7 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
             break;
          case 0x19:
             __cpu_model.m_cpu_type = cpu_type::amdfam19_h;
-            if (cpu_model <= 0x0fu
-                || (cpu_model >= 0x20u && cpu_model <= 0x2fu)
+            if (cpu_model <= 0x0fu || (cpu_model >= 0x20u && cpu_model <= 0x2fu)
                 || (cpu_model >= 0x30u && cpu_model <= 0x3fu)
                 || (cpu_model >= 0x40u && cpu_model <= 0x4fu)
                 || (cpu_model >= 0x50u && cpu_model <= 0x5fu)) {
@@ -697,8 +695,7 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
             break;
          case 0x1a:
             __cpu_model.m_cpu_type = cpu_type::amdfam1_ah;
-            if (cpu_model <= 0x4fu
-                || (cpu_model >= 0x60u && cpu_model <= 0x77u)
+            if (cpu_model <= 0x4fu || (cpu_model >= 0x60u && cpu_model <= 0x77u)
                 || (cpu_model >= 0xd0u && cpu_model <= 0xd7u)) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam1_ah_znver5;
             } else if ((cpu_model >= 0x50u && cpu_model <= 0x5fu)

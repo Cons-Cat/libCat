@@ -259,9 +259,9 @@ nix::read_self_anon_smaps() -> cat::scaredy<nix::anon_smaps, nix::linux_error> {
    cat::idx total_bytes = 0u;
 
    while (true) {
-      cat::scaredy read_result = nix::sys_read(
-         fd, buffer.data() + total_bytes,
-         cat::idx(smaps_buffer_bytes.raw - total_bytes.raw));
+      cat::scaredy read_result =
+         nix::sys_read(fd, buffer.data() + total_bytes,
+                       cat::idx(smaps_buffer_bytes.raw - total_bytes.raw));
       if (!read_result.has_value()) {
          auto _ = nix::sys_close(fd);
          return read_result.error();
