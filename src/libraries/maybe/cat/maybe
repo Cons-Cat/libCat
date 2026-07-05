@@ -195,7 +195,7 @@ struct maybe_value_storage {
    // If `T` is trivially-move-constructible, use this simple move constructor.
    constexpr maybe_value_storage(T&& in_value)
       requires(is_trivially_move_constructible<T>)
-       : m_storage($fwd(in_value)), m_has_some(true) {
+       : m_storage(move(in_value)), m_has_some(true) {
    }
 
    // If `T` is not trivially-move-constructible, then manually invoke `move` on
@@ -264,7 +264,7 @@ struct maybe_value_storage {
    operator=(T&& in_value) -> maybe_value_storage&
       requires(is_trivially_move_assignable<T>)
    {
-      m_storage = $fwd(in_value);
+      m_storage = move(in_value);
       m_has_some = true;
       return *this;
    }
@@ -555,14 +555,18 @@ struct maybe_compact_storage {
       return *this;
    }
 
-   // If `value_type` is non-trivially-copy-assignable, then manually construct
-   // it in-place.
+   // If `value_type` is non-trivially-copy-assignable, then assign into the
+   // engaged value or construct it in-place over the niche.
    constexpr auto
    operator=(value_type const& in_value) -> maybe_compact_storage&
       requires(is_copy_assignable<value_type>
                && !is_trivially_copy_assignable<value_type>)
    {
-      this->assign(in_value);
+      if (this->has_value()) {
+         m_storage = in_value;
+      } else {
+         this->construct(in_value);
+      }
       return *this;
    }
 
@@ -578,18 +582,22 @@ struct maybe_compact_storage {
    operator=(value_type&& in_value) -> maybe_compact_storage&
       requires(is_trivially_move_assignable<value_type>)
    {
-      m_storage = $fwd(in_value);
+      m_storage = move(in_value);
       return *this;
    }
 
-   // If `value_type` is non-trivially-move-assignable, then manually invoke
-   // `move()` on it.
+   // If `value_type` is non-trivially-move-assignable, then move into the
+   // engaged value or construct it in-place over the niche.
    constexpr auto
    operator=(value_type&& in_value) -> maybe_compact_storage&
       requires(is_move_assignable<value_type>
                && !is_trivially_move_assignable<value_type>)
    {
-      this->assign($fwd(in_value));
+      if (this->has_value()) {
+         m_storage = move(in_value);
+      } else {
+         this->construct(move(in_value));
+      }
       return *this;
    }
 
