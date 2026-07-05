@@ -22,18 +22,35 @@ memcpy(void* _Nonnull __restrict p_destination,
        void const* _Nonnull __restrict p_source, __SIZE_TYPE__ bytes)
    -> void* _Nonnull;
 
-// Deprecated call to `memset()`. Consider using `cat::set_memory() or
+// Deprecated call to `memset()`. Consider using `cat::fill_memory() or
 // cat::zero_memory()` instead. `memset()` exists to enable some Clang
 // optimizations.
 extern "C" [[deprecated("`std::memset()` should not be used directly! Consider "
-                        "`cat::set_memory()` or "
+                        "`cat::fill_memory()` or "
                         "`cat::zero_memory()` instead."),
              gnu::returns_nonnull]]
 auto
 memset(void* _Nonnull p_source, int byte_value, __SIZE_TYPE__ bytes)
    -> void* _Nonnull;
 
+// Deprecated call to `memcmp()`. Consider using `cat::compare_memory()` or a
+// `span` comparison instead. `memcmp()` exists because Clang lowers
+// `__builtin_memcmp()` into a call to it in optimized builds.
+extern "C" [[deprecated("`std::memcmp()` should not be used directly! Consider "
+                        "`cat::compare_memory()` instead.")]]
+auto
+memcmp(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
+       __SIZE_TYPE__ bytes) -> int;
+
 }  // namespace std
+
+// Clang emits `bcmp` for equality-only memory comparisons in optimized builds.
+// It exists for the same reason as `std::memcmp` and is not part of `std`.
+extern "C" [[deprecated("`bcmp()` should not be used directly! Consider "
+                        "`cat::compare_memory()` instead.")]]
+auto
+bcmp(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
+     __SIZE_TYPE__ bytes) -> int;
 
 namespace cat {
 

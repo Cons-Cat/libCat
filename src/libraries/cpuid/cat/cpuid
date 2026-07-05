@@ -262,6 +262,23 @@ extern "C"
 }  // namespace detail
 }  // namespace x64
 
+namespace cat::detail {
+
+struct rep_string_support {
+   bool has_erms = false;
+   bool has_fsrm = false;
+};
+
+// REP MOVSB/STOSB tuning flags. `__cpu_indicator_init()` fills these from
+// CPUID leaf 7 when feature detection is enabled.
+extern "C"
+#if !defined(CAT_NO_CPUID) && !defined(CAT_BUILD_SHARED)
+   [[gnu::visibility("hidden")]]
+#endif
+   constinit inline rep_string_support memory_rep_string_support{};
+
+}  // namespace cat::detail
+
 #ifndef CAT_NO_CPUID
 namespace cat::detail {
 
@@ -707,6 +724,8 @@ extern "C"
       cat::bitset ebx_bits = cat::make_bitset<32u>(ebx);
       cat::bitset ecx_bits = cat::make_bitset<32u>(ecx);
       cat::bitset edx_bits = cat::make_bitset<32u>(edx);
+
+      cat::detail::memory_rep_string_support = {ebx_bits[9], edx_bits[4]};
 
       // Enable AVX2.
       if (ebx_bits[3]) {

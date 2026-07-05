@@ -3,7 +3,6 @@
 #pragma once
 
 #include <cat/arithmetic>
-#include <cat/compare>
 #include <cat/meta>
 
 // We generate arithmetic operators by finding implementations of the
@@ -1666,20 +1665,6 @@ struct bitwise_interface : bit_and_interface<Derived>,
    friend struct arithmetic_interface<Derived>;
 
  public:
-   friend constexpr auto
-   operator==([[maybe_unused]] bitwise_interface const& left,
-              [[maybe_unused]] bitwise_interface const& right)
-      -> bool {
-      return true;
-   }
-
-   friend constexpr auto
-   operator<=>([[maybe_unused]] bitwise_interface const& left,
-               [[maybe_unused]] bitwise_interface const& right)
-      -> std::strong_ordering {
-      return std::strong_ordering::equal;
-   }
-
    // Unary complement operator. Only generated when the derived type exposes a
    // `.bit_complement()` member.
    [[gnu::always_inline, gnu::nodebug]]

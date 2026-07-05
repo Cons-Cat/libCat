@@ -246,17 +246,17 @@ tuple_at(Self&& self, idx index, index_list_type<indices...> /*unused*/)
       return maybe<Subscript>{nullopt};
    }
    using pointee = remove_reference<Subscript>;
-   add_pointer<pointee> p = nullptr;
-   (void)((index == idx{indices}
-           && (p = &$fwd(self).template get<indices>(), true))
-          || ...);
-   cat::assert(p);
+   add_pointer<pointee> p_element = nullptr;
+   auto _ = ((index == idx{indices}
+              && (p_element = &$fwd(self).template get<indices>(), true))
+             || ...);
+   cat::assert(p_element);
    if constexpr (is_lvalue_reference<Subscript>) {
-      return {*p};
+      return {*p_element};
    } else if constexpr (is_rvalue_reference<Subscript>) {
-      return {static_cast<Subscript>(move(*p))};
+      return {static_cast<Subscript>(move(*p_element))};
    } else {
-      return {*p};
+      return {*p_element};
    }
 }
 

@@ -1,4 +1,5 @@
 #include <cat/arithmetic>
+#include <cat/bit>
 #include <cat/maybe>
 
 #include "../unit_tests.hpp"
@@ -13,6 +14,10 @@ namespace {
 
 static_assert(cat::is_same<decltype(cat::narrow_cast<cat::idx>(cat::uword{0u})),
                            cat::maybe<cat::idx>>);
+
+static_assert(
+   cat::is_same<decltype(cat::narrow_cast<cat::byte>(0u)),
+                cat::maybe<cat::byte>>);
 
 static_assert(sizeof(cat::maybe<cat::idx>) == sizeof(cat::idx),
               "`maybe<idx>` must not grow past `idx` (high-bit niche in "
@@ -29,6 +34,17 @@ static_assert([] {
 static_assert([] {
    auto const m = cat::narrow_cast<cat::int8>(cat::int4{-99});
    return m.has_value() && m.value() == -99_i8;
+}());
+
+static_assert([] {
+   auto const value = cat::narrow_cast<cat::byte>(255u);
+   return value.has_value() && value.value() == 255u;
+}());
+
+static_assert([] {
+   auto const negative = cat::narrow_cast<cat::byte>(-1);
+   auto const too_large = cat::narrow_cast<cat::byte>(256u);
+   return !negative.has_value() && !too_large.has_value();
 }());
 
 }  // namespace

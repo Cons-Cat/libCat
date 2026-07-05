@@ -48,8 +48,11 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/math/implementations/sqrt.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
   ${CATLIB}/memory/implementations/copy_memory_backward.cpp
+  ${CATLIB}/memory/implementations/compare_memory.cpp
+  ${CATLIB}/memory/implementations/fill_memory_impl.cpp
   ${CATLIB}/string/implementations/memcpy.cpp
   ${CATLIB}/string/implementations/memset.cpp
+  ${CATLIB}/string/implementations/memcmp.cpp
   ${CATLIB}/string/implementations/strlen.cpp
   ${CATLIB}/string/implementations/print.cpp
   ${CATLIB}/string/implementations/println.cpp
@@ -321,8 +324,21 @@ set(CAT_HEADER_FILES
   ${CATLIB}/maybe/cat/maybe
   ${CATLIB}/maybe/implementations/narrow_cast.tpp
   ${CATLIB}/memory/cat/memory
+  ${CATLIB}/memory/cat/detail/movsb.hpp
+  ${CATLIB}/memory/implementations/compare_memory.tpp
+  ${CATLIB}/memory/implementations/compare_memory_avx2.tpp
+  ${CATLIB}/memory/implementations/compare_memory_chunk.tpp
+  ${CATLIB}/memory/implementations/compare_memory_medium.tpp
+  ${CATLIB}/memory/implementations/compare_memory_small.tpp
   ${CATLIB}/memory/implementations/copy_memory.tpp
   ${CATLIB}/memory/implementations/copy_memory_backward.tpp
+  ${CATLIB}/memory/implementations/copy_memory_backward_large.tpp
+  ${CATLIB}/memory/implementations/copy_memory_backward_medium.tpp
+  ${CATLIB}/memory/implementations/copy_memory_large.tpp
+  ${CATLIB}/memory/implementations/copy_memory_medium.tpp
+  ${CATLIB}/memory/implementations/copy_memory_small.tpp
+  ${CATLIB}/memory/implementations/fill_memory_medium.tpp
+  ${CATLIB}/memory/implementations/fill_memory_small.tpp
   ${CATLIB}/memory/implementations/is_memory_overlapping.tpp
   ${CATLIB}/meta/cat/meta
   ${CATLIB}/notype/cat/notype

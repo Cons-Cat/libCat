@@ -20,7 +20,9 @@ copy_memory(void const* _Nonnull __restrict p_source,
       __builtin_memcpy(p_destination, p_source, bytes);
    } else {
       // Vectorized implementation for runtime.
-      detail::copy_memory_impl(p_source, p_destination, bytes);
+      detail::copy_memory_impl(static_cast<byte const* _Nonnull>(p_source),
+                               static_cast<byte* _Nonnull>(p_destination),
+                               bytes);
    }
 }
 

@@ -54,11 +54,11 @@ array : public container_interface<array<T, length>, T>,
       requires(is_implicitly_convertible<U, T>)
    constexpr auto
    fill(U value) -> array& {
-      // TODO: This `set_memory()` segfaults with optimizations enabled. Is it
+      // TODO: This `fill_memory()` segfaults with optimizations enabled. Is it
       // even necessary?
       //
       // if (!is_constant_evaluated() && sizeof(T) <= 8) {
-      //     // set_memory(this->storage, value, length);
+      //     // fill_memory(this->storage, value, length);
       // } else {
       for (unsigned long long i = 0u; i < length; ++i) {
          this->m_data[i] = static_cast<T>(value);

@@ -1203,7 +1203,7 @@ struct byte : bitwise_interface<byte> {
    template <is_arithmetic T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr explicit byte(T from)
-       : value(static_cast<unsigned char>(make_raw_arithmetic(from))) {
+       : value(static_cast<unsigned char>(from)) {
    }
 
    uint1 value;
@@ -1251,8 +1251,8 @@ struct byte : bitwise_interface<byte> {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr explicit
    operator T() const
-      requires(is_either<remove_cv<T>, char, signed char, unsigned char,
-                         char8_t>)
+      requires(
+         is_either<remove_cv<T>, char, signed char, unsigned char, char8_t>)
    {
       return __builtin_bit_cast(T, value);
    }
@@ -1350,14 +1350,6 @@ struct byte : bitwise_interface<byte> {
 };
 
 static_assert(is_implicit_lifetime<cat::byte>);
-
-template <typename To, is_integral From>
-   requires(is_same<To, byte>)
-[[nodiscard]]
-constexpr auto
-narrow_cast(From value) -> byte {
-   return byte(value);
-}
 
 [[nodiscard]]
 constexpr auto

@@ -20,7 +20,9 @@ copy_memory_backward(void const* _Nonnull p_source,
       __builtin_memmove(p_destination, p_source, bytes);
    } else {
       // Vectorized implementation for runtime.
-      detail::copy_memory_backward_impl(p_source, p_destination, bytes);
+      detail::copy_memory_backward_impl(
+         static_cast<byte const* _Nonnull>(p_source),
+         static_cast<byte* _Nonnull>(p_destination), bytes);
    }
 }
 
