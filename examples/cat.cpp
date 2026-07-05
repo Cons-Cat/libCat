@@ -22,7 +22,6 @@ get_file_size(nix::file_descriptor file_descriptor) -> cat::maybe<iword> {
 
 void
 output_to_console(nix::io_vector io_vector) {
-   // TODO: Create a mutable string type to prevent this undefined behavior.
    // TODO: Make this buffered output to reduce syscalls.
    cat::byte const* _Nonnull p_buffer = io_vector.data();
    ++p_buffer;

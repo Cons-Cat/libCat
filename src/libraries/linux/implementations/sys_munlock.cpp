@@ -1,8 +1,7 @@
 #include <cat/linux>
 
 auto
-nix::sys_munlock(void const* _Nonnull p_address, cat::uword length)
-   -> nix::scaredy_nix<void> {
+nix::sys_munlock(cat::span<cat::byte const> memory) -> nix::scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/
-   return nix::syscall_volatile<void>(150, p_address, length);
+   return nix::syscall_volatile<void>(150, memory.data(), memory.size());
 }

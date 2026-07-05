@@ -2,11 +2,11 @@
 
 auto
 nix::sys_renameat2(file_descriptor old_dirfd,
-                   char const* _Nonnull __restrict p_old_path,
+                   cat::zstr_view old_path,
                    file_descriptor new_dirfd,
-                   char const* _Nonnull __restrict p_new_path,
+                   cat::zstr_view new_path,
                    renameat2_flags flags) -> nix::scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/
-   return nix::syscall_volatile<void>(316, old_dirfd, p_old_path, new_dirfd,
-                                      p_new_path, flags);
+   return nix::syscall_volatile<void>(316, old_dirfd, old_path.data(), new_dirfd,
+                                      new_path.data(), flags);
 }

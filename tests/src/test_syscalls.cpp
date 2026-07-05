@@ -158,14 +158,14 @@ $test(syscall_kernel_version) {
 // File I/O round trip.
 
 $test(syscall_io_basic) {
-   auto _ = nix::sys_unlink(tmp_basic.data());
+   auto _ = nix::sys_unlink(tmp_basic);
 
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic.data(), nix::open_mode::read_write).verify();
+      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
    cat::verify(fd.value >= 0);
 
    cat::idx written =
-      nix::sys_write(fd, payload_basic.data(), payload_basic_length.raw)
+      nix::sys_write(fd, payload_basic.data(), payload_basic_length)
          .verify();
    cat::verify(written == payload_basic_length);
 
@@ -179,7 +179,7 @@ $test(syscall_io_basic) {
 
    // Positioned read/write don't move the file offset.
    cat::idx written_pwrite =
-      nix::sys_pwrite64(fd, payload_short.data(), payload_short_length.raw, 0)
+      nix::sys_pwrite64(fd, payload_short.data(), payload_short_length, 0)
          .verify();
    cat::verify(written_pwrite == payload_short_length);
 
@@ -194,29 +194,29 @@ $test(syscall_io_basic) {
 
    nix::sys_ftruncate(fd, 0).verify();
    nix::sys_close(fd).verify();
-   auto truncate_result = nix::sys_truncate(tmp_basic.data(), 4);
+   auto truncate_result = nix::sys_truncate(tmp_basic, 4);
    cat::verify(truncate_result.has_value()
                || is_denied_or_invalid(truncate_result.error()));
-   nix::sys_unlink(tmp_basic.data()).verify();
+   nix::sys_unlink(tmp_basic).verify();
 }
 
 // Scatter/gather and offsets.
 
 $test(syscall_io_vector) {
-   auto _ = nix::sys_unlink(tmp_basic.data());
+   auto _ = nix::sys_unlink(tmp_basic);
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic.data(), nix::open_mode::read_write).verify();
+      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
 
    nix::io_vector vecs[2] = {
       nix::io_vector(
-         reinterpret_cast<cat::byte*>(const_cast<char*>(payload_hello.data())),
+         __builtin_bit_cast(cat::byte* _Nonnull, payload_hello.data()),
          payload_hello_length),
       nix::io_vector(
-         reinterpret_cast<cat::byte*>(const_cast<char*>(payload_world.data())),
+         __builtin_bit_cast(cat::byte* _Nonnull, payload_world.data()),
          payload_world_length),
    };
    cat::idx written =
-      nix::sys_writev(fd, cat::span<nix::io_vector>{vecs, 2u}).verify();
+      nix::sys_writev(fd, vecs, 2u).verify();
    cat::verify(written == 13);
 
    nix::sys_lseek(fd, 0, nix::seek_whence::beginning).verify();
@@ -228,13 +228,13 @@ $test(syscall_io_vector) {
       nix::io_vector(reinterpret_cast<cat::byte*>(rb), cat::idx(6)),
    };
    cat::iword got =
-      nix::sys_readv(fd, cat::span<nix::io_vector>{rvecs, 2u}).verify();
+      nix::sys_readv(fd, rvecs, 2u).verify();
    cat::verify(got == 13);
    cat::verify(ra[0] == 'h');
    cat::verify(rb[0] == 'w');
 
    nix::sys_close(fd).verify();
-   nix::sys_unlink(tmp_basic.data()).verify();
+   nix::sys_unlink(tmp_basic).verify();
 }
 
 // pipe / dup.
@@ -245,7 +245,7 @@ $test(syscall_pipe_dup) {
    nix::file_descriptor read_end{fds[0]};
    nix::file_descriptor write_end{fds[1]};
 
-   nix::sys_write(write_end, payload_ping.data(), payload_ping_length.raw)
+   nix::sys_write(write_end, payload_ping.data(), payload_ping_length)
       .verify();
    char buf[8] = {};
    cat::iword got = nix::sys_read(read_end, buf, sizeof(buf)).verify();
@@ -270,9 +270,9 @@ $test(syscall_pipe_dup) {
 // fcntl / flock.
 
 $test(syscall_fcntl_flock) {
-   auto _ = nix::sys_unlink(tmp_basic.data());
+   auto _ = nix::sys_unlink(tmp_basic);
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic.data(), nix::open_mode::read_write).verify();
+      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
 
    // Read the descriptor flags back. The set side requires packing a bit into
    // the syscall's third register, which is awkward to express via
@@ -286,18 +286,18 @@ $test(syscall_fcntl_flock) {
    nix::sys_flock(fd, nix::flock_op::unlock).verify();
 
    nix::sys_close(fd).verify();
-   nix::sys_unlink(tmp_basic.data()).verify();
+   nix::sys_unlink(tmp_basic).verify();
 }
 
 // stat family / access / xattr-less metadata.
 
 $test(syscall_fs_metadata) {
-   auto _ = nix::sys_unlink(tmp_basic.data());
+   auto _ = nix::sys_unlink(tmp_basic);
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic.data(), nix::open_mode::read_write).verify();
-   nix::sys_write(fd, payload_short.data(), payload_short_length.raw).verify();
+      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
+   nix::sys_write(fd, payload_short.data(), payload_short_length).verify();
    nix::sys_close(fd).verify();
-   nix::sys_chmod(tmp_basic.data(), nix::file_permissions::user_read
+   nix::sys_chmod(tmp_basic, nix::file_permissions::user_read
                                        | nix::file_permissions::user_write)
       .verify();
 
@@ -311,67 +311,67 @@ $test(syscall_fs_metadata) {
    cat::verify(st_lpath.is_regular());
 
    nix::file_status st_at{};
-   nix::sys_newfstatat(nix::at_fdcwd, tmp_basic.data(), st_at).verify();
+   nix::sys_newfstatat(nix::at_fdcwd, tmp_basic, st_at).verify();
    cat::verify(st_at.is_regular());
 
-   fd = nix::sys_open(tmp_basic.data(), nix::open_mode::read_only).verify();
+   fd = nix::sys_open(tmp_basic, nix::open_mode::read_only).verify();
    nix::file_status st_fstat = nix::sys_fstat(fd).verify();
    cat::verify(st_fstat.is_regular());
    nix::sys_close(fd).verify();
 
-   nix::sys_access(tmp_basic.data(), nix::access_mode::exists).verify();
-   nix::sys_access(tmp_basic.data(),
+   nix::sys_access(tmp_basic, nix::access_mode::exists).verify();
+   nix::sys_access(tmp_basic,
                    nix::access_mode::readable | nix::access_mode::writable)
       .verify();
 
-   nix::sys_faccessat(nix::at_fdcwd, tmp_basic.data(), nix::access_mode::exists)
+   nix::sys_faccessat(nix::at_fdcwd, tmp_basic, nix::access_mode::exists)
       .verify();
 
    // `sys_statx` is Linux 4.11+, present everywhere libCat targets.
    nix::statx_data sx{};
-   nix::sys_statx(nix::at_fdcwd, tmp_basic.data(), nix::atfile_flags::none,
+   nix::sys_statx(nix::at_fdcwd, tmp_basic, nix::atfile_flags::none,
                   nix::statx_mask::basic_stats, sx)
       .verify();
    cat::verify(sx.file_size == 4);
 
    nix::statfs_data fs{};
-   nix::sys_statfs(tmp_basic.data(), fs).verify();
+   nix::sys_statfs(tmp_basic, fs).verify();
    cat::verify(fs.block_size > 0);
 
-   fd = nix::sys_open(tmp_basic.data(), nix::open_mode::read_only).verify();
+   fd = nix::sys_open(tmp_basic, nix::open_mode::read_only).verify();
    nix::statfs_data fs2{};
    nix::sys_fstatfs(fd, fs2).verify();
    cat::verify(fs2.block_size > 0);
    nix::sys_close(fd).verify();
 
-   nix::sys_unlink(tmp_basic.data()).verify();
+   nix::sys_unlink(tmp_basic).verify();
 }
 
 // mode / ownership.
 
 $test(syscall_fs_mode) {
-   auto _ = nix::sys_unlink(tmp_basic.data());
+   auto _ = nix::sys_unlink(tmp_basic);
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic.data(), nix::open_mode::read_write).verify();
+      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
 
-   nix::sys_chmod(tmp_basic.data(), nix::file_permissions::user_read
+   nix::sys_chmod(tmp_basic, nix::file_permissions::user_read
                                        | nix::file_permissions::user_write)
       .verify();
    nix::sys_fchmod(
       fd, nix::file_permissions::user_read | nix::file_permissions::user_write)
       .verify();
    nix::sys_fchmodat(
-      nix::at_fdcwd, tmp_basic.data(),
+      nix::at_fdcwd, tmp_basic,
       nix::file_permissions::user_read | nix::file_permissions::user_write)
       .verify();
 
    // Setting our own uid/gid back on a file we own is always permitted.
    nix::user_id uid = nix::sys_getuid();
    nix::group_id gid = nix::sys_getgid();
-   nix::sys_chown(tmp_basic.data(), uid, gid).verify();
+   nix::sys_chown(tmp_basic, uid, gid).verify();
    nix::sys_fchown(fd, uid, gid).verify();
-   nix::sys_lchown(tmp_basic.data(), uid, gid).verify();
-   nix::sys_fchownat(nix::at_fdcwd, tmp_basic.data(), uid, gid).verify();
+   nix::sys_lchown(tmp_basic, uid, gid).verify();
+   nix::sys_fchownat(nix::at_fdcwd, tmp_basic, uid, gid).verify();
 
    // `sys_umask` returns the previous umask. Setting and restoring is a no-op.
    nix::file_permissions previous =
@@ -379,28 +379,28 @@ $test(syscall_fs_mode) {
    auto unused_restore = nix::sys_umask(previous);
 
    nix::sys_close(fd).verify();
-   nix::sys_unlink(tmp_basic.data()).verify();
+   nix::sys_unlink(tmp_basic).verify();
 }
 
 // Directories / dirents / cwd.
 
 $test(syscall_fs_directories) {
    // Clean leftover state.
-   auto unused_unlink = nix::sys_unlink(tmp_dir_inside.data());
-   auto unused_rmdir_inside = nix::sys_rmdir(tmp_dir_inside.data());
-   auto unused_rmdir = nix::sys_rmdir(tmp_dir.data());
+   auto unused_unlink = nix::sys_unlink(tmp_dir_inside);
+   auto unused_rmdir_inside = nix::sys_rmdir(tmp_dir_inside);
+   auto unused_rmdir = nix::sys_rmdir(tmp_dir);
 
-   nix::sys_mkdir(tmp_dir.data(), nix::file_permissions::user_read
+   nix::sys_mkdir(tmp_dir, nix::file_permissions::user_read
                                      | nix::file_permissions::user_write
                                      | nix::file_permissions::user_execute)
       .verify();
    nix::sys_mkdirat(
-      nix::at_fdcwd, tmp_dir_inside.data(),
+      nix::at_fdcwd, tmp_dir_inside,
       nix::file_permissions::user_read | nix::file_permissions::user_write)
       .verify();
 
    nix::file_descriptor dir_fd =
-      nix::sys_open(tmp_dir.data(), nix::open_mode::read_only,
+      nix::sys_open(tmp_dir, nix::open_mode::read_only,
                     nix::open_flags::directory)
          .verify();
    alignas(8) char dirent_buf[1'024] = {};
@@ -419,18 +419,18 @@ $test(syscall_fs_directories) {
    cat::verify(cwd_len > 0);
    cat::verify(cwd[0] == '/');
 
-   nix::sys_chdir(tmp_dir.data()).verify();
-   nix::sys_chdir(cwd).verify();
+   nix::sys_chdir(tmp_dir).verify();
+   nix::sys_chdir(&cwd[0]).verify();
    nix::file_descriptor cwd_fd =
-      nix::sys_open(cwd, nix::open_mode::read_only, nix::open_flags::directory)
+      nix::sys_open(&cwd[0], nix::open_mode::read_only, nix::open_flags::directory)
          .verify();
    nix::sys_fchdir(cwd_fd).verify();
    nix::sys_close(cwd_fd).verify();
 
-   nix::sys_unlinkat(nix::at_fdcwd, tmp_dir_inside.data(),
+   nix::sys_unlinkat(nix::at_fdcwd, tmp_dir_inside,
                      nix::atfile_flags::remove_directory)
       .verify();
-   nix::sys_unlinkat(nix::at_fdcwd, tmp_dir.data(),
+   nix::sys_unlinkat(nix::at_fdcwd, tmp_dir,
                      nix::atfile_flags::remove_directory)
       .verify();
 }
@@ -439,59 +439,58 @@ $test(syscall_fs_directories) {
 
 $test(syscall_fs_links) {
    // Clean leftovers.
-   auto unused_unlink_target = nix::sys_unlink(tmp_link_target.data());
-   auto unused_unlink_link = nix::sys_unlink(tmp_link.data());
-   auto unused_unlink_symlink = nix::sys_unlink(tmp_symlink.data());
-   auto unused_unlink_rename_a = nix::sys_unlink(tmp_rename_a.data());
-   auto unused_unlink_rename_b = nix::sys_unlink(tmp_rename_b.data());
+   auto unused_unlink_target = nix::sys_unlink(tmp_link_target);
+   auto unused_unlink_link = nix::sys_unlink(tmp_link);
+   auto unused_unlink_symlink = nix::sys_unlink(tmp_symlink);
+   auto unused_unlink_rename_a = nix::sys_unlink(tmp_rename_a);
+   auto unused_unlink_rename_b = nix::sys_unlink(tmp_rename_b);
 
    nix::sys_close(
-      nix::sys_creat(tmp_link_target.data(), nix::open_mode::read_write)
+      nix::sys_creat(tmp_link_target, nix::open_mode::read_write)
          .verify())
       .verify();
 
-   nix::sys_link(tmp_link_target.data(), tmp_link.data()).verify();
-   nix::sys_symlink(tmp_link_target.data(), tmp_symlink.data()).verify();
+   nix::sys_link(tmp_link_target, tmp_link).verify();
+   nix::sys_symlink(tmp_link_target, tmp_symlink).verify();
 
    char readlink_buffer[128] = {};
    cat::idx readlink_len =
-      nix::sys_readlink(tmp_symlink.data(), readlink_buffer,
-                        sizeof(readlink_buffer))
+      nix::sys_readlink(tmp_symlink, readlink_buffer, sizeof(readlink_buffer))
          .verify();
    // "/tmp/libcat_test_link_target" is 28 characters.
    cat::verify(readlink_len == cat::idx{28u});
 
-   nix::sys_readlinkat(nix::at_fdcwd, tmp_symlink.data(), readlink_buffer,
+   nix::sys_readlinkat(nix::at_fdcwd, tmp_symlink, readlink_buffer,
                        sizeof(readlink_buffer))
       .verify();
 
    // *at variants of link/symlink/rename.
    nix::sys_close(
-      nix::sys_creat(tmp_rename_a.data(), nix::open_mode::read_write).verify())
+      nix::sys_creat(tmp_rename_a, nix::open_mode::read_write).verify())
       .verify();
-   nix::sys_renameat(nix::at_fdcwd, tmp_rename_a.data(), nix::at_fdcwd,
-                     tmp_rename_b.data())
+   nix::sys_renameat(nix::at_fdcwd, tmp_rename_a, nix::at_fdcwd,
+                     tmp_rename_b)
       .verify();
-   nix::sys_rename(tmp_rename_b.data(), tmp_rename_a.data()).verify();
+   nix::sys_rename(tmp_rename_b, tmp_rename_a).verify();
    // `sys_renameat2` has the same arity plus flags. Pass `none` to mirror.
-   nix::sys_renameat2(nix::at_fdcwd, tmp_rename_a.data(), nix::at_fdcwd,
-                      tmp_rename_b.data(), nix::renameat2_flags::none)
+   nix::sys_renameat2(nix::at_fdcwd, tmp_rename_a, nix::at_fdcwd,
+                      tmp_rename_b, nix::renameat2_flags::none)
       .verify();
 
-   nix::sys_unlink(tmp_link.data()).verify();
-   nix::sys_unlink(tmp_symlink.data()).verify();
-   nix::sys_unlink(tmp_link_target.data()).verify();
-   nix::sys_unlink(tmp_rename_b.data()).verify();
+   nix::sys_unlink(tmp_link).verify();
+   nix::sys_unlink(tmp_symlink).verify();
+   nix::sys_unlink(tmp_link_target).verify();
+   nix::sys_unlink(tmp_rename_b).verify();
 }
 
 // openat / openat2 / fallocate / utimensat.
 
 $test(syscall_fs_at_variants) {
-   auto _ = nix::sys_unlink(tmp_atfile.data());
+   auto _ = nix::sys_unlink(tmp_atfile);
 
    nix::file_descriptor fd =
       nix::sys_openat(
-         nix::at_fdcwd, tmp_atfile.data(), nix::open_mode::read_write,
+         nix::at_fdcwd, tmp_atfile, nix::open_mode::read_write,
          nix::open_flags::create | nix::open_flags::truncate,
          nix::file_permissions::user_read | nix::file_permissions::user_write)
          .verify();
@@ -503,7 +502,7 @@ $test(syscall_fs_at_variants) {
       .resolve = 0u,
    };
    nix::file_descriptor fd2 =
-      nix::sys_openat2(nix::at_fdcwd, tmp_atfile.data(), how).verify();
+      nix::sys_openat2(nix::at_fdcwd, tmp_atfile, how).verify();
    nix::sys_ftruncate(fd2, cat::page_size).verify();
    // `sys_fallocate` may legitimately return `linux_error::opnotsupp` on tmpfs.
    auto fallocate_result =
@@ -512,12 +511,12 @@ $test(syscall_fs_at_variants) {
                || fallocate_result.error() == nix::linux_error::opnotsupp);
 
    // `utimensat` with `nullptr` p_times sets both to the current time.
-   nix::sys_utimensat(nix::at_fdcwd, tmp_atfile.data(), nullptr).verify();
+   nix::sys_utimensat(nix::at_fdcwd, tmp_atfile, nullptr).verify();
    // `utime` likewise.
-   nix::sys_utime(tmp_atfile.data(), nullptr).verify();
+   nix::sys_utime(tmp_atfile, nullptr).verify();
 
    nix::sys_close(fd2).verify();
-   nix::sys_unlink(tmp_atfile.data()).verify();
+   nix::sys_unlink(tmp_atfile).verify();
 }
 
 // Memory.
@@ -766,7 +765,7 @@ $test(syscall_socket_pair) {
    // Round-trip through `send`/`recv`.
    // Use the namespace-scope null-terminated payload.
    cat::iword sent =
-      nix::sys_sendto(a, payload_two.data(), payload_two_length.raw, 0)
+      nix::sys_sendto(a, payload_two.data(), payload_two_length)
          .verify();
    cat::verify(sent == cat::iword(payload_two_length));
 
@@ -774,7 +773,7 @@ $test(syscall_socket_pair) {
    cat::iword got = nix::sys_recv(b, buffer, sizeof(buffer)).verify();
    cat::verify(got == 2);
    cat::verify(buffer[0] == 'h');
-   sent = nix::sys_sendto(a, payload_two.data(), payload_two_length.raw, 0)
+   sent = nix::sys_sendto(a, payload_two.data(), payload_two_length)
              .verify();
    cat::verify(sent == cat::iword(payload_two_length));
    char explicit_null_buffer[8] = {};
@@ -783,7 +782,7 @@ $test(syscall_socket_pair) {
             .verify();
    cat::verify(got == 2);
    cat::verify(explicit_null_buffer[0] == 'h');
-   sent = nix::sys_sendto(a, payload_two.data(), payload_two_length.raw, 0)
+   sent = nix::sys_sendto(a, payload_two.data(), payload_two_length)
              .verify();
    cat::verify(sent == cat::iword(payload_two_length));
    cat::socket_unix<cat::socket_type::stream> socket_receiver(b);
@@ -797,7 +796,7 @@ $test(syscall_socket_pair) {
    // `sendmsg` / `recvmsg` round trip.
    nix::io_vector iov_send[1] = {
       nix::io_vector(
-         reinterpret_cast<cat::byte*>(const_cast<char*>(payload_two.data())),
+         __builtin_bit_cast(cat::byte* _Nonnull, payload_two.data()),
          payload_two_length),
    };
    nix::msg_header sender{};
@@ -808,7 +807,7 @@ $test(syscall_socket_pair) {
    sender.p_control = nullptr;
    sender.control_length = 0u;
    sender.flags = 0;
-   cat::iword sent_msg = nix::sys_sendmsg(a, sender, 0).verify();
+   cat::iword sent_msg = nix::sys_sendmsg(a, sender).verify();
    cat::verify(sent_msg == cat::iword(payload_two_length));
 
    char recv_buf[8] = {};
@@ -824,7 +823,7 @@ $test(syscall_socket_pair) {
    receiver.p_control = nullptr;
    receiver.control_length = 0u;
    receiver.flags = 0;
-   cat::iword got_msg = nix::sys_recvmsg(b, receiver, 0).verify();
+   cat::iword got_msg = nix::sys_recvmsg(b, receiver).verify();
    cat::verify(got_msg == 2);
 
    // `shutdown` half-close, then close both ends.
@@ -898,10 +897,10 @@ $test(syscall_io_uring) {
 $test(syscall_optional_six_x) {
    // `cachestat` (Linux 6.5+).
    if (nix::has_sys_cachestat()) {
-      auto _ = nix::sys_unlink(tmp_basic.data());
+      auto _ = nix::sys_unlink(tmp_basic);
       nix::file_descriptor fd =
-         nix::sys_creat(tmp_basic.data(), nix::open_mode::read_write).verify();
-      nix::sys_write(fd, payload_short.data(), payload_short_length.raw)
+         nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
+      nix::sys_write(fd, payload_short.data(), payload_short_length)
          .verify();
       nix::cachestat_range range = {.offset = 0, .length = 4};
       nix::cachestat_stats out{};
@@ -909,19 +908,19 @@ $test(syscall_optional_six_x) {
       cat::verify(cs.has_value() || cs.error() == nix::linux_error::nosys
                   || cs.error() == nix::linux_error::perm);
       nix::sys_close(fd).verify();
-      nix::sys_unlink(tmp_basic.data()).verify();
+      nix::sys_unlink(tmp_basic).verify();
    }
 
    // `fchmodat2` (Linux 6.6+).
    if (nix::has_sys_fchmodat2()) {
-      auto unused_unlink = nix::sys_unlink(tmp_basic.data());
+      auto unused_unlink = nix::sys_unlink(tmp_basic);
       nix::sys_close(
-         nix::sys_creat(tmp_basic.data(), nix::open_mode::read_write).verify())
+         nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify())
          .verify();
-      auto fc = nix::sys_fchmodat2(nix::at_fdcwd, tmp_basic.data(), 0644u, 0);
+      auto fc = nix::sys_fchmodat2(nix::at_fdcwd, tmp_basic, 0644u, 0);
       cat::verify(fc.has_value() || fc.error() == nix::linux_error::nosys
                   || fc.error() == nix::linux_error::perm);
-      nix::sys_unlink(tmp_basic.data()).verify();
+      nix::sys_unlink(tmp_basic).verify();
    }
 
    // `futex_wake/wait/requeue` (Linux 6.7+) need real waiters. Just confirm

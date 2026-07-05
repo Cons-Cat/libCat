@@ -1,8 +1,8 @@
 #include <cat/linux>
 
 auto
-nix::sys_lchown(char const* _Nonnull p_file_path, user_id user, group_id group)
+nix::sys_lchown(cat::zstr_view file_path, user_id user, group_id group)
    -> nix::scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/
-   return nix::syscall_volatile<void>(94, p_file_path, user, group);
+   return nix::syscall_volatile<void>(94, file_path.data(), user, group);
 }

@@ -1,7 +1,7 @@
 #include <cat/linux>
 
 auto
-nix::sys_unlink(char const* _Nonnull p_path_name) -> nix::scaredy_nix<void> {
+nix::sys_unlink(cat::zstr_view path_name) -> nix::scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/
-   return nix::syscall_volatile<void>(87, p_path_name);
+   return nix::syscall_volatile<void>(87, path_name.data());
 }

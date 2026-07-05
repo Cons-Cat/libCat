@@ -74,11 +74,12 @@ struct socket_unix {
    }
 
    auto
-   send_string(str_view const message, int8 flags = 0,
+   send_string(str_view const message,
+               nix::message_flags flags = nix::message_flags::none,
                cat::Socket const* _Nonnull p_destination_socket = nullptr,
                iword const addr_length = 0) -> maybe<void> {
       scaredy result =
-         nix::sys_sendto(this->descriptor, message.data(), message.size(),
+         nix::sys_sendto(this->descriptor, message,
                          flags, p_destination_socket, addr_length);
       if (result.has_value()) {
          return monostate;
@@ -87,12 +88,14 @@ struct socket_unix {
    }
 
    auto
-   send_struct(auto const& message_struct, int8 flags = 0,
+   send_struct(auto const& message_struct,
+               nix::message_flags flags = nix::message_flags::none,
                cat::Socket const* _Nonnull p_destination_socket = nullptr,
                iword const addr_length = 0) -> maybe<void> {
-      scaredy result = nix::sys_sendto(this->descriptor, &message_struct,
-                                       sizeof(message_struct), flags,
-                                       p_destination_socket, addr_length);
+      scaredy result = nix::sys_sendto(
+         this->descriptor,
+         __builtin_bit_cast(char const* _Nonnull, &message_struct),
+         sizeof(message_struct), flags, p_destination_socket, addr_length);
       if (result.has_value()) {
          return monostate;
       }
@@ -148,9 +151,9 @@ struct socket_unix {
            Socket const* _Nullable __restrict p_socket = nullptr,
            iword const* _Nullable __restrict p_socket_size = nullptr)
       -> maybe<iword> {
-      nix::scaredy_nix<iword> const result =
-         nix::sys_recv(this->descriptor, p_message_buffer, buffer_length,
-                       p_socket, p_socket_size);
+      nix::scaredy_nix<iword> const result = nix::sys_recv(
+         this->descriptor, p_message_buffer, cat::idx(buffer_length),
+         p_socket, p_socket_size);
       if (result.has_value()) {
          return result.value();
       }
