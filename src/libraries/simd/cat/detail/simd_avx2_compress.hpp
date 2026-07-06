@@ -194,8 +194,11 @@ struct compress<T, Abi> {
    invoke(simd<T, Abi> input, simd_mask<T, Abi> selector) -> simd<T, Abi> {
       using raw_t = simd<T, Abi>::raw_type;
 
-      __UINT32_TYPE__ const lane_bits =
+      __UINT32_TYPE__ lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(selector);
+      // TODO: Clang had a regression in SIMD constant folding. Remove this asm
+      // when possible.
+      asm volatile("" : "+r"(lane_bits));
 
       compress_detail::compress_chunks_4x64 const in_chunks =
          __builtin_bit_cast(compress_detail::compress_chunks_4x64, input.raw);
