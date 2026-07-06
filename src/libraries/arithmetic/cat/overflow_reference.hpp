@@ -48,7 +48,8 @@ class overflow_reference
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policy>(
-            m_wrapped->raw);
+            m_wrapped->raw
+         );
       } else if constexpr (detail::is_idx<wrapper_type>) {
          return basic_idx<overflow_policy>(m_wrapped->raw);
       } else {
@@ -62,12 +63,14 @@ class overflow_reference
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::undefined>(
-            m_wrapped->raw);
+            m_wrapped->raw
+         );
       } else if constexpr (detail::is_idx<wrapper_type>) {
          return basic_idx<overflow_policies::undefined>(m_wrapped->raw);
       } else {
          return basic_int<raw_type, overflow_policies::undefined>(
-            m_wrapped->raw);
+            m_wrapped->raw
+         );
       }
    }
 
@@ -75,40 +78,45 @@ class overflow_reference
    constexpr auto
    undef() & -> overflow_reference<WrappedQual, overflow_policies::undefined> {
       return overflow_reference<WrappedQual, overflow_policies::undefined>(
-         *m_wrapped);
+         *m_wrapped
+      );
    }
 
    constexpr auto
-   undef() const& -> overflow_reference<WrappedQual const,
-                                        overflow_policies::undefined> {
-      return overflow_reference<WrappedQual const,
-                                overflow_policies::undefined>(*m_wrapped);
+   undef() const& -> overflow_reference<
+      WrappedQual const, overflow_policies::undefined> {
+      return overflow_reference<
+         WrappedQual const, overflow_policies::undefined>(*m_wrapped);
    }
 
    constexpr auto
    wrap() & -> overflow_reference<WrappedQual, overflow_policies::wrap> {
       return overflow_reference<WrappedQual, overflow_policies::wrap>(
-         *m_wrapped);
+         *m_wrapped
+      );
    }
 
    constexpr auto
-   wrap()
-      const& -> overflow_reference<WrappedQual const, overflow_policies::wrap> {
+   wrap() const& -> overflow_reference<
+      WrappedQual const, overflow_policies::wrap> {
       return overflow_reference<WrappedQual const, overflow_policies::wrap>(
-         *m_wrapped);
+         *m_wrapped
+      );
    }
 
    constexpr auto
    sat() & -> overflow_reference<WrappedQual, overflow_policies::saturate> {
       return overflow_reference<WrappedQual, overflow_policies::saturate>(
-         *m_wrapped);
+         *m_wrapped
+      );
    }
 
    constexpr auto
-   sat() const& -> overflow_reference<WrappedQual const,
-                                      overflow_policies::saturate> {
+   sat() const& -> overflow_reference<
+      WrappedQual const, overflow_policies::saturate> {
       return overflow_reference<WrappedQual const, overflow_policies::saturate>(
-         *m_wrapped);
+         *m_wrapped
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -117,12 +125,14 @@ class overflow_reference
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::undefined>(
-            m_wrapped->raw);
+            m_wrapped->raw
+         );
       } else if constexpr (detail::is_idx<wrapper_type>) {
          return basic_idx<overflow_policies::undefined>(m_wrapped->raw);
       } else {
          return basic_int<raw_type, overflow_policies::undefined>(
-            m_wrapped->raw);
+            m_wrapped->raw
+         );
       }
    }
 
@@ -132,7 +142,8 @@ class overflow_reference
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::wrap>(
-            m_wrapped->raw);
+            m_wrapped->raw
+         );
       } else if constexpr (detail::is_idx<wrapper_type>) {
          return basic_idx<overflow_policies::wrap>(m_wrapped->raw);
       } else {
@@ -146,35 +157,41 @@ class overflow_reference
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::saturate>(
-            m_wrapped->raw);
+            m_wrapped->raw
+         );
       } else if constexpr (detail::is_idx<wrapper_type>) {
          return basic_idx<overflow_policies::saturate>(m_wrapped->raw);
       } else {
          return basic_int<raw_type, overflow_policies::saturate>(
-            m_wrapped->raw);
+            m_wrapped->raw
+         );
       }
    }
 
    template <typename U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
    operator U() const {
       // The accessor's policy decides the cast: `.sat()` clamps to `U`'s
       // range regardless of the wrapped type's own policy.
-      if constexpr (overflow_policy == overflow_policies::saturate
-                    && is_integral<U>) {
+      if constexpr (
+         overflow_policy == overflow_policies::saturate && is_integral<U>
+      ) {
          return static_cast<U>(
-            cat::sat_cast<raw_arithmetic_type<U>>(m_wrapped->raw));
+            cat::sat_cast<raw_arithmetic_type<U>>(m_wrapped->raw)
+         );
       } else {
          return static_cast<U>(*m_wrapped);
       }
    }
 
    template <is_integral U>
-      requires(is_signed<raw_arithmetic_type<U>>
-               && detail::is_idx<wrapper_type>)
+      requires(
+         is_signed<raw_arithmetic_type<U>> && detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(sizeof(raw_type) > sizeof(U))
    operator U() const {
@@ -202,14 +219,17 @@ class overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator==(overflow_reference lhs, U rhs) -> bool {
-      return detail::raw_mixed_integral_equals(lhs.m_wrapped->raw,
-                                               make_raw_arithmetic(rhs));
+      return detail::raw_mixed_integral_equals(
+         lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
+      );
    }
 
    // Same-signed-ness <=> / == for `basic_intptr`-wrapped references.
    template <is_integral U>
-      requires(is_safe_arithmetic_comparison<raw_type, U>
-               && detail::is_basic_intptr<wrapper_type>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U>
+         && detail::is_basic_intptr<wrapper_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<=>(overflow_reference lhs, U rhs) {
@@ -217,8 +237,10 @@ class overflow_reference
    }
 
    template <is_integral U>
-      requires(is_safe_arithmetic_comparison<raw_type, U>
-               && detail::is_basic_intptr<wrapper_type>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U>
+         && detail::is_basic_intptr<wrapper_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator==(overflow_reference lhs, U rhs) -> bool {
@@ -227,35 +249,39 @@ class overflow_reference
 
    // Mixed-signed-ness <=> / == for `basic_intptr`-wrapped references.
    template <is_integral U>
-      requires(!is_safe_arithmetic_comparison<raw_type, U>
-               && detail::is_basic_intptr<wrapper_type>
-               && ((is_unsigned_integral<raw_type> && is_signed_integral<U>)
-                   || (is_signed_integral<raw_type>
-                       && is_unsigned_integral<U>)))
+      requires(
+         !is_safe_arithmetic_comparison<raw_type, U>
+         && detail::is_basic_intptr<wrapper_type>
+         && ((is_unsigned_integral<raw_type> && is_signed_integral<U>) || (is_signed_integral<raw_type> && is_unsigned_integral<U>))
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<=>(overflow_reference lhs, U rhs) {
-      return detail::raw_mixed_integral_spaceship(lhs.m_wrapped->raw,
-                                                  make_raw_arithmetic(rhs));
+      return detail::raw_mixed_integral_spaceship(
+         lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
+      );
    }
 
    template <is_integral U>
-      requires(!is_safe_arithmetic_comparison<raw_type, U>
-               && detail::is_basic_intptr<wrapper_type>
-               && ((is_unsigned_integral<raw_type> && is_signed_integral<U>)
-                   || (is_signed_integral<raw_type>
-                       && is_unsigned_integral<U>)))
+      requires(
+         !is_safe_arithmetic_comparison<raw_type, U>
+         && detail::is_basic_intptr<wrapper_type>
+         && ((is_unsigned_integral<raw_type> && is_signed_integral<U>) || (is_signed_integral<raw_type> && is_unsigned_integral<U>))
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator==(overflow_reference lhs, U rhs) -> bool {
-      return detail::raw_mixed_integral_equals(lhs.m_wrapped->raw,
-                                               make_raw_arithmetic(rhs));
+      return detail::raw_mixed_integral_equals(
+         lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
+      );
    }
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<raw_type, U>
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U>
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<=>(U rhs) const {
@@ -263,9 +289,11 @@ class overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<raw_type, U>
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U>
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator==(overflow_reference lhs, U rhs) -> bool {
@@ -276,31 +304,35 @@ class overflow_reference
    // off the negative-signed-vs-unsigned case, so this works for any
    // combination of widths and runs at runtime as well as `consteval`.
    template <is_arithmetic U>
-      requires(!is_safe_arithmetic_comparison<raw_type, U>
-               && !detail::is_idx<overflow_reference>
-               && ((is_unsigned_integral<raw_type> && is_signed_integral<U>)
-                   || (is_signed_integral<raw_type> && is_unsigned_integral<U>))
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !is_safe_arithmetic_comparison<raw_type, U>
+         && !detail::is_idx<overflow_reference>
+         && ((is_unsigned_integral<raw_type> && is_signed_integral<U>) || (is_signed_integral<raw_type> && is_unsigned_integral<U>))
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<=>(overflow_reference lhs, U rhs) {
-      return detail::raw_mixed_integral_spaceship(lhs.m_wrapped->raw,
-                                                  make_raw_arithmetic(rhs));
+      return detail::raw_mixed_integral_spaceship(
+         lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
+      );
    }
 
    template <is_arithmetic U>
-      requires(!is_safe_arithmetic_comparison<raw_type, U>
-               && !detail::is_idx<overflow_reference>
-               && ((is_unsigned_integral<raw_type> && is_signed_integral<U>)
-                   || (is_signed_integral<raw_type> && is_unsigned_integral<U>))
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !is_safe_arithmetic_comparison<raw_type, U>
+         && !detail::is_idx<overflow_reference>
+         && ((is_unsigned_integral<raw_type> && is_signed_integral<U>) || (is_signed_integral<raw_type> && is_unsigned_integral<U>))
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator==(overflow_reference lhs, U rhs) -> bool {
-      return detail::raw_mixed_integral_equals(lhs.m_wrapped->raw,
-                                               make_raw_arithmetic(rhs));
+      return detail::raw_mixed_integral_equals(
+         lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
+      );
    }
 
    // Assignment from a compile-time-known raw integer that fits `raw_type`.
@@ -312,18 +344,20 @@ class overflow_reference
       requires(!is_const<WrappedQual> && detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator=(U other) __attribute__((
-      enable_if(detail::raw_source_fits_implicit_storage<raw_type>(other),
-                "value is out of range for assignment to cat::basic_idx"))) {
+   operator=(U other) __attribute__((enable_if(
+      detail::raw_source_fits_implicit_storage<raw_type>(other),
+      "value is out of range for assignment to cat::basic_idx"
+   ))) {
       m_wrapped->raw = static_cast<raw_type>(make_raw_arithmetic(other));
       return *this;
    }
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<raw_type, U>
-               && !is_const<WrappedQual>
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator=(U operand) -> overflow_reference& {
@@ -332,8 +366,10 @@ class overflow_reference
    }
 
    template <detail::is_basic_intptr U>
-      requires(!is_const<WrappedQual> && detail::is_basic_intptr<wrapper_type>
-               && is_constructible<wrapper_type, U>)
+      requires(
+         !is_const<WrappedQual> && detail::is_basic_intptr<wrapper_type>
+         && is_constructible<wrapper_type, U>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator=(U operand) -> overflow_reference& {
@@ -344,24 +380,27 @@ class overflow_reference
    // Cross-signed-ness assignment for compile-time-known operands that fit the
    // wrapped storage. Mirrors the `basic_int` `enable_if` constructor.
    template <is_arithmetic U>
-      requires(!is_safe_arithmetic_comparison<raw_type, U>
-               && !is_const<WrappedQual>
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator=(U operand) __attribute__((
-      enable_if(detail::raw_source_fits_implicit_storage<raw_type>(operand),
-                "value is out of range for implicit assignment to this "
-                "arithmetic type"))) {
+   operator=(U operand) __attribute__((enable_if(
+      detail::raw_source_fits_implicit_storage<raw_type>(operand),
+      "value is out of range for implicit assignment to this "
+      "arithmetic type"
+   ))) {
       *m_wrapped = basic_int<raw_type, overflow_policy>(operand);
       return *this;
    }
 
    template <is_integral U>
-      requires(is_safe_arithmetic_conversion<U, raw_type>
-               && !is_const<WrappedQual>
-               && detail::is_basic_intptr<wrapper_type>)
+      requires(
+         is_safe_arithmetic_conversion<U, raw_type> && !is_const<WrappedQual>
+         && detail::is_basic_intptr<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator=(U operand) -> overflow_reference& {
@@ -370,10 +409,11 @@ class overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<raw_type, U>
-               && !is_const<WrappedQual>
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+=(U operand) -> overflow_reference& {
@@ -390,13 +430,15 @@ class overflow_reference
    // LHS with a wider RHS, and that wider value would silently narrow to the
    // LHS storage on assignment.
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<raw_type, U>
-               && !is_const<WrappedQual>
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>
-               && is_same<remove_cvref<decltype(declval<overflow_reference&>()
-                                                   .subtract_by(declval<U>()))>,
-                          basic_int<raw_type, overflow_policy>>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+         && is_same<
+            remove_cvref<decltype(declval<overflow_reference&>()
+                                     .subtract_by(declval<U>()))>,
+            basic_int<raw_type, overflow_policy>>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator-=(U operand) -> overflow_reference& {
@@ -407,19 +449,22 @@ class overflow_reference
    // Cross-signed-ness -= for compile-time-known operands that fit the wrapped
    // storage. Mirrors the += overload above.
    template <is_arithmetic U>
-      requires(!is_safe_arithmetic_comparison<raw_type, U>
-               && !is_const<WrappedQual>
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>
-               && is_same<remove_cvref<decltype(declval<overflow_reference&>()
-                                                   .subtract_by(declval<U>()))>,
-                          basic_int<raw_type, overflow_policy>>)
+      requires(
+         !is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+         && is_same<
+            remove_cvref<decltype(declval<overflow_reference&>()
+                                     .subtract_by(declval<U>()))>,
+            basic_int<raw_type, overflow_policy>>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator-=(U operand) __attribute__((
-      enable_if(detail::raw_source_fits_implicit_storage<raw_type>(operand),
-                "value is out of range for implicit operation on this "
-                "arithmetic type"))) {
+   operator-=(U operand) __attribute__((enable_if(
+      detail::raw_source_fits_implicit_storage<raw_type>(operand),
+      "value is out of range for implicit operation on this "
+      "arithmetic type"
+   ))) {
       *this = subtract_by(basic_int<raw_type, overflow_policy>(operand));
       return *this;
    }
@@ -430,24 +475,27 @@ class overflow_reference
    // `constexpr`-ness needed by `enable_if` is consumed at the call site, not
    // inside the body).
    template <is_arithmetic U>
-      requires(!is_safe_arithmetic_comparison<raw_type, U>
-               && !is_const<WrappedQual>
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator+=(U operand) __attribute__((
-      enable_if(detail::raw_source_fits_implicit_storage<raw_type>(operand),
-                "value is out of range for implicit operation on this "
-                "arithmetic type"))) {
+   operator+=(U operand) __attribute__((enable_if(
+      detail::raw_source_fits_implicit_storage<raw_type>(operand),
+      "value is out of range for implicit operation on this "
+      "arithmetic type"
+   ))) {
       *this = add(basic_int<raw_type, overflow_policy>(operand));
       return *this;
    }
 
    template <is_integral U>
-      requires(is_safe_arithmetic_conversion<U, raw_type>
-               && !is_const<WrappedQual>
-               && detail::is_basic_intptr<wrapper_type>)
+      requires(
+         is_safe_arithmetic_conversion<U, raw_type> && !is_const<WrappedQual>
+         && detail::is_basic_intptr<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+=(U operand) -> overflow_reference& {
@@ -462,9 +510,10 @@ class overflow_reference
       requires(!is_const<WrappedQual> && detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator+=(U operand) __attribute__((
-      enable_if(detail::raw_source_fits_implicit_storage<raw_type>(operand),
-                "value is out of range for `+=` to cat::basic_idx"))) {
+   operator+=(U operand) __attribute__((enable_if(
+      detail::raw_source_fits_implicit_storage<raw_type>(operand),
+      "value is out of range for `+=` to cat::basic_idx"
+   ))) {
       m_wrapped->raw =
          static_cast<raw_type>(m_wrapped->raw + make_raw_arithmetic(operand));
       return *this;
@@ -479,11 +528,10 @@ class overflow_reference
    // friends below take over for compile-time constants that fit the LHS
    // storage.
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>
-               && (overflow_policy == overflow_policies::undefined
-                   || is_safe_arithmetic_comparison<raw_type,
-                                                    raw_arithmetic_type<U>>))
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+         && (overflow_policy == overflow_policies::undefined || is_safe_arithmetic_comparison<raw_type, raw_arithmetic_type<U>>)
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(U other) const
@@ -496,28 +544,36 @@ class overflow_reference
    // `enable_if` overload of `add`. This friend captures the operand directly,
    // allowing `enable_if` to fire on the call-site constant.
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type> && is_raw_arithmetic<U>
-               && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+         && is_raw_arithmetic<U>
+         && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int<raw_type, overflow_policy>
-   operator+(overflow_reference const& self, U operand) __attribute__((
-      enable_if(detail::raw_source_fits_implicit_storage<raw_type>(operand),
-                "value is out of range for implicit operation on this "
-                "arithmetic type"))) {
+   operator+(overflow_reference const& self, U operand)
+      __attribute__((enable_if(
+         detail::raw_source_fits_implicit_storage<raw_type>(operand),
+         "value is out of range for implicit operation on this "
+         "arithmetic type"
+      ))) {
       return self.view().add(basic_int<raw_type, overflow_policy>(operand));
    }
 
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type> && is_raw_arithmetic<U>
-               && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+         && is_raw_arithmetic<U>
+         && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int<raw_type, overflow_policy>
-   operator+(U operand, overflow_reference const& self) __attribute__((
-      enable_if(detail::raw_source_fits_implicit_storage<raw_type>(operand),
-                "value is out of range for implicit operation on this "
-                "arithmetic type"))) {
+   operator+(U operand, overflow_reference const& self)
+      __attribute__((enable_if(
+         detail::raw_source_fits_implicit_storage<raw_type>(operand),
+         "value is out of range for implicit operation on this "
+         "arithmetic type"
+      ))) {
       return self.view().add(basic_int<raw_type, overflow_policy>(operand));
    }
 
@@ -557,8 +613,9 @@ class overflow_reference
    // widens to a wider non-pointer RHS. Everything else (unsigned, wrap/sat,
    // pointer RHS, equal/narrower RHS) keeps the LHS shape.
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U operand) const -> conditional<
@@ -579,8 +636,10 @@ class overflow_reference
    }
 
    template <is_integral U>
-      requires(!is_same<remove_cvref<U>, basic_idx<overflow_policy>>
-               && detail::is_idx<wrapper_type>)
+      requires(
+         !is_same<remove_cvref<U>, basic_idx<overflow_policy>>
+         && detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U other) const
@@ -605,8 +664,9 @@ class overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U operand) const -> remove_constref<U> {
@@ -637,8 +697,9 @@ class overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U operand) const
@@ -670,8 +731,9 @@ class overflow_reference
    }
 
    template <typename U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(U operand) const -> basic_int<raw_type, overflow_policy> {
@@ -702,9 +764,11 @@ class overflow_reference
    }
 
    template <is_raw_arithmetic U>
-      requires(is_safe_arithmetic_comparison<raw_type, U>
-               && !detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U>
+         && !detail::is_basic_intptr<wrapper_type>
+         && !detail::is_idx<wrapper_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_into(U operand) const -> remove_constref<U> {
@@ -746,8 +810,9 @@ class overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    modulo_by(U operand) const -> basic_int<raw_type, overflow_policy> {
@@ -796,10 +861,10 @@ class overflow_reference
    // `bit_and` forwarders. Only for wrappers with unsigned storage where the
    // operand fits the LHS width. A wider operand would silently truncate.
    template <is_unsigned_integral U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>
-               && is_unsigned_integral<raw_type>
-               && sizeof(raw_type) >= sizeof(U))
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+         && is_unsigned_integral<raw_type> && sizeof(raw_type) >= sizeof(U)
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U operand) const -> basic_int<raw_type, overflow_policy> {
@@ -807,8 +872,9 @@ class overflow_reference
    }
 
    template <typename U>
-      requires(detail::is_basic_intptr<wrapper_type>
-               && is_unsigned_integral<raw_type>)
+      requires(
+         detail::is_basic_intptr<wrapper_type> && is_unsigned_integral<raw_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U other) const {
@@ -825,10 +891,10 @@ class overflow_reference
 
    // `bit_or` forwarders. Wider-or-equal LHS unsigned only. See `bit_and`.
    template <is_unsigned_integral U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>
-               && is_unsigned_integral<raw_type>
-               && sizeof(raw_type) >= sizeof(U))
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+         && is_unsigned_integral<raw_type> && sizeof(raw_type) >= sizeof(U)
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(U operand) const -> basic_int<raw_type, overflow_policy> {
@@ -836,8 +902,9 @@ class overflow_reference
    }
 
    template <typename Self, typename U>
-      requires(detail::is_basic_intptr<wrapper_type>
-               && is_unsigned_integral<raw_type>)
+      requires(
+         detail::is_basic_intptr<wrapper_type> && is_unsigned_integral<raw_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(Self self, U operand) const {
@@ -857,8 +924,10 @@ class overflow_reference
    // the signed-bitcast trick. `basic_intptr` only forwards for unsigned
    // storage.
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type> && is_integral<raw_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+         && is_integral<raw_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_by(U operand) const -> basic_int<raw_type, overflow_policy> {
@@ -874,8 +943,9 @@ class overflow_reference
    }
 
    template <typename U>
-      requires(detail::is_basic_intptr<wrapper_type>
-               && is_unsigned_integral<raw_type>)
+      requires(
+         detail::is_basic_intptr<wrapper_type> && is_unsigned_integral<raw_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_by(U operand) const {
@@ -885,8 +955,10 @@ class overflow_reference
    // `shift_left_into` forwarders. Same eligibility as `shift_left_by`. Both
    // names map to the same << `operator,` just for the two dispatch sides.
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type> && is_integral<raw_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+         && is_integral<raw_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_into(U other) const -> U {
@@ -902,8 +974,9 @@ class overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(detail::is_basic_intptr<wrapper_type>
-               && is_unsigned_integral<raw_type>)
+      requires(
+         detail::is_basic_intptr<wrapper_type> && is_unsigned_integral<raw_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_into(U other) const -> U {
@@ -912,8 +985,10 @@ class overflow_reference
 
    // `shift_right_by` forwarders. Same eligibility rules as `shift_left_by`.
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type> && is_integral<raw_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+         && is_integral<raw_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_by(U operand) const -> basic_int<raw_type, overflow_policy> {
@@ -929,8 +1004,9 @@ class overflow_reference
    }
 
    template <typename U>
-      requires(detail::is_basic_intptr<wrapper_type>
-               && is_unsigned_integral<raw_type>)
+      requires(
+         detail::is_basic_intptr<wrapper_type> && is_unsigned_integral<raw_type>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_by(U operand) const {
@@ -940,8 +1016,10 @@ class overflow_reference
    // `shift_right_into` forwarders. Same eligibility rules as
    // `shift_left_into`.
    template <is_arithmetic U>
-      requires(!detail::is_basic_intptr<wrapper_type>
-               && !detail::is_idx<wrapper_type> && is_integral<raw_type>)
+      requires(
+         !detail::is_basic_intptr<wrapper_type> && !detail::is_idx<wrapper_type>
+         && is_integral<raw_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_into(U other) const -> U {
@@ -957,8 +1035,9 @@ class overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(detail::is_basic_intptr<wrapper_type>
-               && is_unsigned_integral<raw_type>)
+      requires(
+         detail::is_basic_intptr<wrapper_type> && is_unsigned_integral<raw_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_into(U other) const -> U {

@@ -27,7 +27,8 @@ wait_clone_child_through_waitid(nix::process_id child_id)
       // `clone_flags::csignal`, so `sys_waitid` only needs
       // `wait_options_flags::exited`.
       nix::scaredy_nix<nix::process_id> const result = nix::sys_waitid(
-         nix::wait_id::process_id, child_id, nix::wait_options_flags::exited);
+         nix::wait_id::process_id, child_id, nix::wait_options_flags::exited
+      );
       if (result.has_value()) {
          return result;
       }
@@ -44,9 +45,9 @@ wait_clone_child_through_waitid(nix::process_id child_id)
 // `futex_command::wait` with `futex_options::none`.
 [[nodiscard]]
 auto
-wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
-                                         nix::futex_word* p_clear_tid)
-   -> nix::scaredy_nix<nix::process_id> {
+wait_clone_thread_through_cleartid_futex(
+   nix::process_id child_id, nix::futex_word* p_clear_tid
+) -> nix::scaredy_nix<nix::process_id> {
    nix::process_id const thread_group_id = nix::sys_getpid();
    cat::uword spins = 0u;
    for (;;) {
@@ -59,16 +60,20 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
             if (word == 0u) {
                return nix::scaredy_nix<nix::process_id>(child_id);
             }
-            nix::scaredy_nix<cat::idx> const slept =
-               nix::sys_futex(*p_clear_tid,
-                              nix::make_futex_op(nix::futex_command::wait,
-                                                 nix::futex_options::none),
-                              word, nullptr, nullptr, cat::uint4{});
+            nix::scaredy_nix<cat::idx> const slept = nix::sys_futex(
+               *p_clear_tid,
+               nix::make_futex_op(
+                  nix::futex_command::wait, nix::futex_options::none
+               ),
+               word, nullptr, nullptr, cat::uint4{}
+            );
             if (slept.has_value()) {
                continue;
             }
-            if (slept.error() == nix::linux_error::again
-                || slept.error() == nix::linux_error::intr) {
+            if (
+               slept.error() == nix::linux_error::again
+               || slept.error() == nix::linux_error::intr
+            ) {
                continue;
             }
             return nix::scaredy_nix<nix::process_id>(slept.error());
@@ -76,7 +81,8 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
       }
       if ((spins & 127u) == 0u) {
          nix::scaredy_nix<void> const poke = nix::sys_tgkill(
-            thread_group_id, child_id, static_cast<nix::signal>(0));
+            thread_group_id, child_id, static_cast<nix::signal>(0)
+         );
          if (!poke.has_value()) {
             if (poke.error() == nix::linux_error::srch) {
                return nix::scaredy_nix<nix::process_id>(child_id);
@@ -96,9 +102,10 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
 }  // namespace
 
 auto
-nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
-                         void* p_function, void* p_args_struct)
-   -> scaredy_nix<void> {
+nix::process::spawn_impl(
+   cat::uintptr<void> stack, cat::idx initial_stack_size, void* p_function,
+   void* p_args_struct
+) -> scaredy_nix<void> {
    m_stack_size = initial_stack_size;
    m_p_stack_bottom = stack.get();
 
@@ -139,7 +146,8 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
          return nix::linux_error::inval;
       }
       nix::detail::install_executable_tls_image_at_thread_pointer(
-         tls_thread_pointer);
+         tls_thread_pointer
+      );
 
       // Local-exec TLS lowering loads the thread pointer from `%fs:0`. The
       // copied executable TLS image only covers `.tdata/.tbss` strictly below
@@ -217,7 +225,8 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 #endif
         [cleartid] "r"(p_clear_tid_for_clone)
       : "rcx", "r11", "memory"
-      : clone_child, clone_parent);
+      : clone_child, clone_parent
+   );
 
 clone_child:
    asm volatile(
@@ -230,7 +239,8 @@ clone_child:
          syscall)"
       :
       :
-      : "rax", "rdi", "rsp", "rcx", "r11", "cc", "memory");
+      : "rax", "rdi", "rsp", "rcx", "r11", "cc", "memory"
+   );
    __builtin_unreachable();
 
 clone_parent:
@@ -255,5 +265,6 @@ nix::process::wait() const -> scaredy_nix<process_id> {
       return wait_clone_child_through_waitid(m_id);
    }
    return wait_clone_thread_through_cleartid_futex(
-      m_id, const_cast<nix::futex_word*>(&m_clone_child_clear_tid_for_kernel));
+      m_id, const_cast<nix::futex_word*>(&m_clone_child_clear_tid_for_kernel)
+   );
 }

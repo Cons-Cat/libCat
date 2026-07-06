@@ -13,8 +13,9 @@
 namespace {
 
 void
-initialize_bytes(cat::byte* _Nonnull p_data, cat::idx bytes,
-                 cat::byte seed = cat::byte(17u)) {
+initialize_bytes(
+   cat::byte* _Nonnull p_data, cat::idx bytes, cat::byte seed = cat::byte(17u)
+) {
    cat::uint1 value = seed.value;
    for (cat::idx i = 0u; i < bytes; ++i) {
       p_data[i] = cat::byte(value);
@@ -30,16 +31,20 @@ fill_bytes(cat::byte* _Nonnull p_data, cat::idx bytes, cat::byte value) {
 }
 
 void
-verify_copy_result(cat::byte const* _Nonnull p_source,
-                   cat::byte const* _Nonnull p_destination, cat::idx bytes) {
+verify_copy_result(
+   cat::byte const* _Nonnull p_source, cat::byte const* _Nonnull p_destination,
+   cat::idx bytes
+) {
    for (cat::idx i = 0u; i < bytes; ++i) {
       cat::verify(p_destination[i] == p_source[i]);
    }
 }
 
 void
-verify_buffer_result(cat::byte const* _Nonnull p_expected,
-                     cat::byte const* _Nonnull p_actual, cat::idx bytes) {
+verify_buffer_result(
+   cat::byte const* _Nonnull p_expected, cat::byte const* _Nonnull p_actual,
+   cat::idx bytes
+) {
    for (cat::idx i = 0u; i < bytes; ++i) {
       cat::verify(p_actual[i] == p_expected[i]);
    }
@@ -59,10 +64,12 @@ copy_case(cat::idx bytes, cat::idx source_skew, cat::idx destination_skew) {
    initialize_bytes(source.data(), source.size());
    fill_bytes(destination.data(), destination.size(), cat::byte(0xA5u));
 
-   cat::copy_memory(source.data() + source_skew,
-                    destination.data() + destination_skew, bytes);
-   verify_copy_result(source.data() + source_skew,
-                      destination.data() + destination_skew, bytes);
+   cat::copy_memory(
+      source.data() + source_skew, destination.data() + destination_skew, bytes
+   );
+   verify_copy_result(
+      source.data() + source_skew, destination.data() + destination_skew, bytes
+   );
 
    if (destination_skew > 0u) {
       cat::verify(destination[previous_index(destination_skew)] == 0xA5u);
@@ -71,8 +78,9 @@ copy_case(cat::idx bytes, cat::idx source_skew, cat::idx destination_skew) {
 }
 
 void
-overlap_case(cat::idx bytes, cat::idx source_offset,
-             cat::idx destination_offset) {
+overlap_case(
+   cat::idx bytes, cat::idx source_offset, cat::idx destination_offset
+) {
    cat::array<cat::byte, 8_uki> buffer{};
    cat::array<cat::byte, 8_uki> expected{};
 
@@ -83,14 +91,16 @@ overlap_case(cat::idx bytes, cat::idx source_offset,
       expected[destination_offset + i] = buffer[source_offset + i];
    }
 
-   cat::copy_memory_backward(buffer.data() + source_offset,
-                             buffer.data() + destination_offset, bytes);
+   cat::copy_memory_backward(
+      buffer.data() + source_offset, buffer.data() + destination_offset, bytes
+   );
    verify_copy_result(expected.data(), buffer.data(), buffer.size());
 }
 
 void
-large_overlap_case(cat::idx bytes, cat::idx source_offset,
-                   cat::idx destination_offset) {
+large_overlap_case(
+   cat::idx bytes, cat::idx source_offset, cat::idx destination_offset
+) {
    cat::page_allocator pager;
    cat::idx const capacity =
       bytes + max(source_offset, destination_offset) + 512u;
@@ -107,8 +117,9 @@ large_overlap_case(cat::idx bytes, cat::idx source_offset,
       expected[destination_offset + i] = page[source_offset + i];
    }
 
-   cat::copy_memory_backward(page.data() + source_offset,
-                             page.data() + destination_offset, bytes);
+   cat::copy_memory_backward(
+      page.data() + source_offset, page.data() + destination_offset, bytes
+   );
    verify_buffer_result(expected.data(), page.data(), capacity);
 }
 
@@ -123,9 +134,12 @@ compare_equal_case(cat::idx bytes, cat::idx left_skew, cat::idx right_skew) {
       right[right_skew + i] = left[left_skew + i];
    }
 
-   cat::verify(cat::compare_memory(left.data() + left_skew,
-                                   right.data() + right_skew, bytes)
-               == 0);
+   cat::verify(
+      cat::compare_memory(
+         left.data() + left_skew, right.data() + right_skew, bytes
+      )
+      == 0
+   );
 }
 
 void
@@ -163,11 +177,13 @@ compare_avx2_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
 // `uintptr<void const>` without duplicate conversion operators. This matches
 // `copy_memory_impl` holding addresses as `cat::uintptr` from `void const*` /
 // `void*`.
+static_assert(cat::is_same<
+              decltype(cat::uintptr{static_cast<void const*>(nullptr)}),
+              cat::uintptr<void const>>);
 static_assert(
-   cat::is_same<decltype(cat::uintptr{static_cast<void const*>(nullptr)}),
-                cat::uintptr<void const>>);
-static_assert(cat::is_same<decltype(cat::uintptr{static_cast<void*>(nullptr)}),
-                           cat::uintptr<void>>);
+   cat::is_same<
+      decltype(cat::uintptr{static_cast<void*>(nullptr)}), cat::uintptr<void>>
+);
 
 $test(copy_memory) {
    using namespace cat::literals;

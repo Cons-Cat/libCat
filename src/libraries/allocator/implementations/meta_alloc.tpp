@@ -16,9 +16,11 @@ template <typename T, bool has_feedback>
 [[gnu::no_sanitize_address, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 meta_alloc_unpoison_memory(
-   conditional<has_feedback, maybe_sized_allocation<void* _Nonnull>,
-               maybe_ptr<void>> const& maybe_memory,
-   idx allocation_bytes) -> tuple<T* _Nonnull, idx> {
+   conditional<
+      has_feedback, maybe_sized_allocation<void* _Nonnull>,
+      maybe_ptr<void>> const& maybe_memory,
+   idx allocation_bytes
+) -> tuple<T* _Nonnull, idx> {
    T* _Nonnull p_allocation;
    idx prepared_bytes;
    if constexpr (has_feedback) {
@@ -38,18 +40,19 @@ meta_alloc_unpoison_memory(
 template <typename Derived>
 // Handle and return types implied by the same flags as `meta_alloc`. Non-0
 // `inline_size` enables small buffer optimization. Passing 0 disables it.
-template <typename T, bool is_fail_safe, bool is_multiple, bool has_feedback,
-          idx inline_size>
+template <
+   typename T, bool is_fail_safe, bool is_multiple, bool has_feedback,
+   idx inline_size>
 struct allocator_interface<Derived>::meta_alloc_alias_types {
    static constexpr bool is_inline = (inline_size != 0);
 
    using underlying_handle =
       decltype(declval<Derived&>().template make_handle<T>(
-         declval<T* _Nonnull>()));
+         declval<T* _Nonnull>()
+      ));
 
-   using maybe_allocation =
-      conditional<has_feedback, maybe_sized_allocation<void* _Nonnull>,
-                  maybe_ptr<void>>;
+   using maybe_allocation = conditional<
+      has_feedback, maybe_sized_allocation<void* _Nonnull>, maybe_ptr<void>>;
 
    using handle_type = conditional<
       is_multiple,
@@ -57,39 +60,45 @@ struct allocator_interface<Derived>::meta_alloc_alias_types {
          is_inline,
          detail::inline_memory_handle<underlying_handle, inline_size>,
          underlying_handle>>,
-      conditional<is_inline,
-                  detail::inline_memory_handle<underlying_handle, inline_size>,
-                  underlying_handle>>;
+      conditional<
+         is_inline,
+         detail::inline_memory_handle<underlying_handle, inline_size>,
+         underlying_handle>>;
 
    using return_handle = conditional<
       is_fail_safe,
       conditional<
          !is_inline,
-         conditional<has_feedback,
-                     conditional<is_multiple, maybe<tuple<span<T>, idx>>,
-                                 maybe_sized_allocation<T* _Nonnull>>,
-                     conditional<is_multiple, maybe_span<T>, maybe_ptr<T>>>,
-         conditional<has_feedback, maybe<tuple<handle_type, idx>>,
-                     maybe<handle_type>>>,
+         conditional<
+            has_feedback,
+            conditional<
+               is_multiple, maybe<tuple<span<T>, idx>>,
+               maybe_sized_allocation<T* _Nonnull>>,
+            conditional<is_multiple, maybe_span<T>, maybe_ptr<T>>>,
+         conditional<
+            has_feedback, maybe<tuple<handle_type, idx>>, maybe<handle_type>>>,
       conditional<
          !is_inline,
-         conditional<has_feedback,
-                     conditional<is_multiple, tuple<span<T>, idx>,
-                                 sized_allocation<T* _Nonnull>>,
-                     conditional<is_multiple, span<T>, T* _Nonnull>>,
+         conditional<
+            has_feedback,
+            conditional<
+               is_multiple, tuple<span<T>, idx>, sized_allocation<T* _Nonnull>>,
+            conditional<is_multiple, span<T>, T* _Nonnull>>,
          conditional<has_feedback, tuple<handle_type, idx>, handle_type>>>;
 };
 
 template <typename Derived>
 // Only called from `meta_alloc` when `inline_size != 0`.
-template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
-          bool is_zeroed, bool has_feedback, idx inline_size, typename... Args>
+template <
+   typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+   bool is_zeroed, bool has_feedback, idx inline_size, typename... Args>
 [[gnu::no_sanitize_address]]
 constexpr auto
 allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
-   idx allocation_bytes, idx allocation_count, Args&&... arguments) {
-   using alias_types = meta_alloc_alias_types<T, is_fail_safe, is_multiple,
-                                              has_feedback, inline_size>;
+   idx allocation_bytes, idx allocation_count, Args&&... arguments
+) {
+   using alias_types = meta_alloc_alias_types<
+      T, is_fail_safe, is_multiple, has_feedback, inline_size>;
    using return_handle = alias_types::return_handle;
    using handle_type = alias_types::handle_type;
 
@@ -119,7 +128,8 @@ allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
       // cannot fail.
       if constexpr (has_feedback) {
          return return_handle(
-            tuple<handle_type, idx>{move(stack_handle), inline_size});
+            tuple<handle_type, idx>{move(stack_handle), inline_size}
+         );
       } else {
          return return_handle(move(stack_handle));
       }
@@ -130,21 +140,24 @@ template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
 allocator_interface<Derived>::meta_alloc_aligned_feedback(
-   ualign allocation_alignment, idx allocation_bytes)
-   -> maybe_sized_allocation<void* _Nonnull> {
+   ualign allocation_alignment, idx allocation_bytes
+) -> maybe_sized_allocation<void* _Nonnull> {
    maybe_sized_allocation<void* _Nonnull> maybe_memory;
 
    if constexpr (has_aligned_allocate_feedback) {
       maybe_memory = this->self().aligned_allocate_feedback(
-         allocation_alignment, allocation_bytes);
+         allocation_alignment, allocation_bytes
+      );
    } else {
       if constexpr (has_allocation_bytes) {
          maybe actual_allocation_bytes = this->self().allocation_bytes(
-            allocation_alignment, allocation_bytes);
+            allocation_alignment, allocation_bytes
+         );
 
          if (actual_allocation_bytes.has_value()) {
             maybe_ptr<void> const allocation = this->self().aligned_allocate(
-               allocation_alignment, actual_allocation_bytes.value());
+               allocation_alignment, actual_allocation_bytes.value()
+            );
 
             maybe_memory = maybe_sized_allocation<void* _Nonnull>{
                sized_allocation<void* _Nonnull>{
@@ -156,8 +169,9 @@ allocator_interface<Derived>::meta_alloc_aligned_feedback(
             maybe_memory = nullopt;
          }
       } else {
-         maybe temp_memory = this->self().aligned_allocate(allocation_alignment,
-                                                           allocation_bytes);
+         maybe temp_memory = this->self().aligned_allocate(
+            allocation_alignment, allocation_bytes
+         );
          if (temp_memory.has_value()) {
             maybe_memory = maybe_sized_allocation<void* _Nonnull>{
                sized_allocation<void* _Nonnull>{
@@ -176,9 +190,9 @@ allocator_interface<Derived>::meta_alloc_aligned_feedback(
 template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
-allocator_interface<Derived>::meta_alloc_aligned(ualign allocation_alignment,
-                                                 idx allocation_bytes)
-   -> maybe_ptr<void> {
+allocator_interface<Derived>::meta_alloc_aligned(
+   ualign allocation_alignment, idx allocation_bytes
+) -> maybe_ptr<void> {
    maybe_ptr<void> maybe_memory;
 
    if constexpr (has_aligned_allocate) {
@@ -187,8 +201,10 @@ allocator_interface<Derived>::meta_alloc_aligned(ualign allocation_alignment,
    } else {
       maybe_memory = this->self().allocate(allocation_bytes);
       if (maybe_memory.has_value()) {
-         assert(cat::is_aligned(maybe_memory.value(), allocation_alignment),
-                "allocation_type is misaligned!");
+         assert(
+            cat::is_aligned(maybe_memory.value(), allocation_alignment),
+            "allocation_type is misaligned!"
+         );
       }
    }
 
@@ -199,8 +215,8 @@ template <typename Derived>
 [[gnu::no_sanitize_address]]
 constexpr auto
 allocator_interface<Derived>::meta_alloc_unaligned_feedback(
-   ualign allocation_alignment, idx allocation_bytes)
-   -> maybe_sized_allocation<void* _Nonnull> {
+   ualign allocation_alignment, idx allocation_bytes
+) -> maybe_sized_allocation<void* _Nonnull> {
    maybe_sized_allocation<void* _Nonnull> maybe_memory;
 
    if constexpr (has_allocate_feedback) {
@@ -223,11 +239,13 @@ allocator_interface<Derived>::meta_alloc_unaligned_feedback(
             maybe_memory = nullopt;
          }
       } else {
-         auto temp_memory = this->self().aligned_allocate(allocation_alignment,
-                                                          allocation_bytes);
+         auto temp_memory = this->self().aligned_allocate(
+            allocation_alignment, allocation_bytes
+         );
          if (temp_memory.has_value()) {
             maybe_memory = maybe_sized_allocation<void* _Nonnull>(
-               tuple{temp_memory.value(), allocation_bytes});
+               tuple{temp_memory.value(), allocation_bytes}
+            );
          } else {
             maybe_memory = nullopt;
          }
@@ -254,21 +272,24 @@ allocator_interface<Derived>::meta_alloc_unaligned(idx allocation_bytes)
 }
 
 template <typename Derived>
-template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
-          bool is_zeroed, bool has_feedback, idx inline_size, typename... Args>
+template <
+   typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+   bool is_zeroed, bool has_feedback, idx inline_size, typename... Args>
 [[gnu::no_sanitize_address]]
 constexpr auto
 allocator_interface<Derived>::meta_alloc_construct(
    meta_alloc_raw_maybe_allocation<has_feedback> maybe_memory,
-   idx allocation_bytes, idx allocation_count, Args&&... arguments) {
+   idx allocation_bytes, idx allocation_count, Args&&... arguments
+) {
    constexpr bool is_inline = (inline_size != 0);
-   using alias_types = meta_alloc_alias_types<T, is_fail_safe, is_multiple,
-                                              has_feedback, inline_size>;
+   using alias_types = meta_alloc_alias_types<
+      T, is_fail_safe, is_multiple, has_feedback, inline_size>;
    using return_handle = alias_types::return_handle;
 
    auto [p_allocation, prepared_bytes] =
-      detail::meta_alloc_unpoison_memory<T, has_feedback>(maybe_memory,
-                                                          allocation_bytes);
+      detail::meta_alloc_unpoison_memory<T, has_feedback>(
+         maybe_memory, allocation_bytes
+      );
 
    // Zero-fill for the `calloc` family, unless the allocator already served the
    // request through the matching zeroed allocate hook.
@@ -298,7 +319,8 @@ allocator_interface<Derived>::meta_alloc_construct(
       }
       if constexpr (has_feedback) {
          return return_handle(
-            tuple<handle_type, idx>{move(handle), prepared_bytes});
+            tuple<handle_type, idx>{move(handle), prepared_bytes}
+         );
       } else {
          return return_handle(move(handle));
       }
@@ -306,10 +328,12 @@ allocator_interface<Derived>::meta_alloc_construct(
       if constexpr (has_feedback) {
          if constexpr (is_multiple) {
             return return_handle(
-               tuple{span<T>(p_allocation, allocation_count), prepared_bytes});
+               tuple{span<T>(p_allocation, allocation_count), prepared_bytes}
+            );
          } else {
             return return_handle(
-               sized_allocation<T* _Nonnull>{p_allocation, prepared_bytes});
+               sized_allocation<T* _Nonnull>{p_allocation, prepared_bytes}
+            );
          }
       } else {
          if constexpr (is_multiple) {
@@ -334,25 +358,32 @@ template <typename Derived>
 // `is_zeroed` zero-initializes the allocation instead of constructing.
 //
 // `has_feedback` returns sized byte counts to report over-allocation.
-template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
-          bool is_zeroed, bool has_feedback, idx inline_size, typename... Args>
-   requires((!is_multiple || (sizeof...(Args) <= 0))
-            // Multi-allocations must be default-constructed. Zeroed-out
-            // allocations must not take constructor arguments and must use a
-            // trivial object type.
-            && (!is_zeroed || (sizeof...(Args) == 0))
-            && (!is_zeroed || is_implicit_lifetime<T>))
+template <
+   typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+   bool is_zeroed, bool has_feedback, idx inline_size, typename... Args>
+   requires(
+      (!is_multiple || (sizeof...(Args) <= 0))
+      // Multi-allocations must be default-constructed. Zeroed-out
+      // allocations must not take constructor arguments and must use a
+      // trivial object type.
+      && (!is_zeroed || (sizeof...(Args) == 0))
+      && (!is_zeroed || is_implicit_lifetime<T>)
+   )
 constexpr auto
-allocator_interface<Derived>::meta_alloc(ualign allocation_alignment,
-                                         idx allocation_count,
-                                         Args&&... arguments) {
+allocator_interface<Derived>::meta_alloc(
+   ualign allocation_alignment, idx allocation_count, Args&&... arguments
+) {
    constexpr bool is_inline = (inline_size != 0);
 
    if constexpr (has_max_allocation_bytes) {
-      static_assert(sizeof(T) <= Derived::max_allocation_bytes,
-                    "This allocation is too large for this allocator!");
-      assert((allocation_count * sizeof(T)) <= Derived::max_allocation_bytes,
-             "This allocation is too larger for this allocator!");
+      static_assert(
+         sizeof(T) <= Derived::max_allocation_bytes,
+         "This allocation is too large for this allocator!"
+      );
+      assert(
+         (allocation_count * sizeof(T)) <= Derived::max_allocation_bytes,
+         "This allocation is too larger for this allocator!"
+      );
    }
 
    idx const allocation_bytes = allocation_count * sizeof(T);
@@ -361,13 +392,14 @@ allocator_interface<Derived>::meta_alloc(ualign allocation_alignment,
       if (allocation_bytes <= inline_size) {
          return this->template meta_alloc_inline_stack_allocate<
             T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback,
-            inline_size>(allocation_bytes, allocation_count,
-                         $fwd(arguments)...);
+            inline_size>(
+            allocation_bytes, allocation_count, $fwd(arguments)...
+         );
       }
    }
 
-   using alias_types = meta_alloc_alias_types<T, is_fail_safe, is_multiple,
-                                              has_feedback, inline_size>;
+   using alias_types = meta_alloc_alias_types<
+      T, is_fail_safe, is_multiple, has_feedback, inline_size>;
    using return_handle = alias_types::return_handle;
 
    if consteval {
@@ -403,20 +435,24 @@ allocator_interface<Derived>::meta_alloc(ualign allocation_alignment,
          }
          if constexpr (has_feedback) {
             return return_handle(
-               tuple<handle_type, idx>{move(handle), prepared_bytes});
+               tuple<handle_type, idx>{move(handle), prepared_bytes}
+            );
          } else {
             return return_handle(move(handle));
          }
       } else {
          if constexpr (has_feedback) {
             if constexpr (is_multiple) {
-               return return_handle(tuple{
-                  span<T>(p_allocation, allocation_count),
-                  prepared_bytes,
-               });
+               return return_handle(
+                  tuple{
+                     span<T>(p_allocation, allocation_count),
+                     prepared_bytes,
+                  }
+               );
             } else {
                return return_handle(
-                  sized_allocation<T* _Nonnull>{p_allocation, prepared_bytes});
+                  sized_allocation<T* _Nonnull>{p_allocation, prepared_bytes}
+               );
             }
          } else {
             if constexpr (is_multiple) {
@@ -435,10 +471,12 @@ allocator_interface<Derived>::meta_alloc(ualign allocation_alignment,
          if constexpr (is_aligned) {
             if constexpr (has_feedback) {
                maybe_memory = this->self().aligned_allocate_zeroed_feedback(
-                  allocation_alignment, allocation_bytes);
+                  allocation_alignment, allocation_bytes
+               );
             } else {
                maybe_memory = this->self().aligned_allocate_zeroed(
-                  allocation_alignment, allocation_bytes);
+                  allocation_alignment, allocation_bytes
+               );
             }
          } else {
             if constexpr (has_feedback) {
@@ -456,13 +494,16 @@ allocator_interface<Derived>::meta_alloc(ualign allocation_alignment,
          if constexpr (has_feedback) {
             maybe_memory = over_aligned
                               ? this->meta_alloc_aligned_feedback(
-                                   allocation_alignment, allocation_bytes)
+                                   allocation_alignment, allocation_bytes
+                                )
                               : this->meta_alloc_unaligned_feedback(
-                                   allocation_alignment, allocation_bytes);
+                                   allocation_alignment, allocation_bytes
+                                );
          } else {
             maybe_memory = over_aligned
-                              ? this->meta_alloc_aligned(allocation_alignment,
-                                                         allocation_bytes)
+                              ? this->meta_alloc_aligned(
+                                   allocation_alignment, allocation_bytes
+                                )
                               : this->meta_alloc_unaligned(allocation_bytes);
          }
       }
@@ -473,11 +514,12 @@ allocator_interface<Derived>::meta_alloc(ualign allocation_alignment,
          }
       }
 
-      return this->template meta_alloc_construct<T, is_fail_safe, is_aligned,
-                                                 is_multiple, is_zeroed,
-                                                 has_feedback, inline_size>(
+      return this->template meta_alloc_construct<
+         T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback,
+         inline_size>(
          move(maybe_memory), allocation_bytes, allocation_count,
-         $fwd(arguments)...);
+         $fwd(arguments)...
+      );
    }
 }
 

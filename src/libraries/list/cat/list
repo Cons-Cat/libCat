@@ -65,8 +65,8 @@ inline namespace manual {
 template <typename T>
 class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
     : public container_interface<basic_list<T>, T>,
-      public stepanov_iterable_interface<basic_list<T>,
-                                         detail::list_stepanov_iterator, T> {
+      public stepanov_iterable_interface<
+         basic_list<T>, detail::list_stepanov_iterator, T> {
    friend detail::list_stepanov_iterator<T>;
 
    using node_type = detail::list_node<T>;
@@ -98,9 +98,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    }
 
    // Copy construction is deleted to prevent implicit copying.
-   constexpr basic_list(basic_list const&) = delete (
-      "Implicit copying of `cat::basic_list` is forbidden. Call "
-      "`.clone()` or move instead!");
+   constexpr basic_list(basic_list const&) =
+      delete ("Implicit copying of `cat::basic_list` is forbidden. Call "
+              "`.clone()` or move instead!");
 
    // Copy assignment is deleted to prevent implicit copying.
    auto
@@ -116,9 +116,11 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
          return *this;
       }
       if !consteval {
-         cat::assert(m_storage.m_p_head == nullptr && m_size == 0u,
-                     "basic_list move-assigned over while still owning nodes. "
-                     "Call .free(allocator) first.");
+         cat::assert(
+            m_storage.m_p_head == nullptr && m_size == 0u,
+            "basic_list move-assigned over while still owning nodes. "
+            "Call .free(allocator) first."
+         );
       }
       m_storage = other_list.m_storage;
       m_size = other_list.m_size;
@@ -378,8 +380,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <is_allocator Allocator, typename Range>
    [[nodiscard]]
    constexpr auto
-   append_range_sequential(allocator_ref<Allocator> allocator,
-                           Range const& range, idx count) -> maybe<void> {
+   append_range_sequential(
+      allocator_ref<Allocator> allocator, Range const& range, idx count
+   ) -> maybe<void> {
       span<node_type> nodes =
          $prop(allocator.template alloc_multi<node_type>(count));
       idx i = 0u;
@@ -396,8 +399,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <is_allocator Allocator, typename Range>
    [[nodiscard]]
    constexpr auto
-   prepend_range_sequential(allocator_ref<Allocator> allocator,
-                            Range const& range, idx count) -> maybe<void> {
+   prepend_range_sequential(
+      allocator_ref<Allocator> allocator, Range const& range, idx count
+   ) -> maybe<void> {
       span<node_type> nodes =
          $prop(allocator.template alloc_multi<node_type>(count));
       idx i = 0u;
@@ -415,8 +419,10 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
  public:
    template <is_allocator Allocator, typename U>
    constexpr auto
-   append_new_node(allocator_ref<Allocator> allocator,
-                   node_type* _Nullable& p_tail, U&& value) -> maybe<iterator> {
+   append_new_node(
+      allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
+      U&& value
+   ) -> maybe<iterator> {
       node_type* p_node = $prop(allocator.template alloc<node_type>());
       p_node->p_next_node = nullptr;
       p_node->p_previous_node = p_tail;
@@ -436,18 +442,20 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Termination overload for variadic append_new_nodes.
    template <is_allocator Allocator>
    constexpr auto
-   append_new_nodes(allocator_ref<Allocator> /*unused*/,
-                    [[maybe_unused]] node_type* _Nullable& p_tail)
-      -> maybe<void> {
+   append_new_nodes(
+      allocator_ref<Allocator> /*unused*/,
+      [[maybe_unused]] node_type* _Nullable& p_tail
+   ) -> maybe<void> {
       return monostate;
    }
 
    // Append multiple new nodes from a parameter pack.
    template <is_allocator Allocator, typename U, typename... Args>
    constexpr auto
-   append_new_nodes(allocator_ref<Allocator> allocator,
-                    node_type* _Nullable& p_tail, U&& value,
-                    Args&&... remaining) -> maybe<void> {
+   append_new_nodes(
+      allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
+      U&& value, Args&&... remaining
+   ) -> maybe<void> {
       $prop(this->append_new_node(allocator, p_tail, $fwd(value)));
       return this->append_new_nodes(allocator, p_tail, $fwd(remaining)...);
    }
@@ -495,8 +503,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Construct an element in place before the iterator position.
    template <is_allocator Allocator, typename... Args>
    constexpr auto
-   emplace(allocator_ref<Allocator> allocator, iterator where,
-           Args&&... arguments) -> maybe<iterator> {
+   emplace(
+      allocator_ref<Allocator> allocator, iterator where, Args&&... arguments
+   ) -> maybe<iterator> {
       auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
       node_type& node = *p_node;
       new (&node.storage) T($fwd(arguments)...);
@@ -981,17 +990,21 @@ make_list(allocator_ref<Allocator> /*unused*/) -> maybe<basic_list<T>> {
 }
 
 // Create a `cat::basic_list` initialized from the given values.
-template <typename T, is_allocator Allocator, is_convertible<T> U,
-          is_convertible<T>... Args>
+template <
+   typename T, is_allocator Allocator, is_convertible<T> U,
+   is_convertible<T>... Args>
 [[nodiscard]]
 constexpr auto
-make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
-          U&& value, Args&&... remaining) -> maybe<basic_list<T>> {
+make_list(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], U&& value,
+   Args&&... remaining
+) -> maybe<basic_list<T>> {
    basic_list<T> new_list;
    detail::list_node<T>* p_tail = nullptr;
 
-   $prop(new_list.append_new_nodes(allocator, p_tail, $fwd(value),
-                                   $fwd(remaining)...));
+   $prop(new_list.append_new_nodes(
+      allocator, p_tail, $fwd(value), $fwd(remaining)...
+   ));
 
    return new_list;
 }
@@ -1000,8 +1013,10 @@ make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
 template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 constexpr auto
-make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
-          Args&&... arguments) {
+make_list(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Args&&... arguments
+) {
    using common = common_type<Args...>;
    return make_list<common>(allocator, static_cast<common>($fwd(arguments))...);
 }
@@ -1010,8 +1025,10 @@ make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_list_filled(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
-                 idx count, T const& value) -> maybe<basic_list<T>> {
+make_list_filled(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   T const& value
+) -> maybe<basic_list<T>> {
    basic_list<T> new_list;
    detail::list_node<T>* p_tail = nullptr;
    for (idx i = 0u; i < count; ++i) {

@@ -37,7 +37,8 @@ $test(pointer_in_range) {
 
    for (idx i = 0u; i < range.size(); ++i) {
       cat::verify(
-         cat::is_pointer_in_range(__builtin_addressof(values[i]), range));
+         cat::is_pointer_in_range(__builtin_addressof(values[i]), range)
+      );
    }
 
    cat::verify(!cat::is_pointer_in_range(values.data() + values.size(), range));
@@ -48,7 +49,9 @@ $test(pointer_in_range) {
    cat::span<int4 const> const empty{};
    cat::verify(!cat::is_pointer_in_range(values.data(), empty));
    cat::verify(
-      !cat::is_pointer_in_range(static_cast<int4 const*>(nullptr), range));
+      !cat::is_pointer_in_range(static_cast<int4 const*>(nullptr), range)
+   );
    cat::verify(
-      !cat::is_pointer_in_range(static_cast<int4 const*>(nullptr), empty));
+      !cat::is_pointer_in_range(static_cast<int4 const*>(nullptr), empty)
+   );
 }

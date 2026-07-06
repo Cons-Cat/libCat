@@ -27,8 +27,10 @@ class source_location {
 
  public:
    static constexpr auto
-   current(decltype(__builtin_source_location()) _Nonnull p_call_site_location =
-              __builtin_source_location()) -> source_location {
+   current(
+      decltype(__builtin_source_location()) _Nonnull p_call_site_location =
+         __builtin_source_location()
+   ) -> source_location {
       source_location current_location;
       current_location.m_p_location =
          static_cast<__impl const*>(p_call_site_location);
@@ -98,7 +100,8 @@ nop() {
 namespace detail {
 void
 print_assert_location(
-   source_location const& callsite = source_location::current());
+   source_location const& callsite = source_location::current()
+);
 
 using assert_handler = void (*_Nonnull)(source_location const&);
 }  // namespace detail
@@ -120,24 +123,28 @@ void
 verify(
    bool invariant_expression,
    void (*_Nonnull p_assert_handler)(source_location const&) = assert_handler,
-   source_location const& callsite = source_location::current());
+   source_location const& callsite = source_location::current()
+);
 
 void
 verify(
    bool invariant_expression, str_view error_string,
    void (*_Nonnull p_assert_handler)(source_location const&) = assert_handler,
-   source_location const& callsite = source_location::current());
+   source_location const& callsite = source_location::current()
+);
 
 void
 assert(
    bool invariant_expression,
    void (*_Nonnull p_assert_handler)(source_location const&) = assert_handler,
-   source_location const& callsite = source_location::current());
+   source_location const& callsite = source_location::current()
+);
 
 void
 assert(
    bool invariant_expression, str_view error_string,
    void (*_Nonnull p_assert_handler)(source_location const&) = assert_handler,
-   source_location const& callsite = source_location::current());
+   source_location const& callsite = source_location::current()
+);
 
 }  // namespace cat

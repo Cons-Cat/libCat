@@ -1,10 +1,13 @@
 #include <cat/linux>
 
 auto
-nix::sys_getsockopt(file_descriptor socket_descriptor, cat::int4 level,
-                    cat::int4 option_name, void* _Nonnull p_option_value,
-                    cat::int4& inout_option_length) -> nix::scaredy_nix<void> {
+nix::sys_getsockopt(
+   file_descriptor socket_descriptor, cat::int4 level, cat::int4 option_name,
+   void* _Nonnull p_option_value, cat::int4& inout_option_length
+) -> nix::scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/
-   return nix::syscall<void>(55, socket_descriptor, level, option_name,
-                             p_option_value, &inout_option_length);
+   return nix::syscall<void>(
+      55, socket_descriptor, level, option_name, p_option_value,
+      &inout_option_length
+   );
 }

@@ -41,12 +41,14 @@ $test(futex_syscalls) {
    cat::uint4 const owner_died = held | nix::futex_owner_died_flag;
    cat::verify(nix::robust_futex::owner_exited_abnormally(owner_died));
 
-   auto const woken =
-      nix::sys_futex(futex_word,
-                     nix::make_futex_op(futex_command::wake,
-                                        futex_options::private_process),
-                     1u, nullptr, nullptr, 0u)
-         .verify();
+   auto const woken = nix::sys_futex(
+                         futex_word,
+                         nix::make_futex_op(
+                            futex_command::wake, futex_options::private_process
+                         ),
+                         1u, nullptr, nullptr, 0u
+   )
+                         .verify();
    cat::verify(woken == 0u);
 
    nix::futex futex_other{};
@@ -80,9 +82,9 @@ $test(futex_syscalls) {
       .kernel_reserved = 0u,
    };
 
-   auto const waitv_result =
-      nix::sys_futex_waitv(cat::span{&waiter, 1u}, futex_waitv_call_flags::none,
-                           nullptr, cat::int4{});
+   auto const waitv_result = nix::sys_futex_waitv(
+      cat::span{&waiter, 1u}, futex_waitv_call_flags::none, nullptr, cat::int4{}
+   );
 
    cat::verify(!waitv_result.has_value());
    cat::verify(waitv_result.error() == nix::linux_error::again);

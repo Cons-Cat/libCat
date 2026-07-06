@@ -68,8 +68,8 @@ template <typename... Methods>
 class dyn_ptr;
 template <typename... Methods>
 class const_dyn_ptr;
-template <is_allocator Allocator, idx inline_storage_size = 64u,
-          typename... Methods>
+template <
+   is_allocator Allocator, idx inline_storage_size = 64u, typename... Methods>
 class basic_dyn;
 template <typename... Methods>
 class dyn_inplace;
@@ -113,8 +113,9 @@ struct dyn_invoker<T, Method, Return(Args...)> {
    [[gnu::always_inline, gnu::nodebug]]
    static constexpr auto
    call(void* _Nonnull p_self, Args... arguments) -> Return {
-      return Method::template do_invoke<T>(*static_cast<T*>(p_self),
-                                           $fwd(arguments)...);
+      return Method::template do_invoke<T>(
+         *static_cast<T*>(p_self), $fwd(arguments)...
+      );
    }
 };
 
@@ -123,8 +124,9 @@ struct dyn_invoker<T, Method, Return(Args...) const> {
    [[gnu::always_inline, gnu::nodebug]]
    static constexpr auto
    call(void const* _Nonnull p_self, Args... arguments) -> Return {
-      return Method::template do_invoke<T>(*static_cast<T const*>(p_self),
-                                           $fwd(arguments)...);
+      return Method::template do_invoke<T>(
+         *static_cast<T const*>(p_self), $fwd(arguments)...
+      );
    }
 };
 
@@ -208,8 +210,8 @@ template <typename... Superset>
 inline constexpr bool is_prefix_impl<type_list<>, type_list<Superset...>> =
    true;
 template <typename First, typename... SubsetR, typename... SupersetR>
-inline constexpr bool is_prefix_impl<type_list<First, SubsetR...>,
-                                     type_list<First, SupersetR...>> =
+inline constexpr bool is_prefix_impl<
+   type_list<First, SubsetR...>, type_list<First, SupersetR...>> =
    is_prefix_impl<type_list<SubsetR...>, type_list<SupersetR...>>;
 
 // `subset_match<Subset, Superset>::found` is `true` when `Subset` appears in
@@ -285,7 +287,8 @@ struct vtable<> {};
 // and devirtualize the dispatch into a direct call.
 template <typename T, typename... Methods>
 inline constexpr vtable<Methods...> vtable_for{
-   &detail::dyn_invoker<T, Methods>::call...};
+   &detail::dyn_invoker<T, Methods>::call...
+};
 template <typename T, typename... Methods>
 inline constexpr vtable<Methods...> const* _Nonnull p_vtable_for =
    &vtable_for<remove_cvref<T>, Methods...>;
@@ -317,10 +320,12 @@ narrow_vtable(vtable<Superset...> const* _Nonnull p_superset)
 
       auto const& first_slot =
          static_cast<vtable_slot<table_offset, first_superset_method> const&>(
-            *p_superset);
+            *p_superset
+         );
 
       return reinterpret_cast<vtable<Subset...> const*>(
-         __builtin_addressof(first_slot));
+         __builtin_addressof(first_slot)
+      );
    }
 }
 
@@ -414,8 +419,10 @@ class [[gsl::Pointer]] dyn_ref {
    dyn_type_id_ptr _Nonnull m_p_type_id;
    void* _Nonnull m_p_value;
 
-   constexpr dyn_ref(vtable<Methods...> const* _Nonnull p_vt,
-                     dyn_type_id_ptr p_td, void* _Nonnull p_v)
+   constexpr dyn_ref(
+      vtable<Methods...> const* _Nonnull p_vt, dyn_type_id_ptr p_td,
+      void* _Nonnull p_v
+   )
        : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
 
@@ -438,8 +445,9 @@ class [[gsl::Pointer]] dyn_ref {
       requires(!is_const<T>
                && detail::methods_support_type<remove_cvref<T>, Methods...>
                && !is_same<remove_cvref<T>, dyn_ref>)
-   constexpr dyn_ref(T& value [[clang::lifetimebound]]
-                     )
+   constexpr dyn_ref(
+      T& value [[clang::lifetimebound]]
+   )
        : m_p_vtable(p_vtable_for<T, Methods...>),
          m_p_type_id(p_dyn_type_id_for<T>),
          m_p_value(__builtin_addressof(value)) {
@@ -450,8 +458,8 @@ class [[gsl::Pointer]] dyn_ref {
    // subset of `Superset...`.
    template <typename... Superset>
       requires(sizeof...(Superset) != sizeof...(Methods)
-               && detail::is_subset_impl<type_list<Methods...>,
-                                         type_list<Superset...>>)
+               && detail::is_subset_impl<
+                  type_list<Methods...>, type_list<Superset...>>)
    constexpr dyn_ref(dyn_ref<Superset...> other)
        : m_p_vtable(detail::narrow_vtable<Methods...>(other.m_p_vtable)),
          m_p_type_id(other.m_p_type_id),
@@ -461,9 +469,11 @@ class [[gsl::Pointer]] dyn_ref {
    // Explicit rebind. The deleted `operator=(T&&)` above forces users to spell
    // this out, so the lifetime change is visible at the call site.
    template <typename T>
-      requires(!is_const<T>
-               && detail::methods_support_type<remove_cvref<T>, Methods...>
-               && !is_same<remove_cvref<T>, dyn_ref>)
+      requires(
+         !is_const<T>
+         && detail::methods_support_type<remove_cvref<T>, Methods...>
+         && !is_same<remove_cvref<T>, dyn_ref>
+      )
    constexpr void
    rebind(T& value [[clang::lifetime_capture_by(this)]]) {
       m_p_vtable = p_vtable_for<T, Methods...>;
@@ -501,8 +511,10 @@ class [[gsl::Pointer]] const_dyn_ref {
    dyn_type_id_ptr _Nonnull m_p_type_id;
    void const* _Nonnull m_p_value;
 
-   constexpr const_dyn_ref(vtable<Methods...> const* _Nonnull p_vt,
-                           dyn_type_id_ptr p_td, void const* _Nonnull p_v)
+   constexpr const_dyn_ref(
+      vtable<Methods...> const* _Nonnull p_vt, dyn_type_id_ptr p_td,
+      void const* _Nonnull p_v
+   )
        : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
 
@@ -525,8 +537,9 @@ class [[gsl::Pointer]] const_dyn_ref {
    template <typename T>
       requires(detail::methods_support_type<remove_cvref<T>, Methods...>
                && !is_same<remove_cvref<T>, const_dyn_ref>)
-   constexpr const_dyn_ref(T const& value [[clang::lifetimebound]]
-                           )
+   constexpr const_dyn_ref(
+      T const& value [[clang::lifetimebound]]
+   )
        : m_p_vtable(p_vtable_for<T, Methods...>),
          m_p_type_id(p_dyn_type_id_for<T>),
          m_p_value(__builtin_addressof(value)) {
@@ -544,8 +557,8 @@ class [[gsl::Pointer]] const_dyn_ref {
    // subset of `Superset...`.
    template <typename... Superset>
       requires(sizeof...(Superset) != sizeof...(Methods)
-               && detail::is_subset_impl<type_list<Methods...>,
-                                         type_list<Superset...>>)
+               && detail::is_subset_impl<
+                  type_list<Methods...>, type_list<Superset...>>)
    constexpr const_dyn_ref(const_dyn_ref<Superset...> other)
        : m_p_vtable(detail::narrow_vtable<Methods...>(other.m_p_vtable)),
          m_p_type_id(other.m_p_type_id),
@@ -554,8 +567,8 @@ class [[gsl::Pointer]] const_dyn_ref {
 
    template <typename... Superset>
       requires(sizeof...(Superset) != sizeof...(Methods)
-               && detail::is_subset_impl<type_list<Methods...>,
-                                         type_list<Superset...>>)
+               && detail::is_subset_impl<
+                  type_list<Methods...>, type_list<Superset...>>)
    constexpr const_dyn_ref(dyn_ref<Superset...> other)
        : m_p_vtable(detail::narrow_vtable<Methods...>(other.m_p_vtable)),
          m_p_type_id(other.m_p_type_id),
@@ -565,8 +578,10 @@ class [[gsl::Pointer]] const_dyn_ref {
    // Explicit rebind. The deleted `operator=(T&&)` above forces users to spell
    // this out, so the lifetime change is visible at the call site.
    template <typename T>
-      requires(detail::methods_support_type<remove_cvref<T>, Methods...>
-               && !is_same<remove_cvref<T>, const_dyn_ref>)
+      requires(
+         detail::methods_support_type<remove_cvref<T>, Methods...>
+         && !is_same<remove_cvref<T>, const_dyn_ref>
+      )
    constexpr void
    rebind(T const& value [[clang::lifetime_capture_by(this)]]) {
       m_p_vtable = p_vtable_for<T, Methods...>;
@@ -609,8 +624,10 @@ class [[gsl::Pointer]] dyn_ptr {
    dyn_type_id_ptr m_p_type_id = p_dyn_type_id_for<void>;
    void* _Nullable m_p_value = nullptr;
 
-   constexpr dyn_ptr(vtable<Methods...> const* _Nonnull p_vt,
-                     dyn_type_id_ptr p_td, void* _Nullable p_v)
+   constexpr dyn_ptr(
+      vtable<Methods...> const* _Nonnull p_vt, dyn_type_id_ptr p_td,
+      void* _Nullable p_v
+   )
        : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
 
@@ -639,30 +656,35 @@ class [[gsl::Pointer]] dyn_ptr {
                && detail::methods_support_type<remove_cvref<T>, Methods...>)
    constexpr dyn_ptr(T* _Nonnull p_value [[clang::lifetimebound]])
        : m_p_vtable(p_value != nullptr ? p_vtable_for<T, Methods...> : nullptr),
-         m_p_type_id(p_value != nullptr ? p_dyn_type_id_for<T>
-                                        : p_dyn_type_id_for<void>),
+         m_p_type_id(
+            p_value != nullptr ? p_dyn_type_id_for<T> : p_dyn_type_id_for<void>
+         ),
          m_p_value(p_value) {
    }
 
    template <is_allocator Allocator, idx inline_size>
    constexpr dyn_ptr(
       basic_dyn<Allocator, inline_size, Methods...>* _Nonnull p_dyn
-      [[clang::lifetimebound]]);
+      [[clang::lifetimebound]]
+   );
 
-   constexpr dyn_ptr(dyn_inplace<Methods...>* _Nonnull p_dyn
-                     [[clang::lifetimebound]]);
+   constexpr dyn_ptr(
+      dyn_inplace<Methods...>* _Nonnull p_dyn [[clang::lifetimebound]]
+   );
 
    // Narrowing converting constructor: a `dyn_ptr<Superset...>` is convertible
    // to `dyn_ptr<Methods...>` whenever `Methods...` is a contiguous
    // subset of `Superset...`.
    template <typename... Superset>
       requires(sizeof...(Superset) != sizeof...(Methods)
-               && detail::is_subset_impl<type_list<Methods...>,
-                                         type_list<Superset...>>)
+               && detail::is_subset_impl<
+                  type_list<Methods...>, type_list<Superset...>>)
    constexpr dyn_ptr(dyn_ptr<Superset...> other)
-       : m_p_vtable(other.has_value()
-                       ? detail::narrow_vtable<Methods...>(other.m_p_vtable)
-                       : nullptr),
+       : m_p_vtable(
+            other.has_value()
+               ? detail::narrow_vtable<Methods...>(other.m_p_vtable)
+               : nullptr
+         ),
          m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
    }
@@ -720,9 +742,10 @@ class [[gsl::Pointer]] const_dyn_ptr {
    dyn_type_id_ptr m_p_type_id = p_dyn_type_id_for<void>;
    void const* _Nullable m_p_value = nullptr;
 
-   constexpr const_dyn_ptr(vtable<Methods...> const* _Nonnull p_vtable,
-                           dyn_type_id_ptr p_type_id,
-                           void const* _Nullable p_value)
+   constexpr const_dyn_ptr(
+      vtable<Methods...> const* _Nonnull p_vtable, dyn_type_id_ptr p_type_id,
+      void const* _Nullable p_value
+   )
        : m_p_vtable(p_vtable), m_p_type_id(p_type_id), m_p_value(p_value) {
    }
 
@@ -750,18 +773,21 @@ class [[gsl::Pointer]] const_dyn_ptr {
       requires(detail::methods_support_type<remove_cvref<T>, Methods...>)
    constexpr const_dyn_ptr(T const* _Nonnull p_value [[clang::lifetimebound]])
        : m_p_vtable(p_value != nullptr ? p_vtable_for<T, Methods...> : nullptr),
-         m_p_type_id(p_value != nullptr ? p_dyn_type_id_for<T>
-                                        : p_dyn_type_id_for<void>),
+         m_p_type_id(
+            p_value != nullptr ? p_dyn_type_id_for<T> : p_dyn_type_id_for<void>
+         ),
          m_p_value(p_value) {
    }
 
    template <is_allocator Allocator, idx inline_size>
    constexpr const_dyn_ptr(
       basic_dyn<Allocator, inline_size, Methods...> const* _Nonnull p_dyn
-      [[clang::lifetimebound]]);
+      [[clang::lifetimebound]]
+   );
 
-   constexpr const_dyn_ptr(dyn_inplace<Methods...> const* _Nonnull p_dyn
-                           [[clang::lifetimebound]]);
+   constexpr const_dyn_ptr(
+      dyn_inplace<Methods...> const* _Nonnull p_dyn [[clang::lifetimebound]]
+   );
 
    constexpr const_dyn_ptr(dyn_ptr<Methods...> p_other)
        : m_p_vtable(p_other.m_p_vtable),
@@ -775,24 +801,28 @@ class [[gsl::Pointer]] const_dyn_ptr {
    // subset of `Superset...`.
    template <typename... Superset>
       requires(sizeof...(Superset) != sizeof...(Methods)
-               && detail::is_subset_impl<type_list<Methods...>,
-                                         type_list<Superset...>>)
+               && detail::is_subset_impl<
+                  type_list<Methods...>, type_list<Superset...>>)
    constexpr const_dyn_ptr(const_dyn_ptr<Superset...> other)
-       : m_p_vtable(other.has_value()
-                       ? detail::narrow_vtable<Methods...>(other.m_p_vtable)
-                       : nullptr),
+       : m_p_vtable(
+            other.has_value()
+               ? detail::narrow_vtable<Methods...>(other.m_p_vtable)
+               : nullptr
+         ),
          m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
    }
 
    template <typename... Superset>
       requires(sizeof...(Superset) != sizeof...(Methods)
-               && detail::is_subset_impl<type_list<Methods...>,
-                                         type_list<Superset...>>)
+               && detail::is_subset_impl<
+                  type_list<Methods...>, type_list<Superset...>>)
    constexpr const_dyn_ptr(dyn_ptr<Superset...> other)
-       : m_p_vtable(other.has_value()
-                       ? detail::narrow_vtable<Methods...>(other.m_p_vtable)
-                       : nullptr),
+       : m_p_vtable(
+            other.has_value()
+               ? detail::narrow_vtable<Methods...>(other.m_p_vtable)
+               : nullptr
+         ),
          m_p_type_id(other.m_p_type_id),
          m_p_value(other.m_p_value) {
    }
@@ -952,11 +982,13 @@ basic_dyn {
       static_assert(
          alignof(T) <= storage_alignment,
          "`T`'s alignment exceeds this `basic_dyn`'s inline storage buffer "
-         "alignment!");
+         "alignment!"
+      );
       auto allocation =
          m_allocator
             .template inline_align_alloc_multi<unsigned char, inline_size>(
-               alignof(T), sizeof(T));
+               alignof(T), sizeof(T)
+            );
       cat::assert(allocation.has_value(), "`basic_dyn` allocation failed!");
       m_handle = cat::move(allocation).value();
       m_p_value = static_cast<void*>(m_allocator.get(m_handle).data());
@@ -977,13 +1009,16 @@ basic_dyn {
          auto allocation =
             m_allocator
                .template inline_align_alloc_multi<unsigned char, inline_size>(
-                  storage_alignment, other.m_handle.raw_size());
-         cat::assert(allocation.has_value(),
-                     "`basic_dyn` move allocation failed!");
+                  storage_alignment, other.m_handle.raw_size()
+               );
+         cat::assert(
+            allocation.has_value(), "`basic_dyn` move allocation failed!"
+         );
          m_handle = cat::move(allocation).value();
          m_p_value = static_cast<void*>(m_allocator.get(m_handle).data());
-         other.m_p_vtable->template fun<move_constructor>()(other.m_p_value,
-                                                            m_p_value);
+         other.m_p_vtable->template fun<move_constructor>()(
+            other.m_p_value, m_p_value
+         );
          m_p_vtable = other.m_p_vtable;
          m_type_descriptor = other.m_type_descriptor;
          other.m_p_vtable = nullptr;
@@ -1002,29 +1037,34 @@ basic_dyn {
    }
 
  public:
-   constexpr basic_dyn() = delete (
-      "`cat::basic_dyn` requires an allocator! Pass an allocator "
-      "reference or call `cat::make_basic_dyn()`.");
+   constexpr basic_dyn() =
+      delete ("`cat::basic_dyn` requires an allocator! Pass an allocator "
+              "reference or call `cat::make_basic_dyn()`.");
 
    constexpr basic_dyn(Allocator& allocator [[clang::lifetimebound]])
        : m_allocator(allocator) {
    }
 
    template <typename T>
-      requires(!is_same<remove_cvref<T>, basic_dyn>
-               && can_hold<remove_cvref<T>>)
-   constexpr basic_dyn(Allocator& allocator [[clang::lifetimebound]]
-                       ,
-                       T&& value)
+      requires(
+         !is_same<remove_cvref<T>, basic_dyn> && can_hold<remove_cvref<T>>
+      )
+   constexpr basic_dyn(
+      Allocator& allocator [[clang::lifetimebound]]
+      ,
+      T&& value
+   )
        : m_allocator(allocator) {
       construct_in_empty<remove_cvref<T>>($fwd(value));
    }
 
    template <typename T, typename... Args>
       requires(can_hold<T> && is_constructible<T, Args...>)
-   constexpr basic_dyn(Allocator& allocator [[clang::lifetimebound]]
-                       ,
-                       in_place_type_for<T> /*tag*/, Args&&... arguments)
+   constexpr basic_dyn(
+      Allocator& allocator [[clang::lifetimebound]]
+      ,
+      in_place_type_for<T> /*tag*/, Args&&... arguments
+   )
        : m_allocator(allocator) {
       construct_in_empty<T>($fwd(arguments)...);
    }
@@ -1046,13 +1086,16 @@ basic_dyn {
       auto allocation =
          m_allocator
             .template inline_align_alloc_multi<unsigned char, inline_size>(
-               storage_alignment, other.m_handle.raw_size());
-      cat::assert(allocation.has_value(),
-                  "`basic_dyn` copy allocation failed!");
+               storage_alignment, other.m_handle.raw_size()
+            );
+      cat::assert(
+         allocation.has_value(), "`basic_dyn` copy allocation failed!"
+      );
       m_handle = cat::move(allocation).value();
       m_p_value = static_cast<void*>(m_allocator.get(m_handle).data());
-      other.m_p_vtable->template fun<copy_constructor>()(other.m_p_value,
-                                                         m_p_value);
+      other.m_p_vtable->template fun<copy_constructor>()(
+         other.m_p_value, m_p_value
+      );
       m_p_vtable = other.m_p_vtable;
       m_type_descriptor = other.m_type_descriptor;
    }
@@ -1069,8 +1112,10 @@ basic_dyn {
       if (this == __builtin_addressof(other)) {
          return *this;
       }
-      cat::assert(__builtin_addressof(m_allocator)
-                  == __builtin_addressof(other.m_allocator));
+      cat::assert(
+         __builtin_addressof(m_allocator)
+         == __builtin_addressof(other.m_allocator)
+      );
       destroy_held();
       release_storage();
       if (other.m_p_vtable != nullptr) {
@@ -1092,8 +1137,9 @@ basic_dyn {
    }
 
    template <typename T>
-      requires(!is_same<remove_cvref<T>, basic_dyn>
-               && can_hold<remove_cvref<T>>)
+      requires(
+         !is_same<remove_cvref<T>, basic_dyn> && can_hold<remove_cvref<T>>
+      )
    auto
    operator=(T&& value) -> basic_dyn& {
       emplace<remove_cvref<T>>($fwd(value));
@@ -1279,7 +1325,8 @@ class [[gsl::Owner]] dyn_inplace {
          other.m_storage.disposer = nullptr;
       } else {
          other.m_vtable.template fun<move_constructor>()(
-            other.m_p_value, m_storage.inline_bytes);
+            other.m_p_value, m_storage.inline_bytes
+         );
          m_p_value = m_storage.inline_bytes;
       }
       m_vtable = other.m_vtable;
@@ -1292,8 +1339,9 @@ class [[gsl::Owner]] dyn_inplace {
    constexpr dyn_inplace() = default;
 
    template <typename T>
-      requires(!is_same<remove_cvref<T>, dyn_inplace>
-               && can_hold<remove_cvref<T>>)
+      requires(
+         !is_same<remove_cvref<T>, dyn_inplace> && can_hold<remove_cvref<T>>
+      )
    constexpr dyn_inplace(T&& value) {
       emplace<remove_cvref<T>>($fwd(value));
    }
@@ -1317,7 +1365,8 @@ class [[gsl::Owner]] dyn_inplace {
    {
       if (other.m_p_value != nullptr) {
          other.m_vtable.template fun<copy_constructor>()(
-            other.m_p_value, m_storage.inline_bytes);
+            other.m_p_value, m_storage.inline_bytes
+         );
          m_vtable = other.m_vtable;
          m_type_descriptor = other.m_type_descriptor;
          m_p_value = m_storage.inline_bytes;
@@ -1355,8 +1404,9 @@ class [[gsl::Owner]] dyn_inplace {
    }
 
    template <typename T>
-      requires(!is_same<remove_cvref<T>, dyn_inplace>
-               && can_hold<remove_cvref<T>>)
+      requires(
+         !is_same<remove_cvref<T>, dyn_inplace> && can_hold<remove_cvref<T>>
+      )
    auto
    operator=(T&& value) -> dyn_inplace& {
       emplace<remove_cvref<T>>($fwd(value));
@@ -1371,7 +1421,8 @@ class [[gsl::Owner]] dyn_inplace {
       static_assert(
          fits_inline<T>,
          "`T`'s size or alignment exceeds this `dyn_inplace`'s inline "
-         "storage!");
+         "storage!"
+      );
       destroy_held();
       if consteval {
          // Inline `unsigned char` storage is not transparently replaceable
@@ -1430,7 +1481,8 @@ class [[gsl::Owner]] dyn_inplace {
 template <typename... Methods>
 template <is_allocator Allocator, idx inline_size>
 constexpr dyn_ptr<Methods...>::dyn_ptr(
-   basic_dyn<Allocator, inline_size, Methods...>* _Nonnull p_dyn) {
+   basic_dyn<Allocator, inline_size, Methods...>* _Nonnull p_dyn
+) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = p_dyn->m_p_vtable;
       m_p_type_id = p_dyn->m_type_descriptor;
@@ -1441,7 +1493,8 @@ constexpr dyn_ptr<Methods...>::dyn_ptr(
 template <typename... Methods>
 template <is_allocator Allocator, idx inline_size>
 constexpr const_dyn_ptr<Methods...>::const_dyn_ptr(
-   basic_dyn<Allocator, inline_size, Methods...> const* _Nonnull p_dyn) {
+   basic_dyn<Allocator, inline_size, Methods...> const* _Nonnull p_dyn
+) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = p_dyn->m_p_vtable;
       m_p_type_id = p_dyn->m_type_descriptor;
@@ -1451,7 +1504,8 @@ constexpr const_dyn_ptr<Methods...>::const_dyn_ptr(
 
 template <typename... Methods>
 constexpr dyn_ptr<Methods...>::dyn_ptr(
-   dyn_inplace<Methods...>* _Nonnull p_dyn) {
+   dyn_inplace<Methods...>* _Nonnull p_dyn
+) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = &p_dyn->m_vtable;
       m_p_type_id = p_dyn->m_type_descriptor;
@@ -1461,7 +1515,8 @@ constexpr dyn_ptr<Methods...>::dyn_ptr(
 
 template <typename... Methods>
 constexpr const_dyn_ptr<Methods...>::const_dyn_ptr(
-   dyn_inplace<Methods...> const* _Nonnull p_dyn) {
+   dyn_inplace<Methods...> const* _Nonnull p_dyn
+) {
    if (p_dyn != nullptr && p_dyn->has_value()) {
       m_p_vtable = &p_dyn->m_vtable;
       m_p_type_id = p_dyn->m_type_descriptor;
@@ -1478,33 +1533,42 @@ namespace detail {
 // `dyn_ptr`.
 template <typename Method>
 struct dyn_invoke_impl {
-   template <is_allocator Allocator, idx inline_size, typename... Methods,
-             typename... Args>
+   template <
+      is_allocator Allocator, idx inline_size, typename... Methods,
+      typename... Args>
       requires(detail::contains_method<Method, Methods...>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator()(basic_dyn<Allocator, inline_size, Methods...>& dyn,
-              Args&&... arguments) const {
+   operator()(
+      basic_dyn<Allocator, inline_size, Methods...>& dyn, Args&&... arguments
+   ) const {
       if !consteval {
          cat::assert(dyn.has_value());
       }
-      return dyn.m_p_vtable->template fun<Method>()(dyn.m_p_value,
-                                                    $fwd(arguments)...);
+      return dyn.m_p_vtable->template fun<Method>()(
+         dyn.m_p_value, $fwd(arguments)...
+      );
    }
 
-   template <is_allocator Allocator, idx inline_size, typename... Methods,
-             typename... Args>
-      requires(detail::contains_method<Method, Methods...>
-               && detail::method_is_const<Method>)
+   template <
+      is_allocator Allocator, idx inline_size, typename... Methods,
+      typename... Args>
+      requires(
+         detail::contains_method<Method, Methods...>
+         && detail::method_is_const<Method>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator()(basic_dyn<Allocator, inline_size, Methods...> const& dyn,
-              Args&&... arguments) const {
+   operator()(
+      basic_dyn<Allocator, inline_size, Methods...> const& dyn,
+      Args&&... arguments
+   ) const {
       if !consteval {
          cat::assert(dyn.has_value());
       }
-      return dyn.m_p_vtable->template fun<Method>()(dyn.m_p_value,
-                                                    $fwd(arguments)...);
+      return dyn.m_p_vtable->template fun<Method>()(
+         dyn.m_p_value, $fwd(arguments)...
+      );
    }
 
    template <typename... Methods, typename... Args>
@@ -1515,21 +1579,25 @@ struct dyn_invoke_impl {
       if !consteval {
          cat::assert(dyn.has_value());
       }
-      return dyn.m_vtable.template fun<Method>()(dyn.m_p_value,
-                                                 $fwd(arguments)...);
+      return dyn.m_vtable.template fun<Method>()(
+         dyn.m_p_value, $fwd(arguments)...
+      );
    }
 
    template <typename... Methods, typename... Args>
-      requires(detail::contains_method<Method, Methods...>
-               && detail::method_is_const<Method>)
+      requires(
+         detail::contains_method<Method, Methods...>
+         && detail::method_is_const<Method>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator()(dyn_inplace<Methods...> const& dyn, Args&&... arguments) const {
       if !consteval {
          cat::assert(dyn.has_value());
       }
-      return dyn.m_vtable.template fun<Method>()(dyn.m_p_value,
-                                                 $fwd(arguments)...);
+      return dyn.m_vtable.template fun<Method>()(
+         dyn.m_p_value, $fwd(arguments)...
+      );
    }
 
    template <typename... Methods, typename... Args>
@@ -1537,18 +1605,22 @@ struct dyn_invoke_impl {
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator()(dyn_ref<Methods...> ref, Args&&... arguments) const {
-      return ref.m_p_vtable->template fun<Method>()(ref.m_p_value,
-                                                    $fwd(arguments)...);
+      return ref.m_p_vtable->template fun<Method>()(
+         ref.m_p_value, $fwd(arguments)...
+      );
    }
 
    template <typename... Methods, typename... Args>
-      requires(detail::contains_method<Method, Methods...>
-               && detail::method_is_const<Method>)
+      requires(
+         detail::contains_method<Method, Methods...>
+         && detail::method_is_const<Method>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator()(const_dyn_ref<Methods...> ref, Args&&... arguments) const {
-      return ref.m_p_vtable->template fun<Method>()(ref.m_p_value,
-                                                    $fwd(arguments)...);
+      return ref.m_p_vtable->template fun<Method>()(
+         ref.m_p_value, $fwd(arguments)...
+      );
    }
 };
 
@@ -1556,8 +1628,10 @@ struct dyn_invoke_impl {
 // its dynamic type matches `T`, otherwise `nullptr`.
 template <typename T>
 struct dyn_cast_impl {
-   static_assert(!is_reference<T>, "`cat::dyn_cast` must return a pointer "
-                                   "type! Remove the reference qualifier.");
+   static_assert(
+      !is_reference<T>, "`cat::dyn_cast` must return a pointer "
+                        "type! Remove the reference qualifier."
+   );
 
    template <is_allocator Allocator, idx inline_size, typename... Methods>
    constexpr auto
@@ -1573,7 +1647,8 @@ struct dyn_cast_impl {
    constexpr auto
    operator()(
       basic_dyn<Allocator, inline_size, Methods...> const* _Nullable p_dyn
-      [[clang::lifetimebound]]) const -> T const* _Nullable {
+      [[clang::lifetimebound]]
+   ) const -> T const* _Nullable {
       return (p_dyn != nullptr
               && p_dyn->type_descriptor() == p_dyn_type_id_for<T>)
                 ? static_cast<T const*>(p_dyn->m_p_value)
@@ -1657,11 +1732,13 @@ using dyn = basic_dyn<Allocator, 64u, Methods...>;
 // stores a reference to `allocator` for the lifetime of the returned dyn.
 // The inline storage size defaults to `64u` and may be
 // overridden as the first explicit template argument.
-template <typename... Methods, is_allocator Allocator, typename T,
-          idx inline_storage_size = 64u>
-   requires(detail::methods_support_type<remove_cvref<T>, Methods...>
-            && (detail::contains_method<destructor, Methods...>
-                || is_trivially_destructible<remove_cvref<T>>))
+template <
+   typename... Methods, is_allocator Allocator, typename T,
+   idx inline_storage_size = 64u>
+   requires(
+      detail::methods_support_type<remove_cvref<T>, Methods...>
+      && (detail::contains_method<destructor, Methods...> || is_trivially_destructible<remove_cvref<T>>)
+   )
 [[nodiscard]]
 constexpr auto
 make_basic_dyn(Allocator& allocator [[clang::lifetimebound]], T&& value) {
@@ -1671,8 +1748,8 @@ make_basic_dyn(Allocator& allocator [[clang::lifetimebound]], T&& value) {
    };
 }
 
-template <typename... Methods, is_allocator Allocator,
-          idx inline_storage_size = 64u>
+template <
+   typename... Methods, is_allocator Allocator, idx inline_storage_size = 64u>
 [[nodiscard]]
 constexpr auto
 make_basic_dyn(Allocator& allocator [[clang::lifetimebound]]) {

@@ -30,7 +30,8 @@ struct mask_to_bitset<T, Abi> {
       // P2638R0 pack mask lanes into a lane-bit pattern for `bitset`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       return static_cast<__UINT64_TYPE__>(
-         x64::detail::avx2_abi_mask_to_bitset(mask));
+         x64::detail::avx2_abi_mask_to_bitset(mask)
+      );
    }
 };
 
@@ -42,7 +43,8 @@ struct mask_to_bitset<T, Abi> {
       // P2638R0 pack mask lanes into a lane-bit pattern for `bitset`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       return static_cast<__UINT64_TYPE__>(
-         x64::detail::sse2_abi_mask_to_bitset(mask));
+         x64::detail::sse2_abi_mask_to_bitset(mask)
+      );
    }
 };
 
@@ -66,7 +68,8 @@ simd_to_bitset(simd_mask<T, Abi> mask) -> bitset<Abi::lanes> {
       static_assert(
          Abi::lanes <= sizeof(mask_lane_bits) * 8u,
          "`mask_to_bitset::invoke` for this ABI returns a type with fewer bits "
-         "than there are lanes in `simd_mask` for this ABI.");
+         "than there are lanes in `simd_mask` for this ABI."
+      );
 
       auto const pattern = detail::simd_abi::invoke<mask_lane_bits, hook>(mask);
       bitset<Abi::lanes> out{};

@@ -11,8 +11,10 @@ namespace cat::detail {
 // memmove-style overlap, and are valid for disjoint `memcpy` too.
 [[clang::no_builtin("memcpy")]]
 inline void
-copy_memory_small(byte const* _Nonnull __restrict p_source,
-                  byte* _Nonnull __restrict p_destination, idx bytes) {
+copy_memory_small(
+   byte const* _Nonnull __restrict p_source,
+   byte* _Nonnull __restrict p_destination, idx bytes
+) {
    char* p_dest = reinterpret_cast<char*>(p_destination);
    char const* p_src = reinterpret_cast<char const*>(p_source);
    idx const byte_count = bytes;
@@ -85,8 +87,9 @@ copy_memory_small(byte const* _Nonnull __restrict p_source,
    }
 #pragma unroll
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      tail_chunks[vector_index].load_unaligned(p_src + byte_count - 64
-                                               + (vector_index * 16u));
+      tail_chunks[vector_index].load_unaligned(
+         p_src + byte_count - 64 + (vector_index * 16u)
+      );
    }
 #pragma unroll
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
@@ -94,8 +97,9 @@ copy_memory_small(byte const* _Nonnull __restrict p_source,
    }
 #pragma unroll
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      tail_chunks[vector_index].store_unaligned(p_dest + byte_count - 64
-                                                + (vector_index * 16u));
+      tail_chunks[vector_index].store_unaligned(
+         p_dest + byte_count - 64 + (vector_index * 16u)
+      );
    }
 }
 

@@ -69,7 +69,8 @@ auto
 style_tty_fg(is_allocator auto& alloc, str_view text, str_view color)
    -> maybe<str_span> {
    str_span memory = $prop(alloc.template alloc_multi<char>(
-      text.size() + color.size() + vt_fg_default.size()));
+      text.size() + color.size() + vt_fg_default.size()
+   ));
 
    char* p_memory = memory.data();
    // Add fg color:
@@ -77,9 +78,10 @@ style_tty_fg(is_allocator auto& alloc, str_view text, str_view color)
    // Add text to style:
    copy_memory(text.data(), p_memory + color.size(), text.size());
    // Reset fg color:
-   copy_memory_scalar(vt_fg_default.data(),
-                      p_memory + color.size() + text.size(),
-                      vt_fg_default.size());
+   copy_memory_scalar(
+      vt_fg_default.data(), p_memory + color.size() + text.size(),
+      vt_fg_default.size()
+   );
 
    return memory;
 }
@@ -88,7 +90,8 @@ auto
 style_tty_bg(is_allocator auto& alloc, str_view text, str_view color)
    -> maybe<str_span> {
    str_span memory = $prop(alloc.template alloc_multi<char>(
-      text.size() + color.size() + vt_bg_default.size()));
+      text.size() + color.size() + vt_bg_default.size()
+   ));
 
    char* p_memory = memory.data();
    // Add bg color:
@@ -96,9 +99,10 @@ style_tty_bg(is_allocator auto& alloc, str_view text, str_view color)
    // Add text to style:
    copy_memory(text.data(), p_memory + color.size(), text.size());
    // Reset bg color:
-   copy_memory_scalar(vt_bg_default.data(),
-                      p_memory + color.size() + text.size(),
-                      vt_bg_default.size());
+   copy_memory_scalar(
+      vt_bg_default.data(), p_memory + color.size() + text.size(),
+      vt_bg_default.size()
+   );
 
    return memory;
 }

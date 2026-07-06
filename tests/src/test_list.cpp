@@ -215,8 +215,9 @@ $test(list_factories) {
 }
 
 $test(raii_list_maybe_niche) {
-   static_assert(sizeof(cat::maybe<cat::raii::list<int4>>)
-                 == sizeof(cat::raii::list<int4>));
+   static_assert(
+      sizeof(cat::maybe<cat::raii::list<int4>>) == sizeof(cat::raii::list<int4>)
+   );
    cat::maybe<cat::raii::list<int4>> empty_list;
    cat::verify(!empty_list.has_value());
 
@@ -344,8 +345,7 @@ $test(list) {
    cat::verify(*++list_it == 3);
 
    cat::raii::list swap_left =
-      cat::raii::make_list<int, cat::dyn_allocator>(dynamic_ref, 7, 8)
-         .verify();
+      cat::raii::make_list<int, cat::dyn_allocator>(dynamic_ref, 7, 8).verify();
    cat::raii::list swap_right =
       cat::raii::make_list<int, cat::dyn_allocator>(dynamic_ref, 9, 10, 11)
          .verify();
@@ -391,8 +391,9 @@ $test(list) {
    cat::verify(*(forward_list_1.begin() + 1u) == 0);
 
    cat::raii::forward_list forward_list_fill =
-      cat::raii::make_forward_list_filled<int, cat::dyn_allocator>(dynamic_ref,
-                                                                   4u, 1)
+      cat::raii::make_forward_list_filled<int, cat::dyn_allocator>(
+         dynamic_ref, 4u, 1
+      )
          .verify();
    cat::verify(forward_list_fill.size() == 4);
    {
@@ -477,8 +478,9 @@ $test(list_iterable) {
    cat::verify(rest_total == 7);
 
    auto forward_list_values =
-      cat::raii::make_forward_list<int, cat::dyn_allocator>(dynamic_ref, 4, 5,
-                                                            6)
+      cat::raii::make_forward_list<int, cat::dyn_allocator>(
+         dynamic_ref, 4, 5, 6
+      )
          .verify();
    cat::verify((forward_list_values | cat::sum()) == 15);
    auto shifted_edges = cat::ref(forward_list_values)

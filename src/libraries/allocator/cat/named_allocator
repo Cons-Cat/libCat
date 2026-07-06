@@ -18,8 +18,10 @@ class named_allocator : public allocator_ref<Allocator> {
    str_view m_name;
 
  public:
-   constexpr named_allocator(Allocator& inner [[clang::lifetimebound]],
-                             str_view debug_name [[clang::lifetimebound]])
+   constexpr named_allocator(
+      Allocator& inner [[clang::lifetimebound]],
+      str_view debug_name [[clang::lifetimebound]]
+   )
        : base(inner), m_name(debug_name) {
    }
 

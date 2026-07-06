@@ -34,10 +34,13 @@ class pool_allocator
    // Initialize a `pool_allocator`. This should only be called from
    // `cat::make_pool_allocator`.
    constexpr pool_allocator(uintptr<void> p_address, idx arena_bytes)
-       : m_nodes(span<node_union>(
-            // Pun the opaque `p_address` to the internal `node_union` type.
-            __builtin_bit_cast(node_union*, p_address.raw),
-            arena_bytes / sizeof(node_union))) {
+       : m_nodes(
+            span<node_union>(
+               // Pun the opaque `p_address` to the internal `node_union` type.
+               __builtin_bit_cast(node_union*, p_address.raw),
+               arena_bytes / sizeof(node_union)
+            )
+         ) {
       // Initialize the free list.
       this->reset();
    }
@@ -60,9 +63,9 @@ class pool_allocator
 
  public:
    // `pool_allocator` is move-only.
-   constexpr pool_allocator(pool_allocator const&) = delete (
-      "`cat::pool_allocator` should be constructed using "
-      "`cat::make_pool_allocator`.");
+   constexpr pool_allocator(pool_allocator const&) =
+      delete ("`cat::pool_allocator` should be constructed using "
+              "`cat::make_pool_allocator`.");
    constexpr pool_allocator(pool_allocator&&) = default;
 
    // Reset the bumped pointer to the beginning of this arena.
@@ -192,7 +195,8 @@ template <idx max_node_bytes>
 [[nodiscard,
   deprecated(
      "Creating a `cat::pool_allocator` with a pr-value may "
-     "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
+     "unintentionally leak memory. Copy an l-value `cat::span` instead."
+  )]]
 constexpr auto
 make_pool_allocator(span<byte>&& span) -> pool_allocator<max_node_bytes> {
    return make_pool_allocator<max_node_bytes>(span);

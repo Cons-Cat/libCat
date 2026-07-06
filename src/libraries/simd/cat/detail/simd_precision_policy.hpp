@@ -18,8 +18,8 @@ struct simd_precision_scalar {
    using type = basic_float<T, precision>;
 };
 
-template <typename T, precision_policies old_precision,
-          precision_policies precision>
+template <
+   typename T, precision_policies old_precision, precision_policies precision>
 struct simd_precision_scalar<basic_float<T, old_precision>, precision> {
    using type = basic_float<T, precision>;
 };

@@ -36,8 +36,9 @@ concept has_simd_sat_accessor = requires(T value) { value.sat(); };
 
 template <typename WideBoolSimd>
 void
-verify_widened_bool_simd_matches_bool4(cat::fixed_size_simd<bool, 4u> const ref,
-                                       WideBoolSimd const v) {
+verify_widened_bool_simd_matches_bool4(
+   cat::fixed_size_simd<bool, 4u> const ref, WideBoolSimd const v
+) {
    cat::verify(ref.size() == v.size());
    for (cat::idx i = 0u; i < 4u; ++i) {
       cat::verify(v[i] == ref[i]);
@@ -70,9 +71,10 @@ $test(simd) {
    cat::verify(5 == all_five);
    auto const lane_eq = cat::simd_equal_lanes(same, diff_last);
    cat::verify(lane_eq[0] && lane_eq[1] && lane_eq[2] && !lane_eq[3]);
-   cat::verify(same.equal_lanes(diff_last)[0] && same.equal_lanes(diff_last)[1]
-               && same.equal_lanes(diff_last)[2]
-               && !same.equal_lanes(diff_last)[3]);
+   cat::verify(
+      same.equal_lanes(diff_last)[0] && same.equal_lanes(diff_last)[1]
+      && same.equal_lanes(diff_last)[2] && !same.equal_lanes(diff_last)[3]
+   );
    cat::verify(cat::simd_unequal_lanes(same, diff_last)[3]);
    cat::verify(same.unequal_lanes(twin).none_of());
    cat::verify(same.equal_lanes(twin).all_of());
@@ -146,11 +148,14 @@ $test(simd_broadcast_traits) {
 $test(simd_lane_stepanov_iterator) {
    using simd_t = int4x4;
    using lane_iter = simd_t::iterator;
-   static_assert(cat::is_same<lane_iter::iterator_concept,
-                              cat::random_access_iterator_tag>);
+   static_assert(
+      cat::is_same<lane_iter::iterator_concept, cat::random_access_iterator_tag>
+   );
    static_assert(cat::is_same<lane_iter::reference, lane_iter::value_type>);
-   static_assert(cat::is_same<lane_iter::pointer,
-                              cat::proxy_arrow_result<lane_iter::value_type>>);
+   static_assert(
+      cat::is_same<
+         lane_iter::pointer, cat::proxy_arrow_result<lane_iter::value_type>>
+   );
 
    simd_t v = {10, 20, 30, 40};
    auto b = v.begin();
@@ -200,7 +205,8 @@ $test(simd_lane_stepanov_iterator) {
 $test(simd_collection) {
    static_assert(cat::is_random_access_collection<cat::int4x4>);
    static_assert(
-      cat::is_random_access_collection<cat::fixed_size_simd_mask<int4, 4u>>);
+      cat::is_random_access_collection<cat::fixed_size_simd_mask<int4, 4u>>
+   );
 
    cat::int4x4 lanes{1_i4, 2_i4, 3_i4, 4_i4};
    cat::verify((lanes | cat::sum()) == 10_i4);
@@ -358,14 +364,16 @@ $test(simd_is_array_like_v) {
    // The unaligned wrapper preserves the base ABI's storage size, so it
    // inherits its array-likeness.
    static_assert(
-      is_simd_array_like<float4,
-                         simd_abi::unaligned<simd_abi::native<float4>>>);
+      is_simd_array_like<float4, simd_abi::unaligned<simd_abi::native<float4>>>
+   );
    static_assert(
       is_simd_array_like<
-         float4, simd_abi::unaligned<simd_abi::fixed_size<float4, 4u>>>);
+         float4, simd_abi::unaligned<simd_abi::fixed_size<float4, 4u>>>
+   );
    static_assert(
       !is_simd_array_like<
-         float4, simd_abi::unaligned<simd_abi::fixed_size<float4, 3u>>>);
+         float4, simd_abi::unaligned<simd_abi::fixed_size<float4, 3u>>>
+   );
 
    // P3983R1 note: when the trait is `true`, `bit_cast` between `simd<T, Abi>`
    // and the corresponding `array<T, N>` is well-defined and preserves lane
@@ -384,10 +392,13 @@ $test(simd_is_array_like_v) {
 }
 
 $test(simd_abi_compatible_alias) {
-   static_assert(!cat::is_same<cat::simd_abi::compatible<int>,
-                               cat::simd_abi::native<int>>);
-   cat::verify(cat::simd<int, cat::simd_abi::compatible<int>>::abi_type::lanes
-               == cat::simd<int, cat::simd_abi::native<int>>::abi_type::lanes);
+   static_assert(
+      !cat::is_same<cat::simd_abi::compatible<int>, cat::simd_abi::native<int>>
+   );
+   cat::verify(
+      cat::simd<int, cat::simd_abi::compatible<int>>::abi_type::lanes
+      == cat::simd<int, cat::simd_abi::native<int>>::abi_type::lanes
+   );
 }
 
 $test(simd_abi_deduce) {
@@ -399,7 +410,8 @@ $test(simd_abi_deduce) {
    static_assert(cat::is_same<sse_float, x64::sse_abi<float>>);
    static_assert(cat::is_same<float4x4::abi_type, x64::sse_abi<float4>>);
    static_assert(
-      cat::is_same<float4x8::abi_type, cat::simd_abi::native<float4>>);
+      cat::is_same<float4x8::abi_type, cat::simd_abi::native<float4>>
+   );
 
    using scalar_float =
       cat::simd_abi::deduce<float, cat::simd_abi::scalar<float>::lanes>;
@@ -407,20 +419,22 @@ $test(simd_abi_deduce) {
 
    using fixed_float = cat::simd_abi::deduce<float, 3u>;
    static_assert(
-      cat::is_same<fixed_float, cat::simd_abi::fixed_size<float, 3u>>);
+      cat::is_same<fixed_float, cat::simd_abi::fixed_size<float, 3u>>
+   );
 
-   using compatible_float =
-      cat::simd_abi::deduce<float, cat::simd_abi::compatible<float>::lanes,
-                            cat::simd_abi::compatible<float>>;
+   using compatible_float = cat::simd_abi::deduce<
+      float, cat::simd_abi::compatible<float>::lanes,
+      cat::simd_abi::compatible<float>>;
    static_assert(
-      cat::is_same<compatible_float, cat::simd_abi::compatible<float>>);
+      cat::is_same<compatible_float, cat::simd_abi::compatible<float>>
+   );
 
    using unaligned_double = cat::simd_abi::deduce<
       double, cat::simd_abi::unaligned<cat::simd_abi::native<double>>::lanes,
       cat::simd_abi::unaligned<cat::simd_abi::native<float>>>;
-   static_assert(
-      cat::is_same<unaligned_double,
-                   cat::simd_abi::unaligned<cat::simd_abi::native<double>>>);
+   static_assert(cat::is_same<
+                 unaligned_double,
+                 cat::simd_abi::unaligned<cat::simd_abi::native<double>>>);
 }
 
 $test(simdu) {
@@ -499,8 +513,9 @@ $test(simd_uintptr_intptr) {
    ipv const isplat = cat::make_simd_filled<ipv>(11);
    cat::verify(isplat == i_ptr(11));
    if (ilanes > 1u) {
-      cat::verify((iramp + isplat)[1u].raw
-                  == static_cast<i_ptr::raw_type>(1 + 11));
+      cat::verify(
+         (iramp + isplat)[1u].raw == static_cast<i_ptr::raw_type>(1 + 11)
+      );
    }
 }
 
@@ -508,7 +523,8 @@ $test(simd_rebind_and_resize_traits) {
    using floatv = cat::simd<float, cat::simd_abi::native<float>>;
    using doublev = cat::rebind_simd<double, floatv>;
    static_assert(
-      cat::is_same<doublev, cat::simd<double, cat::simd_abi::native<double>>>);
+      cat::is_same<doublev, cat::simd<double, cat::simd_abi::native<double>>>
+   );
 
    using float4 = cat::fixed_size_simd<float, 4u>;
    using float2 = cat::resize_simd<2u, float4>;
@@ -517,8 +533,8 @@ $test(simd_rebind_and_resize_traits) {
    using maskf = cat::simd_mask<float, cat::simd_abi::native<float>>;
    using maskd = cat::rebind_simd<double, maskf>;
    static_assert(
-      cat::is_same<maskd,
-                   cat::simd_mask<double, cat::simd_abi::native<double>>>);
+      cat::is_same<maskd, cat::simd_mask<double, cat::simd_abi::native<double>>>
+   );
 }
 
 $test(simd_resize_insert_extract) {
@@ -726,28 +742,36 @@ $test(simd_eve_mask_subscript_load_store_aligned) {
    cat::verify(dst[0] == 100 && dst[1] == 200 && dst[2] == -1 && dst[3] == -1);
 
    int4x4 const factory = cat::simd_if_else(
-      m, cat::make_simd_loaded_aligned<int4x4>(src).verify(), pass);
-   cat::verify(r[0] == factory[0] && r[1] == factory[1] && r[2] == factory[2]
-               && r[3] == factory[3]);
+      m, cat::make_simd_loaded_aligned<int4x4>(src).verify(), pass
+   );
+   cat::verify(
+      r[0] == factory[0] && r[1] == factory[1] && r[2] == factory[2]
+      && r[3] == factory[3]
+   );
 
    alignas(float4x4::abi_type::alignment.raw)
       float_lane const fsrc[] = {1.1f, 2.2f, 3.3f, 4.4f};
    float4x4 const fpass = {10_f4, 20_f4, 30_f4, 40_f4};
    auto const mf = cat::make_simd_mask_from_count<float4x4>(2u);
    float4x4 const fr = cat::simd_load_aligned[mf](fpass, fsrc).verify();
-   cat::verify(fr[0] == 1.1f && fr[1] == 2.2f && fr[2] == 30_f4
-               && fr[3] == 40_f4);
+   cat::verify(
+      fr[0] == 1.1f && fr[1] == 2.2f && fr[2] == 30_f4 && fr[3] == 40_f4
+   );
    float4x4 const fz = cat::simd_load_aligned[mf](0_f4, fsrc).verify();
-   cat::verify(fz[0] == 1.1f && fz[1] == 2.2f && fz[2] == 0_f4
-               && fz[3] == 0_f4);
+   cat::verify(
+      fz[0] == 1.1f && fz[1] == 2.2f && fz[2] == 0_f4 && fz[3] == 0_f4
+   );
    alignas(float4x4::abi_type::alignment.raw)
       float_lane fdst[] = {-1.f, -1.f, -1.f, -1.f};
    float4x4 const fv = {100_f4, 200_f4, 300_f4, 400_f4};
    cat::simd_store_aligned[mf](fv, fdst);
-   cat::verify(fdst[0] == 100_f4 && fdst[1] == 200_f4 && fdst[2] == -1.f
-               && fdst[3] == -1.f);
+   cat::verify(
+      fdst[0] == 100_f4 && fdst[1] == 200_f4 && fdst[2] == -1.f
+      && fdst[3] == -1.f
+   );
    float4x4 const ffactory = cat::simd_if_else(
-      mf, cat::make_simd_loaded_aligned<float4x4>(fsrc).verify(), fpass);
+      mf, cat::make_simd_loaded_aligned<float4x4>(fsrc).verify(), fpass
+   );
    cat::verify(fr[0] == ffactory[0] && fr[3] == ffactory[3]);
 }
 
@@ -763,8 +787,9 @@ $test(simd_eve_mask_subscript_load_store_unaligned_and_dispatch) {
 
    int_lane dst[4] = {0, 0, 0, 0};
    int4x4 const w = {1, 2, 3, 4};
-   cat::simd_store_unaligned[cat::make_simd_mask_from_count<int4x4>(2u)](w,
-                                                                         dst);
+   cat::simd_store_unaligned[cat::make_simd_mask_from_count<int4x4>(2u)](
+      w, dst
+   );
    cat::verify(dst[0] == 1 && dst[1] == 2 && dst[2] == 0 && dst[3] == 0);
 
    int_lane dst2[4] = {7, 7, 7, 7};
@@ -776,21 +801,25 @@ $test(simd_eve_mask_subscript_load_store_unaligned_and_dispatch) {
    float4x4 const fpass = {99_f4, 99_f4, 99_f4, 99_f4};
    auto const mf = cat::make_simd_mask_from_count<float4x4>(3u);
    float4x4 const fr = cat::simd_load_unaligned[mf](fpass, fsrc);
-   cat::verify(fr[0] == 1.5f && fr[1] == 2.5f && fr[2] == 3.5f
-               && fr[3] == 99_f4);
+   cat::verify(
+      fr[0] == 1.5f && fr[1] == 2.5f && fr[2] == 3.5f && fr[3] == 99_f4
+   );
    float4x4 const fs = cat::simd_load[mf](fpass, fsrc);
    cat::verify(fs[0] == 1.5f && fs[3] == 99_f4);
    float_lane fdst[4] = {0.f, 0.f, 0.f, 0.f};
    float4x4 const fw = {1_f4, 2_f4, 3_f4, 4_f4};
    cat::simd_store_unaligned[cat::make_simd_mask_from_count<float4x4>(2u)](
-      fw, fdst);
-   cat::verify(fdst[0] == 1_f4 && fdst[1] == 2_f4 && fdst[2] == 0.f
-               && fdst[3] == 0.f);
+      fw, fdst
+   );
+   cat::verify(
+      fdst[0] == 1_f4 && fdst[1] == 2_f4 && fdst[2] == 0.f && fdst[3] == 0.f
+   );
    float_lane fdst2[4] = {7.f, 7.f, 7.f, 7.f};
    auto const fsmm = cat::make_simd_mask_from_count<float4x4>(1u);
    cat::simd_store[fsmm](fw, fdst2);
-   cat::verify(fdst2[0] == 1_f4 && fdst2[1] == 7.f && fdst2[2] == 7.f
-               && fdst2[3] == 7.f);
+   cat::verify(
+      fdst2[0] == 1_f4 && fdst2[1] == 7.f && fdst2[2] == 7.f && fdst2[3] == 7.f
+   );
 }
 
 $test(simd_load_aligned_and_loaded_aligned) {
@@ -817,7 +846,8 @@ $test(simd_aligned_load_returns_nullopt_when_misaligned) {
       int_lane block[8] = {1, 2, 3, 4, 5, 6, 7, 8};
    int_lane const* const p_mis = block + 1;
    cat::verify(
-      !cat::is_aligned(cat::unconst(p_mis), int4x4::abi_type::alignment));
+      !cat::is_aligned(cat::unconst(p_mis), int4x4::abi_type::alignment)
+   );
    auto const full = cat::make_simd_loaded_aligned<int4x4>(p_mis);
    cat::verify(!full.has_value());
 
@@ -1262,8 +1292,9 @@ $test(simd_mask_broadcast_from_bool) {
       cat::verify(all_true_int[i] == filled_true[i]);
       cat::verify(all_false_int[i] == filled_false[i]);
       cat::verify(all_true_int[i] == cat::true_mask<int4, int4x4::abi_type>[i]);
-      cat::verify(all_false_int[i]
-                  == cat::false_mask<int4, int4x4::abi_type>[i]);
+      cat::verify(
+         all_false_int[i] == cat::false_mask<int4, int4x4::abi_type>[i]
+      );
    }
 
    // The 1-lane scalar ABI also broadcasts. The variadic ctor cannot
@@ -1410,19 +1441,25 @@ $test(simd_mask_ctad_and_integral_unaries) {
    auto const k = a < b;
    auto const unary_plus_k = +k;
    cat::simd const ctad_from_mask = k;
-   static_assert(cat::is_same<cat::remove_const<decltype(ctad_from_mask)>,
-                              cat::remove_const<decltype(unary_plus_k)>>);
+   static_assert(cat::is_same<
+                 cat::remove_const<decltype(ctad_from_mask)>,
+                 cat::remove_const<decltype(unary_plus_k)>>);
    cat::verify(unary_plus_k == ctad_from_mask);
-   cat::verify(unary_plus_k[0u] == 1 && unary_plus_k[1u] == 0
-               && unary_plus_k[2u] == 0 && unary_plus_k[3u] == 0);
+   cat::verify(
+      unary_plus_k[0u] == 1 && unary_plus_k[1u] == 0 && unary_plus_k[2u] == 0
+      && unary_plus_k[3u] == 0
+   );
 
    auto const neg_k = -k;
-   cat::verify(neg_k[0u] == -1 && neg_k[1u] == 0 && neg_k[2u] == 0
-               && neg_k[3u] == 0);
+   cat::verify(
+      neg_k[0u] == -1 && neg_k[1u] == 0 && neg_k[2u] == 0 && neg_k[3u] == 0
+   );
 
    auto const tilde_k = ~k;
-   cat::verify(tilde_k[0u] == -2 && tilde_k[1u] == -1 && tilde_k[2u] == -1
-               && tilde_k[3u] == -1);
+   cat::verify(
+      tilde_k[0u] == -2 && tilde_k[1u] == -1 && tilde_k[2u] == -1
+      && tilde_k[3u] == -1
+   );
 
    auto const not_k = !k;
    cat::verify(!not_k[0] && not_k[1] && not_k[2] && not_k[3]);
@@ -1432,8 +1469,10 @@ $test(simd_mask_ctad_and_integral_unaries) {
    auto const kf = xf < yf;
    auto const pf = +kf;
    cat::simd const ctad_f = kf;
-   static_assert(cat::is_same<cat::remove_const<decltype(ctad_f)>,
-                              cat::remove_const<decltype(pf)>>);
+   static_assert(
+      cat::is_same<
+         cat::remove_const<decltype(ctad_f)>, cat::remove_const<decltype(pf)>>
+   );
    cat::verify(pf == ctad_f);
    cat::verify(pf[0u] == 1 && pf[1u] == 0 && pf[2u] == 0 && pf[3u] == 0);
 }
@@ -1493,14 +1532,17 @@ $test(simd_mask_load_and_loaded_from_bool_buffer) {
    M const lane_control = cat::make_simd_mask_from_count<int4x4>(2u);
    M const blended_load =
       cat::make_simd_mask_loaded<M>[lane_control](pass, reload);
-   cat::verify(blended_load[0] && !blended_load[1] && !blended_load[2]
-               && !blended_load[3]);
+   cat::verify(
+      blended_load[0] && !blended_load[1] && !blended_load[2]
+      && !blended_load[3]
+   );
 
    M const pass_fill = cat::make_simd_mask_from_count<int4x4>(1u);
    M const blended_fill =
       cat::simd_mask_filled<M>[lane_control](pass_fill, true);
-   cat::verify(blended_fill[0] && blended_fill[1] && !blended_fill[2]
-               && !blended_fill[3]);
+   cat::verify(
+      blended_fill[0] && blended_fill[1] && !blended_fill[2] && !blended_fill[3]
+   );
 }
 
 // `simd_mask` ` lane setter (P3275: no writable subscript):
@@ -1646,29 +1688,41 @@ $test(simd_permute_dynamic) {
 // standard P2664).
 $test(simd_shuffle_equals_permute_for_matching_lane_indices) {
    int4x4 const src{10, 20, 30, 40};
-   cat::verify(cat::simd_shuffle<3, 2, 1, 0>(src)
-               == cat::simd_permute(src, int4x4{3, 2, 1, 0}));
-   cat::verify(cat::simd_shuffle<1, 2, 3, 0>(src)
-               == cat::simd_permute(src, int4x4{1, 2, 3, 0}));
-   cat::verify(cat::simd_shuffle<0, 0, 3, 3>(src)
-               == cat::simd_permute(src, int4x4{0, 0, 3, 3}));
-   cat::verify(cat::simd_shuffle<0, 1, 2, 3>(src)
-               == cat::simd_permute(src, int4x4{0, 1, 2, 3}));
+   cat::verify(
+      cat::simd_shuffle<3, 2, 1, 0>(src)
+      == cat::simd_permute(src, int4x4{3, 2, 1, 0})
+   );
+   cat::verify(
+      cat::simd_shuffle<1, 2, 3, 0>(src)
+      == cat::simd_permute(src, int4x4{1, 2, 3, 0})
+   );
+   cat::verify(
+      cat::simd_shuffle<0, 0, 3, 3>(src)
+      == cat::simd_permute(src, int4x4{0, 0, 3, 3})
+   );
+   cat::verify(
+      cat::simd_shuffle<0, 1, 2, 3>(src)
+      == cat::simd_permute(src, int4x4{0, 1, 2, 3})
+   );
 
    float4x4 const fv{10_f4, 20_f4, 30_f4, 40_f4};
-   cat::verify(cat::simd_shuffle<3, 2, 1, 0>(fv)
-               == cat::simd_permute(fv, float4x4{3_f4, 2_f4, 1_f4, 0_f4}));
+   cat::verify(
+      cat::simd_shuffle<3, 2, 1, 0>(fv)
+      == cat::simd_permute(fv, float4x4{3_f4, 2_f4, 1_f4, 0_f4})
+   );
 }
 
 $test(simd_multi_subscript_permutes_via_simd_permute) {
    int4x4 const src{10, 20, 30, 40};
    cat::verify(src[3, 2, 1, 0] == cat::simd_permute(src, int4x4{3, 2, 1, 0}));
-   cat::verify(src[int4x4{3, 2, 1, 0}]
-               == cat::simd_permute(src, int4x4{3, 2, 1, 0}));
+   cat::verify(
+      src[int4x4{3, 2, 1, 0}] == cat::simd_permute(src, int4x4{3, 2, 1, 0})
+   );
 
    float4x4 const fv{10_f4, 20_f4, 30_f4, 40_f4};
-   cat::verify(fv[3, 2, 1, 0]
-               == cat::simd_permute(fv, float4x4{3_f4, 2_f4, 1_f4, 0_f4}));
+   cat::verify(
+      fv[3, 2, 1, 0] == cat::simd_permute(fv, float4x4{3_f4, 2_f4, 1_f4, 0_f4})
+   );
 
    auto narrow = src[1, 3];
    cat::verify(narrow.size() == 2u);
@@ -1684,7 +1738,8 @@ $test(simd_split) {
 
    auto split_lanes = cat::simd_split<4u, 4u>(concatenated_lanes);
    static_assert(
-      cat::is_same<decltype(split_lanes), cat::tuple<int4x4, int4x4>>);
+      cat::is_same<decltype(split_lanes), cat::tuple<int4x4, int4x4>>
+   );
    cat::verify(split_lanes.first() == lower_half_lanes);
    cat::verify(split_lanes.second() == upper_half_lanes);
 
@@ -1695,28 +1750,36 @@ $test(simd_split) {
 
    auto split_by_count = cat::simd_split_by<2u>(concatenated_lanes);
    static_assert(
-      cat::is_same<decltype(split_by_count), cat::array<int4x4, 2u>>);
+      cat::is_same<decltype(split_by_count), cat::array<int4x4, 2u>>
+   );
    cat::verify(split_by_count[0u] == lower_half_lanes);
    cat::verify(split_by_count[1u] == upper_half_lanes);
 
    auto split_mask = cat::simd_split<4u, 4u>(
-      int4x8::mask_type{true, false, true, false, false, true, false, true});
+      int4x8::mask_type{true, false, true, false, false, true, false, true}
+   );
    cat::verify(split_mask.first()[0u]);
    cat::verify(!split_mask.first()[1u]);
    cat::verify(split_mask.second()[1u]);
    cat::verify(split_mask.second()[3u]);
 
    auto split_mask_array = cat::simd_split<int4x4::mask_type>(
-      int4x8::mask_type{true, false, true, false, false, true, false, true});
-   static_assert(cat::is_same<decltype(split_mask_array),
-                              cat::array<int4x4::mask_type, 2u>>);
+      int4x8::mask_type{true, false, true, false, false, true, false, true}
+   );
+   static_assert(
+      cat::is_same<
+         decltype(split_mask_array), cat::array<int4x4::mask_type, 2u>>
+   );
    cat::verify(split_mask_array[0u][2u]);
    cat::verify(!split_mask_array[1u][0u]);
 
    auto split_mask_by_count = cat::simd_split_by<2u>(
-      int4x8::mask_type{true, false, true, false, false, true, false, true});
-   static_assert(cat::is_same<decltype(split_mask_by_count),
-                              cat::array<int4x4::mask_type, 2u>>);
+      int4x8::mask_type{true, false, true, false, false, true, false, true}
+   );
+   static_assert(
+      cat::is_same<
+         decltype(split_mask_by_count), cat::array<int4x4::mask_type, 2u>>
+   );
    cat::verify(split_mask_by_count[0u][0u]);
    cat::verify(split_mask_by_count[1u][3u]);
 
@@ -1800,7 +1863,8 @@ $test(simd_compress_expand) {
    int4x4 expand_background = {9, 9, 9, 9};
    int4x4 expand_packed_input = {100, 200, 0, 0};
    int4x4 expanded_lanes = cat::simd_expand(
-      expand_packed_input, first_two_lanes_true_mask, expand_background);
+      expand_packed_input, first_two_lanes_true_mask, expand_background
+   );
    cat::verify(expanded_lanes[0] == 100);
    cat::verify(expanded_lanes[1] == 200);
    cat::verify(expanded_lanes[2] == 9);
@@ -1817,7 +1881,8 @@ $test(simd_compress_expand) {
    float4x4 float_expand_packed_input = {100_f4, 200_f4, 0_f4, 0_f4};
    float4x4 float_expanded_lanes = cat::simd_expand(
       float_expand_packed_input, float_first_two_lanes_true_mask,
-      float_expand_background);
+      float_expand_background
+   );
    cat::verify(float_expanded_lanes[0] == 100_f4);
    cat::verify(float_expanded_lanes[1] == 200_f4);
    cat::verify(float_expanded_lanes[2] == 9_f4);
@@ -1889,7 +1954,8 @@ $test(simd_compress_saturating_lanes) {
       usource, first_two_u,
       // `__UINT64_TYPE__` value `2^33` exceeds `usat4`'s range and is
       // clamped to `usat4::max()` by the constructor.
-      usat4(static_cast<__UINT64_TYPE__>(1ull << 33)));
+      usat4(static_cast<__UINT64_TYPE__>(1ull << 33))
+   );
    cat::verify(u_filled[0u] == u_max);
    cat::verify(u_filled[1u] == usat4(2u));
    cat::verify(u_filled[2u] == u_max);
@@ -1915,7 +1981,8 @@ $test(simd_load_from_store_to) {
    };
    int4x4 gather_index_lanes{0, 2, 4, 1};
    auto gathered_int_lanes = cat::simd_load_from<cat::int4, int4x4::abi_type>(
-      contiguous_int_source, gather_index_lanes);
+      contiguous_int_source, gather_index_lanes
+   );
    cat::verify(gathered_int_lanes[0] == 100);
    cat::verify(gathered_int_lanes[1] == 102);
    cat::verify(gathered_int_lanes[2] == 104);
@@ -1925,7 +1992,8 @@ $test(simd_load_from_store_to) {
    int4x4 scatter_index_lanes{5, 3, 1, 6};
    int4x4 scatter_value_lanes = {11, 22, 33, 44};
    cat::simd_store_to<cat::int4, int4x4::abi_type>(
-      scatter_destination_int, scatter_index_lanes, scatter_value_lanes);
+      scatter_destination_int, scatter_index_lanes, scatter_value_lanes
+   );
    cat::verify(scatter_destination_int[5] == 11);
    cat::verify(scatter_destination_int[3] == 22);
    cat::verify(scatter_destination_int[1] == 33);
@@ -1937,41 +2005,52 @@ $test(simd_load_from_store_to) {
    float4x4 float_gather_index_lanes{0_f4, 2_f4, 4_f4, 1_f4};
    auto gathered_float_lanes =
       cat::simd_load_from<cat::float4, float4x4::abi_type>(
-         contiguous_float_source, float_gather_index_lanes);
+         contiguous_float_source, float_gather_index_lanes
+      );
    cat::verify(gathered_float_lanes[0] == 100.f);
    cat::verify(gathered_float_lanes[2] == 104.f);
    cat::float4 scatter_destination_float[8] = {};
    float4x4 float_scatter_index_lanes{5_f4, 3_f4, 1_f4, 6_f4};
    cat::simd_store_to<cat::float4, float4x4::abi_type>(
       scatter_destination_float, float_scatter_index_lanes,
-      float4x4{11_f4, 22_f4, 33_f4, 44_f4});
+      float4x4{11_f4, 22_f4, 33_f4, 44_f4}
+   );
    cat::verify(scatter_destination_float[5] == 11_f4);
    cat::verify(scatter_destination_float[3] == 22_f4);
 
    auto const regathered_int_lanes =
-      cat::simd_load_from<cat::int4, int4x4::abi_type>(contiguous_int_source,
-                                                       gather_index_lanes);
-   cat::verify(regathered_int_lanes[0] == gathered_int_lanes[0]
-               && regathered_int_lanes[3] == gathered_int_lanes[3]);
+      cat::simd_load_from<cat::int4, int4x4::abi_type>(
+         contiguous_int_source, gather_index_lanes
+      );
+   cat::verify(
+      regathered_int_lanes[0] == gathered_int_lanes[0]
+      && regathered_int_lanes[3] == gathered_int_lanes[3]
+   );
 
    int4x4 const gather_masked_passthrough = {1, 2, 3, 4};
    auto const gather_active_lane_mask =
       cat::make_simd_mask_from_count<int4x4>(2u);
    int4x4 const masked_gather_lanes =
       cat::simd_load_from<cat::int4, int4x4::abi_type>[gather_active_lane_mask](
-         gather_masked_passthrough, contiguous_int_source, gather_index_lanes);
-   cat::verify(masked_gather_lanes[0] == 100 && masked_gather_lanes[1] == 102
-               && masked_gather_lanes[2] == 3 && masked_gather_lanes[3] == 4);
+         gather_masked_passthrough, contiguous_int_source, gather_index_lanes
+      );
+   cat::verify(
+      masked_gather_lanes[0] == 100 && masked_gather_lanes[1] == 102
+      && masked_gather_lanes[2] == 3 && masked_gather_lanes[3] == 4
+   );
 
    cat::int4 partial_scatter_destination[8] = {9, 9, 9, 9, 9, 9, 9, 9};
    int4x4 const partial_scatter_values = {11, 22, 33, 44};
    cat::simd_store_to<
       cat::int4, int4x4::abi_type>[cat::make_simd_mask_from_count<int4x4>(2u)](
-      partial_scatter_destination, scatter_index_lanes, partial_scatter_values);
-   cat::verify(partial_scatter_destination[5] == 11
-               && partial_scatter_destination[3] == 22
-               && partial_scatter_destination[1] == 9
-               && partial_scatter_destination[6] == 9);
+      partial_scatter_destination, scatter_index_lanes, partial_scatter_values
+   );
+   cat::verify(
+      partial_scatter_destination[5] == 11
+      && partial_scatter_destination[3] == 22
+      && partial_scatter_destination[1] == 9
+      && partial_scatter_destination[6] == 9
+   );
 
    alignas(int4x4::abi_type::alignment.raw)
       int_lane const aligned_int_source[] = {11, 22, 33, 44};
@@ -1982,23 +2061,30 @@ $test(simd_load_from_store_to) {
    int4x4 const masked_load_passthrough = {10, 20, 30, 40};
    int4x4 const masked_make_loaded_aligned =
       cat::make_simd_loaded_aligned<int4x4>[gather_active_lane_mask](
-         masked_load_passthrough, aligned_int_source)
+         masked_load_passthrough, aligned_int_source
+      )
          .verify();
    int4x4 const masked_simd_load_aligned =
-      cat::simd_load_aligned[gather_active_lane_mask](masked_load_passthrough,
-                                                      aligned_int_source)
+      cat::simd_load_aligned[gather_active_lane_mask](
+         masked_load_passthrough, aligned_int_source
+      )
          .verify();
-   cat::verify(masked_make_loaded_aligned[0] == masked_simd_load_aligned[0]
-               && masked_make_loaded_aligned[2] == masked_simd_load_aligned[2]);
+   cat::verify(
+      masked_make_loaded_aligned[0] == masked_simd_load_aligned[0]
+      && masked_make_loaded_aligned[2] == masked_simd_load_aligned[2]
+   );
 
    int4x4 const filled_lanes = cat::make_simd_filled<int4x4>(7);
    cat::verify(filled_lanes[2] == 7);
    int4x4 const filled_masked_passthrough = {1, 2, 3, 4};
    int4x4 const masked_filled_lanes =
       cat::simd_filled<int4x4>[gather_active_lane_mask](
-         filled_masked_passthrough, 99);
-   cat::verify(masked_filled_lanes[0] == 99 && masked_filled_lanes[1] == 99
-               && masked_filled_lanes[2] == 3 && masked_filled_lanes[3] == 4);
+         filled_masked_passthrough, 99
+      );
+   cat::verify(
+      masked_filled_lanes[0] == 99 && masked_filled_lanes[1] == 99
+      && masked_filled_lanes[2] == 3 && masked_filled_lanes[3] == 4
+   );
 }
 
 // `simd_bit_cast_as`, `.raw` round-trip:
@@ -2013,10 +2099,12 @@ $test(simd_bit_cast_as_unsigned) {
    float4x4 float_source_lanes = {-1.f, 0.f, 1.f, -2.f};
    auto float_bits_as_unsigned_lanes =
       cat::simd_bit_cast_as<uint_lane>(float_source_lanes);
-   cat::verify(float_bits_as_unsigned_lanes[0]
-               == __builtin_bit_cast(uint_lane, -1.f));
-   cat::verify(float_bits_as_unsigned_lanes[2]
-               == __builtin_bit_cast(uint_lane, 1.f));
+   cat::verify(
+      float_bits_as_unsigned_lanes[0] == __builtin_bit_cast(uint_lane, -1.f)
+   );
+   cat::verify(
+      float_bits_as_unsigned_lanes[2] == __builtin_bit_cast(uint_lane, 1.f)
+   );
 }
 
 $test(simd_raw_roundtrip) {
@@ -2088,9 +2176,11 @@ $test(simd_reduce_min_max_maximum_minimum_float) {
    // `reduce_maximum`/`reduce_minimum` follow `maximumNumber`/`minimumNumber`
    // and can propagate `NaN` from a lane.
    cat::verify(
-      bool(__builtin_isnan(make_raw_arithmetic(nanish.reduce_maximum()[0u]))));
+      bool(__builtin_isnan(make_raw_arithmetic(nanish.reduce_maximum()[0u])))
+   );
    cat::verify(
-      bool(__builtin_isnan(make_raw_arithmetic(nanish.reduce_minimum()[0u]))));
+      bool(__builtin_isnan(make_raw_arithmetic(nanish.reduce_minimum()[0u])))
+   );
 }
 
 $test(simd_reduce_assoc_and_in_order_fadd) {
@@ -2184,25 +2274,29 @@ $test(simd_precision_reference_accessors) {
 
    auto precise_comparison = value < fast_value;
    static_assert(
-      cat::is_same<decltype(precise_comparison), float4x4::mask_type>);
+      cat::is_same<decltype(precise_comparison), float4x4::mask_type>
+   );
    cat::verify(!precise_comparison[0u]);
    cat::verify(!precise_comparison[3u]);
 
    auto fast_comparison = fast_value < value;
    static_assert(
-      cat::is_same<decltype(fast_comparison), float4_fastx4::mask_type>);
+      cat::is_same<decltype(fast_comparison), float4_fastx4::mask_type>
+   );
    cat::verify(fast_comparison[0u]);
    cat::verify(fast_comparison[3u]);
 
    auto reference_comparison = value.fast() <= fast_value;
    static_assert(
-      cat::is_same<decltype(reference_comparison), float4_fastx4::mask_type>);
+      cat::is_same<decltype(reference_comparison), float4_fastx4::mask_type>
+   );
    cat::verify(!reference_comparison[0u]);
    cat::verify(!reference_comparison[3u]);
 
    auto reverse_reference_comparison = value <= fast_value.precise();
-   static_assert(cat::is_same<decltype(reverse_reference_comparison),
-                              float4x4::mask_type>);
+   static_assert(
+      cat::is_same<decltype(reverse_reference_comparison), float4x4::mask_type>
+   );
    cat::verify(!reverse_reference_comparison[0u]);
    cat::verify(!reverse_reference_comparison[3u]);
 
@@ -2249,7 +2343,8 @@ $test(simd_mask_reduce_integral) {
 
 $test(simd_popcount_rotate_left_rotate_right) {
    cat::simd<uint_lane, cat::simd_abi::fixed_size<uint_lane, 4u>> v{
-      0u, 3u, 15u, 0xffffffffu};
+      0u, 3u, 15u, 0xffffffffu
+   };
    auto pc = cat::simd_popcount(v);
    cat::verify(v.popcount() == pc);
    cat::verify(pc[0] == 0u);
@@ -2434,7 +2529,8 @@ $test(simd_chunked_invoke) {
       [&](int4x4 x) {
          seen = seen + iword(x[0] + x[3]);
       },
-      pack);
+      pack
+   );
    cat::verify(seen == iword(5));
 
    cat::float4 fseen = 0_f4;
@@ -2443,7 +2539,8 @@ $test(simd_chunked_invoke) {
       [&](float4x4 x) {
          fseen = fseen + (x[0] + x[3]);
       },
-      fpack);
+      fpack
+   );
    cat::verify(fseen == 5_f4);
 }
 
@@ -2629,10 +2726,12 @@ $test(simd_swap_lanes) {
 $test(simd_vc_style_bool_masks_and_lane_types) {
    static_assert(cat::is_simd_mask<int4x4::mask_type>);
    static_assert(cat::is_simd_mask<float4x4::mask_type>);
-   static_assert(cat::is_same<std::tuple_element_t<0u, int4x4::mask_type>,
-                              int4x4::mask_type::lane_scalar>);
-   static_assert(cat::is_same<std::tuple_element_t<0u, float4x4::mask_type>,
-                              float4x4::mask_type::lane_scalar>);
+   static_assert(cat::is_same<
+                 std::tuple_element_t<0u, int4x4::mask_type>,
+                 int4x4::mask_type::lane_scalar>);
+   static_assert(cat::is_same<
+                 std::tuple_element_t<0u, float4x4::mask_type>,
+                 float4x4::mask_type::lane_scalar>);
 
    using int4_mask = int4x4::mask_type;
    using float_mask = float4x4::mask_type;
@@ -2671,8 +2770,11 @@ $test(simd_as_vectorized_over_vec_float_data) {
    cat::verify(sum4(*b) == sum4(ref0));
    cat::verify(
       sum4(*(b + 1))
-      == sum4(float4x4(float_lane(static_cast<float>(k_extent.raw - 4u)))
-              - cat::iota<float4x4>(0_f4)));
+      == sum4(
+         float4x4(float_lane(static_cast<float>(k_extent.raw - 4u)))
+         - cat::iota<float4x4>(0_f4)
+      )
+   );
 }
 
 // TODO: Claude is too dumb to write this. Do it yourself.
@@ -2836,7 +2938,8 @@ $test(simd_iota) {
       cat::make_simd_mask_from_count<int4x4>(2u);
    int4x4 const int_masked_iota =
       cat::simd_iota<int4x4>[iota_first_two_lanes_mask](
-         iota_passthrough_background, 10);
+         iota_passthrough_background, 10
+      );
    cat::verify(int_masked_iota[0] == 10);
    cat::verify(int_masked_iota[1] == 11);
    cat::verify(int_masked_iota[2] == 300);
@@ -2847,7 +2950,8 @@ $test(simd_iota) {
       cat::make_simd_mask_ignore_first<float4x4>(2u);
    float4x4 const float_masked_iota =
       cat::simd_iota<float4x4>[float_iota_high_two_lanes_mask](
-         float_iota_background, 0);
+         float_iota_background, 0
+      );
    cat::verify(float_masked_iota[0] == 10_f4);
    cat::verify(float_masked_iota[1] == 20_f4);
    cat::verify(float_masked_iota[2] == 2_f4);
@@ -2969,19 +3073,23 @@ $test(simd_bool2_bool4_lanes_match_bool) {
    using simd_four_bool4 = cat::fixed_size_simd<cat::bool4, 4u>;
 
    simd_four_bool const f(true, false, true, false);
-   simd_four_bool2 const f2(cat::bool2(true), cat::bool2(false),
-                            cat::bool2(true), cat::bool2(false));
-   simd_four_bool4 const f4(cat::bool4(true), cat::bool4(false),
-                            cat::bool4(true), cat::bool4(false));
+   simd_four_bool2 const f2(
+      cat::bool2(true), cat::bool2(false), cat::bool2(true), cat::bool2(false)
+   );
+   simd_four_bool4 const f4(
+      cat::bool4(true), cat::bool4(false), cat::bool4(true), cat::bool4(false)
+   );
 
    verify_widened_bool_simd_matches_bool4(f, f2);
    verify_widened_bool_simd_matches_bool4(f, f4);
 
    simd_four_bool const g(false, false, true, true);
-   simd_four_bool2 const g2(cat::bool2(false), cat::bool2(false),
-                            cat::bool2(true), cat::bool2(true));
-   simd_four_bool4 const g4(cat::bool4(false), cat::bool4(false),
-                            cat::bool4(true), cat::bool4(true));
+   simd_four_bool2 const g2(
+      cat::bool2(false), cat::bool2(false), cat::bool2(true), cat::bool2(true)
+   );
+   simd_four_bool4 const g4(
+      cat::bool4(false), cat::bool4(false), cat::bool4(true), cat::bool4(true)
+   );
 
    verify_widened_bool_simd_matches_bool4(g, g2);
    verify_widened_bool_simd_matches_bool4(g, g4);
@@ -3318,38 +3426,43 @@ $test(simd_dispatch_aliases_native_per_arch) {
    // injection makes `native_simd<T>` and `native_simd_mask<T>` resolve
    // to that arch's vector. Compile-time `is_same` only -- no math.
    $simd_switch(
-      $abi(avx2,
-           {
-              static_assert(
-                 cat::is_same<native_simd<cat::int4>,
-                              cat::simd<cat::int4, x64::avx_abi<cat::int4>>>);
-              static_assert(
-                 cat::is_same<
-                    native_simd_mask<cat::int4>,
-                    cat::simd_mask<cat::int4, x64::avx_abi<cat::int4>>>);
-              static_assert(
-                 cat::is_same<
-                    native_unaligned_simd<cat::int4>,
-                    cat::simd<cat::int4, x64::avx_unaligned_abi<cat::int4>>>);
-           }),
-      $abi(sse2,
-           {
-              static_assert(
-                 cat::is_same<native_simd<cat::int4>,
-                              cat::simd<cat::int4, x64::sse_abi<cat::int4>>>);
-              static_assert(
-                 cat::is_same<
-                    native_simd_mask<cat::int4>,
-                    cat::simd_mask<cat::int4, x64::sse_abi<cat::int4>>>);
-           }),
+      $abi(
+         avx2,
+         {
+            static_assert(cat::is_same<
+                          native_simd<cat::int4>,
+                          cat::simd<cat::int4, x64::avx_abi<cat::int4>>>);
+            static_assert(cat::is_same<
+                          native_simd_mask<cat::int4>,
+                          cat::simd_mask<cat::int4, x64::avx_abi<cat::int4>>>);
+            static_assert(
+               cat::is_same<
+                  native_unaligned_simd<cat::int4>,
+                  cat::simd<cat::int4, x64::avx_unaligned_abi<cat::int4>>>
+            );
+         }
+      ),
+      $abi(
+         sse2,
+         {
+            static_assert(cat::is_same<
+                          native_simd<cat::int4>,
+                          cat::simd<cat::int4, x64::sse_abi<cat::int4>>>);
+            static_assert(cat::is_same<
+                          native_simd_mask<cat::int4>,
+                          cat::simd_mask<cat::int4, x64::sse_abi<cat::int4>>>);
+         }
+      ),
       default : {
          // Default lane: `cat::simd_abi::native<T>`.
          static_assert(cat::is_same<
                        native_simd<cat::int4>,
                        cat::simd<cat::int4, cat::simd_abi::native<cat::int4>>>);
          cat::verify(
-            false);  // This is redundant with sse2 so it is unreachable.
-      });
+            false
+         );  // This is redundant with sse2 so it is unreachable.
+      }
+   );
 }
 
 $test(simd_dispatch_aliases_deduce_per_arch) {
@@ -3359,16 +3472,21 @@ $test(simd_dispatch_aliases_deduce_per_arch) {
    // the arch can't represent falls through to whichever candidate
    // does match -- not necessarily `simd_abi::fixed_size`.
    $simd_switch(
-      $abi(avx2,
-           // AVX2 vector for `int4` is 8 lanes; arch candidate wins.
-           static_assert(
-              cat::is_same<deduce_simd<cat::int4, 8u>,
-                           cat::simd<cat::int4, x64::avx_abi<cat::int4>>>);),
-      $abi(sse2,
-           // SSE2 vector for `int4` is 4 lanes. Arch candidate wins.
-           static_assert(
-              cat::is_same<deduce_simd<cat::int4, 4u>,
-                           cat::simd<cat::int4, x64::sse_abi<cat::int4>>>);));
+      $abi(
+         avx2,
+         // AVX2 vector for `int4` is 8 lanes; arch candidate wins.
+         static_assert(cat::is_same<
+                       deduce_simd<cat::int4, 8u>,
+                       cat::simd<cat::int4, x64::avx_abi<cat::int4>>>);
+      ),
+      $abi(
+         sse2,
+         // SSE2 vector for `int4` is 4 lanes. Arch candidate wins.
+         static_assert(cat::is_same<
+                       deduce_simd<cat::int4, 4u>,
+                       cat::simd<cat::int4, x64::sse_abi<cat::int4>>>);
+      )
+   );
 }
 
 $test(simd_dispatch_aliases_scalar_unchanged) {
@@ -3376,43 +3494,51 @@ $test(simd_dispatch_aliases_scalar_unchanged) {
    // of the arch ABI parameter; the macro substitutes only the
    // "native" tag, so these resolve identically inside every `$abi`.
    $simd_switch(
-      $abi(avx2, static_assert(
-                    cat::is_same<
+      $abi(
+         avx2,
+         static_assert(cat::is_same<
                        scalar_simd<cat::int4>,
                        cat::simd<cat::int4, cat::simd_abi::scalar<cat::int4>>>);
-           static_assert(
-              cat::is_same<fixed_size_simd<cat::int4, 4u>,
-                           cat::simd<cat::int4, cat::simd_abi::fixed_size<
-                                                   cat::int4, 4u>>>);),
-      default : __builtin_unreachable(););
+         static_assert(
+            cat::is_same<
+               fixed_size_simd<cat::int4, 4u>,
+               cat::simd<cat::int4, cat::simd_abi::fixed_size<cat::int4, 4u>>>
+         );
+      ),
+      default : __builtin_unreachable();
+   );
 }
 
 $test(simd_dispatch_native_aliases) {
-   $simd_switch($abi(avx2,
-                     {
-                        // AVX2 vectors are 32 bytes, so the masks should divide
-                        // into that.
-                        using mask = native_simd<cat::int4>::mask_type;
-                        auto const bits = mask{}.to_bitset();
-                        static_assert(bits.size() == 8);
+   $simd_switch(
+      $abi(
+         avx2,
+         {
+            // AVX2 vectors are 32 bytes, so the masks should divide
+            // into that.
+            using mask = native_simd<cat::int4>::mask_type;
+            auto const bits = mask{}.to_bitset();
+            static_assert(bits.size() == 8);
 
-                        auto const bits2 = int2x_::mask_type{}.to_bitset();
-                        static_assert(bits2.size() == 16);
+            auto const bits2 = int2x_::mask_type{}.to_bitset();
+            static_assert(bits2.size() == 16);
 
-                        auto const bits3 = int1x_::mask_type{}.to_bitset();
-                        static_assert(bits3.size() == 32);
-                     }),
-                $abi(sse2, {
-                   // SSE2 vectors are 16 bytes, so the masks should divide into
-                   // that.
-                   using mask = native_simd<cat::int4>::mask_type;
-                   auto const bits = mask{}.to_bitset();
-                   static_assert(bits.size() == 4);
+            auto const bits3 = int1x_::mask_type{}.to_bitset();
+            static_assert(bits3.size() == 32);
+         }
+      ),
+      $abi(sse2, {
+         // SSE2 vectors are 16 bytes, so the masks should divide into
+         // that.
+         using mask = native_simd<cat::int4>::mask_type;
+         auto const bits = mask{}.to_bitset();
+         static_assert(bits.size() == 4);
 
-                   auto const bits2 = int2x_::mask_type{}.to_bitset();
-                   static_assert(bits2.size() == 8);
+         auto const bits2 = int2x_::mask_type{}.to_bitset();
+         static_assert(bits2.size() == 8);
 
-                   auto const bits3 = int1x_::mask_type{}.to_bitset();
-                   static_assert(bits3.size() == 16);
-                }));
+         auto const bits3 = int1x_::mask_type{}.to_bitset();
+         static_assert(bits3.size() == 16);
+      })
+   );
 }

@@ -59,8 +59,9 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
          } else {
 #pragma unroll 8
             for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
-               splat.store_unaligned(p_handle.get()
-                                     + (vector_index * sizeof(Vector)));
+               splat.store_unaligned(
+                  p_handle.get() + (vector_index * sizeof(Vector))
+               );
             }
          }
 
@@ -71,8 +72,9 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
       while (bytes_remaining >= step_size) {
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
-            splat.store_non_temporal(p_handle.get()
-                                     + (vector_index * sizeof(Vector)));
+            splat.store_non_temporal(
+               p_handle.get() + (vector_index * sizeof(Vector))
+            );
          }
 
          p_handle += step_size;
@@ -83,8 +85,9 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
       while (bytes_remaining >= step_size) {
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
-            splat.store_unaligned(p_handle.get()
-                                  + (vector_index * sizeof(Vector)));
+            splat.store_unaligned(
+               p_handle.get() + (vector_index * sizeof(Vector))
+            );
          }
 
          p_handle += step_size;
@@ -93,8 +96,10 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
    }
 
    if (bytes_remaining > 0) {
-      fill_memory_medium(reinterpret_cast<byte* _Nonnull>(p_handle.get()),
-                         byte_value, bytes_remaining.to_idx().assert());
+      fill_memory_medium(
+         reinterpret_cast<byte* _Nonnull>(p_handle.get()), byte_value,
+         bytes_remaining.to_idx().assert()
+      );
    }
 }
 
@@ -111,20 +116,25 @@ fill_memory_impl(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
       return;
    }
 
-   if (memory_rep_string_support.has_fsrm
-       || memory_rep_string_support.has_erms) {
+   if (
+      memory_rep_string_support.has_fsrm || memory_rep_string_support.has_erms
+   ) {
       x64::stosb(p_destination, byte_value, bytes);
       return;
    }
 
    $simd_switch(
-      $abi(avx2,
-           {
-              fill_memory_large<char1x_>(p_destination, byte_value, bytes);
-              x64::zero_upper_avx_registers();
-           }),
-      $abi(sse2,
-           { fill_memory_large<char1x_>(p_destination, byte_value, bytes); }));
+      $abi(
+         avx2,
+         {
+            fill_memory_large<char1x_>(p_destination, byte_value, bytes);
+            x64::zero_upper_avx_registers();
+         }
+      ),
+      $abi(sse2, {
+         fill_memory_large<char1x_>(p_destination, byte_value, bytes);
+      })
+   );
 }
 
 }  // namespace cat::detail

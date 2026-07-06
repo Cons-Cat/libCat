@@ -14,8 +14,10 @@ sum(T value) -> T {
 }
 
 template <is_arithmetic T, is_arithmetic U, is_arithmetic... Remaining>
-   requires(is_implicitly_convertible<U, T>
-            && (is_implicitly_convertible<Remaining, T> && ...))
+   requires(
+      is_implicitly_convertible<U, T>
+      && (is_implicitly_convertible<Remaining, T> && ...)
+   )
 [[nodiscard]]
 constexpr auto
 sum(T value_1, U value_2, Remaining... remaining) -> T {

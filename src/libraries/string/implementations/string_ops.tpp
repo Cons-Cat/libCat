@@ -20,8 +20,9 @@ cat::string_length(char const* _Nonnull p_string) -> idx {
 }
 
 inline auto
-cat::detail::compare_strings_detail(str_view const string_1,
-                                    str_view const string_2) -> bool {
+cat::detail::compare_strings_detail(
+   str_view const string_1, str_view const string_2
+) -> bool {
    if (string_1.size() != string_2.size()) {
       return false;
    }

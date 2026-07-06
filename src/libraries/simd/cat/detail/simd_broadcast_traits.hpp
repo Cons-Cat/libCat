@@ -100,10 +100,6 @@ concept simd_consteval_broadcast_arg =
    is_arithmetic<From> && is_constructible<ToLane, From>
    && !simd_broadcast_really_convertible_to<From, ToLane>()
    && requires { typename common_type<From, simd_broadcast_lane_raw<ToLane>>; }
-   && (is_same<common_type<From, simd_broadcast_lane_raw<ToLane>>,
-               simd_broadcast_lane_raw<ToLane>>
-       || (is_same<From, int> && is_integral<simd_broadcast_lane_raw<ToLane>>)
-       || (is_same<From, unsigned int>
-           && is_unsigned_integral<simd_broadcast_lane_raw<ToLane>>));
+   && (is_same<common_type<From, simd_broadcast_lane_raw<ToLane>>, simd_broadcast_lane_raw<ToLane>> || (is_same<From, int> && is_integral<simd_broadcast_lane_raw<ToLane>>) || (is_same<From, unsigned int> && is_unsigned_integral<simd_broadcast_lane_raw<ToLane>>));
 
 }  // namespace cat::detail

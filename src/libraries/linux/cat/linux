@@ -306,9 +306,10 @@ is_positive(auto input) -> bool {
 template <typename T>
    requires(sizeof(detail::map_syscall_type<T>) <= cat::word_bytes)
 using scaredy_nix = cat::scaredy<
-   cat::compact_scaredy<detail::map_syscall_type<T>,
-                        // This is a `T` when it is a positive integer.
-                        detail::is_positive<detail::map_syscall_type<T>>>,
+   cat::compact_scaredy<
+      detail::map_syscall_type<T>,
+      // This is a `T` when it is a positive integer.
+      detail::is_positive<detail::map_syscall_type<T>>>,
    // When the value is negative, this is some `linux_error`.
    linux_error>;
 
@@ -446,11 +447,15 @@ auto
    syscall4(cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type)
       -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto syscall5(cat::iword, cat::no_type, cat::no_type, cat::no_type,
-              cat::no_type, cat::no_type) -> cat::iword;
+auto syscall5(
+   cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
+   cat::no_type
+) -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto syscall6(cat::iword, cat::no_type, cat::no_type, cat::no_type,
-              cat::no_type, cat::no_type, cat::no_type) -> cat::iword;
+auto syscall6(
+   cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
+   cat::no_type, cat::no_type
+) -> cat::iword;
 
 // Volatile counterparts of `syscall0..6`. The compiler must emit each call
 // exactly once at its source position. Required for syscalls with externally
@@ -465,14 +470,19 @@ auto syscall2_volatile(cat::iword, cat::no_type, cat::no_type) -> cat::iword;
 auto syscall3_volatile(cat::iword, cat::no_type, cat::no_type, cat::no_type)
    -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto syscall4_volatile(cat::iword, cat::no_type, cat::no_type, cat::no_type,
-                       cat::no_type) -> cat::iword;
+auto syscall4_volatile(
+   cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type
+) -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto syscall5_volatile(cat::iword, cat::no_type, cat::no_type, cat::no_type,
-                       cat::no_type, cat::no_type) -> cat::iword;
+auto syscall5_volatile(
+   cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
+   cat::no_type
+) -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto syscall6_volatile(cat::iword, cat::no_type, cat::no_type, cat::no_type,
-                       cat::no_type, cat::no_type, cat::no_type) -> cat::iword;
+auto syscall6_volatile(
+   cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
+   cat::no_type, cat::no_type
+) -> cat::iword;
 
 // `syscall<T>` is the default syscall wrapper. Use it for syscalls without
 // externally observable side effects.

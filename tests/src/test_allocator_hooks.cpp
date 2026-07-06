@@ -17,8 +17,10 @@
 static_assert(cat::linear_allocator::min_alignment == 1u);
 static_assert(cat::page_allocator::min_alignment == cat::page_size);
 static_assert(cat::null_allocator::min_alignment == cat::page_size);
-static_assert(cat::pool_allocator<8>::min_alignment
-              == uword(alignof(cat::pool_allocator<8>::node_union)));
+static_assert(
+   cat::pool_allocator<8>::min_alignment
+   == uword(alignof(cat::pool_allocator<8>::node_union))
+);
 
 // Type-erased dispatch loses the static lower bound, so `dyn_allocator`
 // must conservatively claim 1.
@@ -26,8 +28,9 @@ static_assert(cat::dyn_allocator::min_alignment == 1u);
 
 // `allocator_ref<A>` should mirror the wrapped allocator's static alignment.
 static_assert(cat::allocator_ref<cat::linear_allocator>::min_alignment == 1u);
-static_assert(cat::allocator_ref<cat::page_allocator>::min_alignment
-              == cat::page_size);
+static_assert(
+   cat::allocator_ref<cat::page_allocator>::min_alignment == cat::page_size
+);
 
 // `allocator_ref<A>` should fold to an empty type whenever `A` itself is
 // empty (a stateless / global allocator). This lets containers and other
@@ -40,8 +43,10 @@ static_assert(__is_empty(cat::allocator_ref<cat::null_allocator>));
 
 // Stateful allocators leave the ref as a single-pointer handle.
 static_assert(!__is_empty(cat::allocator_ref<cat::linear_allocator>));
-static_assert(sizeof(cat::allocator_ref<cat::linear_allocator>)
-              == sizeof(cat::linear_allocator*));
+static_assert(
+   sizeof(cat::allocator_ref<cat::linear_allocator>)
+   == sizeof(cat::linear_allocator*)
+);
 
 $test(linear_allocator_bytes_used_and_capacity) {
    cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
@@ -90,8 +95,9 @@ $test(linear_allocator_reallocate_grow_always_fails) {
    int4* p_top = allocator.alloc<int4>(42).verify();
    idx const used_before = allocator.bytes_used();
 
-   cat::span<cat::byte> const allocation{reinterpret_cast<cat::byte*>(p_top),
-                                         idx(4u)};
+   cat::span<cat::byte> const allocation{
+      reinterpret_cast<cat::byte*>(p_top), idx(4u)
+   };
    cat::maybe const grew = allocator.alloc_grow(allocation, idx(8u));
    cat::verify(!grew.has_value());
    cat::verify(allocator.bytes_used() == used_before);
@@ -114,16 +120,18 @@ $test(linear_allocator_reallocate_shrink_succeeds) {
    idx const used_before = allocator.bytes_used();
    cat::verify(*p_top == 7);
 
-   cat::span<cat::byte> const allocation{reinterpret_cast<cat::byte*>(p_top),
-                                         idx(4u)};
+   cat::span<cat::byte> const allocation{
+      reinterpret_cast<cat::byte*>(p_top), idx(4u)
+   };
    cat::maybe const shrank = allocator.alloc_grow(allocation, idx(2u));
    cat::verify(shrank.has_value());
    cat::verify(allocator.bytes_used() == used_before);
    // `p_top`'s first `new_bytes` bytes stay valid after shrink.
    cat::verify(*p_top == 7);
 
-   cat::span<cat::byte> const shrunk{reinterpret_cast<cat::byte*>(p_top),
-                                     idx(2u)};
+   cat::span<cat::byte> const shrunk{
+      reinterpret_cast<cat::byte*>(p_top), idx(2u)
+   };
    cat::maybe sized = allocator.alloc_grow_feedback(shrunk, idx(1u));
    cat::verify(sized.has_value());
    cat::verify(sized.value() == 1u);

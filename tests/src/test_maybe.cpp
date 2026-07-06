@@ -129,11 +129,12 @@ $test(maybe_reference_rebinding) {
 // `maybe<compact<T, predicate, sentinel>>` packs the empty state into the
 // otherwise-unused `sentinel` value of `T`.
 $test(maybe_compact_predicate) {
-   cat::maybe<cat::compact<int4,
-                           [](int4 input) -> bool {
-                              return input >= 0;
-                           },
-                           -1>>
+   cat::maybe<cat::compact<
+      int4,
+      [](int4 input) -> bool {
+         return input >= 0;
+      },
+      -1>>
       positive(cat::nullopt);
    cat::verify(!positive.has_value());
 
@@ -161,11 +162,12 @@ $test(maybe_compact_predicate) {
 // Compact predicate over a `void` wrapper. `monotype_storage` lets the
 // engagement bit live in the predicate's storage instead of a side flag.
 $test(maybe_compact_void) {
-   cat::maybe<cat::compact<cat::monotype_storage<int, 0>,
-                           [](int input) -> bool {
-                              return input >= 0;
-                           },
-                           -1>>
+   cat::maybe<cat::compact<
+      cat::monotype_storage<int, 0>,
+      [](int input) -> bool {
+         return input >= 0;
+      },
+      -1>>
       predicate_void(cat::nullopt);
    cat::verify(!predicate_void.has_value());
    predicate_void = cat::monostate;
@@ -176,11 +178,12 @@ $test(maybe_compact_void) {
 // `compact<T, predicate, value>` accepts a literal sentinel that converts to
 // `T`. This covers the -1 to `iword` path used by `maybe_non_negative`.
 $test(maybe_compact_value_conversion) {
-   cat::maybe<cat::compact<iword,
-                           [](iword input) -> bool {
-                              return input >= 0;
-                           },
-                           -1>>
+   cat::maybe<cat::compact<
+      iword,
+      [](iword input) -> bool {
+         return input >= 0;
+      },
+      -1>>
       non_negative(cat::nullopt);
    cat::verify(!non_negative.has_value());
 
@@ -238,9 +241,9 @@ nullopt_value() -> flagged_value {
 
 template <>
 struct cat::default_compact_trait<test_maybe_niche::flagged_value>
-    : cat::identity_trait<cat::compact<test_maybe_niche::flagged_value,
-                                       &test_maybe_niche::has_value,
-                                       &test_maybe_niche::nullopt_value>> {};
+    : cat::identity_trait<cat::compact<
+         test_maybe_niche::flagged_value, &test_maybe_niche::has_value,
+         &test_maybe_niche::nullopt_value>> {};
 
 // `sentinel` supports structural NTTP values directly.
 $test(maybe_sentinel_tuple) {
@@ -353,11 +356,14 @@ $test(maybe_monadic_chains) {
    cat::maybe<int4> moo = 2;
 
    // Type-converting transform.
-   cat::verify(moo.transform([](int4 input) -> uint8 {
-                     return static_cast<uint8>(input * 2);
-                  })
-                  .value()
-               == 4u);
+   cat::verify(
+      moo.transform(
+            [](int4 input) -> uint8 {
+               return static_cast<uint8>(input * 2);
+            }
+      ).value()
+      == 4u
+   );
 
    // `or_else` on an engaged source must not invoke the callable.
    moo.or_else([] {
@@ -365,10 +371,11 @@ $test(maybe_monadic_chains) {
    });
 
    moo = cat::nullopt;
-   cat::verify(!moo.transform([](int4 input) {
-                      return input * 2;
-                   })
-                   .has_value());
+   cat::verify(!moo.transform(
+                      [](int4 input) {
+                         return input * 2;
+                      }
+   ).has_value());
 
    // `and_then` on a disengaged source must not invoke the callable.
    auto _ = moo.and_then([](int4 input) -> cat::maybe<int4> {
@@ -388,11 +395,12 @@ $test(maybe_monadic_chains) {
 // Same chain shapes against a compact-predicate `maybe` to exercise the
 // non-trivial storage path.
 $test(maybe_monadic_compact) {
-   cat::maybe<cat::compact<int4,
-                           [](int4 input) -> bool {
-                              return input >= 0;
-                           },
-                           -1>>
+   cat::maybe<cat::compact<
+      int4,
+      [](int4 input) -> bool {
+         return input >= 0;
+      },
+      -1>>
       positive(cat::nullopt);
 
    cat::verify(!positive
@@ -603,8 +611,9 @@ $test(maybe_void_construction) {
    cat::maybe<maybe_non_trivial> in_place_nontrivial_1{cat::in_place};
    auto _ = in_place_nontrivial_1.verify();
 
-   cat::maybe<maybe_non_trivial> in_place_nontrivial_2{cat::in_place, 1, 2,
-                                                       'a'};
+   cat::maybe<maybe_non_trivial> in_place_nontrivial_2{
+      cat::in_place, 1, 2, 'a'
+   };
    auto _ = in_place_nontrivial_2.verify();
 }
 
@@ -824,15 +833,19 @@ $test(maybe_reference_dangling) {
    // converting constructors and the `operator maybe<U>()` conversion).
    // Rebinding a reference `maybe` from another reference `maybe` is safe.
    static_assert(
-      cat::is_constructible<cat::maybe<int const&>, cat::maybe<int&>&>);
+      cat::is_constructible<cat::maybe<int const&>, cat::maybe<int&>&>
+   );
    static_assert(
-      cat::is_constructible<cat::maybe<int const&>, cat::maybe<int&>&&>);
+      cat::is_constructible<cat::maybe<int const&>, cat::maybe<int&>&&>
+   );
    // Binding a reference `maybe` to the storage owned by a value `maybe` would
    // dangle, so it is rejected for both value categories.
    static_assert(
-      !cat::is_constructible<cat::maybe<int const&>, cat::maybe<int>&>);
+      !cat::is_constructible<cat::maybe<int const&>, cat::maybe<int>&>
+   );
    static_assert(
-      !cat::is_constructible<cat::maybe<int const&>, cat::maybe<int>&&>);
+      !cat::is_constructible<cat::maybe<int const&>, cat::maybe<int>&&>
+   );
    static_assert(!cat::is_constructible<cat::maybe<int&>, cat::maybe<int>&&>);
 }
 

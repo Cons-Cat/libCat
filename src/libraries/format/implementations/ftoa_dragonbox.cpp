@@ -63,8 +63,9 @@ namespace to_chars_detail {
 // explanation.
 
 JKJ_FORCEINLINE static void
-print_9_digits(uint4::raw_type s32, int& exponent,
-               char* _Nonnull& buffer) noexcept {
+print_9_digits(
+   uint4::raw_type s32, int& exponent, char* _Nonnull& buffer
+) noexcept {
    if (s32 < 100) {
       if (s32 < 10) {
          // 1 digit.
@@ -91,8 +92,9 @@ print_9_digits(uint4::raw_type s32, int& exponent,
                buffer[1] = '.';
                exponent += 2;
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 2, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 2, 2u
+               );
                buffer += 4;
             }
             // 4 digits.
@@ -102,8 +104,9 @@ print_9_digits(uint4::raw_type s32, int& exponent,
                buffer[2] = radix_100_table[two_digits * 2 + 1];
                exponent += 3;
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 3, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 3, 2u
+               );
                buffer += 5;
             }
          } else {
@@ -117,11 +120,13 @@ print_9_digits(uint4::raw_type s32, int& exponent,
                buffer[1] = '.';
                exponent += 4;
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 2, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 2, 2u
+               );
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 4, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 4, 2u
+               );
                buffer += 6;
             }
             // 6 digits.
@@ -131,11 +136,13 @@ print_9_digits(uint4::raw_type s32, int& exponent,
                buffer[2] = radix_100_table[two_digits * 2 + 1];
                exponent += 5;
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 3, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 3, 2u
+               );
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 5, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 5, 2u
+               );
                buffer += 7;
             }
          }
@@ -152,14 +159,17 @@ print_9_digits(uint4::raw_type s32, int& exponent,
                buffer[1] = '.';
                exponent += 6;
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 2, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 2, 2u
+               );
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 4, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 4, 2u
+               );
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 6, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 6, 2u
+               );
                buffer += 8;
             }
             // 8 digits.
@@ -169,14 +179,17 @@ print_9_digits(uint4::raw_type s32, int& exponent,
                buffer[2] = radix_100_table[two_digits * 2 + 1];
                exponent += 7;
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 3, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 3, 2u
+               );
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 5, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 5, 2u
+               );
                prod = uint4::raw_type(prod) * uint8::raw_type(100);
-               copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                                  buffer + 7, 2u);
+               copy_memory_scalar(
+                  radix_100_table + int(prod >> 32) * 2, buffer + 7, 2u
+               );
                buffer += 9;
             }
          } else {
@@ -188,17 +201,21 @@ print_9_digits(uint4::raw_type s32, int& exponent,
             exponent += 8;
 
             prod = uint4::raw_type(prod) * uint8::raw_type(100);
-            copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                               buffer + 2, 2u);
+            copy_memory_scalar(
+               radix_100_table + int(prod >> 32) * 2, buffer + 2, 2u
+            );
             prod = uint4::raw_type(prod) * uint8::raw_type(100);
-            copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                               buffer + 4, 2u);
+            copy_memory_scalar(
+               radix_100_table + int(prod >> 32) * 2, buffer + 4, 2u
+            );
             prod = uint4::raw_type(prod) * uint8::raw_type(100);
-            copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                               buffer + 6, 2u);
+            copy_memory_scalar(
+               radix_100_table + int(prod >> 32) * 2, buffer + 6, 2u
+            );
             prod = uint4::raw_type(prod) * uint8::raw_type(100);
-            copy_memory_scalar(radix_100_table + int(prod >> 32) * 2,
-                               buffer + 8, 2u);
+            copy_memory_scalar(
+               radix_100_table + int(prod >> 32) * 2, buffer + 8, 2u
+            );
             buffer += 10;
          }
       }
@@ -207,8 +224,9 @@ print_9_digits(uint4::raw_type s32, int& exponent,
 
 template <>
 char*
-to_chars<float, default_float_traits<float>>(uint4::raw_type s32, int exponent,
-                                             char* buffer) noexcept {
+to_chars<float, default_float_traits<float>>(
+   uint4::raw_type s32, int exponent, char* buffer
+) noexcept {
    // Print significand.
    print_9_digits(s32, exponent, buffer);
 
@@ -236,7 +254,8 @@ to_chars<float, default_float_traits<float>>(uint4::raw_type s32, int exponent,
 template <>
 char*
 to_chars<double, default_float_traits<double>>(
-   uint8::raw_type const significand, int exponent, char* buffer) noexcept {
+   uint8::raw_type const significand, int exponent, char* buffer
+) noexcept {
    uint4::raw_type first_block, second_block;
    bool have_second_block;
 

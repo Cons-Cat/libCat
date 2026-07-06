@@ -91,12 +91,14 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Copy construction is deleted to prevent implicit copying.
    constexpr basic_forward_list(basic_forward_list const&) = delete (
       "Implicit copying of `cat::basic_forward_list` is forbidden. Call "
-      "`.clone()` or move instead!");
+      "`.clone()` or move instead!"
+   );
 
    auto
    operator=(basic_forward_list const&) -> basic_forward_list& = delete (
       "Implicit copying of `cat::basic_forward_list` is forbidden. Call "
-      "`.clone()` or move instead!");
+      "`.clone()` or move instead!"
+   );
 
    // Move assign by transferring ownership from other_list.
    [[clang::reinitializes]]
@@ -106,9 +108,11 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
          return *this;
       }
       if !consteval {
-         cat::assert(m_storage.m_p_head == nullptr && m_size == 0u,
-                     "basic_forward_list move-assigned over while still owning "
-                     "nodes. Call .free(allocator) first.");
+         cat::assert(
+            m_storage.m_p_head == nullptr && m_size == 0u,
+            "basic_forward_list move-assigned over while still owning "
+            "nodes. Call .free(allocator) first."
+         );
       }
       m_storage = other_list.m_storage;
       m_size = other_list.m_size;
@@ -259,8 +263,10 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
  public:
    template <is_allocator Allocator, typename U>
    constexpr auto
-   append_new_node(allocator_ref<Allocator> allocator,
-                   node_type* _Nullable& p_tail, U&& value) -> maybe<iterator> {
+   append_new_node(
+      allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
+      U&& value
+   ) -> maybe<iterator> {
       node_type* p_node = $prop(allocator.template alloc<node_type>());
       p_node->p_next_node = nullptr;
       p_node->storage = $fwd(value);
@@ -278,18 +284,20 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Variadic append termination overload.
    template <is_allocator Allocator>
    constexpr auto
-   append_new_nodes(allocator_ref<Allocator> /*unused*/,
-                    [[maybe_unused]] node_type* _Nullable& p_tail)
-      -> maybe<void> {
+   append_new_nodes(
+      allocator_ref<Allocator> /*unused*/,
+      [[maybe_unused]] node_type* _Nullable& p_tail
+   ) -> maybe<void> {
       return monostate;
    }
 
    // Append multiple new nodes from parameter pack.
    template <is_allocator Allocator, typename U, typename... Args>
    constexpr auto
-   append_new_nodes(allocator_ref<Allocator> allocator,
-                    node_type* _Nullable& p_tail, U&& value,
-                    Args&&... remaining) -> maybe<void> {
+   append_new_nodes(
+      allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
+      U&& value, Args&&... remaining
+   ) -> maybe<void> {
       $prop(this->append_new_node(allocator, p_tail, $fwd(value)));
       return this->append_new_nodes(allocator, p_tail, $fwd(remaining)...);
    }
@@ -298,8 +306,9 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<NewAllocator> allocator)
-      const& -> maybe<basic_forward_list<T>> {
+   clone(
+      allocator_ref<NewAllocator> allocator
+   ) const& -> maybe<basic_forward_list<T>> {
       basic_forward_list<T> new_list;
       node_type* p_tail = nullptr;
       node_type* p_node = m_storage.m_p_head;
@@ -338,8 +347,9 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Construct element in place before iterator and return its iterator.
    template <is_allocator Allocator, typename... Args>
    constexpr auto
-   emplace(allocator_ref<Allocator> allocator, iterator where,
-           Args&&... arguments) -> maybe<iterator> {
+   emplace(
+      allocator_ref<Allocator> allocator, iterator where, Args&&... arguments
+   ) -> maybe<iterator> {
       auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
       node_type& node = *p_node;
       new (&node.storage) T($fwd(arguments)...);
@@ -500,18 +510,21 @@ make_forward_list(allocator_ref<Allocator> /*unused*/)
 }
 
 // Create a `cat::basic_forward_list` initialized from the given values.
-template <typename T, is_allocator Allocator, is_convertible<T> U,
-          is_convertible<T>... Args>
+template <
+   typename T, is_allocator Allocator, is_convertible<T> U,
+   is_convertible<T>... Args>
 [[nodiscard]]
 constexpr auto
-make_forward_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
-                  U&& value, Args&&... remaining)
-   -> maybe<basic_forward_list<T>> {
+make_forward_list(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], U&& value,
+   Args&&... remaining
+) -> maybe<basic_forward_list<T>> {
    basic_forward_list<T> new_list;
    detail::forward_list_node<T>* p_tail = nullptr;
 
-   $prop(new_list.append_new_nodes(allocator, p_tail, $fwd(value),
-                                   $fwd(remaining)...));
+   $prop(new_list.append_new_nodes(
+      allocator, p_tail, $fwd(value), $fwd(remaining)...
+   ));
 
    return new_list;
 }
@@ -520,21 +533,24 @@ make_forward_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
 template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 constexpr auto
-make_forward_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
-                  Args&&... arguments) {
+make_forward_list(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Args&&... arguments
+) {
    using common = common_type<Args...>;
-   return make_forward_list<common>(allocator,
-                                    static_cast<common>($fwd(arguments))...);
+   return make_forward_list<common>(
+      allocator, static_cast<common>($fwd(arguments))...
+   );
 }
 
 // Create a `cat::basic_forward_list` filled with count copies of value.
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_forward_list_filled(allocator_ref<Allocator> allocator
-                         [[clang::lifetimebound]],
-                         idx count, T const& value)
-   -> maybe<basic_forward_list<T>> {
+make_forward_list_filled(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   T const& value
+) -> maybe<basic_forward_list<T>> {
    basic_forward_list<T> new_list;
    detail::forward_list_node<T>* p_tail = nullptr;
    for (idx i = 0u; i < count; ++i) {

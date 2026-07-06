@@ -113,16 +113,16 @@ concept has_bit_complement = requires(T lhs) { lhs.bit_complement(); };
 // example `cat::basic_idx` subtraction against another `basic_idx` widens to
 // `cat::iword`, so decrement is not generated).
 template <typename D>
-concept has_unary_increment =
-   is_same<remove_cvref<D>,
-           remove_cvref<decltype(declval<remove_cvref<D> const&>().add(
-              remove_cvref<D>(1)))>>;
+concept has_unary_increment = is_same<
+   remove_cvref<D>, remove_cvref<decltype(declval<remove_cvref<D> const&>()
+                                             .add(remove_cvref<D>(1)))>>;
 
 template <typename D>
-concept has_unary_decrement =
-   is_same<remove_cvref<D>,
-           remove_cvref<decltype(declval<remove_cvref<D> const&>().subtract_by(
-              static_cast<remove_cvref<D>::raw_type>(1)))>>;
+concept has_unary_decrement = is_same<
+   remove_cvref<D>,
+   remove_cvref<decltype(declval<remove_cvref<D> const&>().subtract_by(
+      static_cast<remove_cvref<D>::raw_type>(1)
+   ))>>;
 
 // Left-hand compound assignments exist only when the corresponding member
 // (`add`, `subtract_by`, ...) returns the same type as the operand, matching
@@ -133,10 +133,9 @@ concept has_plus_assign = is_same<
    remove_cvref<decltype(declval<remove_cvref<D>&>().add(declval<T>()))>>;
 
 template <typename D, typename T>
-concept has_minus_assign =
-   is_same<remove_cvref<D>,
-           remove_cvref<decltype(declval<remove_cvref<D>&>().subtract_by(
-              declval<T>()))>>;
+concept has_minus_assign = is_same<
+   remove_cvref<D>, remove_cvref<decltype(declval<remove_cvref<D>&>()
+                                             .subtract_by(declval<T>()))>>;
 
 template <typename D, typename T>
 concept has_multiply_assign = is_same<
@@ -169,16 +168,14 @@ concept has_bit_xor_assign = is_same<
    remove_cvref<decltype(declval<remove_cvref<D>&>().bit_xor(declval<T>()))>>;
 
 template <typename D, typename T>
-concept has_shift_left_assign =
-   is_same<remove_cvref<D>,
-           remove_cvref<decltype(declval<remove_cvref<D>&>().shift_left_by(
-              declval<T>()))>>;
+concept has_shift_left_assign = is_same<
+   remove_cvref<D>, remove_cvref<decltype(declval<remove_cvref<D>&>()
+                                             .shift_left_by(declval<T>()))>>;
 
 template <typename D, typename T>
-concept has_shift_right_assign =
-   is_same<remove_cvref<D>,
-           remove_cvref<decltype(declval<remove_cvref<D>&>().shift_right_by(
-              declval<T>()))>>;
+concept has_shift_right_assign = is_same<
+   remove_cvref<D>, remove_cvref<decltype(declval<remove_cvref<D>&>()
+                                             .shift_right_by(declval<T>()))>>;
 
 // Member `operator@` on `arithmetic_interface` uses `derived` as the left
 // operand. These concepts require the corresponding member call on `D const`
@@ -288,8 +285,10 @@ struct plus_interface {
    constexpr auto
    operator+(this Derived const& self, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_binary_plus<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_binary_plus<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return self.add(other);
    }
@@ -297,16 +296,20 @@ struct plus_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+(this Derived const& self, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_binary_plus<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_binary_plus<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return self.add(move(other));
    }
 
    // + operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_binary_plus<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_binary_plus<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+(this auto&& self, T&& other) -> decltype(auto) {
@@ -319,9 +322,11 @@ struct plus_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_add_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_plus<Derived, T>)
+      requires(
+         !detail::has_add_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_plus<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -332,9 +337,11 @@ struct plus_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_add_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_plus<Derived, T>)
+      requires(
+         !detail::has_add_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_plus<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(T&& other, Derived&& self) -> decltype(auto) {
@@ -344,8 +351,10 @@ struct plus_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_plus_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_plus_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.add(rhs);
       return self;
@@ -354,8 +363,10 @@ struct plus_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_plus_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_plus_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.add(move(rhs));
       return self;
@@ -363,8 +374,10 @@ struct plus_interface {
 
    // += operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_plus_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_plus_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(Derived& self, T&& other) -> Derived& {
@@ -378,8 +391,10 @@ struct plus_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_add_interface<T, Derived>
-               && detail::has_reverse_binary_plus<Derived, T>)
+      requires(
+         !detail::has_add_interface<T, Derived>
+         && detail::has_reverse_binary_plus<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(T& other, Derived const& self) -> T& {
@@ -391,8 +406,10 @@ struct plus_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_add_interface<T, Derived>
-               && detail::has_reverse_binary_plus<Derived, T>)
+      requires(
+         !detail::has_add_interface<T, Derived>
+         && detail::has_reverse_binary_plus<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(T& other, Derived&& self) -> T& {
@@ -457,8 +474,10 @@ struct minus_interface {
    constexpr auto
    operator-(this Derived const& lhs, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_binary_subtract_by<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_binary_subtract_by<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return lhs.subtract_by(other);
    }
@@ -466,16 +485,20 @@ struct minus_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator-(this Derived const& lhs, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_binary_subtract_by<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_binary_subtract_by<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return lhs.subtract_by(move(other));
    }
 
    // - operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_binary_subtract_by<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_binary_subtract_by<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator-(this auto&& lhs, T&& other) -> decltype(auto) {
@@ -488,9 +511,11 @@ struct minus_interface {
    template <typename T>
    // If this operator's left operand can `subtract_by` `Derived` as its
    // right-hand operand, this overload is ambiguous.
-      requires(!detail::has_subtract_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_minus<Derived, T>)
+      requires(
+         !detail::has_subtract_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_minus<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -501,9 +526,11 @@ struct minus_interface {
    template <typename T>
    // If this operator's left operand can `subtract_by` `Derived` as its
    // right-hand operand, this overload is ambiguous.
-      requires(!detail::has_subtract_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_minus<Derived, T>)
+      requires(
+         !detail::has_subtract_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_minus<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(T&& other, Derived&& self) -> decltype(auto) {
@@ -514,8 +541,10 @@ struct minus_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_minus_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_minus_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.subtract_by(rhs);
       return self;
@@ -524,8 +553,10 @@ struct minus_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_minus_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_minus_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.subtract_by(move(rhs));
       return self;
@@ -533,8 +564,10 @@ struct minus_interface {
 
    // -= operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_minus_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_minus_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(Derived& self, T&& other) -> Derived& {
@@ -548,8 +581,10 @@ struct minus_interface {
    template <typename T>
    // If this operator's left operand can `subtract_by` `Derived` as its
    // right-hand operand, this overload is ambiguous.
-      requires(!detail::has_subtract_by_interface<T, Derived>
-               && detail::has_reverse_binary_minus<Derived, T>)
+      requires(
+         !detail::has_subtract_by_interface<T, Derived>
+         && detail::has_reverse_binary_minus<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(T& other, Derived const& self) -> T& {
@@ -561,8 +596,10 @@ struct minus_interface {
    template <typename T>
    // If this operator's left operand can `subtract_by` `Derived` as its
    // right-hand operand, this overload is ambiguous.
-      requires(!detail::has_subtract_by_interface<T, Derived>
-               && detail::has_reverse_binary_minus<Derived, T>)
+      requires(
+         !detail::has_subtract_by_interface<T, Derived>
+         && detail::has_reverse_binary_minus<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(T& other, Derived&& self) -> T& {
@@ -627,8 +664,10 @@ struct multiply_interface {
    constexpr auto
    operator*(this Derived const& self, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_binary_multiply<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_binary_multiply<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return self.multiply(other);
    }
@@ -636,16 +675,20 @@ struct multiply_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator*(this Derived const& self, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_binary_multiply<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_binary_multiply<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return self.multiply(move(other));
    }
 
    // * operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_binary_multiply<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_binary_multiply<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator*(this auto&& self, T&& other) -> decltype(auto) {
@@ -658,9 +701,11 @@ struct multiply_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_multiply_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_multiply<Derived, T>)
+      requires(
+         !detail::has_multiply_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_multiply<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -671,9 +716,11 @@ struct multiply_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_multiply_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_multiply<Derived, T>)
+      requires(
+         !detail::has_multiply_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_multiply<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*(T&& other, Derived&& self) -> decltype(auto) {
@@ -684,8 +731,10 @@ struct multiply_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_multiply_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_multiply_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.multiply(rhs);
       return self;
@@ -694,8 +743,10 @@ struct multiply_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_multiply_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_multiply_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.multiply(move(rhs));
       return self;
@@ -703,8 +754,10 @@ struct multiply_interface {
 
    // *= operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_multiply_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_multiply_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(Derived& self, T&& other) -> Derived& {
@@ -718,8 +771,10 @@ struct multiply_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_multiply_interface<T, Derived>
-               && detail::has_reverse_binary_multiply<Derived, T>)
+      requires(
+         !detail::has_multiply_interface<T, Derived>
+         && detail::has_reverse_binary_multiply<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(T& other, Derived const& self) -> T& {
@@ -731,8 +786,10 @@ struct multiply_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_multiply_interface<T, Derived>
-               && detail::has_reverse_binary_multiply<Derived, T>)
+      requires(
+         !detail::has_multiply_interface<T, Derived>
+         && detail::has_reverse_binary_multiply<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(T& other, Derived&& self) -> T& {
@@ -757,8 +814,10 @@ struct divide_interface {
    constexpr auto
    operator/(this Derived const& self, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_binary_divide_by<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_binary_divide_by<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return self.divide_by(other);
    }
@@ -766,16 +825,20 @@ struct divide_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator/(this Derived const& self, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_binary_divide_by<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_binary_divide_by<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return self.divide_by(move(other));
    }
 
    // / operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_binary_divide_by<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_binary_divide_by<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator/(this auto&& self, T&& other) -> decltype(auto) {
@@ -788,9 +851,11 @@ struct divide_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_divide_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_divide<Derived, T>)
+      requires(
+         !detail::has_divide_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_divide<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -801,9 +866,11 @@ struct divide_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_divide_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_divide<Derived, T>)
+      requires(
+         !detail::has_divide_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_divide<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/(T&& other, Derived&& self) -> decltype(auto) {
@@ -814,8 +881,10 @@ struct divide_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_divide_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_divide_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.divide_by(rhs);
       return self;
@@ -824,8 +893,10 @@ struct divide_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_divide_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_divide_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.divide_by(move(rhs));
       return self;
@@ -833,8 +904,10 @@ struct divide_interface {
 
    // /= operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_divide_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_divide_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(Derived& self, T&& other) -> Derived& {
@@ -848,8 +921,10 @@ struct divide_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_divide_by_interface<T, Derived>
-               && detail::has_reverse_binary_divide<Derived, T>)
+      requires(
+         !detail::has_divide_by_interface<T, Derived>
+         && detail::has_reverse_binary_divide<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(T& other, Derived const& self) -> T& {
@@ -861,8 +936,10 @@ struct divide_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_divide_by_interface<T, Derived>
-               && detail::has_reverse_binary_divide<Derived, T>)
+      requires(
+         !detail::has_divide_by_interface<T, Derived>
+         && detail::has_reverse_binary_divide<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(T& other, Derived&& self) -> T& {
@@ -887,8 +964,10 @@ struct bit_and_interface {
    constexpr auto
    operator&(this Derived const& self, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_binary_bit_and<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_binary_bit_and<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return self.bit_and(other);
    }
@@ -896,16 +975,20 @@ struct bit_and_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator&(this Derived const& self, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_binary_bit_and<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_binary_bit_and<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return self.bit_and(move(other));
    }
 
    // & operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_binary_bit_and<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_binary_bit_and<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator&(this auto&& self, T&& other) -> decltype(auto) {
@@ -918,9 +1001,11 @@ struct bit_and_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_and_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_bit_and<Derived, T>)
+      requires(
+         !detail::has_bit_and_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_bit_and<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -931,9 +1016,11 @@ struct bit_and_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_and_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_bit_and<Derived, T>)
+      requires(
+         !detail::has_bit_and_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_bit_and<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&(T&& other, Derived&& self) -> decltype(auto) {
@@ -944,8 +1031,10 @@ struct bit_and_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_bit_and_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_bit_and_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.bit_and(rhs);
       return self;
@@ -954,8 +1043,10 @@ struct bit_and_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_bit_and_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_bit_and_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.bit_and(move(rhs));
       return self;
@@ -963,8 +1054,10 @@ struct bit_and_interface {
 
    // &= operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_bit_and_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_bit_and_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(Derived& self, T&& other) -> Derived& {
@@ -978,8 +1071,10 @@ struct bit_and_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_and_interface<T, Derived>
-               && detail::has_reverse_binary_bit_and<Derived, T>)
+      requires(
+         !detail::has_bit_and_interface<T, Derived>
+         && detail::has_reverse_binary_bit_and<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(T& other, Derived const& self) -> T& {
@@ -991,8 +1086,10 @@ struct bit_and_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_and_interface<T, Derived>
-               && detail::has_reverse_binary_bit_and<Derived, T>)
+      requires(
+         !detail::has_bit_and_interface<T, Derived>
+         && detail::has_reverse_binary_bit_and<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(T& other, Derived&& self) -> T& {
@@ -1017,8 +1114,10 @@ struct bit_or_interface {
    constexpr auto
    operator|(this Derived const& self, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_binary_bit_or<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_binary_bit_or<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return self.bit_or(other);
    }
@@ -1026,16 +1125,20 @@ struct bit_or_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator|(this Derived const& self, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_binary_bit_or<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_binary_bit_or<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return self.bit_or(move(other));
    }
 
    // | operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_binary_bit_or<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_binary_bit_or<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator|(this auto&& self, T&& other) -> decltype(auto) {
@@ -1048,9 +1151,11 @@ struct bit_or_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_or_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_bit_or<Derived, T>)
+      requires(
+         !detail::has_bit_or_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_bit_or<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -1061,9 +1166,11 @@ struct bit_or_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_or_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_bit_or<Derived, T>)
+      requires(
+         !detail::has_bit_or_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_bit_or<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|(T&& other, Derived&& self) -> decltype(auto) {
@@ -1074,8 +1181,10 @@ struct bit_or_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_bit_or_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_bit_or_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.bit_or(rhs);
       return self;
@@ -1084,8 +1193,10 @@ struct bit_or_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_bit_or_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_bit_or_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.bit_or(move(rhs));
       return self;
@@ -1093,8 +1204,10 @@ struct bit_or_interface {
 
    // |= operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_bit_or_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_bit_or_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(Derived& self, T&& other) -> Derived& {
@@ -1108,8 +1221,10 @@ struct bit_or_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_or_interface<T, Derived>
-               && detail::has_reverse_binary_bit_or<Derived, T>)
+      requires(
+         !detail::has_bit_or_interface<T, Derived>
+         && detail::has_reverse_binary_bit_or<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(T& other, Derived const& self) -> T& {
@@ -1121,8 +1236,10 @@ struct bit_or_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_or_interface<T, Derived>
-               && detail::has_reverse_binary_bit_or<Derived, T>)
+      requires(
+         !detail::has_bit_or_interface<T, Derived>
+         && detail::has_reverse_binary_bit_or<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(T& other, Derived&& self) -> T& {
@@ -1147,8 +1264,10 @@ struct bit_xor_interface {
    constexpr auto
    operator^(this Derived const& self, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_binary_bit_xor<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_binary_bit_xor<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return self.bit_xor(other);
    }
@@ -1156,16 +1275,20 @@ struct bit_xor_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator^(this Derived const& self, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_binary_bit_xor<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_binary_bit_xor<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return self.bit_xor(move(other));
    }
 
    // ^ operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_binary_bit_xor<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_binary_bit_xor<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator^(this auto&& self, T&& other) -> decltype(auto) {
@@ -1178,9 +1301,11 @@ struct bit_xor_interface {
    template <typename T>
    // If this operator's left operand can xor `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_xor_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_bit_xor<Derived, T>)
+      requires(
+         !detail::has_bit_xor_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_bit_xor<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator^(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -1191,9 +1316,11 @@ struct bit_xor_interface {
    template <typename T>
    // If this operator's left operand can xor `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_xor_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_bit_xor<Derived, T>)
+      requires(
+         !detail::has_bit_xor_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_bit_xor<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator^(T&& other, Derived&& self) -> decltype(auto) {
@@ -1204,8 +1331,10 @@ struct bit_xor_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator^=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_bit_xor_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_bit_xor_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.bit_xor(rhs);
       return self;
@@ -1214,8 +1343,10 @@ struct bit_xor_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator^=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_bit_xor_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_bit_xor_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.bit_xor(move(rhs));
       return self;
@@ -1223,8 +1354,10 @@ struct bit_xor_interface {
 
    // ^= operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_bit_xor_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_bit_xor_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator^=(Derived& self, T&& other) -> Derived& {
@@ -1238,8 +1371,10 @@ struct bit_xor_interface {
    template <typename T>
    // If this operator's left operand can xor `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_xor_interface<T, Derived>
-               && detail::has_reverse_binary_bit_xor<Derived, T>)
+      requires(
+         !detail::has_bit_xor_interface<T, Derived>
+         && detail::has_reverse_binary_bit_xor<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator^=(T& other, Derived const& self) -> T& {
@@ -1251,8 +1386,10 @@ struct bit_xor_interface {
    template <typename T>
    // If this operator's left operand can xor `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_bit_xor_interface<T, Derived>
-               && detail::has_reverse_binary_bit_xor<Derived, T>)
+      requires(
+         !detail::has_bit_xor_interface<T, Derived>
+         && detail::has_reverse_binary_bit_xor<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator^=(T& other, Derived&& self) -> T& {
@@ -1277,8 +1414,10 @@ struct modulo_interface {
    constexpr auto
    operator%(this Derived const& self, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_binary_modulo_by<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_binary_modulo_by<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return self.modulo_by(other);
    }
@@ -1286,16 +1425,20 @@ struct modulo_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator%(this Derived const& self, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_binary_modulo_by<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_binary_modulo_by<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return self.modulo_by(move(other));
    }
 
    // % operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_binary_modulo_by<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_binary_modulo_by<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator%(this auto&& self, T&& other) -> decltype(auto) {
@@ -1308,9 +1451,11 @@ struct modulo_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_modulo_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_modulo<Derived, T>)
+      requires(
+         !detail::has_modulo_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_modulo<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -1321,9 +1466,11 @@ struct modulo_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_modulo_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_binary_modulo<Derived, T>)
+      requires(
+         !detail::has_modulo_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_binary_modulo<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%(T&& other, Derived&& self) -> decltype(auto) {
@@ -1334,8 +1481,10 @@ struct modulo_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_modulo_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_modulo_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.modulo_by(rhs);
       return self;
@@ -1344,8 +1493,10 @@ struct modulo_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_modulo_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_modulo_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.modulo_by(move(rhs));
       return self;
@@ -1353,8 +1504,10 @@ struct modulo_interface {
 
    // %= operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_modulo_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_modulo_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(Derived& self, T&& other) -> Derived& {
@@ -1368,8 +1521,10 @@ struct modulo_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_modulo_by_interface<T, Derived>
-               && detail::has_reverse_binary_modulo<Derived, T>)
+      requires(
+         !detail::has_modulo_by_interface<T, Derived>
+         && detail::has_reverse_binary_modulo<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(T& other, Derived const& self) -> T& {
@@ -1381,8 +1536,10 @@ struct modulo_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_modulo_by_interface<T, Derived>
-               && detail::has_reverse_binary_modulo<Derived, T>)
+      requires(
+         !detail::has_modulo_by_interface<T, Derived>
+         && detail::has_reverse_binary_modulo<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(T& other, Derived&& self) -> T& {
@@ -1407,8 +1564,10 @@ struct shift_left_interface {
    constexpr auto
    operator<<(this Derived const& self, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_shift_left_by<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_shift_left_by<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return self.shift_left_by(other);
    }
@@ -1416,16 +1575,20 @@ struct shift_left_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<<(this Derived const& self, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_shift_left_by<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_shift_left_by<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return self.shift_left_by(move(other));
    }
 
    // << operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_shift_left_by<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_shift_left_by<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<<(this auto&& self, T&& other) -> decltype(auto) {
@@ -1438,9 +1601,11 @@ struct shift_left_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_shift_left_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_shift_left<Derived, T>)
+      requires(
+         !detail::has_shift_left_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_shift_left<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -1451,9 +1616,11 @@ struct shift_left_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_shift_left_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_shift_left<Derived, T>)
+      requires(
+         !detail::has_shift_left_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_shift_left<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<(T&& other, Derived&& self) -> decltype(auto) {
@@ -1465,8 +1632,10 @@ struct shift_left_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_shift_left_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_shift_left_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.shift_left_by(rhs);
       return self;
@@ -1475,8 +1644,10 @@ struct shift_left_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_shift_left_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_shift_left_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.shift_left_by(move(rhs));
       return self;
@@ -1484,8 +1655,10 @@ struct shift_left_interface {
 
    // <<= operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_shift_left_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_shift_left_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(Derived& self, T&& other) -> Derived& {
@@ -1499,8 +1672,10 @@ struct shift_left_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_shift_left_by_interface<T, Derived>
-               && detail::has_reverse_shift_left<Derived, T>)
+      requires(
+         !detail::has_shift_left_by_interface<T, Derived>
+         && detail::has_reverse_shift_left<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(T& other, Derived const& self) -> T& {
@@ -1512,8 +1687,10 @@ struct shift_left_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_shift_left_by_interface<T, Derived>
-               && detail::has_reverse_shift_left<Derived, T>)
+      requires(
+         !detail::has_shift_left_by_interface<T, Derived>
+         && detail::has_reverse_shift_left<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(T& other, Derived&& self) -> T& {
@@ -1538,8 +1715,10 @@ struct shift_right_interface {
    constexpr auto
    operator>>(this Derived const& self, decay_derived const& other)
       -> decltype(auto)
-      requires(detail::has_shift_right_by<Derived, decay_derived const&>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_shift_right_by<Derived, decay_derived const&>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       return self.shift_right_by(other);
    }
@@ -1547,16 +1726,20 @@ struct shift_right_interface {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator>>(this Derived const& self, decay_derived&& other) -> decltype(auto)
-      requires(detail::has_shift_right_by<Derived, decay_derived &&>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_shift_right_by<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       return self.shift_right_by(move(other));
    }
 
    // >> operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_shift_right_by<Derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_shift_right_by<Derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator>>(this auto&& self, T&& other) -> decltype(auto) {
@@ -1569,9 +1752,11 @@ struct shift_right_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_shift_right_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_shift_right<Derived, T>)
+      requires(
+         !detail::has_shift_right_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_shift_right<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>(T&& other, decay_derived const& self) -> decltype(auto) {
@@ -1582,9 +1767,11 @@ struct shift_right_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_shift_right_by_interface<T, Derived>
-               && !is_same<remove_cvref<T>, decay_derived>
-               && detail::has_reverse_shift_right<Derived, T>)
+      requires(
+         !detail::has_shift_right_by_interface<T, Derived>
+         && !is_same<remove_cvref<T>, decay_derived>
+         && detail::has_reverse_shift_right<Derived, T>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>(T&& other, Derived&& self) -> decltype(auto) {
@@ -1596,8 +1783,10 @@ struct shift_right_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(Derived& self, decay_derived const& rhs) -> Derived&
-      requires(detail::has_shift_right_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived const&>)
+      requires(
+         detail::has_shift_right_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived const&>
+      )
    {
       self = self.shift_right_by(rhs);
       return self;
@@ -1606,8 +1795,10 @@ struct shift_right_interface {
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(Derived& self, decay_derived&& rhs) -> Derived&
-      requires(detail::has_shift_right_assign<decay_derived, decay_derived>
-               && is_constructible<Derived, decay_derived &&>)
+      requires(
+         detail::has_shift_right_assign<decay_derived, decay_derived>
+         && is_constructible<Derived, decay_derived &&>
+      )
    {
       self = self.shift_right_by(move(rhs));
       return self;
@@ -1615,8 +1806,10 @@ struct shift_right_interface {
 
    // >>= operator where this is a left-hand-side operand.
    template <typename T>
-      requires(detail::has_shift_right_assign<decay_derived, T>
-               && !is_same<remove_cvref<T>, decay_derived>)
+      requires(
+         detail::has_shift_right_assign<decay_derived, T>
+         && !is_same<remove_cvref<T>, decay_derived>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(Derived& self, T&& other) -> Derived& {
@@ -1630,8 +1823,10 @@ struct shift_right_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_shift_right_by_interface<T, Derived>
-               && detail::has_reverse_shift_right<Derived, T>)
+      requires(
+         !detail::has_shift_right_by_interface<T, Derived>
+         && detail::has_reverse_shift_right<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(T& other, Derived const& self) -> T& {
@@ -1643,8 +1838,10 @@ struct shift_right_interface {
    template <typename T>
    // If this operator's left operand can add `Derived` as its right-hand
    // operand, this overload is ambiguous.
-      requires(!detail::has_shift_right_by_interface<T, Derived>
-               && detail::has_reverse_shift_right<Derived, T>)
+      requires(
+         !detail::has_shift_right_by_interface<T, Derived>
+         && detail::has_reverse_shift_right<Derived, T>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(T& other, Derived&& self) -> T& {

@@ -235,22 +235,19 @@ using dyn_treat_count_feed =
 using dyn_say = cat::dyn_inplace<cat::destructor, say>;
 using dyn_move_constructor_treat_count =
    cat::dyn_inplace<cat::destructor, cat::move_constructor, treat_count>;
-using dyn_move_constructor_copy_constructor_treat_count =
-   cat::dyn_inplace<cat::destructor, cat::move_constructor,
-                    cat::copy_constructor, treat_count>;
+using dyn_move_constructor_copy_constructor_treat_count = cat::dyn_inplace<
+   cat::destructor, cat::move_constructor, cat::copy_constructor, treat_count>;
 
 using dyn_alloc_treat_count =
    cat::dyn<cat::linear_allocator, cat::destructor, treat_count>;
-using dyn_alloc_move_constructor_treat_count =
-   cat::dyn<cat::linear_allocator, cat::destructor, cat::move_constructor,
-            treat_count>;
+using dyn_alloc_move_constructor_treat_count = cat::dyn<
+   cat::linear_allocator, cat::destructor, cat::move_constructor, treat_count>;
 
 // A `basic_dyn` whose inline buffer is sized big enough to hold a
 // `puppy` (which would spill to the heap with the default
 // `64u`).
-using dyn_alloc_big_treat_count =
-   cat::basic_dyn<cat::linear_allocator, sizeof(puppy), cat::destructor,
-                  treat_count>;
+using dyn_alloc_big_treat_count = cat::basic_dyn<
+   cat::linear_allocator, sizeof(puppy), cat::destructor, treat_count>;
 
 // A deliberately over-aligned type used to exercise the SBO alignment guard.
 struct alignas(256) over_aligned_kitty {
@@ -376,8 +373,9 @@ $test(dyn_custom_inline_storage_size) {
 $test(dyn_alignment_guard) {
    // Sanity-check the exposed alignment constants.
    static_assert(dyn_treat_count::storage_alignment == 16u);
-   static_assert(dyn_alloc_treat_count::storage_alignment
-                 >= alignof(cat::iword));
+   static_assert(
+      dyn_alloc_treat_count::storage_alignment >= alignof(cat::iword)
+   );
 
    // Standard-aligned types satisfy `fits_inline` on the in-place dyn when
    // they fit the size budget too.
@@ -605,8 +603,9 @@ $test(dyn_addressof_yields_ptr) {
 
 // Multiple Methods on a single dyn all dispatch correctly.
 $test(dyn_multiple_methods) {
-   cat::dyn_inplace<cat::destructor, cat::move_constructor,
-                    cat::copy_constructor, treat_count, feed>
+   cat::dyn_inplace<
+      cat::destructor, cat::move_constructor, cat::copy_constructor,
+      treat_count, feed>
       dyn{kitty{0}};
 
    cat::dyn_invoke<feed>(dyn, 10_i4);
@@ -734,11 +733,13 @@ $test(dyn_heap_move_preserves_pointer) {
 
 // `methods_list` exposes the configured Methods.
 $test(dyn_methods_list) {
+   static_assert(cat::is_same<
+                 dyn_treat_count_feed::methods,
+                 cat::type_list<cat::destructor, treat_count, feed>>);
    static_assert(
-      cat::is_same<dyn_treat_count_feed::methods,
-                   cat::type_list<cat::destructor, treat_count, feed>>);
-   static_assert(dyn_treat_count_feed::inline_size
-                 == sizeof(cat::vtable<cat::destructor, treat_count, feed>));
+      dyn_treat_count_feed::inline_size
+      == sizeof(cat::vtable<cat::destructor, treat_count, feed>)
+   );
 }
 
 // dyn_ref does not allow rebinding via `=`.
@@ -819,21 +820,23 @@ $test(dyn_inplace_vtable_is_inline) {
 
 // `inline_size` is deduced from the methods list and scales with the vtable.
 $test(dyn_inplace_inline_size) {
-   static_assert(dyn_say::inline_size
-                 == sizeof(cat::vtable<cat::destructor, say>));
-   using wide_t =
-      cat::dyn_inplace<cat::destructor, cat::move_constructor,
-                       cat::copy_constructor, say, treat_count, feed>;
+   static_assert(
+      dyn_say::inline_size == sizeof(cat::vtable<cat::destructor, say>)
+   );
+   using wide_t = cat::dyn_inplace<
+      cat::destructor, cat::move_constructor, cat::copy_constructor, say,
+      treat_count, feed>;
    static_assert(wide_t::inline_size > dyn_say::inline_size);
 
    // The consteval-only disposer pointer lives in a union with the inline
    // storage, so it costs zero runtime bytes. Total layout is just:
    // `inline_size` (storage) + `sizeof(vtable)` + `dyn_type_id_ptr` +
    // `void*`.
-   static_assert(sizeof(dyn_say)
-                 == dyn_say::inline_size
-                       + sizeof(cat::vtable<cat::destructor, say>)
-                       + sizeof(cat::dyn_type_id_ptr) + sizeof(void*));
+   static_assert(
+      sizeof(dyn_say)
+      == dyn_say::inline_size + sizeof(cat::vtable<cat::destructor, say>)
+            + sizeof(cat::dyn_type_id_ptr) + sizeof(void*)
+   );
 }
 
 // `dyn_ref<Methods...>` narrows to `dyn_ref<Subset...>` when `Subset` is a
@@ -934,8 +937,10 @@ $test(dyn_narrowing_dispatches_same_fn) {
    cat::dyn_ref<say, treat_count, feed> wide{cat};
    cat::dyn_ref<treat_count> narrowed = wide;
    cat::dyn_ref<treat_count> fresh{cat};
-   cat::verify(cat::dyn_invoke<treat_count>(narrowed)
-               == cat::dyn_invoke<treat_count>(fresh));
+   cat::verify(
+      cat::dyn_invoke<treat_count>(narrowed)
+      == cat::dyn_invoke<treat_count>(fresh)
+   );
 }
 
 // Narrowing rejects subsets that are NOT contiguous (e.g. skipping the
@@ -943,10 +948,14 @@ $test(dyn_narrowing_dispatches_same_fn) {
 $test(dyn_narrowing_requires_contiguous) {
    using wide_t = cat::dyn_ref<say, treat_count, feed>;
    using non_contig_t = cat::dyn_ref<say, feed>;
-   static_assert(!cat::is_constructible<non_contig_t, wide_t>,
-                 "Non-contiguous subset must not be a valid conversion");
-   static_assert(cat::is_constructible<cat::dyn_ref<treat_count, feed>, wide_t>,
-                 "Contiguous suffix must be a valid conversion");
+   static_assert(
+      !cat::is_constructible<non_contig_t, wide_t>,
+      "Non-contiguous subset must not be a valid conversion"
+   );
+   static_assert(
+      cat::is_constructible<cat::dyn_ref<treat_count, feed>, wide_t>,
+      "Contiguous suffix must be a valid conversion"
+   );
 }
 
 // `basic_dyn` and `dyn_inplace` produce wider `dyn_ptr`s via
@@ -1001,9 +1010,11 @@ $test(dyn_destructor_optional_for_trivial_types) {
 
    using basic_no_dtor = cat::dyn<cat::linear_allocator, treat_count>;
    static_assert(
-      cat::is_constructible<basic_no_dtor, cat::linear_allocator&, triv_kitty>);
+      cat::is_constructible<basic_no_dtor, cat::linear_allocator&, triv_kitty>
+   );
    static_assert(
-      !cat::is_constructible<basic_no_dtor, cat::linear_allocator&, kitty>);
+      !cat::is_constructible<basic_no_dtor, cat::linear_allocator&, kitty>
+   );
 
    basic_no_dtor heap_dyn{allocator, triv_kitty{42}};
    cat::verify(cat::dyn_invoke<treat_count>(heap_dyn) == 42);

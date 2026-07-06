@@ -51,26 +51,30 @@ template <is_allocator Allocator>
    requires(detail::inner_has_max_allocation_bytes<Allocator>)
 inline constexpr idx inner_default_node_bytes = Allocator::max_allocation_bytes;
 
-template <is_allocator Allocator, is_allocator Backing,
-          idx node_bytes_param =
-             detail::inner_has_max_allocation_bytes<Allocator>
-                ? Allocator::max_allocation_bytes
-                : idx(0u),
-          idx chunk_bytes_param = idx(64u * 1'024u)>
+template <
+   is_allocator Allocator, is_allocator Backing,
+   idx node_bytes_param = detail::inner_has_max_allocation_bytes<Allocator>
+                             ? Allocator::max_allocation_bytes
+                             : idx(0u),
+   idx chunk_bytes_param = idx(64u * 1'024u)>
 class resizable_allocator
     : public allocator_interface<resizable_allocator<
          Allocator, Backing, node_bytes_param, chunk_bytes_param>> {
-   static_assert(node_bytes_param >= sizeof(void*),
-                 "`resizable_allocator`'s `node_bytes` must be at least "
-                 "`sizeof(void*)` so each freed slot can host a free-list "
-                 "next pointer.");
-   static_assert(chunk_bytes_param >= node_bytes_param,
-                 "`resizable_allocator`'s `chunk_bytes` must be at least "
-                 "`node_bytes`.");
+   static_assert(
+      node_bytes_param >= sizeof(void*),
+      "`resizable_allocator`'s `node_bytes` must be at least "
+      "`sizeof(void*)` so each freed slot can host a free-list "
+      "next pointer."
+   );
+   static_assert(
+      chunk_bytes_param >= node_bytes_param,
+      "`resizable_allocator`'s `chunk_bytes` must be at least "
+      "`node_bytes`."
+   );
 
  private:
-   using self_type = resizable_allocator<Allocator, Backing, node_bytes_param,
-                                         chunk_bytes_param>;
+   using self_type = resizable_allocator<
+      Allocator, Backing, node_bytes_param, chunk_bytes_param>;
 
    friend allocator_interface<self_type>;
    friend struct dyn_allocator_friend;
@@ -120,7 +124,8 @@ class resizable_allocator
 
    resizable_allocator(resizable_allocator const&) = delete (
       "`resizable_allocator` owns chunk and free-list state that must not "
-      "alias. Move the wrapper instead of copying.");
+      "alias. Move the wrapper instead of copying."
+   );
 
    resizable_allocator(resizable_allocator&& other) noexcept
        : m_p_backing(other.m_p_backing),

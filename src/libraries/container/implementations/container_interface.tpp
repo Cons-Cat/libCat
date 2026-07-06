@@ -23,7 +23,8 @@ container_interface<Derived, T>::subspan(idx start_index, idx end_index) &
       return maybe_span<T>(nullopt);
    }
    return maybe_span<T>(
-      span<T>(self.data() + start_index, idx(end_index - start_index)));
+      span<T>(self.data() + start_index, idx(end_index - start_index))
+   );
 }
 
 template <typename Derived, typename T>
@@ -36,7 +37,8 @@ container_interface<Derived, T>::subspan(idx start_index, idx end_index) const&
       return maybe_span<T const>(nullopt);
    }
    return maybe_span<T const>(
-      span<T const>(self.data() + start_index, idx(end_index - start_index)));
+      span<T const>(self.data() + start_index, idx(end_index - start_index))
+   );
 }
 
 template <typename Derived, typename T>

@@ -624,7 +624,8 @@ $test(flux_fold_terminal) {
                     [](int acc, int x) -> int {
                        return acc * x;
                     },
-                    1);
+                    1
+                 );
    cat::verify(product == 210);
 
    // Pipeable form.
@@ -633,7 +634,8 @@ $test(flux_fold_terminal) {
                   [](int acc, int x) -> int {
                      return acc + (x * x);
                   },
-                  0);
+                  0
+               );
    cat::verify(piped == 4 + 9 + 25 + 49);
 }
 
@@ -808,7 +810,8 @@ $test(flux_fluent_terminals) {
       [](int acc, int x) -> int {
          return acc * x;
       },
-      1);
+      1
+   );
    cat::verify(product == 384);  // 2 * 4 * 6 * 8
 }
 
@@ -877,9 +880,7 @@ $test(flux_fluent_through_ref) {
 
    // And the r-value case stays working.
    int sum_inline = noisy_box{
-      tiny_array<int, 4u>{
-                          {},
-                          {1, 1, 1, 1}}
+      tiny_array<int, 4u>{{}, {1, 1, 1, 1}}
    }.sum();
    cat::verify(sum_inline == 4);
 }
@@ -1188,7 +1189,8 @@ $test(flux_pipe_terminal_closures) {
                        [](int acc, int x) -> int {
                           return acc + (x * x);
                        },
-                       0);
+                       0
+                    );
    cat::verify(piped_fold == 4 + 16 + 36 + 64);
 }
 
@@ -1241,7 +1243,8 @@ struct for_each_move_only_callable {
       -> for_each_move_only_callable& = delete;
 
    constexpr for_each_move_only_callable(
-      for_each_move_only_callable&&) noexcept = default;
+      for_each_move_only_callable&&
+   ) noexcept = default;
    constexpr auto
    operator=(for_each_move_only_callable&&) noexcept
       -> for_each_move_only_callable& = default;
@@ -1326,12 +1329,14 @@ $test(flux_iterate_const_collection) {
       {3, 4, 5}
    };
    cat::verify((arr | cat::sum()) == 12);
-   cat::verify((arr
-                | cat::filter([](int x) -> bool {
-                     return x != 4;
-                  })
-                | cat::sum())
-               == 8);
+   cat::verify(
+      (arr
+       | cat::filter([](int x) -> bool {
+            return x != 4;
+         })
+       | cat::sum())
+      == 8
+   );
 }
 
 // Structural checks: iteration contexts are non-copyable and expose
@@ -1339,7 +1344,8 @@ $test(flux_iterate_const_collection) {
 $test(flux_iteration_context_and_element_traits) {
    using arr4 = tiny_array<int, 4u>;
    static_assert(
-      cat::is_iteration_context<cat::collection_iteration_context<arr4>>);
+      cat::is_iteration_context<cat::collection_iteration_context<arr4>>
+   );
    static_assert(cat::is_same<cat::iterable_element_type<arr4>, int&>);
    static_assert(cat::is_same<cat::iterable_value_type<arr4>, int>);
 

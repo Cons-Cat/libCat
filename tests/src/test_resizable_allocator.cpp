@@ -12,22 +12,22 @@
 
 #include "../unit_tests.hpp"
 
-using wrapper_pool_16 =
-   cat::resizable_allocator<cat::pool_allocator<16>, cat::page_allocator,
-                            cat::idx(16u), cat::page_size>;
-using wrapper_linear_32 =
-   cat::resizable_allocator<cat::linear_allocator, cat::page_allocator,
-                            cat::idx(32u), cat::page_size>;
+using wrapper_pool_16 = cat::resizable_allocator<
+   cat::pool_allocator<16>, cat::page_allocator, cat::idx(16u), cat::page_size>;
+using wrapper_linear_32 = cat::resizable_allocator<
+   cat::linear_allocator, cat::page_allocator, cat::idx(32u), cat::page_size>;
 
 // Static re-exports: the wrapper mirrors `Inner`'s alignment so the alignment
 // fast path in `meta_alloc` sees the wrapped allocator's guarantee.
-static_assert(wrapper_pool_16::min_alignment
-              == cat::pool_allocator<16>::min_alignment);
+static_assert(
+   wrapper_pool_16::min_alignment == cat::pool_allocator<16>::min_alignment
+);
 static_assert(wrapper_pool_16::node_bytes == 16u);
 static_assert(wrapper_pool_16::chunk_bytes == cat::page_size);
 
-static_assert(wrapper_linear_32::min_alignment
-              == cat::linear_allocator::min_alignment);
+static_assert(
+   wrapper_linear_32::min_alignment == cat::linear_allocator::min_alignment
+);
 static_assert(wrapper_linear_32::node_bytes == 32u);
 
 // A bare wrapper holds nothing yet: the chunk list and free list are both
@@ -50,8 +50,9 @@ $test(resizable_allocator_starts_empty) {
 // grow into and must report failure rather than dereferencing a null chunk.
 $test(resizable_allocator_allocate_fails_when_backing_exhausted) {
    cat::null_allocator null_backing;
-   cat::resizable_allocator<cat::pool_allocator<16>, cat::null_allocator,
-                            cat::idx(16u), cat::page_size>
+   cat::resizable_allocator<
+      cat::pool_allocator<16>, cat::null_allocator, cat::idx(16u),
+      cat::page_size>
       wrapper{null_backing};
 
    void* p = cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));

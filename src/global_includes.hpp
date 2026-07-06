@@ -95,8 +95,9 @@ struct monotype_storage {
    }
 
    friend constexpr auto
-   operator<=>(monotype_storage<T, constant_state> const& self,
-               auto const& rhs) {
+   operator<=>(
+      monotype_storage<T, constant_state> const& self, auto const& rhs
+   ) {
       return self.m_storage <=> rhs;
    }
 
@@ -122,8 +123,10 @@ template <typename T, auto predicate, auto>
 struct compact;
 
 template <typename T, auto predicate, is_invocable auto get_nullopt>
-   requires(is_predicate<remove_cvref<decltype(predicate)>, T const&>
-            && !predicate(get_nullopt()))
+   requires(
+      is_predicate<remove_cvref<decltype(predicate)>, T const&>
+      && !predicate(get_nullopt())
+   )
 struct compact<T, predicate, get_nullopt> {
    // The engaged value type. `maybe_compact_storage<compact<...>>` exposes
    // this as `value_type` so the surrounding `maybe<T>` machinery can
@@ -153,14 +156,16 @@ struct compact<T, predicate, get_nullopt> {
 };
 
 template <typename T, auto predicate, auto nullopt_value>
-   requires(is_predicate<remove_cvref<decltype(predicate)>, T const&>
-            && !predicate(T{nullopt_value}))
-struct compact<T, predicate, nullopt_value>
-    : compact<T, predicate,
-              // Sentinel accessor:
-              [] constexpr -> T {
-                 return T{nullopt_value};
-              }> {};
+   requires(
+      is_predicate<remove_cvref<decltype(predicate)>, T const&>
+      && !predicate(T{nullopt_value})
+   )
+struct compact<T, predicate, nullopt_value> : compact<
+                                                 T, predicate,
+                                                 // Sentinel accessor:
+                                                 [] constexpr -> T {
+                                                    return T{nullopt_value};
+                                                 }> {};
 
 template <typename T, auto predicate>
 struct compact_scaredy {
@@ -201,14 +206,13 @@ sentinel_predicate_for_callable(T value) -> bool {
 }  // namespace detail
 
 template <is_structural T, auto value>
-using sentinel =
-   compact<T, detail::sentinel_predicate<T, static_cast<T>(value)>,
-           static_cast<T>(value)>;
+using sentinel = compact<
+   T, detail::sentinel_predicate<T, static_cast<T>(value)>,
+   static_cast<T>(value)>;
 
 template <typename T, T (*_Nonnull get_nullopt)()>
-using sentinel_fn =
-   compact<T, &detail::sentinel_predicate_for_callable<T, get_nullopt>,
-           get_nullopt>;
+using sentinel_fn = compact<
+   T, &detail::sentinel_predicate_for_callable<T, get_nullopt>, get_nullopt>;
 
 // `in_place` is consumed by wrapper classes to default-initialize their
 // storage.

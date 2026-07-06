@@ -144,9 +144,9 @@ basic_futex : public futex_word {
    // Otherwise returns `linux_error::again` without sleeping.
    [[nodiscard]]
    auto
-   wait(cat::uint4 expected,
-        futex_timespec const* _Nullable p_timeout = nullptr)
-      -> scaredy_nix<void>;
+   wait(
+      cat::uint4 expected, futex_timespec const* _Nullable p_timeout = nullptr
+   ) -> scaredy_nix<void>;
 
    // Wake at most one waiter. Returns the number of waiting threads woken.
    [[nodiscard]]
@@ -167,9 +167,10 @@ basic_futex : public futex_word {
    // `expected_source_value`. Otherwise, returns `linux_error::again`.
    [[nodiscard]]
    auto
-   compare_requeue(cat::uint4 wake_limit, cat::uint4 requeue_limit,
-                   futex_word& target, cat::uint4 expected_source_value)
-      -> scaredy_nix<cat::idx>;
+   compare_requeue(
+      cat::uint4 wake_limit, cat::uint4 requeue_limit, futex_word& target,
+      cat::uint4 expected_source_value
+   ) -> scaredy_nix<cat::idx>;
 
    // Robust mutex word layout (`futex_waiters_flag`, `futex_owner_died_flag`).
    [[nodiscard]]
@@ -856,38 +857,46 @@ namespace detail {
 consteval auto
 compose_io_request(io_requests a, io_requests b, io_requests c, io_requests d)
    -> io_requests {
-   return io_requests{(cat::to_underlying(a) << 30)
-                      | (cat::to_underlying(b) << 8)
-                      | cat::to_underlying(c)
-                      | (cat::to_underlying(d) << 16)};
+   return io_requests{
+      (cat::to_underlying(a) << 30)
+      | (cat::to_underlying(b) << 8)
+      | cat::to_underlying(c)
+      | (cat::to_underlying(d) << 16)
+   };
 }
 }  // namespace detail
 
 consteval auto
 io_request(io_requests a, io_requests b) -> io_requests {
-   return detail::compose_io_request(io_requests::none, a, b,
-                                     io_requests::none);
+   return detail::compose_io_request(
+      io_requests::none, a, b, io_requests::none
+   );
 }
 
 consteval auto
 io_request_write(io_requests a, io_requests b, io_requests c) -> io_requests {
-   return detail::compose_io_request(io_requests::write, a, b,
-                                     io_requests(sizeof(c)));
+   return detail::compose_io_request(
+      io_requests::write, a, b, io_requests(sizeof(c))
+   );
 }
 
 consteval auto
 io_request_read(io_requests a, io_requests b, io_requests c) -> io_requests {
-   return detail::compose_io_request(io_requests::read, a, b,
-                                     io_requests(sizeof(c)));
+   return detail::compose_io_request(
+      io_requests::read, a, b, io_requests(sizeof(c))
+   );
 }
 
 consteval auto
 io_request_readwrite(io_requests a, io_requests b, io_requests c)
    -> io_requests {
    return detail::compose_io_request(
-      io_requests{cat::to_underlying(io_requests::read)
-                  | cat::to_underlying(io_requests::write)},
-      a, b, io_requests(sizeof(c)));
+      io_requests{
+         cat::to_underlying(io_requests::read)
+         | cat::to_underlying(io_requests::write)
+      },
+      a, b, io_requests(sizeof(c))
+   );
 }
 
 // TODO: Comment wtf these mean.
@@ -1116,8 +1125,10 @@ sys_read(file_descriptor file_descriptor, cat::span<char> buffer)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_read(file_descriptor file_descriptor, char* _Nonnull p_string_buffer,
-         cat::idx length) -> scaredy_nix<cat::iword> {
+sys_read(
+   file_descriptor file_descriptor, char* _Nonnull p_string_buffer,
+   cat::idx length
+) -> scaredy_nix<cat::iword> {
    return sys_read(file_descriptor, cat::span<char>(p_string_buffer, length));
 }
 
@@ -1128,15 +1139,19 @@ sys_write(file_descriptor file_descriptor, cat::str_view string)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_write(file_descriptor file_descriptor, char const* _Nonnull p_string_buffer,
-          cat::idx length) -> scaredy_nix<cat::idx> {
+sys_write(
+   file_descriptor file_descriptor, char const* _Nonnull p_string_buffer,
+   cat::idx length
+) -> scaredy_nix<cat::idx> {
    return sys_write(file_descriptor, cat::str_view(p_string_buffer, length));
 }
 
 // Syscall 2.
 auto
-sys_open(cat::zstr_view file_path, open_mode file_mode,
-         open_flags flags = open_flags(0)) -> scaredy_nix<file_descriptor>;
+sys_open(
+   cat::zstr_view file_path, open_mode file_mode,
+   open_flags flags = open_flags(0)
+) -> scaredy_nix<file_descriptor>;
 
 // Syscall 3.
 auto
@@ -1156,10 +1171,12 @@ struct file_handle {
    unsigned char* _Nullable mustbezero_1;
    char* _Nullable p_write_base;
 
-   cat::uword (*_Nullable read)(file_handle* _Nonnull, char* _Nonnull,
-                                cat::uword);
-   cat::uword (*_Nullable write)(file_handle* _Nonnull, char const* _Nonnull,
-                                 cat::uword);
+   cat::uword (*_Nullable read)(
+      file_handle* _Nonnull, char* _Nonnull, cat::uword
+   );
+   cat::uword (*_Nullable write)(
+      file_handle* _Nonnull, char const* _Nonnull, cat::uword
+   );
    cat::uword (*_Nullable seek)(file_handle* _Nonnull, cat::uword, cat::int4);
    char* _Nullable buf;
 
@@ -1204,31 +1221,39 @@ sys_lstat(cat::str_view file_path, file_status& out) -> scaredy_nix<void>;
 
 // Syscall 8. Returns the resulting absolute offset.
 auto
-sys_lseek(file_descriptor file_descriptor, cat::iword offset,
-          seek_whence whence) -> scaredy_nix<cat::iword>;
+sys_lseek(
+   file_descriptor file_descriptor, cat::iword offset, seek_whence whence
+) -> scaredy_nix<cat::iword>;
 
 // Syscall 9. `p_start_address` is a hint; passing `nullptr` lets the
 // kernel choose the mapping address.
 auto
-sys_mmap(void* _Nullable p_start_address, cat::uword bytes_size,
-         memory_protection_flags protections, memory_flags flags,
-         file_descriptor file_descriptor, cat::uword page_offset)
-   -> scaredy_nix<void* _Nullable>;
+sys_mmap(
+   void* _Nullable p_start_address, cat::uword bytes_size,
+   memory_protection_flags protections, memory_flags flags,
+   file_descriptor file_descriptor, cat::uword page_offset
+) -> scaredy_nix<void* _Nullable>;
 
 // Syscall 10. Change the protection of the page-aligned range
 // [`p_address`, `p_address + length`).
 auto
-sys_mprotect(cat::span<cat::byte const> memory,
-             memory_protection_flags protections) -> scaredy_nix<void>;
+sys_mprotect(
+   cat::span<cat::byte const> memory, memory_protection_flags protections
+) -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_mprotect(void* _Nonnull p_address, cat::uword length,
-             memory_protection_flags protections) -> scaredy_nix<void> {
+sys_mprotect(
+   void* _Nonnull p_address, cat::uword length,
+   memory_protection_flags protections
+) -> scaredy_nix<void> {
    return sys_mprotect(
-      cat::span(__builtin_bit_cast(cat::byte const* _Nonnull, p_address),
-                cat::idx(length)),
-      protections);
+      cat::span(
+         __builtin_bit_cast(cat::byte const* _Nonnull, p_address),
+         cat::idx(length)
+      ),
+      protections
+   );
 }
 
 // Syscall 11.
@@ -1240,8 +1265,11 @@ inline auto
 sys_munmap(void const* _Nonnull p_memory, cat::uword length)
    -> scaredy_nix<void> {
    return sys_munmap(
-      cat::span(__builtin_bit_cast(cat::byte const* _Nonnull, p_memory),
-                cat::idx(length)));
+      cat::span(
+         __builtin_bit_cast(cat::byte const* _Nonnull, p_memory),
+         cat::idx(length)
+      )
+   );
 }
 
 // Syscall 12. `brk(0)` queries the current program break. A non-null
@@ -1280,8 +1308,8 @@ static_assert(sizeof(signal_info) == 128);
 // otherwise the kernel returns to a stale return address after the handler.
 struct sigaction {
    using handler_fn = void (*_Nullable)(cat::int4);
-   using sigaction_fn = void (*_Nullable)(cat::int4, signal_info* _Nonnull,
-                                          void* _Nullable);
+   using sigaction_fn =
+      void (*_Nullable)(cat::int4, signal_info* _Nonnull, void* _Nullable);
 
    union {
       handler_fn handler;
@@ -1309,18 +1337,20 @@ static_assert(sizeof(signal_stack) == 24);
 // Syscall 13. Install a handler for `s`. Pass `nullptr` for `p_act` to query
 // the current handler. Pass `nullptr` for `p_old_act` to discard it.
 auto
-sys_rt_sigaction(signal s, sigaction const* _Nullable __restrict p_act,
-                 sigaction* _Nullable __restrict p_old_act)
-   -> scaredy_nix<void>;
+sys_rt_sigaction(
+   signal s, sigaction const* _Nullable __restrict p_act,
+   sigaction* _Nullable __restrict p_old_act
+) -> scaredy_nix<void>;
 
 // Syscall 14.
 auto
 // Pass `nullptr` for `p_other_set` to query without modifying, or for
 // `p_current_set` to discard the previous mask.
-sys_rt_sigprocmask(signal_action action,
-                   signals_mask_set const* _Nullable __restrict p_other_set,
-                   signals_mask_set* _Nullable __restrict p_current_set)
-   -> scaredy_nix<void>;
+sys_rt_sigprocmask(
+   signal_action action,
+   signals_mask_set const* _Nullable __restrict p_other_set,
+   signals_mask_set* _Nullable __restrict p_current_set
+) -> scaredy_nix<void>;
 
 // Syscall 15 (`rt_sigreturn`) is the kernel-internal signal-handler trampoline
 // and is not callable directly from user code.
@@ -1331,33 +1361,43 @@ sys_ioctl(file_descriptor io_descriptor, io_requests request)
    -> scaredy_nix<void>;
 
 auto
-sys_ioctl(file_descriptor io_descriptor, io_requests request,
-          cat::no_type_ptr p_argument) -> scaredy_nix<void>;
+sys_ioctl(
+   file_descriptor io_descriptor, io_requests request,
+   cat::no_type_ptr p_argument
+) -> scaredy_nix<void>;
 
 // Syscall 17. Read up to `length` bytes from `file_descriptor` at `offset`.
 auto
-sys_pread64(file_descriptor file_descriptor, cat::span<char> buffer,
-            cat::iword offset) -> scaredy_nix<cat::iword>;
+sys_pread64(
+   file_descriptor file_descriptor, cat::span<char> buffer, cat::iword offset
+) -> scaredy_nix<cat::iword>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_pread64(file_descriptor file_descriptor, char* _Nonnull p_buffer,
-            cat::idx length, cat::iword offset) -> scaredy_nix<cat::iword> {
-   return sys_pread64(file_descriptor, cat::span<char>(p_buffer, length),
-                      offset);
+sys_pread64(
+   file_descriptor file_descriptor, char* _Nonnull p_buffer, cat::idx length,
+   cat::iword offset
+) -> scaredy_nix<cat::iword> {
+   return sys_pread64(
+      file_descriptor, cat::span<char>(p_buffer, length), offset
+   );
 }
 
 // Syscall 18.
 auto
-sys_pwrite64(file_descriptor file_descriptor, cat::str_view buffer,
-             cat::iword offset) -> scaredy_nix<cat::idx>;
+sys_pwrite64(
+   file_descriptor file_descriptor, cat::str_view buffer, cat::iword offset
+) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_pwrite64(file_descriptor file_descriptor, char const* _Nonnull p_buffer,
-             cat::idx length, cat::iword offset) -> scaredy_nix<cat::idx> {
-   return sys_pwrite64(file_descriptor, cat::str_view(p_buffer, length),
-                       offset);
+sys_pwrite64(
+   file_descriptor file_descriptor, char const* _Nonnull p_buffer,
+   cat::idx length, cat::iword offset
+) -> scaredy_nix<cat::idx> {
+   return sys_pwrite64(
+      file_descriptor, cat::str_view(p_buffer, length), offset
+   );
 }
 
 struct io_vector : cat::span<cat::byte> {
@@ -1373,9 +1413,12 @@ struct io_vector : cat::span<cat::byte> {
 
    // Construct from any reasonable pointer type.
    constexpr io_vector(cat::byte* _Nonnull p_start, cat::byte* _Nonnull p_end)
-       : cat::span<cat::byte>(p_start,
-                              cat::idx(cat::uintptr<cat::byte>(p_end)
-                                       - cat::uintptr<cat::byte>(p_start))) {
+       : cat::span<cat::byte>(
+            p_start,
+            cat::idx(
+               cat::uintptr<cat::byte>(p_end) - cat::uintptr<cat::byte>(p_start)
+            )
+         ) {
    }
 
    constexpr auto
@@ -1400,10 +1443,13 @@ sys_readv(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_readv(file_descriptor file_descriptor, io_vector* _Nonnull p_vectors,
-          cat::idx vector_count) -> scaredy_nix<cat::iword> {
-   return sys_readv(file_descriptor,
-                    cat::span<io_vector>(p_vectors, vector_count));
+sys_readv(
+   file_descriptor file_descriptor, io_vector* _Nonnull p_vectors,
+   cat::idx vector_count
+) -> scaredy_nix<cat::iword> {
+   return sys_readv(
+      file_descriptor, cat::span<io_vector>(p_vectors, vector_count)
+   );
 }
 
 // Syscall 20.
@@ -1413,10 +1459,13 @@ sys_writev(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_writev(file_descriptor file_descriptor, io_vector* _Nonnull p_vectors,
-           cat::idx vector_count) -> scaredy_nix<cat::idx> {
-   return sys_writev(file_descriptor,
-                     cat::span<io_vector>(p_vectors, vector_count));
+sys_writev(
+   file_descriptor file_descriptor, io_vector* _Nonnull p_vectors,
+   cat::idx vector_count
+) -> scaredy_nix<cat::idx> {
+   return sys_writev(
+      file_descriptor, cat::span<io_vector>(p_vectors, vector_count)
+   );
 }
 
 // Syscall 21. Check accessibility of `file_path` for the calling process's
@@ -1435,8 +1484,10 @@ sys_sched_yield() -> scaredy_nix<void>;
 // Syscall 25. Resize the mapping at `p_old_address` from `old_size` to
 // `new_size`.
 auto
-sys_mremap(void* _Nonnull p_old_address, cat::idx old_size, cat::idx new_size,
-           mremap_flags flags) -> scaredy_nix<void*>;
+sys_mremap(
+   void* _Nonnull p_old_address, cat::idx old_size, cat::idx new_size,
+   mremap_flags flags
+) -> scaredy_nix<void*>;
 
 // Syscall 32. Duplicate a file descriptor onto the lowest available number.
 auto
@@ -1459,56 +1510,66 @@ sys_socket(cat::int8 protocol_family, cat::int8 type, cat::int8 protocol)
 
 // Syscall 42.
 auto
-sys_connect(file_descriptor socket_descriptor, void const* _Nonnull p_socket,
-            cat::iword socket_size) -> scaredy_nix<void>;
+sys_connect(
+   file_descriptor socket_descriptor, void const* _Nonnull p_socket,
+   cat::iword socket_size
+) -> scaredy_nix<void>;
 
 // Syscall 43. Pass `nullptr` for `p_socket` and `p_addr_len` to accept
 // without retrieving the peer address.
 auto
-sys_accept(file_descriptor socket_descriptor,
-           void* _Nullable __restrict p_socket = nullptr,
-           cat::iword const* _Nullable __restrict p_addr_len = nullptr)
-   -> scaredy_nix<file_descriptor>;
+sys_accept(
+   file_descriptor socket_descriptor,
+   void* _Nullable __restrict p_socket = nullptr,
+   cat::iword const* _Nullable __restrict p_addr_len = nullptr
+) -> scaredy_nix<file_descriptor>;
 
 // Syscall 44. Pass `nullptr` for `p_destination_socket` when sending on a
 // connected socket.
 auto
-sys_sendto(file_descriptor socket_descriptor, cat::str_view buffer,
-           message_flags flags = message_flags::none,
-           cat::Socket const* _Nullable p_destination_socket = nullptr,
-           cat::iword addr_length = 0) -> scaredy_nix<cat::iword>;
+sys_sendto(
+   file_descriptor socket_descriptor, cat::str_view buffer,
+   message_flags flags = message_flags::none,
+   cat::Socket const* _Nullable p_destination_socket = nullptr,
+   cat::iword addr_length = 0
+) -> scaredy_nix<cat::iword>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_sendto(file_descriptor socket_descriptor,
-           char const* _Nonnull p_message_buffer, cat::idx buffer_length,
-           message_flags flags = message_flags::none,
-           cat::Socket const* _Nullable p_destination_socket = nullptr,
-           cat::iword addr_length = 0) -> scaredy_nix<cat::iword> {
-   return sys_sendto(socket_descriptor,
-                     cat::str_view(p_message_buffer, buffer_length), flags,
-                     p_destination_socket, addr_length);
+sys_sendto(
+   file_descriptor socket_descriptor, char const* _Nonnull p_message_buffer,
+   cat::idx buffer_length, message_flags flags = message_flags::none,
+   cat::Socket const* _Nullable p_destination_socket = nullptr,
+   cat::iword addr_length = 0
+) -> scaredy_nix<cat::iword> {
+   return sys_sendto(
+      socket_descriptor, cat::str_view(p_message_buffer, buffer_length), flags,
+      p_destination_socket, addr_length
+   );
 }
 
 // Syscall 45. Linux names this `recvfrom`. The libCat name follows the BSD
 // `recv` family for backward source compatibility with earlier libCat code.
 auto
-sys_recv(file_descriptor socket_descriptor, cat::span<char> buffer,
-         cat::Socket const* _Nullable __restrict p_addr = nullptr,
-         cat::iword const* _Nullable __restrict p_addr_length = nullptr)
-   -> scaredy_nix<cat::iword>;
+sys_recv(
+   file_descriptor socket_descriptor, cat::span<char> buffer,
+   cat::Socket const* _Nullable __restrict p_addr = nullptr,
+   cat::iword const* _Nullable __restrict p_addr_length = nullptr
+) -> scaredy_nix<cat::iword>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_recv(file_descriptor socket_descriptor, void* _Nonnull p_message_buffer,
-         cat::idx buffer_length,
-         cat::Socket const* _Nullable __restrict p_addr = nullptr,
-         cat::iword const* _Nullable __restrict p_addr_length = nullptr)
-   -> scaredy_nix<cat::iword> {
+sys_recv(
+   file_descriptor socket_descriptor, void* _Nonnull p_message_buffer,
+   cat::idx buffer_length,
+   cat::Socket const* _Nullable __restrict p_addr = nullptr,
+   cat::iword const* _Nullable __restrict p_addr_length = nullptr
+) -> scaredy_nix<cat::iword> {
    return sys_recv(
       socket_descriptor,
       cat::span<char>(static_cast<char*>(p_message_buffer), buffer_length),
-      p_addr, p_addr_length);
+      p_addr, p_addr_length
+   );
 }
 
 // `msg_header` is the kernel ABI for `sys_sendmsg()` and `sys_recvmsg()`.
@@ -1537,15 +1598,17 @@ static_assert(sizeof(msg_header) == 56);
 
 // Syscall 46. Returns the number of bytes sent.
 auto
-sys_sendmsg(file_descriptor socket_descriptor, msg_header const& message,
-            message_flags flags = message_flags::none)
-   -> scaredy_nix<cat::iword>;
+sys_sendmsg(
+   file_descriptor socket_descriptor, msg_header const& message,
+   message_flags flags = message_flags::none
+) -> scaredy_nix<cat::iword>;
 
 // Syscall 47. Returns the number of bytes received.
 auto
-sys_recvmsg(file_descriptor socket_descriptor, msg_header& message,
-            message_flags flags = message_flags::none)
-   -> scaredy_nix<cat::iword>;
+sys_recvmsg(
+   file_descriptor socket_descriptor, msg_header& message,
+   message_flags flags = message_flags::none
+) -> scaredy_nix<cat::iword>;
 
 // Syscall 48. Tear down half or all of a connected socket.
 auto
@@ -1554,8 +1617,10 @@ sys_shutdown(file_descriptor socket_descriptor, shutdown_how how)
 
 // Syscall 49.
 auto
-sys_bind(file_descriptor socket_descriptor, void const* _Nonnull p_socket,
-         cat::iword p_addr_len) -> scaredy_nix<void>;
+sys_bind(
+   file_descriptor socket_descriptor, void const* _Nonnull p_socket,
+   cat::iword p_addr_len
+) -> scaredy_nix<void>;
 
 // Syscall 50.
 auto
@@ -1566,32 +1631,40 @@ sys_listen(file_descriptor socket_descriptor, cat::int8 backlog)
 // bound to. `inout_addr_length` is in/out. On input it bounds the buffer, on
 // output it holds the actual size.
 auto
-sys_getsockname(file_descriptor socket_descriptor, cat::Socket& out_socket,
-                cat::iword& inout_addr_length) -> scaredy_nix<void>;
+sys_getsockname(
+   file_descriptor socket_descriptor, cat::Socket& out_socket,
+   cat::iword& inout_addr_length
+) -> scaredy_nix<void>;
 
 // Syscall 52. Fill `out_socket` with the address of the connected peer.
 auto
-sys_getpeername(file_descriptor socket_descriptor, cat::Socket& out_socket,
-                cat::iword& inout_addr_length) -> scaredy_nix<void>;
+sys_getpeername(
+   file_descriptor socket_descriptor, cat::Socket& out_socket,
+   cat::iword& inout_addr_length
+) -> scaredy_nix<void>;
 
 // Syscall 53. Create a connected pair of sockets and write the file
 // descriptors into `socket_vector[0]` and `socket_vector[1]`.
 auto
-sys_socketpair(cat::int8 protocol_family, cat::int8 type, cat::int8 protocol,
-               cat::int4 (&socket_vector)[2]) -> scaredy_nix<void>;
+sys_socketpair(
+   cat::int8 protocol_family, cat::int8 type, cat::int8 protocol,
+   cat::int4 (&socket_vector)[2]
+) -> scaredy_nix<void>;
 
 // Syscall 54.
 auto
-sys_setsockopt(file_descriptor socket_descriptor, cat::int4 level,
-               cat::int4 option_name, void const* _Nonnull p_option_value,
-               cat::int4 option_length) -> scaredy_nix<void>;
+sys_setsockopt(
+   file_descriptor socket_descriptor, cat::int4 level, cat::int4 option_name,
+   void const* _Nonnull p_option_value, cat::int4 option_length
+) -> scaredy_nix<void>;
 
 // Syscall 55. `inout_option_length` is in/out. On input it bounds the buffer,
 // on output it holds the actual size written to `p_option_value`.
 auto
-sys_getsockopt(file_descriptor socket_descriptor, cat::int4 level,
-               cat::int4 option_name, void* _Nonnull p_option_value,
-               cat::int4& inout_option_length) -> scaredy_nix<void>;
+sys_getsockopt(
+   file_descriptor socket_descriptor, cat::int4 level, cat::int4 option_name,
+   void* _Nonnull p_option_value, cat::int4& inout_option_length
+) -> scaredy_nix<void>;
 
 // Syscall 56 (`sys_clone()`) is not provided because it is highly sensitive to
 // function inlining. Instead, the `nix::process` abstraction should be used.
@@ -1605,9 +1678,10 @@ sys_exit(cat::int4 status);
 // Syscall 61. Pass `nullptr` for `p_status_output` to discard status, or for
 // `p_resource_usage` to discard resource usage.
 auto
-sys_wait4(process_id waiting_on_id, cat::int4* _Nullable p_status_output,
-          wait_options_flags options, void* _Nullable p_resource_usage)
-   -> scaredy_nix<process_id>;
+sys_wait4(
+   process_id waiting_on_id, cat::int4* _Nullable p_status_output,
+   wait_options_flags options, void* _Nullable p_resource_usage
+) -> scaredy_nix<process_id>;
 
 // Syscall 63.
 auto
@@ -1616,8 +1690,10 @@ sys_uname(utsname& out) -> scaredy_nix<void>;
 // Syscall 72. The third argument is command-specific. Pass `nullptr` when
 // the command does not consume one.
 auto
-sys_fcntl(file_descriptor file_descriptor, fcntl_command command,
-          cat::no_type_ptr p_argument = nullptr) -> scaredy_nix<cat::iword>;
+sys_fcntl(
+   file_descriptor file_descriptor, fcntl_command command,
+   cat::no_type_ptr p_argument = nullptr
+) -> scaredy_nix<cat::iword>;
 
 // Syscall 73.
 auto
@@ -1651,12 +1727,16 @@ sys_getdents(file_descriptor file_descriptor, cat::span<char> buffer)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_getdents(file_descriptor file_descriptor, linux_dirent* _Nonnull p_buffer,
-             cat::uword length) -> scaredy_nix<cat::idx> {
+sys_getdents(
+   file_descriptor file_descriptor, linux_dirent* _Nonnull p_buffer,
+   cat::uword length
+) -> scaredy_nix<cat::idx> {
    return sys_getdents(
       file_descriptor,
-      cat::span<char>(__builtin_bit_cast(char* _Nonnull, p_buffer),
-                      cat::idx(length)));
+      cat::span<char>(
+         __builtin_bit_cast(char* _Nonnull, p_buffer), cat::idx(length)
+      )
+   );
 }
 
 // Syscall 79. Fill `p_buffer` with the calling process's working directory.
@@ -1719,10 +1799,13 @@ sys_readlink(cat::zstr_view file_path, cat::span<char> buffer)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_readlink(cat::zstr_view file_path, char* _Nonnull __restrict p_buffer,
-             cat::uword buffer_length) -> scaredy_nix<cat::idx> {
-   return sys_readlink(file_path,
-                       cat::span<char>(p_buffer, cat::idx(buffer_length)));
+sys_readlink(
+   cat::zstr_view file_path, char* _Nonnull __restrict p_buffer,
+   cat::uword buffer_length
+) -> scaredy_nix<cat::idx> {
+   return sys_readlink(
+      file_path, cat::span<char>(p_buffer, cat::idx(buffer_length))
+   );
 }
 
 // Syscall 90.
@@ -1907,9 +1990,10 @@ sys_rt_sigpending(signals_mask_set& out) -> scaredy_nix<void>;
 // dequeue it and return its `signal_number`. `p_timeout == nullptr` waits
 // indefinitely. `p_info == nullptr` discards the queued payload.
 auto
-sys_rt_sigtimedwait(signals_mask_set const& set, signal_info* _Nullable p_info,
-                    futex_timespec const* _Nullable p_timeout)
-   -> scaredy_nix<signal>;
+sys_rt_sigtimedwait(
+   signals_mask_set const& set, signal_info* _Nullable p_info,
+   futex_timespec const* _Nullable p_timeout
+) -> scaredy_nix<signal>;
 
 // Syscall 129. Send `s` to `pid` along with a queued `info` payload.
 auto
@@ -1924,9 +2008,10 @@ sys_rt_sigsuspend(signals_mask_set const& new_mask) -> scaredy_nix<void>;
 // Syscall 131. Install a new alternate signal stack and/or query the
 // current one. Either pointer may be `nullptr`.
 auto
-sys_sigaltstack(signal_stack const* _Nullable __restrict p_new_stack,
-                signal_stack* _Nullable __restrict p_old_stack)
-   -> scaredy_nix<void>;
+sys_sigaltstack(
+   signal_stack const* _Nullable __restrict p_new_stack,
+   signal_stack* _Nullable __restrict p_old_stack
+) -> scaredy_nix<void>;
 
 // Syscall 132. Update the access and modification times of `p_file_path`.
 // Pass `nullptr` to set both timestamps to the current time.
@@ -1955,8 +2040,11 @@ inline auto
 sys_mlock(void const* _Nonnull p_address, cat::uword length)
    -> scaredy_nix<void> {
    return sys_mlock(
-      cat::span(__builtin_bit_cast(cat::byte const* _Nonnull, p_address),
-                cat::idx(length)));
+      cat::span(
+         __builtin_bit_cast(cat::byte const* _Nonnull, p_address),
+         cat::idx(length)
+      )
+   );
 }
 
 // Syscall 150.
@@ -1968,8 +2056,11 @@ inline auto
 sys_munlock(void const* _Nonnull p_address, cat::uword length)
    -> scaredy_nix<void> {
    return sys_munlock(
-      cat::span(__builtin_bit_cast(cat::byte const* _Nonnull, p_address),
-                cat::idx(length)));
+      cat::span(
+         __builtin_bit_cast(cat::byte const* _Nonnull, p_address),
+         cat::idx(length)
+      )
+   );
 }
 
 // Syscall 151. Lock all pages currently mapped (`mlockall_flags::current`),
@@ -2022,15 +2113,17 @@ struct futex_op;
 auto
 // `p_timeout == nullptr` waits forever. `p_second_futex` is only consulted
 // by ops that touch a second word (`requeue`, `cmp_requeue`, `wake_op`).
-sys_futex(futex_word& futex, futex_op operation, cat::uint4 value,
-          futex_timespec const* _Nullable p_timeout,
-          futex_word* _Nullable p_second_futex, cat::uint4 value3)
-   -> scaredy_nix<cat::idx>;
+sys_futex(
+   futex_word& futex, futex_op operation, cat::uint4 value,
+   futex_timespec const* _Nullable p_timeout,
+   futex_word* _Nullable p_second_futex, cat::uint4 value3
+) -> scaredy_nix<cat::idx>;
 
 auto
-sys_futex(futex_word& futex, futex_op operation, cat::uint4 value,
-          cat::uint4 value2, futex_word* _Nullable p_second_futex,
-          cat::uint4 value3) -> scaredy_nix<cat::idx>;
+sys_futex(
+   futex_word& futex, futex_op operation, cat::uint4 value, cat::uint4 value2,
+   futex_word* _Nullable p_second_futex, cat::uint4 value3
+) -> scaredy_nix<cat::idx>;
 
 // Syscall 203. Pin thread `pid` (or the calling thread when `pid` is
 // `process_id{0}`) to the CPUs whose bits are set in `mask`. The kernel
@@ -2056,13 +2149,16 @@ sys_getdents64(file_descriptor file_descriptor, cat::span<char> buffer)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_getdents64(file_descriptor file_descriptor,
-               linux_dirent64* _Nonnull p_buffer, cat::uword length)
-   -> scaredy_nix<cat::idx> {
+sys_getdents64(
+   file_descriptor file_descriptor, linux_dirent64* _Nonnull p_buffer,
+   cat::uword length
+) -> scaredy_nix<cat::idx> {
    return sys_getdents64(
       file_descriptor,
-      cat::span<char>(__builtin_bit_cast(char* _Nonnull, p_buffer),
-                      cat::idx(length)));
+      cat::span<char>(
+         __builtin_bit_cast(char* _Nonnull, p_buffer), cat::idx(length)
+      )
+   );
 }
 
 // Syscall 218. Stores the current thread id into `tid` and arranges for the
@@ -2089,78 +2185,95 @@ sys_waitid(wait_id type, process_id id, wait_options_flags options)
 // Syscall 257. `dirfd` may be `at_fdcwd` or any other directory descriptor.
 // `mode` is honored only when `flags` includes `open_flags::create`.
 auto
-sys_openat(file_descriptor dirfd, cat::zstr_view file_path, open_mode mode,
-           open_flags flags = open_flags(0),
-           file_permissions permissions = file_permissions::none)
-   -> scaredy_nix<file_descriptor>;
+sys_openat(
+   file_descriptor dirfd, cat::zstr_view file_path, open_mode mode,
+   open_flags flags = open_flags(0),
+   file_permissions permissions = file_permissions::none
+) -> scaredy_nix<file_descriptor>;
 
 // Syscall 258.
 auto
-sys_mkdirat(file_descriptor dirfd, cat::zstr_view file_path,
-            file_permissions mode) -> scaredy_nix<void>;
+sys_mkdirat(
+   file_descriptor dirfd, cat::zstr_view file_path, file_permissions mode
+) -> scaredy_nix<void>;
 
 // Syscall 260. `flags` accepts `atfile_flags::no_follow` and
 // `atfile_flags::empty_path`.
 auto
-sys_fchownat(file_descriptor dirfd, cat::zstr_view file_path, user_id user,
-             group_id group, atfile_flags flags = atfile_flags::none)
-   -> scaredy_nix<void>;
+sys_fchownat(
+   file_descriptor dirfd, cat::zstr_view file_path, user_id user,
+   group_id group, atfile_flags flags = atfile_flags::none
+) -> scaredy_nix<void>;
 
 // Syscall 262. The kernel name is `newfstatat`. Resolves `p_file_path`
 // relative to `dirfd` (or `at_fdcwd`) and fills `out`.
 auto
-sys_newfstatat(file_descriptor dirfd, cat::zstr_view file_path,
-               file_status& out, atfile_flags flags = atfile_flags::none)
-   -> scaredy_nix<void>;
+sys_newfstatat(
+   file_descriptor dirfd, cat::zstr_view file_path, file_status& out,
+   atfile_flags flags = atfile_flags::none
+) -> scaredy_nix<void>;
 
 // Syscall 263. `flags` accepts `atfile_flags::remove_directory` to behave
 // like `sys_rmdir()`.
 auto
-sys_unlinkat(file_descriptor dirfd, cat::zstr_view file_path,
-             atfile_flags flags = atfile_flags::none) -> scaredy_nix<void>;
+sys_unlinkat(
+   file_descriptor dirfd, cat::zstr_view file_path,
+   atfile_flags flags = atfile_flags::none
+) -> scaredy_nix<void>;
 
 // Syscall 264.
 auto
-sys_renameat(file_descriptor old_dirfd, cat::zstr_view old_path,
-             file_descriptor new_dirfd, cat::zstr_view new_path)
-   -> scaredy_nix<void>;
+sys_renameat(
+   file_descriptor old_dirfd, cat::zstr_view old_path,
+   file_descriptor new_dirfd, cat::zstr_view new_path
+) -> scaredy_nix<void>;
 
 // Syscall 265.
 auto
-sys_linkat(file_descriptor old_dirfd, cat::zstr_view existing_path,
-           file_descriptor new_dirfd, cat::zstr_view new_path,
-           atfile_flags flags = atfile_flags::none) -> scaredy_nix<void>;
+sys_linkat(
+   file_descriptor old_dirfd, cat::zstr_view existing_path,
+   file_descriptor new_dirfd, cat::zstr_view new_path,
+   atfile_flags flags = atfile_flags::none
+) -> scaredy_nix<void>;
 
 // Syscall 266.
 auto
-sys_symlinkat(cat::zstr_view target_path, file_descriptor new_dirfd,
-              cat::zstr_view link_path) -> scaredy_nix<void>;
+sys_symlinkat(
+   cat::zstr_view target_path, file_descriptor new_dirfd,
+   cat::zstr_view link_path
+) -> scaredy_nix<void>;
 
 // Syscall 267.
 auto
-sys_readlinkat(file_descriptor dirfd, cat::zstr_view file_path,
-               cat::span<char> buffer) -> scaredy_nix<cat::idx>;
+sys_readlinkat(
+   file_descriptor dirfd, cat::zstr_view file_path, cat::span<char> buffer
+) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_readlinkat(file_descriptor dirfd, cat::zstr_view file_path,
-               char* _Nonnull __restrict p_buffer, cat::uword buffer_length)
-   -> scaredy_nix<cat::idx> {
-   return sys_readlinkat(dirfd, file_path,
-                         cat::span<char>(p_buffer, cat::idx(buffer_length)));
+sys_readlinkat(
+   file_descriptor dirfd, cat::zstr_view file_path,
+   char* _Nonnull __restrict p_buffer, cat::uword buffer_length
+) -> scaredy_nix<cat::idx> {
+   return sys_readlinkat(
+      dirfd, file_path, cat::span<char>(p_buffer, cat::idx(buffer_length))
+   );
 }
 
 // Syscall 268.
 auto
-sys_fchmodat(file_descriptor dirfd, cat::zstr_view file_path,
-             file_permissions mode, atfile_flags flags = atfile_flags::none)
-   -> scaredy_nix<void>;
+sys_fchmodat(
+   file_descriptor dirfd, cat::zstr_view file_path, file_permissions mode,
+   atfile_flags flags = atfile_flags::none
+) -> scaredy_nix<void>;
 
 // Syscall 269. `flags` accepts `atfile_flags::eaccess` (effective uid/gid
 // instead of real) and `atfile_flags::no_follow`.
 auto
-sys_faccessat(file_descriptor dirfd, cat::zstr_view file_path, access_mode mode,
-              atfile_flags flags = atfile_flags::none) -> scaredy_nix<void>;
+sys_faccessat(
+   file_descriptor dirfd, cat::zstr_view file_path, access_mode mode,
+   atfile_flags flags = atfile_flags::none
+) -> scaredy_nix<void>;
 
 // Syscall 273.
 auto
@@ -2170,31 +2283,38 @@ sys_set_robust_list(robust_list_head& head, cat::uword length_bytes)
 // Syscall 274. The output slots are required. The returned robust-list head
 // pointer itself may be `nullptr` when the target has no robust list.
 auto
-sys_get_robust_list(process_id target, robust_list_head* _Nullable& out_head,
-                    cat::idx& out_length_bytes) -> scaredy_nix<void>;
+sys_get_robust_list(
+   process_id target, robust_list_head* _Nullable& out_head,
+   cat::idx& out_length_bytes
+) -> scaredy_nix<void>;
 
 // Syscall 280. Update access and modification times. `p_times` is a 2-element
 // array (`{access, modification}`) or `nullptr` to set both to the current
 // time. `p_file_path` may be `nullptr` if `dirfd` itself is the target.
 auto
-sys_utimensat(file_descriptor dirfd, cat::zstr_view file_path = {},
-              futex_timespec const (*_Nullable p_times)[2] = nullptr,
-              atfile_flags flags = atfile_flags::none) -> scaredy_nix<void>;
+sys_utimensat(
+   file_descriptor dirfd, cat::zstr_view file_path = {},
+   futex_timespec const (*_Nullable p_times)[2] = nullptr,
+   atfile_flags flags = atfile_flags::none
+) -> scaredy_nix<void>;
 
 // Syscall 285. Manipulate the on-disk allocation of `file_descriptor` over
 // the byte range [`offset`, `offset + length`).
 auto
-sys_fallocate(file_descriptor file_descriptor, fallocate_flags mode,
-              cat::iword offset, cat::iword length) -> scaredy_nix<void>;
+sys_fallocate(
+   file_descriptor file_descriptor, fallocate_flags mode, cat::iword offset,
+   cat::iword length
+) -> scaredy_nix<void>;
 
 // Syscall 288. `sys_accept()` plus `accept4_flags::nonblocking` /
 // `accept4_flags::close_exec`. Pass `nullptr` for `p_socket` and
 // `p_addr_len` to accept without retrieving the peer address.
 auto
-sys_accept4(file_descriptor socket_descriptor,
-            cat::Socket* _Nullable __restrict p_socket,
-            cat::iword* _Nullable __restrict p_addr_len, accept4_flags flags)
-   -> scaredy_nix<file_descriptor>;
+sys_accept4(
+   file_descriptor socket_descriptor,
+   cat::Socket* _Nullable __restrict p_socket,
+   cat::iword* _Nullable __restrict p_addr_len, accept4_flags flags
+) -> scaredy_nix<file_descriptor>;
 
 // Syscall 292. `sys_dup2()` plus `dup3_flags::close_exec`.
 auto
@@ -2207,30 +2327,35 @@ auto sys_pipe2(cat::int4 (&pipefd)[2], pipe2_flags flags) -> scaredy_nix<void>;
 // Syscall 297. Send `s` to thread `tid` inside thread group `tgid` along
 // with a queued `info` payload.
 auto
-sys_rt_tgsigqueueinfo(process_id tgid, process_id tid, signal s,
-                      signal_info const& info) -> scaredy_nix<void>;
+sys_rt_tgsigqueueinfo(
+   process_id tgid, process_id tid, signal s, signal_info const& info
+) -> scaredy_nix<void>;
 
 // Syscall 316. `sys_renameat()` plus `renameat2_flags`.
 auto
-sys_renameat2(file_descriptor old_dirfd, cat::zstr_view old_path,
-              file_descriptor new_dirfd, cat::zstr_view new_path,
-              renameat2_flags flags) -> scaredy_nix<void>;
+sys_renameat2(
+   file_descriptor old_dirfd, cat::zstr_view old_path,
+   file_descriptor new_dirfd, cat::zstr_view new_path, renameat2_flags flags
+) -> scaredy_nix<void>;
 
 // Syscall 318. Fill `length` bytes of `p_buffer` with kernel-supplied
 // randomness. Returns the number of bytes actually written.
 auto
-sys_getrandom(cat::span<unsigned char> buffer,
-              getrandom_flags flags = getrandom_flags::none)
-   -> scaredy_nix<cat::iword>;
+sys_getrandom(
+   cat::span<unsigned char> buffer,
+   getrandom_flags flags = getrandom_flags::none
+) -> scaredy_nix<cat::iword>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_getrandom(void* _Nonnull p_buffer, cat::idx length,
-              getrandom_flags flags = getrandom_flags::none)
-   -> scaredy_nix<cat::iword> {
+sys_getrandom(
+   void* _Nonnull p_buffer, cat::idx length,
+   getrandom_flags flags = getrandom_flags::none
+) -> scaredy_nix<cat::iword> {
    return sys_getrandom(
       cat::span<unsigned char>(static_cast<unsigned char*>(p_buffer), length),
-      flags);
+      flags
+   );
 }
 
 // Syscall 325. `sys_mlock()` plus `mlock2_flags::on_fault`.
@@ -2240,20 +2365,26 @@ sys_mlock2(cat::span<cat::byte const> memory, mlock2_flags flags)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_mlock2(void const* _Nonnull p_address, cat::uword length,
-           mlock2_flags flags) -> scaredy_nix<void> {
+sys_mlock2(
+   void const* _Nonnull p_address, cat::uword length, mlock2_flags flags
+) -> scaredy_nix<void> {
    return sys_mlock2(
-      cat::span(__builtin_bit_cast(cat::byte const* _Nonnull, p_address),
-                cat::idx(length)),
-      flags);
+      cat::span(
+         __builtin_bit_cast(cat::byte const* _Nonnull, p_address),
+         cat::idx(length)
+      ),
+      flags
+   );
 }
 
 // Syscall 332. Extended `stat`. `mask` selects which fields the kernel must
 // fill in `out`. `flags` may include `atfile_flags::no_follow` and the
 // statx-only sync controls.
 auto
-sys_statx(file_descriptor dirfd, cat::zstr_view file_path, atfile_flags flags,
-          statx_mask mask, statx_data& out) -> scaredy_nix<void>;
+sys_statx(
+   file_descriptor dirfd, cat::zstr_view file_path, atfile_flags flags,
+   statx_mask mask, statx_data& out
+) -> scaredy_nix<void>;
 
 // `io_sqring_offsets` is the kernel ABI for the submission-queue offsets
 // that `sys_io_uring_setup()` fills into `io_uring_params::sq_off`.
@@ -2327,19 +2458,21 @@ sys_io_uring_setup(cat::uint4 entries, io_uring_params& params)
 // bytes. Otherwise `p_extended_argument` is interpreted as a `sigset_t`.
 // Passing `nullptr` means no extended argument or signal mask is supplied.
 auto
-sys_io_uring_enter(file_descriptor ring, cat::uint4 to_submit,
-                   cat::uint4 min_complete, io_uring_enter_flags flags,
-                   void const* _Nullable p_extended_argument = nullptr,
-                   cat::uword extended_argument_size = 0u)
-   -> scaredy_nix<cat::idx>;
+sys_io_uring_enter(
+   file_descriptor ring, cat::uint4 to_submit, cat::uint4 min_complete,
+   io_uring_enter_flags flags,
+   void const* _Nullable p_extended_argument = nullptr,
+   cat::uword extended_argument_size = 0u
+) -> scaredy_nix<cat::idx>;
 
 // Syscall 427 (Linux 5.1). Register or unregister resources with `ring`.
 // `op` selects the operation. `p_arg` and `nr_args` are op-specific. Some
 // operations ignore `p_arg`, so `nullptr` is forwarded unchanged.
 auto
-sys_io_uring_register(file_descriptor ring, io_uring_register_op op,
-                      void* _Nullable p_arg, cat::uint4 nr_args)
-   -> scaredy_nix<cat::idx>;
+sys_io_uring_register(
+   file_descriptor ring, io_uring_register_op op, void* _Nullable p_arg,
+   cat::uint4 nr_args
+) -> scaredy_nix<cat::idx>;
 
 // Runtime probe for the whole io_uring family (setup / enter / register).
 // The kernel enables and disables them as a unit, so one query suffices.
@@ -2352,15 +2485,16 @@ has_sys_io_uring() -> bool {
 // Syscall 437. Extended `openat`. The kernel ABI takes a `sizeof(open_how)`
 // argument so it can be extended with new fields on a kernel-version basis.
 auto
-sys_openat2(file_descriptor dirfd, cat::zstr_view file_path,
-            open_how const& how) -> scaredy_nix<file_descriptor>;
+sys_openat2(
+   file_descriptor dirfd, cat::zstr_view file_path, open_how const& how
+) -> scaredy_nix<file_descriptor>;
 
 // Syscall 449.
 auto
-sys_futex_waitv(cat::span<futex_waitv const> waiters,
-                futex_waitv_call_flags call_flags,
-                futex_timespec const* _Nullable p_timeout, cat::int4 clock_id)
-   -> scaredy_nix<cat::iword>;
+sys_futex_waitv(
+   cat::span<futex_waitv const> waiters, futex_waitv_call_flags call_flags,
+   futex_timespec const* _Nullable p_timeout, cat::int4 clock_id
+) -> scaredy_nix<cat::iword>;
 
 // `cachestat_range` describes the [`offset`, `offset + length`) byte range
 // queried by `sys_cachestat()`.
@@ -2381,8 +2515,10 @@ struct cachestat_stats {
 
 // Syscall 451 (Linux 6.5).
 auto
-sys_cachestat(file_descriptor file_descriptor, cachestat_range const& range,
-              cachestat_stats& out, cat::uint4 flags = 0) -> scaredy_nix<void>;
+sys_cachestat(
+   file_descriptor file_descriptor, cachestat_range const& range,
+   cachestat_stats& out, cat::uint4 flags = 0
+) -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -2392,8 +2528,9 @@ has_sys_cachestat() -> bool {
 
 // Syscall 452 (Linux 6.6).
 auto
-sys_fchmodat2(file_descriptor dirfd, cat::zstr_view path, cat::uint4 mode,
-              cat::int4 flags) -> scaredy_nix<void>;
+sys_fchmodat2(
+   file_descriptor dirfd, cat::zstr_view path, cat::uint4 mode, cat::int4 flags
+) -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -2415,8 +2552,9 @@ has_sys_map_shadow_stack() -> bool {
 // Syscall 454 (Linux 6.7). Wakes up to `nr` waiters parked on `uaddr` whose
 // bitset intersects `mask`. Returns the number of waiters woken.
 auto
-sys_futex_wake(futex_word& uaddr, cat::uword mask, cat::int4 nr,
-               cat::uint4 flags) -> scaredy_nix<cat::idx>;
+sys_futex_wake(
+   futex_word& uaddr, cat::uword mask, cat::int4 nr, cat::uint4 flags
+) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -2427,9 +2565,10 @@ has_sys_futex_wake() -> bool {
 // Syscall 455 (Linux 6.7). Park on `uaddr` while it equals `value` and the
 // caller's bitset intersects `mask`. `p_timeout == nullptr` waits forever.
 auto
-sys_futex_wait(futex_word& uaddr, cat::uword value, cat::uword mask,
-               cat::uint4 flags, futex_timespec const* _Nullable p_timeout,
-               cat::int4 clock_id) -> scaredy_nix<void>;
+sys_futex_wait(
+   futex_word& uaddr, cat::uword value, cat::uword mask, cat::uint4 flags,
+   futex_timespec const* _Nullable p_timeout, cat::int4 clock_id
+) -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -2441,9 +2580,10 @@ has_sys_futex_wait() -> bool {
 // waitv-described futex and requeue up to `nr_requeue` of the remaining
 // waiters onto the second.
 auto
-sys_futex_requeue(cat::span<futex_waitv const> waiters, cat::uint4 flags,
-                  cat::int4 nr_wake, cat::int4 nr_requeue)
-   -> scaredy_nix<cat::idx>;
+sys_futex_requeue(
+   cat::span<futex_waitv const> waiters, cat::uint4 flags, cat::int4 nr_wake,
+   cat::int4 nr_requeue
+) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -2463,9 +2603,11 @@ inline auto
 sys_mseal(void* _Nonnull p_address, cat::uword length, cat::uword flags = 0u)
    -> scaredy_nix<void> {
    return sys_mseal(
-      cat::span(__builtin_bit_cast(cat::byte* _Nonnull, p_address),
-                cat::idx(length)),
-      flags);
+      cat::span(
+         __builtin_bit_cast(cat::byte* _Nonnull, p_address), cat::idx(length)
+      ),
+      flags
+   );
 }
 
 [[nodiscard, gnu::always_inline]]
@@ -2475,8 +2617,10 @@ has_sys_mseal() -> bool {
 }
 
 auto
-wait_pid(process_id pid, file_status* _Nonnull p_file_status,
-         wait_options_flags options) -> scaredy_nix<process_id>;
+wait_pid(
+   process_id pid, file_status* _Nonnull p_file_status,
+   wait_options_flags options
+) -> scaredy_nix<process_id>;
 
 // Create and return a `cat::SocketLocal` (also known as Unix socket).
 auto
@@ -2531,8 +2675,10 @@ enum class tty_set_mode : unsigned short {
 };
 
 auto
-tty_set_attributes(file_descriptor tty, tty_set_mode tty_mode,
-                   tty_io_serial const& configuration) -> scaredy_nix<void>;
+tty_set_attributes(
+   file_descriptor tty, tty_set_mode tty_mode,
+   tty_io_serial const& configuration
+) -> scaredy_nix<void>;
 
 auto
 read_char() -> scaredy_nix<char>;
@@ -2636,7 +2782,8 @@ struct process {
       | clone_flags::parent_set_tid
       | clone_flags::child_clear_tid
       | static_cast<clone_flags>(static_cast<unsigned int>(
-         static_cast<unsigned char>(signal::child_stopped)));
+         static_cast<unsigned char>(signal::child_stopped)
+      ));
 
    process() = default;
    // TODO: Add a move constructor and move assignment operator.
@@ -2655,14 +2802,17 @@ struct process {
 
    constexpr void
    add_clone_flag(clone_flags extra) {
-      m_flags = static_cast<clone_flags>(cat::to_underlying(m_flags)
-                                         | cat::to_underlying(extra));
+      m_flags = static_cast<clone_flags>(
+         cat::to_underlying(m_flags) | cat::to_underlying(extra)
+      );
    }
 
    template <typename... Args, cat::is_invocable<Args...> Callback>
    auto
-   spawn(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
-         Callback&& callback, Args&&... arguments) -> scaredy_nix<void>;
+   spawn(
+      cat::is_allocator auto& allocator, cat::idx initial_stack_size,
+      Callback&& callback, Args&&... arguments
+   ) -> scaredy_nix<void>;
 
    [[nodiscard]]
    auto
@@ -2670,9 +2820,10 @@ struct process {
 
  private:
    auto
-   spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
-              void* _Nonnull p_function, void* _Nonnull p_args_struct)
-      -> scaredy_nix<void>;
+   spawn_impl(
+      cat::uintptr<void> stack, cat::idx initial_stack_size,
+      void* _Nonnull p_function, void* _Nonnull p_args_struct
+   ) -> scaredy_nix<void>;
 
    process_id m_id{0};
    // `clone_flags::child_clear_tid` must not use `m_id` as the clear-tid word.
@@ -2714,7 +2865,8 @@ clone_thread_local_buffer_min_bytes() -> cat::idx;
 
 void
 install_executable_tls_image_at_thread_pointer(
-   cat::uintptr<void> p_process_address);
+   cat::uintptr<void> p_process_address
+);
 
 void
 init_parent_process_tls();

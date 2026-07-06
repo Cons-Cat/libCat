@@ -264,8 +264,10 @@ extern "C"
    [[gnu::visibility("hidden")]]
 #endif
    constinit inline cat::array<cat::bitset<32>, 3>
-      __cpu_features2(cat::bitset<32>{}, enable_baseline_feature(),  // NOLINT
-                      cat::bitset<32>{});
+      __cpu_features2(
+         cat::bitset<32>{}, enable_baseline_feature(),  // NOLINT
+         cat::bitset<32>{}
+      );
 
 }  // namespace detail
 }  // namespace x64
@@ -308,8 +310,10 @@ extern "C"
 namespace x64::detail {
 
 inline void
-set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
-                 cat::array<cat::bitset<32>, 4> const& feature_flags) {
+set_vendor_model(
+   cat::uint4 vendor_family_model, cat::uint4 vendor1,
+   cat::array<cat::bitset<32>, 4> const& feature_flags
+) {
    // Extract bits 4 through 7.
    cat::uint4 cpu_model = (vendor_family_model >> 4u) & 0xfu;
    // Extract bits 8 through 11.
@@ -652,8 +656,9 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam15_h_bdver4;
             } else if (cpu_model >= 0x30u && cpu_model <= 0x3fu) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam15_h_bdver3;
-            } else if ((cpu_model >= 0x10u && cpu_model <= 0x1fu)
-                       || cpu_model == 0x02u) {
+            } else if (
+               (cpu_model >= 0x10u && cpu_model <= 0x1fu) || cpu_model == 0x02u
+            ) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam15_h_bdver2;
             } else if (cpu_model <= 0x0fu) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam15_h_bdver1;
@@ -664,43 +669,55 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1,
             break;
          case 0x17:
             __cpu_model.m_cpu_type = cpu_type::amdfam17_h;
-            if ((cpu_model >= 0x30u && cpu_model <= 0x3fu) || cpu_model == 0x47u
-                || (cpu_model >= 0x60u && cpu_model <= 0x67u)
-                || (cpu_model >= 0x68u && cpu_model <= 0x6fu)
-                || (cpu_model >= 0x70u && cpu_model <= 0x7fu)
-                || (cpu_model >= 0x84u && cpu_model <= 0x87u)
-                || (cpu_model >= 0x90u && cpu_model <= 0x97u)
-                || (cpu_model >= 0x98u && cpu_model <= 0x9fu)
-                || (cpu_model >= 0xa0u && cpu_model <= 0xafu)) {
+            if (
+               (cpu_model >= 0x30u && cpu_model <= 0x3fu) || cpu_model == 0x47u
+               || (cpu_model >= 0x60u && cpu_model <= 0x67u)
+               || (cpu_model >= 0x68u && cpu_model <= 0x6fu)
+               || (cpu_model >= 0x70u && cpu_model <= 0x7fu)
+               || (cpu_model >= 0x84u && cpu_model <= 0x87u)
+               || (cpu_model >= 0x90u && cpu_model <= 0x97u)
+               || (cpu_model >= 0x98u && cpu_model <= 0x9fu)
+               || (cpu_model >= 0xa0u && cpu_model <= 0xafu)
+            ) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam17_h_znver2;
-            } else if ((cpu_model >= 0x10u && cpu_model <= 0x1fu)
-                       || (cpu_model >= 0x20u && cpu_model <= 0x2fu)) {
+            } else if (
+               (cpu_model >= 0x10u && cpu_model <= 0x1fu)
+               || (cpu_model >= 0x20u && cpu_model <= 0x2fu)
+            ) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam17_h_znver1;
             }
             break;
          case 0x19:
             __cpu_model.m_cpu_type = cpu_type::amdfam19_h;
-            if (cpu_model <= 0x0fu || (cpu_model >= 0x20u && cpu_model <= 0x2fu)
-                || (cpu_model >= 0x30u && cpu_model <= 0x3fu)
-                || (cpu_model >= 0x40u && cpu_model <= 0x4fu)
-                || (cpu_model >= 0x50u && cpu_model <= 0x5fu)) {
+            if (
+               cpu_model <= 0x0fu || (cpu_model >= 0x20u && cpu_model <= 0x2fu)
+               || (cpu_model >= 0x30u && cpu_model <= 0x3fu)
+               || (cpu_model >= 0x40u && cpu_model <= 0x4fu)
+               || (cpu_model >= 0x50u && cpu_model <= 0x5fu)
+            ) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam19_h_znver3;
-            } else if ((cpu_model >= 0x10u && cpu_model <= 0x1fu)
-                       || (cpu_model >= 0x60u && cpu_model <= 0x6fu)
-                       || (cpu_model >= 0x70u && cpu_model <= 0x77u)
-                       || (cpu_model >= 0x78u && cpu_model <= 0x7fu)
-                       || (cpu_model >= 0xa0u && cpu_model <= 0xafu)) {
+            } else if (
+               (cpu_model >= 0x10u && cpu_model <= 0x1fu)
+               || (cpu_model >= 0x60u && cpu_model <= 0x6fu)
+               || (cpu_model >= 0x70u && cpu_model <= 0x77u)
+               || (cpu_model >= 0x78u && cpu_model <= 0x7fu)
+               || (cpu_model >= 0xa0u && cpu_model <= 0xafu)
+            ) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam19_h_znver4;
             }
             break;
          case 0x1a:
             __cpu_model.m_cpu_type = cpu_type::amdfam1_ah;
-            if (cpu_model <= 0x4fu || (cpu_model >= 0x60u && cpu_model <= 0x77u)
-                || (cpu_model >= 0xd0u && cpu_model <= 0xd7u)) {
+            if (
+               cpu_model <= 0x4fu || (cpu_model >= 0x60u && cpu_model <= 0x77u)
+               || (cpu_model >= 0xd0u && cpu_model <= 0xd7u)
+            ) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam1_ah_znver5;
-            } else if ((cpu_model >= 0x50u && cpu_model <= 0x5fu)
-                       || (cpu_model >= 0x80u && cpu_model <= 0xcfu)
-                       || (cpu_model >= 0xd8u && cpu_model <= 0xe7u)) {
+            } else if (
+               (cpu_model >= 0x50u && cpu_model <= 0x5fu)
+               || (cpu_model >= 0x80u && cpu_model <= 0xcfu)
+               || (cpu_model >= 0xd8u && cpu_model <= 0xe7u)
+            ) {
                __cpu_model.m_cpu_subtype = cpu_subtype::amdfam1_ah_znver6;
             }
             break;
@@ -964,15 +981,21 @@ extern "C"
    // initializer of slot 1.
    if (has_feature(lm) && has_feature(sse2)) {
       enable_feature(x86_64_baseline);
-      if (has_feature(lahf_lm) && has_feature(cmpxchg16_b)
-          && has_feature(popcnt) && has_feature(sse4_2)) {
+      if (
+         has_feature(lahf_lm) && has_feature(cmpxchg16_b) && has_feature(popcnt)
+         && has_feature(sse4_2)
+      ) {
          enable_feature(x86_64_v2);
-         if (has_feature(avx2) && has_feature(bmi) && has_feature(bmi2)
-             && has_feature(fma) && has_feature(f16_c) && has_feature(lzcnt)
-             && has_feature(movbe)) {
+         if (
+            has_feature(avx2) && has_feature(bmi) && has_feature(bmi2)
+            && has_feature(fma) && has_feature(f16_c) && has_feature(lzcnt)
+            && has_feature(movbe)
+         ) {
             enable_feature(x86_64_v3);
-            if (has_feature(avx512_bw) && has_feature(avx512_cd)
-                && has_feature(avx512_dq) && has_feature(avx512_vl)) {
+            if (
+               has_feature(avx512_bw) && has_feature(avx512_cd)
+               && has_feature(avx512_dq) && has_feature(avx512_vl)
+            ) {
                enable_feature(x86_64_v4);
             }
          }
@@ -1003,8 +1026,10 @@ extern "C"
    if (has_feature(avx2)) {
       priority = 80;
    }
-   if (has_feature(avx512_f) && has_feature(avx512_cd) && has_feature(avx512_bw)
-       && has_feature(avx512_dq) && has_feature(avx512_vl)) {
+   if (
+      has_feature(avx512_f) && has_feature(avx512_cd) && has_feature(avx512_bw)
+      && has_feature(avx512_dq) && has_feature(avx512_vl)
+   ) {
       priority = 90;
    }
    cat::detail::simd_dispatch_priority = priority;

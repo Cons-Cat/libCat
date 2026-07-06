@@ -32,7 +32,8 @@ span<T, fixed_extent>::operator<=>(R const& rhs) const {
 
    using element_type = remove_cv<T>;
    using category_type = decltype(synth_three_way(
-      declval<element_type const&>(), declval<element_type const&>()));
+      declval<element_type const&>(), declval<element_type const&>()
+   ));
 
    idx i = 0u;
    idx const lhs_size = this->size();
@@ -53,7 +54,8 @@ span<T, fixed_extent>::operator<=>(R const& rhs) const {
       if constexpr (is_trivially_lexicographically_comparable<remove_cv<T>>) {
          if (shared_size > 0u) {
             signed int const comparison = __builtin_memcmp(
-               this->data(), rhs.data(), (shared_size * sizeof(T)).raw);
+               this->data(), rhs.data(), (shared_size * sizeof(T)).raw
+            );
             if (comparison < 0) {
                return category_type(std::strong_ordering::less);
             }
@@ -93,8 +95,10 @@ span<T, fixed_extent>::operator<=>(R const& rhs) const {
 
 template <typename T, idx fixed_extent>
 template <is_random_access R>
-   requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
-            && is_equality_comparable<remove_cv<T>>)
+   requires(
+      is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+      && is_equality_comparable<remove_cv<T>>
+   )
 constexpr auto
 span<T, fixed_extent>::operator==(R const& rhs) const -> bool {
    idx const lhs_size = this->size();
@@ -113,8 +117,9 @@ span<T, fixed_extent>::operator==(R const& rhs) const -> bool {
 
    if !consteval {
       if constexpr (is_trivially_equality_comparable<remove_cv<T>>) {
-         return __builtin_memcmp(this->data(), rhs.data(),
-                                 (lhs_size * sizeof(T)).raw)
+         return __builtin_memcmp(
+                   this->data(), rhs.data(), (lhs_size * sizeof(T)).raw
+                )
                 == 0;
       }
    }

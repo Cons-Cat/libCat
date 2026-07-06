@@ -15,14 +15,16 @@ template <mem T>
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::get(
-   T& handle [[clang::lifetimebound]]) & -> decltype(auto) {
+   T& handle [[clang::lifetimebound]]
+) & -> decltype(auto) {
    using allocation_type = T::allocation_type;
    if constexpr (T::is_inline_handle) {
       // Get small-size optimized data:
       if (handle.is_inline()) {
          if constexpr (T::is_multi_handle) {
             return span<allocation_type>{
-               __builtin_addressof(handle.get_inline()), handle.size()};
+               __builtin_addressof(handle.get_inline()), handle.size()
+            };
          } else {
             return handle.get_inline();
          }
@@ -33,7 +35,8 @@ allocator_interface<Derived>::get(
    if constexpr (T::is_multi_handle) {
       return span<allocation_type>(
          this->self().template access<allocation_type>(handle.get()),
-         handle.size());
+         handle.size()
+      );
    } else {
       return *(this->self().template access<allocation_type>(handle.get()));
    }
@@ -46,7 +49,8 @@ template <mem T>
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::get(
-   T const& memory [[clang::lifetimebound]]) & -> decltype(auto) {
+   T const& memory [[clang::lifetimebound]]
+) & -> decltype(auto) {
    return unconst(this)->get(unconst(memory));
 }
 

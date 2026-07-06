@@ -80,9 +80,9 @@ span
    // Construct a span from a static `initializer_list`.
    template <typename InitListValueType>
       requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
-   constexpr span(initializer_list<InitListValueType> initializers
-                  [[clang::lifetimebound]]
-                  )
+   constexpr span(
+      initializer_list<InitListValueType> initializers [[clang::lifetimebound]]
+   )
        : m_p_data(initializers.begin()), m_size(initializers.size()) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(initializers.size() == fixed_extent);
@@ -99,8 +99,8 @@ span
    // is managed by the deduction guides below.
    template <is_random_access U>
    constexpr span(U& container [[clang::lifetimebound]])
-      requires(is_convertible<typename U::value_type (* _Nonnull)[],
-                              T (* _Nonnull)[]>)
+      requires(is_convertible<
+                 typename U::value_type (* _Nonnull)[], T (* _Nonnull)[]>)
        : m_p_data(container.data()), m_size(container.size()) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(container.size() == fixed_extent);
@@ -126,8 +126,10 @@ span
    operator=(span<T, fixed_extent>&&) -> span<T, fixed_extent>& = default;
 
    template <is_random_access R>
-      requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
-               && is_equality_comparable<remove_cv<T>>)
+      requires(
+         is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+         && is_equality_comparable<remove_cv<T>>
+      )
    [[nodiscard]]
    constexpr auto
    operator==(R const& rhs) const -> bool;
@@ -161,8 +163,9 @@ span
    template <is_random_access U>
    auto
    operator=(U& container [[clang::lifetimebound]]) -> span<T, fixed_extent>&
-      requires(is_convertible<typename U::value_type (* _Nonnull)[],
-                              T (* _Nonnull)[]>)
+      requires(
+         is_convertible<typename U::value_type (* _Nonnull)[], T (* _Nonnull)[]>
+      )
    {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(container.size() == fixed_extent);
@@ -334,10 +337,10 @@ span
    // overload. `count` is a count of elements. When `count` is omitted on a
    // fixed-extent span the result extent is `fixed_extent - offset`.
    template <idx offset, idx count = dynamic_extent>
-      requires(fixed_extent == dynamic_extent
-               || (offset <= fixed_extent
-                   && (count == dynamic_extent
-                       || count <= fixed_extent - offset)))
+      requires(
+         fixed_extent == dynamic_extent
+         || (offset <= fixed_extent && (count == dynamic_extent || count <= fixed_extent - offset))
+      )
    [[nodiscard]]
    constexpr auto
    subspan() {
@@ -354,10 +357,10 @@ span
    }
 
    template <idx offset, idx count = dynamic_extent>
-      requires(fixed_extent == dynamic_extent
-               || (offset <= fixed_extent
-                   && (count == dynamic_extent
-                       || count <= fixed_extent - offset)))
+      requires(
+         fixed_extent == dynamic_extent
+         || (offset <= fixed_extent && (count == dynamic_extent || count <= fixed_extent - offset))
+      )
    [[nodiscard]]
    constexpr auto
    subspan() const {
@@ -423,7 +426,8 @@ as_bytes(span<T, fixed_extent> source) noexcept {
                                     : fixed_extent * sizeof(T);
    return span<cat::byte const, result_extent>(
       __builtin_bit_cast(cat::byte const* _Nullable, source.data()),
-      source.size_bytes());
+      source.size_bytes()
+   );
 }
 
 // Reinterpret a non-`const` `cat::span` as a writable view of its underlying
@@ -439,7 +443,8 @@ as_writable_bytes(span<T, fixed_extent> source) noexcept {
                                     : fixed_extent * sizeof(T);
    return span<cat::byte, result_extent>(
       __builtin_bit_cast(cat::byte* _Nullable, source.data()),
-      source.size_bytes());
+      source.size_bytes()
+   );
 }
 
 // Create a span between two addresses.
@@ -465,8 +470,8 @@ maybe_span_nullopt() -> span<T> {
 
 // Simplify nullable spans.
 template <typename T>
-using maybe_span = maybe<compact<span<T>, detail::maybe_span_has_value<T>,
-                                 detail::maybe_span_nullopt<T>>>;
+using maybe_span = maybe<compact<
+   span<T>, detail::maybe_span_has_value<T>, detail::maybe_span_nullopt<T>>>;
 
 template <idx index, typename T, idx fixed_extent>
    requires(fixed_extent != dynamic_extent && index < fixed_extent)
@@ -535,8 +540,9 @@ template <typename T>
 constexpr auto
 is_pointer_in_range(T const* _Nullable p_pointer, span<T const> const range)
    -> bool {
-   static_assert(!is_function<T>,
-                 "`is_pointer_in_range` does not accept function types.");
+   static_assert(
+      !is_function<T>, "`is_pointer_in_range` does not accept function types."
+   );
 
    if (p_pointer == nullptr) {
       return false;
@@ -565,24 +571,30 @@ template <typename T>
 constexpr auto
 is_memory_overlapping(span<T const> const first, span<T const> const second)
    -> bool {
-   return is_memory_overlapping(first.data(), first.size() * sizeof(T),
-                                second.data(), second.size() * sizeof(T));
+   return is_memory_overlapping(
+      first.data(), first.size() * sizeof(T), second.data(),
+      second.size() * sizeof(T)
+   );
 }
 
 template <typename T>
    requires(is_implicit_lifetime<T>)
 constexpr void
 copy_memory(span<T const> const source, span<T> destination) {
-   copy_memory(source.data(), destination.data(),
-               (source.size() * sizeof(T)).to_idx().assert());
+   copy_memory(
+      source.data(), destination.data(),
+      (source.size() * sizeof(T)).to_idx().assert()
+   );
 }
 
 template <typename T>
    requires(is_implicit_lifetime<T>)
 constexpr void
 copy_memory_backward(span<T const> const source, span<T> destination) {
-   copy_memory_backward(source.data(), destination.data(),
-                        (source.size() * sizeof(T)).to_idx().assert());
+   copy_memory_backward(
+      source.data(), destination.data(),
+      (source.size() * sizeof(T)).to_idx().assert()
+   );
 }
 
 }  // namespace cat

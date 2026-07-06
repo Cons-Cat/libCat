@@ -13,11 +13,13 @@ extern "C" {
 
 // TODO: Comment these with documentation and use safer types.
 void
-__asan_poison_memory_region(void const volatile* _Nonnull p_address,
-                            uword size);
+__asan_poison_memory_region(
+   void const volatile* _Nonnull p_address, uword size
+);
 void
-__asan_unpoison_memory_region(void const volatile* _Nonnull p_address,
-                              uword size);
+__asan_unpoison_memory_region(
+   void const volatile* _Nonnull p_address, uword size
+);
 
 // Annotate a contiguous container's live element range. ASan poisons every
 // byte outside `[p_begin, p_new_mid)` and unpoisons everything inside it,
@@ -27,10 +29,10 @@ __asan_unpoison_memory_region(void const volatile* _Nonnull p_address,
 // distinguish live elements from raw capacity inside an allocator-owned
 // buffer.
 void
-__sanitizer_annotate_contiguous_container(void const* _Nonnull p_begin,
-                                          void const* _Nonnull p_end,
-                                          void const* _Nonnull p_old_mid,
-                                          void const* _Nonnull p_new_mid);
+__sanitizer_annotate_contiguous_container(
+   void const* _Nonnull p_begin, void const* _Nonnull p_end,
+   void const* _Nonnull p_old_mid, void const* _Nonnull p_new_mid
+);
 
 // These functions are only for debugging.
 [[gnu::used]]
@@ -80,55 +82,65 @@ __asan_get_report_description() -> char const* _Nullable;
 
 [[gnu::used]]
 auto
-__asan_locate_address(void* _Nonnull p_address, char* _Nonnull p_name,
-                      uword name_size,
-                      void* _Nonnull* _Nonnull p_region_address,
-                      uword* _Nonnull p_region_size) -> char const* _Nullable;
+__asan_locate_address(
+   void* _Nonnull p_address, char* _Nonnull p_name, uword name_size,
+   void* _Nonnull* _Nonnull p_region_address, uword* _Nonnull p_region_size
+) -> char const* _Nullable;
 
 [[gnu::used]]
 auto
-__asan_get_alloc_stack(void* _Nonnull p_heap, void* _Nonnull* _Nonnull pp_trace,
-                       uword size, int* _Nonnull p_thread_id) -> __SIZE_TYPE__;
+__asan_get_alloc_stack(
+   void* _Nonnull p_heap, void* _Nonnull* _Nonnull pp_trace, uword size,
+   int* _Nonnull p_thread_id
+) -> __SIZE_TYPE__;
 
 [[gnu::used]]
 auto
-__asan_get_free_stack(void* _Nonnull p_heap, void* _Nonnull* _Nonnull pp_trace,
-                      uword size, int* _Nonnull p_thread_id) -> __SIZE_TYPE__;
+__asan_get_free_stack(
+   void* _Nonnull p_heap, void* _Nonnull* _Nonnull pp_trace, uword size,
+   int* _Nonnull p_thread_id
+) -> __SIZE_TYPE__;
 
 [[gnu::used]]
 void
-__asan_get_shadow_mapping(uword* _Nonnull p_shadow_scale,
-                          uword* _Nonnull p_shadow_offset);
+__asan_get_shadow_mapping(
+   uword* _Nonnull p_shadow_scale, uword* _Nonnull p_shadow_offset
+);
 }
 #else
 // No-op functions are provided when asan is not available.
 inline void
-__asan_poison_memory_region(void const volatile* _Nonnull /*unused*/,
-                            uword /*unused*/) {
+__asan_poison_memory_region(
+   void const volatile* _Nonnull /*unused*/, uword /*unused*/
+) {
 }
 
 inline void
-__asan_unpoison_memory_region(void const volatile* _Nonnull /*unused*/,
-                              uword /*unused*/) {
+__asan_unpoison_memory_region(
+   void const volatile* _Nonnull /*unused*/, uword /*unused*/
+) {
 }
 
 inline void
-__sanitizer_annotate_contiguous_container(void const* _Nonnull /*unused*/,
-                                          void const* _Nonnull /*unused*/,
-                                          void const* _Nonnull /*unused*/,
-                                          void const* _Nonnull /*unused*/) {
+__sanitizer_annotate_contiguous_container(
+   void const* _Nonnull /*unused*/, void const* _Nonnull /*unused*/,
+   void const* _Nonnull /*unused*/, void const* _Nonnull /*unused*/
+) {
 }
 #endif
 
 template <typename T>
 [[gnu::nodebug, gnu::always_inline]]
 constexpr void
-poison_memory_region([[maybe_unused]] T const volatile* _Nonnull p_address,
-                     [[maybe_unused]] uword size) {
+poison_memory_region(
+   [[maybe_unused]] T const volatile* _Nonnull p_address,
+   [[maybe_unused]] uword size
+) {
 #if __has_feature(address_sanitizer)
    if !consteval {
       __asan_poison_memory_region(
-         reinterpret_cast<void const volatile*>(p_address), size);
+         reinterpret_cast<void const volatile*>(p_address), size
+      );
    }
 #endif
 }
@@ -136,12 +148,15 @@ poison_memory_region([[maybe_unused]] T const volatile* _Nonnull p_address,
 template <typename T>
 [[gnu::nodebug, gnu::always_inline]]
 constexpr void
-unpoison_memory_region([[maybe_unused]] T const volatile* _Nonnull p_address,
-                       [[maybe_unused]] uword size) {
+unpoison_memory_region(
+   [[maybe_unused]] T const volatile* _Nonnull p_address,
+   [[maybe_unused]] uword size
+) {
 #if __has_feature(address_sanitizer)
    if !consteval {
       __asan_unpoison_memory_region(
-         reinterpret_cast<void const volatile*>(p_address), size);
+         reinterpret_cast<void const volatile*>(p_address), size
+      );
    }
 #endif
 }
@@ -149,17 +164,20 @@ unpoison_memory_region([[maybe_unused]] T const volatile* _Nonnull p_address,
 template <typename T>
 [[gnu::nodebug, gnu::always_inline]]
 constexpr void
-annotate_contiguous_container([[maybe_unused]] T const* _Nullable p_begin,
-                              [[maybe_unused]] T const* _Nullable p_end,
-                              [[maybe_unused]] T const* _Nullable p_old_mid,
-                              [[maybe_unused]] T const* _Nullable p_new_mid) {
+annotate_contiguous_container(
+   [[maybe_unused]] T const* _Nullable p_begin,
+   [[maybe_unused]] T const* _Nullable p_end,
+   [[maybe_unused]] T const* _Nullable p_old_mid,
+   [[maybe_unused]] T const* _Nullable p_new_mid
+) {
 #if __has_feature(address_sanitizer)
    if !consteval {
       if (p_begin != nullptr) {
          __sanitizer_annotate_contiguous_container(
             static_cast<void const*>(p_begin), static_cast<void const*>(p_end),
             static_cast<void const*>(p_old_mid),
-            static_cast<void const*>(p_new_mid));
+            static_cast<void const*>(p_new_mid)
+         );
       }
    }
 #endif

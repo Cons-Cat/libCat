@@ -40,8 +40,9 @@ template <typename T, __SIZE_TYPE__ extent>
    requires requires(T& left, T& right) { cat::swap(left, right); }
 [[gnu::nodebug]]
 constexpr void
-swap(T (&left)[extent],
-     T (&right)[extent]) noexcept(noexcept(cat::swap(left[0], right[0]))) {
+swap(T (&left)[extent], T (&right)[extent]) noexcept(
+   noexcept(cat::swap(left[0], right[0]))
+) {
    for (cat::idx index = 0u; index < extent; ++index) {
       cat::swap(left[index], right[index]);
    }
@@ -128,8 +129,8 @@ constexpr auto
 make_integer_sequence() {
    if constexpr (count > 0) {
       // Recurse, appending `count - 1` to `integers`.
-      return make_integer_sequence<count - 1, T, T(count.raw - 1),
-                                   T(count.raw - 1), integers...>();
+      return make_integer_sequence<
+         count - 1, T, T(count.raw - 1), T(count.raw - 1), integers...>();
    } else {
       return value_type_list<T, integers...>();
    }
@@ -203,11 +204,14 @@ template <typename Callback, typename... Args>
 // noexcept(is_nothrow_invocable<Callback, Args...>)
 constexpr auto
 invoke(Callback&& callback, Args&&... arguments) noexcept(noexcept(
-   __builtin_invoke(forward<Callback>(callback), forward<Args>(arguments)...)))
-   -> decltype(__builtin_invoke(forward<Callback>(callback),
-                                forward<Args>(arguments)...)) {
-   return __builtin_invoke(forward<Callback>(callback),
-                           forward<Args>(arguments)...);
+   __builtin_invoke(forward<Callback>(callback), forward<Args>(arguments)...)
+))
+   -> decltype(__builtin_invoke(
+      forward<Callback>(callback), forward<Args>(arguments)...
+   )) {
+   return __builtin_invoke(
+      forward<Callback>(callback), forward<Args>(arguments)...
+   );
 }
 
 template <typename ReturnT, typename Callback, typename... Args>

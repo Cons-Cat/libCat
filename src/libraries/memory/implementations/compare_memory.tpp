@@ -9,8 +9,9 @@ namespace cat {
 
 [[clang::no_builtin("memcmp")]]
 constexpr auto
-compare_memory_scalar(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
-                      idx bytes) -> std::strong_ordering {
+compare_memory_scalar(
+   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
+) -> std::strong_ordering {
    unsigned char const* _Nonnull const p_left =
       static_cast<unsigned char const* _Nonnull>(p_lhs);
    unsigned char const* _Nonnull const p_right =
@@ -27,8 +28,9 @@ compare_memory_scalar(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
 }
 
 constexpr auto
-compare_memory(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
-               idx bytes) -> std::strong_ordering {
+compare_memory(
+   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
+) -> std::strong_ordering {
    if (bytes == 0u) {
       return std::strong_ordering::equal;
    }
@@ -38,7 +40,8 @@ compare_memory(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
    } else {
       return detail::compare_memory_impl(
          static_cast<byte const* _Nonnull>(p_lhs),
-         static_cast<byte const* _Nonnull>(p_rhs), bytes);
+         static_cast<byte const* _Nonnull>(p_rhs), bytes
+      );
    }
 }
 

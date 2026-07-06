@@ -249,7 +249,8 @@ class simd_overflow_reference
       -> wrapper_type {
       return simd_integral_add_policy<T, Abi, semantics>(
          simd_integral_mul_policy<T, Abi, semantics>(*m_wrapped, multiplier),
-         addend);
+         addend
+      );
    }
 };
 

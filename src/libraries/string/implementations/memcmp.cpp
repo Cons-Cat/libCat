@@ -5,9 +5,9 @@ namespace {
 
 [[nodiscard]]
 auto
-compare_memory_as_memcmp_int(void const* _Nonnull p_lhs,
-                             void const* _Nonnull p_rhs, __SIZE_TYPE__ bytes)
-   -> int {
+compare_memory_as_memcmp_int(
+   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, __SIZE_TYPE__ bytes
+) -> int {
    auto const order = cat::compare_memory(p_lhs, p_rhs, bytes);
    if (order < 0) {
       return -1;
@@ -27,8 +27,10 @@ extern "C"
    [[gnu::visibility("hidden")]]
 #endif
    auto
-   std::memcmp(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
-               __SIZE_TYPE__ bytes) -> int {
+   std::memcmp(
+      void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
+      __SIZE_TYPE__ bytes
+   ) -> int {
    return compare_memory_as_memcmp_int(p_lhs, p_rhs, bytes);
 }
 
@@ -40,7 +42,9 @@ extern "C"
    [[gnu::visibility("hidden")]]
 #endif
    auto
-   bcmp(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
-        __SIZE_TYPE__ bytes) -> int {
+   bcmp(
+      void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
+      __SIZE_TYPE__ bytes
+   ) -> int {
    return compare_memory_as_memcmp_int(p_lhs, p_rhs, bytes) != 0;
 }

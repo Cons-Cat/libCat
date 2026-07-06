@@ -33,8 +33,9 @@ allocator_interface<Derived>::free(T const& handle) {
          p_memory[i].~allocation_type();
       }
       // }
-      this->self().deallocate(static_cast<void const*>(p_memory),
-                              handle.raw_size());
+      this->self().deallocate(
+         static_cast<void const*>(p_memory), handle.raw_size()
+      );
    }
    // If this is small-size optimized, storage lives in the handle and is
    // released when the handle is destroyed, so this call is a no-op.
@@ -48,8 +49,10 @@ template <typename T>
 constexpr void
 allocator_interface<Derived>::free(T* _Nonnull p_memory) {
    if constexpr (has_max_allocation_bytes) {
-      static_assert(sizeof(T) <= Derived::max_allocation_bytes,
-                    "This allocation is too large for this allocator!");
+      static_assert(
+         sizeof(T) <= Derived::max_allocation_bytes,
+         "This allocation is too large for this allocator!"
+      );
    }
 
    if consteval {
@@ -70,10 +73,14 @@ template <typename T>
 constexpr void
 allocator_interface<Derived>::free_multi(span<T> handle) {
    if constexpr (has_max_allocation_bytes) {
-      static_assert(sizeof(T) <= Derived::max_allocation_bytes,
-                    "This allocation is too large for this allocator!");
-      assert((handle.size() * sizeof(T)) <= Derived::max_allocation_bytes,
-             "This allocation is too large for this allocator!");
+      static_assert(
+         sizeof(T) <= Derived::max_allocation_bytes,
+         "This allocation is too large for this allocator!"
+      );
+      assert(
+         (handle.size() * sizeof(T)) <= Derived::max_allocation_bytes,
+         "This allocation is too large for this allocator!"
+      );
    }
 
    T* _Nonnull p_memory = handle.data();
@@ -87,8 +94,9 @@ allocator_interface<Derived>::free_multi(span<T> handle) {
             p_memory[i].~T();
          }
       }
-      this->self().deallocate(static_cast<void const*>(p_memory),
-                              handle.size() * sizeof(T));
+      this->self().deallocate(
+         static_cast<void const*>(p_memory), handle.size() * sizeof(T)
+      );
 
       poison_memory_region(p_memory, sizeof(T) * handle.size());
    }
@@ -115,12 +123,15 @@ allocator_interface<Derived>::cfree(T& handle) {
       }
       zero_memory_explicit(
          static_cast<void*>(const_cast<allocation_type*>(p_memory)),
-         handle.raw_size());
-      this->self().deallocate(static_cast<void const*>(p_memory),
-                              handle.raw_size());
+         handle.raw_size()
+      );
+      this->self().deallocate(
+         static_cast<void const*>(p_memory), handle.raw_size()
+      );
    } else {
-      zero_memory_explicit(__builtin_addressof(this->get(handle)),
-                           handle.raw_size());
+      zero_memory_explicit(
+         __builtin_addressof(this->get(handle)), handle.raw_size()
+      );
    }
 }
 
@@ -130,8 +141,10 @@ template <typename T>
 constexpr void
 allocator_interface<Derived>::cfree(T* _Nonnull p_memory) {
    if constexpr (has_max_allocation_bytes) {
-      static_assert(sizeof(T) <= Derived::max_allocation_bytes,
-                    "This allocation is too large for this allocator!");
+      static_assert(
+         sizeof(T) <= Derived::max_allocation_bytes,
+         "This allocation is too large for this allocator!"
+      );
    }
 
    if consteval {
@@ -155,10 +168,14 @@ template <typename T>
 constexpr void
 allocator_interface<Derived>::cfree_multi(span<T> handle) {
    if constexpr (has_max_allocation_bytes) {
-      static_assert(sizeof(T) <= Derived::max_allocation_bytes,
-                    "This allocation is too large for this allocator!");
-      assert((handle.size() * sizeof(T)) <= Derived::max_allocation_bytes,
-             "This allocation is too large for this allocator!");
+      static_assert(
+         sizeof(T) <= Derived::max_allocation_bytes,
+         "This allocation is too large for this allocator!"
+      );
+      assert(
+         (handle.size() * sizeof(T)) <= Derived::max_allocation_bytes,
+         "This allocation is too large for this allocator!"
+      );
    }
 
    T* _Nonnull p_memory = handle.data();
@@ -168,8 +185,9 @@ allocator_interface<Derived>::cfree_multi(span<T> handle) {
             p_memory[i].~T();
          }
       }
-      zero_memory_explicit(p_memory,
-                           static_cast<uword>(handle.size() * sizeof(T)));
+      zero_memory_explicit(
+         p_memory, static_cast<uword>(handle.size() * sizeof(T))
+      );
       delete[] p_memory;
    } else {
       if constexpr (!is_trivially_destructible<T>) {
@@ -177,10 +195,12 @@ allocator_interface<Derived>::cfree_multi(span<T> handle) {
             p_memory[i].~T();
          }
       }
-      zero_memory_explicit(p_memory,
-                           static_cast<uword>(handle.size() * sizeof(T)));
-      this->self().deallocate(static_cast<void const*>(p_memory),
-                              handle.size() * sizeof(T));
+      zero_memory_explicit(
+         p_memory, static_cast<uword>(handle.size() * sizeof(T))
+      );
+      this->self().deallocate(
+         static_cast<void const*>(p_memory), handle.size() * sizeof(T)
+      );
       poison_memory_region(p_memory, sizeof(T) * handle.size());
    }
 }

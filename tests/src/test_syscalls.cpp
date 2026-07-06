@@ -130,13 +130,15 @@ $test(syscall_credentials_set) {
    // For a process that's already a group leader this is a no-op.
    nix::process_id pid = nix::sys_getpid();
    auto pgid_result = nix::sys_setpgid(pid, pid);
-   cat::verify(pgid_result.has_value()
-               || pgid_result.error() == nix::linux_error::perm);
+   cat::verify(
+      pgid_result.has_value() || pgid_result.error() == nix::linux_error::perm
+   );
 
    // `setsid` typically fails because we are already a process group leader.
    auto sid_result = nix::sys_setsid();
-   cat::verify(sid_result.has_value()
-               || sid_result.error() == nix::linux_error::perm);
+   cat::verify(
+      sid_result.has_value() || sid_result.error() == nix::linux_error::perm
+   );
 }
 
 // uname / kernel version.
@@ -194,8 +196,10 @@ $test(syscall_io_basic) {
    nix::sys_ftruncate(fd, 0).verify();
    nix::sys_close(fd).verify();
    auto truncate_result = nix::sys_truncate(tmp_basic, 4);
-   cat::verify(truncate_result.has_value()
-               || is_denied_or_invalid(truncate_result.error()));
+   cat::verify(
+      truncate_result.has_value()
+      || is_denied_or_invalid(truncate_result.error())
+   );
    nix::sys_unlink(tmp_basic).verify();
 }
 
@@ -209,10 +213,12 @@ $test(syscall_io_vector) {
    nix::io_vector vecs[2] = {
       nix::io_vector(
          __builtin_bit_cast(cat::byte* _Nonnull, payload_hello.data()),
-         payload_hello_length),
+         payload_hello_length
+      ),
       nix::io_vector(
          __builtin_bit_cast(cat::byte* _Nonnull, payload_world.data()),
-         payload_world_length),
+         payload_world_length
+      ),
    };
    cat::idx written = nix::sys_writev(fd, vecs, 2u).verify();
    cat::verify(written == 13);
@@ -254,8 +260,9 @@ $test(syscall_pipe_dup) {
 
    cat::int4 second_pair[2] = {};
    nix::sys_pipe2(second_pair, nix::pipe2_flags::close_exec).verify();
-   nix::sys_dup3(nix::file_descriptor{second_pair[1]}, write_end,
-                 nix::dup3_flags::none)
+   nix::sys_dup3(
+      nix::file_descriptor{second_pair[1]}, write_end, nix::dup3_flags::none
+   )
       .verify();
    nix::sys_close(nix::file_descriptor{second_pair[0]}).verify();
 
@@ -293,8 +300,10 @@ $test(syscall_fs_metadata) {
       nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
    nix::sys_write(fd, payload_short.data(), payload_short_length).verify();
    nix::sys_close(fd).verify();
-   nix::sys_chmod(tmp_basic, nix::file_permissions::user_read
-                                | nix::file_permissions::user_write)
+   nix::sys_chmod(
+      tmp_basic,
+      nix::file_permissions::user_read | nix::file_permissions::user_write
+   )
       .verify();
 
    nix::file_status st_path{};
@@ -316,8 +325,9 @@ $test(syscall_fs_metadata) {
    nix::sys_close(fd).verify();
 
    nix::sys_access(tmp_basic, nix::access_mode::exists).verify();
-   nix::sys_access(tmp_basic,
-                   nix::access_mode::readable | nix::access_mode::writable)
+   nix::sys_access(
+      tmp_basic, nix::access_mode::readable | nix::access_mode::writable
+   )
       .verify();
 
    nix::sys_faccessat(nix::at_fdcwd, tmp_basic, nix::access_mode::exists)
@@ -325,8 +335,10 @@ $test(syscall_fs_metadata) {
 
    // `sys_statx` is Linux 4.11+, present everywhere libCat targets.
    nix::statx_data sx{};
-   nix::sys_statx(nix::at_fdcwd, tmp_basic, nix::atfile_flags::none,
-                  nix::statx_mask::basic_stats, sx)
+   nix::sys_statx(
+      nix::at_fdcwd, tmp_basic, nix::atfile_flags::none,
+      nix::statx_mask::basic_stats, sx
+   )
       .verify();
    cat::verify(sx.file_size == 4);
 
@@ -350,15 +362,19 @@ $test(syscall_fs_mode) {
    nix::file_descriptor fd =
       nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
 
-   nix::sys_chmod(tmp_basic, nix::file_permissions::user_read
-                                | nix::file_permissions::user_write)
+   nix::sys_chmod(
+      tmp_basic,
+      nix::file_permissions::user_read | nix::file_permissions::user_write
+   )
       .verify();
    nix::sys_fchmod(
-      fd, nix::file_permissions::user_read | nix::file_permissions::user_write)
+      fd, nix::file_permissions::user_read | nix::file_permissions::user_write
+   )
       .verify();
    nix::sys_fchmodat(
       nix::at_fdcwd, tmp_basic,
-      nix::file_permissions::user_read | nix::file_permissions::user_write)
+      nix::file_permissions::user_read | nix::file_permissions::user_write
+   )
       .verify();
 
    // Setting our own uid/gid back on a file we own is always permitted.
@@ -386,24 +402,29 @@ $test(syscall_fs_directories) {
    auto unused_rmdir_inside = nix::sys_rmdir(tmp_dir_inside);
    auto unused_rmdir = nix::sys_rmdir(tmp_dir);
 
-   nix::sys_mkdir(tmp_dir, nix::file_permissions::user_read
-                              | nix::file_permissions::user_write
-                              | nix::file_permissions::user_execute)
+   nix::sys_mkdir(
+      tmp_dir, nix::file_permissions::user_read
+                  | nix::file_permissions::user_write
+                  | nix::file_permissions::user_execute
+   )
       .verify();
    nix::sys_mkdirat(
       nix::at_fdcwd, tmp_dir_inside,
-      nix::file_permissions::user_read | nix::file_permissions::user_write)
+      nix::file_permissions::user_read | nix::file_permissions::user_write
+   )
       .verify();
 
    nix::file_descriptor dir_fd =
-      nix::sys_open(tmp_dir, nix::open_mode::read_only,
-                    nix::open_flags::directory)
+      nix::sys_open(
+         tmp_dir, nix::open_mode::read_only, nix::open_flags::directory
+      )
          .verify();
    alignas(8) char dirent_buf[1'024] = {};
    cat::idx bytes =
-      nix::sys_getdents64(dir_fd,
-                          reinterpret_cast<nix::linux_dirent64*>(dirent_buf),
-                          sizeof(dirent_buf))
+      nix::sys_getdents64(
+         dir_fd, reinterpret_cast<nix::linux_dirent64*>(dirent_buf),
+         sizeof(dirent_buf)
+      )
          .verify();
    cat::verify(bytes > 0);
    nix::sys_close(dir_fd).verify();
@@ -418,17 +439,20 @@ $test(syscall_fs_directories) {
    nix::sys_chdir(tmp_dir).verify();
    nix::sys_chdir(&cwd[0]).verify();
    nix::file_descriptor cwd_fd =
-      nix::sys_open(&cwd[0], nix::open_mode::read_only,
-                    nix::open_flags::directory)
+      nix::sys_open(
+         &cwd[0], nix::open_mode::read_only, nix::open_flags::directory
+      )
          .verify();
    nix::sys_fchdir(cwd_fd).verify();
    nix::sys_close(cwd_fd).verify();
 
-   nix::sys_unlinkat(nix::at_fdcwd, tmp_dir_inside,
-                     nix::atfile_flags::remove_directory)
+   nix::sys_unlinkat(
+      nix::at_fdcwd, tmp_dir_inside, nix::atfile_flags::remove_directory
+   )
       .verify();
-   nix::sys_unlinkat(nix::at_fdcwd, tmp_dir,
-                     nix::atfile_flags::remove_directory)
+   nix::sys_unlinkat(
+      nix::at_fdcwd, tmp_dir, nix::atfile_flags::remove_directory
+   )
       .verify();
 }
 
@@ -443,7 +467,8 @@ $test(syscall_fs_links) {
    auto unused_unlink_rename_b = nix::sys_unlink(tmp_rename_b);
 
    nix::sys_close(
-      nix::sys_creat(tmp_link_target, nix::open_mode::read_write).verify())
+      nix::sys_creat(tmp_link_target, nix::open_mode::read_write).verify()
+   )
       .verify();
 
    nix::sys_link(tmp_link_target, tmp_link).verify();
@@ -456,20 +481,24 @@ $test(syscall_fs_links) {
    // "/tmp/libcat_test_link_target" is 28 characters.
    cat::verify(readlink_len == cat::idx{28u});
 
-   nix::sys_readlinkat(nix::at_fdcwd, tmp_symlink, readlink_buffer,
-                       sizeof(readlink_buffer))
+   nix::sys_readlinkat(
+      nix::at_fdcwd, tmp_symlink, readlink_buffer, sizeof(readlink_buffer)
+   )
       .verify();
 
    // *at variants of link/symlink/rename.
    nix::sys_close(
-      nix::sys_creat(tmp_rename_a, nix::open_mode::read_write).verify())
+      nix::sys_creat(tmp_rename_a, nix::open_mode::read_write).verify()
+   )
       .verify();
    nix::sys_renameat(nix::at_fdcwd, tmp_rename_a, nix::at_fdcwd, tmp_rename_b)
       .verify();
    nix::sys_rename(tmp_rename_b, tmp_rename_a).verify();
    // `sys_renameat2` has the same arity plus flags. Pass `none` to mirror.
-   nix::sys_renameat2(nix::at_fdcwd, tmp_rename_a, nix::at_fdcwd, tmp_rename_b,
-                      nix::renameat2_flags::none)
+   nix::sys_renameat2(
+      nix::at_fdcwd, tmp_rename_a, nix::at_fdcwd, tmp_rename_b,
+      nix::renameat2_flags::none
+   )
       .verify();
 
    nix::sys_unlink(tmp_link).verify();
@@ -487,7 +516,8 @@ $test(syscall_fs_at_variants) {
       nix::sys_openat(
          nix::at_fdcwd, tmp_atfile, nix::open_mode::read_write,
          nix::open_flags::create | nix::open_flags::truncate,
-         nix::file_permissions::user_read | nix::file_permissions::user_write)
+         nix::file_permissions::user_read | nix::file_permissions::user_write
+      )
          .verify();
    nix::sys_close(fd).verify();
 
@@ -502,8 +532,10 @@ $test(syscall_fs_at_variants) {
    // `sys_fallocate` may legitimately return `linux_error::opnotsupp` on tmpfs.
    auto fallocate_result =
       nix::sys_fallocate(fd2, nix::fallocate_flags::none, 0, cat::page_size);
-   cat::verify(fallocate_result.has_value()
-               || fallocate_result.error() == nix::linux_error::opnotsupp);
+   cat::verify(
+      fallocate_result.has_value()
+      || fallocate_result.error() == nix::linux_error::opnotsupp
+   );
 
    // `utimensat` with `nullptr` p_times sets both to the current time.
    nix::sys_utimensat(nix::at_fdcwd, tmp_atfile, nullptr).verify();
@@ -519,9 +551,11 @@ $test(syscall_fs_at_variants) {
 $test(syscall_memory) {
    constexpr cat::uword bytes = cat::page_size;
    void* p_mapping =
-      nix::sys_mmap(nullptr, bytes, nix::memory_protection_flags::read_write,
-                    nix::memory_flags::privately | nix::memory_flags::anonymous,
-                    nix::file_descriptor{-1}, 0)
+      nix::sys_mmap(
+         nullptr, bytes, nix::memory_protection_flags::read_write,
+         nix::memory_flags::privately | nix::memory_flags::anonymous,
+         nix::file_descriptor{-1}, 0
+      )
          .verify();
    cat::verify(p_mapping != nullptr);
    // Touch the page to confirm it's mapped.
@@ -534,21 +568,25 @@ $test(syscall_memory) {
    nix::sys_mprotect(p_mapping, bytes, nix::memory_protection_flags::read_write)
       .verify();
    auto mlock_result = nix::sys_mlock(p_mapping, bytes);
-   cat::verify(mlock_result.has_value()
-               || is_denied_or_invalid(mlock_result.error()));
+   cat::verify(
+      mlock_result.has_value() || is_denied_or_invalid(mlock_result.error())
+   );
    if (mlock_result.has_value()) {
       nix::sys_munlock(p_mapping, bytes).verify();
    }
    auto mlock2_result =
       nix::sys_mlock2(p_mapping, bytes, nix::mlock2_flags::on_fault);
-   cat::verify(mlock2_result.has_value()
-               || is_denied_or_invalid(mlock2_result.error()));
+   cat::verify(
+      mlock2_result.has_value() || is_denied_or_invalid(mlock2_result.error())
+   );
    if (mlock2_result.has_value()) {
       nix::sys_munlock(p_mapping, bytes).verify();
    }
    auto mlockall_result = nix::sys_mlockall(nix::mlockall_flags::current);
-   cat::verify(mlockall_result.has_value()
-               || is_denied_or_invalid(mlockall_result.error()));
+   cat::verify(
+      mlockall_result.has_value()
+      || is_denied_or_invalid(mlockall_result.error())
+   );
    if (mlockall_result.has_value()) {
       nix::sys_munlockall().verify();
    }
@@ -561,16 +599,20 @@ $test(syscall_memory) {
          nix::sys_mmap(
             nullptr, bytes, nix::memory_protection_flags::read_write,
             nix::memory_flags::privately | nix::memory_flags::anonymous,
-            nix::file_descriptor{-1}, 0)
+            nix::file_descriptor{-1}, 0
+         )
             .verify();
       auto mseal_result = nix::sys_mseal(p_sealed, bytes);
-      cat::verify(mseal_result.has_value()
-                  || is_denied_or_invalid(mseal_result.error()));
+      cat::verify(
+         mseal_result.has_value() || is_denied_or_invalid(mseal_result.error())
+      );
       if (mseal_result.has_value()) {
          // A sealed mapping rejects `munmap` with `linux_error::perm`.
          auto munmap_sealed = nix::sys_munmap(p_sealed, bytes);
-         cat::verify(!munmap_sealed.has_value()
-                     && munmap_sealed.error() == nix::linux_error::perm);
+         cat::verify(
+            !munmap_sealed.has_value()
+            && munmap_sealed.error() == nix::linux_error::perm
+         );
       } else {
          nix::sys_munmap(p_sealed, bytes).verify();
       }
@@ -610,9 +652,11 @@ $test(syscall_read_self_statm) {
    cat::idx const before = statm.total_pages;
    constexpr cat::uword bytes = 64u * cat::page_size;
    void* p_mapping =
-      nix::sys_mmap(nullptr, bytes, nix::memory_protection_flags::read_write,
-                    nix::memory_flags::privately | nix::memory_flags::anonymous,
-                    nix::file_descriptor{-1}, 0)
+      nix::sys_mmap(
+         nullptr, bytes, nix::memory_protection_flags::read_write,
+         nix::memory_flags::privately | nix::memory_flags::anonymous,
+         nix::file_descriptor{-1}, 0
+      )
          .verify();
    nix::statm after = nix::read_self_statm().verify();
    cat::verify(after.total_pages >= before);
@@ -632,11 +676,13 @@ $test(syscall_read_self_anon_smaps) {
    cat::idx const resident_before = smaps.resident_bytes;
    constexpr cat::uword bytes = 64u * cat::page_size;
    void* p_mapping =
-      nix::sys_mmap(nullptr, bytes, nix::memory_protection_flags::read_write,
-                    nix::memory_flags::privately
-                       | nix::memory_flags::populate
-                       | nix::memory_flags::anonymous,
-                    nix::file_descriptor{-1}, 0)
+      nix::sys_mmap(
+         nullptr, bytes, nix::memory_protection_flags::read_write,
+         nix::memory_flags::privately
+            | nix::memory_flags::populate
+            | nix::memory_flags::anonymous,
+         nix::file_descriptor{-1}, 0
+      )
          .verify();
    static_cast<unsigned char*>(p_mapping)[0] = 42u;
    nix::anon_smaps after = nix::read_self_anon_smaps().verify();
@@ -648,36 +694,42 @@ $test(syscall_read_self_anon_smaps) {
 $test(syscall_mremap) {
    // Map two pages and write a sentinel into the first.
    void* p_old =
-      nix::sys_mmap(nullptr, 2 * cat::page_size,
-                    nix::memory_protection_flags::read_write,
-                    nix::memory_flags::privately | nix::memory_flags::anonymous,
-                    nix::file_descriptor{-1}, 0)
+      nix::sys_mmap(
+         nullptr, 2 * cat::page_size, nix::memory_protection_flags::read_write,
+         nix::memory_flags::privately | nix::memory_flags::anonymous,
+         nix::file_descriptor{-1}, 0
+      )
          .verify();
    static_cast<unsigned char*>(p_old)[0] = 42u;
 
    // Grow to four pages, allowing the kernel to relocate the mapping. The
    // contents move with it, so the sentinel survives at the (possibly new)
    // address.
-   void* p_grown =
-      nix::sys_mremap(p_old, 2 * cat::page_size, 4 * cat::page_size,
-                      nix::mremap_flags::may_move)
-         .verify();
+   void* p_grown = nix::sys_mremap(
+                      p_old, 2 * cat::page_size, 4 * cat::page_size,
+                      nix::mremap_flags::may_move
+   )
+                      .verify();
    cat::verify(p_grown != nullptr);
    cat::verify(static_cast<unsigned char*>(p_grown)[0] == 42u);
 
    // Shrink in place: a shrink never needs to relocate, so even without
    // `may_move` it succeeds at the same address.
-   void* p_shrunk = nix::sys_mremap(p_grown, 4 * cat::page_size, cat::page_size,
-                                    nix::mremap_flags::none)
-                       .verify();
+   void* p_shrunk =
+      nix::sys_mremap(
+         p_grown, 4 * cat::page_size, cat::page_size, nix::mremap_flags::none
+      )
+         .verify();
    cat::verify(p_shrunk == p_grown);
    cat::verify(static_cast<unsigned char*>(p_shrunk)[0] == 42u);
 
    // A same-size remap without `may_move` is a no-op that returns the same
    // address.
-   void* p_same = nix::sys_mremap(p_shrunk, cat::page_size, cat::page_size,
-                                  nix::mremap_flags::none)
-                     .verify();
+   void* p_same =
+      nix::sys_mremap(
+         p_shrunk, cat::page_size, cat::page_size, nix::mremap_flags::none
+      )
+         .verify();
    cat::verify(p_same == p_shrunk);
 
    nix::sys_munmap(p_shrunk, cat::page_size).verify();
@@ -698,11 +750,13 @@ $test(syscall_resource) {
 
    // Self-affinity round trip.
    cat::uword mask[16] = {};
-   nix::sys_sched_getaffinity(nix::process_id{0},
-                              cat::span<cat::uword>{mask, 16u})
+   nix::sys_sched_getaffinity(
+      nix::process_id{0}, cat::span<cat::uword>{mask, 16u}
+   )
       .verify();
-   nix::sys_sched_setaffinity(nix::process_id{0},
-                              cat::span<cat::uword const>{mask, 16u})
+   nix::sys_sched_setaffinity(
+      nix::process_id{0}, cat::span<cat::uword const>{mask, 16u}
+   )
       .verify();
 }
 
@@ -713,12 +767,14 @@ $test(syscall_signals_state) {
    nix::signals_mask_set saved{};
    auto query_mask =
       nix::sys_rt_sigprocmask(nix::signal_action::block, nullptr, &saved);
-   cat::verify(query_mask.has_value()
-               || is_denied_or_invalid(query_mask.error()));
+   cat::verify(
+      query_mask.has_value() || is_denied_or_invalid(query_mask.error())
+   );
    auto restore_mask =
       nix::sys_rt_sigprocmask(nix::signal_action::set_mask, &saved, nullptr);
-   cat::verify(restore_mask.has_value()
-               || is_denied_or_invalid(restore_mask.error()));
+   cat::verify(
+      restore_mask.has_value() || is_denied_or_invalid(restore_mask.error())
+   );
 
    nix::signals_mask_set pending{};
    nix::sys_rt_sigpending(pending).verify();
@@ -737,15 +793,17 @@ $test(syscall_signals_self_kill) {
    // current thread's signal state.
    nix::process_id self_pid = nix::sys_getpid();
    auto tkill_result = nix::sys_tkill(nix::process_id{-1}, nix::signal::usr1);
-   cat::verify(!tkill_result.has_value()
-               && (tkill_result.error() == nix::linux_error::srch
-                   || tkill_result.error() == nix::linux_error::inval));
+   cat::verify(
+      !tkill_result.has_value()
+      && (tkill_result.error() == nix::linux_error::srch || tkill_result.error() == nix::linux_error::inval)
+   );
 
    auto tgkill_result =
       nix::sys_tgkill(self_pid, nix::process_id{-1}, nix::signal::usr1);
-   cat::verify(!tgkill_result.has_value()
-               && (tgkill_result.error() == nix::linux_error::srch
-                   || tgkill_result.error() == nix::linux_error::inval));
+   cat::verify(
+      !tgkill_result.has_value()
+      && (tgkill_result.error() == nix::linux_error::srch || tgkill_result.error() == nix::linux_error::inval)
+   );
 }
 
 // Sockets.
@@ -770,9 +828,11 @@ $test(syscall_socket_pair) {
    sent = nix::sys_sendto(a, payload_two.data(), payload_two_length).verify();
    cat::verify(sent == cat::iword(payload_two_length));
    char explicit_null_buffer[8] = {};
-   got = nix::sys_recv(b, explicit_null_buffer, sizeof(explicit_null_buffer),
-                       nullptr, nullptr)
-            .verify();
+   got =
+      nix::sys_recv(
+         b, explicit_null_buffer, sizeof(explicit_null_buffer), nullptr, nullptr
+      )
+         .verify();
    cat::verify(got == 2);
    cat::verify(explicit_null_buffer[0] == 'h');
    sent = nix::sys_sendto(a, payload_two.data(), payload_two_length).verify();
@@ -789,7 +849,8 @@ $test(syscall_socket_pair) {
    nix::io_vector iov_send[1] = {
       nix::io_vector(
          __builtin_bit_cast(cat::byte* _Nonnull, payload_two.data()),
-         payload_two_length),
+         payload_two_length
+      ),
    };
    nix::msg_header sender{};
    sender.p_name = nullptr;
@@ -804,8 +865,9 @@ $test(syscall_socket_pair) {
 
    char recv_buf[8] = {};
    nix::io_vector iov_recv[1] = {
-      nix::io_vector(reinterpret_cast<cat::byte*>(recv_buf),
-                     cat::idx(sizeof(recv_buf))),
+      nix::io_vector(
+         reinterpret_cast<cat::byte*>(recv_buf), cat::idx(sizeof(recv_buf))
+      ),
    };
    nix::msg_header receiver{};
    receiver.p_name = nullptr;
@@ -846,8 +908,9 @@ $test(syscall_socket_options) {
 
 $test(syscall_random) {
    unsigned char buffer[16] = {};
-   cat::iword got = nix::sys_getrandom(buffer, sizeof(buffer),
-                                       nix::getrandom_flags::nonblocking)
+   cat::iword got = nix::sys_getrandom(
+                       buffer, sizeof(buffer), nix::getrandom_flags::nonblocking
+   )
                        .verify();
    cat::verify(got == cat::iword(sizeof(buffer)));
 }
@@ -868,8 +931,10 @@ $test(syscall_io_uring) {
       // Some sandboxes deny io_uring_setup with `linux_error::perm` even
       // though probing returned true (the probe uses entries=0 which the
       // kernel rejects before checking the disabled flag).
-      cat::verify(setup_result.error() == nix::linux_error::perm
-                  || setup_result.error() == nix::linux_error::nosys);
+      cat::verify(
+         setup_result.error() == nix::linux_error::perm
+         || setup_result.error() == nix::linux_error::nosys
+      );
       return;
    }
    nix::file_descriptor ring = setup_result.value();
@@ -878,8 +943,10 @@ $test(syscall_io_uring) {
    // `enter` with `to_submit == 0` and no waiting.
    auto enter_result =
       nix::sys_io_uring_enter(ring, 0u, 0u, nix::io_uring_enter_flags::none);
-   cat::verify(enter_result.has_value()
-               || enter_result.error() == nix::linux_error::badfd);
+   cat::verify(
+      enter_result.has_value()
+      || enter_result.error() == nix::linux_error::badfd
+   );
 
    nix::sys_close(ring).verify();
 }
@@ -896,8 +963,10 @@ $test(syscall_optional_six_x) {
       nix::cachestat_range range = {.offset = 0, .length = 4};
       nix::cachestat_stats out{};
       auto cs = nix::sys_cachestat(fd, range, out);
-      cat::verify(cs.has_value() || cs.error() == nix::linux_error::nosys
-                  || cs.error() == nix::linux_error::perm);
+      cat::verify(
+         cs.has_value() || cs.error() == nix::linux_error::nosys
+         || cs.error() == nix::linux_error::perm
+      );
       nix::sys_close(fd).verify();
       nix::sys_unlink(tmp_basic).verify();
    }
@@ -906,11 +975,14 @@ $test(syscall_optional_six_x) {
    if (nix::has_sys_fchmodat2()) {
       auto unused_unlink = nix::sys_unlink(tmp_basic);
       nix::sys_close(
-         nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify())
+         nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify()
+      )
          .verify();
       auto fc = nix::sys_fchmodat2(nix::at_fdcwd, tmp_basic, 0644u, 0);
-      cat::verify(fc.has_value() || fc.error() == nix::linux_error::nosys
-                  || fc.error() == nix::linux_error::perm);
+      cat::verify(
+         fc.has_value() || fc.error() == nix::linux_error::nosys
+         || fc.error() == nix::linux_error::perm
+      );
       nix::sys_unlink(tmp_basic).verify();
    }
 
@@ -919,7 +991,9 @@ $test(syscall_optional_six_x) {
    if (nix::has_sys_futex_wake()) {
       nix::futex_word word{};
       auto wake = nix::sys_futex_wake(word, ~0ul, 0, 2u);
-      cat::verify(wake.has_value() || wake.error() == nix::linux_error::inval
-                  || wake.error() == nix::linux_error::nosys);
+      cat::verify(
+         wake.has_value() || wake.error() == nix::linux_error::inval
+         || wake.error() == nix::linux_error::nosys
+      );
    }
 }

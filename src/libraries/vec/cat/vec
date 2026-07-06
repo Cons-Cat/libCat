@@ -56,9 +56,9 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       other.m_current_capacity = 0;
    }
 
-   constexpr basic_vec(basic_vec const&) = delete (
-      "Implicit copying of `cat::basic_vec` is forbidden. Call "
-      "`.clone()` or move instead!");
+   constexpr basic_vec(basic_vec const&) =
+      delete ("Implicit copying of `cat::basic_vec` is forbidden. Call "
+              "`.clone()` or move instead!");
 
    auto
    operator=(basic_vec const&)
@@ -72,9 +72,11 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
          return *this;
       }
       if !consteval {
-         cat::assert(m_p_data == nullptr,
-                     "basic_vec move-assigned over while still owning storage. "
-                     "Call .free(allocator) first.");
+         cat::assert(
+            m_p_data == nullptr,
+            "basic_vec move-assigned over while still owning storage. "
+            "Call .free(allocator) first."
+         );
       }
       m_p_data = other.m_p_data;
       m_current_size = other.m_current_size;
@@ -132,14 +134,17 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
       if (m_p_data == nullptr) {
          return allocator.template salloc_multi<T>(minimum_capacity);
       }
-      return allocator.resalloc_multi(m_p_data, m_current_capacity,
-                                      minimum_capacity);
+      return allocator.resalloc_multi(
+         m_p_data, m_current_capacity, minimum_capacity
+      );
    }
 
    constexpr void
    annotate_size_change(idx old_size, idx new_size) const {
-      annotate_contiguous_container(m_p_data, m_p_data + m_current_capacity,
-                                    m_p_data + old_size, m_p_data + new_size);
+      annotate_contiguous_container(
+         m_p_data, m_p_data + m_current_capacity, m_p_data + old_size,
+         m_p_data + new_size
+      );
    }
 
    // Reallocate this `vec`'s memory if it is exceeded, in a non-`constexpr`
@@ -422,11 +427,15 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
          // place. Avoids a copy + free pair when the allocator can drop
          // the tail without moving the head.
          if (m_p_data != nullptr) {
-            span<byte> const old_allocation{reinterpret_cast<byte*>(m_p_data),
-                                            m_current_capacity * sizeof(T)};
-            if (maybe const settled = allocator.alloc_grow_feedback(
-                   old_allocation, m_current_size * sizeof(T));
-                settled.has_value()) {
+            span<byte> const old_allocation{
+               reinterpret_cast<byte*>(m_p_data), m_current_capacity * sizeof(T)
+            };
+            if (
+               maybe const settled = allocator.alloc_grow_feedback(
+                  old_allocation, m_current_size * sizeof(T)
+               );
+               settled.has_value()
+            ) {
                m_current_capacity = idx(settled.value() / sizeof(T));
                annotate_size_change(m_current_capacity, m_current_size);
                return monostate;
@@ -434,7 +443,8 @@ class [[clang::preferred_name(vec<T>), gsl::Owner]] basic_vec
          }
 
          auto [alloc_span, alloc_bytes] = $prop(
-            allocator.resalloc_multi(m_p_data, m_current_size, m_current_size));
+            allocator.resalloc_multi(m_p_data, m_current_size, m_current_size)
+         );
          m_p_data = alloc_span.data();
          m_current_capacity = idx(alloc_bytes / sizeof(T));
          annotate_size_change(m_current_capacity, m_current_size);
@@ -691,8 +701,9 @@ maybe_vec_nullopt() -> basic_vec<T> {
 // bare `maybe<vec<T>>` stays the size of `vec<T>` itself.
 template <typename T>
 struct default_compact_trait<basic_vec<T>>
-    : identity_trait<compact<basic_vec<T>, detail::maybe_vec_has_value<T>,
-                             detail::maybe_vec_nullopt<T>>> {};
+    : identity_trait<compact<
+         basic_vec<T>, detail::maybe_vec_has_value<T>,
+         detail::maybe_vec_nullopt<T>>> {};
 
 inline namespace manual {
 

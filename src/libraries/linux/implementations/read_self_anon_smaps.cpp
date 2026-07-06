@@ -212,8 +212,9 @@ is_region_header(cat::str_view line) -> bool {
 }
 
 void
-process_smaps_line(cat::str_view line, smaps_region& region,
-                   smaps_totals& totals) {
+process_smaps_line(
+   cat::str_view line, smaps_region& region, smaps_totals& totals
+) {
    if (line.size() == 0u) {
       return;
    }
@@ -238,7 +239,8 @@ parse_smaps_buffer(cat::str_view buffer, smaps_totals& totals) {
       if (i == buffer.size() || buffer[i] == '\n') {
          process_smaps_line(
             buffer.substring(line_start, cat::idx(i - line_start)), region,
-            totals);
+            totals
+         );
          line_start = i + 1u;
       }
    }
@@ -259,9 +261,10 @@ nix::read_self_anon_smaps() -> cat::scaredy<nix::anon_smaps, nix::linux_error> {
    cat::idx total_bytes = 0u;
 
    while (true) {
-      cat::scaredy read_result =
-         nix::sys_read(fd, buffer.data() + total_bytes,
-                       cat::idx(smaps_buffer_bytes.raw - total_bytes.raw));
+      cat::scaredy read_result = nix::sys_read(
+         fd, buffer.data() + total_bytes,
+         cat::idx(smaps_buffer_bytes.raw - total_bytes.raw)
+      );
       if (!read_result.has_value()) {
          auto _ = nix::sys_close(fd);
          return read_result.error();

@@ -120,7 +120,8 @@ struct compress<T, Abi> {
       __UINT32_TYPE__ const lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(selector);
       v8si const indices = __builtin_bit_cast(
-         v8si, compress_detail::compress_lookup_table_8x32.entry[lane_bits]);
+         v8si, compress_detail::compress_lookup_table_8x32.entry[lane_bits]
+      );
 
       int const active_count = __builtin_popcountg(lane_bits);
       v8si const count_splat = {
@@ -161,7 +162,8 @@ struct compress<T, Abi> {
       __UINT32_TYPE__ const lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(selector);
       v8si const indices = __builtin_bit_cast(
-         v8si, compress_detail::compress_lookup_table_4x64.entry[lane_bits]);
+         v8si, compress_detail::compress_lookup_table_4x64.entry[lane_bits]
+      );
 
       int const active_count = __builtin_popcountg(lane_bits);
       v8si const count_splat = {
@@ -198,7 +200,8 @@ struct compress<T, Abi> {
          ::x64::detail::avx2_abi_masked_lane_bits(selector);
       // TODO: Clang had a regression in SIMD constant folding. Remove this asm
       // when possible.
-      asm volatile("" : "+r"(lane_bits));
+      asm volatile(""
+                   : "+r"(lane_bits));
 
       compress_detail::compress_chunks_4x64 const in_chunks =
          __builtin_bit_cast(compress_detail::compress_chunks_4x64, input.raw);
@@ -211,8 +214,9 @@ struct compress<T, Abi> {
             __builtin_ia32_pdep_di(submask, 0x00010001'00010001ULL) * 0xFFFFULL;
          __UINT64_TYPE__ const compressed =
             __builtin_ia32_pext_di(in_chunks.q[c], word_bit_mask);
-         __builtin_memcpy(&buffer.b[byte_offset], &compressed,
-                          sizeof(compressed));
+         __builtin_memcpy(
+            &buffer.b[byte_offset], &compressed, sizeof(compressed)
+         );
          byte_offset += __builtin_popcountg(submask) * 2u;
       }
 
@@ -246,8 +250,9 @@ struct compress<T, Abi> {
             __builtin_ia32_pdep_di(submask, 0x01010101'01010101ULL) * 0xFFULL;
          __UINT64_TYPE__ const compressed =
             __builtin_ia32_pext_di(in_chunks.q[c], byte_bit_mask);
-         __builtin_memcpy(&buffer.b[byte_offset], &compressed,
-                          sizeof(compressed));
+         __builtin_memcpy(
+            &buffer.b[byte_offset], &compressed, sizeof(compressed)
+         );
          byte_offset += __builtin_popcountg(submask);
       }
 

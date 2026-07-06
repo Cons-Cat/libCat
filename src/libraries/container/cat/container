@@ -148,8 +148,9 @@ container_stepanov_iterator(idx, T const* _Nullable)
 
 }  // namespace detail
 
-template <typename Container, template <typename, auto...> typename Iterator,
-          typename T, auto... args>
+template <
+   typename Container, template <typename, auto...> typename Iterator,
+   typename T, auto... args>
 class stepanov_iterable_interface {
  public:
    // `value_type` is the canonical (cv-unqualified) element type. `reference`
@@ -192,8 +193,9 @@ class stepanov_iterable_interface {
    [[nodiscard]]
    constexpr auto
    cbegin(this auto const& container) {
-      if constexpr (detail::has_stepanov_begin_const_qual<
-                       decltype(container)>) {
+      if constexpr (
+         detail::has_stepanov_begin_const_qual<decltype(container)>
+      ) {
          return container.begin();
       } else {
          // If no `const-qualified` `.begin()` method is provided, wrap over the
@@ -263,14 +265,16 @@ class random_access_stepanov_iterable_interface
       idx const last{container.size().raw - 1u};
       auto* _Nonnull p_data = $fwd(container).data();
       return reverse_proxy_stepanov_iterator(
-         detail::container_stepanov_iterator(last, p_data));
+         detail::container_stepanov_iterator(last, p_data)
+      );
    }
 
    [[nodiscard]]
    constexpr auto
    rend(this auto&& container) {
       return reverse_proxy_stepanov_iterator(
-         detail::container_stepanov_iterator(0, $fwd(container).data()));
+         detail::container_stepanov_iterator(0, $fwd(container).data())
+      );
    }
 };
 
@@ -481,9 +485,11 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    constexpr auto
    subspan(idx, idx) && = delete (
-      "Making a `cat::span` over a temporary would immediately dangle!");
+      "Making a `cat::span` over a temporary would immediately dangle!"
+   );
    constexpr auto subspan(idx, idx) const&& = delete (
-      "Making a `cat::span` over a temporary would immediately dangle!");
+      "Making a `cat::span` over a temporary would immediately dangle!"
+   );
 
    [[nodiscard]]
    constexpr auto
@@ -497,9 +503,11 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    constexpr auto
    first(idx) && = delete (
-      "Placing a `cat::span` over an r-value would immediately dangle!");
+      "Placing a `cat::span` over an r-value would immediately dangle!"
+   );
    constexpr auto first(idx) const&& = delete (
-      "Placing a `cat::span` over an r-value would immediately dangle!");
+      "Placing a `cat::span` over an r-value would immediately dangle!"
+   );
 
    [[nodiscard]]
    constexpr auto
@@ -513,9 +521,11 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    constexpr auto
    last(idx) && = delete (
-      "Placing a `cat::span` over an r-value would immediately dangle!");
+      "Placing a `cat::span` over an r-value would immediately dangle!"
+   );
    constexpr auto last(idx) const&& = delete (
-      "Placing a `cat::span` over an r-value would immediately dangle!");
+      "Placing a `cat::span` over an r-value would immediately dangle!"
+   );
 
    [[nodiscard]]
    constexpr auto

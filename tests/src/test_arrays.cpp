@@ -23,7 +23,8 @@ $test(array_structured_bindings) {
       constexpr cat::array<int, 3> constexpr_array{1, 2, 3};
       static_assert(std::tuple_size_v<cat::array<int, 3>> == 3);
       static_assert(
-         cat::is_same<std::tuple_element_t<1, cat::array<int, 3>>, int>);
+         cat::is_same<std::tuple_element_t<1, cat::array<int, 3>>, int>
+      );
       static_assert(cat::get<0>(constexpr_array) == 1);
       static_assert(cat::get<2>(constexpr_array) == 3);
    }();
@@ -87,24 +88,33 @@ $test(array_layout_data_size) {
 
    // Nested `cat::array`. Same regression vector since the inner array
    // carries the same empty-base chain via `container_interface`.
-   static_assert(sizeof(cat::array<cat::array<int, 2u>, 3u>)
-                 == sizeof(int) * 6);
-   static_assert(__datasizeof(cat::array<cat::array<int, 2u>, 3u>)
-                 == sizeof(int) * 6);
+   static_assert(
+      sizeof(cat::array<cat::array<int, 2u>, 3u>) == sizeof(int) * 6
+   );
+   static_assert(
+      __datasizeof(cat::array<cat::array<int, 2u>, 3u>) == sizeof(int) * 6
+   );
 
    // Length-1 nested array (smallest payload that still triggered the bug).
    static_assert(sizeof(cat::array<cat::array<cat::uint4, 1u>, 1u>) == 4u);
    static_assert(sizeof(cat::array<cat::array<cat::uint4, 1u>, 3u>) == 12u);
 
    // No tail padding: `sizeof == __datasizeof` for every shape.
-   static_assert(sizeof(cat::array<int, 4u>)
-                 == __datasizeof(cat::array<int, 4u>));
-   static_assert(sizeof(cat::array<cat::uint4, 3u>)
-                 == __datasizeof(cat::array<cat::uint4, 3u>));
-   static_assert(sizeof(cat::array<cat::bitset<32>, 3u>)
-                 == __datasizeof(cat::array<cat::bitset<32>, 3u>));
-   static_assert(sizeof(cat::array<cat::array<int, 2u>, 3u>)
-                 == __datasizeof(cat::array<cat::array<int, 2u>, 3u>));
+   static_assert(
+      sizeof(cat::array<int, 4u>) == __datasizeof(cat::array<int, 4u>)
+   );
+   static_assert(
+      sizeof(cat::array<cat::uint4, 3u>)
+      == __datasizeof(cat::array<cat::uint4, 3u>)
+   );
+   static_assert(
+      sizeof(cat::array<cat::bitset<32>, 3u>)
+      == __datasizeof(cat::array<cat::bitset<32>, 3u>)
+   );
+   static_assert(
+      sizeof(cat::array<cat::array<int, 2u>, 3u>)
+      == __datasizeof(cat::array<cat::array<int, 2u>, 3u>)
+   );
 }
 
 $test(array_traits) {

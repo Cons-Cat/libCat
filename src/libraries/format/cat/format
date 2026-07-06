@@ -123,8 +123,9 @@ to_chars() {
 template <is_integral T>
 [[nodiscard]]
 constexpr auto
-to_string_at(basic_int<T> value, span<char> output_buffer
-             [[clang::lifetimebound]]) -> maybe<str_view> {
+to_string_at(
+   basic_int<T> value, span<char> output_buffer [[clang::lifetimebound]]
+) -> maybe<str_view> {
    // Add 1 for a negative sign - character.
    constexpr iword max_length = to_chars<basic_int<T>::max()>().size() + 1;
    char buffer[max_length.raw];
@@ -285,8 +286,9 @@ struct format_type_constant {
 // container for `vfmt_to()`.
 struct format_string_vector : container_interface<format_string_vector, char>,
                               random_access_stepanov_iterable_interface<char> {
-   format_string_vector(char* _Nonnull p_in_storage, idx in_length,
-                        idx in_max_length)
+   format_string_vector(
+      char* _Nonnull p_in_storage, idx in_length, idx in_max_length
+   )
        : p_storage(p_in_storage), length(in_length), max_length(in_max_length) {
    }
 
@@ -310,12 +312,14 @@ struct format_string_vector : container_interface<format_string_vector, char>,
 
    // TODO: Embed the allocator so this isn't dangling.
    auto
-   push_back(is_allocator auto& allocator [[clang::lifetimebound]],
-             char character) -> maybe<void> {
+   push_back(
+      is_allocator auto& allocator [[clang::lifetimebound]], char character
+   ) -> maybe<void> {
       if (this->length + 1 > this->max_length) {
          // Reallocate double the memory if its capacity is exceeded.
          maybe result = allocator.template realloc_multi<char>(
-            this->p_storage, this->max_length, this->max_length * 2u);
+            this->p_storage, this->max_length, this->max_length * 2u
+         );
          if (!result.has_value()) {
             return nullopt;
          }
@@ -357,18 +361,19 @@ class format_args_compact_storage {
       iword const storage_index =
          this->arguments_indices[argument_index.raw].byte_index;
 
-      copy_memory_scalar(__builtin_addressof(value),
-                         &(this->packed_args_storage[0]) + storage_index,
-                         sizeof(T));
+      copy_memory_scalar(
+         __builtin_addressof(value),
+         &(this->packed_args_storage[0]) + storage_index, sizeof(T)
+      );
 
       // Assign `T` to that storage.
       this->arguments_indices[argument_index.raw].discriminant =
          detail::format_type_constant::alternative<T>();
 
       // Set the byte offset for the next argument if there is another.
-      if (argument_index + 1u
-          < sizeof...(Types)) {  // TODO: Explore whether `[[likely]]`
-                                 // improves performance here.
+      if (argument_index + 1u < sizeof...(Types)) {  // TODO: Explore whether
+                                                     // `[[likely]]` improves
+                                                     // performance here.
          this->arguments_indices[argument_index.raw + 1].byte_index =
             storage_index.raw + sizeof(T);
       }
@@ -401,7 +406,8 @@ class format_args_compact_storage {
 struct format_args {
    template <typename... Types>
    explicit constexpr format_args(
-      format_args_compact_storage<Types...> const& storage)
+      format_args_compact_storage<Types...> const& storage
+   )
        : p_args_indices(&(storage.arguments_indices[0])),
          argument_count(storage.argument_count) {
    }
@@ -422,7 +428,8 @@ struct format_args {
       // pointer to the next struct member, which happens to be the raw storage
       // array.
       byte const* const p_storage = reinterpret_cast<byte const* const>(
-         this->p_args_indices + argument_count);
+         this->p_args_indices + argument_count
+      );
 
       byte const* p_data = p_storage + storage_index;
       return *reinterpret_cast<T const*>(p_data);
@@ -439,8 +446,9 @@ template <is_allocator Allocator>
 struct format_buffer_base
     : container_interface<format_buffer_base<Allocator>, char>,
       random_access_stepanov_iterable_interface<char> {
-   format_buffer_base(char* _Nonnull p_in_string, uword in_length,
-                      uword in_max_length)
+   format_buffer_base(
+      char* _Nonnull p_in_string, uword in_length, uword in_max_length
+   )
        : p_string(p_in_string), length(in_length), max_length(in_max_length) {
    }
 
@@ -506,9 +514,11 @@ struct format_buffer_iterator<Allocator, Outputter>
    // To optimize common usage, 256 bytes of storage is reserved on stack.
    char storage[256];
 
-   format_buffer_iterator(Allocator& in_allocator [[clang::lifetimebound]]
-                          ,
-                          Outputter iterator)
+   format_buffer_iterator(
+      Allocator& in_allocator [[clang::lifetimebound]]
+      ,
+      Outputter iterator
+   )
        : format_buffer_base<Allocator>(storage, 0u, 256u),
          allocator(in_allocator),
          output_iterator(iterator) {
@@ -589,9 +599,10 @@ class format_parse_context {
    using iterator = decltype(m_format.begin());
    using const_iterator = decltype(m_format.cbegin());
 
-   constexpr format_parse_context(str_view const in_format
-                                  [[clang::lifetimebound]],
-                                  uword in_args_count = 0u)
+   constexpr format_parse_context(
+      str_view const in_format [[clang::lifetimebound]],
+      uword in_args_count = 0u
+   )
        : m_format(in_format), arguments_count(in_args_count) {
    }
 
@@ -611,7 +622,8 @@ class format_parse_context {
    advance_to(iterator position) {
       // this->format.begin().advance(position - this->format.begin());
       this->m_format.begin().advance(
-         position.distance_to(this->m_format.begin()));
+         position.distance_to(this->m_format.begin())
+      );
    }
 
    constexpr auto
@@ -655,11 +667,13 @@ struct format_handler {
    // and wide chars:
    format_args const arguments;
 
-   format_handler(Allocator& in_allocator [[clang::lifetimebound]],
-                  detail::format_contiguous_output_iterator<Allocator> iterator,
-                  str_view const in_format [[clang::lifetimebound]]
-                  ,
-                  format_args in_args)
+   format_handler(
+      Allocator& in_allocator [[clang::lifetimebound]],
+      detail::format_contiguous_output_iterator<Allocator> iterator,
+      str_view const in_format [[clang::lifetimebound]]
+      ,
+      format_args in_args
+   )
        : allocator(in_allocator),
          output_iterator(iterator),
          format(in_format),
@@ -720,9 +734,9 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
       format_args const& arguments = handler.arguments;
 
       auto parse = [&]<typename Argtype>(Argtype) -> scaredy_format<void> {
-         maybe const result =
-            to_chars(handler.allocator,
-                     arguments.template get<Argtype>(current_argument));
+         maybe const result = to_chars(
+            handler.allocator, arguments.template get<Argtype>(current_argument)
+         );
          if (!result.has_value()) {
             return format_errors::out_of_memory;
          }
@@ -785,24 +799,30 @@ parse_format_string(str_view const format, format_handler<Allocator>&& handler)
 // Format a sequence of `char` and push it into some container.
 template <is_allocator Allocator, typename Outputter>
 auto
-vfmt_to(Allocator& allocator, Outputter output_iterator, str_view const format,
-        detail::format_args arguments) -> scaredy_format<Outputter> {
-   if constexpr (is_same<Outputter, detail::format_contiguous_output_iterator<
-                                       Allocator>>) {
+vfmt_to(
+   Allocator& allocator, Outputter output_iterator, str_view const format,
+   detail::format_args arguments
+) -> scaredy_format<Outputter> {
+   if constexpr (
+      is_same<Outputter, detail::format_contiguous_output_iterator<Allocator>>
+   ) {
       // If the type-erased contiguous format buffer is used, then this routine
       // can be slightly streamlined.
-      detail::format_handler<Allocator> handler = {allocator, output_iterator,
-                                                   format, arguments};
+      detail::format_handler<Allocator> handler = {
+         allocator, output_iterator, format, arguments
+      };
       return parse_format_string(format, move(handler));
    } else {
       // Otherwise, create a type-erased contiguous format buffer to optimize
       // pushing to this output iterator.
       detail::format_buffer_iterator<Allocator, Outputter> buffer = {
-         allocator, output_iterator};
+         allocator, output_iterator
+      };
       detail::format_handler<Allocator> handler = {
          allocator,
          detail::format_contiguous_output_iterator<Allocator>{buffer}, format,
-         arguments};
+         arguments
+      };
       scaredy_format<void> result = parse_format_string(format, move(handler));
       if (!result.has_value()) {
          return result.error<format_errors>();
@@ -845,16 +865,21 @@ vfmt(Allocator& allocator, str_view const format, detail::format_args arguments)
 
 // Store `arguments` in a compacted variant object. Then format a sequence of
 // `char` with those arguments, and push the result into some container.
-template <is_allocator Allocator,
-          is_output_stepanov_iterator<str_view> Outputter, typename... Args>
+template <
+   is_allocator Allocator, is_output_stepanov_iterator<str_view> Outputter,
+   typename... Args>
 [[nodiscard]]
 auto
-fmt_to(Allocator& allocator, Outputter output_iterator, str_view const format,
-       Args&&... arguments) -> scaredy_format<Outputter> {
+fmt_to(
+   Allocator& allocator, Outputter output_iterator, str_view const format,
+   Args&&... arguments
+) -> scaredy_format<Outputter> {
    return vfmt_to(
       allocator, output_iterator, format,
       detail::format_args(
-         detail::format_args_compact_storage<Args...>($fwd(arguments)...)));
+         detail::format_args_compact_storage<Args...>($fwd(arguments)...)
+      )
+   );
 }
 
 template <is_allocator Allocator, typename... Args>
@@ -862,9 +887,12 @@ template <is_allocator Allocator, typename... Args>
 auto
 fmt(Allocator& allocator, str_view const format, Args&&... arguments)
    -> scaredy_format<str_view> {
-   return vfmt(allocator, format,
-               detail::format_args(detail::format_args_compact_storage<Args...>(
-                  $fwd(arguments)...)));
+   return vfmt(
+      allocator, format,
+      detail::format_args(
+         detail::format_args_compact_storage<Args...>($fwd(arguments)...)
+      )
+   );
 }
 
 }  // namespace cat

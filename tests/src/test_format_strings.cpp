@@ -44,8 +44,9 @@ $test(format_strings) {
    // Test formatting `float`.
    allocator.reset();
    cat::str_view string_float = cat::to_chars(allocator, 1.234f).or_exit();
-   cat::verify(cat::compare_strings(string_float.data(), "1.234E0"),
-               string_float);
+   cat::verify(
+      cat::compare_strings(string_float.data(), "1.234E0"), string_float
+   );
    // cat::println(string_float);
 
    cat::str_view formatted_string_float =
@@ -94,14 +95,19 @@ $test(fmt_long_pattern_substitutes) {
    auto allocator = make_linear_allocator(page);
 
    cat::str_view const formatted =
-      cat::fmt(allocator,
-               "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:"
-               "{}:{}:{}:{}:{}:{}:{}:{}",
-               0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-               19, 20, 21, 22, 23)
+      cat::fmt(
+         allocator,
+         "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:"
+         "{}:{}:{}:{}:{}:{}:{}:{}",
+         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+         20, 21, 22, 23
+      )
          .or_exit();
 
-   cat::verify(cat::compare_strings(
-      formatted,
-      "0:1:2:3:4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19:20:21:22:23"));
+   cat::verify(
+      cat::compare_strings(
+         formatted,
+         "0:1:2:3:4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19:20:21:22:23"
+      )
+   );
 }

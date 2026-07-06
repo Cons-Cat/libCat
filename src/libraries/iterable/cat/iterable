@@ -225,8 +225,10 @@ concept is_bidirectional_collection =
 template <typename T>
 concept is_random_access_collection =
    is_bidirectional_collection<T>
-   && requires(T const& c, position_type<T>& p, position_type<T> const& a,
-               position_type<T> const& b, iword offset) {
+   && requires(
+      T const& c, position_type<T>& p, position_type<T> const& a,
+      position_type<T> const& b, iword offset
+   ) {
          offset_pos(c, p, offset);
          { distance(c, a, b) } -> is_convertible<iword>;
       };
@@ -244,11 +246,13 @@ class collection_iteration_context {
 
  public:
    using element_type = decltype(read_at_unchecked(
-      declval<T&>(), declval<position_type<T> const&>()));
+      declval<T&>(), declval<position_type<T> const&>()
+   ));
 
-   constexpr collection_iteration_context(T* _Nonnull p_collection,
-                                          position_type<T> begin_position,
-                                          position_type<T> end_position)
+   constexpr collection_iteration_context(
+      T* _Nonnull p_collection, position_type<T> begin_position,
+      position_type<T> end_position
+   )
        : m_p_collection(p_collection),
          m_position(begin_position),
          m_stop(end_position) {
@@ -270,7 +274,8 @@ class collection_iteration_context {
          auto const position_before_advance = m_position;
          inc_pos(*m_p_collection, m_position);
          if (!loop_body(
-                read_at_unchecked(*m_p_collection, position_before_advance))) {
+                read_at_unchecked(*m_p_collection, position_before_advance)
+             )) {
             return iteration_result::incomplete;
          }
       }
@@ -292,20 +297,24 @@ class reverse_collection_iteration_context {
 
  public:
    using element_type = decltype(read_at_unchecked(
-      declval<T&>(), declval<position_type<T> const&>()));
+      declval<T&>(), declval<position_type<T> const&>()
+   ));
 
    constexpr reverse_collection_iteration_context(
       T* _Nonnull p_collection, position_type<T> begin_position,
-      position_type<T> end_position)
+      position_type<T> end_position
+   )
        : m_p_collection(p_collection),
          m_position(begin_position),
          m_stop(end_position) {
    }
 
    reverse_collection_iteration_context(
-      reverse_collection_iteration_context const&) = delete;
+      reverse_collection_iteration_context const&
+   ) = delete;
    reverse_collection_iteration_context(
-      reverse_collection_iteration_context&&) = delete;
+      reverse_collection_iteration_context&&
+   ) = delete;
    auto
    operator=(reverse_collection_iteration_context const&)
       -> reverse_collection_iteration_context& = delete;
@@ -366,12 +375,14 @@ struct iterate_fn {
 
    // Otherwise wrap a collection in the default forward position walk.
    template <typename T>
-      requires(!is_reference_wrapper<T> && !has_member_iterate<T>
-               && is_collection<T>)
+      requires(
+         !is_reference_wrapper<T> && !has_member_iterate<T> && is_collection<T>
+      )
    constexpr auto
    operator()(T& source) const -> collection_iteration_context<T> {
       return collection_iteration_context<T>{
-         __builtin_addressof(source), begin_pos(source), end_pos(source)};
+         __builtin_addressof(source), begin_pos(source), end_pos(source)
+      };
    }
 };
 
@@ -402,12 +413,15 @@ struct reverse_iterate_fn {
 
    // Otherwise walk a bidirectional collection backward by positions.
    template <typename T>
-      requires(!is_reference_wrapper<T> && !has_member_reverse_iterate<T>
-               && is_bidirectional_collection<T>)
+      requires(
+         !is_reference_wrapper<T> && !has_member_reverse_iterate<T>
+         && is_bidirectional_collection<T>
+      )
    constexpr auto
    operator()(T& source) const -> reverse_collection_iteration_context<T> {
       return reverse_collection_iteration_context<T>{
-         __builtin_addressof(source), end_pos(source), begin_pos(source)};
+         __builtin_addressof(source), end_pos(source), begin_pos(source)
+      };
    }
 };
 }  // namespace cat::detail
@@ -477,8 +491,9 @@ concept is_iteration_context =
 // `iteration_context.run_while`. It exists so generic code never has to spell
 // `iteration_context.run_while(...)` directly.
 // TODO: Do we need this?
-template <is_iteration_context IterationContext,
-          is_predicate<typename IterationContext::element_type> Callback>
+template <
+   is_iteration_context IterationContext,
+   is_predicate<typename IterationContext::element_type> Callback>
 constexpr auto
 run_while(IterationContext& iteration_context, Callback&& callback)
    -> iteration_result {
@@ -530,7 +545,8 @@ step(IterationContext& iteration_context, Callback callback) {
             maybe_result = callback($fwd(element));
          }
          return false;
-      });
+      }
+   );
    return maybe_result;
 }
 

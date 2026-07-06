@@ -198,29 +198,32 @@ template <typename T>
 concept is_rvalue_reference = __is_rvalue_reference(T);
 
 template <typename From, typename To>
-using copy_const_from = conditional<is_const_ref<From>,
-                                    // From is `const`.
-                                    add_const<To>,
-                                    // From is not `const`.
-                                    remove_const<To>>;
+using copy_const_from = conditional<
+   is_const_ref<From>,
+   // From is `const`.
+   add_const<To>,
+   // From is not `const`.
+   remove_const<To>>;
 
 template <typename From, typename To>
-using copy_volatile_from = conditional<is_volatile<remove_reference<From>>,
-                                       // From is volatile.
-                                       add_volatile<To>,
-                                       // From is not volatile.
-                                       remove_volatile<To>>;
+using copy_volatile_from = conditional<
+   is_volatile<remove_reference<From>>,
+   // From is volatile.
+   add_volatile<To>,
+   // From is not volatile.
+   remove_volatile<To>>;
 
 template <typename From, typename To>
-using copy_ref_from =
-   conditional<is_lvalue_reference<From>,
-               // From is an l-value reference.
-               __add_lvalue_reference(remove_reference<To>),
-               conditional<is_rvalue_reference<From>,
-                           // From is an r-value reference.
-                           __add_rvalue_reference(remove_reference<To>),
-                           // From is not a reference.
-                           remove_reference<To>>>;
+using copy_ref_from = conditional<
+   is_lvalue_reference<From>,
+   // From is an l-value reference.
+   __add_lvalue_reference(remove_reference<To>),
+   conditional<
+      is_rvalue_reference<From>,
+      // From is an r-value reference.
+      __add_rvalue_reference(remove_reference<To>),
+      // From is not a reference.
+      remove_reference<To>>>;
 
 template <typename From, typename To>
 using copy_constref_from = copy_ref_from<From, copy_const_from<From, To>>;
@@ -383,10 +386,10 @@ concept is_floating_point = detail::is_floating_point_detail<remove_cv<T>>;
 
 namespace detail {
 template <typename T>
-inline constexpr bool is_integral_detail =
-   is_either<T, char, signed char, unsigned char, bool, signed short,
-             unsigned short, signed int, unsigned int, signed long,
-             unsigned long, signed long long, unsigned long long>;
+inline constexpr bool is_integral_detail = is_either<
+   T, char, signed char, unsigned char, bool, signed short, unsigned short,
+   signed int, unsigned int, signed long, unsigned long, signed long long,
+   unsigned long long>;
 
 template <typename T, auto policy>
 inline constexpr bool is_integral_detail<basic_int<T, policy>> =
@@ -578,8 +581,8 @@ struct detail::make_unsigned_trait<basic_ualign<Storage>> {
 };
 
 template <is_integral Sign, is_integral T>
-using copy_sign_from = conditional<is_signed<Sign>, make_signed_type<Sign>,
-                                   detail::make_unsigned_trait<Sign>>;
+using copy_sign_from = conditional<
+   is_signed<Sign>, make_signed_type<Sign>, detail::make_unsigned_trait<Sign>>;
 
 template <typename T>
 concept is_void = __is_same(T, void);
@@ -754,8 +757,9 @@ concept is_implicit_lifetime = __builtin_is_implicit_lifetime(T);
 
 template <typename S1, typename S2, typename M1, typename M2>
 constexpr auto
-is_corresponding_member(M1 S1::* _Nonnull member_1,
-                        M2 S2::* _Nonnull member_2) noexcept -> bool {
+is_corresponding_member(
+   M1 S1::* _Nonnull member_1, M2 S2::* _Nonnull member_2
+) noexcept -> bool {
    return __builtin_is_corresponding_member(member_1, member_2);
 }
 
@@ -1025,9 +1029,9 @@ struct reference_wrapper_impl {
        : m_p_target(__builtin_addressof(target)) {
    }
 
-   constexpr reference_wrapper_impl(T&&) = delete (
-      "Assigning an r-value to a `cat::reference_wrapper` would "
-      "immediately dangle!");
+   constexpr reference_wrapper_impl(T&&) =
+      delete ("Assigning an r-value to a `cat::reference_wrapper` would "
+              "immediately dangle!");
 
    constexpr void
    rebind(T& target [[clang::lifetime_capture_by(this)]]) {
@@ -1142,8 +1146,8 @@ concept is_weakly_equality_comparable =
 template <typename T, typename U = T>
 concept is_equality_comparable =
    is_weakly_equality_comparable<T, T> && is_weakly_equality_comparable<U, U>
-   && has_common_reference_with<remove_reference<T> const&,
-                                remove_reference<U> const&>
+   && has_common_reference_with<
+      remove_reference<T> const&, remove_reference<U> const&>
    && is_weakly_equality_comparable<
       common_reference<remove_reference<T> const&, remove_reference<U> const&>,
       common_reference<remove_reference<T> const&, remove_reference<U> const&>>

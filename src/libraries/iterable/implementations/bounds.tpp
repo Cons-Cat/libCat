@@ -48,8 +48,10 @@ try_read_at(T& collection, position_type<T> const& position)
 template <typename T>
    requires(is_collection<T>)
 constexpr auto
-slice(T& collection [[clang::lifetimebound]], position_type<T> first,
-      position_type<T> last) -> detail::slice_view<T> {
+slice(
+   T& collection [[clang::lifetimebound]], position_type<T> first,
+   position_type<T> last
+) -> detail::slice_view<T> {
    // Bounds are verified at construction so an invalid range fails fast instead
    // of turning into an out-of-bounds read later.
    cat::assert(!(last < first));
@@ -57,7 +59,8 @@ slice(T& collection [[clang::lifetimebound]], position_type<T> first,
    cat::assert(!(end_pos(collection) < last));
 
    return detail::slice_view<T>{
-      {}, __builtin_addressof(collection), first, last};
+      {}, __builtin_addressof(collection), first, last
+   };
 }
 
 namespace detail {

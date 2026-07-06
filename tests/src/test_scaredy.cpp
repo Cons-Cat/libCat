@@ -116,11 +116,13 @@ $test(scaredy) {
    cat::verify(two_error.error<error_type_one>().code == 1);
 
    // Test compact optimization.
-   cat::scaredy<cat::compact_scaredy<int4,
-                                     [](int4 input) {
-                                        return input >= 0;
-                                     }>,
-                error_type_one>
+   cat::scaredy<
+      cat::compact_scaredy<
+         int4,
+         [](int4 input) {
+            return input >= 0;
+         }>,
+      error_type_one>
       predicate = -1;
 
    // This `scaredy` adds no storage to an `int4`.
@@ -188,20 +190,24 @@ $test(scaredy) {
    cat::match(is_variant_scaredy)(  //
       is_a<int4>().then_do([&]() {
          matched = true;
-      }));
+      })
+   );
    cat::match(is_variant_scaredy)(  //
       is_a<error_type_one>().then_do([&]() {
          matched = false;
-      }));
+      })
+   );
    cat::match(is_variant_scaredy)(  //
       is_a<error_type_two>().then_do([&]() {
          matched = false;
-      }));
+      })
+   );
    // `float` can never hold true here, but it should compile.
    cat::match(is_variant_scaredy)(  //
       is_a<float>().then_do([&]() {
          matched = false;
-      }));
+      })
+   );
    cat::verify(matched);
 
    // Match it against `error_type_one`.
@@ -210,15 +216,18 @@ $test(scaredy) {
    cat::match(is_variant_scaredy)(  //
       is_a<error_type_one>().then_do([&]() {
          matched = true;
-      }));
+      })
+   );
    cat::match(is_variant_scaredy)(  //
       is_a<int4>().then_do([&]() {
          matched = false;
-      }));
+      })
+   );
    cat::match(is_variant_scaredy)(  //
       is_a<error_type_two>().then_do([&]() {
          matched = false;
-      }));
+      })
+   );
    cat::verify(matched);
 
    // Test member access pattern matching syntax.

@@ -301,13 +301,14 @@ template <typename T, typename... Errors>
       // `scaredy` cannot hold C arrays.
       (!is_array<Errors> && ...) &&
       // `scaredy` should have at least one error type.
-      sizeof...(Errors) > 0)
+      sizeof...(Errors) > 0
+   )
 class [[nodiscard]] scaredy {
  private:
-   using storage_type =
-      conditional<requires { T::predicate_function; },
-                  detail::scaredy_compact_storage<T, Errors...[0]>,
-                  detail::scaredy_variant_storage<T, Errors...>>;
+   using storage_type = conditional<
+      requires { T::predicate_function; },
+      detail::scaredy_compact_storage<T, Errors...[0]>,
+      detail::scaredy_variant_storage<T, Errors...>>;
 
  public:
    using value_type = storage_type::value_type;
@@ -562,10 +563,11 @@ class [[nodiscard]] scaredy {
    // TODO: Add overloads which take a `str_view` for an error message.
 
    auto
-   assert(this auto&& self,
-          void (*p_assert_handler)(source_location const&) = assert_handler,
-          source_location const& callsite = source_location::current())
-      -> auto&&
+   assert(
+      this auto&& self,
+      void (*p_assert_handler)(source_location const&) = assert_handler,
+      source_location const& callsite = source_location::current()
+   ) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
       auto&& base = $fwd(self).as_base();
@@ -576,9 +578,10 @@ class [[nodiscard]] scaredy {
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
-   assert(void (*p_assert_handler)(source_location const&) = assert_handler,
-          source_location const& callsite = source_location::current()) const
-      -> monostate_type
+   assert(
+      void (*p_assert_handler)(source_location const&) = assert_handler,
+      source_location const& callsite = source_location::current()
+   ) const -> monostate_type
       requires(storage_type::is_wrapping_void)
    {
       cat::assert(has_value(), p_assert_handler, callsite);
@@ -586,10 +589,11 @@ class [[nodiscard]] scaredy {
    }
 
    auto
-   verify(this auto&& self,
-          void (*p_assert_handler)(source_location const&) = assert_handler,
-          source_location const& callsite = source_location::current())
-      -> auto&&
+   verify(
+      this auto&& self,
+      void (*p_assert_handler)(source_location const&) = assert_handler,
+      source_location const& callsite = source_location::current()
+   ) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
       auto&& base = $fwd(self).as_base();
@@ -600,9 +604,10 @@ class [[nodiscard]] scaredy {
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
-   verify(void (*p_assert_handler)(source_location const&) = assert_handler,
-          source_location const& callsite = source_location::current()) const
-      -> monostate_type
+   verify(
+      void (*p_assert_handler)(source_location const&) = assert_handler,
+      source_location const& callsite = source_location::current()
+   ) const -> monostate_type
       requires(storage_type::is_wrapping_void)
    {
       cat::verify(has_value(), p_assert_handler, callsite);

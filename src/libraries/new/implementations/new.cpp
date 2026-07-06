@@ -36,6 +36,7 @@ operator delete[](void* _Nullable /*unused*/, unsigned long /*unused*/) {
 }
 
 void
-operator delete[](void* _Nullable /*unused*/, unsigned long /*unused*/,
-                  std::align_val_t /*unused*/) {
+operator delete
+   [](void* _Nullable /*unused*/, unsigned long /*unused*/,
+      std::align_val_t /*unused*/) {
 }

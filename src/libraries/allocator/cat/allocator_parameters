@@ -154,10 +154,12 @@ struct dyn_allocator_friend {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   aligned_allocate_zeroed_feedback(T& self, ualign alignment,
-                                    idx allocation_bytes)
-      -> decltype(self.aligned_allocate_zeroed_feedback(alignment,
-                                                        allocation_bytes)) {
+   aligned_allocate_zeroed_feedback(
+      T& self, ualign alignment, idx allocation_bytes
+   )
+      -> decltype(self.aligned_allocate_zeroed_feedback(
+         alignment, allocation_bytes
+      )) {
       return self.aligned_allocate_zeroed_feedback(alignment, allocation_bytes);
    }
 
@@ -228,11 +230,9 @@ concept has_allocate =
    };
 
 template <typename T>
-concept has_deallocate =
-   requires(T& allocator, void const* _Nonnull p_storage,
-            idx allocation_bytes) {
-      dyn_allocator_friend::deallocate(allocator, p_storage, allocation_bytes);
-   };
+concept has_deallocate = requires(
+   T& allocator, void const* _Nonnull p_storage, idx allocation_bytes
+) { dyn_allocator_friend::deallocate(allocator, p_storage, allocation_bytes); };
 
 template <typename T>
 concept has_reset =
@@ -241,8 +241,9 @@ concept has_reset =
 template <typename T>
 concept has_aligned_allocate =
    requires(T& allocator, ualign alignment, idx allocation_bytes) {
-      dyn_allocator_friend::aligned_allocate(allocator, alignment,
-                                             allocation_bytes);
+      dyn_allocator_friend::aligned_allocate(
+         allocator, alignment, allocation_bytes
+      );
    };
 
 template <typename T>
@@ -254,8 +255,9 @@ concept has_allocate_feedback =
 template <typename T>
 concept has_aligned_allocate_feedback =
    requires(T& allocator, ualign alignment, idx allocation_bytes) {
-      dyn_allocator_friend::aligned_allocate_feedback(allocator, alignment,
-                                                      allocation_bytes);
+      dyn_allocator_friend::aligned_allocate_feedback(
+         allocator, alignment, allocation_bytes
+      );
    };
 
 template <typename T>
@@ -284,8 +286,9 @@ concept has_reallocate =
 template <typename T>
 concept has_reallocate_feedback =
    requires(T& allocator, span<byte> allocation, idx new_bytes) {
-      dyn_allocator_friend::reallocate_feedback(allocator, allocation,
-                                                new_bytes);
+      dyn_allocator_friend::reallocate_feedback(
+         allocator, allocation, new_bytes
+      );
    };
 
 template <typename T>
@@ -297,22 +300,25 @@ concept has_allocate_zeroed =
 template <typename T>
 concept has_allocate_zeroed_feedback =
    requires(T& allocator, idx allocation_bytes) {
-      dyn_allocator_friend::allocate_zeroed_feedback(allocator,
-                                                     allocation_bytes);
+      dyn_allocator_friend::allocate_zeroed_feedback(
+         allocator, allocation_bytes
+      );
    };
 
 template <typename T>
 concept has_aligned_allocate_zeroed =
    requires(T& allocator, ualign alignment, idx allocation_bytes) {
-      dyn_allocator_friend::aligned_allocate_zeroed(allocator, alignment,
-                                                    allocation_bytes);
+      dyn_allocator_friend::aligned_allocate_zeroed(
+         allocator, alignment, allocation_bytes
+      );
    };
 
 template <typename T>
 concept has_aligned_allocate_zeroed_feedback =
    requires(T& allocator, ualign alignment, idx allocation_bytes) {
       dyn_allocator_friend::aligned_allocate_zeroed_feedback(
-         allocator, alignment, allocation_bytes);
+         allocator, alignment, allocation_bytes
+      );
    };
 
 template <typename T>
@@ -377,17 +383,20 @@ struct dyn_aligned_allocate {
    do_invoke(T& self, ualign alignment, idx allocation_bytes)
       -> maybe_ptr<void> {
       if constexpr (has_aligned_allocate<T>) {
-         return dyn_allocator_friend::aligned_allocate(self, alignment,
-                                                       allocation_bytes);
+         return dyn_allocator_friend::aligned_allocate(
+            self, alignment, allocation_bytes
+         );
       } else {
          // If the allocator doesn't implement `aligned_allocate`, we generate a
          // shim.
          maybe_ptr<void> result =
             dyn_allocator_friend::allocate(self, allocation_bytes);
-         if (result.has_value()
-             && !cat::is_aligned(result.value(), alignment)) {
-            dyn_allocator_friend::deallocate(self, result.value(),
-                                             allocation_bytes);
+         if (
+            result.has_value() && !cat::is_aligned(result.value(), alignment)
+         ) {
+            dyn_allocator_friend::deallocate(
+               self, result.value(), allocation_bytes
+            );
             return nullopt;
          }
          return result;
@@ -413,7 +422,8 @@ struct dyn_allocate_feedback {
             return nullopt;
          }
          return maybe_sized_allocation<void*>(
-            tuple{result.value(), allocation_bytes});
+            tuple{result.value(), allocation_bytes}
+         );
       }
    }
 };
@@ -428,20 +438,24 @@ struct dyn_aligned_allocate_feedback {
       -> maybe_sized_allocation<void*> {
       if constexpr (has_aligned_allocate_feedback<T>) {
          return dyn_allocator_friend::aligned_allocate_feedback(
-            self, alignment, allocation_bytes);
+            self, alignment, allocation_bytes
+         );
       } else {
          // If the allocator doesn't implement `aligned_allocate_feedback`, we
          // generate a shim.
          maybe_ptr<void> result;
          if constexpr (has_aligned_allocate<T>) {
-            result = dyn_allocator_friend::aligned_allocate(self, alignment,
-                                                            allocation_bytes);
+            result = dyn_allocator_friend::aligned_allocate(
+               self, alignment, allocation_bytes
+            );
          } else {
             result = dyn_allocator_friend::allocate(self, allocation_bytes);
-            if (result.has_value()
-                && !cat::is_aligned(result.value(), alignment)) {
-               dyn_allocator_friend::deallocate(self, result.value(),
-                                                allocation_bytes);
+            if (
+               result.has_value() && !cat::is_aligned(result.value(), alignment)
+            ) {
+               dyn_allocator_friend::deallocate(
+                  self, result.value(), allocation_bytes
+               );
                return nullopt;
             }
          }
@@ -449,7 +463,8 @@ struct dyn_aligned_allocate_feedback {
             return nullopt;
          }
          return maybe_sized_allocation<void*>(
-            tuple{result.value(), allocation_bytes});
+            tuple{result.value(), allocation_bytes}
+         );
       }
    }
 };
@@ -477,8 +492,10 @@ struct dyn_grow {
    template <has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke([[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
-             [[maybe_unused]] idx new_bytes) -> maybe<void> {
+   do_invoke(
+      [[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
+      [[maybe_unused]] idx new_bytes
+   ) -> maybe<void> {
       if constexpr (has_grow<T>) {
          return dyn_allocator_friend::grow(self, allocation, new_bytes);
       } else {
@@ -493,14 +510,18 @@ struct dyn_grow_feedback {
    template <has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke([[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
-             [[maybe_unused]] idx new_bytes) -> maybe_non_zero<idx> {
+   do_invoke(
+      [[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
+      [[maybe_unused]] idx new_bytes
+   ) -> maybe_non_zero<idx> {
       if constexpr (has_grow_feedback<T>) {
-         return dyn_allocator_friend::grow_feedback(self, allocation,
-                                                    new_bytes);
+         return dyn_allocator_friend::grow_feedback(
+            self, allocation, new_bytes
+         );
       } else if constexpr (has_grow<T>) {
-         if (dyn_allocator_friend::grow(self, allocation, new_bytes)
-                .has_value()) {
+         if (
+            dyn_allocator_friend::grow(self, allocation, new_bytes).has_value()
+         ) {
             return new_bytes;
          }
          return nullopt;
@@ -516,8 +537,10 @@ struct dyn_reallocate {
    template <has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke([[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
-             [[maybe_unused]] idx new_bytes) -> maybe_ptr<void> {
+   do_invoke(
+      [[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
+      [[maybe_unused]] idx new_bytes
+   ) -> maybe_ptr<void> {
       if constexpr (has_reallocate<T>) {
          return dyn_allocator_friend::reallocate(self, allocation, new_bytes);
       } else {
@@ -532,11 +555,14 @@ struct dyn_reallocate_feedback {
    template <has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke([[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
-             [[maybe_unused]] idx new_bytes) -> maybe_sized_allocation<void*> {
+   do_invoke(
+      [[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
+      [[maybe_unused]] idx new_bytes
+   ) -> maybe_sized_allocation<void*> {
       if constexpr (has_reallocate_feedback<T>) {
-         return dyn_allocator_friend::reallocate_feedback(self, allocation,
-                                                          new_bytes);
+         return dyn_allocator_friend::reallocate_feedback(
+            self, allocation, new_bytes
+         );
       } else if constexpr (has_reallocate<T>) {
          maybe_ptr<void> result =
             dyn_allocator_friend::reallocate(self, allocation, new_bytes);
@@ -648,12 +674,13 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
       }
    };
 
-   dyn_ptr<detail::dyn_allocate, detail::dyn_deallocate, detail::dyn_reset,
-           detail::dyn_aligned_allocate, detail::dyn_allocate_feedback,
-           detail::dyn_aligned_allocate_feedback, detail::dyn_resize,
-           detail::dyn_grow, detail::dyn_grow_feedback, detail::dyn_reallocate,
-           detail::dyn_reallocate_feedback, detail::dyn_bytes_used,
-           detail::dyn_bytes_capacity, detail::dyn_equals, detail::dyn_name>
+   dyn_ptr<
+      detail::dyn_allocate, detail::dyn_deallocate, detail::dyn_reset,
+      detail::dyn_aligned_allocate, detail::dyn_allocate_feedback,
+      detail::dyn_aligned_allocate_feedback, detail::dyn_resize,
+      detail::dyn_grow, detail::dyn_grow_feedback, detail::dyn_reallocate,
+      detail::dyn_reallocate_feedback, detail::dyn_bytes_used,
+      detail::dyn_bytes_capacity, detail::dyn_equals, detail::dyn_name>
       m_p_allocator;
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -665,22 +692,25 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
    void
    deallocate(void const* _Nonnull p_storage, idx allocation_bytes) {
-      dyn_invoke<detail::dyn_deallocate>(*m_p_allocator, p_storage,
-                                         allocation_bytes);
+      dyn_invoke<detail::dyn_deallocate>(
+         *m_p_allocator, p_storage, allocation_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
    aligned_allocate(ualign alignment, idx allocation_bytes) -> maybe_ptr<void> {
-      return dyn_invoke<detail::dyn_aligned_allocate>(*m_p_allocator, alignment,
-                                                      allocation_bytes);
+      return dyn_invoke<detail::dyn_aligned_allocate>(
+         *m_p_allocator, alignment, allocation_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
    allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*> {
-      return dyn_invoke<detail::dyn_allocate_feedback>(*m_p_allocator,
-                                                       allocation_bytes);
+      return dyn_invoke<detail::dyn_allocate_feedback>(
+         *m_p_allocator, allocation_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -688,7 +718,8 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    aligned_allocate_feedback(ualign alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
       return dyn_invoke<detail::dyn_aligned_allocate_feedback>(
-         *m_p_allocator, alignment, allocation_bytes);
+         *m_p_allocator, alignment, allocation_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -700,30 +731,34 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    [[gnu::always_inline, gnu::nodebug]]
    auto
    grow(span<byte> allocation, idx new_bytes) -> maybe<void> {
-      return dyn_invoke<detail::dyn_grow>(*m_p_allocator, allocation,
-                                          new_bytes);
+      return dyn_invoke<detail::dyn_grow>(
+         *m_p_allocator, allocation, new_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
    grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx> {
-      return dyn_invoke<detail::dyn_grow_feedback>(*m_p_allocator, allocation,
-                                                   new_bytes);
+      return dyn_invoke<detail::dyn_grow_feedback>(
+         *m_p_allocator, allocation, new_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
    reallocate(span<byte> allocation, idx new_bytes) -> maybe_ptr<void> {
-      return dyn_invoke<detail::dyn_reallocate>(*m_p_allocator, allocation,
-                                                new_bytes);
+      return dyn_invoke<detail::dyn_reallocate>(
+         *m_p_allocator, allocation, new_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
    reallocate_feedback(span<byte> allocation, idx new_bytes)
       -> maybe_sized_allocation<void*> {
-      return dyn_invoke<detail::dyn_reallocate_feedback>(*m_p_allocator,
-                                                         allocation, new_bytes);
+      return dyn_invoke<detail::dyn_reallocate_feedback>(
+         *m_p_allocator, allocation, new_bytes
+      );
    }
 
    template <typename T>
@@ -755,10 +790,9 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    // another `dyn_allocator` would otherwise add superfluous indirections.
    template <is_allocator Allocator>
       requires(is_neither<Allocator, dyn_allocator>)
-   [[gnu::always_inline,
-     gnu::nodebug]] constexpr dyn_allocator(Allocator& allocator
-                                            [[clang::lifetimebound]]
-                                            )
+   [[gnu::always_inline, gnu::nodebug]] constexpr dyn_allocator(
+      Allocator& allocator [[clang::lifetimebound]]
+   )
        : m_p_allocator(__builtin_addressof(allocator)) {
    }
 
@@ -778,8 +812,9 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
       if (m_p_allocator.type_id_ptr() != other.m_p_allocator.type_id_ptr()) {
          return false;
       }
-      return dyn_invoke<detail::dyn_equals>(*m_p_allocator,
-                                            other.m_p_allocator.get());
+      return dyn_invoke<detail::dyn_equals>(
+         *m_p_allocator, other.m_p_allocator.get()
+      );
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -883,8 +918,9 @@ class [[gsl::Pointer]] allocator_ref
       -> maybe_sized_allocation<void*>
       requires(detail::has_aligned_allocate_feedback<Allocator>)
    {
-      return get_allocator().aligned_allocate_feedback(alignment,
-                                                       allocation_bytes);
+      return get_allocator().aligned_allocate_feedback(
+         alignment, allocation_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -908,8 +944,9 @@ class [[gsl::Pointer]] allocator_ref
    grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
       requires(detail::has_grow_feedback<Allocator>)
    {
-      return dyn_allocator_friend::grow_feedback(get_allocator(), allocation,
-                                                 new_bytes);
+      return dyn_allocator_friend::grow_feedback(
+         get_allocator(), allocation, new_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -917,8 +954,9 @@ class [[gsl::Pointer]] allocator_ref
    reallocate(span<byte> allocation, idx new_bytes) -> maybe_ptr<void>
       requires(detail::has_reallocate<Allocator>)
    {
-      return dyn_allocator_friend::reallocate(get_allocator(), allocation,
-                                              new_bytes);
+      return dyn_allocator_friend::reallocate(
+         get_allocator(), allocation, new_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -927,8 +965,9 @@ class [[gsl::Pointer]] allocator_ref
       -> maybe_sized_allocation<void*>
       requires(detail::has_reallocate_feedback<Allocator>)
    {
-      return dyn_allocator_friend::reallocate_feedback(get_allocator(),
-                                                       allocation, new_bytes);
+      return dyn_allocator_friend::reallocate_feedback(
+         get_allocator(), allocation, new_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -936,8 +975,9 @@ class [[gsl::Pointer]] allocator_ref
    allocate_zeroed(idx allocation_bytes) -> maybe_ptr<void>
       requires(detail::has_allocate_zeroed<Allocator>)
    {
-      return dyn_allocator_friend::allocate_zeroed(get_allocator(),
-                                                   allocation_bytes);
+      return dyn_allocator_friend::allocate_zeroed(
+         get_allocator(), allocation_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -946,8 +986,9 @@ class [[gsl::Pointer]] allocator_ref
       -> maybe_sized_allocation<void*>
       requires(detail::has_allocate_zeroed_feedback<Allocator>)
    {
-      return dyn_allocator_friend::allocate_zeroed_feedback(get_allocator(),
-                                                            allocation_bytes);
+      return dyn_allocator_friend::allocate_zeroed_feedback(
+         get_allocator(), allocation_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -957,7 +998,8 @@ class [[gsl::Pointer]] allocator_ref
       requires(detail::has_aligned_allocate_zeroed<Allocator>)
    {
       return dyn_allocator_friend::aligned_allocate_zeroed(
-         get_allocator(), alignment, allocation_bytes);
+         get_allocator(), alignment, allocation_bytes
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -967,7 +1009,8 @@ class [[gsl::Pointer]] allocator_ref
       requires(detail::has_aligned_allocate_zeroed_feedback<Allocator>)
    {
       return dyn_allocator_friend::aligned_allocate_zeroed_feedback(
-         get_allocator(), alignment, allocation_bytes);
+         get_allocator(), alignment, allocation_bytes
+      );
    }
 
    template <typename T>
@@ -1062,8 +1105,9 @@ class [[gsl::Pointer]] allocator_ref
          static_cast<void>(other);
          return true;
       } else if constexpr (detail::has_is_equivalent<Allocator>) {
-         return dyn_allocator_friend::is_equivalent(get_allocator(),
-                                                    other.get_allocator());
+         return dyn_allocator_friend::is_equivalent(
+            get_allocator(), other.get_allocator()
+         );
       } else {
          return m_storage == other.m_storage;
       }

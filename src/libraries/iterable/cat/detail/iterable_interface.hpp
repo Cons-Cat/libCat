@@ -126,35 +126,34 @@ struct contiguous_position_interface {
       -> decltype(collection.end_pos());
 
    template <typename Collection, typename Position>
-   friend constexpr auto ::cat::inc_pos(Collection const& collection,
-                                        Position& position)
-      -> decltype(collection.inc_pos(position));
+   friend constexpr auto ::cat::inc_pos(
+      Collection const& collection, Position& position
+   ) -> decltype(collection.inc_pos(position));
 
    template <typename Collection, typename Position>
-   friend constexpr auto ::cat::dec_pos(Collection const& collection,
-                                        Position& position)
-      -> decltype(collection.dec_pos(position));
+   friend constexpr auto ::cat::dec_pos(
+      Collection const& collection, Position& position
+   ) -> decltype(collection.dec_pos(position));
 
    template <typename Collection, typename Position>
-   friend constexpr auto ::cat::read_at_unchecked(Collection& collection,
-                                                  Position const& position)
-      -> decltype(collection.read_at_unchecked(position));
+   friend constexpr auto ::cat::read_at_unchecked(
+      Collection& collection, Position const& position
+   ) -> decltype(collection.read_at_unchecked(position));
 
    template <typename Collection, typename Position>
-   friend constexpr auto ::cat::read_at_unchecked(Collection const& collection,
-                                                  Position const& position)
-      -> decltype(collection.read_at_unchecked(position));
+   friend constexpr auto ::cat::read_at_unchecked(
+      Collection const& collection, Position const& position
+   ) -> decltype(collection.read_at_unchecked(position));
 
    template <typename Collection, typename Position>
-   friend constexpr auto ::cat::offset_pos(Collection const& collection,
-                                           Position& position, iword offset)
-      -> decltype(collection.offset_pos(position, offset));
+   friend constexpr auto ::cat::offset_pos(
+      Collection const& collection, Position& position, iword offset
+   ) -> decltype(collection.offset_pos(position, offset));
 
    template <typename Collection, typename Position>
-   friend constexpr auto ::cat::distance(Collection const& collection,
-                                         Position const& from,
-                                         Position const& to)
-      -> decltype(collection.distance(from, to));
+   friend constexpr auto ::cat::distance(
+      Collection const& collection, Position const& from, Position const& to
+   ) -> decltype(collection.distance(from, to));
 
    // Each hook below requires `Derived` to expose `.data()`, so non-array-like
    // collections (e.g. `basic_list`) inherit this protocol harmlessly without

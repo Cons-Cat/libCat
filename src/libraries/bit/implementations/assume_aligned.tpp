@@ -15,7 +15,8 @@ assume_aligned(U* _Nonnull p_value) -> U* _Nonnull {
       return p_value;
    } else {
       return static_cast<U*>(
-         __builtin_assume_aligned(p_value, make_raw_arithmetic(alignment)));
+         __builtin_assume_aligned(p_value, make_raw_arithmetic(alignment))
+      );
    }
 }
 

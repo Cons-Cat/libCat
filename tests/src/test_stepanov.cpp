@@ -43,10 +43,12 @@ $test(iterator_concepts_std_parity_container_stepanov_iterator) {
 }
 
 $test(iterator_nullable_constructors) {
-   cat::detail::simd_range_stepanov_iterator<cat::int4x4> simd_first(nullptr,
-                                                                     0u);
-   cat::detail::simd_range_stepanov_iterator<cat::int4x4> simd_second(nullptr,
-                                                                      0u);
+   cat::detail::simd_range_stepanov_iterator<cat::int4x4> simd_first(
+      nullptr, 0u
+   );
+   cat::detail::simd_range_stepanov_iterator<cat::int4x4> simd_second(
+      nullptr, 0u
+   );
    cat::verify(simd_first.equal_to(simd_second));
 
    cat::detail::list_stepanov_iterator<cat::int4> list_first(nullptr);

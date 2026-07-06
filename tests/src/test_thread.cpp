@@ -45,10 +45,12 @@ $test(thread) {
    threads[1].spawn(allocator, 2_uki, &function_2).verify();
 
    threads[2]
-      .spawn(allocator, 2_uki,
-             [] {
-                ++atomic;
-             })
+      .spawn(
+         allocator, 2_uki,
+         [] {
+            ++atomic;
+         }
+      )
       .verify();
 
    threads[3]
@@ -57,7 +59,8 @@ $test(thread) {
          [](int) {
             ++atomic;
          },
-         1)
+         1
+      )
       .verify();
 
    threads[4]
@@ -65,7 +68,8 @@ $test(thread) {
          allocator, 2_uki,
          +[] {
             ++atomic;
-         })
+         }
+      )
       .verify();
 
    nix::process non_thread_child;
@@ -74,7 +78,8 @@ $test(thread) {
          allocator, 2_uki,
          +[] {
             ++atomic;
-         })
+         }
+      )
       .verify();
 
    for (idx i = 0; i < 3; ++i) {
@@ -97,10 +102,12 @@ $test(thread_clone_failure) {
    cat::page_allocator allocator;
 
    nix::rlimit original{};
-   cat::verify(nix::sys_getrlimit(
-                  nix::rlimit_resource::max_processes_and_threads_per_real_user,
-                  original)
-                  .has_value());
+   cat::verify(
+      nix::sys_getrlimit(
+         nix::rlimit_resource::max_processes_and_threads_per_real_user, original
+      )
+         .has_value()
+   );
 
    // Lower only the soft limit so the hard ceiling stays high enough to restore
    // `original` without `linux_error::perm` after the experiment.
@@ -110,8 +117,10 @@ $test(thread_clone_failure) {
    };
    cat::verify(
       nix::sys_setrlimit(
-         nix::rlimit_resource::max_processes_and_threads_per_real_user, narrow)
-         .has_value());
+         nix::rlimit_resource::max_processes_and_threads_per_real_user, narrow
+      )
+         .has_value()
+   );
 
    // `cat::thread::spawn` maps errors to `nullopt`. `nix::process` with the
    // same clone flags keeps the errno from `clone` on failure.
@@ -122,10 +131,12 @@ $test(thread_clone_failure) {
       child.spawn(allocator, 2_uki, [] {
       });
 
-   cat::verify(nix::sys_setrlimit(
-                  nix::rlimit_resource::max_processes_and_threads_per_real_user,
-                  original)
-                  .has_value());
+   cat::verify(
+      nix::sys_setrlimit(
+         nix::rlimit_resource::max_processes_and_threads_per_real_user, original
+      )
+         .has_value()
+   );
 
    cat::verify(!spawn_result.has_value());
    cat::verify(spawn_result.error() == nix::linux_error::again);

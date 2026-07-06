@@ -7,6 +7,7 @@ nix::sys_waitid(wait_id type, process_id id, wait_options_flags options)
    // defined at the syscall boundary (see `syscall5`).
    // TODO: `p_signal_info` should replace the `infop` `nullptr`.
    // https://filippo.io/linux-syscall-table/
-   return syscall_volatile<process_id>(247, type, id, nullptr, options,
-                                       nullptr);
+   return syscall_volatile<process_id>(
+      247, type, id, nullptr, options, nullptr
+   );
 }

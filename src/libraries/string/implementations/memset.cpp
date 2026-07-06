@@ -13,7 +13,8 @@ extern "C"
       -> void* _Nonnull {
    cat::byte fill_byte;
    fill_byte = cat::byte(byte_value);
-   cat::detail::fill_memory_impl(static_cast<cat::byte* _Nonnull>(p_source),
-                                 fill_byte, bytes);
+   cat::detail::fill_memory_impl(
+      static_cast<cat::byte* _Nonnull>(p_source), fill_byte, bytes
+   );
    return p_source;
 }

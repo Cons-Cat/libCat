@@ -170,7 +170,8 @@ type_list_fill(type_list<Remaining...> type_list) {
       return type_list;
    } else {
       return type_list_fill<T, count, index + 1u>(
-         typename decltype(type_list)::template merge<T>());
+         typename decltype(type_list)::template merge<T>()
+      );
    }
 }
 }  // namespace detail

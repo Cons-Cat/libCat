@@ -133,8 +133,9 @@ $test(allocator_ref_unwraps_self) {
 
    cat::allocator_ref<cat::linear_allocator> ref = linear;
    cat::allocator_ref deduced = ref;
-   static_assert(cat::is_same<decltype(deduced),
-                              cat::allocator_ref<cat::linear_allocator>>);
+   static_assert(
+      cat::is_same<decltype(deduced), cat::allocator_ref<cat::linear_allocator>>
+   );
 
    // Allocations through `deduced` and `ref` come from the same arena, so a
    // `reset` through one observes through the other.

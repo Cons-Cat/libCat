@@ -33,8 +33,9 @@ array : public container_interface<array<T, length>, T>,
    [[nodiscard]]
    constexpr auto
    operator<=>(array const& other) const -> auto {
-      return cat::lexicographical_compare_three_way(this->begin(), this->end(),
-                                                    other.begin(), other.end());
+      return cat::lexicographical_compare_three_way(
+         this->begin(), this->end(), other.begin(), other.end()
+      );
    }
 
    [[nodiscard]]

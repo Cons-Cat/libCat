@@ -13,25 +13,26 @@ namespace cat::detail {
 template <typename Vector>
 [[nodiscard]]
 inline auto
-compare_memory_mismatch_in_chunk(Vector const& left_vec,
-                                 Vector const& right_vec,
-                                 char const* _Nonnull p_chunk_left,
-                                 char const* _Nonnull p_chunk_right)
-   -> maybe<std::strong_ordering> {
+compare_memory_mismatch_in_chunk(
+   Vector const& left_vec, Vector const& right_vec,
+   char const* _Nonnull p_chunk_left, char const* _Nonnull p_chunk_right
+) -> maybe<std::strong_ordering> {
    auto const equal_mask = left_vec.equal_lanes(right_vec);
    if (equal_mask.all_of()) {
       return nullopt;
    }
 
-   return compare_memory_mismatch_order(left_vec, right_vec, p_chunk_left,
-                                        p_chunk_right);
+   return compare_memory_mismatch_order(
+      left_vec, right_vec, p_chunk_left, p_chunk_right
+   );
 }
 
 template <typename Vector>
 [[nodiscard]]
 inline auto
 compare_memory_batch_all_equal(
-   array<typename Vector::mask_type, 4u> const& equal_masks) -> bool {
+   array<typename Vector::mask_type, 4u> const& equal_masks
+) -> bool {
    if constexpr (sizeof(Vector) == 32u) {
       __UINT32_TYPE__ const full_mask =
          ::x64::detail::avx2_movmsk_full_lane_mask(sizeof(Vector));
@@ -54,8 +55,8 @@ compare_memory_first_mismatch_in_batch(
    array<Vector, 4u> const& vectors_left,
    array<Vector, 4u> const& vectors_right,
    array<typename Vector::mask_type, 4u> const& equal_masks,
-   char const* _Nonnull p_left, char const* _Nonnull p_right, uword vector_size)
-   -> std::strong_ordering {
+   char const* _Nonnull p_left, char const* _Nonnull p_right, uword vector_size
+) -> std::strong_ordering {
 #pragma unroll 4
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
       if (!equal_masks[vector_index].all_of()) {
@@ -64,10 +65,13 @@ compare_memory_first_mismatch_in_batch(
          char const* _Nonnull const p_chunk_right =
             p_right + (vector_index * vector_size);
 
-         if (auto result = compare_memory_mismatch_in_chunk(
-                vectors_left[vector_index], vectors_right[vector_index],
-                p_chunk_left, p_chunk_right);
-             result.has_value()) {
+         if (
+            auto result = compare_memory_mismatch_in_chunk(
+               vectors_left[vector_index], vectors_right[vector_index],
+               p_chunk_left, p_chunk_right
+            );
+            result.has_value()
+         ) {
             return result.value();
          }
       }
@@ -77,8 +81,9 @@ compare_memory_first_mismatch_in_batch(
 
 template <typename Vector>
 auto
-compare_memory_large(byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs,
-                     idx bytes) -> std::strong_ordering {
+compare_memory_large(
+   byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
+) -> std::strong_ordering {
    char const* _Nonnull p_left = reinterpret_cast<char const* _Nonnull>(p_lhs);
    char const* _Nonnull p_right = reinterpret_cast<char const* _Nonnull>(p_rhs);
 
@@ -108,9 +113,9 @@ compare_memory_large(byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs,
          continue;
       }
 
-      return compare_memory_first_mismatch_in_batch(vectors_left, vectors_right,
-                                                    equal_masks, p_left,
-                                                    p_right, vector_size);
+      return compare_memory_first_mismatch_in_batch(
+         vectors_left, vectors_right, equal_masks, p_left, p_right, vector_size
+      );
    }
 
    while (length_iterator >= static_cast<iword>(vector_size)) {
@@ -119,9 +124,12 @@ compare_memory_large(byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs,
       left_vec.load_unaligned(p_left);
       right_vec.load_unaligned(p_right);
 
-      if (auto result = compare_memory_mismatch_in_chunk(left_vec, right_vec,
-                                                         p_left, p_right);
-          result.has_value()) {
+      if (
+         auto result = compare_memory_mismatch_in_chunk(
+            left_vec, right_vec, p_left, p_right
+         );
+         result.has_value()
+      ) {
          return result.value();
       }
 
@@ -134,15 +142,17 @@ compare_memory_large(byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs,
       return compare_memory_small(
          reinterpret_cast<byte const* _Nonnull>(p_left),
          reinterpret_cast<byte const* _Nonnull>(p_right),
-         length_iterator.to_idx().assert());
+         length_iterator.to_idx().assert()
+      );
    }
 
    return std::strong_ordering::equal;
 }
 
 auto
-compare_memory_impl(byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs,
-                    idx bytes) -> std::strong_ordering {
+compare_memory_impl(
+   byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
+) -> std::strong_ordering {
    if (p_lhs == p_rhs) {
       return std::strong_ordering::equal;
    }
@@ -163,10 +173,11 @@ compare_memory_impl(byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs,
    }
 
    return $simd_switch(
-      $abi(avx2,
-           { return compare_memory_large<char1x_>(p_lhs, p_rhs, bytes); }),
-      $abi(sse2,
-           { return compare_memory_large<char1x_>(p_lhs, p_rhs, bytes); }));
+      $abi(
+         avx2, { return compare_memory_large<char1x_>(p_lhs, p_rhs, bytes); }
+      ),
+      $abi(sse2, { return compare_memory_large<char1x_>(p_lhs, p_rhs, bytes); })
+   );
 }
 
 }  // namespace cat::detail

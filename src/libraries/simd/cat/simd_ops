@@ -58,9 +58,10 @@ simd_select(simd_mask<T, Abi> mask, simd<T, Abi> on_true, simd<T, Abi> on_false)
    -> simd<T, Abi> {
    // P2638R0 masked lane pick, now standardized as `std::simd_select`.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-   return simd<T, Abi>(mask.raw != typename simd_mask<T, Abi>::raw_type{}
-                          ? on_true.raw
-                          : on_false.raw);
+   return simd<T, Abi>(
+      mask.raw != typename simd_mask<T, Abi>::raw_type{} ? on_true.raw
+                                                         : on_false.raw
+   );
 }
 
 namespace detail {
@@ -77,9 +78,9 @@ using simd_abi_vec =
         typename Abi::template make_abi_type<simd_abi_scalar<T>>>;
 
 template <typename T, typename Abi>
-using simd_abi_mask_vec =
-   simd_mask<simd_abi_scalar<T>,
-             typename Abi::template make_abi_type<simd_abi_scalar<T>>>;
+using simd_abi_mask_vec = simd_mask<
+   simd_abi_scalar<T>,
+   typename Abi::template make_abi_type<simd_abi_scalar<T>>>;
 
 // Does this unary operation on vectors of T for this ABI have a specialized
 // non-predicated implementation?
@@ -114,14 +115,15 @@ concept has_simd_abi_compress =
 // Does this expand operation on vectors of T for this ABI have a specialized
 // implementation?
 template <typename T, typename Abi>
-concept has_simd_abi_expand =
-   requires(simd_abi_vec<T, Abi> packed, simd_abi_mask_vec<T, Abi> selector,
-            simd_abi_vec<T, Abi> background) {
-      simd_abi::expand<
-         typename simd_abi_vec<T, Abi>::scalar_type,
-         typename simd_abi_vec<T, Abi>::abi_type>::invoke(packed, selector,
-                                                          background);
-   };
+concept has_simd_abi_expand = requires(
+   simd_abi_vec<T, Abi> packed, simd_abi_mask_vec<T, Abi> selector,
+   simd_abi_vec<T, Abi> background
+) {
+                                 simd_abi::expand<
+                                    typename simd_abi_vec<T, Abi>::scalar_type,
+                                    typename simd_abi_vec<T, Abi>::abi_type>::
+                                    invoke(packed, selector, background);
+                              };
 
 // Does this binary operation on vectors of T for this ABI have a specialized
 // non-predicated implementation?
@@ -137,8 +139,9 @@ concept has_simd_abi_binary_full =
 // non-predicated implementation?
 template <typename OpTag, typename T, typename Abi>
 concept has_simd_abi_ternary_full =
-   requires(simd_abi_vec<T, Abi> x, simd_abi_vec<T, Abi> y,
-            simd_abi_vec<T, Abi> z) {
+   requires(
+      simd_abi_vec<T, Abi> x, simd_abi_vec<T, Abi> y, simd_abi_vec<T, Abi> z
+   ) {
       simd_abi::ternary_full<
          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
          typename simd_abi_vec<T, Abi>::abi_type>::invoke(x, y, z);
@@ -159,8 +162,10 @@ concept has_simd_abi_binary_mixed =
 // predicated implementation?
 template <typename OpTag, typename T, typename Abi>
 concept has_simd_abi_binary_masked =
-   requires(simd_abi_vec<T, Abi> left, simd_abi_vec<T, Abi> right,
-            simd_abi_mask_vec<T, Abi> mask) {
+   requires(
+      simd_abi_vec<T, Abi> left, simd_abi_vec<T, Abi> right,
+      simd_abi_mask_vec<T, Abi> mask
+   ) {
       simd_abi::binary_masked<
          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
          typename simd_abi_vec<T, Abi>::abi_type>::invoke(left, right, mask);
@@ -170,8 +175,10 @@ concept has_simd_abi_binary_masked =
 // predicated implementation?
 template <typename OpTag, typename T, typename Abi>
 concept has_simd_abi_ternary_masked =
-   requires(simd_abi_vec<T, Abi> x, simd_abi_vec<T, Abi> y,
-            simd_abi_vec<T, Abi> z, simd_abi_mask_vec<T, Abi> mask) {
+   requires(
+      simd_abi_vec<T, Abi> x, simd_abi_vec<T, Abi> y, simd_abi_vec<T, Abi> z,
+      simd_abi_mask_vec<T, Abi> mask
+   ) {
       simd_abi::ternary_masked<
          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
          typename simd_abi_vec<T, Abi>::abi_type>::invoke(x, y, z, mask);
@@ -180,37 +187,37 @@ concept has_simd_abi_ternary_masked =
 // Does this masked fill operation on vectors of T for this ABI have a
 // specialized predicated implementation?
 template <typename T, typename Abi>
-concept has_simd_abi_fill_masked =
-   requires(simd_abi_vec<T, Abi> passthrough,
-            simd_abi_vec<T, Abi>::scalar_type fill,
-            simd_abi_mask_vec<T, Abi> lane_mask) {
-      simd_abi::fill_masked<T, Abi>::invoke(passthrough, fill, lane_mask);
-   };
+concept has_simd_abi_fill_masked = requires(
+   simd_abi_vec<T, Abi> passthrough, simd_abi_vec<T, Abi>::scalar_type fill,
+   simd_abi_mask_vec<T, Abi> lane_mask
+) { simd_abi::fill_masked<T, Abi>::invoke(passthrough, fill, lane_mask); };
 
 template <typename OpTag, typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
 simd_abi_apply_unary_full(simd<T, Abi> const& input) -> simd<T, Abi> {
-   return simd<T, Abi>(
-      simd_abi::invoke<
-         simd_abi_vec<T, Abi>,
-         simd_abi::unary_full<OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                              typename simd_abi_vec<T, Abi>::abi_type>>(
-         simd_abi_vec<T, Abi>(input.raw))
-         .raw);
+   return simd<T, Abi>(simd_abi::invoke<
+                          simd_abi_vec<T, Abi>,
+                          simd_abi::unary_full<
+                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                             typename simd_abi_vec<T, Abi>::abi_type>>(
+                          simd_abi_vec<T, Abi>(input.raw)
+   )
+                          .raw);
 }
 
 template <typename OpTag, typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
 simd_abi_apply_unary_int(simd<T, Abi> const& input, iword n) -> simd<T, Abi> {
-   return simd<T, Abi>(
-      simd_abi::invoke<
-         simd_abi_vec<T, Abi>,
-         simd_abi::unary_int<OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+   return simd<T, Abi>(simd_abi::invoke<
+                          simd_abi_vec<T, Abi>,
+                          simd_abi::unary_int<
+                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
                              typename simd_abi_vec<T, Abi>::abi_type>>(
-         simd_abi_vec<T, Abi>(input.raw), n)
-         .raw);
+                          simd_abi_vec<T, Abi>(input.raw), n
+   )
+                          .raw);
 }
 
 template <typename OpTag, typename T, typename Abi>
@@ -218,73 +225,89 @@ template <typename OpTag, typename T, typename Abi>
 constexpr auto
 simd_abi_apply_binary_full(simd<T, Abi> const& left, simd<T, Abi> const& right)
    -> simd<T, Abi> {
-   return simd<T, Abi>(
-      simd_abi::invoke<simd_abi_vec<T, Abi>,
-                       simd_abi::binary_full<
-                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                          typename simd_abi_vec<T, Abi>::abi_type>>(
-         simd_abi_vec<T, Abi>(left.raw), simd_abi_vec<T, Abi>(right.raw))
-         .raw);
+   return simd<T, Abi>(simd_abi::invoke<
+                          simd_abi_vec<T, Abi>,
+                          simd_abi::binary_full<
+                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                             typename simd_abi_vec<T, Abi>::abi_type>>(
+                          simd_abi_vec<T, Abi>(left.raw),
+                          simd_abi_vec<T, Abi>(right.raw)
+   )
+                          .raw);
 }
 
 template <typename OpTag, typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_abi_apply_binary_masked(simd<T, Abi> const& left,
-                             simd<T, Abi> const& right,
-                             simd_mask<T, Abi> const& mask) -> simd<T, Abi> {
-   return simd<T, Abi>(
-      simd_abi::invoke<simd_abi_vec<T, Abi>,
-                       simd_abi::binary_masked<
-                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                          typename simd_abi_vec<T, Abi>::abi_type>>(
-         simd_abi_vec<T, Abi>(left.raw), simd_abi_vec<T, Abi>(right.raw),
-         simd_abi_mask_vec<T, Abi>(mask.raw))
-         .raw);
+simd_abi_apply_binary_masked(
+   simd<T, Abi> const& left, simd<T, Abi> const& right,
+   simd_mask<T, Abi> const& mask
+) -> simd<T, Abi> {
+   return simd<T, Abi>(simd_abi::invoke<
+                          simd_abi_vec<T, Abi>,
+                          simd_abi::binary_masked<
+                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                             typename simd_abi_vec<T, Abi>::abi_type>>(
+                          simd_abi_vec<T, Abi>(left.raw),
+                          simd_abi_vec<T, Abi>(right.raw),
+                          simd_abi_mask_vec<T, Abi>(mask.raw)
+   )
+                          .raw);
 }
 
 template <typename OpTag, typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_abi_apply_ternary_full(simd<T, Abi> const& x, simd<T, Abi> const& y,
-                            simd<T, Abi> const& z) -> simd<T, Abi> {
+simd_abi_apply_ternary_full(
+   simd<T, Abi> const& x, simd<T, Abi> const& y, simd<T, Abi> const& z
+) -> simd<T, Abi> {
+   return simd<T, Abi>(simd_abi::invoke<
+                          simd_abi_vec<T, Abi>,
+                          simd_abi::ternary_full<
+                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                             typename simd_abi_vec<T, Abi>::abi_type>>(
+                          simd_abi_vec<T, Abi>(x.raw),
+                          simd_abi_vec<T, Abi>(y.raw),
+                          simd_abi_vec<T, Abi>(z.raw)
+   )
+                          .raw);
+}
+
+template <typename OpTag, typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_ternary_masked(
+   simd<T, Abi> const& x, simd<T, Abi> const& y, simd<T, Abi> const& z,
+   simd_mask<T, Abi> const& mask
+) -> simd<T, Abi> {
    return simd<T, Abi>(
-      simd_abi::invoke<simd_abi_vec<T, Abi>,
-                       simd_abi::ternary_full<
-                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                          typename simd_abi_vec<T, Abi>::abi_type>>(
+      simd_abi::invoke<
+         simd_abi_vec<T, Abi>,
+         simd_abi::ternary_masked<
+            OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+            typename simd_abi_vec<T, Abi>::abi_type>>(
          simd_abi_vec<T, Abi>(x.raw), simd_abi_vec<T, Abi>(y.raw),
-         simd_abi_vec<T, Abi>(z.raw))
-         .raw);
-}
-
-template <typename OpTag, typename T, typename Abi>
-[[nodiscard]]
-constexpr auto
-simd_abi_apply_ternary_masked(simd<T, Abi> const& x, simd<T, Abi> const& y,
-                              simd<T, Abi> const& z,
-                              simd_mask<T, Abi> const& mask) -> simd<T, Abi> {
-   return simd<T, Abi>(
-      simd_abi::invoke<simd_abi_vec<T, Abi>,
-                       simd_abi::ternary_masked<
-                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                          typename simd_abi_vec<T, Abi>::abi_type>>(
-         simd_abi_vec<T, Abi>(x.raw), simd_abi_vec<T, Abi>(y.raw),
-         simd_abi_vec<T, Abi>(z.raw), simd_abi_mask_vec<T, Abi>(mask.raw))
-         .raw);
+         simd_abi_vec<T, Abi>(z.raw), simd_abi_mask_vec<T, Abi>(mask.raw)
+      )
+         .raw
+   );
 }
 
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_abi_apply_fill_masked(simd<T, Abi> const& passthrough,
-                           typename simd_abi_vec<T, Abi>::scalar_type fill,
-                           simd_mask<T, Abi> const& mask) -> simd<T, Abi> {
+simd_abi_apply_fill_masked(
+   simd<T, Abi> const& passthrough,
+   typename simd_abi_vec<T, Abi>::scalar_type fill,
+   simd_mask<T, Abi> const& mask
+) -> simd<T, Abi> {
    return simd<T, Abi>(
       simd_abi::invoke<simd_abi_vec<T, Abi>, simd_abi::fill_masked<T, Abi>>(
          simd_abi_vec<T, Abi>(passthrough.raw), fill,
-         simd_abi_mask_vec<T, Abi>(mask.raw))
-         .raw);
+         simd_abi_mask_vec<T, Abi>(mask.raw)
+      )
+         .raw
+   );
 }
 
 template <typename OpTag, typename T, typename IntT, typename Abi>
@@ -292,59 +315,69 @@ template <typename OpTag, typename T, typename IntT, typename Abi>
 constexpr auto
 simd_abi_apply_binary_mixed(simd<T, Abi> const& x, simd<IntT, Abi> const& y)
    -> simd<T, Abi> {
-   return simd<T, Abi>(
-      simd_abi::invoke<simd_abi_vec<T, Abi>,
-                       simd_abi::binary_mixed<
-                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                          typename simd_abi_vec<IntT, Abi>::scalar_type,
-                          typename simd_abi_vec<T, Abi>::abi_type>>(
-         simd_abi_vec<T, Abi>(x.raw), simd_abi_vec<IntT, Abi>(y.raw))
-         .raw);
+   return simd<T, Abi>(simd_abi::invoke<
+                          simd_abi_vec<T, Abi>,
+                          simd_abi::binary_mixed<
+                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                             typename simd_abi_vec<IntT, Abi>::scalar_type,
+                             typename simd_abi_vec<T, Abi>::abi_type>>(
+                          simd_abi_vec<T, Abi>(x.raw),
+                          simd_abi_vec<IntT, Abi>(y.raw)
+   )
+                          .raw);
 }
 
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_abi_apply_compress(simd<T, Abi> const& input,
-                        simd_mask<T, Abi> const& selector) -> simd<T, Abi> {
+simd_abi_apply_compress(
+   simd<T, Abi> const& input, simd_mask<T, Abi> const& selector
+) -> simd<T, Abi> {
    return simd<T, Abi>(
       simd_abi::invoke<
-         simd_abi_vec<T, Abi>,
-         simd_abi::compress<typename simd_abi_vec<T, Abi>::scalar_type,
-                            typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>, simd_abi::compress<
+                                  typename simd_abi_vec<T, Abi>::scalar_type,
+                                  typename simd_abi_vec<T, Abi>::abi_type>>(
          simd_abi_vec<T, Abi>(input.raw),
-         simd_abi_mask_vec<T, Abi>(selector.raw))
-         .raw);
+         simd_abi_mask_vec<T, Abi>(selector.raw)
+      )
+         .raw
+   );
 }
 
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_abi_apply_expand(simd<T, Abi> const& packed_values,
-                      simd_mask<T, Abi> const& selector,
-                      simd<T, Abi> const& background) -> simd<T, Abi> {
+simd_abi_apply_expand(
+   simd<T, Abi> const& packed_values, simd_mask<T, Abi> const& selector,
+   simd<T, Abi> const& background
+) -> simd<T, Abi> {
    return simd<T, Abi>(
       simd_abi::invoke<
-         simd_abi_vec<T, Abi>,
-         simd_abi::expand<typename simd_abi_vec<T, Abi>::scalar_type,
-                          typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>, simd_abi::expand<
+                                  typename simd_abi_vec<T, Abi>::scalar_type,
+                                  typename simd_abi_vec<T, Abi>::abi_type>>(
          simd_abi_vec<T, Abi>(packed_values.raw),
          simd_abi_mask_vec<T, Abi>(selector.raw),
-         simd_abi_vec<T, Abi>(background.raw))
-         .raw);
+         simd_abi_vec<T, Abi>(background.raw)
+      )
+         .raw
+   );
 }
 
 template <typename Derived, typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_binary_masked_lanewise_fallback(Derived const& derived, simd<T, Abi> left,
-                                     simd<T, Abi> right, simd_mask<T, Abi> mask)
-   -> simd<T, Abi> {
+simd_binary_masked_lanewise_fallback(
+   Derived const& derived, simd<T, Abi> left, simd<T, Abi> right,
+   simd_mask<T, Abi> mask
+) -> simd<T, Abi> {
    simd<T, Abi> result{};
 #pragma clang loop vectorize_predicate(enable)
    for (idx i = 0u; i < Abi::lanes; ++i) {
       result.set_lane(
-         i, mask[i] ? derived.invoke_lanewise(left[i], right[i]) : left[i]);
+         i, mask[i] ? derived.invoke_lanewise(left[i], right[i]) : left[i]
+      );
    }
    return result;
 }
@@ -352,14 +385,16 @@ simd_binary_masked_lanewise_fallback(Derived const& derived, simd<T, Abi> left,
 template <typename Derived, typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_ternary_masked_lanewise_fallback(Derived const& derived, simd<T, Abi> x,
-                                      simd<T, Abi> y, simd<T, Abi> z,
-                                      simd_mask<T, Abi> mask) -> simd<T, Abi> {
+simd_ternary_masked_lanewise_fallback(
+   Derived const& derived, simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z,
+   simd_mask<T, Abi> mask
+) -> simd<T, Abi> {
    simd<T, Abi> result{};
 #pragma clang loop vectorize_predicate(enable)
    for (idx i = 0u; i < Abi::lanes; ++i) {
       result.set_lane(
-         i, mask[i] ? derived.invoke_lanewise(x[i], y[i], z[i]) : x[i]);
+         i, mask[i] ? derived.invoke_lanewise(x[i], y[i], z[i]) : x[i]
+      );
    }
    return result;
 }
@@ -376,8 +411,9 @@ struct simd_unary_masked_impl {
       simd<T, Abi> result{};
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
-         result.set_lane(i,
-                         mask[i] ? self.invoke_lanewise(input[i]) : input[i]);
+         result.set_lane(
+            i, mask[i] ? self.invoke_lanewise(input[i]) : input[i]
+         );
       }
       return result;
    }
@@ -413,8 +449,9 @@ struct simd_unary_predicate_masked_impl {
    constexpr auto
    operator()(simd<T, Abi> input) const -> simd<T, Abi> {
       auto const mask = simd_lane_mask_from_predicate(pred, input);
-      return simd_unary_masked_impl<Derived, simd_mask<T, Abi>>{self,
-                                                                mask}(input);
+      return simd_unary_masked_impl<Derived, simd_mask<T, Abi>>{
+         self, mask
+      }(input);
    }
 };
 
@@ -485,8 +522,10 @@ struct simd_binary_mixed_masked_impl {
    Mask mask;
 
    template <typename T, typename IntT, typename Abi>
-      requires(is_floating_point<T> && is_integral<IntT>
-               && is_same<Mask, simd_mask<T, Abi>>)
+      requires(
+         is_floating_point<T> && is_integral<IntT>
+         && is_same<Mask, simd_mask<T, Abi>>
+      )
    [[nodiscard]]
    constexpr auto
    operator()(simd<T, Abi> x, simd<IntT, Abi> y) const -> simd<T, Abi> {
@@ -512,7 +551,8 @@ struct simd_unary_int_masked_impl {
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
          result.set_lane(
-            i, mask[i] ? self.invoke_lanewise(input[i], count) : input[i]);
+            i, mask[i] ? self.invoke_lanewise(input[i], count) : input[i]
+         );
       }
       return result;
    }
@@ -525,9 +565,10 @@ struct simd_load_blend_masked_impl {
 
    [[nodiscard]]
    constexpr auto
-   operator()(simd<T, Abi> passthrough,
-              simd<T, Abi>::memory_lane const* _Nonnull p_source) const
-      -> simd<T, Abi> {
+   operator()(
+      simd<T, Abi> passthrough,
+      simd<T, Abi>::memory_lane const* _Nonnull p_source
+   ) const -> simd<T, Abi> {
       simd<T, Abi> result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
@@ -541,12 +582,13 @@ struct simd_load_blend_masked_impl {
    template <typename U>
       requires(
          is_constructible<T, remove_cvref<U>>
-         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+      )
    [[nodiscard]]
    constexpr auto
-   operator()(U&& passthrough_fill,
-              simd<T, Abi>::memory_lane const* _Nonnull p_source) const
-      -> simd<T, Abi> {
+   operator()(
+      U&& passthrough_fill, simd<T, Abi>::memory_lane const* _Nonnull p_source
+   ) const -> simd<T, Abi> {
       return (*this)(simd<T, Abi>($fwd(passthrough_fill)), p_source);
    }
 };
@@ -558,9 +600,10 @@ struct simd_load_aligned_blend_masked_impl {
 
    [[nodiscard]]
    constexpr auto
-   operator()(simd<T, Abi> passthrough,
-              simd<T, Abi>::memory_lane const* _Nonnull p_source) const
-      -> maybe<simd<T, Abi>> {
+   operator()(
+      simd<T, Abi> passthrough,
+      simd<T, Abi>::memory_lane const* _Nonnull p_source
+   ) const -> maybe<simd<T, Abi>> {
       if (!is_aligned(unconst(p_source), simd<T, Abi>::abi_type::alignment)) {
          return maybe<simd<T, Abi>>{};
       }
@@ -577,12 +620,13 @@ struct simd_load_aligned_blend_masked_impl {
    template <typename U>
       requires(
          is_constructible<T, remove_cvref<U>>
-         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+      )
    [[nodiscard]]
    constexpr auto
-   operator()(U&& passthrough_fill,
-              simd<T, Abi>::memory_lane const* _Nonnull p_source) const
-      -> maybe<simd<T, Abi>> {
+   operator()(
+      U&& passthrough_fill, simd<T, Abi>::memory_lane const* _Nonnull p_source
+   ) const -> maybe<simd<T, Abi>> {
       return (*this)(simd<T, Abi>($fwd(passthrough_fill)), p_source);
    }
 };
@@ -598,8 +642,9 @@ struct simd_store_to_masked_impl {
 
    template <typename T, typename Abi>
    constexpr void
-   operator()(simd<T, Abi> values,
-              simd<T, Abi>::memory_lane* _Nonnull p_destination) const {
+   operator()(
+      simd<T, Abi> values, simd<T, Abi>::memory_lane* _Nonnull p_destination
+   ) const {
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
          if (mask[i]) {
@@ -610,8 +655,9 @@ struct simd_store_to_masked_impl {
 
    template <typename T, typename Abi, typename IdxAbi, typename Idx>
    constexpr void
-   operator()(T* _Nonnull p_base, simd<Idx, IdxAbi> indices,
-              simd<T, Abi> values) const {
+   operator()(
+      T* _Nonnull p_base, simd<Idx, IdxAbi> indices, simd<T, Abi> values
+   ) const {
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
          if (mask[i]) {
@@ -628,16 +674,18 @@ struct simd_partial_load_blend_masked_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator()(simd<T, Abi> passthrough,
-              simd<T, Abi>::memory_lane const* _Nonnull p_source,
-              idx count) const -> simd<T, Abi> {
+   operator()(
+      simd<T, Abi> passthrough,
+      simd<T, Abi>::memory_lane const* _Nonnull p_source, idx count
+   ) const -> simd<T, Abi> {
       simd<T, Abi> result = passthrough;
       idx const active_lane_count = count < Abi::lanes ? count : Abi::lanes;
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
          if (mask[i]) {
             result.set_lane(
-               i, i < active_lane_count ? static_cast<T>(p_source[i]) : T{});
+               i, i < active_lane_count ? static_cast<T>(p_source[i]) : T{}
+            );
          }
       }
       return result;
@@ -654,8 +702,9 @@ struct simd_fill_blend_masked_impl {
    constexpr auto
    operator()(simd<T, Abi> passthrough, U value) const -> simd<T, Abi> {
       T const fill = static_cast<T>(value);
-      if constexpr (is_same<Mask, simd_mask<T, Abi>>
-                    && has_simd_abi_fill_masked<T, Abi>) {
+      if constexpr (
+         is_same<Mask, simd_mask<T, Abi>> && has_simd_abi_fill_masked<T, Abi>
+      ) {
          return simd_abi_apply_fill_masked<T, Abi>(passthrough, fill, mask);
       }
       simd<T, Abi> result = passthrough;
@@ -699,14 +748,17 @@ struct simd_load_from_blend_masked_impl {
    template <typename T, typename Abi, typename IdxAbi, typename Idx>
    [[nodiscard]]
    constexpr auto
-   operator()(simd<T, Abi> passthrough, T const* _Nonnull p_base,
-              simd<Idx, IdxAbi> indices) const -> simd<T, Abi> {
+   operator()(
+      simd<T, Abi> passthrough, T const* _Nonnull p_base,
+      simd<Idx, IdxAbi> indices
+   ) const -> simd<T, Abi> {
       simd<T, Abi> result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
          if (mask[i]) {
             result.set_lane(
-               i, p_base[idx(static_cast<idx::raw_type>(indices[i]))]);
+               i, p_base[idx(static_cast<idx::raw_type>(indices[i]))]
+            );
          }
       }
       return result;
@@ -735,8 +787,9 @@ class simd_elementwise_factory_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<typename Simd::scalar_type, typename Simd::abi_type>
-                 lane_mask) const -> decltype(auto) {
+   operator[](
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> lane_mask
+   ) const -> decltype(auto) {
       return static_cast<Derived const*>(this)->bind_masked(lane_mask);
    }
 
@@ -748,8 +801,8 @@ class simd_elementwise_factory_interface {
 // registers).
 template <is_simd Simd>
 struct make_simd_loaded_aligned_impl
-    : simd_elementwise_factory_interface<make_simd_loaded_aligned_impl<Simd>,
-                                         Simd> {
+    : simd_elementwise_factory_interface<
+         make_simd_loaded_aligned_impl<Simd>, Simd> {
    using simd_vector = Simd;
 
    constexpr make_simd_loaded_aligned_impl() = default;
@@ -768,9 +821,10 @@ struct make_simd_loaded_aligned_impl
    [[nodiscard]]
    constexpr auto
    bind_masked(
-      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
-      -> simd_load_aligned_blend_masked_impl<typename Simd::scalar_type,
-                                             typename Simd::abi_type> {
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
+   ) const
+      -> simd_load_aligned_blend_masked_impl<
+         typename Simd::scalar_type, typename Simd::abi_type> {
       return {mask};
    }
 };
@@ -779,8 +833,8 @@ struct make_simd_loaded_aligned_impl
 // registers).
 template <is_simd Simd>
 struct make_simd_loaded_unaligned_impl
-    : simd_elementwise_factory_interface<make_simd_loaded_unaligned_impl<Simd>,
-                                         Simd> {
+    : simd_elementwise_factory_interface<
+         make_simd_loaded_unaligned_impl<Simd>, Simd> {
    using simd_vector = Simd;
 
    constexpr make_simd_loaded_unaligned_impl() = default;
@@ -796,9 +850,10 @@ struct make_simd_loaded_unaligned_impl
    [[nodiscard]]
    constexpr auto
    bind_masked(
-      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
-      -> simd_load_blend_masked_impl<typename Simd::scalar_type,
-                                     typename Simd::abi_type> {
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
+   ) const
+      -> simd_load_blend_masked_impl<
+         typename Simd::scalar_type, typename Simd::abi_type> {
       return {mask};
    }
 };
@@ -823,9 +878,10 @@ struct make_simd_loaded_impl
    [[nodiscard]]
    constexpr auto
    bind_masked(
-      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
-      -> simd_load_blend_masked_impl<typename Simd::scalar_type,
-                                     typename Simd::abi_type> {
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
+   ) const
+      -> simd_load_blend_masked_impl<
+         typename Simd::scalar_type, typename Simd::abi_type> {
       return {mask};
    }
 };
@@ -857,7 +913,8 @@ struct make_simd_partial_loaded_impl {
    [[nodiscard]]
    constexpr auto
    operator[](
-      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
+   ) const
       -> simd_partial_load_blend_masked_impl<
          simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {mask};
@@ -879,7 +936,8 @@ struct make_simd_filled_impl {
    [[nodiscard]]
    constexpr auto
    operator[](
-      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask) const
+      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
+   ) const
       -> simd_fill_blend_masked_impl<
          simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {mask};
@@ -917,8 +975,9 @@ struct simd_mask_load_blend_masked_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator()(simd_mask<T, Abi> passthrough,
-              bool const* _Nonnull p_lane_bools) const -> simd_mask<T, Abi> {
+   operator()(
+      simd_mask<T, Abi> passthrough, bool const* _Nonnull p_lane_bools
+   ) const -> simd_mask<T, Abi> {
       simd_mask<T, Abi> result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < simd_mask<T, Abi>::abi_type::lanes; ++i) {
@@ -996,9 +1055,8 @@ struct make_simd_mask_filled_impl {
 
 // Builds a mask by loading lane booleans from memory (gather-style transfer).
 template <is_simd_mask M>
-struct make_simd_mask_loaded_impl
-    : simd_elementwise_mask_factory_interface<make_simd_mask_loaded_impl<M>,
-                                              M> {
+struct make_simd_mask_loaded_impl : simd_elementwise_mask_factory_interface<
+                                       make_simd_mask_loaded_impl<M>, M> {
    using mask_type = M;
 
    constexpr make_simd_mask_loaded_impl() = default;
@@ -1059,8 +1117,9 @@ struct simd_load_from_impl {
       -> simd<T, Abi> {
       simd<T, Abi> result{};
       for (idx i = 0u; i < Abi::lanes; ++i) {
-         result.set_lane(i,
-                         p_base[idx(static_cast<idx::raw_type>(indices[i]))]);
+         result.set_lane(
+            i, p_base[idx(static_cast<idx::raw_type>(indices[i]))]
+         );
       }
       return result;
    }
@@ -1078,8 +1137,9 @@ template <typename T, typename Abi>
 struct simd_store_to_impl {
    template <typename IdxAbi, typename Idx>
    constexpr void
-   operator()(T* _Nonnull p_base, simd<Idx, IdxAbi> indices,
-              simd<T, Abi> values) const {
+   operator()(
+      T* _Nonnull p_base, simd<Idx, IdxAbi> indices, simd<T, Abi> values
+   ) const {
       for (idx i = 0u; i < Abi::lanes; ++i) {
          p_base[idx(static_cast<idx::raw_type>(indices[i]))] = values[i];
       }
@@ -1201,15 +1261,18 @@ struct simd_elementwise_binary_interface {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   invoke_masked(simd<T, Abi> left, simd<T, Abi> right,
-                 simd_mask<T, Abi> mask) const -> simd<T, Abi>
+   invoke_masked(
+      simd<T, Abi> left, simd<T, Abi> right, simd_mask<T, Abi> mask
+   ) const -> simd<T, Abi>
       requires(!simd_binary_derived_supplies_invoke_masked<Derived>)
    {
       if constexpr (!is_void<AbiBinaryMaskedOpTag>) {
-         if constexpr (has_simd_abi_binary_masked<AbiBinaryMaskedOpTag, T,
-                                                  Abi>) {
+         if constexpr (
+            has_simd_abi_binary_masked<AbiBinaryMaskedOpTag, T, Abi>
+         ) {
             return simd_abi_apply_binary_masked<AbiBinaryMaskedOpTag, T, Abi>(
-               left, right, mask);
+               left, right, mask
+            );
          }
          return simd_select(mask, self().invoke_full(left, right), left);
       } else {
@@ -1270,15 +1333,18 @@ struct simd_elementwise_ternary_interface {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   invoke_masked(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z,
-                 simd_mask<T, Abi> mask) const -> simd<T, Abi>
+   invoke_masked(
+      simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z, simd_mask<T, Abi> mask
+   ) const -> simd<T, Abi>
       requires(!simd_ternary_derived_supplies_invoke_masked<Derived>)
    {
       if constexpr (!is_void<AbiTernaryMaskedOpTag>) {
-         if constexpr (has_simd_abi_ternary_masked<AbiTernaryMaskedOpTag, T,
-                                                   Abi>) {
+         if constexpr (
+            has_simd_abi_ternary_masked<AbiTernaryMaskedOpTag, T, Abi>
+         ) {
             return simd_abi_apply_ternary_masked<AbiTernaryMaskedOpTag, T, Abi>(
-               x, y, z, mask);
+               x, y, z, mask
+            );
          }
          return simd_select(mask, self().invoke_full(x, y, z), x);
       } else {
@@ -1847,7 +1913,8 @@ struct simd_roundeven_impl : simd_elementwise_interface<simd_roundeven_impl> {
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_roundeven, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_roundeven, T, Abi>(
-            input);
+            input
+         );
       } else {
          return simd<T, Abi>(__builtin_elementwise_roundeven(input.raw));
       }
@@ -1932,7 +1999,8 @@ struct simd_nearbyint_impl : simd_elementwise_interface<simd_nearbyint_impl> {
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_nearbyint, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_nearbyint, T, Abi>(
-            input);
+            input
+         );
       } else {
          return simd<T, Abi>(__builtin_elementwise_nearbyint(input.raw));
       }
@@ -1988,10 +2056,12 @@ struct simd_canonicalize_impl
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
-      if constexpr (has_simd_abi_unary_full<simd_abi::op_canonicalize, T,
-                                            Abi>) {
+      if constexpr (
+         has_simd_abi_unary_full<simd_abi::op_canonicalize, T, Abi>
+      ) {
          return simd_abi_apply_unary_full<simd_abi::op_canonicalize, T, Abi>(
-            input);
+            input
+         );
       } else {
          return simd<T, Abi>(__builtin_elementwise_canonicalize(input.raw));
       }
@@ -2005,7 +2075,8 @@ struct simd_canonicalize_impl
       using R = raw_arithmetic_type<T>;
       if constexpr (is_same<R, float>) {
          return T(
-            __builtin_canonicalizef(static_cast<R>(make_raw_arithmetic(x))));
+            __builtin_canonicalizef(static_cast<R>(make_raw_arithmetic(x)))
+         );
       }
       return T(__builtin_canonicalize(static_cast<R>(make_raw_arithmetic(x))));
    }
@@ -2057,7 +2128,8 @@ struct simd_bitreverse_impl : simd_elementwise_interface<simd_bitreverse_impl> {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       if constexpr (has_simd_abi_unary_full<simd_abi::op_bitreverse, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_bitreverse, T, Abi>(
-            input);
+            input
+         );
       } else {
          return simd<T, Abi>(__builtin_elementwise_bitreverse(input.raw));
       }
@@ -2095,8 +2167,9 @@ struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
    constexpr auto
    invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_pow, T, Abi>) {
-         return simd_abi_apply_binary_full<simd_abi::op_pow, T, Abi>(left,
-                                                                     right);
+         return simd_abi_apply_binary_full<simd_abi::op_pow, T, Abi>(
+            left, right
+         );
       } else {
          return simd<T, Abi>(__builtin_elementwise_pow(left.raw, right.raw));
       }
@@ -2109,11 +2182,15 @@ struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
    invoke_lanewise(T left, T right) const -> T {
       using R = raw_arithmetic_type<T>;
       if constexpr (is_same<R, float>) {
-         return T(__builtin_powf(static_cast<R>(make_raw_arithmetic(left)),
-                                 static_cast<R>(make_raw_arithmetic(right))));
+         return T(__builtin_powf(
+            static_cast<R>(make_raw_arithmetic(left)),
+            static_cast<R>(make_raw_arithmetic(right))
+         ));
       }
-      return T(__builtin_pow(static_cast<R>(make_raw_arithmetic(left)),
-                             static_cast<R>(make_raw_arithmetic(right))));
+      return T(__builtin_pow(
+         static_cast<R>(make_raw_arithmetic(left)),
+         static_cast<R>(make_raw_arithmetic(right))
+      ));
    }
 };
 
@@ -2127,13 +2204,16 @@ struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
       constexpr auto                                                        \
       invoke_full(simd<T, Abi> left, simd<T, Abi> right) const              \
          -> simd<T, Abi> {                                                  \
-         if constexpr (has_simd_abi_binary_full<simd_abi::op_##Stem, T,     \
-                                                Abi>) {                     \
+         if constexpr (                                                     \
+            has_simd_abi_binary_full<simd_abi::op_##Stem, T, Abi>           \
+         ) {                                                                \
             return simd_abi_apply_binary_full<simd_abi::op_##Stem, T, Abi>( \
-               left, right);                                                \
+               left, right                                                  \
+            );                                                              \
          } else {                                                           \
             return simd<T, Abi>(                                            \
-               __builtin_elementwise_##VecSuffix(left.raw, right.raw));     \
+               __builtin_elementwise_##VecSuffix(left.raw, right.raw)       \
+            );                                                              \
          }                                                                  \
       }                                                                     \
       template <typename T>                                                 \
@@ -2143,13 +2223,19 @@ struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
       invoke_lanewise(T left, T right) const -> T {                         \
          using R = raw_arithmetic_type<T>;                                  \
          if constexpr (is_same<R, float>) {                                 \
-            return T(__builtin_##LaneStem##f(                               \
-               static_cast<R>(make_raw_arithmetic(left)),                   \
-               static_cast<R>(make_raw_arithmetic(right))));                \
+            return T(                                                       \
+               __builtin_##LaneStem##f(                                     \
+                  static_cast<R>(make_raw_arithmetic(left)),                \
+                  static_cast<R>(make_raw_arithmetic(right))                \
+               )                                                            \
+            );                                                              \
          } else {                                                           \
-            return T(__builtin_##LaneStem(                                  \
-               static_cast<R>(make_raw_arithmetic(left)),                   \
-               static_cast<R>(make_raw_arithmetic(right))));                \
+            return T(                                                       \
+               __builtin_##LaneStem(                                        \
+                  static_cast<R>(make_raw_arithmetic(left)),                \
+                  static_cast<R>(make_raw_arithmetic(right))                \
+               )                                                            \
+            );                                                              \
          }                                                                  \
       }                                                                     \
    };
@@ -2173,10 +2259,12 @@ struct simd_minimumnum_impl
    invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_minimumnum, T, Abi>) {
          return simd_abi_apply_binary_full<simd_abi::op_minimumnum, T, Abi>(
-            left, right);
+            left, right
+         );
       } else {
          return simd<T, Abi>(
-            __builtin_elementwise_minimumnum(left.raw, right.raw));
+            __builtin_elementwise_minimumnum(left.raw, right.raw)
+         );
       }
    }
 
@@ -2186,9 +2274,10 @@ struct simd_minimumnum_impl
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
       using R = raw_arithmetic_type<T>;
-      return T(
-         __builtin_fminimum_num(static_cast<R>(make_raw_arithmetic(left)),
-                                static_cast<R>(make_raw_arithmetic(right))));
+      return T(__builtin_fminimum_num(
+         static_cast<R>(make_raw_arithmetic(left)),
+         static_cast<R>(make_raw_arithmetic(right))
+      ));
    }
 };
 
@@ -2203,10 +2292,12 @@ struct simd_maximumnum_impl
    invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_maximumnum, T, Abi>) {
          return simd_abi_apply_binary_full<simd_abi::op_maximumnum, T, Abi>(
-            left, right);
+            left, right
+         );
       } else {
          return simd<T, Abi>(
-            __builtin_elementwise_maximumnum(left.raw, right.raw));
+            __builtin_elementwise_maximumnum(left.raw, right.raw)
+         );
       }
    }
 
@@ -2216,15 +2307,15 @@ struct simd_maximumnum_impl
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
       using R = raw_arithmetic_type<T>;
-      return T(
-         __builtin_fmaximum_num(static_cast<R>(make_raw_arithmetic(left)),
-                                static_cast<R>(make_raw_arithmetic(right))));
+      return T(__builtin_fmaximum_num(
+         static_cast<R>(make_raw_arithmetic(left)),
+         static_cast<R>(make_raw_arithmetic(right))
+      ));
    }
 };
 
-struct simd_add_sat_impl
-    : simd_elementwise_binary_interface<simd_add_sat_impl,
-                                        simd_abi::op_add_sat> {
+struct simd_add_sat_impl : simd_elementwise_binary_interface<
+                              simd_add_sat_impl, simd_abi::op_add_sat> {
    constexpr simd_add_sat_impl() = default;
 
    template <typename T, typename Abi>
@@ -2233,11 +2324,13 @@ struct simd_add_sat_impl
    constexpr auto
    invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_add_sat, T, Abi>) {
-         return simd_abi_apply_binary_full<simd_abi::op_add_sat, T, Abi>(left,
-                                                                         right);
+         return simd_abi_apply_binary_full<simd_abi::op_add_sat, T, Abi>(
+            left, right
+         );
       } else {
          return simd<T, Abi>(
-            __builtin_elementwise_add_sat(left.raw, right.raw));
+            __builtin_elementwise_add_sat(left.raw, right.raw)
+         );
       }
    }
 
@@ -2247,13 +2340,13 @@ struct simd_add_sat_impl
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
       return static_cast<T>(
-         __builtin_add_sat(static_cast<T>(left), static_cast<T>(right)));
+         __builtin_add_sat(static_cast<T>(left), static_cast<T>(right))
+      );
    }
 };
 
-struct simd_sub_sat_impl
-    : simd_elementwise_binary_interface<simd_sub_sat_impl,
-                                        simd_abi::op_sub_sat> {
+struct simd_sub_sat_impl : simd_elementwise_binary_interface<
+                              simd_sub_sat_impl, simd_abi::op_sub_sat> {
    constexpr simd_sub_sat_impl() = default;
 
    template <typename T, typename Abi>
@@ -2262,11 +2355,13 @@ struct simd_sub_sat_impl
    constexpr auto
    invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_sub_sat, T, Abi>) {
-         return simd_abi_apply_binary_full<simd_abi::op_sub_sat, T, Abi>(left,
-                                                                         right);
+         return simd_abi_apply_binary_full<simd_abi::op_sub_sat, T, Abi>(
+            left, right
+         );
       } else {
          return simd<T, Abi>(
-            __builtin_elementwise_sub_sat(left.raw, right.raw));
+            __builtin_elementwise_sub_sat(left.raw, right.raw)
+         );
       }
    }
 
@@ -2276,7 +2371,8 @@ struct simd_sub_sat_impl
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
       return static_cast<T>(
-         __builtin_sub_sat(static_cast<T>(left), static_cast<T>(right)));
+         __builtin_sub_sat(static_cast<T>(left), static_cast<T>(right))
+      );
    }
 };
 
@@ -2287,8 +2383,9 @@ struct simd_if_else_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator()(simd_mask<T, Abi> mask, simd<T, Abi> on_true,
-              simd<T, Abi> on_false) const -> simd<T, Abi> {
+   operator()(
+      simd_mask<T, Abi> mask, simd<T, Abi> on_true, simd<T, Abi> on_false
+   ) const -> simd<T, Abi> {
       // P2638R0 see `simd_select`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       return simd_select(mask, on_true, on_false);
@@ -2297,7 +2394,8 @@ struct simd_if_else_impl {
    template <typename T, typename Abi, typename U>
       requires(
          is_constructible<T, remove_cvref<U>>
-         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+      )
    [[nodiscard]]
    constexpr auto
    operator()(simd_mask<T, Abi> mask, simd<T, Abi> on_true, U&& on_false) const
@@ -2308,8 +2406,10 @@ struct simd_if_else_impl {
    template <typename T, typename Abi, typename A>
    [[nodiscard]]
    constexpr auto
-   operator()(make_simd_mask_else<simd_mask<T, Abi>, A> const& else_branch,
-              simd<T, Abi> on_true) const -> simd<T, Abi> {
+   operator()(
+      make_simd_mask_else<simd_mask<T, Abi>, A> const& else_branch,
+      simd<T, Abi> on_true
+   ) const -> simd<T, Abi> {
       // P2638R0 see `simd_select`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       simd<T, Abi> on_false{};
@@ -2441,8 +2541,11 @@ constexpr auto
 simd_rsqrt_lane(T x) -> T {
    using R = raw_arithmetic_type<T>;
    R const rx = static_cast<R>(make_raw_arithmetic(x));
-   return T(simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1),
-                                                              cat::sqrt(rx)));
+   return T(
+      simd_float_divide<simd_float_precision_policy<T>>(
+         static_cast<R>(1), cat::sqrt(rx)
+      )
+   );
 }
 
 struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
@@ -2453,13 +2556,16 @@ struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
-      if constexpr (simd_float_precision_policy<T> == precision_policies::fast
-                    && has_simd_abi_unary_full<simd_abi::op_rsqrt, T, Abi>) {
+      if constexpr (
+         simd_float_precision_policy<T> == precision_policies::fast
+         && has_simd_abi_unary_full<simd_abi::op_rsqrt, T, Abi>
+      ) {
          return simd_abi_apply_unary_full<simd_abi::op_rsqrt, T, Abi>(input);
       } else {
          simd<T, Abi> one{T(1)};
          return simd<T, Abi>(simd_float_divide<simd_float_precision_policy<T>>(
-            one.raw, __builtin_elementwise_sqrt(input.raw)));
+            one.raw, __builtin_elementwise_sqrt(input.raw)
+         ));
       }
    }
 
@@ -2491,12 +2597,16 @@ simd_nroot_lane(T x, iword n) -> T {
       if constexpr (is_same<raw_arithmetic_type<T>, float>) {
          return static_cast<T>(emulated_powf(
             abs_raw, simd_float_divide<simd_float_precision_policy<T>>(
-                        1.f, static_cast<float>(n.raw))));
+                        1.f, static_cast<float>(n.raw)
+                     )
+         ));
       } else {
-         return static_cast<T>(
-            emulated_pow(static_cast<double>(abs_raw),
-                         simd_float_divide<simd_float_precision_policy<T>>(
-                            1., static_cast<double>(n.raw))));
+         return static_cast<T>(emulated_pow(
+            static_cast<double>(abs_raw),
+            simd_float_divide<simd_float_precision_policy<T>>(
+               1., static_cast<double>(n.raw)
+            )
+         ));
       }
    }();
    if (make_raw_arithmetic(x) < raw_arithmetic_type<T>{}) {
@@ -2523,13 +2633,17 @@ simd_rnroot_lane(T x, iword n) -> T {
    if (n == 1) {
       using R = raw_arithmetic_type<T>;
       R const rx = static_cast<R>(make_raw_arithmetic(x));
-      return T(simd_float_divide<simd_float_precision_policy<T>>(
-         static_cast<R>(1), rx));
+      return T(
+         simd_float_divide<simd_float_precision_policy<T>>(
+            static_cast<R>(1), rx
+         )
+      );
    }
    using R = raw_arithmetic_type<T>;
    R const root = static_cast<R>(make_raw_arithmetic(simd_nroot_lane(x, n)));
-   return T(simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1),
-                                                              root));
+   return T(
+      simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), root)
+   );
 }
 
 template <typename T>
@@ -2550,15 +2664,20 @@ simd_nroot_generic(simd<T, Abi> input, iword n) -> simd<T, Abi> {
    }
    simd<T, Abi> abs_x(__builtin_elementwise_abs(input.raw));
    simd<T, Abi> reciprocal_root{};
-   reciprocal_root.fill(simd_float_divide<simd_float_precision_policy<T>>(
-      T(1), static_cast<T>(n.raw)));
+   reciprocal_root.fill(
+      simd_float_divide<simd_float_precision_policy<T>>(
+         T(1), static_cast<T>(n.raw)
+      )
+   );
    simd<T, Abi> root_magnitude(
-      __builtin_elementwise_pow(abs_x.raw, reciprocal_root.raw));
+      __builtin_elementwise_pow(abs_x.raw, reciprocal_root.raw)
+   );
    simd<T, Abi> zeros{};
    zeros.fill(T(0));
    if ((n.raw & 1u) != 0u) {
-      return simd_if_else_impl{}(input < zeros, zeros - root_magnitude,
-                                 root_magnitude);
+      return simd_if_else_impl{}(
+         input < zeros, zeros - root_magnitude, root_magnitude
+      );
    }
    simd<T, Abi> quiet_nans{};
    if constexpr (is_same<raw_arithmetic_type<T>, float>) {
@@ -2620,7 +2739,8 @@ struct simd_rcbrt_impl : simd_elementwise_interface<simd_rcbrt_impl> {
       simd<T, Abi> const cbrt = simd_cbrt_impl{}.invoke_full(input);
       simd<T, Abi> const one{T(1)};
       return simd<T, Abi>(
-         simd_float_divide<simd_float_precision_policy<T>>(one.raw, cbrt.raw));
+         simd_float_divide<simd_float_precision_policy<T>>(one.raw, cbrt.raw)
+      );
    }
 
    template <typename T>
@@ -2647,12 +2767,14 @@ struct simd_rnroot_impl
       if (n == 1) {
          simd<T, Abi> const one{T(1)};
          return simd<T, Abi>(simd_float_divide<simd_float_precision_policy<T>>(
-            one.raw, input.raw));
+            one.raw, input.raw
+         ));
       }
       simd<T, Abi> const root = simd_nroot_impl{}.invoke_full(input, n);
       simd<T, Abi> const one{T(1)};
       return simd<T, Abi>(
-         simd_float_divide<simd_float_precision_policy<T>>(one.raw, root.raw));
+         simd_float_divide<simd_float_precision_policy<T>>(one.raw, root.raw)
+      );
    }
 
    template <typename T>
@@ -2689,17 +2811,18 @@ struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
 template <typename NewT>
 struct simd_bit_cast_as_impl {
    template <typename T, typename Abi>
-      requires(sizeof(NewT) == sizeof(T) && Abi::lanes > 0
-               && (sizeof(NewT) * Abi::lanes.raw
-                   == sizeof(typename simd<T, Abi>::raw_type)))
+      requires(
+         sizeof(NewT) == sizeof(T) && Abi::lanes > 0
+         && (sizeof(NewT) * Abi::lanes.raw == sizeof(typename simd<T, Abi>::raw_type))
+      )
    [[nodiscard]]
    constexpr auto
    operator()(simd<T, Abi> const& input) const {
-      using out_abi =
-         cat::simd_abi::fixed_size<NewT, idx{Abi::lanes.raw * sizeof(T)
-                                             / sizeof(NewT)}>;
+      using out_abi = cat::simd_abi::fixed_size<
+         NewT, idx{Abi::lanes.raw * sizeof(T) / sizeof(NewT)}>;
       return simd<NewT, out_abi>(
-         __builtin_bit_cast(typename simd<NewT, out_abi>::raw_type, input.raw));
+         __builtin_bit_cast(typename simd<NewT, out_abi>::raw_type, input.raw)
+      );
    }
 };
 
@@ -2746,7 +2869,8 @@ struct simd_shuffle_impl {
    constexpr auto
    operator()(simd<T, Abi> input) const -> simd<T, Abi> {
       return simd<T, Abi>(
-         __builtin_shufflevector(input.raw, input.raw, Idx...));
+         __builtin_shufflevector(input.raw, input.raw, Idx...)
+      );
    }
 };
 
@@ -2782,8 +2906,9 @@ struct simd_compress_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator()(simd<T, Abi> input, simd_mask<T, Abi> selector,
-              T fill_value) const -> simd<T, Abi> {
+   operator()(
+      simd<T, Abi> input, simd_mask<T, Abi> selector, T fill_value
+   ) const -> simd<T, Abi> {
       simd<T, Abi> const zero_filled = (*this)(input, selector);
       idx const active_count = selector.count_if_true();
       simd_mask<T, Abi> const active_lanes =
@@ -2796,11 +2921,14 @@ struct simd_expand_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator()(simd<T, Abi> packed_values, simd_mask<T, Abi> selector,
-              simd<T, Abi> background = {}) const -> simd<T, Abi> {
+   operator()(
+      simd<T, Abi> packed_values, simd_mask<T, Abi> selector,
+      simd<T, Abi> background = {}
+   ) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_expand<T, Abi>) {
-         return simd_abi_apply_expand<T, Abi>(packed_values, selector,
-                                              background);
+         return simd_abi_apply_expand<T, Abi>(
+            packed_values, selector, background
+         );
       } else {
          simd<T, Abi> result = background;
          idx packed_read_index = 0u;
@@ -2827,15 +2955,19 @@ struct simd_rotate_left_impl
    invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_int<simd_abi::op_rotate_left, T, Abi>) {
          return simd_abi_apply_unary_int<simd_abi::op_rotate_left, T, Abi>(
-            input, count);
+            input, count
+         );
       } else {
          simd<T, Abi> result{};
 #pragma clang loop vectorize(enable)
          for (idx i = 0u; i < Abi::lanes; ++i) {
             // `cat/maybe` is an extremely difficult circular include for
             // `cat/simd`, so use the intrinsic directly.
-            result.set_lane(i, T(__builtin_stdc_rotate_left(
-                                  make_raw_arithmetic(input[i]), count.raw)));
+            result.set_lane(
+               i, T(__builtin_stdc_rotate_left(
+                     make_raw_arithmetic(input[i]), count.raw
+                  ))
+            );
          }
          return result;
       }
@@ -2848,7 +2980,8 @@ struct simd_rotate_left_impl
       // `cat/maybe` is an extremely difficult circular include for `cat/simd`,
       // so use the intrinsic directly.
       return T(
-         __builtin_stdc_rotate_left(make_raw_arithmetic(operand), count.raw));
+         __builtin_stdc_rotate_left(make_raw_arithmetic(operand), count.raw)
+      );
    }
 };
 
@@ -2863,15 +2996,19 @@ struct simd_rotate_right_impl
    invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_int<simd_abi::op_rotate_right, T, Abi>) {
          return simd_abi_apply_unary_int<simd_abi::op_rotate_right, T, Abi>(
-            input, count);
+            input, count
+         );
       } else {
          simd<T, Abi> result{};
 #pragma clang loop vectorize(enable)
          for (idx i = 0u; i < Abi::lanes; ++i) {
             // `cat/maybe` is an extremely difficult circular include for
             // `cat/simd`, so use the intrinsic directly.
-            result.set_lane(i, T(__builtin_stdc_rotate_right(
-                                  make_raw_arithmetic(input[i]), count.raw)));
+            result.set_lane(
+               i, T(__builtin_stdc_rotate_right(
+                     make_raw_arithmetic(input[i]), count.raw
+                  ))
+            );
          }
          return result;
       }
@@ -2884,7 +3021,8 @@ struct simd_rotate_right_impl
       // `cat/maybe` is an extremely difficult circular include for `cat/simd`,
       // so use the intrinsic directly.
       return T(
-         __builtin_stdc_rotate_right(make_raw_arithmetic(operand), count.raw));
+         __builtin_stdc_rotate_right(make_raw_arithmetic(operand), count.raw)
+      );
    }
 };
 
@@ -2898,10 +3036,12 @@ struct simd_min_impl : simd_elementwise_binary_interface<simd_min_impl> {
       if constexpr (is_floating_point<T>) {
          if constexpr (has_simd_abi_binary_full<simd_abi::op_minimum, T, Abi>) {
             return simd_abi_apply_binary_full<simd_abi::op_minimum, T, Abi>(
-               left, right);
+               left, right
+            );
          } else {
             return simd<T, Abi>(
-               __builtin_elementwise_minimum(left.raw, right.raw));
+               __builtin_elementwise_minimum(left.raw, right.raw)
+            );
          }
       } else {
          simd<T, Abi> result{};
@@ -2919,12 +3059,15 @@ struct simd_min_impl : simd_elementwise_binary_interface<simd_min_impl> {
       if constexpr (is_floating_point<T>) {
          using R = raw_arithmetic_type<T>;
          if constexpr (is_same<R, float>) {
-            return T(
-               __builtin_fminf(static_cast<R>(make_raw_arithmetic(left)),
-                               static_cast<R>(make_raw_arithmetic(right))));
+            return T(__builtin_fminf(
+               static_cast<R>(make_raw_arithmetic(left)),
+               static_cast<R>(make_raw_arithmetic(right))
+            ));
          }
-         return T(__builtin_fmin(static_cast<R>(make_raw_arithmetic(left)),
-                                 static_cast<R>(make_raw_arithmetic(right))));
+         return T(__builtin_fmin(
+            static_cast<R>(make_raw_arithmetic(left)),
+            static_cast<R>(make_raw_arithmetic(right))
+         ));
       } else {
          return left < right ? left : right;
       }
@@ -2941,10 +3084,12 @@ struct simd_max_impl : simd_elementwise_binary_interface<simd_max_impl> {
       if constexpr (is_floating_point<T>) {
          if constexpr (has_simd_abi_binary_full<simd_abi::op_maximum, T, Abi>) {
             return simd_abi_apply_binary_full<simd_abi::op_maximum, T, Abi>(
-               left, right);
+               left, right
+            );
          } else {
             return simd<T, Abi>(
-               __builtin_elementwise_maximum(left.raw, right.raw));
+               __builtin_elementwise_maximum(left.raw, right.raw)
+            );
          }
       } else {
          simd<T, Abi> result{};
@@ -2962,12 +3107,15 @@ struct simd_max_impl : simd_elementwise_binary_interface<simd_max_impl> {
       if constexpr (is_floating_point<T>) {
          using R = raw_arithmetic_type<T>;
          if constexpr (is_same<R, float>) {
-            return T(
-               __builtin_fmaxf(static_cast<R>(make_raw_arithmetic(left)),
-                               static_cast<R>(make_raw_arithmetic(right))));
+            return T(__builtin_fmaxf(
+               static_cast<R>(make_raw_arithmetic(left)),
+               static_cast<R>(make_raw_arithmetic(right))
+            ));
          }
-         return T(__builtin_fmax(static_cast<R>(make_raw_arithmetic(left)),
-                                 static_cast<R>(make_raw_arithmetic(right))));
+         return T(__builtin_fmax(
+            static_cast<R>(make_raw_arithmetic(left)),
+            static_cast<R>(make_raw_arithmetic(right))
+         ));
       } else {
          return left > right ? left : right;
       }
@@ -3001,9 +3149,9 @@ struct simd_fma_impl
       // (vfmadd...) and NEON (vfma...) is single-rounded regardless of the
       // surrounding precision policy.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-      return T(__builtin_elementwise_fma(make_raw_arithmetic(x),
-                                         make_raw_arithmetic(y),
-                                         make_raw_arithmetic(z)));
+      return T(__builtin_elementwise_fma(
+         make_raw_arithmetic(x), make_raw_arithmetic(y), make_raw_arithmetic(z)
+      ));
    }
 };
 
@@ -3078,10 +3226,12 @@ struct simd_ldexp_impl
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> x, simd<IntT, Abi> y) const -> simd<T, Abi> {
-      if constexpr (has_simd_abi_binary_mixed<simd_abi::op_ldexp, T, IntT,
-                                              Abi>) {
+      if constexpr (
+         has_simd_abi_binary_mixed<simd_abi::op_ldexp, T, IntT, Abi>
+      ) {
          return simd_abi_apply_binary_mixed<simd_abi::op_ldexp, T, IntT, Abi>(
-            x, y);
+            x, y
+         );
       }
       return simd<T, Abi>(__builtin_elementwise_ldexp(x.raw, y.raw));
    }
@@ -3095,7 +3245,8 @@ struct simd_ldexp_impl
       int const exp = static_cast<int>(make_raw_arithmetic(y));
       if constexpr (is_same<R, float>) {
          return T(
-            __builtin_ldexpf(static_cast<R>(make_raw_arithmetic(x)), exp));
+            __builtin_ldexpf(static_cast<R>(make_raw_arithmetic(x)), exp)
+         );
       }
       return T(__builtin_ldexp(static_cast<R>(make_raw_arithmetic(x)), exp));
    }

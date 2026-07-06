@@ -86,37 +86,37 @@ struct tuple_element {
    // `type_map`'s `using types::operator[]...`, which `tuple::get` uses as
    // `$fwd(self)[subscript]`.
    constexpr T&
-   operator[](idx subscript) & [[clang::lifetimebound]]
-   __attribute__((enable_if(subscript == index,
-                            "Index in `cat::tuple` is out of bounds!"))) {
+   operator[](idx subscript) & [[clang::lifetimebound]] __attribute__((
+      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
+   )) {
       return this->storage;
    }
 
    constexpr T const&
-   operator[](idx subscript) const& [[clang::lifetimebound]]
-   __attribute__((enable_if(subscript == index,
-                            "Index in `cat::tuple` is out of bounds!"))) {
+   operator[](idx subscript) const& [[clang::lifetimebound]] __attribute__((
+      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
+   )) {
       return this->storage;
    }
 
    constexpr maybe<T&>
-   at(idx subscript) & [[clang::lifetimebound]]
-   __attribute__((enable_if(subscript == index,
-                            "Index in `cat::tuple` is out of bounds!"))) {
+   at(idx subscript) & [[clang::lifetimebound]] __attribute__((
+      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
+   )) {
       return this->storage;
    }
 
    constexpr maybe<T const&>
-   at(idx subscript) const& [[clang::lifetimebound]]
-   __attribute__((enable_if(subscript == index,
-                            "Index in `cat::tuple` is out of bounds!"))) {
+   at(idx subscript) const& [[clang::lifetimebound]] __attribute__((
+      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
+   )) {
       return this->storage;
    }
 
    constexpr T&&
-   operator[](idx subscript) && [[clang::lifetimebound]]
-   __attribute__((enable_if(subscript == index,
-                            "index in `cat::tuple` is out of bounds!"))) {
+   operator[](idx subscript) && [[clang::lifetimebound]] __attribute__((
+      enable_if(subscript == index, "index in `cat::tuple` is out of bounds!")
+   )) {
       if constexpr (is_reference<T>) {
          return this->storage;
       } else {
@@ -125,14 +125,15 @@ struct tuple_element {
    }
 
    constexpr typename subscript_const_rv_return<T>::type
-   operator[](idx subscript) const&& [[clang::lifetimebound]]
-   __attribute__((enable_if(subscript == index,
-                            "index in `cat::tuple` is out of bounds!"))) {
+   operator[](idx subscript) const&& [[clang::lifetimebound]] __attribute__((
+      enable_if(subscript == index, "index in `cat::tuple` is out of bounds!")
+   )) {
       if constexpr (is_reference<T>) {
          return this->storage;
       } else {
          return static_cast<typename subscript_const_rv_return<T>::type>(
-            this->storage);
+            this->storage
+         );
       }
    }
 
@@ -193,47 +194,55 @@ template <typename Self, typename Callback, idx... indices>
 constexpr auto
 tuple_any_impl(Self&& self, Callback&& callback, index_list_type<indices...>)
    -> bool {
-   return (static_cast<bool>($fwd(callback)($fwd(self).template get<indices>()))
-           || ...);
+   return (
+      static_cast<bool>($fwd(callback)($fwd(self).template get<indices>()))
+      || ...
+   );
 }
 
 template <typename Self, typename Callback, idx... indices>
 constexpr auto
 tuple_all_impl(Self&& self, Callback&& callback, index_list_type<indices...>)
    -> bool {
-   return (static_cast<bool>($fwd(callback)($fwd(self).template get<indices>()))
-           && ...);
+   return (
+      static_cast<bool>($fwd(callback)($fwd(self).template get<indices>()))
+      && ...
+   );
 }
 
 template <typename Self, typename Callback, idx... indices>
 constexpr auto
-tuple_transform_impl(Self&& self, Callback&& callback,
-                     index_list_type<indices...> /*unused*/) {
-   return tuple<decltype($fwd(callback)(
-      $fwd(self).template get<indices>()))...>{
-      $fwd(callback)($fwd(self).template get<indices>())...};
+tuple_transform_impl(
+   Self&& self, Callback&& callback, index_list_type<indices...> /*unused*/
+) {
+   return tuple<
+      decltype($fwd(callback)($fwd(self).template get<indices>()))...>{
+      $fwd(callback)($fwd(self).template get<indices>())...
+   };
 }
 
 template <typename Self, typename Callback, idx... indices>
 constexpr auto
-tuple_for_each_impl(Self&& self, Callback&& callback,
-                    index_list_type<indices...> /*unused*/) -> Callback {
+tuple_for_each_impl(
+   Self&& self, Callback&& callback, index_list_type<indices...> /*unused*/
+) -> Callback {
    ($fwd(callback)($fwd(self).template get<indices>()), ...);
    return $fwd(callback);
 }
 
 template <typename Self, typename... Arguments, idx... indices>
 constexpr void
-tuple_assign_impl(Self&& self, index_list_type<indices...> /*unused*/,
-                  Arguments&&... arguments) {
+tuple_assign_impl(
+   Self&& self, index_list_type<indices...> /*unused*/, Arguments&&... arguments
+) {
    (($fwd(self).template get<indices>() = $fwd(arguments)), ...);
 }
 
 template <typename Callback, typename Tuple, idx... indices>
 constexpr auto
-tuple_apply_impl(Callback&& callback, Tuple&& tuple,
-                 index_list_type<indices...> /*unused*/)
-   -> decltype($fwd(callback)($fwd(tuple).template get<indices>()...)) {
+tuple_apply_impl(
+   Callback&& callback, Tuple&& tuple, index_list_type<indices...> /*unused*/
+) -> decltype($fwd(callback)($fwd(tuple).template get<indices>()...)) {
    return $fwd(callback)($fwd(tuple).template get<indices>()...);
 }
 
@@ -247,9 +256,10 @@ tuple_at(Self&& self, idx index, index_list_type<indices...> /*unused*/)
    }
    using pointee = remove_reference<Subscript>;
    add_pointer<pointee> p_element = nullptr;
-   auto _ = ((index == idx{indices}
-              && (p_element = &$fwd(self).template get<indices>(), true))
-             || ...);
+   auto _ =
+      ((index == idx{indices}
+        && (p_element = &$fwd(self).template get<indices>(), true))
+       || ...);
    cat::assert(p_element);
    if constexpr (is_lvalue_reference<Subscript>) {
       return {*p_element};
@@ -263,12 +273,11 @@ tuple_at(Self&& self, idx index, index_list_type<indices...> /*unused*/)
 }  // namespace detail
 
 template <typename... Types>
-struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
-                                     Types...>::type {
+struct tuple : detail::tuple_storage<
+                  index_sequence_over_types<Types...>, Types...>::type {
    using types = type_list<Types...>;
-   using storage_map =
-      detail::tuple_storage<index_sequence_over_types<Types...>,
-                            Types...>::type;
+   using storage_map = detail::tuple_storage<
+      index_sequence_over_types<Types...>, Types...>::type;
    using storage_map::at;
 
    constexpr auto
@@ -304,9 +313,9 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    // `at(index)` yields `nullopt` when index is out of range.
    [[nodiscard]]
    constexpr maybe<void>
-   at(idx const index) const
-      __attribute__((enable_if(index >= types::size(),
-                               "`index` must be a constant!"))) {
+   at(idx const index) const __attribute__((
+      enable_if(index >= types::size(), "`index` must be a constant!")
+   )) {
       return nullopt;
    }
 
@@ -359,31 +368,35 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    [[nodiscard]]
    constexpr auto
    any_of(this auto&& self, Callback&& callback) -> bool {
-      return detail::tuple_any_impl($fwd(self), $fwd(callback),
-                                    make_index_sequence<types::size()>{});
+      return detail::tuple_any_impl(
+         $fwd(self), $fwd(callback), make_index_sequence<types::size()>{}
+      );
    }
 
    template <typename Callback>
    [[nodiscard]]
    constexpr auto
    all_of(this auto&& self, Callback&& callback) -> bool {
-      return detail::tuple_all_impl($fwd(self), $fwd(callback),
-                                    make_index_sequence<types::size()>{});
+      return detail::tuple_all_impl(
+         $fwd(self), $fwd(callback), make_index_sequence<types::size()>{}
+      );
    }
 
    template <typename Callback>
    [[nodiscard]]
    constexpr auto
    transform(this auto&& self, Callback&& callback) {
-      return detail::tuple_transform_impl($fwd(self), $fwd(callback),
-                                          make_index_sequence<types::size()>{});
+      return detail::tuple_transform_impl(
+         $fwd(self), $fwd(callback), make_index_sequence<types::size()>{}
+      );
    }
 
    template <typename Callback>
    constexpr auto
    for_each(this auto&& self, Callback&& callback) -> Callback {
-      return detail::tuple_for_each_impl($fwd(self), $fwd(callback),
-                                         make_index_sequence<types::size()>{});
+      return detail::tuple_for_each_impl(
+         $fwd(self), $fwd(callback), make_index_sequence<types::size()>{}
+      );
    }
 
    template <typename... Arguments>
@@ -391,7 +404,8 @@ struct tuple : detail::tuple_storage<index_sequence_over_types<Types...>,
    constexpr void
    assign(this auto&& self, Arguments&&... arguments) {
       detail::tuple_assign_impl(
-         $fwd(self), make_index_sequence<types::size()>{}, $fwd(arguments)...);
+         $fwd(self), make_index_sequence<types::size()>{}, $fwd(arguments)...
+      );
    }
 
  private:
@@ -474,7 +488,8 @@ apply(Callback&& callback, Tuple&& tuple) {
    using tuple_decay = decay<Tuple>;
    return detail::tuple_apply_impl(
       $fwd(callback), $fwd(tuple),
-      make_index_sequence<tuple_decay::types::size()>{});
+      make_index_sequence<tuple_decay::types::size()>{}
+   );
 }
 
 }  // namespace cat
@@ -491,8 +506,10 @@ constexpr auto
 tuple_cat(Tuple&& tuple);
 
 template <typename LeftTuple, typename RightTuple, typename... Remaining>
-   requires(is_tuple<LeftTuple> && is_tuple<RightTuple>
-            && (is_tuple<Remaining> && ...))
+   requires(
+      is_tuple<LeftTuple> && is_tuple<RightTuple>
+      && (is_tuple<Remaining> && ...)
+   )
 constexpr auto
 tuple_cat(LeftTuple&& left, RightTuple&& right, Remaining&&... remaining);
 

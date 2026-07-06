@@ -18,9 +18,10 @@ struct mask_lane {
       lane_scalar,
       typename AbiTag::template make_abi_type<lane_scalar>>::raw_type;
 
-   static_assert(AbiTag::template make_abi_type<lane_scalar>::lanes
-                    == AbiTag::lanes,
-                 "`simd_mask` lane count must match its simd ABI");
+   static_assert(
+      AbiTag::template make_abi_type<lane_scalar>::lanes == AbiTag::lanes,
+      "`simd_mask` lane count must match its simd ABI"
+   );
 
    // Packed compare storage. Logical false is `lane_scalar{}`. Logical true
    // sets every bit in the lane (`~lane_scalar{}` for integral lanes,

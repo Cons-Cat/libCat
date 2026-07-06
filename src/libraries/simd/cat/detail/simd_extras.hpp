@@ -68,25 +68,26 @@ simd_split_offset_at() -> idx {
 template <idx... split_sizes, typename Simd, idx... indices>
 [[nodiscard]]
 constexpr auto
-simd_split_impl(Simd const& input,
-                [[maybe_unused]] index_list_type<indices...> /*unused*/) {
-   return tuple<resize_simd<split_sizes, Simd>...>{
-      simd_extract<simd_split_offset_at<indices, split_sizes...>(),
-                   simd_split_offset_at<indices, split_sizes...>()
-                      + split_sizes...[indices.raw]>(input)...};
+simd_split_impl(
+   Simd const& input, [[maybe_unused]] index_list_type<indices...> /*unused*/
+) {
+   return tuple<resize_simd<split_sizes, Simd>...>{simd_extract<
+      simd_split_offset_at<indices, split_sizes...>(),
+      simd_split_offset_at<indices, split_sizes...>()
+         + split_sizes...[indices.raw]>(input)...};
 }
 
 template <typename Split, typename Simd, idx... indices>
 [[nodiscard]]
 constexpr auto
-simd_split_uniform_impl(Simd const& input,
-                        [[maybe_unused]] index_list_type<indices...> /*unused*/)
-   -> array<Split,
-            idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
+simd_split_uniform_impl(
+   Simd const& input, [[maybe_unused]] index_list_type<indices...> /*unused*/
+) -> array<Split, idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
    constexpr idx split_lanes = Split::abi_type::lanes;
    return {
-      simd_extract<idx{indices.raw * split_lanes.raw},
-                   idx{(indices.raw + 1uz) * split_lanes.raw}>(input)...,
+      simd_extract<
+         idx{indices.raw * split_lanes.raw},
+         idx{(indices.raw + 1uz) * split_lanes.raw}>(input)...,
    };
 }
 
@@ -111,31 +112,34 @@ simd_concat(Simd const& lower_lanes_first, Simd const& upper_lanes_second) {
 
 template <idx... split_sizes, is_simd_or_mask Simd>
 // The split sizes must be one or more numbers which sum to the width of `Simd`.
-   requires(sizeof...(split_sizes) > 0 && ((split_sizes != 0u) && ...)
-            && detail::simd_split_lane_sum<split_sizes...>
-                  == Simd::abi_type::lanes)
+   requires(
+      sizeof...(split_sizes) > 0 && ((split_sizes != 0u) && ...)
+      && detail::simd_split_lane_sum<split_sizes...> == Simd::abi_type::lanes
+   )
 [[nodiscard]]
 constexpr auto
 simd_split(Simd const& input) {
    // P2638R0 `split` turns one pack into a tuple of smaller packs.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return detail::simd_split_impl<split_sizes...>(
-      input, make_index_sequence<sizeof...(split_sizes)>{});
+      input, make_index_sequence<sizeof...(split_sizes)>{}
+   );
 }
 
 template <is_simd_or_mask Split, is_simd_or_mask Simd>
    requires(detail::can_split_to<Split, Simd>)
 [[nodiscard]]
 constexpr auto
-simd_split(Simd const& input)
-   -> array<Split,
-            idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
+simd_split(
+   Simd const& input
+) -> array<Split, idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
    // P2638R0 `split<V>` splits into uniform chunks of type `V`.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    constexpr idx split_count =
       idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw};
    return detail::simd_split_uniform_impl<Split>(
-      input, make_index_sequence<split_count>{});
+      input, make_index_sequence<split_count>{}
+   );
 }
 
 template <idx count, is_simd_or_mask Simd>
@@ -165,8 +169,10 @@ simd_resize(Simd const& v) -> resize_simd<new_lanes, Simd> {
 }
 
 template <idx begin_index, idx end_index, typename Simd>
-   requires(is_simd_or_mask<Simd> && end_index > begin_index
-            && end_index <= Simd::abi_type::lanes)
+   requires(
+      is_simd_or_mask<Simd> && end_index > begin_index
+      && end_index <= Simd::abi_type::lanes
+   )
 [[nodiscard]]
 constexpr auto
 simd_extract(Simd const& parent)
@@ -181,11 +187,13 @@ simd_extract(Simd const& parent)
 }
 
 template <idx position, typename SimdParent, typename SimdChild>
-   requires(is_simd_or_mask<SimdParent> && is_simd_or_mask<SimdChild>
-            && is_same<typename SimdParent::scalar_type,
-                       typename SimdChild::scalar_type>
-            && position.raw + SimdChild::abi_type::lanes.raw
-                  <= SimdParent::abi_type::lanes.raw)
+   requires(
+      is_simd_or_mask<SimdParent> && is_simd_or_mask<SimdChild>
+      && is_same<
+         typename SimdParent::scalar_type, typename SimdChild::scalar_type>
+      && position.raw + SimdChild::abi_type::lanes.raw
+            <= SimdParent::abi_type::lanes.raw
+   )
 [[nodiscard]]
 constexpr auto
 simd_insert(SimdParent const& parent, SimdChild const& child) -> SimdParent {
@@ -201,8 +209,9 @@ simd_insert(SimdParent const& parent, SimdChild const& child) -> SimdParent {
 template <is_simd Simd>
 [[nodiscard]]
 constexpr auto
-simd_interleave(Simd const& from_even_lane_index,
-                Simd const& from_odd_lane_index) {
+simd_interleave(
+   Simd const& from_even_lane_index, Simd const& from_odd_lane_index
+) {
    using T = Simd::scalar_type;
    using abi = Simd::abi_type;
    using out_abi = simd_abi::deduce<T, idx{abi::lanes.raw * 2uz}>;
@@ -296,15 +305,17 @@ simd_ctz(simd<T, Abi> x, simd<T, Abi> if_zero) -> simd<T, Abi> {
 // `simd`.
 template <is_simd Simd>
 constexpr auto
-simd_partial_load(Simd& v, typename Simd::memory_lane const* _Nonnull p_source,
-                  idx n) -> Simd& {
+simd_partial_load(
+   Simd& v, typename Simd::memory_lane const* _Nonnull p_source, idx n
+) -> Simd& {
    return v.partial_load(p_source, n);
 }
 
 template <is_simd Simd>
 constexpr void
-simd_partial_store(Simd const& v,
-                   typename Simd::memory_lane* _Nonnull p_destination, idx n) {
+simd_partial_store(
+   Simd const& v, typename Simd::memory_lane* _Nonnull p_destination, idx n
+) {
    v.partial_store(p_destination, n);
 }
 

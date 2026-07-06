@@ -36,7 +36,8 @@ countl_one_raw(T value) -> maybe<uint1> {
    // This intrinsic returns `int` but it can't exceed 64 so it's safe to cast.
    return uint1(__builtin_clzg(
       // ~ casts raw integers to `int`, so we need to cast back.
-      raw_arithmetic_type<T>(~make_raw_arithmetic(value))));
+      raw_arithmetic_type<T>(~make_raw_arithmetic(value))
+   ));
 }
 
 // Count the number of trailing zero bits (counting "rightwards") before the
@@ -66,15 +67,17 @@ countr_one_raw(T value) -> maybe<uint1> {
    // This intrinsic returns `int` but it can't exceed 64 so it's safe to cast.
    return uint1(__builtin_ctzg(
       // ~ casts raw integers to `int`, so we need to cast back.
-      raw_arithmetic_type<T>(~make_raw_arithmetic(value))));
+      raw_arithmetic_type<T>(~make_raw_arithmetic(value))
+   ));
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 bit_ceil_raw(T value) -> maybe<T> {
-   if (make_raw_arithmetic(value)
-       > raw_arithmetic_type<T>(limits<T>::high_bit)) {
+   if (
+      make_raw_arithmetic(value) > raw_arithmetic_type<T>(limits<T>::high_bit)
+   ) {
       return nullopt;
    }
    return T(__builtin_stdc_bit_ceil(make_raw_arithmetic(value)));

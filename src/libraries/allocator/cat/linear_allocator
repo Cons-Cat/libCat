@@ -57,15 +57,18 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    // `linear_allocator` is move-only.
    constexpr linear_allocator(linear_allocator const&) = delete (
       "`linear_allocator` owns bump-pointer arena state that must not alias. "
-      "Create allocators through `make_linear_allocator` instead of copying.");
+      "Create allocators through `make_linear_allocator` instead of copying."
+   );
    constexpr linear_allocator(linear_allocator&&) = default;
 
    // Reset the bumped pointer to the beginning of this arena.
    // NOLINTNEXTLINE
    constexpr void
    reset() {
-      poison_memory_region(static_cast<void const*>(m_p_arena_end),
-                           m_p_arena_begin - m_p_arena_end);
+      poison_memory_region(
+         static_cast<void const*>(m_p_arena_end),
+         m_p_arena_begin - m_p_arena_end
+      );
       m_p_arena_current = m_p_arena_begin;
    }
 
@@ -129,7 +132,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
          return maybe_sized_allocation<void*>(tuple{
             // Return a pointer that is then used for in-place construction.
             static_cast<void*>(m_p_arena_current),
-            narrow_cast<idx>(bytes_allocated).assert()});
+            narrow_cast<idx>(bytes_allocated).assert()
+         });
       }
       return nullopt;
    }
@@ -244,7 +248,8 @@ make_linear_allocator(span<byte>& span [[clang::lifetimebound]])
 [[nodiscard,
   deprecated(
      "Creating a `cat::linear_allocator` with a pr-value may "
-     "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
+     "unintentionally leak memory. Copy an l-value `cat::span` instead."
+  )]]
 constexpr auto
 make_linear_allocator(span<byte>&& span) -> linear_allocator {
    return make_linear_allocator(span);

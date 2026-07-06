@@ -312,8 +312,9 @@ struct connection_request_info {
 
  public:
    // This should almost always be `{11, 0}`.
-   cat::array<cat::uint2, 2u> x_version = {static_cast<unsigned char>(11),
-                                           static_cast<unsigned char>(0)};
+   cat::array<cat::uint2, 2u> x_version = {
+      static_cast<unsigned char>(11), static_cast<unsigned char>(0)
+   };
    // No explicit protocol is specified if this is 0.
    cat::uint2 authorization_protocol_length = static_cast<unsigned char>(0);
    // No explicit protocol is specified if this is 0.
@@ -431,9 +432,10 @@ struct connection {
 
 // TODO: Propagate errors instead of panicking.
 auto
-handshake(cat::is_allocator auto& allocator,
-          cat::socket_unix<cat::socket_type::stream>& socket)
-   -> cat::maybe<x11::connection> {
+handshake(
+   cat::is_allocator auto& allocator,
+   cat::socket_unix<cat::socket_type::stream>& socket
+) -> cat::maybe<x11::connection> {
    x11::connection x_connection{};
 
    // Send a request with default-initialized fields.
@@ -445,8 +447,10 @@ handshake(cat::is_allocator auto& allocator,
                .or_exit();
 
    // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
-   if (x_connection.header.success_code
-       == x11::server_reply_header::success_code_type::failure) {
+   if (
+      x_connection.header.success_code
+      == x11::server_reply_header::success_code_type::failure
+   ) {
       // return Failure(x_connection.header.success_code);
       return cat::nullopt;
    }
@@ -455,16 +459,19 @@ handshake(cat::is_allocator auto& allocator,
    // packets is unknown and potentially a very large amount.
    // TODO: Deallocate this somehow.
    auto memory = $prop(allocator.template alloc_multi<connection_response_info>(
-      cat::idx(x_connection.header.message_length.raw * 4u)));
+      cat::idx(x_connection.header.message_length.raw * 4u)
+   ));
 
    x_connection.p_setup = memory.data();
 
    // TODO: Remove `raw`.
    // TODO: Is the return of `.recieve` important here?
-   auto _ = socket
-               .recieve(x_connection.p_setup,
-                        x_connection.header.message_length.raw * 4)
-               .or_exit();
+   auto _ =
+      socket
+         .recieve(
+            x_connection.p_setup, x_connection.header.message_length.raw * 4
+         )
+         .or_exit();
 
    // Copy pointers to that recieved data from the allocated buffer into
    // `connection`.
@@ -475,11 +482,13 @@ handshake(cat::is_allocator auto& allocator,
       x_connection.p_setup
       + (sizeof(x11::connection_response_info)
          // For now, skip past the vendor name string.
-         + x_connection.p_setup->vendor_string_length)));
+         + x_connection.p_setup->vendor_string_length)
+   ));
 
    x_connection.p_pixel_map_formats =
       static_cast<x11::pixel_map_format_packet*>(
-         static_cast<void*>(p_iterator));
+         static_cast<void*>(p_iterator)
+      );
    p_iterator += sizeof(x11::pixel_map_format_packet)
                  * x_connection.p_setup->pixel_map_formats_count.raw;
 
@@ -515,7 +524,8 @@ struct create_window_request_info {
    client_request_header header = {
       .operation = operation_code::create_window,
       .message_length =
-         static_cast<unsigned short>(sizeof(create_window_request_info) / 4)};
+         static_cast<unsigned short>(sizeof(create_window_request_info) / 4)
+   };
 
    cat::uint1 window_depth;
    window_resource window_id, parent_id;

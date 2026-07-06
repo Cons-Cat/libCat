@@ -23,7 +23,8 @@ struct as_rvalue_view_impl : iterable_interface<> {
          return incoming_context.run_while(
             [&loop_body](auto&& element) -> bool {
                return loop_body(move(element));  // NOLINT
-            });
+            }
+         );
       }
    };
 
@@ -32,7 +33,8 @@ struct as_rvalue_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base>;
       return context_type<incoming_iteration_context_type>{
-         ::cat::iterate(m_base)};
+         ::cat::iterate(m_base)
+      };
    }
 
    constexpr auto
@@ -42,7 +44,8 @@ struct as_rvalue_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base const>;
       return context_type<incoming_iteration_context_type>{
-         ::cat::iterate(m_base)};
+         ::cat::iterate(m_base)
+      };
    }
 
    constexpr auto
@@ -52,7 +55,8 @@ struct as_rvalue_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          decltype(::cat::reverse_iterate(m_base));
       return context_type<incoming_iteration_context_type>{
-         ::cat::reverse_iterate(m_base)};
+         ::cat::reverse_iterate(m_base)
+      };
    }
 
    constexpr auto
@@ -62,7 +66,8 @@ struct as_rvalue_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          decltype(::cat::reverse_iterate(m_base));
       return context_type<incoming_iteration_context_type>{
-         ::cat::reverse_iterate(m_base)};
+         ::cat::reverse_iterate(m_base)
+      };
    }
 };
 

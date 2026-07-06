@@ -61,8 +61,9 @@ operator""_ugi(unsigned long long input) -> idx {
 
 constexpr auto
 operator""_gi(long double input) -> iword {
-   return static_cast<signed long long>(1024.f * 1024.f * 1024.f * 1024.f
-                                        * input);
+   return static_cast<signed long long>(
+      1024.f * 1024.f * 1024.f * 1024.f * input
+   );
 }
 }  // namespace bit_literals
 }  // namespace literals
@@ -99,7 +100,8 @@ countl_zero_raw(T value) __attribute__((enable_if(
    value == 0u,
    "Input must be non-zero! Consider `cat::countl_zero()` instead for "
    "known 0 input. If you must use this version, consider wrapping "
-   "input in `cat::deconst()`."))) = delete;
+   "input in `cat::deconst()`."
+))) = delete;
 
 // Count the number of leading one bits (counting "leftwards") before the first
 // found zero bit. When the input is zero, this returns zero.
@@ -119,11 +121,12 @@ template <is_unsigned_integral T>
    requires(!detail::is_idx<T>)
 [[nodiscard]]
 consteval maybe<uint1>
-countl_one_raw(T value) __attribute__((
-   enable_if(value == 0u,
-             "Input must be non-zero! Consider `cat::countl_one()` instead for "
-             "known 0 input. If you must use this version, consider "
-             "wrapping input in `cat::deconst()`."))) = delete;
+countl_one_raw(T value) __attribute__((enable_if(
+   value == 0u,
+   "Input must be non-zero! Consider `cat::countl_one()` instead for "
+   "known 0 input. If you must use this version, consider "
+   "wrapping input in `cat::deconst()`."
+))) = delete;
 
 // Count the number of trailing zero bits (counting "rightwards") before the
 // first found one bit. When the input is zero, this returns the bit width of
@@ -146,7 +149,8 @@ countr_zero_raw(T value) __attribute__((enable_if(
    value == 0u,
    "Input must be non-zero! Consider `cat::countr_zero()` instead for "
    "known 0 input. If you must use this version, consider wrapping "
-   "input in `cat::deconst()`."))) = delete;
+   "input in `cat::deconst()`."
+))) = delete;
 
 // Count the number of trailing one bits (counting "rightwards") before the
 // first found zero bit. When the input is zero, this returns zero.
@@ -164,11 +168,12 @@ countr_one(T value) -> uint1 {
 template <is_unsigned_integral T>
 [[nodiscard]]
 consteval maybe<uint1>
-countr_one_raw(T value) __attribute__((
-   enable_if(value == 0u,
-             "Input must be non-zero! Consider `cat::countr_one()` instead for "
-             "known 0 input. If you must use this version, consider "
-             "wrapping input in `cat::deconst()`."))) = delete;
+countr_one_raw(T value) __attribute__((enable_if(
+   value == 0u,
+   "Input must be non-zero! Consider `cat::countr_one()` instead for "
+   "known 0 input. If you must use this version, consider "
+   "wrapping input in `cat::deconst()`."
+))) = delete;
 
 // Returns the number of one bits in `value`.
 template <is_unsigned_integral T>
@@ -385,8 +390,9 @@ extract_bits_bmi(T from, cat::uint1 offset, cat::idx length) -> T {
 
    if constexpr (__has_builtin(__builtin_ia32_bextr_u32) && sizeof(T) == 4) {
       return __builtin_ia32_bextr_u32(raw_from, offset.raw | (raw_length << 8));
-   } else if constexpr (__has_builtin(__builtin_ia32_bextr_u64)
-                        && sizeof(T) == 8) {
+   } else if constexpr (
+      __has_builtin(__builtin_ia32_bextr_u64) && sizeof(T) == 8
+   ) {
       return __builtin_ia32_bextr_u64(raw_from, offset.raw | (raw_length << 8));
    } else {
       return extract_bits_fallback(from, offset, length);
@@ -432,12 +438,15 @@ template <cat::is_unsigned_integral T>
 auto
 zero_high_bits_at_bmi2(T source, cat::uint4 bit_index) -> T {
    if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
-      return __builtin_ia32_bzhi_si(cat::make_raw_arithmetic(source),
-                                    bit_index.raw);
-   } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di)
-                        && sizeof(T) == 8) {
-      return __builtin_ia32_bzhi_di(cat::make_raw_arithmetic(source),
-                                    bit_index.raw);
+      return __builtin_ia32_bzhi_si(
+         cat::make_raw_arithmetic(source), bit_index.raw
+      );
+   } else if constexpr (
+      __has_builtin(__builtin_ia32_bzhi_di) && sizeof(T) == 8
+   ) {
+      return __builtin_ia32_bzhi_di(
+         cat::make_raw_arithmetic(source), bit_index.raw
+      );
    } else {
       return zero_high_bits_at_fallback(source, bit_index);
    }
@@ -587,8 +596,9 @@ class bit_reference {
    // Rebind this `bit_reference` to a different bit position specified by
    // `mask` into a `Storage`.
    constexpr void
-   rebind(Storage& reference [[clang::lifetime_capture_by(this)]],
-          Storage mask) {
+   rebind(
+      Storage& reference [[clang::lifetime_capture_by(this)]], Storage mask
+   ) {
       if !consteval {
          assert(has_single_bit(mask));
       }
@@ -705,8 +715,9 @@ make_bit_reference_from_offset(Storage& reference, uword offset)
    if !consteval {
       assert(offset < limits<Storage>::bits);
    }
-   return bit_reference<Storage>(reference,
-                                 Storage(Storage(1u) << Storage(offset)));
+   return bit_reference<Storage>(
+      reference, Storage(Storage(1u) << Storage(offset))
+   );
 }
 
 template <is_unsigned_integral Storage>
@@ -812,7 +823,8 @@ bit_ptr : public plus_interface<bit_ptr<Storage>>,
          --word_offset;
       }
       return make_bit_ptr_from_offset(
-         m_p_storage + word_offset, advanced_bit - word_offset * storage_bits);
+         m_p_storage + word_offset, advanced_bit - word_offset * storage_bits
+      );
    }
 
    template <is_arithmetic Offset>
@@ -962,8 +974,10 @@ class bit_value {
 
    friend constexpr auto
    operator&(bit_value const& self, bit_value const& other) -> bit_value {
-      return static_cast<bool>(static_cast<unsigned char>(self.m_value)
-                               & static_cast<unsigned char>(other.m_value));
+      return static_cast<bool>(
+         static_cast<unsigned char>(self.m_value)
+         & static_cast<unsigned char>(other.m_value)
+      );
    }
 
    constexpr auto
@@ -974,8 +988,10 @@ class bit_value {
 
    friend constexpr auto
    operator|(bit_value const& self, bit_value const& other) -> bit_value {
-      return static_cast<bool>(static_cast<unsigned char>(self.m_value)
-                               | static_cast<unsigned char>(other.m_value));
+      return static_cast<bool>(
+         static_cast<unsigned char>(self.m_value)
+         | static_cast<unsigned char>(other.m_value)
+      );
    }
 
    constexpr auto
@@ -986,8 +1002,10 @@ class bit_value {
 
    friend constexpr auto
    operator^(bit_value const& self, bit_value const& other) -> bit_value {
-      return static_cast<bool>(static_cast<unsigned char>(self.m_value)
-                               ^ static_cast<unsigned char>(other.m_value));
+      return static_cast<bool>(
+         static_cast<unsigned char>(self.m_value)
+         ^ static_cast<unsigned char>(other.m_value)
+      );
    }
 
    constexpr auto
@@ -1055,9 +1073,11 @@ template <typename Iterator>
 // Only storage types can be iterated bitwise. Like other
 // `proxy_stepanov_iterator_interface` adaptors, the wrapped iterator must model
 // random access (`advance` uses += on the underlying iterator).
-   requires(is_random_access_stepanov_iterator<Iterator>
-            && is_unsigned_integral<typename Iterator::value_type>
-            /* || is_same<typename iterator::value_type, byte> */)
+   requires(
+      is_random_access_stepanov_iterator<Iterator>
+      && is_unsigned_integral<typename Iterator::value_type>
+      /* || is_same<typename iterator::value_type, byte> */
+   )
 class bit_stepanov_iterator
     : public proxy_stepanov_iterator_interface<
          random_access_iterator_tag, bit_value,
@@ -1076,21 +1096,24 @@ class bit_stepanov_iterator
    constexpr bit_stepanov_iterator(bit_stepanov_iterator const&) = default;
    constexpr bit_stepanov_iterator(bit_stepanov_iterator&&) = default;
 
-   constexpr explicit bit_stepanov_iterator(Iterator const& other,
-                                            idx current_bit = 0u)
+   constexpr explicit bit_stepanov_iterator(
+      Iterator const& other, idx current_bit = 0u
+   )
        : m_internal_iterator(other), m_bit_position(current_bit) {
    }
 
    constexpr auto
    dereference() -> reference {
-      return make_bit_reference_from_offset(*m_internal_iterator,
-                                            m_bit_position);
+      return make_bit_reference_from_offset(
+         *m_internal_iterator, m_bit_position
+      );
    }
 
    constexpr auto
    dereference() const -> const_reference {
-      return make_bit_reference_from_offset(*m_internal_iterator,
-                                            m_bit_position);
+      return make_bit_reference_from_offset(
+         *m_internal_iterator, m_bit_position
+      );
    }
 
    // The `bit_stepanov_iterator` proxy iterator moves in a way that may be
@@ -1236,7 +1259,8 @@ struct byte : bitwise_interface<byte> {
    friend constexpr auto
    operator<=>(byte const& left, T right) {
       return detail::raw_mixed_integral_spaceship(
-         make_raw_arithmetic(left.value), make_raw_arithmetic(right));
+         make_raw_arithmetic(left.value), make_raw_arithmetic(right)
+      );
    }
 
    template <is_integral T>
@@ -1244,7 +1268,8 @@ struct byte : bitwise_interface<byte> {
    friend constexpr auto
    operator<=>(T left, byte const& right) {
       return detail::raw_mixed_integral_spaceship(
-         make_raw_arithmetic(left), make_raw_arithmetic(right.value));
+         make_raw_arithmetic(left), make_raw_arithmetic(right.value)
+      );
    }
 
    template <typename T>
@@ -1252,7 +1277,8 @@ struct byte : bitwise_interface<byte> {
    constexpr explicit
    operator T() const
       requires(
-         is_either<remove_cv<T>, char, signed char, unsigned char, char8_t>)
+         is_either<remove_cv<T>, char, signed char, unsigned char, char8_t>
+      )
    {
       return __builtin_bit_cast(T, value);
    }
@@ -1388,7 +1414,9 @@ constexpr auto
 has_single_bit(T value) -> bool {
    return __builtin_stdc_has_single_bit(
       static_cast<make_unsigned_type<raw_arithmetic_type<T>>>(
-         make_raw_arithmetic(value)));
+         make_raw_arithmetic(value)
+      )
+   );
 }
 
 [[nodiscard]]

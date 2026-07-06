@@ -14,8 +14,10 @@ namespace cat {
 // a single shared byte). Violations are rejected by `assert`. The `__restrict`
 // qualifiers communicate the non-overlap to the optimizer.
 constexpr void
-copy_memory(void const* _Nonnull __restrict p_source,
-            void* _Nonnull __restrict p_destination, idx bytes);
+copy_memory(
+   void const* _Nonnull __restrict p_source,
+   void* _Nonnull __restrict p_destination, idx bytes
+);
 
 template <typename T, idx extent = idx::max()>
 class span;
@@ -28,8 +30,10 @@ is_pointer_in_range(T const* _Nullable p_pointer, span<T const> range) -> bool;
 
 [[nodiscard]]
 constexpr auto
-is_memory_overlapping(void const* _Nonnull p_first, idx first_bytes,
-                      void const* _Nonnull p_second, idx second_bytes) -> bool;
+is_memory_overlapping(
+   void const* _Nonnull p_first, idx first_bytes, void const* _Nonnull p_second,
+   idx second_bytes
+) -> bool;
 
 // This is implemented in `<cat/span>`.
 template <typename T>
@@ -38,18 +42,22 @@ constexpr auto
 is_memory_overlapping(span<T const> first, span<T const> second) -> bool;
 
 constexpr void
-copy_memory_scalar(void const* _Nonnull __restrict p_source,
-                   void* _Nonnull __restrict p_destination, idx bytes);
+copy_memory_scalar(
+   void const* _Nonnull __restrict p_source,
+   void* _Nonnull __restrict p_destination, idx bytes
+);
 
 [[nodiscard]]
 constexpr auto
-compare_memory(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
-               idx bytes) -> std::strong_ordering;
+compare_memory(
+   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
+) -> std::strong_ordering;
 
 [[nodiscard]]
 constexpr auto
-compare_memory_scalar(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
-                      idx bytes) -> std::strong_ordering;
+compare_memory_scalar(
+   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
+) -> std::strong_ordering;
 
 // This is implemented in `<cat/span>`.
 template <typename T>
@@ -66,14 +74,16 @@ copy_memory_backward(span<T const> source, span<T> destination);
 // overlap, copies forward when `p_destination <= p_source` and backward
 // otherwise so every source byte is read before it can be overwritten.
 constexpr void
-copy_memory_backward_scalar(void const* _Nonnull p_source,
-                            void* _Nonnull p_destination, idx bytes);
+copy_memory_backward_scalar(
+   void const* _Nonnull p_source, void* _Nonnull p_destination, idx bytes
+);
 
 // `memmove`-class copy for arbitrary length. Overlapping source and destination
 // intervals are allowed.
 constexpr void
-copy_memory_backward(void const* _Nonnull p_source,
-                     void* _Nonnull p_destination, idx bytes);
+copy_memory_backward(
+   void const* _Nonnull p_source, void* _Nonnull p_destination, idx bytes
+);
 
 template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
@@ -97,8 +107,9 @@ fill_memory_scalar_explicit(T* _Nonnull p_source, T value, idx size) {
 
 constexpr void
 zero_memory_scalar(void* _Nonnull p_source, idx bytes) {
-   fill_memory_scalar(static_cast<unsigned char*>(p_source), (unsigned char)0,
-                      bytes);
+   fill_memory_scalar(
+      static_cast<unsigned char*>(p_source), (unsigned char)0, bytes
+   );
 }
 
 // This function cannot be constant-folded out by a compiler. The
@@ -106,26 +117,31 @@ zero_memory_scalar(void* _Nonnull p_source, idx bytes) {
 [[gnu::noinline]]
 constexpr void
 zero_memory_scalar_explicit(void* _Nonnull p_source, idx bytes) {
-   fill_memory_scalar(static_cast<unsigned char*>(p_source), (unsigned char)0,
-                      bytes);
+   fill_memory_scalar(
+      static_cast<unsigned char*>(p_source), (unsigned char)0, bytes
+   );
 }
 
 namespace detail {
 
 // Implement `copy_memory()` and `memcpy()`.
 void
-copy_memory_impl(byte const* _Nonnull __restrict p_source,
-                 byte* _Nonnull __restrict p_destination, idx bytes);
+copy_memory_impl(
+   byte const* _Nonnull __restrict p_source,
+   byte* _Nonnull __restrict p_destination, idx bytes
+);
 
 // Implement `copy_memory_backward()` and `memmove()`.
 void
-copy_memory_backward_impl(byte const* _Nonnull p_source,
-                          byte* _Nonnull p_destination, idx bytes);
+copy_memory_backward_impl(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
+);
 
 // Implement `compare_memory()` and `memcmp()`.
 auto
-compare_memory_impl(byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs,
-                    idx bytes) -> std::strong_ordering;
+compare_memory_impl(
+   byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
+) -> std::strong_ordering;
 
 // Implement `fill_memory()` and `memset()`.
 void
@@ -154,8 +170,9 @@ fill_memory_detail(void* _Nonnull p_source, T value, idx const size) {
       if constexpr (sizeof(T) == 1u) {
          byte fill_byte;
          fill_byte = byte(value);
-         fill_memory_impl(static_cast<byte* _Nonnull>(p_source), fill_byte,
-                          size);
+         fill_memory_impl(
+            static_cast<byte* _Nonnull>(p_source), fill_byte, size
+         );
          return;
       }
 
@@ -197,8 +214,9 @@ fill_memory_detail(void* _Nonnull p_source, T value, idx const size) {
       // }
 
       // Fill out remaining portion one byte at a time.
-      fill_memory_scalar(static_cast<T*>(p_current), value,
-                         idx(remaining_bytes));
+      fill_memory_scalar(
+         static_cast<T*>(p_current), value, idx(remaining_bytes)
+      );
    }
 }
 }  // namespace detail

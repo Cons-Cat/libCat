@@ -15,8 +15,9 @@ previous_index(cat::idx index) -> cat::idx {
 }
 
 void
-verify_filled(unsigned char const* _Nonnull p_data, cat::idx bytes,
-              unsigned char value) {
+verify_filled(
+   unsigned char const* _Nonnull p_data, cat::idx bytes, unsigned char value
+) {
    for (cat::idx i = 0u; i < bytes; ++i) {
       cat::verify(p_data[i] == value);
    }

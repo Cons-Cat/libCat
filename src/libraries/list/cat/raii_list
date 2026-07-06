@@ -29,18 +29,18 @@ namespace cat::raii {
 
 template <typename T, is_allocator Allocator>
 class [[clang::preferred_name(list<T, Allocator>), gsl::Owner]]
-basic_list
-    : public container_interface<basic_list<T, Allocator>, T>,
-      public stepanov_iterable_interface<basic_list<T, Allocator>,
-                                         detail::list_stepanov_iterator, T> {
+basic_list : public container_interface<basic_list<T, Allocator>, T>,
+             public stepanov_iterable_interface<
+                basic_list<T, Allocator>, detail::list_stepanov_iterator, T> {
    template <typename, is_allocator>
    friend class basic_list;
 
    template <typename U, is_allocator A>
    friend constexpr auto make_list(allocator_ref<A>) -> maybe<basic_list<U, A>>;
 
-   template <typename U, is_allocator A, is_convertible<U> Arg,
-             is_convertible<U>... Args>
+   template <
+      typename U, is_allocator A, is_convertible<U> Arg,
+      is_convertible<U>... Args>
    friend constexpr auto
    make_list(allocator_ref<A>, Arg&&, Args&&...) -> maybe<basic_list<U, A>>;
 
@@ -69,17 +69,18 @@ basic_list
                                     "without an allocator.");
 
    // Construct a `cat::raii::basic_list` bound to the provided allocator.
-   constexpr basic_list(allocator_ref<Allocator> allocator
-                        [[clang::lifetimebound]])
+   constexpr basic_list(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   )
        : m_core(), m_allocator(allocator) {
    }
 
    // Default move construct the `cat::raii::basic_list`.
    constexpr basic_list(basic_list&&) = default;
 
-   constexpr basic_list(basic_list const&) = delete (
-      "Implicit copying of `cat::raii::basic_list` is forbidden. Call "
-      "`.clone()` or move instead!");
+   constexpr basic_list(basic_list const&) =
+      delete ("Implicit copying of `cat::raii::basic_list` is forbidden. Call "
+              "`.clone()` or move instead!");
 
    auto
    operator=(basic_list const&)
@@ -99,8 +100,10 @@ basic_list
          m_core = cat::move(other.m_core);
       } else {
          if !consteval {
-            cat::assert(false, "raii::basic_list move-assign across non-equal "
-                               "allocators is not yet implemented.");
+            cat::assert(
+               false, "raii::basic_list move-assign across non-equal "
+                      "allocators is not yet implemented."
+            );
          }
       }
       return *this;
@@ -203,8 +206,9 @@ basic_list
    template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<NewAllocator> allocator)
-      const& -> maybe<basic_list<T, NewAllocator>> {
+   clone(
+      allocator_ref<NewAllocator> allocator
+   ) const& -> maybe<basic_list<T, NewAllocator>> {
       basic_list<T, NewAllocator> new_list(allocator);
       new_list.m_core = $prop(m_core.clone(allocator));
       return new_list;
@@ -214,7 +218,8 @@ basic_list
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    clone(
-      dyn_allocator allocator) const& -> maybe<basic_list<T, dyn_allocator>> {
+      dyn_allocator allocator
+   ) const& -> maybe<basic_list<T, dyn_allocator>> {
       basic_list<T, dyn_allocator> new_list(allocator);
       new_list.m_core = $prop(m_core.clone(allocator));
       return new_list;
@@ -542,17 +547,20 @@ make_list(dyn_allocator allocator)
 }
 
 // Create a `cat::raii::basic_list` initialized from the given values.
-template <typename T, is_allocator Allocator, is_convertible<T> U,
-          is_convertible<T>... Args>
+template <
+   typename T, is_allocator Allocator, is_convertible<T> U,
+   is_convertible<T>... Args>
 [[nodiscard]]
 constexpr auto
-make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
-          U&& value, Args&&... remaining)
-   -> maybe<raii::basic_list<T, Allocator>> {
+make_list(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], U&& value,
+   Args&&... remaining
+) -> maybe<raii::basic_list<T, Allocator>> {
    raii::basic_list<T, Allocator> new_list(allocator);
    detail::list_node<T>* p_tail = nullptr;
-   $prop(new_list.m_core.append_new_nodes(allocator, p_tail, $fwd(value),
-                                          $fwd(remaining)...));
+   $prop(new_list.m_core.append_new_nodes(
+      allocator, p_tail, $fwd(value), $fwd(remaining)...
+   ));
    return new_list;
 }
 
@@ -560,8 +568,10 @@ make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
 template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 constexpr auto
-make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]],
-          Args&&... arguments) {
+make_list(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Args&&... arguments
+) {
    using common = common_type<Args...>;
    return make_list<common>(allocator, static_cast<common>($fwd(arguments))...);
 }
@@ -573,10 +583,12 @@ constexpr auto
 make_list(dyn_allocator allocator, U&& value, Args&&... remaining)
    -> maybe<raii::basic_list<T, dyn_allocator>> {
    return cat::raii::make_list<T, dyn_allocator>(
-      allocator_ref<dyn_allocator>(allocator), $fwd(value), $fwd(remaining)...);
+      allocator_ref<dyn_allocator>(allocator), $fwd(value), $fwd(remaining)...
+   );
 }
 
-// Create a `cat::raii::basic_list` using `cat::dyn_allocator` with deduced type.
+// Create a `cat::raii::basic_list` using `cat::dyn_allocator` with deduced
+// type.
 template <typename... Args>
 [[nodiscard]]
 constexpr auto
@@ -584,7 +596,8 @@ make_list(dyn_allocator allocator, Args&&... arguments) {
    using common = common_type<Args...>;
    return cat::raii::make_list<common, dyn_allocator>(
       allocator_ref<dyn_allocator>(allocator),
-      static_cast<common>($fwd(arguments))...);
+      static_cast<common>($fwd(arguments))...
+   );
 }
 
 // Create a `cat::raii::basic_list` filled with count copies of value.
@@ -608,7 +621,8 @@ constexpr auto
 make_list_filled(dyn_allocator allocator, idx count, T const& value)
    -> maybe<raii::basic_list<T, dyn_allocator>> {
    return cat::raii::make_list_filled<T, dyn_allocator>(
-      allocator_ref<dyn_allocator>(allocator), count, value);
+      allocator_ref<dyn_allocator>(allocator), count, value
+   );
 }
 
 }  // namespace cat::raii
@@ -630,7 +644,9 @@ constexpr auto
 raii_list_nullopt() -> raii::basic_list<T, dyn_allocator> {
    raii::basic_list<T, dyn_allocator> value(
       allocator_ref<dyn_allocator>(dyn_allocator(
-         const_cast<null_allocator&>(raii_list_niche_null_allocator))));
+         const_cast<null_allocator&>(raii_list_niche_null_allocator)
+      ))
+   );
    value.m_core = maybe_list_nullopt<T>();
    return value;
 }
@@ -641,8 +657,8 @@ namespace cat {
 
 template <typename T>
 struct default_compact_trait<raii::basic_list<T, dyn_allocator>>
-    : identity_trait<compact<raii::basic_list<T, dyn_allocator>,
-                             detail::raii_list_has_value<T>,
-                             detail::raii_list_nullopt<T>>> {};
+    : identity_trait<compact<
+         raii::basic_list<T, dyn_allocator>, detail::raii_list_has_value<T>,
+         detail::raii_list_nullopt<T>>> {};
 
 }  // namespace cat

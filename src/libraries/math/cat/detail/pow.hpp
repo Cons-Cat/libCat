@@ -210,7 +210,8 @@ emulated_pow(double base, double exponent) -> double {
 constexpr auto
 emulated_powf(float base, float exponent) -> float {
    return static_cast<float>(
-      emulated_pow(static_cast<double>(base), static_cast<double>(exponent)));
+      emulated_pow(static_cast<double>(base), static_cast<double>(exponent))
+   );
 }
 }  // namespace detail
 
@@ -222,10 +223,10 @@ pow(T base, U exponent) -> T {
 }
 
 template <is_floating_point T, is_arithmetic U>
-   requires(is_integral<U>
-            || (is_floating_point<U>
-                && sizeof(raw_arithmetic_type<U>)
-                      == sizeof(raw_arithmetic_type<T>)))
+   requires(
+      is_integral<U>
+      || (is_floating_point<U> && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>))
+   )
 [[nodiscard]]
 constexpr auto
 pow(T base, U exponent) -> T {

@@ -13,8 +13,10 @@ namespace cat::detail {
 // smaller than one `$simd_switch` step.
 [[clang::no_builtin("memcpy")]]
 inline void
-copy_memory_medium(byte const* _Nonnull __restrict p_source,
-                   byte* _Nonnull __restrict p_destination, idx bytes) {
+copy_memory_medium(
+   byte const* _Nonnull __restrict p_source,
+   byte* _Nonnull __restrict p_destination, idx bytes
+) {
    char* p_dest = reinterpret_cast<char*>(p_destination);
    char const* p_src = reinterpret_cast<char const*>(p_source);
    idx const byte_count = bytes;
@@ -49,8 +51,9 @@ copy_memory_medium(byte const* _Nonnull __restrict p_source,
 
    idx const tail_bytes = (byte_count - byte_offset).to_idx().assert();
    if (tail_bytes > 0u) {
-      copy_memory_small(p_source + byte_offset, p_destination + byte_offset,
-                        tail_bytes);
+      copy_memory_small(
+         p_source + byte_offset, p_destination + byte_offset, tail_bytes
+      );
    }
 }
 

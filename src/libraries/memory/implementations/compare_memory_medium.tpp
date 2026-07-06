@@ -31,8 +31,9 @@ compare_memory_chunk(char const* _Nonnull p_left, char const* _Nonnull p_right)
 // Head+tail overlap compare for sizes `33..127`, matching `copy_memory_small`.
 [[nodiscard, clang::no_builtin("memcmp"), gnu::target("sse2")]]
 inline auto
-compare_memory_medium(byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs,
-                      idx bytes) -> std::strong_ordering {
+compare_memory_medium(
+   byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
+) -> std::strong_ordering {
    char const* _Nonnull const p_left =
       reinterpret_cast<char const* _Nonnull>(p_lhs);
    char const* _Nonnull const p_right =
@@ -40,56 +41,82 @@ compare_memory_medium(byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs,
    idx const byte_count = bytes;
 
    if (byte_count < 64u) {
-      if (auto result = compare_memory_chunk(p_left, p_right);
-          result != std::strong_ordering::equal) {
+      if (
+         auto result = compare_memory_chunk(p_left, p_right);
+         result != std::strong_ordering::equal
+      ) {
          return result;
       }
-      if (auto result = compare_memory_chunk(p_left + 16, p_right + 16);
-          result != std::strong_ordering::equal) {
+      if (
+         auto result = compare_memory_chunk(p_left + 16, p_right + 16);
+         result != std::strong_ordering::equal
+      ) {
          return result;
       }
-      if (auto result = compare_memory_chunk(p_left + byte_count - 32,
-                                             p_right + byte_count - 32);
-          result != std::strong_ordering::equal) {
+      if (
+         auto result = compare_memory_chunk(
+            p_left + byte_count - 32, p_right + byte_count - 32
+         );
+         result != std::strong_ordering::equal
+      ) {
          return result;
       }
-      return compare_memory_chunk(p_left + byte_count - 16,
-                                  p_right + byte_count - 16);
+      return compare_memory_chunk(
+         p_left + byte_count - 16, p_right + byte_count - 16
+      );
    }
 
-   if (auto result = compare_memory_chunk(p_left, p_right);
-       result != std::strong_ordering::equal) {
+   if (
+      auto result = compare_memory_chunk(p_left, p_right);
+      result != std::strong_ordering::equal
+   ) {
       return result;
    }
-   if (auto result = compare_memory_chunk(p_left + 16, p_right + 16);
-       result != std::strong_ordering::equal) {
+   if (
+      auto result = compare_memory_chunk(p_left + 16, p_right + 16);
+      result != std::strong_ordering::equal
+   ) {
       return result;
    }
-   if (auto result = compare_memory_chunk(p_left + 32, p_right + 32);
-       result != std::strong_ordering::equal) {
+   if (
+      auto result = compare_memory_chunk(p_left + 32, p_right + 32);
+      result != std::strong_ordering::equal
+   ) {
       return result;
    }
-   if (auto result = compare_memory_chunk(p_left + 48, p_right + 48);
-       result != std::strong_ordering::equal) {
+   if (
+      auto result = compare_memory_chunk(p_left + 48, p_right + 48);
+      result != std::strong_ordering::equal
+   ) {
       return result;
    }
-   if (auto result = compare_memory_chunk(p_left + byte_count - 64,
-                                          p_right + byte_count - 64);
-       result != std::strong_ordering::equal) {
+   if (
+      auto result = compare_memory_chunk(
+         p_left + byte_count - 64, p_right + byte_count - 64
+      );
+      result != std::strong_ordering::equal
+   ) {
       return result;
    }
-   if (auto result = compare_memory_chunk(p_left + byte_count - 48,
-                                          p_right + byte_count - 48);
-       result != std::strong_ordering::equal) {
+   if (
+      auto result = compare_memory_chunk(
+         p_left + byte_count - 48, p_right + byte_count - 48
+      );
+      result != std::strong_ordering::equal
+   ) {
       return result;
    }
-   if (auto result = compare_memory_chunk(p_left + byte_count - 32,
-                                          p_right + byte_count - 32);
-       result != std::strong_ordering::equal) {
+   if (
+      auto result = compare_memory_chunk(
+         p_left + byte_count - 32, p_right + byte_count - 32
+      );
+      result != std::strong_ordering::equal
+   ) {
       return result;
    }
-   return compare_memory_chunk(p_left + byte_count - 16,
-                               p_right + byte_count - 16);
+   return compare_memory_chunk(
+      p_left + byte_count - 16, p_right + byte_count - 16
+   );
 }
 
 }  // namespace cat::detail

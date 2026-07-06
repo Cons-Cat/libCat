@@ -80,19 +80,20 @@ struct default_float_traits {
       limits<T>::is_iec559 && limits<T>::radix == 2
          && (detail::physical_bits<T> == 32 || detail::physical_bits<T> == 64),
       "default_ieee754_traits only works for 32-bits or 64-bits types "
-      "supporting binary32 or binary64 formats!");
+      "supporting binary32 or binary64 formats!"
+   );
 
    // The type that is being viewed.
    using type = T;
 
    // Refers to the format specification class.
-   using format = conditional<detail::physical_bits<T> == 32, ieee754_binary32,
-                              ieee754_binary64>;
+   using format = conditional<
+      detail::physical_bits<T> == 32, ieee754_binary32, ieee754_binary64>;
 
    // Defines an unsigned integer type that is large enough to carry a variable
    // of type `T`. Most of the operations will be done on this integer type.
-   using carrier_uint = conditional<detail::physical_bits<T> == 32,
-                                    uint4::raw_type, uint8::raw_type>;
+   using carrier_uint = conditional<
+      detail::physical_bits<T> == 32, uint4::raw_type, uint8::raw_type>;
    static_assert(sizeof(carrier_uint) == sizeof(T));
 
    // Number of bits in the above unsigned integer type.
@@ -173,8 +174,9 @@ struct default_float_traits {
    // Obtain the actual value of the binary exponent from the extracted
    // significand bits and exponent bits.
    static constexpr carrier_uint
-   binary_significand(carrier_uint significand_bits,
-                      unsigned int exponent_bits) noexcept {
+   binary_significand(
+      carrier_uint significand_bits, unsigned int exponent_bits
+   ) noexcept {
       if (exponent_bits == 0) {
          return significand_bits;
       } else {
@@ -275,7 +277,8 @@ struct float_bits {
    constexpr auto
    remove_exponent_bits(unsigned int exponent_bits) const noexcept {
       return signed_significand_bits<type, traits_type>(
-         traits_type::remove_exponent_bits(u, exponent_bits));
+         traits_type::remove_exponent_bits(u, exponent_bits)
+      );
    }
 
    // Obtain the actual value of the binary exponent from the extracted exponent
@@ -293,15 +296,17 @@ struct float_bits {
    // Obtain the actual value of the binary exponent from the extracted
    // significand bits and exponent bits.
    static constexpr carrier_uint
-   binary_significand(carrier_uint significand_bits,
-                      unsigned int exponent_bits) noexcept {
+   binary_significand(
+      carrier_uint significand_bits, unsigned int exponent_bits
+   ) noexcept {
       return traits_type::binary_significand(significand_bits, exponent_bits);
    }
 
    constexpr carrier_uint
    binary_significand() const noexcept {
-      return binary_significand(extract_significand_bits(),
-                                extract_exponent_bits());
+      return binary_significand(
+         extract_significand_bits(), extract_exponent_bits()
+      );
    }
 
    constexpr bool
@@ -492,8 +497,10 @@ umul128(uint8::raw_type x, uint8::raw_type y) noexcept {
 
    auto intermediate = (bd >> 32) + uint4::raw_type(ad) + uint4::raw_type(bc);
 
-   return {ac + (intermediate >> 32) + (ad >> 32) + (bc >> 32),
-           (intermediate << 32) + uint4::raw_type(bd)};
+   return {
+      ac + (intermediate >> 32) + (ad >> 32) + (bc >> 32),
+      (intermediate << 32) + uint4::raw_type(bd)
+   };
 #endif
 }
 
@@ -596,8 +603,9 @@ count_factors(UInt n) noexcept {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 namespace log {
-static_assert((-1 >> 1) == -1,
-              "right-shift for signed integers must be arithmetic");
+static_assert(
+   (-1 >> 1) == -1, "right-shift for signed integers must be arithmetic"
+);
 
 // Compute floor(e * c - s).
 enum class multiply : uint4::raw_type {
@@ -611,13 +619,15 @@ enum class min_exponent : int4::raw_type {
 enum class max_exponent : int4::raw_type {
 };
 
-template <multiply m, subtract f, shift k, min_exponent e_min,
-          max_exponent e_max>
+template <
+   multiply m, subtract f, shift k, min_exponent e_min, max_exponent e_max>
 constexpr int
 compute(int e) noexcept {
    // assert(int4::raw_type(e_min) <= e && e <= int4::raw_type(e_max));
-   return int((int4::raw_type(e) * int4::raw_type(m) - int4::raw_type(f))
-              >> uword::raw_type(k));
+   return int(
+      (int4::raw_type(e) * int4::raw_type(m) - int4::raw_type(f))
+      >> uword::raw_type(k)
+   );
 }
 
 // For `constexpr` computation. Returns -1 when n = 0.
@@ -638,9 +648,10 @@ static constexpr int floor_log10_pow2_max_exponent = 2'620;
 constexpr int
 floor_log10_pow2(int e) noexcept {
    using namespace log;
-   return compute<multiply(315'653), subtract(0), shift(20),
-                  min_exponent(floor_log10_pow2_min_exponent),
-                  max_exponent(floor_log10_pow2_max_exponent)>(e);
+   return compute<
+      multiply(315'653), subtract(0), shift(20),
+      min_exponent(floor_log10_pow2_min_exponent),
+      max_exponent(floor_log10_pow2_max_exponent)>(e);
 }
 
 static constexpr int floor_log2_pow10_min_exponent = -1'233;
@@ -649,9 +660,10 @@ static constexpr int floor_log2_pow10_max_exponent = 1'233;
 constexpr int
 floor_log2_pow10(int e) noexcept {
    using namespace log;
-   return compute<multiply(1'741'647), subtract(0), shift(19),
-                  min_exponent(floor_log2_pow10_min_exponent),
-                  max_exponent(floor_log2_pow10_max_exponent)>(e);
+   return compute<
+      multiply(1'741'647), subtract(0), shift(19),
+      min_exponent(floor_log2_pow10_min_exponent),
+      max_exponent(floor_log2_pow10_max_exponent)>(e);
 }
 
 static constexpr int floor_log10_pow2_minus_log10_4_over_3_min_exponent =
@@ -673,9 +685,10 @@ static constexpr int floor_log5_pow2_max_exponent = 1'831;
 constexpr int
 floor_log5_pow2(int e) noexcept {
    using namespace log;
-   return compute<multiply(225'799), subtract(0), shift(19),
-                  min_exponent(floor_log5_pow2_min_exponent),
-                  max_exponent(floor_log5_pow2_max_exponent)>(e);
+   return compute<
+      multiply(225'799), subtract(0), shift(19),
+      min_exponent(floor_log5_pow2_min_exponent),
+      max_exponent(floor_log5_pow2_max_exponent)>(e);
 }
 
 static constexpr int floor_log5_pow2_minus_log5_3_min_exponent = -3'543;
@@ -684,9 +697,10 @@ static constexpr int floor_log5_pow2_minus_log5_3_max_exponent = 2'427;
 constexpr int
 floor_log5_pow2_minus_log5_3(int e) noexcept {
    using namespace log;
-   return compute<multiply(451'597), subtract(715'764), shift(20),
-                  min_exponent(floor_log5_pow2_minus_log5_3_min_exponent),
-                  max_exponent(floor_log5_pow2_minus_log5_3_max_exponent)>(e);
+   return compute<
+      multiply(451'597), subtract(715'764), shift(20),
+      min_exponent(floor_log5_pow2_minus_log5_3_min_exponent),
+      max_exponent(floor_log5_pow2_minus_log5_3_max_exponent)>(e);
 }
 }  // namespace log
 
@@ -756,15 +770,19 @@ divide_by_pow10(UInt n) noexcept {
    // generates an inefficient code (mul + mov for no apparent reason, instead
    // of single imul), so we does this manually.
    if constexpr (cat::is_same<UInt, uint4::raw_type> && index == 2) {
-      return uint4::raw_type(wuint::umul64(n, uint4::raw_type(1'374'389'535))
-                             >> 37);
+      return uint4::raw_type(
+         wuint::umul64(n, uint4::raw_type(1'374'389'535)) >> 37
+      );
    }
    // Specialize for 64-bit division by 1000. Ensure that the correctness
    // condition is met.
-   if constexpr (cat::is_same<UInt, uint8::raw_type> && index == 3
-                 && n_max <= uint8::raw_type(15'534'100'272'597'517'998ull)) {
+   if constexpr (
+      cat::is_same<UInt, uint8::raw_type> && index == 3
+      && n_max <= uint8::raw_type(15'534'100'272'597'517'998ull)
+   ) {
       return wuint::umul128_upper64(
-                n, uint8::raw_type(2'361'183'241'434'822'607ull))
+                n, uint8::raw_type(2'361'183'241'434'822'607ull)
+             )
              >> 7;
    } else {
       constexpr auto divisor = compute_power<index>(UInt(10));
@@ -863,7 +881,8 @@ struct cache_holder<ieee754_binary32> {
       0x9a130b96'3a6c115d, 0xc097ce7b'c90715b4, 0xf0bdc21a'bb48db21,
       0x96769950'b50d88f5, 0xbc143fa4'e250eb32, 0xeb194f8e'1ae525fe,
       0x92efd1b8'd0cf37bf, 0xb7abc627'050305ae, 0xe596b7b0'c643c71a,
-      0x8f7e32ce'7bea5c70, 0xb35dbf82'1ae4f38c, 0xe0352f62'a19e306f};
+      0x8f7e32ce'7bea5c70, 0xb35dbf82'1ae4f38c, 0xe0352f62'a19e306f
+   };
 };
 
 template <>
@@ -2105,7 +2124,8 @@ struct full : base {
       // assert(k >= `cache_holder` `<FloatFormat>::` `min_k` && k <=
       // `cache_holder` `<FloatFormat>::` `max_k`).
       return cache_holder<FloatFormat>::cache[uword::raw_type(
-         k - cache_holder<FloatFormat>::min_k)];
+         k - cache_holder<FloatFormat>::min_k
+      )];
    }
 };
 
@@ -2120,9 +2140,10 @@ struct compact : base {
 
       if constexpr (cat::is_same<FloatFormat, ieee754_binary64>) {
          // Compute the base index.
-         auto const cache_index =
-            int(uint4::raw_type(k - cache_holder<FloatFormat>::min_k)
-                / compressed_cache_detail::compression_ratio);
+         auto const cache_index = int(
+            uint4::raw_type(k - cache_holder<FloatFormat>::min_k)
+            / compressed_cache_detail::compression_ratio
+         );
          auto const kb =
             cache_index * compressed_cache_detail::compression_ratio
             + cache_holder<FloatFormat>::min_k;
@@ -2150,20 +2171,23 @@ struct compact : base {
             auto const high_to_middle = recovered_cache.high() << (64 - alpha);
             auto const middle_to_low = recovered_cache.low() << (64 - alpha);
 
-            recovered_cache =
-               wuint::uint128{(recovered_cache.low() >> alpha) | high_to_middle,
-                              ((middle_low.low() >> alpha) | middle_to_low)};
+            recovered_cache = wuint::uint128{
+               (recovered_cache.low() >> alpha) | high_to_middle,
+               ((middle_low.low() >> alpha) | middle_to_low)
+            };
 
             // assert(recovered_cache.low() + 1 != 0);
-            recovered_cache = {recovered_cache.high(),
-                               recovered_cache.low() + 1};
+            recovered_cache = {
+               recovered_cache.high(), recovered_cache.low() + 1
+            };
 
             return recovered_cache;
          }
       } else {
          // Just use the full cache for anything other than binary64.
          return cache_holder<FloatFormat>::cache[uword::raw_type(
-            k - cache_holder<FloatFormat>::min_k)];
+            k - cache_holder<FloatFormat>::min_k
+         )];
       }
    }
 };
@@ -2257,12 +2281,14 @@ struct impl : private FloatTraits,
 
    static constexpr int kappa = cat::is_same<format, ieee754_binary32> ? 1 : 2;
    static_assert(kappa >= 1);
-   static_assert(carrier_bits
-                 >= significand_bits + 2 + log::floor_log2_pow10(kappa + 1));
+   static_assert(
+      carrier_bits >= significand_bits + 2 + log::floor_log2_pow10(kappa + 1)
+   );
 
    static constexpr int min_k = [] {
       constexpr auto a = -log::floor_log10_pow2_minus_log10_4_over_3(
-         int(max_exponent - significand_bits));
+         int(max_exponent - significand_bits)
+      );
       constexpr auto b =
          -log::floor_log10_pow2(int(max_exponent - significand_bits)) + kappa;
       return a < b ? a : b;
@@ -2273,7 +2299,8 @@ struct impl : private FloatTraits,
       // We do invoke `shorter_interval_case` for exponent == `min_exponent`
       // case, so we should not add 1 here.
       constexpr auto a = -log::floor_log10_pow2_minus_log10_4_over_3(
-         int(min_exponent - significand_bits /*+ 1*/));
+         int(min_exponent - significand_bits /*+ 1*/)
+      );
       constexpr auto b =
          -log::floor_log10_pow2(int(min_exponent - significand_bits)) + kappa;
       return a > b ? a : b;
@@ -2287,20 +2314,22 @@ struct impl : private FloatTraits,
    static constexpr int case_shorter_interval_left_endpoint_upper_threshold =
       2
       + log::floor_log2(
-         compute_power<count_factors<5>(
-                          (carrier_uint(1) << (significand_bits + 2)) - 1)
-                       + 1>(10)
-         / 3);
+         compute_power<
+            count_factors<5>((carrier_uint(1) << (significand_bits + 2)) - 1)
+            + 1>(10)
+         / 3
+      );
 
    static constexpr int case_shorter_interval_right_endpoint_lower_threshold =
       0;
    static constexpr int case_shorter_interval_right_endpoint_upper_threshold =
       2
       + log::floor_log2(
-         compute_power<count_factors<5>(
-                          (carrier_uint(1) << (significand_bits + 1)) + 1)
-                       + 1>(10)
-         / 3);
+         compute_power<
+            count_factors<5>((carrier_uint(1) << (significand_bits + 1)) + 1)
+            + 1>(10)
+         / 3
+      );
 
    static constexpr int shorter_interval_tie_lower_threshold =
       -log::floor_log5_pow2_minus_log5_3(significand_bits + 4) - 2
@@ -2321,12 +2350,15 @@ struct impl : private FloatTraits,
    //// The main algorithm assumes the input is a normal/subnormal finite
    /// number
 
-   template <class return_type, class interval_type, class TrailingZeroPolicy,
-             class BinaryToDecimalRoundingPolicy, class CachePolicy,
-             class... AdditionalArgs>
+   template <
+      class return_type, class interval_type, class TrailingZeroPolicy,
+      class BinaryToDecimalRoundingPolicy, class CachePolicy,
+      class... AdditionalArgs>
    JKJ_SAFEBUFFERS static return_type
-   compute_nearest_normal(carrier_uint const two_fc, int const exponent,
-                          AdditionalArgs... additional_args) noexcept {
+   compute_nearest_normal(
+      carrier_uint const two_fc, int const exponent,
+      AdditionalArgs... additional_args
+   ) noexcept {
       //////////////////////////////////////////////////////////////////////
       // Step 1:
       // Schubfach multiplier calculation.
@@ -2373,9 +2405,10 @@ struct impl : private FloatTraits,
       if (r < deltai) {
          // Exclude the right endpoint if necessary.
          if (r == 0 && (is_z_integer & !interval.include_right_endpoint())) {
-            if constexpr (BinaryToDecimalRoundingPolicy::tag
-                          == policy_impl::binary_to_decimal_rounding::tag_t::
-                             do_not_care) {
+            if constexpr (
+               BinaryToDecimalRoundingPolicy::tag
+               == policy_impl::binary_to_decimal_rounding::tag_t::do_not_care
+            ) {
                ret_value.significand *= 10;
                ret_value.exponent = minus_k + kappa;
                --ret_value.significand;
@@ -2414,17 +2447,20 @@ small_divisor_case_label:
       ret_value.significand *= 10;
       ret_value.exponent = minus_k + kappa;
 
-      if constexpr (BinaryToDecimalRoundingPolicy::tag
-                    == policy_impl::binary_to_decimal_rounding::tag_t::
-                       do_not_care) {
+      if constexpr (
+         BinaryToDecimalRoundingPolicy::tag
+         == policy_impl::binary_to_decimal_rounding::tag_t::do_not_care
+      ) {
          // Normally, we want to compute `ret_value.significand` += r /
          // `small_divisor` and return, but we need to take care of the case
          // that the resulting value is exactly the right endpoint, while that
          // is not included in the interval.
          if (!interval.include_right_endpoint()) {
             // Is r divisible by 10^kappa?
-            if (is_z_integer
-                && div::check_divisibility_and_divide_by_pow10<kappa>(r)) {
+            if (
+               is_z_integer
+               && div::check_divisibility_and_divide_by_pow10<kappa>(r)
+            ) {
                // This should be in the interval.
                ret_value.significand += r - 1;
             } else {
@@ -2458,8 +2494,10 @@ small_divisor_case_label:
                // If z^(f) >= epsilon^(f), we might have a tie when z^(f) ==
                // epsilon^(f), or equivalently, when y is an integer. For
                // tie-to-up case, we can just choose the upper one.
-               if (BinaryToDecimalRoundingPolicy::prefer_round_down(ret_value)
-                   & is_y_integer) {
+               if (
+                  BinaryToDecimalRoundingPolicy::prefer_round_down(ret_value)
+                  & is_y_integer
+               ) {
                   --ret_value.significand;
                }
             }
@@ -2468,12 +2506,14 @@ small_divisor_case_label:
       return ret_value;
    }
 
-   template <class return_type, class interval_type, class TrailingZeroPolicy,
-             class BinaryToDecimalRoundingPolicy, class CachePolicy,
-             class... AdditionalArgs>
+   template <
+      class return_type, class interval_type, class TrailingZeroPolicy,
+      class BinaryToDecimalRoundingPolicy, class CachePolicy,
+      class... AdditionalArgs>
    JKJ_SAFEBUFFERS static return_type
-   compute_nearest_shorter(int const exponent,
-                           AdditionalArgs... additional_args) noexcept {
+   compute_nearest_shorter(
+      int const exponent, AdditionalArgs... additional_args
+   ) noexcept {
       return_type ret_value;
       interval_type interval{additional_args...};
 
@@ -2489,14 +2529,18 @@ small_divisor_case_label:
 
       // If we don't accept the right endpoint and if the right endpoint is an
       // integer, decrease it.
-      if (!interval.include_right_endpoint()
-          && is_right_endpoint_integer_shorter_interval(exponent)) {
+      if (
+         !interval.include_right_endpoint()
+         && is_right_endpoint_integer_shorter_interval(exponent)
+      ) {
          --zi;
       }
       // If we don't accept the left endpoint or if the left endpoint is not an
       // integer, increase it.
-      if (!interval.include_left_endpoint()
-          || !is_left_endpoint_integer_shorter_interval(exponent)) {
+      if (
+         !interval.include_left_endpoint()
+         || !is_left_endpoint_integer_shorter_interval(exponent)
+      ) {
          ++xi;
       }
 
@@ -2517,9 +2561,11 @@ small_divisor_case_label:
       ret_value.exponent = minus_k;
 
       // When tie occurs, choose one of them according to the rule.
-      if (BinaryToDecimalRoundingPolicy::prefer_round_down(ret_value)
-          && exponent >= shorter_interval_tie_lower_threshold
-          && exponent <= shorter_interval_tie_upper_threshold) {
+      if (
+         BinaryToDecimalRoundingPolicy::prefer_round_down(ret_value)
+         && exponent >= shorter_interval_tie_lower_threshold
+         && exponent <= shorter_interval_tie_upper_threshold
+      ) {
          --ret_value.significand;
       } else if (ret_value.significand < xi) {
          ++ret_value.significand;
@@ -2529,8 +2575,9 @@ small_divisor_case_label:
 
    template <class return_type, class TrailingZeroPolicy, class CachePolicy>
    JKJ_SAFEBUFFERS static return_type
-   compute_left_closed_directed(carrier_uint const two_fc,
-                                int exponent) noexcept {
+   compute_left_closed_directed(
+      carrier_uint const two_fc, int exponent
+   ) noexcept {
       //////////////////////////////////////////////////////////////////////
       // Step 1:
       // Schubfach multiplier calculation.
@@ -2618,8 +2665,9 @@ small_divisor_case_label:
 
    template <class return_type, class TrailingZeroPolicy, class CachePolicy>
    JKJ_SAFEBUFFERS static return_type
-   compute_right_closed_directed(carrier_uint const two_fc, int const exponent,
-                                 bool shorter_interval) noexcept {
+   compute_right_closed_directed(
+      carrier_uint const two_fc, int const exponent, bool shorter_interval
+   ) noexcept {
       //////////////////////////////////////////////////////////////////////
       // Step 1:
       // Schubfach multiplier calculation.
@@ -2657,8 +2705,9 @@ small_divisor_case_label:
          goto small_divisor_case_label;
       } else if (r == deltai) {
          // Compare the fractional parts.
-         if (!compute_mul_parity(two_fc - (shorter_interval ? 1 : 2), cache,
-                                 beta)
+         if (!compute_mul_parity(
+                 two_fc - (shorter_interval ? 1 : 2), cache, beta
+             )
                  .parity) {
             goto small_divisor_case_label;
          }
@@ -2721,8 +2770,10 @@ small_divisor_case_label:
          auto nm = wuint::umul128(n, magic_number);
 
          // Is n is divisible by 10^8?
-         if ((nm.high() & ((uint8::raw_type(1) << (90 - 64)) - 1)) == 0
-             && nm.low() < magic_number) {
+         if (
+            (nm.high() & ((uint8::raw_type(1) << (90 - 64)) - 1)) == 0
+            && nm.low() < magic_number
+         ) {
             // If yes, work with the quotient.
             auto n32 = uint4::raw_type(nm.high() >> (90 - 64));
 
@@ -2796,29 +2847,37 @@ small_divisor_case_label:
    }
 
    static compute_mul_parity_result
-   compute_mul_parity(carrier_uint two_f, cache_entry_type const& cache,
-                      int beta) noexcept {
+   compute_mul_parity(
+      carrier_uint two_f, cache_entry_type const& cache, int beta
+   ) noexcept {
       // assert(beta >= 1);
       // assert(beta < 64);
 
       if constexpr (cat::is_same<format, ieee754_binary32>) {
          auto r = wuint::umul96_lower64(two_f, cache);
-         return {((r >> (64 - beta)) & 1) != 0,
-                 uint4::raw_type(r >> (32 - beta)) == 0};
+         return {
+            ((r >> (64 - beta)) & 1) != 0,
+            uint4::raw_type(r >> (32 - beta)) == 0
+         };
       } else {
          static_assert(cat::is_same<format, ieee754_binary64>);
          auto r = wuint::umul192_lower128(two_f, cache);
-         return {((r.high() >> (64 - beta)) & 1) != 0,
-                 ((r.high() << beta) | (r.low() >> (64 - beta))) == 0};
+         return {
+            ((r.high() >> (64 - beta)) & 1) != 0,
+            ((r.high() << beta) | (r.low() >> (64 - beta))) == 0
+         };
       }
    }
 
    static constexpr carrier_uint
    compute_left_endpoint_for_shorter_interval_case(
-      cache_entry_type const& cache, int beta) noexcept {
+      cache_entry_type const& cache, int beta
+   ) noexcept {
       if constexpr (cat::is_same<format, ieee754_binary32>) {
-         return carrier_uint((cache - (cache >> (significand_bits + 2)))
-                             >> (cache_bits - significand_bits - 1 - beta));
+         return carrier_uint(
+            (cache - (cache >> (significand_bits + 2)))
+            >> (cache_bits - significand_bits - 1 - beta)
+         );
       } else {
          static_assert(cat::is_same<format, ieee754_binary64>);
          return (cache.high() - (cache.high() >> (significand_bits + 2)))
@@ -2828,10 +2887,13 @@ small_divisor_case_label:
 
    static constexpr carrier_uint
    compute_right_endpoint_for_shorter_interval_case(
-      cache_entry_type const& cache, int beta) noexcept {
+      cache_entry_type const& cache, int beta
+   ) noexcept {
       if constexpr (cat::is_same<format, ieee754_binary32>) {
-         return carrier_uint((cache + (cache >> (significand_bits + 1)))
-                             >> (cache_bits - significand_bits - 1 - beta));
+         return carrier_uint(
+            (cache + (cache >> (significand_bits + 1)))
+            >> (cache_bits - significand_bits - 1 - beta)
+         );
       } else {
          static_assert(cat::is_same<format, ieee754_binary64>);
          return (cache.high() + (cache.high() >> (significand_bits + 1)))
@@ -2840,11 +2902,13 @@ small_divisor_case_label:
    }
 
    static constexpr carrier_uint
-   compute_round_up_for_shorter_interval_case(cache_entry_type const& cache,
-                                              int beta) noexcept {
+   compute_round_up_for_shorter_interval_case(
+      cache_entry_type const& cache, int beta
+   ) noexcept {
       if constexpr (cat::is_same<format, ieee754_binary32>) {
-         return (carrier_uint(cache
-                              >> (cache_bits - significand_bits - 2 - beta))
+         return (carrier_uint(
+                    cache >> (cache_bits - significand_bits - 2 - beta)
+                 )
                  + 1)
                 / 2;
       } else {
@@ -2914,21 +2978,25 @@ struct base_default_pair {
       return {};
    }
 
-   template <class FoundPolicyInfo, class FirstPolicy,
-             class... remainingPolicies>
+   template <
+      class FoundPolicyInfo, class FirstPolicy, class... remainingPolicies>
    static constexpr auto
-   get_policy_impl(FoundPolicyInfo, FirstPolicy,
-                   remainingPolicies... remainings) {
+   get_policy_impl(
+      FoundPolicyInfo, FirstPolicy, remainingPolicies... remainings
+   ) {
       if constexpr (cat::is_base_of<Base, FirstPolicy>) {
-         if constexpr (FoundPolicyInfo::found_info
-                       == policy_found_info::not_found) {
+         if constexpr (
+            FoundPolicyInfo::found_info == policy_found_info::not_found
+         ) {
             return get_policy_impl(
                found_policy_pair<FirstPolicy, policy_found_info::unique>{},
-               remainings...);
+               remainings...
+            );
          } else {
             return get_policy_impl(
                found_policy_pair<FirstPolicy, policy_found_info::repeated>{},
-               remainings...);
+               remainings...
+            );
          }
       } else {
          return get_policy_impl(FoundPolicyInfo(), remainings...);
@@ -2940,7 +3008,8 @@ struct base_default_pair {
    get_policy(Policies... policies) {
       return get_policy_impl(
          found_policy_pair<DefaultPolicy, policy_found_info::not_found>{},
-         policies...);
+         policies...
+      );
    }
 };
 
@@ -2954,15 +3023,17 @@ check_policy_validity(Policy, base_default_pair_list<>) {
    return false;
 }
 
-template <class Policy, class FirstBaseDefaultPair,
-          class... remainingBaseDefaultPairs>
+template <
+   class Policy, class FirstBaseDefaultPair, class... remainingBaseDefaultPairs>
 constexpr bool
 check_policy_validity(
    Policy,
-   base_default_pair_list<FirstBaseDefaultPair, remainingBaseDefaultPairs...>) {
+   base_default_pair_list<FirstBaseDefaultPair, remainingBaseDefaultPairs...>
+) {
    return cat::is_base_of<typename FirstBaseDefaultPair::base, Policy>
           || check_policy_validity(
-             Policy(), base_default_pair_list<remainingBaseDefaultPairs...>{});
+             Policy(), base_default_pair_list<remainingBaseDefaultPairs...>{}
+          );
 }
 
 template <class BaseDefaultPairList>
@@ -2971,14 +3042,16 @@ check_policy_list_validity(BaseDefaultPairList) {
    return true;
 }
 
-template <class BaseDefaultPairList, class FirstPolicy,
-          class... remainingPolicies>
+template <
+   class BaseDefaultPairList, class FirstPolicy, class... remainingPolicies>
 constexpr bool
-check_policy_list_validity(BaseDefaultPairList, FirstPolicy,
-                           remainingPolicies... remaining_policies) {
+check_policy_list_validity(
+   BaseDefaultPairList, FirstPolicy, remainingPolicies... remaining_policies
+) {
    return check_policy_validity(FirstPolicy(), BaseDefaultPairList())
-          && check_policy_list_validity(BaseDefaultPairList(),
-                                        remaining_policies...);
+          && check_policy_list_validity(
+             BaseDefaultPairList(), remaining_policies...
+          );
 }
 
 // Build `policy_holder`.
@@ -2992,19 +3065,21 @@ struct policy_holder : Policies... {};
 
 template <bool repeated, class... FoundPolicyPairs, class... Policies>
 constexpr auto
-make_policy_holder_impl(base_default_pair_list<>,
-                        found_policy_pair_list<repeated, FoundPolicyPairs...>,
-                        Policies...) {
+make_policy_holder_impl(
+   base_default_pair_list<>,
+   found_policy_pair_list<repeated, FoundPolicyPairs...>, Policies...
+) {
    return found_policy_pair_list<repeated, FoundPolicyPairs...>{};
 }
 
-template <class FirstBaseDefaultPair, class... remainingBaseDefaultPairs,
-          bool repeated, class... FoundPolicyPairs, class... Policies>
+template <
+   class FirstBaseDefaultPair, class... remainingBaseDefaultPairs,
+   bool repeated, class... FoundPolicyPairs, class... Policies>
 constexpr auto
 make_policy_holder_impl(
    base_default_pair_list<FirstBaseDefaultPair, remainingBaseDefaultPairs...>,
-   found_policy_pair_list<repeated, FoundPolicyPairs...>,
-   Policies... policies) {
+   found_policy_pair_list<repeated, FoundPolicyPairs...>, Policies... policies
+) {
    using new_found_policy_pair =
       decltype(FirstBaseDefaultPair::get_policy(policies...));
 
@@ -3012,25 +3087,31 @@ make_policy_holder_impl(
       base_default_pair_list<remainingBaseDefaultPairs...>{},
       found_policy_pair_list < repeated
          || new_found_policy_pair::found_info == policy_found_info::repeated,
-      new_found_policy_pair, FoundPolicyPairs... > {}, policies...);
+      new_found_policy_pair, FoundPolicyPairs... > {}, policies...
+   );
 }
 
 template <bool repeated, class... raw_typePolicies>
 constexpr auto
-convert_to_policy_holder(found_policy_pair_list<repeated>,
-                         raw_typePolicies...) {
+convert_to_policy_holder(
+   found_policy_pair_list<repeated>, raw_typePolicies...
+) {
    return policy_holder<raw_typePolicies...>{};
 }
 
-template <bool repeated, class FirstFoundPolicyPair,
-          class... remainingFoundPolicyPairs, class... raw_typePolicies>
+template <
+   bool repeated, class FirstFoundPolicyPair,
+   class... remainingFoundPolicyPairs, class... raw_typePolicies>
 constexpr auto
-convert_to_policy_holder(found_policy_pair_list<repeated, FirstFoundPolicyPair,
-                                                remainingFoundPolicyPairs...>,
-                         raw_typePolicies... policies) {
+convert_to_policy_holder(
+   found_policy_pair_list<
+      repeated, FirstFoundPolicyPair, remainingFoundPolicyPairs...>,
+   raw_typePolicies... policies
+) {
    return convert_to_policy_holder(
       found_policy_pair_list<repeated, remainingFoundPolicyPairs...>{},
-      typename FirstFoundPolicyPair::policy{}, policies...);
+      typename FirstFoundPolicyPair::policy{}, policies...
+   );
 }
 
 template <class BaseDefaultPairList, class... Policies>
@@ -3038,14 +3119,18 @@ constexpr auto
 make_policy_holder(BaseDefaultPairList, Policies... policies) {
    static_assert(
       check_policy_list_validity(BaseDefaultPairList(), Policies()...),
-      "cat::detail::dragonbox: an invalid policy is specified");
+      "cat::detail::dragonbox: an invalid policy is specified"
+   );
 
    using policy_pair_list = decltype(make_policy_holder_impl(
-      BaseDefaultPairList(), found_policy_pair_list<false>{}, policies...));
+      BaseDefaultPairList(), found_policy_pair_list<false>{}, policies...
+   ));
 
-   static_assert(!policy_pair_list::repeated,
-                 "cat::detail::dragonbox: each policy should be "
-                 "specified at most once");
+   static_assert(
+      !policy_pair_list::repeated,
+      "cat::detail::dragonbox: each policy should be "
+      "specified at most once"
+   );
 
    return convert_to_policy_holder(policy_pair_list{});
 }
@@ -3056,27 +3141,33 @@ make_policy_holder(BaseDefaultPairList, Policies... policies) {
 // The interface function.
 ////////////////////////////////////////////////////////////////////////////////////////
 
-template <class Float, class FloatTraits = default_float_traits<Float>,
-          class... Policies>
+template <
+   class Float, class FloatTraits = default_float_traits<Float>,
+   class... Policies>
 JKJ_SAFEBUFFERS auto
-to_decimal(signed_significand_bits<Float, FloatTraits> signed_significand_bits,
-           unsigned int exponent_bits, Policies... policies) noexcept {
+to_decimal(
+   signed_significand_bits<Float, FloatTraits> signed_significand_bits,
+   unsigned int exponent_bits, Policies... policies
+) noexcept {
    // Build policy holder type.
    using namespace detail::policy_impl;
    using policy_holder = decltype(make_policy_holder(
       base_default_pair_list<
          base_default_pair<sign::base, sign::return_sign>,
          base_default_pair<trailing_zero::base, trailing_zero::remove>,
-         base_default_pair<decimal_to_binary_rounding::base,
-                           decimal_to_binary_rounding::nearest_to_even>,
-         base_default_pair<binary_to_decimal_rounding::base,
-                           binary_to_decimal_rounding::to_even>,
+         base_default_pair<
+            decimal_to_binary_rounding::base,
+            decimal_to_binary_rounding::nearest_to_even>,
+         base_default_pair<
+            binary_to_decimal_rounding::base,
+            binary_to_decimal_rounding::to_even>,
          base_default_pair<cache::base, cache::full>>{},
-      policies...));
+      policies...
+   ));
 
-   using return_type = decimal_fp<typename FloatTraits::carrier_uint,
-                                  policy_holder::return_has_sign,
-                                  policy_holder::report_trailing_zeros>;
+   using return_type = decimal_fp<
+      typename FloatTraits::carrier_uint, policy_holder::return_has_sign,
+      policy_holder::report_trailing_zeros>;
 
    return_type ret = policy_holder::delegate(
       signed_significand_bits,
@@ -3121,8 +3212,10 @@ to_decimal(signed_significand_bits<Float, FloatTraits> signed_significand_bits,
                // 2.225'073'858'507'201'4 * 10^-308. This is indeed of the
                // shortest length, and it is the unique one closest to the true
                // value among valid representations of the same length.
-               static_assert(cat::is_same<format, ieee754_binary32>
-                             || cat::is_same<format, ieee754_binary64>);
+               static_assert(
+                  cat::is_same<format, ieee754_binary32>
+                  || cat::is_same<format, ieee754_binary64>
+               );
 
                if (two_fc == 0) {
                   return decltype(interval_type_provider)::
@@ -3138,8 +3231,10 @@ to_decimal(signed_significand_bits<Float, FloatTraits> signed_significand_bits,
                                  typename policy_holder::
                                     binary_to_decimal_rounding_policy,
                                  typename policy_holder::cache_policy>(
-                                 exponent, additional_args...);
-                        });
+                                 exponent, additional_args...
+                              );
+                        }
+                     );
                }
 
                two_fc |=
@@ -3163,11 +3258,13 @@ to_decimal(signed_significand_bits<Float, FloatTraits> signed_significand_bits,
                            typename policy_holder::
                               binary_to_decimal_rounding_policy,
                            typename policy_holder::cache_policy>(
-                           two_fc, exponent, additional_args...);
-                  });
-         } else if constexpr (tag
-                              == decimal_to_binary_rounding::tag_t::
-                                 left_closed_directed) {
+                           two_fc, exponent, additional_args...
+                        );
+                  }
+               );
+         } else if constexpr (
+            tag == decimal_to_binary_rounding::tag_t::left_closed_directed
+         ) {
             // Is the input a normal number?
             if (exponent != 0) {
                exponent += format::exponent_bias - format::significand_bits;
@@ -3184,7 +3281,8 @@ to_decimal(signed_significand_bits<Float, FloatTraits> signed_significand_bits,
                typename policy_holder::cache_policy>(two_fc, exponent);
          } else {
             static_assert(
-               tag == decimal_to_binary_rounding::tag_t::right_closed_directed);
+               tag == decimal_to_binary_rounding::tag_t::right_closed_directed
+            );
 
             bool shorter_interval = false;
 
@@ -3204,17 +3302,20 @@ to_decimal(signed_significand_bits<Float, FloatTraits> signed_significand_bits,
 
             return detail::impl<Float>::template compute_right_closed_directed<
                return_type, typename policy_holder::trailing_zero_policy,
-               typename policy_holder::cache_policy>(two_fc, exponent,
-                                                     shorter_interval);
+               typename policy_holder::cache_policy>(
+               two_fc, exponent, shorter_interval
+            );
          }
-      });
+      }
+   );
 
    policy_holder::handle_sign(signed_significand_bits, ret);
    return ret;
 }
 
-template <class Float, class FloatTraits = default_float_traits<Float>,
-          class... Policies>
+template <
+   class Float, class FloatTraits = default_float_traits<Float>,
+   class... Policies>
 auto
 to_decimal(Float x, Policies... policies) noexcept {
    auto const br = float_bits<Float, FloatTraits>(x);
@@ -3234,8 +3335,9 @@ namespace cat::detail::dragonbox {
 namespace to_chars_detail {
 template <class Float, class FloatTraits>
 extern char*
-to_chars(typename FloatTraits::carrier_uint significand, int exponent,
-         char* buffer) noexcept;
+to_chars(
+   typename FloatTraits::carrier_uint significand, int exponent, char* buffer
+) noexcept;
 
 // Avoid needless ABI overhead incurred by tag dispatch.
 template <class PolicyHolder, class Float, class FloatTraits>
@@ -3255,9 +3357,11 @@ to_chars_n_impl(float_bits<Float, FloatTraits> br, char* buffer) noexcept {
             policy::trailing_zero::remove,
             typename PolicyHolder::decimal_to_binary_rounding_policy{},
             typename PolicyHolder::binary_to_decimal_rounding_policy{},
-            typename PolicyHolder::cache_policy{});
+            typename PolicyHolder::cache_policy{}
+         );
          return to_chars_detail::to_chars<Float, FloatTraits>(
-            result.significand, result.exponent, buffer);
+            result.significand, result.exponent, buffer
+         );
       }
       copy_memory_scalar("0E0", buffer, 3u);
       return buffer + 3;
@@ -3277,27 +3381,33 @@ to_chars_n_impl(float_bits<Float, FloatTraits> br, char* buffer) noexcept {
 }  // namespace to_chars_detail
 
 // Returns the next-to-end position.
-template <class Float, class FloatTraits = default_float_traits<Float>,
-          class... Policies>
+template <
+   class Float, class FloatTraits = default_float_traits<Float>,
+   class... Policies>
 char*
 to_chars_n(Float x, char* buffer, Policies... policies) noexcept {
    using namespace cat::detail::dragonbox::detail::policy_impl;
    using policy_holder = decltype(make_policy_holder(
       base_default_pair_list<
-         base_default_pair<decimal_to_binary_rounding::base,
-                           decimal_to_binary_rounding::nearest_to_even>,
-         base_default_pair<binary_to_decimal_rounding::base,
-                           binary_to_decimal_rounding::to_even>,
+         base_default_pair<
+            decimal_to_binary_rounding::base,
+            decimal_to_binary_rounding::nearest_to_even>,
+         base_default_pair<
+            binary_to_decimal_rounding::base,
+            binary_to_decimal_rounding::to_even>,
          base_default_pair<cache::base, cache::full>>{},
-      policies...));
+      policies...
+   ));
 
    return to_chars_detail::to_chars_n_impl<policy_holder>(
-      float_bits<Float, FloatTraits>(x), buffer);
+      float_bits<Float, FloatTraits>(x), buffer
+   );
 }
 
 // Null-terminate and bypass the return value of `fp_to_chars_n`.
-template <class Float, class FloatTraits = default_float_traits<Float>,
-          class... Policies>
+template <
+   class Float, class FloatTraits = default_float_traits<Float>,
+   class... Policies>
 char*
 to_chars(Float x, char* buffer, Policies... policies) noexcept {
    auto ptr = to_chars_n<Float, FloatTraits>(x, buffer, policies...);

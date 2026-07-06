@@ -16,9 +16,9 @@ inline constexpr precision_policies
    float_precision_for<basic_float<T, precision>, fallback> = precision;
 
 template <typename T, typename U, precision_policies precision>
-using precision_reference_reverse_result =
-   basic_float<common_type<raw_arithmetic_type<T>, raw_arithmetic_type<U>>,
-               float_precision_for<remove_cvref<T>, precision>>;
+using precision_reference_reverse_result = basic_float<
+   common_type<raw_arithmetic_type<T>, raw_arithmetic_type<U>>,
+   float_precision_for<remove_cvref<T>, precision>>;
 
 }  // namespace detail
 
@@ -54,17 +54,18 @@ class precision_reference {
 
  public:
    constexpr auto
-   precise() & -> precision_reference<WrappedQual,
-                                      precision_policies::precise> {
+   precise() & -> precision_reference<
+      WrappedQual, precision_policies::precise> {
       return precision_reference<WrappedQual, precision_policies::precise>(
-         *m_wrapped);
+         *m_wrapped
+      );
    }
 
    constexpr auto
-   precise() const& -> precision_reference<WrappedQual const,
-                                           precision_policies::precise> {
-      return precision_reference<WrappedQual const,
-                                 precision_policies::precise>(*m_wrapped);
+   precise() const& -> precision_reference<
+      WrappedQual const, precision_policies::precise> {
+      return precision_reference<
+         WrappedQual const, precision_policies::precise>(*m_wrapped);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -76,14 +77,16 @@ class precision_reference {
    constexpr auto
    fast() & -> precision_reference<WrappedQual, precision_policies::fast> {
       return precision_reference<WrappedQual, precision_policies::fast>(
-         *m_wrapped);
+         *m_wrapped
+      );
    }
 
    constexpr auto
-   fast() const& -> precision_reference<WrappedQual const,
-                                        precision_policies::fast> {
+   fast() const& -> precision_reference<
+      WrappedQual const, precision_policies::fast> {
       return precision_reference<WrappedQual const, precision_policies::fast>(
-         *m_wrapped);
+         *m_wrapped
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -139,9 +142,10 @@ class precision_reference {
    template <typename OtherWrappedQual, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(precision_reference lhs,
-              precision_reference<OtherWrappedQual, other_precision> rhs)
-      -> bool {
+   operator==(
+      precision_reference lhs,
+      precision_reference<OtherWrappedQual, other_precision> rhs
+   ) -> bool {
       using other_raw_type =
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
       using common = common_type<raw_type, other_raw_type>;
@@ -159,8 +163,9 @@ class precision_reference {
    }
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<raw_type, U>
-               && !is_const<WrappedQual>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator=(U operand) -> precision_reference& {
@@ -181,8 +186,9 @@ class precision_reference {
    constexpr auto
    add(precision_reference<OtherWrappedQual, other_precision> other) const
       -> basic_float<
-         common_type<raw_type, typename precision_reference<
-                                  OtherWrappedQual, other_precision>::raw_type>,
+         common_type<
+            raw_type, typename precision_reference<
+                         OtherWrappedQual, other_precision>::raw_type>,
          precision> {
       using other_raw_type =
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
@@ -210,10 +216,13 @@ class precision_reference {
    template <typename OtherWrappedQual, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(precision_reference<OtherWrappedQual, other_precision> operand)
-      const -> basic_float<
-         common_type<raw_type, typename precision_reference<
-                                  OtherWrappedQual, other_precision>::raw_type>,
+   subtract_by(
+      precision_reference<OtherWrappedQual, other_precision> operand
+   ) const
+      -> basic_float<
+         common_type<
+            raw_type, typename precision_reference<
+                         OtherWrappedQual, other_precision>::raw_type>,
          precision> {
       using other_raw_type =
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
@@ -261,10 +270,13 @@ class precision_reference {
    template <typename OtherWrappedQual, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(precision_reference<OtherWrappedQual, other_precision> operand)
-      const -> basic_float<
-         common_type<raw_type, typename precision_reference<
-                                  OtherWrappedQual, other_precision>::raw_type>,
+   multiply(
+      precision_reference<OtherWrappedQual, other_precision> operand
+   ) const
+      -> basic_float<
+         common_type<
+            raw_type, typename precision_reference<
+                         OtherWrappedQual, other_precision>::raw_type>,
          precision> {
       using other_raw_type =
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
@@ -292,10 +304,13 @@ class precision_reference {
    template <typename OtherWrappedQual, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(precision_reference<OtherWrappedQual, other_precision> operand)
-      const -> basic_float<
-         common_type<raw_type, typename precision_reference<
-                                  OtherWrappedQual, other_precision>::raw_type>,
+   divide_by(
+      precision_reference<OtherWrappedQual, other_precision> operand
+   ) const
+      -> basic_float<
+         common_type<
+            raw_type, typename precision_reference<
+                         OtherWrappedQual, other_precision>::raw_type>,
          precision> {
       using other_raw_type =
          precision_reference<OtherWrappedQual, other_precision>::raw_type;
@@ -333,10 +348,12 @@ class precision_reference {
    }
 
    template <is_arithmetic U, is_arithmetic V>
-      requires((is_integral<U> || is_floating_point<U>)
-               && (is_integral<V> || is_floating_point<V>)
-               && (is_integral<U> || is_same<raw_type, raw_arithmetic_type<U>>)
-               && (is_integral<V> || is_same<raw_type, raw_arithmetic_type<V>>))
+      requires(
+         (is_integral<U> || is_floating_point<U>)
+         && (is_integral<V> || is_floating_point<V>)
+         && (is_integral<U> || is_same<raw_type, raw_arithmetic_type<U>>)
+         && (is_integral<V> || is_same<raw_type, raw_arithmetic_type<V>>)
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    fma(U multiplier, V addend) const {
@@ -422,10 +439,13 @@ class precision_reference {
    }
 
    template <is_arithmetic U>
-      requires(!is_const<WrappedQual>
-               && is_same<remove_cvref<decltype(declval<precision_reference&>()
-                                                   .add(declval<U>()))>,
-                          basic_float<raw_type, precision>>)
+      requires(
+         !is_const<WrappedQual>
+         && is_same<
+            remove_cvref<
+               decltype(declval<precision_reference&>().add(declval<U>()))>,
+            basic_float<raw_type, precision>>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+=(U operand) -> precision_reference& {
@@ -434,10 +454,13 @@ class precision_reference {
    }
 
    template <is_arithmetic U>
-      requires(!is_const<WrappedQual>
-               && is_same<remove_cvref<decltype(declval<precision_reference&>()
-                                                   .subtract_by(declval<U>()))>,
-                          basic_float<raw_type, precision>>)
+      requires(
+         !is_const<WrappedQual>
+         && is_same<
+            remove_cvref<decltype(declval<precision_reference&>()
+                                     .subtract_by(declval<U>()))>,
+            basic_float<raw_type, precision>>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator-=(U operand) -> precision_reference& {
@@ -446,10 +469,13 @@ class precision_reference {
    }
 
    template <is_arithmetic U>
-      requires(!is_const<WrappedQual>
-               && is_same<remove_cvref<decltype(declval<precision_reference&>()
-                                                   .multiply(declval<U>()))>,
-                          basic_float<raw_type, precision>>)
+      requires(
+         !is_const<WrappedQual>
+         && is_same<
+            remove_cvref<decltype(declval<precision_reference&>()
+                                     .multiply(declval<U>()))>,
+            basic_float<raw_type, precision>>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator*=(U operand) -> precision_reference& {
@@ -458,10 +484,13 @@ class precision_reference {
    }
 
    template <is_arithmetic U>
-      requires(!is_const<WrappedQual>
-               && is_same<remove_cvref<decltype(declval<precision_reference&>()
-                                                   .divide_by(declval<U>()))>,
-                          basic_float<raw_type, precision>>)
+      requires(
+         !is_const<WrappedQual>
+         && is_same<
+            remove_cvref<decltype(declval<precision_reference&>()
+                                     .divide_by(declval<U>()))>,
+            basic_float<raw_type, precision>>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator/=(U operand) -> precision_reference& {

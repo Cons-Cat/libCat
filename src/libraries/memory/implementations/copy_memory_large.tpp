@@ -13,14 +13,17 @@ namespace cat::detail {
 
 template <typename Vector>
 void
-copy_memory_large(byte const* _Nonnull p_source, byte* _Nonnull p_destination,
-                  idx bytes) {
+copy_memory_large(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
+) {
    iword bytes_remaining = bytes;
 
    cat::uintptr<char> p_source_handle{
-      const_cast<char*>(reinterpret_cast<char const*>(p_source))};
+      const_cast<char*>(reinterpret_cast<char const*>(p_source))
+   };
    cat::uintptr<char> p_destination_handle{
-      reinterpret_cast<char*>(p_destination)};
+      reinterpret_cast<char*>(p_destination)
+   };
 
    constexpr idx l3_cache_size = 2_umi;
    constexpr idx step_size = sizeof(Vector) * 8u;
@@ -51,7 +54,8 @@ copy_memory_large(byte const* _Nonnull p_source, byte* _Nonnull p_destination,
       copy_memory_medium(
          reinterpret_cast<byte const* _Nonnull>(p_source_handle.get()),
          reinterpret_cast<byte* _Nonnull>(p_destination_handle.get()),
-         bytes_remaining.to_idx().assert());
+         bytes_remaining.to_idx().assert()
+      );
       return;
    }
 
@@ -87,7 +91,8 @@ copy_memory_large(byte const* _Nonnull p_source, byte* _Nonnull p_destination,
 #pragma unroll 8
             for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
                vectors[vector_index].store_unaligned(
-                  p_destination_handle.get() + (vector_index * sizeof(Vector)));
+                  p_destination_handle.get() + (vector_index * sizeof(Vector))
+               );
             }
          }
 
@@ -116,7 +121,8 @@ copy_memory_large(byte const* _Nonnull p_source, byte* _Nonnull p_destination,
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             vectors[vector_index].store_non_temporal(
-               p_destination_handle.get() + (vector_index * sizeof(Vector)));
+               p_destination_handle.get() + (vector_index * sizeof(Vector))
+            );
          }
 
          p_destination_handle += step_size;
@@ -142,7 +148,8 @@ copy_memory_large(byte const* _Nonnull p_source, byte* _Nonnull p_destination,
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             vectors[vector_index].store_unaligned(
-               p_destination_handle.get() + (vector_index * sizeof(Vector)));
+               p_destination_handle.get() + (vector_index * sizeof(Vector))
+            );
          }
 
          p_source_handle += step_size;
@@ -155,7 +162,8 @@ copy_memory_large(byte const* _Nonnull p_source, byte* _Nonnull p_destination,
       copy_memory_medium(
          reinterpret_cast<byte const* _Nonnull>(p_source_handle.get()),
          reinterpret_cast<byte* _Nonnull>(p_destination_handle.get()),
-         bytes_remaining.to_idx().assert());
+         bytes_remaining.to_idx().assert()
+      );
    }
 }
 

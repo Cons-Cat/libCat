@@ -17,8 +17,9 @@ class initializer_list {
 
    constexpr initializer_list() noexcept = default;
 
-   constexpr initializer_list(T const* _Nullable p_data,
-                              __SIZE_TYPE__ in_size) noexcept
+   constexpr initializer_list(
+      T const* _Nullable p_data, __SIZE_TYPE__ in_size
+   ) noexcept
        : m_p_data(p_data), m_size(in_size) {
    }
 

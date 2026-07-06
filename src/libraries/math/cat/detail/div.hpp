@@ -14,8 +14,11 @@ div_ceil(T dividend, U divisor) -> T {
    raw_type const raw_dividend = make_raw_arithmetic(dividend);
    raw_type const raw_divisor =
       static_cast<raw_type>(make_raw_arithmetic(divisor));
-   return T(static_cast<raw_type>((raw_dividend + raw_divisor - raw_type(1))
-                                  / raw_divisor));
+   return T(
+      static_cast<raw_type>(
+         (raw_dividend + raw_divisor - raw_type(1)) / raw_divisor
+      )
+   );
 }
 
 template <is_integral T, is_integral U>
@@ -31,8 +34,10 @@ div_floor(T dividend, U divisor) -> T {
 
    // NOLINTBEGIN(bugprone-branch-clone)
    if constexpr (is_signed<raw_type>) {
-      if (remainder != raw_type(0)
-          && ((remainder < raw_type(0)) != (raw_divisor < raw_type(0)))) {
+      if (
+         remainder != raw_type(0)
+         && ((remainder < raw_type(0)) != (raw_divisor < raw_type(0)))
+      ) {
          --quotient;
       }
    }

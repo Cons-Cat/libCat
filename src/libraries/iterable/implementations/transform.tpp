@@ -17,7 +17,8 @@ struct transform_view_impl : iterable_interface<> {
       HeldCallback* _Nonnull callback_pointer;
 
       using element_type = decltype(declval<HeldCallback&>()(
-         declval<typename BaseContext::element_type>()));
+         declval<typename BaseContext::element_type>()
+      ));
 
       template <is_predicate<element_type> LoopBody>
       constexpr auto
@@ -25,7 +26,8 @@ struct transform_view_impl : iterable_interface<> {
          return incoming_context.run_while(
             [this, &loop_body](auto&& element) -> bool {
                return loop_body((*callback_pointer)($fwd(element)));
-            });
+            }
+         );
       }
    };
 
@@ -34,7 +36,8 @@ struct transform_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base>;
       return context_type<incoming_iteration_context_type, Callback>{
-         ::cat::iterate(m_base), &m_callback};
+         ::cat::iterate(m_base), &m_callback
+      };
    }
 
    constexpr auto
@@ -44,7 +47,8 @@ struct transform_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base const>;
       return context_type<incoming_iteration_context_type, Callback const>{
-         ::cat::iterate(m_base), &m_callback};
+         ::cat::iterate(m_base), &m_callback
+      };
    }
 
    constexpr auto
@@ -54,7 +58,8 @@ struct transform_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          decltype(::cat::reverse_iterate(m_base));
       return context_type<incoming_iteration_context_type, Callback>{
-         ::cat::reverse_iterate(m_base), &m_callback};
+         ::cat::reverse_iterate(m_base), &m_callback
+      };
    }
 
    constexpr auto
@@ -64,7 +69,8 @@ struct transform_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          decltype(::cat::reverse_iterate(m_base));
       return context_type<incoming_iteration_context_type, Callback const>{
-         ::cat::reverse_iterate(m_base), &m_callback};
+         ::cat::reverse_iterate(m_base), &m_callback
+      };
    }
 };
 
@@ -85,7 +91,8 @@ struct transform_impl : view_interface<transform_impl<Callback>> {
    constexpr auto
    apply(Iterable&& incoming) && -> transform_view<Iterable, Callback> {
       return transform_view<Iterable, Callback>{
-         {}, $fwd(incoming), move(callback)};
+         {}, $fwd(incoming), move(callback)
+      };
    }
 };
 }  // namespace detail

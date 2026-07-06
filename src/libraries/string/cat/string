@@ -14,43 +14,56 @@ namespace std {
 
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // `memcpy()` exists to enable some Clang optimizations.
-extern "C" [[deprecated("`std::memcpy()` should not be used directly! Consider "
-                        "`cat::copy_memory()` instead."),
-             gnu::returns_nonnull]]
-auto
-memcpy(void* _Nonnull __restrict p_destination,
-       void const* _Nonnull __restrict p_source, __SIZE_TYPE__ bytes)
-   -> void* _Nonnull;
+extern "C"
+   [[deprecated(
+        "`std::memcpy()` should not be used directly! Consider "
+        "`cat::copy_memory()` instead."
+     ),
+     gnu::returns_nonnull]]
+   auto
+   memcpy(
+      void* _Nonnull __restrict p_destination,
+      void const* _Nonnull __restrict p_source, __SIZE_TYPE__ bytes
+   ) -> void* _Nonnull;
 
 // Deprecated call to `memset()`. Consider using `cat::fill_memory() or
 // cat::zero_memory()` instead. `memset()` exists to enable some Clang
 // optimizations.
-extern "C" [[deprecated("`std::memset()` should not be used directly! Consider "
-                        "`cat::fill_memory()` or "
-                        "`cat::zero_memory()` instead."),
-             gnu::returns_nonnull]]
-auto
-memset(void* _Nonnull p_source, int byte_value, __SIZE_TYPE__ bytes)
-   -> void* _Nonnull;
+extern "C"
+   [[deprecated(
+        "`std::memset()` should not be used directly! Consider "
+        "`cat::fill_memory()` or "
+        "`cat::zero_memory()` instead."
+     ),
+     gnu::returns_nonnull]]
+   auto
+   memset(void* _Nonnull p_source, int byte_value, __SIZE_TYPE__ bytes)
+      -> void* _Nonnull;
 
 // Deprecated call to `memcmp()`. Consider using `cat::compare_memory()` or a
 // `span` comparison instead. `memcmp()` exists because Clang lowers
 // `__builtin_memcmp()` into a call to it in optimized builds.
-extern "C" [[deprecated("`std::memcmp()` should not be used directly! Consider "
-                        "`cat::compare_memory()` instead.")]]
+extern "C" [[deprecated(
+   "`std::memcmp()` should not be used directly! Consider "
+   "`cat::compare_memory()` instead."
+)]]
 auto
-memcmp(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
-       __SIZE_TYPE__ bytes) -> int;
+memcmp(
+   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, __SIZE_TYPE__ bytes
+) -> int;
 
 }  // namespace std
 
 // Clang emits `bcmp` for equality-only memory comparisons in optimized builds.
 // It exists for the same reason as `std::memcmp` and is not part of `std`.
-extern "C" [[deprecated("`bcmp()` should not be used directly! Consider "
-                        "`cat::compare_memory()` instead.")]]
+extern "C" [[deprecated(
+   "`bcmp()` should not be used directly! Consider "
+   "`cat::compare_memory()` instead."
+)]]
 auto
-bcmp(void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
-     __SIZE_TYPE__ bytes) -> int;
+bcmp(
+   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, __SIZE_TYPE__ bytes
+) -> int;
 
 namespace cat {
 
@@ -77,10 +90,11 @@ using zstr_inplace = basic_str_inplace<char, deduced_length, true>;
 
 template <typename CharT, bool is_null_terminated>
    requires(sizeof(CharT) == 1)  // TODO: Generalize this to wide chars.
-class [[clang::preferred_name(str_view), clang::preferred_name(str_span),
-        clang::preferred_name(zstr_view), clang::preferred_name(zstr_span),
-        gsl::Pointer(CharT)]]
-basic_str_span : public span<CharT> {
+class
+   [[clang::preferred_name(str_view), clang::preferred_name(str_span),
+     clang::preferred_name(zstr_view), clang::preferred_name(zstr_span),
+     gsl::Pointer(CharT)]]
+   basic_str_span : public span<CharT> {
  public:
    constexpr basic_str_span() : span<CharT>(nullptr) {
    }
@@ -122,7 +136,8 @@ basic_str_span : public span<CharT> {
    template <idx other_length>
    constexpr basic_str_span(
       basic_str_inplace<CharT, other_length, is_null_terminated>& other_string
-      [[clang::lifetimebound]]) {
+      [[clang::lifetimebound]]
+   ) {
       this->m_p_data = other_string.data();
       this->m_size = other_length;
    }
@@ -131,9 +146,9 @@ basic_str_span : public span<CharT> {
    template <idx other_length>
       requires(is_const<CharT>)
    constexpr basic_str_span(
-      basic_str_inplace<remove_const<CharT>, other_length,
-                        is_null_terminated> const& other_string
-      [[clang::lifetimebound]]
+      basic_str_inplace<
+         remove_const<CharT>, other_length, is_null_terminated> const&
+         other_string [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
       this->m_size = other_length;
@@ -168,24 +183,24 @@ basic_str_span : public span<CharT> {
    template <idx other_length>
       requires(is_null_terminated && !is_const<CharT>)
    constexpr basic_str_span(
-      basic_str_inplace<CharT, other_length, false> const&) =
-      delete ("Cannot bind a null-terminated `zstr_span` over a "
-              "non null-terminated `str_inplace`!");
+      basic_str_inplace<CharT, other_length, false> const&
+   ) = delete ("Cannot bind a null-terminated `zstr_span` over a "
+               "non null-terminated `str_inplace`!");
 
    // Promote `basic_str_span<char>` to `basic_str_span<char const>`.
    template <typename T>
       requires(is_same<CharT, add_const<T>>)
-   constexpr basic_str_span(basic_str_span<T, is_null_terminated> in_span
-                            [[clang::lifetimebound]]
-                            )
+   constexpr basic_str_span(
+      basic_str_span<T, is_null_terminated> in_span [[clang::lifetimebound]]
+   )
        : span<CharT>(in_span) {
    }
 
    // Promote `zstr_span` to `str_span`.
    template <typename T>
       requires(!is_same<CharT, add_const<T>> && !is_null_terminated)
-   constexpr basic_str_span(basic_str_span<T, true> in_span
-                            [[clang::lifetimebound]]
+   constexpr basic_str_span(
+      basic_str_span<T, true> in_span [[clang::lifetimebound]]
    ) {
       this->m_p_data = in_span.data();
       // `zstr_span` size counts the trailing null, so it is never zero here.
@@ -195,8 +210,8 @@ basic_str_span : public span<CharT> {
    // Promote `zstr_span<char>` to `str_span<char const>`.
    template <typename T>
       requires(is_same<CharT, add_const<T>> && !is_null_terminated)
-   constexpr basic_str_span(basic_str_span<T, true> in_span
-                            [[clang::lifetimebound]]
+   constexpr basic_str_span(
+      basic_str_span<T, true> in_span [[clang::lifetimebound]]
    ) {
       this->m_p_data = in_span.data();
       // Same as the non-`const` promotion above.
@@ -228,8 +243,9 @@ basic_str_span : public span<CharT> {
    }
 
    friend constexpr auto
-   operator==(basic_str_span const& this_string,
-              basic_str_span const& other_string) {
+   operator==(
+      basic_str_span const& this_string, basic_str_span const& other_string
+   ) {
       return compare_strings(this_string, other_string);
    }
 
@@ -306,9 +322,10 @@ basic_str_span : public span<CharT> {
 };
 
 template <typename CharT, idx length, bool is_null_terminated>
-class [[clang::preferred_name(str_inplace<length>),
-        clang::preferred_name(zstr_inplace<length>), gsl::Owner]]
-basic_str_inplace
+class
+   [[clang::preferred_name(str_inplace<length>),
+     clang::preferred_name(zstr_inplace<length>), gsl::Owner]]
+   basic_str_inplace
     : public container_interface<
          // TODO: Use CharT instead of `char`.
          basic_str_inplace<CharT, length, is_null_terminated>, char>,
@@ -321,10 +338,12 @@ basic_str_inplace
    // Construct and deduce length from a string literal. Add 1 to length to
    // ignore a null terminator.
    consteval basic_str_inplace(
-      CharT const (&string)[idx(length.raw + !is_null_terminated)]) {
+      CharT const (&string)[idx(length.raw + !is_null_terminated)]
+   ) {
       [[assume(
          string[length.raw - static_cast<__SIZE_TYPE__>(is_null_terminated)]
-         == '\0')]];
+         == '\0'
+      )]];
       // This must be copied instead of initialized in-place to guarantee
       // `const`-correctness.
       this->copy_string_data(string);
@@ -342,12 +361,15 @@ basic_str_inplace
    // TODO: Make this `consteval`.
    // Assign a string literal of lesser or equal length.
    consteval auto
-   operator=(CharT const (&string)[idx(
-      length.raw - static_cast<__SIZE_TYPE__>(is_null_terminated))])
+   operator=(CharT const (
+      &string
+   )[idx(length.raw - static_cast<__SIZE_TYPE__>(is_null_terminated))])
       -> basic_str_inplace& {
-      [[assume(string[length.raw - 1uz
-                      + static_cast<__SIZE_TYPE__>(!is_null_terminated)]
-               == '\0')]];
+      [[assume(
+         string
+            [length.raw - 1uz + static_cast<__SIZE_TYPE__>(!is_null_terminated)]
+         == '\0'
+      )]];
       this->copy_string_data(string);
       return *this;
    }
@@ -398,14 +420,18 @@ basic_str_inplace
    // Concatenate constant-evaluated strings.
    template <idx other_length>
    friend constexpr auto
-   operator+(basic_str_inplace<CharT, length, is_null_terminated> const& self,
-             basic_str_inplace<CharT, other_length, is_null_terminated> const&
-                other_string)
-      -> basic_str_inplace<CharT,
-                           narrow_cast<idx>(uword{length} + uword{other_length}
-                                            - (is_null_terminated ? 1u : 0u))
-                              .value(),
-                           is_null_terminated> {
+   operator+(
+      basic_str_inplace<CharT, length, is_null_terminated> const& self,
+      basic_str_inplace<CharT, other_length, is_null_terminated> const&
+         other_string
+   )
+      -> basic_str_inplace<
+         CharT,
+         narrow_cast<idx>(
+            uword{length} + uword{other_length} - (is_null_terminated ? 1u : 0u)
+         )
+            .value(),
+         is_null_terminated> {
       // `zstr_inplace` stores a trailing null in `length`, so `length` is at
       // least one when `is_null_terminated` subtracts one. Otherwise the
       // subtrahend is zero. The concatenated size drops at most one duplicate
@@ -414,8 +440,9 @@ basic_str_inplace
          narrow_cast<idx>(uword{length} - (is_null_terminated ? 1u : 0u))
             .value();
       constexpr idx const new_length =
-         narrow_cast<idx>(uword{length} + uword{other_length}
-                          - (is_null_terminated ? 1u : 0u))
+         narrow_cast<idx>(
+            uword{length} + uword{other_length} - (is_null_terminated ? 1u : 0u)
+         )
             .value();
 
       basic_str_inplace<CharT, new_length, is_null_terminated> new_string;
@@ -434,8 +461,10 @@ basic_str_inplace
    // Concatenate a string literal to a `basic_str_inplace`.
    template <idx other_length>
    friend constexpr auto
-   operator+(basic_str_inplace<CharT, length, is_null_terminated> const& self,
-             CharT const (&other_string)[other_length]) {
+   operator+(
+      basic_str_inplace<CharT, length, is_null_terminated> const& self,
+      CharT const (&other_string)[other_length]
+   ) {
       [[assume(other_string[other_length.raw - 1] == '\0')]];
       // The assume implies `other_length` is at least one when the literal is
       // treated as null-terminated (`!is_null_terminated` is false). Otherwise
@@ -451,15 +480,17 @@ basic_str_inplace
    // Concatenate a `basic_str_inplace` to a string literal.
    template <idx other_length>
    friend constexpr auto
-   operator+(CharT const (&other_string)[other_length],
-             basic_str_inplace<CharT, length, is_null_terminated> const& self) {
+   operator+(
+      CharT const (&other_string)[other_length],
+      basic_str_inplace<CharT, length, is_null_terminated> const& self
+   ) {
       [[assume(other_string[other_length.raw - 1] == '\0')]];
       // Same reasoning as `operator+` from `basic_str_inplace` to a literal.
-      return basic_str_inplace<CharT,
-                               narrow_cast<idx>(
-                                  other_length - (is_null_terminated ? 0u : 1u))
-                                  .value(),
-                               is_null_terminated>{other_string}
+      return basic_str_inplace<
+                CharT,
+                narrow_cast<idx>(other_length - (is_null_terminated ? 0u : 1u))
+                   .value(),
+                is_null_terminated>{other_string}
              + self;
    }
 
@@ -609,8 +640,9 @@ cat::maybe<T>::or_exit(cat::str_view const error_message, iword exit_code) & {
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(cat::str_view const error_message,
-                       iword exit_code) const& {
+cat::maybe<T>::or_exit(
+   cat::str_view const error_message, iword exit_code
+) const& {
    if (this->has_value()) [[likely]] {
       if constexpr (!is_void<T>) {
          return this->value();
@@ -642,8 +674,9 @@ cat::maybe<T>::or_exit(cat::str_view const error_message, iword exit_code) && {
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(cat::str_view const error_message,
-                       iword exit_code) const&& {
+cat::maybe<T>::or_exit(
+   cat::str_view const error_message, iword exit_code
+) const&& {
    if (this->has_value()) [[likely]] {
       if constexpr (!is_void<T>) {
          return move(this)->value();

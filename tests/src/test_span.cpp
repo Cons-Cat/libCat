@@ -20,8 +20,8 @@ template <typename, typename = void>
 inline constexpr bool can_as_writable_bytes = false;
 template <typename T>
 inline constexpr bool can_as_writable_bytes<
-   T, cat::detail::void_type<decltype(cat::as_writable_bytes(
-         cat::declval<T>()))>> = true;
+   T, cat::detail::void_type<
+         decltype(cat::as_writable_bytes(cat::declval<T>()))>> = true;
 
 // Heterogeneous comparability concepts modeled after the simplified versions in
 // `brevzin/span_ext/$test/$test.cxx`.
@@ -167,10 +167,12 @@ $test(span_initializer_list_constraints) {
    cat::verify(empty_list.empty());
    cat::verify(empty_list.begin() == nullptr);
 
-   static_assert(cat::is_constructible<cat::span<bool const>,
-                                       std::initializer_list<bool>>);
-   static_assert(!cat::is_constructible<cat::span<bool const>,
-                                        std::initializer_list<int>>);
+   static_assert(
+      cat::is_constructible<cat::span<bool const>, std::initializer_list<bool>>
+   );
+   static_assert(
+      !cat::is_constructible<cat::span<bool const>, std::initializer_list<int>>
+   );
 }
 
 $test(span_type_safety_and_extent) {
@@ -190,7 +192,8 @@ $test(span_type_safety_and_extent) {
    cat::verify(dynamic_const.size() == 4u);
 
    static_assert(
-      !cat::is_constructible<cat::span<int4>, cat::span<int4 const>>);
+      !cat::is_constructible<cat::span<int4>, cat::span<int4 const>>
+   );
 }
 
 $test(span_construction_from_array_container) {
@@ -244,7 +247,8 @@ $test(span_const_correctness_conversions) {
    cat::verify(const_view.data() == view.data());
 
    static_assert(
-      !cat::is_constructible<cat::span<int4>, cat::span<int4 const>>);
+      !cat::is_constructible<cat::span<int4>, cat::span<int4 const>>
+   );
 }
 
 $test(span_assignment_dynamic) {
@@ -425,7 +429,8 @@ $test(span_compare_three_way_orderings) {
    static_assert(cat::is_trivially_lexicographically_comparable<unsigned char>);
    static_assert(!cat::is_trivially_lexicographically_comparable<signed char>);
    static_assert(
-      !cat::is_trivially_lexicographically_comparable<unsigned short>);
+      !cat::is_trivially_lexicographically_comparable<unsigned short>
+   );
 
    cat::array<int4, 3u> base{1_i4, 2_i4, 3_i4};
    cat::array<int4, 3u> equal{1_i4, 2_i4, 3_i4};
@@ -484,10 +489,11 @@ $test(span_fixed_extent_tuple_protocol) {
 
    static_assert(std::tuple_size_v<cat::span<int4, 3_idx>> == 3u);
    static_assert(
-      cat::is_same<std::tuple_element_t<0, cat::span<int4, 3_idx>>, int4&>);
+      cat::is_same<std::tuple_element_t<0, cat::span<int4, 3_idx>>, int4&>
+   );
    static_assert(
-      cat::is_same<std::tuple_element_t<0, cat::span<int4, 3_idx> const>,
-                   int4&>);
+      cat::is_same<std::tuple_element_t<0, cat::span<int4, 3_idx> const>, int4&>
+   );
 
    auto& [x, y, z] = fixed;
    cat::verify(x == 7 && y == 8 && z == 9);
@@ -687,20 +693,25 @@ $test(span_as_writable_bytes) {
 // orderable with any random-access range whose element type matches.
 $test(span_compare_concepts_random_access_match) {
    static_assert(
-      is_span_equality_comparable<cat::span<int4>, cat::array<int4, 3u>>);
+      is_span_equality_comparable<cat::span<int4>, cat::array<int4, 3u>>
+   );
    static_assert(
-      is_totally_ordered_with<cat::span<int4>, cat::array<int4, 3u>>);
+      is_totally_ordered_with<cat::span<int4>, cat::array<int4, 3u>>
+   );
 }
 
 // Mirrors `span_ext`'s mixed-`const`-ness checks: comparing a span and a
 // container should work in every `const` combination of the two operands.
 $test(span_compare_concepts_mixed_constness) {
    static_assert(
-      is_totally_ordered_with<cat::span<int4>, cat::array<int4, 3u> const>);
+      is_totally_ordered_with<cat::span<int4>, cat::array<int4, 3u> const>
+   );
    static_assert(
-      is_totally_ordered_with<cat::span<int4 const>, cat::array<int4, 3u>>);
-   static_assert(is_totally_ordered_with<cat::span<int4 const>,
-                                         cat::array<int4, 3u> const>);
+      is_totally_ordered_with<cat::span<int4 const>, cat::array<int4, 3u>>
+   );
+   static_assert(
+      is_totally_ordered_with<cat::span<int4 const>, cat::array<int4, 3u> const>
+   );
 }
 
 // Mirrors `not equality_comparable_with<std::span<int>, std::vector<long>>`
@@ -708,9 +719,11 @@ $test(span_compare_concepts_mixed_constness) {
 // comparison to compile.
 $test(span_compare_concepts_element_type_mismatch) {
    static_assert(
-      !is_span_equality_comparable<cat::span<int4>, cat::array<int8, 3u>>);
+      !is_span_equality_comparable<cat::span<int4>, cat::array<int8, 3u>>
+   );
    static_assert(
-      !is_totally_ordered_with<cat::span<int4>, cat::array<int8, 3u>>);
+      !is_totally_ordered_with<cat::span<int4>, cat::array<int8, 3u>>
+   );
 }
 
 // Mirrors `span_ext`'s `B`/`D` cases. A type with only `operator==` makes the
@@ -718,28 +731,32 @@ $test(span_compare_concepts_element_type_mismatch) {
 // through, but pairing differently-typed spans is rejected even when the
 // elements share a base.
 $test(span_compare_concepts_only_equality_element) {
-   static_assert(is_span_equality_comparable<cat::span<only_equality>,
-                                             cat::span<only_equality>>);
-   static_assert(!is_totally_ordered_with<cat::span<only_equality>,
-                                          cat::span<only_equality>>);
-
-   static_assert(is_span_equality_comparable<cat::span<derived_only_equality>,
-                                             cat::span<derived_only_equality>>);
-   static_assert(!is_totally_ordered_with<cat::span<derived_only_equality>,
-                                          cat::span<derived_only_equality>>);
+   static_assert(is_span_equality_comparable<
+                 cat::span<only_equality>, cat::span<only_equality>>);
+   static_assert(!is_totally_ordered_with<
+                 cat::span<only_equality>, cat::span<only_equality>>);
 
    static_assert(
-      !is_span_equality_comparable<cat::span<only_equality>,
-                                   cat::span<derived_only_equality>>);
+      is_span_equality_comparable<
+         cat::span<derived_only_equality>, cat::span<derived_only_equality>>
+   );
+   static_assert(
+      !is_totally_ordered_with<
+         cat::span<derived_only_equality>, cat::span<derived_only_equality>>
+   );
+
+   static_assert(!is_span_equality_comparable<
+                 cat::span<only_equality>, cat::span<derived_only_equality>>);
 }
 
 // Mirrors `not equality_comparable_with<std::span<NonComparable>, ...>` from
 // `span_ext`: an element type with no comparison operators disables both forms.
 $test(span_compare_concepts_uncomparable_element) {
-   static_assert(!is_span_equality_comparable<cat::span<uncomparable>,
-                                              cat::span<uncomparable>>);
-   static_assert(!is_totally_ordered_with<cat::span<uncomparable>,
-                                          cat::span<uncomparable>>);
+   static_assert(!is_span_equality_comparable<
+                 cat::span<uncomparable>, cat::span<uncomparable>>);
+   static_assert(
+      !is_totally_ordered_with<cat::span<uncomparable>, cat::span<uncomparable>>
+   );
 }
 
 // Mirrors `span_ext`'s `compare_self` template $test: every relational operator

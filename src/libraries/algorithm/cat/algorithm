@@ -13,10 +13,12 @@ concept is_random_access = requires(T t) {
                            };
 
 // Copy-assign the elements of one container into another.
-template <typename input_iterator, typename output_iterator>
+template <typename InputIterator, typename OutputIterator>
 auto
-copy(input_iterator source_begin, input_iterator source_end,
-     output_iterator destination_begin) -> output_iterator {
+copy(
+   InputIterator source_begin, InputIterator source_end,
+   OutputIterator destination_begin
+) -> OutputIterator {
    using destination_element = remove_reference<decltype(*destination_begin)>;
 
    while (source_begin != source_end) {
@@ -29,10 +31,12 @@ copy(input_iterator source_begin, input_iterator source_end,
 }
 
 // Move-assign the elements of one container into another.
-template <typename input_iterator, typename output_iterator>
+template <typename InputIterator, typename OutputIterator>
 auto
-move(input_iterator source_begin, input_iterator source_end,
-     output_iterator destination_begin) -> output_iterator {
+move(
+   InputIterator source_begin, InputIterator source_end,
+   OutputIterator destination_begin
+) -> OutputIterator {
    using destination_element = remove_reference<decltype(*destination_begin)>;
 
    while (source_begin != source_end) {
@@ -46,23 +50,30 @@ move(input_iterator source_begin, input_iterator source_end,
 }
 
 // Optimally relocate the elements of one container into another.
-template <typename input_iterator, typename output_iterator>
+template <typename InputIterator, typename OutputIterator>
 auto
-relocate(input_iterator source_begin, input_iterator source_end,
-         output_iterator destination_begin) -> output_iterator {
+relocate(
+   InputIterator source_begin, InputIterator source_end,
+   OutputIterator destination_begin
+) -> OutputIterator {
    using source_element = remove_reference<decltype(*source_begin)>;
    using destination_element = decltype(*destination_begin);
 
    // If the source and destination containers are contiguous, and they hold the
    // same element type, and that type is trivially-relocatable, copy them fast.
-   if constexpr (is_random_access_stepanov_iterator<input_iterator>
-                 && is_random_access_stepanov_iterator<output_iterator>
-                 && is_same<source_element, destination_element>
-                 && is_trivially_relocatable<source_element>) {
-      copy_memory(__builtin_addressof(*source_begin),
-                  __builtin_addressof(*destination_begin),
-                  cat::make_raw_arithmetic((source_end - source_begin)
-                                           * sizeof(*source_begin)));
+   if constexpr (
+      is_random_access_stepanov_iterator<InputIterator>
+      && is_random_access_stepanov_iterator<OutputIterator>
+      && is_same<source_element, destination_element>
+      && is_trivially_relocatable<source_element>
+   ) {
+      copy_memory(
+         __builtin_addressof(*source_begin),
+         __builtin_addressof(*destination_begin),
+         cat::make_raw_arithmetic(
+            (source_end - source_begin) * sizeof(*source_begin)
+         )
+      );
       return destination_begin;
    } else {
       // Otherwise, if the destination can be moved to, do so.
@@ -75,11 +86,12 @@ relocate(input_iterator source_begin, input_iterator source_end,
    }
 }
 
-template <is_forward_stepanov_iterator ItLhs,
-          is_forward_stepanov_iterator ItRhs>
+template <
+   is_forward_stepanov_iterator Left, is_forward_stepanov_iterator Right>
 constexpr auto
-lexicographical_compare(ItLhs lhs_start, ItLhs lhs_end, ItRhs rhs_start,
-                        ItRhs rhs_end) -> bool {
+lexicographical_compare(
+   Left lhs_start, Left lhs_end, Right rhs_start, Right rhs_end
+) -> bool {
    while (lhs_start != lhs_end) {
       if (rhs_start == rhs_end || *rhs_start < *lhs_start) {
          return false;
@@ -95,14 +107,15 @@ lexicographical_compare(ItLhs lhs_start, ItLhs lhs_end, ItRhs rhs_start,
    return (rhs_start != rhs_end);
 }
 
-template <is_forward_stepanov_iterator ItLhs,
-          is_forward_stepanov_iterator ItRhs>
+template <
+   is_forward_stepanov_iterator Left, is_forward_stepanov_iterator Right>
 constexpr auto
-lexicographical_compare_three_way(ItLhs lhs_start, ItLhs lhs_end,
-                                  ItRhs rhs_start,
-                                  ItRhs rhs_end)  // Formatting.
+lexicographical_compare_three_way(
+   Left lhs_start, Left lhs_end, Right rhs_start, Right rhs_end
+)
    requires(
-      is_common_comparison_category<decltype((* lhs_start) <=> (* rhs_start))>)
+      is_common_comparison_category<decltype((* lhs_start) <=> (* rhs_start))>
+   )
 {
    bool exhaust_left = (lhs_start == lhs_end);
    bool exhaust_right = (rhs_start == rhs_end);
@@ -119,9 +132,11 @@ lexicographical_compare_three_way(ItLhs lhs_start, ItLhs lhs_end,
    }
 
    using category_type = decltype((*lhs_start) <=> (*rhs_start));
-   return category_type(!exhaust_left    ? std::strong_ordering::greater
-                        : !exhaust_right ? std::strong_ordering::less
-                                         : std::strong_ordering::equal);
+   return category_type(
+      !exhaust_left    ? std::strong_ordering::greater
+      : !exhaust_right ? std::strong_ordering::less
+                       : std::strong_ordering::equal
+   );
 }
 
 }  // namespace cat

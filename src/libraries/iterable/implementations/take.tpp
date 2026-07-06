@@ -33,7 +33,8 @@ struct take_view_impl : iterable_interface<> {
                }
                ++taken;
                return loop_body($fwd(element));
-            });
+            }
+         );
 
          if (taken >= limit) {
             return iteration_result::complete;
@@ -48,7 +49,8 @@ struct take_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base>;
       return context_type<incoming_iteration_context_type>{
-         ::cat::iterate(m_base), m_count, 0u};
+         ::cat::iterate(m_base), m_count, 0u
+      };
    }
 
    constexpr auto
@@ -58,7 +60,8 @@ struct take_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base const>;
       return context_type<incoming_iteration_context_type>{
-         ::cat::iterate(m_base), m_count, 0u};
+         ::cat::iterate(m_base), m_count, 0u
+      };
    }
 };
 

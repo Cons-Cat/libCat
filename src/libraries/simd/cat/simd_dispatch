@@ -139,8 +139,9 @@ simd_dispatch_has_duplicate_arch(array<simd_dispatch_meta, n> const& meta)
 // callers with no trailing `default:` clause.
 template <idx n>
 consteval auto
-simd_dispatch_baseline_covers(array<simd_dispatch_meta, n> const& meta,
-                              int baseline_priority) -> bool {
+simd_dispatch_baseline_covers(
+   array<simd_dispatch_meta, n> const& meta, int baseline_priority
+) -> bool {
    for (auto const& entry : meta) {
       if (entry.priority != -1 && entry.priority <= baseline_priority) {
          return true;
@@ -583,72 +584,84 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
    M(3, x3)                                                                   \
    M(4, x4)                                                                   \
    M(5, x5) M(6, x6) M(7, x7) M(8, x8) M(9, x9) M(10, x10) M(11, x11) M(12, x12)
-#define CAT_FE_I_14(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, \
-                    x13)                                                      \
-   M(0, x0)                                                                   \
-   M(1, x1)                                                                   \
-   M(2, x2)                                                                   \
-   M(3, x3)                                                                   \
-   M(4, x4)                                                                   \
-   M(5, x5)                                                                   \
-   M(6, x6)                                                                   \
+#define CAT_FE_I_14(                                             \
+   M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13 \
+)                                                                \
+   M(0, x0)                                                      \
+   M(1, x1)                                                      \
+   M(2, x2)                                                      \
+   M(3, x3)                                                      \
+   M(4, x4)                                                      \
+   M(5, x5)                                                      \
+   M(6, x6)                                                      \
    M(7, x7) M(8, x8) M(9, x9) M(10, x10) M(11, x11) M(12, x12) M(13, x13)
-#define CAT_FE_I_15(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, \
-                    x13, x14)                                                 \
-   M(0, x0)                                                                   \
-   M(1, x1)                                                                   \
-   M(2, x2)                                                                   \
-   M(3, x3)                                                                   \
-   M(4, x4)                                                                   \
-   M(5, x5)                                                                   \
-   M(6, x6)                                                                   \
-   M(7, x7)                                                                   \
+#define CAT_FE_I_15(                                                  \
+   M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14 \
+)                                                                     \
+   M(0, x0)                                                           \
+   M(1, x1)                                                           \
+   M(2, x2)                                                           \
+   M(3, x3)                                                           \
+   M(4, x4)                                                           \
+   M(5, x5)                                                           \
+   M(6, x6)                                                           \
+   M(7, x7)                                                           \
    M(8, x8) M(9, x9) M(10, x10) M(11, x11) M(12, x12) M(13, x13) M(14, x14)
-#define CAT_FE_I_16(M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, \
-                    x13, x14, x15)                                            \
-   M(0, x0)                                                                   \
-   M(1, x1)                                                                   \
-   M(2, x2)                                                                   \
-   M(3, x3)                                                                   \
-   M(4, x4)                                                                   \
-   M(5, x5)                                                                   \
-   M(6, x6)                                                                   \
-   M(7, x7)                                                                   \
-   M(8, x8)                                                                   \
+#define CAT_FE_I_16(                                                       \
+   M, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15 \
+)                                                                          \
+   M(0, x0)                                                                \
+   M(1, x1)                                                                \
+   M(2, x2)                                                                \
+   M(3, x3)                                                                \
+   M(4, x4)                                                                \
+   M(5, x5)                                                                \
+   M(6, x6)                                                                \
+   M(7, x7)                                                                \
+   M(8, x8)                                                                \
    M(9, x9) M(10, x10) M(11, x11) M(12, x12) M(13, x13) M(14, x14) M(15, x15)
 
-#define CAT_GET_FE(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, \
-                   _14, _15, _16, NAME, ...)                               \
+#define CAT_GET_FE(                                                       \
+   _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, \
+   NAME, ...                                                              \
+)                                                                         \
    NAME
 
-#define CAT_FOR_EACH_COMMA(M, ...)                                             \
-   CAT_GET_FE(__VA_ARGS__, CAT_FE_C_16, CAT_FE_C_15, CAT_FE_C_14, CAT_FE_C_13, \
-              CAT_FE_C_12, CAT_FE_C_11, CAT_FE_C_10, CAT_FE_C_9, CAT_FE_C_8,   \
-              CAT_FE_C_7, CAT_FE_C_6, CAT_FE_C_5, CAT_FE_C_4, CAT_FE_C_3,      \
-              CAT_FE_C_2, CAT_FE_C_1)                                          \
+#define CAT_FOR_EACH_COMMA(M, ...)                                            \
+   CAT_GET_FE(                                                                \
+      __VA_ARGS__, CAT_FE_C_16, CAT_FE_C_15, CAT_FE_C_14, CAT_FE_C_13,        \
+      CAT_FE_C_12, CAT_FE_C_11, CAT_FE_C_10, CAT_FE_C_9, CAT_FE_C_8,          \
+      CAT_FE_C_7, CAT_FE_C_6, CAT_FE_C_5, CAT_FE_C_4, CAT_FE_C_3, CAT_FE_C_2, \
+      CAT_FE_C_1                                                              \
+   )                                                                          \
    (M, __VA_ARGS__)
 
-#define CAT_FOR_EACH_INDEXED(M, ...)                                           \
-   CAT_GET_FE(__VA_ARGS__, CAT_FE_I_16, CAT_FE_I_15, CAT_FE_I_14, CAT_FE_I_13, \
-              CAT_FE_I_12, CAT_FE_I_11, CAT_FE_I_10, CAT_FE_I_9, CAT_FE_I_8,   \
-              CAT_FE_I_7, CAT_FE_I_6, CAT_FE_I_5, CAT_FE_I_4, CAT_FE_I_3,      \
-              CAT_FE_I_2, CAT_FE_I_1)                                          \
+#define CAT_FOR_EACH_INDEXED(M, ...)                                          \
+   CAT_GET_FE(                                                                \
+      __VA_ARGS__, CAT_FE_I_16, CAT_FE_I_15, CAT_FE_I_14, CAT_FE_I_13,        \
+      CAT_FE_I_12, CAT_FE_I_11, CAT_FE_I_10, CAT_FE_I_9, CAT_FE_I_8,          \
+      CAT_FE_I_7, CAT_FE_I_6, CAT_FE_I_5, CAT_FE_I_4, CAT_FE_I_3, CAT_FE_I_2, \
+      CAT_FE_I_1                                                              \
+   )                                                                          \
    (M, __VA_ARGS__)
 
 // Extract the last argument of a variadic by dispatching on arity. Used by
 // `$simd_switch` to peek at whether the user-supplied trailing entry is a
 // `default:` clause (non-paren) or a `$abi(...)` tuple (paren-wrapped after
 // `$abi` expands). Caps at 16 to match the `CAT_FE_*` family.
-#define CAT_LAST_ARG(...)                                                 \
-   CAT_LAST_ARG_DISPATCH_(__VA_ARGS__, CAT_LAST_OF_16, CAT_LAST_OF_15,    \
-                          CAT_LAST_OF_14, CAT_LAST_OF_13, CAT_LAST_OF_12, \
-                          CAT_LAST_OF_11, CAT_LAST_OF_10, CAT_LAST_OF_9,  \
-                          CAT_LAST_OF_8, CAT_LAST_OF_7, CAT_LAST_OF_6,    \
-                          CAT_LAST_OF_5, CAT_LAST_OF_4, CAT_LAST_OF_3,    \
-                          CAT_LAST_OF_2, CAT_LAST_OF_1)                   \
+#define CAT_LAST_ARG(...)                                             \
+   CAT_LAST_ARG_DISPATCH_(                                            \
+      __VA_ARGS__, CAT_LAST_OF_16, CAT_LAST_OF_15, CAT_LAST_OF_14,    \
+      CAT_LAST_OF_13, CAT_LAST_OF_12, CAT_LAST_OF_11, CAT_LAST_OF_10, \
+      CAT_LAST_OF_9, CAT_LAST_OF_8, CAT_LAST_OF_7, CAT_LAST_OF_6,     \
+      CAT_LAST_OF_5, CAT_LAST_OF_4, CAT_LAST_OF_3, CAT_LAST_OF_2,     \
+      CAT_LAST_OF_1                                                   \
+   )                                                                  \
    (__VA_ARGS__)
-#define CAT_LAST_ARG_DISPATCH_(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, \
-                               _12, _13, _14, _15, _16, NAME, ...)           \
+#define CAT_LAST_ARG_DISPATCH_(                                           \
+   _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, \
+   NAME, ...                                                              \
+)                                                                         \
    NAME
 #define CAT_LAST_OF_1(_1) _1
 #define CAT_LAST_OF_2(_1, _2) _2
@@ -664,14 +677,17 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 #define CAT_LAST_OF_12(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12) _12
 #define CAT_LAST_OF_13(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13) \
    _13
-#define CAT_LAST_OF_14(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, \
-                       _14)                                                    \
+#define CAT_LAST_OF_14(                                        \
+   _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14 \
+)                                                              \
    _14
-#define CAT_LAST_OF_15(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, \
-                       _14, _15)                                               \
+#define CAT_LAST_OF_15(                                             \
+   _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15 \
+)                                                                   \
    _15
-#define CAT_LAST_OF_16(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, \
-                       _14, _15, _16)                                          \
+#define CAT_LAST_OF_16(                                                  \
+   _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16 \
+)                                                                        \
    _16
 
 // `default: __builtin_unreachable();`, but only when the user did NOT
@@ -708,58 +724,68 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 // `_Pragma` takes a *single* string-literal argument (consumed in translation
 // phase 4). Adjacent-literal concatenation only happens later in phase 6, so
 // keep the message on one line.
-#define CAT_SIMD_SWITCH(...)                                                   \
-   _Pragma("GCC error \"`$simd_switch` is unavailable when `CAT_NO_CPUID` is " \
-           "defined! Re-enable CPUID to use this.\"")
+#define CAT_SIMD_SWITCH(...)                                              \
+   _Pragma(                                                               \
+      "GCC error \"`$simd_switch` is unavailable when `CAT_NO_CPUID` is " \
+      "defined! Re-enable CPUID to use this.\""                           \
+   )
 #else
-#define CAT_SIMD_SWITCH(...)                                                   \
-   ([&]() -> decltype(auto) {                                                  \
-      /* Compile-time entry metadata. The user's trailing `default:` text is   \
-         tracked via a sentinel meta entry (empty arch, priority -1). */       \
-      static constexpr ::cat::array meta{                                      \
-         CAT_FOR_EACH_COMMA(CAT_META_ENTRY, __VA_ARGS__)};                     \
-      static_assert(                                                           \
-         ::cat::detail::simd_dispatch_last_is_default(meta)                    \
-            || ::cat::detail::simd_dispatch_baseline_covers(meta,              \
-                                                            CAT_BASELINE_PRI), \
-         "`$simd_switch` requires a `default:` clause as its last argument, "  \
-         "unless one of the listed `$abi(arch, ...)` entries has "             \
-         "`CAT_PRI_<arch> <= CAT_BASELINE_PRI` (i.e. the build's `-m<arch>` "  \
-         "baseline already guarantees that arch is supported).");              \
-      static_assert(::cat::detail::simd_dispatch_default_count(meta) <= 1u,    \
-                    "`$simd_switch` has multiple `default:` clauses!");        \
-      static_assert(                                                           \
-         !::cat::detail::simd_dispatch_has_duplicate_arch(meta),               \
-         "`$simd_switch` has duplicate target archs! Every `$abi` must be "    \
-         "unique.");                                                           \
-      /* Source-index walk order, sorted descending by `_PRI_<arch>`. */       \
-      static constexpr auto cat_$simd_priority_order =                         \
-         ::cat::detail::simd_dispatch_priority_permutation(meta);              \
-      /* Pick the highest-priority listed entry whose priority is supported    \
-         by the host. `cat::detail::simd_dispatch_priority` is set once at     \
-         startup by `__cpu_indicator_init` in `<cat/cpuid>`. The default       \
-         sentinel's priority is -1, so it always compares `<=` and is reached  \
-         only when no real entry's priority is below the host's tier. When no  \
-         `default:` is present, the baseline-coverage `static_assert` above    \
-         guarantees at least one listed entry's priority is `<=` the host's    \
-         tier. */                                                              \
-      ::cat::idx cat_$simd_selected{};                                         \
-      for (::cat::idx i = 0u; i < cat_$simd_priority_order.size(); ++i) {      \
-         ::cat::idx const source_index = cat_$simd_priority_order[i];          \
-         if (meta[source_index].priority                                       \
-             <= ::cat::detail::simd_dispatch_priority) {                       \
-            cat_$simd_selected = source_index;                                 \
-            break;                                                             \
-         }                                                                     \
-      }                                                                        \
-      /* `case`s for each `$abi` entry. `CAT_SIMD_SYNTH_DEFAULT` adds an       \
-         implicit `default: __builtin_unreachable();` iff the user omitted     \
-         their own `default:` (the baseline-coverage `static_assert` above     \
-         guarantees the synthetic arm is never reached). */                    \
-      switch (cat_$simd_selected.raw) {                                        \
-         CAT_FOR_EACH_INDEXED(CAT_SIMD_DISPATCH_ENTRY, __VA_ARGS__)            \
-         CAT_SIMD_SYNTH_DEFAULT(__VA_ARGS__)                                   \
-      }                                                                        \
+#define CAT_SIMD_SWITCH(...)                                                  \
+   ([&]() -> decltype(auto) {                                                 \
+      /* Compile-time entry metadata. The user's trailing `default:` text is  \
+         tracked via a sentinel meta entry (empty arch, priority -1). */      \
+      static constexpr ::cat::array meta{                                     \
+         CAT_FOR_EACH_COMMA(CAT_META_ENTRY, __VA_ARGS__)                      \
+      };                                                                      \
+      static_assert(                                                          \
+         ::cat::detail::simd_dispatch_last_is_default(meta)                   \
+            || ::cat::detail::simd_dispatch_baseline_covers(                  \
+               meta, CAT_BASELINE_PRI                                         \
+            ),                                                                \
+         "`$simd_switch` requires a `default:` clause as its last argument, " \
+         "unless one of the listed `$abi(arch, ...)` entries has "            \
+         "`CAT_PRI_<arch> <= CAT_BASELINE_PRI` (i.e. the build's `-m<arch>` " \
+         "baseline already guarantees that arch is supported)."               \
+      );                                                                      \
+      static_assert(                                                          \
+         ::cat::detail::simd_dispatch_default_count(meta) <= 1u,              \
+         "`$simd_switch` has multiple `default:` clauses!"                    \
+      );                                                                      \
+      static_assert(                                                          \
+         !::cat::detail::simd_dispatch_has_duplicate_arch(meta),              \
+         "`$simd_switch` has duplicate target archs! Every `$abi` must be "   \
+         "unique."                                                            \
+      );                                                                      \
+      /* Source-index walk order, sorted descending by `_PRI_<arch>`. */      \
+      static constexpr auto cat_$simd_priority_order =                        \
+         ::cat::detail::simd_dispatch_priority_permutation(meta);             \
+      /* Pick the highest-priority listed entry whose priority is supported   \
+         by the host. `cat::detail::simd_dispatch_priority` is set once at    \
+         startup by `__cpu_indicator_init` in `<cat/cpuid>`. The default      \
+         sentinel's priority is -1, so it always compares `<=` and is reached \
+         only when no real entry's priority is below the host's tier. When no \
+         `default:` is present, the baseline-coverage `static_assert` above   \
+         guarantees at least one listed entry's priority is `<=` the host's   \
+         tier. */                                                             \
+      ::cat::idx cat_$simd_selected{};                                        \
+      for (::cat::idx i = 0u; i < cat_$simd_priority_order.size(); ++i) {     \
+         ::cat::idx const source_index = cat_$simd_priority_order[i];         \
+         if (                                                                 \
+            meta[source_index].priority                                       \
+            <= ::cat::detail::simd_dispatch_priority                          \
+         ) {                                                                  \
+            cat_$simd_selected = source_index;                                \
+            break;                                                            \
+         }                                                                    \
+      }                                                                       \
+      /* `case`s for each `$abi` entry. `CAT_SIMD_SYNTH_DEFAULT` adds an      \
+         implicit `default: __builtin_unreachable();` iff the user omitted    \
+         their own `default:` (the baseline-coverage `static_assert` above    \
+         guarantees the synthetic arm is never reached). */                   \
+      switch (cat_$simd_selected.raw) {                                       \
+         CAT_FOR_EACH_INDEXED(CAT_SIMD_DISPATCH_ENTRY, __VA_ARGS__)           \
+         CAT_SIMD_SYNTH_DEFAULT(__VA_ARGS__)                                  \
+      }                                                                       \
    }())
 #endif
 

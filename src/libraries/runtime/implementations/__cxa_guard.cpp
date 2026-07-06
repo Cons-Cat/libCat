@@ -35,9 +35,9 @@ __cxa_guard_acquire(cat::uword* _Nonnull p_guard) -> int {
    }
 
    // Spin-acquire the lock byte; whoever wins runs the initialiser.
-   for (cat::uint1 expected = 0u;
-        !lock.compare_exchange_weak(expected, 1u, cat::memory_order::acquire,
-                                    cat::memory_order::relaxed);
+   for (cat::uint1 expected = 0u; !lock.compare_exchange_weak(
+           expected, 1u, cat::memory_order::acquire, cat::memory_order::relaxed
+        );
         expected = 0u) {
       __builtin_ia32_pause();
    }
@@ -54,14 +54,17 @@ extern "C" void
 // NOLINTNEXTLINE
 __cxa_guard_release(cat::uword* _Nonnull p_guard) {
    cat::atomic<cat::uint1&>{done_ref(p_guard)}.store(
-      1u, cat::memory_order::release);
+      1u, cat::memory_order::release
+   );
    cat::atomic<cat::uint1&>{lock_ref(p_guard)}.store(
-      0u, cat::memory_order::release);
+      0u, cat::memory_order::release
+   );
 }
 
 extern "C" void
 // NOLINTNEXTLINE
 __cxa_guard_abort(cat::uword* _Nonnull p_guard) {
    cat::atomic<cat::uint1&>{lock_ref(p_guard)}.store(
-      0u, cat::memory_order::release);
+      0u, cat::memory_order::release
+   );
 }

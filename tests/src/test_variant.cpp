@@ -38,8 +38,9 @@ $test(variant_layout) {
    static_assert(sizeof(big_variant) == 16);
    static_assert(sizeof(big_variant.discriminant) == 1);
 
-   static_assert(sizeof(cat::variant<char, uint1>)
-                 == sizeof(char) + sizeof(cat::uint1));
+   static_assert(
+      sizeof(cat::variant<char, uint1>) == sizeof(char) + sizeof(cat::uint1)
+   );
 };
 
 namespace {
@@ -63,7 +64,8 @@ $test(variant_discriminant_tiers) {
    // ----- `uint1` tier: variants with fewer than 255 alternatives. -----
    using small_variant = cat::variant<int, char>;
    static_assert(
-      cat::is_same<small_variant::alternative_index_type, cat::uint1>);
+      cat::is_same<small_variant::alternative_index_type, cat::uint1>
+   );
    static_assert(sizeof(small_variant::maybe_discriminant) == 1);
 
    small_variant small_empty;
@@ -73,8 +75,10 @@ $test(variant_discriminant_tiers) {
    // `value_or_niche()` reads the raw scalar; in the empty state it
    // equals `uint1_max`, which never collides with an active index in
    // `0..variant_size-1`.
-   cat::verify(small_empty.discriminant.value_or_niche()
-               == cat::limits<cat::uint1>::max());
+   cat::verify(
+      small_empty.discriminant.value_or_niche()
+      == cat::limits<cat::uint1>::max()
+   );
 
    // ----- `uint4` tier: variants whose alternative count overflows -----
    // `uint1_max`. 300 ints is enough to push the tier selection across
@@ -86,8 +90,9 @@ $test(variant_discriminant_tiers) {
    mid_variant mid_empty;
    cat::verify(!mid_empty.has_value());
    cat::verify(!mid_empty.index().has_value());
-   cat::verify(mid_empty.discriminant.value_or_niche()
-               == cat::limits<cat::uint4>::max());
+   cat::verify(
+      mid_empty.discriminant.value_or_niche() == cat::limits<cat::uint4>::max()
+   );
 
    // Engage the second slot to confirm `value_or_niche()` reports the
    // active index in the `uint4` tier, not the niche.
@@ -105,8 +110,9 @@ $test(variant_discriminant_tiers) {
    using fake_huge_index = cat::conditional<
       false,  // simulate `types::size() < uint1_max` being false
       cat::uint1,
-      cat::conditional<false,  // simulate `< uint4_max` being false too
-                       cat::uint4, cat::idx>>;
+      cat::conditional<
+         false,  // simulate `< uint4_max` being false too
+         cat::uint4, cat::idx>>;
    static_assert(cat::is_same<fake_huge_index, cat::idx>);
 
    // `maybe<idx>` is the discriminant storage in the third tier; an
@@ -169,8 +175,9 @@ $test(variant_get_by_index_propagates_cvref) {
    // Rvalue variants yield rvalue references for moves.
    static_assert(cat::is_same<decltype(cat::move(v).get<0>()), int&&>);
    static_assert(
-      cat::is_same<decltype(cat::variant<int, char, uint4, int2>{1}.get<0>()),
-                   int&&>);
+      cat::is_same<
+         decltype(cat::variant<int, char, uint4, int2>{1}.get<0>()), int&&>
+   );
 
    // Type-keyed `.get<T>()` participates in the same cvref propagation.
    static_assert(cat::is_same<decltype(v.get<int>()), int&>);
@@ -226,8 +233,9 @@ $test(variant_constexpr) {
 
    // `in_place_index<0>` for the first alternative is equivalent and
    // routes through the same union slot.
-   constexpr cat::variant<int, uint4> in_place_variant{cat::in_place_index<0u>,
-                                                       2};
+   constexpr cat::variant<int, uint4> in_place_variant{
+      cat::in_place_index<0u>, 2
+   };
    static_assert(in_place_variant.has_value());
    static_assert(in_place_variant.get<0u>() == 2);
 
@@ -245,10 +253,12 @@ $test(variant_constexpr) {
    static_assert(cat::variant_size<cat::variant<int, int, char>> == 3u);
 
    // `cat::variant_alternative_index<T, V>` (P2527) is constexpr.
-   static_assert(cat::variant_alternative_index<int, cat::variant<int, uint4>>
-                 == 0u);
-   static_assert(cat::variant_alternative_index<uint4, cat::variant<int, uint4>>
-                 == 1u);
+   static_assert(
+      cat::variant_alternative_index<int, cat::variant<int, uint4>> == 0u
+   );
+   static_assert(
+      cat::variant_alternative_index<uint4, cat::variant<int, uint4>> == 1u
+   );
 
    // Variant-vs-variant equality compares discriminants then values, and
    // both steps are constexpr-evaluable. Empty compares equal to empty
@@ -269,7 +279,8 @@ $test(variant_constexpr) {
             return -1;
          }
       },
-      const_variant);
+      const_variant
+   );
    static_assert(visited == 1);
 };
 
@@ -355,7 +366,8 @@ $test(variant_visit_single) {
             hit_index = 2;
          }
       },
-      v);
+      v
+   );
    cat::verify(hit_index == 0);
 
    v = 'q';
@@ -367,7 +379,8 @@ $test(variant_visit_single) {
             hit_index = 1;
          }
       },
-      v);
+      v
+   );
    cat::verify(hit_index == 1);
 
    // Callbacks may have a non-`void` return type.
@@ -383,7 +396,8 @@ $test(variant_visit_single) {
             return 0;
          }
       },
-      v);
+      v
+   );
    cat::verify(doubled == 84);
 
    // Member-shortcut `variant.visit(callback)`.
@@ -414,7 +428,8 @@ $test(variant_visit_multi) {
             matched = true;
          }
       },
-      a, b);
+      a, b
+   );
    cat::verify(matched);
 
    // Three-variant fold.
@@ -433,7 +448,8 @@ $test(variant_visit_multi) {
          }
          return total;
       },
-      a, b, c);
+      a, b, c
+   );
    // a=1 (int), b='b'=98 (char), c=7 (int). 1 + 98 + 7 = 106.
    cat::verify(sum == 106);
 };
@@ -494,7 +510,8 @@ $test(variant_reference_alternatives) {
    // Reference variants are pointer-sized + discriminant.
    static_assert(
       sizeof(cat::variant<int&, double&>) <= sizeof(void*) + alignof(void*),
-      "reference variant should fit in a pointer plus tag.");
+      "reference variant should fit in a pointer plus tag."
+   );
 
    // `.get_ptr<T>()` yields a pointer to the referent or `nullptr` when the
    // wrong alternative is queried.
@@ -537,8 +554,10 @@ struct serial_packet : cat::variant<int, char, float4> {
 };
 
 $test(variant_inheritance) {
-   static_assert(cat::is_variant_like<serial_packet>,
-                 "derived class should satisfy `is_variant_like`.");
+   static_assert(
+      cat::is_variant_like<serial_packet>,
+      "derived class should satisfy `is_variant_like`."
+   );
 
    serial_packet p{17};
    cat::verify(p.tag() == 0u);
@@ -555,7 +574,8 @@ $test(variant_inheritance) {
             return -2;
          }
       },
-      p);
+      p
+   );
    cat::verify(sum_kind == 17);
 
    // Free-function `cat::get<T>(packet)` recovers the variant base members.
@@ -655,14 +675,16 @@ $test(variant_converting_construction_into_cat_arithmetic) {
    // Direct FUN probes to verify the overload set resolves the way the
    // converting constructor will route the input.
    static_assert(
-      cat::is_same<cat::detail::fun_selected_type<float, cat::float4>,
-                   cat::float4>);
+      cat::is_same<
+         cat::detail::fun_selected_type<float, cat::float4>, cat::float4>
+   );
    static_assert(cat::is_same<
                  cat::detail::fun_selected_type<float, cat::int4, cat::float4>,
                  cat::float4>);
    static_assert(
-      cat::is_same<cat::detail::fun_selected_type<int, cat::int4, cat::float4>,
-                   cat::int4>);
+      cat::is_same<
+         cat::detail::fun_selected_type<int, cat::int4, cat::float4>, cat::int4>
+   );
 
    // Same-kind same-width raw -> cat: non-narrowing.
    cat::variant<cat::int4> v_int4 = 1;
@@ -704,14 +726,22 @@ $test(variant_converting_construction_into_cat_arithmetic) {
    // `__is_constructible` so the negative cases stay as compile-time
    // assertions rather than emitting diagnostics from a non-dependent
    // requires-expression body.
-   static_assert(!__is_constructible(cat::variant<cat::int2>, int),
-                 "raw `int` -> `cat::int2` is a narrowing conversion");
-   static_assert(!__is_constructible(cat::variant<cat::uint4>, int),
-                 "raw `int` -> `cat::uint4` is a sign-mismatch conversion");
-   static_assert(!__is_constructible(cat::variant<cat::int4>, float),
-                 "raw `float` -> `cat::int4` is a lossy conversion");
-   static_assert(!__is_constructible(cat::variant<cat::float4>, double),
-                 "raw `double` -> `cat::float4` is a narrowing conversion");
+   static_assert(
+      !__is_constructible(cat::variant<cat::int2>, int),
+      "raw `int` -> `cat::int2` is a narrowing conversion"
+   );
+   static_assert(
+      !__is_constructible(cat::variant<cat::uint4>, int),
+      "raw `int` -> `cat::uint4` is a sign-mismatch conversion"
+   );
+   static_assert(
+      !__is_constructible(cat::variant<cat::int4>, float),
+      "raw `float` -> `cat::int4` is a lossy conversion"
+   );
+   static_assert(
+      !__is_constructible(cat::variant<cat::float4>, double),
+      "raw `double` -> `cat::float4` is a narrowing conversion"
+   );
 };
 
 // Negative cases for the converting constructor. These exercise SFINAE so
@@ -721,16 +751,21 @@ $test(variant_converting_negative_cases) {
    // rejected (no `FUN` overload is viable).
    static_assert(
       !__is_constructible(cat::variant<int>, double),
-      "double -> int is narrowing and there is no other alternative.");
+      "double -> int is narrowing and there is no other alternative."
+   );
 
-   static_assert(!__is_constructible(cat::variant<int, char>, double),
-                 "double -> int and double -> char are both narrowing.");
+   static_assert(
+      !__is_constructible(cat::variant<int, char>, double),
+      "double -> int and double -> char are both narrowing."
+   );
 
    // A plain `int` literal is not a constant expression visible to the
    // concept's hypothetical source, so the narrowing-conversion exception
    // does not apply and `int -> float` is narrowing.
-   static_assert(!__is_constructible(cat::variant<float>, int),
-                 "Plain `int` to `float` is narrowing in the FUN check.");
+   static_assert(
+      !__is_constructible(cat::variant<float>, int),
+      "Plain `int` to `float` is narrowing in the FUN check."
+   );
 };
 
 // P2527R3 `variant_alternative_index<T, V>`. Strict semantics: only the
@@ -940,8 +975,10 @@ $test(variant_type_change_destruction) {
 // Reference variants are never valueless (P4198) and reject default-
 // construction.
 $test(variant_reference_no_default) {
-   static_assert(!__is_constructible(cat::variant<int&, double&>),
-                 "reference variants must be constructed with an alternative.");
+   static_assert(
+      !__is_constructible(cat::variant<int&, double&>),
+      "reference variants must be constructed with an alternative."
+   );
    int my_int = 4;
    cat::variant<int&, double&> r(my_int);
    cat::verify(r.has_value());
@@ -1062,7 +1099,8 @@ $test(variant_p3561_invoke_cases) {
          },
          [](char c) -> int {
             return static_cast<int>(c);
-         });
+         }
+      );
    };
    cat::verify(by_index(first) == 5);
    cat::verify(by_index(second) == 111);
@@ -1079,7 +1117,8 @@ $test(variant_p3561_invoke_cases) {
       },
       [](char c) -> int {
          return static_cast<int>(c);
-      });
+      }
+   );
    cat::verify(matcher(first) == 5);
    cat::verify(matcher(second) == 111);
    cat::verify(matcher(ch) == int{'q'});
@@ -1106,7 +1145,8 @@ $test(variant_p3561_apply_cases) {
       },
       [](int x, char y) -> int {
          return x + static_cast<int>(y);
-      });
+      }
+   );
    cat::verify(sum_pair == 7);
 
    int sum_char = cat::visit_apply_cases(
@@ -1116,7 +1156,8 @@ $test(variant_p3561_apply_cases) {
       },
       [](int x, char y) -> int {
          return x + static_cast<int>(y);
-      });
+      }
+   );
    cat::verify(sum_char == 2 + int{'a'});
 
    // Curried `apply_cases` and tuple-of-callables `visit_apply` both
@@ -1127,7 +1168,8 @@ $test(variant_p3561_apply_cases) {
       },
       [](int x, char y) -> int {
          return x + static_cast<int>(y);
-      });
+      }
+   );
    cat::verify(analyze(pair_args) == 7);
    cat::verify(analyze(char_args) == 2 + int{'a'});
 
@@ -1137,7 +1179,8 @@ $test(variant_p3561_apply_cases) {
       },
       [](int x, char y) -> int {
          return x + static_cast<int>(y);
-      });
+      }
+   );
    cat::verify(cat::visit_apply(pair_args, callable_pack) == 7);
    cat::verify(cat::visit_apply(char_args, callable_pack) == 2 + int{'a'});
 };

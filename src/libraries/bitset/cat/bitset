@@ -30,13 +30,13 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    // 8-byte integers. Divide the bits by 8, rounding up.
    static constexpr idx total_bytes = div_ceil(bits_count, 8u);
 
-   using array_type =
-      conditional<total_bytes <= 8u,
-                  // `uint_fixed` will not compile here if it is larger than 8
-                  // or it is not a power of 2. This is an `array` of one
-                  // element to make it iterable.
-                  array<uint_fixed<min(bit_ceil(total_bytes), 8u)>, 1u>,
-                  array<uint8, div_ceil(total_bytes, 8u)>>;
+   using array_type = conditional<
+      total_bytes <= 8u,
+      // `uint_fixed` will not compile here if it is larger than 8
+      // or it is not a power of 2. This is an `array` of one
+      // element to make it iterable.
+      array<uint_fixed<min(bit_ceil(total_bytes), 8u)>, 1u>,
+      array<uint8, div_ceil(total_bytes, 8u)>>;
 
    using array_type_element = array_type::value_type;
 
@@ -64,9 +64,11 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    // bitset.
    static constexpr idx leading_bytes_bits =
       // Size of this storage, 64 bits or fewer.
-      idx(storage_element_size * 8u -
-          // Minus the number of unused bits in this bitset.
-          leading_skipped_bits);
+      idx(
+         storage_element_size * 8u -
+         // Minus the number of unused bits in this bitset.
+         leading_skipped_bits
+      );
 
    constexpr bitset() = default;
    constexpr bitset(bitset const&) = default;
@@ -163,7 +165,8 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       }
 
       idx const array_word = idx(
-         m_data.size() - 1u - ((index_bit + leading_skipped_bits) / word_bits));
+         m_data.size() - 1u - ((index_bit + leading_skipped_bits) / word_bits)
+      );
       array_type_element& index_byte = m_data[array_word];
 
       uword bit_offset = index_bit + leading_skipped_bits;
@@ -484,8 +487,9 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    rotate_left(iword shift) const -> bitset {
       if constexpr (bits_count == 0u) {
          return *this;
-      } else if constexpr (storage_array_size == 1u
-                           && leading_skipped_bits == 0u) {
+      } else if constexpr (
+         storage_array_size == 1u && leading_skipped_bits == 0u
+      ) {
          // The bitset exactly fills one storage word, so `cat::rotate_left` on
          // the element is the rotation of the whole bitset.
          bitset result;
@@ -520,8 +524,9 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    rotate_right(iword shift) const -> bitset {
       if constexpr (bits_count == 0u) {
          return *this;
-      } else if constexpr (storage_array_size == 1u
-                           && leading_skipped_bits == 0u) {
+      } else if constexpr (
+         storage_array_size == 1u && leading_skipped_bits == 0u
+      ) {
          bitset result;
          result.m_data[0] = cat::rotate_right(m_data[0], shift);
          return result;
@@ -566,8 +571,9 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    [[nodiscard]]
    constexpr auto
    end() const -> const_iterator {
-      return const_iterator(m_data.end(),
-                            limits<array_type_element>::bits - 0u);
+      return const_iterator(
+         m_data.end(), limits<array_type_element>::bits - 0u
+      );
    }
 
    [[nodiscard]]
@@ -579,15 +585,17 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    [[nodiscard]]
    constexpr auto
    cend() const -> const_iterator {
-      return const_iterator(m_data.cend(),
-                            limits<array_type_element>::bits - 0u);
+      return const_iterator(
+         m_data.cend(), limits<array_type_element>::bits - 0u
+      );
    }
 
    [[nodiscard]]
    constexpr auto
    rbegin() -> reverse_iterator {
-      return reverse_iterator(m_data.end(),
-                              limits<array_type_element>::bits - 1u);
+      return reverse_iterator(
+         m_data.end(), limits<array_type_element>::bits - 1u
+      );
    }
 
    [[nodiscard]]
@@ -599,8 +607,9 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    [[nodiscard]]
    constexpr auto
    rbegin() const -> const_reverse_iterator {
-      return reverse_iterator(m_data.end(),
-                              limits<array_type_element>::bits - 1u);
+      return reverse_iterator(
+         m_data.end(), limits<array_type_element>::bits - 1u
+      );
    }
 
    [[nodiscard]]
@@ -612,8 +621,9 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    [[nodiscard]]
    constexpr auto
    crbegin() const -> const_reverse_iterator {
-      return const_reverse_iterator(m_data.end(),
-                                    limits<array_type_element>::bits - 1u);
+      return const_reverse_iterator(
+         m_data.end(), limits<array_type_element>::bits - 1u
+      );
    }
 
    [[nodiscard]]
@@ -644,7 +654,8 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    clear_padding_bits() -> void {
       if constexpr (leading_skipped_bits != 0u) {
          constexpr array_type_element keep_mask = ~array_type_element(
-            (array_type_element(1u) << leading_skipped_bits) - 1u);
+            (array_type_element(1u) << leading_skipped_bits) - 1u
+         );
          // Simply & mask the bits off the end of the bitset.
          m_data[storage_array_size - 1u] &= keep_mask;
       }
@@ -665,9 +676,11 @@ template <idx bits_count, is_unsigned_integral... Arguments>
 constexpr auto
 make_bitset(Arguments... arguments) {
    // TODO: Assert that the input fits in `bits_count`.
-   static_assert(sizeof...(Arguments) == bitset<bits_count>::array_type::size(),
-                 "The arguments passed into this bitset do not fit within the "
-                 "`bits_count` alloted.");
+   static_assert(
+      sizeof...(Arguments) == bitset<bits_count>::array_type::size(),
+      "The arguments passed into this bitset do not fit within the "
+      "`bits_count` alloted."
+   );
 
    bitset<bits_count> new_bitset;
    new_bitset.m_data = {arguments...};

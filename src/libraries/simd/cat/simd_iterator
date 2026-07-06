@@ -41,8 +41,9 @@ template <typename Lane, idx width, bool is_const>
 class vectorized_stepanov_iterator
     : public proxy_stepanov_iterator_interface<
          random_access_iterator_tag, deduce_simd<Lane, width>,
-         conditional<is_const, deduce_simd<Lane, width>,
-                     as_vectorized_chunk_reference<Lane, width>>> {
+         conditional<
+            is_const, deduce_simd<Lane, width>,
+            as_vectorized_chunk_reference<Lane, width>>> {
  private:
    using self_type = vectorized_stepanov_iterator<Lane, width, is_const>;
 
@@ -76,8 +77,9 @@ class vectorized_stepanov_iterator
    [[nodiscard]]
    constexpr auto
    distance_to(self_type const& other) const -> iword {
-      return iword((other.p - p)
-                   / static_cast<decltype(other.p - p)>(width.raw));
+      return iword(
+         (other.p - p) / static_cast<decltype(other.p - p)>(width.raw)
+      );
    }
 
    [[nodiscard]]

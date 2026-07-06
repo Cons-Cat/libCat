@@ -32,11 +32,13 @@ $test(typelist) {
 
    using concat_types = types::concat_types<types2>;
    static_assert(
-      cat::is_same<concat_types, cat::type_list<int, char, int, int, char>>);
+      cat::is_same<concat_types, cat::type_list<int, char, int, int, char>>
+   );
 
    using merge_types = types::merge<float, double>;
    static_assert(
-      cat::is_same<merge_types, cat::type_list<int, char, float, double>>);
+      cat::is_same<merge_types, cat::type_list<int, char, float, double>>
+   );
 
    using fill_types = cat::type_list_filled<int, 3u>;
    static_assert(cat::is_same<fill_types, cat::type_list<int, int, int>>);

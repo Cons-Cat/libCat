@@ -12,8 +12,9 @@ namespace cat::detail {
 
 template <typename Vector>
 void
-copy_memory_backward_large(byte const* _Nonnull p_source,
-                           byte* _Nonnull p_destination, idx bytes) {
+copy_memory_backward_large(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
+) {
    char const* _Nonnull const p_src = reinterpret_cast<char const*>(p_source);
    char* _Nonnull const p_dest = reinterpret_cast<char*>(p_destination);
 
@@ -37,7 +38,8 @@ copy_memory_backward_large(byte const* _Nonnull p_source,
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             vectors[vector_index].store_unaligned(
-               p_dest + tail_bytes + (vector_index * sizeof(Vector)));
+               p_dest + tail_bytes + (vector_index * sizeof(Vector))
+            );
          }
       }
    } else {
@@ -60,7 +62,8 @@ copy_memory_backward_large(byte const* _Nonnull p_source,
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             vectors[vector_index].store_non_temporal(
-               p_dest + tail_bytes + (vector_index * sizeof(Vector)));
+               p_dest + tail_bytes + (vector_index * sizeof(Vector))
+            );
          }
       }
 

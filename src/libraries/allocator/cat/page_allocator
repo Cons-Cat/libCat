@@ -68,7 +68,8 @@ class page_allocator : public allocator_interface<page_allocator> {
          // Anonymous pages (non-files) must have -1.
          nix::file_descriptor(-1),
          // Anonymous pages (non-files) must have 0.
-         0u);
+         0u
+      );
       if (result.has_value()) {
          // mmap returns page-aligned memory. Tell the optimizer so the
          // page-aligned guarantee survives across the `maybe_ptr` wrapping.
@@ -145,7 +146,8 @@ class page_allocator : public allocator_interface<page_allocator> {
          nix::memory_protection_flags::read_write
             | nix::memory_protection_flags::execute,
          nix::memory_flags::privately | nix::memory_flags::anonymous,
-         nix::file_descriptor(-1), 0u);
+         nix::file_descriptor(-1), 0u
+      );
       void* _Nonnull p_new_pages = $prop_as(maybe_pages, nullopt);
       auto _ = nix::sys_munmap(p_new_pages, page_bytes);
       return page_bytes;
@@ -158,8 +160,9 @@ class page_allocator : public allocator_interface<page_allocator> {
       idx const from_size =
          round_up_to_multiple_of(allocation.size(), page_size);
       idx const to_size = round_up_to_multiple_of(new_bytes, page_size);
-      scaredy result = nix::sys_mremap(allocation.data(), from_size, to_size,
-                                       nix::mremap_flags::none);
+      scaredy result = nix::sys_mremap(
+         allocation.data(), from_size, to_size, nix::mremap_flags::none
+      );
       if (!result.has_value()) {
          return nullopt;
       }
@@ -173,8 +176,9 @@ class page_allocator : public allocator_interface<page_allocator> {
       idx const from_size =
          round_up_to_multiple_of(allocation.size(), page_size);
       idx const to_size = round_up_to_multiple_of(new_bytes, page_size);
-      scaredy result = nix::sys_mremap(allocation.data(), from_size, to_size,
-                                       nix::mremap_flags::none);
+      scaredy result = nix::sys_mremap(
+         allocation.data(), from_size, to_size, nix::mremap_flags::none
+      );
       if (!result.has_value()) {
          return nullopt;
       }
@@ -190,8 +194,9 @@ class page_allocator : public allocator_interface<page_allocator> {
       idx const from_size =
          round_up_to_multiple_of(allocation.size(), page_size);
       idx const to_size = round_up_to_multiple_of(new_bytes, page_size);
-      scaredy result = nix::sys_mremap(allocation.data(), from_size, to_size,
-                                       nix::mremap_flags::may_move);
+      scaredy result = nix::sys_mremap(
+         allocation.data(), from_size, to_size, nix::mremap_flags::may_move
+      );
       if (result.has_value()) {
          return __builtin_assume_aligned(result.value(), page_size.raw);
       }
@@ -206,13 +211,16 @@ class page_allocator : public allocator_interface<page_allocator> {
       idx const from_size =
          round_up_to_multiple_of(allocation.size(), page_size);
       idx const to_size = round_up_to_multiple_of(new_bytes, page_size);
-      scaredy result = nix::sys_mremap(allocation.data(), from_size, to_size,
-                                       nix::mremap_flags::may_move);
+      scaredy result = nix::sys_mremap(
+         allocation.data(), from_size, to_size, nix::mremap_flags::may_move
+      );
       // Propagating nullptr is handled correctly by `maybe_sized_allocation`.
-      return {result.has_value()
-                 ? __builtin_assume_aligned(result.value(), page_size.raw)
-                 : nullptr,
-              to_size};
+      return {
+         result.has_value()
+            ? __builtin_assume_aligned(result.value(), page_size.raw)
+            : nullptr,
+         to_size
+      };
    }
 
    // `.reset()` is a no-op provided by `allocator_interface`.

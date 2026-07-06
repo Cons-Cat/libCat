@@ -23,23 +23,24 @@ using conditionally_resolve_common_reference =
 
 // Anything not covered by the specializations below falls through to this
 // catch-all and fails to deduce:
-template <typename T, typename U, typename TQual = remove_reference<T>,
-          typename UQual = remove_reference<U>>
+template <
+   typename T, typename U, typename TQual = remove_reference<T>,
+   typename UQual = remove_reference<U>>
 struct common_reference_detail_trait;
 
 template <typename T, typename U>
 using common_reference_detail = common_reference_detail_trait<T, U>::type;
 
 template <typename T, typename U>
-using cv_conditional_resolve =
-   conditionally_resolve_common_reference<copy_cv_from<T, U>&,
-                                          copy_cv_from<U, T>&>;
+using cv_conditional_resolve = conditionally_resolve_common_reference<
+   copy_cv_from<T, U>&, copy_cv_from<U, T>&>;
 
 // T&, U&
 // The cv-aware ternary result, only when that result is itself a reference.
 template <typename T, typename U, typename TQual, typename UQual>
-   requires(requires { typename cv_conditional_resolve<TQual, UQual>; }
-            && is_reference<cv_conditional_resolve<TQual, UQual>>)
+   requires(requires {
+               typename cv_conditional_resolve<TQual, UQual>;
+            } && is_reference<cv_conditional_resolve<TQual, UQual>>)
 struct common_reference_detail_trait<T&, U&, TQual, UQual> {
    using type = cv_conditional_resolve<TQual, UQual>;
 };
@@ -52,9 +53,11 @@ using common_reference_detail_c =
 // Take the lvalue common reference and collapse it to an
 // rvalue reference, but only if both `T&&` and `U&&` convert to it.
 template <typename T, typename U, typename TQual, typename UQual>
-   requires(requires { typename common_reference_detail_c<TQual, UQual>; }
-            && is_convertible<T &&, common_reference_detail_c<TQual, UQual>>
-            && is_convertible<U &&, common_reference_detail_c<TQual, UQual>>)
+   requires(
+      requires { typename common_reference_detail_c<TQual, UQual>; }
+      && is_convertible<T &&, common_reference_detail_c<TQual, UQual>>
+      && is_convertible<U &&, common_reference_detail_c<TQual, UQual>>
+   )
 struct common_reference_detail_trait<T&&, U&&, TQual, UQual> {
    using type = common_reference_detail_c<TQual, UQual>;
 };
@@ -66,8 +69,9 @@ using common_reference_detail_d = common_reference_detail<T const&, U&>;
 // Borrow `COMMON-REF(T const&, U&)`, but only if `T&&` still
 // converts to it.
 template <typename T, typename U, typename TQual, typename UQual>
-   requires(requires { typename common_reference_detail_d<TQual, UQual>; }
-            && is_convertible<T &&, common_reference_detail_d<TQual, UQual>>)
+   requires(requires {
+               typename common_reference_detail_d<TQual, UQual>;
+            } && is_convertible<T &&, common_reference_detail_d<TQual, UQual>>)
 struct common_reference_detail_trait<T&&, U&, TQual, UQual> {
    using type = common_reference_detail_d<TQual, UQual>;
 };
@@ -99,12 +103,14 @@ struct common_reference_sub_bullet_1 : common_reference_sub_bullet_2<T, U> {};
 // `add_pointer<T>` / `add_pointer<U>` both convert to its pointer form -
 // the last two checks make sure the result is reachable from each side.
 template <typename T, typename U>
-   requires(is_reference<T> && is_reference<U>
-            && requires { typename common_reference_detail<T, U>; }
-            && is_convertible<add_pointer<T>,
-                              add_pointer<common_reference_detail<T, U>>>
-            && is_convertible<add_pointer<U>,
-                              add_pointer<common_reference_detail<T, U>>>)
+   requires(
+      is_reference<T> && is_reference<U>
+      && requires { typename common_reference_detail<T, U>; }
+      && is_convertible<
+         add_pointer<T>, add_pointer<common_reference_detail<T, U>>>
+      && is_convertible<
+         add_pointer<U>, add_pointer<common_reference_detail<T, U>>>
+   )
 struct common_reference_sub_bullet_1<T, U> {
    using type = common_reference_detail<T, U>;
 };
@@ -166,8 +172,8 @@ struct common_reference_trait<T, U> : common_reference_sub_bullet_1<T, U> {};
 template <typename T, typename U, typename V, typename... Remaining>
    requires(requires { typename common_reference_trait<T, U>::type; })
 struct common_reference_trait<T, U, V, Remaining...>
-    : common_reference_trait<typename common_reference_trait<T, U>::type, V,
-                             Remaining...> {};
+    : common_reference_trait<
+         typename common_reference_trait<T, U>::type, V, Remaining...> {};
 
 // `cat::reference_wrapper<W>` participates as if it were `W&`. `TQuals` and
 // `UQuals` carry the original qualified types, so each specialization can
@@ -180,7 +186,8 @@ template <typename W, typename U, typename TQuals, typename UQuals>
       }
       && is_convertible<
          copy_cvref_from<TQuals, reference_wrapper<W>>,
-         typename common_reference_trait<W&, copy_cvref_from<UQuals, U>>::type>)
+         typename common_reference_trait<W&, copy_cvref_from<UQuals, U>>::type>
+   )
 struct basic_common_reference_trait<reference_wrapper<W>, U, TQuals, UQuals> {
    using type = common_reference_trait<W&, copy_cvref_from<UQuals, U>>::type;
 };
@@ -192,15 +199,16 @@ template <typename T, typename W, typename TQuals, typename UQuals>
       }
       && is_convertible<
          copy_cvref_from<UQuals, reference_wrapper<W>>,
-         typename common_reference_trait<copy_cvref_from<TQuals, T>, W&>::type>)
+         typename common_reference_trait<copy_cvref_from<TQuals, T>, W&>::type>
+   )
 struct basic_common_reference_trait<T, reference_wrapper<W>, TQuals, UQuals> {
    using type = common_reference_trait<copy_cvref_from<TQuals, T>, W&>::type;
 };
 
 template <typename W1, typename W2, typename TQuals, typename UQuals>
    requires(requires { typename common_reference_trait<W1&, W2&>::type; })
-struct basic_common_reference_trait<reference_wrapper<W1>,
-                                    reference_wrapper<W2>, TQuals, UQuals> {
+struct basic_common_reference_trait<
+   reference_wrapper<W1>, reference_wrapper<W2>, TQuals, UQuals> {
    using type = common_reference_trait<W1&, W2&>::type;
 };
 

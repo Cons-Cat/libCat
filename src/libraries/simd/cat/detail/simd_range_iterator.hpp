@@ -54,13 +54,15 @@ class simd_range_stepanov_iterator
    constexpr simd_range_stepanov_iterator(simd_range_stepanov_iterator const&) =
       default;
 
-   constexpr simd_range_stepanov_iterator(Pack* _Nullable p_data_in,
-                                          idx offset_in)
+   constexpr simd_range_stepanov_iterator(
+      Pack* _Nullable p_data_in, idx offset_in
+   )
        : m_data(p_data_in), m_offset(offset_in) {
    }
 
    constexpr simd_range_stepanov_iterator(
-      simd_range_stepanov_iterator<pack_type> const& other)
+      simd_range_stepanov_iterator<pack_type> const& other
+   )
       requires(is_const<Pack>)
        : m_data(other.m_data), m_offset(other.m_offset) {
    }

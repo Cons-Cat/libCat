@@ -58,7 +58,8 @@ $test(magic_get_apply) {
          auto _ = c;
          return a + 1;
       },
-      s);
+      s
+   );
    cat::verify(sum == 3);
 }
 

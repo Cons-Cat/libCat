@@ -39,48 +39,64 @@ $test(arithmetic_detail_raw_implicit_storage) {
       -9'007'199'254'740'992LL;
    constexpr long long negative_int_into_double_first_inexact =
       -9'007'199'254'740'993LL;
+   static_assert(
+      cat::detail::raw_source_fits_implicit_storage<float>(int_into_float_zero)
+   );
+   static_assert(
+      cat::detail::raw_source_fits_implicit_storage<float>(int_into_float_small)
+   );
    static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
-      int_into_float_zero));
-   static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
-      int_into_float_small));
-   static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
-      int_into_float_last_exact));
+      int_into_float_last_exact
+   ));
    static_assert(!cat::detail::raw_source_fits_implicit_storage<float>(
-      int_into_float_first_inexact));
+      int_into_float_first_inexact
+   ));
    static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
-      negative_int_into_float_last_exact));
+      negative_int_into_float_last_exact
+   ));
    static_assert(!cat::detail::raw_source_fits_implicit_storage<float>(
-      negative_int_into_float_first_inexact));
+      negative_int_into_float_first_inexact
+   ));
    static_assert(cat::detail::raw_source_fits_implicit_storage<double>(
-      int_into_double_last_exact));
+      int_into_double_last_exact
+   ));
    static_assert(!cat::detail::raw_source_fits_implicit_storage<double>(
-      int_into_double_first_inexact));
+      int_into_double_first_inexact
+   ));
    static_assert(cat::detail::raw_source_fits_implicit_storage<double>(
-      negative_int_into_double_last_exact));
+      negative_int_into_double_last_exact
+   ));
    static_assert(!cat::detail::raw_source_fits_implicit_storage<double>(
-      negative_int_into_double_first_inexact));
+      negative_int_into_double_first_inexact
+   ));
    static_assert(
-      cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(200));
+      cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(200)
+   );
    static_assert(
-      !cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(
-         300));
+      !cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(300)
+   );
    static_assert(
-      !cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(-1));
+      !cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(-1)
+   );
    static_assert(
-      cat::detail::raw_source_fits_implicit_storage<cat::int1::raw_type>(100u));
+      cat::detail::raw_source_fits_implicit_storage<cat::int1::raw_type>(100u)
+   );
    static_assert(
-      !cat::detail::raw_source_fits_implicit_storage<cat::int1::raw_type>(
-         300u));
+      !cat::detail::raw_source_fits_implicit_storage<cat::int1::raw_type>(300u)
+   );
    static_assert(
-      !cat::detail::raw_source_fits_implicit_storage<cat::uint8::raw_type>(
-         -1ll));
+      !cat::detail::raw_source_fits_implicit_storage<cat::uint8::raw_type>(-1ll)
+   );
 
    static_assert(
-      cat::detail::raw_source_fits_implicit_storage<cat::idx::raw_type>(200));
+      cat::detail::raw_source_fits_implicit_storage<cat::idx::raw_type>(200)
+   );
    static_assert(
-      !cat::detail::raw_source_fits_implicit_storage<cat::idx::raw_type>(-1));
+      !cat::detail::raw_source_fits_implicit_storage<cat::idx::raw_type>(-1)
+   );
    static_assert(
-      !cat::detail::raw_source_fits_implicit_storage<cat::idx::raw_type>(-1ll));
+      !cat::detail::raw_source_fits_implicit_storage<cat::idx::raw_type>(-1ll)
+   );
 
    static_assert(cat::detail::raw_source_fits_implicit_storage<
                  cat::uintptr<void>::raw_type>(200));
@@ -138,39 +154,49 @@ $test(arithmetic_traits_is_arithmetic) {
 
 $test(arithmetic_traits_basic_int_and_basic_float) {
    static_assert(
-      cat::is_same<int4, cat::basic_int<__INT32_TYPE__,
-                                        cat::overflow_policies::undefined>>);
-   static_assert(
-      cat::is_same<decltype(cat::basic_int{1}),
-                   cat::basic_int<int, cat::overflow_policies::undefined>>);
+      cat::is_same<
+         int4,
+         cat::basic_int<__INT32_TYPE__, cat::overflow_policies::undefined>>
+   );
+   static_assert(cat::is_same<
+                 decltype(cat::basic_int{1}),
+                 cat::basic_int<int, cat::overflow_policies::undefined>>);
    static_assert(
       cat::is_same<
          decltype(cat::basic_int{1u}),
-         cat::basic_int<unsigned int, cat::overflow_policies::undefined>>);
-   static_assert(cat::is_same<decltype(cat::basic_int{cat::wrap_int4{1}}),
-                              cat::wrap_int4>);
-   static_assert(cat::is_same<decltype(cat::basic_int{cat::sat_uint2{1u}}),
-                              cat::sat_uint2>);
+         cat::basic_int<unsigned int, cat::overflow_policies::undefined>>
+   );
+   static_assert(
+      cat::is_same<decltype(cat::basic_int{cat::wrap_int4{1}}), cat::wrap_int4>
+   );
+   static_assert(
+      cat::is_same<decltype(cat::basic_int{cat::sat_uint2{1u}}), cat::sat_uint2>
+   );
    static_assert(cat::is_same<float4, cat::basic_float<float>>);
    static_assert(cat::is_same<float8, cat::basic_float<double>>);
    static_assert(cat::is_same<decltype(cat::basic_float{1.f}), float4>);
    static_assert(cat::is_same<decltype(cat::basic_float{1.}), float8>);
    static_assert(
-      cat::is_same<decltype(cat::basic_float{float4_fast{1.f}}), float4_fast>);
+      cat::is_same<decltype(cat::basic_float{float4_fast{1.f}}), float4_fast>
+   );
    static_assert(
-      cat::is_same<decltype(cat::basic_float{float8_fast{1.}}), float8_fast>);
+      cat::is_same<decltype(cat::basic_float{float8_fast{1.}}), float8_fast>
+   );
    static_assert(
-      cat::is_same<float4_fast,
-                   cat::basic_float<float, cat::precision_policies::fast>>);
+      cat::is_same<
+         float4_fast, cat::basic_float<float, cat::precision_policies::fast>>
+   );
    static_assert(
-      cat::is_same<float8_fast,
-                   cat::basic_float<double, cat::precision_policies::fast>>);
+      cat::is_same<
+         float8_fast, cat::basic_float<double, cat::precision_policies::fast>>
+   );
    static_assert(float4::precision_policy == cat::precision_policies::precise);
-   static_assert(float4_fast::precision_policy
-                 == cat::precision_policies::fast);
    static_assert(
-      cat::is_same<decltype(float4_fast{1.0F} + 2.0),
-                   cat::basic_float<double, cat::precision_policies::fast>>);
+      float4_fast::precision_policy == cat::precision_policies::fast
+   );
+   static_assert(cat::is_same<
+                 decltype(float4_fast{1.0F} + 2.0),
+                 cat::basic_float<double, cat::precision_policies::fast>>);
    static_assert(cat::is_same<decltype(float4{} + float4_fast{}), float4>);
    static_assert(cat::is_same<decltype(float4_fast{} + float4{}), float4_fast>);
    static_assert(cat::is_convertible<float, float8>);
@@ -207,9 +233,12 @@ $test(arithmetic_ualign) {
    static_assert(cat::is_integral<ualign>);
    static_assert(cat::is_unsigned_integral<ualign>);
    static_assert(
-      cat::is_same<cat::raw_arithmetic_type<ualign>, cat::uword::raw_type>);
-   static_assert(cat::is_same<decltype(cat::basic_ualign{uword(16u)}),
-                              cat::basic_ualign<uword>>);
+      cat::is_same<cat::raw_arithmetic_type<ualign>, cat::uword::raw_type>
+   );
+   static_assert(
+      cat::is_same<
+         decltype(cat::basic_ualign{uword(16u)}), cat::basic_ualign<uword>>
+   );
    static_assert(cat::is_convertible<ualign, uword>);
 
    constexpr ualign base = 16u;
@@ -245,12 +274,14 @@ $test(arithmetic_precision_reference_accessors) {
 
    auto precise_plus_fast_reference = value + value.fast();
    static_assert(
-      cat::is_same<decltype(precise_plus_fast_reference), float4_fast>);
+      cat::is_same<decltype(precise_plus_fast_reference), float4_fast>
+   );
    cat::verify(precise_plus_fast_reference == 2_f4);
 
    auto fast_plus_precise_reference = value.fast() + value.precise();
    static_assert(
-      cat::is_same<decltype(fast_plus_precise_reference), float4_fast>);
+      cat::is_same<decltype(fast_plus_precise_reference), float4_fast>
+   );
    cat::verify(fast_plus_precise_reference == 2_f4);
 
    value.fast() += 2_f4;
@@ -265,14 +296,17 @@ $test(arithmetic_precision_reference_accessors) {
    cat::verify(fast_value == 2_f4);
 
    static_assert(
-      cat::is_same<decltype(value.fast() <=> 1_f4), std::partial_ordering>);
+      cat::is_same<decltype(value.fast() <=> 1_f4), std::partial_ordering>
+   );
    cat::verify((value.fast() <=> 3_f4) == std::partial_ordering::equivalent);
-   cat::verify((fast_value.precise() <=> value.fast())
-               == std::partial_ordering::less);
+   cat::verify(
+      (fast_value.precise() <=> value.fast()) == std::partial_ordering::less
+   );
 
    float4 const nan_value = __builtin_nanf("");
-   cat::verify((nan_value.precise() <=> 1_f4)
-               == std::partial_ordering::unordered);
+   cat::verify(
+      (nan_value.precise() <=> 1_f4) == std::partial_ordering::unordered
+   );
 }
 
 $test(arithmetic_precision_reference_rebind) {
@@ -443,13 +477,18 @@ $test(arithmetic_traits_is_safe_arithmetic_conversion) {
 }
 
 $test(arithmetic_traits_is_same) {
-   static_assert(cat::is_same<decltype(uintptr{static_cast<int*>(nullptr)}),
-                              uintptr<int>>);
-   static_assert(cat::is_same<decltype(uintptr{static_cast<void*>(nullptr)}),
-                              uintptr<void>>);
-   static_assert(cat::is_same<decltype(cat::basic_intptr{
-                                 static_cast<unsigned char*>(nullptr)}),
-                              uintptr<unsigned char>>);
+   static_assert(
+      cat::is_same<decltype(uintptr{static_cast<int*>(nullptr)}), uintptr<int>>
+   );
+   static_assert(
+      cat::is_same<
+         decltype(uintptr{static_cast<void*>(nullptr)}), uintptr<void>>
+   );
+   static_assert(
+      cat::is_same<
+         decltype(cat::basic_intptr{static_cast<unsigned char*>(nullptr)}),
+         uintptr<unsigned char>>
+   );
 
    static_assert(cat::is_same<cat::raw_arithmetic_type<int>, int>);
    static_assert(cat::is_same<cat::raw_arithmetic_type<int4>, int4::raw_type>);
@@ -465,7 +504,8 @@ $test(arithmetic_traits_is_same) {
    static_assert(cat::is_same<cat::uint_fixed<8>, uint8>);
 
    static_assert(
-      cat::is_same<decltype(uword::max() - uintptr<void>{8u}), uword>);
+      cat::is_same<decltype(uword::max() - uintptr<void>{8u}), uword>
+   );
    static_assert(cat::is_same<decltype(iword::max() - intptr<void>{8}), iword>);
 
    static_assert(cat::is_same<decltype(uword{1} - 1_u4), uword>);
@@ -510,26 +550,46 @@ $test(arithmetic_traits_is_signed_integral) {
 }
 
 $test(arithmetic_traits_is_trivially_copyable_and_default_constructible) {
-   static_assert(cat::is_trivially_copyable<int1>
-                 && cat::is_trivially_default_constructible<int1>);
-   static_assert(cat::is_trivially_copyable<uint1>
-                 && cat::is_trivially_default_constructible<uint1>);
-   static_assert(cat::is_trivially_copyable<int2>
-                 && cat::is_trivially_default_constructible<int2>);
-   static_assert(cat::is_trivially_copyable<uint2>
-                 && cat::is_trivially_default_constructible<uint2>);
-   static_assert(cat::is_trivially_copyable<int4>
-                 && cat::is_trivially_default_constructible<int4>);
-   static_assert(cat::is_trivially_copyable<uint4>
-                 && cat::is_trivially_default_constructible<uint4>);
-   static_assert(cat::is_trivially_copyable<int8>
-                 && cat::is_trivially_default_constructible<int8>);
-   static_assert(cat::is_trivially_copyable<uint8>
-                 && cat::is_trivially_default_constructible<uint8>);
-   static_assert(cat::is_trivially_copyable<float4>
-                 && cat::is_trivially_default_constructible<float4>);
-   static_assert(cat::is_trivially_copyable<float8>
-                 && cat::is_trivially_default_constructible<float8>);
+   static_assert(
+      cat::is_trivially_copyable<int1>
+      && cat::is_trivially_default_constructible<int1>
+   );
+   static_assert(
+      cat::is_trivially_copyable<uint1>
+      && cat::is_trivially_default_constructible<uint1>
+   );
+   static_assert(
+      cat::is_trivially_copyable<int2>
+      && cat::is_trivially_default_constructible<int2>
+   );
+   static_assert(
+      cat::is_trivially_copyable<uint2>
+      && cat::is_trivially_default_constructible<uint2>
+   );
+   static_assert(
+      cat::is_trivially_copyable<int4>
+      && cat::is_trivially_default_constructible<int4>
+   );
+   static_assert(
+      cat::is_trivially_copyable<uint4>
+      && cat::is_trivially_default_constructible<uint4>
+   );
+   static_assert(
+      cat::is_trivially_copyable<int8>
+      && cat::is_trivially_default_constructible<int8>
+   );
+   static_assert(
+      cat::is_trivially_copyable<uint8>
+      && cat::is_trivially_default_constructible<uint8>
+   );
+   static_assert(
+      cat::is_trivially_copyable<float4>
+      && cat::is_trivially_default_constructible<float4>
+   );
+   static_assert(
+      cat::is_trivially_copyable<float8>
+      && cat::is_trivially_default_constructible<float8>
+   );
 }
 
 $test(arithmetic_traits_is_trivially_copyable) {
@@ -583,7 +643,8 @@ $test(arithmetic_traits_is_raw_arithmetic) {
 $test(arithmetic_traits_rvalue) {
    int4 const constant_int4 = 0;
    static_assert(
-      cat::is_forwarding_move<decltype(constant_int4.wrap().undef())>);
+      cat::is_forwarding_move<decltype(constant_int4.wrap().undef())>
+   );
    static_assert(cat::is_forwarding_move<decltype(int4{0}.wrap().undef())>);
 
    static_assert(cat::is_forwarding_move<decltype(constant_int4.wrap())>);
@@ -595,7 +656,8 @@ $test(arithmetic_traits_rvalue) {
    idx const constant_idx = 0;
 
    static_assert(
-      cat::is_forwarding_move<decltype(constant_idx.wrap().undef())>);
+      cat::is_forwarding_move<decltype(constant_idx.wrap().undef())>
+   );
    static_assert(cat::is_forwarding_move<decltype(idx{0}.wrap().undef())>);
 
    static_assert(cat::is_forwarding_move<decltype(constant_idx.wrap())>);
@@ -607,9 +669,11 @@ $test(arithmetic_traits_rvalue) {
    uintptr<void> const constant_uptr = nullptr;
 
    static_assert(
-      cat::is_forwarding_move<decltype(constant_uptr.wrap().undef())>);
+      cat::is_forwarding_move<decltype(constant_uptr.wrap().undef())>
+   );
    static_assert(
-      cat::is_forwarding_move<decltype(uintptr<void>{0}.wrap().undef())>);
+      cat::is_forwarding_move<decltype(uintptr<void>{0}.wrap().undef())>
+   );
 
    static_assert(cat::is_forwarding_move<decltype(constant_uptr.wrap())>);
    static_assert(cat::is_forwarding_move<decltype(uintptr<void>{0}.wrap())>);
@@ -619,36 +683,51 @@ $test(arithmetic_traits_rvalue) {
 }
 
 $test(arithmetic_constants_constexpr_helpers) {
-   static_assert(cat::limits<int4>::max() ==  // NOLINT
-                 cat::limits<int4::raw_type>::max());
-   static_assert(cat::limits<uint8>::max() ==  // NOLINT
-                 cat::limits<uint8::raw_type>::max());
-   static_assert(cat::limits<float4>::max()  // NOLINTNEXTLINE
-                 == cat::limits<float4::raw_type>::max());
-   static_assert(cat::limits<float8>::min()
-                 == cat::limits<float8::raw_type>::min());  // NOLINT
-   static_assert(cat::limits<float8>::max()
-                 == cat::limits<float8::raw_type>::max());  // NOLINT
-   static_assert(cat::limits<float4>::min()
-                 == cat::limits<float4::raw_type>::min());  // NOLINT
-   static_assert(cat::limits<float4>::max()
-                 == cat::limits<float4::raw_type>::max());  // NOLINT
+   static_assert(
+      cat::limits<int4>::max() ==  // NOLINT
+      cat::limits<int4::raw_type>::max()
+   );
+   static_assert(
+      cat::limits<uint8>::max() ==  // NOLINT
+      cat::limits<uint8::raw_type>::max()
+   );
+   static_assert(
+      cat::limits<float4>::max()  // NOLINTNEXTLINE
+      == cat::limits<float4::raw_type>::max()
+   );
+   static_assert(
+      cat::limits<float8>::min() == cat::limits<float8::raw_type>::min()
+   );  // NOLINT
+   static_assert(
+      cat::limits<float8>::max() == cat::limits<float8::raw_type>::max()
+   );  // NOLINT
+   static_assert(
+      cat::limits<float4>::min() == cat::limits<float4::raw_type>::min()
+   );  // NOLINT
+   static_assert(
+      cat::limits<float4>::max() == cat::limits<float4::raw_type>::max()
+   );  // NOLINT
 
    static_assert(idx_max == cat::limits<idx>::max());
 
    constexpr int int_into_float_small = 42;
-   static_assert(float4(int_into_float_small).raw
-                 == static_cast<float>(int_into_float_small));
+   static_assert(
+      float4(int_into_float_small).raw
+      == static_cast<float>(int_into_float_small)
+   );
 
    static_assert(cat::make_sign_from<int4>(1u) == 1_i4);
    static_assert(cat::make_sign_from(2, 1u) == 1_i4);
 
-   static_assert(cat::limits<cat::iword>::max()
-                 < cat::limits<cat::uword>::max());
-   static_assert(cat::limits<cat::uword>::max()
-                 > cat::limits<cat::iword>::max());
-   static_assert(cat::limits<cat::iword>::min()
-                 < cat::limits<cat::uword>::max());
+   static_assert(
+      cat::limits<cat::iword>::max() < cat::limits<cat::uword>::max()
+   );
+   static_assert(
+      cat::limits<cat::uword>::max() > cat::limits<cat::iword>::max()
+   );
+   static_assert(
+      cat::limits<cat::iword>::min() < cat::limits<cat::uword>::max()
+   );
 
    // `uword{-1}` would silently wrap a signed sentinel into the unsigned
    // domain. Express the intent through the `wrap` view explicitly.
@@ -1139,15 +1218,20 @@ $test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(u4_six % signed_const_two), uint4>);
    static_assert(cat::is_same<decltype(u4_six - int4{-2}), uint4>);
    static_assert(
-      cat::is_same<decltype(u4_six + cat::deconst(signed_two)), uint4>);
+      cat::is_same<decltype(u4_six + cat::deconst(signed_two)), uint4>
+   );
    static_assert(
-      cat::is_same<decltype(u4_six * cat::deconst(long_two)), iword>);
+      cat::is_same<decltype(u4_six * cat::deconst(long_two)), iword>
+   );
    static_assert(
-      cat::is_same<decltype(u4_six / cat::deconst(long_const_two)), uint4>);
+      cat::is_same<decltype(u4_six / cat::deconst(long_const_two)), uint4>
+   );
    static_assert(
-      cat::is_same<decltype(u4_six % cat::deconst(signed_const_two)), uint4>);
+      cat::is_same<decltype(u4_six % cat::deconst(signed_const_two)), uint4>
+   );
    static_assert(
-      cat::is_same<decltype(u4_six - cat::deconst(int4{-2})), uint4>);
+      cat::is_same<decltype(u4_six - cat::deconst(int4{-2})), uint4>
+   );
 
    // `uint1` (narrowest width). Positive signed constants keep LHS storage
    // rather than widening to RHS.
@@ -1170,15 +1254,20 @@ $test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(u1_six % signed_const_two), uint1>);
    static_assert(cat::is_same<decltype(u1_six - int4{-2}), uint1>);
    static_assert(
-      cat::is_same<decltype(u1_six + cat::deconst(signed_two)), int4>);
+      cat::is_same<decltype(u1_six + cat::deconst(signed_two)), int4>
+   );
    static_assert(
-      cat::is_same<decltype(u1_six * cat::deconst(signed_two)), int4>);
+      cat::is_same<decltype(u1_six * cat::deconst(signed_two)), int4>
+   );
    static_assert(
-      cat::is_same<decltype(u1_six / cat::deconst(signed_const_two)), uint1>);
+      cat::is_same<decltype(u1_six / cat::deconst(signed_const_two)), uint1>
+   );
    static_assert(
-      cat::is_same<decltype(u1_six % cat::deconst(signed_const_two)), uint1>);
+      cat::is_same<decltype(u1_six % cat::deconst(signed_const_two)), uint1>
+   );
    static_assert(
-      cat::is_same<decltype(u1_six - cat::deconst(int4{-2})), uint1>);
+      cat::is_same<decltype(u1_six - cat::deconst(int4{-2})), uint1>
+   );
 
    // `uint8` (widest width). Mixing with same-width `signed long` keeps the
    // `uint8` LHS storage. Smaller `signed int` similarly loses to `uint8`.
@@ -1199,15 +1288,20 @@ $test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(u8_six / long_const_two), uint8>);
    static_assert(cat::is_same<decltype(u8_six % signed_const_two), uint8>);
    static_assert(
-      cat::is_same<decltype(u8_six + cat::deconst(long_two)), uint8>);
+      cat::is_same<decltype(u8_six + cat::deconst(long_two)), uint8>
+   );
    static_assert(
-      cat::is_same<decltype(u8_six * cat::deconst(long_two)), uint8>);
+      cat::is_same<decltype(u8_six * cat::deconst(long_two)), uint8>
+   );
    static_assert(
-      cat::is_same<decltype(u8_six / cat::deconst(long_const_two)), uint8>);
+      cat::is_same<decltype(u8_six / cat::deconst(long_const_two)), uint8>
+   );
    static_assert(
-      cat::is_same<decltype(u8_six % cat::deconst(signed_const_two)), uint8>);
+      cat::is_same<decltype(u8_six % cat::deconst(signed_const_two)), uint8>
+   );
    static_assert(
-      cat::is_same<decltype(u8_six - cat::deconst(int4{-2})), uint8>);
+      cat::is_same<decltype(u8_six - cat::deconst(int4{-2})), uint8>
+   );
 
    // Bitwise and shift with cross-signed-ness compile-time constants on
    // `uint4`.
@@ -1917,10 +2011,12 @@ $test(arithmetic_intptr_uintptr_all_operators_constexpr_const) {
    cat::verify((ip_six - ulong_const_two) == 4);
    static_assert(cat::is_same<decltype(ip_six + unsigned_two), intptr<void>>);
    static_assert(
-      cat::is_same<decltype(ip_six - unsigned_const_two), intptr<void>>);
+      cat::is_same<decltype(ip_six - unsigned_const_two), intptr<void>>
+   );
    static_assert(cat::is_same<decltype(ip_six + ulong_two), intptr<void>>);
    static_assert(
-      cat::is_same<decltype(ip_six - ulong_const_two), intptr<void>>);
+      cat::is_same<decltype(ip_six - ulong_const_two), intptr<void>>
+   );
 
    // Cross-sign constant binary + / - on `uintptr<void>`. Same reasoning as
    // above.
@@ -1931,10 +2027,12 @@ $test(arithmetic_intptr_uintptr_all_operators_constexpr_const) {
    cat::verify((up_six - long_const_two) == 4u);
    static_assert(cat::is_same<decltype(up_six + signed_two), uintptr<void>>);
    static_assert(
-      cat::is_same<decltype(up_six - signed_const_two), uintptr<void>>);
+      cat::is_same<decltype(up_six - signed_const_two), uintptr<void>>
+   );
    static_assert(cat::is_same<decltype(up_six + long_two), uintptr<void>>);
    static_assert(
-      cat::is_same<decltype(up_six - long_const_two), uintptr<void>>);
+      cat::is_same<decltype(up_six - long_const_two), uintptr<void>>
+   );
 }
 
 $test(arithmetic_implicit_idx_constexpr_const) {
@@ -2168,7 +2266,8 @@ $test(arithmetic_idx_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(ix * signed_const_two), idx>);
    static_assert(cat::is_same<decltype(ix * runtime_signed_two), idx>);
    static_assert(
-      cat::is_same<decltype(ix * cat::deconst(signed_const_two)), idx>);
+      cat::is_same<decltype(ix * cat::deconst(signed_const_two)), idx>
+   );
    static_assert(cat::is_same<decltype(ix / signed_two), idx>);
    static_assert(cat::is_same<decltype(ix / long_const_two), idx>);
    static_assert(cat::is_same<decltype(ix / runtime_signed_two), iword>);
@@ -2177,7 +2276,8 @@ $test(arithmetic_idx_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(ix % signed_const_two), idx>);
    static_assert(cat::is_same<decltype(ix % runtime_signed_two), idx>);
    static_assert(
-      cat::is_same<decltype(ix % cat::deconst(signed_const_two)), idx>);
+      cat::is_same<decltype(ix % cat::deconst(signed_const_two)), idx>
+   );
 }
 
 // The same conversions as
@@ -2807,15 +2907,18 @@ $test(arithmetic_overflow_reference_public_type) {
    static_assert(
       cat::is_same<
          decltype(u4.sat()),
-         cat::overflow_reference<uint4, cat::overflow_policies::saturate>>);
+         cat::overflow_reference<uint4, cat::overflow_policies::saturate>>
+   );
    static_assert(
       cat::is_same<
          decltype(u4.undef()),
-         cat::overflow_reference<uint4, cat::overflow_policies::undefined>>);
+         cat::overflow_reference<uint4, cat::overflow_policies::undefined>>
+   );
    static_assert(
       cat::is_same<
          decltype(u4_const.wrap()),
-         cat::overflow_reference<uint4 const, cat::overflow_policies::wrap>>);
+         cat::overflow_reference<uint4 const, cat::overflow_policies::wrap>>
+   );
 
    int4 i4 = 5_i4;
    static_assert(cat::is_same<
@@ -2823,15 +2926,16 @@ $test(arithmetic_overflow_reference_public_type) {
                  cat::overflow_reference<int4, cat::overflow_policies::wrap>>);
 
    idx ix = 5_idx;
-   static_assert(
-      cat::is_same<decltype(ix.wrap()),
-                   cat::overflow_reference<idx, cat::overflow_policies::wrap>>);
+   static_assert(cat::is_same<
+                 decltype(ix.wrap()),
+                 cat::overflow_reference<idx, cat::overflow_policies::wrap>>);
 
    uintptr<void> uptr = nullptr;
    static_assert(
       cat::is_same<
          decltype(uptr.wrap()),
-         cat::overflow_reference<uintptr<void>, cat::overflow_policies::wrap>>);
+         cat::overflow_reference<uintptr<void>, cat::overflow_policies::wrap>>
+   );
 
    // Direct construction by naming the type. Wrapped value is `u4`, behaves
    // exactly like `u4.wrap()` would.
@@ -2842,7 +2946,8 @@ $test(arithmetic_overflow_reference_public_type) {
 
    // The same wrapped value can be observed through a different policy.
    cat::overflow_reference<uint4, cat::overflow_policies::saturate> u4_sat_ref(
-      u4);
+      u4
+   );
    u4 = cat::uint4_max;
    u4_sat_ref += 1u;
    cat::verify(u4 == cat::uint4_max);
@@ -2850,21 +2955,24 @@ $test(arithmetic_overflow_reference_public_type) {
    // Saturate on signed overflow.
    int4 i4_storage = cat::int4_max;
    cat::overflow_reference<int4, cat::overflow_policies::saturate> i4_sat_ref(
-      i4_storage);
+      i4_storage
+   );
    i4_sat_ref += 100;
    cat::verify(i4_storage == cat::int4_max);
 
    // Wrap on signed overflow.
    i4_storage = cat::int4_max;
    cat::overflow_reference<int4, cat::overflow_policies::wrap> i4_wrap_ref(
-      i4_storage);
+      i4_storage
+   );
    i4_wrap_ref += 1;
    cat::verify(i4_storage == cat::int4_min);
 
    // `basic_idx` and `basic_intptr` work the same way.
    idx ix_storage = 5_idx;
    cat::overflow_reference<idx, cat::overflow_policies::wrap> ix_wrap_ref(
-      ix_storage);
+      ix_storage
+   );
    ix_wrap_ref += 10u;
    cat::verify(ix_storage == 15_idx);
 
@@ -3338,33 +3446,43 @@ $test(arithmetic_sat_sub_signed_fixed_width) {
 // `sat_add(T, T)` overload runs -- mixing widths goes through the promoted
 // overload, which would not hit the overflow branch at sub-`int` widths.
 $test(arithmetic_sat_add_sub_signed_overflow_direction) {
-   static_assert(cat::sat_add(cat::int1_min.raw, (-1_i1).raw)
-                 == cat::int1_min.raw);
-   static_assert(cat::sat_add(cat::int2_min.raw, (-1_i2).raw)
-                 == cat::int2_min.raw);
+   static_assert(
+      cat::sat_add(cat::int1_min.raw, (-1_i1).raw) == cat::int1_min.raw
+   );
+   static_assert(
+      cat::sat_add(cat::int2_min.raw, (-1_i2).raw) == cat::int2_min.raw
+   );
    static_assert(cat::sat_add(cat::int4_min.raw, -1) == cat::int4_min.raw);
-   static_assert(cat::sat_add(cat::int8_min.raw, (-1_i8).raw)
-                 == cat::int8_min.raw);
-   static_assert(cat::sat_add(cat::int4_min.raw, cat::int4_min.raw)
-                 == cat::int4_min.raw);
+   static_assert(
+      cat::sat_add(cat::int8_min.raw, (-1_i8).raw) == cat::int8_min.raw
+   );
+   static_assert(
+      cat::sat_add(cat::int4_min.raw, cat::int4_min.raw) == cat::int4_min.raw
+   );
 
-   cat::verify(cat::sat_add(cat::int1_min.raw, (-1_i1).raw)
-               == cat::int1_min.raw);
+   cat::verify(
+      cat::sat_add(cat::int1_min.raw, (-1_i1).raw) == cat::int1_min.raw
+   );
    cat::verify(cat::sat_add(cat::int4_min.raw, -1) == cat::int4_min.raw);
-   cat::verify(cat::sat_add(cat::int4_min.raw, cat::int4_min.raw)
-               == cat::int4_min.raw);
+   cat::verify(
+      cat::sat_add(cat::int4_min.raw, cat::int4_min.raw) == cat::int4_min.raw
+   );
 
-   static_assert(cat::sat_sub(cat::int1_max.raw, (-1_i1).raw)
-                 == cat::int1_max.raw);
-   static_assert(cat::sat_sub(cat::int2_max.raw, (-1_i2).raw)
-                 == cat::int2_max.raw);
+   static_assert(
+      cat::sat_sub(cat::int1_max.raw, (-1_i1).raw) == cat::int1_max.raw
+   );
+   static_assert(
+      cat::sat_sub(cat::int2_max.raw, (-1_i2).raw) == cat::int2_max.raw
+   );
    static_assert(cat::sat_sub(cat::int4_max.raw, -1) == cat::int4_max.raw);
-   static_assert(cat::sat_sub(cat::int8_max.raw, (-1_i8).raw)
-                 == cat::int8_max.raw);
+   static_assert(
+      cat::sat_sub(cat::int8_max.raw, (-1_i8).raw) == cat::int8_max.raw
+   );
    static_assert(cat::sat_sub(0, cat::int4_min.raw) == cat::int4_max.raw);
 
-   cat::verify(cat::sat_sub(cat::int1_max.raw, (-1_i1).raw)
-               == cat::int1_max.raw);
+   cat::verify(
+      cat::sat_sub(cat::int1_max.raw, (-1_i1).raw) == cat::int1_max.raw
+   );
    cat::verify(cat::sat_sub(cat::int4_max.raw, -1) == cat::int4_max.raw);
    cat::verify(cat::sat_sub(0, cat::int4_min.raw) == cat::int4_max.raw);
 }
@@ -3376,8 +3494,9 @@ $test(arithmetic_sat_mul_unsigned_fixed_width) {
    static_assert(cat::sat_mul((2_u1).raw, 3_u1) == 6u);
    static_assert(cat::sat_mul(cat::uint1_max.raw, 1_u1) == cat::uint1_max.raw);
    static_assert(cat::sat_mul(cat::uint1_max.raw, 2_u1) == cat::uint1_max.raw);
-   static_assert(cat::sat_mul(cat::uint1_max, cat::uint1_max)
-                 == cat::uint1_max);
+   static_assert(
+      cat::sat_mul(cat::uint1_max, cat::uint1_max) == cat::uint1_max
+   );
    static_assert(cat::sat_mul((0_u1).raw, cat::uint1_max.raw) == 0u);
 
    cat::verify(cat::sat_mul((2_u1).raw, 3_u1) == 6u);
@@ -3401,15 +3520,18 @@ $test(arithmetic_sat_mul_signed_fixed_width) {
    static_assert(cat::sat_mul(cat::int1_min.raw, 2_i1) == cat::int1_min.raw);
    static_assert(cat::sat_mul(cat::int1_max.raw, -2_i1) == cat::int1_min.raw);
    static_assert(cat::sat_mul(cat::int1_min.raw, -2_i1) == cat::int1_max.raw);
-   static_assert(cat::sat_mul(cat::int1_min.raw, cat::int1_min.raw)
-                 == cat::int1_max.raw);
-   static_assert(cat::sat_mul(cat::int1_min.raw, (-1_i1).raw)
-                 == cat::int1_max.raw);
+   static_assert(
+      cat::sat_mul(cat::int1_min.raw, cat::int1_min.raw) == cat::int1_max.raw
+   );
+   static_assert(
+      cat::sat_mul(cat::int1_min.raw, (-1_i1).raw) == cat::int1_max.raw
+   );
 
    cat::verify(cat::sat_mul(cat::int1_max.raw, -2_i1) == cat::int1_min.raw);
    cat::verify(cat::sat_mul(cat::int1_min.raw, -2_i1) == cat::int1_max.raw);
-   cat::verify(cat::sat_mul(cat::int1_min.raw, cat::int1_min.raw)
-               == cat::int1_max.raw);
+   cat::verify(
+      cat::sat_mul(cat::int1_min.raw, cat::int1_min.raw) == cat::int1_max.raw
+   );
 
    static_assert(cat::sat_mul(cat::int4_max.raw, 2) == cat::int4_max.raw);
    static_assert(cat::sat_mul(cat::int4_max.raw, -2) == cat::int4_min.raw);
@@ -3423,12 +3545,14 @@ $test(arithmetic_sat_mul_signed_fixed_width) {
 
    static_assert(cat::sat_mul(cat::int8_max.raw, 2_i8) == cat::int8_max.raw);
    static_assert(cat::sat_mul(cat::int8_min.raw, 2_i8) == cat::int8_min.raw);
-   static_assert(cat::sat_mul(cat::int8_min.raw, (-1_i8).raw)
-                 == cat::int8_max.raw);
+   static_assert(
+      cat::sat_mul(cat::int8_min.raw, (-1_i8).raw) == cat::int8_max.raw
+   );
 
    cat::verify(cat::sat_mul(cat::int8_max.raw, 2_i8) == cat::int8_max.raw);
-   cat::verify(cat::sat_mul(cat::int8_min.raw, (-1_i8).raw)
-               == cat::int8_max.raw);
+   cat::verify(
+      cat::sat_mul(cat::int8_min.raw, (-1_i8).raw) == cat::int8_max.raw
+   );
 }
 
 // `cat::sat_div` only overflows for signed `min() / -1`. Every other division
@@ -3438,8 +3562,9 @@ $test(arithmetic_sat_div_unsigned_fixed_width) {
    static_assert(cat::sat_div(cat::uint1_max.raw, 1_u1) == cat::uint1_max.raw);
    static_assert(cat::sat_div(cat::uint4_max.raw, 1u) == cat::uint4_max.raw);
    static_assert(cat::sat_div((0_u4).raw, 5u) == 0u);
-   static_assert(cat::sat_div(cat::uint8_max.raw, 2u)
-                 == cat::uint8_max.raw / 2u);
+   static_assert(
+      cat::sat_div(cat::uint8_max.raw, 2u) == cat::uint8_max.raw / 2u
+   );
 
    cat::verify(cat::sat_div(cat::uint1_max.raw, 1_u1) == cat::uint1_max.raw);
    cat::verify(cat::sat_div(cat::uint4_max.raw, 1u) == cat::uint4_max.raw);
@@ -3474,8 +3599,9 @@ $test(arithmetic_sat_div_signed_fixed_width) {
 // unsigned `T` and uses two's-complement wrap for signed `T`.
 $test(arithmetic_wrap_sub_fixed_width) {
    static_assert(cat::wrap_sub(cat::uint1_min.raw, 1_u1) == cat::uint1_max.raw);
-   static_assert(cat::wrap_sub(cat::uint1_min.raw, 2_u1)
-                 == cat::uint1_max.raw - 1u);
+   static_assert(
+      cat::wrap_sub(cat::uint1_min.raw, 2_u1) == cat::uint1_max.raw - 1u
+   );
    static_assert(cat::wrap_sub((5_u4).raw, 10u) == cat::uint4_max.raw - 4u);
    static_assert(cat::wrap_sub(cat::uint4_min.raw, 1u) == cat::uint4_max.raw);
    static_assert(cat::wrap_sub(cat::uint8_min.raw, 1u) == cat::uint8_max.raw);
@@ -3503,8 +3629,9 @@ $test(arithmetic_wrap_div_fixed_width) {
    static_assert(cat::wrap_div((6_u1).raw, 2_u1) == 3u);
    static_assert(cat::wrap_div(cat::uint1_max.raw, 1_u1) == cat::uint1_max.raw);
    static_assert(cat::wrap_div(cat::uint4_max.raw, 1u) == cat::uint4_max.raw);
-   static_assert(cat::wrap_div(cat::uint8_max.raw, 2u)
-                 == cat::uint8_max.raw / 2u);
+   static_assert(
+      cat::wrap_div(cat::uint8_max.raw, 2u) == cat::uint8_max.raw / 2u
+   );
 
    static_assert(cat::wrap_div((6_i1).raw, 2_i1) == 3);
    static_assert(cat::wrap_div((6_i1).raw, -2_i1) == -3);
@@ -3514,11 +3641,13 @@ $test(arithmetic_wrap_div_fixed_width) {
    static_assert(cat::wrap_div(cat::int4_max.raw, -1) == -cat::int4_max.raw);
 
    // The `min() / -1` overflow case wraps to `min()`.
-   static_assert(cat::wrap_div(cat::int1_min.raw, (-1_i1).raw)
-                 == cat::int1_min.raw);
+   static_assert(
+      cat::wrap_div(cat::int1_min.raw, (-1_i1).raw) == cat::int1_min.raw
+   );
    static_assert(cat::wrap_div(cat::int4_min.raw, -1) == cat::int4_min.raw);
-   static_assert(cat::wrap_div(cat::int8_min.raw, (-1_i8).raw)
-                 == cat::int8_min.raw);
+   static_assert(
+      cat::wrap_div(cat::int8_min.raw, (-1_i8).raw) == cat::int8_min.raw
+   );
 
    cat::verify(cat::wrap_div(cat::uint4_max.raw, 1u) == cat::uint4_max.raw);
    cat::verify(cat::wrap_div((6_i1).raw, -2_i1) == -3);
@@ -4051,14 +4180,18 @@ $test(arithmetic_wrap_shr_unsigned_fixed_width) {
    cat::verify(cat::wrap_shr(0x03_u1, 1u) == 0x81_u1);
 
    // `wrap_shl` and `wrap_shr` are inverses under the same count.
-   static_assert(cat::wrap_shr(cat::wrap_shl((0xA5_u1).raw, 3u), 3u)
-                 == (0xA5_u1).raw);
-   static_assert(cat::wrap_shl(cat::wrap_shr((0xA5_u1).raw, 3u), 3u)
-                 == (0xA5_u1).raw);
-   cat::verify(cat::wrap_shr(cat::wrap_shl((0xA5_u1).raw, 3u), 3u)
-               == (0xA5_u1).raw);
-   cat::verify(cat::wrap_shl(cat::wrap_shr((0xA5_u1).raw, 3u), 3u)
-               == (0xA5_u1).raw);
+   static_assert(
+      cat::wrap_shr(cat::wrap_shl((0xA5_u1).raw, 3u), 3u) == (0xA5_u1).raw
+   );
+   static_assert(
+      cat::wrap_shl(cat::wrap_shr((0xA5_u1).raw, 3u), 3u) == (0xA5_u1).raw
+   );
+   cat::verify(
+      cat::wrap_shr(cat::wrap_shl((0xA5_u1).raw, 3u), 3u) == (0xA5_u1).raw
+   );
+   cat::verify(
+      cat::wrap_shl(cat::wrap_shr((0xA5_u1).raw, 3u), 3u) == (0xA5_u1).raw
+   );
 
    // Uint2.
    static_assert(cat::wrap_shr((0x8000_u2).raw, 15u) == 1u);
@@ -4191,8 +4324,9 @@ $test(arithmetic_sat_shl_index) {
 
    // Shifting `bit_62 - 1` (all 62 low bits set) by 1 just fills in bit 62
    // without overflowing into bit 63, so it does not saturate.
-   static_assert(cat::sat_shl(sat_idx{bit_62 - 1u}, 1u)
-                 == sat_idx{cat::idx_max.raw - 1u});
+   static_assert(
+      cat::sat_shl(sat_idx{bit_62 - 1u}, 1u) == sat_idx{cat::idx_max.raw - 1u}
+   );
 
    // Shift counts >= `bit_width` fully saturate (any non-zero value lands at
    // `basic_idx::max()`).
@@ -4214,8 +4348,9 @@ $test(arithmetic_sat_shl_index) {
    static_assert((cat::sat_shl(sat_idx{1}, 64u).raw & high_bit) == 0u);
    static_assert((cat::sat_shl(sat_idx{1}, 100u).raw & high_bit) == 0u);
    static_assert((cat::sat_shl(sat_idx{bit_62}, 1u).raw & high_bit) == 0u);
-   static_assert((cat::sat_shl(sat_idx{cat::idx_max}, 63u).raw & high_bit)
-                 == 0u);
+   static_assert(
+      (cat::sat_shl(sat_idx{cat::idx_max}, 63u).raw & high_bit) == 0u
+   );
 
    // The saturation ceiling is exactly `idx_max`, never anything larger (would
    // violate the invariant) and never anything smaller (would waste range).
@@ -4248,8 +4383,9 @@ $test(arithmetic_sat_shr_index) {
    // In-range shifts behave like the C++ right shift.
    static_assert(cat::sat_shr(sat_idx{4}, 1u) == sat_idx{2});
    static_assert(cat::sat_shr(sat_idx{1ull << 62u}, 62u) == sat_idx{1});
-   static_assert(cat::sat_shr(sat_idx{cat::idx_max}, 0u)
-                 == sat_idx{cat::idx_max});
+   static_assert(
+      cat::sat_shr(sat_idx{cat::idx_max}, 0u) == sat_idx{cat::idx_max}
+   );
 
    // Shift counts >= `bit_width` clamp to zero (positive values).
    static_assert(cat::sat_shr(sat_idx{1}, 64u) == sat_idx{0});
@@ -4260,8 +4396,9 @@ $test(arithmetic_sat_shr_index) {
 
    cat::verify(cat::sat_shr(sat_idx{4}, 1u) == sat_idx{2});
    cat::verify(cat::sat_shr(sat_idx{1ull << 62u}, 62u) == sat_idx{1});
-   cat::verify(cat::sat_shr(sat_idx{cat::idx_max}, 0u)
-               == sat_idx{cat::idx_max});
+   cat::verify(
+      cat::sat_shr(sat_idx{cat::idx_max}, 0u) == sat_idx{cat::idx_max}
+   );
    cat::verify(cat::sat_shr(sat_idx{1}, 64u) == sat_idx{0});
    cat::verify(cat::sat_shr(sat_idx{cat::idx_max}, 100u) == sat_idx{0});
    cat::verify(cat::sat_shr(sat_idx{0}, 5u) == sat_idx{0});
@@ -4277,12 +4414,15 @@ $test(arithmetic_wrap_shl_index) {
 
    // Basic rotation within the ring.
    static_assert(cat::wrap_shl(wrap_idx{1}, 1u) == wrap_idx{2});
-   static_assert(cat::wrap_shl(wrap_idx{1}, ring_bits - 1u)
-                 == wrap_idx{1ull << (ring_bits - 1u)});
+   static_assert(
+      cat::wrap_shl(wrap_idx{1}, ring_bits - 1u)
+      == wrap_idx{1ull << (ring_bits - 1u)}
+   );
 
    // Bit `ring_bits - 1` rotates around to bit 0 -- NOT to bit 63.
-   static_assert(cat::wrap_shl(wrap_idx{1ull << (ring_bits - 1u)}, 1u)
-                 == wrap_idx{1});
+   static_assert(
+      cat::wrap_shl(wrap_idx{1ull << (ring_bits - 1u)}, 1u) == wrap_idx{1}
+   );
 
    // Count taken modulo `ring_bits`, so rotating by `ring_bits` is a no-op (and
    // `ring_bits + 1` is the same as 1).
@@ -4291,43 +4431,55 @@ $test(arithmetic_wrap_shl_index) {
 
    // Large counts are handled via the modulo.
    static_assert(cat::wrap_shl(wrap_idx{1}, ring_bits * 2u) == wrap_idx{1});
-   static_assert(cat::wrap_shl(wrap_idx{1}, 1'000u)
-                 == wrap_idx{1ull << (1'000u % ring_bits)});
+   static_assert(
+      cat::wrap_shl(wrap_idx{1}, 1'000u)
+      == wrap_idx{1ull << (1'000u % ring_bits)}
+   );
 
    // Zero count is a no-op.
-   static_assert(cat::wrap_shl(wrap_idx{cat::idx_max}, 0u)
-                 == wrap_idx{cat::idx_max});
+   static_assert(
+      cat::wrap_shl(wrap_idx{cat::idx_max}, 0u) == wrap_idx{cat::idx_max}
+   );
 
    // Zero value stays zero for any count.
    static_assert(cat::wrap_shl(wrap_idx{0}, 100u) == wrap_idx{0});
 
    // All-ones-in-ring (`idx_max`) rotates to itself.
-   static_assert(cat::wrap_shl(wrap_idx{cat::idx_max}, 5u)
-                 == wrap_idx{cat::idx_max});
-   static_assert(cat::wrap_shl(wrap_idx{cat::idx_max}, 1'000u)
-                 == wrap_idx{cat::idx_max});
+   static_assert(
+      cat::wrap_shl(wrap_idx{cat::idx_max}, 5u) == wrap_idx{cat::idx_max}
+   );
+   static_assert(
+      cat::wrap_shl(wrap_idx{cat::idx_max}, 1'000u) == wrap_idx{cat::idx_max}
+   );
 
    // The result always has bit 63 cleared (the `basic_idx` invariant).
-   static_assert((cat::wrap_shl(wrap_idx{cat::idx_max}, 1u).raw & (1ull << 63u))
-                 == 0u);
-   static_assert((cat::wrap_shl(wrap_idx{1ull << 62u}, 3u).raw & (1ull << 63u))
-                 == 0u);
+   static_assert(
+      (cat::wrap_shl(wrap_idx{cat::idx_max}, 1u).raw & (1ull << 63u)) == 0u
+   );
+   static_assert(
+      (cat::wrap_shl(wrap_idx{1ull << 62u}, 3u).raw & (1ull << 63u)) == 0u
+   );
 
    cat::verify(cat::wrap_shl(wrap_idx{1}, 1u) == wrap_idx{2});
-   cat::verify(cat::wrap_shl(wrap_idx{1ull << (ring_bits - 1u)}, 1u)
-               == wrap_idx{1});
+   cat::verify(
+      cat::wrap_shl(wrap_idx{1ull << (ring_bits - 1u)}, 1u) == wrap_idx{1}
+   );
    cat::verify(cat::wrap_shl(wrap_idx{1}, ring_bits) == wrap_idx{1});
    cat::verify(cat::wrap_shl(wrap_idx{1}, ring_bits + 1u) == wrap_idx{2});
    cat::verify(cat::wrap_shl(wrap_idx{1}, ring_bits * 2u) == wrap_idx{1});
-   cat::verify(cat::wrap_shl(wrap_idx{cat::idx_max}, 0u)
-               == wrap_idx{cat::idx_max});
+   cat::verify(
+      cat::wrap_shl(wrap_idx{cat::idx_max}, 0u) == wrap_idx{cat::idx_max}
+   );
    cat::verify(cat::wrap_shl(wrap_idx{0}, 100u) == wrap_idx{0});
-   cat::verify(cat::wrap_shl(wrap_idx{cat::idx_max}, 5u)
-               == wrap_idx{cat::idx_max});
-   cat::verify((cat::wrap_shl(wrap_idx{cat::idx_max}, 1u).raw & (1ull << 63u))
-               == 0u);
-   cat::verify((cat::wrap_shl(wrap_idx{1ull << 62u}, 3u).raw & (1ull << 63u))
-               == 0u);
+   cat::verify(
+      cat::wrap_shl(wrap_idx{cat::idx_max}, 5u) == wrap_idx{cat::idx_max}
+   );
+   cat::verify(
+      (cat::wrap_shl(wrap_idx{cat::idx_max}, 1u).raw & (1ull << 63u)) == 0u
+   );
+   cat::verify(
+      (cat::wrap_shl(wrap_idx{1ull << 62u}, 3u).raw & (1ull << 63u)) == 0u
+   );
 }
 
 $test(arithmetic_wrap_shr_index) {
@@ -4341,48 +4493,58 @@ $test(arithmetic_wrap_shr_index) {
    static_assert(cat::wrap_shr(wrap_idx{4}, 1u) == wrap_idx{2});
    static_assert(
       cat::wrap_shr(wrap_idx{1ull << (ring_bits - 1u)}, ring_bits - 1u)
-      == wrap_idx{1});
+      == wrap_idx{1}
+   );
 
    // Bit 0 rotates around to bit `ring_bits - 1` -- NOT to bit 63.
-   static_assert(cat::wrap_shr(wrap_idx{1}, 1u)
-                 == wrap_idx{1ull << (ring_bits - 1u)});
+   static_assert(
+      cat::wrap_shr(wrap_idx{1}, 1u) == wrap_idx{1ull << (ring_bits - 1u)}
+   );
 
    // Count taken modulo `ring_bits`.
    static_assert(cat::wrap_shr(wrap_idx{1}, ring_bits) == wrap_idx{1});
    static_assert(cat::wrap_shr(wrap_idx{2}, ring_bits + 1u) == wrap_idx{1});
 
    // Inverse property: rotating left then right restores the value.
-   static_assert(cat::wrap_shr(cat::wrap_shl(wrap_idx{0x1234}, 7u), 7u)
-                 == wrap_idx{0x1234});
+   static_assert(
+      cat::wrap_shr(cat::wrap_shl(wrap_idx{0x1234}, 7u), 7u) == wrap_idx{0x1234}
+   );
 
    // Zero count is a no-op.
-   static_assert(cat::wrap_shr(wrap_idx{cat::idx_max}, 0u)
-                 == wrap_idx{cat::idx_max});
+   static_assert(
+      cat::wrap_shr(wrap_idx{cat::idx_max}, 0u) == wrap_idx{cat::idx_max}
+   );
 
    // Zero value stays zero.
    static_assert(cat::wrap_shr(wrap_idx{0}, 100u) == wrap_idx{0});
 
    // All-ones-in-ring rotates to itself.
-   static_assert(cat::wrap_shr(wrap_idx{cat::idx_max}, 5u)
-                 == wrap_idx{cat::idx_max});
+   static_assert(
+      cat::wrap_shr(wrap_idx{cat::idx_max}, 5u) == wrap_idx{cat::idx_max}
+   );
 
    // Result always has bit 63 cleared.
    static_assert((cat::wrap_shr(wrap_idx{1}, 1u).raw & (1ull << 63u)) == 0u);
-   static_assert((cat::wrap_shr(wrap_idx{cat::idx_max}, 1u).raw & (1ull << 63u))
-                 == 0u);
+   static_assert(
+      (cat::wrap_shr(wrap_idx{cat::idx_max}, 1u).raw & (1ull << 63u)) == 0u
+   );
 
    cat::verify(cat::wrap_shr(wrap_idx{4}, 1u) == wrap_idx{2});
-   cat::verify(cat::wrap_shr(wrap_idx{1}, 1u)
-               == wrap_idx{1ull << (ring_bits - 1u)});
+   cat::verify(
+      cat::wrap_shr(wrap_idx{1}, 1u) == wrap_idx{1ull << (ring_bits - 1u)}
+   );
    cat::verify(cat::wrap_shr(wrap_idx{1}, ring_bits) == wrap_idx{1});
-   cat::verify(cat::wrap_shr(cat::wrap_shl(wrap_idx{0x1234}, 7u), 7u)
-               == wrap_idx{0x1234});
+   cat::verify(
+      cat::wrap_shr(cat::wrap_shl(wrap_idx{0x1234}, 7u), 7u) == wrap_idx{0x1234}
+   );
    cat::verify(cat::wrap_shr(wrap_idx{0}, 100u) == wrap_idx{0});
-   cat::verify(cat::wrap_shr(wrap_idx{cat::idx_max}, 5u)
-               == wrap_idx{cat::idx_max});
+   cat::verify(
+      cat::wrap_shr(wrap_idx{cat::idx_max}, 5u) == wrap_idx{cat::idx_max}
+   );
    cat::verify((cat::wrap_shr(wrap_idx{1}, 1u).raw & (1ull << 63u)) == 0u);
-   cat::verify((cat::wrap_shr(wrap_idx{cat::idx_max}, 1u).raw & (1ull << 63u))
-               == 0u);
+   cat::verify(
+      (cat::wrap_shr(wrap_idx{cat::idx_max}, 1u).raw & (1ull << 63u)) == 0u
+   );
 }
 
 $test(arithmetic_wrap_add_mul_and_overflow_reference_constexpr) {
@@ -4416,7 +4578,8 @@ $test(arithmetic_wrap_add_mul_and_overflow_reference_constexpr) {
 }
 
 $test(
-   arithmetic_promotion_hierarchy_overflow_semantics_and_strong_overflow_types) {
+   arithmetic_promotion_hierarchy_overflow_semantics_and_strong_overflow_types
+) {
    // Test overflow semantics.
    int4 safe_int = int4::max();
    cat::verify((safe_int.wrap() + 100) == cat::int4_min + 99);
@@ -4470,15 +4633,20 @@ $test(arithmetic_binary_ops_take_lhs_overflow_policy) {
 
    // Same-width pairs preserve LHS's policy regardless of RHS's policy.
    static_assert(
-      is_same<decltype(cat::wrap_int4() + cat::int4()), cat::wrap_int4>);
+      is_same<decltype(cat::wrap_int4() + cat::int4()), cat::wrap_int4>
+   );
    static_assert(
-      is_same<decltype(cat::wrap_int4() + cat::sat_int4()), cat::wrap_int4>);
+      is_same<decltype(cat::wrap_int4() + cat::sat_int4()), cat::wrap_int4>
+   );
    static_assert(
-      is_same<decltype(cat::sat_int4() + cat::wrap_int4()), cat::sat_int4>);
+      is_same<decltype(cat::sat_int4() + cat::wrap_int4()), cat::sat_int4>
+   );
    static_assert(
-      is_same<decltype(cat::wrap_int4() - cat::sat_int4()), cat::wrap_int4>);
+      is_same<decltype(cat::wrap_int4() - cat::sat_int4()), cat::wrap_int4>
+   );
    static_assert(
-      is_same<decltype(cat::sat_int4() - cat::wrap_int4()), cat::sat_int4>);
+      is_same<decltype(cat::sat_int4() - cat::wrap_int4()), cat::sat_int4>
+   );
 
    // `wrap`/`saturate` LHS NEVER widens, even on + / *: the user opted into a
    // fixed-width well-defined overflow domain, and silently growing into a
@@ -4491,7 +4659,8 @@ $test(arithmetic_binary_ops_take_lhs_overflow_policy) {
    static_assert(is_same<decltype(cat::wrap_int4() - iword()), cat::wrap_int4>);
    static_assert(is_same<decltype(cat::sat_int4() / iword()), cat::sat_int4>);
    static_assert(
-      is_same<decltype(cat::wrap_uint4() % cat::uword()), cat::wrap_uint4>);
+      is_same<decltype(cat::wrap_uint4() % cat::uword()), cat::wrap_uint4>
+   );
 
    // When the LHS is wider, the result is the LHS's exact type.
    static_assert(is_same<decltype(wrap_uword() + cat::uint4()), wrap_uword>);
@@ -4512,11 +4681,14 @@ $test(arithmetic_binary_ops_take_lhs_overflow_policy) {
    // narrower RHS zero-extends into the LHS width, but a wider RHS would have
    // to silently truncate so it is rejected.
    static_assert(
-      is_same<decltype(cat::wrap_uint4() & cat::uint4()), cat::wrap_uint4>);
+      is_same<decltype(cat::wrap_uint4() & cat::uint4()), cat::wrap_uint4>
+   );
    static_assert(
-      is_same<decltype(cat::sat_uint4() | cat::wrap_uint4()), cat::sat_uint4>);
+      is_same<decltype(cat::sat_uint4() | cat::wrap_uint4()), cat::sat_uint4>
+   );
    static_assert(
-      is_same<decltype(cat::wrap_uint4() ^ cat::uint4()), cat::wrap_uint4>);
+      is_same<decltype(cat::wrap_uint4() ^ cat::uint4()), cat::wrap_uint4>
+   );
 
    // The runtime semantics still come from the LHS.
    {
@@ -4582,14 +4754,22 @@ $test(arithmetic_binary_ops_width_rules) {
 
    // Narrower raw integers also widen on the friend reverse operator, so a raw
    // `unsigned char` works without an explicit cast.
-   static_assert(is_same<decltype(static_cast<unsigned char>(0) & cat::uword()),
-                         cat::uword>);
-   static_assert(is_same<decltype(cat::uword() & static_cast<unsigned char>(0)),
-                         cat::uword>);
-   static_assert(is_same<decltype(static_cast<unsigned char>(0) ^ cat::uword()),
-                         cat::uword>);
-   static_assert(is_same<decltype(cat::uword() ^ static_cast<unsigned char>(0)),
-                         cat::uword>);
+   static_assert(
+      is_same<
+         decltype(static_cast<unsigned char>(0) & cat::uword()), cat::uword>
+   );
+   static_assert(
+      is_same<
+         decltype(cat::uword() & static_cast<unsigned char>(0)), cat::uword>
+   );
+   static_assert(
+      is_same<
+         decltype(static_cast<unsigned char>(0) ^ cat::uword()), cat::uword>
+   );
+   static_assert(
+      is_same<
+         decltype(cat::uword() ^ static_cast<unsigned char>(0)), cat::uword>
+   );
 
    {
       cat::uword value = 0xf0u;
@@ -4809,9 +4989,11 @@ $test(arithmetic_signed_and_idx_arithmetic_shift) {
 
    // Cross-policy still propagates the LHS policy on signed / `idx` shifts.
    static_assert(
-      is_same<decltype(cat::wrap_int4() << uint4()), cat::wrap_int4>);
+      is_same<decltype(cat::wrap_int4() << uint4()), cat::wrap_int4>
+   );
    static_assert(
-      is_same<decltype(cat::wrap_int4() >> uint4()), cat::wrap_int4>);
+      is_same<decltype(cat::wrap_int4() >> uint4()), cat::wrap_int4>
+   );
 
    // Same-type signed-by-signed compiles now: the LHS dispatches into
    // `shift_left_by(int4)` with no signed-ness constraint on `U`. The RHS is
@@ -5013,7 +5195,8 @@ $test(arithmetic_signed_modulo_is_remainder) {
    static_assert(cat::is_same<decltype(int8() % uint4()), int8>);
    // Wrapping policy on the LHS propagates through the LHS-shaped result.
    static_assert(
-      cat::is_same<decltype(cat::wrap_int4() % uint4()), cat::wrap_int4>);
+      cat::is_same<decltype(cat::wrap_int4() % uint4()), cat::wrap_int4>
+   );
 }
 
 // Narrowing into a saturating destination clamps to the destination's range,
@@ -5036,13 +5219,16 @@ $test(arithmetic_saturating_and_wrapping_narrowing_casts) {
    // max into `U` and break the comparison if it ran.
    static_assert(
       cat::sat_cast<__INT64_TYPE__>(static_cast<__INT32_TYPE__>(10'000))
-      == 10'000);
+      == 10'000
+   );
    static_assert(
       cat::sat_cast<__INT64_TYPE__>(cat::limits<__INT32_TYPE__>::max())
-      == cat::limits<__INT32_TYPE__>::max());
+      == cat::limits<__INT32_TYPE__>::max()
+   );
    static_assert(
       cat::sat_cast<__UINT64_TYPE__>(cat::limits<__UINT32_TYPE__>::max())
-      == cat::limits<__UINT32_TYPE__>::max());
+      == cat::limits<__UINT32_TYPE__>::max()
+   );
 
    // Signed -> unsigned: negative clamps to 0, large clamps to max.
    static_assert(cat::sat_cast<__UINT8_TYPE__>(-50) == 0u);
@@ -5050,52 +5236,71 @@ $test(arithmetic_saturating_and_wrapping_narrowing_casts) {
    // Signed -> unsigned, widening: non-negative round-trips and the
    // `limits<T>::max()` boundary survives because the size-based fast path
    // skips the bogus narrow-and-compare.
-   static_assert(cat::sat_cast<__UINT64_TYPE__>(static_cast<__INT8_TYPE__>(42))
-                 == 42u);
+   static_assert(
+      cat::sat_cast<__UINT64_TYPE__>(static_cast<__INT8_TYPE__>(42)) == 42u
+   );
    static_assert(
       cat::sat_cast<__UINT64_TYPE__>(static_cast<__INT32_TYPE__>(2'000'000'000))
-      == 2'000'000'000u);
-   static_assert(cat::sat_cast<__UINT64_TYPE__>(static_cast<__INT64_TYPE__>(-1))
-                 == 0u);
+      == 2'000'000'000u
+   );
    static_assert(
-      cat::sat_cast<__UINT64_TYPE__>(cat::limits<__INT64_TYPE__>::min()) == 0u);
+      cat::sat_cast<__UINT64_TYPE__>(static_cast<__INT64_TYPE__>(-1)) == 0u
+   );
+   static_assert(
+      cat::sat_cast<__UINT64_TYPE__>(cat::limits<__INT64_TYPE__>::min()) == 0u
+   );
    static_assert(
       cat::sat_cast<__UINT64_TYPE__>(cat::limits<__INT64_TYPE__>::max())
-      == static_cast<__UINT64_TYPE__>(cat::limits<__INT64_TYPE__>::max()));
+      == static_cast<__UINT64_TYPE__>(cat::limits<__INT64_TYPE__>::max())
+   );
    // Signed -> unsigned, same width: max signed fits, negative clamps to 0.
    static_assert(
       cat::sat_cast<__UINT32_TYPE__>(cat::limits<__INT32_TYPE__>::max())
-      == 2'147'483'647u);
-   static_assert(cat::sat_cast<__UINT32_TYPE__>(static_cast<__INT32_TYPE__>(-1))
-                 == 0u);
+      == 2'147'483'647u
+   );
+   static_assert(
+      cat::sat_cast<__UINT32_TYPE__>(static_cast<__INT32_TYPE__>(-1)) == 0u
+   );
    // Signed -> unsigned, narrowing: clamp top, in-range round-trip, and the
    // most-negative source clamps to 0.
-   static_assert(cat::sat_cast<__UINT8_TYPE__>(static_cast<__INT32_TYPE__>(255))
-                 == 255u);
-   static_assert(cat::sat_cast<__UINT8_TYPE__>(static_cast<__INT32_TYPE__>(256))
-                 == 255u);
-   static_assert(cat::sat_cast<__UINT8_TYPE__>(static_cast<__INT32_TYPE__>(0))
-                 == 0u);
    static_assert(
-      cat::sat_cast<__UINT8_TYPE__>(cat::limits<__INT64_TYPE__>::min()) == 0u);
+      cat::sat_cast<__UINT8_TYPE__>(static_cast<__INT32_TYPE__>(255)) == 255u
+   );
+   static_assert(
+      cat::sat_cast<__UINT8_TYPE__>(static_cast<__INT32_TYPE__>(256)) == 255u
+   );
+   static_assert(
+      cat::sat_cast<__UINT8_TYPE__>(static_cast<__INT32_TYPE__>(0)) == 0u
+   );
+   static_assert(
+      cat::sat_cast<__UINT8_TYPE__>(cat::limits<__INT64_TYPE__>::min()) == 0u
+   );
 
    // Unsigned -> signed: any value above signed max clamps to signed max.
    static_assert(cat::sat_cast<__INT8_TYPE__>(1'000'000u) == 127);
-   static_assert(cat::sat_cast<__INT32_TYPE__>(static_cast<unsigned int>(-1))
-                 == cat::int4_max.raw);
+   static_assert(
+      cat::sat_cast<__INT32_TYPE__>(static_cast<unsigned int>(-1))
+      == cat::int4_max.raw
+   );
    // Unsigned -> signed, widening: every value fits a strictly wider signed
    // destination.
    static_assert(
       cat::sat_cast<__INT64_TYPE__>(cat::limits<__UINT32_TYPE__>::max())
-      == static_cast<__INT64_TYPE__>(cat::limits<__UINT32_TYPE__>::max()));
+      == static_cast<__INT64_TYPE__>(cat::limits<__UINT32_TYPE__>::max())
+   );
    // Unsigned -> signed, same width: at the boundary clamps to signed max.
-   static_assert(cat::sat_cast<__INT32_TYPE__>(static_cast<__UINT32_TYPE__>(
-                    cat::limits<__INT32_TYPE__>::max()))
-                 == cat::limits<__INT32_TYPE__>::max());
    static_assert(
       cat::sat_cast<__INT32_TYPE__>(
-         static_cast<__UINT32_TYPE__>(cat::limits<__INT32_TYPE__>::max()) + 1u)
-      == cat::limits<__INT32_TYPE__>::max());
+         static_cast<__UINT32_TYPE__>(cat::limits<__INT32_TYPE__>::max())
+      )
+      == cat::limits<__INT32_TYPE__>::max()
+   );
+   static_assert(
+      cat::sat_cast<__INT32_TYPE__>(
+         static_cast<__UINT32_TYPE__>(cat::limits<__INT32_TYPE__>::max()) + 1u
+      )
+      == cat::limits<__INT32_TYPE__>::max()
+   );
 
    // Saturating implicit construction at runtime.
    {
@@ -5147,12 +5352,13 @@ $test(arithmetic_saturating_and_wrapping_narrowing_casts) {
 
    // The runtime saturating constructor really is implicit (it would not
    // compile in a copy-init context if it were `explicit`).
-   static_assert(is_same<decltype([] {
-                            cat::iword w = 1;
-                            cat::sat_int4 s = w;
-                            return s;
-                         }()),
-                         cat::sat_int4>);
+   static_assert(is_same<
+                 decltype([] {
+                    cat::iword w = 1;
+                    cat::sat_int4 s = w;
+                    return s;
+                 }()),
+                 cat::sat_int4>);
 }
 
 $test(arithmetic_uword_mixed_word_operations) {
@@ -5275,8 +5481,9 @@ $test(arithmetic_float_construction_raw_assignment_and_bit_cast) {
    int const int_into_float_1 = -2'024;
    float4 from_int{int_into_float_1};
    cat::verify(from_int == static_cast<float>(int_into_float_1));
-   cat::verify(float4(int_into_float_1).raw
-               == static_cast<float>(int_into_float_1));
+   cat::verify(
+      float4(int_into_float_1).raw == static_cast<float>(int_into_float_1)
+   );
    int runtime_int = 12;
    from_int = float4{runtime_int};
    cat::verify(from_int == 12_f4);
@@ -5289,8 +5496,9 @@ $test(arithmetic_float_construction_raw_assignment_and_bit_cast) {
    int const int_into_float_2 = 16'777'216;
    from_int = float4{int_into_float_2};
    cat::verify(from_int == static_cast<float>(int_into_float_2));
-   cat::verify(float4(int_into_float_2).raw
-               == static_cast<float>(int_into_float_2));
+   cat::verify(
+      float4(int_into_float_2).raw == static_cast<float>(int_into_float_2)
+   );
 
    constexpr float8 float8_zero = 0;
    constexpr float8 float8_negative = -2'024;
@@ -5325,7 +5533,8 @@ $test(arithmetic_float_construction_raw_assignment_and_bit_cast) {
 }
 
 $test(
-   arithmetic_float8_binary_operations_ordering_limits_and_float4_promotion) {
+   arithmetic_float8_binary_operations_ordering_limits_and_float4_promotion
+) {
    float8 a = 3.5_f8;
    float8 b = 2_f8;
    cat::verify(a + b == 5.5_f8);
@@ -5345,7 +5554,8 @@ $test(
 }
 
 $test(
-   arithmetic_float4_binary_ops_raw_float_ordering_limits_make_signed_and_compound) {
+   arithmetic_float4_binary_ops_raw_float_ordering_limits_make_signed_and_compound
+) {
    float4 x = 10_f4;
    float4 y = 4_f4;
    cat::verify(x + y == 14_f4);
@@ -5713,27 +5923,37 @@ $test(arithmetic_semantics_explicit_cast_through_sat_accessor) {
 $test(arithmetic_semantics_overflow_policy_propagates_via_lhs) {
    // LHS policy wins.
    static_assert(
-      cat::is_same<decltype(cat::wrap_int4{} + cat::int4{}), cat::wrap_int4>);
+      cat::is_same<decltype(cat::wrap_int4{} + cat::int4{}), cat::wrap_int4>
+   );
    static_assert(
-      cat::is_same<decltype(cat::sat_int4{} + cat::int4{}), cat::sat_int4>);
+      cat::is_same<decltype(cat::sat_int4{} + cat::int4{}), cat::sat_int4>
+   );
    static_assert(
-      cat::is_same<decltype(cat::int4{} + cat::wrap_int4{}), cat::int4>);
+      cat::is_same<decltype(cat::int4{} + cat::wrap_int4{}), cat::int4>
+   );
    static_assert(
-      cat::is_same<decltype(cat::int4{} + cat::sat_int4{}), cat::int4>);
+      cat::is_same<decltype(cat::int4{} + cat::sat_int4{}), cat::int4>
+   );
 
    // -, *, &, | likewise.
    static_assert(
-      cat::is_same<decltype(cat::wrap_int4{} - cat::int4{}), cat::wrap_int4>);
+      cat::is_same<decltype(cat::wrap_int4{} - cat::int4{}), cat::wrap_int4>
+   );
    static_assert(
-      cat::is_same<decltype(cat::sat_int4{} - cat::int4{}), cat::sat_int4>);
+      cat::is_same<decltype(cat::sat_int4{} - cat::int4{}), cat::sat_int4>
+   );
    static_assert(
-      cat::is_same<decltype(cat::wrap_int4{} * cat::int4{}), cat::wrap_int4>);
+      cat::is_same<decltype(cat::wrap_int4{} * cat::int4{}), cat::wrap_int4>
+   );
    static_assert(
-      cat::is_same<decltype(cat::sat_int4{} * cat::int4{}), cat::sat_int4>);
-   static_assert(cat::is_same<decltype(cat::wrap_uint4{} & cat::uint4{}),
-                              cat::wrap_uint4>);
+      cat::is_same<decltype(cat::sat_int4{} * cat::int4{}), cat::sat_int4>
+   );
    static_assert(
-      cat::is_same<decltype(cat::sat_uint4{} | cat::uint4{}), cat::sat_uint4>);
+      cat::is_same<decltype(cat::wrap_uint4{} & cat::uint4{}), cat::wrap_uint4>
+   );
+   static_assert(
+      cat::is_same<decltype(cat::sat_uint4{} | cat::uint4{}), cat::sat_uint4>
+   );
 }
 
 // Promotion rules.
@@ -5753,27 +5973,37 @@ $test(arithmetic_semantics_promotion_rules) {
 
    // `wrap`/`saturate` LHS NEVER promote, even when RHS is wider.
    static_assert(
-      cat::is_same<decltype(cat::wrap_int1{} + int4{}), cat::wrap_int1>);
+      cat::is_same<decltype(cat::wrap_int1{} + int4{}), cat::wrap_int1>
+   );
    static_assert(
-      cat::is_same<decltype(cat::wrap_int1{} * int4{}), cat::wrap_int1>);
+      cat::is_same<decltype(cat::wrap_int1{} * int4{}), cat::wrap_int1>
+   );
    static_assert(
-      cat::is_same<decltype(cat::sat_int1{} + int4{}), cat::sat_int1>);
+      cat::is_same<decltype(cat::sat_int1{} + int4{}), cat::sat_int1>
+   );
    static_assert(
-      cat::is_same<decltype(cat::sat_int1{} * int4{}), cat::sat_int1>);
+      cat::is_same<decltype(cat::sat_int1{} * int4{}), cat::sat_int1>
+   );
    static_assert(
-      cat::is_same<decltype(cat::wrap_uint1{} + uint4{}), cat::wrap_uint1>);
+      cat::is_same<decltype(cat::wrap_uint1{} + uint4{}), cat::wrap_uint1>
+   );
    static_assert(
-      cat::is_same<decltype(cat::sat_uint1{} + uint4{}), cat::sat_uint1>);
+      cat::is_same<decltype(cat::sat_uint1{} + uint4{}), cat::sat_uint1>
+   );
 
    // `wrap`/`saturate` - keeps LHS shape too.
    static_assert(
-      cat::is_same<decltype(cat::wrap_int1{} - int4{}), cat::wrap_int1>);
+      cat::is_same<decltype(cat::wrap_int1{} - int4{}), cat::wrap_int1>
+   );
    static_assert(
-      cat::is_same<decltype(cat::sat_int1{} - int4{}), cat::sat_int1>);
+      cat::is_same<decltype(cat::sat_int1{} - int4{}), cat::sat_int1>
+   );
    static_assert(
-      cat::is_same<decltype(cat::wrap_uint1{} - uint4{}), cat::wrap_uint1>);
+      cat::is_same<decltype(cat::wrap_uint1{} - uint4{}), cat::wrap_uint1>
+   );
    static_assert(
-      cat::is_same<decltype(cat::sat_uint1{} - uint4{}), cat::sat_uint1>);
+      cat::is_same<decltype(cat::sat_uint1{} - uint4{}), cat::sat_uint1>
+   );
 
    // `undefined` UNSIGNED - does NOT promote.
    static_assert(cat::is_same<decltype(uint1{} - uint4{}), uint1>);
@@ -6177,24 +6407,31 @@ $test(arithmetic_semantics_member_matches_free_function) {
       constexpr unsigned b = 5u;
       static_assert((wrap_uint4{a} + wrap_uint4{b}).raw == cat::wrap_add(a, b));
       static_assert((wrap_uint4{a} * wrap_uint4{b}).raw == cat::wrap_mul(a, b));
-      static_assert((wrap_uint4{0u} - wrap_uint4{1u}).raw
-                    == cat::wrap_sub(0u, 1u));
-      static_assert((wrap_uint4{a} / wrap_uint4{2u}).raw
-                    == cat::wrap_div(a, 2u));
-      static_assert((wrap_uint4{a} << wrap_uint4{1u}).raw
-                    == cat::wrap_shl(a, 1u));
-      static_assert((wrap_uint4{1u} >> wrap_uint4{1u}).raw
-                    == cat::wrap_shr(1u, 1u));
+      static_assert(
+         (wrap_uint4{0u} - wrap_uint4{1u}).raw == cat::wrap_sub(0u, 1u)
+      );
+      static_assert(
+         (wrap_uint4{a} / wrap_uint4{2u}).raw == cat::wrap_div(a, 2u)
+      );
+      static_assert(
+         (wrap_uint4{a} << wrap_uint4{1u}).raw == cat::wrap_shl(a, 1u)
+      );
+      static_assert(
+         (wrap_uint4{1u} >> wrap_uint4{1u}).raw == cat::wrap_shr(1u, 1u)
+      );
 
       cat::verify((wrap_uint4{a} + wrap_uint4{b}).raw == cat::wrap_add(a, b));
       cat::verify((wrap_uint4{a} * wrap_uint4{b}).raw == cat::wrap_mul(a, b));
-      cat::verify((wrap_uint4{0u} - wrap_uint4{1u}).raw
-                  == cat::wrap_sub(0u, 1u));
+      cat::verify(
+         (wrap_uint4{0u} - wrap_uint4{1u}).raw == cat::wrap_sub(0u, 1u)
+      );
       cat::verify((wrap_uint4{a} / wrap_uint4{2u}).raw == cat::wrap_div(a, 2u));
-      cat::verify((wrap_uint4{a} << wrap_uint4{1u}).raw
-                  == cat::wrap_shl(a, 1u));
-      cat::verify((wrap_uint4{1u} >> wrap_uint4{1u}).raw
-                  == cat::wrap_shr(1u, 1u));
+      cat::verify(
+         (wrap_uint4{a} << wrap_uint4{1u}).raw == cat::wrap_shl(a, 1u)
+      );
+      cat::verify(
+         (wrap_uint4{1u} >> wrap_uint4{1u}).raw == cat::wrap_shr(1u, 1u)
+      );
    }
    {
       // `sat_uint4`: saturating clamp at max.
@@ -6202,12 +6439,14 @@ $test(arithmetic_semantics_member_matches_free_function) {
       constexpr unsigned b = 5u;
       static_assert((sat_uint4{a} + sat_uint4{b}).raw == cat::sat_add(a, b));
       static_assert((sat_uint4{a} * sat_uint4{b}).raw == cat::sat_mul(a, b));
-      static_assert((sat_uint4{0u} - sat_uint4{1u}).raw
-                    == cat::sat_sub(0u, 1u));
+      static_assert(
+         (sat_uint4{0u} - sat_uint4{1u}).raw == cat::sat_sub(0u, 1u)
+      );
       static_assert((sat_uint4{a} / sat_uint4{2u}).raw == cat::sat_div(a, 2u));
       static_assert((sat_uint4{a} << sat_uint4{1u}).raw == cat::sat_shl(a, 1u));
-      static_assert((sat_uint4{1u} >> sat_uint4{1u}).raw
-                    == cat::sat_shr(1u, 1u));
+      static_assert(
+         (sat_uint4{1u} >> sat_uint4{1u}).raw == cat::sat_shr(1u, 1u)
+      );
 
       cat::verify((sat_uint4{a} + sat_uint4{b}).raw == cat::sat_add(a, b));
       cat::verify((sat_uint4{a} * sat_uint4{b}).raw == cat::sat_mul(a, b));
@@ -6267,19 +6506,25 @@ $test(arithmetic_semantics_member_matches_free_function) {
       using wrap_idx = cat::basic_idx<cat::overflow_policies::wrap>;
       using sat_idx = cat::basic_idx<cat::overflow_policies::saturate>;
       constexpr __SIZE_TYPE__ bit_62 = static_cast<__SIZE_TYPE__>(1) << 62u;
-      static_assert((wrap_idx{bit_62} << 1u).raw
-                    == cat::wrap_shl(wrap_idx{bit_62}, 1u).raw);
-      static_assert((wrap_idx{1u} >> 1u).raw
-                    == cat::wrap_shr(wrap_idx{1u}, 1u).raw);
-      static_assert((sat_idx{bit_62} << 1u).raw
-                    == cat::sat_shl(sat_idx{bit_62}, 1u).raw);
-      static_assert((sat_idx{1u} >> 1u).raw
-                    == cat::sat_shr(sat_idx{1u}, 1u).raw);
+      static_assert(
+         (wrap_idx{bit_62} << 1u).raw == cat::wrap_shl(wrap_idx{bit_62}, 1u).raw
+      );
+      static_assert(
+         (wrap_idx{1u} >> 1u).raw == cat::wrap_shr(wrap_idx{1u}, 1u).raw
+      );
+      static_assert(
+         (sat_idx{bit_62} << 1u).raw == cat::sat_shl(sat_idx{bit_62}, 1u).raw
+      );
+      static_assert(
+         (sat_idx{1u} >> 1u).raw == cat::sat_shr(sat_idx{1u}, 1u).raw
+      );
 
-      cat::verify((wrap_idx{bit_62} << 1u).raw
-                  == cat::wrap_shl(wrap_idx{bit_62}, 1u).raw);
-      cat::verify((sat_idx{bit_62} << 1u).raw
-                  == cat::sat_shl(sat_idx{bit_62}, 1u).raw);
+      cat::verify(
+         (wrap_idx{bit_62} << 1u).raw == cat::wrap_shl(wrap_idx{bit_62}, 1u).raw
+      );
+      cat::verify(
+         (sat_idx{bit_62} << 1u).raw == cat::sat_shl(sat_idx{bit_62}, 1u).raw
+      );
    }
 }
 
@@ -6300,8 +6545,10 @@ expected_promoted_arithmetic() {
    if constexpr (policy != cat::overflow_policies::undefined) {
       // Overflow policies never promote. Always return LHS shape.
       return typename cat::detail::rebind_overflow_policy<L, policy>::type{};
-   } else if constexpr (cat::detail::integer_promotion_hierarchy<L>::order
-                        >= cat::detail::integer_promotion_hierarchy<R>::order) {
+   } else if constexpr (
+      cat::detail::integer_promotion_hierarchy<L>::order
+      >= cat::detail::integer_promotion_hierarchy<R>::order
+   ) {
       return typename cat::detail::rebind_overflow_policy<L, policy>::type{};
    } else {
       return typename cat::detail::rebind_overflow_policy<R, policy>::type{};
@@ -6322,8 +6569,8 @@ promotion_pair_matches_fn() -> bool {
    if constexpr (!has_promoted_type<L, R>) {
       return true;
    } else {
-      return cat::is_same<cat::detail::promoted_type<L, R>,
-                          expected_promoted_type<L, R>>;
+      return cat::is_same<
+         cat::detail::promoted_type<L, R>, expected_promoted_type<L, R>>;
    }
 }
 

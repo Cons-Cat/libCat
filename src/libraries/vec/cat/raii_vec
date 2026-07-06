@@ -44,16 +44,17 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    constexpr basic_vec() = delete ("`cat::raii::basic_vec` cannot be created "
                                    "without an allocator.");
 
-   constexpr basic_vec(allocator_ref<Allocator> allocator
-                       [[clang::lifetimebound]])
+   constexpr basic_vec(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   )
        : m_core(), m_allocator(allocator) {
    }
 
    constexpr basic_vec(basic_vec&&) = default;
 
-   constexpr basic_vec(basic_vec const&) = delete (
-      "Implicit copying of `cat::raii::basic_vec` is forbidden. Call "
-      "`.clone()` or move instead!");
+   constexpr basic_vec(basic_vec const&) =
+      delete ("Implicit copying of `cat::raii::basic_vec` is forbidden. Call "
+              "`.clone()` or move instead!");
 
    auto
    operator=(basic_vec const&)
@@ -73,8 +74,10 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
       } else {
          // TODO: Implement element-wise move across non-equal allocators.
          if !consteval {
-            cat::assert(false, "raii::basic_vec move-assign across non-equal "
-                               "allocators is not yet implemented.");
+            cat::assert(
+               false, "raii::basic_vec move-assign across non-equal "
+                      "allocators is not yet implemented."
+            );
          }
       }
       return *this;
@@ -266,8 +269,9 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<NewAllocator> allocator)
-      const& -> maybe<basic_vec<T, NewAllocator>> {
+   clone(
+      allocator_ref<NewAllocator> allocator
+   ) const& -> maybe<basic_vec<T, NewAllocator>> {
       basic_vec<T, NewAllocator> new_vector(allocator);
       new_vector.m_core = $prop(m_core.clone(allocator));
       return new_vector;
@@ -416,7 +420,9 @@ constexpr auto
 raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator> {
    raii::basic_vec<T, dyn_allocator> value(
       allocator_ref<dyn_allocator>(dyn_allocator(
-         const_cast<null_allocator&>(raii_vec_niche_null_allocator))));
+         const_cast<null_allocator&>(raii_vec_niche_null_allocator)
+      ))
+   );
    value.m_core = maybe_vec_nullopt<T>();
    return value;
 }
@@ -430,9 +436,8 @@ namespace cat {
 // bare `maybe<raii::vec<T>>` stays the size of `raii::vec<T>` itself.
 template <typename T>
 struct default_compact_trait<raii::basic_vec<T, dyn_allocator>>
-    : identity_trait<
-         compact<raii::basic_vec<T, dyn_allocator>,
-                 detail::raii_vec_has_value<T>, detail::raii_vec_nullopt<T>>> {
-};
+    : identity_trait<compact<
+         raii::basic_vec<T, dyn_allocator>, detail::raii_vec_has_value<T>,
+         detail::raii_vec_nullopt<T>>> {};
 
 }  // namespace cat

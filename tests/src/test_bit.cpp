@@ -164,10 +164,12 @@ $test(byte_bitwise_api) {
    static_assert(cat::has_single_bit(cat::byte(0b0001'0000u)));
    static_assert(cat::bit_floor(cat::byte(5u)) == 4u);
    static_assert(cat::bit_ceil(cat::byte(5u)) == 8u);
-   static_assert(cat::rotate_left(cat::byte(0b1000'0001u), cat::uword(1u))
-                 == 0b0000'0011u);
-   static_assert(cat::rotate_right(cat::byte(0b1000'0001u), cat::uword(1u))
-                 == 0b1100'0000u);
+   static_assert(
+      cat::rotate_left(cat::byte(0b1000'0001u), cat::uword(1u)) == 0b0000'0011u
+   );
+   static_assert(
+      cat::rotate_right(cat::byte(0b1000'0001u), cat::uword(1u)) == 0b1100'0000u
+   );
    static_assert(cat::countl_zero_raw(cat::byte(0x0Fu)).value() == 4u);
    static_assert(!cat::countl_zero_raw(cat::byte(0u)).has_value());
 
@@ -214,10 +216,12 @@ $test(bit_floor_and_ceil) {
    cat::verify(!cat::bit_ceil_raw(0x80000001u).has_value());
    cat::verify(
       cat::bit_ceil_raw(cat::idx(cat::limits<cat::idx>::high_bit)).value()
-      == cat::limits<cat::idx>::high_bit);
+      == cat::limits<cat::idx>::high_bit
+   );
    cat::verify(
       !cat::bit_ceil_raw(cat::idx(cat::limits<cat::idx>::high_bit + 1u))
-          .has_value());
+          .has_value()
+   );
    auto raw_bit_ceil_runtime = 0x80000001_u4;
    cat::verify(!cat::bit_ceil_raw(raw_bit_ceil_runtime).has_value());
 
@@ -233,24 +237,40 @@ $test(bit_floor_and_ceil) {
 $test(bit_rotate) {
    using namespace cat::arithmetic_literals;
 
-   static_assert(cat::rotate_left(0b1000'0001_u1, cat::uword(1u))
-                 == 0b0000'0011_u1);
-   static_assert(cat::rotate_right(0b1000'0001_u1, cat::uword(1u))
-                 == 0b1100'0000_u1);
-   static_assert(cat::rotate_left(0b1000'0001_u1, cat::uword(9u))
-                 == cat::rotate_left(0b1000'0001_u1, cat::uword(1u)));
-   cat::verify(cat::rotate_left(0b1000'0001_u1, cat::uword(9u))
-               == cat::rotate_left(0b1000'0001_u1, cat::uword(1u)));
-   cat::verify(cat::rotate_right(0b1000'0001_u1, cat::uword(9u))
-               == cat::rotate_right(0b1000'0001_u1, cat::uword(1u)));
-   static_assert(cat::rotate_left(0b1000'0001_u1, 6)
-                 == cat::rotate_left(0b1000'0001_u1, cat::uword(6u)));
-   static_assert(cat::rotate_right(0b1000'0001_u1, 6)
-                 == cat::rotate_right(0b1000'0001_u1, cat::uword(6u)));
-   static_assert(cat::rotate_left(0b1000'0001_u1, cat::iword(-1))
-                 == cat::rotate_right(0b1000'0001_u1, cat::uword(1u)));
-   static_assert(cat::rotate_right(0b1000'0001_u1, cat::iword(-1))
-                 == cat::rotate_left(0b1000'0001_u1, cat::uword(1u)));
+   static_assert(
+      cat::rotate_left(0b1000'0001_u1, cat::uword(1u)) == 0b0000'0011_u1
+   );
+   static_assert(
+      cat::rotate_right(0b1000'0001_u1, cat::uword(1u)) == 0b1100'0000_u1
+   );
+   static_assert(
+      cat::rotate_left(0b1000'0001_u1, cat::uword(9u))
+      == cat::rotate_left(0b1000'0001_u1, cat::uword(1u))
+   );
+   cat::verify(
+      cat::rotate_left(0b1000'0001_u1, cat::uword(9u))
+      == cat::rotate_left(0b1000'0001_u1, cat::uword(1u))
+   );
+   cat::verify(
+      cat::rotate_right(0b1000'0001_u1, cat::uword(9u))
+      == cat::rotate_right(0b1000'0001_u1, cat::uword(1u))
+   );
+   static_assert(
+      cat::rotate_left(0b1000'0001_u1, 6)
+      == cat::rotate_left(0b1000'0001_u1, cat::uword(6u))
+   );
+   static_assert(
+      cat::rotate_right(0b1000'0001_u1, 6)
+      == cat::rotate_right(0b1000'0001_u1, cat::uword(6u))
+   );
+   static_assert(
+      cat::rotate_left(0b1000'0001_u1, cat::iword(-1))
+      == cat::rotate_right(0b1000'0001_u1, cat::uword(1u))
+   );
+   static_assert(
+      cat::rotate_right(0b1000'0001_u1, cat::iword(-1))
+      == cat::rotate_left(0b1000'0001_u1, cat::uword(1u))
+   );
 }
 
 $test(bit_x64_helpers) {
@@ -339,8 +359,9 @@ $test(bit_ptr) {
    cat::bit_ptr bit_pointer = cat::make_bit_ptr_from_offset(bit_words, 1u);
    *bit_pointer = true;
    cat::verify(bit_words[0] == 0b0000'0010u);
-   cat::verify(cat::make_bit_ptr_from_mask(bit_words, 0b0000'0010u)
-               == bit_pointer);
+   cat::verify(
+      cat::make_bit_ptr_from_mask(bit_words, 0b0000'0010u) == bit_pointer
+   );
    bit_pointer[7] = true;
    cat::verify(bit_words[1] == 0b0000'0001u);
    cat::bit_ptr next_word_bit = bit_pointer + 8;

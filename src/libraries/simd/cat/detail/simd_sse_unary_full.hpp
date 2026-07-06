@@ -19,7 +19,8 @@ struct unary_full<op_rsqrt, float, Abi> {
       simd_type const minus_half_x = -0.5f * input;
       simd_type const three_halves = 1.5f;
       simd_type const correction = __builtin_elementwise_fma(
-         minus_half_x.raw, rsqrt.raw * rsqrt.raw, three_halves.raw);
+         minus_half_x.raw, rsqrt.raw * rsqrt.raw, three_halves.raw
+      );
       return rsqrt * correction;
    }
 };

@@ -86,8 +86,9 @@ $test(vec_maybe_niche) {
 $test(raii_vec_maybe_niche) {
    // `maybe<raii::vec<T>>` reuses the manual core's niche, so it stays the
    // size of `raii::vec<T>` itself just like `maybe<vec<T>>`.
-   static_assert(sizeof(cat::maybe<cat::raii::vec<int4>>)
-                 == sizeof(cat::raii::vec<int4>));
+   static_assert(
+      sizeof(cat::maybe<cat::raii::vec<int4>>) == sizeof(cat::raii::vec<int4>)
+   );
    cat::maybe<cat::raii::vec<int4>> empty_vec;
    cat::verify(!empty_vec.has_value());
 
@@ -643,8 +644,9 @@ $test(raii_vec_factories) {
    verify_all_ones(filled);
 
    cat::raii::vec static_filled =
-      cat::raii::make_vec_filled<int4, cat::linear_allocator>(arena.alloc, 3,
-                                                              9_i4)
+      cat::raii::make_vec_filled<int4, cat::linear_allocator>(
+         arena.alloc, 3, 9_i4
+      )
          .verify();
    cat::verify(static_filled.size() == 3);
    cat::verify(static_filled[2] == 9);

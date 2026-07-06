@@ -13,8 +13,10 @@ namespace cat {
 // the per-alternative `maybe` wrappers) remain readable.
 
 template <typename... Alternatives>
-   requires(type_list<Alternatives...>::is_all_references
-            || !type_list<Alternatives...>::is_any_reference)
+   requires(
+      type_list<Alternatives...>::is_all_references
+      || !type_list<Alternatives...>::is_any_reference
+   )
 template <idx index>
 constexpr auto
 variant<Alternatives...>::get(this auto&& self) -> decltype(auto)
@@ -28,14 +30,17 @@ variant<Alternatives...>::get(this auto&& self) -> decltype(auto)
 }
 
 template <typename... Alternatives>
-   requires(type_list<Alternatives...>::is_all_references
-            || !type_list<Alternatives...>::is_any_reference)
+   requires(
+      type_list<Alternatives...>::is_all_references
+      || !type_list<Alternatives...>::is_any_reference
+   )
 template <typename T>
 constexpr auto
 variant<Alternatives...>::get(this auto&& self) -> decltype(auto)
-   requires(types::template is_unique<T>
-            || (is_reference_variant
-                && types::template is_unique<add_lvalue_reference<T>>))
+   requires(
+      types::template is_unique<T>
+      || (is_reference_variant && types::template is_unique<add_lvalue_reference<T>>)
+   )
 {
    if constexpr (types::template has_type<T>) {
       return $fwd(self).as_base().template get<alternative_index<T>>();
@@ -47,14 +52,17 @@ variant<Alternatives...>::get(this auto&& self) -> decltype(auto)
 }
 
 template <typename... Alternatives>
-   requires(type_list<Alternatives...>::is_all_references
-            || !type_list<Alternatives...>::is_any_reference)
+   requires(
+      type_list<Alternatives...>::is_all_references
+      || !type_list<Alternatives...>::is_any_reference
+   )
 template <typename T>
 constexpr auto
 variant<Alternatives...>::get_ptr(this auto&& self)
-   requires(types::template is_unique<T>
-            || (is_reference_variant
-                && types::template is_unique<add_lvalue_reference<T>>))
+   requires(
+      types::template is_unique<T>
+      || (is_reference_variant && types::template is_unique<add_lvalue_reference<T>>)
+   )
 {
    using key =
       conditional<types::template has_type<T>, T, add_lvalue_reference<T>>;
@@ -67,8 +75,10 @@ variant<Alternatives...>::get_ptr(this auto&& self)
 }
 
 template <typename... Alternatives>
-   requires(type_list<Alternatives...>::is_all_references
-            || !type_list<Alternatives...>::is_any_reference)
+   requires(
+      type_list<Alternatives...>::is_all_references
+      || !type_list<Alternatives...>::is_any_reference
+   )
 template <idx index>
 constexpr auto
 variant<Alternatives...>::get_ptr(this auto&& self)
@@ -87,8 +97,10 @@ variant<Alternatives...>::get_ptr(this auto&& self)
 }
 
 template <typename... Alternatives>
-   requires(type_list<Alternatives...>::is_all_references
-            || !type_list<Alternatives...>::is_any_reference)
+   requires(
+      type_list<Alternatives...>::is_all_references
+      || !type_list<Alternatives...>::is_any_reference
+   )
 template <typename T>
 constexpr auto
 variant<Alternatives...>::get_if(this auto&& self)
@@ -103,14 +115,18 @@ variant<Alternatives...>::get_if(this auto&& self)
 }
 
 template <typename... Alternatives>
-   requires(type_list<Alternatives...>::is_all_references
-            || !type_list<Alternatives...>::is_any_reference)
+   requires(
+      type_list<Alternatives...>::is_all_references
+      || !type_list<Alternatives...>::is_any_reference
+   )
 template <typename T>
 constexpr auto
 variant<Alternatives...>::get_if(this auto&& self)
    -> maybe<add_lvalue_reference<T>>
-   requires(is_reference_variant && !types::template has_type<T>
-            && types::template is_unique<add_lvalue_reference<T>>)
+   requires(
+      is_reference_variant && !types::template has_type<T>
+      && types::template is_unique<add_lvalue_reference<T>>
+   )
 {
    using key = add_lvalue_reference<T>;
    auto&& base = $fwd(self).as_base();
@@ -121,8 +137,10 @@ variant<Alternatives...>::get_if(this auto&& self)
 }
 
 template <typename... Alternatives>
-   requires(type_list<Alternatives...>::is_all_references
-            || !type_list<Alternatives...>::is_any_reference)
+   requires(
+      type_list<Alternatives...>::is_all_references
+      || !type_list<Alternatives...>::is_any_reference
+   )
 template <idx index>
 constexpr auto
 variant<Alternatives...>::get_if(this auto&& self)

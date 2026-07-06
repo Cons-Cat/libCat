@@ -28,7 +28,8 @@ struct filter_view_impl : iterable_interface<> {
                }
 
                return loop_body($fwd(element));
-            });
+            }
+         );
       }
    };
 

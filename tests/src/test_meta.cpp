@@ -322,7 +322,8 @@ $test(meta_const_volatile) {
    static_assert(is_same<add_const<int const volatile>, int const volatile>);
    static_assert(is_same<add_const<int const volatile&>, int const volatile&>);
    static_assert(
-      is_same<add_const<int const volatile&&>, int const volatile&&>);
+      is_same<add_const<int const volatile&&>, int const volatile&&>
+   );
 
    static_assert(is_same<add_volatile<int>, int volatile>);
    static_assert(is_same<add_volatile<int&>, int volatile&>);
@@ -336,9 +337,11 @@ $test(meta_const_volatile) {
    static_assert(is_same<add_volatile<int const&&>, int const volatile&&>);
    static_assert(is_same<add_volatile<int const volatile>, int const volatile>);
    static_assert(
-      is_same<add_volatile<int const volatile&>, int const volatile&>);
+      is_same<add_volatile<int const volatile&>, int const volatile&>
+   );
    static_assert(
-      is_same<add_volatile<int const volatile&&>, int const volatile&&>);
+      is_same<add_volatile<int const volatile&&>, int const volatile&&>
+   );
 }
 
 $test(meta_integral_signedness) {
@@ -461,8 +464,9 @@ $test(meta_function_enum_and_common_type) {
    static_assert(is_same<common_type<long int>, long int>);
    static_assert(is_same<common_type<int, int>, int>);
    static_assert(is_same<common_type<int const, int>, int>);
-   static_assert(is_same<common_type<int, long int, unsigned long int>,
-                         unsigned long int>);
+   static_assert(
+      is_same<common_type<int, long int, unsigned long int>, unsigned long int>
+   );
 }
 
 $test(meta_common_reference) {
@@ -494,13 +498,16 @@ $test(meta_common_reference) {
    static_assert(is_same<common_reference<reference_wrapper<int>, int&>, int&>);
    static_assert(is_same<common_reference<int&, reference_wrapper<int>>, int&>);
    static_assert(
-      is_same<common_reference<reference_wrapper<int>, reference_wrapper<int>>,
-              int&>);
+      is_same<
+         common_reference<reference_wrapper<int>, reference_wrapper<int>>, int&>
+   );
    static_assert(
-      is_same<common_reference<reference_wrapper<int const>, int const&>,
-              int const&>);
-   static_assert(is_same<common_reference<reference_wrapper<int>, int const&>,
-                         int const&>);
+      is_same<
+         common_reference<reference_wrapper<int const>, int const&>, int const&>
+   );
+   static_assert(
+      is_same<common_reference<reference_wrapper<int>, int const&>, int const&>
+   );
    // `is_reference_wrapper` holds for any `cat::reference_wrapper<T>`,
    // including partial specializations.
    static_assert(is_reference_wrapper<reference_wrapper<int>>);
@@ -520,34 +527,35 @@ $test(meta_common_reference) {
 $test(meta_common_comparison) {
    using namespace cat;
 
-   static_assert(is_same<std::common_comparison_category_t<std::strong_ordering,
-                                                           std::weak_ordering>,
-                         std::weak_ordering>);
+   static_assert(is_same<
+                 std::common_comparison_category_t<
+                    std::strong_ordering, std::weak_ordering>,
+                 std::weak_ordering>);
 
-   static_assert(
-      is_same<std::common_comparison_category_t<std::weak_ordering,
-                                                std::strong_ordering>,
-              std::weak_ordering>);
+   static_assert(is_same<
+                 std::common_comparison_category_t<
+                    std::weak_ordering, std::strong_ordering>,
+                 std::weak_ordering>);
 
-   static_assert(
-      is_same<std::common_comparison_category_t<std::partial_ordering,
-                                                std::weak_ordering>,
-              std::partial_ordering>);
+   static_assert(is_same<
+                 std::common_comparison_category_t<
+                    std::partial_ordering, std::weak_ordering>,
+                 std::partial_ordering>);
 
-   static_assert(
-      is_same<std::common_comparison_category_t<std::weak_ordering,
-                                                std::partial_ordering>,
-              std::partial_ordering>);
+   static_assert(is_same<
+                 std::common_comparison_category_t<
+                    std::weak_ordering, std::partial_ordering>,
+                 std::partial_ordering>);
 
-   static_assert(
-      is_same<std::common_comparison_category_t<std::partial_ordering,
-                                                std::strong_ordering>,
-              std::partial_ordering>);
+   static_assert(is_same<
+                 std::common_comparison_category_t<
+                    std::partial_ordering, std::strong_ordering>,
+                 std::partial_ordering>);
 
-   static_assert(
-      is_same<std::common_comparison_category_t<std::strong_ordering,
-                                                std::partial_ordering>,
-              std::partial_ordering>);
+   static_assert(is_same<
+                 std::common_comparison_category_t<
+                    std::strong_ordering, std::partial_ordering>,
+                 std::partial_ordering>);
 
    // Reduces across three or more arguments. The fold weakens
    // pairwise from the left.
@@ -555,41 +563,47 @@ $test(meta_common_comparison) {
       is_same<
          std::common_comparison_category_t<
             std::strong_ordering, std::strong_ordering, std::strong_ordering>,
-         std::strong_ordering>);
+         std::strong_ordering>
+   );
 
    static_assert(
       is_same<
          std::common_comparison_category_t<
             std::strong_ordering, std::weak_ordering, std::strong_ordering>,
-         std::weak_ordering>);
+         std::weak_ordering>
+   );
 
    static_assert(
       is_same<
          std::common_comparison_category_t<
             std::strong_ordering, std::partial_ordering, std::weak_ordering>,
-         std::partial_ordering>);
+         std::partial_ordering>
+   );
 
    // Empty pack: identity for the weakening operation is the strongest
    // category. Matches `std::common_comparison_category_t<>`.
    static_assert(
-      is_same<std::common_comparison_category_t<>, std::strong_ordering>);
+      is_same<std::common_comparison_category_t<>, std::strong_ordering>
+   );
 
    // Single comparison-category argument is itself.
-   static_assert(
-      is_same<std::common_comparison_category_t<std::strong_ordering>,
-              std::strong_ordering>);
-   static_assert(is_same<std::common_comparison_category_t<std::weak_ordering>,
-                         std::weak_ordering>);
-   static_assert(
-      is_same<std::common_comparison_category_t<std::partial_ordering>,
-              std::partial_ordering>);
+   static_assert(is_same<
+                 std::common_comparison_category_t<std::strong_ordering>,
+                 std::strong_ordering>);
+   static_assert(is_same<
+                 std::common_comparison_category_t<std::weak_ordering>,
+                 std::weak_ordering>);
+   static_assert(is_same<
+                 std::common_comparison_category_t<std::partial_ordering>,
+                 std::partial_ordering>);
 
    // `[cmp.common]`: any non-comparison-category argument collapses the
    // result to `void`, matching `std::common_comparison_category`.
    static_assert(is_same<std::common_comparison_category_t<int>, void>);
    static_assert(
-      is_same<std::common_comparison_category_t<std::strong_ordering, int>,
-              void>);
+      is_same<
+         std::common_comparison_category_t<std::strong_ordering, int>, void>
+   );
 }
 
 // P0870R7 `is_convertible_without_narrowing<From, To>`. Holds when `From`
@@ -670,7 +684,8 @@ $test(meta_member_pointer) {
    // Test member type traits.
    static_assert(is_member_pointer<decltype(&members::member_function)>);
    static_assert(
-      is_member_function_pointer<decltype(&members::member_function)>);
+      is_member_function_pointer<decltype(&members::member_function)>
+   );
    static_assert(!is_member_function_pointer<decltype(&test_is_function)>);
 
    members members;
@@ -764,15 +779,19 @@ $test(meta_is_invocable) {
    static_assert(!is_invocable<decltype(&add_two), int>);
    static_assert(!is_invocable<int>);
 
-   static_assert(is_invocable<bool (member_receiver::*)(int) const,
-                              member_receiver const&, int>);
+   static_assert(
+      is_invocable<
+         bool (member_receiver::*)(int) const, member_receiver const&, int>
+   );
 }
 
 $test(meta_is_predicate) {
    using namespace cat;
    static_assert(is_predicate<decltype(&is_positive), int>);
-   static_assert(is_predicate<bool (member_receiver::*)(int) const,
-                              member_receiver const&, int>);
+   static_assert(
+      is_predicate<
+         bool (member_receiver::*)(int) const, member_receiver const&, int>
+   );
 
    static_assert(!is_predicate<decltype(&add_two), int, int, int>);
    static_assert(!is_predicate<decltype(&return_opaque), int>);

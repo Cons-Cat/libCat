@@ -516,8 +516,9 @@ fold_comp_category(comp_category_kind const (&kinds)[size])
 template <typename... Ts>
 consteval auto
 common_comp_value() {
-   constexpr comp_category_kind kinds[] = {comp_category_kind::strong,
-                                           classify_comp_category<Ts>()...};
+   constexpr comp_category_kind kinds[] = {
+      comp_category_kind::strong, classify_comp_category<Ts>()...
+   };
    constexpr comp_category_kind result = fold_comp_category(kinds);
    if constexpr (result == comp_category_kind::partial) {
       return partial_ordering::equivalent;

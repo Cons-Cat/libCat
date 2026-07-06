@@ -63,7 +63,8 @@ invoke(Args&&... arguments) -> Expected {
    static_assert(
       is_same<Expected, remove_cvref<decltype(result)>>,
       "simd_abi specialization: Hook::invoke must return exactly the type "
-      "Expected at this call site");
+      "Expected at this call site"
+   );
    return result;
 }
 

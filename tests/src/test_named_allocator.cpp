@@ -10,10 +10,14 @@
 
 // Static alignment guarantees re-export from `Inner` so the alignment fast
 // path in `meta_alloc` still sees the wrapped allocator's actual minimum.
-static_assert(cat::named_allocator<cat::linear_allocator>::min_alignment
-              == cat::linear_allocator::min_alignment);
-static_assert(cat::named_allocator<cat::page_allocator>::min_alignment
-              == cat::page_allocator::min_alignment);
+static_assert(
+   cat::named_allocator<cat::linear_allocator>::min_alignment
+   == cat::linear_allocator::min_alignment
+);
+static_assert(
+   cat::named_allocator<cat::page_allocator>::min_alignment
+   == cat::page_allocator::min_alignment
+);
 
 // `named_allocator::name()` must return the exact `str_view` it was built
 // with. The label is the wrapper's only added state.

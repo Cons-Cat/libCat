@@ -12,10 +12,10 @@ namespace cat::detail {
 template <typename Vector>
 [[nodiscard, gnu::always_inline]]
 inline auto
-compare_memory_mismatch_order(Vector const& left_vec, Vector const& right_vec,
-                              char const* _Nonnull p_left,
-                              char const* _Nonnull p_right)
-   -> std::strong_ordering {
+compare_memory_mismatch_order(
+   Vector const& left_vec, Vector const& right_vec, char const* _Nonnull p_left,
+   char const* _Nonnull p_right
+) -> std::strong_ordering {
    auto const equal_mask = left_vec.equal_lanes(right_vec);
    idx const byte_offset = equal_mask.to_bitset().countr_one();
 
@@ -26,9 +26,9 @@ compare_memory_mismatch_order(Vector const& left_vec, Vector const& right_vec,
 template <typename Vector>
 [[nodiscard, gnu::always_inline]]
 inline auto
-compare_memory_compare_chunk(char const* _Nonnull p_left,
-                             char const* _Nonnull p_right)
-   -> std::strong_ordering {
+compare_memory_compare_chunk(
+   char const* _Nonnull p_left, char const* _Nonnull p_right
+) -> std::strong_ordering {
    Vector left_vec;
    Vector right_vec;
    left_vec.load_unaligned(p_left);

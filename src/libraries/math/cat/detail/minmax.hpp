@@ -14,8 +14,10 @@ min(T value) -> T {
 }
 
 template <is_less_than_comparable T, typename U, typename... Remaining>
-   requires(is_implicitly_convertible<U, T>
-            && (is_implicitly_convertible<Remaining, T> && ...))
+   requires(
+      is_implicitly_convertible<U, T>
+      && (is_implicitly_convertible<Remaining, T> && ...)
+   )
 [[nodiscard]]
 constexpr auto
 min(T value_1, U value_2, Remaining... remaining) -> T {
@@ -31,8 +33,10 @@ max(T value) -> T {
 }
 
 template <is_greater_than_comparable T, typename U, typename... Remaining>
-   requires(is_implicitly_convertible<U, T>
-            && (is_implicitly_convertible<Remaining, T> && ...))
+   requires(
+      is_implicitly_convertible<U, T>
+      && (is_implicitly_convertible<Remaining, T> && ...)
+   )
 [[nodiscard]]
 constexpr auto
 max(T value_1, U value_2, Remaining... remaining) -> T {

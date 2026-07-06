@@ -13,8 +13,9 @@ dot(T value_1, U value_2) {
    return value_1 * value_2;
 }
 
-template <is_arithmetic T, is_arithmetic U, is_arithmetic V, is_arithmetic W,
-          is_arithmetic... Remaining>
+template <
+   is_arithmetic T, is_arithmetic U, is_arithmetic V, is_arithmetic W,
+   is_arithmetic... Remaining>
 [[nodiscard]]
 constexpr auto
 dot(T value_1, U value_2, V value_3, W value_4, Remaining... remaining) {

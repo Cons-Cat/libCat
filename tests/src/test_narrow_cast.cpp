@@ -12,15 +12,20 @@ namespace {
 
 // Compile-time invariants (fail the build if these regress):
 
-static_assert(cat::is_same<decltype(cat::narrow_cast<cat::idx>(cat::uword{0u})),
-                           cat::maybe<cat::idx>>);
+static_assert(cat::is_same<
+              decltype(cat::narrow_cast<cat::idx>(cat::uword{0u})),
+              cat::maybe<cat::idx>>);
 
-static_assert(cat::is_same<decltype(cat::narrow_cast<cat::byte>(0u)),
-                           cat::maybe<cat::byte>>);
+static_assert(
+   cat::is_same<
+      decltype(cat::narrow_cast<cat::byte>(0u)), cat::maybe<cat::byte>>
+);
 
-static_assert(sizeof(cat::maybe<cat::idx>) == sizeof(cat::idx),
-              "`maybe<idx>` must not grow past `idx` (high-bit niche in "
-              "`narrow_cast<idx>`)");
+static_assert(
+   sizeof(cat::maybe<cat::idx>) == sizeof(cat::idx),
+   "`maybe<idx>` must not grow past `idx` (high-bit niche in "
+   "`narrow_cast<idx>`)"
+);
 
 // Safe widening still produces a `maybe` and preserves the value.
 static_assert([] {
@@ -89,12 +94,14 @@ $test(narrow_cast_narrowing_same_signedness_int8_to_int4) {
    cat::iword const one_past_max =
       static_cast<cat::iword>(cat::limits<cat::int4>::max()) + 1_sz;
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::int8{one_past_max}).has_value());
+      !cat::narrow_cast<cat::int4>(cat::int8{one_past_max}).has_value()
+   );
 
    cat::iword const one_below_min =
       static_cast<cat::iword>(cat::limits<cat::int4>::min()) - 1_sz;
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::int8{one_below_min}).has_value());
+      !cat::narrow_cast<cat::int4>(cat::int8{one_below_min}).has_value()
+   );
 }
 
 $test(narrow_cast_mixed_width_signed_to_unsigned) {
@@ -104,7 +111,8 @@ $test(narrow_cast_mixed_width_signed_to_unsigned) {
    cat::verify(!cat::narrow_cast<cat::uint4>(cat::int4{-1}).has_value());
    cat::verify(
       !cat::narrow_cast<cat::uint4>(cat::int4{cat::limits<cat::int4>::min()})
-          .has_value());
+          .has_value()
+   );
 
    {
       auto const m = cat::narrow_cast<cat::uint4>(cat::int4{0});
@@ -126,9 +134,11 @@ $test(narrow_cast_mixed_width_unsigned_to_signed) {
    // Value above `int4::max` must be rejected without mis-promoting
    // `limits<int4>::min()` in an unsigned/signed compare.
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::uint4{0x80000000u}).has_value());
+      !cat::narrow_cast<cat::int4>(cat::uint4{0x80000000u}).has_value()
+   );
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::uint4{0xFFFFFFFFu}).has_value());
+      !cat::narrow_cast<cat::int4>(cat::uint4{0xFFFFFFFFu}).has_value()
+   );
 
    {
       auto const m = cat::narrow_cast<cat::int4>(cat::uint4{0u});
@@ -142,7 +152,8 @@ $test(narrow_cast_mixed_width_unsigned_to_signed) {
 
 $test(narrow_cast_large_integrals_toward_smaller) {
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::iword{1_sz} << 32u).has_value());
+      !cat::narrow_cast<cat::int4>(cat::iword{1_sz} << 32u).has_value()
+   );
    {
       auto const m = cat::narrow_cast<cat::int4>(cat::iword{42});
       cat::verify(m.has_value() && m.value() == 42_i4);
@@ -155,7 +166,8 @@ $test(narrow_cast_iword_to_uword_and_back) {
    cat::verify(!cat::narrow_cast<cat::uword>(cat::iword{-1}).has_value());
    cat::verify(
       !cat::narrow_cast<cat::uword>(cat::iword{cat::limits<cat::iword>::min()})
-          .has_value());
+          .has_value()
+   );
 
    {
       auto const m = cat::narrow_cast<cat::uword>(cat::iword{0});
@@ -183,13 +195,15 @@ $test(narrow_cast_to_idx_is_maybe_of_idx) {
       // range and must be empty (also exercises `raw_mixed_integral_spaceship`
       // for unsigned vs `limits<idx>::max()`).
       cat::verify(
-         !cat::narrow_cast<cat::idx>(cat::uword{1_uz << 63u}).has_value());
+         !cat::narrow_cast<cat::idx>(cat::uword{1_uz << 63u}).has_value()
+      );
    }
    {
       // Full `uword` is far above `idx` max.
       cat::verify(
          !cat::narrow_cast<cat::idx>(cat::uword{0xFFFFFFFF'FFFFFFFF_uz})
-             .has_value());
+             .has_value()
+      );
    }
    {
       // Negative `iword` is below `idx` min (0).
@@ -208,7 +222,8 @@ $test(narrow_cast_fundamental_char_and_small_unsigned) {
    }
    {
       cat::verify(
-         !cat::narrow_cast<cat::uint1>(cat::uword{300_uz}).has_value());
+         !cat::narrow_cast<cat::uint1>(cat::uword{300_uz}).has_value()
+      );
    }
    {
       auto const m = cat::narrow_cast<cat::uint1>(cat::uword{0_uz});

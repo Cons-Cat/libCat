@@ -10,8 +10,10 @@ namespace detail {
 
 // "Magic get" for aggregates.
 template <idx index, typename T>
-   requires(__builtin_structured_binding_size(remove_cvref<T>) > 0
-            && (index < __builtin_structured_binding_size(remove_cvref<T>)))
+   requires(
+      __builtin_structured_binding_size(remove_cvref<T>) > 0
+      && (index < __builtin_structured_binding_size(remove_cvref<T>))
+   )
 [[nodiscard, gnu::always_inline]]
 constexpr auto
 get_aggregate_lvalue(T& t) -> decltype(auto) {
@@ -77,9 +79,10 @@ struct tuple_size
 
 // Analogous to the proposed `std::aggr::get` in the P2141 paper.
 template <idx index, typename S>
-   requires(has_aggregate_get<remove_cvref<S>>
-            && index
-                  < __builtin_structured_binding_size(::cat::remove_cvref<S>))
+   requires(
+      has_aggregate_get<remove_cvref<S>>
+      && index < __builtin_structured_binding_size(::cat::remove_cvref<S>)
+   )
 [[nodiscard]]
 constexpr auto
 get(S& t) noexcept -> decltype(auto) {
@@ -87,9 +90,10 @@ get(S& t) noexcept -> decltype(auto) {
 }
 
 template <idx index, typename S>
-   requires(has_aggregate_get<remove_cvref<S>>
-            && index
-                  < __builtin_structured_binding_size(::cat::remove_cvref<S>))
+   requires(
+      has_aggregate_get<remove_cvref<S>>
+      && index < __builtin_structured_binding_size(::cat::remove_cvref<S>)
+   )
 [[nodiscard]]
 constexpr auto
 get(S const& t) noexcept -> decltype(auto) {
@@ -100,16 +104,22 @@ get(S const& t) noexcept -> decltype(auto) {
 // True pr-value or x-value aggregate so we can bind the pack and move the
 // selected element out.
 template <idx index, typename S>
-   requires(is_rvalue_reference<S &&> && has_aggregate_get<remove_cvref<S>>
-            && index
-                  < __builtin_structured_binding_size(::cat::remove_cvref<S>))
+   requires(
+      is_rvalue_reference<S &&> && has_aggregate_get<remove_cvref<S>>
+      && index < __builtin_structured_binding_size(::cat::remove_cvref<S>)
+   )
 [[nodiscard]]
 constexpr auto
-get(S&& t) noexcept
-   -> decltype(cat::move(::cat::detail::get_aggregate_lvalue<index>(
-      static_cast<remove_reference<S>&>(t)))) {
-   return cat::move(::cat::detail::get_aggregate_lvalue<index>(
-      static_cast<remove_reference<S>&>(t)));
+get(S&& t) noexcept -> decltype(cat::move(
+   ::cat::detail::get_aggregate_lvalue<index>(
+      static_cast<remove_reference<S>&>(t)
+   )
+)) {
+   return cat::move(
+      ::cat::detail::get_aggregate_lvalue<index>(
+         static_cast<remove_reference<S>&>(t)
+      )
+   );
 }
 
 }  // namespace cat
@@ -129,9 +139,9 @@ aggregate_get(Aggregate&& t) -> decltype(auto) {
 template <typename Callback, typename Aggregate, idx... indices>
 [[nodiscard, gnu::always_inline]]
 constexpr auto
-aggregate_apply_impl(Callback&& callback, Aggregate&& t,
-                     index_list_type<indices...>)
-   -> decltype($fwd(callback)(aggregate_get<indices>($fwd(t))...)) {
+aggregate_apply_impl(
+   Callback&& callback, Aggregate&& t, index_list_type<indices...>
+) -> decltype($fwd(callback)(aggregate_get<indices>($fwd(t))...)) {
    return $fwd(callback)(aggregate_get<indices>($fwd(t))...);
 }
 
@@ -149,7 +159,9 @@ apply(Callback&& callback, Aggregate&& t) {
    return detail::aggregate_apply_impl(
       $fwd(callback), $fwd(t),
       make_index_sequence<static_cast<idx>(
-         __builtin_structured_binding_size(::cat::remove_cvref<Aggregate>))>{});
+         __builtin_structured_binding_size(::cat::remove_cvref<Aggregate>)
+      )>{}
+   );
 }
 
 }  // namespace cat

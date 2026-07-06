@@ -216,7 +216,8 @@ $test(alloc) {
    auto inline_align_alloc_multi =
       allocator.inline_align_alloc_multi<int4>(8u, 5u).value();
    cat::verify(
-      cat::is_aligned(allocator.get_ptr(inline_align_alloc_multi), 8u));
+      cat::is_aligned(allocator.get_ptr(inline_align_alloc_multi), 8u)
+   );
    cat::verify(inline_align_alloc_multi.is_inline());
 
    auto inline_align_alloc_multi_big =
@@ -227,7 +228,8 @@ $test(alloc) {
    auto inline_align_xalloc_multi =
       allocator.inline_align_xalloc_multi<int4>(8u, 5u);
    cat::verify(
-      cat::is_aligned(allocator.get_ptr(inline_align_xalloc_multi), 8u));
+      cat::is_aligned(allocator.get_ptr(inline_align_xalloc_multi), 8u)
+   );
    cat::verify(inline_align_xalloc_multi.is_inline());
 
    // Test `inline_unalign_alloc_multi`.
@@ -558,8 +560,9 @@ $test(alloc) {
 
    auto [inline_align_salloc_multi_big, inline_align_salloc_multi_bytes_big] =
       allocator.inline_align_salloc_multi<alloc_huge_object>(8u, 5u).value();
-   cat::verify(inline_align_salloc_multi_bytes_big
-               >= sizeof(alloc_huge_object));
+   cat::verify(
+      inline_align_salloc_multi_bytes_big >= sizeof(alloc_huge_object)
+   );
    cat::verify(!inline_align_salloc_multi_big.is_inline());
 
    // Test `inline_align_xsalloc_multi`.
@@ -571,8 +574,9 @@ $test(alloc) {
 
    auto [inline_align_xsalloc_multi_big, inline_align_xsalloc_multi_bytes_big] =
       allocator.inline_align_xsalloc_multi<alloc_huge_object>(8u, 5u);
-   cat::verify(inline_align_xsalloc_multi_bytes_big
-               >= sizeof(alloc_huge_object));
+   cat::verify(
+      inline_align_xsalloc_multi_bytes_big >= sizeof(alloc_huge_object)
+   );
    cat::verify(!inline_align_xsalloc_multi_big.is_inline());
 
    // Test `inline_unalign_salloc_multi`.
@@ -582,11 +586,12 @@ $test(alloc) {
    cat::verify(inline_unalign_salloc_multi_bytes == 64u);
    cat::verify(inline_unalign_salloc_multi.is_inline());
 
-   auto [inline_unalign_salloc_multi_big,
-         inline_unalign_salloc_multi_bytes_big] =
-      allocator.inline_unalign_salloc_multi<alloc_huge_object>(5u).value();
-   cat::verify(inline_unalign_salloc_multi_bytes_big
-               == sizeof(alloc_huge_object) * 5);
+   auto
+      [inline_unalign_salloc_multi_big, inline_unalign_salloc_multi_bytes_big] =
+         allocator.inline_unalign_salloc_multi<alloc_huge_object>(5u).value();
+   cat::verify(
+      inline_unalign_salloc_multi_bytes_big == sizeof(alloc_huge_object) * 5
+   );
    cat::verify(!inline_unalign_salloc_multi_big.is_inline());
 
    // Test `inline_unalign_xsalloc_multi`.
@@ -596,11 +601,13 @@ $test(alloc) {
    cat::verify(inline_unalign_xsalloc_multi_bytes == 64u);
    cat::verify(inline_unalign_xsalloc_multi.is_inline());
 
-   auto [inline_unalign_xsalloc_multi_big,
-         inline_unalign_xsalloc_multi_bytes_big] =
-      allocator.inline_unalign_xsalloc_multi<alloc_huge_object>(5u);
-   cat::verify(inline_unalign_xsalloc_multi_bytes_big
-               == sizeof(alloc_huge_object) * 5);
+   auto
+      [inline_unalign_xsalloc_multi_big,
+       inline_unalign_xsalloc_multi_bytes_big] =
+         allocator.inline_unalign_xsalloc_multi<alloc_huge_object>(5u);
+   cat::verify(
+      inline_unalign_xsalloc_multi_bytes_big == sizeof(alloc_huge_object) * 5
+   );
    cat::verify(!inline_unalign_xsalloc_multi_big.is_inline());
 
    // Test `xcalloc`.
@@ -991,8 +998,9 @@ $test(alloc) {
 
    // Test `inline_align_xrealloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_align_xrealloc_multi_to(allocator, inline_alloc,
-                                                     8u, 10u);
+   auto _ = allocator.inline_align_xrealloc_multi_to(
+      allocator, inline_alloc, 8u, 10u
+   );
    allocator.free(inline_alloc);
 
    // Test `inline_unalign_realloc_multi`.
@@ -1037,8 +1045,9 @@ $test(alloc) {
 
    // Test `inline_align_xrealloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_align_xrealloc_multi_to(allocator, inline_alloc,
-                                                     8u, 10u);
+   auto _ = allocator.inline_align_xrealloc_multi_to(
+      allocator, inline_alloc, 8u, 10u
+   );
    allocator.free(inline_alloc);
 
    // Test `inline_unalign_realloc_multi`.
@@ -1212,8 +1221,9 @@ $test(alloc) {
 
    // Test `inline_align_xrecalloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_align_xrecalloc_multi_to(allocator, inline_alloc,
-                                                      8u, 10u);
+   auto _ = allocator.inline_align_xrecalloc_multi_to(
+      allocator, inline_alloc, 8u, 10u
+   );
    allocator.free(inline_alloc);
 
    // Test `inline_unalign_recalloc_multi`.
@@ -1259,8 +1269,9 @@ $test(alloc) {
 
    // Test `inline_align_xrecalloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_align_xrecalloc_multi_to(allocator, inline_alloc,
-                                                      8u, 10u);
+   auto _ = allocator.inline_align_xrecalloc_multi_to(
+      allocator, inline_alloc, 8u, 10u
+   );
    allocator.free(inline_alloc);
 
    // Test `inline_unalign_recalloc_multi`.
@@ -1620,8 +1631,9 @@ $test(alloc) {
 
    // Test `inline_align_xresalloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_align_xresalloc_multi_to(allocator, inline_alloc,
-                                                      8u, 10u);
+   auto _ = allocator.inline_align_xresalloc_multi_to(
+      allocator, inline_alloc, 8u, 10u
+   );
    allocator.free(inline_alloc);
 
    // Test `inline_unalign_resalloc_multi`.
@@ -1667,8 +1679,9 @@ $test(alloc) {
 
    // Test `inline_align_xresalloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_align_xresalloc_multi_to(allocator, inline_alloc,
-                                                      8u, 10u);
+   auto _ = allocator.inline_align_xresalloc_multi_to(
+      allocator, inline_alloc, 8u, 10u
+   );
    allocator.free(inline_alloc);
 
    // Test `inline_unalign_resalloc_multi`.
@@ -1843,8 +1856,9 @@ $test(alloc) {
 
    // Test `inline_align_xrescalloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_align_xrescalloc_multi_to(allocator, inline_alloc,
-                                                       8u, 10u);
+   auto _ = allocator.inline_align_xrescalloc_multi_to(
+      allocator, inline_alloc, 8u, 10u
+   );
    allocator.free(inline_alloc);
 
    // Test `inline_unalign_rescalloc_multi`.
@@ -1866,8 +1880,9 @@ $test(alloc) {
 
    // Test `inline_unalign_xrescalloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_unalign_xrescalloc_multi_to(allocator,
-                                                         inline_alloc, 10u);
+   auto _ = allocator.inline_unalign_xrescalloc_multi_to(
+      allocator, inline_alloc, 10u
+   );
    allocator.free(inline_alloc);
 
    // Test `inline_align_rescalloc_multi`.
@@ -1891,8 +1906,9 @@ $test(alloc) {
 
    // Test `inline_align_xrescalloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_align_xrescalloc_multi_to(allocator, inline_alloc,
-                                                       8u, 10u);
+   auto _ = allocator.inline_align_xrescalloc_multi_to(
+      allocator, inline_alloc, 8u, 10u
+   );
    allocator.free(inline_alloc);
 
    // Test `inline_unalign_rescalloc_multi`.
@@ -1914,8 +1930,9 @@ $test(alloc) {
 
    // Test `inline_unalign_xrescalloc_multi_to`.
    inline_alloc = allocator.inline_alloc<int4>().value();
-   auto _ = allocator.inline_unalign_xrescalloc_multi_to(allocator,
-                                                         inline_alloc, 10u);
+   auto _ = allocator.inline_unalign_xrescalloc_multi_to(
+      allocator, inline_alloc, 10u
+   );
 }
 
 // Exercise every `inline_*` non-nalloc function with a non-default SBO size

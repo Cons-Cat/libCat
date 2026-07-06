@@ -35,8 +35,10 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
    // Being `protected:` permits derived classes and friends to call this. Only
    // allow the shallow copy constructor to be used by these static factory
    // member functions. For public copying, `.clone()` should be used.
-   [[deprecated("Implicit copying of `cat::ring` is forbidden. Call `.clone() "
-                "instead!")]]
+   [[deprecated(
+      "Implicit copying of `cat::ring` is forbidden. Call `.clone() "
+      "instead!"
+   )]]
    //
    ring(ring const&) = default;
 
@@ -50,8 +52,10 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
          $prop(allocator.template alloc_multi<T>(new_capacity));
 
       if constexpr (is_trivially_relocatable<T>) {
-         copy_memory(this->p_storage, p_new,
-                     cat::make_raw_arithmetic(this->current_size * sizeof(T)));
+         copy_memory(
+            this->p_storage, p_new,
+            cat::make_raw_arithmetic(this->current_size * sizeof(T))
+         );
       } else {
          for (iword::raw_type i = 0; i < this->current_size; ++i) {
             p_new[i] = move(this->p_storage[i]);
@@ -70,17 +74,20 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
       requires(is_implicitly_convertible<U, T>)
    [[nodiscard]]
    static auto
-   reserved([[maybe_unused]] is_allocator auto& allocator,
-            [[maybe_unused]] iword capacity) -> maybe<ring<T>> {
+   reserved(
+      [[maybe_unused]] is_allocator auto& allocator,
+      [[maybe_unused]] iword capacity
+   ) -> maybe<ring<T>> {
    }
 
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
    [[nodiscard]]
    static auto
-   filled([[maybe_unused]] is_allocator auto& allocator,
-          [[maybe_unused]] iword capacity, [[maybe_unused]] T value)
-      -> maybe<ring<T>> {
+   filled(
+      [[maybe_unused]] is_allocator auto& allocator,
+      [[maybe_unused]] iword capacity, [[maybe_unused]] T value
+   ) -> maybe<ring<T>> {
    }
 
    [[nodiscard]]
@@ -99,7 +106,8 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
          if constexpr (is_trivially_relocatable<T>) {
             copy_memory(
                this->p_storage, p_new,
-               cat::make_raw_arithmetic(this->current_size * sizeof(T)));
+               cat::make_raw_arithmetic(this->current_size * sizeof(T))
+            );
          } else {
             for (iword::raw_type i = 0; i < this->current_size; ++i) {
                p_new[i] = move(this->p_storage[i]);

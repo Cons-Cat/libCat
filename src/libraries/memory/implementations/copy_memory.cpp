@@ -13,8 +13,10 @@
 namespace cat::detail {
 
 void
-copy_memory_impl(byte const* _Nonnull __restrict p_source,
-                 byte* _Nonnull __restrict p_destination, idx bytes) {
+copy_memory_impl(
+   byte const* _Nonnull __restrict p_source,
+   byte* _Nonnull __restrict p_destination, idx bytes
+) {
    __builtin_assume_separate_storage(p_source, p_destination);
 
    if (bytes <= 127u) {
@@ -28,20 +30,25 @@ copy_memory_impl(byte const* _Nonnull __restrict p_source,
       return;
    }
 
-   if (memory_rep_string_support.has_fsrm
-       || memory_rep_string_support.has_erms) {
+   if (
+      memory_rep_string_support.has_fsrm || memory_rep_string_support.has_erms
+   ) {
       x64::movsb(p_destination, p_source, bytes);
       return;
    }
 
    $simd_switch(
-      $abi(avx2,
-           {
-              copy_memory_large<char1x_>(p_source, p_destination, bytes);
-              x64::zero_upper_avx_registers();
-           }),
-      $abi(sse2,
-           { copy_memory_large<char1x_>(p_source, p_destination, bytes); }));
+      $abi(
+         avx2,
+         {
+            copy_memory_large<char1x_>(p_source, p_destination, bytes);
+            x64::zero_upper_avx_registers();
+         }
+      ),
+      $abi(sse2, {
+         copy_memory_large<char1x_>(p_source, p_destination, bytes);
+      })
+   );
 }
 
 }  // namespace cat::detail

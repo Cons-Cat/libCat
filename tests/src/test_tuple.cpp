@@ -30,14 +30,18 @@ static_assert(!cat::is_implicit_lifetime<tup_non_trivial>);
 
 $test(tuple_basics) {
    using intint = cat::tuple<int, int>;
-   static_assert(cat::is_trivially_copyable<intint>
-                 && cat::is_trivially_default_constructible<intint>);
+   static_assert(
+      cat::is_trivially_copyable<intint>
+      && cat::is_trivially_default_constructible<intint>
+   );
    static_assert(cat::is_implicit_lifetime<intint>);
    static_assert(sizeof(intint) == 8);
 
    using floatfloat = cat::tuple<float, float>;
-   static_assert(cat::is_trivially_copyable<floatfloat>
-                 && cat::is_trivially_default_constructible<floatfloat>);
+   static_assert(
+      cat::is_trivially_copyable<floatfloat>
+      && cat::is_trivially_default_constructible<floatfloat>
+   );
    static_assert(cat::is_implicit_lifetime<floatfloat>);
    static_assert(sizeof(floatfloat) == 8);
 
@@ -90,15 +94,20 @@ $test(tuple_basics) {
    // Test value categories for moved tuples.
    cat::tuple<int, char> intchar_move{100, 'a'};
    static_assert(
-      cat::is_same<decltype(cat::move(intchar_move).first()), int&&>);
+      cat::is_same<decltype(cat::move(intchar_move).first()), int&&>
+   );
    static_assert(
-      cat::is_same<decltype(cat::move(intchar_move).second()), char&&>);
+      cat::is_same<decltype(cat::move(intchar_move).second()), char&&>
+   );
 
    cat::tuple<int, char> const intchar_move_const{100, 'a'};
-   static_assert(cat::is_same<decltype(cat::move(intchar_move_const).first()),
-                              int const&&>);
-   static_assert(cat::is_same<decltype(cat::move(intchar_move_const).second()),
-                              char const&&>);
+   static_assert(
+      cat::is_same<decltype(cat::move(intchar_move_const).first()), int const&&>
+   );
+   static_assert(
+      cat::is_same<
+         decltype(cat::move(intchar_move_const).second()), char const&&>
+   );
 
    // Test type deduction.
    cat::tuple deduced = {0, 'b', 10.f};
@@ -108,7 +117,8 @@ $test(tuple_basics) {
 
    // Test `tuple` auto-generated getters.
    static_assert(
-      cat::is_implicit_lifetime<cat::tuple<char, int4, bool, void*, uint8>>);
+      cat::is_implicit_lifetime<cat::tuple<char, int4, bool, void*, uint8>>
+   );
    cat::tuple<char, int4, bool, void*, uint8> five_tuple;
    static_assert(cat::is_same<decltype(five_tuple.first()), char&>);
    static_assert(cat::is_same<decltype(five_tuple.second()), int4&>);
@@ -156,10 +166,12 @@ $test(tuple_basics) {
    static_assert(cat::is_implicit_lifetime<
                  cat::tuple<cat::tuple<int, int>, cat::tuple<int, char>>>);
    cat::tuple<cat::tuple<int, int>, cat::tuple<int, char>> tuple_of_tuple = {
-      tuple, intchar};
+      tuple, intchar
+   };
    cat::tuple tuple_of_tuple_ctad = {tuple, intchar};
    static_assert(
-      cat::is_same<decltype(tuple_of_tuple_ctad), decltype(tuple_of_tuple)>);
+      cat::is_same<decltype(tuple_of_tuple_ctad), decltype(tuple_of_tuple)>
+   );
 }
 
 $test(tuple_implicit_lifetime_when_members_are) {
@@ -219,7 +231,8 @@ $test(tuple_operator_index) {
       };
 
       static_assert(
-         cat::is_same<decltype(cat::tuple<move_only>{}[0_idx]), move_only&&>);
+         cat::is_same<decltype(cat::tuple<move_only>{}[0_idx]), move_only&&>
+      );
 
       cat::tuple<move_only> holder{move_only{42}};
       move_only moved = cat::move(holder)[0_idx];
@@ -278,7 +291,8 @@ $test(tuple_cat) {
 
    auto cat_two = cat::tuple_cat(intint{0, 1}, floatfloat{2.f, 3.f});
    static_assert(
-      cat::is_same<decltype(cat_two), cat::tuple<int, int, float, float>>);
+      cat::is_same<decltype(cat_two), cat::tuple<int, int, float, float>>
+   );
    cat::verify(cat_two.first() == 0);
    cat::verify(cat_two.second() == 1);
    cat::verify(cat_two.third() == 2.f);
@@ -289,26 +303,34 @@ $test(tuple_cat) {
    cat::verify(cat_one.first() == 7);
    cat::verify(cat_one.second() == 8);
 
-   static_assert(cat::is_same<decltype(cat::tuple_cat(cat::tuple<int>{})),
-                              cat::tuple<int>>);
-   static_assert(cat::is_same<decltype(cat::tuple_cat(
-                                 cat::tuple<>{}, cat::tuple<>{}, intint{1, 2})),
-                              intint>);
-
-   auto cat_three = cat::tuple_cat(cat::tuple<int>{10}, cat::tuple<char>{'a'},
-                                   cat::tuple<float>{1.f});
    static_assert(
-      cat::is_same<decltype(cat_three), cat::tuple<int, char, float>>);
+      cat::is_same<decltype(cat::tuple_cat(cat::tuple<int>{})), cat::tuple<int>>
+   );
+   static_assert(
+      cat::is_same<
+         decltype(cat::tuple_cat(cat::tuple<>{}, cat::tuple<>{}, intint{1, 2})),
+         intint>
+   );
+
+   auto cat_three = cat::tuple_cat(
+      cat::tuple<int>{10}, cat::tuple<char>{'a'}, cat::tuple<float>{1.f}
+   );
+   static_assert(
+      cat::is_same<decltype(cat_three), cat::tuple<int, char, float>>
+   );
    cat::verify(cat_three.first() == 10);
    cat::verify(cat_three.second() == 'a');
    cat::verify(cat_three.third() == 1.f);
 
    // Empty tuples in the pack should be identity elements.
-   auto cat_mixed_empties =
-      cat::tuple_cat(cat::tuple<>{}, intint{3, 4}, cat::tuple<>{},
-                     floatfloat{5.f, 6.f}, cat::tuple<>{});
-   static_assert(cat::is_same<decltype(cat_mixed_empties),
-                              cat::tuple<int, int, float, float>>);
+   auto cat_mixed_empties = cat::tuple_cat(
+      cat::tuple<>{}, intint{3, 4}, cat::tuple<>{}, floatfloat{5.f, 6.f},
+      cat::tuple<>{}
+   );
+   static_assert(
+      cat::is_same<
+         decltype(cat_mixed_empties), cat::tuple<int, int, float, float>>
+   );
    cat::verify(cat_mixed_empties.first() == 3);
    cat::verify(cat_mixed_empties.second() == 4);
    cat::verify(cat_mixed_empties.third() == 5.f);
@@ -316,8 +338,9 @@ $test(tuple_cat) {
 
    int left_i = 1;
    int right_i = 2;
-   auto cat_refs = cat::tuple_cat(cat::tuple<int&, int&>{left_i, right_i},
-                                  cat::tuple<int>{3});
+   auto cat_refs = cat::tuple_cat(
+      cat::tuple<int&, int&>{left_i, right_i}, cat::tuple<int>{3}
+   );
    static_assert(cat::is_same<decltype(cat_refs), cat::tuple<int&, int&, int>>);
    cat::verify(cat_refs.first() == 1);
    cat::verify(cat_refs.second() == 2);
@@ -329,10 +352,12 @@ $test(tuple_cat) {
    // `T const&`.
    int const a_const = 11;
    int const b_const = 12;
-   auto cat_const = cat::tuple_cat(cat::tuple<int const&>{a_const},
-                                   cat::tuple<int const&>{b_const});
+   auto cat_const = cat::tuple_cat(
+      cat::tuple<int const&>{a_const}, cat::tuple<int const&>{b_const}
+   );
    static_assert(
-      cat::is_same<decltype(cat_const), cat::tuple<int const&, int const&>>);
+      cat::is_same<decltype(cat_const), cat::tuple<int const&, int const&>>
+   );
    cat::verify(cat_const.first() == 11);
    cat::verify(cat_const.second() == 12);
 
@@ -351,11 +376,13 @@ $test(tuple_cat) {
    {
       not_copy m0{};
       not_copy m1{};
-      auto only_moves =
-         cat::tuple_cat(cat::tuple<not_copy>{static_cast<not_copy&&>(m0)},
-                        cat::tuple<not_copy>{static_cast<not_copy&&>(m1)});
+      auto only_moves = cat::tuple_cat(
+         cat::tuple<not_copy>{static_cast<not_copy&&>(m0)},
+         cat::tuple<not_copy>{static_cast<not_copy&&>(m1)}
+      );
       static_assert(
-         cat::is_same<decltype(only_moves), cat::tuple<not_copy, not_copy>>);
+         cat::is_same<decltype(only_moves), cat::tuple<not_copy, not_copy>>
+      );
    }
 }
 
@@ -386,9 +413,11 @@ $test(tuple_tie_make_forward) {
       int third = 2;
       int fifth = 3;
       auto f = cat::forward_as_tuple(
-         lvalue, cat::move(second), cat::move(third), by_ref, cat::move(fifth));
-      static_assert(cat::is_same<decltype(f),
-                                 cat::tuple<int&, int&&, int&&, int&, int&&>>);
+         lvalue, cat::move(second), cat::move(third), by_ref, cat::move(fifth)
+      );
+      static_assert(
+         cat::is_same<decltype(f), cat::tuple<int&, int&&, int&&, int&, int&&>>
+      );
       cat::verify(f.first() == 10);
       cat::verify(f.second() == 1);
       cat::verify(f.third() == 2);
@@ -406,7 +435,8 @@ $test(tuple_tie_make_forward) {
       int third = 30;
       auto c = cat::forward_as_tuple(lvalue, const_lvalue, cat::move(third));
       static_assert(
-         cat::is_same<decltype(c), cat::tuple<int&, int const&, int&&>>);
+         cat::is_same<decltype(c), cat::tuple<int&, int const&, int&&>>
+      );
       cat::verify(c.first() == 10);
       cat::verify(c.second() == 20);
       cat::verify(c.third() == 30);
@@ -430,7 +460,8 @@ $test(tuple_apply) {
       [](int left, int right) {
          return left + right;
       },
-      cat::tuple<int, int>{2, 3});
+      cat::tuple<int, int>{2, 3}
+   );
    cat::verify(apply_sum == 5);
 }
 

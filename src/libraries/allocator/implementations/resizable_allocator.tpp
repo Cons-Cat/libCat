@@ -7,18 +7,20 @@
 
 namespace cat {
 
-template <is_allocator Inner, is_allocator Backing, idx node_bytes_param,
-          idx chunk_bytes_param>
-resizable_allocator<Inner, Backing, node_bytes_param,
-                    chunk_bytes_param>::~resizable_allocator() {
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
+resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+   ~resizable_allocator() {
    this->reset();
 }
 
-template <is_allocator Inner, is_allocator Backing, idx node_bytes_param,
-          idx chunk_bytes_param>
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
 void
-resizable_allocator<Inner, Backing, node_bytes_param,
-                    chunk_bytes_param>::reset() {
+resizable_allocator<
+   Inner, Backing, node_bytes_param, chunk_bytes_param>::reset() {
    // The free list lives inside the chunks we are about to free, so
    // dropping the head is enough. No per-node bookkeeping needed.
    m_p_free_head = nullptr;
@@ -33,23 +35,26 @@ resizable_allocator<Inner, Backing, node_bytes_param,
    m_p_chunks = nullptr;
 }
 
-template <is_allocator Inner, is_allocator Backing, idx node_bytes_param,
-          idx chunk_bytes_param>
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
 constexpr auto
-resizable_allocator<Inner, Backing, node_bytes_param,
-                    chunk_bytes_param>::acquire_chunk(idx chunk_bytes_request)
-   -> chunk_header* _Nullable {
+resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+   acquire_chunk(idx chunk_bytes_request) -> chunk_header* _Nullable {
    // Each chunk reserves a `chunk_header` prologue at the start of the
    // backing allocation and gives the rest of the slab to `Inner`.
    idx const total_bytes = chunk_bytes_request;
    void* p_backing = nullptr;
-   if constexpr (requires(Backing& backing, ualign alignment,
-                          idx allocation_bytes) {
-                    dyn_allocator_friend::aligned_allocate(backing, alignment,
-                                                           allocation_bytes);
-                 }) {
+   if constexpr (
+      requires(Backing& backing, ualign alignment, idx allocation_bytes) {
+         dyn_allocator_friend::aligned_allocate(
+            backing, alignment, allocation_bytes
+         );
+      }
+   ) {
       p_backing = dyn_allocator_friend::aligned_allocate(
-         *m_p_backing, alignof(chunk_header), total_bytes);
+         *m_p_backing, alignof(chunk_header), total_bytes
+      );
    } else {
       p_backing = dyn_allocator_friend::allocate(*m_p_backing, total_bytes);
    }
@@ -78,13 +83,13 @@ resizable_allocator<Inner, Backing, node_bytes_param,
    return p_chunk;
 }
 
-template <is_allocator Inner, is_allocator Backing, idx node_bytes_param,
-          idx chunk_bytes_param>
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
 [[gnu::malloc, clang::ownership_returns(libcat)]]
 auto
-resizable_allocator<Inner, Backing, node_bytes_param,
-                    chunk_bytes_param>::allocate(idx /*allocation_bytes*/)
-   -> void* _Nullable {
+resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+   allocate(idx /*allocation_bytes*/) -> void* _Nullable {
    // The wrapper bypasses `meta_alloc`'s unpoison path, so inner allocators
    // that pre-poison their arena (e.g. `linear_allocator`) would leave the
    // returned slot user-poisoned. Clear the shadow for the slot we hand out.
@@ -118,8 +123,9 @@ resizable_allocator<Inner, Backing, node_bytes_param,
    return nullptr;
 }
 
-template <is_allocator Inner, is_allocator Backing, idx node_bytes_param,
-          idx chunk_bytes_param>
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
 [[clang::ownership_takes(libcat, 2)]]
 void
 resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
@@ -129,16 +135,17 @@ resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    m_p_free_head = p_slot;
 }
 
-template <is_allocator Inner, is_allocator Backing, idx node_bytes_param,
-          idx chunk_bytes_param>
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
 auto
-resizable_allocator<Inner, Backing, node_bytes_param,
-                    chunk_bytes_param>::resize(idx minimum_bytes)
-   -> maybe_non_zero<idx> {
-   idx const request_bytes =
-      static_cast<idx>(minimum_bytes + sizeof(chunk_header) > chunk_bytes
-                          ? minimum_bytes + sizeof(chunk_header)
-                          : chunk_bytes);
+resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+   resize(idx minimum_bytes) -> maybe_non_zero<idx> {
+   idx const request_bytes = static_cast<idx>(
+      minimum_bytes + sizeof(chunk_header) > chunk_bytes
+         ? minimum_bytes + sizeof(chunk_header)
+         : chunk_bytes
+   );
    chunk_header* const p_new_chunk = this->acquire_chunk(request_bytes);
    if (p_new_chunk == nullptr) {
       return nullopt;
@@ -148,12 +155,14 @@ resizable_allocator<Inner, Backing, node_bytes_param,
    return request_bytes;
 }
 
-template <is_allocator Inner, is_allocator Backing, idx node_bytes_param,
-          idx chunk_bytes_param>
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
 [[nodiscard]]
 auto
-resizable_allocator<Inner, Backing, node_bytes_param,
-                    chunk_bytes_param>::bytes_used() const -> idx {
+resizable_allocator<
+   Inner, Backing, node_bytes_param, chunk_bytes_param>::bytes_used() const
+   -> idx {
    idx total = idx(0u);
    for (chunk_header const* p_walk = m_p_chunks; p_walk != nullptr;
         p_walk = p_walk->p_next) {
@@ -168,12 +177,14 @@ resizable_allocator<Inner, Backing, node_bytes_param,
    return total > free_bytes ? static_cast<idx>(total - free_bytes) : idx(0u);
 }
 
-template <is_allocator Inner, is_allocator Backing, idx node_bytes_param,
-          idx chunk_bytes_param>
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
 [[nodiscard]]
 auto
-resizable_allocator<Inner, Backing, node_bytes_param,
-                    chunk_bytes_param>::bytes_capacity() const -> idx {
+resizable_allocator<
+   Inner, Backing, node_bytes_param, chunk_bytes_param>::bytes_capacity() const
+   -> idx {
    idx total = idx(0u);
    for (chunk_header const* p_walk = m_p_chunks; p_walk != nullptr;
         p_walk = p_walk->p_next) {

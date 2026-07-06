@@ -11,5 +11,6 @@ nix::sys_open(cat::zstr_view file_path, open_mode file_mode, open_flags flags)
       nix::open_flags::large_file
          | flags
          | static_cast<nix::open_flags>(file_mode),
-      file_mode);
+      file_mode
+   );
 }

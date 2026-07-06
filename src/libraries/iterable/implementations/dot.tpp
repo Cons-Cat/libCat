@@ -13,9 +13,8 @@ struct dot_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, dot_impl self) {
-      using result_type =
-         remove_cvref<decltype(declval<iterable_element_type<Iterable>>()
-                               * declval<iterable_element_type<Other>>())>;
+      using result_type = remove_cvref<
+         decltype(declval<iterable_element_type<Iterable>>() * declval<iterable_element_type<Other>>())>;
 
       result_type total{};
       auto left_context = iterate(incoming);
@@ -29,7 +28,8 @@ struct dot_impl {
             }
             total = total + ($fwd(left_element) * maybe_right_element.value());
             return true;
-         });
+         }
+      );
 
       return total;
    }

@@ -13,8 +13,10 @@ nix::sys_ioctl(file_descriptor io_descriptor, io_requests request)
 // Control the settings of special files, such as stdin or stdout, with a
 // request that requires a parameter.
 auto
-nix::sys_ioctl(file_descriptor io_descriptor, io_requests request,
-               cat::no_type_ptr p_argument) -> scaredy_nix<void> {
+nix::sys_ioctl(
+   file_descriptor io_descriptor, io_requests request,
+   cat::no_type_ptr p_argument
+) -> scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/
    return syscall_volatile<void>(16, io_descriptor, request, p_argument);
 }

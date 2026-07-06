@@ -26,14 +26,19 @@ nix::syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
    } else if constexpr (length == 3) {
       result = nix::syscall3(call, arguments[0], arguments[1], arguments[2]);
    } else if constexpr (length == 4) {
-      result = nix::syscall4(call, arguments[0], arguments[1], arguments[2],
-                             arguments[3]);
+      result = nix::syscall4(
+         call, arguments[0], arguments[1], arguments[2], arguments[3]
+      );
    } else if constexpr (length == 5) {
-      result = nix::syscall5(call, arguments[0], arguments[1], arguments[2],
-                             arguments[3], arguments[4]);
+      result = nix::syscall5(
+         call, arguments[0], arguments[1], arguments[2], arguments[3],
+         arguments[4]
+      );
    } else {
-      result = nix::syscall6(call, arguments[0], arguments[1], arguments[2],
-                             arguments[3], arguments[4], arguments[5]);
+      result = nix::syscall6(
+         call, arguments[0], arguments[1], arguments[2], arguments[3],
+         arguments[4], arguments[5]
+      );
    }
 
    if (static_cast<cat::iword>(result) < 0) {
@@ -70,15 +75,19 @@ nix::syscall_volatile(cat::iword call, Args... parameters)
       result =
          nix::syscall3_volatile(call, arguments[0], arguments[1], arguments[2]);
    } else if constexpr (length == 4) {
-      result = nix::syscall4_volatile(call, arguments[0], arguments[1],
-                                      arguments[2], arguments[3]);
+      result = nix::syscall4_volatile(
+         call, arguments[0], arguments[1], arguments[2], arguments[3]
+      );
    } else if constexpr (length == 5) {
-      result = nix::syscall5_volatile(call, arguments[0], arguments[1],
-                                      arguments[2], arguments[3], arguments[4]);
+      result = nix::syscall5_volatile(
+         call, arguments[0], arguments[1], arguments[2], arguments[3],
+         arguments[4]
+      );
    } else {
-      result =
-         nix::syscall6_volatile(call, arguments[0], arguments[1], arguments[2],
-                                arguments[3], arguments[4], arguments[5]);
+      result = nix::syscall6_volatile(
+         call, arguments[0], arguments[1], arguments[2], arguments[3],
+         arguments[4], arguments[5]
+      );
    }
 
    if (static_cast<cat::iword>(result) < 0) {

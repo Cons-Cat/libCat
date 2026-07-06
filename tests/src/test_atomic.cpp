@@ -63,8 +63,10 @@ constexpr_atomic_value_operations() -> bool {
       return false;
    }
 
-   if (!cat::atomic<int>::notify_is_lock_free()
-       || !cat::atomic<int>::wait_is_signal_safe()) {
+   if (
+      !cat::atomic<int>::notify_is_lock_free()
+      || !cat::atomic<int>::wait_is_signal_safe()
+   ) {
       return false;
    }
 
@@ -82,8 +84,10 @@ constexpr_atomic_value_operations() -> bool {
       return false;
    }
 
-   if (value.fetch_and(0b1110) != 7 || value.fetch_or(0b0001) != 6
-       || value.fetch_xor(0b0011) != 7) {
+   if (
+      value.fetch_and(0b1110) != 7 || value.fetch_or(0b0001) != 6
+      || value.fetch_xor(0b0011) != 7
+   ) {
       return false;
    }
 
@@ -176,12 +180,18 @@ $test(atomic_memory_order_helpers) {
    static_assert(cat::memory_order_seq_cst == cat::memory_order::seq_cst);
    static_assert(constexpr_atomic_value_operations());
    static_assert(constexpr_atomic_reference_operations());
-   static_assert(cat::detail::cmpexch_failure_order(cat::memory_order::seq_cst)
-                 == cat::memory_order::seq_cst);
-   static_assert(cat::detail::cmpexch_failure_order(cat::memory_order::acq_rel)
-                 == cat::memory_order::acquire);
-   static_assert(cat::detail::cmpexch_failure_order(cat::memory_order::release)
-                 == cat::memory_order::relaxed);
+   static_assert(
+      cat::detail::cmpexch_failure_order(cat::memory_order::seq_cst)
+      == cat::memory_order::seq_cst
+   );
+   static_assert(
+      cat::detail::cmpexch_failure_order(cat::memory_order::acq_rel)
+      == cat::memory_order::acquire
+   );
+   static_assert(
+      cat::detail::cmpexch_failure_order(cat::memory_order::release)
+      == cat::memory_order::relaxed
+   );
 
    cat::thread_fence(cat::memory_order::seq_cst);
    cat::signal_fence(cat::memory_order::seq_cst);
@@ -216,7 +226,8 @@ $test(atomic_store_load_assignment_conversion) {
    static_assert(!has_volatile_load<cat::atomic<int>>);
    static_assert(!has_volatile_store<cat::atomic<int>>);
    static_assert(
-      cat::is_same<cat::atomic<int*>::difference_type, __PTRDIFF_TYPE__>);
+      cat::is_same<cat::atomic<int*>::difference_type, __PTRDIFF_TYPE__>
+   );
 
    cat::atomic<int> constructed{3};
    cat::verify(constructed.load() == 3);
@@ -263,13 +274,15 @@ $test(atomic_compare_exchange) {
 
    int expected = 9;
    cat::verify(!value.compare_exchange_strong(
-      expected, 11, cat::memory_order::seq_cst, cat::memory_order::relaxed));
+      expected, 11, cat::memory_order::seq_cst, cat::memory_order::relaxed
+   ));
    cat::verify(expected == 10);
    cat::verify(value.load() == 10);
 
    expected = 10;
    cat::verify(value.compare_exchange_strong(
-      expected, 11, cat::memory_order::seq_cst, cat::memory_order::relaxed));
+      expected, 11, cat::memory_order::seq_cst, cat::memory_order::relaxed
+   ));
    cat::verify(expected == 10);
    cat::verify(value.load() == 11);
 
@@ -281,7 +294,8 @@ $test(atomic_compare_exchange) {
    bool weak_success = false;
    for (idx attempt = 0u; attempt < 16u && !weak_success; ++attempt) {
       weak_success = value.compare_exchange_weak(
-         expected, 14, cat::memory_order::seq_cst, cat::memory_order::relaxed);
+         expected, 14, cat::memory_order::seq_cst, cat::memory_order::relaxed
+      );
    }
    cat::verify(weak_success);
    cat::verify(value.load() == 14);
@@ -405,7 +419,8 @@ $test(atomic_floating_point_min_max) {
 
    value.store(__builtin_nanf(""));
    cat::verify(
-      __builtin_isnan(static_cast<float>(value.fetch_fmaximum_num(3.0f))));
+      __builtin_isnan(static_cast<float>(value.fetch_fmaximum_num(3.0f)))
+   );
    cat::verify(value.load() == 3.0f);
    value.store(3.0f);
    cat::verify(value.fetch_fmaximum_num(__builtin_nanf("")) == 3.0f);
@@ -420,12 +435,14 @@ $test(atomic_floating_point_min_max) {
 
    float storage = 1.0f;
    cat::atomic<cat::float4&> reference{
-      *reinterpret_cast<cat::float4*>(&storage)};
+      *reinterpret_cast<cat::float4*>(&storage)
+   };
    reference.fetch_fmaximum_num(__builtin_nanf(""));
    cat::verify(storage == 1.0f);
 
    cat::atomic_ref_relaxed<cat::float4> bound{
-      *reinterpret_cast<cat::float4*>(&storage)};
+      *reinterpret_cast<cat::float4*>(&storage)
+   };
    bound.fetch_fminimum(0.5f);
    cat::verify(storage == 0.5f);
 
@@ -439,8 +456,9 @@ $test(atomic_compare_and_compare_load) {
 
    cat::verify(value.compare(10));
    cat::verify(value.compare(10, cat::memory_order::relaxed));
-   cat::verify(value.compare(10, cat::memory_order::seq_cst,
-                             cat::memory_order::relaxed));
+   cat::verify(
+      value.compare(10, cat::memory_order::seq_cst, cat::memory_order::relaxed)
+   );
    cat::verify(!value.compare(11));
    cat::verify(value.load() == 10);
 
@@ -456,8 +474,9 @@ $test(atomic_compare_and_compare_load) {
    cat::verify(value.load() == 10);
 
    expected = 17;
-   cat::verify(!value.compare_load(expected, cat::memory_order::seq_cst,
-                                   cat::memory_order::relaxed));
+   cat::verify(!value.compare_load(
+      expected, cat::memory_order::seq_cst, cat::memory_order::relaxed
+   ));
    cat::verify(expected == 10);
 
    cat::atomic<bool> flag;
@@ -586,22 +605,31 @@ $test(atomic_overflow_semantics) {
    cat::atomic<cat::sat_uint1&> reference{storage};
    cat::verify(reference.fetch_add(2u) == 254u);
    cat::verify(storage == cat::limits<cat::sat_uint1>::max());
-   cat::verify(reference.wrap().fetch_add(1u)
-               == cat::limits<cat::sat_uint1>::max());
+   cat::verify(
+      reference.wrap().fetch_add(1u) == cat::limits<cat::sat_uint1>::max()
+   );
    cat::verify(storage == 0u);
 }
 
 $test(atomic_ref_bound) {
-   static_assert(cat::atomic_ref_relaxed<int>::memory_ordering
-                 == cat::memory_order::relaxed);
-   static_assert(cat::atomic_ref_acq_rel<int>::memory_ordering
-                 == cat::memory_order::acq_rel);
-   static_assert(cat::atomic_ref_seq_cst<int>::memory_ordering
-                 == cat::memory_order::seq_cst);
+   static_assert(
+      cat::atomic_ref_relaxed<int>::memory_ordering
+      == cat::memory_order::relaxed
+   );
+   static_assert(
+      cat::atomic_ref_acq_rel<int>::memory_ordering
+      == cat::memory_order::acq_rel
+   );
+   static_assert(
+      cat::atomic_ref_seq_cst<int>::memory_ordering
+      == cat::memory_order::seq_cst
+   );
    static_assert(cat::is_copy_constructible<cat::atomic_ref_relaxed<int>>);
    static_assert(!cat::is_copy_assignable<cat::atomic_ref_relaxed<int>>);
-   static_assert(!cat::is_constructible<cat::atomic_ref_relaxed<int>,
-                                        cat::atomic_ref_seq_cst<int> const&>);
+   static_assert(
+      !cat::is_constructible<
+         cat::atomic_ref_relaxed<int>, cat::atomic_ref_seq_cst<int> const&>
+   );
    static_assert(!has_runtime_load_order<cat::atomic_ref_relaxed<int>>);
    static_assert(!has_runtime_store_order<cat::atomic_ref_relaxed<int>>);
 
@@ -768,10 +796,12 @@ $test(atomic_reference_const_qualified) {
 
    // `address()` propagates const to the returned `void*` form.
    static_assert(
-      cat::is_same<decltype(cat::declval<atomic<int&>>().address()), void*>);
+      cat::is_same<decltype(cat::declval<atomic<int&>>().address()), void*>
+   );
    static_assert(
-      cat::is_same<decltype(cat::declval<atomic<int const&>>().address()),
-                   void const*>);
+      cat::is_same<
+         decltype(cat::declval<atomic<int const&>>().address()), void const*>
+   );
 
    // Mutating ops are gone for `T const`, but loads, waits, compares, and
    // const-only introspection remain.
@@ -804,9 +834,11 @@ $test(atomic_reference_const_qualified) {
    cat::verify(from_writable.address() == writable.address());
 
    static_assert(
-      is_atomic_ref_convertible_from<atomic<int&>, atomic<int const&>>);
+      is_atomic_ref_convertible_from<atomic<int&>, atomic<int const&>>
+   );
    static_assert(
-      !is_atomic_ref_convertible_from<atomic<int const&>, atomic<int&>>);
+      !is_atomic_ref_convertible_from<atomic<int const&>, atomic<int&>>
+   );
    static_assert(!has_atomic_ref_relaxed_specialization<int volatile>);
    static_assert(!has_atomic_ref_relaxed_specialization<int const volatile>);
 
@@ -816,9 +848,11 @@ $test(atomic_reference_const_qualified) {
    cat::verify(bound_read_only.compare(42));
    cat::verify(bound_read_only.address() == &storage);
    static_assert(
-      cat::is_same<decltype(bound_read_only.address()), void const*>);
+      cat::is_same<decltype(bound_read_only.address()), void const*>
+   );
    static_assert(
-      cat::is_same<cat::atomic_ref_relaxed<int const>::value_type, int>);
+      cat::is_same<cat::atomic_ref_relaxed<int const>::value_type, int>
+   );
    static_assert(!has_store<cat::atomic_ref_relaxed<int const>>);
    static_assert(!has_fetch_add<cat::atomic_ref_relaxed<int const>>);
    static_assert(!has_store_add<cat::atomic_ref_relaxed<int const>>);
@@ -828,11 +862,13 @@ $test(atomic_reference_const_qualified) {
    cat::atomic_ref_relaxed<int const> bound_from_writable{writable_bound};
    cat::verify(bound_from_writable.load() == 42);
    static_assert(
-      is_atomic_ref_convertible_from<cat::atomic_ref_relaxed<int>,
-                                     cat::atomic_ref_relaxed<int const>>);
+      is_atomic_ref_convertible_from<
+         cat::atomic_ref_relaxed<int>, cat::atomic_ref_relaxed<int const>>
+   );
    static_assert(
-      !is_atomic_ref_convertible_from<cat::atomic_ref_relaxed<int const>,
-                                      cat::atomic_ref_relaxed<int>>);
+      !is_atomic_ref_convertible_from<
+         cat::atomic_ref_relaxed<int const>, cat::atomic_ref_relaxed<int>>
+   );
 }
 
 $test(atomic_lock_free) {
