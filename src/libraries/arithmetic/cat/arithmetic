@@ -1598,9 +1598,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U* _Nonnull p_operand) const -> U* _Nonnull {
+   add(U* _Nullable p_operand) const -> U* _Nullable {
       return raw + p_operand;
    }
 
@@ -1693,9 +1693,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U* _Nonnull p_operand) -> U* _Nonnull {
+   subtract_by(U* _Nullable p_operand) -> U* _Nullable {
       return raw - p_operand;
    }
 
@@ -1708,9 +1708,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U* _Nonnull p_operand) -> U* _Nonnull {
+   subtract_from(U* _Nullable p_operand) -> U* _Nullable {
       return p_operand - raw;
    }
 
@@ -1752,9 +1752,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U* _Nonnull p_operand) const -> U* _Nonnull {
+   multiply(U* _Nullable p_operand) const -> U* _Nullable {
       return raw * p_operand;
    }
 
@@ -1797,9 +1797,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U* _Nonnull p_operand) const -> U* _Nonnull {
+   divide_by(U* _Nullable p_operand) const -> U* _Nullable {
       return raw / p_operand;
    }
 
@@ -1816,9 +1816,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U* _Nonnull p_operand) const -> U* _Nonnull {
+   divide_into(U* _Nullable p_operand) const -> U* _Nullable {
       return p_operand / raw;
    }
 
@@ -1871,9 +1871,9 @@ basic_int :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U* _Nonnull p_operand) const -> U* _Nonnull {
+   modulo_by(U* _Nullable p_operand) const -> U* _Nullable {
       return raw % p_operand;
    }
 
@@ -1891,9 +1891,9 @@ basic_int :
 
    template <typename U>
       requires(is_unsigned_integral<T>)
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U* _Nonnull p_operand) const -> U* _Nonnull {
+   bit_and(U* _Nullable p_operand) const -> U* _Nullable {
       return p_operand & raw;
    }
 
@@ -1917,9 +1917,9 @@ basic_int :
 
    template <typename U>
       requires(is_unsigned_integral<T>)
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U* _Nonnull p_operand) const -> U* _Nonnull {
+   bit_or(U* _Nullable p_operand) const -> U* _Nullable {
       return p_operand | raw;
    }
 
@@ -2526,9 +2526,9 @@ basic_intptr :
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U* _Nonnull p_operand) const -> U* _Nonnull {
+   add(U* _Nullable p_operand) const -> U* _Nullable {
       return basic_intptr<U, Storage, overflow_policy>(p_operand)
          .add(*this)
          .get();
@@ -2568,9 +2568,9 @@ basic_intptr :
    // Subtraction as the right-hand operand on a left-hand pointer does integer
    // arithmetic, not pointer arithmetic. This does not widen the pointer type.
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U* _Nonnull p_operand) const -> U* _Nonnull {
+   subtract_by(U* _Nullable p_operand) const -> U* _Nullable {
       return basic_intptr<U, Storage, overflow_policy>(p_operand)
          .subtract_by(*this)
          .get();
@@ -2586,9 +2586,9 @@ basic_intptr :
    // Subtraction as the left-hand operand by a right-hand pointer does integer
    // arithmetic, not pointer arithmetic. This does not widen the pointer type.
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U* _Nonnull p_operand) const -> U* _Nonnull {
+   subtract_from(U* _Nullable p_operand) const -> U* _Nullable {
       return basic_intptr<U, Storage, overflow_policy>(p_operand)
          .subtract_by(raw)
          .get();
@@ -2609,7 +2609,7 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U* _Nonnull p_operand) const -> basic_intptr {
+   multiply(U* _Nullable p_operand) const -> basic_intptr {
       return basic_intptr(
          raw * basic_intptr<U, Storage, overflow_policy>(p_operand).raw);
    }
@@ -2624,7 +2624,7 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U* _Nonnull p_operand) const -> basic_intptr {
+   divide_by(U* _Nullable p_operand) const -> basic_intptr {
       return this->divide_by(
          basic_intptr<U, Storage, overflow_policy>(p_operand));
    }
@@ -2639,7 +2639,7 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U* _Nonnull p_operand) const -> basic_intptr {
+   divide_into(U* _Nullable p_operand) const -> basic_intptr {
       return basic_intptr<U, Storage, overflow_policy>(p_operand).divide_into(
          raw);
    }
@@ -2658,7 +2658,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U* _Nonnull p_operand) const -> basic_intptr {
+   bit_and(U* _Nullable p_operand) const -> basic_intptr {
       return this->bit_and(
          basic_intptr<U, Storage, overflow_policy>(p_operand));
    }
@@ -2676,7 +2676,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U* _Nonnull p_operand) const -> basic_intptr {
+   bit_or(U* _Nullable p_operand) const -> basic_intptr {
       return this->bit_or(basic_intptr<U, Storage, overflow_policy>(p_operand));
    }
 
@@ -2690,7 +2690,7 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U* _Nonnull p_operand) const -> basic_intptr {
+   modulo_by(U* _Nullable p_operand) const -> basic_intptr {
       return this->modulo_by(
          basic_intptr<U, Storage, overflow_policy>(p_operand));
    }
@@ -3012,9 +3012,9 @@ basic_idx :
 
    // Generate `operator+` for pointer arithmetic.
    template <typename T>
-   [[gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(T* _Nonnull p_other) const -> T* _Nonnull {
+   add(T* _Nullable p_other) const -> T* _Nullable {
       return p_other + raw;
    }
 
@@ -3089,9 +3089,9 @@ basic_idx :
 
    // Generate `operator-` for pointer arithmetic.
    template <typename T>
-   [[gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(T* _Nonnull p_other) const -> T* _Nonnull {
+   subtract_from(T* _Nullable p_other) const -> T* _Nullable {
       return p_other - raw;
    }
 
@@ -3138,9 +3138,9 @@ basic_idx :
 
    // Generate `operator*` for pointer arithmetic.
    template <typename T>
-   [[gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(T* _Nonnull p_other) const -> T* _Nonnull {
+   multiply(T* _Nullable p_other) const -> T* _Nullable {
       return p_other * raw;
    }
 
@@ -3202,9 +3202,9 @@ basic_idx :
 
    // Generate `operator/` for pointer arithmetic.
    template <typename T>
-   [[gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(T* _Nonnull p_other) const -> T* _Nonnull {
+   divide_into(T* _Nullable p_other) const -> T* _Nullable {
       return p_other / raw;
    }
 

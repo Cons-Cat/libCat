@@ -904,6 +904,84 @@ $test(arithmetic_implicit_conversions_raw_storage_and_pointer_arithmetic) {
    p_idx -= uintptr<void>{1u};
 }
 
+$test(arithmetic_nullable_pointer_arithmetic) {
+   int4* p_null = nullptr;
+
+   char storage;
+   int4* p_value = reinterpret_cast<int4*>(&storage);
+
+   // `basic_idx` pointer arithmetic via operators.
+   cat::verify(p_null + 0_idx == nullptr);
+   cat::verify(0_idx + p_null == nullptr);
+   cat::verify(p_null - 0_idx == nullptr);
+
+   cat::verify(p_value + 0_idx == p_value);
+   cat::verify(0_idx + p_value == p_value);
+   cat::verify(p_value - 0_idx == p_value);
+
+   // `basic_idx` pointer arithmetic via members.
+   cat::verify((0_idx).add(p_null) == nullptr);
+   cat::verify((0_idx).subtract_from(p_null) == nullptr);
+
+   // `basic_int` unsigned pointer arithmetic via operators.
+   cat::verify(0_u8 + p_null == nullptr);
+   cat::verify(p_null - 0_u8 == nullptr);
+
+   cat::verify(0_u8 + p_value == p_value);
+   cat::verify(p_value - 0_u8 == p_value);
+
+   // `basic_int` unsigned pointer arithmetic via members.
+   cat::verify(uword{0}.add(p_null) == nullptr);
+   cat::verify(uword{0}.subtract_from(p_null) == nullptr);
+
+   // `basic_intptr` pointer arithmetic via operators.
+   cat::verify(p_null + intptr<void>{0} == nullptr);
+   cat::verify(intptr<void>{0} + p_null == nullptr);
+   cat::verify(p_null - intptr<void>{0} == nullptr);
+   cat::verify(p_null - uintptr<void>{0u} == nullptr);
+   cat::verify(intptr<void>{0}.subtract_from(p_null) == nullptr);
+   cat::verify(uintptr<void>{0u}.subtract_from(p_null) == nullptr);
+
+   cat::verify(p_value + intptr<void>{0} == p_value);
+   cat::verify(intptr<void>{0} + p_value == p_value);
+   cat::verify(p_value - intptr<void>{0} == p_value);
+
+   // `basic_intptr` pointer arithmetic via members.
+   cat::verify(intptr<void>{0}.add(p_null) == nullptr);
+   cat::verify(intptr<void>{0}.subtract_from(p_null) == nullptr);
+   cat::verify(uintptr<void>{0u}.subtract_from(p_null) == nullptr);
+
+   // Compound assignment on raw pointers.
+   int4* p_mut = p_value;
+   p_mut += 0_idx;
+   cat::verify(p_mut == p_value);
+   p_mut = p_value;
+   p_mut -= 0_idx;
+   cat::verify(p_mut == p_value);
+   p_mut = p_value;
+   p_mut += intptr<void>{0};
+   cat::verify(p_mut == p_value);
+   p_mut = p_value;
+   p_mut -= intptr<void>{0};
+   cat::verify(p_mut == p_value);
+   p_mut = p_value;
+   p_mut += uintptr<void>{0u};
+   cat::verify(p_mut == p_value);
+   p_mut = p_value;
+   p_mut -= uintptr<void>{0u};
+   cat::verify(p_mut == p_value);
+
+   // `overflow_reference` forwarding.
+   idx zero_idx = 0_idx;
+   cat::verify(p_null + zero_idx.wrap() == nullptr);
+   cat::verify(zero_idx.wrap() + p_null == nullptr);
+   cat::verify(p_null - zero_idx.wrap() == nullptr);
+
+   uword zero_uword = 0_u8;
+   cat::verify(zero_uword.wrap().add(p_null) == nullptr);
+   cat::verify(zero_uword.wrap().subtract_from(p_null) == nullptr);
+}
+
 // Cross-sign / narrowing implicit constant conversions from `constexpr` and
 // `const` integral sources whose value fits the destination storage. These go
 // through the `enable_if` constructor because the source is a constant

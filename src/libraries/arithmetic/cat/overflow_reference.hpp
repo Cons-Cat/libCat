@@ -547,9 +547,9 @@ class overflow_reference
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U* _Nonnull p_operand) const -> U* _Nonnull {
+   add(U* _Nullable p_operand) const -> U* _Nullable {
       return view().add(p_operand);
    }
 
@@ -598,9 +598,9 @@ class overflow_reference
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U* _Nonnull p_operand) -> U* _Nonnull {
+   subtract_by(U* _Nullable p_operand) -> U* _Nullable {
       return view().subtract_by(p_operand);
    }
 
@@ -630,9 +630,9 @@ class overflow_reference
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U* _Nonnull p_operand) -> U* _Nonnull {
+   subtract_from(U* _Nullable p_operand) -> U* _Nullable {
       return view().subtract_from(p_operand);
    }
 
@@ -663,9 +663,9 @@ class overflow_reference
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U* _Nonnull p_operand) const -> U* _Nonnull {
+   multiply(U* _Nullable p_operand) const -> U* _Nullable {
       return view().multiply(p_operand);
    }
 
@@ -695,9 +695,9 @@ class overflow_reference
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U* _Nonnull p_operand) const -> U* _Nonnull {
+   divide_by(U* _Nullable p_operand) const -> U* _Nullable {
       return view().divide_by(p_operand);
    }
 
@@ -728,9 +728,9 @@ class overflow_reference
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U* _Nonnull p_operand) const -> U* _Nonnull {
+   divide_into(U* _Nullable p_operand) const -> U* _Nullable {
       return view().divide_into(p_operand);
    }
 
@@ -771,9 +771,9 @@ class overflow_reference
    }
 
    template <typename U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U* _Nonnull p_operand) const -> U* _Nonnull {
+   modulo_by(U* _Nullable p_operand) const -> U* _Nullable {
       return view().modulo_by(p_operand);
    }
 
@@ -817,9 +817,9 @@ class overflow_reference
 
    template <typename U>
       requires(!detail::is_idx<wrapper_type> && is_unsigned_integral<raw_type>)
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U* _Nonnull p_operand) const -> U* _Nonnull {
+   bit_and(U* _Nullable p_operand) const -> U* _Nullable {
       return view().bit_and(p_operand);
    }
 
@@ -846,9 +846,9 @@ class overflow_reference
 
    template <typename U>
       requires(!detail::is_idx<wrapper_type> && is_unsigned_integral<raw_type>)
-   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U* _Nonnull p_operand) const -> U* _Nonnull {
+   bit_or(U* _Nullable p_operand) const -> U* _Nullable {
       return view().bit_or(p_operand);
    }
 
