@@ -1322,6 +1322,7 @@ class
    constexpr auto
    operator[](Ts&&... lanes) const;
 
+   // Count set bits in each unsigned integer lane.
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    popcount() const -> simd

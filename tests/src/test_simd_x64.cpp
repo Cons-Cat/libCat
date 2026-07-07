@@ -44,9 +44,8 @@ has_avx512_runtime_support() -> bool {
 [[gnu::target("avx512f,avx512cd,avx512bw,avx512dq,avx512vl")]]
 auto
 verify_avx512_abi_runtime_hooks() -> void {
-   x64::avx512_simd<cat::uint8> const words{
-      1u, 3u, 7u, 15u, 31u, 63u, 127u, cat::uint8::max()
-   };
+   x64::avx512_simd<cat::uint8> const words{1u,  3u,  7u,   15u,
+                                            31u, 63u, 127u, cat::uint8::max()};
    auto const counts = words.popcount();
    cat::verify(counts[0u] == 1u);
    cat::verify(counts[1u] == 2u);
@@ -54,13 +53,10 @@ verify_avx512_abi_runtime_hooks() -> void {
    cat::verify(counts.sum() == 92u);
 
    x64::avx512_simd<cat::uint4> const lanes{
-      1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,
-      9u,  10u, 11u, 12u, 13u, 14u, 15u, 16u
+      1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u
    };
-   x64::avx512_simd<cat::uint4> const threshold{
-      8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u,
-      8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u
-   };
+   x64::avx512_simd<cat::uint4> const threshold{8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u,
+                                                8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u};
    auto const high_lanes = lanes > threshold;
    cat::verify(high_lanes.count_if_true() == 8u);
    cat::verify(high_lanes.find_if_true() == 8u);

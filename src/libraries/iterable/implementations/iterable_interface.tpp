@@ -39,6 +39,36 @@ iterable_pipe_reverse(Self&& self) {
 
 template <typename Self>
 constexpr auto
+iterable_pipe_as_rvalue(Self&& self) {
+   return $fwd(self) | as_rvalue();
+}
+
+template <typename Self, typename Position>
+constexpr auto
+iterable_pipe_read_at(Self& self, Position const& position) -> decltype(auto) {
+   return read_at(self, position);
+}
+
+template <typename Self, typename Position>
+constexpr auto
+iterable_pipe_try_read_at(Self& self, Position const& position) {
+   return try_read_at(self, position);
+}
+
+template <typename Self, typename Position>
+constexpr auto
+iterable_pipe_slice(Self& self, Position first, Position last) {
+   return slice(self, first, last);
+}
+
+template <typename Self>
+constexpr auto
+iterable_pipe_as_span(Self& self) {
+   return as_span(self);
+}
+
+template <typename Self>
+constexpr auto
 iterable_pipe_sum(Self&& self) {
    return $fwd(self) | sum();
 }
@@ -71,6 +101,18 @@ template <typename Self>
 constexpr auto
 iterable_pipe_count(Self&& self) -> idx {
    return $fwd(self) | count();
+}
+
+template <typename Self>
+constexpr auto
+iterable_pipe_popcount(Self&& self) -> idx {
+   return $fwd(self) | popcount();
+}
+
+template <typename Container, typename Self>
+constexpr auto
+iterable_pipe_to(Self&& self) -> Container {
+   return $fwd(self) | to<Container>();
 }
 
 template <typename Self, typename Callback>
@@ -118,6 +160,43 @@ iterable_interface<Tag>::reverse(this Self&& self) {
 template <typename Tag>
 template <typename Self>
 constexpr auto
+iterable_interface<Tag>::as_rvalue(this Self&& self) {
+   return detail::iterable_pipe_as_rvalue($fwd(self));
+}
+
+template <typename Tag>
+template <typename Self, typename Position>
+constexpr decltype(auto)
+iterable_interface<Tag>::read_at(this Self& self, Position const& position) {
+   return detail::iterable_pipe_read_at(self, position);
+}
+
+template <typename Tag>
+template <typename Self, typename Position>
+constexpr auto
+iterable_interface<Tag>::try_read_at(
+   this Self& self, Position const& position
+) {
+   return detail::iterable_pipe_try_read_at(self, position);
+}
+
+template <typename Tag>
+template <typename Self, typename Position>
+constexpr auto
+iterable_interface<Tag>::slice(this Self& self, Position first, Position last) {
+   return detail::iterable_pipe_slice(self, first, last);
+}
+
+template <typename Tag>
+template <typename Self>
+constexpr auto
+iterable_interface<Tag>::as_span(this Self& self) {
+   return detail::iterable_pipe_as_span(self);
+}
+
+template <typename Tag>
+template <typename Self>
+constexpr auto
 iterable_interface<Tag>::sum(this Self&& self) {
    return detail::iterable_pipe_sum($fwd(self));
 }
@@ -155,6 +234,13 @@ template <typename Self>
 constexpr auto
 iterable_interface<Tag>::count(this Self&& self) -> idx {
    return detail::iterable_pipe_count($fwd(self));
+}
+
+template <typename Tag>
+template <typename Container, typename Self>
+constexpr auto
+iterable_interface<Tag>::to(this Self&& self) -> Container {
+   return detail::iterable_pipe_to<Container>($fwd(self));
 }
 
 template <typename Tag>

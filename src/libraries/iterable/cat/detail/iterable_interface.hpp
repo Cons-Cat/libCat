@@ -77,6 +77,26 @@ struct iterable_interface {
 
    template <typename Self>
    constexpr auto
+   as_rvalue(this Self&& self);
+
+   template <typename Self, typename Position>
+   constexpr decltype(auto)
+   read_at(this Self& self, Position const& position);
+
+   template <typename Self, typename Position>
+   constexpr auto
+   try_read_at(this Self& self, Position const& position);
+
+   template <typename Self, typename Position>
+   constexpr auto
+   slice(this Self& self, Position first, Position last);
+
+   template <typename Self>
+   constexpr auto
+   as_span(this Self& self);
+
+   template <typename Self>
+   constexpr auto
    sum(this Self&& self);
 
    template <typename Self>
@@ -98,6 +118,10 @@ struct iterable_interface {
    template <typename Self>
    constexpr auto
    count(this Self&& self) -> idx;
+
+   template <typename Container, typename Self>
+   constexpr auto
+   to(this Self&& self) -> Container;
 
    template <typename Self, typename Callback>
    constexpr auto

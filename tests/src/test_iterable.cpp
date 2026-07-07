@@ -364,6 +364,38 @@ static_assert(cat::is_bidirectional_collection<tiny_array<int, 4u>>);
 static_assert(cat::is_random_access_collection<tiny_array<int, 4u>>);
 static_assert(!cat::is_bidirectional_collection<tiny_list<int, 8u>>);
 
+struct sized_count_iteration_context {
+   bool* m_p_iteration_used = nullptr;
+
+   using element_type = int;
+
+   template <typename Pred>
+   constexpr auto
+   run_while(Pred&& /*pred*/) -> cat::iteration_result {
+      *m_p_iteration_used = true;
+      return cat::iteration_result::complete;
+   }
+};
+
+struct sized_count_source : cat::iterable_interface<> {
+   bool* m_p_iteration_used = nullptr;
+
+   constexpr explicit sized_count_source(bool* p_iteration_used)
+       : m_p_iteration_used(p_iteration_used) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> cat::idx {
+      return 7u;
+   }
+
+   constexpr auto
+   iterate() -> sized_count_iteration_context {
+      return {m_p_iteration_used};
+   }
+};
+
 // Reverse iteration: collections climb on bidirectional, iterables opt-in by
 // writing a member `reverse_iterate()`.
 static_assert(cat::is_reverse_iterable<tiny_array<int, 4u>>);
@@ -443,6 +475,15 @@ $test(flux_iterable_basics) {
       total += x;
    });
    cat::verify(total == 60);
+}
+
+$test(flux_count_uses_size_when_available) {
+   bool iteration_used = false;
+   sized_count_source source{&iteration_used};
+
+   cat::verify((source | cat::count()) == 7u);
+   cat::verify((cat::ref(source) | cat::count()) == 7u);
+   cat::verify(!iteration_used);
 }
 
 $test(flux_pipe_collection) {
@@ -690,6 +731,7 @@ $test(flux_read_at_and_try_read_at) {
    // `read_at` is checked but not maybe-returning - in-bounds reads succeed.
    cat::verify(cat::read_at(arr, cat::idx{0u}) == 11);
    cat::verify(cat::read_at(arr, cat::idx{3u}) == 44);
+   cat::verify(arr.read_at(cat::idx{1u}) == 22);
 
    // `try_read_at` returns a `maybe`. In and out of range cases are both
    // observable.
@@ -702,6 +744,10 @@ $test(flux_read_at_and_try_read_at) {
 
    auto far_past = cat::try_read_at(arr, cat::idx{1'000u});
    cat::verify(!far_past.has_value());
+
+   auto member_in_range = arr.try_read_at(cat::idx{3u});
+   cat::verify(member_in_range.has_value());
+   cat::verify(member_in_range.value() == 44);
 }
 
 $test(flux_slice_basic) {
@@ -713,6 +759,7 @@ $test(flux_slice_basic) {
    // Slice [1, 4) gives {20, 30, 40}, sum = 90.
    auto sub = cat::slice(arr, cat::idx{1u}, cat::idx{4u});
    cat::verify((sub | cat::sum()) == 90);
+   cat::verify(arr.slice(cat::idx{1u}, cat::idx{4u}).sum() == 90);
 
    // Slices preserve refinement: a slice of a random-access collection is
    // itself random access.
@@ -741,6 +788,7 @@ $test(flux_as_span) {
    cat::verify(span_view.size() == 4u);
    cat::verify(span_view[0] == 7);
    cat::verify(span_view[3] == 28);
+   cat::verify(arr.as_span()[2u] == 21);
 
    // The span aliases the original storage. Mutating through the span is
    // visible in `arr`.
@@ -1147,12 +1195,16 @@ $test(flux_as_rvalue_element_type) {
    tiny_array<tiny_string, 2u> arr;
    using fwd_chain = decltype(cat::ref(arr) | cat::as_rvalue());
    using fwd_ctx = cat::iterable_iteration_context_type<fwd_chain>;
-   static_assert(cat::is_same<typename fwd_ctx::element_type, tiny_string&&>);
+   static_assert(cat::is_same<fwd_ctx::element_type, tiny_string&&>);
+   using member_fwd_chain = decltype(cat::ref(arr).as_rvalue());
+   using member_fwd_ctx =
+      cat::iterable_iteration_context_type<member_fwd_chain>;
+   static_assert(cat::is_same<member_fwd_ctx::element_type, tiny_string&&>);
 
    using rev_chain =
       decltype(cat::ref(arr) | cat::reverse() | cat::as_rvalue());
    using rev_ctx = cat::iterable_iteration_context_type<rev_chain>;
-   static_assert(cat::is_same<typename rev_ctx::element_type, tiny_string&&>);
+   static_assert(cat::is_same<rev_ctx::element_type, tiny_string&&>);
 
    // `filter` is now reverse-iterable when its base is, so the P3725-shaped
    // chain has a well-formed reverse context too.
@@ -1305,6 +1357,11 @@ $test(flux_to_without_as_rvalue) {
    cat::verify(out.size() == 4u);
    cat::verify(out.m_data[0] == 1);
    cat::verify(out.m_data[3] == 4);
+
+   auto member_out = arr.to<tiny_vector<int, 8u>>();
+   cat::verify(member_out.size() == 4u);
+   cat::verify(member_out.m_data[0] == 1);
+   cat::verify(member_out.m_data[3] == 4);
 }
 
 // A `slice_view` keeps the parent's random-access protocol, so `distance` and

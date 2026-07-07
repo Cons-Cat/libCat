@@ -8,10 +8,11 @@
 #include <cat/utility>
 
 // `$simd_switch` is a SIMD variant selector. Entries are declared by
-// `$abi(arch, body)` and dispatched at runtime. The best-fitting ABI is
-// selected at runtime in constant time. A `default:` case is required when an
-// ISA baseline is not provided. It runs when no `$abi` entry otherwise matches.
-// `cat::` namespace qualification MUST NOT be used within `$abi` bodies!
+// `$abi(arch, { body{ })` and dispatched at runtime. The best-fitting ABI is
+// selected during program run in constant time. A `default:` case is required
+// when an ISA baseline is not provided. It runs when no `$abi` entry otherwise
+// matches. `cat::` namespace qualification MUST NOT be used within `$abi`
+// bodies!
 //
 // `$abi(ssse3, ...)` and `$abi(avx2, ...)` in any order, `avx2` still
 // wins on a CPU that supports it.
@@ -38,9 +39,9 @@
 // clause is emitted verbatim into the surrounding switch body, so its
 // statements can read and write the same captures.
 //
-// Compile-time diagnostics enforce that:
+// The compiler enforces that:
 //   * the last argument is a `default:` clause OR one of the listed
-//     `$abi(arch, ...)` entries has `CAT_PRI_<arch> <= CAT_BASELINE_PRI`
+//     `$abi(arch, ...)` entries has `CAT_PRI_<arch> <= CAT_BASELINE_PRI
 //     (i.e. the build's `-m<arch>` baseline statically guarantees that
 //     arch is supported on every host capable of running the binary, so
 //     no fallback is reachable).
@@ -58,8 +59,8 @@
 // explicitly after `<cat/simd>`.
 //
 // The implementation of this macro is unfortunately complex. But the value
-// of this feature is huge, and there are no elegant implementations for it in
-// C++ today.
+// of this feature is huge, and in my opinion, there are no elegant
+// implementations possible for it in C++ today.
 
 namespace cat::detail {
 
@@ -186,18 +187,19 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 }  // namespace cat::detail
 
 // Per-arch hooks. Each supported arch defines:
-//    CAT_TGT_<arch>   GNU target attribute string (comma-separated features).
-//    CAT_PRI_<arch>   integer priority. higher is preferred.
+//    CAT_TGT_<arch>   GNU target attribute string (comma-separated
+//    features). CAT_PRI_<arch>   integer priority. higher is preferred.
 // Adding a new arch is purely additive here. The numeric `CAT_PRI_<arch>`
 // values must mirror the priority ladder in `<cat/cpuid>` (which writes
 // `cat::detail::simd_dispatch_priority` from the same numbers).
 //
-// `CAT_TGT_<arch>` and `CAT_PRI_<arch>` look like `constexpr` constants to
-// clang-tidy's `cppcoreguidelines-macro-usage` check, but they have to stay
+// `CAT_TGT_<arch>` and `CAT_PRI_<arch>` look like `constexpr` constants
+// to clang-tidy's `cppcoreguidelines-macro-usage` check, but they have to stay
 // macros so `CAT_CONCAT(CAT_TGT_, arch)` / `CAT_CONCAT(CAT_PRI_, arch)`
 // can build their names by token paste, `[[gnu::target("...")]]` gets a
-// literal at the call site, and `CAT_BASELINE_PRI` arithmetic works inside
+// literal at the call site, and `CAT_BASELINE_PRI  arithmetic works inside
 // `#if`. Suppress the check for the whole block.
+
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define CAT_TGT_avx512 "avx512f,avx512cd,avx512bw,avx512dq,avx512vl"
 #define CAT_PRI_avx512 90
@@ -225,7 +227,8 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 // `-mavx2` defines `__AVX2__`, `-mavx` defines `__AVX__`, etc. The highest
 // matching tier wins. `0` is "below sse2".
 //
-// The numeric values mirror `CAT_PRI_<arch>` so they're directly comparable.
+// The numeric values mirror `CAT_PRI_<arch>` so they're directly
+// comparable.
 #if defined(__AVX512F__) && defined(__AVX512CD__) && defined(__AVX512BW__) \
    && defined(__AVX512DQ__) && defined(__AVX512VL__)
 #define CAT_BASELINE_PRI 90
@@ -252,12 +255,6 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 // reach the SSE2 entry at runtime. Treating those entries as warnings would
 // punish library code for being portable, so the dispatch silently picks
 // the highest-priority supported arch and ignores the rest.
-//
-// Note: Clang treats `[[gnu::target("X")]]` as ADDITIVE. It adds
-// features but never restricts them. So an `$abi(sse2, ...)` in a TU
-// compiled with `-mavx2` baseline still gets AVX2-class codegen. The
-// per-arch dispatch table just routes around that entry on hosts that meet
-// a higher tier. Lower the build baseline if true per-arch codegen matters.
 
 // Preprocessor plumbing.
 #define CAT_CONCAT(a, b) CAT_CONCAT_(a, b)
@@ -648,7 +645,7 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 // Extract the last argument of a variadic by dispatching on arity. Used by
 // `$simd_switch` to peek at whether the user-supplied trailing entry is a
 // `default:` clause (non-paren) or a `$abi(...)` tuple (paren-wrapped after
-// `$abi` expands). Caps at 16 to match the `CAT_FE_*` family.
+// `$abi` expands).
 #define CAT_LAST_ARG(...)                                             \
    CAT_LAST_ARG_DISPATCH_(                                            \
       __VA_ARGS__, CAT_LAST_OF_16, CAT_LAST_OF_15, CAT_LAST_OF_14,    \
@@ -690,44 +687,26 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 )                                                                        \
    _16
 
-// `default: __builtin_unreachable();`, but only when the user did NOT
-// already supply a `default:` clause. That holds when the last
-// `$simd_switch` argument is a paren-wrapped `(arch, body)` tuple from
-// `$abi(...)`. The `simd_dispatch_baseline_covers` `static_assert` in
-// `$simd_switch` guarantees that one of the listed entries' runtime
-// predicates always holds, so the switch never actually reaches this
-// synthetic arm. It exists so the optimizer gets an explicit "no other
-// case is possible" hint and so clang-tidy's
-// `bugprone-switch-missing-default-case` doesn't flag the expansion.
 #define CAT_SIMD_SYNTH_DEFAULT(...) \
    CAT_CONCAT(CAT_SIMD_SYNTH_DEFAULT_, CAT_IS_PAREN(CAT_LAST_ARG(__VA_ARGS__)))
-#define CAT_SIMD_SYNTH_DEFAULT_0  // user-supplied `default:` already present.
+// User-supplied `default:` already present:
+#define CAT_SIMD_SYNTH_DEFAULT_0
+// When a `default` case is absent, we presume it is unreachable.
 #define CAT_SIMD_SYNTH_DEFAULT_1 \
    default:                      \
       __builtin_unreachable();
 
-// SIMD dispatch for different ABIs. See the `simd_dispatch` file masthead
+// SIMD dispatch for different ABIs. See this file's masthead
 // comment for API usage. The trailing `default:` clause is the user's
-// own switch-style fallback (verbatim text, not a lambda); it runs when
-// no `$abi(...)` entry's CPU-support check passes. The selector walks
-// arch entries in priority order, never picks the default sentinel
-// (whose `_PRI` is -1), and falls through to the user's `default:` only
-// when every `$abi` entry rejects the host, which can only happen if
-// the file baseline is below all listed archs.
-//
-// `CAT_NO_CPUID` opts a target out of runtime CPU feature detection
-// (see `<cat/cpuid>`), which `$simd_switch` depends on to pick a
-// `$abi(...)` entry. Calling `$simd_switch` in that configuration is a
-// programming error, so the macro expands to a `_Pragma("GCC error ...")`
-// at the call site instead of silently no-oping.
+// own switch-style fallback. The selector walks arch entries in priority order,
+// never picks the default sentinel (whose `_PRI  is -1), and falls through
+// to the user's `default:` only when every `$abi` entry rejects the host, which
+// can only happen if the file baseline is below all listed archs.
 #ifdef CAT_NO_CPUID
-// `_Pragma` takes a *single* string-literal argument (consumed in translation
-// phase 4). Adjacent-literal concatenation only happens later in phase 6, so
-// keep the message on one line.
-#define CAT_SIMD_SWITCH(...)                                              \
-   _Pragma(                                                               \
-      "GCC error \"`$simd_switch` is unavailable when `CAT_NO_CPUID` is " \
-      "defined! Re-enable CPUID to use this.\""                           \
+#define CAT_SIMD_SWITCH(...)                                             \
+   _Pragma(                                                              \
+      "\"`$simd_switch` is unavailable when `CAT_NO_CPUID` is defined! " \
+      "Disable `CAT_NO_CPUID` to use this.\""                            \
    )
 #else
 #define CAT_SIMD_SWITCH(...)                                                  \
@@ -744,7 +723,8 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
             ),                                                                \
          "`$simd_switch` requires a `default:` clause as its last argument, " \
          "unless one of the listed `$abi(arch, ...)` entries has "            \
-         "`CAT_PRI_<arch> <= CAT_BASELINE_PRI` (i.e. the build's `-m<arch>` " \
+         "`CAT_PRI_<arch> <= CAT_BASELINE_PRI  (i.e. the build's "            \
+         "`-m<arch>` "                                                        \
          "baseline already guarantees that arch is supported)."               \
       );                                                                      \
       static_assert(                                                          \
@@ -757,7 +737,7 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
          "unique."                                                            \
       );                                                                      \
       /* Source-index walk order, sorted descending by `_PRI_<arch>`. */      \
-      static constexpr auto cat_$simd_priority_order =                        \
+      static constexpr auto cat_simd_priority_order =                         \
          ::cat::detail::simd_dispatch_priority_permutation(meta);             \
       /* Pick the highest-priority listed entry whose priority is supported   \
          by the host. `cat::detail::simd_dispatch_priority` is set once at    \
@@ -767,14 +747,14 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
          `default:` is present, the baseline-coverage `static_assert` above   \
          guarantees at least one listed entry's priority is `<=` the host's   \
          tier. */                                                             \
-      ::cat::idx cat_$simd_selected{};                                        \
-      for (::cat::idx i = 0u; i < cat_$simd_priority_order.size(); ++i) {     \
-         ::cat::idx const source_index = cat_$simd_priority_order[i];         \
+      ::cat::idx cat_simd_selected{};                                         \
+      for (::cat::idx i = 0u; i < cat_simd_priority_order.size(); ++i) {      \
+         ::cat::idx const source_index = cat_simd_priority_order[i];          \
          if (                                                                 \
             meta[source_index].priority                                       \
             <= ::cat::detail::simd_dispatch_priority                          \
          ) {                                                                  \
-            cat_$simd_selected = source_index;                                \
+            cat_simd_selected = source_index;                                 \
             break;                                                            \
          }                                                                    \
       }                                                                       \
@@ -782,7 +762,7 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
          implicit `default: __builtin_unreachable();` iff the user omitted    \
          their own `default:` (the baseline-coverage `static_assert` above    \
          guarantees the synthetic arm is never reached). */                   \
-      switch (cat_$simd_selected.raw) {                                       \
+      switch (cat_simd_selected.raw) {                                        \
          CAT_FOR_EACH_INDEXED(CAT_SIMD_DISPATCH_ENTRY, __VA_ARGS__)           \
          CAT_SIMD_SYNTH_DEFAULT(__VA_ARGS__)                                  \
       }                                                                       \

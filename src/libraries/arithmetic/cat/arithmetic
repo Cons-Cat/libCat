@@ -195,13 +195,12 @@ struct is_idx_trait : false_trait {};
 template <overflow_policies policy>
 struct is_idx_trait<basic_idx<policy>> : true_trait {};
 
-// TODO: Expose this to users?
-template <typename T>
-concept is_idx = is_idx_trait<T>::value;
-
 template <typename T>
 concept is_basic_intptr = requires { typename remove_cvref<T>::ptr; };
 }  // namespace detail
+
+template <typename T>
+concept is_idx = detail::is_idx_trait<remove_cvref<T>>::value;
 
 template <is_integral T>
 constexpr auto
@@ -239,12 +238,12 @@ make_sign_from(Sign, T value) -> copy_sign_from<Sign, T> {
 
 template <typename T>
 concept is_safe_arithmetic =
-   detail::is_idx<T> || detail::is_basic_intptr<T>
+   is_idx<T> || detail::is_basic_intptr<T>
    || (is_arithmetic<T> && !__is_same(T, raw_arithmetic_type<T>));
 
 template <typename T>
 concept is_safe_integral =
-   detail::is_idx<T> || detail::is_basic_intptr<T>
+   is_idx<T> || detail::is_basic_intptr<T>
    || (is_integral<T> && !__is_same(T, raw_arithmetic_type<T>));
 
 template <typename T>
@@ -1574,7 +1573,7 @@ class
    // combination of widths and runs at runtime as well as `consteval`.
    template <is_arithmetic U>
       requires(
-         !is_safe_arithmetic_comparison<T, U> && !detail::is_idx<basic_int>
+         !is_safe_arithmetic_comparison<T, U> && !is_idx<basic_int>
          && ((is_unsigned_integral<T> && is_signed_integral<U>) || (is_signed_integral<T> && is_unsigned_integral<U>))
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -1587,7 +1586,7 @@ class
 
    template <is_arithmetic U>
       requires(
-         !is_safe_arithmetic_comparison<T, U> && !detail::is_idx<basic_int>
+         !is_safe_arithmetic_comparison<T, U> && !is_idx<basic_int>
          && ((is_unsigned_integral<T> && is_signed_integral<U>) || (is_signed_integral<T> && is_unsigned_integral<U>))
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]

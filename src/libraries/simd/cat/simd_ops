@@ -2789,6 +2789,7 @@ struct simd_rnroot_impl
 struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
    constexpr simd_popcount_impl() = default;
 
+   // Count set bits in each SIMD lane.
    template <typename T, typename Abi>
       requires(is_unsigned_integral<T> && !is_bool<T>)
    [[nodiscard]]
@@ -2797,6 +2798,7 @@ struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
       return input.popcount();
    }
 
+   // Count set bits in one scalar lane.
    template <typename T>
       requires(is_unsigned_integral<T> && !is_bool<T>)
    [[nodiscard]]
