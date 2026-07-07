@@ -13,3 +13,5 @@ CMakeFiles/
 *.bc
 *.pyc
 __pycache__/
+# TODO: Make a proper upstream benchmark suite.
+benchmarks/
