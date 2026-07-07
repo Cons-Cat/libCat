@@ -42,6 +42,7 @@
 #include <cat/utility>
 
 #include "cat/detail/simd_avx2.hpp"
+#include "cat/detail/simd_avx512.hpp"
 #include "cat/detail/simd_broadcast_traits.hpp"
 #include "cat/detail/simd_precision_policy.hpp"
 #include "cat/detail/simd_range_iterator.hpp"
@@ -2235,7 +2236,7 @@ class
    // inlined `decode_lane(raw, i)` into a wider load that ignores the
    // `gnu::aligned(1)` annotation on the unaligned mask's `raw_type`, which
    // segfaults `simd_avx_unaligned_abi_mask` on a 2-byte-misaligned
-   // simd_mask. (See `tests/src/test_simd_sse_avx.cpp`'s unaligned mask
+   // simd_mask. (See `tests/src/test_simd_x64.cpp`'s unaligned mask
    // test and the file-level policy comment on `cat::simd`.) Codegen on
    // an aligned mask is already fine without the attribute -- Clang
    // inlines this thin wrapper at every optimization level.

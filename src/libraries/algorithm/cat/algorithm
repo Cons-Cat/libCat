@@ -86,8 +86,7 @@ relocate(
    }
 }
 
-template <
-   is_forward_stepanov_iterator Left, is_forward_stepanov_iterator Right>
+template <is_forward_stepanov_iterator Left, is_forward_stepanov_iterator Right>
 constexpr auto
 lexicographical_compare(
    Left lhs_start, Left lhs_end, Right rhs_start, Right rhs_end
@@ -107,8 +106,7 @@ lexicographical_compare(
    return (rhs_start != rhs_end);
 }
 
-template <
-   is_forward_stepanov_iterator Left, is_forward_stepanov_iterator Right>
+template <is_forward_stepanov_iterator Left, is_forward_stepanov_iterator Right>
 constexpr auto
 lexicographical_compare_three_way(
    Left lhs_start, Left lhs_end, Right rhs_start, Right rhs_end

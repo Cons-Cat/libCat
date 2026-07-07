@@ -271,6 +271,13 @@ using namespace simd_sse2;
 
 }  // namespace detail::simd_avx
 
+namespace detail::simd_avx512 {
+
+CAT_SIMD_ALIASES(::x64::avx512_abi)
+CAT_SIMD_PLACEHOLDER_ALIASES(::x64::avx512_abi)
+
+}  // namespace detail::simd_avx512
+
 namespace detail::simd_avx2 {
 
 CAT_SIMD_ALIASES(::x64::avx_abi)

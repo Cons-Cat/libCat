@@ -3224,7 +3224,7 @@ basic_idx :
    operator-=(T) =
       delete ("An integer cannot be subtracted from and then assigned to a "
               "`cat::basic_idx` because "
-              "subtraction underflow. Consider subtracting them "
+              "subtraction potentially underflows. Consider subtracting them "
               "together and assigning the result to a `cat::iword` instead.");
 
    // Provide actionable error messages for `operator--`.

@@ -31,6 +31,50 @@ verify_avx2_compress_matches_reference(
    }
 }
 
+[[nodiscard]]
+auto
+has_avx512_runtime_support() -> bool {
+   return __builtin_cpu_supports("avx512f")
+          && __builtin_cpu_supports("avx512cd")
+          && __builtin_cpu_supports("avx512bw")
+          && __builtin_cpu_supports("avx512dq")
+          && __builtin_cpu_supports("avx512vl");
+}
+
+[[gnu::target("avx512f,avx512cd,avx512bw,avx512dq,avx512vl")]]
+auto
+verify_avx512_abi_runtime_hooks() -> void {
+   x64::avx512_simd<cat::uint8> const words{
+      1u, 3u, 7u, 15u, 31u, 63u, 127u, cat::uint8::max()
+   };
+   auto const counts = words.popcount();
+   cat::verify(counts[0u] == 1u);
+   cat::verify(counts[1u] == 2u);
+   cat::verify(counts[7u] == 64u);
+   cat::verify(counts.sum() == 92u);
+
+   x64::avx512_simd<cat::uint4> const lanes{
+      1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,
+      9u,  10u, 11u, 12u, 13u, 14u, 15u, 16u
+   };
+   x64::avx512_simd<cat::uint4> const threshold{
+      8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u,
+      8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u
+   };
+   auto const high_lanes = lanes > threshold;
+   cat::verify(high_lanes.count_if_true() == 8u);
+   cat::verify(high_lanes.find_if_true() == 8u);
+   cat::verify(high_lanes.find_last_if_true() == 15u);
+
+   cat::bitset<16u> const bits = high_lanes.to_bitset();
+   for (cat::idx i = 0u; i < 8u; ++i) {
+      cat::verify(!bits[i]);
+   }
+   for (cat::idx i = 8u; i < 16u; ++i) {
+      cat::verify(bits[i]);
+   }
+}
+
 }  // namespace
 
 // SSE hooks (`simd_sse.hpp`).
@@ -271,6 +315,20 @@ $test(simd_avx_abi_hooks_mask_reductions_and_bitset) {
    }
    for (idx i = 0u; i < 8u; ++i) {
       cat::verify(b[i] == sparse[i]);
+   }
+}
+
+$test(simd_avx512_abi_layout_and_runtime_hooks) {
+   static_assert(x64::avx512_simd<cat::uint8>::size() == 8u);
+   static_assert(x64::avx512_simd<cat::uint4>::size() == 16u);
+   static_assert(x64::avx512_simd<cat::uint1>::size() == 64u);
+   static_assert(alignof(x64::avx512_simd<cat::uint8>) == 64u);
+   static_assert(x64::avx512_unaligned_simd<cat::uint8>::size() == 8u);
+   static_assert(alignof(x64::avx512_unaligned_simd<cat::uint8>) == 1u);
+   static_assert(x64::avx512_simd_mask<cat::uint4>::size() == 16u);
+
+   if (has_avx512_runtime_support()) {
+      verify_avx512_abi_runtime_hooks();
    }
 }
 
