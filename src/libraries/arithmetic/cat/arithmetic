@@ -1996,6 +1996,114 @@ class
       return basic_int(raw ^ static_cast<T>(make_raw_arithmetic(operand)));
    }
 
+   // Count zero bits from the most significant bit.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   countl_zero() const -> uint1
+      requires(is_unsigned_integral<T>);
+
+   // Count one bits from the most significant bit.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   countl_one() const -> uint1
+      requires(is_unsigned_integral<T>);
+
+   // Count zero bits from the least significant bit.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   countr_zero() const -> uint1
+      requires(is_unsigned_integral<T>);
+
+   // Count one bits from the least significant bit.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   countr_one() const -> uint1
+      requires(is_unsigned_integral<T>);
+
+   // Count all one bits.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   popcount() const -> uint1
+      requires(is_unsigned_integral<T>);
+
+   // Return true when exactly one bit is set.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   has_single_bit() const -> bool
+      requires(is_unsigned_integral<T>);
+
+   // Return the largest power of two not greater than this value.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_floor() const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Return the smallest power of two not less than this value.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_ceil() const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Return the number of bits needed to represent this value.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_width() const -> uint1
+      requires(is_unsigned_integral<T>);
+
+   // Reverse the byte order.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   byteswap() const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Shift left and return zero when the count reaches the width.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shift_left(uword count) const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Shift right and return zero when the count reaches the width.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shift_right(uword count) const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Rotate bits left by the count.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   rotate_left(uword count) const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Rotate bits right by the count.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   rotate_right(uword count) const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Reverse all bits.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_reverse() const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Repeat the low bit pattern across the value.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_repeat(idx pattern_bits) const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Pack source bits selected by the mask toward the low bit.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_compress(basic_int mask) const -> basic_int
+      requires(is_unsigned_integral<T>);
+
+   // Scatter low source bits into the mask positions.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_expand(basic_int mask) const -> basic_int
+      requires(is_unsigned_integral<T>);
+
    template <typename U>
       requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]

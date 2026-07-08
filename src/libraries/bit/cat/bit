@@ -72,16 +72,70 @@ inline constexpr bool is_target_little_endian =
    (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
 inline constexpr bool is_target_big_endian = !is_target_little_endian;
 
+enum class endian : unsigned char {
+   little = 0,
+   big = 1,
+   native = is_target_little_endian ? little : big,
+};
+
 inline constexpr idx char_bits = sizeof(unsigned char) * 8u;
 inline constexpr idx word_bits = sizeof(uword) * 8u;
 inline constexpr idx word_bytes = sizeof(uword);
 
 inline constexpr idx page_size = 4_uki;
 
+enum class iteration_result : bool;
+
+}  // namespace cat
+
+namespace x64 {
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+shift_left_by(T value, cat::uword count) -> T;
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+shift_right_by(T value, cat::uword count) -> T;
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+rotate_right_by(T value, cat::uword count) -> T;
+
+template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
+   requires(sizeof(T) == sizeof(U))
+[[nodiscard]]
+constexpr auto
+parallel_extract_bits(T value, U mask) -> T;
+
+template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
+   requires(sizeof(T) == sizeof(U))
+[[nodiscard]]
+constexpr auto
+deposit_bits_mask(T value, U mask) -> T;
+}  // namespace x64
+
+namespace cat {
+
+// Reinterpret the object representation of one trivially copyable type as
+// another type of the same size.
+template <typename To, typename From>
+   requires(
+      sizeof(To) == sizeof(From)
+      && is_trivially_copyable<To> && is_trivially_copyable<From>
+   )
+[[nodiscard]]
+constexpr auto
+bit_cast(From const& value) -> To {
+   return __builtin_bit_cast(To, value);
+}
+
 // Count the number of leading zero bits (counting "leftwards") before the first
 // found zero bit. When the input is zero, this returns the bit width of `T`.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 constexpr auto
 countl_zero(T value) -> uint1 {
@@ -93,7 +147,7 @@ countl_zero(T value) -> uint1 {
 
 // When a constant 0 is inputted, this function is disabled.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 consteval maybe<uint1>
 countl_zero_raw(T value) __attribute__((enable_if(
@@ -106,7 +160,7 @@ countl_zero_raw(T value) __attribute__((enable_if(
 // Count the number of leading one bits (counting "leftwards") before the first
 // found zero bit. When the input is zero, this returns zero.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 constexpr auto
 countl_one(T value) -> uint1 {
@@ -118,7 +172,7 @@ countl_one(T value) -> uint1 {
 
 // When a constant zero is inputted, this function is disabled.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 consteval maybe<uint1>
 countl_one_raw(T value) __attribute__((enable_if(
@@ -210,10 +264,54 @@ bit_ceil(T value) -> T {
    return T(__builtin_stdc_bit_ceil(make_raw_arithmetic(value)));
 }
 
+// Return the number of bits needed to represent `value`.
+template <is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+bit_width(T value) -> uint1 {
+   return uint1(__builtin_stdc_bit_width(make_raw_arithmetic(value)));
+}
+
+// Reverse the byte order of an unsigned integer value.
+template <is_unsigned_integral T>
+   requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
+[[nodiscard]]
+constexpr auto
+byteswap(T value) -> T {
+   auto raw_value = make_raw_arithmetic(value);
+   if constexpr (sizeof(raw_value) == 1) {
+      return value;
+   } else if constexpr (sizeof(raw_value) == 2) {
+      return T(__builtin_bswap16(raw_value));
+   } else if constexpr (sizeof(raw_value) == 4) {
+      return T(__builtin_bswap32(raw_value));
+   } else if constexpr (sizeof(raw_value) == 8) {
+      return T(__builtin_bswap64(raw_value));
+   }
+}
+
+// Shift left and return zero when the shift count reaches the bit width.
+template <is_unsigned_integral T>
+   requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
+[[nodiscard]]
+constexpr auto
+shift_left(T value, uword count) -> T {
+   return ::x64::shift_left_by(value, count);
+}
+
+// Shift right and return zero when the shift count reaches the bit width.
+template <is_unsigned_integral T>
+   requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
+[[nodiscard]]
+constexpr auto
+shift_right(T value, uword count) -> T {
+   return ::x64::shift_right_by(value, count);
+}
+
 // Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
 // width of `T`.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)  // TODO: Support `idx`.
+   requires(!is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
 constexpr auto
 rotate_left(T value, uword shift) -> T {
@@ -223,7 +321,7 @@ rotate_left(T value, uword shift) -> T {
 // Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
 // width of `T`. Negative shifts rotate right by the same magnitude value.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 constexpr T
 rotate_left(T value, iword shift) {
@@ -233,7 +331,7 @@ rotate_left(T value, iword shift) {
 }
 
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 constexpr auto
 rotate_right(T value, uword shift) -> T;
@@ -241,7 +339,7 @@ rotate_right(T value, uword shift) -> T;
 // Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
 // width of `T`.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 constexpr T
 rotate_left(T value, iword shift)
@@ -256,17 +354,17 @@ rotate_left(T value, iword shift)
 // Returns `value` rotated right by `shift` positions. Shifts wrap around the
 // bit width of `T`.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)  // TODO: Support `idx`.
+   requires(!is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
 constexpr auto
 rotate_right(T value, uword shift) -> T {
-   return T(__builtin_stdc_rotate_right(make_raw_arithmetic(value), shift.raw));
+   return ::x64::rotate_right_by(value, shift);
 }
 
 // Returns `value` rotated right by `shift` positions. Shifts wrap around the
 // bit width of `T`. Negative shifts rotate left by the same magnitude value.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 constexpr T
 rotate_right(T value, iword shift) {
@@ -278,7 +376,7 @@ rotate_right(T value, iword shift) {
 // Returns `value` rotated right by `shift` positions. Shifts wrap around the
 // bit width of `T`.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 constexpr T
 rotate_right(T value, iword shift)
@@ -288,6 +386,231 @@ rotate_right(T value, iword shift)
    // Unsigned wrap is intentional so the most-negative value has a magnitude.
    uword magnitude = 0u - shift;
    return rotate_left(value, uword(magnitude));
+}
+
+// Reverse every bit in an unsigned integer.
+template <is_unsigned_integral T>
+   requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
+[[nodiscard]]
+constexpr auto
+bit_reverse(T value) -> T {
+   auto raw_value = make_raw_arithmetic(value);
+   if constexpr (sizeof(raw_value) == 1) {
+      return T(__builtin_bitreverse8(static_cast<unsigned char>(raw_value)));
+   } else if constexpr (sizeof(raw_value) == 2) {
+      return T(__builtin_bitreverse16(static_cast<unsigned short>(raw_value)));
+   } else if constexpr (sizeof(raw_value) == 4) {
+      return T(__builtin_bitreverse32(static_cast<unsigned int>(raw_value)));
+   } else if constexpr (sizeof(raw_value) == 8) {
+      return T(
+         __builtin_bitreverse64(static_cast<unsigned long long>(raw_value))
+      );
+   }
+}
+
+// Repeat the first `pattern_bits` count of low bits in `value` across the
+// result as many times as they fits. If they fit unevenly,
+template <is_unsigned_integral T>
+   requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
+[[nodiscard]]
+constexpr auto
+bit_repeat(T value, idx pattern_bits) -> T {
+   if !consteval {
+      assert(pattern_bits > 0u);
+   }
+   constexpr idx bits = limits<T>::digits;
+   if (pattern_bits >= bits) {
+      return value;
+   }
+   T result = 0u;
+   for (idx bit_index = 0u; bit_index < bits; ++bit_index) {
+      idx const source_bit = bit_index % pattern_bits;
+      if ((shift_right(value, source_bit) % T(2u)) != 0u) {
+         result += shift_left(T(1u), bit_index);
+      }
+   }
+   return result;
+}
+
+// Pack source bits selected by `mask` contiguously toward the low bit.
+template <is_unsigned_integral T>
+   requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
+[[nodiscard]]
+constexpr auto
+bit_compress(T value, T mask) -> T {
+   return ::x64::parallel_extract_bits(value, mask);
+}
+
+// Scatter low source bits into the one-bit positions of `mask`.
+template <is_unsigned_integral T>
+   requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
+[[nodiscard]]
+constexpr auto
+bit_expand(T value, T mask) -> T {
+   return ::x64::deposit_bits_mask(value, mask);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::countl_zero() const -> uint1
+   requires(is_unsigned_integral<T>)
+{
+   return cat::countl_zero(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::countl_one() const -> uint1
+   requires(is_unsigned_integral<T>)
+{
+   return cat::countl_one(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::countr_zero() const -> uint1
+   requires(is_unsigned_integral<T>)
+{
+   return cat::countr_zero(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::countr_one() const -> uint1
+   requires(is_unsigned_integral<T>)
+{
+   return cat::countr_one(*this);
+}
+
+// Count set bits in an unsigned basic integer.
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::popcount() const -> uint1
+   requires(is_unsigned_integral<T>)
+{
+   return cat::popcount(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::has_single_bit() const -> bool
+   requires(is_unsigned_integral<T>)
+{
+   return cat::has_single_bit(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::bit_floor() const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::bit_floor(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::bit_ceil() const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::bit_ceil(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::bit_width() const -> uint1
+   requires(is_unsigned_integral<T>)
+{
+   return cat::bit_width(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::byteswap() const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::byteswap(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::shift_left(uword count) const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::shift_left(*this, count);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::shift_right(uword count) const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::shift_right(*this, count);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::rotate_left(uword count) const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::rotate_left(*this, count);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::rotate_right(uword count) const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::rotate_right(*this, count);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::bit_reverse() const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::bit_reverse(*this);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::bit_repeat(idx pattern_bits) const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::bit_repeat(*this, pattern_bits);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::bit_compress(basic_int mask) const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::bit_compress(*this, mask);
+}
+
+template <typename T, overflow_policies overflow_policy>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+basic_int<T, overflow_policy>::bit_expand(basic_int mask) const -> basic_int
+   requires(is_unsigned_integral<T>)
+{
+   return cat::bit_expand(*this, mask);
 }
 
 }  // namespace cat
@@ -381,6 +704,90 @@ zero_high_bits_at_fallback(T source, cat::uint4 bit_index) -> T {
    return T(cat::make_raw_arithmetic(source) & mask);
 }
 
+template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
+   requires(sizeof(T) == sizeof(U))
+[[nodiscard]]
+constexpr auto
+and_not_fallback(T left, U right) -> T {
+   return T(~cat::make_raw_arithmetic(left) & cat::make_raw_arithmetic(right));
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+extract_lowest_bit_fallback(T value) -> T {
+   using raw_type = cat::raw_arithmetic_type<T>;
+   raw_type const raw_value = cat::make_raw_arithmetic(value);
+   return T(raw_value & raw_type(0u - raw_value));
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+mask_through_lowest_bit_fallback(T value) -> T {
+   using raw_type = cat::raw_arithmetic_type<T>;
+   raw_type const raw_value = cat::make_raw_arithmetic(value);
+   return T(raw_value ^ raw_type(raw_value - 1u));
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+reset_lowest_bit_fallback(T value) -> T {
+   using raw_type = cat::raw_arithmetic_type<T>;
+   raw_type const raw_value = cat::make_raw_arithmetic(value);
+   return T(raw_value & raw_type(raw_value - 1u));
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+shift_left_by_fallback(T value, cat::uword count) -> T {
+   constexpr cat::idx bits = sizeof(T) * 8u;
+   if (count >= bits) {
+      return 0u;
+   }
+   return T(cat::make_raw_arithmetic(value) << count.raw);
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+shift_right_by_fallback(T value, cat::uword count) -> T {
+   constexpr cat::idx bits = sizeof(T) * 8u;
+   if (count >= bits) {
+      return 0u;
+   }
+   return T(cat::make_raw_arithmetic(value) >> count.raw);
+}
+
+template <cat::is_signed_integral T>
+[[nodiscard]]
+constexpr auto
+shift_right_arithmetic_by_fallback(T value, cat::uword count) -> T {
+   constexpr cat::idx bits = sizeof(T) * 8u;
+   if (count >= bits) {
+      return value < 0 ? T(-1) : T(0);
+   }
+   return T(cat::make_raw_arithmetic(value) >> count.raw);
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+rotate_right_by_fallback(T value, cat::uword count) -> T {
+   constexpr cat::idx bits = sizeof(T) * 8u;
+   cat::uword const reduced_count = count % bits;
+   if (reduced_count == 0u) {
+      return value;
+   }
+   auto const raw_value = cat::make_raw_arithmetic(value);
+   return T(
+      (raw_value >> reduced_count.raw)
+      | (raw_value << (cat::make_raw_arithmetic(bits - reduced_count)))
+   );
+}
+
 template <cat::is_unsigned T>
 [[nodiscard, gnu::target("bmi"), gnu::nodebug]]
 auto
@@ -451,6 +858,63 @@ zero_high_bits_at_bmi2(T source, cat::uint4 bit_index) -> T {
       return zero_high_bits_at_fallback(source, bit_index);
    }
 }
+
+template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
+   requires(sizeof(T) == sizeof(U))
+[[nodiscard, gnu::target("bmi"), gnu::nodebug]]
+auto
+and_not_bmi(T left, U right) -> T {
+   return T(~cat::make_raw_arithmetic(left) & cat::make_raw_arithmetic(right));
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard, gnu::target("bmi"), gnu::nodebug]]
+auto
+extract_lowest_bit_bmi(T value) -> T {
+   return extract_lowest_bit_fallback(value);
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard, gnu::target("bmi"), gnu::nodebug]]
+auto
+mask_through_lowest_bit_bmi(T value) -> T {
+   return mask_through_lowest_bit_fallback(value);
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard, gnu::target("bmi"), gnu::nodebug]]
+auto
+reset_lowest_bit_bmi(T value) -> T {
+   return reset_lowest_bit_fallback(value);
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
+auto
+shift_left_by_bmi2(T value, cat::uword count) -> T {
+   return shift_left_by_fallback(value, count);
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
+auto
+shift_right_by_bmi2(T value, cat::uword count) -> T {
+   return shift_right_by_fallback(value, count);
+}
+
+template <cat::is_signed_integral T>
+[[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
+auto
+shift_right_arithmetic_by_bmi2(T value, cat::uword count) -> T {
+   return shift_right_arithmetic_by_fallback(value, count);
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
+auto
+rotate_right_by_bmi2(T value, cat::uword count) -> T {
+   return rotate_right_by_fallback(value, count);
+}
 }  // namespace detail
 
 // Extracts `length` number of bits out of `from`, ending at the `offset` of the
@@ -467,6 +931,63 @@ extract_bits(T from, cat::uint1 offset, cat::idx length) -> T {
          return detail::extract_bits_bmi(from, offset, length);
       }
       return detail::extract_bits_fallback(from, offset, length);
+   }
+}
+
+template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
+   requires(sizeof(T) == sizeof(U))
+[[nodiscard]]
+constexpr auto
+and_not(T left, U right) -> T {
+   if consteval {
+      return detail::and_not_fallback(left, right);
+   } else {
+      if (__builtin_cpu_supports("bmi")) {
+         return detail::and_not_bmi(left, right);
+      }
+      return detail::and_not_fallback(left, right);
+   }
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+extract_lowest_bit(T value) -> T {
+   if consteval {
+      return detail::extract_lowest_bit_fallback(value);
+   } else {
+      if (__builtin_cpu_supports("bmi")) {
+         return detail::extract_lowest_bit_bmi(value);
+      }
+      return detail::extract_lowest_bit_fallback(value);
+   }
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+mask_through_lowest_bit(T value) -> T {
+   if consteval {
+      return detail::mask_through_lowest_bit_fallback(value);
+   } else {
+      if (__builtin_cpu_supports("bmi")) {
+         return detail::mask_through_lowest_bit_bmi(value);
+      }
+      return detail::mask_through_lowest_bit_fallback(value);
+   }
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+reset_lowest_bit(T value) -> T {
+   if consteval {
+      return detail::reset_lowest_bit_fallback(value);
+   } else {
+      if (__builtin_cpu_supports("bmi")) {
+         return detail::reset_lowest_bit_bmi(value);
+      }
+      return detail::reset_lowest_bit_fallback(value);
    }
 }
 
@@ -513,6 +1034,62 @@ zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
          return detail::zero_high_bits_at_bmi2(source, bit_index);
       }
       return detail::zero_high_bits_at_fallback(source, bit_index);
+   }
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+shift_left_by(T value, cat::uword count) -> T {
+   if consteval {
+      return detail::shift_left_by_fallback(value, count);
+   } else {
+      if (__builtin_cpu_supports("bmi2")) {
+         return detail::shift_left_by_bmi2(value, count);
+      }
+      return detail::shift_left_by_fallback(value, count);
+   }
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+shift_right_by(T value, cat::uword count) -> T {
+   if consteval {
+      return detail::shift_right_by_fallback(value, count);
+   } else {
+      if (__builtin_cpu_supports("bmi2")) {
+         return detail::shift_right_by_bmi2(value, count);
+      }
+      return detail::shift_right_by_fallback(value, count);
+   }
+}
+
+template <cat::is_signed_integral T>
+[[nodiscard]]
+constexpr auto
+shift_right_arithmetic_by(T value, cat::uword count) -> T {
+   if consteval {
+      return detail::shift_right_arithmetic_by_fallback(value, count);
+   } else {
+      if (__builtin_cpu_supports("bmi2")) {
+         return detail::shift_right_arithmetic_by_bmi2(value, count);
+      }
+      return detail::shift_right_arithmetic_by_fallback(value, count);
+   }
+}
+
+template <cat::is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+rotate_right_by(T value, cat::uword count) -> T {
+   if consteval {
+      return detail::rotate_right_by_fallback(value, count);
+   } else {
+      if (__builtin_cpu_supports("bmi2")) {
+         return detail::rotate_right_by_bmi2(value, count);
+      }
+      return detail::rotate_right_by_fallback(value, count);
    }
 }
 
@@ -579,6 +1156,16 @@ class bit_reference {
  public:
    constexpr bit_reference(bit_reference<Storage> const&) = default;
    constexpr bit_reference(bit_reference<Storage>&&) = default;
+
+   constexpr auto
+   operator=(bit_reference<Storage> const& other) & -> bit_reference& = default;
+
+   constexpr auto
+   operator=(bit_reference<Storage>&& other) & -> bit_reference& {
+      m_p_storage = other.m_p_storage;
+      m_bit_mask = other.m_bit_mask;
+      return *this;
+   }
 
    constexpr bit_reference(bit_value& other)
        : m_p_storage(__builtin_addressof(detail::get_bit_value(other))),
@@ -1086,6 +1673,7 @@ class bit_stepanov_iterator
    static constexpr idx word_bits = limits<typename Iterator::value_type>::bits;
 
  public:
+   using storage_type = Iterator::value_type;
    using value_type = bit_value;
    using const_value_type = bit_value const;
    using reference = bit_reference<typename Iterator::value_type>;
@@ -1114,6 +1702,18 @@ class bit_stepanov_iterator
       return make_bit_reference_from_offset(
          *m_internal_iterator, m_bit_position
       );
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   base() const -> Iterator {
+      return m_internal_iterator;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   position() const -> idx {
+      return m_bit_position;
    }
 
    // The `bit_stepanov_iterator` proxy iterator moves in a way that may be
@@ -1149,6 +1749,126 @@ class bit_stepanov_iterator
    Iterator m_internal_iterator;
    idx m_bit_position;
 };
+
+namespace detail {
+template <is_unsigned_integral Word>
+[[nodiscard]]
+constexpr auto
+bit_low_mask(idx bit_count) -> Word {
+   if (bit_count == 0u) {
+      return Word(0u);
+   }
+   if (bit_count >= limits<Word>::bits) {
+      return ~Word(0u);
+   }
+   return (Word(1u) << bit_count) - Word(1u);
+}
+
+template <is_unsigned_integral Word>
+[[nodiscard]]
+constexpr auto
+bit_blend(Word old_word, Word new_word, idx bit_offset, idx bit_count) -> Word {
+   Word const mask = bit_low_mask<Word>(bit_count) << bit_offset;
+   return (old_word & ~mask) | (new_word & mask);
+}
+
+template <typename Iterator>
+constexpr void
+reverse_bit_words(Iterator first_word, Iterator last_word) {
+   while (first_word < last_word) {
+      --last_word;
+      if (first_word == last_word) {
+         *first_word = bit_reverse(*first_word);
+         return;
+      }
+      auto const first_value = *first_word;
+      *first_word = bit_reverse(*last_word);
+      *last_word = bit_reverse(first_value);
+      ++first_word;
+   }
+}
+
+template <typename Iterator>
+constexpr void
+shift_left(
+   bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last,
+   idx bit_count
+) {
+   iword const range_bits = last - first;
+   if (bit_count == 0u || range_bits <= 0) {
+      return;
+   }
+   if (bit_count >= range_bits) {
+      for (idx bit_index = 0u; bit_index < idx(range_bits); ++bit_index) {
+         first[bit_index].assign(false);
+      }
+      return;
+   }
+   idx const remaining_bits = idx(range_bits - bit_count);
+   for (idx bit_index = 0u; bit_index < remaining_bits; ++bit_index) {
+      first[bit_index].assign(bool(first[bit_index + bit_count]));
+   }
+   for (idx bit_index = remaining_bits; bit_index < idx(range_bits);
+        ++bit_index) {
+      first[bit_index].assign(false);
+   }
+}
+
+template <typename Iterator>
+constexpr void
+shift_right(
+   bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last,
+   idx bit_count
+) {
+   iword const range_bits = last - first;
+   if (bit_count == 0u || range_bits <= 0) {
+      return;
+   }
+   if (bit_count >= range_bits) {
+      for (idx bit_index = 0u; bit_index < idx(range_bits); ++bit_index) {
+         first[bit_index].assign(false);
+      }
+      return;
+   }
+   idx const remaining_bits = idx(range_bits - bit_count);
+   for (idx bit_index = remaining_bits; bit_index > 0u;) {
+      bit_index = idx(bit_index - 1u);
+      first[bit_index + bit_count].assign(bool(first[bit_index]));
+   }
+   for (idx bit_index = 0u; bit_index < bit_count; ++bit_index) {
+      first[bit_index].assign(false);
+   }
+}
+
+template <typename Iterator>
+constexpr void
+reverse_bits_inplace(
+   bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last
+) {
+   iword const range_bits = last - first;
+   if (range_bits <= 1) {
+      return;
+   }
+
+   idx left_index = 0u;
+   idx right_index = idx(range_bits - 1);
+   while (left_index < right_index) {
+      bool const left_value = bool(first[left_index]);
+      first[left_index].assign(bool(first[right_index]));
+      first[right_index].assign(left_value);
+      ++left_index;
+      right_index = idx(right_index - 1u);
+   }
+}
+}  // namespace detail
+
+template <typename Iterator>
+constexpr void
+stepanov_reverse_inplace(
+   bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last
+) {
+   detail::reverse_bits_inplace(first, last);
+}
 
 inline constexpr bit_value one_bit = true;
 inline constexpr bit_value zero_bit = false;
@@ -1373,6 +2093,78 @@ struct byte : bitwise_interface<byte> {
    has_single_bit() const -> bool {
       return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
    }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_width() const -> uint1 {
+      return cat::bit_width(value);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_floor() const -> byte {
+      return byte(cat::bit_floor(value));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_ceil() const -> byte {
+      return byte(cat::bit_ceil(value));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   byteswap() const -> byte {
+      return *this;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shift_left(uword count) const -> byte {
+      return byte(cat::shift_left(value, count));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shift_right(uword count) const -> byte {
+      return byte(cat::shift_right(value, count));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   rotate_left(uword count) const -> byte {
+      return byte(cat::rotate_left(value, count));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   rotate_right(uword count) const -> byte {
+      return byte(cat::rotate_right(value, count));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_reverse() const -> byte {
+      return byte(cat::bit_reverse(value));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_repeat(idx pattern_bits) const -> byte {
+      return byte(cat::bit_repeat(value, pattern_bits));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_compress(byte mask) const -> byte {
+      return byte(cat::bit_compress(value, mask.value));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_expand(byte mask) const -> byte {
+      return byte(cat::bit_expand(value, mask.value));
+   }
 };
 
 static_assert(is_implicit_lifetime<cat::byte>);
@@ -1401,10 +2193,143 @@ countr_one(byte value) -> uint1 {
    return countr_one(value.value);
 }
 
+// Count set bits in a byte value.
 [[nodiscard]]
 constexpr auto
 popcount(byte value) -> uint1 {
    return popcount(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+bit_width(byte value) -> uint1 {
+   return bit_width(value.value);
+}
+
+[[nodiscard]]
+constexpr auto
+byteswap(byte value) -> byte {
+   return value;
+}
+
+[[nodiscard]]
+constexpr auto
+shift_left(byte value, uword count) -> byte {
+   return byte(shift_left(value.value, count));
+}
+
+[[nodiscard]]
+constexpr auto
+shift_right(byte value, uword count) -> byte {
+   return byte(shift_right(value.value, count));
+}
+
+[[nodiscard]]
+constexpr auto
+bit_reverse(byte value) -> byte {
+   return byte(bit_reverse(value.value));
+}
+
+[[nodiscard]]
+constexpr auto
+bit_repeat(byte value, idx pattern_bits) -> byte {
+   return byte(bit_repeat(value.value, pattern_bits));
+}
+
+[[nodiscard]]
+constexpr auto
+bit_compress(byte value, byte mask) -> byte {
+   return byte(bit_compress(value.value, mask.value));
+}
+
+[[nodiscard]]
+constexpr auto
+bit_expand(byte value, byte mask) -> byte {
+   return byte(bit_expand(value.value, mask.value));
+}
+
+namespace detail {
+// Count set bits in a byte buffer at runtime.
+[[nodiscard]]
+auto
+popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) -> idx;
+
+// Count set bits in a word buffer at runtime.
+[[nodiscard]]
+auto
+popcount_words_runtime(
+   uword const* _Nonnull p_words, idx words, uword tail_mask
+) -> idx;
+}  // namespace detail
+
+// Count set bits across a byte span.
+template <idx fixed_extent>
+[[nodiscard]]
+constexpr auto
+popcount(span<byte const, fixed_extent> bytes) -> idx {
+   if consteval {
+      idx count = 0u;
+      for (idx i = 0u; i < bytes.size(); ++i) {
+         count += popcount(bytes[i]);
+      }
+      return count;
+   } else {
+      return detail::popcount_bytes_runtime(bytes.data(), bytes.size());
+   }
+}
+
+// Count set bits across a word span.
+template <is_unsigned_integral Word, idx fixed_extent>
+[[nodiscard]]
+constexpr auto
+popcount(span<Word const, fixed_extent> words) -> idx {
+   if consteval {
+      idx count = 0u;
+      for (idx i = 0u; i < words.size(); ++i) {
+         count += popcount(words[i]);
+      }
+      return count;
+   } else {
+      if constexpr (is_same<remove_cv<Word>, uword>) {
+         if (words.size() < 64u) {
+            idx count = 0u;
+            for (idx i = 0u; i < words.size(); ++i) {
+               count += popcount(words[i]);
+            }
+            return count;
+         }
+         return detail::popcount_words_runtime(
+            words.data(), words.size(), ~uword(0u)
+         );
+      } else {
+         idx count = 0u;
+         for (idx i = 0u; i < words.size(); ++i) {
+            count += popcount(words[i]);
+         }
+         return count;
+      }
+   }
+}
+
+template <typename Words>
+concept is_unsigned_word_container =
+   requires(Words const& words) {
+      typename remove_cvref<Words>::value_type;
+      words.data();
+      words.size();
+   }
+   && is_unsigned_integral<remove_cv<typename remove_cvref<Words>::value_type>>
+   && !requires { typename remove_cvref<Words>::element_type; };
+
+// Count set bits across a contiguous container of unsigned words.
+template <is_unsigned_word_container Words>
+[[nodiscard]]
+constexpr auto
+popcount(Words const& words) -> idx {
+   using word_type = remove_cv<typename remove_cvref<Words>::value_type>;
+   return popcount(
+      span<word_type const, idx::max()>{words.data(), words.size()}
+   );
 }
 
 template <is_integral T>

@@ -5532,6 +5532,65 @@ $test(arithmetic_float_construction_raw_assignment_and_bit_cast) {
    cat::verify(__builtin_bit_cast(unsigned, 2_i4) == 2u);
 }
 
+$test(arithmetic_unsigned_basic_int_bit_members) {
+   using namespace cat::arithmetic_literals;
+
+   static_assert((0b0001'0110_u1).countl_zero() == 3u);
+   static_assert((0b1110'0000_u1).countl_one() == 3u);
+   static_assert((0b0001'0000_u1).countr_zero() == 4u);
+   static_assert((0b0000'1111_u1).countr_one() == 4u);
+   static_assert((0b1010'1010_u1).popcount() == 4u);
+   static_assert((0b0001'0000_u1).has_single_bit());
+   static_assert((5_u1).bit_floor() == 4u);
+   static_assert((5_u1).bit_ceil() == 8u);
+   static_assert((5_u1).bit_width() == 3u);
+   static_assert((0x1234_u2).byteswap() == 0x3412_u2);
+   static_assert((1_u1).shift_left(7u) == 0b1000'0000_u1);
+   static_assert((0b1000'0000_u1).shift_right(7u) == 1_u1);
+   static_assert((0b1000'0001_u1).rotate_left(1u) == 0b0000'0011_u1);
+   static_assert((0b1000'0001_u1).rotate_right(1u) == 0b1100'0000_u1);
+   static_assert((0b0001'0110_u1).bit_reverse() == 0b0110'1000_u1);
+   static_assert((0b1110_u1).bit_repeat(2u) == 0b1010'1010_u1);
+   static_assert(
+      (0b0100'1001_u1).bit_compress(0b1100'1100_u1) == 0b0000'0110_u1
+   );
+   static_assert((0b0000'0110_u1).bit_expand(0b1100'1100_u1) == 0b0100'1000_u1);
+
+   uint1 wrapped_value = 0b0001'0110_u1;
+   cat::verify(wrapped_value.wrap().countl_zero() == 3u);
+   cat::verify(wrapped_value.wrap().countl_one() == 0u);
+   cat::verify(wrapped_value.wrap().countr_zero() == 1u);
+   cat::verify(wrapped_value.wrap().countr_one() == 0u);
+   cat::verify(wrapped_value.wrap().popcount() == 3u);
+   cat::verify(!wrapped_value.wrap().has_single_bit());
+   cat::verify(wrapped_value.wrap().bit_floor() == (0b0001'0000_u1).wrap());
+   cat::verify(wrapped_value.wrap().bit_ceil() == (0b0010'0000_u1).wrap());
+   cat::verify(wrapped_value.wrap().bit_width() == 5u);
+   cat::verify((0x12_u1).wrap().byteswap() == (0x12_u1).wrap());
+   cat::verify((1_u1).wrap().shift_left(7u) == (0b1000'0000_u1).wrap());
+   cat::verify(
+      (0b1000'0000_u1).wrap().shift_right(7u) == (0b0000'0001_u1).wrap()
+   );
+   cat::verify(
+      (0b1000'0001_u1).wrap().rotate_left(1u) == (0b0000'0011_u1).wrap()
+   );
+   cat::verify(
+      (0b1000'0001_u1).wrap().rotate_right(1u) == (0b1100'0000_u1).wrap()
+   );
+   cat::verify(
+      (0b0001'0110_u1).wrap().bit_reverse() == (0b0110'1000_u1).wrap()
+   );
+   cat::verify((0b1110_u1).wrap().bit_repeat(2u) == (0b1010'1010_u1).wrap());
+   cat::verify(
+      (0b0100'1001_u1).wrap().bit_compress(0b1100'1100_u1)
+      == (0b0000'0110_u1).wrap()
+   );
+   cat::verify(
+      (0b0000'0110_u1).wrap().bit_expand(0b1100'1100_u1)
+      == (0b0100'1000_u1).wrap()
+   );
+}
+
 $test(
    arithmetic_float8_binary_operations_ordering_limits_and_float4_promotion
 ) {

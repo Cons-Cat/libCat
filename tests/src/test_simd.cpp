@@ -2351,12 +2351,12 @@ $test(simd_popcount_rotate_left_rotate_right) {
    cat::verify(pc[1] == 2u);
    cat::verify(pc[2] == 4u);
    cat::verify(pc[3] == 32u);
-   // pc = cat::popcount(v);
-   // cat::verify(v.popcount() == pc);
-   // cat::verify(pc[0] == 0u);
-   // cat::verify(pc[1] == 2u);
-   // cat::verify(pc[2] == 4u);
-   // cat::verify(pc[3] == 32u);
+   pc = cat::popcount(v);
+   cat::verify(v.popcount() == pc);
+   cat::verify(pc[0] == 0u);
+   cat::verify(pc[1] == 2u);
+   cat::verify(pc[2] == 4u);
+   cat::verify(pc[3] == 32u);
 
    using mi4 =
       cat::simd_mask<cat::int4, cat::simd_abi::fixed_size<cat::int4, 4u>>;

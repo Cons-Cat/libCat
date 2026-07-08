@@ -123,6 +123,10 @@ struct iterable_interface {
    constexpr auto
    count(this Self&& self) -> idx;
 
+   template <typename Self>
+   constexpr auto
+   popcount(this Self&& self) -> idx;
+
    template <typename Container, typename Self>
    constexpr auto
    to(this Self&& self) -> Container;

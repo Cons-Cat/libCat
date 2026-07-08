@@ -270,6 +270,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/atomic/cat/atomic
   ${CATLIB}/bit/cat/bit
   ${CATLIB}/bit/implementations/bit_raw.tpp
+  ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/bitset/cat/bitset
   ${CATLIB}/container/cat/container
   ${CATLIB}/container/cat/detail/initializer_list.hpp
@@ -293,6 +294,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/iterable/implementations/iterable_interface.tpp
   ${CATLIB}/iterable/implementations/max.tpp
   ${CATLIB}/iterable/implementations/min.tpp
+  ${CATLIB}/iterable/implementations/popcount.tpp
   ${CATLIB}/iterable/implementations/product.tpp
   ${CATLIB}/iterable/implementations/reverse.tpp
   ${CATLIB}/iterable/implementations/slice_view.tpp

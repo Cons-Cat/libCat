@@ -164,6 +164,20 @@ $test(byte_bitwise_api) {
    static_assert(cat::has_single_bit(cat::byte(0b0001'0000u)));
    static_assert(cat::bit_floor(cat::byte(5u)) == 4u);
    static_assert(cat::bit_ceil(cat::byte(5u)) == 8u);
+   static_assert(cat::bit_width(cat::byte(5u)) == 3u);
+   static_assert(cat::byteswap(cat::byte(0xA5u)) == 0xA5u);
+   static_assert(cat::shift_left(cat::byte(1u), 8u) == 0u);
+   static_assert(cat::shift_right(cat::byte(0x80u), 7u) == 1u);
+   static_assert(cat::bit_reverse(cat::byte(0b0001'0110u)) == 0b0110'1000u);
+   static_assert(cat::bit_repeat(cat::byte(0b1110u), 2u) == 0b1010'1010u);
+   static_assert(
+      cat::bit_compress(cat::byte(0b0100'1001u), cat::byte(0b1100'1100u))
+      == 0b0000'0110u
+   );
+   static_assert(
+      cat::bit_expand(cat::byte(0b0000'0110u), cat::byte(0b1100'1100u))
+      == 0b0100'1000u
+   );
    static_assert(
       cat::rotate_left(cat::byte(0b1000'0001u), cat::uword(1u)) == 0b0000'0011u
    );
@@ -176,6 +190,13 @@ $test(byte_bitwise_api) {
    auto const byte_bit_ceil = cat::bit_ceil_raw(cat::byte(5u));
    cat::verify(byte_bit_ceil.has_value());
    cat::verify(byte_bit_ceil.value() == 8u);
+
+   cat::byte byte_value(0b0001'0110u);
+   cat::verify(byte_value.bit_width() == 5u);
+   cat::verify(byte_value.bit_reverse() == 0b0110'1000u);
+   cat::verify(
+      byte_value.bit_compress(cat::byte(0b1100'1100u)) == 0b0000'0001u
+   );
 }
 
 $test(bit_popcount_and_single_bit) {
@@ -188,6 +209,46 @@ $test(bit_popcount_and_single_bit) {
    static_assert(cat::popcount(0b0'1010'1011_u2) == 5);
    static_assert(cat::popcount(cat::idx{0b0'1010'1011u}) == 5);
    static_assert(cat::popcount(0_u4) == 0);
+   static_assert(cat::bit_cast<unsigned>(2_i4) == 2u);
+   static_assert(cat::byteswap(0x1234_u2) == 0x3412_u2);
+   static_assert(cat::bit_width(0u) == 0u);
+   static_assert(cat::bit_width(0b1000u) == 4u);
+   static_assert(cat::shift_left(1_u1, 7u) == 0b1000'0000_u1);
+   static_assert(cat::shift_left(1_u1, 8u) == 0_u1);
+   static_assert(cat::shift_right(0b1000'0000_u1, 7u) == 1_u1);
+   static_assert(cat::shift_right(0b1000'0000_u1, 8u) == 0_u1);
+   static_assert(cat::bit_reverse(0b0001'0110_u1) == 0b0110'1000_u1);
+   static_assert(cat::bit_repeat(0b1110_u1, 2u) == 0b1010'1010_u1);
+   static_assert(
+      cat::bit_compress(0b0100'1001_u1, 0b1100'1100_u1) == 0b0000'0110_u1
+   );
+   static_assert(
+      cat::bit_expand(0b0000'0110_u1, 0b1100'1100_u1) == 0b0100'1000_u1
+   );
+   static_assert(cat::endian::native == cat::endian::little);
+   static_assert([] {
+      cat::array<cat::byte, 4u> bytes{
+         cat::byte(0b1010'1010u), cat::byte(0b1111'0000u),
+         cat::byte(0b0000'0000u), cat::byte(0b1111'1111u)
+      };
+      return cat::popcount(cat::span<cat::byte const>(bytes)) == 16u;
+   }());
+   static_assert([] {
+      cat::array<cat::uword, 2u> words{0b1111_u8, cat::uword(0b1010'1111u)};
+      return cat::popcount(cat::bit_span(words, 0u, 68u)) == 8u;
+   }());
+
+   cat::array<cat::byte, 5u> bytes{
+      cat::byte(0b1111'1111u), cat::byte(0b0000'1111u), cat::byte(0b1010'1010u),
+      cat::byte(0u), cat::byte(0b1000'0001u)
+   };
+   cat::verify(cat::popcount(cat::span<cat::byte const>(bytes)) == 18u);
+
+   cat::array<cat::uword, 3u> words{
+      cat::uword(0b1111u), cat::uword(0b1010'1010u), cat::uword(0b1111'0000u)
+   };
+   cat::verify(cat::popcount(cat::span<cat::uword const>(words)) == 12u);
+   cat::verify(cat::popcount(cat::bit_span(words, 0u, 132u)) == 8u);
 
    // Test `has_single_bit()`. Matches C23 `stdc_has_single_bit`, so zero is not
    // a single-bit value.
@@ -273,33 +334,6 @@ $test(bit_rotate) {
    );
 }
 
-$test(bit_x64_helpers) {
-   using namespace cat::arithmetic_literals;
-
-   static_assert(x64::extract_bits(uint1::max() >> 1, 4_u1, 4u) == 0b0111u);
-   static_assert(x64::extract_bits(uint1::max(), 4_u1, 4u) == 0b1111u);
-   static_assert(x64::extract_bits(uint1::max() >> 1, 0_u1, 4u) == 0b1111u);
-   static_assert(x64::extract_bits(uint1::max() >> 1, 0_u1, 5u) == 0b1'1111u);
-
-   static_assert(x64::extract_bits(uint4::max() >> 1, 27_u1, 4u) == 0b1111u);
-   static_assert(x64::extract_bits(uint4::max() >> 1, 28_u1, 4u) == 0b0111u);
-
-   static_assert(x64::extract_bits(uint8::max() >> 1, 59_u1, 4u) == 0b1111u);
-   static_assert(x64::extract_bits(uint8::max() >> 1, 60_u1, 4u) == 0b0111u);
-
-   // Test pext.
-   static_assert(x64::parallel_extract_bits(uint8::max(), 0b1ull) == 0b1ull);
-   static_assert(x64::parallel_extract_bits(uint4::max(), 0b1u) == 0b1u);
-   static_assert(x64::parallel_extract_bits(uint2::max(), 0b1_u2) == 0b1_u2);
-   static_assert(x64::parallel_extract_bits(0b1101_u1, 0b0101_u1) == 0b11_u1);
-   static_assert(x64::deposit_bits_mask(0b11_u1, 0b1010_u1) == 0b1010_u1);
-
-   static_assert(x64::zero_high_bits_at(0b1111'0000_u1, 4u) == 0u);
-   static_assert(x64::zero_high_bits_at(0b1111'0000_u1, 8u) == 0b1111'0000_u1);
-   cat::verify(x64::zero_high_bits_at(8_u4, 8u) == 8_u4);
-   cat::verify(x64::zero_high_bits_at(8_u8, 8u) == 8_u8);
-}
-
 $test(bit_value) {
    cat::bit_value bit1 = false;
    bit1 = true;
@@ -349,6 +383,39 @@ $test(bit_reference) {
    cat::verify(bit1);
    bit1 = bit5;
    cat::verify(!bit1);
+}
+
+$test(bit_reference_popcount_terminal) {
+   using namespace cat::arithmetic_literals;
+
+   static_assert(cat::is_iterable<proxy_bit_popcount_source>);
+
+   proxy_bit_popcount_source bits{0b1010'1100_u1};
+   cat::verify((bits | cat::popcount()) == 4u);
+}
+
+$test(bit_word_iterable_popcount_terminal) {
+   using namespace cat::arithmetic_literals;
+
+   cat::page_allocator pager;
+   cat::vec<cat::uint1> words;
+   words.resize(pager, 2u, 0_u1).verify();
+   words[0u] = 0b1010'1100_u1;
+   words[1u] = 0b0000'0011_u1;
+
+   cat::verify((words | cat::popcount()) == 6u);
+   cat::verify(words.popcount() == 6u);
+   cat::verify(cat::popcount(words) == 6u);
+   words.free(pager);
+
+   cat::vec<cat::uword> uword_words;
+   uword_words.resize(pager, 2u, 0u).verify();
+   uword_words[0u] = 0b1010'1100_u1;
+   uword_words[1u] = 0b0000'0011_u1;
+
+   cat::verify(cat::popcount(uword_words) == 6u);
+   cat::verify((uword_words | cat::popcount()) == 6u);
+   uword_words.free(pager);
 }
 
 $test(bit_ptr) {

@@ -593,6 +593,7 @@ struct view_interface {
 #include "../implementations/for_each.tpp"
 #include "../implementations/max.tpp"
 #include "../implementations/min.tpp"
+#include "../implementations/popcount.tpp"
 #include "../implementations/product.tpp"
 #include "../implementations/reverse_inplace.tpp"
 #include "../implementations/sum.tpp"

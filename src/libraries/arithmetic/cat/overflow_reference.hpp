@@ -39,6 +39,9 @@ class overflow_reference
    using wrapper_type = remove_cvref<WrappedQual>;
 
    static constexpr overflow_policies policy = overflow_policy;
+   static constexpr bool supports_unsigned_bit_members =
+      is_unsigned_integral<raw_type> && !detail::is_basic_intptr<wrapper_type>
+      && !is_idx<wrapper_type>;
 
    WrappedQual* _Nonnull m_wrapped;
 
@@ -166,6 +169,155 @@ class overflow_reference
             m_wrapped->raw
          );
       }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   countl_zero() const -> uint1
+      requires(supports_unsigned_bit_members)
+   {
+      return view().countl_zero();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   countl_one() const -> uint1
+      requires(supports_unsigned_bit_members)
+   {
+      return view().countl_one();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   countr_zero() const -> uint1
+      requires(supports_unsigned_bit_members)
+   {
+      return view().countr_zero();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   countr_one() const -> uint1
+      requires(supports_unsigned_bit_members)
+   {
+      return view().countr_one();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   popcount() const -> uint1
+      requires(supports_unsigned_bit_members)
+   {
+      return view().popcount();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   has_single_bit() const -> bool
+      requires(supports_unsigned_bit_members)
+   {
+      return view().has_single_bit();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_floor() const
+      requires(supports_unsigned_bit_members)
+   {
+      return view().bit_floor();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_ceil() const
+      requires(supports_unsigned_bit_members)
+   {
+      return view().bit_ceil();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_width() const -> uint1
+      requires(supports_unsigned_bit_members)
+   {
+      return view().bit_width();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   byteswap() const
+      requires(supports_unsigned_bit_members)
+   {
+      return view().byteswap();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shift_left(uword count) const
+      requires(supports_unsigned_bit_members)
+   {
+      return view().shift_left(count);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shift_right(uword count) const
+      requires(supports_unsigned_bit_members)
+   {
+      return view().shift_right(count);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   rotate_left(uword count) const
+      requires(supports_unsigned_bit_members)
+   {
+      return view().rotate_left(count);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   rotate_right(uword count) const
+      requires(supports_unsigned_bit_members)
+   {
+      return view().rotate_right(count);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_reverse() const
+      requires(supports_unsigned_bit_members)
+   {
+      return view().bit_reverse();
+   }
+
+   template <is_arithmetic PatternBits>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_repeat(PatternBits pattern_bits) const
+      requires(supports_unsigned_bit_members)
+   {
+      return view().bit_repeat(pattern_bits);
+   }
+
+   template <typename Mask>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_compress(Mask mask) const
+      requires(supports_unsigned_bit_members)
+   {
+      using view_type = decltype(view());
+      return view().bit_compress(view_type(mask));
+   }
+
+   template <typename Mask>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   bit_expand(Mask mask) const
+      requires(supports_unsigned_bit_members)
+   {
+      using view_type = decltype(view());
+      return view().bit_expand(view_type(mask));
    }
 
    template <typename U>

@@ -41,6 +41,15 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    using array_type_element = array_type::value_type;
 
  public:
+   using storage_type = array_type_element;
+   using value_type = bit_value;
+   using const_value_type = bit_value const;
+   using reference = bit_reference<array_type_element>;
+   using const_reference = bit_reference<array_type_element const>;
+   using pointer = bit_ptr<array_type_element>;
+   using const_pointer = bit_ptr<array_type_element const>;
+   using size_type = idx;
+   using difference_type = iword;
    using iterator = bit_stepanov_iterator<typename array_type::iterator>;
    using const_iterator =
       bit_stepanov_iterator<typename array_type::const_iterator>;
@@ -155,6 +164,21 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       return m_data == other.m_data;
    }
 
+   // Count set bits in this bitset.
+   [[nodiscard]]
+   constexpr auto
+   popcount() const -> idx {
+      return cat::popcount(
+         span<array_type_element const>{m_data.data(), m_data.size()}
+      );
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_single_bit() const -> bool {
+      return popcount() == 1u;
+   }
+
    // Index into this bit-set from the right-most bit.
    [[nodiscard]]
    constexpr auto
@@ -264,22 +288,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    [[nodiscard]]
    constexpr auto
    all_of() const -> bool {
-      // TODO: Make this branchless where possible.
-
-      // For all but the last array element, compare against a full byte.
-      for (idx i; i < m_data.size() - 1; ++i) {
-         if (m_data[i] != array_type_element::max()) {
-            // If at least one bit is 0:
-            return false;
-         }
-      }
-
-      // On the last array element, compare against a bitmask. Leading bits of
-      // the leading byte should not be considered part of the bitset, so they
-      // are masked on unconditionally.
-      auto const mask = (array_type_element(1u) << (leading_skipped_bits))--;
-      return (m_data[storage_array_size - 1u] | mask)
-             == array_type_element::max();
+      return popcount() == bits_count;
    }
 
    // Evaluate true if at least one bit in this bitset is 1.
@@ -300,6 +309,12 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    constexpr auto
    none_of() const -> bool {
       return !(any_of());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bit_width() const -> idx {
+      return idx(bits_count - countl_zero());
    }
 
    [[nodiscard]]
@@ -495,6 +510,29 @@ bitset : public bitwise_interface<bitset<bits_count>> {
          bitset result;
          result.m_data[0] = cat::rotate_left(m_data[0], shift);
          return result;
+      } else if constexpr (storage_array_size == 1u) {
+         using raw_type = raw_arithmetic_type<array_type_element>;
+         constexpr raw_type logical_mask =
+            (raw_type(1u) << bits_count.raw) - 1u;
+         constexpr raw_type storage_shift = leading_skipped_bits.raw;
+         constexpr auto bw = iword::raw_type(bits_count);
+         auto s = shift.raw % bw;
+         if (s < 0) {
+            s += bw;
+         }
+         uword const left_shift = uword(s);
+         raw_type const packed =
+            raw_type(m_data[0].raw >> storage_shift) & logical_mask;
+         raw_type const rotated =
+            left_shift == 0u
+               ? packed
+               : raw_type(
+                    (packed << left_shift.raw)
+                    | (packed >> (bits_count.raw - left_shift.raw))
+                 ) & logical_mask;
+         bitset result;
+         result.m_data[0] = array_type_element(rotated << storage_shift);
+         return result;
       } else {
          // TODO: For the padded single-word case, delegate to
          // `cat::rotate_left` plus masking to rotate within `bits_count` bits.
@@ -529,6 +567,29 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       ) {
          bitset result;
          result.m_data[0] = cat::rotate_right(m_data[0], shift);
+         return result;
+      } else if constexpr (storage_array_size == 1u) {
+         using raw_type = raw_arithmetic_type<array_type_element>;
+         constexpr raw_type logical_mask =
+            (raw_type(1u) << bits_count.raw) - 1u;
+         constexpr raw_type storage_shift = leading_skipped_bits.raw;
+         constexpr auto bw = iword::raw_type(bits_count);
+         auto s = shift.raw % bw;
+         if (s < 0) {
+            s += bw;
+         }
+         uword const right_shift = uword(s);
+         raw_type const packed =
+            raw_type(m_data[0].raw >> storage_shift) & logical_mask;
+         raw_type const rotated =
+            right_shift == 0u
+               ? packed
+               : raw_type(
+                    (packed >> right_shift.raw)
+                    | (packed << (bits_count.raw - right_shift.raw))
+                 ) & logical_mask;
+         bitset result;
+         result.m_data[0] = array_type_element(rotated << storage_shift);
          return result;
       } else {
          bitset result;
@@ -684,6 +745,7 @@ make_bitset(Arguments... arguments) {
 
    bitset<bits_count> new_bitset;
    new_bitset.m_data = {arguments...};
+   new_bitset.clear_padding_bits();
    return new_bitset;
 }
 

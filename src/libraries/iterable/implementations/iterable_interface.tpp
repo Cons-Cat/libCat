@@ -251,6 +251,13 @@ iterable_interface<Tag>::count(this Self&& self) -> idx {
 }
 
 template <typename Tag>
+template <typename Self>
+constexpr auto
+iterable_interface<Tag>::popcount(this Self&& self) -> idx {
+   return detail::iterable_pipe_popcount($fwd(self));
+}
+
+template <typename Tag>
 template <typename Container, typename Self>
 constexpr auto
 iterable_interface<Tag>::to(this Self&& self) -> Container {
