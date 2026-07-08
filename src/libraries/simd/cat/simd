@@ -2350,24 +2350,21 @@ class
       return !(this->any_of());
    }
 
-   // Standard mask reductions-style helpers on logical lanes (standard mask
-   // wording. `reduce_min_index`/`reduce_max_index` over true lane indices).
+   // Count true lanes.
    [[nodiscard]]
    constexpr auto
    count_if_true() const -> idx {
       return detail::simd_abi::mask_count_if_true<T, abi_type>::invoke(*this);
    }
 
-   // Lowest index of a true lane. `count_if_true()` is non-zero (at least one
-   // true lane).
+   // Lowest index of a true lane. `count_if_true()` is non-zero.
    [[nodiscard]]
    constexpr auto
    find_if_true() const -> idx {
       return detail::simd_abi::mask_find_if_true<T, abi_type>::invoke(*this);
    }
 
-   // Highest index of a true lane. `count_if_true()` is non-zero (at least one
-   // true lane).
+   // Highest index of a true lane. `count_if_true()` is non-zero.
    [[nodiscard]]
    constexpr auto
    find_last_if_true() const -> idx {
@@ -2553,6 +2550,15 @@ class
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
+popcount(simd<T, Abi> const& input) -> simd<T, Abi>
+   requires(is_unsigned_integral<T> && !is_bool<T>)
+{
+   return input.popcount();
+}
+
+template <typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
 popcount(simd_mask<T, Abi> const& mask) -> int {
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return static_cast<int>(mask.count_if_true());
@@ -2568,7 +2574,7 @@ simd(simd_mask<T, Abi>) -> simd<
 // Reductions use Clang `__builtin_reduce_*` on the GNU vector `raw` value.
 // `simd_reduce_*` are `inline constexpr` functors forwarding `simd::reduce_*`
 // (always `simd<T, simd_abi::fixed_size<T, 1>>`. mask summaries use
-// `idx`-valued `count_if_true`/`find_if_true` / `find_last_if_true` on
+// `idx`-valued `count_if_true` / `find_if_true` / `find_last_if_true` on
 // `simd_mask`).
 
 namespace detail {
@@ -2971,8 +2977,7 @@ struct mask_count_if_true {
    }
 };
 
-// Find the first lane of `m` that is true. `count_if_true()` is non-zero (at
-// least one true lane).
+// Find the first lane of `m` that is true. `count_if_true()` is non-zero.
 template <typename T, typename Abi>
 struct mask_find_if_true {
    [[nodiscard]]
@@ -2988,8 +2993,7 @@ struct mask_find_if_true {
    }
 };
 
-// Find the last lane of `m` that is true. `count_if_true()` is non-zero (at
-// least one true lane).
+// Find the last lane of `m` that is true. `count_if_true()` is non-zero.
 template <typename T, typename Abi>
 struct mask_find_last_if_true {
    [[nodiscard]]

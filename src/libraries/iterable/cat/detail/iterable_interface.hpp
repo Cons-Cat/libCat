@@ -77,6 +77,10 @@ struct iterable_interface {
 
    template <typename Self>
    constexpr auto
+   reverse_inplace(this Self&& self) -> decltype(auto);
+
+   template <typename Self>
+   constexpr auto
    as_rvalue(this Self&& self);
 
    template <typename Self, typename Position>

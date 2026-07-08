@@ -362,6 +362,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/implementations/simd_mask_bitset.tpp
   ${CATLIB}/simd/cat/detail/simd_broadcast_traits.hpp
   ${CATLIB}/simd/cat/detail/simd_range_iterator.hpp
+  ${CATLIB}/simd/cat/detail/simd_avx512.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_mask_ops.hpp
   ${CATLIB}/simd/cat/detail/simd_aliases.hpp

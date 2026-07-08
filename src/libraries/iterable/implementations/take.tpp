@@ -17,7 +17,7 @@ struct take_view_impl : iterable_interface<> {
       idx limit;
       idx taken;
 
-      using element_type = typename BaseContext::element_type;
+      using element_type = BaseContext::element_type;
 
       template <is_predicate<element_type> LoopBody>
       constexpr auto
@@ -49,7 +49,7 @@ struct take_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base>;
       return context_type<incoming_iteration_context_type>{
-         ::cat::iterate(m_base), m_count, 0u
+         cat::iterate(m_base), m_count, 0u
       };
    }
 
@@ -60,7 +60,7 @@ struct take_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base const>;
       return context_type<incoming_iteration_context_type>{
-         ::cat::iterate(m_base), m_count, 0u
+         cat::iterate(m_base), m_count, 0u
       };
    }
 };

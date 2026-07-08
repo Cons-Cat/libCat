@@ -27,7 +27,7 @@ constexpr_list_func() -> int4 {
    auto _ = list.push_back<cat::page_allocator>(pager, 1);
    auto _ = list.push_back<cat::page_allocator>(pager, 2);
    auto _ = list.push_front<cat::page_allocator>(pager, 3);
-   list.reverse();
+   list.reverse_inplace();
    int4 result = list.front() + list.back();
    list.free<cat::page_allocator>(pager);
    return result;
@@ -89,9 +89,9 @@ $test(manual_list_modifiers) {
    }) == 1);
    cat::verify(list.front() == 1);
 
-   cat::verify(list.unique(allocator_ref) == 1);
+   cat::verify(list.unique_inplace(allocator_ref) == 1);
    cat::verify(list.size() == 4);
-   list.reverse();
+   list.reverse_inplace();
    cat::verify(list.front() == 5);
    cat::verify(list.back() == 1);
 
@@ -146,6 +146,32 @@ $test(manual_forward_list_modifiers) {
    list.free(allocator_ref);
 }
 
+$test(list_reverse_inplace) {
+   linear_arena arena;
+   auto& allocator = arena.alloc;
+   auto allocator_ref = cat::allocator_ref<cat::linear_allocator>(allocator);
+
+   cat::list<int> manual =
+      cat::make_list<int>(allocator_ref, 1, 2, 3, 4).verify();
+   manual | cat::reverse_inplace();
+   cat::verify(manual.front() == 4);
+   cat::verify(manual.back() == 1);
+   manual.reverse_inplace();
+   cat::verify(manual.front() == 1);
+   cat::verify(manual.back() == 4);
+
+   cat::raii::list managed =
+      cat::raii::make_list<int>(allocator, 5, 6, 7).verify();
+   managed | cat::reverse_inplace();
+   cat::verify(managed.front() == 7);
+   cat::verify(managed.back() == 5);
+   managed.reverse_inplace();
+   cat::verify(managed.front() == 5);
+   cat::verify(managed.back() == 7);
+
+   manual.free(allocator_ref);
+}
+
 $test(raii_list_modifiers_release) {
    linear_arena arena;
    auto& allocator = arena.alloc;
@@ -156,9 +182,9 @@ $test(raii_list_modifiers_release) {
    cat::verify(list.size() == 6);
 
    cat::verify(list.remove(2) == 2);
-   cat::verify(list.unique() == 1);
+   cat::verify(list.unique_inplace() == 1);
    cat::verify(list.size() == 3);
-   list.reverse();
+   list.reverse_inplace();
    cat::verify(list.front() == 4);
    cat::verify(list.back() == 1);
 

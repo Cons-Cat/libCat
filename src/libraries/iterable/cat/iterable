@@ -454,8 +454,7 @@ template <is_iterable T>
 using iterable_iteration_context_type = decltype(iterate(declval<T&>()));
 
 template <is_iterable T>
-using iterable_element_type =
-   typename iterable_iteration_context_type<T>::element_type;
+using iterable_element_type = iterable_iteration_context_type<T>::element_type;
 
 template <is_iterable T>
 using iterable_value_type = remove_cvref<iterable_element_type<T>>;
@@ -531,7 +530,7 @@ template <typename IterationContext, typename Callback>
    requires(is_iteration_context<IterationContext>)
 constexpr auto
 step(IterationContext& iteration_context, Callback callback) {
-   using element_type = typename IterationContext::element_type;
+   using element_type = IterationContext::element_type;
    using result_type =
       remove_cvref<decltype(callback(declval<element_type>()))>;
 
@@ -595,6 +594,7 @@ struct view_interface {
 #include "../implementations/max.tpp"
 #include "../implementations/min.tpp"
 #include "../implementations/product.tpp"
+#include "../implementations/reverse_inplace.tpp"
 #include "../implementations/sum.tpp"
 #include "../implementations/take.tpp"
 #include "../implementations/to.tpp"

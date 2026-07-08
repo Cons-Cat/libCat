@@ -39,6 +39,12 @@ iterable_pipe_reverse(Self&& self) {
 
 template <typename Self>
 constexpr auto
+iterable_pipe_reverse_inplace(Self&& self) -> decltype(auto) {
+   return $fwd(self) | reverse_inplace();
+}
+
+template <typename Self>
+constexpr auto
 iterable_pipe_as_rvalue(Self&& self) {
    return $fwd(self) | as_rvalue();
 }
@@ -160,14 +166,22 @@ iterable_interface<Tag>::reverse(this Self&& self) {
 template <typename Tag>
 template <typename Self>
 constexpr auto
+iterable_interface<Tag>::reverse_inplace(this Self&& self) -> decltype(auto) {
+   return detail::iterable_pipe_reverse_inplace($fwd(self));
+}
+
+template <typename Tag>
+template <typename Self>
+constexpr auto
 iterable_interface<Tag>::as_rvalue(this Self&& self) {
    return detail::iterable_pipe_as_rvalue($fwd(self));
 }
 
 template <typename Tag>
 template <typename Self, typename Position>
-constexpr decltype(auto)
-iterable_interface<Tag>::read_at(this Self& self, Position const& position) {
+constexpr auto
+iterable_interface<Tag>::read_at(this Self& self, Position const& position)
+   -> decltype(auto) {
    return detail::iterable_pipe_read_at(self, position);
 }
 

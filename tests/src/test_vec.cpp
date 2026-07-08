@@ -784,6 +784,14 @@ $test(vec_collection) {
    cat::verify(cat::read_at(vec_values, 1u) == 6);
    auto vec_tail = cat::ref(vec_values) | cat::reverse() | cat::take(2u);
    cat::verify(vec_tail.sum() == 13);
+   vec_values | cat::reverse_inplace();
+   cat::verify(vec_values[0] == 7);
+   cat::verify(vec_values[1] == 6);
+   cat::verify(vec_values[2] == 5);
+   vec_values.reverse_inplace();
+   cat::verify(vec_values[0] == 5);
+   cat::verify(vec_values[1] == 6);
+   cat::verify(vec_values[2] == 7);
    auto transformed_tail = cat::ref(vec_values)
                               .filter([](int value) -> bool {
                                  return value > 5;

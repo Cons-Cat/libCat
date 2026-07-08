@@ -761,7 +761,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
 
    // Reverse the order of nodes in the `cat::basic_list`.
    constexpr void
-   reverse() {
+   reverse_inplace() {
+      // Optimized implementation compared to `cat::reverse_inplace_stepanov()`.
+      // Shadows `cat::iterable_interface::reverse_inplace()`.
       node_type* p_current = m_storage.m_p_head;
       while (p_current != nullptr) {
          node_type* p_next = p_current->p_next_node;
@@ -799,7 +801,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Remove consecutive duplicate elements based on predicate.
    template <is_allocator Allocator, typename Pred>
    constexpr auto
-   unique(allocator_ref<Allocator> allocator, Pred&& pred) -> idx {
+   unique_inplace(allocator_ref<Allocator> allocator, Pred&& pred) -> idx {
       idx const old_size = m_size;
       node_type* p_current = m_storage.m_p_head;
       while (p_current != nullptr && p_current->p_next_node != nullptr) {
@@ -815,10 +817,12 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Remove consecutive equal elements.
    template <is_allocator Allocator>
    constexpr auto
-   unique(allocator_ref<Allocator> allocator) -> idx {
-      return this->unique(allocator, [](T const& left, T const& right) -> bool {
-         return left == right;
-      });
+   unique_inplace(allocator_ref<Allocator> allocator) -> idx {
+      return this->unique_inplace(
+         allocator, [](T const& left, T const& right) -> bool {
+            return left == right;
+         }
+      );
    }
 
    // Return iterator to the first node.

@@ -11,7 +11,7 @@ namespace cat {
 // found zero bit, wrapped in a `cat::maybe`. When the input is zero, this
 // returns `nullopt`.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 constexpr auto
 countl_zero_raw(T value) -> maybe<uint1> {
@@ -26,7 +26,7 @@ countl_zero_raw(T value) -> maybe<uint1> {
 // found zero bit, wrapped in a `cat::maybe`. When the input is zero, this
 // returns `nullopt`.
 template <is_unsigned_integral T>
-   requires(!detail::is_idx<T>)
+   requires(!is_idx<T>)
 [[nodiscard]]
 constexpr auto
 countl_one_raw(T value) -> maybe<uint1> {

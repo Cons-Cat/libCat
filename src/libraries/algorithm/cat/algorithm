@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/stepanov>
+#include <cat/utility>
 
 namespace cat {
 
@@ -11,6 +12,27 @@ concept is_random_access = requires(T t) {
                               t.data();
                               t.size();
                            };
+
+template <is_bidirectional_stepanov_iterator Iterator>
+constexpr void
+stepanov_reverse_inplace(Iterator first, Iterator last) {
+   if constexpr (is_random_access_stepanov_iterator<Iterator>) {
+      if (first != last) {
+         for (; first < --last; ++first) {
+            cat::swap(*first, *last);
+         }
+      }
+   } else {
+      while (first != last) {
+         --last;
+         if (first == last) {
+            break;
+         }
+         cat::swap(*first, *last);
+         ++first;
+      }
+   }
+}
 
 // Copy-assign the elements of one container into another.
 template <typename InputIterator, typename OutputIterator>

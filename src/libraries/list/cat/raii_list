@@ -400,8 +400,10 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
 
    // Reverse element order.
    constexpr void
-   reverse() {
-      m_core.reverse();
+   reverse_inplace() {
+      // Optimized implementation compared to `cat::reverse_inplace_stepanov()`.
+      // Shadows `cat::iterable_interface::reverse_inplace()`.
+      m_core.reverse_inplace();
    }
 
    // Remove elements matching predicate and return count removed.
@@ -420,14 +422,14 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Remove consecutive duplicates based on predicate and return removed count.
    template <typename Pred>
    constexpr auto
-   unique(Pred&& pred) -> idx {
-      return m_core.unique(m_allocator, $fwd(pred));
+   unique_inplace(Pred&& pred) -> idx {
+      return m_core.unique_inplace(m_allocator, $fwd(pred));
    }
 
    // Remove consecutive equal elements and return removed count.
    constexpr auto
-   unique() -> idx {
-      return m_core.unique(m_allocator);
+   unique_inplace() -> idx {
+      return m_core.unique_inplace(m_allocator);
    }
 
    // Return iterator to first element.
