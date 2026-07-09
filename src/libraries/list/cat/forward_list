@@ -427,6 +427,22 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       }
    }
 
+   constexpr void
+   reverse_inplace() {
+      // Shadows `cat::iterable_interface::reverse_inplace()`.
+      // This is optimized for `cat::basic_forward_list` compared to the default
+      // implementation.
+      node_type* p_previous = nullptr;
+      node_type* p_current = m_storage.m_p_head;
+      while (p_current != nullptr) {
+         node_type* p_next = p_current->p_next_node;
+         p_current->p_next_node = p_previous;
+         p_previous = p_current;
+         p_current = p_next;
+      }
+      m_storage.m_p_head = p_previous;
+   }
+
    // Return iterator to the first node.
    [[nodiscard]]
    constexpr auto

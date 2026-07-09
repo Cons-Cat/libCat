@@ -6,11 +6,11 @@
 #include "../unit_tests.hpp"
 
 $test(stepanov_iterator_concepts_std_parity_pointers) {
-   static_assert(cat::is_same<cat::iter_value_t<int*>, int>);
+   static_assert(cat::is_same<cat::iter_value_type<int*>, int>);
    static_assert(cat::is_same<cat::iter_reference_t<int*>, int&>);
    static_assert(cat::is_same<cat::iter_difference_t<int*>, cat::iword>);
    static_assert(cat::is_same<cat::iter_rvalue_reference_t<int*>, int&&>);
-   static_assert(cat::is_same<cat::iter_value_t<int const*>, int>);
+   static_assert(cat::is_same<cat::iter_value_type<int const*>, int>);
    static_assert(cat::is_same<cat::iter_reference_t<int const*>, int const&>);
    static_assert(cat::is_stepanov_weakly_incrementable<int*>);
    static_assert(cat::is_stepanov_indirectly_readable<int*>);
@@ -29,7 +29,7 @@ $test(iterator_concepts_std_parity_container_stepanov_iterator) {
    static_assert(cat::is_stepanov_iterable<decltype(arr)>);
    static_assert(cat::is_stepanov_bidi_iterable<decltype(arr)>);
 
-   static_assert(cat::is_same<cat::iter_value_t<iter>, int>);
+   static_assert(cat::is_same<cat::iter_value_type<iter>, int>);
    static_assert(cat::is_same<cat::iter_difference_t<iter>, cat::iword>);
    static_assert(cat::is_same<cat::iter_rvalue_reference_t<iter>, int&&>);
    static_assert(cat::is_stepanov_weakly_incrementable<iter>);

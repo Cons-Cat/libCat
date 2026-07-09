@@ -2863,16 +2863,32 @@ struct simd_permute_impl {
    }
 };
 
-template <int... Idx>
+template <int... indices>
 struct simd_shuffle_impl {
    template <typename T, typename Abi>
-      requires(sizeof...(Idx) == Abi::lanes.raw)
+      requires(sizeof...(indices) == Abi::lanes.raw)
    [[nodiscard]]
    constexpr auto
    operator()(simd<T, Abi> input) const -> simd<T, Abi> {
       return simd<T, Abi>(
-         __builtin_shufflevector(input.raw, input.raw, Idx...)
+         __builtin_shufflevector(input.raw, input.raw, indices...)
       );
+   }
+};
+
+struct simd_reverse_impl {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input) const -> simd<T, Abi> {
+      return []<idx... indices>(
+                simd<T, Abi> value, index_list_type<indices...> /*unused*/
+             ) -> simd<T, Abi> {
+         return simd_shuffle_impl<
+            static_cast<int>(Abi::lanes - 1u - indices)...>{}(value);
+      }
+             // Generate a backwards sequence of NTTP indices.
+             (input, make_index_sequence<Abi::lanes>{});
    }
 };
 
@@ -3415,8 +3431,10 @@ inline constexpr detail::simd_bit_cast_as_impl<NewT> simd_bit_cast_as{};
 
 inline constexpr detail::simd_permute_impl simd_permute{};
 
-template <int... Idx>
-inline constexpr detail::simd_shuffle_impl<Idx...> simd_shuffle{};
+template <int... indices>
+inline constexpr detail::simd_shuffle_impl<indices...> simd_shuffle{};
+
+inline constexpr detail::simd_reverse_impl simd_reverse{};
 
 inline constexpr detail::simd_compress_impl simd_compress{};
 inline constexpr detail::simd_expand_impl simd_expand{};

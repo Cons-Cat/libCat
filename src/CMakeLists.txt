@@ -46,6 +46,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/math/implementations/pow.cpp
   ${CATLIB}/math/implementations/sqrt.cpp
+  ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
   ${CATLIB}/memory/implementations/copy_memory_backward.cpp
   ${CATLIB}/memory/implementations/compare_memory.cpp

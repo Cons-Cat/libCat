@@ -206,7 +206,10 @@ popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) -> idx {
    }
 
    return $simd_switch(
-      $abi(avx512, { return popcount_bytes_simd<uint8x_>(p_bytes, bytes); }),
+      $abi(
+         (avx512, sse2),
+         { return popcount_bytes_simd<uint8x_>(p_bytes, bytes); }
+      ),
       $abi(
          avx2,
          {
@@ -215,7 +218,6 @@ popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) -> idx {
             return count;
          }
       ),
-      $abi(sse2, { return popcount_bytes_simd<uint8x_>(p_bytes, bytes); }),
       default : return popcount_bytes_scalar(p_bytes, bytes);
    );
 }
@@ -231,19 +233,13 @@ popcount_words_runtime(
 
    return $simd_switch(
       $abi(
-         avx512,
+         (avx512, sse2),
          { return popcount_words_simd<uint8x_>(p_words, words, tail_mask); }
       ),
-      $abi(
-         avx2,
-         {
-            idx count = popcount_words_simd<uint8x_>(p_words, words, tail_mask);
-            x64::zero_upper_avx_registers();
-            return count;
-         }
-      ),
-      $abi(sse2, {
-         return popcount_words_simd<uint8x_>(p_words, words, tail_mask);
+      $abi(avx2, {
+         idx count = popcount_words_simd<uint8x_>(p_words, words, tail_mask);
+         x64::zero_upper_avx_registers();
+         return count;
       })
    );
 }

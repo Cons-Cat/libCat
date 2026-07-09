@@ -762,8 +762,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Reverse the order of nodes in the `cat::basic_list`.
    constexpr void
    reverse_inplace() {
-      // Optimized implementation compared to `cat::reverse_inplace_stepanov()`.
       // Shadows `cat::iterable_interface::reverse_inplace()`.
+      // This is optimized for `cat::basic_list` compared to the default
+      // implementation.
       node_type* p_current = m_storage.m_p_head;
       while (p_current != nullptr) {
          node_type* p_next = p_current->p_next_node;

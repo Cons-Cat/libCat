@@ -401,8 +401,8 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Reverse element order.
    constexpr void
    reverse_inplace() {
-      // Optimized implementation compared to `cat::reverse_inplace_stepanov()`.
       // Shadows `cat::iterable_interface::reverse_inplace()`.
+      // This is optimized for list compared to the default implementation.
       m_core.reverse_inplace();
    }
 

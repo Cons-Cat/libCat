@@ -307,7 +307,7 @@ $test(simd_avx_abi_hooks_mask_reductions_and_bitset) {
    cat::bitset<8u> const b = sparse.to_bitset();
    cat::bitset<8u> const b_ref = sparse_ref.to_bitset();
    for (idx k = 0u; k < 8u; ++k) {
-      cat::verify(static_cast<bool>(b[k]) == static_cast<bool>(b_ref[k]));
+      cat::verify(b[k] == b_ref[k]);
    }
    for (idx i = 0u; i < 8u; ++i) {
       cat::verify(b[i] == sparse[i]);

@@ -172,12 +172,9 @@ compare_memory_impl(
       }
    }
 
-   return $simd_switch(
-      $abi(
-         avx2, { return compare_memory_large<char1x_>(p_lhs, p_rhs, bytes); }
-      ),
-      $abi(sse2, { return compare_memory_large<char1x_>(p_lhs, p_rhs, bytes); })
-   );
+   return $simd_switch($abi((avx2, sse2), {
+      return compare_memory_large<char1x_>(p_lhs, p_rhs, bytes);
+   }));
 }
 
 }  // namespace cat::detail

@@ -792,6 +792,21 @@ $test(vec_collection) {
    cat::verify(vec_values[0] == 5);
    cat::verify(vec_values[1] == 6);
    cat::verify(vec_values[2] == 7);
+
+   cat::raii::vec managed_values =
+      cat::raii::make_vec_filled(allocator, 3u, 0).verify();
+   managed_values[0] = 8;
+   managed_values[1] = 9;
+   managed_values[2] = 10;
+   managed_values | cat::reverse_inplace();
+   cat::verify(managed_values[0] == 10);
+   cat::verify(managed_values[1] == 9);
+   cat::verify(managed_values[2] == 8);
+   managed_values.reverse_inplace();
+   cat::verify(managed_values[0] == 8);
+   cat::verify(managed_values[1] == 9);
+   cat::verify(managed_values[2] == 10);
+
    auto transformed_tail = cat::ref(vec_values)
                               .filter([](int value) -> bool {
                                  return value > 5;
@@ -801,4 +816,41 @@ $test(vec_collection) {
                               });
    cat::verify(transformed_tail.sum() == 130);
    cat::verify(cat::as_span(vec_values).size() == 3u);
+}
+
+$test(vec_reverse_inplace_simd) {
+   cat::page_allocator allocator;
+   cat::vec<int> values;
+   values.resize(allocator, 65u, 0).verify();
+   $defer {
+      values.free(allocator);
+   };
+
+   for (cat::idx i = 0u; i < values.size(); ++i) {
+      values[i] = static_cast<int>(i);
+   }
+
+   values | cat::reverse_inplace();
+   for (cat::idx i = 0u; i < values.size(); ++i) {
+      cat::verify(values[i] == static_cast<int>(64u - i));
+   }
+
+   values.reverse_inplace();
+   for (cat::idx i = 0u; i < values.size(); ++i) {
+      cat::verify(values[i] == static_cast<int>(i));
+   }
+
+   cat::vec<cat::int4> wrapped_values;
+   wrapped_values.resize(allocator, 65u, 0_i4).verify();
+   $defer {
+      wrapped_values.free(allocator);
+   };
+   for (cat::idx i = 0u; i < wrapped_values.size(); ++i) {
+      wrapped_values[i] = cat::int4(i);
+   }
+
+   wrapped_values | cat::reverse_inplace();
+   for (cat::idx i = 0u; i < wrapped_values.size(); ++i) {
+      cat::verify(wrapped_values[i] == cat::int4(64u - i));
+   }
 }

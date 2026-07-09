@@ -278,6 +278,11 @@ basic_forward_list
       m_core.pop_front(m_allocator);
    }
 
+   constexpr void
+   reverse_inplace() {
+      m_core.reverse_inplace();
+   }
+
    // Return iterator to the first element.
    [[nodiscard]]
    constexpr auto

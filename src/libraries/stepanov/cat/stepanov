@@ -9,11 +9,12 @@
 // iterators with `cat::proxy_stepanov_iterator_interface`.
 //
 // libCat is migrating to the Flux v2 sequence model under `cat/iterable`. The
-// Stepanov `begin`/`end` machinery is marked so the transition is visible at.
+// Stepanov `begin`/`end` machinery is marked so the transition is visible at
 // every site (iterator types are `cat::*_stepanov_iterator` and matching
 // concepts are `cat::is_*_stepanov_iterator` where the role prefix mirrors
 // C++20. Range shape in `<cat/container>` is `cat::is_stepanov_container`). New
-// code should prefer `cat::is_iterable`/`cat::is_collection`.
+// code should prefer `cat::is_iterable`/`cat::is_collection`, but these will
+// always be provided to support range-for loops.
 //
 // We also provide helpers for generating reverse and `const` iterators, as well
 // as simple adaptors for iterating over ranges like `cat::as_reverse_stepanov`
@@ -157,8 +158,7 @@ template <typename Iterator>
 using infer_difference_type = detail::infer_difference_trait<Iterator>::type;
 
 template <typename T>
-using iterator_difference_type =
-   typename detail::infer_difference_trait<T>::type;
+using iterator_difference_type = detail::infer_difference_trait<T>::type;
 
 struct random_access_iterator_tag {};
 
@@ -208,7 +208,7 @@ struct iter_value_trait<I> {
 }  // namespace detail
 
 template <typename I>
-using iter_value_t = typename detail::iter_value_trait<I>::type;
+using iter_value_type = detail::iter_value_trait<I>::type;
 
 // `cat::stepanov_iterator_interface` is a mixin class for generating
 // conventional iterator boilerplate from a minimal set of user-written
@@ -304,9 +304,7 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    {
       if constexpr (detail::has_advance<remove_cvref<decltype(self)>>) {
          self.advance(
-            static_cast<typename remove_cvref<decltype(self)>::difference_type>(
-               offset
-            )
+            static_cast<remove_cvref<decltype(self)>::difference_type>(offset)
          );
       } else {
          for (idx i; i < offset; ++i) {
@@ -322,9 +320,7 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
          self.increment();
       } else {
          self.advance(
-            static_cast<typename remove_cvref<decltype(self)>::difference_type>(
-               1
-            )
+            static_cast<remove_cvref<decltype(self)>::difference_type>(1)
          );
       }
       return self;
@@ -345,9 +341,7 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
          self.decrement();
       } else {
          self.advance(
-            static_cast<typename remove_cvref<decltype(self)>::difference_type>(
-               -1
-            )
+            static_cast<remove_cvref<decltype(self)>::difference_type>(-1)
          );
       }
       return self;
@@ -409,6 +403,15 @@ template <typename Derived>
       && detail::has_distance_to<remove_cvref<Derived>>
    )
 constexpr auto
+operator-(Derived const& left, Derived const& right)
+   -> infer_difference_type<remove_cvref<Derived>>;
+
+template <typename Derived>
+   requires(
+      is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>
+      && detail::has_distance_to<remove_cvref<Derived>>
+   )
+constexpr auto
 operator<=>(Derived const& left, Derived const& right) {
    using iter = remove_cvref<Derived>;
    using diff = infer_difference_type<iter>;
@@ -424,7 +427,7 @@ operator+(Derived const& left, auto offset) -> remove_cvref<Derived>
    using iter = remove_cvref<Derived>;
    iter new_iterator = left;
    if constexpr (detail::has_advance<iter>) {
-      new_iterator.advance(static_cast<typename iter::difference_type>(offset));
+      new_iterator.advance(static_cast<iter::difference_type>(offset));
    } else {
       for (idx i; i < offset; ++i) {
          ++new_iterator;
@@ -442,7 +445,7 @@ operator+(auto offset, Derived const& right) -> remove_cvref<Derived>
    using iter = remove_cvref<Derived>;
    iter new_iterator = right;
    if constexpr (detail::has_advance<iter>) {
-      new_iterator.advance(static_cast<typename iter::difference_type>(offset));
+      new_iterator.advance(static_cast<iter::difference_type>(offset));
    } else {
       for (idx i; i < offset; ++i) {
          ++new_iterator;
@@ -460,9 +463,7 @@ operator-(Derived const& left, auto offset) -> remove_cvref<Derived>
    using iter = remove_cvref<Derived>;
    iter new_iterator = left;
    if constexpr (detail::has_advance<iter>) {
-      new_iterator.advance(
-         -static_cast<typename iter::difference_type>(offset)
-      );
+      new_iterator.advance(-static_cast<iter::difference_type>(offset));
    } else {
       for (idx i; i < offset; ++i) {
          --new_iterator;
@@ -479,7 +480,7 @@ operator-=(Derived& left, auto offset) -> remove_cvref<Derived>&
 {
    using iter = remove_cvref<Derived>;
    if constexpr (detail::has_advance<iter>) {
-      left.advance(-static_cast<typename iter::difference_type>(offset));
+      left.advance(-static_cast<iter::difference_type>(offset));
    } else {
       for (idx i; i < offset; ++i) {
          --left;
@@ -515,15 +516,36 @@ class reverse_proxy_stepanov_iterator
    using reference = Iterator::reference;
    using const_reference = Iterator::const_reference;
 
+   constexpr reverse_proxy_stepanov_iterator(
+      reverse_proxy_stepanov_iterator const&
+   ) = default;
+   constexpr reverse_proxy_stepanov_iterator(
+      reverse_proxy_stepanov_iterator&&
+   ) = default;
+
    constexpr reverse_proxy_stepanov_iterator(Iterator const& other)
        : m_internal_iterator(other) {
    }
 
-   // Forward any constructor to the `internal_iterator`.
+   // Forward any non-special member constructor to the `internal_iterator`.
    template <typename... Args>
+      requires(
+         is_constructible<Iterator, Args...>
+         && !(
+            sizeof...(Args) == 1u
+            && (is_same<remove_cvref<Args>, self_type> && ...)
+         )
+      )
    constexpr reverse_proxy_stepanov_iterator(Args&&... arguments)
        : m_internal_iterator($fwd(arguments)...) {
    }
+
+   constexpr auto
+   operator=(reverse_proxy_stepanov_iterator const&)
+      -> reverse_proxy_stepanov_iterator& = default;
+   constexpr auto
+   operator=(reverse_proxy_stepanov_iterator&&)
+      -> reverse_proxy_stepanov_iterator& = default;
 
    constexpr auto
    dereference() -> decltype(auto) {
@@ -558,6 +580,13 @@ class reverse_proxy_stepanov_iterator
    {
       // Reverse the polarity of `distance_to()`.
       return -m_internal_iterator.distance_to(other.m_internal_iterator);
+   }
+
+   friend constexpr auto
+   operator-(self_type const& left, self_type const& right)
+      requires(detail::has_distance_to<Iterator>)
+   {
+      return right.distance_to(left);
    }
 
  private:
@@ -620,7 +649,7 @@ concept is_input_or_output_stepanov_iterator =
 template <typename In>
 concept is_stepanov_indirectly_readable =
    requires(remove_cvref<In> const in) {
-      typename iter_value_t<remove_cvref<In>>;
+      typename iter_value_type<remove_cvref<In>>;
       { *in };
    };
 

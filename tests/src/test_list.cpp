@@ -172,6 +172,35 @@ $test(list_reverse_inplace) {
    manual.free(allocator_ref);
 }
 
+$test(forward_list_reverse_inplace) {
+   linear_arena arena;
+   auto& allocator = arena.alloc;
+   auto allocator_ref = cat::allocator_ref<cat::linear_allocator>(allocator);
+
+   cat::forward_list<int> manual =
+      cat::make_forward_list<int>(allocator_ref, 1, 2, 3, 4).verify();
+   manual | cat::reverse_inplace();
+   auto manual_iterator = manual.begin();
+   cat::verify(*manual_iterator == 4);
+   cat::verify(*++manual_iterator == 3);
+   cat::verify(*++manual_iterator == 2);
+   cat::verify(*++manual_iterator == 1);
+   manual.reverse_inplace();
+   cat::verify(manual.front() == 1);
+
+   cat::raii::forward_list managed =
+      cat::raii::make_forward_list<int>(allocator, 5, 6, 7).verify();
+   managed | cat::reverse_inplace();
+   auto managed_iterator = managed.begin();
+   cat::verify(*managed_iterator == 7);
+   cat::verify(*++managed_iterator == 6);
+   cat::verify(*++managed_iterator == 5);
+   managed.reverse_inplace();
+   cat::verify(managed.front() == 5);
+
+   manual.free(allocator_ref);
+}
+
 $test(raii_list_modifiers_release) {
    linear_arena arena;
    auto& allocator = arena.alloc;

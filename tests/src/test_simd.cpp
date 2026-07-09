@@ -636,6 +636,20 @@ $test(simd_shuffle_shufflevector) {
    cat::verify(fr[3] == 10_f4);
 }
 
+$test(simd_reverse_shufflevector) {
+   int4x4 const integers = {10, 20, 30, 40};
+   int4x4 const reversed_integers = cat::simd_reverse(integers);
+   cat::verify(reversed_integers[0] == 40);
+   cat::verify(reversed_integers[1] == 30);
+   cat::verify(reversed_integers[2] == 20);
+   cat::verify(reversed_integers[3] == 10);
+
+   float4x4 const floats = {10_f4, 20_f4, 30_f4, 40_f4};
+   float4x4 const reversed_floats = cat::simd_reverse(floats);
+   cat::verify(reversed_floats[0] == 40_f4);
+   cat::verify(reversed_floats[3] == 10_f4);
+}
+
 $test(simd_mask_pattern_and_if_else_builder) {
    using M = int4x4::mask_type;
    M m{5u};
