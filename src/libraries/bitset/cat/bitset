@@ -7,8 +7,12 @@
 #include <cat/math>
 #include <cat/maybe>
 #include <cat/meta>
+#include <cat/span>
 
 namespace cat {
+
+template <is_unsigned_integral Storage>
+class bit_span;
 
 namespace detail {
 template <typename... Arguments>
@@ -18,8 +22,12 @@ concept are_bitset_arguments_same_size =
 
 template <idx bits_count>
 class [[clang::trivial_abi, gsl::Owner]]
-bitset : public bitwise_interface<bitset<bits_count>> {
+bitset : public bitwise_interface<bitset<bits_count>>,
+         public bit_collection_interface<bitset<bits_count>> {
  private:
+   template <is_unsigned_integral>
+   friend class bit_span;
+
    template <idx, is_unsigned_integral... Arguments>
       requires(detail::are_bitset_arguments_same_size<Arguments...>)
    friend constexpr auto
@@ -92,51 +100,6 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    static constexpr auto
    size() -> idx {
       return bits_count;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   begin_pos() const -> idx {
-      return 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   end_pos() const -> idx {
-      return bits_count;
-   }
-
-   constexpr void
-   inc_pos(idx& position) const {
-      ++position;
-   }
-
-   constexpr void
-   dec_pos(idx& position) const {
-      position = narrow_cast<idx>(position - 1u).assert();
-   }
-
-   constexpr void
-   offset_pos(idx& position, iword offset) const {
-      position = narrow_cast<idx>(position + offset).assert();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   distance(idx left, idx right) const -> iword {
-      return right - left;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   read_at_unchecked(idx position) -> bit_value {
-      return bit_value{(*this)[position]};
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   read_at_unchecked(idx position) const -> bit_value {
-      return bit_value{(*this)[position]};
    }
 
    constexpr void
@@ -295,13 +258,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
    [[nodiscard]]
    constexpr auto
    any_of() const -> bool {
-      // TODO: Make this branchless where possible.
-      for (auto i : m_data) {
-         if (i != 0u) {
-            return true;
-         }
-      }
-      return false;
+      return popcount() != 0u;
    }
 
    // Evaluate true if every bit in this bitset is 0.
@@ -607,6 +564,12 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       }
    }
 
+   constexpr void
+   reverse_inplace() {
+      auto first = bit_stepanov_iterator(m_data.rbegin(), leading_skipped_bits);
+      cat::stepanov_reverse_inplace(first, first + bits_count);
+   }
+
    // Because `bit_stepanov_iterator` produces proxy-references, the
    // `stepanov_iterable_interface` base cannot generate these iterator methods
    // automatically.
@@ -729,6 +692,40 @@ bitset : public bitwise_interface<bitset<bits_count>> {
 template <__SIZE_TYPE__ bits_count>
 bitset(char const (&bitstring)[bits_count]) -> bitset<idx(bits_count - 1u)>;
 
+template <is_unsigned_integral Storage>
+template <idx bits_count>
+constexpr bit_span<Storage>::bit_span(
+   bitset<bits_count>& storage [[clang::lifetimebound]]
+)
+    : bit_span(
+         storage.m_data.data(), bitset<bits_count>::leading_skipped_bits,
+         bits_count
+      ) {
+   static_assert(is_same<Storage, typename bitset<bits_count>::storage_type>);
+}
+
+template <is_unsigned_integral Storage>
+template <idx bits_count>
+constexpr bit_span<Storage>::bit_span(
+   bitset<bits_count> const& storage [[clang::lifetimebound]]
+)
+    : bit_span(
+         storage.m_data.data(), bitset<bits_count>::leading_skipped_bits,
+         bits_count
+      ) {
+   static_assert(
+      is_same<Storage, typename bitset<bits_count>::storage_type const>
+   );
+}
+
+template <idx bits_count>
+bit_span(bitset<bits_count>&)
+   -> bit_span<typename bitset<bits_count>::storage_type>;
+
+template <idx bits_count>
+bit_span(bitset<bits_count> const&)
+   -> bit_span<typename bitset<bits_count>::storage_type const>;
+
 template <idx bits_count, is_unsigned_integral... Arguments>
 // Ensure that all `types` are the same size. e.g., `uint4` and unsigned are
 // compatible here.
@@ -745,7 +742,17 @@ make_bitset(Arguments... arguments) {
 
    bitset<bits_count> new_bitset;
    new_bitset.m_data = {arguments...};
-   new_bitset.clear_padding_bits();
+   if !consteval {
+      bitset<bits_count> cleared = new_bitset;
+      // Confirm no padding bits are 1.
+      cleared.clear_padding_bits();
+      assert(new_bitset == cleared);
+   } else {
+      bitset<bits_count> cleared = new_bitset;
+      cleared.clear_padding_bits();
+      bool const padding_is_clear = new_bitset == cleared;
+      [[assume(padding_is_clear)]];
+   }
    return new_bitset;
 }
 

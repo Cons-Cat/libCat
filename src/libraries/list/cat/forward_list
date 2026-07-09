@@ -605,7 +605,9 @@ class forward_list_stepanov_iterator
    // Access the element at the iterator.
    constexpr auto
    dereference() const -> T& {
-      assert(m_p_node);
+      if !consteval {
+         assert(m_p_node);
+      }
       return m_p_node->storage;
    }
 

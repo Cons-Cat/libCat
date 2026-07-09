@@ -1,0 +1,586 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/bit>
+#include <cat/debug>
+#include <cat/maybe>
+#include <cat/span>
+#include <cat/vec>
+
+namespace cat {
+namespace raii {
+template <is_allocator>
+class basic_bitvec;
+}  // namespace raii
+
+inline namespace manual {
+
+class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
+   template <is_allocator>
+   friend class cat::raii::basic_bitvec;
+
+ public:
+   using storage_type = uword;
+   using value_type = bit_value;
+   using const_value_type = bit_value const;
+   using reference = bit_reference<uword>;
+   using const_reference = bit_reference<uword const>;
+   using pointer = bit_ptr<uword>;
+   using const_pointer = bit_ptr<uword const>;
+   using size_type = idx;
+   using difference_type = iword;
+   using iterator = bit_span<uword>::iterator;
+   using const_iterator = bit_span<uword const>::iterator;
+   using reverse_iterator = bit_span<uword>::reverse_iterator;
+   using const_reverse_iterator = bit_span<uword const>::reverse_iterator;
+
+   // Create an empty manual bit vector without storage.
+   constexpr bitvec() = default;
+   constexpr bitvec(bitvec&&) = default;
+   constexpr bitvec(bitvec const&) =
+      delete ("Implicit copying of `cat::bitvec` is forbidden. Call `.clone()` "
+              "or move instead!");
+
+   constexpr auto
+   operator=(bitvec&&) -> bitvec& = default;
+   auto
+   operator=(bitvec const&)
+      -> bitvec& = delete ("Implicit copying of `cat::bitvec` is forbidden. "
+                           "Call `.clone()` or move instead!");
+
+   // Return the number of logical bits.
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_bit_size;
+   }
+
+   // Return the number of bits that fit in allocated storage.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_words.capacity() * word_bits;
+   }
+
+   // Return the number of storage words that hold logical bits.
+   [[nodiscard]]
+   constexpr auto
+   word_count() const -> idx {
+      return words_for_bits(m_bit_size);
+   }
+
+   // Return mutable access to the backing words.
+   [[nodiscard]]
+   constexpr auto
+   data() [[clang::lifetimebound]] -> uword* _Nullable {
+      return m_words.data();
+   }
+
+   // Return const access to the backing words.
+   [[nodiscard]]
+   constexpr auto
+   data() const [[clang::lifetimebound]] -> uword const* _Nullable {
+      return m_words.data();
+   }
+
+   // Return a bit iterator to the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   begin() [[clang::lifetimebound]] {
+      return bit_span(*this).begin();
+   }
+
+   // Return a bit iterator past the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   end() [[clang::lifetimebound]] {
+      return bit_span(*this).end();
+   }
+
+   // Return a const bit iterator to the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   begin() const [[clang::lifetimebound]] {
+      return bit_span<uword const>(data(), 0u, m_bit_size).begin();
+   }
+
+   // Return a const bit iterator past the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   end() const [[clang::lifetimebound]] {
+      return bit_span<uword const>(data(), 0u, m_bit_size).end();
+   }
+
+   // Return a const bit iterator to the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   cbegin() const [[clang::lifetimebound]] {
+      return begin();
+   }
+
+   // Return a const bit iterator past the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   cend() const [[clang::lifetimebound]] {
+      return end();
+   }
+
+   // Return a reverse bit iterator to the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   rbegin() [[clang::lifetimebound]] {
+      return bit_span(*this).rbegin();
+   }
+
+   // Return a reverse bit iterator before the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   rend() [[clang::lifetimebound]] {
+      return bit_span(*this).rend();
+   }
+
+   // Return a const reverse bit iterator to the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   rbegin() const [[clang::lifetimebound]] {
+      return bit_span<uword const>(data(), 0u, m_bit_size).rbegin();
+   }
+
+   // Return a const reverse bit iterator before the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   rend() const [[clang::lifetimebound]] {
+      return bit_span<uword const>(data(), 0u, m_bit_size).rend();
+   }
+
+   // Return a const reverse bit iterator to the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   crbegin() const [[clang::lifetimebound]] {
+      return bit_span<uword const>(data(), 0u, m_bit_size).crbegin();
+   }
+
+   // Return a const reverse bit iterator before the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   crend() const [[clang::lifetimebound]] {
+      return bit_span<uword const>(data(), 0u, m_bit_size).crend();
+   }
+
+   constexpr void
+   reverse_inplace() {
+      bit_span(*this).reverse_inplace();
+   }
+
+   // Count the set bits in the vector.
+   [[nodiscard]]
+   constexpr auto
+   popcount() const -> idx {
+      return cat::popcount(bit_span<uword const>(data(), 0u, m_bit_size));
+   }
+
+   // Return whether exactly one logical bit is set.
+   [[nodiscard]]
+   constexpr auto
+   has_single_bit() const -> bool {
+      return popcount() == 1u;
+   }
+
+   // Return the number of bits needed to represent the vector.
+   [[nodiscard]]
+   constexpr auto
+   bit_width() const -> idx {
+      return idx(m_bit_size - countl_zero());
+   }
+
+   // Count clear bits from the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   countl_zero() const -> idx {
+      idx count = 0u;
+      for (idx bit_index = 0u; bit_index < m_bit_size; ++bit_index) {
+         if ((*this)[bit_index]) {
+            break;
+         }
+         ++count;
+      }
+      return count;
+   }
+
+   // Count set bits from the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   countl_one() const -> idx {
+      idx count = 0u;
+      for (idx bit_index = 0u; bit_index < m_bit_size; ++bit_index) {
+         if (!(*this)[bit_index]) {
+            break;
+         }
+         ++count;
+      }
+      return count;
+   }
+
+   // Count clear bits from the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   countr_zero() const -> idx {
+      idx count = 0u;
+      for (idx bit_index = m_bit_size; bit_index > 0u;) {
+         bit_index = idx(bit_index - 1u);
+         if ((*this)[bit_index]) {
+            break;
+         }
+         ++count;
+      }
+      return count;
+   }
+
+   // Count set bits from the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   countr_one() const -> idx {
+      idx count = 0u;
+      for (idx bit_index = m_bit_size; bit_index > 0u;) {
+         bit_index = idx(bit_index - 1u);
+         if (!(*this)[bit_index]) {
+            break;
+         }
+         ++count;
+      }
+      return count;
+   }
+
+   // Return whether any logical bit is set.
+   [[nodiscard]]
+   constexpr auto
+   any() const -> bool {
+      return popcount() != 0u;
+   }
+
+   // Return whether no logical bits are set.
+   [[nodiscard]]
+   constexpr auto
+   none() const -> bool {
+      return !any();
+   }
+
+   // Return whether every logical bit is set.
+   [[nodiscard]]
+   constexpr auto
+   all() const -> bool {
+      return popcount() == m_bit_size;
+   }
+
+   // Return a mutable proxy reference to one bit.
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx bit_index) [[clang::lifetimebound]] -> bit_reference<uword> {
+      if !consteval {
+         assert(bit_index < m_bit_size);
+      }
+      return make_bit_reference_from_offset(
+         m_words[bit_index / word_bits], bit_index % word_bits
+      );
+   }
+
+   // Return a const proxy reference to one bit.
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx bit_index) const [[clang::lifetimebound]]
+   -> bit_reference<uword> {
+      return (*unconst(this))[bit_index];
+   }
+
+   // Reserve storage for at least the requested bit capacity.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   reserve(allocator_ref<Allocator> allocator, idx bit_capacity)
+      -> maybe<void> {
+      return m_words.reserve(allocator, words_for_bits(bit_capacity));
+   }
+
+   // Reserve storage through a type-erased allocator.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   reserve(dyn_allocator allocator, idx bit_capacity) -> maybe<void> {
+      return reserve<dyn_allocator>(allocator, bit_capacity);
+   }
+
+   // Resize the vector and initialize new bits with the requested value.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   resize(
+      allocator_ref<Allocator> allocator, idx bit_count, bit_value value = false
+   ) -> maybe<void> {
+      idx const old_size = m_bit_size;
+      idx const old_words = word_count();
+      idx const new_words = words_for_bits(bit_count);
+      $prop(m_words.resize(allocator, new_words, uword(0u)));
+      m_bit_size = bit_count;
+
+      if (value && bit_count > old_size) {
+         for (idx bit_index = old_size; bit_index < bit_count; ++bit_index) {
+            (*this)[bit_index].set();
+         }
+      } else if (new_words > old_words) {
+         for (idx word_index = old_words; word_index < new_words;
+              ++word_index) {
+            m_words[word_index] = 0u;
+         }
+      }
+
+      clear_tail_bits();
+      return monostate;
+   }
+
+   // Resize the vector through a type-erased allocator.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   resize(dyn_allocator allocator, idx bit_count, bit_value value = false)
+      -> maybe<void> {
+      return resize<dyn_allocator>(allocator, bit_count, value);
+   }
+
+   // Append one bit to the end.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   push_back(allocator_ref<Allocator> allocator, bit_value value)
+      -> maybe<void> {
+      idx const bit_index = m_bit_size;
+      $prop(resize(allocator, m_bit_size + 1u));
+      (*this)[bit_index].assign(value);
+      return monostate;
+   }
+
+   // Append one bit through a type-erased allocator.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_back(dyn_allocator allocator, bit_value value) -> maybe<void> {
+      return push_back<dyn_allocator>(allocator, value);
+   }
+
+   // Append every bit-like value of `range` to the end of this bit vector.
+   template <is_allocator Allocator, typename Range>
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Range const& range)
+      -> maybe<void> {
+      if constexpr (requires { range.size(); }) {
+         $prop(reserve(allocator, m_bit_size + idx(range.size())));
+      }
+      for (auto&& value : range) {
+         bit_value bit;
+         bit = value;
+         $prop(push_back(allocator, bit));
+      }
+      return monostate;
+   }
+
+   // Append every bit-like value of `range` through a type-erased allocator.
+   template <typename Range>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   append_range(dyn_allocator allocator, Range const& range) -> maybe<void> {
+      return append_range<dyn_allocator>(allocator, range);
+   }
+
+   // Remove and return the last bit if one exists.
+   [[nodiscard]]
+   constexpr auto
+   pop_back() -> maybe<bit_value> {
+      if (m_bit_size == 0u) {
+         return nullopt;
+      }
+      idx const last_bit = idx(m_bit_size - 1u);
+      bit_value value;
+      value = (*this)[last_bit];
+      (*this)[last_bit].assign(false);
+      m_bit_size = last_bit;
+      clear_tail_bits();
+      return value;
+   }
+
+   // Free all storage through the supplied allocator.
+   template <is_allocator Allocator>
+   [[clang::reinitializes]]
+   constexpr void
+   free(allocator_ref<Allocator> allocator) {
+      m_words.free(allocator);
+      m_bit_size = 0u;
+   }
+
+   // Free all storage through a type-erased allocator.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   free(dyn_allocator allocator) {
+      free<dyn_allocator>(allocator);
+   }
+
+   // Clear all logical bits while keeping storage.
+   constexpr void
+   clear() {
+      for (idx word_index = 0u; word_index < word_count(); ++word_index) {
+         m_words[word_index] = 0u;
+      }
+   }
+
+   // Set every logical bit to the requested value.
+   constexpr auto
+   fill(bit_value value = true) -> bitvec& {
+      uword const word_value = value ? ~uword(0u) : uword(0u);
+      for (idx word_index = 0u; word_index < word_count(); ++word_index) {
+         m_words[word_index] = word_value;
+      }
+      clear_tail_bits();
+      return *this;
+   }
+
+   // Set one bit to the requested value.
+   constexpr auto
+   set(idx bit_index, bit_value value = true) -> bitvec& {
+      (*this)[bit_index].assign(value);
+      return *this;
+   }
+
+   // Reset one bit to false.
+   constexpr auto
+   reset(idx bit_index) -> bitvec& {
+      (*this)[bit_index] = false;
+      return *this;
+   }
+
+   // Flip one bit in place.
+   constexpr auto
+   flip(idx bit_index) -> bitvec& {
+      (*this)[bit_index].flip();
+      return *this;
+   }
+
+   // Return whether every set bit is also set in `other`.
+   [[nodiscard]]
+   constexpr auto
+   is_subset_of(bitvec const& other) const -> bool {
+      if !consteval {
+         assert(m_bit_size == other.m_bit_size);
+      }
+      for (idx word_index = 0u; word_index < word_count(); ++word_index) {
+         uword const extra_bits =
+            m_words[word_index] & ~other.m_words[word_index];
+         if (extra_bits != 0u) {
+            return false;
+         }
+      }
+      return true;
+   }
+
+   // Return whether this vector shares any set bit with `other`.
+   [[nodiscard]]
+   constexpr auto
+   intersects(bitvec const& other) const -> bool {
+      if !consteval {
+         assert(m_bit_size == other.m_bit_size);
+      }
+      for (idx word_index = 0u; word_index < word_count(); ++word_index) {
+         if ((m_words[word_index] & other.m_words[word_index]) != 0u) {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   // Return whether this vector shares no set bits with `other`.
+   [[nodiscard]]
+   constexpr auto
+   disjoint(bitvec const& other) const -> bool {
+      return !intersects(other);
+   }
+
+ private:
+   // Store the bitwise and of two vectors in `result`.
+   constexpr auto
+   bit_and_into(bitvec const& other, bitvec& result) const -> bitvec& {
+      if !consteval {
+         assert(m_bit_size == other.m_bit_size);
+         assert(result.m_bit_size == m_bit_size);
+      }
+      for (idx word_index = 0u; word_index < word_count(); ++word_index) {
+         result.m_words[word_index] =
+            m_words[word_index] & other.m_words[word_index];
+      }
+      return result;
+   }
+
+   // Store the bitwise or of two vectors in `result`.
+   constexpr auto
+   bit_or_into(bitvec const& other, bitvec& result) const -> bitvec& {
+      if !consteval {
+         assert(m_bit_size == other.m_bit_size);
+         assert(result.m_bit_size == m_bit_size);
+      }
+      for (idx word_index = 0u; word_index < word_count(); ++word_index) {
+         result.m_words[word_index] =
+            m_words[word_index] | other.m_words[word_index];
+      }
+      result.clear_tail_bits();
+      return result;
+   }
+
+   // Store the bitwise xor of two vectors in `result`.
+   constexpr auto
+   bit_xor_into(bitvec const& other, bitvec& result) const -> bitvec& {
+      if !consteval {
+         assert(m_bit_size == other.m_bit_size);
+         assert(result.m_bit_size == m_bit_size);
+      }
+      for (idx word_index = 0u; word_index < word_count(); ++word_index) {
+         result.m_words[word_index] =
+            m_words[word_index] ^ other.m_words[word_index];
+      }
+      result.clear_tail_bits();
+      return result;
+   }
+
+   // Store the bitwise complement of this vector in `result`.
+   constexpr auto
+   bit_complement_into(bitvec& result) const -> bitvec& {
+      if !consteval {
+         assert(result.m_bit_size == m_bit_size);
+      }
+      for (idx word_index = 0u; word_index < word_count(); ++word_index) {
+         result.m_words[word_index] = ~m_words[word_index];
+      }
+      result.clear_tail_bits();
+      return result;
+   }
+
+   // Return the number of words needed for a bit count.
+   [[nodiscard]]
+   static constexpr auto
+   words_for_bits(idx bit_count) -> idx {
+      return div_ceil(bit_count, word_bits);
+   }
+
+   // Clear unused bits in the final storage word.
+   constexpr void
+   clear_tail_bits() {
+      idx const words = word_count();
+      if (words != 0u) {
+         idx const used_bits = m_bit_size % word_bits;
+         if (used_bits != 0u) {
+            m_words[idx(words - 1u)] &= (uword(1u) << used_bits) - uword(1u);
+         }
+      }
+   }
+
+   basic_vec<uword> m_words;
+   idx m_bit_size = 0u;
+};
+
+}  // namespace manual
+
+}  // namespace cat

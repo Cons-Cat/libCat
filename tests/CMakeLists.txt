@@ -80,7 +80,10 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_copy_memory.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_bit_span.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_bit_x64.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_bitvec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_stringify.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_syscalls.cpp

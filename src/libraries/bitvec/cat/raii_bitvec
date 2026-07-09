@@ -1,0 +1,461 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/bitvec>
+
+namespace cat::raii {
+
+template <is_allocator Allocator = dyn_allocator>
+class [[gsl::Owner]]
+basic_bitvec : public bit_collection_interface<basic_bitvec<Allocator>> {
+ public:
+   using storage_type = uword;
+   using value_type = bit_value;
+   using const_value_type = bit_value const;
+   using reference = bit_reference<uword>;
+   using const_reference = bit_reference<uword const>;
+   using pointer = bit_ptr<uword>;
+   using const_pointer = bit_ptr<uword const>;
+   using size_type = idx;
+   using difference_type = iword;
+   using iterator = bit_span<uword>::iterator;
+   using const_iterator = bit_span<uword const>::iterator;
+   using reverse_iterator = bit_span<uword>::reverse_iterator;
+   using const_reverse_iterator = bit_span<uword const>::reverse_iterator;
+
+   // Forbid creating an owning bit vector without an allocator.
+   constexpr basic_bitvec() =
+      delete ("`cat::raii::basic_bitvec` requires an allocator.");
+
+   // Create an owning bit vector over an allocator reference.
+   constexpr explicit basic_bitvec(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   )
+       : m_allocator(allocator) {
+   }
+
+   // Create an owning bit vector over a type-erased allocator.
+   constexpr explicit basic_bitvec(dyn_allocator allocator)
+      requires(is_same<Allocator, dyn_allocator>)
+       : basic_bitvec(allocator_ref<dyn_allocator>(allocator)) {
+   }
+
+   // Create an owning bit vector with an initial size.
+   constexpr basic_bitvec(
+      dyn_allocator allocator, idx bit_count, bit_value value = false
+   )
+      requires(is_same<Allocator, dyn_allocator>)
+       : basic_bitvec(allocator) {
+      resize(bit_count, value).verify();
+   }
+
+   constexpr basic_bitvec(basic_bitvec&&) = default;
+   constexpr basic_bitvec(basic_bitvec const&) =
+      delete ("Implicit copying of `cat::raii::basic_bitvec` is forbidden. "
+              "Call `.clone()` or move instead!");
+
+   auto
+   operator=(basic_bitvec const&) -> basic_bitvec& =
+      delete ("Implicit copying of `cat::raii::basic_bitvec` "
+              "is forbidden. Call `.clone()` or move instead!");
+
+   // Move from another owning bit vector with the same allocator.
+   [[clang::reinitializes]]
+   constexpr auto
+   operator=(basic_bitvec&& other) -> basic_bitvec& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+      m_core.free(m_allocator);
+      if !consteval {
+         assert(m_allocator == other.m_allocator);
+      }
+      m_core = cat::move(other.m_core);
+      return *this;
+   }
+
+   // Free the owned storage at destruction.
+   constexpr ~basic_bitvec() {
+      m_core.free(m_allocator);
+   }
+
+   // Return the number of logical bits.
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_core.size();
+   }
+
+   // Return the number of bits that fit in allocated storage.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_core.capacity();
+   }
+
+   // Return the number of storage words that hold logical bits.
+   [[nodiscard]]
+   constexpr auto
+   word_count() const -> idx {
+      return m_core.word_count();
+   }
+
+   // Return mutable access to the backing words.
+   [[nodiscard]]
+   constexpr auto
+   data() [[clang::lifetimebound]] -> uword* _Nullable {
+      return m_core.data();
+   }
+
+   // Return const access to the backing words.
+   [[nodiscard]]
+   constexpr auto
+   data() const [[clang::lifetimebound]] -> uword const* _Nullable {
+      return m_core.data();
+   }
+
+   // Return a bit iterator to the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   begin() [[clang::lifetimebound]] {
+      return m_core.begin();
+   }
+
+   // Return a bit iterator past the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   end() [[clang::lifetimebound]] {
+      return m_core.end();
+   }
+
+   // Return a const bit iterator to the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   begin() const [[clang::lifetimebound]] {
+      return m_core.begin();
+   }
+
+   // Return a const bit iterator past the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   end() const [[clang::lifetimebound]] {
+      return m_core.end();
+   }
+
+   // Return a const bit iterator to the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   cbegin() const [[clang::lifetimebound]] {
+      return m_core.cbegin();
+   }
+
+   // Return a const bit iterator past the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   cend() const [[clang::lifetimebound]] {
+      return m_core.cend();
+   }
+
+   // Return a reverse bit iterator to the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   rbegin() [[clang::lifetimebound]] {
+      return m_core.rbegin();
+   }
+
+   // Return a reverse bit iterator before the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   rend() [[clang::lifetimebound]] {
+      return m_core.rend();
+   }
+
+   // Return a const reverse bit iterator to the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   rbegin() const [[clang::lifetimebound]] {
+      return m_core.rbegin();
+   }
+
+   // Return a const reverse bit iterator before the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   rend() const [[clang::lifetimebound]] {
+      return m_core.rend();
+   }
+
+   // Return a const reverse bit iterator to the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   crbegin() const [[clang::lifetimebound]] {
+      return m_core.crbegin();
+   }
+
+   // Return a const reverse bit iterator before the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   crend() const [[clang::lifetimebound]] {
+      return m_core.crend();
+   }
+
+   constexpr void
+   reverse_inplace() {
+      m_core.reverse_inplace();
+   }
+
+   // Count the set bits in the vector.
+   [[nodiscard]]
+   constexpr auto
+   popcount() const -> idx {
+      return m_core.popcount();
+   }
+
+   // Return whether exactly one logical bit is set.
+   [[nodiscard]]
+   constexpr auto
+   has_single_bit() const -> bool {
+      return m_core.has_single_bit();
+   }
+
+   // Return the number of bits needed to represent the vector.
+   [[nodiscard]]
+   constexpr auto
+   bit_width() const -> idx {
+      return m_core.bit_width();
+   }
+
+   // Count clear bits from the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   countl_zero() const -> idx {
+      return m_core.countl_zero();
+   }
+
+   // Count set bits from the first logical bit.
+   [[nodiscard]]
+   constexpr auto
+   countl_one() const -> idx {
+      return m_core.countl_one();
+   }
+
+   // Count clear bits from the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   countr_zero() const -> idx {
+      return m_core.countr_zero();
+   }
+
+   // Count set bits from the last logical bit.
+   [[nodiscard]]
+   constexpr auto
+   countr_one() const -> idx {
+      return m_core.countr_one();
+   }
+
+   // Return whether any logical bit is set.
+   [[nodiscard]]
+   constexpr auto
+   any() const -> bool {
+      return m_core.any();
+   }
+
+   // Return whether no logical bits are set.
+   [[nodiscard]]
+   constexpr auto
+   none() const -> bool {
+      return m_core.none();
+   }
+
+   // Return whether every logical bit is set.
+   [[nodiscard]]
+   constexpr auto
+   all() const -> bool {
+      return m_core.all();
+   }
+
+   // Return a mutable proxy reference to one bit.
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx bit_index) [[clang::lifetimebound]] -> bit_reference<uword> {
+      return m_core[bit_index];
+   }
+
+   // Return a const proxy reference to one bit.
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx bit_index) const [[clang::lifetimebound]]
+   -> bit_reference<uword> {
+      return m_core[bit_index];
+   }
+
+   // Reserve storage for at least the requested bit capacity.
+   [[nodiscard]]
+   constexpr auto
+   reserve(idx bit_capacity) -> maybe<void> {
+      return m_core.reserve(m_allocator, bit_capacity);
+   }
+
+   // Resize the vector and initialize new bits with the requested value.
+   [[nodiscard]]
+   constexpr auto
+   resize(idx bit_count, bit_value value = false) -> maybe<void> {
+      return m_core.resize(m_allocator, bit_count, value);
+   }
+
+   // Append one bit to the end.
+   [[nodiscard]]
+   constexpr auto
+   push_back(bit_value value) -> maybe<void> {
+      return m_core.push_back(m_allocator, value);
+   }
+
+   // Append every bit-like value of `range` to the end of this bit vector.
+   template <typename Range>
+   [[nodiscard]]
+   constexpr auto
+   append_range(Range const& range) -> maybe<void> {
+      return m_core.append_range(m_allocator, range);
+   }
+
+   // Remove and return the last bit if one exists.
+   [[nodiscard]]
+   constexpr auto
+   pop_back() -> maybe<bit_value> {
+      return m_core.pop_back();
+   }
+
+   // Clear all logical bits while keeping storage.
+   constexpr void
+   clear() {
+      m_core.clear();
+   }
+
+   // Set every logical bit to the requested value.
+   constexpr auto
+   fill(bit_value value = true) -> basic_bitvec& {
+      m_core.fill(value);
+      return *this;
+   }
+
+   // Set one bit to the requested value.
+   constexpr auto
+   set(idx bit_index, bit_value value = true) -> basic_bitvec& {
+      m_core.set(bit_index, value);
+      return *this;
+   }
+
+   // Reset one bit to false.
+   constexpr auto
+   reset(idx bit_index) -> basic_bitvec& {
+      m_core.reset(bit_index);
+      return *this;
+   }
+
+   // Flip one bit in place.
+   constexpr auto
+   flip(idx bit_index) -> basic_bitvec& {
+      m_core.flip(bit_index);
+      return *this;
+   }
+
+   // Return whether every set bit is also set in `other`.
+   [[nodiscard]]
+   constexpr auto
+   is_subset_of(basic_bitvec const& other) const -> bool {
+      return m_core.is_subset_of(other.m_core);
+   }
+
+   // Return whether this vector shares any set bit with `other`.
+   [[nodiscard]]
+   constexpr auto
+   intersects(basic_bitvec const& other) const -> bool {
+      return m_core.intersects(other.m_core);
+   }
+
+   // Return whether this vector shares no set bits with `other`.
+   [[nodiscard]]
+   constexpr auto
+   disjoint(basic_bitvec const& other) const -> bool {
+      return m_core.disjoint(other.m_core);
+   }
+
+   // Return the bitwise and of two vectors.
+   [[nodiscard]]
+   constexpr auto
+   bit_and(basic_bitvec const& other) const -> basic_bitvec {
+      basic_bitvec result(m_allocator);
+      result.resize(size()).verify();
+      m_core.bit_and_into(other.m_core, result.m_core);
+      return result;
+   }
+
+   // Return the bitwise or of two vectors.
+   [[nodiscard]]
+   constexpr auto
+   bit_or(basic_bitvec const& other) const -> basic_bitvec {
+      basic_bitvec result(m_allocator);
+      result.resize(size()).verify();
+      m_core.bit_or_into(other.m_core, result.m_core);
+      return result;
+   }
+
+   // Return the bitwise xor of two vectors.
+   [[nodiscard]]
+   constexpr auto
+   bit_xor(basic_bitvec const& other) const -> basic_bitvec {
+      basic_bitvec result(m_allocator);
+      result.resize(size()).verify();
+      m_core.bit_xor_into(other.m_core, result.m_core);
+      return result;
+   }
+
+   // Return the bitwise complement of this vector.
+   [[nodiscard]]
+   constexpr auto
+   bit_complement() const -> basic_bitvec {
+      basic_bitvec result(m_allocator);
+      result.resize(size()).verify();
+      m_core.bit_complement_into(result.m_core);
+      return result;
+   }
+
+   // Return the bitwise and of two vectors.
+   [[nodiscard]]
+   friend constexpr auto
+   operator&(basic_bitvec const& left, basic_bitvec const& right)
+      -> basic_bitvec {
+      return left.bit_and(right);
+   }
+
+   // Return the bitwise or of two vectors.
+   [[nodiscard]]
+   friend constexpr auto
+   operator|(basic_bitvec const& left, basic_bitvec const& right)
+      -> basic_bitvec {
+      return left.bit_or(right);
+   }
+
+   // Return the bitwise xor of two vectors.
+   [[nodiscard]]
+   friend constexpr auto
+   operator^(basic_bitvec const& left, basic_bitvec const& right)
+      -> basic_bitvec {
+      return left.bit_xor(right);
+   }
+
+   // Return the bitwise complement of a vector.
+   [[nodiscard]]
+   friend constexpr auto
+   operator~(basic_bitvec const& value) -> basic_bitvec {
+      return value.bit_complement();
+   }
+
+ private:
+   cat::bitvec m_core;
+   allocator_ref<Allocator> m_allocator;
+};
+
+using bitvec = basic_bitvec<dyn_allocator>;
+
+}  // namespace cat::raii

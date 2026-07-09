@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/iterable_interface.hpp>
+
 #include <cat/arithmetic>
 #include <cat/meta>
 #include <cat/stepanov>
@@ -9,6 +11,9 @@
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by Clang.
 
 namespace cat {
+
+template <typename T, idx fixed_extent = idx::max()>
+class span;
 
 inline namespace literals {
 inline namespace bit_literals {
@@ -1115,6 +1120,11 @@ constexpr auto
 make_bit_reference_from_offset(Storage& reference, uword offset)
    -> bit_reference<Storage>;
 
+template <is_unsigned_integral Storage>
+   requires(!is_const<Storage>)
+constexpr void
+swap(bit_reference<Storage> left, bit_reference<Storage> right);
+
 template <is_unsigned_integral Storage, is_unsigned_integral Mask>
 constexpr auto
 make_bit_ptr_from_mask(Storage* _Nonnull p_storage, Mask mask)
@@ -1132,371 +1142,12 @@ constexpr auto
 get_bit_value(bit_value const& value) -> bool const&;
 }  // namespace detail
 
-template <is_unsigned_integral Storage>
-class bit_reference {
- private:
-   friend bit_value;
-   friend class bit_ptr<Storage>;
-   template <is_unsigned_integral FriendStorage, is_unsigned_integral Mask>
-   friend constexpr auto
-   make_bit_reference_from_mask(FriendStorage& reference, Mask mask)
-      -> bit_reference<FriendStorage>;
-   friend constexpr auto
-   make_bit_reference_from_offset<Storage>(Storage& reference, uword offset)
-      -> bit_reference<Storage>;
+}  // namespace cat
 
-   // This constructor is only used by the free factory functions.
-   constexpr bit_reference(Storage& in_storage, Storage in_mask)
-       : m_p_storage(__builtin_addressof(in_storage)), m_bit_mask(in_mask) {
-      if !consteval {
-         assert(has_single_bit(in_mask));
-      }
-   }
+#include <cat/detail/bit_ptr.hpp>
+#include <cat/detail/bit_reference.hpp>
 
- public:
-   constexpr bit_reference(bit_reference<Storage> const&) = default;
-   constexpr bit_reference(bit_reference<Storage>&&) = default;
-
-   constexpr auto
-   operator=(bit_reference<Storage> const& other) & -> bit_reference& = default;
-
-   constexpr auto
-   operator=(bit_reference<Storage>&& other) & -> bit_reference& {
-      m_p_storage = other.m_p_storage;
-      m_bit_mask = other.m_bit_mask;
-      return *this;
-   }
-
-   constexpr bit_reference(bit_value& other)
-       : m_p_storage(__builtin_addressof(detail::get_bit_value(other))),
-         m_bit_mask(1u) {
-   }
-
-   constexpr bit_reference(bit_value const& other)
-       : m_p_storage(__builtin_addressof(detail::get_bit_value(other))),
-         m_bit_mask(1u) {
-   }
-
-   // You cannot take a reference of r-values.
-   constexpr bit_reference(bit_value&& other) = delete;
-
-   // Rebind this `bit_reference` to a different bit position specified by
-   // `mask` into a `Storage`.
-   constexpr void
-   rebind(
-      Storage& reference [[clang::lifetime_capture_by(this)]], Storage mask
-   ) {
-      if !consteval {
-         assert(has_single_bit(mask));
-      }
-      m_p_storage = __builtin_addressof(reference);
-      m_bit_mask = mask;
-   }
-
-   // Assign a true or false value to this bit.
-   constexpr auto
-   operator=(Storage value) -> bit_reference& {
-      this->assign(value);
-      return *this;
-   }
-
-   // Assign a true or false value to this bit.
-   constexpr auto
-   operator=(bool value) -> bit_reference&
-      requires(!is_same<Storage, bool>)
-   {
-      this->assign(value);
-      return *this;
-   }
-
-   // Because `bit_reference` and `bit_value` convert to `bool`, this comparison
-   // works between all the above.
-   friend constexpr auto
-   operator==(bit_reference<Storage> const& self, bool other) -> bool {
-      return self.is_set() == other;
-   }
-
-   // Implicitly convert this bit to a true or false value.
-   constexpr
-   operator bool() const {
-      return this->is_set();
-   }
-
-   // Assign a true or false value to this bit.
-   constexpr auto
-   assign(bool value) -> bit_reference& {
-      value ? this->set() : this->unset();
-      return *this;
-   }
-
-   // Assign another bit's value to this bit.
-   template <is_unsigned_integral T>
-   constexpr auto
-   assign(Storage value) -> bit_reference& {
-      assert(has_single_bit(value));
-      value & 1u ? set() : unset();
-      return *this;
-   }
-
-   // Flag this bit on.
-   constexpr auto
-   set() -> bit_reference& {
-      *m_p_storage |= m_bit_mask;
-      return *this;
-   }
-
-   // Flag this bit off.
-   constexpr auto
-   unset() -> bit_reference& {
-      *m_p_storage &= ~m_bit_mask;
-      return *this;
-   }
-
-   // Flag this bit as the opposite of its current state.
-   constexpr auto
-   flip() -> bit_reference& {
-      *m_p_storage ^= m_bit_mask;
-      return *this;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   is_set() const -> bool {
-      return static_cast<bool>(*m_p_storage & m_bit_mask);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   mask() const -> Storage const& {
-      return m_bit_mask;
-   }
-
- private:
-   Storage* _Nonnull m_p_storage;
-
-   // If this references a `bit_value`, the type would be `bool`, which can be
-   // problematic and confusing for bit operations such as negation.
-   using mask_integer_type =
-      conditional<is_same<Storage, bool>, unsigned char, Storage>;
-   remove_cv<mask_integer_type> m_bit_mask;
-};
-
-template <is_same<bit_value> T>
-bit_reference(T) -> bit_reference<unsigned char>;
-
-bit_reference(bit_value&) -> bit_reference<bool>;
-
-bit_reference(bit_value const&) -> bit_reference<bool const>;
-
-template <is_unsigned_integral Storage, is_unsigned_integral Mask>
-constexpr auto
-make_bit_reference_from_mask(Storage& reference, Mask mask)
-   -> bit_reference<Storage> {
-   return bit_reference<Storage>(reference, Storage(mask));
-}
-
-template <is_unsigned_integral Storage>
-constexpr auto
-make_bit_reference_from_offset(Storage& reference, uword offset)
-   -> bit_reference<Storage> {
-   if !consteval {
-      assert(offset < limits<Storage>::bits);
-   }
-   return bit_reference<Storage>(
-      reference, Storage(Storage(1u) << Storage(offset))
-   );
-}
-
-template <is_unsigned_integral Storage>
-class [[gsl::Pointer]]
-bit_ptr : public plus_interface<bit_ptr<Storage>>,
-          public minus_interface<bit_ptr<Storage>> {
-   static constexpr idx storage_bits = limits<Storage>::bits;
-
-   template <is_unsigned_integral FriendStorage, is_unsigned_integral Mask>
-   friend constexpr auto
-   make_bit_ptr_from_mask(FriendStorage* _Nonnull p_storage, Mask mask)
-      -> bit_ptr<FriendStorage>;
-   template <is_unsigned_integral FriendStorage, is_arithmetic Offset>
-   friend constexpr auto
-   make_bit_ptr_from_offset(FriendStorage* _Nonnull p_storage, Offset offset)
-      -> bit_ptr<FriendStorage>;
-
- public:
-   using storage_type = Storage;
-   using value_type = bit_value;
-   using reference = bit_reference<Storage>;
-   using difference_type = iword;
-
-   constexpr bit_ptr() = default;
-   constexpr bit_ptr(bit_ptr const&) = default;
-   constexpr bit_ptr(bit_ptr&&) = default;
-
-   constexpr bit_ptr(decltype(nullptr)) {
-   }
-
-   constexpr explicit bit_ptr(Storage* _Nullable p_storage)
-       : m_p_storage(p_storage) {
-   }
-
- private:
-   constexpr bit_ptr(Storage* _Nonnull p_storage, idx bit_offset)
-       : m_p_storage(p_storage + (bit_offset / storage_bits)),
-         m_bit_position(bit_offset % storage_bits) {
-   }
-
- public:
-   constexpr auto
-   operator=(bit_ptr const&) -> bit_ptr& = default;
-
-   constexpr auto
-   operator=(decltype(nullptr)) -> bit_ptr& {
-      m_p_storage = nullptr;
-      m_bit_position = 0u;
-      return *this;
-   }
-
-   [[nodiscard]]
-   constexpr explicit
-   operator bool() const {
-      return m_p_storage != nullptr;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   operator*() const -> reference {
-      return make_bit_reference_from_offset(*m_p_storage, m_bit_position);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   operator[](difference_type offset) const -> reference {
-      return *(*this + offset);
-   }
-
-   constexpr auto
-   operator++() -> bit_ptr& {
-      *this += 1;
-      return *this;
-   }
-
-   constexpr auto
-   operator--() -> bit_ptr& {
-      *this -= 1;
-      return *this;
-   }
-
-   constexpr auto
-   operator++(int) -> bit_ptr {
-      bit_ptr old = *this;
-      ++*this;
-      return old;
-   }
-
-   constexpr auto
-   operator--(int) -> bit_ptr {
-      bit_ptr old = *this;
-      --*this;
-      return old;
-   }
-
-   template <is_arithmetic Offset>
-   [[nodiscard]]
-   constexpr auto
-   add(Offset offset) const -> bit_ptr {
-      difference_type const advanced_bit = m_bit_position + offset;
-      difference_type word_offset = advanced_bit / storage_bits;
-      if (advanced_bit < 0 && word_offset * storage_bits != advanced_bit) {
-         --word_offset;
-      }
-      return make_bit_ptr_from_offset(
-         m_p_storage + word_offset, advanced_bit - word_offset * storage_bits
-      );
-   }
-
-   template <is_arithmetic Offset>
-   constexpr auto
-   subtract_by(Offset offset) const -> bit_ptr {
-      return add(-offset);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   storage() const -> Storage* _Nullable {
-      return m_p_storage;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   bit_position() const -> idx {
-      return m_bit_position;
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator-(bit_ptr left, bit_ptr right) -> difference_type {
-      difference_type const storage_difference =
-         left.m_p_storage - right.m_p_storage;
-      return storage_difference * storage_bits + left.m_bit_position
-             - right.m_bit_position;
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator==(bit_ptr left, bit_ptr right) -> bool {
-      return left.m_p_storage == right.m_p_storage
-             && left.m_bit_position == right.m_bit_position;
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator==(bit_ptr pointer, decltype(nullptr)) -> bool {
-      return pointer.m_p_storage == nullptr;
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator==(decltype(nullptr), bit_ptr pointer) -> bool {
-      return pointer == nullptr;
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator<=>(bit_ptr left, bit_ptr right) {
-      if (left.m_p_storage != right.m_p_storage) {
-         return left.m_p_storage <=> right.m_p_storage;
-      }
-      return left.m_bit_position <=> right.m_bit_position;
-   }
-
- private:
-   Storage* _Nullable m_p_storage = nullptr;
-   idx m_bit_position = 0u;
-};
-
-template <is_unsigned_integral Storage>
-bit_ptr(Storage* _Nullable) -> bit_ptr<Storage>;
-
-template <is_unsigned_integral Storage, is_unsigned_integral Mask>
-constexpr auto
-make_bit_ptr_from_mask(Storage* _Nonnull p_storage, Mask mask)
-   -> bit_ptr<Storage> {
-   Storage const storage_mask = Storage(mask);
-   if !consteval {
-      assert(has_single_bit(storage_mask));
-   }
-   return bit_ptr<Storage>(p_storage, countr_zero(storage_mask));
-}
-
-template <is_unsigned_integral Storage, is_arithmetic Offset>
-constexpr auto
-make_bit_ptr_from_offset(Storage* _Nonnull p_storage, Offset offset)
-   -> bit_ptr<Storage> {
-   if !consteval {
-      assert(offset >= 0);
-   }
-   return bit_ptr<Storage>(p_storage, idx(offset));
-}
+namespace cat {
 
 class bit_value {
  private:
@@ -1524,7 +1175,7 @@ class bit_value {
    from_offset(Storage word, iword offset) {
       assert(offset < limits<Storage>::bits);
       bit_value bit;
-      bit.m_value = static_cast<bool>((word >> offset) & 1);
+      bit.m_value = ((word >> offset) & 1u) != 0u;
    }
 
    constexpr auto
@@ -1561,10 +1212,9 @@ class bit_value {
 
    friend constexpr auto
    operator&(bit_value const& self, bit_value const& other) -> bit_value {
-      return static_cast<bool>(
-         static_cast<unsigned char>(self.m_value)
-         & static_cast<unsigned char>(other.m_value)
-      );
+      return (static_cast<unsigned char>(self.m_value)
+              & static_cast<unsigned char>(other.m_value))
+             != 0u;
    }
 
    constexpr auto
@@ -1575,10 +1225,9 @@ class bit_value {
 
    friend constexpr auto
    operator|(bit_value const& self, bit_value const& other) -> bit_value {
-      return static_cast<bool>(
-         static_cast<unsigned char>(self.m_value)
-         | static_cast<unsigned char>(other.m_value)
-      );
+      return (static_cast<unsigned char>(self.m_value)
+              | static_cast<unsigned char>(other.m_value))
+             != 0u;
    }
 
    constexpr auto
@@ -1589,10 +1238,9 @@ class bit_value {
 
    friend constexpr auto
    operator^(bit_value const& self, bit_value const& other) -> bit_value {
-      return static_cast<bool>(
-         static_cast<unsigned char>(self.m_value)
-         ^ static_cast<unsigned char>(other.m_value)
-      );
+      return (static_cast<unsigned char>(self.m_value)
+              ^ static_cast<unsigned char>(other.m_value))
+             != 0u;
    }
 
    constexpr auto
@@ -1654,222 +1302,6 @@ class bit_value {
    bool m_value;
 };
 
-struct byte;
-
-template <typename Iterator>
-// Only storage types can be iterated bitwise. Like other
-// `proxy_stepanov_iterator_interface` adaptors, the wrapped iterator must model
-// random access (`advance` uses += on the underlying iterator).
-   requires(
-      is_random_access_stepanov_iterator<Iterator>
-      && is_unsigned_integral<typename Iterator::value_type>
-      /* || is_same<typename iterator::value_type, byte> */
-   )
-class bit_stepanov_iterator
-    : public proxy_stepanov_iterator_interface<
-         random_access_iterator_tag, bit_value,
-         bit_reference<typename Iterator::value_type>, iword> {
- private:
-   static constexpr idx word_bits = limits<typename Iterator::value_type>::bits;
-
- public:
-   using storage_type = Iterator::value_type;
-   using value_type = bit_value;
-   using const_value_type = bit_value const;
-   using reference = bit_reference<typename Iterator::value_type>;
-   using const_reference =
-      bit_reference<remove_cvref<typename Iterator::value_type> const>;
-
-   constexpr bit_stepanov_iterator() = default;
-   constexpr bit_stepanov_iterator(bit_stepanov_iterator const&) = default;
-   constexpr bit_stepanov_iterator(bit_stepanov_iterator&&) = default;
-
-   constexpr explicit bit_stepanov_iterator(
-      Iterator const& other, idx current_bit = 0u
-   )
-       : m_internal_iterator(other), m_bit_position(current_bit) {
-   }
-
-   constexpr auto
-   dereference() -> reference {
-      return make_bit_reference_from_offset(
-         *m_internal_iterator, m_bit_position
-      );
-   }
-
-   constexpr auto
-   dereference() const -> const_reference {
-      return make_bit_reference_from_offset(
-         *m_internal_iterator, m_bit_position
-      );
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   base() const -> Iterator {
-      return m_internal_iterator;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   position() const -> idx {
-      return m_bit_position;
-   }
-
-   // The `bit_stepanov_iterator` proxy iterator moves in a way that may be
-   // couner-intuitive at first. It will travel forwards across the elements of
-   // a container, but backwards across that element's bits. It cannot move
-   // backwards across the elements, because that would require it adapt to only
-   // bidi-iterators and never forward iterators, which s an unacceptable
-   // limitation.
-   constexpr void
-   advance(iword offset) {
-      iword advance_bits = m_bit_position + offset;
-      iword bytes_overflow = advance_bits / word_bits;
-      if (advance_bits < 0 && ((bytes_overflow * word_bits) != advance_bits)) {
-         --bytes_overflow;
-      }
-      m_internal_iterator += bytes_overflow.raw;  // TODO: Remove `.raw`.
-      m_bit_position = idx(advance_bits - bytes_overflow * word_bits);
-   }
-
-   constexpr auto
-   distance_to(bit_stepanov_iterator const& other) const -> iword {
-      iword const word_difference =
-         m_internal_iterator - other.m_internal_iterator;
-      // Multiply the number of words between the two iterators by the size of a
-      // word in bits, then add the difference between the iterators' current
-      // bit offset within their word. That gives the total number of bits
-      // between any two bit iterators.
-      return (word_difference * word_bits) + other.m_bit_position
-             - m_bit_position;
-   }
-
- private:
-   Iterator m_internal_iterator;
-   idx m_bit_position;
-};
-
-namespace detail {
-template <is_unsigned_integral Word>
-[[nodiscard]]
-constexpr auto
-bit_low_mask(idx bit_count) -> Word {
-   if (bit_count == 0u) {
-      return Word(0u);
-   }
-   if (bit_count >= limits<Word>::bits) {
-      return ~Word(0u);
-   }
-   return (Word(1u) << bit_count) - Word(1u);
-}
-
-template <is_unsigned_integral Word>
-[[nodiscard]]
-constexpr auto
-bit_blend(Word old_word, Word new_word, idx bit_offset, idx bit_count) -> Word {
-   Word const mask = bit_low_mask<Word>(bit_count) << bit_offset;
-   return (old_word & ~mask) | (new_word & mask);
-}
-
-template <typename Iterator>
-constexpr void
-reverse_bit_words(Iterator first_word, Iterator last_word) {
-   while (first_word < last_word) {
-      --last_word;
-      if (first_word == last_word) {
-         *first_word = bit_reverse(*first_word);
-         return;
-      }
-      auto const first_value = *first_word;
-      *first_word = bit_reverse(*last_word);
-      *last_word = bit_reverse(first_value);
-      ++first_word;
-   }
-}
-
-template <typename Iterator>
-constexpr void
-shift_left(
-   bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last,
-   idx bit_count
-) {
-   iword const range_bits = last - first;
-   if (bit_count == 0u || range_bits <= 0) {
-      return;
-   }
-   if (bit_count >= range_bits) {
-      for (idx bit_index = 0u; bit_index < idx(range_bits); ++bit_index) {
-         first[bit_index].assign(false);
-      }
-      return;
-   }
-   idx const remaining_bits = idx(range_bits - bit_count);
-   for (idx bit_index = 0u; bit_index < remaining_bits; ++bit_index) {
-      first[bit_index].assign(bool(first[bit_index + bit_count]));
-   }
-   for (idx bit_index = remaining_bits; bit_index < idx(range_bits);
-        ++bit_index) {
-      first[bit_index].assign(false);
-   }
-}
-
-template <typename Iterator>
-constexpr void
-shift_right(
-   bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last,
-   idx bit_count
-) {
-   iword const range_bits = last - first;
-   if (bit_count == 0u || range_bits <= 0) {
-      return;
-   }
-   if (bit_count >= range_bits) {
-      for (idx bit_index = 0u; bit_index < idx(range_bits); ++bit_index) {
-         first[bit_index].assign(false);
-      }
-      return;
-   }
-   idx const remaining_bits = idx(range_bits - bit_count);
-   for (idx bit_index = remaining_bits; bit_index > 0u;) {
-      bit_index = idx(bit_index - 1u);
-      first[bit_index + bit_count].assign(bool(first[bit_index]));
-   }
-   for (idx bit_index = 0u; bit_index < bit_count; ++bit_index) {
-      first[bit_index].assign(false);
-   }
-}
-
-template <typename Iterator>
-constexpr void
-reverse_bits_inplace(
-   bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last
-) {
-   iword const range_bits = last - first;
-   if (range_bits <= 1) {
-      return;
-   }
-
-   idx left_index = 0u;
-   idx right_index = idx(range_bits - 1);
-   while (left_index < right_index) {
-      bool const left_value = bool(first[left_index]);
-      first[left_index].assign(bool(first[right_index]));
-      first[right_index].assign(left_value);
-      ++left_index;
-      right_index = idx(right_index - 1u);
-   }
-}
-}  // namespace detail
-
-template <typename Iterator>
-constexpr void
-stepanov_reverse_inplace(
-   bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last
-) {
-   detail::reverse_bits_inplace(first, last);
-}
-
 inline constexpr bit_value one_bit = true;
 inline constexpr bit_value zero_bit = false;
 
@@ -1884,6 +1316,12 @@ get_bit_value(bit_value const& value) -> bool const& {
    return value.m_value;
 }
 }  // namespace detail
+
+}  // namespace cat
+
+#include <cat/detail/bit_iterable.hpp>
+
+namespace cat {
 
 template <is_unsigned_integral T>
 [[nodiscard]]
@@ -2318,8 +1756,10 @@ concept is_unsigned_word_container =
       words.data();
       words.size();
    }
-   && is_unsigned_integral<remove_cv<typename remove_cvref<Words>::value_type>>
-   && !requires { typename remove_cvref<Words>::element_type; };
+   && is_unsigned_integral<typename Words::value_type>
+   // Is not a `cat::simd` or `cat::simd_mask`:
+   && !requires { typename Words::element_type; }
+   && !requires { typename Words::abi_type; };
 
 // Count set bits across a contiguous container of unsigned words.
 template <is_unsigned_word_container Words>
@@ -2438,6 +1878,8 @@ using ::operator|=;
 using ::operator&;
 using ::operator&=;
 }  // namespace cat
+
+#include <cat/detail/bit_span.hpp>
 
 #include "./implementations/align_down.tpp"
 #include "./implementations/align_up.tpp"

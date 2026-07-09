@@ -19,7 +19,7 @@ copy_memory(
    void* _Nonnull __restrict p_destination, idx bytes
 );
 
-template <typename T, idx extent = idx::max()>
+template <typename T, idx extent>
 class span;
 
 // This is implemented in `<cat/span>`.

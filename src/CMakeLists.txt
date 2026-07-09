@@ -8,8 +8,8 @@ set(CAT_INCLUDE_SUBDIRS
   meta compare limits runtime cpuid sanitizer arithmetic
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string tui format memory allocator utility file
-  linux thread atomic socket x11 bit bitset stepanov math type_list tuple
-  vec ring enum iterable dyn)
+  linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
+  tuple vec ring enum iterable dyn)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -270,9 +270,12 @@ set(CAT_HEADER_FILES
   ${CATLIB}/array/cat/array
   ${CATLIB}/atomic/cat/atomic
   ${CATLIB}/bit/cat/bit
+  ${CATLIB}/bit/cat/detail/bit_iterable.hpp
   ${CATLIB}/bit/implementations/bit_raw.tpp
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/bitset/cat/bitset
+  ${CATLIB}/bitvec/cat/bitvec
+  ${CATLIB}/bitvec/cat/raii_bitvec
   ${CATLIB}/container/cat/container
   ${CATLIB}/container/cat/detail/initializer_list.hpp
   ${CATLIB}/container/implementations/container_interface.tpp

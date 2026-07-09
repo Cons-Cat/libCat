@@ -1,4 +1,8 @@
 #include <cat/bit>
+#include <cat/iterable>
+#include <cat/page_allocator>
+#include <cat/span>
+#include <cat/vec>
 
 #include "../unit_tests.hpp"
 
@@ -17,9 +21,37 @@ concept can_align_intptr_to_constant = requires(cat::uintptr<int> p_value) {
                                           cat::is_aligned(p_value, alignment);
                                        };
 
-template <auto alignment>
-concept can_assume_aligned_to_constant =
-   requires(int* p_value) { cat::assume_aligned<alignment>(p_value); };
+struct proxy_bit_popcount_context {
+   cat::uint1* m_p_storage = nullptr;
+
+   using element_type = cat::bit_reference<cat::uint1>;
+
+   template <typename Predicate>
+   constexpr auto
+   run_while(Predicate&& predicate) -> cat::iteration_result {
+      for (cat::uword bit_offset = 0u; bit_offset < 8u; ++bit_offset) {
+         if (!predicate(
+                cat::make_bit_reference_from_offset(*m_p_storage, bit_offset)
+             )) {
+            return cat::iteration_result::incomplete;
+         }
+      }
+      return cat::iteration_result::complete;
+   }
+};
+
+struct proxy_bit_popcount_source : cat::iterable_interface<> {
+   cat::uint1 m_storage = 0u;
+
+   constexpr explicit proxy_bit_popcount_source(cat::uint1 storage)
+       : m_storage(storage) {
+   }
+
+   constexpr auto
+   iterate() -> proxy_bit_popcount_context {
+      return {&m_storage};
+   }
+};
 }  // namespace
 
 $test(bit_constraints_and_alignment) {
@@ -27,11 +59,6 @@ $test(bit_constraints_and_alignment) {
    static_assert(!can_align_pointer_to_constant<12u>);
    static_assert(can_align_intptr_to_constant<32u>);
    static_assert(!can_align_intptr_to_constant<12u>);
-   static_assert(can_assume_aligned_to_constant<32u>);
-   static_assert(can_assume_aligned_to_constant<32>);
-   static_assert(!can_assume_aligned_to_constant<12u>);
-   static_assert(!can_assume_aligned_to_constant<12>);
-   static_assert(!can_assume_aligned_to_constant<-32>);
    alignas(32) int aligned_value = 0;
    cat::verify(cat::assume_aligned<32u>(&aligned_value) == &aligned_value);
    cat::verify(cat::assume_aligned<32>(&aligned_value) == &aligned_value);
@@ -233,11 +260,6 @@ $test(bit_popcount_and_single_bit) {
       };
       return cat::popcount(cat::span<cat::byte const>(bytes)) == 16u;
    }());
-   static_assert([] {
-      cat::array<cat::uword, 2u> words{0b1111_u8, cat::uword(0b1010'1111u)};
-      return cat::popcount(cat::bit_span(words, 0u, 68u)) == 8u;
-   }());
-
    cat::array<cat::byte, 5u> bytes{
       cat::byte(0b1111'1111u), cat::byte(0b0000'1111u), cat::byte(0b1010'1010u),
       cat::byte(0u), cat::byte(0b1000'0001u)
@@ -248,7 +270,6 @@ $test(bit_popcount_and_single_bit) {
       cat::uword(0b1111u), cat::uword(0b1010'1010u), cat::uword(0b1111'0000u)
    };
    cat::verify(cat::popcount(cat::span<cat::uword const>(words)) == 12u);
-   cat::verify(cat::popcount(cat::bit_span(words, 0u, 132u)) == 8u);
 
    // Test `has_single_bit()`. Matches C23 `stdc_has_single_bit`, so zero is not
    // a single-bit value.
@@ -444,32 +465,4 @@ $test(bit_ptr) {
    cat::verify(bit_pointer < next_word_bit);
    next_word_bit -= 7;
    cat::verify(next_word_bit == bit_pointer);
-}
-
-$test(bit_stepanov_iterator) {
-   cat::array<uint4, 4u> array(0u, cat::uint4_max, 0u, 0u);
-   cat::bit_stepanov_iterator it(array.begin());
-
-   // 1st bit of 1st uint4 is 0:
-   cat::verify(*it == false);
-
-   // 32nd bit of 1st uint4 is 0:
-   cat::verify(*(it + 31) == false);
-
-   // 1st bit of 2nd uint4 is 1:
-   cat::verify(*(it + 32) == true);
-
-   // 2nd bit of 2nd uint4 is 1:
-   it += 33u;
-   cat::verify(*it == true);
-
-   // The next 30 bits are 1:
-   for (int4 i = 0; i < 30; ++i) {
-      ++it;
-      cat::verify(*it == true);
-   }
-
-   // 1st bit of 3rd uint4 is 0:
-   it++;
-   cat::verify(*it == false);
 }

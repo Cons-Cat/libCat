@@ -109,6 +109,78 @@ $test(bitset_make_and_predicates) {
    cat::verify(!bits127.any_of());
 }
 
+$test(bitset_popcount) {
+   using namespace cat::arithmetic_literals;
+
+   using bits7_type = cat::bitset<7u>;
+   static_assert(cat::is_same<bits7_type::value_type, cat::bit_value>);
+   static_assert(
+      cat::is_same<bits7_type::const_value_type, cat::bit_value const>
+   );
+   static_assert(
+      cat::is_same<
+         bits7_type::reference, cat::bit_reference<bits7_type::storage_type>>
+   );
+   static_assert(cat::is_same<
+                 bits7_type::const_reference,
+                 cat::bit_reference<bits7_type::storage_type const>>);
+   static_assert(
+      cat::is_same<bits7_type::pointer, cat::bit_ptr<bits7_type::storage_type>>
+   );
+   static_assert(cat::is_same<
+                 bits7_type::const_pointer,
+                 cat::bit_ptr<bits7_type::storage_type const>>);
+   static_assert(cat::is_same<bits7_type::size_type, cat::idx>);
+   static_assert(cat::is_same<bits7_type::difference_type, cat::iword>);
+   static_assert(
+      cat::is_same<bits7_type::iterator::value_type, cat::bit_value>
+   );
+   static_assert(
+      cat::is_same<bits7_type::iterator::reference, bits7_type::reference>
+   );
+   static_assert(
+      cat::is_same<
+         bits7_type::const_iterator::reference, bits7_type::const_reference>
+   );
+   using bits7_context = cat::iterable_iteration_context_type<bits7_type>;
+   static_assert(
+      cat::is_same<bits7_context::element_type, bits7_type::reference>
+   );
+
+   constexpr cat::bitset<7u> bits7_zero{};
+   static_assert(bits7_zero.popcount() == 0u);
+
+   constexpr cat::bitset<7u> bits7 = cat::make_bitset<7u>(0b1111'1110_u1);
+   static_assert(bits7.popcount() == 7u);
+   static_assert(bits7.all_of());
+   static_assert(!bits7.has_single_bit());
+   static_assert(bits7.bit_width() == 7u);
+   static_assert(cat::bit_width(bits7) == 7u);
+
+   constexpr cat::bitset<17u> bits17 =
+      cat::make_bitset<17u>(0b0000'0000'1111'1111'1000'0000'0000'0000_u4);
+   static_assert(bits17.popcount() == 9u);
+   static_assert(!bits17.all_of());
+   static_assert(bits17.any_of());
+
+   cat::bitset<129u> bits129;
+   bits129[0u] = true;
+   bits129[64u] = true;
+   bits129[128u] = true;
+   cat::verify(bits129.popcount() == 3u);
+   cat::verify(cat::popcount(bits129) == 3u);
+   cat::verify(!bits129.has_single_bit());
+   cat::verify(cat::countl_zero(bits129) == 0u);
+   cat::bitset<129u> reversed129 = bits129;
+   reversed129.reverse_inplace();
+   cat::verify(reversed129[0u]);
+   cat::verify(bits129.any_of());
+   cat::verify(!bits129.all_of());
+   bits129.fill();
+   cat::verify(bits129.popcount() == 129u);
+   cat::verify(bits129.all_of());
+}
+
 $test(bitset_count_leading_trailing_zero) {
    using namespace cat::arithmetic_literals;
 
@@ -134,7 +206,7 @@ $test(bitset_count_leading_trailing_zero) {
    cat::verify(bits127.countr_zero() == 0u);
    cat::verify(bits127.countr_one() == 125u);
 
-   bits127 = cat::make_bitset<127>(0_u8, cat::uint8_max >> 1u);
+   bits127 = cat::make_bitset<127>(0_u8, 0x7FFFFFFF'FFFFFFFE_u8);
    cat::verify(bits127.countl_zero() == 65u);
    cat::verify(bits127.countl_one() == 0u);
    cat::verify(bits127.countr_zero() == 0u);
@@ -180,7 +252,7 @@ $test(bitset_subscript_multiword) {
 
    // 16-byte bitset's subscript with bit offset.
    constexpr cat::bitset<127> bits127_2 =
-      cat::make_bitset<127>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+      cat::make_bitset<127>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFA_u8);
    // 11111111'11111111'11111111'11111111'11111111'11111111'11111111'1111101.
    static_assert(bits127_2[0u]);
    static_assert(!bits127_2[1u]);
@@ -233,7 +305,7 @@ $test(bitset_at) {
    using namespace cat::arithmetic_literals;
 
    constexpr cat::bitset<127> bits127_2 =
-      cat::make_bitset<127>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+      cat::make_bitset<127>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFA_u8);
 
    // `const` `.at()`.
    auto _ = bits127_2.at(0u).verify();
@@ -320,6 +392,33 @@ $test(bitset_rotate) {
    // Rotating by `bits_count` returns to the original.
    cat::verify(bits127_4.rotate_left(127) == bits127_4);
    cat::verify(bits127_4.rotate_right(127) == bits127_4);
+}
+
+$test(bitset_reverse_inplace) {
+   cat::bitset<8u> bits8("10010000");
+   cat::bitset<8u> reversed8 = bits8;
+   reversed8.reverse_inplace();
+   cat::verify(!reversed8[0u]);
+   cat::verify(reversed8[4u]);
+   cat::verify(reversed8[7u]);
+
+   cat::bitset<7u> bits7("1001000");
+   cat::bitset<7u> reversed7 = bits7;
+   reversed7.reverse_inplace();
+   cat::verify(!reversed7[0u]);
+   cat::verify(reversed7[3u]);
+   cat::verify(reversed7[6u]);
+
+   cat::bitset<127u> bits127;
+   bits127[0u] = true;
+   bits127[66u] = true;
+   bits127[126u] = true;
+   cat::bitset<127u> reversed127 = bits127;
+   reversed127.reverse_inplace();
+   cat::verify(reversed127[0u]);
+   cat::verify(reversed127[60u]);
+   cat::verify(reversed127[126u]);
+   cat::verify(reversed127.popcount() == 3u);
 }
 
 $test(bitset_set_even_odd) {
@@ -487,7 +586,7 @@ $test(bitset_stepanov_iterator) {
    using namespace cat::arithmetic_literals;
 
    constexpr cat::bitset<127> bits127_2 =
-      cat::make_bitset<127>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+      cat::make_bitset<127>(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFA_u8);
 
    for ([[maybe_unused]]
         auto bit : bits127_2) {
@@ -537,9 +636,57 @@ $test(bitset_collection) {
    bits[2u] = true;
 
    cat::verify((bits | cat::count()) == 5u);
-   cat::verify(bool(cat::read_at(bits, 0u)));
-   cat::verify(!bool(cat::read_at(bits, 1u)));
-   cat::verify(bool(cat::read_at(bits, 2u)));
+   cat::verify(bits.count() == 5u);
+   cat::verify(
+      bits
+         .filter([](auto bit) -> bool {
+            return bit;
+         })
+         .count()
+      == 2u
+   );
+   cat::idx reverse_weight = 1u;
+   cat::verify(
+      (bits
+       | cat::reverse()
+       | cat::transform([&reverse_weight](auto bit) -> cat::idx {
+            cat::idx const weight = reverse_weight;
+            ++reverse_weight;
+            return bit ? weight : 0u;
+         })
+       | cat::sum())
+      == 8u
+   );
+   bits | cat::reverse_inplace();
+   cat::verify(bits[2u]);
+   cat::verify(bits[4u]);
+   bits.reverse_inplace();
+   cat::verify(bits[0u]);
+   cat::verify(bits[2u]);
+   auto bit_slice = cat::slice(bits, 0u, 3u);
+   cat::verify(
+      bit_slice
+         .filter([](auto bit) -> bool {
+            return bit;
+         })
+         .count()
+      == 2u
+   );
+   cat::verify(
+      bit_slice.reverse()
+         .transform([](auto bit) -> cat::idx {
+            return bit ? 1u : 0u;
+         })
+         .sum()
+      == 2u
+   );
+   cat::verify(cat::read_at(bits, 0u));
+   cat::verify(!cat::read_at(bits, 1u));
+   cat::verify(cat::read_at(bits, 2u));
+   cat::read_at(bits, 1u).assign(true);
+   cat::verify(bits[1u]);
+   cat::read_at(bits, 1u).assign(false);
+   cat::verify(!bits[1u]);
 
    idx true_count = 0u;
    bits | cat::for_each([&true_count](auto bit) {
