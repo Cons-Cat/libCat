@@ -424,8 +424,8 @@ as_bytes(span<T, fixed_extent> source) noexcept {
    constexpr idx result_extent = (fixed_extent == dynamic_extent)
                                     ? dynamic_extent
                                     : fixed_extent * sizeof(T);
-   return span<cat::byte const, result_extent>(
-      __builtin_bit_cast(cat::byte const* _Nullable, source.data()),
+   return span<byte const, result_extent>(
+      __builtin_bit_cast(byte const* _Nullable, source.data()),
       source.size_bytes()
    );
 }
@@ -441,9 +441,8 @@ as_writable_bytes(span<T, fixed_extent> source) noexcept {
    constexpr idx result_extent = (fixed_extent == dynamic_extent)
                                     ? dynamic_extent
                                     : fixed_extent * sizeof(T);
-   return span<cat::byte, result_extent>(
-      __builtin_bit_cast(cat::byte* _Nullable, source.data()),
-      source.size_bytes()
+   return span<byte, result_extent>(
+      __builtin_bit_cast(byte* _Nullable, source.data()), source.size_bytes()
    );
 }
 

@@ -38,7 +38,7 @@ struct filter_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base>;
       return context_type<incoming_iteration_context_type, Callback>{
-         ::cat::iterate(m_base),
+         cat::iterate(m_base),
          &m_callback,
       };
    }
@@ -50,7 +50,7 @@ struct filter_view_impl : iterable_interface<> {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base const>;
       return context_type<incoming_iteration_context_type, Callback const>{
-         ::cat::iterate(m_base),
+         cat::iterate(m_base),
          &m_callback,
       };
    }
@@ -60,9 +60,9 @@ struct filter_view_impl : iterable_interface<> {
       requires(is_reverse_iterable<Base>)
    {
       using incoming_iteration_context_type =
-         decltype(::cat::reverse_iterate(m_base));
+         decltype(cat::reverse_iterate(m_base));
       return context_type<incoming_iteration_context_type, Callback>{
-         ::cat::reverse_iterate(m_base),
+         cat::reverse_iterate(m_base),
          &m_callback,
       };
    }
@@ -72,9 +72,9 @@ struct filter_view_impl : iterable_interface<> {
       requires(is_reverse_iterable<Base const>)
    {
       using incoming_iteration_context_type =
-         decltype(::cat::reverse_iterate(m_base));
+         decltype(cat::reverse_iterate(m_base));
       return context_type<incoming_iteration_context_type, Callback const>{
-         ::cat::reverse_iterate(m_base),
+         cat::reverse_iterate(m_base),
          &m_callback,
       };
    }

@@ -93,13 +93,13 @@ unwrap_ref(T& value) -> T& {
 
 template <typename T>
 constexpr auto
-unwrap_ref(::cat::reference_wrapper<T>& borrow) -> T& {
+unwrap_ref(reference_wrapper<T>& borrow) -> T& {
    return borrow.get();
 }
 
 template <typename T>
 constexpr auto
-unwrap_ref(::cat::reference_wrapper<T> const& borrow) -> T& {
+unwrap_ref(reference_wrapper<T> const& borrow) -> T& {
    return borrow.get();
 }
 }  // namespace cat::detail
@@ -352,7 +352,7 @@ struct iterate_fn {
    // Forward this call through a mutable borrow from `reference_wrapper`.
    template <typename T>
    constexpr auto
-   operator()(::cat::reference_wrapper<T>& borrow) const
+   operator()(reference_wrapper<T>& borrow) const
       -> decltype((*this)(borrow.get())) {
       return (*this)(borrow.get());
    }
@@ -360,7 +360,7 @@ struct iterate_fn {
    // Forward this call through a `const` borrow from `reference_wrapper`.
    template <typename T>
    constexpr auto
-   operator()(::cat::reference_wrapper<T> const& borrow) const
+   operator()(reference_wrapper<T> const& borrow) const
       -> decltype((*this)(borrow.get())) {
       return (*this)(borrow.get());
    }
@@ -390,7 +390,7 @@ struct reverse_iterate_fn {
    // Forward this call through a mutable borrow from `reference_wrapper`.
    template <typename T>
    constexpr auto
-   operator()(::cat::reference_wrapper<T>& borrow) const
+   operator()(reference_wrapper<T>& borrow) const
       -> decltype((*this)(borrow.get())) {
       return (*this)(borrow.get());
    }
@@ -398,7 +398,7 @@ struct reverse_iterate_fn {
    // Forward this call through a `const` borrow from `reference_wrapper`.
    template <typename T>
    constexpr auto
-   operator()(::cat::reference_wrapper<T> const& borrow) const
+   operator()(reference_wrapper<T> const& borrow) const
       -> decltype((*this)(borrow.get())) {
       return (*this)(borrow.get());
    }

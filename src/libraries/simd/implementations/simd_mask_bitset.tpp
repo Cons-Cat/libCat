@@ -93,7 +93,7 @@ simd_to_bitset(simd_mask<T, Abi> mask) -> bitset<Abi::lanes> {
 
 template <typename T, typename Abi>
 constexpr auto
-simd_mask<T, Abi>::to_bitset() const -> ::cat::bitset<Abi::lanes> {
+simd_mask<T, Abi>::to_bitset() const -> bitset<Abi::lanes> {
    // P2638R0 `simd_mask::to_bitset`.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return simd_to_bitset(*this);

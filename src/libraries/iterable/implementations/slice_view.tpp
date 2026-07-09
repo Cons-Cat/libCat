@@ -4,8 +4,7 @@
 
 #include <cat/iterable>
 
-namespace cat {
-namespace detail {
+namespace cat::detail {
 template <typename T>
 struct slice_view : iterable_interface<> {
    T* _Nonnull m_p_collection;
@@ -24,21 +23,21 @@ struct slice_view : iterable_interface<> {
 
    constexpr auto
    inc_pos(position_type<T>& position) const -> void {
-      ::cat::inc_pos(*m_p_collection, position);
+      cat::inc_pos(*m_p_collection, position);
    }
 
    constexpr auto
    dec_pos(position_type<T>& position) const -> void
       requires(is_bidirectional_collection<T>)
    {
-      ::cat::dec_pos(*m_p_collection, position);
+      cat::dec_pos(*m_p_collection, position);
    }
 
    constexpr auto
    offset_pos(position_type<T>& position, iword offset) const -> void
       requires(is_random_access_collection<T>)
    {
-      ::cat::offset_pos(*m_p_collection, position, offset);
+      cat::offset_pos(*m_p_collection, position, offset);
    }
 
    constexpr auto
@@ -46,13 +45,13 @@ struct slice_view : iterable_interface<> {
       -> iword
       requires(is_random_access_collection<T>)
    {
-      return ::cat::distance(*m_p_collection, left, right);
+      return cat::distance(*m_p_collection, left, right);
    }
 
    constexpr auto
    read_at_unchecked(position_type<T> const& position) const -> decltype(auto) {
-      return ::cat::read_at_unchecked(*m_p_collection, position);
+      return cat::read_at_unchecked(*m_p_collection, position);
    }
 };
-}  // namespace detail
-}  // namespace cat
+} // namespace cat::detail
+

@@ -81,23 +81,23 @@ struct tuple_size
 template <idx index, typename S>
    requires(
       has_aggregate_get<remove_cvref<S>>
-      && index < __builtin_structured_binding_size(::cat::remove_cvref<S>)
+      && index < __builtin_structured_binding_size(remove_cvref<S>)
    )
 [[nodiscard]]
 constexpr auto
 get(S& t) noexcept -> decltype(auto) {
-   return ::cat::detail::get_aggregate_lvalue<index>(t);
+   return detail::get_aggregate_lvalue<index>(t);
 }
 
 template <idx index, typename S>
    requires(
       has_aggregate_get<remove_cvref<S>>
-      && index < __builtin_structured_binding_size(::cat::remove_cvref<S>)
+      && index < __builtin_structured_binding_size(remove_cvref<S>)
    )
 [[nodiscard]]
 constexpr auto
 get(S const& t) noexcept -> decltype(auto) {
-   return ::cat::detail::get_aggregate_lvalue<index>(t);
+   return detail::get_aggregate_lvalue<index>(t);
 }
 
 // `S&&` with `is_rvalue_reference`:
@@ -106,19 +106,15 @@ get(S const& t) noexcept -> decltype(auto) {
 template <idx index, typename S>
    requires(
       is_rvalue_reference<S &&> && has_aggregate_get<remove_cvref<S>>
-      && index < __builtin_structured_binding_size(::cat::remove_cvref<S>)
+      && index < __builtin_structured_binding_size(remove_cvref<S>)
    )
 [[nodiscard]]
 constexpr auto
-get(S&& t) noexcept -> decltype(cat::move(
-   ::cat::detail::get_aggregate_lvalue<index>(
-      static_cast<remove_reference<S>&>(t)
-   )
+get(S&& t) noexcept -> decltype(move(
+   detail::get_aggregate_lvalue<index>(static_cast<remove_reference<S>&>(t))
 )) {
-   return cat::move(
-      ::cat::detail::get_aggregate_lvalue<index>(
-         static_cast<remove_reference<S>&>(t)
-      )
+   return move(
+      detail::get_aggregate_lvalue<index>(static_cast<remove_reference<S>&>(t))
    );
 }
 
@@ -133,7 +129,7 @@ template <idx index, typename Aggregate>
 [[nodiscard, gnu::always_inline]]
 constexpr auto
 aggregate_get(Aggregate&& t) -> decltype(auto) {
-   return ::cat::get<index>($fwd(t));
+   return get<index>($fwd(t));
 }
 
 template <typename Callback, typename Aggregate, idx... indices>
@@ -158,9 +154,8 @@ constexpr auto
 apply(Callback&& callback, Aggregate&& t) {
    return detail::aggregate_apply_impl(
       $fwd(callback), $fwd(t),
-      make_index_sequence<static_cast<idx>(
-         __builtin_structured_binding_size(::cat::remove_cvref<Aggregate>)
-      )>{}
+      make_index_sequence<static_cast<
+         idx>(__builtin_structured_binding_size(remove_cvref<Aggregate>))>{}
    );
 }
 

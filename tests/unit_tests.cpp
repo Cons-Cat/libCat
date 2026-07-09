@@ -37,7 +37,7 @@ main() -> int {
    // Call all unit test functions that were pushed into `test_fns` by the
    // `CAT_TEST` macro.
    for (idx i = 0; i < test_fns.value().size(); ++i) {
-      auto _ = print(::cat::fmt(pager, "Running test {}", i).value());
+      auto _ = print(cat::fmt(pager, "Running test {}", i).value());
       if (cat::setjmp(jump_buffer)) {
          // Jump here when a test fails, skipping the rest of a test's
          // constructor function.

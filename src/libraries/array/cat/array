@@ -33,7 +33,7 @@ array : public container_interface<array<T, length>, T>,
    [[nodiscard]]
    constexpr auto
    operator<=>(array const& other) const -> auto {
-      return cat::lexicographical_compare_three_way(
+      return lexicographical_compare_three_way(
          this->begin(), this->end(), other.begin(), other.end()
       );
    }
@@ -160,7 +160,7 @@ template <idx index, typename T, idx length>
 [[nodiscard]]
 constexpr auto
 get(array<T, length>&& a) noexcept -> T&& {
-   return cat::move(a[index]);
+   return move(a[index]);
 }
 
 }  // namespace cat
