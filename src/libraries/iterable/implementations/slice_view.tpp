@@ -53,5 +53,4 @@ struct slice_view : iterable_interface<> {
       return cat::read_at_unchecked(*m_p_collection, position);
    }
 };
-} // namespace cat::detail
-
+}  // namespace cat::detail

@@ -418,9 +418,7 @@ class allocator_interface {
       typename... Args>
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_inline_stack_allocate(
-      idx allocation_bytes, idx allocation_count, Args&&... arguments
-   );
+   meta_alloc_inline_stack_allocate(idx allocation_count, Args&&... arguments);
 
    [[gnu::no_sanitize_address]]
    constexpr auto
@@ -4068,6 +4066,15 @@ class allocator_interface {
    template <typename T>
    constexpr void
    cfree(span<T> handle);
+
+   // Invalidate a `basic_str_span` handle, such as `str_view` or `str_span`.
+   template <typename CharT, bool is_null_terminated>
+   constexpr void
+   free(basic_str_span<CharT, is_null_terminated> handle);
+
+   template <typename CharT, bool is_null_terminated>
+   constexpr void
+   cfree(basic_str_span<CharT, is_null_terminated> handle);
 
    // Get a non-`const` handle to the data in any memory handle. If that memory
    // handle is to a multi-allocation, this returns a `span`.

@@ -257,12 +257,15 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/implementations/free.tpp
   ${CATLIB}/allocator/implementations/resizable_allocator.tpp
   ${CATLIB}/allocator/cat/allocator_parameters
-  ${CATLIB}/allocator/cat/linear_allocator
+  # Allocator adaptors:
+  ${CATLIB}/allocator/cat/resizable_allocator
   ${CATLIB}/allocator/cat/named_allocator
+  # Allocators:
   ${CATLIB}/allocator/cat/null_allocator
+  ${CATLIB}/allocator/cat/inplace_allocator
+  ${CATLIB}/allocator/cat/linear_allocator
   ${CATLIB}/allocator/cat/page_allocator
   ${CATLIB}/allocator/cat/pool_allocator
-  ${CATLIB}/allocator/cat/resizable_allocator
   ${CATLIB}/arithmetic/cat/arithmetic
   ${CATLIB}/arithmetic/cat/overflow_reference.hpp
   ${CATLIB}/arithmetic/cat/precision_reference.hpp

@@ -1071,7 +1071,7 @@ class [[gsl::Pointer]] allocator_ref
       if constexpr (detail::has_bytes_used<Allocator>) {
          return dyn_allocator_friend::bytes_used(get_allocator());
       } else {
-         return idx(0u);
+         return 0u;
       }
    }
 
@@ -1081,7 +1081,7 @@ class [[gsl::Pointer]] allocator_ref
       if constexpr (detail::has_bytes_capacity<Allocator>) {
          return dyn_allocator_friend::bytes_capacity(get_allocator());
       } else {
-         return idx(0u);
+         return 0u;
       }
    }
 

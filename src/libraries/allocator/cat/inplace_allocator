@@ -1,0 +1,181 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+
+// TODO: Should we remove deriving from `allocator_interface` and require
+// wrapping in `allocator_ref` to reduce template monomorphization?
+
+namespace cat {
+
+// A one-shot fixed buffer allocator. It holds `arena_bytes` of storage inside
+// its own stack frame and hands that whole buffer out as a single allocation.
+// A second allocation fails until this is `free()`d or `reset()`.
+template <idx arena_bytes>
+class inplace_allocator
+    : public allocator_interface<inplace_allocator<arena_bytes>> {
+ private:
+   friend allocator_interface<inplace_allocator>;
+   friend struct dyn_allocator_friend;
+   template <typename>
+   friend class allocator_ref;
+   template <is_allocator, is_allocator, idx, idx>
+   friend class resizable_allocator;
+
+   template <typename T>
+   struct inplace_memory_handle : detail::base_memory_handle<T> {
+      T* _Nonnull p_storage;
+
+      // TODO: Simplify with CRTP or deducing-this.
+      auto
+      get() -> decltype(auto) {
+         return *this;
+      }
+
+      auto
+      get() const -> decltype(auto) {
+         return *this;
+      }
+   };
+
+ public:
+   constexpr inplace_allocator() {
+      poison_memory_region(m_storage.data(), arena_bytes);
+   }
+
+   constexpr inplace_allocator(inplace_allocator const&) = delete (
+      "`inplace_allocator` owns an on-stack buffer that must not alias. "
+      "Create allocators through `make_inplace_allocator` instead of copying."
+   );
+   constexpr inplace_allocator(inplace_allocator&&) = default;
+
+   // Clear any leftover poison so the buffer's stack storage does not stay
+   // poisoned after this allocator dies and its stack slot is reused.
+   constexpr ~inplace_allocator() {
+      unpoison_memory_region(m_storage.data(), arena_bytes);
+   }
+
+   // Release the outstanding allocation, making the buffer available again.
+   constexpr void
+   reset() {
+      poison_memory_region(m_storage.data(), arena_bytes);
+      m_is_allocated = false;
+   }
+
+ private:
+   // The buffer's tail is the only allocation this can produce. A request that
+   // fits after over-alignment padding settles on whatever remains of the
+   // buffer past that padding.
+   auto
+   allocation_bytes(ualign alignment, idx allocation_bytes)
+      -> maybe_non_zero<idx> {
+      if (m_is_allocated) {
+         // Over-allocated.
+         return nullopt;
+      }
+
+      // Get padding from the buffer's base to the first `alignment`-aligned address.
+      byte const* p_aligned = align_up(m_storage.data(), alignment);
+      idx const offset = idx(p_aligned - m_storage.data());
+
+      if (offset + allocation_bytes <= arena_bytes) {
+         return idx(arena_bytes - offset);
+      }
+
+      // Not enough room for this alignment.
+      return nullopt;
+   }
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   auto
+   allocate(idx allocation_bytes) -> void* _Nullable {
+      if (!m_is_allocated && allocation_bytes <= arena_bytes) {
+         // Mark future over-allocation.
+         m_is_allocated = true;
+         return static_cast<void*>(m_storage.data());
+      }
+
+      // Over-allocated.
+      return nullptr;
+   }
+
+   // Over-align by handing out a pointer aligned up within the buffer, so long
+   // as the request still fits past that padding.
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   auto
+   aligned_allocate(ualign alignment, idx allocation_bytes) -> void* _Nullable {
+      if (m_is_allocated) {
+         // Future over-allocation.
+         return nullptr;
+      }
+
+      byte* p_aligned = align_up(m_storage.data(), alignment);
+      idx const offset = static_cast<idx>(p_aligned - m_storage.data());
+
+      if (offset + allocation_bytes <= arena_bytes) {
+         // Mark future over-allocation.
+         m_is_allocated = true;
+         return static_cast<void*>(p_aligned);
+      }
+
+      // Not enough room for this alignment.
+      return nullptr;
+   }
+
+   [[clang::ownership_takes(libcat, 2)]]
+   void
+   deallocate(void const* _Nonnull /*unused*/, uword /*unused*/) {
+      m_is_allocated = false;
+   }
+
+   template <typename T>
+   [[clang::ownership_holds(libcat, 2)]]
+   constexpr auto
+   make_handle(T* _Nonnull p_handle_storage) -> inplace_memory_handle<T> {
+      return inplace_memory_handle<T>{{}, p_handle_storage};
+   }
+
+   template <typename T>
+   [[gnu::returns_nonnull]]
+   auto
+   access(inplace_memory_handle<T>& memory) -> T* _Nonnull {
+      return memory.p_storage;
+   }
+
+   template <typename T>
+   [[gnu::returns_nonnull]]
+   auto
+   access(inplace_memory_handle<T> const& memory) const -> T const* _Nonnull {
+      return memory.p_storage;
+   }
+
+ public:
+   // The buffer is aligned strongly enough for any scalar type.
+   static constexpr ualign min_alignment = __BIGGEST_ALIGNMENT__;
+
+   [[nodiscard]]
+   constexpr auto
+   bytes_used() const -> idx {
+      return m_is_allocated ? arena_bytes : 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bytes_capacity() const -> idx {
+      return arena_bytes;
+   }
+
+ private:
+   alignas(min_alignment.raw) array<byte, arena_bytes> m_storage;
+   bool m_is_allocated = false;
+};
+
+template <idx arena_bytes>
+[[nodiscard]]
+constexpr auto
+make_inplace_allocator() -> inplace_allocator<arena_bytes> {
+   return {};
+}
+
+}  // namespace cat

@@ -88,51 +88,50 @@ struct allocator_interface<Derived>::meta_alloc_alias_types {
 };
 
 template <typename Derived>
-// Only called from `meta_alloc` when `inline_size != 0`.
+// Only called from `meta_alloc` when `inline_size != 0` and
+// `allocation_bytes <= inline_size`.
 template <
    typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
    bool is_zeroed, bool has_feedback, idx inline_size, typename... Args>
 [[gnu::no_sanitize_address]]
 constexpr auto
 allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
-   idx allocation_bytes, idx allocation_count, Args&&... arguments
+   idx allocation_count, Args&&... arguments
 ) {
    using alias_types = meta_alloc_alias_types<
       T, is_fail_safe, is_multiple, has_feedback, inline_size>;
    using return_handle = alias_types::return_handle;
    using handle_type = alias_types::handle_type;
 
-   if (allocation_bytes <= inline_size) {
-      // Allocate memory on this stack frame.
-      handle_type stack_handle;
-      stack_handle.set_inlined(true);
-      stack_handle.set_count(allocation_count);
+   // Allocate memory on this stack frame.
+   handle_type stack_handle;
+   stack_handle.set_inlined(true);
+   stack_handle.set_count(allocation_count);
 
+   if constexpr (is_zeroed) {
+      zero_memory_explicit(__builtin_addressof(stack_handle), inline_size);
+   }
+
+   if constexpr (is_multiple) {
+      for (idx i = 0u; i < allocation_count; ++i) {
+         new (reinterpret_cast<T* _Nonnull>(&stack_handle) + i) T;
+      }
+   } else {
       if constexpr (is_zeroed) {
-         zero_memory_explicit(__builtin_addressof(stack_handle), inline_size);
-      }
-
-      if constexpr (is_multiple) {
-         for (idx i = 0u; i < allocation_count; ++i) {
-            new (reinterpret_cast<T* _Nonnull>(&stack_handle) + i) T;
-         }
+         stack_handle.set_inline_storage(T{});
       } else {
-         if constexpr (is_zeroed) {
-            stack_handle.set_inline_storage(T{});
-         } else {
-            stack_handle.set_inline_storage(T($fwd(arguments)...));
-         }
+         stack_handle.set_inline_storage(T($fwd(arguments)...));
       }
+   }
 
-      // Return here to skip error handling, because an on-stack allocation
-      // cannot fail.
-      if constexpr (has_feedback) {
-         return return_handle(
-            tuple<handle_type, idx>{move(stack_handle), inline_size}
-         );
-      } else {
-         return return_handle(move(stack_handle));
-      }
+   // Return here to skip error handling, because an on-stack allocation
+   // cannot fail.
+   if constexpr (has_feedback) {
+      return return_handle(
+         tuple<handle_type, idx>{move(stack_handle), inline_size}
+      );
+   } else {
+      return return_handle(move(stack_handle));
    }
 }
 
@@ -392,9 +391,7 @@ allocator_interface<Derived>::meta_alloc(
       if (allocation_bytes <= inline_size) {
          return this->template meta_alloc_inline_stack_allocate<
             T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback,
-            inline_size>(
-            allocation_bytes, allocation_count, $fwd(arguments)...
-         );
+            inline_size>(allocation_count, $fwd(arguments)...);
       }
    }
 
