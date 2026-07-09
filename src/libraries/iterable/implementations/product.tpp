@@ -24,6 +24,7 @@ struct product_impl {
 }  // namespace detail
 
 // Reduce the incoming elements with *. This is a terminal algorithm.
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 product() -> detail::product_impl {
    return {};

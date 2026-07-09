@@ -139,6 +139,7 @@ struct reverse_inplace_impl {
 }  // namespace detail
 
 // Reverse the incoming container in-place. This is a terminal algorithm.
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 reverse_inplace() -> detail::reverse_inplace_impl {
    return {};

@@ -108,6 +108,7 @@ struct filter_impl : view_interface<filter_impl<Callback>> {
 
 // Lazy predicate filter. Iterable-only (not a multipass collection).
 template <typename Callback>
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 filter(Callback callback) -> detail::filter_impl<Callback> {
    return detail::filter_impl<Callback>{{}, move(callback)};

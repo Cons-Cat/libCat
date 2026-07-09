@@ -26,6 +26,7 @@ struct fold_impl {
 
 // Left-fold with a callback and initial value. This is a terminal algorithm.
 template <typename Callback, typename Init>
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 fold(Callback callback, Init init) -> detail::fold_impl<Callback, Init> {
    return detail::fold_impl<Callback, Init>{move(callback), move(init)};

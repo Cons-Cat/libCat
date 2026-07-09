@@ -29,6 +29,7 @@ struct min_impl {
 }  // namespace detail
 
 // Reduce the incoming elements to the smallest. This is a terminal algorithm.
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 min() -> detail::min_impl {
    return {};

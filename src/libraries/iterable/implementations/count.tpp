@@ -28,6 +28,7 @@ struct count_impl {
 }  // namespace detail
 
 // Count the incoming elements. This is a terminal algorithm.
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 count() -> detail::count_impl {
    return {};

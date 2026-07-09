@@ -24,6 +24,7 @@ struct sum_impl {
 }  // namespace detail
 
 // Reduce the incoming elements with +. This is a terminal algorithm.
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 sum() -> detail::sum_impl {
    return {};

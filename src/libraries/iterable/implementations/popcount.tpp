@@ -31,6 +31,7 @@ struct popcount_impl {
 }  // namespace detail
 
 // Return an iterable terminal that counts set bits.
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 popcount() -> detail::popcount_impl {
    return {};

@@ -29,6 +29,7 @@ struct max_impl {
 }  // namespace detail
 
 // Reduce the incoming elements to the largest. This is a terminal algorithm.
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 max() -> detail::max_impl {
    return {};

@@ -81,6 +81,7 @@ struct take_impl : view_interface<take_impl> {
 
 // Access a fixed number of elements from the input. This is a terminal
 // algorithm.
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 take(idx count) -> detail::take_impl {
    return detail::take_impl{{}, count};

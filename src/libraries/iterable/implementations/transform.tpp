@@ -99,6 +99,7 @@ struct transform_impl : view_interface<transform_impl<Callback>> {
 
 // Lazy element-wise transform.
 template <typename Callback>
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 transform(Callback callback) -> detail::transform_impl<Callback> {
    return detail::transform_impl<Callback>{{}, move(callback)};

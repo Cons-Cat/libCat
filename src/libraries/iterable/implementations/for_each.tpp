@@ -28,6 +28,7 @@ struct for_each_impl {
 // Invoke a perfect-forwarded callback on every element. This is a terminal
 // algorithm.
 template <typename Callback>
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 for_each(Callback&& callback) -> detail::for_each_impl<Callback> {
    return detail::for_each_impl<Callback>{$fwd(callback)};

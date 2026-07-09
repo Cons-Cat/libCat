@@ -39,6 +39,7 @@ struct dot_impl {
 // Reduce the lockstep elementwise product of two iterables with +. Stops when
 // either input is exhausted. This is a terminal algorithm.
 template <typename Other>
+[[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 dot(Other&& other) -> detail::dot_impl<remove_cvref<Other>> {
    return detail::dot_impl<remove_cvref<Other>>{$fwd(other)};
