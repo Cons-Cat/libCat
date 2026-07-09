@@ -219,4 +219,24 @@ allocator_interface<Derived>::cfree(span<T> handle) {
    this->cfree_multi(handle);
 }
 
+// Convenience wrappers for string allocations.
+
+template <typename Derived>
+template <typename CharT, bool is_null_terminated>
+constexpr void
+allocator_interface<Derived>::free(
+   basic_str_span<CharT, is_null_terminated> handle
+) {
+   this->free_multi(span<CharT>{handle.data(), handle.size()});
+}
+
+template <typename Derived>
+template <typename CharT, bool is_null_terminated>
+constexpr void
+allocator_interface<Derived>::cfree(
+   basic_str_span<CharT, is_null_terminated> handle
+) {
+   this->cfree_multi(span<CharT>{handle.data(), handle.size()});
+}
+
 }  // namespace cat

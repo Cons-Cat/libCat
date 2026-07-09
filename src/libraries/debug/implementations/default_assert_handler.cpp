@@ -7,13 +7,9 @@ void
 cat::detail::print_assert_location(source_location const& callsite) {
    page_allocator allocator;
    // TODO: This will leak. An `inline_allocator` should be used.
-   auto _ = eprint(
-      // This `idx` cast is very unlikely to overflow, so it's unchecked.
-      fmt(
-         allocator, "assert failed on line {}, in:\n    ",
-         cat::idx(static_cast<cat::idx::raw_type>(callsite.line()))
-      )
-         .or_exit()
+   auto _ = eprint_fmt(
+      allocator, "assert failed on line {}, in:\n    ",
+      cat::idx(static_cast<cat::idx::raw_type>(callsite.line()))
    );
    // TODO: Truncate to only the last one or two directories.
    auto _ = eprint(callsite.file_name());
