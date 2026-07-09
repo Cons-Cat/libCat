@@ -305,7 +305,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           ctest --test-dir build-debug -R '^UnitTests$' --verbose --output-on-failure \
-            --repeat until-pass:2 --timeout 120
+            --timeout 150
 
       - name: Run example binaries (Debug, sanitizers=ON)
         if: ${{ !cancelled() }}
@@ -348,7 +348,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           ctest --test-dir build-debug-nosan -R '^UnitTests$' --verbose --output-on-failure \
-            --repeat until-pass:2 --timeout 120
+            --timeout 150
 
       - name: Run example binaries (Debug, sanitizers=OFF)
         if: ${{ !cancelled() }}
@@ -412,7 +412,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           ctest --test-dir build-release -R '^UnitTests$' --verbose --output-on-failure \
-            --repeat until-pass:2 --timeout 120
+            --timeout 150
 
       - name: Run example binaries (Release)
         if: ${{ !cancelled() }}
@@ -520,7 +520,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           ctest --test-dir build-release-asan -R '^UnitTests$' --verbose --output-on-failure \
-            --repeat until-pass:2 --timeout 120
+            --timeout 150
 
       - name: Run example binaries (Release, sanitizers=ON)
         if: ${{ !cancelled() }}
@@ -642,7 +642,7 @@ jobs:
         run: |
           set -eu
           ctest --test-dir build-shared -R '^UnitTests$' --verbose --output-on-failure \
-            --repeat until-pass:2 --timeout 120
+            --timeout 150
 
       - name: Run example binaries (CAT_USE_SHARED=ON, Debug)
         if: ${{ !cancelled() }}
