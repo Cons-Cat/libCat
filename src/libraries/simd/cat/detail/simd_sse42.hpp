@@ -73,7 +73,9 @@ inline constexpr bool is_sse_abi_impl<sse_unaligned_abi<T>, T> = true;
 template <typename Abi, typename T>
 concept is_sse_abi = detail::is_sse_abi_impl<Abi, T>;
 
-enum class string_control : unsigned char {
+enum class [[clang::enum_extensibility(
+   closed
+)]] string_control : unsigned char {
    unsigned_byte = 0x00,
    unsigned_word = 0x01,
    signed_byte = 0x02,

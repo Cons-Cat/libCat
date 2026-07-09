@@ -166,13 +166,13 @@ to_string_at(
 }
 
 // Formatting.
-enum class format_errors : unsigned char {
+enum class [[clang::enum_extensibility(closed)]] format_errors : unsigned char {
    out_of_memory,
    cannot_format_argument,
    argument_type_mismatch,
    inconsistent_argument_indexing,
    unknown_format_specifier,
-   unmatched_open_brace
+   unmatched_open_brace,
    // TODO: This list is incomplete.
 };
 
@@ -183,27 +183,29 @@ using scaredy_format = scaredy<T, format_errors>;
 namespace detail {
 // This represents precisely 16 alternatives to fill 4 bits in
 // `format_argument_compact_index`.
-enum class format_discriminant : unsigned char {
-   automatic_type,  // This type is deduced from a variadic argument.
+enum class [[clang::enum_extensibility(
+   closed
+)]] format_discriminant : unsigned char {
+   automatic_type = 0,  // This type is deduced from a variadic argument.
    // These types are sorted for fast alternative checking.
-   int1_type,
-   uint1_type,
-   int2_type,
-   uint2_type,
-   int4_type,
-   uint4_type,
-   int8_type,
-   uint8_type,
+   int1_type = 1,
+   uint1_type = 2,
+   int2_type = 3,
+   uint2_type = 4,
+   int4_type = 5,
+   uint4_type = 6,
+   int8_type = 7,
+   uint8_type = 8,
    idx_type = uint8_type,
-   bool_type,
+   bool_type = 9,
    integer_sentinel = bool_type,  // types less than this are integers.
-   float_type,
-   double_type,
+   float_type = 10,
+   double_type = 11,
    float_sentinel = double_type,  // types less than this are floats.
-   raw_string_type,
-   cat_string_type,
-   pointer_type,
-   other_type,
+   raw_string_type = 12,
+   cat_string_type = 13,
+   pointer_type = 14,
+   other_type = 15,
 };
 
 // Specializations of `format_type_constant` map a type to a

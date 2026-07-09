@@ -10,7 +10,9 @@
 
 namespace nix {
 
-enum class memory_protection_flags : unsigned char {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] memory_protection_flags : unsigned char {
    none = 0b000,        // Data cannot be accessed at all.
    read = 0b001,        // Data is readable.
    write = 0b010,       // Data is writable.
@@ -18,7 +20,9 @@ enum class memory_protection_flags : unsigned char {
    execute = 0b100,     // Data can be executed.
 };
 
-enum class memory_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] memory_flags : unsigned int {
    shared = 0b1,           // Writes change the underlying object.
    privately = 0b10,       // Writes only change the calling process.
    fixed = 0b1'0000,       // Map to precisely this address, rather than virtual
@@ -39,21 +43,25 @@ enum class memory_flags : unsigned int {
                                 // underlying mapping.
 };
 
-enum class mremap_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] mremap_flags : unsigned int {
    none = 0,            // Resize in place only. Fail if it cannot.
    may_move = 0b1,      // Allow relocating the mapping to a new address.
    fixed = 0b10,        // Relocate to a fixed address (requires `may_move`).
    dont_unmap = 0b100,  // Keep the old mapping mapped (Linux 5.7+).
 };
 
-enum class wait_id : unsigned char {
+enum class [[clang::enum_extensibility(open)]] wait_id : unsigned char {
    all = 0,
    process_id = 1,
    process_group = 2,
    file_descriptor = 3,
 };
 
-enum class wait_options_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] wait_options_flags : unsigned int {
    no_hang = 1,
    untraced = 2,
    stopped = 2,
@@ -66,7 +74,7 @@ enum class wait_options_flags : unsigned int {
 };
 
 // Futex command in the low bits of a futex `op` argument.
-enum class futex_command : unsigned char {
+enum class [[clang::enum_extensibility(open)]] futex_command : unsigned char {
    wait = 0,
    wake = 1,
    fd = 2,
@@ -84,7 +92,9 @@ enum class futex_command : unsigned char {
 };
 
 // Bit-or this with `futex_command` to build the `op` argument to `sys_futex()`.
-enum class futex_options : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] futex_options : unsigned int {
    none = 0,
    private_process = 128,
    clock_realtime = 256,
@@ -94,7 +104,9 @@ enum class futex_options : unsigned int {
 // futex2). Underlying type is `unsigned int` so values like `clock_realtime`
 // (256) fit and `struct futex_waitv` exposes a full `__u32`-sized flags word to
 // the kernel.
-enum class futex_wait_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] futex_wait_flags : unsigned int {
    word_32 = 2,
    word_64 = 3,
    private_process = 128,
@@ -103,7 +115,9 @@ enum class futex_wait_flags : unsigned int {
 
 // `flags` argument to `sys_futex_waitv()` (syscall `futex_waitv`,
 // `man 2 futex_waitv`).
-enum class futex_waitv_call_flags : unsigned char {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] futex_waitv_call_flags : unsigned char {
    none = 0,
 };
 
@@ -214,7 +228,7 @@ static_assert(sizeof(robust_futex) == sizeof(cat::uint4));
 
 // Whence argument to `sys_lseek()`. The `data` and `hole` values are Linux
 // extensions for sparse-file traversal.
-enum class seek_whence : unsigned char {
+enum class [[clang::enum_extensibility(open)]] seek_whence : unsigned char {
    beginning = 0,
    current = 1,
    end = 2,
@@ -223,14 +237,18 @@ enum class seek_whence : unsigned char {
 };
 
 // Flags argument to `sys_dup3()`. Mirrors `open_flags::close_exec`.
-enum class dup3_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] dup3_flags : unsigned int {
    none = 0,
    close_exec = 02000000,
 };
 
 // Flags argument to `sys_pipe2()`. Same encoding as the matching
 // `open_flags` bits.
-enum class pipe2_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] pipe2_flags : unsigned int {
    none = 0,
    nonblocking = 04000,
    close_exec = 02000000,
@@ -239,7 +257,9 @@ enum class pipe2_flags : unsigned int {
 };
 
 // Flags argument to `sys_getrandom()`.
-enum class getrandom_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] getrandom_flags : unsigned int {
    none = 0,
    nonblocking = 0x0001,
    random = 0x0002,
@@ -248,7 +268,9 @@ enum class getrandom_flags : unsigned int {
 
 // `mode` argument to `sys_access()`. `exists` (zero) tests for presence.
 // The `readable`/`writable`/`executable` bits may be combined.
-enum class access_mode : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] access_mode : unsigned int {
    exists = 0,
    executable = 1,
    writable = 2,
@@ -257,7 +279,9 @@ enum class access_mode : unsigned int {
 
 // `sa_flags` argument to `sys_rt_sigaction()`. The kernel ABI names
 // `unsigned long`, so this enum's underlying type is 8 bytes on x86_64.
-enum class signal_action_flags : unsigned long {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] signal_action_flags : unsigned long {
    none = 0,
    no_child_stop = 0x00000001,  // SA_NOCLDSTOP
    no_child_wait = 0x00000002,  // SA_NOCLDWAIT
@@ -273,7 +297,9 @@ enum class signal_action_flags : unsigned long {
 
 // `ss_flags` field of `signal_stack` and the corresponding sigaltstack
 // argument bits.
-enum class signal_stack_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] signal_stack_flags : unsigned int {
    none = 0,
    on_stack = 1,            // SS_ONSTACK
    disable = 2,             // SS_DISABLE
@@ -282,14 +308,16 @@ enum class signal_stack_flags : unsigned int {
 
 // `how` argument to `sys_shutdown()`. Selects which half of a connected
 // socket to tear down.
-enum class shutdown_how : unsigned int {
+enum class [[clang::enum_extensibility(open)]] shutdown_how : unsigned int {
    read = 0,        // SHUT_RD
    write = 1,       // SHUT_WR
    read_write = 2,  // SHUT_RDWR
 };
 
 // `flags` argument to `sys_sendto()`, `sys_sendmsg()`, and `sys_recvmsg()`.
-enum class message_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] message_flags : unsigned int {
    none = 0,
    out_of_band = 1,         // MSG_OOB
    peek = 2,                // MSG_PEEK
@@ -314,14 +342,18 @@ enum class message_flags : unsigned int {
 
 // `flags` argument to `sys_accept4()`. Same encoding as the matching
 // `open_flags` and `pipe2_flags` bits.
-enum class accept4_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] accept4_flags : unsigned int {
    none = 0,
    nonblocking = 04000,
    close_exec = 02000000,
 };
 
 // File-mode permission bits. Matches POSIX `mode_t` octal layout.
-enum class file_permissions : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] file_permissions : unsigned int {
    none = 0,
    other_execute = 01,
    other_write = 02,
@@ -339,7 +371,7 @@ enum class file_permissions : unsigned int {
 
 // `cmd` argument to `sys_fcntl()`. Only the most commonly used commands are
 // listed. The kernel ABI accepts arbitrary `int` values here.
-enum class fcntl_command : int {
+enum class [[clang::enum_extensibility(open)]] fcntl_command : int {
    duplicate_fd = 0,                 // F_DUPFD
    get_fd_flags = 1,                 // F_GETFD
    set_fd_flags = 2,                 // F_SETFD
@@ -358,7 +390,8 @@ enum class fcntl_command : int {
 };
 
 // `operation` argument to `sys_flock()`.
-enum class flock_op : int {
+enum class
+   [[clang::flag_enum, clang::enum_extensibility(open)]] flock_op : int {
    shared = 1,       // LOCK_SH
    exclusive = 2,    // LOCK_EX
    nonblocking = 4,  // LOCK_NB
@@ -368,7 +401,8 @@ enum class flock_op : int {
 // `flags` argument to `*at()`-family syscalls (`sys_openat`,
 // `sys_unlinkat`, `sys_fchmodat`, etc.). Not every flag is meaningful for
 // every syscall.
-enum class atfile_flags : int {
+enum class
+   [[clang::flag_enum, clang::enum_extensibility(open)]] atfile_flags : int {
    none = 0,
    no_follow = 0x100,          // AT_SYMLINK_NOFOLLOW
    remove_directory = 0x200,   // AT_REMOVEDIR
@@ -385,7 +419,8 @@ enum class atfile_flags : int {
 inline constexpr file_descriptor at_fdcwd = {-100};
 
 // `mode` argument to `sys_fallocate()`.
-enum class fallocate_flags : int {
+enum class
+   [[clang::flag_enum, clang::enum_extensibility(open)]] fallocate_flags : int {
    none = 0,
    keep_size = 0x01,       // FALLOC_FL_KEEP_SIZE
    punch_hole = 0x02,      // FALLOC_FL_PUNCH_HOLE
@@ -397,7 +432,9 @@ enum class fallocate_flags : int {
 };
 
 // `flags` argument to `sys_renameat2()`.
-enum class renameat2_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] renameat2_flags : unsigned int {
    none = 0,
    no_replace = 1,  // RENAME_NOREPLACE
    exchange = 2,    // RENAME_EXCHANGE
@@ -407,7 +444,9 @@ enum class renameat2_flags : unsigned int {
 // `flags` argument to `sys_mlockall()`. At least one of `current` or
 // `future` must be set. `on_fault` is a Linux 4.4+ extension that defers
 // locking until the page is first faulted in.
-enum class mlockall_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] mlockall_flags : unsigned int {
    none = 0,
    current = 1,   // MCL_CURRENT
    future = 2,    // MCL_FUTURE
@@ -415,14 +454,18 @@ enum class mlockall_flags : unsigned int {
 };
 
 // `flags` argument to `sys_mlock2()`.
-enum class mlock2_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] mlock2_flags : unsigned int {
    none = 0,
    on_fault = 1,  // MLOCK_ONFAULT
 };
 
 // `flags` field of `io_uring_params` (the third argument to
 // `sys_io_uring_setup()`). Mirrors the kernel's `IORING_SETUP_*` constants.
-enum class io_uring_setup_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] io_uring_setup_flags : unsigned int {
    none = 0,
    io_poll = 1u << 0,              // IORING_SETUP_IOPOLL
    sq_poll = 1u << 1,              // IORING_SETUP_SQPOLL
@@ -445,7 +488,9 @@ enum class io_uring_setup_flags : unsigned int {
 
 // `flags` argument to `sys_io_uring_enter()`. Mirrors the kernel's
 // `IORING_ENTER_*` constants.
-enum class io_uring_enter_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] io_uring_enter_flags : unsigned int {
    none = 0,
    get_events = 1u << 0,       // IORING_ENTER_GETEVENTS
    sq_wakeup = 1u << 1,        // IORING_ENTER_SQ_WAKEUP
@@ -456,7 +501,9 @@ enum class io_uring_enter_flags : unsigned int {
 
 // `op` argument to `sys_io_uring_register()`. Mirrors `IORING_REGISTER_*` /
 // `IORING_UNREGISTER_*`. Newer codes can be passed via `cat::uint4` cast.
-enum class io_uring_register_op : unsigned int {
+enum class [[clang::enum_extensibility(
+   open
+)]] io_uring_register_op : unsigned int {
    register_buffers = 0,            // IORING_REGISTER_BUFFERS
    unregister_buffers = 1,          // IORING_UNREGISTER_BUFFERS
    register_files = 2,              // IORING_REGISTER_FILES
@@ -492,7 +539,9 @@ enum class io_uring_register_op : unsigned int {
 
 // `mask` bits for `sys_statx()` selecting which fields the kernel must fill
 // in the output `statx_data`.
-enum class statx_mask : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] statx_mask : unsigned int {
    type = 0x0001,
    mode = 0x0002,
    nlink = 0x0004,
@@ -608,7 +657,7 @@ static_assert(sizeof(statfs_data) == 120);
 // `linux_dirent64` matches the kernel ABI for `sys_getdents64()` (the
 // preferred form on 64-bit). Records are variable-length, advance by
 // `record_length` to reach the next entry.
-enum class file_type : unsigned char {
+enum class [[clang::enum_extensibility(open)]] file_type : unsigned char {
    unknown = 0,
    fifo = 1,
    character_device = 2,
@@ -714,14 +763,16 @@ struct utsname {
 static_assert(sizeof(utsname) == 6u * 65u);
 static_assert(alignof(utsname) == 1u);
 
-enum class open_mode : unsigned char {
+enum class [[clang::enum_extensibility(open)]] open_mode : unsigned char {
    read_only = 00,
    write_only = 01,
    // This flag cannot be use on a FIFO.
    read_write = 02,
 };
 
-enum class open_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] open_flags : unsigned int {
    // This will create a new file. If that file already exists, it is no-op
    // unless combined with `open_flags::exclusive`.
    create = 0100,
@@ -755,7 +806,9 @@ enum class open_flags : unsigned int {
 };
 
 // TODO: Comment wtf these mean.
-enum class io_requests : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] io_requests : unsigned int {
    none = 0,
    write = 1,
    read = 2,
@@ -901,7 +954,9 @@ io_request_readwrite(io_requests a, io_requests b, io_requests c)
 
 // TODO: Comment wtf these mean.
 // NOLINTNEXTLINE The ABI requires this by 4 bytes.
-enum class tty_configuration_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] tty_configuration_flags : unsigned int {
    vintr = 0,
    vquit = 1,
    verase = 2,
@@ -1838,7 +1893,7 @@ auto
 sys_umask(file_permissions mask) -> scaredy_nix<file_permissions>;
 
 // Syscall 97.
-enum class rlimit_resource : unsigned int {
+enum class [[clang::enum_extensibility(open)]] rlimit_resource : unsigned int {
    // CPU time in seconds.
    cpu_time_seconds = 0,
    // Maximum file size.
@@ -2664,7 +2719,7 @@ auto
 tty_get_attributes(file_descriptor tty)
    -> cat::scaredy<tty_io_serial, linux_error>;
 
-enum class tty_set_mode : unsigned short {
+enum class [[clang::enum_extensibility(open)]] tty_set_mode : unsigned short {
    // Update the tty immediately.
    now = 0x5402,
    // Update the tty once all currently written data has been transmitted.
@@ -2851,7 +2906,7 @@ raise_here(signal signal) -> scaredy_nix<void>;
 // main-thread TLS block can be installed by copying the executable TLS image
 // with `detail::install_executable_tls_image_at_thread_pointer` then calling
 // `sys_arch_prctl(arch_prctl_request::set_fs_base, thread_pointer.get())`.
-enum class arch_prctl_request : int {
+enum class [[clang::enum_extensibility(open)]] arch_prctl_request : int {
    set_fs_base = 0x1002,
    get_fs_base = 0x1003,
 };

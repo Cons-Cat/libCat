@@ -16,7 +16,7 @@ namespace x11 {
 // TODO: Handle `$DISPLAY`.
 constexpr auto socket_path = cat::make_str_inplace<108>("/tmp/.X11-unix/X0");
 
-enum class operation_code : unsigned char {
+enum class [[clang::enum_extensibility(open)]] operation_code : unsigned char {
    error = 0,
    create_window = 1,
    change_window_attributes = 2,
@@ -137,10 +137,10 @@ enum class operation_code : unsigned char {
    get_pointer_mapping = 117,
    set_modifier_mapping = 118,
    get_modifier_mapping = 119,
-   no_operation = 120
+   no_operation = 120,
 };
 
-enum class event_code : unsigned char {
+enum class [[clang::enum_extensibility(open)]] event_code : unsigned char {
    key_press = 2,
    key_release = 3,
    button_press = 4,
@@ -176,7 +176,7 @@ enum class event_code : unsigned char {
    mapping_notify = 34,
 };
 
-enum class key_code : unsigned char {
+enum class [[clang::enum_extensibility(open)]] key_code : unsigned char {
 };
 
 struct [[gnu::packed]] event_mask {
@@ -286,9 +286,11 @@ struct client_request_header {
 
 // Every X server reply begins with an `x11::server_reply_header`.
 struct server_reply_header {
-   enum class success_code_type : unsigned char {
+   enum class [[clang::enum_extensibility(
+      open
+   )]] success_code_type : unsigned char {
       failure = 0,
-      success = 1
+      success = 1,
    } success_code;
 
  private:
@@ -532,10 +534,12 @@ struct create_window_request_info {
    cat::int2 x, y;
    cat::uint2 width, height, border_thickness;
 
-   enum class window_class_type : unsigned char {
+   enum class [[clang::enum_extensibility(
+      open
+   )]] window_class_type : unsigned char {
       input_output = 0,
       input_only = 1,
-      copy_from_parent = 2
+      copy_from_parent = 2,
    } window_class;
 
    cat::uint4 visual_resource_id;

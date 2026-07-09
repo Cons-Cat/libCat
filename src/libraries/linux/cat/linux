@@ -27,7 +27,7 @@ struct signals_mask_set;
 namespace nix {
 // TODO: Consider using the names from `std::errc`.
 // NOLINTNEXTLINE
-enum class linux_error : long long {
+enum class [[clang::enum_extensibility(open)]] linux_error : long long {
    // Operation is not permitted.
    perm = -1,
    // No such file or directory.
@@ -349,7 +349,7 @@ struct group_id {
    cat::int4 value;
 };
 
-enum class signal : unsigned char {
+enum class [[clang::enum_extensibility(open)]] signal : unsigned char {
    hang_up = 1,                    // sighng
    interrupt = 2,                  // sigint
    sigint = interrupt,             // sigquit
@@ -384,10 +384,10 @@ enum class signal : unsigned char {
    pollable_event = io,            // sigpoll
    power_failure = 30,             // sigpwr
    bad_syscall = 31,               // sigsys
-   unused = bad_syscall
+   unused = bad_syscall,
 };
 
-enum class signal_action : unsigned char {
+enum class [[clang::enum_extensibility(open)]] signal_action : unsigned char {
    // The set of blocked signals is the union of the `p_other_set` and
    // `p_current_set`.
    block = 0,
@@ -395,14 +395,16 @@ enum class signal_action : unsigned char {
    // `p_other_set` which are not in `p_current_set` are silently ignored.
    unblock = 1,
    // `p_current_set` is set to `p_other_set`.
-   set_mask = 2
+   set_mask = 2,
 };
 
 // `clone_flags` is widely referenced by the process and thread APIs, so it
 // lives alongside the other foundational types.
 // TODO: Write comments for these, and simplifiy names.
 // https://linux.die.net/man/2/clone
-enum class clone_flags : unsigned int {
+enum class
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] clone_flags : unsigned int {
    csignal = 0x000000ff,
    newtime = 0x00000080,
    virtual_memory = 0x00000100,

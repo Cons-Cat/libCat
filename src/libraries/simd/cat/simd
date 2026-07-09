@@ -2821,7 +2821,7 @@ inline constexpr bool is_simd_array_like =
 // underlying type so values match that interface without a narrower promotion
 // story.
 // NOLINTNEXTLINE(performance-enum-size)
-enum class prefetch_hint : int {
+enum class [[clang::enum_extensibility(open)]] prefetch_hint : int {
    // Prefetch data into non-temporal cache structure and into a location close
    // to the processor, minimizing cache pollution.
    non_temporal = 0,

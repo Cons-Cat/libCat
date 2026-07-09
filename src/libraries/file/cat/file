@@ -8,13 +8,17 @@
 
 namespace cat {
 
-enum class file_open_mode : unsigned char {
+enum class [[clang::enum_extensibility(
+   closed
+)]] file_open_mode : unsigned char {
    read,
    write,
    append,
 };
 
-enum class file_seek_mode : unsigned char {
+enum class [[clang::enum_extensibility(
+   closed
+)]] file_seek_mode : unsigned char {
    set,
    current,
    end,

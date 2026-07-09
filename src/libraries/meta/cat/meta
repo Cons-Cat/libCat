@@ -11,8 +11,12 @@ namespace cat {
 struct stepanov_iterator_interface_base {};
 
 // Forward declare arithmetic wrappers. These are implemented in `<arithmetic>`.
-enum class overflow_policies : unsigned char;
-enum class precision_policies : unsigned char;
+enum class [[clang::enum_extensibility(
+   closed
+)]] overflow_policies : unsigned char;
+enum class [[clang::enum_extensibility(
+   closed
+)]] precision_policies : unsigned char;
 
 template <typename T, overflow_policies>
 class basic_int;

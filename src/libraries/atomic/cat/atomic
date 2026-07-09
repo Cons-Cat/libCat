@@ -35,7 +35,7 @@
 namespace cat {
 
 // NOLINTNEXTLINE
-enum memory_order : int {
+enum [[clang::enum_extensibility(open)]] memory_order : int {
    relaxed = 0,
    // We don't use `consume`.
    // https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3475r2.pdf
@@ -52,7 +52,9 @@ inline constexpr memory_order memory_order_acq_rel = memory_order::acq_rel;
 inline constexpr memory_order memory_order_seq_cst = memory_order::seq_cst;
 
 namespace detail {
-enum memory_order_modifier : unsigned int {
+enum
+   [[clang::flag_enum,
+     clang::enum_extensibility(open)]] memory_order_modifier : unsigned int {
    mask = 0x0ffff,
    modifier_mask = 0xffff0000,
    hle_acquire = 0x10000,

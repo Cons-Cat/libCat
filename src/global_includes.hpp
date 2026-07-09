@@ -243,7 +243,7 @@ template <__SIZE_TYPE__ index, typename T>
 using tuple_element_t = tuple_element<index, T>::type;
 
 // TODO: Does this actually have to be in `std::`?
-enum class align_val_t : __SIZE_TYPE__ {
+enum class [[clang::enum_extensibility(open)]] align_val_t : __SIZE_TYPE__ {
 };
 }  // namespace std
 

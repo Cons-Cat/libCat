@@ -72,14 +72,18 @@
 namespace cat {
 
 // These policies control the overflow semantics of integer wrappers.
-enum class overflow_policies : unsigned char {
+enum class [[clang::enum_extensibility(
+   closed
+)]] overflow_policies : unsigned char {
    undefined,
    wrap,
    saturate,
    // trap,
 };
 
-enum class precision_policies : unsigned char {
+enum class [[clang::enum_extensibility(
+   closed
+)]] precision_policies : unsigned char {
    precise,
    fast,
 };

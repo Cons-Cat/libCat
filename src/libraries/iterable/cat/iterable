@@ -72,7 +72,7 @@
 namespace cat {
 
 // A `run_while` loop returns `iteration_result` to signal its status.
-enum class iteration_result : bool {
+enum class [[clang::enum_extensibility(closed)]] iteration_result : bool {
    incomplete = false,  // The loop was suspened.
    complete = true,     // The loop completed.
 };

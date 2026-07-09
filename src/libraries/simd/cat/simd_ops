@@ -44,7 +44,9 @@ concept vec_floating_point =
 template <typename Simd, typename T>
 concept is_simd_of = is_simd<Simd> && is_same<typename Simd::scalar_type, T>;
 
-enum class simd_memory_flag : unsigned char {
+enum class [[clang::enum_extensibility(
+   closed
+)]] simd_memory_flag : unsigned char {
    default_,   // Default-align a SIMD load by ABI.
    aligned,    // Over-align a SIMD load. This results in `maybe` loads.
    unaligned,  // Unalign a SIMD load. This maps to unaligned instructions.

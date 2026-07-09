@@ -17,13 +17,13 @@ struct Socket {
    char data[14];
 };
 
-enum class socket_type : unsigned char {
+enum class [[clang::enum_extensibility(closed)]] socket_type : unsigned char {
    stream = 1,
    data_gram = 2,
    raw = 3,
    reliable_data_gram = 4,
    sequenced_packet = 5,
-   datagram_congestion_control = 6
+   datagram_congestion_control = 6,
 };
 
 template <int2 in_family, socket_type in_type, int4 in_protocol>

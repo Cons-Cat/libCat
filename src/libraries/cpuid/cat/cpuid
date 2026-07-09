@@ -22,7 +22,7 @@ cpuid(cat::uint4 leaf, cat::uint4 subleaf = 0u) -> cat::array<cat::uint4, 4> {
 namespace detail {
 
 // NOLINTNEXTLINE The ABI requires this be 4 bytes.
-enum class cpu_type : unsigned int {
+enum class [[clang::enum_extensibility(open)]] cpu_type : unsigned int {
    intel_bonnell = 1,
    intel_core2,
    intel_corei7,
@@ -48,7 +48,7 @@ enum class cpu_type : unsigned int {
 };
 
 // NOLINTNEXTLINE The ABI requires this be 4 bytes.
-enum class cpu_subtype : unsigned char {
+enum class [[clang::enum_extensibility(open)]] cpu_subtype : unsigned char {
    intel_corei7_nehalem = 1,
    intel_corei7_westmere,
    intel_corei7_sandybridge,
@@ -93,7 +93,9 @@ enum class cpu_subtype : unsigned char {
    hygonfam18_h_c86_4g_m8,
 };
 
-enum class processor_features : unsigned char {
+enum class [[clang::enum_extensibility(
+   open
+)]] processor_features : unsigned char {
    cmov = 0,
    mmx = 1,
    popcnt = 2,

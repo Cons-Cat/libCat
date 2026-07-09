@@ -608,15 +608,15 @@ static_assert(
 );
 
 // Compute floor(e * c - s).
-enum class multiply : uint4::raw_type {
+enum class [[clang::enum_extensibility(closed)]] multiply : uint4::raw_type {
 };
-enum class subtract : uint4::raw_type {
+enum class [[clang::enum_extensibility(closed)]] subtract : uint4::raw_type {
 };
-enum class shift : uword::raw_type {
+enum class [[clang::enum_extensibility(closed)]] shift : uword::raw_type {
 };
-enum class min_exponent : int4::raw_type {
+enum class [[clang::enum_extensibility(closed)]] min_exponent : int4::raw_type {
 };
-enum class max_exponent : int4::raw_type {
+enum class [[clang::enum_extensibility(closed)]] max_exponent : int4::raw_type {
 };
 
 template <
@@ -1644,10 +1644,10 @@ struct report : base {
 namespace decimal_to_binary_rounding {
 struct base {};
 
-enum class tag_t {
+enum class [[clang::enum_extensibility(closed)]] tag_t {
    to_nearest,
    left_closed_directed,
-   right_closed_directed
+   right_closed_directed,
 };
 
 namespace interval_type {
@@ -2047,12 +2047,12 @@ struct away_from_zero : base {
 namespace binary_to_decimal_rounding {
 struct base {};
 
-enum class tag_t {
+enum class [[clang::enum_extensibility(closed)]] tag_t {
    do_not_care,
    to_even,
    to_odd,
    away_from_zero,
-   toward_zero
+   toward_zero,
 };
 
 struct do_not_care : base {
@@ -2956,10 +2956,10 @@ namespace policy_impl {
 
 // For a given kind, find a policy belonging to that kind. Check if there are
 // more than one such policies.
-enum class policy_found_info {
+enum class [[clang::enum_extensibility(closed)]] policy_found_info {
    not_found,
    unique,
-   repeated
+   repeated,
 };
 
 template <class Policy, policy_found_info info>

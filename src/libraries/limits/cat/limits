@@ -10,8 +10,12 @@ namespace cat {
 // TODO: Implement support for complex floats.
 
 // Forward declare types. These are implemented in `<numeral>`.
-enum class overflow_policies : unsigned char;
-enum class precision_policies : unsigned char;
+enum class [[clang::enum_extensibility(
+   closed
+)]] overflow_policies : unsigned char;
+enum class [[clang::enum_extensibility(
+   closed
+)]] precision_policies : unsigned char;
 
 template <typename T, overflow_policies>
 class basic_int;
@@ -19,8 +23,8 @@ class basic_int;
 template <typename T, precision_policies>
 class basic_float;
 
-template <typename T, typename storage_type, overflow_policies overflow_policy>
-   requires(sizeof(storage_type) == sizeof(void*))
+template <typename T, typename Storage, overflow_policies overflow_policy>
+   requires(sizeof(Storage) == sizeof(void*))
 class basic_intptr;
 
 template <typename>
@@ -361,18 +365,18 @@ struct limits<basic_idx<policy>> {
    static constexpr bool is_iec559 = false;
 };
 
-enum class float_denorm : signed char {
+enum class [[clang::enum_extensibility(closed)]] float_denorm : signed char {
    indeterminate = -1,
    absent = 0,
-   present = 1
+   present = 1,
 };
 
-enum class float_round : signed char {
+enum class [[clang::enum_extensibility(closed)]] float_round : signed char {
    indeterminate = -1,
    toward_zero = 0,
    to_nearest = 1,
    toward_infinity = 2,
-   toward_neg_infinity = 3
+   toward_neg_infinity = 3,
 };
 
 template <>
