@@ -488,13 +488,13 @@ $test(simd_uintptr_intptr) {
 
    upv const uramp = cat::iota<upv>(u_ptr{});
    for (idx i = 0u; i < ulanes; ++i) {
-      cat::verify(uramp[i].raw == i.raw);
+      cat::verify(uramp[i] == i);
    }
 
    upv const usplat = cat::make_simd_filled<upv>(42_uz);
    cat::verify(usplat == u_ptr(42_uz));
    for (idx i = 0u; i < ulanes; ++i) {
-      cat::verify((uramp + usplat)[i].raw == i.raw + 42_uz);
+      cat::verify((uramp + usplat)[i] == i + 42_uz);
    }
 
    cat::verify(uramp.equal_lanes(uramp).all_of());
@@ -507,15 +507,13 @@ $test(simd_uintptr_intptr) {
 
    ipv const iramp = cat::iota<ipv>(i_ptr{});
    for (idx i = 0u; i < ilanes; ++i) {
-      cat::verify(iramp[i].raw == static_cast<i_ptr::raw_type>(i.raw));
+      cat::verify(iramp[i] == i);
    }
 
    ipv const isplat = cat::make_simd_filled<ipv>(11);
    cat::verify(isplat == i_ptr(11));
    if (ilanes > 1u) {
-      cat::verify(
-         (iramp + isplat)[1u].raw == static_cast<i_ptr::raw_type>(1 + 11)
-      );
+      cat::verify((iramp + isplat)[1u] == 12);
    }
 }
 
@@ -551,8 +549,8 @@ $test(simd_resize_insert_extract) {
    cat::verify(grow[1] == 11);
    cat::verify(grow[2] == 12);
    cat::verify(grow[3] == 13);
-   cat::verify(grow[4].raw == 0);
-   cat::verify(grow[5].raw == 0);
+   cat::verify(grow[4] == 0);
+   cat::verify(grow[5] == 0);
 
    auto const slice = cat::simd_extract<1u, 3u>(v);
    static_assert(decltype(slice)::abi_type::lanes == 2);
@@ -684,8 +682,7 @@ $test(simd_sqrt_all_lanes_non_negative) {
 
 $test(simd_rsqrt_rcbrt_rnroot) {
    auto near_one = [](float4 value) {
-      float const diff = value.raw > 1.0f ? value.raw - 1.0f : 1.0f - value.raw;
-      return diff < 0.001f;
+      return cat::abs(value - 1_f4) < 0.001_f4;
    };
 
    float4x4 v = {1_f4, 4_f4, 9_f4, 16_f4};
@@ -934,9 +931,9 @@ $test(simd_byte_lane_load_store_dispatch_misaligned) {
 
    cat::char1x16 loaded{};
    loaded.load(p_mis);
-   idx const last_idx = lanes.raw - 1u;
+   idx const last_idx = lanes - 1u;
    cat::verify(loaded[0u] == p_mis[0]);
-   cat::verify(loaded[last_idx] == p_mis[last_idx.raw]);
+   cat::verify(loaded[last_idx] == p_mis[last_idx]);
 
    cat::char1x16 const from_loaded =
       cat::make_simd_loaded<cat::char1x16>(p_mis);
@@ -945,7 +942,7 @@ $test(simd_byte_lane_load_store_dispatch_misaligned) {
    cat::native_unaligned_simd<char> loose{};
    loose.load(p_mis);
    cat::verify(loose[0u] == p_mis[0]);
-   cat::verify(loose[last_idx] == p_mis[last_idx.raw]);
+   cat::verify(loose[last_idx] == p_mis[last_idx]);
 
    alignas(128) char scratch[128]{};
    char* const p_mis_out = scratch + 11;
@@ -1315,9 +1312,9 @@ $test(simd_mask_broadcast_from_bool) {
    // match here because it requires `sizeof...(args) > 1`.
    using scalar_mask = cat::scalar_simd_mask<int4>;
    scalar_mask const scalar_true(true);
-   cat::verify(static_cast<bool>(scalar_true));
+   cat::verify(scalar_true);
    scalar_mask const scalar_false(false);
-   cat::verify(!static_cast<bool>(scalar_false));
+   cat::verify(!scalar_false);
 }
 
 // `.for_each` member iteration on `simd` and `simd_mask`. The implementation
@@ -1347,7 +1344,7 @@ $test(simd_for_each) {
    int4 expected[] = {1_i4, 2_i4, 3_i4, 4_i4};
    cat::idx pos = 0u;
    v.for_each([&](int4 lane) {
-      cat::verify(lane == expected[pos.raw]);
+      cat::verify(lane == expected[pos]);
       ++pos;
    });
    cat::verify(pos == int4x4::abi_type::lanes);
@@ -1381,7 +1378,7 @@ $test(simd_mask_for_each) {
    bool expected[] = {true, false, true, false};
    cat::idx pos = 0u;
    m.for_each([&](bool lane) {
-      cat::verify(lane == expected[pos.raw]);
+      cat::verify(lane == expected[pos]);
       ++pos;
    });
    cat::verify(pos == mask_int::abi_type::lanes);
@@ -2107,7 +2104,7 @@ $test(simd_bit_cast_as_unsigned) {
    int4x4 signed_source_lanes = {-1, 0, 1, -2};
    auto unsigned_reinterpret_lanes =
       cat::simd_bit_cast_as<uint_lane>(signed_source_lanes);
-   cat::verify(unsigned_reinterpret_lanes[0] == static_cast<uint_lane>(-1));
+   cat::verify(unsigned_reinterpret_lanes[0] == uint_lane(-1));
    cat::verify(unsigned_reinterpret_lanes[2] == 1u);
 
    float4x4 float_source_lanes = {-1.f, 0.f, 1.f, -2.f};
@@ -2610,15 +2607,15 @@ $test(simd_as_vectorized_random_access_and_mutation) {
    static constexpr idx k_extent = 128u;
    float_lane buf[128] = {};
    for (idx i = 0u; i < k_extent; ++i) {
-      buf[i.raw] = float_lane(static_cast<float>(k_extent.raw - i.raw));
+      buf[i] = float_lane(128.f - i);
    }
 
    auto b = cat::as_vectorized<float4, 4u>(buf);
-   auto e = cat::as_vectorized<float4, 4u>(buf + k_extent.raw);
+   auto e = cat::as_vectorized<float4, 4u>(buf + k_extent);
    auto const& bconst = b;
 
-   float4x4 const ref0 = float4x4(float_lane(static_cast<float>(k_extent.raw)))
-                         - cat::iota<float4x4>(0_f4);
+   float4x4 const ref0 =
+      float4x4(float_lane(128.f)) - cat::iota<float4x4>(0_f4);
    cat::verify(sum4(*b) == sum4(ref0));
    cat::verify(sum4(*bconst) == sum4(ref0));
 
@@ -2627,13 +2624,11 @@ $test(simd_as_vectorized_random_access_and_mutation) {
    cat::verify(sum4(*(e - 1)) == sum4(ref_last));
 
    float4x4 const ref_second_chunk =
-      float4x4(float_lane(static_cast<float>(k_extent.raw - 4u)))
-      - cat::iota<float4x4>(0_f4);
+      float4x4(float_lane(124.f)) - cat::iota<float4x4>(0_f4);
    cat::verify(sum4(*(b + 1)) == sum4(ref_second_chunk));
    cat::verify(sum4(*(b + 1)) == sum4(ref_second_chunk));
 
-   iword const chunk_count =
-      iword(static_cast<iword::raw_type>(k_extent.raw / 4uz));
+   iword const chunk_count = iword(k_extent / 4uz);
    cat::verify(e - b == chunk_count);
    cat::verify(b - e == -chunk_count);
 
@@ -2664,7 +2659,7 @@ $test(simd_as_vectorized_random_access_and_mutation) {
    cat::verify(next == b);
    cat::verify(sum4(*next) == sum4(*b));
 
-   float_lane ref_hi = float_lane(static_cast<float>(k_extent.raw));
+   float_lane ref_hi = float_lane(128.f);
    for (auto cur = b; cur != e; ++cur, ref_hi -= float_lane(4.f)) {
       float4x4 x = *cur;
       float4x4 const ref = float4x4(ref_hi) - cat::iota<float4x4>(0_f4);
@@ -2674,7 +2669,7 @@ $test(simd_as_vectorized_random_access_and_mutation) {
       cat::verify(sum4(*cur) == sum4(ref + 1_f4));
    }
 
-   ref_hi = float_lane(static_cast<float>(k_extent.raw)) + 1.f;
+   ref_hi = float_lane(128.f) + 1.f;
    for (auto cur = b; cur != e; ++cur, ref_hi -= float_lane(4.f)) {
       float4x4 x = *cur;
       float4x4 const ref = float4x4(ref_hi) - cat::iota<float4x4>(0_f4);
@@ -2683,9 +2678,9 @@ $test(simd_as_vectorized_random_access_and_mutation) {
    }
 
    float_lane const* p_cbuf = buf;
-   float_lane ref_c = float_lane(static_cast<float>(k_extent.raw)) + 1.f;
+   float_lane ref_c = float_lane(128.f) + 1.f;
    for (auto cit = cat::as_vectorized<float4, 4u>(p_cbuf),
-             cend = cat::as_vectorized<float4, 4u>(p_cbuf + k_extent.raw);
+             cend = cat::as_vectorized<float4, 4u>(p_cbuf + k_extent);
         cit != cend; ++cit, ref_c -= float_lane(4.f)) {
       float4x4 x = *cit;
       float4x4 const ref = float4x4(ref_c) - cat::iota<float4x4>(0_f4);
@@ -2772,21 +2767,17 @@ $test(simd_as_vectorized_over_vec_float_data) {
          .verify();
    storage.reserve(k_extent).or_exit();
    for (idx i = 0u; i < k_extent; ++i) {
-      storage.push_back(float_lane(static_cast<float>(k_extent.raw - i.raw)))
-         .or_exit();
+      storage.push_back(float_lane(128.f - i.raw)).or_exit();
    }
    cat::verify(storage.size() == k_extent);
 
    auto b = cat::as_vectorized<float4, 4u>(storage.data());
-   float4x4 const ref0 = float4x4(float_lane(static_cast<float>(k_extent.raw)))
-                         - cat::iota<float4x4>(0_f4);
+   float4x4 const ref0 =
+      float4x4(float_lane(128.f)) - cat::iota<float4x4>(0_f4);
    cat::verify(sum4(*b) == sum4(ref0));
    cat::verify(
       sum4(*(b + 1))
-      == sum4(
-         float4x4(float_lane(static_cast<float>(k_extent.raw - 4u)))
-         - cat::iota<float4x4>(0_f4)
-      )
+      == sum4(float4x4(float_lane(124.f)) - cat::iota<float4x4>(0_f4))
    );
 }
 

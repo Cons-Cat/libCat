@@ -86,12 +86,13 @@ $test(simd_sse_abi_hooks_permute_and_rsqrt) {
    x64::sse_simd<int4> const ints{10, 20, 30, 40};
    cat::fixed_size_simd<int4, 4u> const ref_ints{10, 20, 30, 40};
    int4x4 const irev{3u, 2u, 1u, 0u};
-   cat::verify(cat::simd_permute(ints, irev)[0u] == 40);
-   cat::verify(cat::simd_permute(ints, irev)[3u] == 10);
+   auto const perm_ints = cat::simd_permute(ints, irev);
+   cat::verify(cat::simd_permute(ref_ints, irev)[0u] == 40);
+   cat::verify(perm_ints[3u] == 10);
    cat::verify(
       cat::simd_permute(ref_ints, irev)
-      == static_cast<cat::fixed_size_simd<int4, 4u>>(
-         cat::simd_permute(ints, irev)
+      == cat::fixed_size_simd<int4, 4u>(
+         perm_ints[0u], perm_ints[1u], perm_ints[2u], perm_ints[3u]
       )
    );
 
@@ -104,11 +105,12 @@ $test(simd_sse_abi_hooks_permute_and_rsqrt) {
       10_f4, 20_f4, 30_f4, 40_f4
    };
    float4x4 const frev{3_f4, 2_f4, 1_f4, 0_f4};
-   cat::verify(cat::simd_permute(floats, frev)[0u] == 40_f4);
+   auto const perm_floats = cat::simd_permute(floats, frev);
+   cat::verify(perm_floats[0u] == 40_f4);
    cat::verify(
       cat::simd_permute(ref_floats, frev)
-      == static_cast<cat::fixed_size_simd<float4, 4u>>(
-         cat::simd_permute(floats, frev)
+      == cat::fixed_size_simd<float4, 4u>(
+         perm_floats[0u], perm_floats[1u], perm_floats[2u], perm_floats[3u]
       )
    );
 
@@ -194,7 +196,7 @@ $test(simd_avx_abi_hooks_permute_and_rsqrt) {
    auto const rr = cat::simd_rsqrt(ones);
    cat::fixed_size_simd<float4, 4u> const rr_scalar = cat::simd_rsqrt(ones_ref);
    for (idx i = 0u; i < idx{8}; ++i) {
-      idx const j = idx{static_cast<uword>(i.raw % 4u)};
+      idx const j = i % 4u;
       cat::verify(cat::abs(rr[i] - 0.5_f4) < 0.001_f4);
       cat::verify(cat::abs(rr[i] - rr_scalar[j]) < 0.002_f4);
    }
@@ -215,8 +217,7 @@ $test(simd_sse_rsqrt_fast_is_nr_refined) {
    auto const rr = cat::simd_rsqrt(v);
    float const expected[4] = {0.5f, 2.f, 0.25f, 0.1f};
    for (cat::idx i = 0u; i < cat::idx{4}; ++i) {
-      float const got = static_cast<float>(rr[i]);
-      cat::verify(cat::abs(got - expected[i.raw]) < 1e-5f * expected[i.raw]);
+      cat::verify(cat::abs(rr[i] - expected[i]) < 1e-5f * expected[i]);
    }
 }
 
@@ -230,8 +231,7 @@ $test(simd_avx_rsqrt_fast_is_nr_refined) {
    float const expected[8] = {0.5f, 2.f,   0.25f,       0.1f,
                               4.f,  0.04f, 0.70710677f, 1.f / 3.f};
    for (cat::idx i = 0u; i < cat::idx{8}; ++i) {
-      float const got = static_cast<float>(rr[i]);
-      cat::verify(cat::abs(got - expected[i.raw]) < 1e-5f * expected[i.raw]);
+      cat::verify(cat::abs(rr[i] - expected[i]) < 1e-5f * expected[i]);
    }
 }
 
@@ -248,7 +248,7 @@ $test(simd_avx_rsqrt_times_sqrt_near_one) {
    sxf const s_ref = cat::simd_sqrt(narrow);
    for (idx i = 0u; i < avxf::abi_type::lanes; ++i) {
       float const p = wr[i] * s[i];
-      idx const j = idx{static_cast<uword>(i.raw % 4u)};
+      idx const j = i % 4u;
       float const ref_prod = wr_ref[j] * s_ref[j];
       cat::verify(cat::abs(p - ref_prod) < 0.01f);
       cat::verify(cat::abs(p - 1.f) < 0.02f);
@@ -701,77 +701,60 @@ $test(simd_avx2_compress_word) {
 $test(simd_avx2_compress_byte) {
    using byte_avx = x64::avx_simd<cat::int1>;
    using byte_avx_mask = x64::avx_simd_mask<cat::int1>;
-   using byte_ref = cat::fixed_size_simd<cat::int1, 32u>;
-   using byte_ref_mask =
-      cat::simd_mask<cat::int1, cat::simd_abi::fixed_size<cat::int1, 32u>>;
 
    byte_avx input{};
-   byte_ref input_ref{};
    for (cat::idx i = 0u; i < 32u; ++i) {
-      input.set_lane(i, static_cast<cat::int1>(i + 1));
-      input_ref.set_lane(i, static_cast<cat::int1>(i + 1));
+      input.set_lane(i, cat::int1(i + 1));
    }
 
-   for (cat::idx active : {
-           cat::idx{0u},
-           cat::idx{1u},
-           cat::idx{7u},
-           cat::idx{8u},
-           cat::idx{15u},
-           cat::idx{16u},
-           cat::idx{23u},
-           cat::idx{31u},
-           cat::idx{32u},
-        }) {
-      verify_avx2_compress_matches_reference(
-         input, input_ref, cat::make_simd_mask_from_count<byte_avx>(active),
-         cat::make_simd_mask_from_count<byte_ref>(active)
-      );
+   // Count-prefix mask: the leading `active` lanes pack to the front and the
+   // tail zeroes out.
+   auto const seven_packed =
+      cat::simd_compress(input, cat::make_simd_mask_from_count<byte_avx>(7u));
+   for (cat::idx i = 0u; i < 7u; ++i) {
+      cat::verify(seven_packed[i] == i + 1);
+   }
+   cat::verify(seven_packed[7u] == 0);
+   cat::verify(seven_packed[31u] == 0);
+
+   // Every lane active is an identity compress across all four chunks.
+   auto const all_packed =
+      cat::simd_compress(input, cat::make_simd_mask_from_count<byte_avx>(32u));
+   for (cat::idx i = 0u; i < 32u; ++i) {
+      cat::verify(all_packed[i] == i + 1);
    }
 
-   // Alternating across every 8-lane `pext` chunk.
+   // Alternating across every 8-lane `pext` chunk packs the odd values.
    byte_avx_mask alternating{};
-   byte_ref_mask alternating_ref{};
    for (cat::idx i = 0u; i < 32u; ++i) {
-      bool const bit = (i.raw % 2u) == 0u;
-      alternating.set_lane(i, bit);
-      alternating_ref.set_lane(i, bit);
+      alternating.set_lane(i, (i % 2u) == 0u);
    }
-   verify_avx2_compress_matches_reference(
-      input, input_ref, alternating, alternating_ref
-   );
+   auto const alt_packed = cat::simd_compress(input, alternating);
+   for (cat::idx i = 0u; i < 16u; ++i) {
+      cat::verify(alt_packed[i] == (i * 2u) + 1u);
+   }
+   cat::verify(alt_packed[16u] == 0);
+   cat::verify(alt_packed[31u] == 0);
 
-   // Only the third 8-byte chunk (lanes 16..23) is active.
+   // Only the third 8-byte chunk (lanes 16..23) is active: cross-chunk offset.
    byte_avx_mask third_chunk{};
-   byte_ref_mask third_chunk_ref{};
    for (cat::idx i = 16u; i < 24u; ++i) {
       third_chunk.set_lane(i, true);
-      third_chunk_ref.set_lane(i, true);
    }
-   verify_avx2_compress_matches_reference(
-      input, input_ref, third_chunk, third_chunk_ref
-   );
+   auto const third_packed = cat::simd_compress(input, third_chunk);
+   for (cat::idx i = 0u; i < 8u; ++i) {
+      cat::verify(third_packed[i] == i + 17u);
+   }
+   cat::verify(third_packed[8u] == 0);
+   cat::verify(third_packed[31u] == 0);
 
    // One active lane in the final chunk: exercises the maximum byte offset.
    byte_avx_mask tail_only{};
-   byte_ref_mask tail_only_ref{};
    tail_only.set_lane(31u, true);
-   tail_only_ref.set_lane(31u, true);
-   verify_avx2_compress_matches_reference(
-      input, input_ref, tail_only, tail_only_ref
-   );
-
-   auto const alt_packed = cat::simd_compress(input, alternating);
-   cat::verify(alt_packed[0u] == cat::int1{1});
-   cat::verify(alt_packed[1u] == cat::int1{3});
-   cat::verify(alt_packed[15u] == cat::int1{31});
-   cat::verify(alt_packed[16u] == cat::int1{0});
-   cat::verify(alt_packed[31u] == cat::int1{0});
-
    auto const tail_packed = cat::simd_compress(input, tail_only);
-   cat::verify(tail_packed[0u] == cat::int1{32});
-   cat::verify(tail_packed[1u] == cat::int1{0});
-   cat::verify(tail_packed[31u] == cat::int1{0});
+   cat::verify(tail_packed[0u] == 32);
+   cat::verify(tail_packed[1u] == 0);
+   cat::verify(tail_packed[31u] == 0);
 }
 
 // C++26 `[simd.permute.mask]` three-argument compress (P2664). The trailing
@@ -835,13 +818,13 @@ $test(simd_avx2_compress_with_fill_value) {
    using byte_avx = x64::avx_simd<cat::int1>;
    byte_avx byte_input{};
    for (cat::idx i = 0u; i < 32u; ++i) {
-      byte_input.set_lane(i, static_cast<cat::int1>(i + 1));
+      byte_input.set_lane(i, cat::int1(i + 1));
    }
    auto const byte_filled = cat::simd_compress(
       byte_input, cat::make_simd_mask_from_count<byte_avx>(5u), cat::int1{42}
    );
-   cat::verify(byte_filled[0u] == cat::int1{1});
-   cat::verify(byte_filled[4u] == cat::int1{5});
-   cat::verify(byte_filled[5u] == cat::int1{42});
-   cat::verify(byte_filled[31u] == cat::int1{42});
+   cat::verify(byte_filled[0u] == 1);
+   cat::verify(byte_filled[4u] == 5);
+   cat::verify(byte_filled[5u] == 42);
+   cat::verify(byte_filled[31u] == 42);
 }

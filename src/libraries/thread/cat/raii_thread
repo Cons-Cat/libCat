@@ -44,8 +44,7 @@ class basic_thread {
    template <typename... Args>
    auto
    spawn(
-      idx stack_size, is_invocable<Args...> auto&& callback,
-      Args&&... arguments
+      idx stack_size, is_invocable<Args...> auto&& callback, Args&&... arguments
    ) -> maybe<void> {
       return m_core.spawn(
          m_allocator, stack_size, $fwd(callback), $fwd(arguments)...

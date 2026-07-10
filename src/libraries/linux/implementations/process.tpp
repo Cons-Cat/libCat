@@ -79,8 +79,8 @@ struct process {
  private:
    auto
    spawn_impl(
-      cat::uintptr<void> stack, cat::idx stack_size,
-      void* _Nonnull p_function, void* _Nullable p_args_struct
+      cat::uintptr<void> stack, cat::idx stack_size, void* _Nonnull p_function,
+      void* _Nullable p_args_struct
    ) -> scaredy_nix<void>;
 
    process_id m_id{0};
@@ -129,8 +129,7 @@ manual::process::spawn(
       // If there are no arguments, and `callback` is a pointer, it can be
       // called almost directly.
       result = this->spawn_impl(
-         p_stack_bottom, stack_size, reinterpret_cast<void*>(callback),
-         nullptr
+         p_stack_bottom, stack_size, reinterpret_cast<void*>(callback), nullptr
       );
    } else {
       // If there are arguments, `callback` must be wrapped in a lambda that has

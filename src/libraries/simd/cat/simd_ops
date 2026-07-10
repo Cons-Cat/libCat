@@ -2867,15 +2867,21 @@ struct simd_permute_impl {
 
 template <int... indices>
 struct simd_shuffle_impl {
+// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
    template <typename T, typename Abi>
       requires(sizeof...(indices) == Abi::lanes.raw)
-   [[nodiscard]]
+   [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator()(simd<T, Abi> input) const -> simd<T, Abi> {
       return simd<T, Abi>(
          __builtin_shufflevector(input.raw, input.raw, indices...)
       );
    }
+
+#pragma clang diagnostic pop
 };
 
 struct simd_reverse_impl {

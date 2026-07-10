@@ -627,6 +627,10 @@ class
       return true;
    }
 
+// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
    // Compare greater-than for each lane to another `simd`'s lanes, and store
    // the results in a new `simd`.
    [[nodiscard, gnu::always_inline]]
@@ -634,6 +638,8 @@ class
    operator>(simd const& operand) const -> simd_mask<T, abi_type> {
       return this->raw > operand.raw;
    }
+
+#pragma clang diagnostic pop
 
    // Compare greater-than-or-equal for each lane to another `simd`'s lanes, and
    // store the results in a new `simd`.
@@ -1161,11 +1167,17 @@ class
       return old;
    }
 
+// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator&(simd const& operand) const -> simd {
       return this->raw & operand.raw;
    }
+
+#pragma clang diagnostic pop
 
    [[gnu::always_inline]]
    constexpr auto
@@ -1174,11 +1186,17 @@ class
       return *this;
    }
 
+// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator|(simd const& operand) const -> simd {
       return this->raw | operand.raw;
    }
+
+#pragma clang diagnostic pop
 
    [[gnu::always_inline]]
    constexpr auto
@@ -1238,11 +1256,17 @@ class
       return *this;
    }
 
+// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator^(simd const& operand) const -> simd {
       return this->raw ^ operand.raw;
    }
+
+#pragma clang diagnostic pop
 
    [[gnu::always_inline]]
    constexpr auto
@@ -1322,6 +1346,10 @@ class
    constexpr auto
    operator[](Ts&&... lanes) const;
 
+// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
    // Count set bits in each unsigned integer lane.
    [[nodiscard, gnu::always_inline]]
    constexpr auto
@@ -1330,6 +1358,8 @@ class
    {
       return simd(__builtin_elementwise_popcount(this->raw));
    }
+
+#pragma clang diagnostic pop
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
