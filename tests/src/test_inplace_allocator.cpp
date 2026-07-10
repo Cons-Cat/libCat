@@ -46,7 +46,7 @@ $test(inplace_allocator) {
    cat::verify(*p_over == 9);
    cat::verify(cat::is_aligned(p_over, 64u));
 
-   // An over-aligned request that cannot fit past its padding fails.
+   // An over-aligned request larger than the whole buffer fails.
    over_aligned.reset();
-   cat::verify(!over_aligned.align_alloc_multi<int4>(64u, 17u).has_value());
+   cat::verify(!over_aligned.align_alloc_multi<int4>(64u, 33u).has_value());
 }

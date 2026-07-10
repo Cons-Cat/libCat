@@ -583,7 +583,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    [[nodiscard]]
    constexpr auto
    end() -> iterator {
-      return iterator(m_data.end(), limits<array_type_element>::bits - 0u);
+      return iterator(m_data.end());
    }
 
    [[nodiscard]]
@@ -595,9 +595,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    [[nodiscard]]
    constexpr auto
    end() const -> const_iterator {
-      return const_iterator(
-         m_data.end(), limits<array_type_element>::bits - 0u
-      );
+      return const_iterator(m_data.end());
    }
 
    [[nodiscard]]
@@ -609,9 +607,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    [[nodiscard]]
    constexpr auto
    cend() const -> const_iterator {
-      return const_iterator(
-         m_data.cend(), limits<array_type_element>::bits - 0u
-      );
+      return const_iterator(m_data.cend());
    }
 
    [[nodiscard]]

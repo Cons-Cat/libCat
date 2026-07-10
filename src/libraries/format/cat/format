@@ -18,6 +18,21 @@ namespace cat {
 // TODO: Functions in this header should return owning-`str_span`, not
 // `str_view`.
 
+// Get the upper bound buffer size for a stringified floating point type.
+namespace detail {
+template <typename T>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+float_to_chars_max_size() -> idx {
+   if constexpr (sizeof(T) == 4u) {
+      return 16u;
+   } else {
+      return 25u;
+   }
+}
+}  // namespace detail
+
 // Erase the type of `cat::basic_int` from redundant template instantiations.
 template <is_allocator Allocator, is_integral T, overflow_policies policy>
 [[nodiscard]]
@@ -75,8 +90,9 @@ template <is_allocator Allocator, typename T>
 [[nodiscard]]
 auto
 to_chars(allocator_ref<Allocator> allocator, T value) -> maybe<str_view> {
-   span string =
-      $prop(allocator.template alloc_multi<char>(limits<T>::digits10));
+   span string = $prop(
+      allocator.template alloc_multi<char>(detail::float_to_chars_max_size<T>())
+   );
    char* p_string = string.data();
 
    detail::dragonbox::to_chars(value, p_string);
