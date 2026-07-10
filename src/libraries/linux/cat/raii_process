@@ -1,0 +1,101 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/linux>
+
+namespace nix::raii {
+
+template <cat::is_allocator Allocator = cat::dyn_allocator>
+class basic_process;
+
+template <cat::is_allocator Allocator = cat::dyn_allocator>
+using process = basic_process<Allocator>;
+
+template <cat::is_allocator Allocator>
+class basic_process {
+ public:
+   basic_process() = delete;
+
+   basic_process(
+      cat::allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   )
+       : m_core(), m_allocator(allocator) {
+   }
+
+   basic_process(basic_process&&) = default;
+
+   basic_process(basic_process const&) = delete;
+
+   auto
+   operator=(basic_process const&) -> basic_process& = delete;
+
+   [[clang::reinitializes]]
+   auto
+   operator=(basic_process&& other) -> basic_process& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+
+      if (m_core.has_stack()) {
+         auto _ = m_core.wait();
+         m_core.free(m_allocator);
+      }
+      m_core = cat::move(other.m_core);
+      m_allocator = other.m_allocator;
+      return *this;
+   }
+
+   ~basic_process() {
+      if (!m_core.has_stack()) {
+         return;
+      }
+      auto _ = m_core.wait();
+      m_core.free(m_allocator);
+   }
+
+   constexpr void
+   add_clone_flag(clone_flags extra) {
+      m_core.add_clone_flag(extra);
+   }
+
+   template <typename... Args, cat::is_invocable<Args...> Callback>
+   auto
+   spawn(cat::idx stack_size, Callback&& callback, Args&&... arguments)
+      -> scaredy_nix<void> {
+      return m_core.spawn(
+         m_allocator, stack_size, $fwd(callback), $fwd(arguments)...
+      );
+   }
+
+   [[nodiscard]]
+   auto
+   wait() const -> scaredy_nix<process_id> {
+      return m_core.wait();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_stack() const -> bool {
+      return m_core.has_stack();
+   }
+
+   [[clang::reinitializes]]
+   void
+   free() {
+      m_core.free(m_allocator);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   release() -> manual::process {
+      return cat::move(m_core);
+   }
+
+ private:
+   manual::process m_core;
+   [[no_unique_address]]
+   cat::allocator_ref<Allocator> m_allocator;
+};
+
+}  // namespace nix::raii

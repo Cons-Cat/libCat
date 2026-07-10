@@ -18,8 +18,11 @@ struct Socket;
 }
 
 namespace nix {
-struct file_status;
+inline namespace manual {
 struct process;
+}
+
+struct file_status;
 struct clone_arguments;
 struct signals_mask_set;
 }  // namespace nix

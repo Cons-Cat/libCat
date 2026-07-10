@@ -2,6 +2,7 @@
 #include <cat/bit>
 #include <cat/linux>
 #include <cat/page_allocator>
+#include <cat/raii_thread>
 #include <cat/runtime>
 #include <cat/string>
 #include <cat/thread>
@@ -39,14 +40,22 @@ function_2() {
 
 $test(thread) {
    cat::thread threads[5];
-   cat::page_allocator allocator;
+   nix::process non_thread_child;
 
-   threads[0].spawn(allocator, 2_uki, function_1).verify();
-   threads[1].spawn(allocator, 2_uki, &function_2).verify();
+   $defer {
+      for (idx i = 0; i < 5; ++i) {
+         threads[i].free(pager);
+      }
+      non_thread_child.free(pager);
+   };
+
+   threads[0].spawn(pager, 2_uki, function_1).verify();
+
+   threads[1].spawn(pager, 2_uki, &function_2).verify();
 
    threads[2]
       .spawn(
-         allocator, 2_uki,
+         pager, 2_uki,
          [] {
             ++atomic;
          }
@@ -55,7 +64,7 @@ $test(thread) {
 
    threads[3]
       .spawn(
-         allocator, 2_uki,
+         pager, 2_uki,
          [](int) {
             ++atomic;
          },
@@ -65,17 +74,16 @@ $test(thread) {
 
    threads[4]
       .spawn(
-         allocator, 2_uki,
+         pager, 2_uki,
          +[] {
             ++atomic;
          }
       )
       .verify();
 
-   nix::process non_thread_child;
    non_thread_child
       .spawn(
-         allocator, 2_uki,
+         pager, 2_uki,
          +[] {
             ++atomic;
          }
@@ -98,9 +106,37 @@ $test(thread) {
    cat::verify(atomic.load() == 11);
 }
 
-$test(thread_clone_failure) {
-   cat::page_allocator allocator;
+$test(raii_thread) {
+   int4 const before = atomic.load();
 
+   {
+      cat::raii::basic_thread<cat::page_allocator> worker{pager};
+      worker
+         .spawn(
+            2_uki,
+            [] {
+               ++atomic;
+            }
+         )
+         .verify();
+      cat::verify(worker.has_stack());
+   }
+
+   cat::verify(atomic.load() == before + 1);
+}
+
+$test(raii_thread_join) {
+   int4 const before = atomic.load();
+
+   cat::raii::basic_thread<cat::page_allocator> worker{pager};
+   worker.spawn(2_uki, &function_2).verify();
+   worker.join().verify();
+   worker.free();
+   cat::verify(!worker.has_stack());
+   cat::verify(atomic.load() == before + 1);
+}
+
+$test(thread_clone_failure) {
    nix::rlimit original{};
    cat::verify(
       nix::sys_getrlimit(
@@ -127,9 +163,8 @@ $test(thread_clone_failure) {
    nix::process child;
    child.add_clone_flag(nix::clone_flags::thread);
    child.add_clone_flag(nix::clone_flags::child_set_tid);
-   nix::scaredy_nix<void> const spawn_result =
-      child.spawn(allocator, 2_uki, [] {
-      });
+   nix::scaredy_nix<void> const spawn_result = child.spawn(pager, 2_uki, [] {
+   });
 
    cat::verify(
       nix::sys_setrlimit(

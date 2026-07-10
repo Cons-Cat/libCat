@@ -102,11 +102,11 @@ wait_clone_thread_through_cleartid_futex(
 }  // namespace
 
 auto
-nix::process::spawn_impl(
-   cat::uintptr<void> stack, cat::idx initial_stack_size, void* p_function,
+nix::manual::process::spawn_impl(
+   cat::uintptr<void> stack, cat::idx stack_size, void* p_function,
    void* p_args_struct
 ) -> scaredy_nix<void> {
-   m_stack_size = initial_stack_size;
+   m_stack_size = stack_size;
    m_p_stack_bottom = stack.get();
 
    cat::uintptr<void> stack_top;
@@ -249,7 +249,7 @@ clone_parent:
 
 [[nodiscard]]
 auto
-nix::process::wait() const -> scaredy_nix<process_id> {
+nix::manual::process::wait() const -> scaredy_nix<process_id> {
    // Spin until the kernel publishes the child tid for
    // `clone_flags::parent_set_tid`. Use an acquire load so this synchronizes
    // with that store. `pause` hints the spin loop on x86.

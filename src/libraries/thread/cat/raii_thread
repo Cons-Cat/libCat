@@ -1,0 +1,79 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/thread>
+
+namespace cat::raii {
+
+template <is_allocator Allocator = dyn_allocator>
+class basic_thread;
+
+template <is_allocator Allocator = dyn_allocator>
+using thread = basic_thread<Allocator>;
+
+template <is_allocator Allocator>
+class basic_thread {
+ public:
+   basic_thread() = delete;
+
+   basic_thread(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   )
+       : m_allocator(allocator) {
+   }
+
+   basic_thread(basic_thread&&) = delete;
+
+   basic_thread(basic_thread const&) = delete;
+
+   auto
+   operator=(basic_thread const&) -> basic_thread& = delete;
+
+   auto
+   operator=(basic_thread&&) -> basic_thread& = delete;
+
+   ~basic_thread() {
+      if (!m_core.has_stack()) {
+         return;
+      }
+      auto _ = m_core.join();
+      m_core.free(m_allocator);
+   }
+
+   template <typename... Args>
+   auto
+   spawn(
+      idx stack_size, is_invocable<Args...> auto&& callback,
+      Args&&... arguments
+   ) -> maybe<void> {
+      return m_core.spawn(
+         m_allocator, stack_size, $fwd(callback), $fwd(arguments)...
+      );
+   }
+
+   [[nodiscard]]
+   auto
+   join() const -> maybe<void> {
+      return m_core.join();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_stack() const -> bool {
+      return m_core.has_stack();
+   }
+
+   [[clang::reinitializes]]
+   void
+   free() {
+      m_core.free(m_allocator);
+   }
+
+ private:
+   manual::thread m_core;
+   [[no_unique_address]]
+   allocator_ref<Allocator> m_allocator;
+};
+
+}  // namespace cat::raii

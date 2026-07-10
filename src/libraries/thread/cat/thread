@@ -3,9 +3,12 @@
 #pragma once
 
 #include <cat/allocator>
+#include <cat/allocator_parameters>
 #include <cat/linux>
 
 namespace cat {
+
+inline namespace manual {
 
 struct thread {
  public:
@@ -25,11 +28,11 @@ struct thread {
    template <typename... Args>
    auto
    spawn(
-      is_allocator auto& allocator, idx initial_stack_size,
+      is_allocator auto& allocator, idx stack_size,
       is_invocable<Args...> auto&& callback, Args&&... arguments
    ) -> maybe<void> {
       scaredy result = m_handle.spawn(
-         allocator, initial_stack_size, $fwd(callback), $fwd(arguments)...
+         allocator, stack_size, $fwd(callback), $fwd(arguments)...
       );
       if (result.has_value()) {
          return monostate;
@@ -47,11 +50,35 @@ struct thread {
       return nullopt;
    }
 
+   [[nodiscard]]
+   constexpr auto
+   has_stack() const -> bool {
+      return m_handle.has_stack();
+   }
+
+   // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
+   template <is_allocator Allocator>
+   [[clang::reinitializes]]
+   void
+   free(allocator_ref<Allocator> allocator) {
+      m_handle.free(allocator);
+   }
+
+   // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   void
+   free(dyn_allocator allocator) {
+      free<dyn_allocator>(allocator);
+   }
+
  private:
    // This is platform-specific hidden code.
    nix::process m_handle;
 };
 
+}  // namespace manual
+
+// TODO: Move this elsewhere.
 inline void
 relax_cpu() {
    asm volatile("pause" ::

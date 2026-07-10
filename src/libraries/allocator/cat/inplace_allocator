@@ -75,7 +75,8 @@ class inplace_allocator
          return nullopt;
       }
 
-      // Get padding from the buffer's base to the first `alignment`-aligned address.
+      // Get padding from the buffer's base to the first `alignment`-aligned
+      // address.
       byte const* p_aligned = align_up(m_storage.data(), alignment);
       idx const offset = idx(p_aligned - m_storage.data());
 

@@ -313,6 +313,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/stepanov/cat/insert_iterators
   ${CATLIB}/limits/cat/limits
   ${CATLIB}/linux/cat/linux
+  ${CATLIB}/linux/cat/raii_process
   ${CATLIB}/linux/cat/detail/syscalls.hpp
   ${CATLIB}/list/cat/list
   ${CATLIB}/list/cat/raii_list
@@ -389,6 +390,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/span/implementations/span.tpp
   ${CATLIB}/string/cat/string
   ${CATLIB}/thread/cat/thread
+  ${CATLIB}/thread/cat/raii_thread
   ${CATLIB}/tui/cat/tui
   ${CATLIB}/tuple/cat/tuple
   ${CATLIB}/type_list/cat/type_list

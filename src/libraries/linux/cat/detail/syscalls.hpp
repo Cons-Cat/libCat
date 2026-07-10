@@ -2822,76 +2822,9 @@ struct file_status {
 
 static_assert(sizeof(file_status) == 144);
 
-// `process` handles an asynchronous task multitasked by the Linux kernel.
-// TODO: Extract this to an implementation file.
-struct process {
-   // `clone_flags::csignal` must carry `signal::child_stopped`, otherwise
-   // `clone` leaves `exit_signal` at 0. `clone_flags::set_tls` is merged in
-   // `spawn_impl` when the executable has a `PT_TLS` image so each clone child
-   // receives an initialized `%fs` base.
-   static constexpr clone_flags default_flags =
-      clone_flags::virtual_memory
-      | clone_flags::file_system
-      | clone_flags::file_descriptor_table
-      | clone_flags::io
-      | clone_flags::parent_set_tid
-      | clone_flags::child_clear_tid
-      | static_cast<clone_flags>(static_cast<unsigned int>(
-         static_cast<unsigned char>(signal::child_stopped)
-      ));
-
-   process() = default;
-   // TODO: Add a move constructor and move assignment operator.
-   process(process const&) = delete;
-
-   [[nodiscard]]
-   constexpr auto
-   get_clone_flags() const -> clone_flags {
-      return m_flags;
-   }
-
-   constexpr void
-   set_clone_flags(clone_flags flags) {
-      m_flags = flags;
-   }
-
-   constexpr void
-   add_clone_flag(clone_flags extra) {
-      m_flags = static_cast<clone_flags>(
-         cat::to_underlying(m_flags) | cat::to_underlying(extra)
-      );
-   }
-
-   template <typename... Args, cat::is_invocable<Args...> Callback>
-   auto
-   spawn(
-      cat::is_allocator auto& allocator, cat::idx initial_stack_size,
-      Callback&& callback, Args&&... arguments
-   ) -> scaredy_nix<void>;
-
-   [[nodiscard]]
-   auto
-   wait() const -> scaredy_nix<process_id>;
-
- private:
-   auto
-   spawn_impl(
-      cat::uintptr<void> stack, cat::idx initial_stack_size,
-      void* _Nonnull p_function, void* _Nonnull p_args_struct
-   ) -> scaredy_nix<void>;
-
-   process_id m_id{0};
-   // `clone_flags::child_clear_tid` must not use `m_id` as the clear-tid word.
-   // The kernel stores the child tid here, clears it to zero at thread exit,
-   // and wakes waiters with `futex_command::wake` and `futex_options::none`.
-   // `wait()` uses `futex_command::wait` with `futex_options::none` on this
-   // word when `clone_flags::thread` and `clone_flags::child_set_tid` are set.
-   alignas(8) futex_word m_clone_child_clear_tid_for_kernel{};
-   // TODO: Free this later.
-   void* _Nullable m_p_stack_bottom;
-   cat::idx m_stack_size;
-   clone_flags m_flags = default_flags;
-};
+inline namespace manual {
+struct process;
+}  // namespace manual
 
 auto
 block_all_signals() -> signals_mask_set;
