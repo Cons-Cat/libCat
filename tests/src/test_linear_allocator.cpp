@@ -32,7 +32,6 @@ probe_alloc_multi_int4(linear_allocator& a, idx n) -> int4* {
 
 $test(linear_allocator) {
    // Initialize an allocator.
-   cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(24u).verify();
    $defer {
       pager.free(page);

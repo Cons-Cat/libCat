@@ -6,7 +6,6 @@
 
 $test(format_strings) {
    // Initialize an allocator.
-   cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
    $defer {
       pager.free(page);
@@ -87,10 +86,9 @@ $test(format_strings) {
 }
 
 $test(fmt_long_pattern_substitutes) {
-   cat::page_allocator local_pager;
-   cat::span page = local_pager.alloc_multi<cat::byte>(16_uki).or_exit();
+   cat::span page = pager.alloc_multi<cat::byte>(16_uki).or_exit();
    $defer {
-      local_pager.free(page);
+      pager.free(page);
    };
    auto allocator = make_linear_allocator(page);
 

@@ -101,7 +101,6 @@ void
 large_overlap_case(
    cat::idx bytes, cat::idx source_offset, cat::idx destination_offset
 ) {
-   cat::page_allocator pager;
    cat::idx const capacity =
       bytes + max(source_offset, destination_offset) + 512u;
    cat::span page = pager.alloc_multi<cat::byte>(capacity).or_exit();
@@ -439,7 +438,6 @@ $test(compare_memory_all_size_tiers_and_mismatch_positions) {
 
 $test(compare_memory_large_non_temporal_size) {
    cat::idx const bytes = 2_umi + 129u;
-   cat::page_allocator pager;
    cat::span left = pager.alloc_multi<cat::byte>(bytes).or_exit();
    cat::span right = pager.alloc_multi<cat::byte>(bytes).or_exit();
    $defer {

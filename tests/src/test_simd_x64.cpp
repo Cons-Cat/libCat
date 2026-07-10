@@ -332,7 +332,6 @@ $test(simd_avx_unaligned_abi) {
    static_assert(x64::avx_unaligned_simd<float>::size() == 8u);
    static_assert(alignof(x64::avx_unaligned_simd<float>) == 1);
 
-   cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
    $defer {
       pager.free(page);
@@ -365,7 +364,6 @@ $test(simd_sse_and_unaligned_abi) {
    static_assert(x64::sse_unaligned_simd<float>::size() == 4u);
    static_assert(alignof(x64::sse_unaligned_simd<float>) == 1);
 
-   cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
    $defer {
       pager.free(page);
@@ -396,7 +394,6 @@ $test(simd_avx_unaligned_abi_mask) {
    static_assert(x64::avx_unaligned_simd_mask<float>::size() == 8u);
    static_assert(alignof(x64::avx_unaligned_simd_mask<float>) == 1);
 
-   cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
    $defer {
       pager.free(page);
@@ -429,7 +426,6 @@ $test(simd_sse_and_unaligned_abi_mask) {
    static_assert(x64::sse_unaligned_simd_mask<float>::size() == 4u);
    static_assert(alignof(x64::sse_unaligned_simd_mask<float>) == 1);
 
-   cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
    $defer {
       pager.free(page);

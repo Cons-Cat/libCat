@@ -16,7 +16,6 @@ $test(reallocation_disjoint_intervals) {
 }
 
 $test(reallocation_disjoint_linear_ptr_realloc) {
-   cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(512u).verify();
    $defer {
       pager.free(page);

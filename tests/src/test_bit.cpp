@@ -418,7 +418,6 @@ $test(bit_reference_popcount_terminal) {
 $test(bit_word_iterable_popcount_terminal) {
    using namespace cat::arithmetic_literals;
 
-   cat::page_allocator pager;
    cat::vec<cat::uint1> words;
    words.resize(pager, 2u, 0_u1).verify();
    words[0u] = 0b1010'1100_u1;

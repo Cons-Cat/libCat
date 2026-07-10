@@ -30,31 +30,27 @@ struct alloc_non_trivial_huge_object {
 
 consteval void
 const_test() {
-   cat::page_allocator allocator;
+   int4* p_alloc = pager.alloc<int4>(1).value();
+   pager.free(p_alloc);
 
-   int4* p_alloc = allocator.alloc<int4>(1).value();
-   allocator.free(p_alloc);
+   int4* p_xalloc = pager.xalloc<int4>(1);
+   pager.free(p_xalloc);
 
-   int4* p_xalloc = allocator.xalloc<int4>(1);
-   allocator.free(p_xalloc);
-
-   cat::span<int4> alloc_multi = allocator.alloc_multi<int4>(5u).value();
+   cat::span<int4> alloc_multi = pager.alloc_multi<int4>(5u).value();
    // `realloc_multi` is not a constant expression on Clang.
-   allocator.free_multi(alloc_multi);
+   pager.free_multi(alloc_multi);
 
-   cat::span<int4> xalloc_multi = allocator.xalloc_multi<int4>(5u);
-   allocator.free_multi(xalloc_multi);
+   cat::span<int4> xalloc_multi = pager.xalloc_multi<int4>(5u);
+   pager.free_multi(xalloc_multi);
 }
 
 consteval void
 const_test_inline_alloc() {
-   cat::page_allocator allocator;
+   auto h_alloc = pager.inline_alloc<int4>(1).value();
+   pager.free(h_alloc);
 
-   auto h_alloc = allocator.inline_alloc<int4>(1).value();
-   allocator.free(h_alloc);
-
-   auto hx = allocator.inline_xalloc<int4>(1);
-   allocator.free(hx);
+   auto hx = pager.inline_xalloc<int4>(1);
+   pager.free(hx);
 
    // Inline multi uses placement `new` over the handle object, which is not a
    // constant expression on Clang.
@@ -64,13 +60,11 @@ const_test_inline_alloc() {
 // constant-evaluation context.
 consteval void
 const_test_inline_alloc_sbo16() {
-   cat::page_allocator allocator;
+   auto h_alloc = pager.inline_alloc<int4, 16u>(1).value();
+   pager.free(h_alloc);
 
-   auto h_alloc = allocator.inline_alloc<int4, 16u>(1).value();
-   allocator.free(h_alloc);
-
-   auto hx = allocator.inline_xalloc<int4, 16u>(1);
-   allocator.free(hx);
+   auto hx = pager.inline_xalloc<int4, 16u>(1);
+   pager.free(hx);
 }
 
 $test(alloc) {
@@ -78,7 +72,6 @@ $test(alloc) {
    const_test_inline_alloc();
 
    // Initialize an allocator.
-   cat::page_allocator pager;
    pager.reset();
    // Page the kernel for a linear allocator to $test with.
    cat::span page = pager.alloc_multi<cat::byte>(4_uki - 64u).or_exit();
@@ -1945,7 +1938,6 @@ $test(alloc_inline_sbo16) {
 
    constexpr cat::idx sbo = 16u;
 
-   cat::page_allocator pager;
    pager.reset();
    cat::span page = pager.alloc_multi<cat::byte>(4_uki - 64u).or_exit();
    $defer {

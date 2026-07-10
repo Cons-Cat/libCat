@@ -212,8 +212,7 @@ $test(pool_allocator_equality) {
 // `page_allocator::resize` does an anonymous probe via `mmap` /`munmap`.
 // A page-sized request must succeed on any working system.
 $test(page_allocator_resize_probes_kernel) {
-   cat::page_allocator local_pager;
-   cat::maybe const grown = local_pager.resize(cat::page_size);
+   cat::maybe const grown = pager.resize(cat::page_size);
    cat::verify(grown.has_value());
    cat::verify(grown.value() >= cat::page_size);
 }

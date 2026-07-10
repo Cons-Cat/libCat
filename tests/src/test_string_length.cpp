@@ -29,7 +29,6 @@ $test(string_length) {
 
    // Page-allocator-backed buffer: the whole page is mapped, so the SIMD
    // over-read is in-bounds for ASan.
-   cat::page_allocator pager;
    cat::zstr_span mut_zstr = pager.calloc_multi<char>(6).verify();
    mut_zstr[0] = 'a';
    mut_zstr[1] = 'b';

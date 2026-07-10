@@ -39,7 +39,6 @@ fill_case(cat::idx bytes, cat::idx skew, unsigned char value) {
 
 void
 large_fill_case(cat::idx bytes, cat::idx skew, unsigned char value) {
-   cat::page_allocator pager;
    cat::idx const capacity = bytes + skew + 256u;
    cat::span page = pager.alloc_multi<unsigned char>(capacity).or_exit();
    $defer {
@@ -84,8 +83,7 @@ $test(fill_memory) {
       }
    }
 
-   cat::page_allocator allocator;
-   cat::span page = allocator.alloc_multi<uint1>(4_uki).or_exit();
+   cat::span page = pager.alloc_multi<uint1>(4_uki).or_exit();
    uint1* p_page = page.data();
 
    cat::fill_memory(p_page, 1_u1, 4_uki);

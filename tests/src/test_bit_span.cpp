@@ -151,7 +151,6 @@ $test(bit_span) {
    cat::verify(const_span_bits.size() == 64u);
    cat::verify(const_span_bits[1u]);
 
-   cat::page_allocator pager;
    cat::vec<cat::uint4> vec_words;
    vec_words.resize(pager, 2u, 0_u4).verify();
    vec_words[1u] = 0b11_u4;

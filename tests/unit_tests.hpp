@@ -11,6 +11,7 @@ using namespace cat::literals;
 using namespace cat::arithmetic;
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+// TODO: Do we need this attribute?
 [[gnu::used]]
 constinit inline cat::page_allocator pager;
 

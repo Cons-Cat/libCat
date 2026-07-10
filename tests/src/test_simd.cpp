@@ -2762,7 +2762,6 @@ $test(simd_as_vectorized_over_vec_float_data) {
    };
 
    static constexpr idx k_extent = 128u;
-   cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(8_uki).or_exit();
    $defer {
       pager.free(page);
@@ -2799,7 +2798,6 @@ $test(simd_list_stepanov_iterator_vectorization_float) {
    // `list_iter` models `simdize<L::iterator>`. `e` is `++list.end()` because
    // `cat::raii::list` keeps the last node as `end()` and advancing past the tail
    // matches a simdized past-end iterator.
-   cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(32_uki).or_exit();
    $defer {
       pager.free(page);

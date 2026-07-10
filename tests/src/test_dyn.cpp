@@ -303,10 +303,9 @@ $test(dyn_construct_empty) {
 // `basic_dyn` keeps small values inline and falls back to the heap when
 // the value exceeds `64u`.
 $test(dyn_inline_vs_heap) {
-   cat::page_allocator local_pager;
-   cat::span page = local_pager.alloc_multi<cat::byte>(8_uki).or_exit();
+   cat::span page = pager.alloc_multi<cat::byte>(8_uki).or_exit();
    $defer {
-      local_pager.free(page);
+      pager.free(page);
    };
    auto allocator = cat::make_linear_allocator(page);
 
@@ -337,10 +336,9 @@ $test(dyn_custom_inline_storage_size) {
    static_assert(dyn_alloc_big_treat_count::inline_size == sizeof(puppy));
    static_assert(sizeof(puppy) > 64u);
 
-   cat::page_allocator local_pager;
-   cat::span page = local_pager.alloc_multi<cat::byte>(8_uki).or_exit();
+   cat::span page = pager.alloc_multi<cat::byte>(8_uki).or_exit();
    $defer {
-      local_pager.free(page);
+      pager.free(page);
    };
    auto allocator = cat::make_linear_allocator(page);
 
@@ -666,10 +664,9 @@ $test(dyn_vtable_slots_stable) {
 
 // `is_stable_pointers` flips depending on inline vs heap storage.
 $test(dyn_pointer_stability) {
-   cat::page_allocator local_pager;
-   cat::span page = local_pager.alloc_multi<cat::byte>(8_uki).or_exit();
+   cat::span page = pager.alloc_multi<cat::byte>(8_uki).or_exit();
    $defer {
-      local_pager.free(page);
+      pager.free(page);
    };
    auto allocator = cat::make_linear_allocator(page);
 
@@ -682,10 +679,9 @@ $test(dyn_pointer_stability) {
 
 // `make_basic_dyn<Methods...>` deduces from the value.
 $test(dyn_make_basic) {
-   cat::page_allocator local_pager;
-   cat::span page = local_pager.alloc_multi<cat::byte>(4_uki).or_exit();
+   cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
    $defer {
-      local_pager.free(page);
+      pager.free(page);
    };
    auto allocator = cat::make_linear_allocator(page);
 
@@ -697,10 +693,9 @@ $test(dyn_make_basic) {
 
 // Heap storage path destroys the held object and frees the heap allocation.
 $test(dyn_heap_lifecycle) {
-   cat::page_allocator local_pager;
-   cat::span page = local_pager.alloc_multi<cat::byte>(8_uki).or_exit();
+   cat::span page = pager.alloc_multi<cat::byte>(8_uki).or_exit();
    $defer {
-      local_pager.free(page);
+      pager.free(page);
    };
    auto allocator = cat::make_linear_allocator(page);
 
@@ -715,10 +710,9 @@ $test(dyn_heap_lifecycle) {
 
 // Move from heap-stored value preserves the heap pointer (no extra moves).
 $test(dyn_heap_move_preserves_pointer) {
-   cat::page_allocator local_pager;
-   cat::span page = local_pager.alloc_multi<cat::byte>(8_uki).or_exit();
+   cat::span page = pager.alloc_multi<cat::byte>(8_uki).or_exit();
    $defer {
-      local_pager.free(page);
+      pager.free(page);
    };
    auto allocator = cat::make_linear_allocator(page);
 
@@ -1001,10 +995,9 @@ $test(dyn_destructor_optional_for_trivial_types) {
    dyn.emplace<triv_kitty>(99_i4);
    cat::verify(cat::dyn_invoke<treat_count>(dyn) == 99);
 
-   cat::page_allocator local_pager;
-   cat::span page = local_pager.alloc_multi<cat::byte>(4_uki).or_exit();
+   cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
    $defer {
-      local_pager.free(page);
+      pager.free(page);
    };
    auto allocator = cat::make_linear_allocator(page);
 

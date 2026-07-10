@@ -11,7 +11,6 @@
 namespace {
 
 struct linear_arena {
-   cat::page_allocator pager;
    cat::span<cat::byte> page = pager.alloc_multi<cat::byte>(4_uki).verify();
    cat::linear_allocator alloc = cat::make_linear_allocator(page);
 
@@ -22,7 +21,6 @@ struct linear_arena {
 
 consteval auto
 constexpr_list_func() -> int4 {
-   cat::page_allocator pager;
    cat::list<int> list;
    auto _ = list.push_back<cat::page_allocator>(pager, 1);
    auto _ = list.push_back<cat::page_allocator>(pager, 2);
@@ -35,7 +33,6 @@ constexpr_list_func() -> int4 {
 
 consteval auto
 constexpr_forward_list_func() -> int4 {
-   cat::page_allocator pager;
    cat::forward_list<int> list;
    auto _ = list.push_front<cat::page_allocator>(pager, 1);
    auto _ = list.push_front<cat::page_allocator>(pager, 2);
@@ -284,7 +281,7 @@ $test(raii_list_maybe_niche) {
 $test(list) {
    linear_arena arena;
    auto& allocator = arena.alloc;
-   cat::dyn_allocator dynamic_allocator = allocator;
+   cat::dyn_allocator dynamic_allocator = pager;
    auto dynamic_ref = cat::allocator_ref<cat::dyn_allocator>(dynamic_allocator);
 
    cat::raii::list list_1 = cat::raii::make_list<int4>(allocator).verify();
@@ -497,8 +494,7 @@ $test(list_iterable) {
    static_assert(cat::is_reverse_iterable<flux_test_list>);
    static_assert(!cat::is_reverse_iterable<flux_test_forward_list>);
 
-   cat::page_allocator allocator;
-   cat::dyn_allocator dynamic_allocator = allocator;
+   cat::dyn_allocator dynamic_allocator = pager;
    auto dynamic_ref = cat::allocator_ref<cat::dyn_allocator>(dynamic_allocator);
    auto list_values =
       cat::raii::make_list<int, cat::dyn_allocator>(dynamic_ref, 1, 2, 3, 4)

@@ -42,7 +42,6 @@ $test(bitvec_manual_core) {
       cat::is_same<bitvec_context::element_type, cat::bitvec::reference>
    );
 
-   cat::page_allocator pager;
    cat::bitvec bits;
    bits.resize(pager, 10u).verify();
    bits[3u] = true;
@@ -143,7 +142,6 @@ $test(bitvec_core_operations) {
          raii_bitvec_context::element_type, cat::raii::bitvec::reference>
    );
 
-   cat::page_allocator pager;
    cat::raii::bitvec bits{cat::dyn_allocator(pager)};
 
    cat::verify(bits.size() == 0u);
@@ -252,7 +250,6 @@ $test(bitvec_core_operations) {
 }
 
 $test(bitvec_push_pop) {
-   cat::page_allocator pager;
    cat::raii::bitvec bits{cat::dyn_allocator(pager)};
 
    bits.reserve(130u).verify();
@@ -275,7 +272,6 @@ $test(bitvec_push_pop) {
 }
 
 $test(bitvec_append_range) {
-   cat::page_allocator pager;
    cat::array<bool, 5u> source{true, false, true, true, false};
 
    cat::bitvec manual_bits;
@@ -305,7 +301,6 @@ $test(bitvec_append_range) {
 }
 
 $test(bitvec_bitwise_predicates) {
-   cat::page_allocator pager;
    cat::raii::bitvec left{cat::dyn_allocator(pager)};
    cat::raii::bitvec right{cat::dyn_allocator(pager)};
    left.resize(130u).verify();
