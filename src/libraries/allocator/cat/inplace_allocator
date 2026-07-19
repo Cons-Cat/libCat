@@ -23,22 +23,6 @@ class inplace_allocator
    template <is_allocator, is_allocator, idx, idx>
    friend class resizable_allocator;
 
-   template <typename T>
-   struct inplace_memory_handle : detail::base_memory_handle<T> {
-      T* _Nonnull p_storage;
-
-      // TODO: Simplify with CRTP or deducing-this.
-      auto
-      get() -> decltype(auto) {
-         return *this;
-      }
-
-      auto
-      get() const -> decltype(auto) {
-         return *this;
-      }
-   };
-
  public:
    constexpr inplace_allocator() {
       poison_memory_region(m_storage.data(), arena_bytes);
@@ -128,27 +112,6 @@ class inplace_allocator
    void
    deallocate(void const* _Nonnull /*unused*/, uword /*unused*/) {
       m_is_allocated = false;
-   }
-
-   template <typename T>
-   [[clang::ownership_holds(libcat, 2)]]
-   constexpr auto
-   make_handle(T* _Nonnull p_handle_storage) -> inplace_memory_handle<T> {
-      return inplace_memory_handle<T>{{}, p_handle_storage};
-   }
-
-   template <typename T>
-   [[gnu::returns_nonnull]]
-   auto
-   access(inplace_memory_handle<T>& memory) -> T* _Nonnull {
-      return memory.p_storage;
-   }
-
-   template <typename T>
-   [[gnu::returns_nonnull]]
-   auto
-   access(inplace_memory_handle<T> const& memory) const -> T const* _Nonnull {
-      return memory.p_storage;
    }
 
  public:

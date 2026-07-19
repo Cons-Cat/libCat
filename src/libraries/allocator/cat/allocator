@@ -20,29 +20,14 @@ concept is_allocator = requires {
                           typename T::allocator_interface_tag;
                        };
 
+// Opaque pointer handle shared by allocators.
 template <typename T>
-concept mem = requires(T handle) {
-                 handle.is_inline_handle;
-                 handle.is_multi_handle;
-                 handle.size();
-                 handle.raw_size();
-                 handle.is_inline();
-              };
-
-// TODO: Handles' `.get()` should be only visible to allocators.
-namespace detail {
-
-// `base_memory_handle` is an opaque memory handle. allocators are to define and
-// produce a memory handle type which derives from this. These handles contain
-// absolutely arbitrary storage (such as a `T*`, or an `ssize` address offset).
-// Handles must provide a `.get()` method to return whatever that storage is.
-template <typename T>
-struct base_memory_handle {
+struct mem_handle {
    static constexpr bool is_inline_handle = false;
    static constexpr bool is_multi_handle = false;
    // Non-inline handles have no inline buffer size.
    static constexpr idx inline_size = 0;
-   using allocation_type = T;
+   using value_type = T;
 
    // Number of `T`s allocated. This is always 1 if the call is not intercepted
    // by a `multi_memory_handle`.
@@ -73,7 +58,21 @@ struct base_memory_handle {
    is_inline() const -> bool {
       return false;
    }
+
+   T* _Nonnull p_storage;
+
+   constexpr auto
+   get() -> mem_handle& {
+      return *this;
+   }
+
+   constexpr auto
+   get() const -> mem_handle const& {
+      return *this;
+   }
 };
+
+namespace detail {
 
 // A `multi_memory_handle` wraps another memory handle for `*_multi`
 // allocations. It effectively overrides `Handle`'s `.size()` and
@@ -83,10 +82,10 @@ struct multi_memory_handle {
    static constexpr bool is_inline_handle = Handle::is_inline_handle;
    static constexpr bool is_multi_handle = true;
    static constexpr idx inline_size = Handle::inline_size;
-   using allocation_type = Handle::allocation_type;
+   using value_type = Handle::value_type;
    Handle handle;
 
-   // How large this allocation was, in terms of `allocation_type`.
+   // How large this allocation was, in terms of `value_type`.
    idx array_length;
 
    multi_memory_handle() = default;
@@ -96,7 +95,7 @@ struct multi_memory_handle {
 
    // TODO: Variadic emplace.
    constexpr void
-   set_inline_storage(allocation_type value) {
+   set_inline_storage(value_type value) {
       this->handle.set_inline_storage(value);
    }
 
@@ -123,7 +122,7 @@ struct multi_memory_handle {
    [[nodiscard]]
    auto
    raw_size() const -> idx {
-      return this->array_length * sizeof(allocation_type);
+      return this->array_length * sizeof(value_type);
    }
 
    [[nodiscard]]
@@ -145,12 +144,12 @@ struct multi_memory_handle {
    }
 
    auto
-   get_inline() & -> allocation_type& {
+   get_inline() & -> value_type& {
       return this->handle.get_inline();
    }
 
    auto
-   get_inline() const& -> allocation_type const& {
+   get_inline() const& -> value_type const& {
       return this->handle.get_inline();
    }
 };
@@ -165,11 +164,11 @@ struct inline_memory_handle {
    static constexpr bool is_inline_handle = true;
    static constexpr bool is_multi_handle = Handle::is_multi_handle;
    static constexpr idx inline_size = inline_size_param;
-   using allocation_type = Handle::allocation_type;
+   using value_type = Handle::value_type;
 
    union {
       Handle handle;
-      allocation_type inline_storage;
+      value_type inline_storage;
       // Reserve `inline_size` bytes to make the size of this handle
       // predictable.
       byte empty[inline_size];
@@ -188,14 +187,14 @@ struct inline_memory_handle {
 
    constexpr ~inline_memory_handle() {
       if (this->is_on_stack) {
-         inline_storage.~allocation_type();
+         inline_storage.~value_type();
       }
    }
 
    // Intercept a propagating call to `.set_inline_storage()`.
    // TODO: Variadic emplace.
    constexpr void
-   set_inline_storage(allocation_type value) {
+   set_inline_storage(value_type value) {
       inline_storage = value;
    }
 
@@ -242,13 +241,13 @@ struct inline_memory_handle {
 
    // Intercept calls to `.get_inline()`.
    auto
-   get_inline() & -> allocation_type& {
+   get_inline() & -> value_type& {
       return inline_storage;
    }
 
    // Intercept calls to `.get_inline()`.
    auto
-   get_inline() const& -> allocation_type const& {
+   get_inline() const& -> value_type const& {
       return inline_storage;
    }
 };
@@ -2362,7 +2361,7 @@ class allocator_interface {
    // another. The new allocation reuses the SBO size of the old handle.
    [[nodiscard]]
    constexpr auto
-   inline_realloc_to(auto& allocator, mem auto& handle) {
+   inline_realloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2373,14 +2372,14 @@ class allocator_interface {
    // Try to move a small-size optimized handle from this allocator into itself.
    [[nodiscard]]
    constexpr auto
-   inline_realloc(mem auto& handle) {
+   inline_realloc(auto& handle) {
       return inline_realloc_to(*this, handle);
    }
 
    // Move a small-size optimized handle from this allocator into another.
    [[nodiscard]]
    constexpr auto
-   inline_xrealloc_to(auto& allocator, mem auto& handle) {
+   inline_xrealloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2391,7 +2390,7 @@ class allocator_interface {
    // Move a small-size optimized handle from this allocator into itself.
    [[nodiscard]]
    constexpr auto
-   inline_xrealloc(mem auto& handle) {
+   inline_xrealloc(auto& handle) {
       return inline_xrealloc_to(*this, handle);
    }
 
@@ -2399,9 +2398,7 @@ class allocator_interface {
    // with an alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_align_realloc_to(
-      auto& allocator, mem auto& handle, ualign alignment
-   ) {
+   inline_align_realloc_to(auto& allocator, auto& handle, ualign alignment) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2413,7 +2410,7 @@ class allocator_interface {
    // with an alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_align_realloc(mem auto& handle, ualign alignment) {
+   inline_align_realloc(auto& handle, ualign alignment) {
       return inline_align_realloc_to(*this, handle, alignment);
    }
 
@@ -2421,9 +2418,7 @@ class allocator_interface {
    // an alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_align_xrealloc_to(
-      auto& allocator, mem auto& handle, ualign alignment
-   ) {
+   inline_align_xrealloc_to(auto& allocator, auto& handle, ualign alignment) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2435,7 +2430,7 @@ class allocator_interface {
    // alignment guarantee.
    [[nodiscard]]
    auto
-   inline_align_xrealloc(mem auto& handle, ualign alignment) {
+   inline_align_xrealloc(auto& handle, ualign alignment) {
       return inline_align_xrealloc_to(*this, handle, alignment);
    }
 
@@ -2443,7 +2438,7 @@ class allocator_interface {
    // with no alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_realloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_realloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2455,7 +2450,7 @@ class allocator_interface {
    // with no alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_realloc(mem auto& handle) {
+   inline_unalign_realloc(auto& handle) {
       return inline_unalign_realloc_to(*this, handle);
    }
 
@@ -2463,7 +2458,7 @@ class allocator_interface {
    // no alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xrealloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_xrealloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2476,7 +2471,7 @@ class allocator_interface {
    // alignment guarantee.
    [[nodiscard]]
    auto
-   inline_unalign_xrealloc(mem auto& handle) {
+   inline_unalign_xrealloc(auto& handle) {
       return inline_unalign_xrealloc_to(*this, handle);
    }
 
@@ -2484,7 +2479,7 @@ class allocator_interface {
    // another.
    [[nodiscard]]
    constexpr auto
-   inline_realloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_realloc_multi_to(auto& allocator, auto& handle, idx new_count) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
@@ -2496,7 +2491,7 @@ class allocator_interface {
    // into itself.
    [[nodiscard]]
    constexpr auto
-   inline_realloc_multi(mem auto& handle, idx new_count) {
+   inline_realloc_multi(auto& handle, idx new_count) {
       return inline_realloc_multi_to(*this, handle, new_count);
    }
 
@@ -2504,7 +2499,7 @@ class allocator_interface {
    // allocator into another.
    [[nodiscard]]
    constexpr auto
-   inline_xrealloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_xrealloc_multi_to(auto& allocator, auto& handle, idx new_count) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
@@ -2516,7 +2511,7 @@ class allocator_interface {
    // allocator into itself.
    [[nodiscard]]
    constexpr auto
-   inline_xrealloc_multi(mem auto& handle, idx new_count) {
+   inline_xrealloc_multi(auto& handle, idx new_count) {
       return inline_xrealloc_multi_to(*this, handle, new_count);
    }
 
@@ -2525,7 +2520,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_realloc_multi_to(
-      auto& allocator, mem auto& handle, ualign alignment, idx new_count
+      auto& allocator, auto& handle, ualign alignment, idx new_count
    ) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
@@ -2539,9 +2534,7 @@ class allocator_interface {
    // this allocator into itself with an alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_align_realloc_multi(
-      mem auto& handle, ualign alignment, idx new_count
-   ) {
+   inline_align_realloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_realloc_multi_to(*this, handle, alignment, new_count);
    }
 
@@ -2550,7 +2543,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_xrealloc_multi_to(
-      auto& allocator, mem auto& handle, ualign alignment, idx new_count
+      auto& allocator, auto& handle, ualign alignment, idx new_count
    ) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
@@ -2564,9 +2557,7 @@ class allocator_interface {
    // allocator into itself with an alignment guarantee.
    [[nodiscard]]
    auto
-   inline_align_xrealloc_multi(
-      mem auto& handle, ualign alignment, idx new_count
-   ) {
+   inline_align_xrealloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_xrealloc_multi_to(
          *this, handle, alignment, new_count
       );
@@ -2577,7 +2568,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_realloc_multi_to(
-      auto& allocator, mem auto& handle, idx new_count
+      auto& allocator, auto& handle, idx new_count
    ) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
@@ -2591,7 +2582,7 @@ class allocator_interface {
    // this allocator into itself with no alignment guarantee.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_realloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_realloc_multi(auto& handle, idx new_count) {
       return inline_unalign_realloc_multi_to(*this, handle, new_count);
    }
 
@@ -2600,7 +2591,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_xrealloc_multi_to(
-      auto& allocator, mem auto& handle, idx new_count
+      auto& allocator, auto& handle, idx new_count
    ) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
@@ -2614,7 +2605,7 @@ class allocator_interface {
    // allocator into itself with no alignment guarantee.
    [[nodiscard]]
    auto
-   inline_unalign_xrealloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_xrealloc_multi(auto& handle, idx new_count) {
       return inline_unalign_xrealloc_multi_to(*this, handle, new_count);
    }
 
@@ -2622,7 +2613,7 @@ class allocator_interface {
    // another, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_recalloc_to(auto& allocator, mem auto& handle) {
+   inline_recalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2634,7 +2625,7 @@ class allocator_interface {
    // and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_recalloc(mem auto& handle) {
+   inline_recalloc(auto& handle) {
       return inline_recalloc_to(*this, handle);
    }
 
@@ -2642,7 +2633,7 @@ class allocator_interface {
    // zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_xrecalloc_to(auto& allocator, mem auto& handle) {
+   inline_xrecalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2654,7 +2645,7 @@ class allocator_interface {
    // zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_xrecalloc(mem auto& handle) {
+   inline_xrecalloc(auto& handle) {
       return inline_xrecalloc_to(*this, handle);
    }
 
@@ -2662,9 +2653,7 @@ class allocator_interface {
    // with an alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_align_recalloc_to(
-      auto& allocator, mem auto& handle, ualign alignment
-   ) {
+   inline_align_recalloc_to(auto& allocator, auto& handle, ualign alignment) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2676,7 +2665,7 @@ class allocator_interface {
    // with an alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_align_recalloc(mem auto& handle, ualign alignment) {
+   inline_align_recalloc(auto& handle, ualign alignment) {
       return inline_align_recalloc_to(*this, handle, alignment);
    }
 
@@ -2684,9 +2673,7 @@ class allocator_interface {
    // an alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_align_xrecalloc_to(
-      auto& allocator, mem auto& handle, ualign alignment
-   ) {
+   inline_align_xrecalloc_to(auto& allocator, auto& handle, ualign alignment) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2698,7 +2685,7 @@ class allocator_interface {
    // alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    auto
-   inline_align_xrecalloc(mem auto& handle, ualign alignment) {
+   inline_align_xrecalloc(auto& handle, ualign alignment) {
       return inline_align_xrecalloc_to(*this, handle, alignment);
    }
 
@@ -2706,7 +2693,7 @@ class allocator_interface {
    // with no alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_recalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_recalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2718,7 +2705,7 @@ class allocator_interface {
    // with no alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_recalloc(mem auto& handle) {
+   inline_unalign_recalloc(auto& handle) {
       return inline_unalign_recalloc_to(*this, handle);
    }
 
@@ -2726,7 +2713,7 @@ class allocator_interface {
    // no alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xrecalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_xrecalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -2738,7 +2725,7 @@ class allocator_interface {
    // alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    auto
-   inline_unalign_xrecalloc(mem auto& handle) {
+   inline_unalign_xrecalloc(auto& handle) {
       return inline_unalign_xrecalloc_to(*this, handle);
    }
 
@@ -2746,7 +2733,7 @@ class allocator_interface {
    // another, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_recalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_recalloc_multi_to(auto& allocator, auto& handle, idx new_count) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
@@ -2758,7 +2745,7 @@ class allocator_interface {
    // into itself, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_recalloc_multi(mem auto& handle, idx new_count) {
+   inline_recalloc_multi(auto& handle, idx new_count) {
       return inline_recalloc_multi_to(*this, handle, new_count);
    }
 
@@ -2766,7 +2753,7 @@ class allocator_interface {
    // allocator into another, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_xrecalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
+   inline_xrecalloc_multi_to(auto& allocator, auto& handle, idx new_count) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
@@ -2778,7 +2765,7 @@ class allocator_interface {
    // allocator into itself, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_xrecalloc_multi(mem auto& handle, idx new_count) {
+   inline_xrecalloc_multi(auto& handle, idx new_count) {
       return inline_xrecalloc_multi_to(*this, handle, new_count);
    }
 
@@ -2787,7 +2774,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_recalloc_multi_to(
-      auto& allocator, mem auto& handle, ualign alignment, idx new_count
+      auto& allocator, auto& handle, ualign alignment, idx new_count
    ) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
@@ -2802,9 +2789,7 @@ class allocator_interface {
    // allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_align_recalloc_multi(
-      mem auto& handle, ualign alignment, idx new_count
-   ) {
+   inline_align_recalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_recalloc_multi_to(
          *this, handle, alignment, new_count
       );
@@ -2816,7 +2801,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_xrecalloc_multi_to(
-      auto& allocator, mem auto& handle, ualign alignment, idx new_count
+      auto& allocator, auto& handle, ualign alignment, idx new_count
    ) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
@@ -2831,9 +2816,7 @@ class allocator_interface {
    // allocated memory.
    [[nodiscard]]
    auto
-   inline_align_xrecalloc_multi(
-      mem auto& handle, ualign alignment, idx new_count
-   ) {
+   inline_align_xrecalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_xrecalloc_multi_to(
          *this, handle, alignment, new_count
       );
@@ -2845,7 +2828,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_recalloc_multi_to(
-      auto& allocator, mem auto& handle, idx new_count
+      auto& allocator, auto& handle, idx new_count
    ) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
@@ -2860,7 +2843,7 @@ class allocator_interface {
    // allocated memory.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_recalloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_recalloc_multi(auto& handle, idx new_count) {
       return inline_unalign_recalloc_multi_to(*this, handle, new_count);
    }
 
@@ -2870,7 +2853,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_xrecalloc_multi_to(
-      auto& allocator, mem auto& handle, idx new_count
+      auto& allocator, auto& handle, idx new_count
    ) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
@@ -2885,7 +2868,7 @@ class allocator_interface {
    // allocated memory.
    [[nodiscard]]
    auto
-   inline_unalign_xrecalloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_xrecalloc_multi(auto& handle, idx new_count) {
       return inline_unalign_xrecalloc_multi_to(*this, handle, new_count);
    }
 
@@ -3462,7 +3445,7 @@ class allocator_interface {
    // another, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_resalloc_to(auto& allocator, mem auto& handle) {
+   inline_resalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3474,7 +3457,7 @@ class allocator_interface {
    // and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_resalloc(mem auto& handle) {
+   inline_resalloc(auto& handle) {
       return inline_resalloc_to(*this, handle);
    }
 
@@ -3482,7 +3465,7 @@ class allocator_interface {
    // return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xresalloc_to(auto& allocator, mem auto& handle) {
+   inline_xresalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3494,7 +3477,7 @@ class allocator_interface {
    // return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xresalloc(mem auto& handle) {
+   inline_xresalloc(auto& handle) {
       return inline_xresalloc_to(*this, handle);
    }
 
@@ -3503,9 +3486,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_resalloc_to(
-      auto& allocator, mem auto& handle, ualign alignment
-   ) {
+   inline_align_resalloc_to(auto& allocator, auto& handle, ualign alignment) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3518,7 +3499,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_resalloc(mem auto& handle, ualign alignment) {
+   inline_align_resalloc(auto& handle, ualign alignment) {
       return inline_align_resalloc_to(*this, handle, alignment);
    }
 
@@ -3527,9 +3508,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_xresalloc_to(
-      auto& allocator, mem auto& handle, ualign alignment
-   ) {
+   inline_align_xresalloc_to(auto& allocator, auto& handle, ualign alignment) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3541,7 +3520,7 @@ class allocator_interface {
    // alignment guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    auto
-   inline_align_xresalloc(mem auto& handle, ualign alignment) {
+   inline_align_xresalloc(auto& handle, ualign alignment) {
       return inline_align_xresalloc_to(*this, handle, alignment);
    }
 
@@ -3550,7 +3529,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_resalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_resalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3564,7 +3543,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_resalloc(mem auto& handle) {
+   inline_unalign_resalloc(auto& handle) {
       return inline_unalign_resalloc_to(*this, handle);
    }
 
@@ -3573,7 +3552,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xresalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_xresalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3586,20 +3565,21 @@ class allocator_interface {
    // alignment guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    auto
-   inline_unalign_xresalloc(mem auto& handle) {
+   inline_unalign_xresalloc(auto& handle) {
       return inline_unalign_xresalloc_to(*this, handle);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
    // this allocator into another, and return the number of bytes that were
    // allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
-   inline_resalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
-      using T = typeof(this->get(handle));  // Decay reference.
+   inline_resalloc_multi_to(auto& allocator, Handle& handle, idx new_count) {
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_salloc_multi<T, inline_size>,
+         &allocator_interface<Derived>::inline_salloc_multi<
+            typename Handle::value_type, inline_size>,
          true, true>(allocator, handle, new_count);
    }
 
@@ -3607,20 +3587,21 @@ class allocator_interface {
    // into itself, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_resalloc_multi(mem auto& handle, idx new_count) {
+   inline_resalloc_multi(auto& handle, idx new_count) {
       return inline_resalloc_multi_to(*this, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
    // allocator into another, and return the number of bytes that were
    // allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
-   inline_xresalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
-      using T = typeof(this->get(handle));  // Decay reference.
+   inline_xresalloc_multi_to(auto& allocator, Handle& handle, idx new_count) {
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_xsalloc_multi<T, inline_size>,
+         &allocator_interface<Derived>::inline_xsalloc_multi<
+            typename Handle::value_type, inline_size>,
          false, true>(allocator, handle, new_count);
    }
 
@@ -3628,23 +3609,23 @@ class allocator_interface {
    // allocator into itself, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xresalloc_multi(mem auto& handle, idx new_count) {
+   inline_xresalloc_multi(auto& handle, idx new_count) {
       return inline_xresalloc_multi_to(*this, handle, new_count);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
    // this allocator into another with an alignment guarantee, and return the
    // number of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
    inline_align_resalloc_multi_to(
-      auto& allocator, mem auto& handle, ualign alignment, idx new_count
+      auto& allocator, Handle& handle, ualign alignment, idx new_count
    ) {
-      using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
          &allocator_interface<Derived>::inline_align_salloc_multi<
-            T, inline_size>,
+            typename Handle::value_type, inline_size>,
          true, true>(allocator, handle, new_count, alignment);
    }
 
@@ -3653,9 +3634,7 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_resalloc_multi(
-      mem auto& handle, ualign alignment, idx new_count
-   ) {
+   inline_align_resalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_resalloc_multi_to(
          *this, handle, alignment, new_count
       );
@@ -3664,16 +3643,16 @@ class allocator_interface {
    // Move and resize a small-size optimized array memory handle from this
    // allocator into another with an alignment guarantee, and return the number
    // of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
    inline_align_xresalloc_multi_to(
-      auto& allocator, mem auto& handle, ualign alignment, idx new_count
+      auto& allocator, Handle& handle, ualign alignment, idx new_count
    ) {
-      using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
          &allocator_interface<Derived>::inline_align_xsalloc_multi<
-            T, inline_size>,
+            typename Handle::value_type, inline_size>,
          false, true>(allocator, handle, new_count, alignment);
    }
 
@@ -3682,9 +3661,7 @@ class allocator_interface {
    // of bytes that were allocated.
    [[nodiscard]]
    auto
-   inline_align_xresalloc_multi(
-      mem auto& handle, ualign alignment, idx new_count
-   ) {
+   inline_align_xresalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_xresalloc_multi_to(
          *this, handle, alignment, new_count
       );
@@ -3693,16 +3670,16 @@ class allocator_interface {
    // Try to move and resize a small-size optimized array memory handle from
    // this allocator into another with no alignment guarantee, and return the
    // number of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
    inline_unalign_resalloc_multi_to(
-      auto& allocator, mem auto& handle, idx new_count
+      auto& allocator, Handle& handle, idx new_count
    ) {
-      using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
          &allocator_interface<Derived>::inline_unalign_salloc_multi<
-            T, inline_size>,
+            typename Handle::value_type, inline_size>,
          true, true>(allocator, handle, new_count);
    }
 
@@ -3711,23 +3688,23 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_resalloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_resalloc_multi(auto& handle, idx new_count) {
       return inline_unalign_resalloc_multi_to(*this, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
    // allocator into another with no alignment guarantee, and return the number
    // of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xresalloc_multi_to(
-      auto& allocator, mem auto& handle, idx new_count
+      auto& allocator, Handle& handle, idx new_count
    ) {
-      using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
          &allocator_interface<Derived>::inline_unalign_xsalloc_multi<
-            T, inline_size>,
+            typename Handle::value_type, inline_size>,
          false, true>(allocator, handle, new_count);
    }
 
@@ -3736,7 +3713,7 @@ class allocator_interface {
    // of bytes that were allocated.
    [[nodiscard]]
    auto
-   inline_unalign_xresalloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_xresalloc_multi(auto& handle, idx new_count) {
       return inline_unalign_xresalloc_multi_to(*this, handle, new_count);
    }
 
@@ -3745,7 +3722,7 @@ class allocator_interface {
    // that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_rescalloc_to(auto& allocator, mem auto& handle) {
+   inline_rescalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3758,7 +3735,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_rescalloc(mem auto& handle) {
+   inline_rescalloc(auto& handle) {
       return inline_rescalloc_to(*this, handle);
    }
 
@@ -3767,7 +3744,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xrescalloc_to(auto& allocator, mem auto& handle) {
+   inline_xrescalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3780,7 +3757,7 @@ class allocator_interface {
    // allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xrescalloc(mem auto& handle) {
+   inline_xrescalloc(auto& handle) {
       return inline_xrescalloc_to(*this, handle);
    }
 
@@ -3789,9 +3766,7 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_rescalloc_to(
-      auto& allocator, mem auto& handle, ualign alignment
-   ) {
+   inline_align_rescalloc_to(auto& allocator, auto& handle, ualign alignment) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3804,7 +3779,7 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_rescalloc(mem auto& handle, ualign alignment) {
+   inline_align_rescalloc(auto& handle, ualign alignment) {
       return inline_align_rescalloc_to(*this, handle, alignment);
    }
 
@@ -3813,9 +3788,7 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_xrescalloc_to(
-      auto& allocator, mem auto& handle, ualign alignment
-   ) {
+   inline_align_xrescalloc_to(auto& allocator, auto& handle, ualign alignment) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3828,7 +3801,7 @@ class allocator_interface {
    // of bytes that were allocated.
    [[nodiscard]]
    auto
-   inline_align_xrescalloc(mem auto& handle, ualign alignment) {
+   inline_align_xrescalloc(auto& handle, ualign alignment) {
       return inline_align_xrescalloc_to(*this, handle, alignment);
    }
 
@@ -3837,7 +3810,7 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_rescalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_rescalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3850,7 +3823,7 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_rescalloc(mem auto& handle) {
+   inline_unalign_rescalloc(auto& handle) {
       return inline_unalign_rescalloc_to(*this, handle);
    }
 
@@ -3859,7 +3832,7 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xrescalloc_to(auto& allocator, mem auto& handle) {
+   inline_unalign_xrescalloc_to(auto& allocator, auto& handle) {
       using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return meta_realloc<
@@ -3872,20 +3845,21 @@ class allocator_interface {
    // of bytes that were allocated.
    [[nodiscard]]
    auto
-   inline_unalign_xrescalloc(mem auto& handle) {
+   inline_unalign_xrescalloc(auto& handle) {
       return inline_unalign_xrescalloc_to(*this, handle);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
    // this allocator into another, zero-out the allocated memory, and return the
    // number of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
-   inline_rescalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
-      using T = typeof(this->get(handle));  // Decay reference.
+   inline_rescalloc_multi_to(auto& allocator, Handle& handle, idx new_count) {
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_scalloc_multi<T, inline_size>,
+         &allocator_interface<Derived>::inline_scalloc_multi<
+            typename Handle::value_type, inline_size>,
          true, true>(allocator, handle, new_count);
    }
 
@@ -3894,22 +3868,21 @@ class allocator_interface {
    // that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_rescalloc_multi(mem auto& handle, idx new_count) {
+   inline_rescalloc_multi(auto& handle, idx new_count) {
       return inline_rescalloc_multi_to(*this, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
    // allocator into another, zero-out the allocated memory, and return the
    // number of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
-   inline_xrescalloc_multi_to(
-      auto& allocator, mem auto& handle, idx new_count
-   ) {
-      using T = typeof(this->get(handle));  // Decay reference.
+   inline_xrescalloc_multi_to(auto& allocator, Handle& handle, idx new_count) {
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
-         &allocator_interface<Derived>::inline_xscalloc_multi<T, inline_size>,
+         &allocator_interface<Derived>::inline_xscalloc_multi<
+            typename Handle::value_type, inline_size>,
          false, true>(allocator, handle, new_count);
    }
 
@@ -3918,23 +3891,23 @@ class allocator_interface {
    // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_xrescalloc_multi(mem auto& handle, idx new_count) {
+   inline_xrescalloc_multi(auto& handle, idx new_count) {
       return inline_xrescalloc_multi_to(*this, handle, new_count);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
    // this allocator into another with an alignment guarantee, zero-out the
    // allocated memory, and return the number of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
    inline_align_rescalloc_multi_to(
-      auto& allocator, mem auto& handle, ualign alignment, idx new_count
+      auto& allocator, Handle& handle, ualign alignment, idx new_count
    ) {
-      using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
          &allocator_interface<Derived>::inline_align_scalloc_multi<
-            T, inline_size>,
+            typename Handle::value_type, inline_size>,
          true, true>(allocator, handle, new_count, alignment);
    }
 
@@ -3943,9 +3916,7 @@ class allocator_interface {
    // allocated memory, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_align_rescalloc_multi(
-      mem auto& handle, ualign alignment, idx new_count
-   ) {
+   inline_align_rescalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_rescalloc_multi_to(
          *this, handle, alignment, new_count
       );
@@ -3954,16 +3925,16 @@ class allocator_interface {
    // Move and resize a small-size optimized array memory handle from this
    // allocator into another with an alignment guarantee, zero-out the allocated
    // memory, and return the number of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
    inline_align_xrescalloc_multi_to(
-      auto& allocator, mem auto& handle, ualign alignment, idx new_count
+      auto& allocator, Handle& handle, ualign alignment, idx new_count
    ) {
-      using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
          &allocator_interface<Derived>::inline_align_xscalloc_multi<
-            T, inline_size>,
+            typename Handle::value_type, inline_size>,
          false, true>(allocator, handle, new_count, alignment);
    }
 
@@ -3973,7 +3944,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_align_xrescalloc_multi(
-      mem auto& handle, ualign alignment, idx new_count
+      auto& handle, ualign alignment, idx new_count
    ) {
       return inline_align_xrescalloc_multi_to(
          *this, handle, alignment, new_count
@@ -3983,16 +3954,16 @@ class allocator_interface {
    // Try to move and resize a small-size optimized array memory handle from
    // this allocator into another with no alignment guarantee, zero-out the
    // allocated memory, and return the number of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
    inline_unalign_rescalloc_multi_to(
-      auto& allocator, mem auto& handle, idx new_count
+      auto& allocator, Handle& handle, idx new_count
    ) {
-      using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
          &allocator_interface<Derived>::inline_unalign_scalloc_multi<
-            T, inline_size>,
+            typename Handle::value_type, inline_size>,
          true, true>(allocator, handle, new_count);
    }
 
@@ -4001,23 +3972,23 @@ class allocator_interface {
    // allocated memory, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
-   inline_unalign_rescalloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_rescalloc_multi(auto& handle, idx new_count) {
       return inline_unalign_rescalloc_multi_to(*this, handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
    // allocator into another with no alignment guarantee, zero-out the allocated
    // memory, and return the number of bytes that were allocated.
+   template <typename Handle>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xrescalloc_multi_to(
-      auto& allocator, mem auto& handle, idx new_count
+      auto& allocator, Handle& handle, idx new_count
    ) {
-      using T = typeof(this->get(handle));  // Decay reference.
       constexpr idx inline_size = handle.inline_size;
       return inline_meta_realloc_multi<
          &allocator_interface<Derived>::inline_unalign_xscalloc_multi<
-            T, inline_size>,
+            typename Handle::value_type, inline_size>,
          false, true>(allocator, handle, new_count);
    }
 
@@ -4026,12 +3997,12 @@ class allocator_interface {
    // memory, and return the number of bytes that were allocated.
    [[nodiscard]]
    auto
-   inline_unalign_xrescalloc_multi(mem auto& handle, idx new_count) {
+   inline_unalign_xrescalloc_multi(auto& handle, idx new_count) {
       return inline_unalign_xrescalloc_multi_to(*this, handle, new_count);
    }
 
    // Invalidate any memory handle, invoking its data's destructor.
-   template <mem T>
+   template <typename T>
    constexpr void
    free(T const& handle);
 
@@ -4047,7 +4018,7 @@ class allocator_interface {
    constexpr void
    free_multi(span<T> handle);
 
-   template <mem T>
+   template <typename T>
    constexpr void
    cfree(T& handle);
 
@@ -4079,14 +4050,15 @@ class allocator_interface {
 
    // Get a non-`const` handle to the data in any memory handle. If that memory
    // handle is to a multi-allocation, this returns a `span`.
-   template <mem T>
+   template <typename T>
+      requires(!is_const<T>)
    [[nodiscard]]
    constexpr auto
    get(T& handle [[clang::lifetimebound]]) & -> decltype(auto);
 
    // Get a `const` handle to the data in any memory handle. If that memory
    // handle is to a multi-allocation, this returns a `span`.
-   template <mem T>
+   template <typename T>
    [[nodiscard]]
    constexpr auto
    get(T const& memory [[clang::lifetimebound]]) & -> decltype(auto);
@@ -4103,14 +4075,14 @@ class allocator_interface {
    constexpr auto
    get(T const* _Nonnull p_handle) & -> T&;
 
-   // Get a pointer to an allocated non-`const` `mem`.
-   template <mem T>
+   // Get a pointer to an allocated non-`const` memory handle.
+   template <typename T>
    [[nodiscard]]
    constexpr auto
    get_ptr(T& memory) -> auto;
 
-   // Get a `const` pointer to an allocated `mem`.
-   template <mem T>
+   // Get a `const` pointer to an allocated memory handle.
+   template <typename T>
    [[nodiscard]]
    constexpr auto
    get_ptr(T const& memory) -> auto;
@@ -4252,7 +4224,7 @@ class allocator_interface {
       }
 
       if constexpr (!pass_old_to_alloc) {
-         if constexpr (mem<decltype(old_handle)>) {
+         if constexpr (requires { old_handle.is_inline_handle; }) {
             if constexpr (is_fail_safe) {
                if constexpr (has_feedback) {
                   this->relocate_inline_handle(
@@ -4300,15 +4272,15 @@ class allocator_interface {
    // Move data from `handle` into `allocation`. Allocators used with this
    // interface supply non-overlapping destination storage for this transfer.
    constexpr void
-   relocate_inline_handle(mem auto& handle, mem auto& allocation) {
-      using allocation_type = remove_cvref<decltype(handle)>::allocation_type;
+   relocate_inline_handle(auto& handle, auto& allocation) {
+      using value_type = remove_cvref<decltype(handle)>::value_type;
       if !consteval {
          assert(!is_memory_overlapping(
             this->get_ptr(handle), handle.raw_size(), this->get_ptr(allocation),
             allocation.raw_size()
          ));
       }
-      if constexpr (is_trivially_relocatable<allocation_type>) {
+      if constexpr (is_trivially_relocatable<value_type>) {
          copy_memory(
             this->get_ptr(handle), this->get_ptr(allocation), handle.raw_size()
          );
@@ -4380,7 +4352,7 @@ class allocator_interface {
       requires(sizeof...(Args) <= 1)
    constexpr auto
    inline_meta_realloc_multi(
-      auto& allocator, mem auto& old_handle, idx new_count, Args&&... arguments
+      auto& allocator, auto& old_handle, idx new_count, Args&&... arguments
    ) {
       // Zero or one optional alignment argument before the new count.
       auto new_handle =

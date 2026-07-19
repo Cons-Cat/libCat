@@ -10,14 +10,14 @@ namespace cat {
 
 template <typename Derived>
 // Invalidate any memory handle, invoking its data's destructor.
-template <mem T>
+template <typename T>
 constexpr void
 allocator_interface<Derived>::free(T const& handle) {
-   using allocation_type = T::allocation_type const;
+   using value_type = T::value_type const;
 
    // If this is not a small-size optimized handle:
    if (!handle.is_inline()) {
-      allocation_type const* p_memory;
+      value_type const* p_memory;
       if constexpr (T::is_multi_handle) {
          // Get the pointer from a span produced by the allocator.
          p_memory = this->get(handle).data();
@@ -26,11 +26,11 @@ allocator_interface<Derived>::free(T const& handle) {
          p_memory = __builtin_addressof(this->get(handle));
       }
 
-      poison_memory_region(p_memory, sizeof(allocation_type));
+      poison_memory_region(p_memory, sizeof(value_type));
 
-      // if constexpr (is_destructible<allocation_type>) {
+      // if constexpr (is_destructible<value_type>) {
       for (idx i = 0u; i < handle.size(); ++i) {
-         p_memory[i].~allocation_type();
+         p_memory[i].~value_type();
       }
       // }
       this->self().deallocate(
@@ -103,26 +103,26 @@ allocator_interface<Derived>::free_multi(span<T> handle) {
 }
 
 template <typename Derived>
-template <mem T>
+template <typename T>
 constexpr void
 allocator_interface<Derived>::cfree(T& handle) {
-   using allocation_type = T::allocation_type const;
+   using value_type = T::value_type const;
 
    if (!handle.is_inline()) {
-      allocation_type const* p_memory;
+      value_type const* p_memory;
       if constexpr (T::is_multi_handle) {
          p_memory = this->get(handle).data();
       } else {
          p_memory = __builtin_addressof(this->get(handle));
       }
 
-      poison_memory_region(p_memory, sizeof(allocation_type));
+      poison_memory_region(p_memory, sizeof(value_type));
 
       for (idx i = 0u; i < handle.size(); ++i) {
-         p_memory[i].~allocation_type();
+         p_memory[i].~value_type();
       }
       zero_memory_explicit(
-         static_cast<void*>(const_cast<allocation_type*>(p_memory)),
+         static_cast<void*>(const_cast<value_type*>(p_memory)),
          handle.raw_size()
       );
       this->self().deallocate(

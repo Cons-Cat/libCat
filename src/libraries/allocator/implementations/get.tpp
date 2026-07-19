@@ -11,19 +11,21 @@ namespace cat {
 template <typename Derived>
 // Get a non-`const` handle to the data in any memory handle. If that memory
 // handle is to a multi-allocation, this returns a `span`.
-template <mem T>
+template <typename T>
+   requires(!is_const<T>)
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::get(
    T& handle [[clang::lifetimebound]]
 ) & -> decltype(auto) {
-   using allocation_type = T::allocation_type;
+   using value_type = T::value_type;
    if constexpr (T::is_inline_handle) {
       // Get small-size optimized data:
       if (handle.is_inline()) {
          if constexpr (T::is_multi_handle) {
-            return span<allocation_type>{
-               __builtin_addressof(handle.get_inline()), handle.size()
+            return span<value_type>{
+               __builtin_addressof(handle.get_inline()),
+               handle.size(),
             };
          } else {
             return handle.get_inline();
@@ -33,19 +35,16 @@ allocator_interface<Derived>::get(
 
    // Get non-small-size optimized data:
    if constexpr (T::is_multi_handle) {
-      return span<allocation_type>(
-         this->self().template access<allocation_type>(handle.get()),
-         handle.size()
-      );
+      return span<value_type>(handle.get().p_storage, handle.size());
    } else {
-      return *(this->self().template access<allocation_type>(handle.get()));
+      return *handle.get().p_storage;
    }
 }
 
 template <typename Derived>
 // Get a `const` handle to the data in any memory handle. If that memory handle
 // is to a multi-allocation, this returns a `span`.
-template <mem T>
+template <typename T>
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::get(
@@ -73,8 +72,8 @@ allocator_interface<Derived>::get(T const* _Nonnull p_handle) & -> T& {
 }
 
 template <typename Derived>
-// Get a pointer to an allocated non-`const` `mem`.
-template <mem T>
+// Get a pointer to an allocated non-`const` memory handle.
+template <typename T>
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::get_ptr(T& memory) -> auto {
@@ -91,8 +90,8 @@ allocator_interface<Derived>::get_ptr(T& memory) -> auto {
 }
 
 template <typename Derived>
-// Get a `const` pointer to an allocated `mem`.
-template <mem T>
+// Get a `const` pointer to an allocated memory handle.
+template <typename T>
 [[nodiscard]]
 constexpr auto
 allocator_interface<Derived>::get_ptr(T const& memory) -> auto {

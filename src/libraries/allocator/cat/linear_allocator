@@ -37,22 +37,6 @@ class linear_allocator : public allocator_interface<linear_allocator> {
       this->reset();
    }
 
-   template <typename T>
-   struct linear_memory_handle : detail::base_memory_handle<T> {
-      T* _Nonnull p_storage;
-
-      // TODO: Simplify with CRTP or deducing-this.
-      auto
-      get() -> decltype(auto) {
-         return *this;
-      }
-
-      auto
-      get() const -> decltype(auto) {
-         return *this;
-      }
-   };
-
  public:
    // `linear_allocator` is move-only.
    constexpr linear_allocator(linear_allocator const&) = delete (
@@ -172,29 +156,6 @@ class linear_allocator : public allocator_interface<linear_allocator> {
          return nullopt;
       }
       return new_bytes;
-   }
-
-   // Produce a handle to allocated memory.
-   template <typename T>
-   [[clang::ownership_holds(libcat, 2)]]
-   constexpr auto
-   make_handle(T* _Nonnull p_handle_storage) -> linear_memory_handle<T> {
-      return linear_memory_handle<T>{{}, p_handle_storage};
-   }
-
-   // Access some memory.
-   template <typename T>
-   [[gnu::returns_nonnull]]
-   auto
-   access(linear_memory_handle<T>& memory) -> T* _Nonnull {
-      return memory.p_storage;
-   }
-
-   template <typename T>
-   [[gnu::returns_nonnull]]
-   auto
-   access(linear_memory_handle<T> const& memory) const -> T const* _Nonnull {
-      return memory.p_storage;
    }
 
  public:

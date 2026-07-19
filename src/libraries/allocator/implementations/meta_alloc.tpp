@@ -46,10 +46,7 @@ template <
 struct allocator_interface<Derived>::meta_alloc_alias_types {
    static constexpr bool is_inline = (inline_size != 0);
 
-   using underlying_handle =
-      decltype(declval<Derived&>().template make_handle<T>(
-         declval<T* _Nonnull>()
-      ));
+   using underlying_handle = mem_handle<T>;
 
    using maybe_allocation = conditional<
       has_feedback, maybe_sized_allocation<void* _Nonnull>, maybe_ptr<void>>;
@@ -202,7 +199,7 @@ allocator_interface<Derived>::meta_alloc_aligned(
       if (maybe_memory.has_value()) {
          assert(
             cat::is_aligned(maybe_memory.value(), allocation_alignment),
-            "allocation_type is misaligned!"
+            "value_type is misaligned!"
          );
       }
    }
@@ -309,8 +306,7 @@ allocator_interface<Derived>::meta_alloc_construct(
    if constexpr (is_inline) {
       using handle_type = alias_types::handle_type;
       using underlying_handle = alias_types::underlying_handle;
-      underlying_handle const raw_handle =
-         this->self().template make_handle<T>(p_allocation);
+      underlying_handle const raw_handle{p_allocation};
       handle_type handle(move(raw_handle));
       handle.set_inlined(false);
       if constexpr (is_multiple) {
@@ -423,8 +419,7 @@ allocator_interface<Derived>::meta_alloc(
       if constexpr (is_inline) {
          using handle_type = alias_types::handle_type;
          using underlying_handle = alias_types::underlying_handle;
-         underlying_handle const raw_handle =
-            this->self().template make_handle<T>(p_allocation);
+         underlying_handle const raw_handle{p_allocation};
          handle_type handle(move(raw_handle));
          handle.set_inlined(false);
          if constexpr (is_multiple) {

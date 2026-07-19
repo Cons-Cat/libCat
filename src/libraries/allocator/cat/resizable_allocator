@@ -166,42 +166,6 @@ class resizable_allocator
    void
    deallocate(void const* _Nonnull p_storage, idx allocation_bytes);
 
-   template <typename T>
-   struct resizable_memory_handle : detail::base_memory_handle<T> {
-      T* _Nonnull p_storage;
-
-      auto
-      get() -> decltype(auto) {
-         return *this;
-      }
-
-      auto
-      get() const -> decltype(auto) {
-         return *this;
-      }
-   };
-
-   template <typename T>
-   [[clang::ownership_holds(libcat, 2)]]
-   constexpr auto
-   make_handle(T* _Nonnull p_handle_storage) -> resizable_memory_handle<T> {
-      return resizable_memory_handle<T>{{}, p_handle_storage};
-   }
-
-   template <typename T>
-   [[gnu::returns_nonnull]]
-   auto
-   access(resizable_memory_handle<T>& memory) -> T* _Nonnull {
-      return memory.p_storage;
-   }
-
-   template <typename T>
-   [[gnu::returns_nonnull]]
-   auto
-   access(resizable_memory_handle<T> const& memory) const -> T const* _Nonnull {
-      return memory.p_storage;
-   }
-
  public:
    [[nodiscard]]
    auto

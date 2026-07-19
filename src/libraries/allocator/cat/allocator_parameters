@@ -191,29 +191,6 @@ struct dyn_allocator_friend {
    name(T const& self) -> decltype(self.name()) {
       return self.name();
    }
-
-   template <typename T, typename Storage>
-   [[gnu::always_inline, gnu::nodebug, clang::ownership_holds(libcat, 2)]]
-   static auto
-   make_handle(T& self, Storage* _Nonnull p_handle_storage)
-      -> decltype(self.template make_handle<Storage>(p_handle_storage)) {
-      return self.template make_handle<Storage>(p_handle_storage);
-   }
-
-   template <typename T, typename Handle>
-   [[gnu::always_inline, gnu::nodebug]]
-   static auto
-   access(T& self, Handle& memory) -> decltype(self.access(memory)) {
-      return self.access(memory);
-   }
-
-   template <typename T, typename Handle>
-   [[gnu::always_inline, gnu::nodebug]]
-   static auto
-   access(T const& self, Handle const& memory)
-      -> decltype(self.access(memory)) {
-      return self.access(memory);
-   }
 };
 
 namespace detail {
@@ -659,21 +636,6 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    friend class allocator_ref;
 
  private:
-   template <typename T>
-   struct dyn_memory_handle : detail::base_memory_handle<T> {
-      T* _Nonnull p_storage;
-
-      auto
-      get() -> decltype(auto) {
-         return *this;
-      }
-
-      auto
-      get() const -> decltype(auto) {
-         return *this;
-      }
-   };
-
    dyn_ptr<
       detail::dyn_allocate, detail::dyn_deallocate, detail::dyn_reset,
       detail::dyn_aligned_allocate, detail::dyn_allocate_feedback,
@@ -759,27 +721,6 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
       return dyn_invoke<detail::dyn_reallocate_feedback>(
          *m_p_allocator, allocation, new_bytes
       );
-   }
-
-   template <typename T>
-   [[gnu::always_inline, gnu::nodebug, clang::ownership_holds(libcat, 2)]]
-   constexpr auto
-   make_handle(T* _Nonnull p_handle_storage) -> dyn_memory_handle<T> {
-      return dyn_memory_handle<T>{{}, p_handle_storage};
-   }
-
-   template <typename T>
-   [[gnu::returns_nonnull, gnu::always_inline, gnu::nodebug]]
-   auto
-   access(dyn_memory_handle<T>& memory) -> T* _Nonnull {
-      return memory.p_storage;
-   }
-
-   template <typename T>
-   [[gnu::returns_nonnull, gnu::always_inline, gnu::nodebug]]
-   auto
-   access(dyn_memory_handle<T> const& memory) const -> T const* _Nonnull {
-      return memory.p_storage;
    }
 
  public:
@@ -1013,27 +954,6 @@ class [[gsl::Pointer]] allocator_ref
       );
    }
 
-   template <typename T>
-   [[gnu::always_inline, gnu::nodebug, clang::ownership_holds(libcat, 2)]]
-   constexpr auto
-   make_handle(T* _Nonnull p_handle_storage) {
-      return get_allocator().template make_handle<T>(p_handle_storage);
-   }
-
-   template <typename Handle>
-   [[gnu::always_inline, gnu::nodebug]]
-   auto
-   access(Handle& memory) -> decltype(auto) {
-      return get_allocator().access(memory);
-   }
-
-   template <typename Handle>
-   [[gnu::always_inline, gnu::nodebug]]
-   auto
-   access(Handle const& memory) const -> decltype(auto) {
-      return get_allocator().access(memory);
-   }
-
  public:
    // Mirror `Allocator::min_alignment` so generic code can query the static
    // alignment guarantee without un-erasing the held allocator type.
@@ -1194,27 +1114,6 @@ class [[gsl::Pointer]] allocator_ref<dyn_allocator>
    reallocate_feedback(span<byte> allocation, idx new_bytes)
       -> maybe_sized_allocation<void*> {
       return m_allocator.reallocate_feedback(allocation, new_bytes);
-   }
-
-   template <typename T>
-   [[gnu::always_inline, gnu::nodebug, clang::ownership_holds(libcat, 2)]]
-   constexpr auto
-   make_handle(T* _Nonnull p_handle_storage) {
-      return m_allocator.template make_handle<T>(p_handle_storage);
-   }
-
-   template <typename Handle>
-   [[gnu::always_inline, gnu::nodebug]]
-   auto
-   access(Handle& memory) -> decltype(auto) {
-      return m_allocator.access(memory);
-   }
-
-   template <typename Handle>
-   [[gnu::always_inline, gnu::nodebug]]
-   auto
-   access(Handle const& memory) const -> decltype(auto) {
-      return m_allocator.access(memory);
    }
 
  public:
