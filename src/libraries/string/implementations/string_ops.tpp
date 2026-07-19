@@ -7,18 +7,6 @@
 #include <cat/string>
 #include <cat/utility>
 
-[[clang::no_builtin("strlen")]]
-constexpr auto
-cat::string_length(char const* _Nonnull p_string) -> idx {
-   idx result;
-   while (true) {
-      if (p_string[result.raw] == '\0') {
-         return result;
-      }
-      result++;
-   }
-}
-
 inline auto
 cat::detail::compare_strings_detail(
    str_view const string_1, str_view const string_2

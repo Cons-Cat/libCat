@@ -152,7 +152,6 @@ concept maybe_converts_from_any_cvref =
 }  // namespace detail
 
 template <typename CharT, bool null_terminated>
-   requires(sizeof(CharT) == 1)
 class basic_str_span;
 
 using str_view = basic_str_span<char const, false>;

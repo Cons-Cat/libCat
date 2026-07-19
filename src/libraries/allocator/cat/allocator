@@ -2,10 +2,11 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/str_span.hpp>
+
 #include <cat/debug>
 #include <cat/memory>
 #include <cat/sanitizer>
-#include <cat/string>
 #include <cat/tuple>
 
 namespace cat {

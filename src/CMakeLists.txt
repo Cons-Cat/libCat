@@ -389,6 +389,10 @@ set(CAT_HEADER_FILES
   ${CATLIB}/span/cat/span
   ${CATLIB}/span/implementations/span.tpp
   ${CATLIB}/string/cat/string
+  ${CATLIB}/string/cat/detail/str_inplace.hpp
+  ${CATLIB}/string/cat/detail/str_span.hpp
+  ${CATLIB}/string/cat/detail/str_vec.hpp
+  ${CATLIB}/string/cat/detail/raii_str_vec.hpp
   ${CATLIB}/thread/cat/thread
   ${CATLIB}/thread/cat/raii_thread
   ${CATLIB}/tui/cat/tui

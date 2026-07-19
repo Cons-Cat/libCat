@@ -70,6 +70,17 @@ $test(string_length) {
    auto inplace_z_3 = inplace_z_2 + inplace_z_2;
    cat::verify(inplace_z_3.size() == 11);  // "HelloHello\0"
 
+   cat::verify(cat::string_length(L"Hello") == 5u);
+   cat::wstr_inplace<5u> wide_inplace = L"Hello";
+   cat::verify(wide_inplace.size() == 5u);
+   cat::verify(cat::wstr_view(wide_inplace) == cat::wstr_view(L"Hello"));
+
+   cat::wzstr_inplace<6u> wide_inplace_z =
+      cat::make_wzstr_inplace<6u>(L"Hello");
+   cat::verify(wide_inplace_z.size() == 6u);
+   cat::verify(cat::wstr_view(wide_inplace_z).size() == 5u);
+   cat::verify(cat::wzstr_view(wide_inplace_z).size() == 6u);
+
    // Binding str_inplace / zstr_inplace to a `char` array uses the consteval
    // constructor (length is array extent), so no runtime `string_length` call.
    static constexpr char const char_array[] = {'H', 'i', 'a', '\0'};
@@ -84,7 +95,9 @@ $test(string_length) {
 
 $test(string_collection) {
    static_assert(cat::is_random_access_collection<cat::str_inplace<4u>>);
+   static_assert(cat::is_random_access_collection<cat::wstr_inplace<4u>>);
    static_assert(cat::is_random_access_collection<cat::str_view>);
+   static_assert(cat::is_random_access_collection<cat::wstr_view>);
 
    cat::str_inplace<3u> text = "cat";
    cat::verify((text | cat::count()) == 3u);
@@ -109,4 +122,12 @@ $test(string_collection) {
                                return value - 'a';
                             });
    cat::verify(prefix_offsets.sum() == 2);
+
+   cat::wstr_inplace<3u> wide_text = L"cat";
+   cat::verify((wide_text | cat::count()) == 3u);
+   cat::verify(cat::read_at(wide_text, 1u) == L'a');
+
+   cat::wstr_view wide_view = wide_text;
+   cat::verify((wide_view | cat::count()) == 3u);
+   cat::verify(wide_view.find(L't').verify() == 2u);
 }
