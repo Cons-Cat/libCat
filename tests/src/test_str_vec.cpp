@@ -1,3 +1,4 @@
+#include <cat/array>
 #include <cat/iterable>
 #include <cat/linear_allocator>
 #include <cat/null_allocator>
@@ -110,6 +111,50 @@ $test(str_vec_make_append_and_views) {
    cat::verify(cat::wstr_view(wide_zstring) == cat::wstr_view(L"cats"));
 }
 
+$test(str_vec_append_range_variants) {
+   linear_arena arena;
+   cat::array<char, 3u> narrow{'c', 'a', 't'};
+   cat::array<wchar_t, 3u> wide{L'c', L'a', L't'};
+
+   auto verify_manual_narrow = [&]<typename Vector> {
+      Vector string;
+      string.append_range(arena.alloc, narrow).verify();
+      string.append_range(arena.alloc, narrow).verify();
+      cat::verify(string.view() == cat::str_view("catcat"));
+      string.free(arena.alloc);
+   };
+   verify_manual_narrow.template operator()<cat::str_vec>();
+   verify_manual_narrow.template operator()<cat::zstr_vec>();
+
+   auto verify_manual_wide = [&]<typename Vector> {
+      Vector string;
+      string.append_range(arena.alloc, wide).verify();
+      string.append_range(arena.alloc, wide).verify();
+      cat::verify(string.view() == cat::wstr_view(L"catcat"));
+      string.free(arena.alloc);
+   };
+   verify_manual_wide.template operator()<cat::wstr_vec>();
+   verify_manual_wide.template operator()<cat::wzstr_vec>();
+
+   auto verify_raii_narrow = [&]<typename Vector> {
+      Vector string{cat::dyn_allocator(arena.alloc)};
+      string.append_range(narrow).verify();
+      string.append_range(narrow).verify();
+      cat::verify(string.view() == cat::str_view("catcat"));
+   };
+   verify_raii_narrow.template operator()<cat::raii::str_vec<>>();
+   verify_raii_narrow.template operator()<cat::raii::zstr_vec<>>();
+
+   auto verify_raii_wide = [&]<typename Vector> {
+      Vector string{cat::dyn_allocator(arena.alloc)};
+      string.append_range(wide).verify();
+      string.append_range(wide).verify();
+      cat::verify(string.view() == cat::wstr_view(L"catcat"));
+   };
+   verify_raii_wide.template operator()<cat::raii::wstr_vec<>>();
+   verify_raii_wide.template operator()<cat::raii::wzstr_vec<>>();
+}
+
 $test(str_vec_variadic_concat) {
    linear_arena arena;
 
@@ -189,13 +234,12 @@ $test(str_vec_variadic_concat) {
 
 $test(zstr_vec_mutation_preserves_terminator) {
    linear_arena arena;
-   cat::zstr_vec string = cat::make_zstr_vec(arena.alloc).verify();
+   cat::zstr_vec string;
    $defer {
       string.free(arena.alloc);
    };
 
-   cat::verify(string.size() == 1u);
-   cat::verify(string[0u] == '\0');
+   cat::verify(string.size() == 0u);
 
    string.push_back(arena.alloc, 'a').verify();
    string.push_back(arena.alloc, 'b').verify();
@@ -248,14 +292,16 @@ $test(str_vec_clone_move_and_failure) {
       failed.free(null_alloc);
    };
    cat::verify(!failed.push_back(null_alloc, 'x').has_value());
-   cat::verify(!cat::make_zstr_vec(null_alloc).has_value());
+   cat::zstr_vec zfailed;
+   cat::verify(!zfailed.push_back(null_alloc, 'x').has_value());
 
    cat::wstr_vec wide_failed;
    $defer {
       wide_failed.free(null_alloc);
    };
    cat::verify(!wide_failed.push_back(null_alloc, L'x').has_value());
-   cat::verify(!cat::make_wzstr_vec(null_alloc).has_value());
+   cat::wzstr_vec wzfailed;
+   cat::verify(!wzfailed.push_back(null_alloc, L'x').has_value());
 }
 
 $test(raii_str_vec_lifecycle) {

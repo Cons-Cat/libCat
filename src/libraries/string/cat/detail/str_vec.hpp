@@ -4,7 +4,7 @@
 
 #include <cat/vec>
 
-#include "str_span.hpp"
+#include "./str_span.hpp"
 
 namespace cat {
 
@@ -492,7 +492,7 @@ class
    detail::maybe_str_vec_nullopt()
       -> basic_str_vec<OtherCharT, other_is_null_terminated>;
 
-   cat::basic_vec<CharT> m_core;
+   cat::basic_vec<CharT, vec_flags::pointer_size_layout> m_core;
 };
 
 }  // namespace manual
@@ -509,7 +509,7 @@ template <typename CharT, bool is_null_terminated>
 constexpr auto
 maybe_str_vec_nullopt() -> basic_str_vec<CharT, is_null_terminated> {
    basic_str_vec<CharT, is_null_terminated> value;
-   value.m_core = maybe_vec_nullopt<CharT>();
+   value.m_core = maybe_vec_nullopt<CharT, vec_flags::pointer_size_layout>();
    return value;
 }
 
@@ -561,62 +561,6 @@ struct default_compact_trait<basic_str_vec<CharT, is_null_terminated>>
          detail::maybe_str_vec_nullopt<CharT, is_null_terminated>>> {};
 
 inline namespace manual {
-
-template <is_allocator Allocator>
-[[nodiscard]]
-constexpr auto
-make_str_vec(allocator_ref<Allocator> /*unused*/) -> maybe<str_vec> {
-   return str_vec{};
-}
-
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-make_str_vec(dyn_allocator allocator) -> maybe<str_vec> {
-   return make_str_vec<dyn_allocator>(allocator);
-}
-
-template <is_allocator Allocator>
-[[nodiscard]]
-constexpr auto
-make_zstr_vec(allocator_ref<Allocator> allocator) -> maybe<zstr_vec> {
-   zstr_vec new_string;
-   $prop(new_string.resize(allocator, 1u));
-   return new_string;
-}
-
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-make_zstr_vec(dyn_allocator allocator) -> maybe<zstr_vec> {
-   return make_zstr_vec<dyn_allocator>(allocator);
-}
-
-template <is_allocator Allocator>
-[[nodiscard]]
-constexpr auto
-make_wstr_vec(allocator_ref<Allocator> /*unused*/) -> maybe<wstr_vec> {
-   return wstr_vec{};
-}
-
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-make_wstr_vec(dyn_allocator allocator) -> maybe<wstr_vec> {
-   return make_wstr_vec<dyn_allocator>(allocator);
-}
-
-template <is_allocator Allocator>
-[[nodiscard]]
-constexpr auto
-make_wzstr_vec(allocator_ref<Allocator> allocator) -> maybe<wzstr_vec> {
-   wzstr_vec new_string;
-   $prop(new_string.resize(allocator, 1u));
-   return new_string;
-}
-
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-make_wzstr_vec(dyn_allocator allocator) -> maybe<wzstr_vec> {
-   return make_wzstr_vec<dyn_allocator>(allocator);
-}
 
 template <is_allocator Allocator>
 [[nodiscard]]

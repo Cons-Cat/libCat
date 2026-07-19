@@ -3,12 +3,24 @@
 #pragma once
 
 #include <cat/bitvec>
+#include <cat/null_allocator>
+
+namespace cat::detail {
+template <vec_flags flags>
+constexpr auto
+raii_bitvec_has_value(raii::basic_bitvec<dyn_allocator, flags> const& value)
+   -> bool;
+
+template <vec_flags flags>
+constexpr auto
+raii_bitvec_nullopt() -> raii::basic_bitvec<dyn_allocator, flags>;
+}  // namespace cat::detail
 
 namespace cat::raii {
 
-template <is_allocator Allocator = dyn_allocator>
-class [[gsl::Owner]]
-basic_bitvec : public bit_collection_interface<basic_bitvec<Allocator>> {
+template <is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
+class [[gsl::Owner]] basic_bitvec
+    : public bit_collection_interface<basic_bitvec<Allocator, flags>> {
  public:
    using storage_type = uword;
    using value_type = bit_value;
@@ -452,10 +464,64 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<Allocator>> {
    }
 
  private:
-   cat::bitvec m_core;
+   template <vec_flags other_flags>
+   friend constexpr auto
+   detail::raii_bitvec_has_value(
+      basic_bitvec<dyn_allocator, other_flags> const&
+   ) -> bool;
+
+   template <vec_flags other_flags>
+   friend constexpr auto
+   detail::raii_bitvec_nullopt() -> basic_bitvec<dyn_allocator, other_flags>;
+
+   cat::basic_bitvec<flags> m_core;
    allocator_ref<Allocator> m_allocator;
 };
 
-using bitvec = basic_bitvec<dyn_allocator>;
+template <is_allocator Allocator = dyn_allocator>
+using bitvec = basic_bitvec<Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
+   vec_flags flags = {}>
+using small_bitvec = basic_bitvec<
+   Allocator,
+   flags | vec_flags::inline_storage(div_ceil(inline_count, word_bits))>;
 
 }  // namespace cat::raii
+
+namespace cat::detail {
+
+template <vec_flags flags>
+constexpr auto
+raii_bitvec_has_value(raii::basic_bitvec<dyn_allocator, flags> const& value)
+   -> bool {
+   return maybe_bitvec_has_value<flags>(value.m_core);
+}
+
+inline constexpr null_allocator raii_bitvec_niche_null_allocator{};
+
+template <vec_flags flags>
+constexpr auto
+raii_bitvec_nullopt() -> raii::basic_bitvec<dyn_allocator, flags> {
+   raii::basic_bitvec<dyn_allocator, flags> value(
+      allocator_ref<dyn_allocator>(dyn_allocator(
+         const_cast<null_allocator&>(raii_bitvec_niche_null_allocator)
+      ))
+   );
+   value.m_core = maybe_bitvec_nullopt<flags>();
+   return value;
+}
+
+}  // namespace cat::detail
+
+namespace cat {
+
+template <vec_flags flags>
+struct default_compact_trait<raii::basic_bitvec<dyn_allocator, flags>>
+    : identity_trait<compact<
+         raii::basic_bitvec<dyn_allocator, flags>,
+         detail::raii_bitvec_has_value<flags>,
+         detail::raii_bitvec_nullopt<flags>>> {};
+
+}  // namespace cat

@@ -610,6 +610,8 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
 }  // namespace cat
 
+#include <cat/detail/vec_flags.hpp>
+
 // `<cat/span>` defines `span<T>` and `maybe_span<T>`, which the slice and
 // getter methods of `container_interface` return. It transitively reincludes
 // this header but the cycle is harmless thanks to `#pragma once`. Bringing in

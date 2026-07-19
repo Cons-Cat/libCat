@@ -10,14 +10,39 @@
 
 namespace cat {
 namespace raii {
-template <is_allocator>
+template <is_allocator, vec_flags>
 class basic_bitvec;
 }  // namespace raii
 
 inline namespace manual {
 
-class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
-   template <is_allocator>
+template <vec_flags flags = {}>
+class basic_bitvec;
+
+}  // namespace manual
+
+namespace detail {
+template <vec_flags flags>
+constexpr auto
+maybe_bitvec_has_value(basic_bitvec<flags> const& value) -> bool;
+
+template <vec_flags flags>
+constexpr auto
+maybe_bitvec_nullopt() -> basic_bitvec<flags>;
+}  // namespace detail
+
+inline namespace manual {
+
+using bitvec = basic_bitvec<>;
+
+template <idx inline_count = 4u, vec_flags flags = {}>
+using small_bitvec = basic_bitvec<
+   flags | vec_flags::inline_storage(div_ceil(inline_count, word_bits))>;
+
+template <vec_flags flags>
+class [[clang::preferred_name(bitvec), gsl::Owner]]
+basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
+   template <is_allocator, vec_flags>
    friend class cat::raii::basic_bitvec;
 
  public:
@@ -36,18 +61,19 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
    using const_reverse_iterator = bit_span<uword const>::reverse_iterator;
 
    // Create an empty manual bit vector without storage.
-   constexpr bitvec() = default;
-   constexpr bitvec(bitvec&&) = default;
-   constexpr bitvec(bitvec const&) =
-      delete ("Implicit copying of `cat::bitvec` is forbidden. Call `.clone()` "
-              "or move instead!");
+   constexpr basic_bitvec() = default;
+   constexpr basic_bitvec(basic_bitvec&&) = default;
+   constexpr basic_bitvec(basic_bitvec const&) = delete (
+      "Implicit copying of `cat::basic_bitvec` is forbidden. Call `.clone()` "
+      "or move instead!"
+   );
 
    constexpr auto
-   operator=(bitvec&&) -> bitvec& = default;
+   operator=(basic_bitvec&&) -> basic_bitvec& = default;
    auto
-   operator=(bitvec const&)
-      -> bitvec& = delete ("Implicit copying of `cat::bitvec` is forbidden. "
-                           "Call `.clone()` or move instead!");
+   operator=(basic_bitvec const&) -> basic_bitvec& =
+      delete ("Implicit copying of `cat::basic_bitvec` is forbidden. "
+              "Call `.clone()` or move instead!");
 
    // Return the number of logical bits.
    [[nodiscard]]
@@ -431,7 +457,7 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
 
    // Set every logical bit to the requested value.
    constexpr auto
-   fill(bit_value value = true) -> bitvec& {
+   fill(bit_value value = true) -> basic_bitvec& {
       uword const word_value = value ? ~uword(0u) : uword(0u);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          m_words[word_index] = word_value;
@@ -442,21 +468,21 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
 
    // Set one bit to the requested value.
    constexpr auto
-   set(idx bit_index, bit_value value = true) -> bitvec& {
+   set(idx bit_index, bit_value value = true) -> basic_bitvec& {
       (*this)[bit_index].assign(value);
       return *this;
    }
 
    // Reset one bit to false.
    constexpr auto
-   reset(idx bit_index) -> bitvec& {
+   reset(idx bit_index) -> basic_bitvec& {
       (*this)[bit_index] = false;
       return *this;
    }
 
    // Flip one bit in place.
    constexpr auto
-   flip(idx bit_index) -> bitvec& {
+   flip(idx bit_index) -> basic_bitvec& {
       (*this)[bit_index].flip();
       return *this;
    }
@@ -464,7 +490,7 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
    // Return whether every set bit is also set in `other`.
    [[nodiscard]]
    constexpr auto
-   is_subset_of(bitvec const& other) const -> bool {
+   is_subset_of(basic_bitvec const& other) const -> bool {
       if !consteval {
          assert(m_bit_size == other.m_bit_size);
       }
@@ -481,7 +507,7 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
    // Return whether this vector shares any set bit with `other`.
    [[nodiscard]]
    constexpr auto
-   intersects(bitvec const& other) const -> bool {
+   intersects(basic_bitvec const& other) const -> bool {
       if !consteval {
          assert(m_bit_size == other.m_bit_size);
       }
@@ -496,14 +522,23 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
    // Return whether this vector shares no set bits with `other`.
    [[nodiscard]]
    constexpr auto
-   disjoint(bitvec const& other) const -> bool {
+   disjoint(basic_bitvec const& other) const -> bool {
       return !intersects(other);
    }
 
  private:
+   template <vec_flags other_flags>
+   friend constexpr auto
+   detail::maybe_bitvec_has_value(basic_bitvec<other_flags> const&) -> bool;
+
+   template <vec_flags other_flags>
+   friend constexpr auto
+   detail::maybe_bitvec_nullopt() -> basic_bitvec<other_flags>;
+
    // Store the bitwise and of two vectors in `result`.
    constexpr auto
-   bit_and_into(bitvec const& other, bitvec& result) const -> bitvec& {
+   bit_and_into(basic_bitvec const& other, basic_bitvec& result) const
+      -> basic_bitvec& {
       if !consteval {
          assert(m_bit_size == other.m_bit_size);
          assert(result.m_bit_size == m_bit_size);
@@ -517,7 +552,8 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
 
    // Store the bitwise or of two vectors in `result`.
    constexpr auto
-   bit_or_into(bitvec const& other, bitvec& result) const -> bitvec& {
+   bit_or_into(basic_bitvec const& other, basic_bitvec& result) const
+      -> basic_bitvec& {
       if !consteval {
          assert(m_bit_size == other.m_bit_size);
          assert(result.m_bit_size == m_bit_size);
@@ -532,7 +568,8 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
 
    // Store the bitwise xor of two vectors in `result`.
    constexpr auto
-   bit_xor_into(bitvec const& other, bitvec& result) const -> bitvec& {
+   bit_xor_into(basic_bitvec const& other, basic_bitvec& result) const
+      -> basic_bitvec& {
       if !consteval {
          assert(m_bit_size == other.m_bit_size);
          assert(result.m_bit_size == m_bit_size);
@@ -547,7 +584,7 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
 
    // Store the bitwise complement of this vector in `result`.
    constexpr auto
-   bit_complement_into(bitvec& result) const -> bitvec& {
+   bit_complement_into(basic_bitvec& result) const -> basic_bitvec& {
       if !consteval {
          assert(result.m_bit_size == m_bit_size);
       }
@@ -577,10 +614,34 @@ class [[gsl::Owner]] bitvec : public bit_collection_interface<bitvec> {
       }
    }
 
-   basic_vec<uword> m_words;
+   basic_vec<uword, flags> m_words;
    idx m_bit_size = 0u;
 };
 
 }  // namespace manual
+
+namespace detail {
+
+template <vec_flags flags>
+constexpr auto
+maybe_bitvec_has_value(basic_bitvec<flags> const& value) -> bool {
+   return maybe_vec_has_value<uword, flags>(value.m_words);
+}
+
+template <vec_flags flags>
+constexpr auto
+maybe_bitvec_nullopt() -> basic_bitvec<flags> {
+   basic_bitvec<flags> value;
+   value.m_words = maybe_vec_nullopt<uword, flags>();
+   return value;
+}
+
+}  // namespace detail
+
+template <vec_flags flags>
+struct default_compact_trait<basic_bitvec<flags>>
+    : identity_trait<compact<
+         basic_bitvec<flags>, detail::maybe_bitvec_has_value<flags>,
+         detail::maybe_bitvec_nullopt<flags>>> {};
 
 }  // namespace cat

@@ -5,6 +5,43 @@
 
 #include "../unit_tests.hpp"
 
+namespace {
+
+template <typename Vector>
+void
+verify_bitvec_niche() {
+   static_assert(sizeof(cat::maybe<Vector>) == sizeof(Vector));
+   cat::maybe<Vector> empty;
+   cat::verify(!empty.has_value());
+}
+
+}  // namespace
+
+$test(bitvec_flags_and_niches) {
+   verify_bitvec_niche<cat::bitvec>();
+   verify_bitvec_niche<
+      cat::basic_bitvec<cat::vec_flags::pointer_size_layout>>();
+   verify_bitvec_niche<cat::small_bitvec<>>();
+   verify_bitvec_niche<
+      cat::small_bitvec<4u, cat::vec_flags::pointer_size_layout>>();
+
+   verify_bitvec_niche<cat::raii::bitvec<>>();
+   verify_bitvec_niche<cat::raii::basic_bitvec<
+      cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
+   verify_bitvec_niche<cat::raii::small_bitvec<>>();
+   verify_bitvec_niche<cat::raii::small_bitvec<
+      cat::dyn_allocator, 4u, cat::vec_flags::pointer_size_layout>>();
+
+   cat::small_bitvec<> small;
+   small.resize(pager, 4u).verify();
+   cat::verify(small.capacity() >= 4u);
+   small.free(pager);
+
+   cat::raii::small_bitvec<> managed{cat::dyn_allocator(pager)};
+   managed.resize(4u).verify();
+   cat::verify(managed.capacity() >= 4u);
+}
+
 $test(bitvec_manual_core) {
    static_assert(cat::is_same<cat::bitvec::storage_type, cat::uword>);
    static_assert(cat::is_same<cat::bitvec::value_type, cat::bit_value>);
@@ -102,47 +139,50 @@ $test(bitvec_manual_core) {
 }
 
 $test(bitvec_core_operations) {
-   static_assert(cat::is_same<cat::raii::bitvec::storage_type, cat::uword>);
-   static_assert(cat::is_same<cat::raii::bitvec::value_type, cat::bit_value>);
+   static_assert(cat::is_same<cat::raii::bitvec<>::storage_type, cat::uword>);
+   static_assert(cat::is_same<cat::raii::bitvec<>::value_type, cat::bit_value>);
    static_assert(
-      cat::is_same<cat::raii::bitvec::const_value_type, cat::bit_value const>
+      cat::is_same<cat::raii::bitvec<>::const_value_type, cat::bit_value const>
    );
    static_assert(
-      cat::is_same<cat::raii::bitvec::reference, cat::bit_reference<cat::uword>>
+      cat::is_same<
+         cat::raii::bitvec<>::reference, cat::bit_reference<cat::uword>>
    );
    static_assert(cat::is_same<
-                 cat::raii::bitvec::const_reference,
+                 cat::raii::bitvec<>::const_reference,
                  cat::bit_reference<cat::uword const>>);
    static_assert(
-      cat::is_same<cat::raii::bitvec::pointer, cat::bit_ptr<cat::uword>>
+      cat::is_same<cat::raii::bitvec<>::pointer, cat::bit_ptr<cat::uword>>
    );
    static_assert(
       cat::is_same<
-         cat::raii::bitvec::const_pointer, cat::bit_ptr<cat::uword const>>
+         cat::raii::bitvec<>::const_pointer, cat::bit_ptr<cat::uword const>>
    );
-   static_assert(cat::is_same<cat::raii::bitvec::size_type, cat::idx>);
-   static_assert(cat::is_same<cat::raii::bitvec::difference_type, cat::iword>);
+   static_assert(cat::is_same<cat::raii::bitvec<>::size_type, cat::idx>);
+   static_assert(
+      cat::is_same<cat::raii::bitvec<>::difference_type, cat::iword>
+   );
    static_assert(
       cat::is_same<
-         cat::raii::bitvec::iterator, cat::bit_span<cat::uword>::iterator>
+         cat::raii::bitvec<>::iterator, cat::bit_span<cat::uword>::iterator>
    );
    static_assert(cat::is_same<
-                 cat::raii::bitvec::const_iterator,
+                 cat::raii::bitvec<>::const_iterator,
                  cat::bit_span<cat::uword const>::iterator>);
    static_assert(cat::is_same<
-                 cat::raii::bitvec::reverse_iterator,
+                 cat::raii::bitvec<>::reverse_iterator,
                  cat::bit_span<cat::uword>::reverse_iterator>);
    static_assert(cat::is_same<
-                 cat::raii::bitvec::const_reverse_iterator,
+                 cat::raii::bitvec<>::const_reverse_iterator,
                  cat::bit_span<cat::uword const>::reverse_iterator>);
    using raii_bitvec_context =
-      cat::iterable_iteration_context_type<cat::raii::bitvec>;
+      cat::iterable_iteration_context_type<cat::raii::bitvec<>>;
    static_assert(
       cat::is_same<
-         raii_bitvec_context::element_type, cat::raii::bitvec::reference>
+         raii_bitvec_context::element_type, cat::raii::bitvec<>::reference>
    );
 
-   cat::raii::bitvec bits{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> bits{cat::dyn_allocator(pager)};
 
    cat::verify(bits.size() == 0u);
    cat::verify(bits.word_count() == 0u);
@@ -184,7 +224,7 @@ $test(bitvec_core_operations) {
    cat::verify(bits.any());
    cat::verify(!bits.all());
    static_assert(cat::is_random_access_collection<cat::bitvec>);
-   static_assert(cat::is_random_access_collection<cat::raii::bitvec>);
+   static_assert(cat::is_random_access_collection<cat::raii::bitvec<>>);
    cat::verify((bits | cat::count()) == 70u);
    cat::verify((bits | cat::popcount()) == 3u);
    cat::verify(bits.count() == 70u);
@@ -250,7 +290,7 @@ $test(bitvec_core_operations) {
 }
 
 $test(bitvec_push_pop) {
-   cat::raii::bitvec bits{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> bits{cat::dyn_allocator(pager)};
 
    bits.reserve(130u).verify();
    cat::verify(bits.capacity() >= 130u);
@@ -274,6 +314,33 @@ $test(bitvec_push_pop) {
 $test(bitvec_append_range) {
    cat::array<bool, 5u> source{true, false, true, true, false};
 
+   auto verify_manual = [&]<typename Vector> {
+      Vector bits;
+      bits.append_range(pager, source).verify();
+      cat::verify(bits.size() == 5u);
+      cat::verify(bits.popcount() == 3u);
+      bits.free(pager);
+   };
+   verify_manual.template operator()<cat::bitvec>();
+   verify_manual.template
+   operator()<cat::basic_bitvec<cat::vec_flags::pointer_size_layout>>();
+   verify_manual.template operator()<cat::small_bitvec<>>();
+   verify_manual.template
+   operator()<cat::small_bitvec<4u, cat::vec_flags::pointer_size_layout>>();
+
+   auto verify_raii = [&]<typename Vector> {
+      Vector bits{cat::dyn_allocator(pager)};
+      bits.append_range(source).verify();
+      cat::verify(bits.size() == 5u);
+      cat::verify(bits.popcount() == 3u);
+   };
+   verify_raii.template operator()<cat::raii::bitvec<>>();
+   verify_raii.template operator()<cat::raii::basic_bitvec<
+      cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
+   verify_raii.template operator()<cat::raii::small_bitvec<>>();
+   verify_raii.template operator()<cat::raii::small_bitvec<
+      cat::dyn_allocator, 4u, cat::vec_flags::pointer_size_layout>>();
+
    cat::bitvec manual_bits;
    manual_bits.append_range(pager, source).verify();
    cat::verify(manual_bits.size() == 5u);
@@ -291,7 +358,7 @@ $test(bitvec_append_range) {
    cat::verify(!manual_bits[6u]);
    manual_bits.free(pager);
 
-   cat::raii::bitvec raii_bits{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> raii_bits{cat::dyn_allocator(pager)};
    raii_bits.append_range(source).verify();
    cat::verify(raii_bits.size() == 5u);
    cat::verify(raii_bits.popcount() == 3u);
@@ -301,8 +368,8 @@ $test(bitvec_append_range) {
 }
 
 $test(bitvec_bitwise_predicates) {
-   cat::raii::bitvec left{cat::dyn_allocator(pager)};
-   cat::raii::bitvec right{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> left{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> right{cat::dyn_allocator(pager)};
    left.resize(130u).verify();
    right.resize(130u).verify();
 
@@ -317,20 +384,20 @@ $test(bitvec_bitwise_predicates) {
    left[0u] = false;
    cat::verify(left.is_subset_of(right));
 
-   cat::raii::bitvec and_bits = left & right;
+   cat::raii::bitvec<> and_bits = left & right;
    cat::verify(and_bits.popcount() == 1u);
    cat::verify(and_bits[64u]);
 
-   cat::raii::bitvec or_bits = left | right;
+   cat::raii::bitvec<> or_bits = left | right;
    cat::verify(or_bits.popcount() == 2u);
    cat::verify(or_bits[64u]);
    cat::verify(or_bits[129u]);
 
-   cat::raii::bitvec xor_bits = left ^ right;
+   cat::raii::bitvec<> xor_bits = left ^ right;
    cat::verify(xor_bits.popcount() == 1u);
    cat::verify(xor_bits[129u]);
 
-   cat::raii::bitvec not_bits = ~left;
+   cat::raii::bitvec<> not_bits = ~left;
    cat::verify(not_bits.popcount() == 129u);
    cat::verify((not_bits.data()[2u] & ~cat::uword(0b11u)) == 0u);
 }

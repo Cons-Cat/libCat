@@ -281,6 +281,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bitvec/cat/raii_bitvec
   ${CATLIB}/container/cat/container
   ${CATLIB}/container/cat/detail/initializer_list.hpp
+  ${CATLIB}/container/cat/detail/vec_flags.hpp
   ${CATLIB}/container/implementations/container_interface.tpp
   ${CATLIB}/compare/cat/compare
   ${CATLIB}/cpuid/cat/cpuid
@@ -403,6 +404,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/variant/cat/variant
   ${CATLIB}/vec/cat/vec
   ${CATLIB}/vec/cat/raii_vec
+  ${CATLIB}/vec/cat/detail/vec_storage.hpp
   ${CATLIB}/x11/cat/x11
   ${CATLIB}/linux/implementations/syscall.tpp
   ${CATLIB}/linux/implementations/process.tpp

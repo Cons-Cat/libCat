@@ -7,14 +7,22 @@
 
 namespace cat::raii {
 
-template <typename T, is_allocator Allocator = dyn_allocator>
+template <
+   typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
 class basic_vec;
 
 // `vec<T, Allocator>` is the user-facing alias for the managed
 // `raii::basic_vec<T, Allocator>`. Declared above the class definition so
 // the `[[clang::preferred_name]]` attribute can reference it.
-template <typename T, is_allocator Allocator = dyn_allocator>
-using vec = basic_vec<T, Allocator>;
+template <
+   typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
+using vec = basic_vec<T, Allocator, flags>;
+
+template <
+   typename T, is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
+   vec_flags flags = {}>
+using small_vec =
+   basic_vec<T, Allocator, flags | vec_flags::inline_storage(inline_count)>;
 
 }  // namespace cat::raii
 
@@ -22,22 +30,23 @@ namespace cat::detail {
 // The `maybe<raii::vec>` niche reuses the manual core's niche: disengaged
 // when `data() == nullptr && size() != 0`. The owned allocator is a
 // `null_allocator` while empty, which is never dispatched through.
-template <typename T>
+template <typename T, vec_flags flags>
 constexpr auto
-raii_vec_has_value(raii::basic_vec<T, dyn_allocator> const& value) -> bool;
+raii_vec_has_value(raii::basic_vec<T, dyn_allocator, flags> const& value)
+   -> bool;
 
-template <typename T>
+template <typename T, vec_flags flags>
 constexpr auto
-raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator>;
+raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator, flags>;
 }  // namespace cat::detail
 
 namespace cat::raii {
 
-template <typename T, is_allocator Allocator>
-class [[clang::preferred_name(vec<T, Allocator>), gsl::Owner]]
-basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
+template <typename T, is_allocator Allocator, vec_flags flags>
+class [[clang::preferred_name(vec<T, Allocator, flags>), gsl::Owner]]
+basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
             public random_access_stepanov_iterable_interface<T> {
-   template <typename, is_allocator>
+   template <typename, is_allocator, vec_flags>
    friend class basic_vec;
 
  public:
@@ -255,7 +264,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    [[nodiscard]]
    static constexpr auto
    max_size() -> idx {
-      return cat::basic_vec<T>::max_size();
+      return cat::basic_vec<T, flags>::max_size();
    }
 
    // Deep-copy the contents of this `vec`.
@@ -271,18 +280,22 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    constexpr auto
    clone(
       allocator_ref<NewAllocator> allocator
-   ) const& -> maybe<basic_vec<T, NewAllocator>> {
-      basic_vec<T, NewAllocator> new_vector(allocator);
-      new_vector.m_core = $prop(m_core.clone(allocator));
+   ) const& -> maybe<basic_vec<T, NewAllocator, flags>> {
+      basic_vec<T, NewAllocator, flags> new_vector(allocator);
+      $prop(new_vector.m_core.reserve(allocator, m_core.capacity()));
+      $prop(new_vector.m_core.append_range(allocator, m_core));
       return new_vector;
    }
 
    // Deep-copy the contents of this `vec`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(dyn_allocator allocator) const& -> maybe<basic_vec<T, dyn_allocator>> {
-      basic_vec<T, dyn_allocator> new_vector(allocator);
-      new_vector.m_core = $prop(m_core.clone(allocator));
+   clone(
+      dyn_allocator allocator
+   ) const& -> maybe<basic_vec<T, dyn_allocator, flags>> {
+      basic_vec<T, dyn_allocator, flags> new_vector(allocator);
+      $prop(new_vector.m_core.reserve(allocator, m_core.capacity()));
+      $prop(new_vector.m_core.append_range(allocator, m_core));
       return new_vector;
    }
 
@@ -296,41 +309,43 @@ basic_vec : public container_interface<basic_vec<T, Allocator>, T>,
    // `vec` is responsible for being `.free()`'d elsewhere.
    [[nodiscard, clang::reinitializes]]
    constexpr auto
-   release() -> manual::basic_vec<T> {
+   release() -> manual::basic_vec<T, flags> {
       return cat::move(m_core);
    }
 
  private:
-   template <typename U>
+   template <typename U, vec_flags other_flags>
    friend constexpr auto
-   detail::raii_vec_nullopt() -> basic_vec<U, dyn_allocator>;
+   detail::raii_vec_has_value(basic_vec<U, dyn_allocator, other_flags> const&)
+      -> bool;
 
-   cat::basic_vec<T> m_core;
+   template <typename U, vec_flags other_flags>
+   friend constexpr auto
+   detail::raii_vec_nullopt() -> basic_vec<U, dyn_allocator, other_flags>;
+
+   cat::basic_vec<T, flags> m_core;
    [[no_unique_address]]
    allocator_ref<Allocator> m_allocator;
 };
 
-template <typename T, is_allocator Allocator>
-[[nodiscard]]
-constexpr auto
-make_vec(allocator_ref<Allocator> allocator)
-   -> maybe<raii::basic_vec<T, Allocator>> {
-   return raii::basic_vec<T, Allocator>(allocator);
+template <typename T, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_vec(allocator_ref<Allocator> allocator)
+   -> maybe<raii::basic_vec<T, Allocator, flags>> {
+   return raii::basic_vec<T, Allocator, flags>(allocator);
 }
 
-template <typename T>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-make_vec(dyn_allocator allocator) -> maybe<raii::basic_vec<T, dyn_allocator>> {
-   return raii::basic_vec<T, dyn_allocator>(allocator);
+template <typename T, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec(dyn_allocator allocator)
+      -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
+   return raii::basic_vec<T, dyn_allocator, flags>(allocator);
 }
 
-template <typename T, is_allocator Allocator>
-[[nodiscard]]
-constexpr auto
-make_vec(allocator_ref<Allocator> allocator, initializer_list<T> values)
-   -> maybe<raii::basic_vec<T, Allocator>> {
-   raii::basic_vec<T, Allocator> new_vector(allocator);
+template <typename T, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto
+   make_vec(allocator_ref<Allocator> allocator, initializer_list<T> values)
+      -> maybe<raii::basic_vec<T, Allocator, flags>> {
+   raii::basic_vec<T, Allocator, flags> new_vector(allocator);
    $prop(new_vector.reserve(max(values.size(), 4u)));
    for (T const& value : values) {
       $prop(new_vector.push_back(value));
@@ -338,12 +353,11 @@ make_vec(allocator_ref<Allocator> allocator, initializer_list<T> values)
    return new_vector;
 }
 
-template <typename T>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-make_vec(dyn_allocator allocator, initializer_list<T> values)
-   -> maybe<raii::basic_vec<T, dyn_allocator>> {
-   raii::basic_vec<T, dyn_allocator> new_vector(allocator);
+template <typename T, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec(dyn_allocator allocator, initializer_list<T> values)
+      -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
+   raii::basic_vec<T, dyn_allocator, flags> new_vector(allocator);
    $prop(new_vector.reserve(max(values.size(), 4u)));
    for (T const& value : values) {
       $prop(new_vector.push_back(value));
@@ -351,33 +365,30 @@ make_vec(dyn_allocator allocator, initializer_list<T> values)
    return new_vector;
 }
 
-template <typename T, is_allocator Allocator>
-[[nodiscard]]
-constexpr auto
-make_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
-   -> maybe<raii::basic_vec<T, Allocator>> {
-   raii::basic_vec<T, Allocator> new_vector(allocator);
+template <typename T, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto
+   make_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
+      -> maybe<raii::basic_vec<T, Allocator, flags>> {
+   raii::basic_vec<T, Allocator, flags> new_vector(allocator);
    $prop(new_vector.reserve(max(capacity, 4u)));
    return new_vector;
 }
 
-template <typename T>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-make_vec_reserved(dyn_allocator allocator, idx capacity)
-   -> maybe<raii::basic_vec<T, dyn_allocator>> {
-   raii::basic_vec<T, dyn_allocator> new_vector(allocator);
+template <typename T, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_reserved(dyn_allocator allocator, idx capacity)
+      -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
+   raii::basic_vec<T, dyn_allocator, flags> new_vector(allocator);
    $prop(new_vector.reserve(max(capacity, 4u)));
    return new_vector;
 }
 
-template <typename T, is_allocator Allocator>
-[[nodiscard]]
-constexpr auto
-make_vec_filled(allocator_ref<Allocator> allocator, idx count, T const& value)
-   -> maybe<raii::basic_vec<T, Allocator>> {
-   raii::basic_vec<T, Allocator> new_vector =
-      $prop(raii::make_vec_reserved<T>(allocator, count));
+template <typename T, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_vec_filled(
+   allocator_ref<Allocator> allocator, idx count, T const& value
+) -> maybe<raii::basic_vec<T, Allocator, flags>> {
+   raii::basic_vec<T, Allocator, flags> new_vector =
+      $prop((raii::make_vec_reserved<T, Allocator, flags>(allocator, count)));
    // TODO: Call a vectorized fill memory function.
    // TODO: Forward from the last `value`.
    for (idx i = 0u; i < count; ++i) {
@@ -386,13 +397,12 @@ make_vec_filled(allocator_ref<Allocator> allocator, idx count, T const& value)
    return new_vector;
 }
 
-template <typename T>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-make_vec_filled(dyn_allocator allocator, idx count, T const& value)
-   -> maybe<raii::basic_vec<T, dyn_allocator>> {
-   raii::basic_vec<T, dyn_allocator> new_vector =
-      $prop(raii::make_vec_reserved<T>(allocator, count));
+template <typename T, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_filled(dyn_allocator allocator, idx count, T const& value)
+      -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
+   raii::basic_vec<T, dyn_allocator, flags> new_vector =
+      $prop((raii::make_vec_reserved<T, flags>(allocator, count)));
    // TODO: Call a vectorized fill memory function.
    // TODO: Forward from the last `value`.
    for (idx i = 0u; i < count; ++i) {
@@ -405,25 +415,24 @@ make_vec_filled(dyn_allocator allocator, idx count, T const& value)
 
 namespace cat::detail {
 
-template <typename T>
+template <typename T, vec_flags flags>
 constexpr auto
-raii_vec_has_value(raii::basic_vec<T, dyn_allocator> const& value) -> bool {
-   // Engaged iff not in the `data == nullptr && size != 0` niche, mirroring
-   // the manual `basic_vec` predicate.
-   return value.data() != nullptr || value.size() == 0u;
+raii_vec_has_value(raii::basic_vec<T, dyn_allocator, flags> const& value)
+   -> bool {
+   return maybe_vec_has_value<T, flags>(value.m_core);
 }
 
 inline constexpr null_allocator raii_vec_niche_null_allocator{};
 
-template <typename T>
+template <typename T, vec_flags flags>
 constexpr auto
-raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator> {
-   raii::basic_vec<T, dyn_allocator> value(
+raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator, flags> {
+   raii::basic_vec<T, dyn_allocator, flags> value(
       allocator_ref<dyn_allocator>(dyn_allocator(
          const_cast<null_allocator&>(raii_vec_niche_null_allocator)
       ))
    );
-   value.m_core = maybe_vec_nullopt<T>();
+   value.m_core = maybe_vec_nullopt<T, flags>();
    return value;
 }
 
@@ -431,13 +440,11 @@ raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator> {
 
 namespace cat {
 
-// `maybe<raii::basic_vec<T, Allocator>>` opts into compact storage, packing
-// the disengaged state into the same niche the manual `basic_vec` uses so a
-// bare `maybe<raii::vec<T>>` stays the size of `raii::vec<T>` itself.
-template <typename T>
-struct default_compact_trait<raii::basic_vec<T, dyn_allocator>>
+template <typename T, vec_flags flags>
+struct default_compact_trait<raii::basic_vec<T, dyn_allocator, flags>>
     : identity_trait<compact<
-         raii::basic_vec<T, dyn_allocator>, detail::raii_vec_has_value<T>,
-         detail::raii_vec_nullopt<T>>> {};
+         raii::basic_vec<T, dyn_allocator, flags>,
+         detail::raii_vec_has_value<T, flags>,
+         detail::raii_vec_nullopt<T, flags>>> {};
 
 }  // namespace cat

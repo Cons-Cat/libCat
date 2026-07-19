@@ -70,37 +70,110 @@ struct linear_arena {
    }
 };
 
+template <typename Vector>
+void
+verify_vec_niche() {
+   static_assert(sizeof(cat::maybe<Vector>) == sizeof(Vector));
+   cat::maybe<Vector> empty;
+   cat::verify(!empty.has_value());
+}
+
 }  // namespace
 
 $test(vec_maybe_niche) {
-   // `maybe<vec<T>>` packs the disengaged state into the
-   // `data == nullptr && size != 0` niche, so it stays the size of
-   // `vec<T>` itself, matching `maybe<idx>` and friends.
-   static_assert(sizeof(cat::maybe<cat::vec<int4>>) == sizeof(cat::vec<int4>));
-   cat::maybe<cat::vec<int4>> empty_vec;
-   cat::verify(!empty_vec.has_value());
+   verify_vec_niche<cat::vec<int4>>();
+   verify_vec_niche<cat::vec<int4, cat::vec_flags::pointer_size_layout>>();
+   verify_vec_niche<cat::small_vec<int4>>();
+   verify_vec_niche<
+      cat::small_vec<int4, 4u, cat::vec_flags::pointer_size_layout>>();
 }
 
 $test(raii_vec_maybe_niche) {
-   // `maybe<raii::vec<T>>` reuses the manual core's niche, so it stays the
-   // size of `raii::vec<T>` itself just like `maybe<vec<T>>`.
-   static_assert(
-      sizeof(cat::maybe<cat::raii::vec<int4>>) == sizeof(cat::raii::vec<int4>)
-   );
-   cat::maybe<cat::raii::vec<int4>> empty_vec;
-   cat::verify(!empty_vec.has_value());
+   verify_vec_niche<cat::raii::vec<int4>>();
+   verify_vec_niche<cat::raii::vec<
+      int4, cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
+   verify_vec_niche<cat::raii::small_vec<int4>>();
+   verify_vec_niche<cat::raii::small_vec<
+      int4, cat::dyn_allocator, 4u, cat::vec_flags::pointer_size_layout>>();
 
    linear_arena arena;
    auto engaged = cat::raii::make_vec<int4>(arena.alloc);
    cat::verify(engaged.has_value());
 }
 
+$test(vec_flags) {
+   constexpr auto flags =
+      cat::vec_flags::pointer_size_layout | cat::vec_flags::inline_storage(4u);
+   static_assert(flags.uses_pointer_size_layout);
+   static_assert(flags.inline_storage_count == 4u);
+
+   static_assert(sizeof(cat::vec<int4>) == sizeof(void*) * 3u);
+   static_assert(
+      sizeof(cat::vec<int4, cat::vec_flags::pointer_size_layout>)
+      == sizeof(void*) * 3u
+   );
+}
+
+$test(small_vec_inline_storage) {
+   linear_arena arena;
+   idx const bytes_before = arena.alloc.bytes_used();
+
+   cat::small_vec<int4, 8u> values;
+   for (idx i = 0u; i < 8u; ++i) {
+      values.push_back(arena.alloc, int4(i)).verify();
+   }
+   cat::verify(arena.alloc.bytes_used() == bytes_before);
+
+   values.push_back(arena.alloc, 8_i4).verify();
+   cat::verify(arena.alloc.bytes_used() > bytes_before);
+   cat::verify(values.size() == 9u);
+   values.free(arena.alloc);
+
+   cat::raii::small_vec<int4, cat::linear_allocator, 8u> managed(arena.alloc);
+   managed.push_back(1_i4).verify();
+   cat::verify(managed[0] == 1_i4);
+}
+
+$test(vec_append_range_variants) {
+   linear_arena arena;
+   cat::array<int4, 3u> source{1_i4, 2_i4, 3_i4};
+
+   auto verify_manual = [&]<typename Vector> {
+      Vector values;
+      values.append_range(arena.alloc, source).verify();
+      values.append_range(arena.alloc, source).verify();
+      cat::verify(values.size() == 6u);
+      cat::verify(values[4u] == 2_i4);
+      values.free(arena.alloc);
+   };
+   verify_manual.template operator()<cat::vec<int4>>();
+   verify_manual.template
+   operator()<cat::vec<int4, cat::vec_flags::pointer_size_layout>>();
+   verify_manual.template operator()<cat::small_vec<int4>>();
+   verify_manual.template
+   operator()<cat::small_vec<int4, 4u, cat::vec_flags::pointer_size_layout>>();
+
+   auto verify_raii = [&]<typename Vector> {
+      Vector values(cat::dyn_allocator(arena.alloc));
+      values.append_range(source).verify();
+      values.append_range(source).verify();
+      cat::verify(values.size() == 6u);
+      cat::verify(values[4u] == 2_i4);
+   };
+   verify_raii.template operator()<cat::raii::vec<int4>>();
+   verify_raii.template operator()<cat::raii::vec<
+      int4, cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
+   verify_raii.template operator()<cat::raii::small_vec<int4>>();
+   verify_raii.template operator()<cat::raii::small_vec<
+      int4, cat::dyn_allocator, 4u, cat::vec_flags::pointer_size_layout>>();
+}
+
 $test(vec_iterator_typedefs) {
-   using test_vec_t = cat::vec<int4>;
-   using iterator = test_vec_t::iterator;
-   using const_iterator = test_vec_t::const_iterator;
-   using reverse_iterator = test_vec_t::reverse_iterator;
-   using const_reverse_iterator = test_vec_t::const_reverse_iterator;
+   using test_vec = cat::vec<int4>;
+   using iterator = test_vec::iterator;
+   using const_iterator = test_vec::const_iterator;
+   using reverse_iterator = test_vec::reverse_iterator;
+   using const_reverse_iterator = test_vec::const_reverse_iterator;
 
    static_assert(cat::is_same<iterator::value_type, int4>);
    static_assert(cat::is_same<iterator::reference, int4&>);
@@ -248,14 +321,6 @@ $test(vec_compare_trivial_equality) {
 $test(vec_make_factories) {
    linear_arena arena;
 
-   // `make_vec` with the default empty initializer list returns an
-   // engaged but empty vec.
-   cat::vec empty = cat::make_vec<int4>(arena.alloc).verify();
-   $defer {
-      empty.free(arena.alloc);
-   };
-   cat::verify(empty.size() == 0);
-
    // `make_vec` populated with an initializer list reserves and pushes.
    cat::vec list_vec =
       cat::make_vec<int4>(arena.alloc, {1_i4, 2_i4, 3_i4}).verify();
@@ -308,9 +373,6 @@ $test(vec_make_factories) {
       tiny_reserved.free(arena.alloc);
    };
    cat::verify(tiny_reserved.capacity() >= 4);
-
-   // A 0-capacity request stays allocation-free.
-   cat::verify(empty.capacity() == 0);
 }
 
 $test(vec_clone) {
