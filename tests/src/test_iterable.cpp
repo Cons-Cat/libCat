@@ -354,6 +354,9 @@ static_assert(cat::is_position<cat::idx>);
 static_assert(cat::is_collection<tiny_array<int, 4u>>);
 static_assert(cat::is_iterable<tiny_array<int, 4u>>);
 static_assert(cat::is_iterable<tiny_list<int, 8u>>);
+static_assert(cat::is_collection<cat::initializer_list<int>>);
+static_assert(cat::is_random_access_collection<cat::initializer_list<int>>);
+static_assert(cat::is_contiguous_iterable<cat::initializer_list<int>>);
 // `tiny_list` is intentionally `iterable`-only. Position protocol must not be
 // inferred.
 static_assert(!cat::is_collection<tiny_list<int, 8u>>);

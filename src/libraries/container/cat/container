@@ -18,33 +18,17 @@ template <typename T, idx fixed_extent>
 class span;
 
 template <typename T>
-concept is_stepanov_container = requires(T container) {
-                                   container.begin();
-                                   container.end();
-                                   container.cbegin();
-                                   container.cend();
-                                   container.size();
-                                };
+concept has_size = requires(remove_reference<T>& value) {
+                      { value.size() } -> is_implicitly_convertible<idx>;
+                   };
+
+template <typename T>
+concept is_contiguous =
+   has_size<T> && requires(remove_reference<T>& value) {
+                     requires is_pointer<decltype(value.data())>;
+                  };
 
 namespace detail {
-template <typename T>
-concept is_stepanov_contiguous_container =  // is_stepanov_container<T> &&
-   requires(T container) { container.data(); };
-
-// clang-format off
-    template <typename T>
-    // Parentheses are required here to satisfy cppcheck.
-    concept is_stepanov_bounded_container = (requires(T container) {
-        container.size();
-    }) || (requires(T container) {
-        container.capacity();
-    });
-// clang-format on
-
-// If `.size()` is provided.
-template <typename T>
-concept has_size = requires(T t) { t.size(); };
-
 // If `.capacity()` is provided.
 template <typename T>
 concept has_capacity = requires(T t) { t.capacity(); };
@@ -304,7 +288,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    [[nodiscard]]
    constexpr auto
    size(this Derived const& self) -> idx
-      requires(detail::has_capacity<Derived> && !detail::has_size<Derived>)
+      requires(detail::has_capacity<Derived> && !has_size<Derived>)
    {
       return self.capacity();
    }
@@ -313,7 +297,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    [[nodiscard]]
    constexpr auto
    capacity(this Derived const& self) -> idx
-      requires(detail::has_size<Derived>)
+      requires(has_size<Derived>)
    {
       return self.size();
    }
@@ -323,7 +307,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    [[nodiscard]]
    constexpr auto
    is_empty(this Derived const& self) -> bool
-      requires(detail::has_size<Derived>)
+      requires(has_size<Derived>)
    {
       return self.size() == 0;
    }
@@ -333,7 +317,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    [[nodiscard]]
    constexpr auto
    is_full(this Derived const& self) -> bool
-      requires(detail::has_size<Derived>)
+      requires(has_size<Derived>)
    {
       return self.size() == self.capacity();
    }
@@ -613,9 +597,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
 #include <cat/detail/vec_flags.hpp>
 
 // `<cat/span>` defines `span<T>` and `maybe_span<T>`, which the slice and
-// getter methods of `container_interface` return. It transitively reincludes
-// this header but the cycle is harmless thanks to `#pragma once`. Bringing in
-// `<cat/span>` here also pulls in `container_interface.tpp`, providing the
-// out-of-line method definitions to every translation unit that includes
-// `<cat/container>`.
+// getter methods of `container_interface` return. Bringing in `<cat/span>` here
+// also pulls in `container_interface.tpp`, providing the out-of-line method
+// definitions to every translation unit that includes `<cat/container>`.
 #include <cat/span>

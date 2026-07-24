@@ -77,6 +77,65 @@ enum class [[clang::enum_extensibility(closed)]] iteration_result : bool {
    complete = true,     // The loop completed.
 };
 
+template <typename T>
+[[nodiscard]]
+constexpr auto
+begin_pos(initializer_list<T> const& collection) -> idx {
+   static_cast<void>(collection);
+   return 0u;
+}
+
+template <typename T>
+[[nodiscard]]
+constexpr auto
+end_pos(initializer_list<T> const& collection) -> idx {
+   return collection.size();
+}
+
+template <typename T>
+constexpr void
+inc_pos(initializer_list<T> const& collection, idx& position) {
+   static_cast<void>(collection);
+   ++position;
+}
+
+template <typename T>
+constexpr void
+dec_pos(initializer_list<T> const& collection, idx& position) {
+   static_cast<void>(collection);
+   position = idx(position.raw - 1u);
+}
+
+template <typename T>
+constexpr void
+offset_pos(initializer_list<T> const& collection, idx& position, iword offset) {
+   static_cast<void>(collection);
+   position = idx(static_cast<idx::raw_type>((position + offset).raw));
+}
+
+template <typename T>
+[[nodiscard]]
+constexpr auto
+distance(initializer_list<T> const& collection, idx left, idx right) -> iword {
+   static_cast<void>(collection);
+   return right - left;
+}
+
+template <typename T>
+[[nodiscard]]
+constexpr auto
+read_at_unchecked(initializer_list<T>& collection, idx position) -> T const& {
+   return collection.data()[position];
+}
+
+template <typename T>
+[[nodiscard]]
+constexpr auto
+read_at_unchecked(initializer_list<T> const& collection, idx position)
+   -> T const& {
+   return collection.data()[position];
+}
+
 }  // namespace cat
 
 // Member-call mixin and contiguous position helpers live in
@@ -450,6 +509,11 @@ concept is_iterable = requires(T& t) { iterate(t); };
 template <typename T>
 concept is_reverse_iterable = requires(T& t) { reverse_iterate(t); };
 
+// `is_contiguous_iterable<T>` holds when `T` is an iterable and has both
+// `.data()` and `.size()` methods.
+template <typename T>
+concept is_contiguous_iterable = is_iterable<T> && is_contiguous<T>;
+
 template <is_iterable T>
 using iterable_iteration_context_type = decltype(iterate(declval<T&>()));
 
@@ -459,6 +523,7 @@ using iterable_element_type = iterable_iteration_context_type<T>::element_type;
 template <is_iterable T>
 using iterable_value_type = remove_cvref<iterable_element_type<T>>;
 
+// Invoke a fallible callback for every element and stop on failure.
 // When the target is iterable, `reference_wrapper` also inherits
 // `iterable_interface` so borrowed sequences carry the member-call surface.
 template <typename T>

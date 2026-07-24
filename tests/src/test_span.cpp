@@ -163,7 +163,7 @@ $test(span_initializer_list_constraints) {
    cat::verify(from_list.size() == 3u);
    cat::verify(from_list[0] && !from_list[1] && from_list[2]);
 
-   std::initializer_list<bool> empty_list(nullptr, 0u);
+   std::initializer_list<bool> empty_list;
    cat::verify(empty_list.empty());
    cat::verify(empty_list.begin() == nullptr);
 

@@ -2,11 +2,20 @@
 // vim: set ft=cpp:
 #pragma once
 
-// Freestanding `std::initializer_list` (language support library contract).
+// libCat provides `std::initializer_list` for use within our container
+// functions.
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
 namespace std {
 
 template <typename T>
 class initializer_list {
+   constexpr initializer_list(
+      T const* _Nullable p_data, __SIZE_TYPE__ in_size
+   ) noexcept
+       : m_p_data(p_data), m_size(in_size) {
+   }
+
  public:
    using value_type = T;
    using reference = T const&;
@@ -17,16 +26,16 @@ class initializer_list {
 
    constexpr initializer_list() noexcept = default;
 
-   constexpr initializer_list(
-      T const* _Nullable p_data, __SIZE_TYPE__ in_size
-   ) noexcept
-       : m_p_data(p_data), m_size(in_size) {
-   }
-
    [[nodiscard]]
    constexpr auto
    size() const noexcept -> __SIZE_TYPE__ {
       return m_size;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() const noexcept -> T const* _Nullable {
+      return m_p_data;
    }
 
    [[nodiscard]]
@@ -52,35 +61,9 @@ class initializer_list {
    __SIZE_TYPE__ m_size = 0u;
 };
 
-template <class T>
-[[nodiscard]]
-constexpr auto
-begin(initializer_list<T> inits) noexcept -> T const* _Nullable {
-   return inits.begin();
-}
-
-template <class T>
-[[nodiscard]]
-constexpr auto
-end(initializer_list<T> inits) noexcept -> T const* _Nullable {
-   return inits.end();
-}
-
-template <class T>
-[[nodiscard]]
-constexpr auto
-cbegin(initializer_list<T> inits) noexcept -> T const* _Nullable {
-   return inits.begin();
-}
-
-template <class T>
-[[nodiscard]]
-constexpr auto
-cend(initializer_list<T> inits) noexcept -> T const* _Nullable {
-   return inits.end();
-}
-
 }  // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 namespace cat {
 using std::initializer_list;

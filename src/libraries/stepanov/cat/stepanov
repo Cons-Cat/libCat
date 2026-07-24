@@ -55,6 +55,33 @@
 //
 
 namespace cat {
+
+template <typename T>
+concept is_stepanov_container = requires(T container) {
+                                   container.begin();
+                                   container.end();
+                                   container.cbegin();
+                                   container.cend();
+                                   container.size();
+                                };
+
+namespace detail {
+template <typename T>
+concept is_stepanov_contiguous_container =
+   is_stepanov_container<T> && requires(T container) { container.data(); };
+
+// clang-format off
+    template <typename T>
+    // Parentheses are required here to satisfy cppcheck.
+    concept is_stepanov_bounded_container = (requires(T container) {
+        container.size();
+    }) || (requires(T container) {
+        container.capacity();
+    });
+// clang-format on
+
+}  // namespace detail
+
 struct stepanov_iterator_interface_access {
    template <typename Derived>
    static constexpr auto
