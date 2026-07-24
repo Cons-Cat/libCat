@@ -2,9 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/simd_switch_priority.hpp>
+
 #include <cat/array>
-#include <cat/cpuid>
-#include <cat/string>
 #include <cat/utility>
 
 // `$simd_switch` is a SIMD variant selector. Entries are declared by
@@ -41,22 +41,21 @@
 //
 // The compiler enforces that:
 //   * the last argument is a `default:` clause OR one of the listed
-//     `$abi(arch, ...)` entries has `CAT_PRI_<arch> <= CAT_BASELINE_PRI
+//     `$abi(arch, ...)` entries has `CAT_PRIORITY_<arch> <= CAT_BASELINE_PRI
 //     (i.e. the build's `-m<arch>` baseline statically guarantees that
 //     arch is supported on every host capable of running the binary, so
 //     no fallback is reachable).
 //   * at most one `default:` clause is provided.
 //   * no two entries share the same arch tag.
 //
-// Adding support for a new arch only requires defining `CAT_TGT_<arch>`,
-// `CAT_SUP_<arch>`, `CAT_PRI_<arch>` macros below and an (optionally empty)
-// `cat::detail::simd_<arch>` namespace.
+// Adding support for a new arch only requires defining `CAT_TARGET_<arch>`,
+// `CAT_SUP_<arch>`, `CAT_PRIORITY_<arch>` macros below and an (optionally
+// empty) `cat::detail::simd_<arch>` namespace.
 //
-// `<cat/simd_dispatch>` is intentionally *not* re-included by `<cat/simd>`,
+// `<cat/simd_switch>` is intentionally *not* re-included by `<cat/simd>`,
 // because pulling `<cat/array>` and `<cat/string>` mid-`<cat/simd>` parse
 // would precede the default `idx fixed_extent` forward-declaration of
-// `cat::span` in `<cat/memory>` and break `<cat/container>`. Include it
-// explicitly after `<cat/simd>`.
+// `cat::span` in `<cat/memory>` and break `<cat/container>`.
 //
 // The implementation of this macro is unfortunately complex. But the value
 // of this feature is huge, and in my opinion, there are no elegant
@@ -87,9 +86,39 @@ namespace simd_sse2 {}  // namespace simd_sse2
 // here, because each `$abi` body is invoked inline at the dispatch site,
 // not stored. That is what lets `$abi` lambdas use `[&]` capture without
 // pulling in a `copyable_function`-style type-erased callable.
+struct simd_dispatch_arch {
+   char const* _Nonnull p_data;
+   idx length;
+
+   template <idx extent>
+   consteval simd_dispatch_arch(char const (&data)[extent])
+       : p_data(data), length(extent - 1u) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return length;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(simd_dispatch_arch left, simd_dispatch_arch right) -> bool {
+      if (left.length != right.length) {
+         return false;
+      }
+      for (idx i = 0u; i < left.length; ++i) {
+         if (left.p_data[i] != right.p_data[i]) {
+            return false;
+         }
+      }
+      return true;
+   }
+};
+
 struct simd_dispatch_meta {
-   str_view arch;  // empty string indicates the default fallback.
-   int4 priority;  // -1 indicates the default fallback.
+   simd_dispatch_arch arch;  // Empty indicates the default fallback.
+   int4 priority;            // -1 indicates the default fallback.
 };
 
 template <idx n>
@@ -187,47 +216,50 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 }  // namespace cat::detail
 
 // Per-arch hooks. Each supported arch defines:
-//    CAT_TGT_<arch>   GNU target attribute string (comma-separated
-//    features). CAT_PRI_<arch>   integer priority. higher is preferred.
-// Adding a new arch is purely additive here. The numeric `CAT_PRI_<arch>`
+//    CAT_TARGET_<arch>   GNU target attribute string (comma-separated
+//    features).
+//
+//    CAT_PRIORITY_<arch>   integer priority. higher is preferred.
+//
+// Adding a new arch is purely additive here. The numeric `CAT_PRIORITY_<arch>`
 // values must mirror the priority ladder in `<cat/cpuid>` (which writes
 // `cat::detail::simd_dispatch_priority` from the same numbers).
 //
-// `CAT_TGT_<arch>` and `CAT_PRI_<arch>` look like `constexpr` constants
+// `CAT_TARGET_<arch>` and `CAT_PRIORITY_<arch>` look like `constexpr` constants
 // to clang-tidy's `cppcoreguidelines-macro-usage` check, but they have to stay
-// macros so `CAT_CONCAT(CAT_TGT_, arch)` / `CAT_CONCAT(CAT_PRI_, arch)`
+// macros so `CAT_CONCAT(CAT_TARGET_, arch)` / `CAT_CONCAT(CAT_PRIORITY_, arch)`
 // can build their names by token paste, `[[gnu::target("...")]]` gets a
 // literal at the call site, and `CAT_BASELINE_PRI  arithmetic works inside
 // `#if`. Suppress the check for the whole block.
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
-#define CAT_TGT_avx512 "avx512f,avx512cd,avx512bw,avx512dq,avx512vl"
-#define CAT_PRI_avx512 90
+#define CAT_TARGET_avx512 "avx512f,avx512cd,avx512bw,avx512dq,avx512vl"
+#define CAT_PRIORITY_avx512 90
 
-#define CAT_TGT_avx2 "avx2"
-#define CAT_PRI_avx2 80
+#define CAT_TARGET_avx2 "avx2"
+#define CAT_PRIORITY_avx2 80
 
-#define CAT_TGT_avx "avx"
-#define CAT_PRI_avx 70
+#define CAT_TARGET_avx "avx"
+#define CAT_PRIORITY_avx 70
 
-#define CAT_TGT_sse4_2 "sse4.2"
-#define CAT_PRI_sse4_2 60
+#define CAT_TARGET_sse4_2 "sse4.2"
+#define CAT_PRIORITY_sse4_2 60
 
-#define CAT_TGT_sse4_1 "sse4.1"
-#define CAT_PRI_sse4_1 55
+#define CAT_TARGET_sse4_1 "sse4.1"
+#define CAT_PRIORITY_sse4_1 55
 
-#define CAT_TGT_ssse3 "ssse3"
-#define CAT_PRI_ssse3 50
+#define CAT_TARGET_ssse3 "ssse3"
+#define CAT_PRIORITY_ssse3 50
 
-#define CAT_TGT_sse2 "sse2"
-#define CAT_PRI_sse2 40
+#define CAT_TARGET_sse2 "sse2"
+#define CAT_PRIORITY_sse2 40
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 // File baseline tier inferred from compiler-defined `__<feature>__` macros.
 // `-mavx2` defines `__AVX2__`, `-mavx` defines `__AVX__`, etc. The highest
 // matching tier wins. `0` is "below sse2".
 //
-// The numeric values mirror `CAT_PRI_<arch>` so they're directly
+// The numeric values mirror `CAT_PRIORITY_<arch>` so they're directly
 // comparable.
 #if defined(__AVX512F__) && defined(__AVX512CD__) && defined(__AVX512BW__) \
    && defined(__AVX512DQ__) && defined(__AVX512VL__)
@@ -355,9 +387,9 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 #define CAT_META_ENTRY(x) CAT_CONCAT(CAT_META_, CAT_IS_PAREN(x))(x)
 #define CAT_META_0(x) ::cat::detail::simd_dispatch_meta{"", -1}
 #define CAT_META_1(x) CAT_META_FROM_TUPLE x
-#define CAT_META_FROM_TUPLE(arch, ...)  \
-   ::cat::detail::simd_dispatch_meta {  \
-      #arch, CAT_CONCAT(CAT_PRI_, arch) \
+#define CAT_META_FROM_TUPLE(arch, ...)       \
+   ::cat::detail::simd_dispatch_meta {       \
+      #arch, CAT_CONCAT(CAT_PRIORITY_, arch) \
    }
 
 // SIMD_DISPATCH pass emits one switch case per entry. `(arch, body)` tuples
@@ -379,13 +411,13 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 #define CAT_SIMD_DISPATCH_0(idx, x) x
 #define CAT_SIMD_DISPATCH_1(idx, x) \
    CAT_SIMD_INVOKE_N(CAT_SIMD_DISPATCH_TUPLE_, idx, CAT_UNPAREN(x))
-#define CAT_SIMD_DISPATCH_TUPLE_(idx, arch, ...)                             \
-   case idx:                                                                 \
-      return                                                                 \
-         [&] [[gnu::target(CAT_CONCAT(CAT_TGT_, arch))]] -> decltype(auto) { \
-            CAT_SIMD_ARCH_USINGS(::cat::detail::simd_##arch)                 \
-            __VA_ARGS__                                                      \
-         }();
+#define CAT_SIMD_DISPATCH_TUPLE_(idx, arch, ...)                \
+   case idx:                                                    \
+      return [&] [[gnu::target(CAT_CONCAT(CAT_TARGET_, arch))]] \
+                -> decltype(auto) {                             \
+         CAT_SIMD_ARCH_USINGS(::cat::detail::simd_##arch)       \
+         __VA_ARGS__                                            \
+      }();
 
 // Per-alias using-declarations for an arch namespace. The
 // `using namespace NS;` opens the arch namespace for unqualified names that
@@ -723,7 +755,7 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
             ),                                                                \
          "`$simd_switch` requires a `default:` clause as its last argument, " \
          "unless one of the listed `$abi(arch, ...)` entries has "            \
-         "`CAT_PRI_<arch> <= CAT_BASELINE_PRI  (i.e. the build's "            \
+         "`CAT_PRIORITY_<arch> <= CAT_BASELINE_PRI  (i.e. the build's "       \
          "`-m<arch>` "                                                        \
          "baseline already guarantees that arch is supported)."               \
       );                                                                      \

@@ -4,9 +4,9 @@
 #include <cat/math>
 #include <cat/page_allocator>
 #include <cat/simd>
-#include <cat/simd_dispatch>
 #include <cat/simd_iterator>
 #include <cat/simd_ops>
+#include <cat/simd_switch>
 #include <cat/tuple>
 #include <cat/vec>
 

@@ -386,7 +386,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_sse_unary_full.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_unary_full.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_compress.hpp
-  ${CATLIB}/simd/cat/simd_dispatch
+  ${CATLIB}/simd/cat/detail/simd_switch_priority.hpp
+  ${CATLIB}/simd/cat/simd_switch
   ${CATLIB}/socket/cat/socket
   ${CATLIB}/span/cat/span
   ${CATLIB}/span/implementations/span.tpp

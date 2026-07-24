@@ -3,7 +3,7 @@
 #pragma once
 
 #include <cat/iterable>
-#include <cat/simd_dispatch>
+#include <cat/simd_switch>
 #include <cat/simd_ops>
 #include <cat/utility>
 
@@ -90,6 +90,9 @@ struct reverse_inplace_impl {
          ) {
             using value_type = remove_reference<decltype(*range.data())>;
             if constexpr (is_arithmetic<value_type>) {
+#ifdef CAT_NO_CPUID
+               reverse_inplace_scalar_impl(range.data(), range.size());
+#else
                if consteval {
                   reverse_inplace_scalar_impl(range.data(), range.size());
                } else {
@@ -117,6 +120,7 @@ struct reverse_inplace_impl {
                      );
                   }
                }
+#endif
             } else {
                reverse_inplace_scalar_impl(range.data(), range.size());
             }

@@ -1,6 +1,6 @@
 #include <cat/memory>
 #include <cat/simd>
-#include <cat/simd_dispatch>
+#include <cat/simd_switch>
 
 #include "copy_memory_backward_large.tpp"
 #include "copy_memory_backward_small.tpp"

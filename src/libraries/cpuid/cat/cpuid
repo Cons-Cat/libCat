@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/simd_switch_priority.hpp>
+
 #include <cat/arithmetic>
 #include <cat/array>
 #include <cat/bitset>
@@ -290,24 +292,6 @@ extern "C"
    constinit inline rep_string_support memory_rep_string_support{};
 
 }  // namespace cat::detail
-
-#ifndef CAT_NO_CPUID
-namespace cat::detail {
-
-// Highest `CAT_PRI_<arch>` tier (mirroring the hierarchy in
-// `<cat/simd_dispatch>`) that the host CPU supports.
-// `__cpu_indicator_init()` sets this once at startup. `$simd_switch` reads it
-// to pick the highest-priority listed `$abi(arch, ...)` entry whose priority
-// is `<= simd_dispatch_priority`. Defaults to `40` (SSE2), which the
-// x86-64 PSABI guarantees on every host.
-extern "C"
-#ifndef CAT_BUILD_SHARED
-   [[gnu::visibility("hidden")]]
-#endif
-   constinit inline cat::int4 simd_dispatch_priority = 40;
-
-}  // namespace cat::detail
-#endif
 
 namespace x64::detail {
 
@@ -1011,7 +995,7 @@ extern "C"
 
 #ifndef CAT_NO_CPUID
    // Compute the highest `$simd_switch` priority tier supported by the host.
-   // The numeric values mirror `<cat/simd_dispatch>`'s `CAT_PRI_<arch>` ladder.
+   // The numeric values mirror `<cat/simd_switch>`'s `CAT_PRI_<arch>` ladder.
    cat::int4 priority = 40;  // sse2 baseline.
    if (has_feature(ssse3)) {
       priority = 50;

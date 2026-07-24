@@ -5,7 +5,7 @@
 #include <cat/cpuid>
 #include <cat/memory>
 #include <cat/simd>
-#include <cat/simd_dispatch>
+#include <cat/simd_switch>
 
 #include "fill_memory_medium.tpp"
 #include "fill_memory_small.tpp"

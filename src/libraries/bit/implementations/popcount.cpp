@@ -1,6 +1,6 @@
 #include <cat/bit>
 #include <cat/simd>
-#include <cat/simd_dispatch>
+#include <cat/simd_switch>
 
 namespace cat::detail {
 

@@ -2,7 +2,7 @@
 #include <cat/array>
 #include <cat/memory>
 #include <cat/simd>
-#include <cat/simd_dispatch>
+#include <cat/simd_switch>
 
 #include "compare_memory_avx2.tpp"
 #include "compare_memory_medium.tpp"
