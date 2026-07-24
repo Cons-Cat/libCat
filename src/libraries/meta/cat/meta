@@ -1021,24 +1021,47 @@ struct common_type_trait
 template <typename... Args>
 using common_type = detail::common_type_trait<Args...>::type;
 
+template <typename T>
+struct reference_wrapper;
+
 namespace detail {
 // Splitting `reference_wrapper_impl<T>` out from the derived class allows us to
 // easily specialize `reference_wrapper` for different types, which is used for
 // algorithms.
 template <typename T>
+constexpr auto
+reference_wrapper_bind(T& target) noexcept -> T& {
+   return target;
+}
+
+template <typename T>
+void
+reference_wrapper_bind(T&&) = delete;
+
+template <typename T>
 struct reference_wrapper_impl {
+   using type = T;
+
    T* _Nonnull m_p_target;
 
-   constexpr reference_wrapper_impl(T& target [[clang::lifetimebound]])
-       : m_p_target(__builtin_addressof(target)) {
+   template <typename U>
+      requires(
+         !is_same<remove_cvref<U>, reference_wrapper<T>>
+         && requires(U&& target) {
+            detail::reference_wrapper_bind<T>(static_cast<U&&>(target));
+         }
+      )
+   constexpr reference_wrapper_impl(U&& target [[clang::lifetimebound]])
+      noexcept(noexcept(
+         detail::reference_wrapper_bind<T>(static_cast<U&&>(target))
+      ))
+       : m_p_target(__builtin_addressof(
+            detail::reference_wrapper_bind<T>(static_cast<U&&>(target))
+         )) {
    }
 
-   constexpr reference_wrapper_impl(T&&) =
-      delete ("Assigning an r-value to a `cat::reference_wrapper` would "
-              "immediately dangle!");
-
    constexpr void
-   rebind(T& target [[clang::lifetime_capture_by(this)]]) {
+   rebind(T& target [[clang::lifetime_capture_by(this)]]) noexcept {
       m_p_target = __builtin_addressof(target);
    }
 
@@ -1049,13 +1072,22 @@ struct reference_wrapper_impl {
 
    [[nodiscard]]
    constexpr auto
-   get() const -> T& {
+   get() const noexcept -> T& {
       return *m_p_target;
    }
 
    constexpr
-   operator T&() const {
+   operator T&() const noexcept {
       return *m_p_target;
+   }
+
+   template <typename... Args>
+      requires(is_invocable<T&, Args...>)
+   constexpr auto
+   operator()(Args&&... arguments) const noexcept(noexcept(
+      __builtin_invoke(this->get(), static_cast<Args&&>(arguments)...)
+   )) -> decltype(auto) {
+      return __builtin_invoke(this->get(), static_cast<Args&&>(arguments)...);
    }
 };
 }  // namespace detail
@@ -1064,6 +1096,49 @@ template <typename T>
 struct reference_wrapper : detail::reference_wrapper_impl<T> {
    using detail::reference_wrapper_impl<T>::reference_wrapper_impl;
 };
+
+template <typename T>
+reference_wrapper(T&) -> reference_wrapper<T>;
+
+template <typename T, typename U>
+   requires(requires(reference_wrapper<T> left, reference_wrapper<U> right) {
+      { left.get() == right.get() } -> is_convertible<bool>;
+   })
+[[nodiscard]]
+constexpr auto
+operator==(reference_wrapper<T> left, reference_wrapper<U> right) -> bool {
+   return left.get() == right.get();
+}
+
+template <typename T>
+   requires(requires(reference_wrapper<T> left, T const& right) {
+      { left.get() == right } -> is_convertible<bool>;
+   })
+[[nodiscard]]
+constexpr auto
+operator==(reference_wrapper<T> left, T const& right) -> bool {
+   return left.get() == right;
+}
+
+template <typename T, typename U>
+   requires(requires(reference_wrapper<T> left, reference_wrapper<U> right) {
+      left.get() <=> right.get();
+   })
+[[nodiscard]]
+constexpr auto
+operator<=>(reference_wrapper<T> left, reference_wrapper<U> right) {
+   return left.get() <=> right.get();
+}
+
+template <typename T>
+   requires(requires(reference_wrapper<T> left, T const& right) {
+      left.get() <=> right;
+   })
+[[nodiscard]]
+constexpr auto
+operator<=>(reference_wrapper<T> left, T const& right) {
+   return left.get() <=> right;
+}
 
 namespace detail {
 template <typename T>

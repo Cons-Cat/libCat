@@ -530,6 +530,36 @@ $test(meta_common_reference) {
    //     tuple<int&, double&>>;
 }
 
+$test(meta_reference_wrapper) {
+   using namespace cat;
+
+   struct base {
+      int value;
+
+      constexpr auto
+      operator<=>(base const&) const = default;
+   };
+   struct derived : base {};
+
+   derived value{{1}};
+   reference_wrapper<base> wrapped(value);
+   reference_wrapper deduced(value);
+   static_assert(is_same<decltype(deduced), reference_wrapper<derived>>);
+   static_assert(is_same<decltype(wrapped)::type, base>);
+   static_assert(noexcept(reference_wrapper<base>(value)));
+   static_assert(noexcept(wrapped.get()));
+   verify(__builtin_addressof(wrapped.get()) == static_cast<base*>(&value));
+   verify(wrapped == value);
+   verify((wrapped <=> value) == 0);
+
+   auto callback = [](int input) noexcept -> int {
+      return input + 1;
+   };
+   reference_wrapper callback_ref(callback);
+   static_assert(noexcept(callback_ref(1)));
+   verify(callback_ref(1) == 2);
+}
+
 $test(meta_common_comparison) {
    using namespace cat;
 
