@@ -6,7 +6,109 @@
 #include <cat/bit>
 #include <cat/debug>
 
+#include "copy_memory_small.tpp"
+
+// `copy_memory()` selects an optimal copy implementation from a hierarchy of
+// size ranges. It can do this either at runtime by cascading `if`-statements,
+// or potentially at compile-time by attribute `enable_if` overloads.
+
 namespace cat {
+
+[[gnu::always_inline]]
+constexpr void
+copy_memory(
+   void const* _Nonnull __restrict p_source,
+   void* _Nonnull __restrict p_destination, idx bytes
+) __attribute__((enable_if(bytes > 0u && bytes < 4u, ""))) {
+   if consteval {
+      __builtin_memcpy(p_destination, p_source, bytes);
+   } else {
+      detail::copy_memory_small_1_to_3(
+         static_cast<byte const* _Nonnull>(p_source),
+         static_cast<byte* _Nonnull>(p_destination), bytes
+      );
+   }
+}
+
+[[gnu::always_inline]]
+constexpr void
+copy_memory(
+   void const* _Nonnull __restrict p_source,
+   void* _Nonnull __restrict p_destination, idx bytes
+) __attribute__((enable_if(bytes >= 4u && bytes < 8u, ""))) {
+   if consteval {
+      __builtin_memcpy(p_destination, p_source, bytes);
+   } else {
+      detail::copy_memory_small_4_to_7(
+         static_cast<byte const* _Nonnull>(p_source),
+         static_cast<byte* _Nonnull>(p_destination), bytes
+      );
+   }
+}
+
+[[gnu::always_inline]]
+constexpr void
+copy_memory(
+   void const* _Nonnull __restrict p_source,
+   void* _Nonnull __restrict p_destination, idx bytes
+) __attribute__((enable_if(bytes >= 8u && bytes < 16u, ""))) {
+   if consteval {
+      __builtin_memcpy(p_destination, p_source, bytes);
+   } else {
+      detail::copy_memory_small_8_to_15(
+         static_cast<byte const* _Nonnull>(p_source),
+         static_cast<byte* _Nonnull>(p_destination), bytes
+      );
+   }
+}
+
+[[gnu::always_inline]]
+constexpr void
+copy_memory(
+   void const* _Nonnull __restrict p_source,
+   void* _Nonnull __restrict p_destination, idx bytes
+) __attribute__((enable_if(bytes >= 16u && bytes < 32u, ""))) {
+   if consteval {
+      __builtin_memcpy(p_destination, p_source, bytes);
+   } else {
+      detail::copy_memory_small_16_to_31(
+         static_cast<byte const* _Nonnull>(p_source),
+         static_cast<byte* _Nonnull>(p_destination), bytes
+      );
+   }
+}
+
+[[gnu::always_inline]]
+constexpr void
+copy_memory(
+   void const* _Nonnull __restrict p_source,
+   void* _Nonnull __restrict p_destination, idx bytes
+) __attribute__((enable_if(bytes >= 32u && bytes < 64u, ""))) {
+   if consteval {
+      __builtin_memcpy(p_destination, p_source, bytes);
+   } else {
+      detail::copy_memory_small_32_to_63(
+         static_cast<byte const* _Nonnull>(p_source),
+         static_cast<byte* _Nonnull>(p_destination), bytes
+      );
+   }
+}
+
+[[gnu::always_inline]]
+constexpr void
+copy_memory(
+   void const* _Nonnull __restrict p_source,
+   void* _Nonnull __restrict p_destination, idx bytes
+) __attribute__((enable_if(bytes >= 64u && bytes <= 127u, ""))) {
+   if consteval {
+      __builtin_memcpy(p_destination, p_source, bytes);
+   } else {
+      detail::copy_memory_small_64_to_127(
+         static_cast<byte const* _Nonnull>(p_source),
+         static_cast<byte* _Nonnull>(p_destination), bytes
+      );
+   }
+}
 
 // Copy non-overlapping memory ranges.
 constexpr void

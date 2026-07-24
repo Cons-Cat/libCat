@@ -348,6 +348,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/memory/implementations/copy_memory_backward.tpp
   ${CATLIB}/memory/implementations/copy_memory_backward_large.tpp
   ${CATLIB}/memory/implementations/copy_memory_backward_medium.tpp
+  ${CATLIB}/memory/implementations/copy_memory_backward_small.tpp
   ${CATLIB}/memory/implementations/copy_memory_large.tpp
   ${CATLIB}/memory/implementations/copy_memory_medium.tpp
   ${CATLIB}/memory/implementations/copy_memory_small.tpp

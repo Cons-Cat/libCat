@@ -3,6 +3,7 @@
 #include <cat/simd_dispatch>
 
 #include "copy_memory_backward_large.tpp"
+#include "copy_memory_backward_small.tpp"
 #include "copy_memory_large.tpp"
 #include "copy_memory_medium.tpp"
 #include "copy_memory_small.tpp"
@@ -14,7 +15,7 @@ copy_memory_forward_overlap_impl(
    byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) {
    if (bytes <= 127u) {
-      copy_memory_small(p_source, p_destination, bytes);
+      copy_memory_backward_small(p_source, p_destination, bytes);
       return;
    }
 
@@ -52,7 +53,7 @@ copy_memory_backward_impl(
    }
 
    if (bytes <= 127u) {
-      copy_memory_small(p_source, p_destination, bytes);
+      copy_memory_backward_small(p_source, p_destination, bytes);
       return;
    }
 

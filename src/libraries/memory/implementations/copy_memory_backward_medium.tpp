@@ -6,7 +6,7 @@
 #include <cat/bit>
 #include <cat/simd>
 
-#include "copy_memory_small.tpp"
+#include "copy_memory_backward_small.tpp"
 
 namespace cat::detail {
 
@@ -51,7 +51,7 @@ copy_memory_backward_medium(
    }
 
    if (bytes_remaining > 0u) {
-      copy_memory_small(
+      copy_memory_backward_small(
          p_source, p_destination, bytes_remaining.to_idx().assert()
       );
    }

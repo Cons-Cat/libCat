@@ -9,25 +9,26 @@ namespace cat::detail {
 
 [[gnu::always_inline]]
 inline void
-copy_memory_small_1_to_3(
-   byte const* _Nonnull __restrict p_source,
-   byte* _Nonnull __restrict p_destination, idx bytes
+copy_memory_backward_small_1_to_3(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) {
    char* p_dest = reinterpret_cast<char*>(p_destination);
    char const* p_src = reinterpret_cast<char const*>(p_source);
    idx last_byte;
    last_byte.raw = bytes.raw - 1u;
    idx const middle_byte = bytes >> 1u;
-   p_dest[0] = p_src[0];
-   p_dest[last_byte] = p_src[last_byte];
-   p_dest[middle_byte] = p_src[middle_byte];
+   char const head = p_src[0];
+   char const tail = p_src[last_byte];
+   char const middle = p_src[middle_byte];
+   p_dest[0] = head;
+   p_dest[last_byte] = tail;
+   p_dest[middle_byte] = middle;
 }
 
 [[gnu::always_inline]]
 inline void
-copy_memory_small_4_to_7(
-   byte const* _Nonnull __restrict p_source,
-   byte* _Nonnull __restrict p_destination, idx bytes
+copy_memory_backward_small_4_to_7(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) {
    uint4 head_word;
    uint4 tail_word;
@@ -39,9 +40,8 @@ copy_memory_small_4_to_7(
 
 [[gnu::always_inline]]
 inline void
-copy_memory_small_8_to_15(
-   byte const* _Nonnull __restrict p_source,
-   byte* _Nonnull __restrict p_destination, idx bytes
+copy_memory_backward_small_8_to_15(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) {
    uword head_word;
    uword tail_word;
@@ -53,9 +53,8 @@ copy_memory_small_8_to_15(
 
 [[gnu::always_inline]]
 inline void
-copy_memory_small_16_to_31(
-   byte const* _Nonnull __restrict p_source,
-   byte* _Nonnull __restrict p_destination, idx bytes
+copy_memory_backward_small_16_to_32(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) {
    char const* p_src = reinterpret_cast<char const*>(p_source);
    char* p_dest = reinterpret_cast<char*>(p_destination);
@@ -69,9 +68,8 @@ copy_memory_small_16_to_31(
 
 [[gnu::always_inline]]
 inline void
-copy_memory_small_32_to_63(
-   byte const* _Nonnull __restrict p_source,
-   byte* _Nonnull __restrict p_destination, idx bytes
+copy_memory_backward_small_33_to_64(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) {
    char const* p_src = reinterpret_cast<char const*>(p_source);
    char* p_dest = reinterpret_cast<char*>(p_destination);
@@ -91,67 +89,66 @@ copy_memory_small_32_to_63(
 
 [[gnu::always_inline]]
 inline void
-copy_memory_small_64_to_127(
-   byte const* _Nonnull __restrict p_source,
-   byte* _Nonnull __restrict p_destination, idx bytes
+copy_memory_backward_small_65_to_127(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) {
    char const* p_src = reinterpret_cast<char const*>(p_source);
    char* p_dest = reinterpret_cast<char*>(p_destination);
-   char1x16 head_chunks[4];
-   char1x16 tail_chunks[4];
-#pragma unroll
-   for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      head_chunks[vector_index].load_unaligned(p_src + (vector_index * 16u));
-   }
-#pragma unroll
-   for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      tail_chunks[vector_index].load_unaligned(
-         p_src + bytes - 64 + (vector_index * 16u)
-      );
-   }
-#pragma unroll
-   for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      head_chunks[vector_index].store_unaligned(p_dest + (vector_index * 16u));
-   }
-#pragma unroll
-   for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      tail_chunks[vector_index].store_unaligned(
-         p_dest + bytes - 64 + (vector_index * 16u)
-      );
-   }
+   char1x16 head_first;
+   char1x16 head_second;
+   char1x16 head_third;
+   char1x16 head_fourth;
+   char1x16 tail_first;
+   char1x16 tail_second;
+   char1x16 tail_third;
+   char1x16 tail_fourth;
+   head_first.load_unaligned(p_src);
+   head_second.load_unaligned(p_src + 16);
+   head_third.load_unaligned(p_src + 32);
+   head_fourth.load_unaligned(p_src + 48);
+   tail_first.load_unaligned(p_src + bytes - 64);
+   tail_second.load_unaligned(p_src + bytes - 48);
+   tail_third.load_unaligned(p_src + bytes - 32);
+   tail_fourth.load_unaligned(p_src + bytes - 16);
+   head_first.store_unaligned(p_dest);
+   head_second.store_unaligned(p_dest + 16);
+   head_third.store_unaligned(p_dest + 32);
+   head_fourth.store_unaligned(p_dest + 48);
+   tail_first.store_unaligned(p_dest + bytes - 64);
+   tail_second.store_unaligned(p_dest + bytes - 48);
+   tail_third.store_unaligned(p_dest + bytes - 32);
+   tail_fourth.store_unaligned(p_dest + bytes - 16);
 }
 
-// Power-of-2 branch tree for sizes `<= 127`.
-[[clang::no_builtin("memcpy")]]
+[[clang::no_builtin("memmove")]]
 inline void
-copy_memory_small(
-   byte const* _Nonnull __restrict p_source,
-   byte* _Nonnull __restrict p_destination, idx bytes
+copy_memory_backward_small(
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) {
    if (bytes == 0u) {
       return;
    }
    if (bytes < 4u) {
-      copy_memory_small_1_to_3(p_source, p_destination, bytes);
+      copy_memory_backward_small_1_to_3(p_source, p_destination, bytes);
       return;
    }
    if (bytes < 8u) {
-      copy_memory_small_4_to_7(p_source, p_destination, bytes);
+      copy_memory_backward_small_4_to_7(p_source, p_destination, bytes);
       return;
    }
    if (bytes < 16u) {
-      copy_memory_small_8_to_15(p_source, p_destination, bytes);
+      copy_memory_backward_small_8_to_15(p_source, p_destination, bytes);
       return;
    }
-   if (bytes < 32u) {
-      copy_memory_small_16_to_31(p_source, p_destination, bytes);
+   if (bytes <= 32u) {
+      copy_memory_backward_small_16_to_32(p_source, p_destination, bytes);
       return;
    }
-   if (bytes < 64u) {
-      copy_memory_small_32_to_63(p_source, p_destination, bytes);
+   if (bytes <= 64u) {
+      copy_memory_backward_small_33_to_64(p_source, p_destination, bytes);
       return;
    }
-   copy_memory_small_64_to_127(p_source, p_destination, bytes);
+   copy_memory_backward_small_65_to_127(p_source, p_destination, bytes);
 }
 
 }  // namespace cat::detail

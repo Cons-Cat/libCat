@@ -366,6 +366,19 @@ $test(copy_memory_overlap_all_size_tiers) {
    }
 }
 
+$test(copy_memory_backward_small_overlap) {
+   for (cat::idx bytes = 1u; bytes <= 127u; ++bytes) {
+      overlap_case(bytes, 16u, 17u);
+      overlap_case(bytes, 17u, 16u);
+      overlap_case(bytes, 3u, 8u);
+      overlap_case(bytes, 8u, 3u);
+   }
+
+   overlap_case(127u, 5u, 6u);
+   overlap_case(128u, 5u, 6u);
+   overlap_case(200u, 3u, 4u);
+}
+
 $test(copy_memory_overlap_large_non_temporal_tiers) {
    cat::idx const bytes = 2_umi + 257u;
    large_overlap_case(bytes, 512u, 128u);
