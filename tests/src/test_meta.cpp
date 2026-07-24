@@ -514,6 +514,12 @@ $test(meta_common_reference) {
    static_assert(is_reference_wrapper<reference_wrapper<int> const&>);
    static_assert(!is_reference_wrapper<int>);
    static_assert(!is_reference_wrapper<int*>);
+   static_assert(is_same<unwrap_reference<int const&>, int const&>);
+   static_assert(is_same<unwrap_reference<reference_wrapper<int>>, int&>);
+   static_assert(is_same<unwrap_ref_decay<int const&>, int>);
+   static_assert(
+      is_same<unwrap_ref_decay<reference_wrapper<int> const&>, int&>
+   );
 
    // TODO: This is supposed to work. It is blocked by the `tuple` conversion
    // operator.

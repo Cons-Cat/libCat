@@ -11,15 +11,15 @@ struct reverse_view_impl : iterable_interface<> {
    Base m_base;
 
    constexpr auto
-   iterate() -> decltype(reverse_iterate(detail::unwrap_ref(m_base))) {
-      return reverse_iterate(detail::unwrap_ref(m_base));
+   iterate() -> decltype(reverse_iterate(unwrap_ref(m_base))) {
+      return reverse_iterate(unwrap_ref(m_base));
    }
 
    constexpr auto
-   iterate() const -> decltype(reverse_iterate(detail::unwrap_ref(m_base)))
-      requires(is_reverse_iterable<decltype(detail::unwrap_ref(m_base))>)
+   iterate() const -> decltype(reverse_iterate(unwrap_ref(m_base)))
+      requires(is_reverse_iterable<decltype(unwrap_ref(m_base))>)
    {
-      return reverse_iterate(detail::unwrap_ref(m_base));
+      return reverse_iterate(unwrap_ref(m_base));
    }
 };
 

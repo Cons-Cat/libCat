@@ -142,27 +142,6 @@ read_at_unchecked(initializer_list<T> const& collection, idx position)
 // <cat/detail/iterable_interface.hpp>. Iterable member implementations are
 // included from the bottom of this header.
 
-namespace cat::detail {
-// Peel `reference_wrapper` so adapters and range-for see the wrapped iterable.
-template <typename T>
-constexpr auto
-unwrap_ref(T& value) -> T& {
-   return value;
-}
-
-template <typename T>
-constexpr auto
-unwrap_ref(reference_wrapper<T>& borrow) -> T& {
-   return borrow.get();
-}
-
-template <typename T>
-constexpr auto
-unwrap_ref(reference_wrapper<T> const& borrow) -> T& {
-   return borrow.get();
-}
-}  // namespace cat::detail
-
 namespace cat {
 
 // A `position` is a handle to a collection element. It is regular and strictly

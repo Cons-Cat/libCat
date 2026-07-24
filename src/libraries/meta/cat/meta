@@ -1065,6 +1065,38 @@ struct reference_wrapper : detail::reference_wrapper_impl<T> {
    using detail::reference_wrapper_impl<T>::reference_wrapper_impl;
 };
 
+namespace detail {
+template <typename T>
+struct unwrap_reference_trait : identity_trait<T> {};
+
+template <typename T>
+struct unwrap_reference_trait<reference_wrapper<T>> : identity_trait<T&> {};
+}  // namespace detail
+
+template <typename T>
+using unwrap_reference = detail::unwrap_reference_trait<T>::type;
+
+template <typename T>
+using unwrap_ref_decay = unwrap_reference<decay<T>>;
+
+template <typename T>
+constexpr auto
+unwrap_ref(T& reference) -> T& {
+   return reference;
+}
+
+template <typename T>
+constexpr auto
+unwrap_ref(reference_wrapper<T>& reference) -> T& {
+   return reference.get();
+}
+
+template <typename T>
+constexpr auto
+unwrap_ref(reference_wrapper<T> const& reference) -> T& {
+   return reference.get();
+}
+
 template <typename T>
 constexpr auto
 ref(T& target [[clang::lifetimebound]]) -> reference_wrapper<T> {
