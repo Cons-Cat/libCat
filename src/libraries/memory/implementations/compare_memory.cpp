@@ -157,7 +157,7 @@ compare_memory_impl(
       return std::strong_ordering::equal;
    }
 
-   if (bytes <= 16u) {
+   if (bytes <= 32u) {
       return compare_memory_small(p_lhs, p_rhs, bytes);
    }
 

@@ -22,6 +22,12 @@ target_compile_options(cat-tests-base INTERFACE
   -Wno-self-assign-overloaded
 )
 
+# `cat-impl-shared`'s PCH is `-fPIC`. Without this, Clang rejects PCH reuse with
+# "is pie differs in precompiled file".
+if(CAT_USE_SHARED)
+  target_compile_options(cat-tests-base INTERFACE -fPIC)
+endif()
+
 # Umbrella that adds every test source on top of `cat-tests-base`.
 add_library(cat-tests INTERFACE)
 target_link_libraries(cat-tests INTERFACE cat-tests-base)
@@ -111,7 +117,11 @@ if(CAT_BUILD_UNIT_TESTS)
   # `CAT_LINK_OPTIONS` arrives transitively from `cat`'s
   # `INTERFACE_LINK_OPTIONS`.
   if(CAT_PCH)
-    target_precompile_headers(unit_tests REUSE_FROM cat-impl)
+    if(CAT_USE_SHARED)
+      target_precompile_headers(unit_tests REUSE_FROM cat-impl-shared)
+    else()
+      target_precompile_headers(unit_tests REUSE_FROM cat-impl)
+    endif()
   endif()
 
   # Enable running `unit_tests` through `ctest`.
