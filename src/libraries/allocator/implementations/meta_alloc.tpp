@@ -396,7 +396,7 @@ allocator_interface<Derived>::meta_alloc(
    using return_handle = alias_types::return_handle;
 
    if consteval {
-      bool const plain_new_ok = (allocation_alignment == uword(1))
+      bool const plain_new_ok = (allocation_alignment == 1u)
                                 || (allocation_alignment == uword(alignof(T)));
       T* _Nonnull p_allocation;
       if constexpr (is_multiple) {

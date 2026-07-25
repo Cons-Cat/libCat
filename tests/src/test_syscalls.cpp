@@ -619,7 +619,7 @@ $test(syscall_memory) {
    }
 
    // `map_shadow_stack` requires Intel CET. Just probe the support query.
-   (void)nix::has_sys_map_shadow_stack();
+   auto _ = nix::has_sys_map_shadow_stack();
 
    // `sys_brk(nullptr)` queries the current break.
    auto* p_brk = nix::sys_brk(nullptr).verify();

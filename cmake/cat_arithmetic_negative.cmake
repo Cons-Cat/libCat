@@ -99,7 +99,7 @@ block()
   # (mirrors the per-width story in the positive `can_brace_init` block).
   foreach(n IN ITEMS 1 2 4 8)
     _cat_neg_expect_illformed("uint${n}-brace-neg1" "#include <cat/arithmetic>
-void t() { (void)cat::uint${n}{-1}; }
+void t() { auto _ = cat::uint${n}{-1}; }
 ")
     if (n EQUAL 1)
       set(_il "1000")
@@ -113,7 +113,7 @@ void t() { (void)cat::uint${n}{-1}; }
       set(_il "18446744073709551616u")
     endif()
     _cat_neg_expect_illformed("int${n}-const-too-large" "#include <cat/arithmetic>
-void t() { (void)cat::int${n}{${_il}}; }
+void t() { auto _ = cat::int${n}{${_il}}; }
 ")
   endforeach()
 

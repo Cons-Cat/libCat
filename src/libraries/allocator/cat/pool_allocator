@@ -113,7 +113,7 @@ class pool_allocator
            p_walk = p_walk->p_next) {
          ++free_nodes;
       }
-      idx const used_nodes = static_cast<idx>(m_nodes.size() - free_nodes);
+      idx const used_nodes = idx(m_nodes.size() - free_nodes);
       return used_nodes * max_node_bytes;
    }
 

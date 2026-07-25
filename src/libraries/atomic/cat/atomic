@@ -2405,9 +2405,9 @@ class basic_atomic_accessor {
       requires is_convertible<
          OtherElementType (*_Nonnull)[], element_type (*_Nonnull)[]>
    constexpr basic_atomic_accessor(
+      [[maybe_unused]]
       basic_atomic_accessor<OtherElementType, ReferenceType> other
    ) {
-      static_cast<void>(other);
    }
 
    constexpr auto

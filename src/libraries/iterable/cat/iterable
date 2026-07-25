@@ -80,8 +80,7 @@ enum class [[clang::enum_extensibility(closed)]] iteration_result : bool {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-begin_pos(initializer_list<T> const& collection) -> idx {
-   static_cast<void>(collection);
+begin_pos([[maybe_unused]] initializer_list<T> const& collection) -> idx {
    return 0u;
 }
 
@@ -94,30 +93,31 @@ end_pos(initializer_list<T> const& collection) -> idx {
 
 template <typename T>
 constexpr void
-inc_pos(initializer_list<T> const& collection, idx& position) {
-   static_cast<void>(collection);
+inc_pos([[maybe_unused]] initializer_list<T> const& collection, idx& position) {
    ++position;
 }
 
 template <typename T>
 constexpr void
-dec_pos(initializer_list<T> const& collection, idx& position) {
-   static_cast<void>(collection);
+dec_pos([[maybe_unused]] initializer_list<T> const& collection, idx& position) {
    position = idx(position.raw - 1u);
 }
 
 template <typename T>
 constexpr void
-offset_pos(initializer_list<T> const& collection, idx& position, iword offset) {
-   static_cast<void>(collection);
+offset_pos(
+   [[maybe_unused]] initializer_list<T> const& collection, idx& position,
+   iword offset
+) {
    position = idx(static_cast<idx::raw_type>((position + offset).raw));
 }
 
 template <typename T>
 [[nodiscard]]
 constexpr auto
-distance(initializer_list<T> const& collection, idx left, idx right) -> iword {
-   static_cast<void>(collection);
+distance(
+   [[maybe_unused]] initializer_list<T> const& collection, idx left, idx right
+) -> iword {
    return right - left;
 }
 

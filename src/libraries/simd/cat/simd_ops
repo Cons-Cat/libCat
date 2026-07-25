@@ -2653,7 +2653,7 @@ template <typename T>
 [[nodiscard]]
 constexpr auto
 simd_rcbrt_lane(T x) -> T {
-   return simd_rnroot_lane(x, iword(3));
+   return simd_rnroot_lane(x, 3);
 }
 
 template <typename T, typename Abi>
@@ -2718,7 +2718,7 @@ struct simd_cbrt_impl : simd_elementwise_interface<simd_cbrt_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
-      return simd_nroot_impl{}.invoke_full(input, iword(3));
+      return simd_nroot_impl{}.invoke_full(input, 3);
    }
 
    template <typename T>
@@ -2726,7 +2726,7 @@ struct simd_cbrt_impl : simd_elementwise_interface<simd_cbrt_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      return simd_nroot_lane(x, iword(3));
+      return simd_nroot_lane(x, 3);
    }
 };
 

@@ -149,10 +149,9 @@ popcount_words_simd_unmasked(uword const* _Nonnull p_words, idx words) -> idx {
       count += sixteens.popcount();
    }
 
-   Vector total = (count * Vector(uword(16u)))
-                  + (eights.popcount() * Vector(uword(8u)))
-                  + (fours.popcount() * Vector(uword(4u)))
-                  + (twos.popcount() * Vector(uword(2u))) + ones.popcount();
+   Vector total = (count * Vector(16u)) + (eights.popcount() * Vector(8u))
+                  + (fours.popcount() * Vector(4u))
+                  + (twos.popcount() * Vector(2u)) + ones.popcount();
 
    for (; word_index + vector_words <= words; word_index += vector_words) {
       total +=
@@ -188,7 +187,7 @@ template <typename Vector>
 auto
 popcount_words_simd(uword const* _Nonnull p_words, idx words, uword tail_mask)
    -> idx {
-   if (tail_mask == ~uword(0u)) {
+   if (tail_mask == uword::max()) {
       return popcount_words_simd_unmasked<Vector>(p_words, words);
    }
    idx const full_words = idx(words - 1u);

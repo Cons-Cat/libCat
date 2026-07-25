@@ -94,7 +94,7 @@ class simd_range_stepanov_iterator
       cat::assert(m_data != nullptr);
       iword const new_off = iword(m_offset) + offset;
       iword const sz = iword(pack_type::size());
-      cat::assert(new_off >= iword(0) && new_off <= sz);
+      cat::assert(new_off >= 0 && new_off <= sz);
       m_offset = idx(new_off);
    }
 

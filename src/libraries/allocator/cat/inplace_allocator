@@ -96,7 +96,7 @@ class inplace_allocator
       }
 
       byte* p_aligned = align_up(m_storage.data(), alignment);
-      idx const offset = static_cast<idx>(p_aligned - m_storage.data());
+      idx const offset = idx(p_aligned - m_storage.data());
 
       if (offset + allocation_bytes <= arena_bytes) {
          // Mark future over-allocation.

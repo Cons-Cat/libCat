@@ -66,7 +66,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
       // The allocation size is the difference between the current pointer and
       // the new pointer.
       if (allocation >= m_p_arena_end) {
-         return static_cast<idx>(m_p_arena_current - allocation);
+         return idx(m_p_arena_current - allocation);
       }
       return nullopt;
    }
@@ -167,14 +167,14 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    [[nodiscard]]
    auto
    bytes_used() const -> idx {
-      return static_cast<idx>(m_p_arena_begin - m_p_arena_current);
+      return idx(m_p_arena_begin - m_p_arena_current);
    }
 
    // NOLINTNEXTLINE
    [[nodiscard]]
    auto
    bytes_capacity() const -> idx {
-      return static_cast<idx>(m_p_arena_begin - m_p_arena_end);
+      return idx(m_p_arena_begin - m_p_arena_end);
    }
 
    // Two linear allocators are equivalent when they govern the same arena.

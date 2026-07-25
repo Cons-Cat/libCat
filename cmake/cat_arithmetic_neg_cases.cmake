@@ -25,12 +25,12 @@
 # / deleted overloads, not the runtime `enable_if` path.
 
 _cat_neg_expect_illformed("uint1-const-1000" [[#include <cat/arithmetic>
-void t() { (void)cat::uint1{1000u}; }
+void t() { auto _ = cat::uint1{1000u}; }
 ]])
 
 _cat_neg_expect_illformed("int1-brace-wider-int4-literal" [[#include <cat/arithmetic>
 using namespace cat::literals;
-void t() { (void)cat::int1{ 200_i4 }; }
+void t() { auto _ = cat::int1{ 200_i4 }; }
 ]])
 
 # Copy-initialization from *known* out-of-range **constants** for the implicit
@@ -54,19 +54,19 @@ _cat_neg_expect_illformed("enable-if-float4-implicit-int-inexact" [[#include <ca
 void t() { cat::float4 f = 16'777'217; }
 ]])
 _cat_neg_expect_illformed("enable-if-float4-brace-int-inexact" [[#include <cat/arithmetic>
-void t() { (void)cat::float4{16'777'217}; }
+void t() { auto _ = cat::float4{16'777'217}; }
 ]])
 _cat_neg_expect_illformed("enable-if-float4-brace-int-negative-inexact" [[#include <cat/arithmetic>
-void t() { (void)cat::float4{-16'777'217}; }
+void t() { auto _ = cat::float4{-16'777'217}; }
 ]])
 _cat_neg_expect_illformed("enable-if-float8-implicit-ll-inexact" [[#include <cat/arithmetic>
 void t() { cat::float8 f = 9'007'199'254'740'993LL; }
 ]])
 _cat_neg_expect_illformed("enable-if-float8-brace-ll-inexact" [[#include <cat/arithmetic>
-void t() { (void)cat::float8{9'007'199'254'740'993LL}; }
+void t() { auto _ = cat::float8{9'007'199'254'740'993LL}; }
 ]])
 _cat_neg_expect_illformed("enable-if-float8-brace-ll-negative-inexact" [[#include <cat/arithmetic>
-void t() { (void)cat::float8{-9'007'199'254'740'993LL}; }
+void t() { auto _ = cat::float8{-9'007'199'254'740'993LL}; }
 ]])
 _cat_neg_expect_illformed("enable-if-uint8-implicit-ll-neg1" [[#include <cat/arithmetic>
 void t() { cat::uint8 u = -1ll; }
@@ -75,7 +75,7 @@ _cat_neg_expect_illformed("enable-if-idx-implicit-int-neg1" [[#include <cat/arit
 void t() { cat::idx i = -1; }
 ]])
 _cat_neg_expect_illformed("enable-if-idx-brace-int-neg1" [[#include <cat/arithmetic>
-void t() { (void)cat::idx{-1}; }
+void t() { auto _ = cat::idx{-1}; }
 ]])
 _cat_neg_expect_illformed("enable-if-idx-implicit-ll-neg1" [[#include <cat/arithmetic>
 void t() { cat::idx i = -1ll; }
@@ -84,7 +84,7 @@ _cat_neg_expect_illformed("enable-if-uintptr-implicit-int-neg1" [[#include <cat/
 void t() { cat::uintptr<void> p = -1; }
 ]])
 _cat_neg_expect_illformed("enable-if-uintptr-brace-int-neg1" [[#include <cat/arithmetic>
-void t() { (void)cat::uintptr<void>{-1}; }
+void t() { auto _ = cat::uintptr<void>{-1}; }
 ]])
 _cat_neg_expect_illformed("enable-if-uintptr-implicit-ll-neg1" [[#include <cat/arithmetic>
 void t() { cat::uintptr<void> p = -1ll; }
@@ -100,22 +100,22 @@ _cat_neg_expect_illformed("idx-pluseq-negative-literal" [[#include <cat/arithmet
 void t() { cat::idx i(0u); i += -1; }
 ]])
 _cat_neg_expect_illformed("bit-countl-zero-raw-zero" [[#include <cat/bit>
-void t() { (void)cat::countl_zero_raw(0u); }
+void t() { auto _ = cat::countl_zero_raw(0u); }
 ]])
 _cat_neg_expect_illformed("bit-countl-one-raw-zero" [[#include <cat/bit>
-void t() { (void)cat::countl_one_raw(0u); }
+void t() { auto _ = cat::countl_one_raw(0u); }
 ]])
 _cat_neg_expect_illformed("bit-countr-zero-raw-zero" [[#include <cat/bit>
-void t() { (void)cat::countr_zero_raw(0u); }
+void t() { auto _ = cat::countr_zero_raw(0u); }
 ]])
 _cat_neg_expect_illformed("bit-countr-zero-raw-idx-zero" [[#include <cat/bit>
-void t() { (void)cat::countr_zero_raw(cat::idx{0u}); }
+void t() { auto _ = cat::countr_zero_raw(cat::idx{0u}); }
 ]])
 _cat_neg_expect_illformed("bit-countr-one-raw-zero" [[#include <cat/bit>
-void t() { (void)cat::countr_one_raw(0u); }
+void t() { auto _ = cat::countr_one_raw(0u); }
 ]])
 _cat_neg_expect_illformed("bit-countr-one-raw-idx-zero" [[#include <cat/bit>
-void t() { (void)cat::countr_one_raw(cat::idx{0u}); }
+void t() { auto _ = cat::countr_one_raw(cat::idx{0u}); }
 ]])
 _cat_neg_expect_illformed("undef-int1-pluseq-uint-OOR" [[#include <cat/arithmetic>
 void t() { auto r = cat::int1(0).undef(); r += 300u; }
@@ -204,7 +204,7 @@ _cat_neg_expect_illformed("idx-diveq-signed" [[#include <cat/arithmetic>
 void t() { cat::idx i(cat::deconst(6u)); int s = cat::deconst(2); i /= s; }
 ]])
 _cat_neg_expect_illformed("idx-bitand" [[#include <cat/arithmetic>
-void t() { (void)(cat::idx(cat::deconst(1u)) & cat::idx(cat::deconst(1u))); }
+void t() { auto _ = cat::idx(cat::deconst(1u)) & cat::idx(cat::deconst(1u)); }
 ]])
 
 # `operator-` (binary): only the `is_integral` `__attribute__((enable_if(...)))`
@@ -212,13 +212,13 @@ void t() { (void)(cat::idx(cat::deconst(1u)) & cat::idx(cat::deconst(1u))); }
 # Non-integer arithmetic and pointers have no `cat::` `operator-` and fail
 # overload resolution.
 _cat_neg_expect_illformed("idx-minus-float" [[#include <cat/arithmetic>
-void t() { (void)(cat::idx(0u) - 1.0f); }
+void t() { auto _ = cat::idx(0u) - 1.0f; }
 ]])
 _cat_neg_expect_illformed("idx-minus-double" [[#include <cat/arithmetic>
-void t() { (void)(cat::idx(0u) - 1.0); }
+void t() { auto _ = cat::idx(0u) - 1.0; }
 ]])
 _cat_neg_expect_illformed("idx-minus-int-ptr" [[#include <cat/arithmetic>
-void t() { int a = 0; (void)(cat::idx(0u) - &a); }
+void t() { int a = 0; auto _ = cat::idx(0u) - &a; }
 ]])
 
 # `idx(0u) - deconst(1u)` widens to `iword`; it must not implicitly become
@@ -226,7 +226,7 @@ void t() { int a = 0; (void)(cat::idx(0u) - &a); }
 _cat_neg_expect_illformed("idx-minus-deconst-1u-binds-iword" [[#include <cat/arithmetic>
 void t() {
    cat::uword w = cat::idx(0u) - cat::deconst(1u);
-   (void)w;
+   auto _ = w;
 }
 ]])
 

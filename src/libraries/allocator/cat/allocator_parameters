@@ -452,12 +452,11 @@ struct dyn_resize {
    template <has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke(T& self, idx minimum_bytes) -> maybe_non_zero<idx> {
+   do_invoke([[maybe_unused]] T& self, [[maybe_unused]] idx minimum_bytes)
+      -> maybe_non_zero<idx> {
       if constexpr (has_resize<T>) {
          return dyn_allocator_friend::resize(self, minimum_bytes);
       } else {
-         static_cast<void>(self);
-         static_cast<void>(minimum_bytes);
          return nullopt;
       }
    }
@@ -559,11 +558,10 @@ struct dyn_bytes_used {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke(T const& self) -> idx {
+   do_invoke([[maybe_unused]] T const& self) -> idx {
       if constexpr (has_bytes_used<T>) {
          return dyn_allocator_friend::bytes_used(self);
       } else {
-         static_cast<void>(self);
          return idx(0u);
       }
    }
@@ -575,11 +573,10 @@ struct dyn_bytes_capacity {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke(T const& self) -> idx {
+   do_invoke([[maybe_unused]] T const& self) -> idx {
       if constexpr (has_bytes_capacity<T>) {
          return dyn_allocator_friend::bytes_capacity(self);
       } else {
-         static_cast<void>(self);
          return idx(0u);
       }
    }
@@ -594,13 +591,14 @@ struct dyn_equals {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke(T const& self, void const* _Nonnull p_other) -> bool {
+   do_invoke(
+      [[maybe_unused]] T const& self, [[maybe_unused]] void const* _Nonnull p_other
+   ) -> bool {
+      [[maybe_unused]]
       T const& other = *static_cast<T const*>(p_other);
       if constexpr (has_is_equivalent<T>) {
          return dyn_allocator_friend::is_equivalent(self, other);
       } else if constexpr (__is_empty(T)) {
-         static_cast<void>(self);
-         static_cast<void>(other);
          return true;
       } else {
          return __builtin_addressof(self) == __builtin_addressof(other);
@@ -614,11 +612,10 @@ struct dyn_name {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
-   do_invoke(T const& self) -> str_view {
+   do_invoke([[maybe_unused]] T const& self) -> str_view {
       if constexpr (has_name<T>) {
          return dyn_allocator_friend::name(self);
       } else {
-         static_cast<void>(self);
          return str_view{};
       }
    }
@@ -971,10 +968,9 @@ class [[gsl::Pointer]] allocator_ref
              "allocators! Pass an allocator l-value instead.");
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr allocator_ref(Allocator& allocator)
+   constexpr allocator_ref([[maybe_unused]] Allocator& allocator)
       requires(__is_empty(Allocator))
    {
-      static_cast<void>(allocator);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -1020,9 +1016,8 @@ class [[gsl::Pointer]] allocator_ref
    // forwards to `is_equivalent`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   is_equivalent(allocator_ref const& other) const -> bool {
+   is_equivalent([[maybe_unused]] allocator_ref const& other) const -> bool {
       if constexpr (__is_empty(Allocator)) {
-         static_cast<void>(other);
          return true;
       } else if constexpr (detail::has_is_equivalent<Allocator>) {
          return dyn_allocator_friend::is_equivalent(

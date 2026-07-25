@@ -141,7 +141,7 @@ template <
 auto
 resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    resize(idx minimum_bytes) -> maybe_non_zero<idx> {
-   idx const request_bytes = static_cast<idx>(
+   idx const request_bytes = idx(
       minimum_bytes + sizeof(chunk_header) > chunk_bytes
          ? minimum_bytes + sizeof(chunk_header)
          : chunk_bytes
@@ -163,18 +163,18 @@ auto
 resizable_allocator<
    Inner, Backing, node_bytes_param, chunk_bytes_param>::bytes_used() const
    -> idx {
-   idx total = idx(0u);
+   idx total = 0u;
    for (chunk_header const* p_walk = m_p_chunks; p_walk != nullptr;
         p_walk = p_walk->p_next) {
       total += p_walk->inner.bytes_used();
    }
-   idx free_slots = idx(0u);
+   idx free_slots = 0u;
    for (free_node const* p_walk = m_p_free_head; p_walk != nullptr;
         p_walk = p_walk->p_next) {
       ++free_slots;
    }
-   idx const free_bytes = static_cast<idx>(free_slots * node_bytes);
-   return total > free_bytes ? static_cast<idx>(total - free_bytes) : idx(0u);
+   idx const free_bytes = idx(free_slots * node_bytes);
+   return total > free_bytes ? idx(total - free_bytes) : 0u;
 }
 
 template <
@@ -185,7 +185,7 @@ auto
 resizable_allocator<
    Inner, Backing, node_bytes_param, chunk_bytes_param>::bytes_capacity() const
    -> idx {
-   idx total = idx(0u);
+   idx total = 0u;
    for (chunk_header const* p_walk = m_p_chunks; p_walk != nullptr;
         p_walk = p_walk->p_next) {
       total += p_walk->inner.bytes_capacity();

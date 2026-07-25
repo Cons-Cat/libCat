@@ -460,11 +460,10 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    template <typename WordStorage>
    [[nodiscard]]
    static constexpr auto
-   bit_offset_for(WordStorage& storage) -> idx {
+   bit_offset_for([[maybe_unused]] WordStorage& storage) -> idx {
       if constexpr (requires { WordStorage::leading_skipped_bits; }) {
          return WordStorage::leading_skipped_bits;
       } else {
-         static_cast<void>(storage);
          return 0u;
       }
    }

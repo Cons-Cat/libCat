@@ -1189,7 +1189,7 @@ $test(flux_internal_iterate_empty_filter) {
        return false;
     }))
       .for_each([&](int x) {
-         static_cast<void>(x);
+         auto _ = x;
          ++iterations;
       });
    cat::verify(iterations == 0);

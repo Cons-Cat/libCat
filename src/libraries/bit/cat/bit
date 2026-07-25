@@ -1737,7 +1737,7 @@ popcount(span<Word const, fixed_extent> words) -> idx {
             return count;
          }
          return detail::popcount_words_runtime(
-            words.data(), words.size(), ~uword(0u)
+            words.data(), words.size(), uword::max()
          );
       } else {
          idx count = 0u;
@@ -1766,7 +1766,7 @@ concept is_contiguous_bits =
    requires(remove_reference<Range>& range, bit_value bit) {
       { range.size() } -> is_convertible<idx>;
       requires is_pointer<decltype(range.data())>;
-      bit = range[idx(0u)];
+      bit = range[0u];
    };
 
 // Count set bits across a contiguous container of unsigned words.

@@ -27,7 +27,7 @@ type_name() -> cat::str_view {
 }
 
 consteval auto
-nameof([[maybe_unused]] auto&& value) -> cat::str_view {
+nameof(auto&& value) -> cat::str_view {
    return type_name<cat::remove_reference<decltype(value)>>();
 }
 
@@ -36,17 +36,16 @@ template <auto enum_value>
 consteval auto
 enum_name_from_nttp() -> cat::str_view {
    char const* _Nonnull p_string = __PRETTY_FUNCTION__ + 34u;
-   cat::idx size = sizeof(__PRETTY_FUNCTION__) - 38u;
+   iword size = iword(sizeof(__PRETTY_FUNCTION__) - 38u);
    // Scan backwards from the function signature to find `enum_value`'s word
    // boundary, and trim everything else from the string. This boundary is
    // either a scope-resolution operator or whitespace for scoped and unscoped
    // enums respectively.
-   for (cat::iword i = cat::iword(size) - cat::iword(1); i >= cat::iword(0);
-        --i) {
+   for (cat::iword i = size - 1; i >= 0; --i) {
       if (p_string[cat::idx(i)] == ':' || p_string[cat::idx(i)] == ' ') {
          p_string = p_string + cat::idx(i) + 1u;
-         size.raw -= cat::idx(i - cat::iword(1)).raw;
-         return {p_string, size};
+         size -= i - 1;
+         return {p_string, idx{size}};
       }
    }
    __builtin_unreachable();

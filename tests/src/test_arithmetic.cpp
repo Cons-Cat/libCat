@@ -6138,7 +6138,7 @@ $test(arithmetic_semantics_overflow_reference_view_types) {
    static_assert(can_minus_assign<decltype(a.wrap()), int4>);
    static_assert(can_minus_assign<decltype(a.sat()), int4>);
 
-   (void)b;
+   auto _ = b;
 }
 
 // Signed % is C-style remainder (sign of LHS is preserved). Unsigned % is

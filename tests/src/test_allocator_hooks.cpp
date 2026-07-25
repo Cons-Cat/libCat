@@ -58,13 +58,13 @@ $test(linear_allocator_bytes_used_and_capacity) {
    cat::verify(allocator.bytes_capacity() == 64u);
    cat::verify(allocator.bytes_used() == 0u);
 
+   [[maybe_unused]]
    auto* p_a = allocator.alloc<int4>(1).verify();
-   static_cast<void>(p_a);
    cat::verify(allocator.bytes_used() >= 4u);
    cat::verify(allocator.bytes_used() <= allocator.bytes_capacity());
 
+   [[maybe_unused]]
    auto* p_b = allocator.alloc<int4>(2).verify();
-   static_cast<void>(p_b);
    cat::verify(allocator.bytes_used() >= 8u);
 
    allocator.reset();
@@ -306,8 +306,8 @@ $test(dyn_allocator_introspection_forwarding) {
    cat::verify(dyn.bytes_used() == linear.bytes_used());
    cat::verify(dyn.name().size() == 0);
 
+   [[maybe_unused]]
    auto* p = dyn.alloc<int4>(5).verify();
-   static_cast<void>(p);
    cat::verify(dyn.bytes_used() == linear.bytes_used());
 }
 
@@ -378,8 +378,8 @@ $test(allocator_ref_introspection_forwarding) {
    cat::verify(ref.bytes_capacity() == linear.bytes_capacity());
    cat::verify(ref.bytes_used() == linear.bytes_used());
 
+   [[maybe_unused]]
    auto* p = ref.alloc<int4>(9).verify();
-   static_cast<void>(p);
    cat::verify(ref.bytes_used() == linear.bytes_used());
 }
 

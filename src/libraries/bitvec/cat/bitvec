@@ -346,7 +346,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
       idx const old_size = m_bit_size;
       idx const old_words = word_count();
       idx const new_words = words_for_bits(bit_count);
-      $prop(m_words.resize(allocator, new_words, uword(0u)));
+      $prop(m_words.resize(allocator, new_words, 0u));
       m_bit_size = bit_count;
 
       if (value && bit_count > old_size) {
@@ -740,7 +740,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Set every logical bit to the requested value.
    constexpr auto
    fill(bit_value value = true) -> basic_bitvec& {
-      uword const word_value = value ? ~uword(0u) : uword(0u);
+      uword const word_value = value ? uword::max() : 0u;
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          m_words[word_index] = word_value;
       }
@@ -891,7 +891,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
       if (words != 0u) {
          idx const used_bits = m_bit_size % word_bits;
          if (used_bits != 0u) {
-            m_words[idx(words - 1u)] &= (uword(1u) << used_bits) - uword(1u);
+            m_words[idx(words - 1u)] &= (1_uz << used_bits) - 1_uz;
          }
       }
    }

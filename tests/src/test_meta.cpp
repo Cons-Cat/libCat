@@ -782,7 +782,7 @@ struct opaque_return {};
 
 auto
 return_opaque(int x) -> opaque_return {
-   (void)x;
+   auto _ = x;
    return {};
 }
 
@@ -805,7 +805,7 @@ struct non_convertible_to_bool {
 
 auto
 bad_predicate_return(int x) -> non_convertible_to_bool {
-   (void)x;
+   auto _ = x;
    return {};
 }
 }  // namespace

@@ -340,8 +340,7 @@ template <typename Derived>
 struct bit_collection_interface : iterable_interface<Derived> {
    [[nodiscard]]
    constexpr auto
-   begin_pos(this Derived const& self) -> idx {
-      static_cast<void>(self);
+   begin_pos(this Derived const&) -> idx {
       return 0u;
    }
 

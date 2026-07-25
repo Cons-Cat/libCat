@@ -79,7 +79,7 @@ struct reverse_inplace_impl {
       } else if constexpr (
          has_const_self_reverse_inplace_member<decltype(range)>
       ) {
-         static_cast<void>(range.reverse_inplace());
+         auto _ = range.reverse_inplace();
       } else {
          if constexpr (
             is_random_access_collection<decltype(range)>

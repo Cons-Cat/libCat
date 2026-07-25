@@ -4151,9 +4151,8 @@ class allocator_interface {
    // to richer equality.
    [[nodiscard]]
    constexpr auto
-   is_equivalent(Derived const& other) const -> bool {
+   is_equivalent([[maybe_unused]] Derived const& other) const -> bool {
       if constexpr (__is_empty(Derived)) {
-         static_cast<void>(other);
          return true;
       } else {
          return __builtin_addressof(this->self()) == __builtin_addressof(other);

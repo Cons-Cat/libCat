@@ -47,8 +47,8 @@ $test(named_allocator_forwards_alloc_and_introspection) {
    cat::verify(named.bytes_capacity() == inner.bytes_capacity());
    cat::verify(named.bytes_used() == 0u);
 
+   [[maybe_unused]]
    auto* p = named.alloc<cat::int4>(7).verify();
-   static_cast<void>(p);
    cat::verify(named.bytes_used() == inner.bytes_used());
    cat::verify(named.bytes_used() >= 4u);
 }
@@ -96,8 +96,8 @@ $test(named_allocator_reset_forwards) {
    cat::is_allocator auto inner = cat::make_linear_allocator(page);
    cat::named_allocator named{inner, cat::str_view{"resettable"}};
 
+   [[maybe_unused]]
    auto* p = named.alloc<cat::int4>(1).verify();
-   static_cast<void>(p);
    cat::verify(named.bytes_used() > 0u);
 
    named.reset();

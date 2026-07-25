@@ -103,7 +103,7 @@ $test(bit_span) {
       == 188u
    );
    auto inplace_result = array_bits | cat::reverse_inplace();
-   static_cast<void>(inplace_result);
+   auto _ = inplace_result;
    cat::verify(array_bits[60u]);
    cat::verify(array_bits[62u]);
    cat::verify(array_bits[63u]);

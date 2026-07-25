@@ -144,7 +144,7 @@ template <typename Callback, is_variant_like Variant>
 constexpr auto
 visit(Callback&& callback, Variant&& v) -> decltype(auto) {
    using result_type =
-      decltype(invoke($fwd(callback), $fwd(v).template get<idx(0u)>()));
+      decltype(invoke($fwd(callback), $fwd(v).template get<0u>()));
    detail::visit_value_adapter<result_type, Callback> adapter{$fwd(callback)};
    return detail::visit_dispatcher<true, result_type>::template dispatch_switch<
       0u>($fwd(v), adapter);
@@ -182,7 +182,7 @@ template <typename Callback, is_variant_like Variant>
 constexpr auto
 visit_indexed(Callback&& callback, Variant&& v) -> decltype(auto) {
    using result_type = decltype($fwd(callback).template operator()<idx{0u}>(
-      $fwd(v).template get<idx(0u)>()
+      $fwd(v).template get<0u>()
    ));
    return detail::visit_dispatcher<true, result_type>::template dispatch_switch<
       0u>($fwd(v), $fwd(callback));

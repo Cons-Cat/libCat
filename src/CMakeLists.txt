@@ -275,6 +275,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/atomic/cat/atomic
   ${CATLIB}/bit/cat/bit
   ${CATLIB}/bit/cat/detail/bit_iterable.hpp
+  ${CATLIB}/bit/cat/detail/bit_ptr.hpp
+  ${CATLIB}/bit/cat/detail/bit_reference.hpp
+  ${CATLIB}/bit/cat/detail/bit_span.hpp
   ${CATLIB}/bit/implementations/bit_raw.tpp
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/bitset/cat/bitset
@@ -310,6 +313,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/iterable/implementations/popcount.tpp
   ${CATLIB}/iterable/implementations/product.tpp
   ${CATLIB}/iterable/implementations/reverse.tpp
+  ${CATLIB}/iterable/implementations/reverse_inplace.tpp
   ${CATLIB}/iterable/implementations/slice_view.tpp
   ${CATLIB}/iterable/implementations/sum.tpp
   ${CATLIB}/iterable/implementations/take.tpp
