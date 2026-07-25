@@ -9,6 +9,7 @@ namespace cat::raii {
 
 template <
    typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
+   requires(is_same<remove_cvref<T>, T>)
 class basic_vec;
 
 // `vec<T, Allocator>` is the user-facing alias for the managed
@@ -43,10 +44,12 @@ raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator, flags>;
 namespace cat::raii {
 
 template <typename T, is_allocator Allocator, vec_flags flags>
+   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(vec<T, Allocator, flags>), gsl::Owner]]
 basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
             public random_access_stepanov_iterable_interface<T> {
-   template <typename, is_allocator, vec_flags>
+   template <typename U, is_allocator OtherAllocator, vec_flags other_flags>
+      requires(is_same<remove_cvref<U>, U>)
    friend class basic_vec;
 
  public:
@@ -207,6 +210,13 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
       return m_core.push_back(m_allocator, cat::move(value));
    }
 
+   template <typename First, typename Second, typename... Remaining>
+   constexpr auto
+   push_back(First&&, Second&&, Remaining&&...) -> maybe<void> =
+      delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+              "to construct an element or `append_range()` to "
+              "append a range.");
+
    template <typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -252,11 +262,31 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    }
 
    // Append every element of `range` to the end of this `vec`.
-   template <typename Range>
+   template <is_iterable Range>
    [[nodiscard]]
    constexpr auto
-   append_range(Range const& range) -> maybe<void> {
-      return m_core.append_range(m_allocator, range);
+   append_range(Range&& range) -> maybe<void> {
+      return m_core.append_range(m_allocator, $fwd(range));
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_iterable Range>
+   [[nodiscard]]
+   constexpr auto
+   insert_range(idx position, Range&& range) -> maybe<void>
+      requires(is_assignable<T&, T &&>)
+   {
+      return m_core.insert_range(m_allocator, position, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every element of `range`.
+   template <is_iterable Range>
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(idx first, idx last, Range&& range) -> maybe<void>
+      requires(is_assignable<T&, T &&>)
+   {
+      return m_core.replace_with_range(m_allocator, first, last, $fwd(range));
    }
 
    // Maximum number of elements this `vec` can theoretically hold, bounded

@@ -31,6 +31,7 @@ class basic_str_span;
 
 inline namespace manual {
 template <typename CharT, bool is_null_terminated>
+   requires(is_same<remove_cvref<CharT>, CharT>)
 class basic_str_vec;
 }  // namespace manual
 

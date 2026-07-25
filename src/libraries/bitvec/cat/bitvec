@@ -4,6 +4,7 @@
 
 #include <cat/bit>
 #include <cat/debug>
+#include <cat/iterable>
 #include <cat/maybe>
 #include <cat/span>
 #include <cat/vec>
@@ -390,29 +391,310 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
       return push_back<dyn_allocator>(allocator, value);
    }
 
+   template <
+      is_allocator Allocator, typename First, typename Second,
+      typename... Remaining>
+   constexpr auto
+   push_back(allocator_ref<Allocator>, First&&, Second&&, Remaining&&...)
+      -> maybe<void> = delete (
+         "`push_back()` is not variadic! Consider either `emplace_back()` "
+         "to construct an element or `append_range()` to "
+         "append a range."
+      );
+
+   template <typename First, typename Second, typename... Remaining>
+   constexpr auto
+   push_back(dyn_allocator, First&&, Second&&, Remaining&&...) -> maybe<void> =
+      delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+              "to construct an element or `append_range()` to "
+              "append a range.");
+
    // Append every bit-like value of `range` to the end of this bit vector.
    template <is_allocator Allocator, typename Range>
+      requires(is_contiguous_iterable<Range> && is_contiguous_bits<Range>)
    [[nodiscard]]
    constexpr auto
-   append_range(allocator_ref<Allocator> allocator, Range const& range)
+   append_range(allocator_ref<Allocator> allocator, Range&& range)
       -> maybe<void> {
-      if constexpr (requires { range.size(); }) {
-         $prop(reserve(allocator, m_bit_size + idx(range.size())));
+      idx const count = idx(range.size());
+      if (count == 0u) {
+         return monostate;
       }
-      for (auto&& value : range) {
+
+      idx const old_size = m_bit_size;
+      $prop(resize(allocator, old_size + count));
+
+      // Copy `range` to the end.
+      for (idx i = 0u; i < count; ++i) {
          bit_value bit;
-         bit = value;
-         $prop(push_back(allocator, bit));
+         bit = range[i];
+         (*this)[old_size + i].assign(bit);
       }
       return monostate;
    }
 
+   // Append every bit-like value of `range` to the end of this bit vector.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(!is_contiguous_bits<Iterable> && has_size<Iterable>)
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Iterable&& range)
+      -> maybe<void> {
+      $prop(reserve(allocator, m_bit_size + idx(range.size())));
+
+      // Append each bit.
+      maybe<void> result = monostate;
+      auto append = [&](auto&& value) {
+         if (!result.has_value()) {
+            return;
+         }
+         bit_value bit;
+         bit = value;
+         result = push_back(allocator, bit);
+      };
+      auto context = cat::iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         append($fwd(value));
+         return true;
+      });
+      return result;
+   }
+
+   // Append every bit-like value of `range` to the end of this bit vector.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(!is_contiguous_bits<Iterable> && !has_size<Iterable>)
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Iterable&& range)
+      -> maybe<void> {
+      // Append each bit.
+      maybe<void> result = monostate;
+      auto append = [&](auto&& value) {
+         if (!result.has_value()) {
+            return;
+         }
+         bit_value bit;
+         bit = value;
+         result = push_back(allocator, bit);
+      };
+      auto context = cat::iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         append($fwd(value));
+         return true;
+      });
+      return result;
+   }
+
    // Append every bit-like value of `range` through a type-erased allocator.
-   template <typename Range>
+   template <is_iterable Iterable>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append_range(dyn_allocator allocator, Range const& range) -> maybe<void> {
-      return append_range<dyn_allocator>(allocator, range);
+   append_range(dyn_allocator allocator, Iterable&& range) -> maybe<void> {
+      return append_range<dyn_allocator>(allocator, $fwd(range));
+   }
+
+   // Insert every bit-like value of `range` before `position`.
+   template <is_allocator Allocator, typename Range>
+      requires(is_contiguous_iterable<Range> && is_contiguous_bits<Range>)
+   [[nodiscard]]
+   constexpr auto
+   insert_range(allocator_ref<Allocator> allocator, idx position, Range&& range)
+      -> maybe<void> {
+      if !consteval {
+         assert(position <= m_bit_size);
+      }
+
+      idx const count = idx(range.size());
+      if (count == 0u) {
+         return monostate;
+      }
+
+      idx const old_size = m_bit_size;
+      $prop(resize(allocator, old_size + count));
+
+      // Move the existing tail.
+      for (idx i = old_size; i > position; i = idx(i - 1u)) {
+         (*this)[idx(i + count - 1u)].assign((*this)[idx(i - 1u)]);
+      }
+
+      // Copy `range` into the gap.
+      for (idx i = 0u; i < count; ++i) {
+         bit_value bit;
+         bit = range[i];
+         (*this)[position + i].assign(bit);
+      }
+      return monostate;
+   }
+
+   // Insert every bit-like value of `range` before `position`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(!is_contiguous_bits<Iterable> && has_size<Iterable>)
+   [[nodiscard]]
+   constexpr auto
+   insert_range(
+      allocator_ref<Allocator> allocator, idx position, Iterable&& range
+   ) -> maybe<void> {
+      if !consteval {
+         assert(position <= m_bit_size);
+      }
+
+      idx const count = idx(range.size());
+      if (count == 0u) {
+         return monostate;
+      }
+
+      idx const old_size = m_bit_size;
+      $prop(resize(allocator, old_size + count));
+
+      // Move the existing tail.
+      for (idx i = old_size; i > position; i = idx(i - 1u)) {
+         (*this)[idx(i + count - 1u)].assign((*this)[idx(i - 1u)]);
+      }
+
+      // Write `range` into the gap.
+      idx i = position;
+      auto insert = [&](auto&& value) {
+         bit_value bit;
+         bit = value;
+         (*this)[i].assign(bit);
+         ++i;
+      };
+      auto context = cat::iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         insert($fwd(value));
+         return true;
+      });
+      return monostate;
+   }
+
+   // Insert every bit-like value of `range` before `position`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(!is_contiguous_bits<Iterable> && !has_size<Iterable>)
+   [[nodiscard]]
+   constexpr auto
+   insert_range(
+      allocator_ref<Allocator> allocator, idx position, Iterable&& range
+   ) -> maybe<void> {
+      if !consteval {
+         assert(position <= m_bit_size);
+      }
+      idx insertion_position = position;
+      maybe<void> result = monostate;
+
+      // Insert each bit and grow as needed.
+      auto insert = [&](auto&& value) {
+         if (!result.has_value()) {
+            return;
+         }
+         idx const old_size = m_bit_size;
+         result = resize(allocator, old_size + 1u);
+         if (!result.has_value()) {
+            return;
+         }
+         for (idx i = old_size; i > insertion_position; i = idx(i - 1u)) {
+            (*this)[i].assign((*this)[idx(i - 1u)]);
+         }
+         bit_value bit;
+         bit = value;
+         (*this)[insertion_position].assign(bit);
+         ++insertion_position;
+      };
+      auto context = cat::iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         insert($fwd(value));
+         return true;
+      });
+      return result;
+   }
+
+   // Insert every bit-like value of `range` before `position`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert_range(dyn_allocator allocator, idx position, Iterable&& range)
+      -> maybe<void> {
+      return insert_range<dyn_allocator>(allocator, position, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every bit-like value of `range`.
+   template <is_allocator Allocator, typename Range>
+      requires(is_contiguous_iterable<Range> && is_contiguous_bits<Range>)
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(
+      allocator_ref<Allocator> allocator, idx first, idx last, Range&& range
+   ) -> maybe<void> {
+      if !consteval {
+         assert(first <= last);
+         assert(last <= m_bit_size);
+      }
+      idx const count = idx(range.size());
+      idx const old_size = m_bit_size;
+      idx const removed = idx(last - first);
+      idx const new_size = idx(old_size - removed + count);
+      idx const tail_size = idx(old_size - last);
+
+      // Move the existing tail.
+      if (new_size > old_size) {
+         $prop(resize(allocator, new_size));
+         for (idx i = tail_size; i > 0u; i = idx(i - 1u)) {
+            (*this)[idx(first + count + i - 1u)].assign(
+               (*this)[idx(last + i - 1u)]
+            );
+         }
+      } else {
+         for (idx i = 0u; i < tail_size; ++i) {
+            (*this)[first + count + i].assign((*this)[last + i]);
+         }
+      }
+
+      // Copy `range` into the gap.
+      for (idx i = 0u; i < count; ++i) {
+         bit_value bit;
+         bit = range[i];
+         (*this)[first + i].assign(bit);
+      }
+
+      // Resize last when the replacement shrinks.
+      if (new_size < old_size) {
+         $prop(resize(allocator, new_size));
+      }
+      return monostate;
+   }
+
+   // Replace `[first, last)` with every bit-like value of `range`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(!is_contiguous_bits<Iterable>)
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(
+      allocator_ref<Allocator> allocator, idx first, idx last, Iterable&& range
+   ) -> maybe<void> {
+      if !consteval {
+         assert(first <= last);
+         assert(last <= m_bit_size);
+      }
+
+      // Erase the replaced bits.
+      idx const old_size = m_bit_size;
+      idx const removed = idx(last - first);
+      for (idx i = last; i < old_size; ++i) {
+         (*this)[idx(i - removed)].assign((*this)[i]);
+      }
+      $prop(resize(allocator, idx(old_size - removed)));
+      return insert_range(allocator, first, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every bit-like value of `range`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   replace_with_range(
+      dyn_allocator allocator, idx first, idx last, Iterable&& range
+   ) -> maybe<void> {
+      return replace_with_range<dyn_allocator>(
+         allocator, first, last, $fwd(range)
+      );
    }
 
    // Remove and return the last bit if one exists.

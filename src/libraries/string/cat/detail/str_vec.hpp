@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/iterable>
 #include <cat/vec>
 
 #include "./str_span.hpp"
@@ -10,12 +11,14 @@ namespace cat {
 
 namespace raii {
 template <typename CharT, bool is_null_terminated, is_allocator Allocator>
+   requires(is_same<remove_cvref<CharT>, CharT>)
 class basic_str_vec;
 }  // namespace raii
 
 inline namespace manual {
 
 template <typename CharT, bool is_null_terminated>
+   requires(is_same<remove_cvref<CharT>, CharT>)
 class basic_str_vec;
 
 using str_vec = basic_str_vec<char, false>;
@@ -39,6 +42,7 @@ maybe_str_vec_nullopt() -> basic_str_vec<CharT, is_null_terminated>;
 inline namespace manual {
 
 template <typename CharT, bool null_terminated>
+   requires(is_same<remove_cvref<CharT>, CharT>)
 class
    [[clang::preferred_name(str_vec), clang::preferred_name(zstr_vec),
      clang::preferred_name(wstr_vec), clang::preferred_name(wzstr_vec),
@@ -46,7 +50,9 @@ class
    basic_str_vec
     : public container_interface<basic_str_vec<CharT, null_terminated>, CharT>,
       public random_access_stepanov_iterable_interface<CharT> {
-   template <typename, bool, is_allocator>
+   template <
+      typename OtherChar, bool other_null_terminated, is_allocator Allocator>
+      requires(is_same<remove_cvref<OtherChar>, OtherChar>)
    friend class raii::basic_str_vec;
 
  public:
@@ -294,6 +300,24 @@ class
       return push_back<dyn_allocator>(allocator, value);
    }
 
+   template <
+      is_allocator Allocator, typename First, typename Second,
+      typename... Remaining>
+   constexpr auto
+   push_back(allocator_ref<Allocator>, First&&, Second&&, Remaining&&...)
+      -> maybe<void> = delete (
+         "`push_back()` is not variadic! Consider either `emplace_back()` "
+         "to construct an element or `append_range()` to "
+         "append a range."
+      );
+
+   template <typename First, typename Second, typename... Remaining>
+   constexpr auto
+   push_back(dyn_allocator, First&&, Second&&, Remaining&&...) -> maybe<void> =
+      delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+              "to construct an element or `append_range()` to "
+              "append a range.");
+
    [[nodiscard]]
    constexpr auto
    pop_back() -> maybe<CharT> {
@@ -395,42 +419,92 @@ class
       return append<dyn_allocator>(allocator, string);
    }
 
-   template <is_allocator Allocator, typename Range>
+   // Append every element of `range`.
+   template <is_allocator Allocator, is_iterable Iterable>
    [[nodiscard]]
    constexpr auto
-   append_range(allocator_ref<Allocator> allocator, Range const& range)
+   append_range(allocator_ref<Allocator> allocator, Iterable&& range)
       -> maybe<void> {
-      for (CharT const value : range) {
-         $prop(this->push_back(allocator, value));
+      if constexpr (!null_terminated) {
+         return m_core.append_range(allocator, $fwd(range));
+      } else {
+         if (m_core.size() == 0u) {
+            $prop(m_core.push_back(allocator, CharT{'\0'}));
+         }
+
+         return m_core.insert_range(allocator, content_size(), $fwd(range));
       }
-      return monostate;
    }
 
-   template <is_allocator Allocator>
-   [[nodiscard]]
-   constexpr auto
-   append_range(
-      allocator_ref<Allocator> allocator,
-      basic_str_span<CharT const, false> string
-   ) -> maybe<void> {
-      return append(allocator, string);
-   }
-
-   template <is_allocator Allocator>
-   [[nodiscard]]
-   constexpr auto
-   append_range(
-      allocator_ref<Allocator> allocator,
-      basic_str_span<CharT const, true> string
-   ) -> maybe<void> {
-      return append(allocator, string);
-   }
-
-   template <typename Range>
+   // Append every element of `range`.
+   template <is_iterable Iterable>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append_range(dyn_allocator allocator, Range const& range) -> maybe<void> {
-      return append_range<dyn_allocator>(allocator, range);
+   append_range(dyn_allocator allocator, Iterable&& range) -> maybe<void> {
+      return append_range<dyn_allocator>(allocator, $fwd(range));
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_allocator Allocator, is_iterable Iterable>
+   [[nodiscard]]
+   constexpr auto
+   insert_range(
+      allocator_ref<Allocator> allocator, idx position, Iterable&& range
+   ) -> maybe<void> {
+      if constexpr (null_terminated) {
+         if !consteval {
+            cat::assert(position <= content_size());
+         }
+      }
+
+      if constexpr (null_terminated) {
+         if (m_core.size() == 0u) {
+            $prop(m_core.push_back(allocator, CharT{'\0'}));
+         }
+      }
+
+      return m_core.insert_range(allocator, position, $fwd(range));
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert_range(dyn_allocator allocator, idx position, Iterable&& range)
+      -> maybe<void> {
+      return insert_range<dyn_allocator>(allocator, position, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every element of `range`.
+   template <is_allocator Allocator, is_iterable Iterable>
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(
+      allocator_ref<Allocator> allocator, idx first, idx last, Iterable&& range
+   ) -> maybe<void> {
+      if constexpr (null_terminated) {
+         if !consteval {
+            cat::assert(first <= last);
+            cat::assert(last <= content_size());
+         }
+         if (m_core.size() == 0u) {
+            $prop(m_core.push_back(allocator, CharT{'\0'}));
+         }
+      }
+
+      return m_core.replace_with_range(allocator, first, last, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every element of `range`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   replace_with_range(
+      dyn_allocator allocator, idx first, idx last, Iterable&& range
+   ) -> maybe<void> {
+      return replace_with_range<dyn_allocator>(
+         allocator, first, last, $fwd(range)
+      );
    }
 
    template <is_allocator NewAllocator>

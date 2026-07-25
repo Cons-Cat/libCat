@@ -43,6 +43,7 @@ struct list_storage {
 inline namespace manual {
 
 template <typename T>
+   requires(is_same<remove_cvref<T>, T>)
 class basic_list;
 
 template <typename T>
@@ -63,6 +64,7 @@ maybe_list_nullopt() -> basic_list<T>;
 inline namespace manual {
 
 template <typename T>
+   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
     : public container_interface<basic_list<T>, T>,
       public stepanov_iterable_interface<
@@ -249,13 +251,16 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    }
 
    // Replace contents with elements from the given range.
-   template <is_allocator Allocator, typename Range>
+   template <is_allocator Allocator, is_iterable Iterable>
    [[nodiscard]]
    constexpr auto
-   assign_range(allocator_ref<Allocator> allocator, Range const& range)
+   assign_range(allocator_ref<Allocator> allocator, Iterable&& range)
       -> maybe<void> {
+      // Remove the existing nodes.
       this->free(allocator);
-      return this->append_range(allocator, range);
+
+      // Append `range`.
+      return this->append_range(allocator, $fwd(range));
    }
 
    // Initialize storage with a single node as head and tail.
@@ -313,105 +318,6 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
          m_storage.m_p_tail = &node;
          ++m_size;
       }
-   }
-
-   // Link a contiguous span of nodes into a doubly linked chain.
-   constexpr void
-   link_node_chain(span<node_type> nodes) {
-      if (nodes.size() == 0u) {
-         return;
-      }
-      if (nodes.size() == 1u) {
-         nodes.front().p_next_node = nullptr;
-         nodes.front().p_previous_node = nullptr;
-         return;
-      }
-      nodes.front().p_previous_node = nullptr;
-      nodes.back().p_next_node = nullptr;
-      for (idx i = 0u; i + 1u < nodes.size(); ++i) {
-         nodes[i].p_next_node = &nodes[i + 1u];
-         nodes[i + 1u].p_previous_node = &nodes[i];
-      }
-   }
-
-   // Append a chain of nodes to the end of the `cat::basic_list`.
-   constexpr void
-   append_nodes(span<node_type> nodes) {
-      if (nodes.size() == 0u) {
-         return;
-      }
-      node_type& first = nodes.front();
-      node_type& last = nodes.back();
-      if (m_size == 0u) {
-         m_storage.m_p_head = &first;
-         m_storage.m_p_tail = &last;
-         first.p_previous_node = nullptr;
-         last.p_next_node = nullptr;
-      } else {
-         m_storage.m_p_tail->p_next_node = &first;
-         first.p_previous_node = m_storage.m_p_tail;
-         m_storage.m_p_tail = &last;
-         last.p_next_node = nullptr;
-      }
-      m_size += nodes.size();
-   }
-
-   // Prepend a chain of nodes to the front of the `cat::basic_list`.
-   constexpr void
-   prepend_nodes(span<node_type> nodes) {
-      if (nodes.size() == 0u) {
-         return;
-      }
-      node_type& first = nodes.front();
-      node_type& last = nodes.back();
-      if (m_size == 0u) {
-         m_storage.m_p_head = &first;
-         m_storage.m_p_tail = &last;
-      } else {
-         last.p_next_node = m_storage.m_p_head;
-         m_storage.m_p_head->p_previous_node = &last;
-         m_storage.m_p_head = &first;
-      }
-      first.p_previous_node = nullptr;
-      m_size += nodes.size();
-   }
-
-   // Allocate nodes and append range elements sequentially.
-   template <is_allocator Allocator, typename Range>
-   [[nodiscard]]
-   constexpr auto
-   append_range_sequential(
-      allocator_ref<Allocator> allocator, Range const& range, idx count
-   ) -> maybe<void> {
-      span<node_type> nodes =
-         $prop(allocator.template alloc_multi<node_type>(count));
-      idx i = 0u;
-      for (auto const& value : range) {
-         nodes[i].storage = value;
-         ++i;
-      }
-      this->link_node_chain(nodes);
-      this->append_nodes(nodes);
-      return monostate;
-   }
-
-   // Allocate nodes and prepend range elements sequentially.
-   template <is_allocator Allocator, typename Range>
-   [[nodiscard]]
-   constexpr auto
-   prepend_range_sequential(
-      allocator_ref<Allocator> allocator, Range const& range, idx count
-   ) -> maybe<void> {
-      span<node_type> nodes =
-         $prop(allocator.template alloc_multi<node_type>(count));
-      idx i = 0u;
-      for (auto const& value : range) {
-         nodes[i].storage = value;
-         ++i;
-      }
-      this->link_node_chain(nodes);
-      this->prepend_nodes(nodes);
-      return monostate;
    }
 
    // Allocate a new node at the end and initialize it with value.
@@ -518,6 +424,37 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       return iterator(p_node);
    }
 
+   // Insert every element of `range` before `where`.
+   template <is_allocator Allocator, is_iterable Iterable>
+   [[nodiscard]]
+   constexpr auto
+   insert_range(
+      allocator_ref<Allocator> allocator, iterator where, Iterable&& range
+   ) -> maybe<iterator> {
+      iterator first = where;
+      bool inserted = false;
+      maybe<void> result = monostate;
+
+      // Insert each element.
+      range | cat::for_each([&](auto&& value) {
+         if (result.has_value()) {
+            maybe<iterator> inserted_iterator =
+               this->insert(allocator, where, $fwd(value));
+            if (!inserted_iterator.has_value()) {
+               result = nullopt;
+            } else if (!inserted) {
+               first = inserted_iterator.value();
+               inserted = true;
+            }
+         }
+      });
+
+      if (!result.has_value()) {
+         return nullopt;
+      }
+      return first;
+   }
+
    // Erase the element at iterator and return the next iterator.
    template <is_allocator Allocator>
    constexpr auto
@@ -544,6 +481,32 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       m_size = idx(m_size - 1u);
       allocator.free(&node);
       return iterator(next);
+   }
+
+   // Erase `[first, last)` and return `last`.
+   template <is_allocator Allocator>
+   constexpr auto
+   erase(allocator_ref<Allocator> allocator, iterator first, iterator last)
+      -> iterator {
+      while (first != last) {
+         first = this->erase(allocator, first);
+      }
+      return last;
+   }
+
+   // Replace `[first, last)` with every element of `range`.
+   template <is_allocator Allocator, is_iterable Iterable>
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(
+      allocator_ref<Allocator> allocator, iterator first, iterator last,
+      Iterable&& range
+   ) -> maybe<iterator> {
+      // Remove the replaced nodes.
+      iterator const where = this->erase(allocator, first, last);
+
+      // Insert `range`.
+      return this->insert_range(allocator, where, $fwd(range));
    }
 
    // Remove the element after the given iterator.
@@ -593,6 +556,17 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
 
       return iterator(p_node);
    }
+
+   template <
+      is_allocator Allocator, typename First, typename Second,
+      typename... Remaining>
+   constexpr auto
+   push_front(allocator_ref<Allocator>, First&&, Second&&, Remaining&&...)
+      -> maybe<iterator> = delete (
+         "`push_front()` is not variadic! Consider either `emplace_front()` "
+         "to construct an element or `prepend_range()` to "
+         "prepend a range."
+      );
 
    // Construct an element at the front and return its iterator.
    template <is_allocator Allocator, typename... Args>
@@ -654,6 +628,17 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       return iterator(p_node);
    }
 
+   template <
+      is_allocator Allocator, typename First, typename Second,
+      typename... Remaining>
+   constexpr auto
+   push_back(allocator_ref<Allocator>, First&&, Second&&, Remaining&&...)
+      -> maybe<iterator> = delete (
+         "`push_back()` is not variadic! Consider either `emplace_back()` "
+         "to construct an element or `append_range()` to "
+         "append a range."
+      );
+
    // Construct an element at the back and return its iterator.
    template <is_allocator Allocator, typename... Args>
    constexpr auto
@@ -668,45 +653,50 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    }
 
    // Append elements from a range using the allocator.
-   template <is_allocator Allocator, typename Range>
+   template <is_allocator Allocator, is_iterable Iterable>
    [[nodiscard]]
    constexpr auto
-   append_range(allocator_ref<Allocator> allocator, Range const& range)
+   append_range(allocator_ref<Allocator> allocator, Iterable&& range)
       -> maybe<void> {
-      if constexpr (requires { idx(range.size()); }) {
-         idx const count = idx(range.size());
-         if (count == 0u) {
-            return monostate;
+      maybe<void> result = monostate;
+
+      // Append each element.
+      range | cat::for_each([&](auto&& value) {
+         if (result.has_value()) {
+            maybe<iterator> const appended =
+               this->push_back(allocator, $fwd(value));
+            if (!appended.has_value()) {
+               result = nullopt;
+            }
          }
-         return this->append_range_sequential(allocator, range, count);
-      }
-      for (auto const& value : range) {
-         $prop(this->push_back(allocator, value));
-      }
-      return monostate;
+      });
+      return result;
    }
 
    // Prepend elements from a range using the allocator.
-   template <is_allocator Allocator, typename Range>
+   template <is_allocator Allocator, is_iterable Iterable>
    [[nodiscard]]
    constexpr auto
-   prepend_range(allocator_ref<Allocator> allocator, Range const& range)
+   prepend_range(allocator_ref<Allocator> allocator, Iterable&& range)
       -> maybe<void> {
-      if constexpr (requires { idx(range.size()); }) {
-         idx const count = idx(range.size());
-         if (count == 0u) {
-            return monostate;
-         }
-         return this->prepend_range_sequential(allocator, range, count);
-      }
       if (this->empty()) {
-         return this->append_range(allocator, range);
+         return this->append_range(allocator, $fwd(range));
       }
+
       iterator const where = this->begin();
-      for (auto const& value : range) {
-         $prop(this->insert(allocator, where, value));
-      }
-      return monostate;
+      maybe<void> result = monostate;
+
+      // Insert each element before the original head.
+      range | cat::for_each([&](auto&& value) {
+         if (result.has_value()) {
+            maybe<iterator> const inserted =
+               this->insert(allocator, where, $fwd(value));
+            if (!inserted.has_value()) {
+               result = nullopt;
+            }
+         }
+      });
+      return result;
    }
 
    // Resize to given size by popping or emplacing default elements.
@@ -1059,8 +1049,8 @@ class list_stepanov_iterator
    using node_type = list_node<T>;
 
    // Construct iterator from a node pointer.
-   constexpr list_stepanov_iterator(node_type* _Nullable p_input)
-       : m_p_node(p_input) {
+   constexpr list_stepanov_iterator(node_type* _Nullable p_range)
+       : m_p_node(p_range) {
    }
 
    // Move iterator to next node.

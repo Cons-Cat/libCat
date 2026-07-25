@@ -1,3 +1,4 @@
+#include <cat/array>
 #include <cat/forward_list>
 #include <cat/insert_iterators>
 #include <cat/iterable>
@@ -231,6 +232,37 @@ $test(raii_list_modifiers_release) {
       cat::raii::make_list<int>(allocator, 1, 2, 3).verify();
    reset_list.reset();
    cat::verify(reset_list.size() == 0);
+}
+
+$test(list_iterable_range_modifiers) {
+   linear_arena arena;
+   cat::array<int, 2u> source{2, 3};
+   cat::raii::list list = cat::raii::make_list<int>(arena.alloc, 1, 4).verify();
+
+   list.insert_range(++list.begin(), source).verify();
+   cat::verify(list.size() == 4u);
+   cat::verify(*(list.begin() + 1u) == 2);
+   cat::verify(*(list.begin() + 2u) == 3);
+
+   auto greater_than_two = cat::ref(source).filter([](int value) -> bool {
+      return value > 2;
+   });
+   auto first = list.begin() + 1u;
+   auto last = first + 2u;
+   list.replace_with_range(first, last, greater_than_two).verify();
+   cat::verify(list.size() == 3u);
+   cat::verify(*(list.begin() + 1u) == 3);
+
+   auto forward = cat::raii::make_forward_list<int>(arena.alloc, 1, 4).verify();
+   forward.insert_range(++forward.begin(), source).verify();
+   cat::verify(forward.size() == 4u);
+   cat::verify(*(forward.begin() + 1u) == 2);
+   auto threes = cat::ref(source).filter([](int value) -> bool {
+      return value == 3;
+   });
+   forward.append_range(threes).verify();
+   cat::verify(forward.size() == 5u);
+   cat::verify(*(forward.begin() + 4u) == 3);
 }
 
 $test(list_factories) {

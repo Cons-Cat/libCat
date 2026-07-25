@@ -8,6 +8,7 @@
 namespace cat::raii {
 
 template <typename T, is_allocator Allocator = dyn_allocator>
+   requires(is_same<remove_cvref<T>, T>)
 class basic_forward_list;
 
 template <typename T, is_allocator Allocator = dyn_allocator>
@@ -30,13 +31,15 @@ raii_forward_list_nullopt() -> raii::basic_forward_list<T, dyn_allocator>;
 namespace cat::raii {
 
 template <typename T, is_allocator Allocator>
+   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(forward_list<T, Allocator>), gsl::Owner]]
 basic_forward_list
     : public container_interface<basic_forward_list<T, Allocator>, T>,
       public stepanov_iterable_interface<
          basic_forward_list<T, Allocator>,
          detail::forward_list_stepanov_iterator, T> {
-   template <typename, is_allocator>
+   template <typename U, is_allocator OtherAllocator>
+      requires(is_same<remove_cvref<U>, U>)
    friend class basic_forward_list;
 
    template <typename U, is_allocator A>
@@ -235,6 +238,22 @@ basic_forward_list
       return m_core.insert(m_allocator, where, $fwd(value));
    }
 
+   // Insert every element of `range` before `where`.
+   template <is_iterable Iterable>
+   [[nodiscard]]
+   constexpr auto
+   insert_range(iterator where, Iterable&& range) -> maybe<iterator> {
+      return m_core.insert_range(m_allocator, where, $fwd(range));
+   }
+
+   // Append every element of `range`.
+   template <is_iterable Iterable>
+   [[nodiscard]]
+   constexpr auto
+   append_range(Iterable&& range) -> maybe<void> {
+      return m_core.append_range(m_allocator, $fwd(range));
+   }
+
    // Emplace an element before iterator using the stored allocator.
    template <typename... Args>
    constexpr auto
@@ -264,6 +283,14 @@ basic_forward_list
    {
       return m_core.push_front(m_allocator, cat::move(value));
    }
+
+   template <typename First, typename Second, typename... Remaining>
+   constexpr auto
+   push_front(First&&, Second&&, Remaining&&...) -> maybe<iterator> = delete (
+      "`push_front()` is not variadic! Consider either `emplace_front()` "
+      "to construct an element or `prepend_range()` to "
+      "prepend a range."
+   );
 
    // Emplace an element at the front and return its iterator.
    template <typename... Args>

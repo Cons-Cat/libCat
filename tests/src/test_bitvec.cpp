@@ -367,6 +367,48 @@ $test(bitvec_append_range) {
    cat::verify(raii_bits.popcount() == 5u);
 }
 
+$test(bitvec_iterable_range_modifiers) {
+   cat::array<bool, 4u> source{true, false, true, false};
+   cat::raii::bitvec<> bits{cat::dyn_allocator(pager)};
+   auto set_bits = cat::ref(source).filter([](bool value) -> bool {
+      return value;
+   });
+   bits.append_range(set_bits).verify();
+   cat::verify(bits.size() == 2u);
+   cat::verify(bits.popcount() == 2u);
+
+   bits.insert_range(1u, source).verify();
+   cat::verify(bits.size() == 6u);
+   cat::verify(bits.popcount() == 4u);
+
+   auto clear_bits = cat::ref(source).filter([](bool value) -> bool {
+      return !value;
+   });
+   bits.replace_with_range(1u, 5u, clear_bits).verify();
+   cat::verify(bits.size() == 4u);
+   cat::verify(bits[0u]);
+   cat::verify(!bits[1u]);
+   cat::verify(!bits[2u]);
+   cat::verify(bits[3u]);
+}
+
+$test(bitvec_contiguous_range_modifiers) {
+   cat::array<bool, 3u> source{true, false, true};
+   cat::array<bool, 2u> insertion{false, true};
+   cat::array<bool, 1u> replacement{false};
+   cat::raii::bitvec<> bits{cat::dyn_allocator(pager)};
+
+   bits.append_range(source).verify();
+   bits.insert_range(1u, insertion).verify();
+   bits.replace_with_range(2u, 4u, replacement).verify();
+
+   cat::verify(bits.size() == 4u);
+   cat::verify(bits[0u]);
+   cat::verify(!bits[1u]);
+   cat::verify(!bits[2u]);
+   cat::verify(bits[3u]);
+}
+
 $test(bitvec_bitwise_predicates) {
    cat::raii::bitvec<> left{cat::dyn_allocator(pager)};
    cat::raii::bitvec<> right{cat::dyn_allocator(pager)};

@@ -7,6 +7,7 @@
 #include <cat/allocator_parameters>
 #include <cat/array>
 #include <cat/container>
+#include <cat/iterable>
 #include <cat/math>
 #include <cat/sanitizer>
 #include <cat/utility>
@@ -18,6 +19,7 @@ namespace cat {
 inline namespace manual {
 
 template <typename T, vec_flags flags = {}>
+   requires(is_same<remove_cvref<T>, T>)
 class basic_vec;
 
 template <typename T, vec_flags flags = {}>
@@ -44,6 +46,7 @@ maybe_vec_nullopt() -> basic_vec<T, flags>;
 inline namespace manual {
 
 template <typename T, vec_flags flags>
+   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(vec<T, flags>), gsl::Owner]]
 basic_vec : public container_interface<basic_vec<T, flags>, T>,
             public random_access_stepanov_iterable_interface<T> {
@@ -96,7 +99,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    [[nodiscard]]
    constexpr auto
    operator==(basic_vec const& rhs) const -> bool
-      requires(is_equality_comparable<remove_cv<T>>)
+      requires(is_equality_comparable<T>)
    {
       return span<T const>(*this) == span<T const>(rhs);
    }
@@ -104,7 +107,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    [[nodiscard]]
    constexpr auto
    operator<=>(basic_vec const& rhs) const
-      requires(requires(remove_cv<T> const& left, remove_cv<T> const& right) {
+      requires(requires(T const& left, T const& right) {
                   { left < right } -> is_convertible<bool>;
                   { right < left } -> is_convertible<bool>;
                })
@@ -120,11 +123,10 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    }
 
  private:
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
    constexpr auto
-   internal_allocate(
-      allocator_ref<CallAllocator> allocator, idx minimum_capacity
-   ) -> maybe<tuple<span<T>, idx>> {
+   internal_allocate(allocator_ref<Allocator> allocator, idx minimum_capacity)
+      -> maybe<tuple<span<T>, idx>> {
       if constexpr (detail::vec_storage<T, flags>::is_inline) {
          if (!m_storage.m_has_handle) {
             auto [handle, allocation_bytes] = $prop(
@@ -156,9 +158,9 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       }
    }
 
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
    constexpr void
-   free_inline_storage(allocator_ref<CallAllocator> allocator) {
+   free_inline_storage(allocator_ref<Allocator> allocator) {
       if (m_storage.m_has_handle) {
          if (!m_storage.m_handle.is_inline()) {
             m_storage.m_handle.set_count(size());
@@ -170,9 +172,9 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       }
    }
 
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
    constexpr void
-   cfree_inline_storage(allocator_ref<CallAllocator> allocator) {
+   cfree_inline_storage(allocator_ref<Allocator> allocator) {
       if (m_storage.m_has_handle) {
          if (!m_storage.m_handle.is_inline()) {
             m_storage.m_handle.set_count(size());
@@ -194,9 +196,9 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
 
    // Reallocate this `vec`'s memory if it is exceeded, in a non-`constexpr`
    // context.
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
    constexpr auto
-   increase_storage(allocator_ref<CallAllocator> allocator) -> maybe<void> {
+   increase_storage(allocator_ref<Allocator> allocator) -> maybe<void> {
       constexpr idx initial_capacity = detail::vec_storage<T, flags>::is_inline
                                           ? flags.inline_storage_count
                                           : 4u;
@@ -270,16 +272,17 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    }
 
    // Deallocate this `vec`'s storage from `allocator`.
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void
-   free(allocator_ref<CallAllocator> allocator) {
+   free(allocator_ref<Allocator> allocator) {
       if consteval {
          delete[] data();
       } else {
          if constexpr (detail::vec_storage<T, flags>::is_inline) {
             if (m_storage.m_has_handle && m_storage.m_handle.is_inline()) {
                reset();
+               annotate_size_change(0u, capacity());
             } else if (m_storage.m_has_handle) {
                annotate_size_change(size(), capacity());
             }
@@ -301,16 +304,17 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    }
 
    // Deallocate this `vec`'s storage from `allocator`.
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void
-   cfree(allocator_ref<CallAllocator> allocator) {
+   cfree(allocator_ref<Allocator> allocator) {
       if consteval {
          delete[] data();
       } else {
          if constexpr (detail::vec_storage<T, flags>::is_inline) {
             if (m_storage.m_has_handle && m_storage.m_handle.is_inline()) {
                reset();
+               annotate_size_change(0u, capacity());
             } else if (m_storage.m_has_handle) {
                annotate_size_change(size(), capacity());
             }
@@ -332,10 +336,10 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    }
 
    // Try to allocate storage for at least `minimum_capacity` number of `T`s.
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   reserve(allocator_ref<CallAllocator> allocator, idx minimum_capacity)
+   reserve(allocator_ref<Allocator> allocator, idx minimum_capacity)
       -> maybe<void> {
       if (minimum_capacity > capacity()) {
          if consteval {
@@ -373,11 +377,11 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    }
 
    // Try to change the size of this `vec`.
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
       requires(is_default_constructible<T>)
    [[nodiscard]]
    constexpr auto
-   resize(allocator_ref<CallAllocator> allocator, idx size) -> maybe<void> {
+   resize(allocator_ref<Allocator> allocator, idx size) -> maybe<void> {
       if (size > capacity()) {
          // This sets `this->current_capacity` and `this->p_storage`.
          $prop(this->reserve(allocator, size));
@@ -412,11 +416,11 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
 
    // Try to change the size of this `vec`, copy-constructing any new
    // elements from `value`.
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
       requires(is_copy_constructible<T>)
    [[nodiscard]]
    constexpr auto
-   resize(allocator_ref<CallAllocator> allocator, idx size, T const& value)
+   resize(allocator_ref<Allocator> allocator, idx size, T const& value)
       -> maybe<void> {
       if (size > capacity()) {
          $prop(this->reserve(allocator, size));
@@ -455,10 +459,10 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    }
 
    // De-allocate excess storage.
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   shrink_to_fit(allocator_ref<CallAllocator> allocator) -> maybe<void> {
+   shrink_to_fit(allocator_ref<Allocator> allocator) -> maybe<void> {
       if (capacity() == size()) {
          return monostate;
       }
@@ -538,11 +542,11 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       return clone<dyn_allocator>(allocator);
    }
 
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
       requires(is_copy_constructible<T>)
    [[nodiscard]]
    constexpr auto
-   push_back(allocator_ref<CallAllocator> allocator, T const& value)
+   push_back(allocator_ref<Allocator> allocator, T const& value)
       -> maybe<void> {
       if (size() + 1 > capacity()) {
          $prop(this->increase_storage(allocator));
@@ -555,11 +559,11 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       return monostate;
    }
 
-   template <is_allocator CallAllocator>
+   template <is_allocator Allocator>
       requires(is_move_constructible<T>)
    [[nodiscard]]
    constexpr auto
-   push_back(allocator_ref<CallAllocator> allocator, T&& value) -> maybe<void> {
+   push_back(allocator_ref<Allocator> allocator, T&& value) -> maybe<void> {
       if (size() + 1 > capacity()) {
          $prop(this->increase_storage(allocator));
       }
@@ -583,11 +587,29 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       return push_back<dyn_allocator>(allocator, cat::move(value));
    }
 
-   template <is_allocator CallAllocator, typename... Args>
+   template <
+      is_allocator Allocator, typename First, typename Second,
+      typename... Remaining>
+   constexpr auto
+   push_back(allocator_ref<Allocator>, First&&, Second&&, Remaining&&...)
+      -> maybe<void> = delete (
+         "`push_back()` is not variadic! Consider either `emplace_back()` "
+         "to construct an element or `append_range()` to "
+         "append a range."
+      );
+
+   template <typename First, typename Second, typename... Remaining>
+   constexpr auto
+   push_back(dyn_allocator, First&&, Second&&, Remaining&&...) -> maybe<void> =
+      delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+              "to construct an element or `append_range()` to "
+              "append a range.");
+
+   template <is_allocator Allocator, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   emplace_back(allocator_ref<CallAllocator> allocator, Args&&... arguments)
+   emplace_back(allocator_ref<Allocator> allocator, Args&&... arguments)
       [[clang::lifetimebound]] -> maybe<T&> {
       if (size() + 1 > capacity()) {
          $prop(this->increase_storage(allocator));
@@ -644,7 +666,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    // Remove the element at `index`, shifting subsequent elements left.
    constexpr void
    erase(idx index)
-      requires(is_move_assignable<T>)
+      requires(is_assignable<T&, T &&>)
    {
       if !consteval {
          cat::assert(index < size());
@@ -665,7 +687,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    // subsequent elements left.
    constexpr void
    erase(idx start, idx end)
-      requires(is_move_assignable<T>)
+      requires(is_assignable<T&, T &&>)
    {
       if !consteval {
          cat::assert(start <= end);
@@ -692,26 +714,458 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    }
 
    // Append every element of `range` to the end of this `vec`.
-   template <is_allocator CallAllocator, typename Range>
+   template <is_allocator Allocator, typename Range>
+      requires(
+         is_contiguous_iterable<Range>
+         && is_same<remove_cvref<decltype(* declval<Range&>().data())>, T>
+         && is_implicit_lifetime<T>
+      )
    [[nodiscard]]
    constexpr auto
-   append_range(allocator_ref<CallAllocator> allocator, Range const& range)
+   append_range(allocator_ref<Allocator> allocator, Range&& range)
       -> maybe<void> {
-      if constexpr (requires { range.size(); }) {
-         $prop(this->reserve(allocator, size() + idx(range.size())));
+      idx const count = idx(range.size());
+      if (count == 0u) {
+         return monostate;
       }
-      for (T const& value : range) {
-         $prop(this->push_back(allocator, value));
+
+      idx const old_size = size();
+      idx const new_size = old_size + count;
+      $prop(this->reserve(allocator, new_size));
+      annotate_size_change(old_size, new_size);
+
+      // Copy `range` to the end.
+      copy_memory_backward(range.data(), data() + old_size, count * sizeof(T));
+      m_storage.set_size(new_size);
+      return monostate;
+   }
+
+   // Append every element of `range` to the end of this `vec`.
+   template <is_allocator Allocator, typename Range>
+      requires(
+         is_contiguous_iterable<Range>
+         && is_same<remove_cvref<decltype(* declval<Range&>().data())>, T>
+         && !is_implicit_lifetime<T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Range&& range)
+      -> maybe<void> {
+      idx const count = idx(range.size());
+      if (count == 0u) {
+         return monostate;
+      }
+
+      $prop(this->reserve(allocator, size() + count));
+
+      // Move or copy `range` to the end.
+      if constexpr (is_rvalue_reference<iterable_element_type<Range>>) {
+         for (idx i = 0u; i < count; ++i) {
+            $prop(this->push_back(allocator, cat::move(range.data()[i])));
+         }
+      } else {
+         for (idx i = 0u; i < count; ++i) {
+            $prop(this->push_back(allocator, range.data()[i]));
+         }
       }
       return monostate;
    }
 
    // Append every element of `range` to the end of this `vec`.
-   template <typename Range>
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(
+         (!is_contiguous_iterable<Iterable>
+          || !is_same<remove_cvref<decltype(* declval<Iterable&>().data())>, T>)
+         && has_size<Iterable>
+      )
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Iterable&& range)
+      -> maybe<void> {
+      $prop(this->reserve(allocator, size() + idx(range.size())));
+
+      // Append each element.
+      maybe<void> result = monostate;
+      auto append = [&](auto&& value) {
+         if (result.has_value()) {
+            result = this->push_back(allocator, $fwd(value));
+         }
+      };
+      auto context = cat::iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         append($fwd(value));
+         return true;
+      });
+      return result;
+   }
+
+   // Append every element of `range` to the end of this `vec`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(
+         (!is_contiguous_iterable<Iterable>
+          || !is_same<remove_cvref<decltype(* declval<Iterable&>().data())>, T>)
+         && !has_size<Iterable>
+      )
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Iterable&& range)
+      -> maybe<void> {
+      // Append each element.
+      maybe<void> result = monostate;
+      auto append = [&](auto&& value) {
+         if (result.has_value()) {
+            result = this->push_back(allocator, $fwd(value));
+         }
+      };
+      auto context = cat::iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         append($fwd(value));
+         return true;
+      });
+      return result;
+   }
+
+   // Append every element of `range` to the end of this `vec`.
+   template <is_iterable Iterable>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append_range(dyn_allocator allocator, Range const& range) -> maybe<void> {
-      return append_range<dyn_allocator>(allocator, range);
+   append_range(dyn_allocator allocator, Iterable&& range) -> maybe<void> {
+      return append_range<dyn_allocator>(allocator, $fwd(range));
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_allocator Allocator, typename Range>
+      requires(
+         is_contiguous_iterable<Range>
+         && is_same<remove_cvref<decltype(* declval<Range&>().data())>, T>
+         && is_implicit_lifetime<T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   insert_range(allocator_ref<Allocator> allocator, idx position, Range&& range)
+      -> maybe<void>
+      requires(is_assignable<T&, T &&>)
+   {
+      if !consteval {
+         cat::assert(position <= size());
+      }
+      idx const count = idx(range.size());
+      if (count == 0u) {
+         return monostate;
+      }
+      idx const old_size = size();
+      idx const new_size = old_size + count;
+      $prop(this->reserve(allocator, new_size));
+      annotate_size_change(old_size, new_size);
+      idx const tail_size = idx(old_size - position);
+
+      // Move the existing tail.
+      copy_memory_backward(
+         data() + position, data() + position + count, tail_size * sizeof(T)
+      );
+
+      // Copy `range` into the gap.
+      copy_memory_backward(range.data(), data() + position, count * sizeof(T));
+
+      m_storage.set_size(new_size);
+      return monostate;
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_allocator Allocator, typename Range>
+      requires(
+         is_contiguous_iterable<Range>
+         && is_same<remove_cvref<decltype(* declval<Range&>().data())>, T>
+         && !is_implicit_lifetime<T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   insert_range(allocator_ref<Allocator> allocator, idx position, Range&& range)
+      -> maybe<void>
+      requires(is_assignable<T&, T &&>)
+   {
+      if !consteval {
+         cat::assert(position <= size());
+      }
+
+      idx const range_size = idx(range.size());
+      if (range_size == 0u) {
+         return monostate;
+      }
+      idx const old_size = size();
+      idx const new_size = old_size + range_size;
+      $prop(this->reserve(allocator, new_size));
+      annotate_size_change(old_size, new_size);
+
+      // Move the existing tail.
+      for (idx i = old_size; i > position; i = idx(i - 1u)) {
+         data()[idx(i + range_size - 1u)] = cat::move(data()[idx(i - 1u)]);
+      }
+
+      // Move or copy `range` into the gap.
+      m_storage.set_size(new_size);
+      if constexpr (is_rvalue_reference<iterable_element_type<Range>>) {
+         for (idx i = 0u; i < range_size; ++i) {
+            data()[position + i] = cat::move(range.data()[i]);
+         }
+      } else {
+         for (idx i = 0u; i < range_size; ++i) {
+            data()[position + i] = range.data()[i];
+         }
+      }
+
+      return monostate;
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(
+         (!is_contiguous_iterable<Iterable>
+          || !is_same<remove_cvref<decltype(* declval<Iterable&>().data())>, T>)
+         && has_size<Iterable> && is_assignable<T&, T &&>
+      )
+   [[nodiscard]]
+   constexpr auto
+   insert_range(
+      allocator_ref<Allocator> allocator, idx position, Iterable&& range
+   ) -> maybe<void> {
+      if !consteval {
+         cat::assert(position <= size());
+      }
+      idx const count = idx(range.size());
+      if (count == 0u) {
+         return monostate;
+      }
+      idx const old_size = size();
+      idx const new_size = old_size + count;
+      $prop(this->reserve(allocator, new_size));
+      annotate_size_change(old_size, new_size);
+
+      // Move the existing tail.
+      for (idx i = old_size; i > position; i = idx(i - 1u)) {
+         data()[idx(i + count - 1u)] = cat::move(data()[idx(i - 1u)]);
+      }
+
+      // Write `range` into the gap.
+      m_storage.set_size(new_size);
+      idx i = position;
+      auto insert = [&](auto&& value) {
+         data()[i] = $fwd(value);
+         ++i;
+      };
+      auto context = cat::iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         insert($fwd(value));
+         return true;
+      });
+      return monostate;
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(
+         (!is_contiguous_iterable<Iterable>
+          || !is_same<remove_cvref<decltype(* declval<Iterable&>().data())>, T>)
+         && !has_size<Iterable> && is_assignable<T&, T &&>
+      )
+   [[nodiscard]]
+   constexpr auto
+   insert_range(
+      allocator_ref<Allocator> allocator, idx position, Iterable&& range
+   ) -> maybe<void> {
+      if !consteval {
+         cat::assert(position <= size());
+      }
+
+      idx insertion_position = position;
+      maybe<void> result = monostate;
+
+      // Insert each element and grow as needed.
+      auto insert = [&](auto&& value) {
+         if (!result.has_value()) {
+            return;
+         }
+         idx const old_size = size();
+         if (old_size + 1u > capacity()) {
+            result = this->increase_storage(allocator);
+            if (!result.has_value()) {
+               return;
+            }
+         }
+
+         annotate_size_change(old_size, old_size + 1u);
+         for (idx i = old_size; i > insertion_position; i = idx(i - 1u)) {
+            data()[i] = cat::move(data()[idx(i - 1u)]);
+         }
+
+         data()[insertion_position] = $fwd(value);
+         m_storage.set_size(old_size + 1u);
+         ++insertion_position;
+      };
+
+      auto context = cat::iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         insert($fwd(value));
+         return true;
+      });
+
+      return result;
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert_range(dyn_allocator allocator, idx position, Iterable&& range)
+      -> maybe<void>
+      requires(is_assignable<T&, T &&>)
+   {
+      return insert_range<dyn_allocator>(allocator, position, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every element of `range`.
+   template <is_allocator Allocator, typename Range>
+      requires(
+         is_contiguous_iterable<Range>
+         && is_same<remove_cvref<decltype(* declval<Range&>().data())>, T>
+         && is_implicit_lifetime<T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(
+      allocator_ref<Allocator> allocator, idx first, idx last, Range&& range
+   ) -> maybe<void>
+      requires(is_assignable<T&, T &&>)
+   {
+      if !consteval {
+         cat::assert(first <= last);
+         cat::assert(last <= size());
+      }
+
+      idx const count = idx(range.size());
+      idx const old_size = size();
+      idx const removed = idx(last - first);
+      idx const new_size = idx(old_size - removed + count);
+      $prop(this->reserve(allocator, new_size));
+
+      if (new_size > old_size) {
+         annotate_size_change(old_size, new_size);
+      }
+
+      // Move the existing tail.
+      idx const tail_size = idx(old_size - last);
+      copy_memory_backward(
+         data() + last, data() + first + count, tail_size * sizeof(T)
+      );
+
+      // Copy `range` into the gap.
+      copy_memory_backward(range.data(), data() + first, count * sizeof(T));
+
+      if (new_size <= old_size) {
+         annotate_size_change(old_size, new_size);
+      }
+
+      m_storage.set_size(new_size);
+      return monostate;
+   }
+
+   // Replace `[first, last)` with every element of `range`.
+   template <is_allocator Allocator, typename Range>
+      requires(
+         is_contiguous_iterable<Range>
+         && is_same<remove_cvref<decltype(* declval<Range&>().data())>, T>
+         && !is_implicit_lifetime<T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(
+      allocator_ref<Allocator> allocator, idx first, idx last, Range&& range
+   ) -> maybe<void>
+      requires(is_assignable<T&, T &&>)
+   {
+      if !consteval {
+         cat::assert(first <= last);
+         cat::assert(last <= size());
+      }
+      idx const count = idx(range.size());
+      idx const old_size = size();
+      idx const removed = idx(last - first);
+      idx const new_size = idx(old_size - removed + count);
+      idx const tail_size = idx(old_size - last);
+      $prop(this->reserve(allocator, new_size));
+
+      if (new_size > old_size) {
+         annotate_size_change(old_size, new_size);
+      }
+
+      // Move the existing tail.
+      if (count > removed) {
+         for (idx i = tail_size; i > 0u; i = idx(i - 1u)) {
+            data()[idx(first + count + i - 1u)] =
+               cat::move(data()[idx(last + i - 1u)]);
+         }
+      } else {
+         for (idx i = 0u; i < tail_size; ++i) {
+            data()[first + count + i] = cat::move(data()[last + i]);
+         }
+      }
+
+      // Move or copy `range` into the gap.
+      if constexpr (is_rvalue_reference<iterable_element_type<Range>>) {
+         for (idx i = 0u; i < count; ++i) {
+            data()[first + i] = cat::move(range.data()[i]);
+         }
+      } else {
+         for (idx i = 0u; i < count; ++i) {
+            data()[first + i] = range.data()[i];
+         }
+      }
+
+      // Destroy removed trailing elements.
+      if constexpr (!is_trivially_destructible<T>) {
+         if !consteval {
+            for (idx i = new_size; i < old_size; ++i) {
+               data()[i].~T();
+            }
+         }
+      }
+
+      if (new_size <= old_size) {
+         annotate_size_change(old_size, new_size);
+      }
+
+      m_storage.set_size(new_size);
+      return monostate;
+   }
+
+   // Replace `[first, last)` with every element of `range`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(
+         (!is_contiguous_iterable<Iterable>
+          || !is_same<remove_cvref<decltype(* declval<Iterable&>().data())>, T>)
+         && is_assignable<T&, T &&>
+      )
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(
+      allocator_ref<Allocator> allocator, idx first, idx last, Iterable&& range
+   ) -> maybe<void> {
+      erase(first, last);
+      return insert_range(allocator, first, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every element of `range`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   replace_with_range(
+      dyn_allocator allocator, idx first, idx last, Iterable&& range
+   ) -> maybe<void>
+      requires(is_assignable<T&, T &&>)
+   {
+      return replace_with_range<dyn_allocator>(
+         allocator, first, last, $fwd(range)
+      );
    }
 
    // Maximum number of elements this `vec` can theoretically hold, bounded

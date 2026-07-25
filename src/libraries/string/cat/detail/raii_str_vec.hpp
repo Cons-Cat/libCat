@@ -11,6 +11,7 @@ namespace cat::raii {
 template <
    typename CharT, bool is_null_terminated,
    is_allocator Allocator = dyn_allocator>
+   requires(is_same<remove_cvref<CharT>, CharT>)
 class basic_str_vec;
 
 template <is_allocator Allocator = dyn_allocator>
@@ -55,6 +56,7 @@ raii_str_vec_nullopt()
 namespace cat::raii {
 
 template <typename CharT, bool null_terminated, is_allocator Allocator>
+   requires(is_same<remove_cvref<CharT>, CharT>)
 class
    [[clang::preferred_name(str_vec<Allocator>),
      clang::preferred_name(zstr_vec<Allocator>),
@@ -63,7 +65,10 @@ class
    basic_str_vec : public container_interface<
                       basic_str_vec<CharT, null_terminated, Allocator>, CharT>,
                    public random_access_stepanov_iterable_interface<CharT> {
-   template <typename, bool, is_allocator>
+   template <
+      typename OtherChar, bool other_null_terminated,
+      is_allocator OtherAllocator>
+      requires(is_same<remove_cvref<OtherChar>, OtherChar>)
    friend class basic_str_vec;
 
  public:
@@ -245,6 +250,13 @@ class
       return m_core.push_back(m_allocator, value);
    }
 
+   template <typename First, typename Second, typename... Remaining>
+   constexpr auto
+   push_back(First&&, Second&&, Remaining&&...) -> maybe<void> =
+      delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+              "to construct an element or `append_range()` to "
+              "append a range.");
+
    [[nodiscard]]
    constexpr auto
    pop_back() -> maybe<CharT> {
@@ -279,11 +291,28 @@ class
       return m_core.append(m_allocator, string);
    }
 
-   template <typename Range>
+   // Append every element of `range`.
+   template <is_iterable Range>
    [[nodiscard]]
    constexpr auto
-   append_range(Range const& range) -> maybe<void> {
-      return m_core.append_range(m_allocator, range);
+   append_range(Range&& range) -> maybe<void> {
+      return m_core.append_range(m_allocator, $fwd(range));
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_iterable Range>
+   [[nodiscard]]
+   constexpr auto
+   insert_range(idx position, Range&& range) -> maybe<void> {
+      return m_core.insert_range(m_allocator, position, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every element of `range`.
+   template <is_iterable Range>
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(idx first, idx last, Range&& range) -> maybe<void> {
+      return m_core.replace_with_range(m_allocator, first, last, $fwd(range));
    }
 
    [[nodiscard]]

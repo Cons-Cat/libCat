@@ -1761,6 +1761,14 @@ concept is_unsigned_word_container =
    && !requires { typename Words::element_type; }
    && !requires { typename Words::abi_type; };
 
+template <typename Range>
+concept is_contiguous_bits =
+   requires(remove_reference<Range>& range, bit_value bit) {
+      { range.size() } -> is_convertible<idx>;
+      requires is_pointer<decltype(range.data())>;
+      bit = range[idx(0u)];
+   };
+
 // Count set bits across a contiguous container of unsigned words.
 template <is_unsigned_word_container Words>
 [[nodiscard]]

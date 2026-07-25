@@ -168,6 +168,55 @@ $test(vec_append_range_variants) {
       int4, cat::dyn_allocator, 4u, cat::vec_flags::pointer_size_layout>>();
 }
 
+$test(vec_iterable_range_modifiers) {
+   linear_arena arena;
+   cat::array<int4, 4u> source{1_i4, 2_i4, 3_i4, 4_i4};
+   cat::raii::vec<int4, cat::linear_allocator> values(arena.alloc);
+
+   auto evens = cat::ref(source).filter([](int4 value) -> bool {
+      return value % 2_i4 == 0_i4;
+   });
+   values.append_range(evens).verify();
+   cat::verify(values.size() == 2u);
+   cat::verify(values[0u] == 2_i4);
+   cat::verify(values[1u] == 4_i4);
+
+   values.insert_range(1u, source).verify();
+   cat::verify(values.size() == 6u);
+   cat::verify(values[0u] == 2_i4);
+   cat::verify(values[1u] == 1_i4);
+   cat::verify(values[4u] == 4_i4);
+   cat::verify(values[5u] == 4_i4);
+
+   auto greater_than_two = cat::ref(source).filter([](int4 value) -> bool {
+      return value > 2_i4;
+   });
+   values.replace_with_range(1u, 5u, greater_than_two).verify();
+   cat::verify(values.size() == 4u);
+   cat::verify(values[0u] == 2_i4);
+   cat::verify(values[1u] == 3_i4);
+   cat::verify(values[2u] == 4_i4);
+   cat::verify(values[3u] == 4_i4);
+}
+
+$test(vec_contiguous_range_modifiers) {
+   linear_arena arena;
+   cat::array<int4, 3u> source{1_i4, 2_i4, 3_i4};
+   cat::array<int4, 2u> insertion{4_i4, 5_i4};
+   cat::array<int4, 1u> replacement{6_i4};
+   cat::raii::vec<int4, cat::linear_allocator> values(arena.alloc);
+
+   values.append_range(source).verify();
+   values.insert_range(1u, insertion).verify();
+   values.replace_with_range(2u, 4u, replacement).verify();
+
+   cat::verify(values.size() == 4u);
+   cat::verify(values[0u] == 1_i4);
+   cat::verify(values[1u] == 4_i4);
+   cat::verify(values[2u] == 6_i4);
+   cat::verify(values[3u] == 3_i4);
+}
+
 $test(vec_iterator_typedefs) {
    using test_vec = cat::vec<int4>;
    using iterator = test_vec::iterator;

@@ -322,12 +322,62 @@ class [[gsl::Owner]] basic_bitvec
       return m_core.push_back(m_allocator, value);
    }
 
+   template <typename First, typename Second, typename... Remaining>
+   constexpr auto
+   push_back(First&&, Second&&, Remaining&&...) -> maybe<void> =
+      delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+              "to construct an element or `append_range()` to "
+              "append a range.");
+
    // Append every bit-like value of `range` to the end of this bit vector.
-   template <typename Range>
+   template <is_contiguous_bits Range>
    [[nodiscard]]
    constexpr auto
-   append_range(Range const& range) -> maybe<void> {
-      return m_core.append_range(m_allocator, range);
+   append_range(Range&& range) -> maybe<void> {
+      return m_core.append_range(m_allocator, $fwd(range));
+   }
+
+   // Append every bit-like value of `range` to the end of this bit vector.
+   template <is_iterable Iterable>
+      requires(!is_contiguous_bits<Iterable>)
+   [[nodiscard]]
+   constexpr auto
+   append_range(Iterable&& range) -> maybe<void> {
+      return m_core.append_range(m_allocator, $fwd(range));
+   }
+
+   // Insert every bit-like value of `range` before `position`.
+   template <is_contiguous_bits Range>
+   [[nodiscard]]
+   constexpr auto
+   insert_range(idx position, Range&& range) -> maybe<void> {
+      return m_core.insert_range(m_allocator, position, $fwd(range));
+   }
+
+   // Insert every bit-like value of `range` before `position`.
+   template <is_iterable Iterable>
+      requires(!is_contiguous_bits<Iterable>)
+   [[nodiscard]]
+   constexpr auto
+   insert_range(idx position, Iterable&& range) -> maybe<void> {
+      return m_core.insert_range(m_allocator, position, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every bit-like value of `range`.
+   template <is_contiguous_bits Range>
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(idx first, idx last, Range&& range) -> maybe<void> {
+      return m_core.replace_with_range(m_allocator, first, last, $fwd(range));
+   }
+
+   // Replace `[first, last)` with every bit-like value of `range`.
+   template <is_iterable Iterable>
+      requires(!is_contiguous_bits<Iterable>)
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(idx first, idx last, Iterable&& range) -> maybe<void> {
+      return m_core.replace_with_range(m_allocator, first, last, $fwd(range));
    }
 
    // Remove and return the last bit if one exists.

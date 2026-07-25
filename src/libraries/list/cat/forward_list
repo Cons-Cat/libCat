@@ -38,6 +38,7 @@ struct forward_list_storage {
 inline namespace manual {
 
 template <typename T>
+   requires(is_same<remove_cvref<T>, T>)
 class basic_forward_list;
 
 template <typename T>
@@ -58,6 +59,7 @@ maybe_forward_list_nullopt() -> basic_forward_list<T>;
 inline namespace manual {
 
 template <typename T>
+   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
     : public container_interface<basic_forward_list<T>, T>,
       public stepanov_iterable_interface<
@@ -344,6 +346,66 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       return iterator(p_node);
    }
 
+   // Insert every element of `range` before `where`.
+   template <is_allocator Allocator, is_iterable Iterable>
+   [[nodiscard]]
+   constexpr auto
+   insert_range(
+      allocator_ref<Allocator> allocator, iterator where, Iterable&& range
+   ) -> maybe<iterator> {
+      iterator first = where;
+      bool inserted = false;
+      maybe<void> result = monostate;
+
+      // Insert each element.
+      range | cat::for_each([&](auto&& value) {
+         if (result.has_value()) {
+            maybe<iterator> inserted_iterator =
+               this->insert(allocator, where, $fwd(value));
+            if (!inserted_iterator.has_value()) {
+               result = nullopt;
+            } else if (!inserted) {
+               first = inserted_iterator.value();
+               inserted = true;
+            }
+         }
+      });
+
+      if (!result.has_value()) {
+         return nullopt;
+      }
+      return first;
+   }
+
+   // Append every element of `range`.
+   template <is_allocator Allocator, is_iterable Iterable>
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Iterable&& range)
+      -> maybe<void> {
+      node_type* p_tail = m_storage.m_p_head;
+      if (p_tail != nullptr) {
+         while (p_tail->p_next_node != nullptr) {
+            p_tail = p_tail->p_next_node;
+         }
+      }
+
+      maybe<void> result = monostate;
+
+      // Append each element.
+      range | cat::for_each([&](auto&& value) {
+         if (result.has_value()) {
+            maybe<iterator> const appended =
+               this->append_new_node(allocator, p_tail, $fwd(value));
+            if (!appended.has_value()) {
+               result = nullopt;
+            }
+         }
+      });
+
+      return result;
+   }
+
    // Construct element in place before iterator and return its iterator.
    template <is_allocator Allocator, typename... Args>
    constexpr auto
@@ -401,6 +463,17 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
 
       return iterator(p_node);
    }
+
+   template <
+      is_allocator Allocator, typename First, typename Second,
+      typename... Remaining>
+   constexpr auto
+   push_front(allocator_ref<Allocator>, First&&, Second&&, Remaining&&...)
+      -> maybe<iterator> = delete (
+         "`push_front()` is not variadic! Consider either `emplace_front()` "
+         "to construct an element or `prepend_range()` to "
+         "prepend a range."
+      );
 
    // Construct an element at the front and return its iterator.
    template <is_allocator Allocator, typename... Args>
@@ -591,8 +664,8 @@ class forward_list_stepanov_iterator
 
    using node_type = forward_list_node<T>;
 
-   constexpr forward_list_stepanov_iterator(node_type* _Nullable p_input)
-       : m_p_node(p_input) {
+   constexpr forward_list_stepanov_iterator(node_type* _Nullable p_range)
+       : m_p_node(p_range) {
    }
 
    // Advance iterator to the next node.

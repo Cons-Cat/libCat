@@ -539,6 +539,7 @@ $test(meta_reference_wrapper) {
       constexpr auto
       operator<=>(base const&) const = default;
    };
+
    struct derived : base {};
 
    derived value{{1}};

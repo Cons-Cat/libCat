@@ -607,6 +607,29 @@ $test(flux_take_and_drop_variants) {
       {1, 2, 3, 4, 5, 6}
    };
 
+   auto verify_view = [](auto&& view, cat::initializer_list<int> expected) {
+      cat::idx i = 0u;
+      auto context = cat::iterate(view);
+      auto const result = context.run_while([&](int value) -> bool {
+         cat::verify(i < expected.size());
+         cat::verify(value == expected.data()[i]);
+         ++i;
+         return true;
+      });
+      cat::verify(result == cat::iteration_result::complete);
+      cat::verify(i == expected.size());
+   };
+
+   verify_view(arr | cat::take(6u), {1, 2, 3, 4, 5, 6});
+   verify_view(arr | cat::drop(0u), {1, 2, 3, 4, 5, 6});
+   verify_view(arr | cat::take_last(6u), {1, 2, 3, 4, 5, 6});
+   verify_view(arr | cat::drop_last(0u), {1, 2, 3, 4, 5, 6});
+
+   verify_view(arr | cat::take(2u), {1, 2});
+   verify_view(arr | cat::drop(2u), {3, 4, 5, 6});
+   verify_view(arr | cat::take_last(2u), {5, 6});
+   verify_view(arr | cat::drop_last(2u), {1, 2, 3, 4});
+
    cat::verify((arr | cat::take_last(2u) | cat::sum()) == 11);
    cat::verify((arr | cat::take_last(100u) | cat::sum()) == 21);
    cat::verify((arr | cat::take_last(0u) | cat::sum()) == 0);
@@ -624,6 +647,11 @@ $test(flux_take_and_drop_variants) {
    auto greater_than_three = [](int value) -> bool {
       return value > 3;
    };
+   verify_view(arr | cat::take_while(less_than_four), {1, 2, 3});
+   verify_view(arr | cat::drop_while(less_than_four), {4, 5, 6});
+   verify_view(arr | cat::take_last_while(greater_than_three), {4, 5, 6});
+   verify_view(arr | cat::drop_last_while(greater_than_three), {1, 2, 3});
+
    cat::verify(
       (arr | cat::take_last_while(greater_than_three) | cat::sum()) == 15
    );
@@ -637,6 +665,11 @@ $test(flux_take_and_drop_variants) {
    auto never = [](int) -> bool {
       return false;
    };
+   verify_view(arr | cat::take_while(always), {1, 2, 3, 4, 5, 6});
+   verify_view(arr | cat::drop_while(never), {1, 2, 3, 4, 5, 6});
+   verify_view(arr | cat::take_last_while(always), {1, 2, 3, 4, 5, 6});
+   verify_view(arr | cat::drop_last_while(never), {1, 2, 3, 4, 5, 6});
+
    cat::verify((arr | cat::take_while(always) | cat::sum()) == 21);
    cat::verify((arr | cat::take_while(never) | cat::sum()) == 0);
    cat::verify((arr | cat::drop_while(always) | cat::sum()) == 0);
@@ -675,10 +708,12 @@ $test(flux_take_and_drop_variants) {
 
    using unsized_view = decltype(cat::ref(list) | cat::filter(cat::is_even));
    using list_reference = decltype(cat::ref(list));
-   static_assert(!is_applicable_view_adaptor<
-                 decltype(cat::take_last(1u)), unsized_view>);
-   static_assert(!is_applicable_view_adaptor<
-                 decltype(cat::drop_last(1u)), unsized_view>);
+   static_assert(
+      !is_applicable_view_adaptor<decltype(cat::take_last(1u)), unsized_view>
+   );
+   static_assert(
+      !is_applicable_view_adaptor<decltype(cat::drop_last(1u)), unsized_view>
+   );
    static_assert(!is_applicable_view_adaptor<
                  decltype(cat::take_last_while(cat::is_even)), list_reference>);
    static_assert(!is_applicable_view_adaptor<

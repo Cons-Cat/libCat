@@ -155,6 +155,42 @@ $test(str_vec_append_range_variants) {
    verify_raii_wide.template operator()<cat::raii::wzstr_vec<>>();
 }
 
+$test(str_vec_iterable_range_modifiers) {
+   linear_arena arena;
+   cat::array<char, 3u> source{'c', 'a', 't'};
+   cat::raii::zstr_vec<cat::linear_allocator> string(arena.alloc);
+   auto consonants = cat::ref(source).filter([](char value) -> bool {
+      return value != 'a';
+   });
+   string.append_range(consonants).verify();
+   cat::verify(string.view() == cat::str_view("ct"));
+
+   string.insert_range(1u, source).verify();
+   cat::verify(string.view() == cat::str_view("ccatt"));
+
+   auto vowels = cat::ref(source).filter([](char value) -> bool {
+      return value == 'a';
+   });
+   string.replace_with_range(1u, 4u, vowels).verify();
+   cat::verify(string.view() == cat::str_view("cat"));
+   cat::verify(string[idx(string.size() - 1u)] == '\0');
+}
+
+$test(str_vec_contiguous_range_modifiers) {
+   linear_arena arena;
+   cat::array<char, 3u> source{'c', 'a', 't'};
+   cat::array<char, 2u> insertion{'o', 'w'};
+   cat::array<char, 1u> replacement{'!'};
+   cat::raii::zstr_vec<cat::linear_allocator> string(arena.alloc);
+
+   string.append_range(source).verify();
+   string.insert_range(1u, insertion).verify();
+   string.replace_with_range(2u, 4u, replacement).verify();
+
+   cat::verify(string.view() == cat::str_view("co!t"));
+   cat::verify(string[idx(string.size() - 1u)] == '\0');
+}
+
 $test(str_vec_variadic_concat) {
    linear_arena arena;
 
