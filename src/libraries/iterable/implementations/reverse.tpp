@@ -37,7 +37,7 @@ struct reverse_impl : view_interface<reverse_impl> {
 }  // namespace detail
 
 // `reverse()` returns a closure consumable by `data | reverse()`. The
-// underlying iterable must model `is_reverse_iterable`.
+// underlying iterable must model `is_reverse_iterable`. This is a view adaptor.
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 reverse() -> detail::reverse_impl {

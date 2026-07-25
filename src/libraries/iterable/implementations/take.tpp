@@ -79,8 +79,7 @@ struct take_impl : view_interface<take_impl> {
 };
 }  // namespace detail
 
-// Access a fixed number of elements from the input. This is a terminal
-// algorithm.
+// Lazily yield at most `count` elements. This is a view adaptor.
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 take(idx count) -> detail::take_impl {

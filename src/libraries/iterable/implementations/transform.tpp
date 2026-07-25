@@ -97,7 +97,7 @@ struct transform_impl : view_interface<transform_impl<Callback>> {
 };
 }  // namespace detail
 
-// Lazy element-wise transform.
+// Lazily transform each element with `callback`. This is a view adaptor.
 template <typename Callback>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto

@@ -45,6 +45,7 @@ try_read_at(T& collection, position_type<T> const& position)
 // parent collection's `.inc_pos()`/`.dec_pos()` / `.read_at_unchecked()` so a
 // slice keeps every refinement (multipass / bidirectional / random access) of
 // its parent. This is how it differs from contiguous views like `cat::span`.
+// This is a view adaptor.
 template <typename T>
    requires(is_collection<T>)
 constexpr auto
@@ -71,7 +72,8 @@ concept has_contiguous_storage = requires(T& collection) {
                                  };
 }  // namespace detail
 
-// `data()` + `size()` span over a random-access collection.
+// Return a `data()` + `size()` span over a random-access collection. This is a
+// view adaptor.
 template <typename T>
    requires(is_random_access_collection<T> && detail::has_contiguous_storage<T>)
 constexpr auto

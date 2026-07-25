@@ -84,8 +84,8 @@ struct iterable_interface {
    as_rvalue(this Self&& self);
 
    template <typename Self, typename Position>
-   constexpr decltype(auto)
-   read_at(this Self& self, Position const& position);
+   constexpr auto
+   read_at(this Self& self, Position const& position) -> decltype(auto);
 
    template <typename Self, typename Position>
    constexpr auto

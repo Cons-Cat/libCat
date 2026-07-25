@@ -46,11 +46,11 @@
 // be used instead. However, this design is not user-extensible, whereas the
 // pipe-chaining API is.
 //
-// Iterables pipe into "views", which model lazily evaluated functions.
-// Pipelines end in a "terminal", which eagerly evaluates.
+// Iterables pipe into view adaptors, which produce lazily evaluated iterables.
+// Pipelines end in terminal algorithms, which eagerly evaluate.
 //
-// Views take ownership of their base by value. An r-value argument is moved
-// into its view. A trivially-copyable l-value is copied, but
+// View adaptors take ownership of their base by value. An r-value argument is
+// moved into its view. A trivially-copyable l-value is copied, but
 // non-trivially-copyable l-values are rejected. They must be passed through
 // `cat::ref` or `cat::cref` explicitly to opt-in to non-owning aliasing. This
 // makes accidental dangling references against temporaries impossible.
@@ -477,7 +477,8 @@ inline constexpr detail::iterate_fn iterate{};
 inline constexpr detail::reverse_iterate_fn reverse_iterate{};
 
 // `is_iterable<T>` holds when `cat::iterate(t)` is a valid call for `T&`. It is
-// the single-pass entry concept that every adaptor and terminal targets.
+// the single-pass entry concept that every view adaptor and terminal algorithm
+// targets.
 template <typename T>
 concept is_iterable = requires(T& t) { iterate(t); };
 
@@ -513,7 +514,7 @@ struct reference_wrapper<T> : detail::reference_wrapper_impl<T>,
 };
 
 // Pipe `apply` accepts r-values, trivially-copyable l-values, or
-// `reference_wrapper` as the storage policy for the adaptor base. Non
+// `reference_wrapper` as the storage policy for the view adaptor base. Non
 // trivially-copyable l-values are rejected be default for safety.
 template <typename Iterable>
 concept is_borrow_acceptable = !is_lvalue_reference<Iterable>
@@ -593,16 +594,16 @@ step(IterationContext& iteration_context, Callback callback) {
    return maybe_result;
 }
 
-// `view_interface` is the CRTP shell that gives every view object `operator|`
-// against an incoming iterable for free. A type opts in nominally by inheriting
-// `view_interface<Derived>` and providing an `apply(Iterable&&)` member which
-// builds the view from `Iterable` (typically with the `is_borrow_acceptable`
-// ownership-policy guard applied as a constraint).
+// `view_interface` is the CRTP shell that gives every view adaptor closure
+// `operator|` against an incoming iterable for free. A type opts in nominally
+// by inheriting `view_interface<Derived>` and providing an `apply(Iterable&&)`
+// member which builds the view from `Iterable` (typically with the
+// `is_borrow_acceptable` ownership-policy guard applied as a constraint).
 //
 // View types returned from `apply()` inherit their `*_impl` iterable body.
 //
-// This is the public extension point. External code can build its own adaptor
-// closures, and have them participate in the pipe surface, by inheriting
+// This is the public extension point. External code can build its own view
+// adaptor closures and have them participate in the pipe surface by inheriting
 // `view_interface`, exactly like `transform_impl` and friends do below.
 template <typename Derived>
 // NOLINTNEXTLINE This must be structural, so its constructor is `public`.

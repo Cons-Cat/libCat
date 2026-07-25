@@ -106,7 +106,7 @@ struct filter_impl : view_interface<filter_impl<Callback>> {
 
 }  // namespace detail
 
-// Lazy predicate filter. Iterable-only (not a multipass collection).
+// Lazily yield elements accepted by `callback`. This is a view adaptor.
 template <typename Callback>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto

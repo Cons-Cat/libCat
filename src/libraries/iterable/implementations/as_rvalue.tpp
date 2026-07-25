@@ -89,7 +89,7 @@ struct as_rvalue_impl : view_interface<as_rvalue_impl> {
 // broken `std::views` pipeline
 // `views::filter | views::reverse | views::as_rvalue | ranges::to` (example
 // from P3725) becomes a single fused loop where the wrapper only ever observes
-// elements the base actually yielded.
+// elements the base actually yielded. This is a view adaptor.
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 as_rvalue() -> detail::as_rvalue_impl {

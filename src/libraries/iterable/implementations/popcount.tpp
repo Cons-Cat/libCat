@@ -30,7 +30,7 @@ struct popcount_impl {
 };
 }  // namespace detail
 
-// Return an iterable terminal that counts set bits.
+// Count set bits in the incoming elements. This is a terminal algorithm.
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 popcount() -> detail::popcount_impl {
