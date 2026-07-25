@@ -7,8 +7,8 @@ extern "C"
    // prefer that.
    [[gnu::visibility("hidden")]]
 #endif
-   [[clang::no_builtin]]
    auto
+   // NOLINTNEXTLINE(bugprone-std-namespace-modification)
    std::memset(void* _Nonnull p_source, int byte_value, __SIZE_TYPE__ bytes)
       -> void* _Nonnull {
    cat::byte fill_byte;

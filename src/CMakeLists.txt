@@ -52,6 +52,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/memory/implementations/compare_memory.cpp
   ${CATLIB}/memory/implementations/fill_memory_impl.cpp
   ${CATLIB}/string/implementations/memcpy.cpp
+  ${CATLIB}/string/implementations/memmove.cpp
   ${CATLIB}/string/implementations/memset.cpp
   ${CATLIB}/string/implementations/memcmp.cpp
   ${CATLIB}/string/implementations/strlen.cpp

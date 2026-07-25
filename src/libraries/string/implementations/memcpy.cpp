@@ -7,6 +7,7 @@ extern "C"
    [[gnu::visibility("hidden")]]
 #endif
    auto
+   // NOLINTNEXTLINE(bugprone-std-namespace-modification)
    std::memcpy(
       void* _Nonnull __restrict p_destination,
       void const* _Nonnull __restrict p_source, __SIZE_TYPE__ bytes

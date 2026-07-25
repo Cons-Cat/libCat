@@ -20,6 +20,20 @@ extern "C"
       void const* _Nonnull __restrict p_source, __SIZE_TYPE__ bytes
    ) -> void* _Nonnull;
 
+// Deprecated call to `memmove()`. Consider using
+// `cat::copy_memory_backward()` instead.
+extern "C"
+   [[deprecated(
+        "`std::memmove()` should not be used directly! Consider "
+        "`cat::copy_memory_backward()` instead."
+     ),
+     gnu::returns_nonnull]]
+   auto
+   memmove(
+      void* _Nonnull p_destination, void const* _Nonnull p_source,
+      __SIZE_TYPE__ bytes
+   ) -> void* _Nonnull;
+
 // Deprecated call to `memset()`. Consider using `cat::fill_memory() or
 // cat::zero_memory()` instead. `memset()` exists to enable some Clang
 // optimizations.
