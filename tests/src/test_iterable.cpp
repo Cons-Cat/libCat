@@ -83,6 +83,12 @@ class tiny_list : public cat::iterable_interface<> {
       m_nodes[tail].next = slot;
    }
 
+   [[nodiscard]]
+   constexpr auto
+   size() const -> cat::idx {
+      return m_size;
+   }
+
    class iteration_context {
     private:
       tiny_list const* m_p_list;
@@ -350,6 +356,12 @@ struct tiny_vector
 
 // Concept sanity:
 
+template <typename Adaptor, typename Iterable>
+concept is_applicable_view_adaptor =
+   requires(Adaptor adaptor, Iterable&& iterable) {
+      cat::move(adaptor).apply($fwd(iterable));
+   };
+
 static_assert(cat::is_position<cat::idx>);
 static_assert(cat::is_collection<tiny_array<int, 4u>>);
 static_assert(cat::is_iterable<tiny_array<int, 4u>>);
@@ -553,6 +565,124 @@ $test(flux_take_truncates) {
    // Taking zero produces zero.
    int none = arr | cat::take(0u) | cat::sum();
    cat::verify(none == 0);
+}
+
+$test(flux_drop_skips) {
+   tiny_array<int, 6u> arr = {
+      {},
+      {10, 20, 30, 40, 50, 60}
+   };
+
+   int remaining = arr | cat::drop(2u) | cat::sum();
+   cat::verify(remaining == 180);
+
+   int none = arr | cat::drop(100u) | cat::sum();
+   cat::verify(none == 0);
+
+   int middle = arr | cat::drop(2u) | cat::take(2u) | cat::sum();
+   cat::verify(middle == 70);
+
+   auto view = arr | cat::drop(2u);
+   auto context = cat::iterate(view);
+   int first = 0;
+   auto paused = context.run_while([&first](int value) -> bool {
+      first = value;
+      return false;
+   });
+   cat::verify(paused == cat::iteration_result::incomplete);
+   cat::verify(first == 30);
+
+   int rest = 0;
+   auto complete = context.run_while([&rest](int value) -> bool {
+      rest += value;
+      return true;
+   });
+   cat::verify(complete == cat::iteration_result::complete);
+   cat::verify(rest == 150);
+}
+
+$test(flux_take_and_drop_variants) {
+   tiny_array<int, 6u> arr = {
+      {},
+      {1, 2, 3, 4, 5, 6}
+   };
+
+   cat::verify((arr | cat::take_last(2u) | cat::sum()) == 11);
+   cat::verify((arr | cat::take_last(100u) | cat::sum()) == 21);
+   cat::verify((arr | cat::take_last(0u) | cat::sum()) == 0);
+
+   cat::verify((arr | cat::drop_last(2u) | cat::sum()) == 10);
+   cat::verify((arr | cat::drop_last(100u) | cat::sum()) == 0);
+   cat::verify((arr | cat::drop_last(0u) | cat::sum()) == 21);
+
+   auto less_than_four = [](int value) -> bool {
+      return value < 4;
+   };
+   cat::verify((arr | cat::take_while(less_than_four) | cat::sum()) == 6);
+   cat::verify((arr | cat::drop_while(less_than_four) | cat::sum()) == 15);
+
+   auto greater_than_three = [](int value) -> bool {
+      return value > 3;
+   };
+   cat::verify(
+      (arr | cat::take_last_while(greater_than_three) | cat::sum()) == 15
+   );
+   cat::verify(
+      (arr | cat::drop_last_while(greater_than_three) | cat::sum()) == 6
+   );
+
+   auto always = [](int) -> bool {
+      return true;
+   };
+   auto never = [](int) -> bool {
+      return false;
+   };
+   cat::verify((arr | cat::take_while(always) | cat::sum()) == 21);
+   cat::verify((arr | cat::take_while(never) | cat::sum()) == 0);
+   cat::verify((arr | cat::drop_while(always) | cat::sum()) == 0);
+   cat::verify((arr | cat::drop_while(never) | cat::sum()) == 21);
+   cat::verify((arr | cat::take_last_while(always) | cat::sum()) == 21);
+   cat::verify((arr | cat::take_last_while(never) | cat::sum()) == 0);
+   cat::verify((arr | cat::drop_last_while(always) | cat::sum()) == 0);
+   cat::verify((arr | cat::drop_last_while(never) | cat::sum()) == 21);
+
+   noisy_box forward_only(
+      tiny_array<int, 4u>{
+         {},
+         {2, 4, 6, 8},
+   }
+   );
+   cat::verify(
+      (cat::ref(forward_only) | cat::take_last(2u) | cat::sum()) == 14
+   );
+   cat::verify((cat::ref(forward_only) | cat::drop_last(2u) | cat::sum()) == 6);
+   cat::verify(
+      (cat::ref(forward_only)
+       | cat::take_last_while([](int value) -> bool {
+            return value > 4;
+         })
+       | cat::sum())
+      == 14
+   );
+
+   tiny_list<int, 8u> list;
+   list.push_back(1);
+   list.push_back(2);
+   list.push_back(3);
+   list.push_back(4);
+   cat::verify((cat::ref(list) | cat::take_last(2u) | cat::sum()) == 7);
+   cat::verify((cat::ref(list) | cat::drop_last(2u) | cat::sum()) == 3);
+
+   using unsized_view = decltype(cat::ref(list) | cat::filter(cat::is_even));
+   using list_reference = decltype(cat::ref(list));
+   static_assert(!is_applicable_view_adaptor<
+                 decltype(cat::take_last(1u)), unsized_view>);
+   static_assert(!is_applicable_view_adaptor<
+                 decltype(cat::drop_last(1u)), unsized_view>);
+   static_assert(!is_applicable_view_adaptor<
+                 decltype(cat::take_last_while(cat::is_even)), list_reference>);
+   static_assert(!is_applicable_view_adaptor<
+                 decltype(cat::drop_last_while(cat::is_even)), list_reference>);
 }
 
 $test(flux_run_while_pause_resume) {
@@ -885,6 +1015,16 @@ $test(flux_fluent_chain) {
    // `take` is also fluent.
    int first_three = arr.take(3u).sum();
    cat::verify(first_three == 6);  // 1 + 2 + 3
+
+   int middle_two = arr.drop(2u).take(2u).sum();
+   cat::verify(middle_two == 7);  // 3 + 4
+
+   cat::verify(arr.take_last(2u).sum() == 11);
+   cat::verify(arr.drop_last(2u).sum() == 10);
+   cat::verify(arr.take_while(cat::is_greater(4)).sum() == 6);
+   cat::verify(arr.drop_while(cat::is_greater(4)).sum() == 15);
+   cat::verify(arr.take_last_while(cat::is_less(3)).sum() == 15);
+   cat::verify(arr.drop_last_while(cat::is_less(3)).sum() == 6);
 }
 
 $test(flux_fluent_reverse) {

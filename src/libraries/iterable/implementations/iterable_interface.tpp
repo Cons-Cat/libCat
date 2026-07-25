@@ -33,6 +33,48 @@ iterable_pipe_take(Self&& self, idx count) {
 
 template <typename Self>
 constexpr auto
+iterable_pipe_take_last(Self&& self, idx count) {
+   return $fwd(self) | take_last(count);
+}
+
+template <typename Self, typename Callback>
+constexpr auto
+iterable_pipe_take_while(Self&& self, Callback callback) {
+   return $fwd(self) | take_while(move(callback));
+}
+
+template <typename Self, typename Callback>
+constexpr auto
+iterable_pipe_take_last_while(Self&& self, Callback callback) {
+   return $fwd(self) | take_last_while(move(callback));
+}
+
+template <typename Self>
+constexpr auto
+iterable_pipe_drop(Self&& self, idx count) {
+   return $fwd(self) | drop(count);
+}
+
+template <typename Self>
+constexpr auto
+iterable_pipe_drop_last(Self&& self, idx count) {
+   return $fwd(self) | drop_last(count);
+}
+
+template <typename Self, typename Callback>
+constexpr auto
+iterable_pipe_drop_while(Self&& self, Callback callback) {
+   return $fwd(self) | drop_while(move(callback));
+}
+
+template <typename Self, typename Callback>
+constexpr auto
+iterable_pipe_drop_last_while(Self&& self, Callback callback) {
+   return $fwd(self) | drop_last_while(move(callback));
+}
+
+template <typename Self>
+constexpr auto
 iterable_pipe_reverse(Self&& self) {
    return $fwd(self) | reverse();
 }
@@ -154,6 +196,55 @@ template <typename Self>
 constexpr auto
 iterable_interface<Tag>::take(this Self&& self, idx count) {
    return detail::iterable_pipe_take($fwd(self), count);
+}
+
+template <typename Tag>
+template <typename Self>
+constexpr auto
+iterable_interface<Tag>::take_last(this Self&& self, idx count) {
+   return detail::iterable_pipe_take_last($fwd(self), count);
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+constexpr auto
+iterable_interface<Tag>::take_while(this Self&& self, Callback callback) {
+   return detail::iterable_pipe_take_while($fwd(self), move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+constexpr auto
+iterable_interface<Tag>::take_last_while(this Self&& self, Callback callback) {
+   return detail::iterable_pipe_take_last_while($fwd(self), move(callback));
+}
+
+template <typename Tag>
+template <typename Self>
+constexpr auto
+iterable_interface<Tag>::drop(this Self&& self, idx count) {
+   return detail::iterable_pipe_drop($fwd(self), count);
+}
+
+template <typename Tag>
+template <typename Self>
+constexpr auto
+iterable_interface<Tag>::drop_last(this Self&& self, idx count) {
+   return detail::iterable_pipe_drop_last($fwd(self), count);
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+constexpr auto
+iterable_interface<Tag>::drop_while(this Self&& self, Callback callback) {
+   return detail::iterable_pipe_drop_while($fwd(self), move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+constexpr auto
+iterable_interface<Tag>::drop_last_while(this Self&& self, Callback callback) {
+   return detail::iterable_pipe_drop_last_while($fwd(self), move(callback));
 }
 
 template <typename Tag>

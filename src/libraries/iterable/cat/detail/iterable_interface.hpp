@@ -73,6 +73,34 @@ struct iterable_interface {
 
    template <typename Self>
    constexpr auto
+   take_last(this Self&& self, idx count);
+
+   template <typename Self, typename Callback>
+   constexpr auto
+   take_while(this Self&& self, Callback callback);
+
+   template <typename Self, typename Callback>
+   constexpr auto
+   take_last_while(this Self&& self, Callback callback);
+
+   template <typename Self>
+   constexpr auto
+   drop(this Self&& self, idx count);
+
+   template <typename Self>
+   constexpr auto
+   drop_last(this Self&& self, idx count);
+
+   template <typename Self, typename Callback>
+   constexpr auto
+   drop_while(this Self&& self, Callback callback);
+
+   template <typename Self, typename Callback>
+   constexpr auto
+   drop_last_while(this Self&& self, Callback callback);
+
+   template <typename Self>
+   constexpr auto
    reverse(this Self&& self);
 
    template <typename Self>

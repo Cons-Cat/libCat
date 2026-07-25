@@ -7,40 +7,30 @@
 namespace cat {
 namespace detail {
 template <typename Base>
-struct take_view_impl : iterable_interface<> {
+struct drop_view_impl : iterable_interface<> {
    Base m_base;
    idx m_count;
 
    template <typename BaseContext>
    struct context_type {
       BaseContext incoming_context;
-      idx limit;
-      idx taken;
+      idx count;
+      idx dropped;
 
       using element_type = BaseContext::element_type;
 
       template <is_predicate<element_type> LoopBody>
       constexpr auto
       run_while(LoopBody&& loop_body) -> iteration_result {
-         if (taken >= limit) {
-            return iteration_result::complete;
-         }
-
-         auto const nested_run_result = incoming_context.run_while(
+         return incoming_context.run_while(
             [this, &loop_body](auto&& element) -> bool {
-               if (taken >= limit) {
-                  return false;
+               if (dropped < count) {
+                  ++dropped;
+                  return true;
                }
-               ++taken;
                return loop_body($fwd(element));
             }
          );
-
-         if (taken >= limit) {
-            return iteration_result::complete;
-         }
-
-         return nested_run_result;
       }
    };
 
@@ -70,24 +60,24 @@ struct take_view_impl : iterable_interface<> {
 };
 
 template <typename Base>
-using take_view = take_view_impl<Base>;
+using drop_view = drop_view_impl<Base>;
 
-struct take_impl : view_interface<take_impl> {
+struct drop_impl : view_interface<drop_impl> {
    idx count;
 
    template <is_borrow_acceptable Iterable>
    constexpr auto
-   apply(Iterable&& incoming) const -> take_view<Iterable> {
-      return take_view<Iterable>{{}, $fwd(incoming), count};
+   apply(Iterable&& incoming) const -> drop_view<Iterable> {
+      return drop_view<Iterable>{{}, $fwd(incoming), count};
    }
 };
 }  // namespace detail
 
-// Lazily yield at most `count` elements. This is a view adaptor.
+// Lazily skip the first `count` elements. This is a view adaptor.
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-take(idx count) -> detail::take_impl {
-   return detail::take_impl{{}, count};
+drop(idx count) -> detail::drop_impl {
+   return detail::drop_impl{{}, count};
 }
 
 }  // namespace cat

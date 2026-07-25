@@ -625,10 +625,18 @@ struct view_interface {
 
 }  // namespace cat
 
-// Views:
+// View adaptors:
 #include "../implementations/as_rvalue.tpp"
+#include "../implementations/drop.tpp"
+#include "../implementations/drop_last.tpp"
+#include "../implementations/drop_last_while.tpp"
+#include "../implementations/drop_while.tpp"
 #include "../implementations/filter.tpp"
 #include "../implementations/reverse.tpp"
+#include "../implementations/take.tpp"
+#include "../implementations/take_last.tpp"
+#include "../implementations/take_last_while.tpp"
+#include "../implementations/take_while.tpp"
 #include "../implementations/transform.tpp"
 
 // Terminal algorithms:
@@ -642,7 +650,6 @@ struct view_interface {
 #include "../implementations/product.tpp"
 #include "../implementations/reverse_inplace.tpp"
 #include "../implementations/sum.tpp"
-#include "../implementations/take.tpp"
 #include "../implementations/to.tpp"
 
 namespace cat::detail {

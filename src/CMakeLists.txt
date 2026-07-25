@@ -296,6 +296,10 @@ set(CAT_HEADER_FILES
   ${CATLIB}/iterable/implementations/bounds.tpp
   ${CATLIB}/iterable/implementations/count.tpp
   ${CATLIB}/iterable/implementations/dot.tpp
+  ${CATLIB}/iterable/implementations/drop.tpp
+  ${CATLIB}/iterable/implementations/drop_last.tpp
+  ${CATLIB}/iterable/implementations/drop_last_while.tpp
+  ${CATLIB}/iterable/implementations/drop_while.tpp
   ${CATLIB}/iterable/implementations/filter.tpp
   ${CATLIB}/iterable/implementations/fold.tpp
   ${CATLIB}/iterable/implementations/for_each.tpp
@@ -308,6 +312,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/iterable/implementations/slice_view.tpp
   ${CATLIB}/iterable/implementations/sum.tpp
   ${CATLIB}/iterable/implementations/take.tpp
+  ${CATLIB}/iterable/implementations/take_last.tpp
+  ${CATLIB}/iterable/implementations/take_last_while.tpp
+  ${CATLIB}/iterable/implementations/take_while.tpp
   ${CATLIB}/iterable/implementations/to.tpp
   ${CATLIB}/iterable/implementations/transform.tpp
   ${CATLIB}/stepanov/cat/stepanov
