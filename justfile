@@ -569,13 +569,25 @@ status_cxx mode=last_mode verbose="":
       value="$(printf '\033[90mn/a\033[0m')"; \
       test ! -f "$cache" \
         || value="$(sed -n 's/^CMAKE_CXX_COMPILER:[^=]*=//p' "$cache")"; \
+      compiler="$value"; \
       if [ "{{ verbose }}" != "-v" ]; then \
         case "$value" in \
           "$PWD"/*) value=".${value#"$PWD"}" ;; \
         esac; \
       fi; \
       if [ -z "$value" ]; then value="$(printf '\033[90mn/a\033[0m')"; fi; \
-      printf '\033[1mCMAKE_CXX_COMPILER: \033[0m%s\n' "$value"
+      printf '\033[1mCMAKE_CXX_COMPILER: \033[0m%s\n' "$value"; \
+      case "$(readlink -f "$compiler" 2>/dev/null)" in \
+        "$PWD"/.cache/cat-llvm/*) \
+          timestamp="$("$compiler" --version \
+            | sed -n 's/.*++\([0-9]\{14\}\).*/\1/p')"; \
+          if [ -n "$timestamp" ]; then \
+            date_input="$(printf '%s\n' "$timestamp" \
+              | sed 's/\(....\)\(..\)\(..\)\(..\)\(..\)\(..\)/\1-\2-\3 \4:\5:\6/')"; \
+            timestamp="$(date -d "$date_input" '+%B %-d, %Y at %H:%M:%S')"; \
+            printf '\033[1mClang nightly: \033[0m%s\n' "$timestamp"; \
+          fi ;; \
+      esac
 
 status_linker mode=last_mode:
     @python3 scripts/status_linker.py "{{ build_dir(mode) }}" "{{ cmake_config(mode) }}"

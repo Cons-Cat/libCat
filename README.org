@@ -397,6 +397,7 @@ For an example configuration:
   just status release
   # CAT_USE_SANITIZERS: OFF (cached)
   # CMAKE_CXX_COMPILER: ./.cache/cat-llvm/bin/clang++
+  # Clang nightly: July 7, 2026 at 11:16:25
   # CMAKE_LINKER_TYPE: LLD
   # ISA: default (x86_64-pc-linux-gnu)
   # Language: gnu++26 nostdlib nostdlib++
