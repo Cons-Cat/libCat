@@ -35,7 +35,7 @@ LLVM_PACKAGE_NAMES = (
 )
 DEBIAN_BASE_URL = "https://deb.debian.org/debian"
 DEBIAN_PACKAGES_INDEX_URL = f"{DEBIAN_BASE_URL}/dists/unstable/main/binary-amd64/Packages.gz"
-PACKAGE_SET_REVISION = "6"
+PACKAGE_SET_REVISION = "7"
 
 DEBIAN_PACKAGE_NAMES = (
     "gcc-16-base",
@@ -43,7 +43,10 @@ DEBIAN_PACKAGE_NAMES = (
     "libstdc++6",
     "libc6",
     "libc-gconv-modules-extra",
+    # clangd (LLVM nightly) still links abseil 20260107. Debian's re2/grpc
+    # already moved to 20260526, so both SONAMEs must be staged.
     "libabsl20260107",
+    "libabsl20260526",
     "libbsd0",
     "libedit2",
     "libffi8",
@@ -118,6 +121,7 @@ RUNTIME_LIBRARY_PREFIXES = (
 
 REQUIRED_PREFIX_RUNTIME_LIBRARIES = (
     "libabsl_base.so.20260107",
+    "libabsl_base.so.20260526",
     "libgrpc++.so.1.51",
 )
 
