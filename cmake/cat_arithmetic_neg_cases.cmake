@@ -99,23 +99,23 @@ void t() { cat::uintptr<void> p = -1ll; }
 _cat_neg_expect_illformed("idx-pluseq-negative-literal" [[#include <cat/arithmetic>
 void t() { cat::idx i(0u); i += -1; }
 ]])
-_cat_neg_expect_illformed("bit-countl-zero-raw-zero" [[#include <cat/bit>
-void t() { auto _ = cat::countl_zero_raw(0u); }
+_cat_neg_expect_illformed("bit-countl-zero-unchecked-zero" [[#include <cat/bit>
+void t() { auto _ = cat::countl_zero_unchecked(0u); }
 ]])
-_cat_neg_expect_illformed("bit-countl-one-raw-zero" [[#include <cat/bit>
-void t() { auto _ = cat::countl_one_raw(0u); }
+_cat_neg_expect_illformed("bit-countl-one-unchecked-ones" [[#include <cat/bit>
+void t() { auto _ = cat::countl_one_unchecked(0xFFFFFFFFu); }
 ]])
-_cat_neg_expect_illformed("bit-countr-zero-raw-zero" [[#include <cat/bit>
-void t() { auto _ = cat::countr_zero_raw(0u); }
+_cat_neg_expect_illformed("bit-countr-zero-unchecked-zero" [[#include <cat/bit>
+void t() { auto _ = cat::countr_zero_unchecked(0u); }
 ]])
-_cat_neg_expect_illformed("bit-countr-zero-raw-idx-zero" [[#include <cat/bit>
-void t() { auto _ = cat::countr_zero_raw(cat::idx{0u}); }
+_cat_neg_expect_illformed("bit-countr-zero-unchecked-idx-zero" [[#include <cat/bit>
+void t() { auto _ = cat::countr_zero_unchecked(cat::idx{0u}); }
 ]])
-_cat_neg_expect_illformed("bit-countr-one-raw-zero" [[#include <cat/bit>
-void t() { auto _ = cat::countr_one_raw(0u); }
+_cat_neg_expect_illformed("bit-countr-one-unchecked-ones" [[#include <cat/bit>
+void t() { auto _ = cat::countr_one_unchecked(0xFFFFFFFFu); }
 ]])
-_cat_neg_expect_illformed("bit-countr-one-raw-idx-zero" [[#include <cat/bit>
-void t() { auto _ = cat::countr_one_raw(cat::idx{0u}); }
+_cat_neg_expect_illformed("bit-ceil-unchecked-overflow" [[#include <cat/bit>
+void t() { auto _ = cat::bit_ceil_unchecked(0x80000001u); }
 ]])
 _cat_neg_expect_illformed("undef-int1-pluseq-uint-OOR" [[#include <cat/arithmetic>
 void t() { auto r = cat::int1(0).undef(); r += 300u; }

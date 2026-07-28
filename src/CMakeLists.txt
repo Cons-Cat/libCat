@@ -278,7 +278,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bit/cat/detail/bit_ptr.hpp
   ${CATLIB}/bit/cat/detail/bit_reference.hpp
   ${CATLIB}/bit/cat/detail/bit_span.hpp
-  ${CATLIB}/bit/implementations/bit_raw.tpp
+  ${CATLIB}/bit/implementations/bit_checked.tpp
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/bitset/cat/bitset
   ${CATLIB}/bitvec/cat/bitvec

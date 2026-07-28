@@ -1740,7 +1740,7 @@ using maybe_non_zero = maybe<sentinel<T, T(0)>>;
 
 // These templates have circular dependencies with `maybe`, so they are included
 // here.
-#include "../../bit/implementations/bit_raw.tpp"
+#include "../../bit/implementations/bit_checked.tpp"
 #include "../implementations/narrow_cast.tpp"
 
 namespace cat {

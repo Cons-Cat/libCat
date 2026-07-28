@@ -74,21 +74,25 @@ $test(bit_count_leading) {
    static_assert(cat::countl_zero(0_u4) == 32u);
    static_assert(cat::countl_zero(0_u8) == 64u);
    static_assert(cat::countl_zero(0x7FFFFFFF'FFFFFFFFu) == 1);
-   static_assert(cat::countl_zero_raw(0x7FFFFFFF'FFFFFFFFu).value() == 1);
+   cat::verify(cat::try_countl_zero(0x7FFFFFFF'FFFFFFFFu).verify() == 1);
+   static_assert(cat::countl_zero_unchecked(0x7FFFFFFF'FFFFFFFFu) == 1);
    static_assert(cat::countl_zero(0x7FFFFFFFu) == 1);
-   static_assert(cat::countl_zero_raw(0x7FFFFFFFu).value() == 1);
-   auto raw_countl_runtime = 0x7FFFFFFF_u4;
-   cat::verify(cat::countl_zero_raw(raw_countl_runtime).value() == 1);
-   raw_countl_runtime = 0_u4;
-   cat::verify(!cat::countl_zero_raw(raw_countl_runtime).has_value());
+   cat::verify(cat::try_countl_zero(0x7FFFFFFFu).verify() == 1);
+   auto countl_runtime = 0x7FFFFFFF_u4;
+   cat::verify(cat::try_countl_zero(countl_runtime).verify() == 1);
+   countl_runtime = 0_u4;
+   cat::verify(!cat::try_countl_zero(countl_runtime).has_value());
    static_assert(cat::countl_one(0x7FFFFFFF'FFFFFFFFu) == 0);
-   static_assert(cat::countl_one_raw(0x7FFFFFFF'FFFFFFFFu).value() == 0);
+   cat::verify(cat::try_countl_one(0x7FFFFFFF'FFFFFFFFu).verify() == 0);
+   static_assert(cat::countl_one_unchecked(0x7FFFFFFF'FFFFFFFFu) == 0);
    static_assert(cat::countl_one(0x7FFFFFFFu) == 0);
-   static_assert(cat::countl_one_raw(0x7FFFFFFFu).value() == 0);
-   auto raw_countl_one_runtime = 0x7FFFFFFF_u4;
-   cat::verify(cat::countl_one_raw(raw_countl_one_runtime).value() == 0);
-   raw_countl_one_runtime = 0_u4;
-   cat::verify(!cat::countl_one_raw(raw_countl_one_runtime).has_value());
+   cat::verify(cat::try_countl_one(0x7FFFFFFFu).verify() == 0);
+   cat::verify(cat::try_countl_one(0u).verify() == 0);
+   static_assert(!cat::try_countl_one(0xFFFFFFFFu).has_value());
+   auto countl_one_runtime = 0x7FFFFFFF_u4;
+   cat::verify(cat::try_countl_one(countl_one_runtime).verify() == 0);
+   countl_one_runtime = 0xFFFFFFFF_u4;
+   cat::verify(!cat::try_countl_one(countl_one_runtime).has_value());
 
    static_assert(cat::countl_zero(0xFFFFFFFF_u4) == 0);
    static_assert(cat::countl_zero(0xFFFFFFFF'FFFFFFFF_u8) == 0);
@@ -104,25 +108,29 @@ $test(bit_count_trailing) {
    static_assert(cat::countr_zero(0_u8) == 64u);
    static_assert(cat::countr_zero(cat::idx{0u}) == __SIZE_WIDTH__);
    static_assert(cat::countr_zero(cat::idx{8u}) == 3u);
-   static_assert(cat::countr_zero_raw(cat::idx{8u}).value() == 3u);
-   auto raw_countr_runtime = cat::idx{8u};
-   cat::verify(cat::countr_zero_raw(raw_countr_runtime).value() == 3u);
-   raw_countr_runtime = cat::idx{0u};
-   cat::verify(!cat::countr_zero_raw(raw_countr_runtime).has_value());
+   cat::verify(cat::try_countr_zero(cat::idx{8u}).verify() == 3u);
+   static_assert(cat::countr_zero_unchecked(cat::idx{8u}) == 3u);
+   auto countr_runtime = cat::idx{8u};
+   cat::verify(cat::try_countr_zero(countr_runtime).verify() == 3u);
+   countr_runtime = cat::idx{0u};
+   cat::verify(!cat::try_countr_zero(countr_runtime).has_value());
    static_assert(cat::countr_one(cat::idx{7u}) == 3u);
-   static_assert(cat::countr_one_raw(cat::idx{7u}).value() == 3u);
-   auto raw_countr_one_runtime = cat::idx{7u};
-   cat::verify(cat::countr_one_raw(raw_countr_one_runtime).value() == 3u);
-   raw_countr_one_runtime = cat::idx{0u};
-   cat::verify(!cat::countr_one_raw(raw_countr_one_runtime).has_value());
+   cat::verify(cat::try_countr_one(cat::idx{7u}).verify() == 3u);
+   static_assert(cat::countr_one_unchecked(cat::idx{7u}) == 3u);
+   auto countr_one_runtime = cat::idx{7u};
+   cat::verify(cat::try_countr_one(countr_one_runtime).verify() == 3u);
+   countr_one_runtime = cat::idx::max();
+   cat::verify(cat::try_countr_one(countr_one_runtime).verify() == 63u);
    static_assert(cat::countr_zero(0xFFFFFFFF'FFFFFFFEu) == 1);
-   static_assert(cat::countr_zero_raw(0xFFFFFFFF'FFFFFFFEu).value() == 1);
+   cat::verify(cat::try_countr_zero(0xFFFFFFFF'FFFFFFFEu).verify() == 1);
    static_assert(cat::countr_zero(0xFFFFFFFEu) == 1);
-   static_assert(cat::countr_zero_raw(0xFFFFFFFEu).value() == 1);
+   cat::verify(cat::try_countr_zero(0xFFFFFFFEu).verify() == 1);
    static_assert(cat::countr_one(0xFFFFFFFF'FFFFFFFEu) == 0);
-   static_assert(cat::countr_one_raw(0xFFFFFFFF'FFFFFFFEu).value() == 0);
+   cat::verify(cat::try_countr_one(0xFFFFFFFF'FFFFFFFEu).verify() == 0);
    static_assert(cat::countr_one(0xFFFFFFFEu) == 0);
-   static_assert(cat::countr_one_raw(0xFFFFFFFEu).value() == 0);
+   cat::verify(cat::try_countr_one(0xFFFFFFFEu).verify() == 0);
+   cat::verify(cat::try_countr_one(0u).verify() == 0);
+   static_assert(!cat::try_countr_one(0xFFFFFFFFu).has_value());
 }
 
 $test(bit_count_small_integer_wrappers) {
@@ -211,12 +219,16 @@ $test(byte_bitwise_api) {
    static_assert(
       cat::rotate_right(cat::byte(0b1000'0001u), cat::uword(1u)) == 0b1100'0000u
    );
-   static_assert(cat::countl_zero_raw(cat::byte(0x0Fu)).value() == 4u);
-   static_assert(!cat::countl_zero_raw(cat::byte(0u)).has_value());
+   cat::verify(cat::try_countl_zero(cat::byte(0x0Fu)).verify() == 4u);
+   static_assert(cat::countl_zero_unchecked(cat::byte(0x0Fu)) == 4u);
+   static_assert(!cat::try_countl_zero(cat::byte(0u)).has_value());
+   static_assert(!cat::try_countl_one(cat::byte(0xFFu)).has_value());
+   static_assert(!cat::try_countr_one(cat::byte(0xFFu)).has_value());
 
-   auto const byte_bit_ceil = cat::bit_ceil_raw(cat::byte(5u));
+   auto const byte_bit_ceil = cat::try_bit_ceil(cat::byte(5u));
    cat::verify(byte_bit_ceil.has_value());
-   cat::verify(byte_bit_ceil.value() == 8u);
+   cat::verify(byte_bit_ceil.verify() == 8u);
+   static_assert(cat::bit_ceil_unchecked(cat::byte(5u)) == 8u);
 
    cat::byte byte_value(0b0001'0110u);
    cat::verify(byte_value.bit_width() == 5u);
@@ -291,21 +303,22 @@ $test(bit_floor_and_ceil) {
    static_assert(cat::bit_ceil(3u) == 4u);
    static_assert(cat::bit_ceil(4u) == 4u);
    static_assert(cat::bit_ceil(5u) == 8u);
-   cat::verify(cat::bit_ceil_raw(3u).value() == 4u);
-   cat::verify(cat::bit_ceil_raw(5u).value() == 8u);
-   cat::verify(cat::bit_ceil_raw(0u).value() == 1u);
-   cat::verify(cat::bit_ceil_raw(cat::idx(5u)).value() == 8u);
-   cat::verify(!cat::bit_ceil_raw(0x80000001u).has_value());
+   cat::verify(cat::try_bit_ceil(3u).verify() == 4u);
+   cat::verify(cat::try_bit_ceil(5u).verify() == 8u);
+   cat::verify(cat::bit_ceil_unchecked(5u) == 8u);
+   cat::verify(cat::try_bit_ceil(0u).verify() == 1u);
+   cat::verify(cat::try_bit_ceil(cat::idx(5u)).verify() == 8u);
+   cat::verify(!cat::try_bit_ceil(0x80000001u).has_value());
    cat::verify(
-      cat::bit_ceil_raw(cat::idx(cat::limits<cat::idx>::high_bit)).value()
+      cat::try_bit_ceil(cat::idx(cat::limits<cat::idx>::high_bit)).verify()
       == cat::limits<cat::idx>::high_bit
    );
    cat::verify(
-      !cat::bit_ceil_raw(cat::idx(cat::limits<cat::idx>::high_bit + 1u))
+      !cat::try_bit_ceil(cat::idx(cat::limits<cat::idx>::high_bit + 1u))
           .has_value()
    );
-   auto raw_bit_ceil_runtime = 0x80000001_u4;
-   cat::verify(!cat::bit_ceil_raw(raw_bit_ceil_runtime).has_value());
+   auto bit_ceil_runtime = 0x80000001_u4;
+   cat::verify(!cat::try_bit_ceil(bit_ceil_runtime).has_value());
 
    // Test `bit_floor()`.
    static_assert(cat::bit_floor(0u) == 0u);

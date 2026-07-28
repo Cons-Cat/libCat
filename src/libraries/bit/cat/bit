@@ -147,19 +147,18 @@ countl_zero(T value) -> uint1 {
    return uint1(__builtin_stdc_leading_zeros(make_raw_arithmetic(value)));
 }
 
-// The overloads of `countl_zero_raw()` are implemented in
-// `../implementations/bit_raw.tpp`.
+// The checked and unchecked overloads are implemented in
+// `../implementations/bit_checked.tpp`.
 
 // When a constant 0 is inputted, this function is disabled.
 template <is_unsigned_integral T>
    requires(!is_idx<T>)
 [[nodiscard]]
-consteval maybe<uint1>
-countl_zero_raw(T value) __attribute__((enable_if(
+consteval uint1
+countl_zero_unchecked(T value) __attribute__((enable_if(
    value == 0u,
    "Input must be non-zero! Consider `cat::countl_zero()` instead for "
-   "known 0 input. If you must use this version, consider wrapping "
-   "input in `cat::deconst()`."
+   "known 0 input or `cat::try_countl_zero()` for checked input."
 ))) = delete;
 
 // Count the number of leading one bits (counting "leftwards") before the first
@@ -172,19 +171,15 @@ countl_one(T value) -> uint1 {
    return uint1(__builtin_stdc_leading_ones(make_raw_arithmetic(value)));
 }
 
-// The overloads of `countl_one_raw()` are implemented in
-// `../implementations/bit_raw.tpp`.
-
-// When a constant zero is inputted, this function is disabled.
+// When a constant all-ones value is inputted, this function is disabled.
 template <is_unsigned_integral T>
    requires(!is_idx<T>)
 [[nodiscard]]
-consteval maybe<uint1>
-countl_one_raw(T value) __attribute__((enable_if(
-   value == 0u,
-   "Input must be non-zero! Consider `cat::countl_one()` instead for "
-   "known 0 input. If you must use this version, consider "
-   "wrapping input in `cat::deconst()`."
+consteval uint1
+countl_one_unchecked(T value) __attribute__((enable_if(
+   make_raw_arithmetic(value) == limits<raw_arithmetic_type<T>>::max(),
+   "Input must not be all-ones! Consider `cat::countl_one()` instead or "
+   "`cat::try_countl_one()` for checked input."
 ))) = delete;
 
 // Count the number of trailing zero bits (counting "rightwards") before the
@@ -197,18 +192,14 @@ countr_zero(T value) -> uint1 {
    return uint1(__builtin_stdc_trailing_zeros(make_raw_arithmetic(value)));
 }
 
-// The overloads of `countr_zero_raw()` are implemented in
-// `../implementations/bit_raw.tpp`.
-
 // When a constant 0 is inputted, this function is disabled.
 template <is_unsigned_integral T>
 [[nodiscard]]
-consteval maybe<uint1>
-countr_zero_raw(T value) __attribute__((enable_if(
+consteval uint1
+countr_zero_unchecked(T value) __attribute__((enable_if(
    value == 0u,
    "Input must be non-zero! Consider `cat::countr_zero()` instead for "
-   "known 0 input. If you must use this version, consider wrapping "
-   "input in `cat::deconst()`."
+   "known 0 input or `cat::try_countr_zero()` for checked input."
 ))) = delete;
 
 // Count the number of trailing one bits (counting "rightwards") before the
@@ -220,18 +211,14 @@ countr_one(T value) -> uint1 {
    return uint1(__builtin_stdc_trailing_ones(make_raw_arithmetic(value)));
 }
 
-// The overloads of `countr_one_raw()` are implemented in
-// `../implementations/bit_raw.tpp`.
-
-// When a constant zero is inputted, this function is disabled.
+// When a constant all-ones value is inputted, this function is disabled.
 template <is_unsigned_integral T>
 [[nodiscard]]
-consteval maybe<uint1>
-countr_one_raw(T value) __attribute__((enable_if(
-   value == 0u,
-   "Input must be non-zero! Consider `cat::countr_one()` instead for "
-   "known 0 input. If you must use this version, consider "
-   "wrapping input in `cat::deconst()`."
+consteval uint1
+countr_one_unchecked(T value) __attribute__((enable_if(
+   make_raw_arithmetic(value) == limits<raw_arithmetic_type<T>>::max(),
+   "Input must not be all-ones! Consider `cat::countr_one()` instead or "
+   "`cat::try_countr_one()` for checked input."
 ))) = delete;
 
 // Returns the number of one bits in `value`.
@@ -268,6 +255,16 @@ constexpr auto
 bit_ceil(T value) -> T {
    return T(__builtin_stdc_bit_ceil(make_raw_arithmetic(value)));
 }
+
+// When the result is not representable, this function is disabled.
+template <is_unsigned_integral T>
+[[nodiscard]]
+consteval T
+bit_ceil_unchecked(T value) __attribute__((enable_if(
+   value > raw_arithmetic_type<T>(limits<T>::high_bit),
+   "Result must be representable! Consider `cat::try_bit_ceil()` for "
+   "checked input."
+))) = delete;
 
 // Return the number of bits needed to represent `value`.
 template <is_unsigned_integral T>

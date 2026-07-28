@@ -33,8 +33,8 @@ class type_list {
    struct recurse_for_type_at_index<type_list<Head, Tail...>, index> {
       // Index 0 is handled by the partial specialization above, so `index` is
       // never zero here and `index.raw - 1uz` cannot wrap.
-      using result = recurse_for_type_at_index<
-         type_list<Tail...>, narrow_cast<idx>(index - 1u).value()>::result;
+      using result =
+         recurse_for_type_at_index<type_list<Tail...>, idx(index - 1u)>::result;
    };
 
    // If the last element in this type list is `T`.

@@ -2406,7 +2406,8 @@ class basic_atomic_accessor {
          OtherElementType (*_Nonnull)[], element_type (*_Nonnull)[]>
    constexpr basic_atomic_accessor(
       [[maybe_unused]]
-      basic_atomic_accessor<OtherElementType, ReferenceType> other
+      basic_atomic_accessor<OtherElementType, ReferenceType>
+         other
    ) {
    }
 

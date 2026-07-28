@@ -124,8 +124,7 @@ struct variant_node<Alternative, Remaining...> {
       if constexpr (index == 0u) {
          return $fwd(self).storage;
       } else {
-         return $fwd(self)
-            .remaining.template get<narrow_cast<idx>(index - 1u).value()>();
+         return $fwd(self).remaining.template get<idx(index - 1u)>();
       }
    }
 
@@ -169,7 +168,7 @@ variant_ref_slot(variant_ref_union<Ts...>& u) -> auto& {
    if constexpr (index == 0u) {
       return u.head;
    } else {
-      return variant_ref_slot<narrow_cast<idx>(index - 1u).value()>(u.tail);
+      return variant_ref_slot<idx(index - 1u)>(u.tail);
    }
 }
 
@@ -179,7 +178,7 @@ variant_ref_slot(variant_ref_union<Ts...> const& u) -> auto& {
    if constexpr (index == 0u) {
       return u.head;
    } else {
-      return variant_ref_slot<narrow_cast<idx>(index - 1u).value()>(u.tail);
+      return variant_ref_slot<idx(index - 1u)>(u.tail);
    }
 }
 
