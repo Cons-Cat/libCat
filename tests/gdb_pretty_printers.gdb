@@ -136,6 +136,7 @@ expect_regex(
     "cat_gdb_str_span_value",
     r'"hi\\0!" \(4 chars, ' + escaped_pointer_pattern() + r"\)")
 expect_exact("cat_gdb_str_inplace_value", '"hello" (5 chars)')
+expect_exact("cat_gdb_str_literal_value", '"literal\\0" (7 chars)')
 expect_regex(
     "cat_gdb_zstr_span_value",
     r'"zip\\0" \(4 chars, null-terminated, '
@@ -147,9 +148,9 @@ expect_regex(
     + escaped_pointer_pattern()
     + r"\)")
 expect_exact("cat_gdb_zstr_inplace_value",
-             '"hello\\0" (6 chars, null-terminated)')
+             '"hello\\0" (5 chars, null-terminated)')
 expect_exact("cat_gdb_zstr_padded_inplace_value",
-             '"hi\\0\\0\\0\\0" (6 chars, null-terminated)')
+             '"hi\\0" (2 chars, null-terminated)')
 expect_exact("cat_gdb_bit_value", "1")
 expect_exact("cat_gdb_bitset_value", "[01010101'01] (10 bits, 6 r-padding)")
 expect_exact("cat_gdb_bitset6_value", filled_bitset(6, 2))

@@ -47,7 +47,7 @@ struct socket_unix {
    // holds.
    auto
    get_size() -> iword {
-      return iword(sizeof(attributes) + sizeof(path_name));
+      return iword(sizeof(attributes) + path_name.size());
    }
 
    // Create and return a `Socket`.

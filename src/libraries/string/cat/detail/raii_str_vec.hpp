@@ -102,7 +102,7 @@ class
 
       m_core.free(m_allocator);
       if (m_allocator == other.m_allocator) {
-         m_core = cat::move(other.m_core);
+         m_core = move(other.m_core);
       } else {
          if !consteval {
             cat::assert(
@@ -130,6 +130,12 @@ class
    operator==(basic_str_span<CharT const, other_is_null_terminated> rhs) const
       -> bool {
       return m_core == rhs;
+   }
+
+   constexpr auto
+   fill(CharT value) -> basic_str_vec& {
+      m_core.fill(value);
+      return *this;
    }
 
    constexpr void
@@ -359,10 +365,16 @@ class
    [[nodiscard, clang::reinitializes]]
    constexpr auto
    release() -> manual::basic_str_vec<CharT, null_terminated> {
-      return cat::move(m_core);
+      return move(m_core);
    }
 
  private:
+   template <typename OtherCharT, bool other_is_null_terminated>
+   friend constexpr auto
+   detail::raii_str_vec_has_value(
+      basic_str_vec<OtherCharT, other_is_null_terminated, dyn_allocator> const&
+   ) -> bool;
+
    template <typename OtherCharT, bool other_is_null_terminated>
    friend constexpr auto
    detail::raii_str_vec_nullopt()
@@ -405,9 +417,7 @@ make_raii_str_vec(allocator_ref<Allocator> allocator, Strings const&... strings)
    ((content_size +=
      basic_str_span<CharT const, false>(basic_str_span(strings)).size()),
     ...);
-   $prop(new_string.reserve(
-      max(content_size + static_cast<unsigned>(is_null_terminated), 4u)
-   ));
+   $prop(new_string.reserve(max(content_size, 4u)));
    auto appended = append_raii_str_vec_parts<
       raii::basic_str_vec<CharT, is_null_terminated, Allocator>, CharT>(
       new_string, strings...
@@ -421,7 +431,7 @@ constexpr auto
 raii_str_vec_has_value(
    raii::basic_str_vec<CharT, is_null_terminated, dyn_allocator> const& value
 ) -> bool {
-   return value.data() != nullptr || value.size() == 0u;
+   return maybe_str_vec_has_value(value.m_core);
 }
 
 inline constexpr null_allocator raii_str_vec_niche_null_allocator{};
@@ -475,7 +485,7 @@ constexpr auto
 make_zstr_vec(allocator_ref<Allocator> allocator)
    -> maybe<raii::zstr_vec<Allocator>> {
    raii::zstr_vec<Allocator> new_string(allocator);
-   $prop(new_string.resize(1u));
+   $prop(new_string.resize(0u));
    return new_string;
 }
 
@@ -505,7 +515,7 @@ constexpr auto
 make_wzstr_vec(allocator_ref<Allocator> allocator)
    -> maybe<raii::wzstr_vec<Allocator>> {
    raii::wzstr_vec<Allocator> new_string(allocator);
-   $prop(new_string.resize(1u));
+   $prop(new_string.resize(0u));
    return new_string;
 }
 
@@ -540,7 +550,7 @@ constexpr auto
 make_zstr_vec(allocator_ref<Allocator> allocator, str_view string)
    -> maybe<raii::zstr_vec<Allocator>> {
    raii::zstr_vec<Allocator> new_string(allocator);
-   $prop(new_string.reserve(max(string.size() + 1u, 4u)));
+   $prop(new_string.reserve(max(string.size(), 4u)));
    $prop(new_string.append(string));
    return new_string;
 }
@@ -576,7 +586,7 @@ constexpr auto
 make_wzstr_vec(allocator_ref<Allocator> allocator, wstr_view string)
    -> maybe<raii::wzstr_vec<Allocator>> {
    raii::wzstr_vec<Allocator> new_string(allocator);
-   $prop(new_string.reserve(max(string.size() + 1u, 4u)));
+   $prop(new_string.reserve(max(string.size(), 4u)));
    $prop(new_string.append(string));
    return new_string;
 }
@@ -712,7 +722,7 @@ constexpr auto
 make_zstr_vec(allocator_ref<Allocator> allocator, initializer_list<char> values)
    -> maybe<raii::zstr_vec<Allocator>> {
    raii::zstr_vec<Allocator> new_string(allocator);
-   $prop(new_string.reserve(max(values.size() + 1u, 4u)));
+   $prop(new_string.reserve(max(values.size(), 4u)));
    $prop(new_string.append_range(values));
    return new_string;
 }
@@ -750,7 +760,7 @@ make_wzstr_vec(
    allocator_ref<Allocator> allocator, initializer_list<wchar_t> values
 ) -> maybe<raii::wzstr_vec<Allocator>> {
    raii::wzstr_vec<Allocator> new_string(allocator);
-   $prop(new_string.reserve(max(values.size() + 1u, 4u)));
+   $prop(new_string.reserve(max(values.size(), 4u)));
    $prop(new_string.append_range(values));
    return new_string;
 }
@@ -786,7 +796,7 @@ make_zstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
    -> maybe<raii::zstr_vec<Allocator>> {
    raii::zstr_vec<Allocator> new_string(allocator);
    $prop(new_string.reserve(max(capacity, 4u)));
-   $prop(new_string.resize(1u));
+   $prop(new_string.resize(0u));
    return new_string;
 }
 
@@ -821,7 +831,7 @@ make_wzstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
    -> maybe<raii::wzstr_vec<Allocator>> {
    raii::wzstr_vec<Allocator> new_string(allocator);
    $prop(new_string.reserve(max(capacity, 4u)));
-   $prop(new_string.resize(1u));
+   $prop(new_string.resize(0u));
    return new_string;
 }
 

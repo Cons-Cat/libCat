@@ -109,54 +109,36 @@ to_chars(dyn_allocator allocator, T value) -> maybe<str_view> {
 }
 
 namespace detail {
-template <uword::raw_type length, auto value>
+template <auto value>
 consteval auto
-make_const_string(str_inplace<length> const& string) {
-   // Copy over the string into new, larger, storage.
-   str_inplace<length + 1u> new_string;
-   for (uword i = 0u; i < length; ++i) {
-      new_string[i + 1] = string[i];
-   }
-
-   // Add a null terminator to the end of the new string.
-   new_string[length] = '\0';
-
-   // Fill in the next digit.
-   constexpr auto remainder = value % 10;
-   new_string[0] = (remainder > 9) ? (remainder - 10) + 'a' : remainder + '0';
+make_const_string() {
+   constexpr auto signed_remainder = value % 10;
+   constexpr auto remainder =
+      signed_remainder < 0 ? -signed_remainder : signed_remainder;
+   constexpr char digit =
+      (remainder > 9) ? (remainder - 10) + 'a' : remainder + '0';
    constexpr auto new_value = value / 10;
 
-   // Recurse through the rest of this integer.
    if constexpr (new_value == 0) {
-      return new_string;
+      return basic_str_literal(digit);
    } else {
-      return make_const_string<length + 1, new_value>(new_string);
+      return make_const_string<new_value>() + digit;
    }
 }
 }  // namespace detail
 
-// Convert a `constexpr` `is_integral` to `str_inplace`.
+// Convert a `constexpr` `is_integral` to `str_literal`.
 template <auto value>
    requires(is_integral<decltype(value)>)
 [[nodiscard]]
 consteval auto
 to_chars() {
    if constexpr (value == 0) {
-      return str_inplace("0");
+      return str_literal("0");
+   } else if constexpr (is_signed<decltype(value)> && value < 0) {
+      return '-' + detail::make_const_string<value>();
    } else {
-      constexpr str_inplace string("");
-
-      // Handle a negative sign.
-      if constexpr (is_signed<decltype(value)> && value < 0) {
-         str_inplace<string.size() + 1u> new_string;
-         for (idx i = 0u; i < string.size(); ++i) {
-            new_string[i + 1u] = string[i];
-         }
-         new_string[0] = '-';
-         return new_string;
-      } else {
-         return string;
-      }
+      return detail::make_const_string<value>();
    }
 }
 

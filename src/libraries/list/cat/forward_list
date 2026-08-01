@@ -458,7 +458,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       -> maybe<iterator> {
       auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
       node_type& node = *p_node;
-      node.storage = cat::move(value);
+      node.storage = move(value);
       this->place_node_front(node);
 
       return iterator(p_node);

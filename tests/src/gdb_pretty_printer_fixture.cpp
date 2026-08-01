@@ -250,6 +250,9 @@ cat::str_span cat_gdb_str_span_value{cat_gdb_str_span_data, 4u};
 cat::str_inplace<5u> cat_gdb_str_inplace_value{"hello"};
 
 [[gnu::used, gnu::retain]]
+cat::str_literal<7u> cat_gdb_str_literal_value{"literal"};
+
+[[gnu::used, gnu::retain]]
 char cat_gdb_zstr_span_data[] = {'z', 'i', 'p', '\0'};
 
 [[gnu::used, gnu::retain]]
@@ -259,7 +262,7 @@ cat::zstr_span cat_gdb_zstr_span_value{cat_gdb_zstr_span_data, 4u};
 cat::zstr_view cat_gdb_zstr_view_value{"view"};
 
 [[gnu::used, gnu::retain]]
-cat::zstr_inplace<6u> cat_gdb_zstr_inplace_value{"hello"};
+cat::zstr_inplace<5u> cat_gdb_zstr_inplace_value{"hello"};
 
 [[gnu::used, gnu::retain]]
 cat::zstr_inplace<6u> cat_gdb_zstr_padded_inplace_value =
@@ -447,6 +450,7 @@ cat_gdb_pretty_printer_breakpoint() {
                 "g"(&cat_gdb_array_value),
                 "g"(&cat_gdb_str_span_value),
                 "g"(&cat_gdb_str_inplace_value),
+                "g"(&cat_gdb_str_literal_value),
                 "g"(&cat_gdb_zstr_span_value),
                 "g"(&cat_gdb_zstr_view_value),
                 "g"(&cat_gdb_zstr_inplace_value),

@@ -71,7 +71,7 @@ struct visit_dispatcher<true, Result> {
       // variant it yields the niche, which never matches a valid `case`
       // label, so the default arm routes through the unreachable false
       // specialization.
-      switch (static_cast<unsigned int>(v.discriminant.value_or_niche().raw)) {
+      switch (static_cast<unsigned int>(v.index().value_or_niche().raw)) {
          CAT_VARIANT_CASE(0u);
          CAT_VARIANT_CASE(1u);
          CAT_VARIANT_CASE(2u);

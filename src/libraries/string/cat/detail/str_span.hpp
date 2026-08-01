@@ -113,8 +113,7 @@ class
       // Subtract 1 to length to ignore a null terminator. For `zstr_span` the
       // assume forces a trailing null so `other_length` is at least one and
       // subtracting one cannot wrap. For `str_span` the subtrahend is zero.
-      this->m_size =
-         narrow_cast<idx>(other_length - (null_terminated ? 0u : 1u)).value();
+      this->m_size = idx(other_length - (null_terminated ? 0u : 1u));
    }
 
    template <idx other_length>
@@ -124,57 +123,56 @@ class
               "literal! Consider a `str_view` instead.");
 
    // Make a `str_span` over a `str_inplace`.
-   template <idx other_length>
+   template <idx other_capacity, vec_flags flags>
    constexpr basic_str_span(
-      basic_str_inplace<CharT, other_length, null_terminated>& other_string
-      [[clang::lifetimebound]]
+      basic_str_inplace<CharT, other_capacity, null_terminated, flags>&
+         other_string [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
-      this->m_size = other_length;
+      this->m_size =
+         other_string.size() + static_cast<unsigned>(null_terminated);
    }
 
    // Make a `str_view` over a `str_inplace`.
-   template <idx other_length>
+   template <idx other_capacity, vec_flags flags>
       requires(is_const<CharT>)
    constexpr basic_str_span(
       basic_str_inplace<
-         remove_const<CharT>, other_length, null_terminated> const& other_string
-      [[clang::lifetimebound]]
+         remove_const<CharT>, other_capacity, null_terminated, flags> const&
+         other_string [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
-      this->m_size = other_length;
+      this->m_size =
+         other_string.size() + static_cast<unsigned>(null_terminated);
    }
 
    // Make a `str_span` over a `zstr_inplace`.
-   template <typename T, idx other_length>
+   template <typename T, idx other_capacity, vec_flags flags>
       requires(!null_terminated)
    constexpr basic_str_span(
-      basic_str_inplace<T, other_length, true>& other_string
+      basic_str_inplace<T, other_capacity, true, flags>& other_string
       [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
-      // `zstr_inplace` storage length counts the trailing null, so it is never
-      // zero and `other_length - 1u` cannot wrap for a non-empty string.
-      this->m_size = narrow_cast<idx>(other_length - 1u).value();
+      this->m_size = other_string.size();
    }
 
    // Make a `str_view` over a `zstr_inplace`.
-   template <typename T, idx other_length>
+   template <typename T, idx other_capacity, vec_flags flags>
       requires(!null_terminated)
    constexpr basic_str_span(
-      basic_str_inplace<T, other_length, true> const& other_string
+      basic_str_inplace<T, other_capacity, true, flags> const& other_string
       [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
-      // Same bound as the mutable overload above.
-      this->m_size = narrow_cast<idx>(other_length - 1u).value();
+      this->m_size = other_string.size();
    }
 
    // Make a `str_span` over a `zstr_inplace`.
-   template <idx other_length>
+   template <idx other_capacity, vec_flags flags>
       requires(null_terminated && !is_const<CharT>)
    constexpr basic_str_span(
-      basic_str_inplace<CharT, other_length, false> const&
+      basic_str_inplace<CharT, other_capacity, false, flags> const&
    ) = delete ("Cannot bind a null-terminated `zstr_span` over a "
                "non null-terminated `str_inplace`!");
 
@@ -185,7 +183,8 @@ class
       [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
-      this->m_size = other_string.size();
+      this->m_size =
+         other_string.size() + static_cast<unsigned>(null_terminated);
    }
 
    template <bool other_is_null_terminated>
@@ -195,7 +194,8 @@ class
          other_string [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
-      this->m_size = other_string.size();
+      this->m_size =
+         other_string.size() + static_cast<unsigned>(null_terminated);
    }
 
    template <bool other_is_null_terminated>
@@ -205,8 +205,7 @@ class
       [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
-      this->m_size =
-         other_string.size() == 0u ? 0u : idx(other_string.size() - 1u);
+      this->m_size = other_string.size();
    }
 
    template <bool other_is_null_terminated>
@@ -216,8 +215,7 @@ class
          other_string [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
-      this->m_size =
-         other_string.size() == 0u ? 0u : idx(other_string.size() - 1u);
+      this->m_size = other_string.size();
    }
 
    // Promote `basic_str_span<char>` to `basic_str_span<char const>`.
@@ -237,7 +235,7 @@ class
    ) {
       this->m_p_data = in_span.data();
       // `zstr_span` size counts the trailing null, so it is never zero here.
-      this->m_size = narrow_cast<idx>(in_span.size() - 1u).value();
+      this->m_size = idx(in_span.size() - 1u);
    }
 
    // Promote `zstr_span<char>` to `str_span<char const>`.
@@ -248,7 +246,7 @@ class
    ) {
       this->m_p_data = in_span.data();
       // Same as the non-`const` promotion above.
-      this->m_size = narrow_cast<idx>(in_span.size() - 1u).value();
+      this->m_size = idx(in_span.size() - 1u);
    }
 
    // Prevent binding a `zstr_span` over a `str_span`.
@@ -266,19 +264,21 @@ class
       requires(
          !is_const<CharT>
          && is_same<CharT, typename remove_cvref<String>::value_type>
+         && !is_same<
+            remove_cvref<String>, basic_str_span<remove_const<CharT>, false>>
+         && !is_same<
+            remove_cvref<String>, basic_str_span<remove_const<CharT>, true>>
       )
    constexpr basic_str_span(
       String& string [[clang::lifetimebound]]
    ) {
       this->m_p_data = string.data();
-      this->m_size = string.size();
+      this->m_size = string.size() + static_cast<unsigned>(null_terminated);
       bool const source_is_null_terminated = string.is_null_terminated();
       if constexpr (null_terminated) {
          if !consteval {
             assert(source_is_null_terminated);
          }
-      } else if (source_is_null_terminated && this->m_size != 0u) {
-         this->m_size = idx(this->m_size - 1u);
       }
    }
 
@@ -287,19 +287,21 @@ class
          is_const<CharT>
          && is_same<
             remove_const<CharT>, typename remove_cvref<String>::value_type>
+         && !is_same<
+            remove_cvref<String>, basic_str_span<remove_const<CharT>, false>>
+         && !is_same<
+            remove_cvref<String>, basic_str_span<remove_const<CharT>, true>>
       )
    constexpr basic_str_span(
       String const& string [[clang::lifetimebound]]
    ) {
       this->m_p_data = string.data();
-      this->m_size = string.size();
+      this->m_size = string.size() + static_cast<unsigned>(null_terminated);
       bool const source_is_null_terminated = string.is_null_terminated();
       if constexpr (null_terminated) {
          if !consteval {
             assert(source_is_null_terminated);
          }
-      } else if (source_is_null_terminated && this->m_size != 0u) {
-         this->m_size = idx(this->m_size - 1u);
       }
    }
 
@@ -332,14 +334,28 @@ class
    operator==(
       basic_str_span const& this_string, basic_str_span const& other_string
    ) {
-      return compare_strings(this_string, other_string);
+      using char_type = remove_const<CharT>;
+      using view_type = basic_str_span<char_type const, false>;
+      return compare_strings(view_type(this_string), view_type(other_string));
+   }
+
+   constexpr auto
+   fill(remove_const<CharT> value) -> basic_str_span&
+      requires(!is_const<CharT>)
+   {
+      idx const content_size =
+         idx(this->size() - static_cast<unsigned>(null_terminated));
+      for (idx index; index < content_size; ++index) {
+         (*this)[index] = value;
+      }
+      return *this;
    }
 
    // TODO: Make these member functions `const`.
 
    [[nodiscard]]
    constexpr auto
-   substring(idx position, idx count) -> basic_str_span {
+   substring(idx position, idx count) -> basic_str_span<CharT, false> {
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wdangling-assignment` false positives when slicing still aliases the
       // same backing buffer.
@@ -352,12 +368,12 @@ class
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wdangling-assignment` false positives when slicing still aliases the
       // same backing buffer.
-      return this->substring(offset, idx(this->m_size - offset));
+      return {this->m_p_data + offset, idx(this->m_size - offset)};
    }
 
    [[nodiscard]]
    constexpr auto
-   remove_suffix(idx offset) -> basic_str_span {
+   remove_suffix(idx offset) -> basic_str_span<CharT, false> {
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wdangling-assignment` false positives when slicing still aliases the
       // same backing buffer.
@@ -412,13 +428,17 @@ class
    // idx m_size;
 };
 
-template <typename CharT, idx length, bool null_terminated>
-basic_str_span(basic_str_inplace<CharT, length, null_terminated>&)
-   -> basic_str_span<CharT, null_terminated>;
+template <
+   typename CharT, idx inline_capacity, bool null_terminated, vec_flags flags>
+basic_str_span(
+   basic_str_inplace<CharT, inline_capacity, null_terminated, flags>&
+) -> basic_str_span<CharT, null_terminated>;
 
-template <typename CharT, idx length, bool null_terminated>
-basic_str_span(basic_str_inplace<CharT, length, null_terminated> const&)
-   -> basic_str_span<CharT const, null_terminated>;
+template <
+   typename CharT, idx inline_capacity, bool null_terminated, vec_flags flags>
+basic_str_span(
+   basic_str_inplace<CharT, inline_capacity, null_terminated, flags> const&
+) -> basic_str_span<CharT const, null_terminated>;
 
 template <typename CharT, bool null_terminated>
 basic_str_span(basic_str_vec<CharT, null_terminated>&)
@@ -427,5 +447,44 @@ basic_str_span(basic_str_vec<CharT, null_terminated>&)
 template <typename CharT, bool null_terminated>
 basic_str_span(basic_str_vec<CharT, null_terminated> const&)
    -> basic_str_span<CharT const, null_terminated>;
+
+template <typename String>
+concept is_basic_string = requires(String const& string) {
+                             typename remove_cvref<String>::value_type;
+                             string.data();
+                             string.size();
+                             string.is_null_terminated();
+                          };
+
+template <typename Left, typename Right>
+   requires(
+      is_basic_string<Left> && is_basic_string<Right>
+      && !is_same<remove_cvref<Left>, remove_cvref<Right>>
+      && is_same<
+         remove_const<typename remove_cvref<Left>::value_type>,
+         remove_const<typename remove_cvref<Right>::value_type>>
+   )
+[[nodiscard]]
+constexpr auto
+operator==(Left const& left, Right const& right) -> bool {
+   using char_type = remove_const<typename remove_cvref<Left>::value_type>;
+   using view_type = basic_str_span<char_type const, false>;
+   return compare_strings(view_type(left), view_type(right));
+}
+
+template <typename String, typename CharT, idx extent>
+   requires(
+      is_basic_string<String>
+      && is_same<
+         remove_const<typename remove_cvref<String>::value_type>,
+         remove_const<CharT>>
+   )
+[[nodiscard]]
+constexpr auto
+operator==(String const& left, CharT const (&right)[extent]) -> bool {
+   using char_type = remove_const<CharT>;
+   using view_type = basic_str_span<char_type const, false>;
+   return compare_strings(view_type(left), view_type(right, extent - 1u));
+}
 
 }  // namespace cat

@@ -745,23 +745,18 @@ constinit inline bool has_sys_io_uring_cache = false;  // NOLINT
 
 }  // namespace detail
 
-// `utsname` is the Linux ABI for `sys_uname()`. Each field is 65 bytes
-// (`__NEW_UTS_LEN + 1`) and the kernel zero-fills the unused tail, so
-// every slot is always NUL-terminated.
 struct utsname {
-   cat::zstr_inplace<65> sysname;
-   cat::zstr_inplace<65> nodename;
-   cat::zstr_inplace<65> release;
-   cat::zstr_inplace<65> version;
-   cat::zstr_inplace<65> machine;
-   cat::zstr_inplace<65> domainname;
+   cat::zstr_inplace_fixed<64> sysname;
+   cat::zstr_inplace_fixed<64> nodename;
+   cat::zstr_inplace_fixed<64> release;
+   cat::zstr_inplace_fixed<64> version;
+   cat::zstr_inplace_fixed<64> machine;
+   cat::zstr_inplace_fixed<64> domainname;
 };
 
-// Pin the kernel ABI. `zstr_inplace<65>` collapses its empty CRTP bases
-// via EBO, leaving a flat `char[65]` payload, so the struct must occupy
-// exactly 6 * 65 bytes with byte alignment.
-static_assert(sizeof(utsname) == 6u * 65u);
-static_assert(alignof(utsname) == 1u);
+// This describes the ABI specified by Linux:
+static_assert(sizeof(utsname) == 6ull * 65ull);
+static_assert(alignof(utsname) == 1ull);
 
 enum class [[clang::enum_extensibility(open)]] open_mode : unsigned char {
    read_only = 00,

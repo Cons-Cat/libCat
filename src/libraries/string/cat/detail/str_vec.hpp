@@ -87,6 +87,14 @@ class
       );
    }
 
+   constexpr auto
+   fill(CharT value) -> basic_str_vec& {
+      for (idx index; index < size(); ++index) {
+         data()[index] = value;
+      }
+      return *this;
+   }
+
    constexpr void
    swap(basic_str_vec& other) {
       m_core.swap(other.m_core);
@@ -107,7 +115,11 @@ class
    [[nodiscard]]
    constexpr auto
    size() const -> idx {
-      return m_core.size();
+      if constexpr (!null_terminated) {
+         return m_core.size();
+      } else {
+         return m_core.size() == 0u ? 0u : idx(m_core.size() - 1u);
+      }
    }
 
    [[nodiscard]]
@@ -116,28 +128,27 @@ class
       if constexpr (null_terminated) {
          return true;
       } else {
-         return m_core.size() != 0u
-                && m_core[idx(m_core.size() - 1u)] == CharT{'\0'};
+         return size() != 0u && m_core[idx(size() - 1u)] == CharT{'\0'};
       }
    }
 
    [[nodiscard]]
    constexpr auto
    capacity() const -> idx {
-      return m_core.capacity();
+      if constexpr (!null_terminated) {
+         return m_core.capacity();
+      } else {
+         return m_core.capacity() == 0u ? 0u : idx(m_core.capacity() - 1u);
+      }
    }
 
    [[nodiscard]]
    constexpr auto
    view() const [[clang::lifetimebound]] -> basic_str_span<CharT const, false> {
-      if (m_core.data() == nullptr || m_core.size() == 0u) {
+      if (m_core.data() == nullptr || size() == 0u) {
          return {};
       }
-      if constexpr (null_terminated) {
-         return {m_core.data(), content_size()};
-      } else {
-         return {m_core.data(), m_core.size()};
-      }
+      return {m_core.data(), size()};
    }
 
    [[nodiscard]]
@@ -146,7 +157,10 @@ class
       if (m_core.data() == nullptr) {
          return {};
       }
-      return {m_core.data(), m_core.size()};
+      return {
+         m_core.data(),
+         size() + static_cast<unsigned>(null_terminated),
+      };
    }
 
    [[nodiscard]]
@@ -156,7 +170,10 @@ class
       if (m_core.data() == nullptr) {
          return {};
       }
-      return {m_core.data(), m_core.size()};
+      return {
+         m_core.data(),
+         size() + static_cast<unsigned>(null_terminated),
+      };
    }
 
    [[nodiscard]]
@@ -209,7 +226,9 @@ class
    constexpr auto
    reserve(allocator_ref<Allocator> allocator, idx minimum_capacity)
       -> maybe<void> {
-      return m_core.reserve(allocator, minimum_capacity);
+      return m_core.reserve(
+         allocator, minimum_capacity + static_cast<unsigned>(null_terminated)
+      );
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -239,18 +258,12 @@ class
       if constexpr (!null_terminated) {
          return m_core.resize(allocator, new_size, value);
       } else {
-         if (new_size == 0u) {
-            m_core.reset();
-            return monostate;
-         }
-
          idx const old_content_size = content_size();
-         idx const new_content_size = idx(new_size - 1u);
-         $prop(m_core.resize(allocator, new_size, value));
-         for (idx i = old_content_size; i < new_content_size; ++i) {
+         $prop(m_core.resize(allocator, new_size + 1u, value));
+         for (idx i = old_content_size; i < new_size; ++i) {
             m_core[i] = value;
          }
-         m_core[new_content_size] = CharT{'\0'};
+         m_core[new_size] = CharT{'\0'};
          return monostate;
       }
    }
@@ -525,21 +538,15 @@ class
    [[nodiscard]]
    static constexpr auto
    max_size() -> idx {
-      return cat::basic_vec<CharT>::max_size();
+      return cat::basic_vec<CharT>::max_size()
+             - static_cast<unsigned>(null_terminated);
    }
 
  private:
    [[nodiscard]]
    constexpr auto
    content_size() const -> idx {
-      if constexpr (!null_terminated) {
-         return m_core.size();
-      } else {
-         if (m_core.size() == 0u) {
-            return 0u;
-         }
-         return idx(m_core.size() - 1u);
-      }
+      return size();
    }
 
    constexpr void
@@ -563,6 +570,12 @@ class
 
    template <typename OtherCharT, bool other_is_null_terminated>
    friend constexpr auto
+   detail::maybe_str_vec_has_value(
+      basic_str_vec<OtherCharT, other_is_null_terminated> const&
+   ) -> bool;
+
+   template <typename OtherCharT, bool other_is_null_terminated>
+   friend constexpr auto
    detail::maybe_str_vec_nullopt()
       -> basic_str_vec<OtherCharT, other_is_null_terminated>;
 
@@ -576,7 +589,7 @@ template <typename CharT, bool is_null_terminated>
 constexpr auto
 maybe_str_vec_has_value(basic_str_vec<CharT, is_null_terminated> const& value)
    -> bool {
-   return value.data() != nullptr || value.size() == 0u;
+   return maybe_vec_has_value(value.m_core);
 }
 
 template <typename CharT, bool is_null_terminated>
@@ -617,10 +630,7 @@ make_basic_str_vec(
    ((content_size +=
      basic_str_span<CharT const, false>(basic_str_span(strings)).size()),
     ...);
-   $prop(new_string.reserve(
-      allocator,
-      max(content_size + static_cast<unsigned>(is_null_terminated), 4u)
-   ));
+   $prop(new_string.reserve(allocator, max(content_size, 4u)));
    $prop(append_str_vec_parts(new_string, allocator, strings...));
    return new_string;
 }
@@ -659,7 +669,7 @@ constexpr auto
 make_zstr_vec(allocator_ref<Allocator> allocator, str_view string)
    -> maybe<zstr_vec> {
    zstr_vec new_string;
-   $prop(new_string.reserve(allocator, max(string.size() + 1u, 4u)));
+   $prop(new_string.reserve(allocator, max(string.size(), 4u)));
    $prop(new_string.append(allocator, string));
    return new_string;
 }
@@ -693,7 +703,7 @@ constexpr auto
 make_wzstr_vec(allocator_ref<Allocator> allocator, wstr_view string)
    -> maybe<wzstr_vec> {
    wzstr_vec new_string;
-   $prop(new_string.reserve(allocator, max(string.size() + 1u, 4u)));
+   $prop(new_string.reserve(allocator, max(string.size(), 4u)));
    $prop(new_string.append(allocator, string));
    return new_string;
 }
@@ -828,7 +838,7 @@ constexpr auto
 make_zstr_vec(allocator_ref<Allocator> allocator, initializer_list<char> values)
    -> maybe<zstr_vec> {
    zstr_vec new_string;
-   $prop(new_string.reserve(allocator, max(values.size() + 1u, 4u)));
+   $prop(new_string.reserve(allocator, max(values.size(), 4u)));
    $prop(new_string.append_range(allocator, values));
    return new_string;
 }
@@ -866,7 +876,7 @@ make_wzstr_vec(
    allocator_ref<Allocator> allocator, initializer_list<wchar_t> values
 ) -> maybe<wzstr_vec> {
    wzstr_vec new_string;
-   $prop(new_string.reserve(allocator, max(values.size() + 1u, 4u)));
+   $prop(new_string.reserve(allocator, max(values.size(), 4u)));
    $prop(new_string.append_range(allocator, values));
    return new_string;
 }
@@ -901,7 +911,7 @@ make_zstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
    -> maybe<zstr_vec> {
    zstr_vec new_string;
    $prop(new_string.reserve(allocator, max(capacity, 4u)));
-   $prop(new_string.resize(allocator, 1u));
+   $prop(new_string.resize(allocator, 0u));
    return new_string;
 }
 
@@ -936,7 +946,7 @@ make_wzstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
    -> maybe<wzstr_vec> {
    wzstr_vec new_string;
    $prop(new_string.reserve(allocator, max(capacity, 4u)));
-   $prop(new_string.resize(allocator, 1u));
+   $prop(new_string.resize(allocator, 0u));
    return new_string;
 }
 

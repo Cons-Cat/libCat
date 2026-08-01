@@ -90,7 +90,7 @@ variant<Alternatives...>::get_ptr(this auto&& self)
    // `.value_or_niche()` reads the raw discriminant bits including the
    // niche when empty. The niche never matches a valid alternative
    // index, so a single comparison handles both states.
-   if (base.discriminant.value_or_niche() == index) {
+   if (base.index().value_or_niche() == index) {
       return __builtin_addressof(base.template get<index>());
    }
    return result_type{nullptr};
@@ -153,13 +153,13 @@ variant<Alternatives...>::get_if(this auto&& self)
    // index, so the comparison handles both states.
    if constexpr (is_reference<key>) {
       using maybe_type = maybe<key>;
-      if (base.discriminant.value_or_niche() == index) {
+      if (base.index().value_or_niche() == index) {
          return maybe_type{base.template get<index>()};
       }
       return maybe_type{nullopt};
    } else {
       using maybe_type = maybe<decltype(base.template get<index>())>;
-      if (base.discriminant.value_or_niche() == index) {
+      if (base.index().value_or_niche() == index) {
          return maybe_type{base.template get<index>()};
       }
       return maybe_type{nullopt};

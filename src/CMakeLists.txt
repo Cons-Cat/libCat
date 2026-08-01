@@ -406,6 +406,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/span/implementations/span.tpp
   ${CATLIB}/string/cat/string
   ${CATLIB}/string/cat/detail/str_inplace.hpp
+  ${CATLIB}/string/cat/detail/str_literal.hpp
   ${CATLIB}/string/cat/detail/str_span.hpp
   ${CATLIB}/string/cat/detail/str_vec.hpp
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
@@ -418,6 +419,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/utility/cat/utility
   ${CATLIB}/variant/cat/variant
   ${CATLIB}/vec/cat/vec
+  ${CATLIB}/vec/cat/vec_inplace
   ${CATLIB}/vec/cat/raii_vec
   ${CATLIB}/vec/cat/detail/vec_storage.hpp
   ${CATLIB}/x11/cat/x11

@@ -371,7 +371,7 @@ struct move_constructor {
       requires(is_move_constructible<T>)
    static constexpr void
    do_invoke(T& self, void* _Nonnull p_dst) {
-      new (p_dst) T(cat::move(self));
+      new (p_dst) T(move(self));
       self.~T();
    }
 };
@@ -990,7 +990,7 @@ basic_dyn {
                alignof(T), sizeof(T)
             );
       cat::assert(allocation.has_value(), "`basic_dyn` allocation failed!");
-      m_handle = cat::move(allocation).value();
+      m_handle = move(allocation).value();
       m_p_value = static_cast<void*>(m_allocator.get(m_handle).data());
       new (m_p_value) T($fwd(arguments)...);
       m_p_vtable = p_vtable_for<T, Methods...>;
@@ -1014,7 +1014,7 @@ basic_dyn {
          cat::assert(
             allocation.has_value(), "`basic_dyn` move allocation failed!"
          );
-         m_handle = cat::move(allocation).value();
+         m_handle = move(allocation).value();
          m_p_value = static_cast<void*>(m_allocator.get(m_handle).data());
          other.m_p_vtable->template fun<move_constructor>()(
             other.m_p_value, m_p_value
@@ -1091,7 +1091,7 @@ basic_dyn {
       cat::assert(
          allocation.has_value(), "`basic_dyn` copy allocation failed!"
       );
-      m_handle = cat::move(allocation).value();
+      m_handle = move(allocation).value();
       m_p_value = static_cast<void*>(m_allocator.get(m_handle).data());
       other.m_p_vtable->template fun<copy_constructor>()(
          other.m_p_value, m_p_value
@@ -1132,7 +1132,7 @@ basic_dyn {
          return *this;
       }
       basic_dyn copy = other;
-      *this = cat::move(copy);
+      *this = move(copy);
       return *this;
    }
 
@@ -1399,7 +1399,7 @@ class [[gsl::Owner]] dyn_inplace {
          return *this;
       }
       dyn_inplace copy = other;
-      *this = cat::move(copy);
+      *this = move(copy);
       return *this;
    }
 

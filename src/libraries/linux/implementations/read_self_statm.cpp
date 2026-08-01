@@ -10,9 +10,9 @@ nix::read_self_statm() -> cat::scaredy<nix::statm, nix::linux_error> {
 
    // `/proc/self/statm` is one short ASCII line. 128 bytes covers every
    // feasible output.
-   cat::zstr_inplace<128> buffer = {};
+   cat::zstr_inplace_fixed<128> buffer = {};
    cat::scaredy read_result =
-      nix::sys_read(fd, buffer.data(), buffer.size() - 1u);
+      nix::sys_read(fd, buffer.data(), buffer.capacity());
    // Close the fd before propagating a read failure so the descriptor never
    // leaks across an early return.
    auto _ = nix::sys_close(fd);

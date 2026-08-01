@@ -32,11 +32,11 @@ $test(variant_basic_access) {
 $test(variant_layout) {
    cat::variant<int, char, uint4> v(1);
    static_assert(sizeof(v) == 8);
-   static_assert(sizeof(v.discriminant) == 1);
+   static_assert(sizeof(v.index()) == 1);
 
    cat::variant<char, int4[3]> big_variant;
    static_assert(sizeof(big_variant) == 16);
-   static_assert(sizeof(big_variant.discriminant) == 1);
+   static_assert(sizeof(big_variant.index()) == 1);
 
    static_assert(
       sizeof(cat::variant<char, uint1>) == sizeof(char) + sizeof(cat::uint1)
@@ -76,8 +76,7 @@ $test(variant_discriminant_tiers) {
    // equals `uint1_max`, which never collides with an active index in
    // `0..variant_size-1`.
    cat::verify(
-      small_empty.discriminant.value_or_niche()
-      == cat::limits<cat::uint1>::max()
+      small_empty.index().value_or_niche() == cat::limits<cat::uint1>::max()
    );
 
    // ----- `uint4` tier: variants whose alternative count overflows -----
@@ -91,14 +90,14 @@ $test(variant_discriminant_tiers) {
    cat::verify(!mid_empty.has_value());
    cat::verify(!mid_empty.index().has_value());
    cat::verify(
-      mid_empty.discriminant.value_or_niche() == cat::limits<cat::uint4>::max()
+      mid_empty.index().value_or_niche() == cat::limits<cat::uint4>::max()
    );
 
    // Engage the second slot to confirm `value_or_niche()` reports the
    // active index in the `uint4` tier, not the niche.
    mid_variant mid_active{cat::in_place_index<0u>, 11};
    cat::verify(mid_active.has_value());
-   cat::verify(mid_active.discriminant.value_or_niche() == cat::uint4{0u});
+   cat::verify(mid_active.index().value_or_niche() == cat::uint4{0u});
 
    // ----- `idx` tier: variants whose alternative count would overflow -----
    // `uint4_max`. Constructing one with ~4 billion alternatives is
@@ -549,7 +548,7 @@ struct serial_packet : cat::variant<int, char, float4> {
    [[nodiscard]]
    constexpr auto
    tag() const -> uint1 {
-      return this->discriminant.value();
+      return index().value();
    }
 };
 

@@ -21,6 +21,9 @@ namespace cat::raii {
 template <is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
 class [[gsl::Owner]] basic_bitvec
     : public bit_collection_interface<basic_bitvec<Allocator, flags>> {
+   template <is_allocator, vec_flags>
+   friend class basic_bitvec;
+
  public:
    using storage_type = uword;
    using value_type = bit_value;
@@ -59,7 +62,11 @@ class [[gsl::Owner]] basic_bitvec
    )
       requires(is_same<Allocator, dyn_allocator>)
        : basic_bitvec(allocator) {
-      resize(bit_count, value).verify();
+      if constexpr (flags.is_fixed_size) {
+         initialize_fixed(bit_count, value).verify();
+      } else {
+         resize(bit_count, value).verify();
+      }
    }
 
    constexpr basic_bitvec(basic_bitvec&&) = default;
@@ -72,6 +79,65 @@ class [[gsl::Owner]] basic_bitvec
       delete ("Implicit copying of `cat::raii::basic_bitvec` "
               "is forbidden. Call `.clone()` or move instead!");
 
+   // Deep-copy the contents of this bit vector.
+   [[nodiscard]]
+   constexpr auto
+   clone() const& -> maybe<basic_bitvec> {
+      return clone(m_allocator);
+   }
+
+   // Deep-copy the contents of this bit vector.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(
+      allocator_ref<NewAllocator> allocator
+   ) const& -> maybe<basic_bitvec<NewAllocator, flags>> {
+      basic_bitvec<NewAllocator, flags> result(allocator);
+      result.m_core = $prop(m_core.clone(allocator));
+      return result;
+   }
+
+   // Deep-copy the contents of this bit vector.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(
+      dyn_allocator allocator
+   ) const& -> maybe<basic_bitvec<dyn_allocator, flags>> {
+      return clone<dyn_allocator>(allocator);
+   }
+
+   template <is_allocator OtherAllocator, vec_flags other_flags>
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_bitvec<OtherAllocator, other_flags> const& other) const
+      -> bool {
+      if (size() != other.size()) {
+         return false;
+      }
+      for (idx bit_index; bit_index < size(); ++bit_index) {
+         if ((*this)[bit_index] != other[bit_index]) {
+            return false;
+         }
+      }
+      return true;
+   }
+
+   template <vec_flags other_flags>
+   [[nodiscard]]
+   constexpr auto
+   operator==(cat::basic_bitvec<other_flags> const& other) const -> bool {
+      if (size() != other.size()) {
+         return false;
+      }
+      for (idx bit_index; bit_index < size(); ++bit_index) {
+         if ((*this)[bit_index] != other[bit_index]) {
+            return false;
+         }
+      }
+      return true;
+   }
+
    // Move from another owning bit vector with the same allocator.
    [[clang::reinitializes]]
    constexpr auto
@@ -83,7 +149,7 @@ class [[gsl::Owner]] basic_bitvec
       if !consteval {
          assert(m_allocator == other.m_allocator);
       }
-      m_core = cat::move(other.m_core);
+      m_core = move(other.m_core);
       return *this;
    }
 
@@ -304,42 +370,59 @@ class [[gsl::Owner]] basic_bitvec
    // Reserve storage for at least the requested bit capacity.
    [[nodiscard]]
    constexpr auto
-   reserve(idx bit_capacity) -> maybe<void> {
+   reserve(idx bit_capacity) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return m_core.reserve(m_allocator, bit_capacity);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   initialize_fixed(idx bit_count, bit_value value = false) -> maybe<void>
+      requires(flags.is_fixed_size)
+   {
+      return m_core.initialize_fixed(m_allocator, bit_count, value);
    }
 
    // Resize the vector and initialize new bits with the requested value.
    [[nodiscard]]
    constexpr auto
-   resize(idx bit_count, bit_value value = false) -> maybe<void> {
+   resize(idx bit_count, bit_value value = false) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return m_core.resize(m_allocator, bit_count, value);
    }
 
    // Append one bit to the end.
    [[nodiscard]]
    constexpr auto
-   push_back(bit_value value) -> maybe<void> {
+   push_back(bit_value value) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return m_core.push_back(m_allocator, value);
    }
 
    template <typename First, typename Second, typename... Remaining>
    constexpr auto
-   push_back(First&&, Second&&, Remaining&&...) -> maybe<void> =
-      delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
-              "to construct an element or `append_range()` to "
-              "append a range.");
+   push_back(First&&, Second&&, Remaining&&...) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   = delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+             "to construct an element or `append_range()` to "
+             "append a range.");
 
    // Append every bit-like value of `range` to the end of this bit vector.
    template <is_contiguous_bits Range>
    [[nodiscard]]
    constexpr auto
-   append_range(Range&& range) -> maybe<void> {
+   append_range(Range&& range) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return m_core.append_range(m_allocator, $fwd(range));
    }
 
    // Append every bit-like value of `range` to the end of this bit vector.
    template <is_iterable Iterable>
-      requires(!is_contiguous_bits<Iterable>)
+      requires(!is_contiguous_bits<Iterable> && !flags.is_fixed_size)
    [[nodiscard]]
    constexpr auto
    append_range(Iterable&& range) -> maybe<void> {
@@ -350,13 +433,15 @@ class [[gsl::Owner]] basic_bitvec
    template <is_contiguous_bits Range>
    [[nodiscard]]
    constexpr auto
-   insert_range(idx position, Range&& range) -> maybe<void> {
+   insert_range(idx position, Range&& range) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return m_core.insert_range(m_allocator, position, $fwd(range));
    }
 
    // Insert every bit-like value of `range` before `position`.
    template <is_iterable Iterable>
-      requires(!is_contiguous_bits<Iterable>)
+      requires(!is_contiguous_bits<Iterable> && !flags.is_fixed_size)
    [[nodiscard]]
    constexpr auto
    insert_range(idx position, Iterable&& range) -> maybe<void> {
@@ -367,13 +452,15 @@ class [[gsl::Owner]] basic_bitvec
    template <is_contiguous_bits Range>
    [[nodiscard]]
    constexpr auto
-   replace_with_range(idx first, idx last, Range&& range) -> maybe<void> {
+   replace_with_range(idx first, idx last, Range&& range) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return m_core.replace_with_range(m_allocator, first, last, $fwd(range));
    }
 
    // Replace `[first, last)` with every bit-like value of `range`.
    template <is_iterable Iterable>
-      requires(!is_contiguous_bits<Iterable>)
+      requires(!is_contiguous_bits<Iterable> && !flags.is_fixed_size)
    [[nodiscard]]
    constexpr auto
    replace_with_range(idx first, idx last, Iterable&& range) -> maybe<void> {
@@ -383,7 +470,9 @@ class [[gsl::Owner]] basic_bitvec
    // Remove and return the last bit if one exists.
    [[nodiscard]]
    constexpr auto
-   pop_back() -> maybe<bit_value> {
+   pop_back() -> maybe<bit_value>
+      requires(!flags.is_fixed_size)
+   {
       return m_core.pop_back();
    }
 
@@ -447,7 +536,11 @@ class [[gsl::Owner]] basic_bitvec
    constexpr auto
    bit_and(basic_bitvec const& other) const -> basic_bitvec {
       basic_bitvec result(m_allocator);
-      result.resize(size()).verify();
+      if constexpr (flags.is_fixed_size) {
+         result.initialize_fixed(size()).verify();
+      } else {
+         result.resize(size()).verify();
+      }
       m_core.bit_and_into(other.m_core, result.m_core);
       return result;
    }
@@ -457,7 +550,11 @@ class [[gsl::Owner]] basic_bitvec
    constexpr auto
    bit_or(basic_bitvec const& other) const -> basic_bitvec {
       basic_bitvec result(m_allocator);
-      result.resize(size()).verify();
+      if constexpr (flags.is_fixed_size) {
+         result.initialize_fixed(size()).verify();
+      } else {
+         result.resize(size()).verify();
+      }
       m_core.bit_or_into(other.m_core, result.m_core);
       return result;
    }
@@ -467,7 +564,11 @@ class [[gsl::Owner]] basic_bitvec
    constexpr auto
    bit_xor(basic_bitvec const& other) const -> basic_bitvec {
       basic_bitvec result(m_allocator);
-      result.resize(size()).verify();
+      if constexpr (flags.is_fixed_size) {
+         result.initialize_fixed(size()).verify();
+      } else {
+         result.resize(size()).verify();
+      }
       m_core.bit_xor_into(other.m_core, result.m_core);
       return result;
    }
@@ -477,7 +578,11 @@ class [[gsl::Owner]] basic_bitvec
    constexpr auto
    bit_complement() const -> basic_bitvec {
       basic_bitvec result(m_allocator);
-      result.resize(size()).verify();
+      if constexpr (flags.is_fixed_size) {
+         result.initialize_fixed(size()).verify();
+      } else {
+         result.resize(size()).verify();
+      }
       m_core.bit_complement_into(result.m_core);
       return result;
    }
@@ -531,12 +636,102 @@ class [[gsl::Owner]] basic_bitvec
 template <is_allocator Allocator = dyn_allocator>
 using bitvec = basic_bitvec<Allocator>;
 
+template <is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
+using bitvec_fixed = basic_bitvec<Allocator, flags | vec_flags::fixed_size>;
+
 template <
    is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
    vec_flags flags = {}>
 using small_bitvec = basic_bitvec<
    Allocator,
    flags | vec_flags::inline_storage(div_ceil(inline_count, word_bits))>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
+   vec_flags flags = {}>
+using small_bitvec_fixed = basic_bitvec<
+   Allocator, flags
+                 | vec_flags::inline_storage(div_ceil(inline_count, word_bits))
+                 | vec_flags::fixed_size>;
+
+template <is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_bitvec_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<basic_bitvec<Allocator, flags>> {
+   basic_bitvec<Allocator, flags> result(allocator);
+   if constexpr (flags.is_fixed_size) {
+      $prop(result.initialize_fixed(count, value));
+   } else {
+      $prop(result.resize(count, value));
+   }
+   return result;
+}
+
+template <vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_filled(dyn_allocator allocator, idx count, bit_value value)
+      -> maybe<basic_bitvec<dyn_allocator, flags>> {
+   return raii::make_bitvec_filled<dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
+
+template <idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_small_bitvec_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<small_bitvec<Allocator, inline_count, flags>> {
+   return raii::make_bitvec_filled<
+      Allocator,
+      flags | vec_flags::inline_storage(div_ceil(inline_count, word_bits))>(
+      allocator, count, value
+   );
+}
+
+template <idx inline_count = 4u, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_bitvec_filled(dyn_allocator allocator, idx count, bit_value value)
+      -> maybe<small_bitvec<dyn_allocator, inline_count, flags>> {
+   return raii::make_small_bitvec_filled<inline_count, dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
+
+template <is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_bitvec_fixed_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<bitvec_fixed<Allocator, flags>> {
+   return raii::make_bitvec_filled<Allocator, flags | vec_flags::fixed_size>(
+      allocator, count, value
+   );
+}
+
+template <vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_fixed_filled(dyn_allocator allocator, idx count, bit_value value)
+      -> maybe<bitvec_fixed<dyn_allocator, flags>> {
+   return raii::make_bitvec_fixed_filled<dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
+
+template <idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_small_bitvec_fixed_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<small_bitvec_fixed<Allocator, inline_count, flags>> {
+   return raii::make_small_bitvec_filled<
+      inline_count, Allocator, flags | vec_flags::fixed_size>(
+      allocator, count, value
+   );
+}
+
+template <idx inline_count = 4u, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_bitvec_fixed_filled(
+      dyn_allocator allocator, idx count, bit_value value
+   ) -> maybe<small_bitvec_fixed<dyn_allocator, inline_count, flags>> {
+   return raii::make_small_bitvec_fixed_filled<
+      inline_count, dyn_allocator, flags>(allocator, count, value);
+}
 
 }  // namespace cat::raii
 

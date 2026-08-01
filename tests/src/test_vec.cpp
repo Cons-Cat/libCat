@@ -7,9 +7,133 @@
 #include "../unit_tests.hpp"
 
 namespace {
+// NOLINTNEXTLINE
+inline constinit idx relocation_move_count = 0u;
+}  // namespace
+
+struct relocation_only_probe {
+   int4 value = 0;
+
+   relocation_only_probe() = default;
+   relocation_only_probe(relocation_only_probe const&) = delete;
+   relocation_only_probe(relocation_only_probe&& other) : value(other.value) {
+      ++relocation_move_count;
+   }
+   auto
+   operator=(relocation_only_probe const&) -> relocation_only_probe& = delete;
+   auto
+   operator=(relocation_only_probe&&) -> relocation_only_probe& = delete;
+};
+
+template <>
+inline constexpr bool cat::is_trivially_relocatable<relocation_only_probe> =
+   true;
+
+namespace {
 
 // NOLINTNEXTLINE
 inline constinit idx destructor_count = 0u;
+
+// NOLINTNEXTLINE
+inline constinit idx lifetime_live_count = 0u;
+// NOLINTNEXTLINE
+inline constinit idx lifetime_destructor_count = 0u;
+// NOLINTNEXTLINE
+inline constinit idx lifetime_dead_assignment_count = 0u;
+
+struct lifetime_probe {
+   int4 value = 0;
+   bool live = true;
+
+   lifetime_probe() {
+      ++lifetime_live_count;
+   }
+
+   explicit lifetime_probe(int4 new_value) : value(new_value) {
+      ++lifetime_live_count;
+   }
+
+   lifetime_probe(lifetime_probe const& other) : value(other.value) {
+      ++lifetime_live_count;
+   }
+
+   lifetime_probe(lifetime_probe&& other) : value(other.value) {
+      ++lifetime_live_count;
+   }
+
+   auto
+   operator=(lifetime_probe const& other) -> lifetime_probe& {
+      if (this == &other) {
+         return *this;
+      }
+      if (!live) {
+         ++lifetime_dead_assignment_count;
+      }
+      value = other.value;
+      return *this;
+   }
+
+   auto
+   operator=(lifetime_probe&& other) -> lifetime_probe& {
+      if (this == &other) {
+         return *this;
+      }
+      if (!live) {
+         ++lifetime_dead_assignment_count;
+      }
+      value = other.value;
+      return *this;
+   }
+
+   ~lifetime_probe() {
+      if (live) {
+         live = false;
+         lifetime_live_count = idx(lifetime_live_count - 1u);
+         ++lifetime_destructor_count;
+      }
+   }
+};
+
+static_assert(cat::is_trivially_relocatable<relocation_only_probe>);
+
+struct constexpr_lifetime_probe {
+   idx* p_live = nullptr;
+   int4 value = 0;
+
+   constexpr constexpr_lifetime_probe() = default;
+
+   constexpr constexpr_lifetime_probe(idx& live, int4 new_value)
+       : p_live(&live), value(new_value) {
+      ++live;
+   }
+
+   constexpr constexpr_lifetime_probe(constexpr_lifetime_probe const& other)
+       : p_live(other.p_live), value(other.value) {
+      if (p_live != nullptr) {
+         ++*p_live;
+      }
+   }
+
+   constexpr auto
+   operator=(constexpr_lifetime_probe const& other)
+      -> constexpr_lifetime_probe& {
+      if (this == &other) {
+         return *this;
+      }
+      if (p_live == nullptr && other.p_live != nullptr) {
+         ++*other.p_live;
+      }
+      p_live = other.p_live;
+      value = other.value;
+      return *this;
+   }
+
+   constexpr ~constexpr_lifetime_probe() {
+      if (p_live != nullptr) {
+         *p_live = idx(*p_live - 1u);
+      }
+   }
+};
 
 struct foo {
    bool live = true;
@@ -52,6 +176,50 @@ const_func() -> int4 {
    return result;
 }
 
+consteval auto
+vec_consteval_reserve_preserves_values() -> bool {
+   cat::vec<int4> values;
+   auto _ = values.push_back(pager, 11_i4);
+   auto _ = values.push_back(pager, 22_i4);
+   auto _ = values.reserve(pager, 16u);
+   bool const result =
+      values.size() == 2u && values[0u] == 11_i4 && values[1u] == 22_i4;
+   values.free(pager);
+   return result;
+}
+
+consteval auto
+vec_consteval_growth_preserves_values() -> bool {
+   cat::vec<int4> values;
+   for (idx i = 0u; i < 9u; ++i) {
+      auto _ = values.push_back(pager, int4(i + 1u));
+   }
+   bool result = values.size() == 9u;
+   for (idx i = 0u; i < values.size(); ++i) {
+      result = result && values[i] == int4(i + 1u);
+   }
+   values.free(pager);
+   return result;
+}
+
+consteval auto
+vec_consteval_resize_lifetimes() -> bool {
+   idx live = 0u;
+   constexpr_lifetime_probe value(live, 7_i4);
+   cat::vec<constexpr_lifetime_probe> values;
+   auto _ = values.resize(pager, 3u, value);
+   bool result = live == 4u;
+   auto _ = values.resize(pager, 1u, value);
+   result = result && live == 2u && values[0u].value == 7_i4;
+   auto _ = values.resize(pager, 4u, value);
+   result = result && live == 5u;
+   for (auto const& element : values) {
+      result = result && element.value == 7_i4;
+   }
+   values.free(pager);
+   return result && live == 1u;
+}
+
 void
 verify_all_ones(auto const& vector) {
    for (auto value : vector) {
@@ -77,6 +245,19 @@ verify_vec_niche() {
    cat::maybe<Vector> empty;
    cat::verify(!empty.has_value());
 }
+
+template <typename Vector>
+concept can_change_vec_size =
+   requires(Vector& vector, cat::linear_allocator& allocator) {
+      vector.reserve(allocator, 1u);
+      vector.push_back(allocator, 1_i4);
+      vector.resize(allocator, 1u);
+      vector.clear();
+      vector.erase(0u);
+   };
+
+template <typename Vector>
+concept can_reserve_raii = requires(Vector& vector) { vector.reserve(1u); };
 
 }  // namespace
 
@@ -105,6 +286,7 @@ $test(vec_flags) {
    constexpr auto flags =
       cat::vec_flags::pointer_size_layout | cat::vec_flags::inline_storage(4u);
    static_assert(flags.uses_pointer_size_layout);
+   static_assert(!flags.is_fixed_size);
    static_assert(flags.inline_storage_count == 4u);
 
    static_assert(sizeof(cat::vec<int4>) == sizeof(void*) * 3u);
@@ -112,6 +294,108 @@ $test(vec_flags) {
       sizeof(cat::vec<int4, cat::vec_flags::pointer_size_layout>)
       == sizeof(void*) * 3u
    );
+   static_assert(
+      sizeof(cat::vec<int4, cat::vec_flags::fixed_size>) == sizeof(void*) * 2u
+   );
+   static_assert(
+      sizeof(cat::vec<
+             int4,
+             cat::vec_flags::fixed_size | cat::vec_flags::pointer_size_layout>)
+      == sizeof(void*) * 2u
+   );
+}
+
+$test(fixed_vec_aliases) {
+   static_assert(
+      cat::is_same<
+         cat::vec_fixed<int4>, cat::vec<int4, cat::vec_flags::fixed_size>>
+   );
+   static_assert(cat::is_same<
+                 cat::small_vec_fixed<int4>,
+                 cat::small_vec<int4, 4u, cat::vec_flags::fixed_size>>);
+   static_assert(
+      cat::is_same<
+         cat::raii::vec_fixed<int4>,
+         cat::raii::vec<int4, cat::dyn_allocator, cat::vec_flags::fixed_size>>
+   );
+   static_assert(cat::is_same<
+                 cat::raii::small_vec_fixed<int4>,
+                 cat::raii::small_vec<
+                    int4, cat::dyn_allocator, 4u, cat::vec_flags::fixed_size>>);
+   static_assert(!can_change_vec_size<cat::vec_fixed<int4>>);
+   static_assert(!can_change_vec_size<cat::small_vec_fixed<int4>>);
+   static_assert(!can_reserve_raii<cat::raii::vec_fixed<int4>>);
+   static_assert(!can_reserve_raii<cat::raii::small_vec_fixed<int4>>);
+}
+
+$test(fixed_size_vec) {
+   linear_arena arena;
+   using fixed_vec = cat::vec_fixed<int4>;
+   static_assert(!can_change_vec_size<fixed_vec>);
+
+   fixed_vec values =
+      cat::make_vec<int4, cat::linear_allocator, cat::vec_flags::fixed_size>(
+         arena.alloc, {1_i4, 2_i4, 3_i4}
+      )
+         .verify();
+   cat::verify(values.size() == 3u);
+   cat::verify(values.capacity() == 3u);
+   cat::verify(values[1u] == 2_i4);
+   values.free(arena.alloc);
+
+   cat::small_vec_fixed<int4> inline_values =
+      cat::make_vec<
+         int4, cat::linear_allocator,
+         cat::vec_flags::fixed_size | cat::vec_flags::inline_storage(4u)>(
+         arena.alloc, {4_i4, 5_i4}
+      )
+         .verify();
+   cat::verify(inline_values.size() == 2u);
+   cat::verify(inline_values.capacity() == 2u);
+   inline_values.free(arena.alloc);
+}
+
+$test(vec_fill_families) {
+   linear_arena arena;
+
+   auto small =
+      cat::make_small_vec_filled<int4>(arena.alloc, 3u, 1_i4).verify();
+   auto fixed =
+      cat::make_vec_fixed_filled<int4>(arena.alloc, 3u, 2_i4).verify();
+   auto small_fixed =
+      cat::make_small_vec_fixed_filled<int4>(arena.alloc, 3u, 3_i4).verify();
+
+   small.fill(4_i4);
+   fixed.fill(5_i4);
+   small_fixed.fill(6_i4);
+   cat::verify(small[2u] == 4_i4);
+   cat::verify(fixed[2u] == 5_i4);
+   cat::verify(small_fixed[2u] == 6_i4);
+
+   small.free(arena.alloc);
+   fixed.free(arena.alloc);
+   small_fixed.free(arena.alloc);
+
+   auto raii_small =
+      cat::raii::make_small_vec_filled<int4>(arena.alloc, 3u, 1_i4).verify();
+   auto raii_fixed =
+      cat::raii::make_vec_fixed_filled<int4>(arena.alloc, 3u, 2_i4).verify();
+   auto raii_small_fixed =
+      cat::raii::make_small_vec_fixed_filled<int4>(arena.alloc, 3u, 3_i4)
+         .verify();
+   auto ordered =
+      cat::raii::make_small_vec_filled<int4, 8u, cat::linear_allocator>(
+         arena.alloc, 3u, 7_i4
+      )
+         .verify();
+
+   raii_small.fill(4_i4);
+   raii_fixed.fill(5_i4);
+   raii_small_fixed.fill(6_i4);
+   cat::verify(raii_small[2u] == 4_i4);
+   cat::verify(raii_fixed[2u] == 5_i4);
+   cat::verify(raii_small_fixed[2u] == 6_i4);
+   cat::verify(ordered[2u] == 7_i4);
 }
 
 $test(small_vec_inline_storage) {
@@ -249,6 +533,18 @@ $test(vec_constexpr_usage) {
    static_assert(const_func() == 10);
 }
 
+$test(vec_consteval_reserve_preserves_values) {
+   static_assert(vec_consteval_reserve_preserves_values());
+}
+
+$test(vec_consteval_growth_preserves_values) {
+   static_assert(vec_consteval_growth_preserves_values());
+}
+
+$test(vec_consteval_resize_lifetimes) {
+   static_assert(vec_consteval_resize_lifetimes());
+}
+
 $test(vec_default_construct) {
    linear_arena arena;
    cat::vec<int4> v;
@@ -284,6 +580,98 @@ $test(vec_push_back) {
    cat::verify(v.size() == 8);
    cat::verify(v.capacity() >= 8);
    cat::verify(v.data() != nullptr);
+}
+
+$test(vec_push_back_after_pop_restarts_lifetime) {
+   linear_arena arena;
+   lifetime_dead_assignment_count = 0u;
+   cat::vec<lifetime_probe> values;
+   values.push_back(arena.alloc, lifetime_probe(1_i4)).verify();
+   auto popped = values.pop_back().verify();
+
+   values.push_back(arena.alloc, lifetime_probe(2_i4)).verify();
+   cat::verify(lifetime_dead_assignment_count == 0u);
+   cat::verify(values[0u].value == 2_i4);
+   values.free(arena.alloc);
+}
+
+$test(vec_push_back_after_reset_restarts_lifetime) {
+   linear_arena arena;
+   lifetime_dead_assignment_count = 0u;
+   cat::vec<lifetime_probe> values;
+   values.push_back(arena.alloc, lifetime_probe(1_i4)).verify();
+   values.reset();
+
+   values.push_back(arena.alloc, lifetime_probe(2_i4)).verify();
+   cat::verify(lifetime_dead_assignment_count == 0u);
+   cat::verify(values[0u].value == 2_i4);
+   values.free(arena.alloc);
+}
+
+$test(vec_push_back_after_resize_shrink_restarts_lifetime) {
+   linear_arena arena;
+   lifetime_dead_assignment_count = 0u;
+   cat::vec<lifetime_probe> values;
+   values.push_back(arena.alloc, lifetime_probe(1_i4)).verify();
+   values.push_back(arena.alloc, lifetime_probe(2_i4)).verify();
+   values.resize(arena.alloc, 1u).verify();
+
+   values.push_back(arena.alloc, lifetime_probe(3_i4)).verify();
+   cat::verify(lifetime_dead_assignment_count == 0u);
+   cat::verify(values[1u].value == 3_i4);
+   values.free(arena.alloc);
+}
+
+$test(vec_relocates_trivial_elements_with_copy_memory) {
+   linear_arena arena;
+   cat::vec<relocation_only_probe> values;
+   values.resize(arena.alloc, 2u).verify();
+   values[0u].value = 11_i4;
+   values[1u].value = 22_i4;
+
+   relocation_move_count = 0u;
+   relocation_only_probe* const p_before = values.data();
+   values.reserve(arena.alloc, 16u).verify();
+
+   cat::verify(relocation_move_count == 0u);
+   cat::verify(values.data() != p_before);
+   cat::verify(values[0u].value == 11_i4);
+   cat::verify(values[1u].value == 22_i4);
+   values.free(arena.alloc);
+}
+
+$test(vec_relocates_nontrivial_elements_individually) {
+   linear_arena arena;
+   lifetime_live_count = 0u;
+   lifetime_destructor_count = 0u;
+   cat::vec<lifetime_probe> values;
+   values.emplace_back(arena.alloc, 11_i4).verify();
+   values.emplace_back(arena.alloc, 22_i4).verify();
+   idx const destructors_before = lifetime_destructor_count;
+
+   values.reserve(arena.alloc, 16u).verify();
+
+   cat::verify(lifetime_destructor_count == destructors_before + 2u);
+   cat::verify(lifetime_live_count == 2u);
+   cat::verify(values[0u].value == 11_i4);
+   cat::verify(values[1u].value == 22_i4);
+   values.free(arena.alloc);
+   cat::verify(lifetime_live_count == 0u);
+}
+
+$test(vec_emplace_back_starts_element_lifetime) {
+   linear_arena arena;
+   lifetime_live_count = 0u;
+   lifetime_destructor_count = 0u;
+   cat::vec<lifetime_probe> values;
+   values.reserve(arena.alloc, 4u).verify();
+   idx const live_before = lifetime_live_count;
+   idx const destructors_before = lifetime_destructor_count;
+
+   values.emplace_back(arena.alloc, 9_i4).verify();
+   cat::verify(lifetime_live_count == live_before + 1u);
+   cat::verify(lifetime_destructor_count == destructors_before);
+   values.free(arena.alloc);
 }
 
 $test(vec_reset_preserves_capacity) {
@@ -367,8 +755,40 @@ $test(vec_compare_trivial_equality) {
    cat::verify((bytes <=> bigger_bytes) < 0);
 }
 
+$test(vec_compare_manual_and_raii) {
+   linear_arena arena;
+   cat::vec<int4> manual;
+   cat::small_vec<int4, 4u> small;
+   manual.push_back(arena.alloc, 1_i4).verify();
+   manual.push_back(arena.alloc, 2_i4).verify();
+   small.push_back(arena.alloc, 1_i4).verify();
+   small.push_back(arena.alloc, 2_i4).verify();
+
+   cat::raii::basic_vec<int4, cat::linear_allocator> linear(arena.alloc);
+   cat::raii::vec<int4> dynamic{cat::dyn_allocator(pager)};
+   linear.push_back(1_i4).verify();
+   linear.push_back(2_i4).verify();
+   dynamic.push_back(1_i4).verify();
+   dynamic.push_back(2_i4).verify();
+
+   cat::verify(manual == small);
+   cat::verify(linear == dynamic);
+   cat::verify(manual == linear);
+   cat::verify((manual <=> dynamic) == 0);
+
+   dynamic.push_back(3_i4).verify();
+   cat::verify(linear != dynamic);
+   cat::verify((manual <=> dynamic) < 0);
+   small.free(arena.alloc);
+   manual.free(arena.alloc);
+}
+
 $test(vec_make_factories) {
    linear_arena arena;
+
+   cat::vec<int4> empty = cat::make_vec<int4>();
+   cat::verify(empty.is_empty());
+   cat::verify(empty.data() == nullptr);
 
    // `make_vec` populated with an initializer list reserves and pushes.
    cat::vec list_vec =
@@ -573,6 +993,27 @@ $test(vec_null_allocator_failure) {
    cat::verify(!v.reserve(null_alloc, 1).has_value());
 }
 
+$test(vec_noncontiguous_replace_failure_preserves_values) {
+   linear_arena arena;
+   cat::null_allocator null_alloc;
+   cat::vec<int4> values =
+      cat::make_vec<int4>(arena.alloc, {1_i4, 2_i4, 3_i4, 4_i4}).verify();
+   cat::array<int4, 2u> replacements{8_i4, 9_i4};
+   auto noncontiguous = cat::ref(replacements).filter([](int4) -> bool {
+      return true;
+   });
+
+   auto const result =
+      values.replace_with_range(null_alloc, 1u, 2u, noncontiguous);
+   cat::verify(!result.has_value());
+   cat::verify(values.size() == 4u);
+   cat::verify(values[0u] == 1_i4);
+   cat::verify(values[1u] == 2_i4);
+   cat::verify(values[2u] == 3_i4);
+   cat::verify(values[3u] == 4_i4);
+   values.free(arena.alloc);
+}
+
 $test(vec_free_resets_state) {
    linear_arena arena;
    cat::vec<int4> v;
@@ -606,33 +1047,6 @@ $test(vec_abandon_outlives_allocator) {
    cat::verify(post[0] == 19);
 }
 
-// When the wrapped allocator supports in-place `reallocate`, `shrink_to_fit`
-// must reuse the existing buffer instead of allocating-then-copying. The
-// downward-bump `linear_allocator` honors shrinks in place, so the address
-// returned by `data()` must match before and after the shrink.
-$test(vec_shrink_to_fit_in_place_via_reallocate) {
-   linear_arena arena;
-   cat::vec<int4> v;
-   $defer {
-      v.free(arena.alloc);
-   };
-   v.reserve(arena.alloc, 32u).verify();
-   v.push_back(arena.alloc, 1_i4).verify();
-   v.push_back(arena.alloc, 2_i4).verify();
-   v.push_back(arena.alloc, 3_i4).verify();
-   cat::verify(v.capacity() >= 32);
-
-   int4 const* const p_before = v.data();
-   v.shrink_to_fit(arena.alloc).verify();
-
-   cat::verify(v.data() == p_before);
-   cat::verify(v.capacity() == v.size());
-   cat::verify(v.size() == 3);
-   cat::verify(v[0] == 1);
-   cat::verify(v[1] == 2);
-   cat::verify(v[2] == 3);
-}
-
 $test(vec_shrink_to_fit) {
    // `shrink_to_fit` releases excess capacity left behind by growth
    // patterns and downward `resize`s. Without it, vecs propagate their
@@ -648,6 +1062,14 @@ $test(vec_shrink_to_fit) {
    v.push_back(arena.alloc, 22_i4).verify();
    cat::verify(v.capacity() >= 64);
 
+   cat::null_allocator null_alloc;
+   int4* const p_before_failed_shrink = v.data();
+   idx const capacity_before_failed_shrink = v.capacity();
+   cat::verify(!v.shrink_to_fit(null_alloc).has_value());
+   cat::verify(v.data() == p_before_failed_shrink);
+   cat::verify(v.capacity() == capacity_before_failed_shrink);
+   cat::verify(v.size() == 2);
+
    v.shrink_to_fit(arena.alloc).verify();
    cat::verify(v.size() == 2);
    cat::verify(v.capacity() == 2);
@@ -658,8 +1080,7 @@ $test(vec_shrink_to_fit) {
    v.shrink_to_fit(arena.alloc).verify();
    cat::verify(v.capacity() == 2);
 
-   // Shrinking an emptied vec reallocates to a zero-length buffer but
-   // does not free. Use `.free(allocator)` to release the storage.
+   // Shrinking an emptied vec releases its storage.
    v.reset();
    v.shrink_to_fit(arena.alloc).verify();
    cat::verify(v.size() == 0);
@@ -670,6 +1091,38 @@ $test(vec_shrink_to_fit) {
    empty_vec.shrink_to_fit(arena.alloc).verify();
    cat::verify(empty_vec.capacity() == 0);
    cat::verify(empty_vec.data() == nullptr);
+}
+
+$test(vec_shrink_to_fit_minimum_allocation_static) {
+   cat::vec<int4> v;
+   $defer {
+      v.free(pager);
+   };
+   v.reserve<cat::page_allocator>(pager, 2u).verify();
+   v.push_back(pager, 1_i4).verify();
+
+   int4* const p_before = v.data();
+   idx const capacity_before = v.capacity();
+   v.shrink_to_fit<cat::page_allocator>(pager).verify();
+
+   cat::verify(v.data() == p_before);
+   cat::verify(v.capacity() == capacity_before);
+}
+
+$test(vec_shrink_to_fit_minimum_allocation_dynamic) {
+   cat::vec<int4> v;
+   $defer {
+      v.free(pager);
+   };
+   v.reserve(pager, 2u).verify();
+   v.push_back(pager, 1_i4).verify();
+
+   int4* const p_before = v.data();
+   idx const capacity_before = v.capacity();
+   v.shrink_to_fit(pager).verify();
+
+   cat::verify(v.data() == p_before);
+   cat::verify(v.capacity() == capacity_before);
 }
 
 $test(vec_element_destructors) {
@@ -686,6 +1139,28 @@ $test(vec_element_destructors) {
       destructor_count = 0u;
    }
    cat::assert(destructor_count == 3);
+}
+
+$test(fixed_inline_vec_free_destroys_all_elements) {
+   linear_arena arena;
+   lifetime_destructor_count = 0u;
+   cat::small_vec_fixed<lifetime_probe> values;
+   values.initialize_fixed<cat::linear_allocator>(arena.alloc, 3u).verify();
+   lifetime_destructor_count = 0u;
+
+   values.free(arena.alloc);
+   cat::verify(lifetime_destructor_count == 3u);
+}
+
+$test(fixed_inline_vec_cfree_destroys_all_elements) {
+   linear_arena arena;
+   lifetime_destructor_count = 0u;
+   cat::small_vec_fixed<lifetime_probe> values;
+   values.initialize_fixed<cat::linear_allocator>(arena.alloc, 3u).verify();
+   lifetime_destructor_count = 0u;
+
+   values.cfree(arena.alloc);
+   cat::verify(lifetime_destructor_count == 3u);
 }
 
 $test(raii_vec_make_and_push_back) {

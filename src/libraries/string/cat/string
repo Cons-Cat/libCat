@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include "detail/str_literal.hpp"
 #include "detail/str_span.hpp"
 
 namespace std {

@@ -1,0 +1,432 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/algorithm>
+#include <cat/array>
+#include <cat/container>
+#include <cat/iterable>
+#include <cat/maybe>
+#include <cat/utility>
+
+namespace cat {
+
+template <typename T, idx fixed_size>
+using vec_inplace_fixed = array<T, fixed_size>;
+
+template <typename T, idx inline_capacity>
+   requires(is_same<remove_cvref<T>, T>)
+class [[clang::trivial_abi, gsl::Owner]]
+vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
+              public random_access_stepanov_iterable_interface<T> {
+   template <typename U, idx other_capacity>
+      requires(is_same<remove_cvref<U>, U>)
+   friend class vec_inplace;
+
+ public:
+   constexpr vec_inplace() = default;
+
+   constexpr vec_inplace(vec_inplace const& other)
+      requires(is_copy_constructible<T>)
+   {
+      for (T const& value : other) {
+         construct_back(value);
+      }
+   }
+
+   constexpr vec_inplace(vec_inplace const&)
+      requires(!is_copy_constructible<T>)
+   = delete;
+
+   constexpr vec_inplace(vec_inplace&& other)
+      requires(is_move_constructible<T>)
+   {
+      for (T& value : other) {
+         construct_back(move(value));
+      }
+      other.clear();
+   }
+
+   constexpr vec_inplace(vec_inplace&&)
+      requires(!is_move_constructible<T>)
+   = delete;
+
+   constexpr auto
+   operator=(vec_inplace const& other) -> vec_inplace&
+      requires(is_copy_constructible<T>)
+   {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+      clear();
+      for (T const& value : other) {
+         construct_back(value);
+      }
+      return *this;
+   }
+
+   constexpr auto
+   operator=(vec_inplace const&) -> vec_inplace&
+      requires(!is_copy_constructible<T>)
+   = delete;
+
+   constexpr auto
+   operator=(vec_inplace&& other) -> vec_inplace&
+      requires(is_move_constructible<T>)
+   {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+      clear();
+      for (T& value : other) {
+         construct_back(move(value));
+      }
+      other.clear();
+      return *this;
+   }
+
+   constexpr auto
+   operator=(vec_inplace&&) -> vec_inplace&
+      requires(!is_move_constructible<T>)
+   = delete;
+
+   constexpr ~vec_inplace() {
+      clear();
+   }
+
+   template <idx other_capacity>
+   [[nodiscard]]
+   constexpr auto
+   operator==(vec_inplace<T, other_capacity> const& other) const -> bool
+      requires(is_equality_comparable<T>)
+   {
+      if (size() != other.size()) {
+         return false;
+      }
+      for (idx index = 0u; index < size(); ++index) {
+         if (!(data()[index] == other.data()[index])) {
+            return false;
+         }
+      }
+      return true;
+   }
+
+   template <idx other_capacity>
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(vec_inplace<T, other_capacity> const& other) const
+      requires(requires(T const& left, T const& right) { left <=> right; })
+   {
+      return lexicographical_compare_three_way(
+         this->begin(), this->end(), other.begin(), other.end()
+      );
+   }
+
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   data() [[clang::lifetimebound]] -> T* _Nonnull {
+      if constexpr (uses_preconstructed_storage) {
+         return m_storage;
+      } else {
+         return reinterpret_cast<T*>(m_storage);
+      }
+   }
+
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   data() const [[clang::lifetimebound]] -> T const* _Nonnull {
+      if constexpr (uses_preconstructed_storage) {
+         return m_storage;
+      } else {
+         return reinterpret_cast<T const*>(m_storage);
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_size;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   capacity() -> idx {
+      return inline_capacity;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   max_size() -> idx {
+      return inline_capacity;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   reserve(idx minimum_capacity) const -> maybe<void> {
+      if (minimum_capacity > inline_capacity) {
+         return nullopt;
+      }
+      return monostate;
+   }
+
+   template <typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard]]
+   constexpr auto
+   try_emplace_back(Args&&... arguments) [[clang::lifetimebound]] -> maybe<T&> {
+      if (this->is_full()) {
+         return nullopt;
+      }
+      return construct_back($fwd(arguments)...);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   try_push_back(T const& value) [[clang::lifetimebound]] -> maybe<T&>
+      requires(is_copy_constructible<T>)
+   {
+      return try_emplace_back(value);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   try_push_back(T&& value) [[clang::lifetimebound]] -> maybe<T&>
+      requires(is_move_constructible<T>)
+   {
+      return try_emplace_back(move(value));
+   }
+
+   template <typename... Args>
+      requires(is_constructible<T, Args...>)
+   constexpr auto
+   unchecked_emplace_back(Args&&... arguments) [[clang::lifetimebound]] -> T& {
+      if !consteval {
+         cat::assert(!this->is_full());
+      }
+      return construct_back($fwd(arguments)...);
+   }
+
+   constexpr auto
+   unchecked_push_back(T const& value) [[clang::lifetimebound]] -> T&
+      requires(is_copy_constructible<T>)
+   {
+      return unchecked_emplace_back(value);
+   }
+
+   constexpr auto
+   unchecked_push_back(T&& value) [[clang::lifetimebound]] -> T&
+      requires(is_move_constructible<T>)
+   {
+      return unchecked_emplace_back(move(value));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   resize(idx new_size) -> maybe<void>
+      requires(is_default_constructible<T>)
+   {
+      if (new_size > inline_capacity) {
+         return nullopt;
+      }
+      resize_unchecked(new_size);
+      return monostate;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   resize(idx new_size, T const& value) -> maybe<void>
+      requires(is_copy_constructible<T>)
+   {
+      if (new_size > inline_capacity) {
+         return nullopt;
+      }
+      resize_unchecked(new_size, value);
+      return monostate;
+   }
+
+   template <is_iterable Range>
+      requires(has_size<Range>)
+   [[nodiscard]]
+   constexpr auto
+   try_append_range(Range&& range) -> maybe<void> {
+      idx const count = range.size();
+      if (count > inline_capacity - size()) {
+         return nullopt;
+      }
+      for (auto&& value : range) {
+         construct_back($fwd(value));
+      }
+      return monostate;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   pop_back() -> maybe<T>
+      requires(is_move_constructible<T>)
+   {
+      if (this->is_empty()) {
+         return nullopt;
+      }
+      m_size = idx(m_size - 1u);
+      T result = move(data()[m_size]);
+      destroy(m_size);
+      return result;
+   }
+
+   constexpr auto
+   fill(T const& value) -> vec_inplace&
+      requires(is_copy_assignable<T>)
+   {
+      for (T& element : *this) {
+         element = value;
+      }
+      return *this;
+   }
+
+   [[clang::reinitializes]]
+   constexpr void
+   clear() {
+      while (m_size != 0u) {
+         m_size = idx(m_size - 1u);
+         destroy(m_size);
+      }
+   }
+
+   constexpr void
+   erase(idx index)
+      requires(is_move_assignable<T>)
+   {
+      if !consteval {
+         cat::assert(index < size());
+      }
+      for (idx source = index + 1u; source < size(); ++source) {
+         data()[idx(source - 1u)] = move(data()[source]);
+      }
+      m_size = idx(m_size - 1u);
+      destroy(m_size);
+   }
+
+   constexpr void
+   erase(idx first, idx last)
+      requires(is_move_assignable<T>)
+   {
+      if !consteval {
+         cat::assert(first <= last);
+         cat::assert(last <= size());
+      }
+      if (first == last) {
+         return;
+      }
+      idx const count = idx(last - first);
+      idx const old_size = size();
+      for (idx source = last; source < old_size; ++source) {
+         data()[idx(source - count)] = move(data()[source]);
+      }
+      m_size = idx(m_size - count);
+      for (idx index = m_size; index < old_size; ++index) {
+         destroy(index);
+      }
+   }
+
+   constexpr void
+   swap(vec_inplace& other)
+      requires(is_move_constructible<T>)
+   {
+      if (this == __builtin_addressof(other)) {
+         return;
+      }
+      vec_inplace temporary(move(*this));
+      *this = move(other);
+      other = move(temporary);
+   }
+
+ private:
+   template <typename... Args>
+   constexpr auto
+   construct_back(Args&&... arguments) -> T& {
+      T* _Nonnull const p_value = data() + m_size;
+      if constexpr (uses_preconstructed_storage) {
+         *p_value = T($fwd(arguments)...);
+      } else {
+         new (p_value) T($fwd(arguments)...);
+      }
+      ++m_size;
+      return *p_value;
+   }
+
+   constexpr void
+   destroy(idx index) {
+      if constexpr (!is_trivially_destructible<T>) {
+         data()[index].~T();
+      }
+   }
+
+   constexpr void
+   resize_unchecked(idx new_size)
+      requires(is_default_constructible<T>)
+   {
+      if (new_size < size()) {
+         while (m_size != new_size) {
+            m_size = idx(m_size - 1u);
+            destroy(m_size);
+         }
+      } else {
+         while (m_size != new_size) {
+            construct_back();
+         }
+      }
+   }
+
+   constexpr void
+   resize_unchecked(idx new_size, T const& value)
+      requires(is_copy_constructible<T>)
+   {
+      if (new_size < size()) {
+         while (m_size != new_size) {
+            m_size = idx(m_size - 1u);
+            destroy(m_size);
+         }
+      } else {
+         while (m_size != new_size) {
+            construct_back(value);
+         }
+      }
+   }
+
+   static constexpr bool uses_preconstructed_storage =
+      is_trivially_copyable<T> && is_default_constructible<T>
+      && is_move_assignable<T>;
+
+   using storage_element = conditional<uses_preconstructed_storage, T, byte>;
+
+   static constexpr __SIZE_TYPE__ storage_count =
+      inline_capacity == 0u
+         ? 1u
+         : inline_capacity * (uses_preconstructed_storage ? 1u : sizeof(T));
+
+   alignas(T) storage_element m_storage[storage_count]{};
+   idx m_size = 0u;
+};
+
+template <typename T, idx inline_capacity>
+[[nodiscard]]
+constexpr auto
+make_vec_inplace_filled(idx count, T const& value)
+   -> maybe<vec_inplace<T, inline_capacity>> {
+   vec_inplace<T, inline_capacity> result;
+   $prop(result.resize(count, value));
+   return result;
+}
+
+template <typename T, idx fixed_size>
+   requires(is_default_constructible<T> && is_copy_assignable<T>)
+[[nodiscard]]
+constexpr auto
+make_vec_inplace_fixed_filled(T const& value)
+   -> vec_inplace_fixed<T, fixed_size> {
+   vec_inplace_fixed<T, fixed_size> result;
+   result.fill(value);
+   return result;
+}
+
+}  // namespace cat

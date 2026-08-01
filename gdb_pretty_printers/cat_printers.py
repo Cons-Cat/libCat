@@ -193,14 +193,15 @@ class StrInplacePrinter:
         self.m_data = val['m_data']
         self.is_null_terminated = str(val.type.template_argument(2)) == 'true'
 
-        try:
-            self.m_size = val.type.template_argument(1)['raw']
-        except:
-            # If the template parameter can't be found by GDB, parse out the last
-            # integer in the type signature instead.
-            type_string = val.type.strip_typedefs().name
-            regex = re.compile(r'[0-9]+', re.MULTILINE)
-            self.m_size = int(regex.findall(type_string)[-1])
+        character_type = self.m_data.type.target().strip_typedefs()
+        self.m_size = self.m_data.type.sizeof // character_type.sizeof
+        if self.is_null_terminated:
+            self.m_size -= 1
+
+        for field in val.type.fields():
+            if field.is_base_class and 'str_inplace_size<true>' in str(field.type):
+                self.m_size = int(val.cast(field.type)['m_size']['raw'])
+                break
 
         return
 
@@ -208,11 +209,28 @@ class StrInplacePrinter:
         p_str = self.m_data.cast(self.m_data.type.target().strip_typedefs().pointer())
 
         # Print null bytes as `\0`.
-        string = p_str.string(length=self.m_size)
+        display_size = self.m_size + int(self.is_null_terminated)
+        string = p_str.string(length=display_size)
         string = ''.join(['\\0' if i == '\0' else i for i in string])
 
         zstr_suffix = ', null-terminated' if self.is_null_terminated else ''
         return '"' + string + '" (' + str(self.m_size) + ' chars' + zstr_suffix + ')'
+
+
+@cat_type('basic_str_literal')
+class StrLiteralPrinter:
+    "Print a `cat::str_literal`"
+
+    def __init__(self, val: gdb.Value):
+        self.m_data = val['data_']
+        character_type = self.m_data.type.target().strip_typedefs()
+        self.m_size = self.m_data.type.sizeof // character_type.sizeof - 1
+
+    def to_string(self):
+        p_str = self.m_data.cast(self.m_data.type.target().strip_typedefs().pointer())
+        string = p_str.string(length=self.m_size + 1)
+        string = ''.join(['\\0' if i == '\0' else i for i in string])
+        return '"' + string + '" (' + str(self.m_size) + ' chars)'
 
 
 @cat_type('bit_value')

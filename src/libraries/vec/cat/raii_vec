@@ -20,10 +20,21 @@ template <
 using vec = basic_vec<T, Allocator, flags>;
 
 template <
+   typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
+using vec_fixed = basic_vec<T, Allocator, flags | vec_flags::fixed_size>;
+
+template <
    typename T, is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
    vec_flags flags = {}>
 using small_vec =
    basic_vec<T, Allocator, flags | vec_flags::inline_storage(inline_count)>;
+
+template <
+   typename T, is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
+   vec_flags flags = {}>
+using small_vec_fixed = basic_vec<
+   T, Allocator,
+   flags | vec_flags::inline_storage(inline_count) | vec_flags::fixed_size>;
 
 }  // namespace cat::raii
 
@@ -82,7 +93,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
 
       m_core.free(m_allocator);
       if (m_allocator == other.m_allocator) {
-         m_core = cat::move(other.m_core);
+         m_core = move(other.m_core);
       } else {
          // TODO: Implement element-wise move across non-equal allocators.
          if !consteval {
@@ -112,6 +123,49 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
          cat::assert(m_allocator == other.m_allocator);
       }
       m_core.swap(other.m_core);
+   }
+
+   template <is_allocator OtherAllocator, vec_flags other_flags>
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_vec<T, OtherAllocator, other_flags> const& other) const
+      -> bool
+      requires(is_equality_comparable<T>)
+   {
+      return span<T const>(*this) == span<T const>(other);
+   }
+
+   template <vec_flags other_flags>
+   [[nodiscard]]
+   constexpr auto
+   operator==(cat::basic_vec<T, other_flags> const& other) const -> bool
+      requires(is_equality_comparable<T>)
+   {
+      return span<T const>(*this) == span<T const>(other);
+   }
+
+   template <is_allocator OtherAllocator, vec_flags other_flags>
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(basic_vec<T, OtherAllocator, other_flags> const& other) const
+      requires(requires(T const& left, T const& right) {
+                  { left < right } -> is_convertible<bool>;
+                  { right < left } -> is_convertible<bool>;
+               })
+   {
+      return span<T const>(*this) <=> span<T const>(other);
+   }
+
+   template <vec_flags other_flags>
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(cat::basic_vec<T, other_flags> const& other) const
+      requires(requires(T const& left, T const& right) {
+                  { left < right } -> is_convertible<bool>;
+                  { right < left } -> is_convertible<bool>;
+               })
+   {
+      return span<T const>(*this) <=> span<T const>(other);
    }
 
    // Returns `nullptr` when this `vec` is default-constructed or moved-from.
@@ -164,15 +218,25 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    // Try to allocate storage for at least `minimum_capacity` number of `T`s.
    [[nodiscard]]
    constexpr auto
-   reserve(idx minimum_capacity) -> maybe<void> {
+   reserve(idx minimum_capacity) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return m_core.reserve(m_allocator, minimum_capacity);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   initialize_fixed(idx fixed_size) -> maybe<void>
+      requires(flags.is_fixed_size && is_default_constructible<T>)
+   {
+      return m_core.initialize_fixed(m_allocator, fixed_size);
    }
 
    // Try to change the size of this `vec`.
    [[nodiscard]]
    constexpr auto
    resize(idx size) -> maybe<void>
-      requires(is_default_constructible<T>)
+      requires(is_default_constructible<T> && !flags.is_fixed_size)
    {
       return m_core.resize(m_allocator, size);
    }
@@ -182,7 +246,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    [[nodiscard]]
    constexpr auto
    resize(idx size, T const& value) -> maybe<void>
-      requires(is_copy_constructible<T>)
+      requires(is_copy_constructible<T> && !flags.is_fixed_size)
    {
       return m_core.resize(m_allocator, size, value);
    }
@@ -197,7 +261,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    [[nodiscard]]
    constexpr auto
    push_back(T const& value) -> maybe<void>
-      requires(is_copy_constructible<T>)
+      requires(is_copy_constructible<T> && !flags.is_fixed_size)
    {
       return m_core.push_back(m_allocator, value);
    }
@@ -205,9 +269,9 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    [[nodiscard]]
    constexpr auto
    push_back(T&& value) -> maybe<void>
-      requires(is_move_constructible<T>)
+      requires(is_move_constructible<T> && !flags.is_fixed_size)
    {
-      return m_core.push_back(m_allocator, cat::move(value));
+      return m_core.push_back(m_allocator, move(value));
    }
 
    template <typename First, typename Second, typename... Remaining>
@@ -218,11 +282,19 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
               "append a range.");
 
    template <typename... Args>
-      requires(is_constructible<T, Args...>)
+      requires(is_constructible<T, Args...> && !flags.is_fixed_size)
    [[nodiscard]]
    constexpr auto
    emplace_back(Args&&... arguments) [[clang::lifetimebound]] -> maybe<T&> {
       return m_core.emplace_back(m_allocator, $fwd(arguments)...);
+   }
+
+   constexpr auto
+   fill(T const& value) -> basic_vec&
+      requires(is_copy_assignable<T>)
+   {
+      m_core.fill(value);
+      return *this;
    }
 
    // Remove and return the last element. Returns `nullopt` when the vec
@@ -230,7 +302,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    [[nodiscard]]
    constexpr auto
    pop_back() -> maybe<T>
-      requires(is_move_constructible<T>)
+      requires(is_move_constructible<T> && !flags.is_fixed_size)
    {
       return m_core.pop_back();
    }
@@ -240,14 +312,16 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    // also release the allocation.
    [[clang::reinitializes]]
    constexpr void
-   clear() {
+   clear()
+      requires(!flags.is_fixed_size)
+   {
       m_core.reset();
    }
 
    // Remove the element at `index`, shifting subsequent elements left.
    constexpr void
    erase(idx index)
-      requires(is_move_assignable<T>)
+      requires(is_move_assignable<T> && !flags.is_fixed_size)
    {
       m_core.erase(index);
    }
@@ -256,7 +330,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    // subsequent elements left.
    constexpr void
    erase(idx start, idx end)
-      requires(is_move_assignable<T>)
+      requires(is_move_assignable<T> && !flags.is_fixed_size)
    {
       m_core.erase(start, end);
    }
@@ -265,7 +339,9 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    template <is_iterable Range>
    [[nodiscard]]
    constexpr auto
-   append_range(Range&& range) -> maybe<void> {
+   append_range(Range&& range) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return m_core.append_range(m_allocator, $fwd(range));
    }
 
@@ -274,7 +350,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    [[nodiscard]]
    constexpr auto
    insert_range(idx position, Range&& range) -> maybe<void>
-      requires(is_assignable<T&, T &&>)
+      requires(is_assignable<T&, T &&> && !flags.is_fixed_size)
    {
       return m_core.insert_range(m_allocator, position, $fwd(range));
    }
@@ -284,7 +360,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    [[nodiscard]]
    constexpr auto
    replace_with_range(idx first, idx last, Range&& range) -> maybe<void>
-      requires(is_assignable<T&, T &&>)
+      requires(is_assignable<T&, T &&> && !flags.is_fixed_size)
    {
       return m_core.replace_with_range(m_allocator, first, last, $fwd(range));
    }
@@ -312,8 +388,17 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
       allocator_ref<NewAllocator> allocator
    ) const& -> maybe<basic_vec<T, NewAllocator, flags>> {
       basic_vec<T, NewAllocator, flags> new_vector(allocator);
-      $prop(new_vector.m_core.reserve(allocator, m_core.capacity()));
-      $prop(new_vector.m_core.append_range(allocator, m_core));
+      if constexpr (flags.is_fixed_size) {
+         $prop(
+            new_vector.m_core.initialize_fixed(allocator, m_core.capacity())
+         );
+         for (idx i; i < m_core.size(); ++i) {
+            new_vector[i] = m_core[i];
+         }
+      } else {
+         $prop(new_vector.m_core.reserve(allocator, m_core.capacity()));
+         $prop(new_vector.m_core.append_range(allocator, m_core));
+      }
       return new_vector;
    }
 
@@ -324,8 +409,17 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
       dyn_allocator allocator
    ) const& -> maybe<basic_vec<T, dyn_allocator, flags>> {
       basic_vec<T, dyn_allocator, flags> new_vector(allocator);
-      $prop(new_vector.m_core.reserve(allocator, m_core.capacity()));
-      $prop(new_vector.m_core.append_range(allocator, m_core));
+      if constexpr (flags.is_fixed_size) {
+         $prop(
+            new_vector.m_core.initialize_fixed(allocator, m_core.capacity())
+         );
+         for (idx i; i < m_core.size(); ++i) {
+            new_vector[i] = m_core[i];
+         }
+      } else {
+         $prop(new_vector.m_core.reserve(allocator, m_core.capacity()));
+         $prop(new_vector.m_core.append_range(allocator, m_core));
+      }
       return new_vector;
    }
 
@@ -340,7 +434,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    [[nodiscard, clang::reinitializes]]
    constexpr auto
    release() -> manual::basic_vec<T, flags> {
-      return cat::move(m_core);
+      return move(m_core);
    }
 
  private:
@@ -376,9 +470,19 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
    make_vec(allocator_ref<Allocator> allocator, initializer_list<T> values)
       -> maybe<raii::basic_vec<T, Allocator, flags>> {
    raii::basic_vec<T, Allocator, flags> new_vector(allocator);
-   $prop(new_vector.reserve(max(values.size(), 4u)));
+   if constexpr (flags.is_fixed_size) {
+      $prop(new_vector.initialize_fixed(values.size()));
+   } else {
+      $prop(new_vector.reserve(max(values.size(), 4u)));
+   }
+   idx index;
    for (T const& value : values) {
-      $prop(new_vector.push_back(value));
+      if constexpr (flags.is_fixed_size) {
+         new_vector[index] = value;
+         ++index;
+      } else {
+         $prop(new_vector.push_back(value));
+      }
    }
    return new_vector;
 }
@@ -388,9 +492,19 @@ template <typename T, vec_flags flags = {}>
    make_vec(dyn_allocator allocator, initializer_list<T> values)
       -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
    raii::basic_vec<T, dyn_allocator, flags> new_vector(allocator);
-   $prop(new_vector.reserve(max(values.size(), 4u)));
+   if constexpr (flags.is_fixed_size) {
+      $prop(new_vector.initialize_fixed(values.size()));
+   } else {
+      $prop(new_vector.reserve(max(values.size(), 4u)));
+   }
+   idx index;
    for (T const& value : values) {
-      $prop(new_vector.push_back(value));
+      if constexpr (flags.is_fixed_size) {
+         new_vector[index] = value;
+         ++index;
+      } else {
+         $prop(new_vector.push_back(value));
+      }
    }
    return new_vector;
 }
@@ -400,7 +514,11 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
    make_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
       -> maybe<raii::basic_vec<T, Allocator, flags>> {
    raii::basic_vec<T, Allocator, flags> new_vector(allocator);
-   $prop(new_vector.reserve(max(capacity, 4u)));
+   if constexpr (flags.is_fixed_size) {
+      $prop(new_vector.initialize_fixed(capacity));
+   } else {
+      $prop(new_vector.reserve(max(capacity, 4u)));
+   }
    return new_vector;
 }
 
@@ -409,7 +527,11 @@ template <typename T, vec_flags flags = {}>
    make_vec_reserved(dyn_allocator allocator, idx capacity)
       -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
    raii::basic_vec<T, dyn_allocator, flags> new_vector(allocator);
-   $prop(new_vector.reserve(max(capacity, 4u)));
+   if constexpr (flags.is_fixed_size) {
+      $prop(new_vector.initialize_fixed(capacity));
+   } else {
+      $prop(new_vector.reserve(max(capacity, 4u)));
+   }
    return new_vector;
 }
 
@@ -422,7 +544,11 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
    // TODO: Call a vectorized fill memory function.
    // TODO: Forward from the last `value`.
    for (idx i = 0u; i < count; ++i) {
-      $prop(new_vector.push_back(value));
+      if constexpr (flags.is_fixed_size) {
+         new_vector[i] = value;
+      } else {
+         $prop(new_vector.push_back(value));
+      }
    }
    return new_vector;
 }
@@ -436,9 +562,73 @@ template <typename T, vec_flags flags = {}>
    // TODO: Call a vectorized fill memory function.
    // TODO: Forward from the last `value`.
    for (idx i = 0u; i < count; ++i) {
-      $prop(new_vector.push_back(value));
+      if constexpr (flags.is_fixed_size) {
+         new_vector[i] = value;
+      } else {
+         $prop(new_vector.push_back(value));
+      }
    }
    return new_vector;
+}
+
+template <
+   typename T, idx inline_count = 4u, is_allocator Allocator,
+   vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_small_vec_filled(
+   allocator_ref<Allocator> allocator, idx count, T const& value
+) -> maybe<small_vec<T, Allocator, inline_count, flags>> {
+   return raii::make_vec_filled<
+      T, Allocator, flags | vec_flags::inline_storage(inline_count)>(
+      allocator, count, value
+   );
+}
+
+template <typename T, idx inline_count = 4u, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_vec_filled(dyn_allocator allocator, idx count, T const& value)
+      -> maybe<small_vec<T, dyn_allocator, inline_count, flags>> {
+   return raii::make_small_vec_filled<T, inline_count, dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
+
+template <typename T, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_vec_fixed_filled(
+   allocator_ref<Allocator> allocator, idx count, T const& value
+) -> maybe<vec_fixed<T, Allocator, flags>> {
+   return raii::make_vec_filled<T, Allocator, flags | vec_flags::fixed_size>(
+      allocator, count, value
+   );
+}
+
+template <typename T, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_fixed_filled(dyn_allocator allocator, idx count, T const& value)
+      -> maybe<vec_fixed<T, dyn_allocator, flags>> {
+   return raii::make_vec_fixed_filled<T, dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
+
+template <
+   typename T, idx inline_count = 4u, is_allocator Allocator,
+   vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_small_vec_fixed_filled(
+   allocator_ref<Allocator> allocator, idx count, T const& value
+) -> maybe<small_vec_fixed<T, Allocator, inline_count, flags>> {
+   return raii::make_small_vec_filled<
+      T, inline_count, Allocator, flags | vec_flags::fixed_size>(
+      allocator, count, value
+   );
+}
+
+template <typename T, idx inline_count = 4u, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_vec_fixed_filled(
+      dyn_allocator allocator, idx count, T const& value
+   ) -> maybe<small_vec_fixed<T, dyn_allocator, inline_count, flags>> {
+   return raii::make_small_vec_fixed_filled<
+      T, inline_count, dyn_allocator, flags>(allocator, count, value);
 }
 
 }  // namespace cat::raii

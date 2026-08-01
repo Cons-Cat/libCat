@@ -58,8 +58,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    using word_iterator = word_span::iterator;
    using const_word_iterator = word_span::const_iterator;
    using iterator = bit_stepanov_iterator<word_iterator>;
-   using const_iterator =
-      bit_stepanov_iterator<const_word_iterator>;
+   using const_iterator = bit_stepanov_iterator<const_word_iterator>;
    using reverse_iterator = reverse_proxy_stepanov_iterator<iterator>;
    using const_reverse_iterator =
       reverse_proxy_stepanov_iterator<const_iterator>;
@@ -109,7 +108,8 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
          || detail::bit_span_bit_container<WordStorage, Storage>
       )
    constexpr bit_span(
-      WordStorage& storage [[clang::lifetimebound]],
+      WordStorage& storage [[clang::lifetimebound]]
+      ,
       idx bit_offset, idx bit_count
    )
        : bit_span(storage.data(), bit_offset, bit_count) {
@@ -156,9 +156,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    constexpr auto
    cbegin() const -> const_iterator {
       return const_iterator(
-         const_word_iterator(
-            m_bit_offset / limits<Storage>::bits, m_p_storage
-         ),
+         const_word_iterator(m_bit_offset / limits<Storage>::bits, m_p_storage),
          m_bit_offset % limits<Storage>::bits
       );
    }
@@ -483,7 +481,6 @@ bit_span(WordStorage&) -> bit_span<bit_span_storage_type<WordStorage>>;
 template <typename WordStorage>
 bit_span(WordStorage&, idx, idx)
    -> bit_span<bit_span_storage_type<WordStorage>>;
-
 
 namespace detail {
 template <typename Bits>

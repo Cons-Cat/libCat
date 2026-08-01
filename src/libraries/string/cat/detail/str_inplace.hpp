@@ -3,104 +3,183 @@
 #pragma once
 
 #include <cat/math>
+#include <cat/maybe>
 #include <cat/memory>
 #include <cat/span>
 #include <cat/utility>
 
 namespace cat {
 
-template <typename CharT, idx length, bool null_terminated>
+namespace detail {
+template <bool tracks_size>
+struct str_inplace_size;
+
+template <>
+struct str_inplace_size<true> {
+   idx m_size = 0u;
+};
+
+template <>
+struct str_inplace_size<false> {};
+}  // namespace detail
+
+template <
+   typename CharT, idx inline_capacity, bool null_terminated,
+   vec_flags flags = {}>
 class basic_str_inplace;
 
-template <idx deduced_length>
-using str_inplace = basic_str_inplace<char, deduced_length, false>;
+template <idx inline_capacity, vec_flags flags = {}>
+using str_inplace = basic_str_inplace<char, inline_capacity, false, flags>;
 
-template <idx deduced_length>
-using zstr_inplace = basic_str_inplace<char, deduced_length, true>;
+template <idx inline_capacity, vec_flags flags = {}>
+using zstr_inplace = basic_str_inplace<char, inline_capacity, true, flags>;
 
-template <idx deduced_length>
-using wstr_inplace = basic_str_inplace<wchar_t, deduced_length, false>;
+template <idx inline_capacity, vec_flags flags = {}>
+using wstr_inplace = basic_str_inplace<wchar_t, inline_capacity, false, flags>;
 
-template <idx deduced_length>
-using wzstr_inplace = basic_str_inplace<wchar_t, deduced_length, true>;
+template <idx inline_capacity, vec_flags flags = {}>
+using wzstr_inplace = basic_str_inplace<wchar_t, inline_capacity, true, flags>;
 
-template <typename CharT, idx length, bool null_terminated>
+template <idx inline_capacity, vec_flags flags = {}>
+using str_inplace_fixed = basic_str_inplace<
+   char, inline_capacity, false, flags | vec_flags::fixed_size>;
+
+template <idx inline_capacity, vec_flags flags = {}>
+using zstr_inplace_fixed = basic_str_inplace<
+   char, inline_capacity, true, flags | vec_flags::fixed_size>;
+
+template <idx inline_capacity, vec_flags flags = {}>
+using wstr_inplace_fixed = basic_str_inplace<
+   wchar_t, inline_capacity, false, flags | vec_flags::fixed_size>;
+
+template <idx inline_capacity, vec_flags flags = {}>
+using wzstr_inplace_fixed = basic_str_inplace<
+   wchar_t, inline_capacity, true, flags | vec_flags::fixed_size>;
+
+template <
+   typename CharT, idx inline_capacity, bool null_terminated, vec_flags flags>
 class
-   [[clang::preferred_name(str_inplace<length>),
-     clang::preferred_name(zstr_inplace<length>),
-     clang::preferred_name(wstr_inplace<length>),
-     clang::preferred_name(wzstr_inplace<length>), gsl::Owner]]
+   [[clang::trivial_abi,
+     clang::preferred_name(str_inplace<inline_capacity, flags>),
+     clang::preferred_name(zstr_inplace<inline_capacity, flags>),
+     clang::preferred_name(wstr_inplace<inline_capacity, flags>),
+     clang::preferred_name(wzstr_inplace<inline_capacity, flags>), gsl::Owner]]
    basic_str_inplace
     : public container_interface<
-         basic_str_inplace<CharT, length, null_terminated>, CharT>,
-      public random_access_stepanov_iterable_interface<CharT> {
+         basic_str_inplace<CharT, inline_capacity, null_terminated, flags>,
+         CharT>,
+      public random_access_stepanov_iterable_interface<CharT>,
+      private detail::str_inplace_size<!flags.is_fixed_size> {
  public:
-   constexpr basic_str_inplace() = default;
+   constexpr basic_str_inplace() {
+      this->write_terminator();
+   }
 
    constexpr basic_str_inplace(basic_str_inplace const& string) = default;
 
-   // Construct and deduce length from a string literal. Add 1 to length to
-   // ignore a null terminator.
-   consteval basic_str_inplace(
-      CharT const (
-         &string
-      )[idx(length.raw + static_cast<__SIZE_TYPE__>(!null_terminated))]
-   ) {
-      [[assume(
-         string[length.raw - static_cast<__SIZE_TYPE__>(null_terminated)]
-         == CharT{'\0'}
-      )]];
-      // This must be copied instead of initialized in-place to guarantee
-      // `const`-correctness.
-      this->copy_string_data(string);
-   }
-
-   // Assign a `basic_str_inplace` of lesser or equal length.
+   template <
+      idx other_capacity, bool other_null_terminated, vec_flags other_flags>
+      requires(!flags.is_fixed_size && other_capacity <= inline_capacity)
    constexpr auto
-   // NOLINTNEXTLINE This does handle self-assignment.
-   operator=(basic_str_inplace<CharT, length, null_terminated> const& string)
-      -> basic_str_inplace<CharT, length, null_terminated>& {
-      this->copy_string_data(string.data());
+   operator=(
+      basic_str_inplace<
+         CharT, other_capacity, other_null_terminated, other_flags> const& other
+   ) -> basic_str_inplace& {
+      this->m_size = other.size();
+      for (idx index; index < other.size(); ++index) {
+         m_data[index] = other[index];
+      }
+      this->write_terminator();
       return *this;
    }
 
-   // TODO: Make this `consteval`.
-   // Assign a string literal of lesser or equal length.
-   consteval auto
-   operator=(CharT const (
-      &string
-   )[idx(length.raw - static_cast<__SIZE_TYPE__>(null_terminated))])
-      -> basic_str_inplace& {
-      [[assume(
-         string[length.raw - 1uz + static_cast<__SIZE_TYPE__>(!null_terminated)]
-         == CharT{'\0'}
-      )]];
-      this->copy_string_data(string);
-      return *this;
+   // Construct from a string literal.
+   template <idx extent>
+      requires(
+         flags.is_fixed_size ? extent == inline_capacity + 1u
+                             : extent <= inline_capacity + 1u
+      )
+   consteval basic_str_inplace(CharT const (&string)[extent]) {
+      [[assume(string[extent.raw - 1u] == CharT{'\0'})]];
+      idx const content_size = idx(extent - 1u);
+      if constexpr (!flags.is_fixed_size) {
+         this->m_size = content_size;
+      }
+      for (idx index; index < content_size; ++index) {
+         m_data[index] = string[index];
+      }
+      this->write_terminator();
    }
 
-   // Compare two strings of equal length.
+   template <
+      idx other_capacity, bool other_null_terminated, vec_flags other_flags>
+   [[nodiscard]]
    constexpr auto
-   operator==(basic_str_inplace const& other) const -> bool {
-      for (idx i = 0; i < length; ++i) {
-         if (m_data[i] != other[i]) {
+   operator==(
+      basic_str_inplace<
+         CharT, other_capacity, other_null_terminated, other_flags> const& other
+   ) const -> bool {
+      if (size() != other.size()) {
+         return false;
+      }
+      for (idx index; index < size(); ++index) {
+         if (m_data[index] != other[index]) {
             return false;
          }
       }
       return true;
-   };
+   }
+
+   template <
+      idx other_capacity, bool other_null_terminated, vec_flags other_flags>
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(
+      basic_str_inplace<
+         CharT, other_capacity, other_null_terminated, other_flags> const& other
+   ) const {
+      return span<CharT const>(data(), size())
+             <=> span<CharT const>(other.data(), other.size());
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator==(CharT const (&other)[extent]) const -> bool {
+      idx const other_size = idx(extent - 1u);
+      if (size() != other_size) {
+         return false;
+      }
+      for (idx index; index < size(); ++index) {
+         if (m_data[index] != other[index]) {
+            return false;
+         }
+      }
+      return true;
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(CharT const (&left)[extent], basic_str_inplace const& right)
+      -> bool {
+      return right == left;
+   }
 
    constexpr auto
    operator==(CharT const other) const -> bool
-      requires(length == 1u + static_cast<unsigned>(null_terminated))
+      requires(inline_capacity == 1u)
    {
-      return m_data[0] == other;
+      return size() == 1u && m_data[0] == other;
    }
 
    constexpr void
    swap(basic_str_inplace& other) {
-      for (idx index = 0u; index < length; ++index) {
+      for (idx index; index < inline_capacity + null_terminated; ++index) {
          cat::swap(m_data[index], other.m_data[index]);
+      }
+      if constexpr (!flags.is_fixed_size) {
+         cat::swap(this->m_size, other.m_size);
       }
    }
 
@@ -119,7 +198,23 @@ class
    [[nodiscard]]
    constexpr auto
    size() const -> idx {
-      return length;
+      if constexpr (flags.is_fixed_size) {
+         return inline_capacity;
+      } else {
+         return this->m_size;
+      }
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   capacity() -> idx {
+      return inline_capacity;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   max_size() -> idx {
+      return inline_capacity;
    }
 
    [[nodiscard]]
@@ -127,137 +222,260 @@ class
    is_null_terminated() const -> bool {
       if constexpr (null_terminated) {
          return true;
-      } else if constexpr (length == 0u) {
+      } else if (size() == 0u) {
          return false;
       } else {
-         return m_data[length - 1u] == CharT{'\0'};
+         return m_data[size() - 1u] == CharT{'\0'};
       }
    }
 
-   // Concatenate constant-evaluated strings.
-   template <idx other_length>
+   [[nodiscard]]
+   constexpr auto
+   c_str() const [[clang::lifetimebound]]
+   -> CharT const* _Nonnull requires(null_terminated) { return m_data; }
+
+   [[nodiscard]] constexpr auto reserve(idx minimum_capacity) const
+      -> maybe<void> {
+      if (minimum_capacity > inline_capacity) {
+         return nullopt;
+      }
+      return monostate;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   resize(idx new_size, CharT value = CharT{'\0'}) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
+      if (new_size > inline_capacity) {
+         return nullopt;
+      }
+      for (idx index = size(); index < new_size; ++index) {
+         m_data[index] = value;
+      }
+      this->m_size = new_size;
+      this->write_terminator();
+      return monostate;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   try_push_back(CharT value) -> maybe<CharT&>
+      requires(!flags.is_fixed_size)
+   {
+      if (size() == inline_capacity) {
+         return nullopt;
+      }
+      return unchecked_push_back(value);
+   }
+
+   constexpr auto
+   unchecked_push_back(CharT value) -> CharT&
+      requires(!flags.is_fixed_size)
+   {
+      if !consteval {
+         cat::assert(size() < inline_capacity);
+      }
+      CharT& result = m_data[this->m_size];
+      result = value;
+      ++this->m_size;
+      this->write_terminator();
+      return result;
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   append(CharT const (&string)[extent]) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
+      idx const count = idx(extent - 1u);
+      if (count > inline_capacity - size()) {
+         return nullopt;
+      }
+      for (idx index; index < count; ++index) {
+         m_data[this->m_size + index] = string[index];
+      }
+      this->m_size += count;
+      this->write_terminator();
+      return monostate;
+   }
+
+   template <typename Range>
+      requires(has_size<Range> && !flags.is_fixed_size)
+   [[nodiscard]]
+   constexpr auto
+   try_append_range(Range&& range) -> maybe<void> {
+      idx const count = range.size();
+      if (count > inline_capacity - size()) {
+         return nullopt;
+      }
+      for (auto&& value : range) {
+         unchecked_push_back($fwd(value));
+      }
+      return monostate;
+   }
+
+   constexpr auto
+   fill(CharT value) -> basic_str_inplace& {
+      for (idx index; index < size(); ++index) {
+         m_data[index] = value;
+      }
+      return *this;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   pop_back() -> maybe<CharT>
+      requires(!flags.is_fixed_size)
+   {
+      if (this->is_empty()) {
+         return nullopt;
+      }
+      this->m_size = idx(this->m_size - 1u);
+      CharT const result = m_data[this->m_size];
+      this->write_terminator();
+      return result;
+   }
+
+   constexpr void
+   clear()
+      requires(!flags.is_fixed_size)
+   {
+      this->m_size = 0u;
+      this->write_terminator();
+   }
+
+   constexpr void
+   erase(idx index)
+      requires(!flags.is_fixed_size)
+   {
+      if !consteval {
+         cat::assert(index < size());
+      }
+      for (idx source = index + 1u; source < size(); ++source) {
+         m_data[idx(source - 1u)] = m_data[source];
+      }
+      this->m_size = idx(this->m_size - 1u);
+      this->write_terminator();
+   }
+
+   constexpr void
+   erase(idx first, idx last)
+      requires(!flags.is_fixed_size)
+   {
+      if !consteval {
+         cat::assert(first <= last);
+         cat::assert(last <= size());
+      }
+      idx const count = idx(last - first);
+      for (idx source = last; source < size(); ++source) {
+         m_data[idx(source - count)] = m_data[source];
+      }
+      this->m_size = idx(this->m_size - count);
+      this->write_terminator();
+   }
+
+   template <idx other_capacity, vec_flags other_flags>
    friend constexpr auto
    operator+(
-      basic_str_inplace<CharT, length, null_terminated> const& self,
-      basic_str_inplace<CharT, other_length, null_terminated> const&
+      basic_str_inplace const& self,
+      basic_str_inplace<
+         CharT, other_capacity, null_terminated, other_flags> const&
          other_string
    )
       -> basic_str_inplace<
-         CharT,
-         narrow_cast<idx>(
-            uword{length} + uword{other_length} - (null_terminated ? 1u : 0u)
-         )
-            .value(),
-         null_terminated> {
-      // `zstr_inplace` stores a trailing null in `length`, so `length` is at
-      // least one when `is_null_terminated` subtracts one. Otherwise the
-      // subtrahend is zero. The concatenated size drops at most one duplicate
-      // null, never more than `length + other_length`.
-      constexpr idx const self_useful =
-         narrow_cast<idx>(uword{length} - (null_terminated ? 1u : 0u)).value();
-      constexpr idx const new_length =
-         narrow_cast<idx>(
-            uword{length} + uword{other_length} - (null_terminated ? 1u : 0u)
-         )
-            .value();
-
-      basic_str_inplace<CharT, new_length, null_terminated> new_string;
-
-      for (idx i = 0u; i < self_useful; ++i) {
-         new_string[i] = self.m_data[i];
+         CharT, inline_capacity + other_capacity, null_terminated> {
+      basic_str_inplace<
+         CharT, inline_capacity + other_capacity, null_terminated>
+         new_string;
+      for (idx i; i < self.size(); ++i) {
+         new_string.unchecked_push_back(self.m_data[i]);
       }
-
-      for (idx i = self_useful; i < new_length; ++i) {
-         new_string[i] = other_string.data()[i.raw - self_useful.raw];
+      for (idx i; i < other_string.size(); ++i) {
+         new_string.unchecked_push_back(other_string[i]);
       }
-
       return new_string;
    }
 
-   // Concatenate a string literal to a `basic_str_inplace`.
    template <idx other_length>
    friend constexpr auto
    operator+(
-      basic_str_inplace<CharT, length, null_terminated> const& self,
-      CharT const (&other_string)[other_length]
+      basic_str_inplace const& self, CharT const (&other_string)[other_length]
    ) {
-      [[assume(other_string[other_length.raw - 1] == '\0')]];
-      // The assume implies `other_length` is at least one when the literal is
-      // treated as null-terminated (`!is_null_terminated` is false). Otherwise
-      // the subtrahend is zero.
+      [[assume(other_string[other_length.raw - 1u] == '\0')]];
       return self
              + basic_str_inplace<
-                CharT,
-                narrow_cast<idx>(other_length - (null_terminated ? 0u : 1u))
-                   .value(),
-                null_terminated>{other_string};
+                CharT, idx(other_length - 1u), null_terminated>{other_string};
    }
 
-   // Concatenate a `basic_str_inplace` to a string literal.
    template <idx other_length>
    friend constexpr auto
    operator+(
-      CharT const (&other_string)[other_length],
-      basic_str_inplace<CharT, length, null_terminated> const& self
+      CharT const (&other_string)[other_length], basic_str_inplace const& self
    ) {
-      [[assume(other_string[other_length.raw - 1] == '\0')]];
-      // Same reasoning as `operator+` from `basic_str_inplace` to a literal.
-      return basic_str_inplace<
-                CharT,
-                narrow_cast<idx>(other_length - (null_terminated ? 0u : 1u))
-                   .value(),
-                null_terminated>{other_string}
+      [[assume(other_string[other_length.raw - 1u] == '\0')]];
+      return basic_str_inplace<CharT, idx(other_length - 1u), null_terminated>{
+                other_string
+             }
              + self;
+   }
+
+   friend constexpr auto
+   operator+(basic_str_inplace const& self, CharT value)
+      -> basic_str_inplace<CharT, inline_capacity + 1u, null_terminated> {
+      basic_str_inplace<CharT, inline_capacity + 1u, null_terminated> result;
+      for (idx index; index < self.size(); ++index) {
+         result.unchecked_push_back(self[index]);
+      }
+      result.unchecked_push_back(value);
+      return result;
+   }
+
+   friend constexpr auto
+   operator+(CharT value, basic_str_inplace const& self)
+      -> basic_str_inplace<CharT, inline_capacity + 1u, null_terminated> {
+      basic_str_inplace<CharT, inline_capacity + 1u, null_terminated> result;
+      result.unchecked_push_back(value);
+      for (idx index; index < self.size(); ++index) {
+         result.unchecked_push_back(self[index]);
+      }
+      return result;
    }
 
  private:
    constexpr void
-   copy_string_data(CharT const* _Nonnull p_source) {
-      if consteval {
-         for (idx i = 0u; i < length; ++i) {
-            this->m_data[i] = p_source[i];
-         }
-      } else {
-         copy_memory(p_source, this->data(), length * sizeof(CharT));
+   write_terminator() {
+      if constexpr (null_terminated) {
+         m_data[size()] = CharT{'\0'};
       }
    }
 
-   CharT m_data[length];
+   static constexpr __SIZE_TYPE__ storage_size =
+      inline_capacity + null_terminated == 0u
+         ? 1u
+         : inline_capacity + null_terminated;
+
+   CharT m_data[storage_size]{};
 };
 
 // Deduce the length of string literals without a null-terminator.
 template <idx len>
 basic_str_inplace(char const (&str)[len])
-   // A string literal includes a trailing null, so `len` is at least one.
-   ->basic_str_inplace<char, narrow_cast<idx>(len - 1u).value(), false>;
+   -> basic_str_inplace<char, idx(len - 1u), false, vec_flags{}>;
 
 template <idx len>
 basic_str_inplace(wchar_t const (&str)[len])
-   // A string literal includes a trailing null, so `len` is at least one.
-   ->basic_str_inplace<wchar_t, narrow_cast<idx>(len - 1u).value(), false>;
+   -> basic_str_inplace<wchar_t, idx(len - 1u), false, vec_flags{}>;
 
-// Create a `str_inplace` from a smaller string, and null out the unfilled
-// bytes.
 template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1u) <= padded_length)
 consteval auto
 make_str_inplace(char const (&string)[deduced_length])
    -> str_inplace<padded_length> {
-   [[assume(string[deduced_length.raw - 1uz] == '\0')]];
+   [[assume(string[deduced_length.raw - 1u] == '\0')]];
    str_inplace<padded_length> new_string;
-   // The assume matches a normal string literal, so `deduced_length` is at
-   // least one and `deduced_length - 1u` is the last character index, not an
-   // underflowed length.
-   for (idx i; i < narrow_cast<idx>(deduced_length - 1u).value(); ++i) {
-      new_string[i] = string[i.raw];
-   }
-   // Pad the string out with null bytes. Padding starts at the same index as
-   // the literal's trailing null slot, so the starting index matches the copy
-   // loop bound above.
-   for (idx i = narrow_cast<idx>(deduced_length - 1u).value();
-        i < padded_length; ++i) {
-      new_string[i] = '\0';
-   }
+   auto _ = new_string.append(string);
    return new_string;
 }
 
@@ -266,35 +484,20 @@ template <idx padded_length, idx deduced_length>
 consteval auto
 make_wstr_inplace(wchar_t const (&string)[deduced_length])
    -> wstr_inplace<padded_length> {
-   [[assume(string[deduced_length.raw - 1uz] == L'\0')]];
+   [[assume(string[deduced_length.raw - 1u] == L'\0')]];
    wstr_inplace<padded_length> new_string;
-   for (idx i; i < narrow_cast<idx>(deduced_length - 1u).value(); ++i) {
-      new_string[i] = string[i.raw];
-   }
-   for (idx i = narrow_cast<idx>(deduced_length - 1u).value();
-        i < padded_length; ++i) {
-      new_string[i] = L'\0';
-   }
+   auto _ = new_string.append(string);
    return new_string;
 }
 
-// TODO: Add a variant that doesn't require `padded_length`.
-// Create a `str_inplace` from a smaller string, and null out the unfilled
-// bytes.
 template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1u) <= padded_length)
 consteval auto
 make_zstr_inplace(char const (&string)[deduced_length])
    -> zstr_inplace<padded_length> {
-   [[assume(string[deduced_length.raw - 1uz] == '\0')]];
+   [[assume(string[deduced_length.raw - 1u] == '\0')]];
    zstr_inplace<padded_length> new_string;
-   for (idx i; i < deduced_length; ++i) {
-      new_string[i] = string[i];
-   }
-   // Pad the string out with null bytes.
-   for (idx i = deduced_length; i < padded_length; ++i) {
-      new_string[i] = '\0';
-   }
+   auto _ = new_string.append(string);
    return new_string;
 }
 
@@ -303,15 +506,88 @@ template <idx padded_length, idx deduced_length>
 consteval auto
 make_wzstr_inplace(wchar_t const (&string)[deduced_length])
    -> wzstr_inplace<padded_length> {
-   [[assume(string[deduced_length.raw - 1uz] == L'\0')]];
+   [[assume(string[deduced_length.raw - 1u] == L'\0')]];
    wzstr_inplace<padded_length> new_string;
-   for (idx i; i < deduced_length; ++i) {
-      new_string[i] = string[i];
-   }
-   for (idx i = deduced_length; i < padded_length; ++i) {
-      new_string[i] = L'\0';
-   }
+   auto _ = new_string.append(string);
    return new_string;
+}
+
+template <idx inline_capacity>
+[[nodiscard]]
+constexpr auto
+make_str_inplace_filled(idx count, char value)
+   -> maybe<str_inplace<inline_capacity>> {
+   str_inplace<inline_capacity> result;
+   $prop(result.resize(count, value));
+   return result;
+}
+
+template <idx inline_capacity>
+[[nodiscard]]
+constexpr auto
+make_zstr_inplace_filled(idx count, char value)
+   -> maybe<zstr_inplace<inline_capacity>> {
+   zstr_inplace<inline_capacity> result;
+   $prop(result.resize(count, value));
+   return result;
+}
+
+template <idx inline_capacity>
+[[nodiscard]]
+constexpr auto
+make_wstr_inplace_filled(idx count, wchar_t value)
+   -> maybe<wstr_inplace<inline_capacity>> {
+   wstr_inplace<inline_capacity> result;
+   $prop(result.resize(count, value));
+   return result;
+}
+
+template <idx inline_capacity>
+[[nodiscard]]
+constexpr auto
+make_wzstr_inplace_filled(idx count, wchar_t value)
+   -> maybe<wzstr_inplace<inline_capacity>> {
+   wzstr_inplace<inline_capacity> result;
+   $prop(result.resize(count, value));
+   return result;
+}
+
+template <idx fixed_size>
+[[nodiscard]]
+constexpr auto
+make_str_inplace_fixed_filled(char value) -> str_inplace_fixed<fixed_size> {
+   str_inplace_fixed<fixed_size> result;
+   result.fill(value);
+   return result;
+}
+
+template <idx fixed_size>
+[[nodiscard]]
+constexpr auto
+make_zstr_inplace_fixed_filled(char value) -> zstr_inplace_fixed<fixed_size> {
+   zstr_inplace_fixed<fixed_size> result;
+   result.fill(value);
+   return result;
+}
+
+template <idx fixed_size>
+[[nodiscard]]
+constexpr auto
+make_wstr_inplace_fixed_filled(wchar_t value)
+   -> wstr_inplace_fixed<fixed_size> {
+   wstr_inplace_fixed<fixed_size> result;
+   result.fill(value);
+   return result;
+}
+
+template <idx fixed_size>
+[[nodiscard]]
+constexpr auto
+make_wzstr_inplace_fixed_filled(wchar_t value)
+   -> wzstr_inplace_fixed<fixed_size> {
+   wzstr_inplace_fixed<fixed_size> result;
+   result.fill(value);
+   return result;
 }
 
 }  // namespace cat

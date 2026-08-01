@@ -3,8 +3,8 @@
 #pragma once
 
 #include <cat/iterable>
-#include <cat/simd_switch>
 #include <cat/simd_ops>
+#include <cat/simd_switch>
 #include <cat/utility>
 
 namespace cat {
@@ -47,8 +47,7 @@ constexpr void
 reverse_inplace_simd_impl(Element* _Nonnull p_data, idx size) {
    constexpr idx lanes = Vector::abi_type::lanes;
    using memory_lane = Vector::memory_lane;
-   memory_lane* _Nonnull p_lanes =
-      __builtin_bit_cast(memory_lane*, p_data);
+   memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
    idx left = 0u;
    iword right = size;
 
@@ -82,11 +81,10 @@ struct reverse_inplace_impl {
          auto _ = range.reverse_inplace();
       } else {
          if constexpr (
-            is_random_access_collection<decltype(range)>
-            && requires {
-                  range.data();
-                  range.size();
-               }
+            is_random_access_collection<decltype(range)> && requires {
+                                                               range.data();
+                                                               range.size();
+                                                            }
          ) {
             using value_type = remove_reference<decltype(*range.data())>;
             if constexpr (is_arithmetic<value_type>) {
@@ -103,20 +101,18 @@ struct reverse_inplace_impl {
                         $abi(
                            (sse2, avx512),
                            {
-                              reverse_inplace_simd_impl<native_simd<value_type>>(
+                              reverse_inplace_simd_impl<
+                                 native_simd<value_type> >(
                                  range.data(), range.size()
                               );
                            }
                         ),
-                        $abi(
-                           avx2,
-                           {
-                              reverse_inplace_simd_impl<native_simd<value_type>>(
-                                 range.data(), range.size()
-                              );
-                              x64::zero_upper_avx_registers();
-                           }
-                        )
+                        $abi(avx2, {
+                           reverse_inplace_simd_impl<native_simd<value_type> >(
+                              range.data(), range.size()
+                           );
+                           x64::zero_upper_avx_registers();
+                        })
                      );
                   }
                }

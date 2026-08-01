@@ -293,8 +293,10 @@ class variant {
       maybe<sentinel<
          alternative_index_type, limits<alternative_index_type>::max()>>>;
 
-   maybe_discriminant discriminant;
+ private:
+   maybe_discriminant m_discriminant;
 
+ public:
    // Comparison operators are declared near the top of the class to match
    // the layout used by `cat::tuple` and the other libCat sum-types.
    template <typename T>
@@ -310,7 +312,10 @@ class variant {
    [[nodiscard]]
    friend constexpr auto
    operator==(variant const& a, variant const& b) -> bool {
-      if (a.discriminant.value_or_niche() != b.discriminant.value_or_niche()) {
+      if (
+         a.m_discriminant.value_or_niche()
+         != b.m_discriminant.value_or_niche()
+      ) {
          return false;
       }
       if (!a.has_value()) {
@@ -339,8 +344,8 @@ class variant {
       if (!b.has_value()) {
          return static_cast<result>(std::strong_ordering::greater);
       }
-      auto const a_index = a.discriminant.value_or_niche();
-      auto const b_index = b.discriminant.value_or_niche();
+      auto const a_index = a.m_discriminant.value_or_niche();
+      auto const b_index = b.m_discriminant.value_or_niche();
       if (a_index != b_index) {
          return static_cast<result>(a_index <=> b_index);
       }
@@ -403,12 +408,12 @@ class variant {
       requires(!is_reference_variant)
    {
       if constexpr (index_value < variant_size) {
-         if (this->discriminant.value_or_niche() == index_value) {
+         if (m_discriminant.value_or_niche() == index_value) {
             using active = types::template get<index_value>;
             if constexpr (!is_trivially_destructible<active>) {
                m_storage.template get<index_value>().~active();
             }
-            this->discriminant = nullopt;
+            m_discriminant = nullopt;
             return;
          }
          this->template hard_reset_indexed<index_value + 1u>();
@@ -421,11 +426,11 @@ class variant {
       requires(!is_reference_variant)
    {
       if constexpr (index_value < variant_size) {
-         if (other.discriminant.value_or_niche() == index_value) {
+         if (other.m_discriminant.value_or_niche() == index_value) {
             using active = types::template get<index_value>;
             new (__builtin_addressof(m_storage.template get<index_value>()))
                active(other.m_storage.template get<index_value>());
-            this->discriminant = alternative_index_type{index_value};
+            m_discriminant = alternative_index_type{index_value};
             return;
          }
          this->template copy_construct_indexed<index_value + 1u>(other);
@@ -438,16 +443,14 @@ class variant {
       requires(!is_reference_variant)
    {
       if constexpr (index_value < variant_size) {
-         if (other.discriminant.value_or_niche() == index_value) {
+         if (other.m_discriminant.value_or_niche() == index_value) {
             using active = types::template get<index_value>;
             new (__builtin_addressof(m_storage.template get<index_value>()))
-               active(cat::move(other).m_storage.template get<index_value>());
-            this->discriminant = alternative_index_type{index_value};
+               active(move(other).m_storage.template get<index_value>());
+            m_discriminant = alternative_index_type{index_value};
             return;
          }
-         this->template move_construct_indexed<index_value + 1u>(
-            cat::move(other)
-         );
+         move_construct_indexed<index_value + 1u>(move(other));
       }
    }
 
@@ -457,16 +460,16 @@ class variant {
       requires(!is_reference_variant)
    {
       if constexpr (index_value < variant_size) {
-         if (other.discriminant.value_or_niche() == index_value) {
+         if (other.m_discriminant.value_or_niche() == index_value) {
             using active = types::template get<index_value>;
-            if (this->discriminant.value_or_niche() == index_value) {
+            if (m_discriminant.value_or_niche() == index_value) {
                m_storage.template get<index_value>() =
                   other.m_storage.template get<index_value>();
             } else {
                this->template hard_reset_indexed<>();
                new (__builtin_addressof(m_storage.template get<index_value>()))
                   active(other.m_storage.template get<index_value>());
-               this->discriminant = alternative_index_type{index_value};
+               m_discriminant = alternative_index_type{index_value};
             }
             return;
          }
@@ -482,21 +485,20 @@ class variant {
       requires(!is_reference_variant)
    {
       if constexpr (index_value < variant_size) {
-         if (other.discriminant.value_or_niche() == index_value) {
+         if (other.m_discriminant.value_or_niche() == index_value) {
             using active = types::template get<index_value>;
-            if (this->discriminant.value_or_niche() == index_value) {
+            if (m_discriminant.value_or_niche() == index_value) {
                m_storage.template get<index_value>() =
-                  cat::move(other).m_storage.template get<index_value>();
+                  move(other).m_storage.template get<index_value>();
             } else {
                this->template hard_reset_indexed<>();
-               new (
-                  __builtin_addressof(m_storage.template get<index_value>())
-               ) active(cat::move(other).m_storage.template get<index_value>());
-               this->discriminant = alternative_index_type{index_value};
+               new (__builtin_addressof(m_storage.template get<index_value>()))
+                  active(move(other).m_storage.template get<index_value>());
+               m_discriminant = alternative_index_type{index_value};
             }
             return;
          }
-         this->template move_assign_indexed<index_value + 1u>(cat::move(other));
+         this->template move_assign_indexed<index_value + 1u>(move(other));
       } else {
          this->template hard_reset_indexed<>();
       }
@@ -520,7 +522,7 @@ class variant {
          if (other.template is<U>()) {
             new (__builtin_addressof(this->template get<U>()))
                U($fwd(other).template get<U>());
-            this->discriminant = this->alternative_index<U>;
+            m_discriminant = this->alternative_index<U>;
             return;
          }
       }
@@ -546,7 +548,7 @@ class variant {
                this->template hard_reset_indexed<>();
                new (__builtin_addressof(this->template get<U>()))
                   U($fwd(other).template get<U>());
-               this->discriminant = this->alternative_index<U>;
+               m_discriminant = this->alternative_index<U>;
             }
             return;
          }
@@ -604,7 +606,7 @@ class variant {
       using active = types::template get<index_value>;
       new (__builtin_addressof(m_storage.template get<index_value>()))
          active($fwd(args)...);
-      this->discriminant = alternative_index_type{index_value};
+      m_discriminant = alternative_index_type{index_value};
    }
 
    constexpr variant(variant const& other)
@@ -616,7 +618,7 @@ class variant {
    constexpr variant(variant&& other)
       requires(!is_reference_variant)
    {
-      this->template move_construct_indexed<>(cat::move(other));
+      this->template move_construct_indexed<>(move(other));
    }
 
    // Value-variant alternative construction. Exact-match overload: when the
@@ -628,7 +630,7 @@ class variant {
       requires(!is_reference_variant && types::template is_unique<T>)
    constexpr variant(T const& input) {
       new (__builtin_addressof(this->template get<T>())) T(input);
-      this->discriminant = this->alternative_index<T>;
+      m_discriminant = this->alternative_index<T>;
    }
 
    template <is_forwarding_move T>
@@ -638,7 +640,7 @@ class variant {
    constexpr variant(T&& input) {
       // NOLINTNEXTLINE
       new (__builtin_addressof(this->template get<T>())) T(move(input));
-      this->discriminant = this->alternative_index<T>;
+      m_discriminant = this->alternative_index<T>;
    }
 
    // Converting construction. When the input's decayed type is not itself
@@ -660,7 +662,7 @@ class variant {
       using selected = detail::fun_selected_type<T&&, Alternatives...>;
       new (__builtin_addressof(this->template get<selected>()))
          selected(static_cast<selected>($fwd(input)));
-      this->discriminant = this->alternative_index<selected>;
+      m_discriminant = this->alternative_index<selected>;
    }
 
    // Subsume a `variant` whose alternatives are a subset of this one's
@@ -688,7 +690,7 @@ class variant {
    constexpr variant(T& input) {
       detail::variant_ref_slot<alternative_index<T&>>(m_storage) =
          __builtin_addressof(input);
-      this->discriminant = this->alternative_index<T&>;
+      m_discriminant = this->alternative_index<T&>;
    }
 
    template <typename T>
@@ -696,7 +698,7 @@ class variant {
    constexpr variant(T const& input) {
       detail::variant_ref_slot<alternative_index<T const&>>(m_storage) =
          __builtin_addressof(input);
-      this->discriminant = this->alternative_index<T const&>;
+      m_discriminant = this->alternative_index<T const&>;
    }
 
    // Reject r-value binding for reference variants. The l-value-binding
@@ -725,7 +727,7 @@ class variant {
       } else {
          this->template hard_reset_indexed<>();
          new (__builtin_addressof(this->template get<T>())) T(operand);
-         this->discriminant = this->alternative_index<T>;
+         m_discriminant = this->alternative_index<T>;
       }
       return *this;
    }
@@ -739,7 +741,7 @@ class variant {
       } else {
          this->template hard_reset_indexed<>();
          new (__builtin_addressof(this->template get<T>())) T($fwd(operand));
-         this->discriminant = this->alternative_index<T>;
+         m_discriminant = this->alternative_index<T>;
       }
       return *this;
    }
@@ -765,7 +767,7 @@ class variant {
    operator=(variant&& operand) -> variant&
       requires(!is_reference_variant)
    {
-      this->template move_assign_indexed<>(cat::move(operand));
+      this->template move_assign_indexed<>(move(operand));
       return *this;
    }
 
@@ -781,7 +783,7 @@ class variant {
       requires(!is_reference_variant)
    constexpr auto
    operator=(variant<Us...>&& operand) -> variant& {
-      this->template assign_other_variant<Us...>(cat::move(operand));
+      this->template assign_other_variant<Us...>(move(operand));
       return *this;
    }
 
@@ -883,7 +885,7 @@ class variant {
    [[nodiscard]]
    constexpr auto
    index() const -> maybe_discriminant {
-      return this->discriminant;
+      return m_discriminant;
    }
 
    // `.is<T>()` is `true` when the current alternative is `T`. Accepts any
@@ -901,13 +903,13 @@ class variant {
    constexpr auto
    is() const -> bool {
       if constexpr (types::template is_unique<T>) {
-         return this->discriminant.value_or_niche()
+         return m_discriminant.value_or_niche()
                 == this->alternative_index<T>;
       } else if constexpr (
          is_reference_variant
          && types::template is_unique<add_lvalue_reference<T>>
       ) {
-         return this->discriminant.value_or_niche()
+         return m_discriminant.value_or_niche()
                 == this->alternative_index<add_lvalue_reference<T>>;
       } else {
          return false;
@@ -927,7 +929,7 @@ class variant {
             is_implicitly_convertible<
                remove_cvref<T>, remove_cvref<alternative>>
          ) {
-            if (this->discriminant.value_or_niche() == index_value) {
+            if (m_discriminant.value_or_niche() == index_value) {
                using compare_type = remove_cvref<alternative>;
                return static_cast<compare_type>(in_value)
                       == m_storage.template get<index_value>();
@@ -947,7 +949,7 @@ class variant {
    constexpr auto
    recurse_compare_eq_indexed(variant const& other) const -> bool {
       if constexpr (index_value < variant_size) {
-         if (this->discriminant.value_or_niche() == index_value) {
+         if (m_discriminant.value_or_niche() == index_value) {
             return m_storage.template get<index_value>()
                    == other.m_storage.template get<index_value>();
          }
@@ -967,7 +969,7 @@ class variant {
       using result = std::common_comparison_category_t<
          decltype(declval<Alternatives const&>() <=> declval<Alternatives const&>())...>;
       if constexpr (index_value < variant_size) {
-         if (this->discriminant.value_or_niche() == index_value) {
+         if (m_discriminant.value_or_niche() == index_value) {
             return static_cast<result>(
                m_storage.template get<index_value>()
                <=> other.m_storage.template get<index_value>()
@@ -1012,13 +1014,13 @@ class variant {
    [[nodiscard]]
    constexpr auto
    holds_alternative() const -> bool {
-      return this->discriminant.value_or_niche() == this->alternative_index<T>;
+      return m_discriminant.value_or_niche() == this->alternative_index<T>;
    }
 
    [[nodiscard]]
    constexpr auto
    holds_alternative(alternative_index_type alternative) const -> bool {
-      return this->discriminant.value_or_niche() == alternative;
+      return m_discriminant.value_or_niche() == alternative;
    }
 
    // `.has_value()` is `false` iff this variant is in the empty (valueless)
@@ -1027,7 +1029,7 @@ class variant {
    [[nodiscard]]
    constexpr auto
    has_value() const -> bool {
-      return this->discriminant.has_value();
+      return m_discriminant.has_value();
    }
 
    // Destroy the active alternative (if any) and return to the empty state.

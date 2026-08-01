@@ -100,7 +100,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
 
       m_core.free(m_allocator);
       if (m_allocator == other.m_allocator) {
-         m_core = cat::move(other.m_core);
+         m_core = move(other.m_core);
       } else {
          if !consteval {
             cat::assert(
@@ -312,7 +312,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    push_front(T&& value) -> maybe<iterator>
       requires(is_move_constructible<T>)
    {
-      return m_core.push_front(m_allocator, cat::move(value));
+      return m_core.push_front(m_allocator, move(value));
    }
 
    template <typename First, typename Second, typename... Remaining>
@@ -350,7 +350,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    push_back(T&& value) -> maybe<iterator>
       requires(is_move_constructible<T>)
    {
-      return m_core.push_back(m_allocator, cat::move(value));
+      return m_core.push_back(m_allocator, move(value));
    }
 
    template <typename First, typename Second, typename... Remaining>
@@ -534,7 +534,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    [[nodiscard, clang::reinitializes]]
    constexpr auto
    release() -> manual::basic_list<T> {
-      return cat::move(m_core);
+      return move(m_core);
    }
 
  private:

@@ -48,6 +48,36 @@ $test(str_vec_maybe_niche) {
    cat::verify(!raii_wide_empty.has_value());
 }
 
+$test(string_fill) {
+   linear_arena arena;
+   auto string = cat::make_str_vec_filled(arena.alloc, 3u, 'a').verify();
+   auto zstring = cat::make_zstr_vec_filled(arena.alloc, 3u, 'b').verify();
+   auto wide = cat::make_wstr_vec_filled(arena.alloc, 3u, L'c').verify();
+   auto raii = cat::raii::make_str_vec_filled(arena.alloc, 3u, 'd').verify();
+
+   string.fill('e');
+   zstring.fill('f');
+   wide.fill(L'g');
+   raii.fill('h');
+   cat::verify(string == "eee");
+   cat::verify(zstring == "fff");
+   cat::verify(wide == L"ggg");
+   cat::verify(raii == "hhh");
+
+   string.free(arena.alloc);
+   zstring.free(arena.alloc);
+   wide.free(arena.alloc);
+
+   char text[] = "cat";
+   cat::str_span span(text, 3u);
+   cat::zstr_span zspan(text, 4u);
+   span.fill('x');
+   cat::verify(cat::str_view(text, 3u) == "xxx");
+   zspan.fill('y');
+   cat::verify(cat::str_view(text, 3u) == "yyy");
+   cat::verify(text[3] == '\0');
+}
+
 $test(str_vec_make_append_and_views) {
    linear_arena arena;
    cat::str_vec string =
@@ -71,13 +101,13 @@ $test(str_vec_make_append_and_views) {
       zstring.free(arena.alloc);
    };
 
-   cat::verify(zstring.size() == 4u);
-   cat::verify(zstring[3u] == '\0');
+   cat::verify(zstring.size() == 3u);
+   cat::verify(zstring.data()[zstring.size()] == '\0');
    cat::verify(cat::str_view(zstring) == cat::str_view("cat"));
 
    zstring.append(arena.alloc, cat::zstr_view("s")).verify();
-   cat::verify(zstring.size() == 5u);
-   cat::verify(zstring[4u] == '\0');
+   cat::verify(zstring.size() == 4u);
+   cat::verify(zstring.data()[zstring.size()] == '\0');
    cat::verify(cat::str_view(zstring) == cat::str_view("cats"));
 
    cat::wstr_vec wide_string =
@@ -101,13 +131,13 @@ $test(str_vec_make_append_and_views) {
       wide_zstring.free(arena.alloc);
    };
 
-   cat::verify(wide_zstring.size() == 4u);
-   cat::verify(wide_zstring[3u] == L'\0');
+   cat::verify(wide_zstring.size() == 3u);
+   cat::verify(wide_zstring.data()[wide_zstring.size()] == L'\0');
    cat::verify(cat::wstr_view(wide_zstring) == cat::wstr_view(L"cat"));
 
    wide_zstring.append(arena.alloc, cat::wzstr_view(L"s")).verify();
-   cat::verify(wide_zstring.size() == 5u);
-   cat::verify(wide_zstring[4u] == L'\0');
+   cat::verify(wide_zstring.size() == 4u);
+   cat::verify(wide_zstring.data()[wide_zstring.size()] == L'\0');
    cat::verify(cat::wstr_view(wide_zstring) == cat::wstr_view(L"cats"));
 }
 
@@ -173,7 +203,7 @@ $test(str_vec_iterable_range_modifiers) {
    });
    string.replace_with_range(1u, 4u, vowels).verify();
    cat::verify(string.view() == cat::str_view("cat"));
-   cat::verify(string[idx(string.size() - 1u)] == '\0');
+   cat::verify(string.data()[string.size()] == '\0');
 }
 
 $test(str_vec_contiguous_range_modifiers) {
@@ -188,14 +218,14 @@ $test(str_vec_contiguous_range_modifiers) {
    string.replace_with_range(2u, 4u, replacement).verify();
 
    cat::verify(string.view() == cat::str_view("co!t"));
-   cat::verify(string[idx(string.size() - 1u)] == '\0');
+   cat::verify(string.data()[string.size()] == '\0');
 }
 
 $test(str_vec_variadic_concat) {
    linear_arena arena;
 
    cat::str_inplace inplace = "c";
-   cat::zstr_inplace<2u> z_inplace = cat::make_zstr_inplace<2u>("d");
+   cat::zstr_inplace<1u> z_inplace = cat::make_zstr_inplace<1u>("d");
    cat::str_vec manual =
       cat::make_str_vec(arena.alloc, cat::str_view("e")).verify();
    $defer {
@@ -224,8 +254,8 @@ $test(str_vec_variadic_concat) {
    $defer {
       z_concatenated.free(arena.alloc);
    };
-   cat::verify(z_concatenated.size() == 7u);
-   cat::verify(z_concatenated[6u] == '\0');
+   cat::verify(z_concatenated.size() == 6u);
+   cat::verify(z_concatenated.data()[z_concatenated.size()] == '\0');
    cat::verify(z_concatenated.view() == cat::str_view("abcdef"));
 
    cat::raii::str_vec managed_concatenated =
@@ -237,7 +267,7 @@ $test(str_vec_variadic_concat) {
    cat::verify(managed_concatenated == cat::str_view("abcdef"));
 
    cat::wstr_inplace wide_inplace = L"c";
-   cat::wzstr_inplace<2u> wide_z_inplace = cat::make_wzstr_inplace<2u>(L"d");
+   cat::wzstr_inplace<1u> wide_z_inplace = cat::make_wzstr_inplace<1u>(L"d");
    cat::wstr_vec wide_manual =
       cat::make_wstr_vec(arena.alloc, cat::wstr_view(L"e")).verify();
    $defer {
@@ -263,8 +293,11 @@ $test(str_vec_variadic_concat) {
          wide_z_inplace, wide_manual, wide_managed
       )
          .verify();
-   cat::verify(wide_managed_concatenated.size() == 7u);
-   cat::verify(wide_managed_concatenated[6u] == L'\0');
+   cat::verify(wide_managed_concatenated.size() == 6u);
+   cat::verify(
+      wide_managed_concatenated.data()[wide_managed_concatenated.size()]
+      == L'\0'
+   );
    cat::verify(wide_managed_concatenated.view() == cat::wstr_view(L"abcdef"));
 }
 
@@ -279,26 +312,26 @@ $test(zstr_vec_mutation_preserves_terminator) {
 
    string.push_back(arena.alloc, 'a').verify();
    string.push_back(arena.alloc, 'b').verify();
-   cat::verify(string.size() == 3u);
-   cat::verify(string[2u] == '\0');
+   cat::verify(string.size() == 2u);
+   cat::verify(string.data()[string.size()] == '\0');
    cat::verify(cat::str_view(string) == cat::str_view("ab"));
 
    cat::verify(string.pop_back().verify() == 'b');
-   cat::verify(string.size() == 2u);
-   cat::verify(string[1u] == '\0');
+   cat::verify(string.size() == 1u);
+   cat::verify(string.data()[string.size()] == '\0');
 
    string.erase(0u);
-   cat::verify(string.size() == 1u);
-   cat::verify(string[0u] == '\0');
+   cat::verify(string.size() == 0u);
+   cat::verify(string.data()[string.size()] == '\0');
 
    string.append(arena.alloc, cat::str_view("xyz")).verify();
    string.erase(1u, 3u);
    cat::verify(cat::str_view(string) == cat::str_view("x"));
-   cat::verify(string[1u] == '\0');
+   cat::verify(string.data()[string.size()] == '\0');
 
    string.clear();
-   cat::verify(string.size() == 1u);
-   cat::verify(string[0u] == '\0');
+   cat::verify(string.size() == 0u);
+   cat::verify(string.data()[string.size()] == '\0');
 }
 
 $test(str_vec_clone_move_and_failure) {
@@ -383,40 +416,40 @@ $test(raii_zstr_vec_lifecycle) {
    linear_arena arena;
    cat::raii::zstr_vec string = cat::raii::make_zstr_vec(arena.alloc).verify();
 
-   cat::verify(string.size() == 1u);
-   cat::verify(string[0u] == '\0');
+   cat::verify(string.size() == 0u);
+   cat::verify(string.data()[0u] == '\0');
 
    string.append(cat::str_view("hi")).verify();
-   cat::verify(string.size() == 3u);
-   cat::verify(string[2u] == '\0');
+   cat::verify(string.size() == 2u);
+   cat::verify(string.data()[string.size()] == '\0');
    cat::verify(string.view() == cat::str_view("hi"));
 
    cat::raii::zstr_vec filled =
       cat::raii::make_zstr_vec_filled(arena.alloc, 4u, 'x').verify();
    cat::verify(filled.size() == 4u);
-   cat::verify(filled[3u] == '\0');
-   cat::verify(filled.view() == cat::str_view("xxx"));
+   cat::verify(filled.data()[filled.size()] == '\0');
+   cat::verify(filled.view() == cat::str_view("xxxx"));
 
    filled.clear();
-   cat::verify(filled.size() == 1u);
-   cat::verify(filled[0u] == '\0');
+   cat::verify(filled.size() == 0u);
+   cat::verify(filled.data()[filled.size()] == '\0');
 
    cat::raii::wzstr_vec wide_string =
       cat::raii::make_wzstr_vec(arena.alloc).verify();
 
-   cat::verify(wide_string.size() == 1u);
-   cat::verify(wide_string[0u] == L'\0');
+   cat::verify(wide_string.size() == 0u);
+   cat::verify(wide_string.data()[0u] == L'\0');
 
    wide_string.append(cat::wstr_view(L"hi")).verify();
-   cat::verify(wide_string.size() == 3u);
-   cat::verify(wide_string[2u] == L'\0');
+   cat::verify(wide_string.size() == 2u);
+   cat::verify(wide_string.data()[wide_string.size()] == L'\0');
    cat::verify(wide_string.view() == cat::wstr_view(L"hi"));
 
    cat::raii::wzstr_vec wide_filled =
       cat::raii::make_wzstr_vec_filled(arena.alloc, 4u, L'x').verify();
    cat::verify(wide_filled.size() == 4u);
-   cat::verify(wide_filled[3u] == L'\0');
-   cat::verify(wide_filled.view() == cat::wstr_view(L"xxx"));
+   cat::verify(wide_filled.data()[wide_filled.size()] == L'\0');
+   cat::verify(wide_filled.view() == cat::wstr_view(L"xxxx"));
 }
 
 $test(str_vec_collection) {

@@ -1,3 +1,4 @@
+#include <cat/bitset>
 #include <cat/bitvec>
 #include <cat/iterable>
 #include <cat/page_allocator>
@@ -14,6 +15,23 @@ verify_bitvec_niche() {
    cat::maybe<Vector> empty;
    cat::verify(!empty.has_value());
 }
+
+template <typename Vector>
+concept can_change_manual_bitvec_size =
+   requires(Vector& vector, cat::page_allocator& allocator) {
+      vector.reserve(allocator, 1u);
+      vector.resize(allocator, 1u);
+      vector.push_back(allocator, true);
+      vector.pop_back();
+   };
+
+template <typename Vector>
+concept can_change_raii_bitvec_size = requires(Vector& vector) {
+                                         vector.reserve(1u);
+                                         vector.resize(1u);
+                                         vector.push_back(true);
+                                         vector.pop_back();
+                                      };
 
 }  // namespace
 
@@ -40,6 +58,167 @@ $test(bitvec_flags_and_niches) {
    cat::raii::small_bitvec<> managed{cat::dyn_allocator(pager)};
    managed.resize(4u).verify();
    cat::verify(managed.capacity() >= 4u);
+}
+
+$test(bitvec_fixed_size_variants) {
+   static_assert(!can_change_manual_bitvec_size<cat::bitvec_fixed<>>);
+   static_assert(!can_change_manual_bitvec_size<cat::small_bitvec_fixed<>>);
+   static_assert(!can_change_raii_bitvec_size<cat::raii::bitvec_fixed<>>);
+   static_assert(!can_change_raii_bitvec_size<cat::raii::small_bitvec_fixed<>>);
+
+   cat::bitvec_fixed<> bits;
+   bits.initialize_fixed(pager, 70u, true).verify();
+   cat::verify(bits.size() == 70u);
+   cat::verify(bits.capacity() == 128u);
+   cat::verify(bits.all());
+   bits.reset(69u);
+   cat::verify(!bits[69u]);
+   bits.free(pager);
+
+   cat::raii::bitvec_fixed<> managed(cat::dyn_allocator(pager), 70u);
+   cat::verify(managed.size() == 70u);
+   managed.set(69u);
+   cat::verify(managed[69u]);
+
+   cat::bitset<5u> inplace;
+   inplace[2u] = true;
+   cat::verify(inplace.size() == 5u);
+   cat::verify(inplace[2u]);
+
+   auto filled = cat::make_bitvec_filled(pager, 5u, true).verify();
+   auto small_filled = cat::make_small_bitvec_filled(pager, 5u, true).verify();
+   auto fixed_filled = cat::make_bitvec_fixed_filled(pager, 5u, true).verify();
+   auto small_fixed_filled =
+      cat::make_small_bitvec_fixed_filled(pager, 5u, true).verify();
+   cat::verify(filled.all());
+   cat::verify(small_filled.all());
+   cat::verify(fixed_filled.all());
+   cat::verify(small_fixed_filled.all());
+   filled.free(pager);
+   small_filled.free(pager);
+   fixed_filled.free(pager);
+   small_fixed_filled.free(pager);
+
+   auto raii_filled = cat::raii::make_bitvec_filled(pager, 5u, true).verify();
+   auto raii_small_filled =
+      cat::raii::make_small_bitvec_filled(pager, 5u, true).verify();
+   auto raii_fixed_filled =
+      cat::raii::make_bitvec_fixed_filled(pager, 5u, true).verify();
+   auto raii_small_fixed_filled =
+      cat::raii::make_small_bitvec_fixed_filled(pager, 5u, true).verify();
+   auto ordered = cat::raii::make_small_bitvec_filled<8u, cat::page_allocator>(
+                     pager, 5u, true
+   )
+                     .verify();
+   cat::verify(raii_filled.all());
+   cat::verify(raii_small_filled.all());
+   cat::verify(raii_fixed_filled.all());
+   cat::verify(raii_small_fixed_filled.all());
+   cat::verify(ordered.all());
+
+   auto inplace_filled = cat::make_bitset_filled<5u>(true);
+   cat::verify(inplace_filled.all_of());
+}
+
+$test(bitvec_manual_clone) {
+   cat::bitvec source;
+   source.resize(pager, 70u).verify();
+   source.set(0u).set(64u).set(69u);
+
+   cat::bitvec cloned = source.clone(pager).verify();
+   cat::verify(cloned == source);
+   cat::verify(cloned.data() != source.data());
+
+   cloned.flip(64u);
+   cat::verify(!cloned[64u]);
+   cat::verify(source[64u]);
+   cat::verify(cloned != source);
+
+   cloned.free(pager);
+   source.free(pager);
+}
+
+$test(bitvec_manual_fixed_clone) {
+   cat::bitvec_fixed<> source;
+   source.initialize_fixed(pager, 70u).verify();
+   source.set(0u).set(64u).set(69u);
+
+   cat::bitvec_fixed<> cloned = source.clone(pager).verify();
+   cat::verify(cloned == source);
+   cat::verify(cloned.data() != source.data());
+
+   cloned.reset(69u);
+   cat::verify(!cloned[69u]);
+   cat::verify(source[69u]);
+   cat::verify(cloned != source);
+
+   cloned.free(pager);
+   source.free(pager);
+}
+
+$test(bitvec_raii_clone) {
+   cat::raii::bitvec<> source{cat::dyn_allocator(pager)};
+   source.resize(70u).verify();
+   source.set(0u).set(64u).set(69u);
+
+   cat::raii::bitvec<> cloned = source.clone().verify();
+   cat::verify(cloned == source);
+   cat::verify(cloned.data() != source.data());
+
+   cloned.flip(0u);
+   cat::verify(!cloned[0u]);
+   cat::verify(source[0u]);
+   cat::verify(cloned != source);
+}
+
+$test(bitvec_raii_fixed_clone) {
+   cat::raii::bitvec_fixed<> source(cat::dyn_allocator(pager), 70u);
+   source.set(0u).set(64u).set(69u);
+
+   cat::raii::bitvec_fixed<> cloned = source.clone().verify();
+   cat::verify(cloned == source);
+   cat::verify(cloned.data() != source.data());
+
+   cloned.reset(64u);
+   cat::verify(!cloned[64u]);
+   cat::verify(source[64u]);
+   cat::verify(cloned != source);
+}
+
+$test(bitvec_equality) {
+   cat::bitvec manual_left;
+   cat::bitvec manual_right;
+   manual_left.resize(pager, 70u).verify();
+   manual_right.resize(pager, 70u).verify();
+   manual_left.set(0u).set(69u);
+   manual_right.set(0u).set(69u);
+   cat::verify(manual_left == manual_right);
+   manual_right.flip(69u);
+   cat::verify(manual_left != manual_right);
+
+   cat::bitvec manual_short;
+   manual_short.resize(pager, 69u).verify();
+   manual_short.set(0u);
+   cat::verify(manual_left != manual_short);
+
+   cat::raii::bitvec<> raii_left{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> raii_right{cat::dyn_allocator(pager)};
+   raii_left.resize(70u).verify();
+   raii_right.resize(70u).verify();
+   raii_left.set(0u).set(69u);
+   raii_right.set(0u).set(69u);
+   cat::verify(raii_left == raii_right);
+   raii_right.flip(0u);
+   cat::verify(raii_left != raii_right);
+
+   cat::raii::bitvec<> raii_short{cat::dyn_allocator(pager)};
+   raii_short.resize(69u).verify();
+   raii_short.set(0u);
+   cat::verify(raii_left != raii_short);
+
+   manual_short.free(pager);
+   manual_right.free(pager);
+   manual_left.free(pager);
 }
 
 $test(bitvec_manual_core) {

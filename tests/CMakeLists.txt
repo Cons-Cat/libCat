@@ -57,6 +57,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_string_length.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_inplace.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_str_literal.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_view_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_vec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable.cpp
@@ -83,6 +84,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_magic_get.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vec.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_vec_inplace.cpp
     # TODO: This container needs a lot of work.
     # ${CMAKE_SOURCE_DIR}/tests/src/test_ring.cpp.
     ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp

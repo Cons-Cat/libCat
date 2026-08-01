@@ -582,6 +582,17 @@ struct dyn_bytes_capacity {
    }
 };
 
+struct dyn_min_allocation_bytes {
+   using signature = auto() const -> idx;
+
+   template <typename T>
+   [[gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   do_invoke([[maybe_unused]] T const& self) -> idx {
+      return T::min_allocation_bytes;
+   }
+};
+
 // `dyn_equals` is the type-erased value-equality hook. Callers must guarantee
 // that `p_other` points to a `T`, which is checked at the `dyn_allocator`
 // equality entry point via type-id comparison.
@@ -640,7 +651,8 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
       detail::dyn_aligned_allocate_feedback, detail::dyn_resize,
       detail::dyn_grow, detail::dyn_grow_feedback, detail::dyn_reallocate,
       detail::dyn_reallocate_feedback, detail::dyn_bytes_used,
-      detail::dyn_bytes_capacity, detail::dyn_equals, detail::dyn_name>
+      detail::dyn_bytes_capacity, detail::dyn_min_allocation_bytes,
+      detail::dyn_equals, detail::dyn_name>
       m_p_allocator;
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -770,6 +782,12 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
+   minimum_allocation_bytes() const -> idx {
+      return dyn_invoke<detail::dyn_min_allocation_bytes>(*m_p_allocator);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   auto
    name() const -> str_view {
       return dyn_invoke<detail::dyn_name>(*m_p_allocator);
    }
@@ -784,9 +802,21 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    }
 };
 
-// Non-owning, static-dispatch handle to an `Allocator`. Functions are
+namespace detail {
+// Provide `max_allocation_bytes` iff it is available.
+template <typename Allocator>
+struct max_allocation_bytes_storage {};
+
+template <typename Allocator>
+   requires(requires { Allocator::max_allocation_bytes; })
+struct max_allocation_bytes_storage<Allocator> {
+   static constexpr idx max_allocation_bytes = Allocator::max_allocation_bytes;
+};
+}
+
+// Reference-like static-dispatch handle to an `Allocator`. Functions are
 // encouraged to consume this type rather than `Allocator&` to reduce
-// `.template alloc<>()` syntactic noise and to encourage overload resolution
+// `.template alloc<>()` syntactic noise and to bias overload resolution
 // towards `dyn_allocator` when not explicitly specified.
 //
 // For zero-size (stateless / "global") allocators, the ref carries no instance
@@ -796,7 +826,8 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
 // outer aggregate.
 template <typename Allocator>
 class [[gsl::Pointer]] allocator_ref
-    : public allocator_interface<allocator_ref<Allocator>> {
+    : public allocator_interface<allocator_ref<Allocator>>,
+      detail::max_allocation_bytes_storage<Allocator> {
  private:
    friend allocator_interface<allocator_ref<Allocator>>;
 
@@ -957,6 +988,12 @@ class [[gsl::Pointer]] allocator_ref
    // alignment guarantee without un-erasing the held allocator type.
    static constexpr ualign min_alignment = Allocator::min_alignment;
    static constexpr idx min_allocation_bytes = Allocator::min_allocation_bytes;
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   minimum_allocation_bytes() const -> idx {
+      return min_allocation_bytes;
+   }
 
    // Empty allocators carry no state, so the ref can be default-constructed
    // for them. Stateful allocators must be bound to a concrete instance.
@@ -1139,6 +1176,12 @@ class [[gsl::Pointer]] allocator_ref<dyn_allocator>
    auto
    bytes_capacity() const -> idx {
       return m_allocator.bytes_capacity();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   auto
+   minimum_allocation_bytes() const -> idx {
+      return m_allocator.minimum_allocation_bytes();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]

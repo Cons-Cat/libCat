@@ -36,9 +36,18 @@ inline namespace manual {
 
 using bitvec = basic_bitvec<>;
 
+template <vec_flags flags = {}>
+using bitvec_fixed = basic_bitvec<flags | vec_flags::fixed_size>;
+
 template <idx inline_count = 4u, vec_flags flags = {}>
 using small_bitvec = basic_bitvec<
    flags | vec_flags::inline_storage(div_ceil(inline_count, word_bits))>;
+
+template <idx inline_count = 4u, vec_flags flags = {}>
+using small_bitvec_fixed = basic_bitvec<
+   flags
+   | vec_flags::inline_storage(div_ceil(inline_count, word_bits))
+   | vec_flags::fixed_size>;
 
 template <vec_flags flags>
 class [[clang::preferred_name(bitvec), gsl::Owner]]
@@ -75,6 +84,48 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    operator=(basic_bitvec const&) -> basic_bitvec& =
       delete ("Implicit copying of `cat::basic_bitvec` is forbidden. "
               "Call `.clone()` or move instead!");
+
+   // Deep-copy the contents of this bit vector.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(
+      allocator_ref<Allocator> allocator
+   ) const& -> maybe<basic_bitvec<flags>> {
+      basic_bitvec<flags> result;
+      if constexpr (flags.is_fixed_size) {
+         $prop(result.initialize_fixed(allocator, size()));
+      } else {
+         $prop(result.reserve(allocator, capacity()));
+         $prop(result.resize(allocator, size()));
+      }
+      for (idx word_index; word_index < word_count(); ++word_index) {
+         result.data()[word_index] = data()[word_index];
+      }
+      return result;
+   }
+
+   // Deep-copy the contents of this bit vector.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(dyn_allocator allocator) const& -> maybe<basic_bitvec<flags>> {
+      return clone<dyn_allocator>(allocator);
+   }
+
+   template <vec_flags other_flags>
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_bitvec<other_flags> const& other) const -> bool {
+      if (size() != other.size()) {
+         return false;
+      }
+      for (idx bit_index; bit_index < size(); ++bit_index) {
+         if ((*this)[bit_index] != other[bit_index]) {
+            return false;
+         }
+      }
+      return true;
+   }
 
    // Return the number of logical bits.
    [[nodiscard]]
@@ -320,19 +371,46 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
       return (*unconst(this))[bit_index];
    }
 
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   initialize_fixed(
+      allocator_ref<Allocator> allocator, idx bit_count, bit_value value = false
+   ) -> maybe<void>
+      requires(flags.is_fixed_size)
+   {
+      $prop(m_words.initialize_fixed(allocator, words_for_bits(bit_count)));
+      m_bit_size = bit_count;
+      fill(value);
+      return monostate;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   initialize_fixed(
+      dyn_allocator allocator, idx bit_count, bit_value value = false
+   ) -> maybe<void>
+      requires(flags.is_fixed_size)
+   {
+      return initialize_fixed<dyn_allocator>(allocator, bit_count, value);
+   }
+
    // Reserve storage for at least the requested bit capacity.
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   reserve(allocator_ref<Allocator> allocator, idx bit_capacity)
-      -> maybe<void> {
+   reserve(allocator_ref<Allocator> allocator, idx bit_capacity) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return m_words.reserve(allocator, words_for_bits(bit_capacity));
    }
 
    // Reserve storage through a type-erased allocator.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   reserve(dyn_allocator allocator, idx bit_capacity) -> maybe<void> {
+   reserve(dyn_allocator allocator, idx bit_capacity) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return reserve<dyn_allocator>(allocator, bit_capacity);
    }
 
@@ -342,7 +420,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    resize(
       allocator_ref<Allocator> allocator, idx bit_count, bit_value value = false
-   ) -> maybe<void> {
+   ) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       idx const old_size = m_bit_size;
       idx const old_words = word_count();
       idx const new_words = words_for_bits(bit_count);
@@ -368,7 +448,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    resize(dyn_allocator allocator, idx bit_count, bit_value value = false)
-      -> maybe<void> {
+      -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return resize<dyn_allocator>(allocator, bit_count, value);
    }
 
@@ -376,8 +458,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   push_back(allocator_ref<Allocator> allocator, bit_value value)
-      -> maybe<void> {
+   push_back(allocator_ref<Allocator> allocator, bit_value value) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       idx const bit_index = m_bit_size;
       $prop(resize(allocator, m_bit_size + 1u));
       (*this)[bit_index].assign(value);
@@ -387,7 +470,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Append one bit through a type-erased allocator.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   push_back(dyn_allocator allocator, bit_value value) -> maybe<void> {
+   push_back(dyn_allocator allocator, bit_value value) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return push_back<dyn_allocator>(allocator, value);
    }
 
@@ -396,22 +481,26 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
       typename... Remaining>
    constexpr auto
    push_back(allocator_ref<Allocator>, First&&, Second&&, Remaining&&...)
-      -> maybe<void> = delete (
-         "`push_back()` is not variadic! Consider either `emplace_back()` "
-         "to construct an element or `append_range()` to "
-         "append a range."
-      );
+      -> maybe<void>
+      requires(!flags.is_fixed_size)
+   = delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+             "to construct an element or `append_range()` to "
+             "append a range.");
 
    template <typename First, typename Second, typename... Remaining>
    constexpr auto
-   push_back(dyn_allocator, First&&, Second&&, Remaining&&...) -> maybe<void> =
-      delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
-              "to construct an element or `append_range()` to "
-              "append a range.");
+   push_back(dyn_allocator, First&&, Second&&, Remaining&&...) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   = delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+             "to construct an element or `append_range()` to "
+             "append a range.");
 
    // Append every bit-like value of `range` to the end of this bit vector.
    template <is_allocator Allocator, typename Range>
-      requires(is_contiguous_iterable<Range> && is_contiguous_bits<Range>)
+      requires(
+         is_contiguous_iterable<Range> && is_contiguous_bits<Range>
+         && !flags.is_fixed_size
+      )
    [[nodiscard]]
    constexpr auto
    append_range(allocator_ref<Allocator> allocator, Range&& range)
@@ -435,7 +524,10 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
    // Append every bit-like value of `range` to the end of this bit vector.
    template <is_allocator Allocator, is_iterable Iterable>
-      requires(!is_contiguous_bits<Iterable> && has_size<Iterable>)
+      requires(
+         !is_contiguous_bits<Iterable> && has_size<Iterable>
+         && !flags.is_fixed_size
+      )
    [[nodiscard]]
    constexpr auto
    append_range(allocator_ref<Allocator> allocator, Iterable&& range)
@@ -462,7 +554,10 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
    // Append every bit-like value of `range` to the end of this bit vector.
    template <is_allocator Allocator, is_iterable Iterable>
-      requires(!is_contiguous_bits<Iterable> && !has_size<Iterable>)
+      requires(
+         !is_contiguous_bits<Iterable> && !has_size<Iterable>
+         && !flags.is_fixed_size
+      )
    [[nodiscard]]
    constexpr auto
    append_range(allocator_ref<Allocator> allocator, Iterable&& range)
@@ -489,13 +584,18 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    template <is_iterable Iterable>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append_range(dyn_allocator allocator, Iterable&& range) -> maybe<void> {
+   append_range(dyn_allocator allocator, Iterable&& range) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return append_range<dyn_allocator>(allocator, $fwd(range));
    }
 
    // Insert every bit-like value of `range` before `position`.
    template <is_allocator Allocator, typename Range>
-      requires(is_contiguous_iterable<Range> && is_contiguous_bits<Range>)
+      requires(
+         is_contiguous_iterable<Range> && is_contiguous_bits<Range>
+         && !flags.is_fixed_size
+      )
    [[nodiscard]]
    constexpr auto
    insert_range(allocator_ref<Allocator> allocator, idx position, Range&& range)
@@ -528,7 +628,10 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
    // Insert every bit-like value of `range` before `position`.
    template <is_allocator Allocator, is_iterable Iterable>
-      requires(!is_contiguous_bits<Iterable> && has_size<Iterable>)
+      requires(
+         !is_contiguous_bits<Iterable> && has_size<Iterable>
+         && !flags.is_fixed_size
+      )
    [[nodiscard]]
    constexpr auto
    insert_range(
@@ -569,7 +672,10 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
    // Insert every bit-like value of `range` before `position`.
    template <is_allocator Allocator, is_iterable Iterable>
-      requires(!is_contiguous_bits<Iterable> && !has_size<Iterable>)
+      requires(
+         !is_contiguous_bits<Iterable> && !has_size<Iterable>
+         && !flags.is_fixed_size
+      )
    [[nodiscard]]
    constexpr auto
    insert_range(
@@ -612,13 +718,18 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    insert_range(dyn_allocator allocator, idx position, Iterable&& range)
-      -> maybe<void> {
+      -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return insert_range<dyn_allocator>(allocator, position, $fwd(range));
    }
 
    // Replace `[first, last)` with every bit-like value of `range`.
    template <is_allocator Allocator, typename Range>
-      requires(is_contiguous_iterable<Range> && is_contiguous_bits<Range>)
+      requires(
+         is_contiguous_iterable<Range> && is_contiguous_bits<Range>
+         && !flags.is_fixed_size
+      )
    [[nodiscard]]
    constexpr auto
    replace_with_range(
@@ -664,7 +775,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
    // Replace `[first, last)` with every bit-like value of `range`.
    template <is_allocator Allocator, is_iterable Iterable>
-      requires(!is_contiguous_bits<Iterable>)
+      requires(!is_contiguous_bits<Iterable> && !flags.is_fixed_size)
    [[nodiscard]]
    constexpr auto
    replace_with_range(
@@ -691,7 +802,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    replace_with_range(
       dyn_allocator allocator, idx first, idx last, Iterable&& range
-   ) -> maybe<void> {
+   ) -> maybe<void>
+      requires(!flags.is_fixed_size)
+   {
       return replace_with_range<dyn_allocator>(
          allocator, first, last, $fwd(range)
       );
@@ -700,7 +813,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Remove and return the last bit if one exists.
    [[nodiscard]]
    constexpr auto
-   pop_back() -> maybe<bit_value> {
+   pop_back() -> maybe<bit_value>
+      requires(!flags.is_fixed_size)
+   {
       if (m_bit_size == 0u) {
          return nullopt;
       }
@@ -899,6 +1014,84 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    basic_vec<uword, flags> m_words;
    idx m_bit_size = 0u;
 };
+
+template <is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_bitvec_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<basic_bitvec<flags>> {
+   basic_bitvec<flags> result;
+   if constexpr (flags.is_fixed_size) {
+      $prop(result.initialize_fixed(allocator, count, value));
+   } else {
+      $prop(result.resize(allocator, count, value));
+   }
+   return result;
+}
+
+template <vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_filled(dyn_allocator allocator, idx count, bit_value value)
+      -> maybe<basic_bitvec<flags>> {
+   return make_bitvec_filled<dyn_allocator, flags>(allocator, count, value);
+}
+
+template <idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_small_bitvec_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<small_bitvec<inline_count, flags>> {
+   return make_bitvec_filled<
+      Allocator,
+      flags | vec_flags::inline_storage(div_ceil(inline_count, word_bits))>(
+      allocator, count, value
+   );
+}
+
+template <idx inline_count = 4u, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_bitvec_filled(dyn_allocator allocator, idx count, bit_value value)
+      -> maybe<small_bitvec<inline_count, flags>> {
+   return make_small_bitvec_filled<inline_count, dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
+
+template <is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_bitvec_fixed_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<bitvec_fixed<flags>> {
+   return make_bitvec_filled<Allocator, flags | vec_flags::fixed_size>(
+      allocator, count, value
+   );
+}
+
+template <vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_fixed_filled(dyn_allocator allocator, idx count, bit_value value)
+      -> maybe<bitvec_fixed<flags>> {
+   return make_bitvec_fixed_filled<dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
+
+template <idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_small_bitvec_fixed_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<small_bitvec_fixed<inline_count, flags>> {
+   return make_small_bitvec_filled<
+      inline_count, Allocator, flags | vec_flags::fixed_size>(
+      allocator, count, value
+   );
+}
+
+template <idx inline_count = 4u, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_bitvec_fixed_filled(
+      dyn_allocator allocator, idx count, bit_value value
+   ) -> maybe<small_bitvec_fixed<inline_count, flags>> {
+   return make_small_bitvec_fixed_filled<inline_count, dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
 
 }  // namespace manual
 

@@ -905,7 +905,7 @@ $test(flux_read_at_and_try_read_at) {
    // observable.
    auto in_range = cat::try_read_at(arr, cat::idx{2u});
    cat::verify(in_range.has_value());
-   cat::verify(in_range.value() == 33);
+   cat::verify(in_range.verify() == 33);
 
    auto past_end = cat::try_read_at(arr, cat::idx{4u});
    cat::verify(!past_end.has_value());
@@ -915,7 +915,7 @@ $test(flux_read_at_and_try_read_at) {
 
    auto member_in_range = arr.try_read_at(cat::idx{3u});
    cat::verify(member_in_range.has_value());
-   cat::verify(member_in_range.value() == 44);
+   cat::verify(member_in_range.verify() == 44);
 }
 
 $test(flux_slice_basic) {

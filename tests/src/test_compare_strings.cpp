@@ -3,6 +3,19 @@
 
 #include "../unit_tests.hpp"
 
+namespace {
+
+template <typename... Strings>
+void
+verify_string_equality_matrix(Strings const&... strings) {
+   auto verify_row = [&](auto const& left) {
+      (cat::verify(left == strings), ...);
+   };
+   (verify_row(strings), ...);
+}
+
+}  // namespace
+
 $test(compare_strings) {
    // The runtime SIMD `cat::compare_strings_detail` is bounded by the
    // compared strings' size, but constructing a `cat::str_view` from a small
@@ -29,6 +42,59 @@ $test(compare_strings) {
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
    cat::verify(cat::compare_strings(long_string_1, long_string_2));
+}
+
+$test(string_type_equality_matrix) {
+   char text[] = "matrix";
+   cat::str_literal<6u> literal = "matrix";
+   cat::str_inplace inplace = "matrix";
+   cat::zstr_inplace<6u> zinplace = "matrix";
+   cat::str_inplace_fixed<6u> inplace_fixed = "matrix";
+   cat::zstr_inplace_fixed<6u> zinplace_fixed = "matrix";
+   cat::str_view view(text, 6u);
+   cat::zstr_view zview(text, 7u);
+   cat::str_span span(text, 6u);
+   cat::zstr_span zspan(text, 7u);
+   auto vector = cat::make_str_vec(pager, view).verify();
+   auto zvector = cat::make_zstr_vec(pager, view).verify();
+   auto raii_vector =
+      cat::raii::make_str_vec(cat::dyn_allocator(pager), view).verify();
+   auto raii_zvector =
+      cat::raii::make_zstr_vec(cat::dyn_allocator(pager), view).verify();
+
+   verify_string_equality_matrix(
+      literal, inplace, zinplace, inplace_fixed, zinplace_fixed, view, zview,
+      span, zspan, vector, zvector, raii_vector, raii_zvector
+   );
+
+   vector.free(pager);
+   zvector.free(pager);
+
+   wchar_t wide_text[] = L"matrix";
+   cat::wstr_literal<6u> wide_literal = L"matrix";
+   cat::wstr_inplace wide_inplace = L"matrix";
+   cat::wzstr_inplace<6u> wide_zinplace = L"matrix";
+   cat::wstr_inplace_fixed<6u> wide_inplace_fixed = L"matrix";
+   cat::wzstr_inplace_fixed<6u> wide_zinplace_fixed = L"matrix";
+   cat::wstr_view wide_view(wide_text, 6u);
+   cat::wzstr_view wide_zview(wide_text, 7u);
+   cat::wstr_span wide_span(wide_text, 6u);
+   cat::wzstr_span wide_zspan(wide_text, 7u);
+   auto wide_vector = cat::make_wstr_vec(pager, wide_view).verify();
+   auto wide_zvector = cat::make_wzstr_vec(pager, wide_view).verify();
+   auto raii_wide_vector =
+      cat::raii::make_wstr_vec(cat::dyn_allocator(pager), wide_view).verify();
+   auto raii_wide_zvector =
+      cat::raii::make_wzstr_vec(cat::dyn_allocator(pager), wide_view).verify();
+
+   verify_string_equality_matrix(
+      wide_literal, wide_inplace, wide_zinplace, wide_inplace_fixed,
+      wide_zinplace_fixed, wide_view, wide_zview, wide_span, wide_zspan,
+      wide_vector, wide_zvector, raii_wide_vector, raii_wide_zvector
+   );
+
+   wide_vector.free(pager);
+   wide_zvector.free(pager);
 }
 
 $test(compare_strings_long_misaligned_equal_and_diff) {

@@ -757,7 +757,7 @@ extern "C"
 
    // Fill out the vendor name from the string stored in `%EBX`, `%ECX`, and
    // `%EDX`.
-   cat::str_inplace<12u> vendor_name;
+   cat::str_inplace_fixed<12u> vendor_name;
    __builtin_memcpy(vendor_name.data(), &vendor1, 4);
    __builtin_memcpy(vendor_name.data() + 4, &vendor2, 4);
    __builtin_memcpy(vendor_name.data() + 8, &vendor3, 4);

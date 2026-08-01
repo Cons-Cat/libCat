@@ -23,13 +23,10 @@ $test(format_strings) {
    // TODO: Test `int1`, `uint1`, `int2`, `uint2`, `uint4`, `int8`, and
    // `uint8`.
 
-   // TOOD: These stopped working for some reason. constexpr cat::str_inplace
-   // const_int = cat::to_chars<136>();
-   // constexpr cat::str_inplace
-   // const_negative = cat::to_chars<-1650>();
-
-   // cat::verify(cat::compare_strings(const_int.data(), "136"));
-   // cat::verify(cat::compare_strings(const_negative.data(), "-1650"));
+   constexpr auto const_int = cat::to_chars<136>();
+   constexpr auto const_negative = cat::to_chars<-1'650>();
+   static_assert(const_int == "136");
+   static_assert(const_negative == "-1650");
 
    // Test formatting `int`.
    allocator.reset();
