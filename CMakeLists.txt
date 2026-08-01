@@ -136,9 +136,14 @@ list(
   # Lifetime analysis and bounds-safety.
   -Wdangling
   -Wdangling-gsl
-  "SHELL:-Xclang -fexperimental-bounds-safety"
   # TODO: -Wlifetime-safety-permissive.
 )
+
+option(CAT_BOUNDS_SAFETY "Enable Clang experimental bounds-safety." ON)
+if(CAT_BOUNDS_SAFETY)
+  list(APPEND CAT_CXX_FLAGS_COMMON
+    "SHELL:-Xclang -fexperimental-bounds-safety")
+endif()
 
 if(CAT_USE_SANITIZERS)
   # Whole-program. Rides with the essentials.
@@ -317,16 +322,14 @@ target_include_directories(cat-impl PRIVATE
 
 add_subdirectory(src/)
 
-# PCH uses `.hpp` only (extensionless API headers go through the regular include
-# path via `CAT_HEADER_FILES` in `src/CMakeLists.txt`). Glob is scoped to `src/`
-# so the PCH never picks up `tests/unit_tests.hpp`.
-file(GLOB_RECURSE CAT_HEADERS "src/*.hpp")
-
 option(CAT_PCH "Enable precompiled-headers for libCat headers." ON)
 if (CAT_PCH)
   # `PRIVATE` on `cat-impl` so external consumers of `cat::cat` don't inherit
   # PCH machinery. In-tree tests/examples opt-in via `REUSE_FROM cat-impl`.
-  target_precompile_headers(cat-impl PRIVATE ${CAT_HEADERS})
+  # `str_span` completes `str_view` used by assertions in global headers.
+  target_precompile_headers(cat-impl PRIVATE
+    "${CMAKE_SOURCE_DIR}/src/global_includes.hpp"
+    "${CMAKE_SOURCE_DIR}/src/libraries/string/cat/detail/str_span.hpp")
   # Strip the PCH's embedded mtime so sccache / ccache can reuse PCH-consuming
   # TUs across rebuilds. `SHELL:` keeps `-Xclang` glued to its argument.
   target_compile_options(cat-impl PRIVATE
