@@ -16,9 +16,11 @@ struct relocation_only_probe {
 
    relocation_only_probe() = default;
    relocation_only_probe(relocation_only_probe const&) = delete;
+
    relocation_only_probe(relocation_only_probe&& other) : value(other.value) {
       ++relocation_move_count;
    }
+
    auto
    operator=(relocation_only_probe const&) -> relocation_only_probe& = delete;
    auto

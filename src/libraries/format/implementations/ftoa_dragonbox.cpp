@@ -321,6 +321,16 @@ to_chars<double, default_float_traits<double>>(
    return buffer;
 }
 }  // namespace to_chars_detail
+
+auto
+to_chars(float value, char* _Nonnull buffer) -> char* _Nonnull {
+   return to_chars<float>(value, buffer);
+}
+
+auto
+to_chars(double value, char* _Nonnull buffer) -> char* _Nonnull {
+   return to_chars<double>(value, buffer);
+}
 }  // namespace cat::detail::dragonbox
 
 // NOLINTEND

@@ -63,9 +63,8 @@
 // does this to re-use the inaccessible word high bit of an `idx` as its niche
 // value.
 //
-// `.value()` is an unchecked accessor, but it does call `cat::assert()` when
-// that is enabled. For `compact` specializations, `.value_or_niche()` can be
-// used to read the raw bit-state of the niche even when empty.
+// `.value()` is an unchecked accessor. For `compact` specializations,
+// `.value_or_niche()` can read the raw bit-state of the niche even when empty.
 //
 // `.get_ptr()` is a P4189 pointer-view observer: it yields a pointer to
 // the held value when engaged or `nullptr` when disengaged. Checked
@@ -617,15 +616,9 @@ struct maybe_compact_storage {
    = delete;
 
    // The following methods are homogenous to all `maybe...storage_type` types.
-   // Checked observer. Engagement is verified in debug builds. Compact
-   // storage uniquely also exposes `.value_or_niche()` for callers that
-   // want the raw bit-state (the niche scalar when empty).
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> auto&& {
-      if !consteval {
-         cat::assert(T::has_value(self.m_storage));
-      }
       return $fwd(self).m_storage;
    }
 
@@ -746,8 +739,8 @@ class [[nodiscard]] maybe
       is_specialization<storage_type, maybe_compact_storage>;
 
    // True iff the engaged value is a raw pointer whose niche is `nullptr`
-   // (e.g. `maybe_ptr<T>`). When true, the checked observers `value()`,
-   // `assert()`, and `verify()` return `_Nonnull`.
+   // (e.g. `maybe_ptr<T>`). When true, `value()`, `assert()`, and `verify()`
+   // return `_Nonnull`.
    static constexpr bool is_nonnull = []() {
       if constexpr (uses_compact_storage) {
          return storage_type::is_nonnull;
@@ -1166,10 +1159,7 @@ class [[nodiscard]] maybe
       return !this->has_value();
    }
 
-   // Get the stored value. The storage layer asserts engagement at runtime
-   // in debug builds. For compact-storage `maybe`s that intentionally want
-   // the raw bit-state (including the niche when empty), use
-   // `.value_or_niche()` instead.
+   // Get the stored value without checking engagement.
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> decltype(auto)

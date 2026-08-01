@@ -62,6 +62,9 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/string/implementations/eprintln.cpp
   ${CATLIB}/format/implementations/itoa_jeaiii.cpp
   ${CATLIB}/format/implementations/ftoa_dragonbox.cpp
+  ${CATLIB}/format/implementations/format.cpp
+  ${CATLIB}/format/implementations/format_float.cpp
+  ${CATLIB}/format/implementations/format_integer.cpp
   ${CATLIB}/linux/implementations/syscall0.cpp
   ${CATLIB}/linux/implementations/syscall1.cpp
   ${CATLIB}/linux/implementations/syscall2.cpp
@@ -294,6 +297,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/file/cat/file
   ${CATLIB}/format/cat/format
   ${CATLIB}/format/cat/detail/ftoa_dragonbox.hpp
+  ${CATLIB}/format/cat/detail/ftoa_dragonbox_fwd.hpp
   ${CATLIB}/format/cat/detail/itoa_jeaiii.hpp
   ${CATLIB}/iterable/cat/iterable
   ${CATLIB}/iterable/cat/detail/iterable_interface.hpp

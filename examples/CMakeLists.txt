@@ -33,6 +33,12 @@ if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
   if(CAT_PCH)
     target_precompile_headers(hello REUSE_FROM cat-impl)
   endif()
+
+  add_executable(hello_featureful hello_featureful.cpp)
+  target_link_libraries(hello_featureful PRIVATE cat-examples)
+  if(CAT_PCH)
+    target_precompile_headers(hello_featureful REUSE_FROM cat-impl)
+  endif()
 endif()
 
 option(CAT_BUILD_EXAMPLE_ECHO "Compile echo.cpp." OFF)

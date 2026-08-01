@@ -1,6 +1,7 @@
 #include <cat/format>
 #include <cat/linear_allocator>
 #include <cat/page_allocator>
+#include <cat/pool_allocator>
 
 #include "../unit_tests.hpp"
 
@@ -105,4 +106,15 @@ $test(fmt_long_pattern_substitutes) {
          "0:1:2:3:4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19:20:21:22:23"
       )
    );
+}
+
+$test(fmt_growth_failure) {
+   cat::span storage = pager.alloc_multi<cat::byte>(128u).or_exit();
+   $defer {
+      pager.free(storage);
+   };
+   auto allocator = cat::make_pool_allocator<64u>(storage);
+
+   auto result = cat::fmt(allocator, "{}", uint8::max());
+   cat::verify(!result.has_value());
 }

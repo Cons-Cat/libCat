@@ -1,16 +1,21 @@
+#include <cat/detail/itoa_jeaiii.hpp>
+
 #include <cat/debug>
-#include <cat/format>
 #include <cat/linux>
-#include <cat/page_allocator>
+#include <cat/string>
 
 void
 cat::detail::print_assert_location(source_location const& callsite) {
-   page_allocator allocator;
-   // TODO: This will leak. An `inline_allocator` should be used.
-   auto _ = eprint_fmt(
-      allocator, "assert failed on line {}, in:\n    ",
-      cat::idx(static_cast<cat::idx::raw_type>(callsite.line()))
-   );
+   // Format the line number into a stack buffer. Avoid `fmt` so assert does not
+   // pull the full formatter or Dragonbox into every binary.
+   char line_buffer[16];
+   char* const p_end =
+      u32toa_jeaiii(static_cast<uint4::raw_type>(callsite.line()), line_buffer);
+   str_view const line_string(line_buffer, idx(p_end - line_buffer));
+
+   auto _ = eprint("assert failed on line ");
+   auto _ = eprint(line_string);
+   auto _ = eprint(", in:\n    ");
    // TODO: Truncate to only the last one or two directories.
    auto _ = eprint(callsite.file_name());
    auto _ = eprint("\ncalled from:\n    ");

@@ -313,8 +313,7 @@ class variant {
    friend constexpr auto
    operator==(variant const& a, variant const& b) -> bool {
       if (
-         a.m_discriminant.value_or_niche()
-         != b.m_discriminant.value_or_niche()
+         a.m_discriminant.value_or_niche() != b.m_discriminant.value_or_niche()
       ) {
          return false;
       }
@@ -903,8 +902,7 @@ class variant {
    constexpr auto
    is() const -> bool {
       if constexpr (types::template is_unique<T>) {
-         return m_discriminant.value_or_niche()
-                == this->alternative_index<T>;
+         return m_discriminant.value_or_niche() == this->alternative_index<T>;
       } else if constexpr (
          is_reference_variant
          && types::template is_unique<add_lvalue_reference<T>>

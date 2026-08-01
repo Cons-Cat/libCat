@@ -398,17 +398,22 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       if (minimum_capacity > capacity()) {
          idx const old_size = size();
          idx const old_capacity = capacity();
+         // Allocate manually because only `old_size` elements are live within
+         // `old_capacity`, and unused capacity must remain uninitialized.
          if constexpr (detail::vec_storage<T, flags>::is_inline) {
             auto [new_handle, allocation_bytes] = $prop(
                (allocator.template inline_salloc_multi_uninit<
                   T, flags.inline_storage_count * sizeof(T)>(minimum_capacity))
             );
+
             T* _Nonnull const p_new = allocator.get(new_handle).data();
             annotate_size_change(old_size, old_capacity);
             relocate_elements_to(p_new);
+
             if (m_storage.m_has_handle) {
                free_inline_storage(allocator);
             }
+
             m_storage.m_handle = move(new_handle);
             m_storage.m_has_handle = true;
             m_storage.set_layout(
@@ -419,11 +424,14 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
             auto [alloc_span, alloc_bytes] = $prop(
                allocator.template salloc_multi_uninit<T>(minimum_capacity)
             );
+
             annotate_size_change(old_size, old_capacity);
             relocate_elements_to(alloc_span.data());
+
             if (data() != nullptr) {
                allocator.free_multi_uninit(span<T>(data(), old_capacity));
             }
+
             m_storage.set_layout(
                alloc_span.data(), old_size, alloc_bytes / sizeof(T)
             );
@@ -534,9 +542,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       }
 
       if constexpr (!detail::vec_storage<T, flags>::is_inline) {
-         if (
-            capacity() <= allocator.minimum_allocation_bytes() / sizeof(T)
-         ) {
+         if (capacity() <= allocator.minimum_allocation_bytes() / sizeof(T)) {
             return monostate;
          }
       }
