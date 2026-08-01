@@ -89,6 +89,7 @@ endmacro()
 # macro's leaked locals (`_cat_n_path`, `_cat_n_target`, `_cat_n_check_target`)
 # all stay scoped -- no per-loop `unset()` cleanup needed.
 block()
+  file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg")
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/CMakeFiles/cat_arithmetic_neg")
 
   set(_cat_neg_n_cases 0)
