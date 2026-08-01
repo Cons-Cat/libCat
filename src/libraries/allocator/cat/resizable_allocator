@@ -114,6 +114,7 @@ class resizable_allocator
    // Re-exports so `meta_alloc`'s alignment fast path and bounds checks see
    // the wrapped allocator's guarantees instead of the interface default.
    static constexpr ualign min_alignment = Allocator::min_alignment;
+   static constexpr idx min_allocation_bytes = node_bytes_param;
    static constexpr idx max_allocation_bytes = node_bytes_param;
    static constexpr idx node_bytes = node_bytes_param;
    static constexpr idx chunk_bytes = chunk_bytes_param;

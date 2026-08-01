@@ -6,6 +6,7 @@
 
 #include <cat/debug>
 #include <cat/memory>
+#include <cat/new>
 #include <cat/sanitizer>
 #include <cat/tuple>
 
@@ -88,9 +89,10 @@ struct multi_memory_handle {
    // How large this allocation was, in terms of `value_type`.
    idx array_length;
 
-   multi_memory_handle() = default;
+   constexpr multi_memory_handle() = default;
 
-   multi_memory_handle(Handle input_handle) : handle(input_handle) {
+   constexpr multi_memory_handle(Handle input_handle)
+       : handle(move(input_handle)) {
    }
 
    // TODO: Variadic emplace.
@@ -104,6 +106,11 @@ struct multi_memory_handle {
       this->handle.set_inlined(inlined);
    }
 
+   constexpr void
+   set_inline_objects_live() {
+      this->handle.set_inline_objects_live();
+   }
+
    // Intercept a propagating call to `.set_count()`.
    constexpr void
    set_count(idx count) {
@@ -113,14 +120,14 @@ struct multi_memory_handle {
 
    // Intercept a propagating call to `.size()`.
    [[nodiscard]]
-   auto
+   constexpr auto
    size() const -> idx {
       return this->array_length;
    }
 
    // Intercept a propagating call to `.raw_size()`.
    [[nodiscard]]
-   auto
+   constexpr auto
    raw_size() const -> idx {
       return this->array_length * sizeof(value_type);
    }
@@ -132,25 +139,35 @@ struct multi_memory_handle {
    }
 
    // Get the allocator-specific handle type.
-   auto
+   constexpr auto
    get() & -> decltype(auto) {
       return this->handle.get();
    }
 
    // Get the allocator-specific handle type.
-   auto
+   constexpr auto
    get() const& -> decltype(auto) {
       return this->handle.get();
    }
 
-   auto
+   constexpr auto
    get_inline() & -> value_type& {
       return this->handle.get_inline();
    }
 
-   auto
+   constexpr auto
    get_inline() const& -> value_type const& {
       return this->handle.get_inline();
+   }
+
+   constexpr auto
+   get_inline_ptr() -> value_type* _Nonnull {
+      return this->handle.get_inline_ptr();
+   }
+
+   constexpr auto
+   get_inline_ptr() const -> value_type const* _Nonnull {
+      return this->handle.get_inline_ptr();
    }
 };
 
@@ -169,24 +186,105 @@ struct inline_memory_handle {
    union {
       Handle handle;
       value_type inline_storage;
-      // Reserve `inline_size` bytes to make the size of this handle
-      // predictable.
       byte empty[inline_size];
    };
 
-   bool is_on_stack;
+   unsigned char storage_state;
 
    // Value-initialize `handle` so the union has an active member before
    // `set_count` / other mutators run. Required for constant evaluation.
-   constexpr inline_memory_handle() : handle(), is_on_stack(false) {
+   constexpr inline_memory_handle() : handle(), storage_state(0u) {
    }
 
    constexpr inline_memory_handle(Handle input_handle)
-       : handle(input_handle), is_on_stack(handle.is_inline()) {
+       : handle(move(input_handle)),
+         storage_state(handle.is_inline() ? 2u : 0u) {
+   }
+
+   constexpr inline_memory_handle(inline_memory_handle const& other)
+       : storage_state(other.storage_state) {
+      if (storage_state != 0u) {
+         if (storage_state == 1u) {
+            new (__builtin_addressof(inline_storage))
+               value_type(other.inline_storage);
+         } else {
+            for (idx i; i < inline_size; ++i) {
+               empty[i] = other.empty[i];
+            }
+         }
+      } else {
+         new (__builtin_addressof(handle)) Handle(other.handle);
+      }
+   }
+
+   constexpr inline_memory_handle(inline_memory_handle&& other)
+       : storage_state(other.storage_state) {
+      if (storage_state != 0u) {
+         if (storage_state == 1u) {
+            new (__builtin_addressof(inline_storage))
+               value_type(move(other.inline_storage));
+            other.inline_storage.~value_type();
+            other.storage_state = 2u;
+         }
+      } else {
+         new (__builtin_addressof(handle)) Handle(move(other.handle));
+      }
+      other.storage_state = 0u;
+   }
+
+   constexpr auto
+   operator=(inline_memory_handle const& other) -> inline_memory_handle& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+      if (storage_state == 1u) {
+         inline_storage.~value_type();
+      } else if (storage_state == 0u) {
+         handle.~Handle();
+      }
+      storage_state = other.storage_state;
+      if (storage_state != 0u) {
+         if (storage_state == 1u) {
+            new (__builtin_addressof(inline_storage))
+               value_type(other.inline_storage);
+         } else {
+            for (idx i; i < inline_size; ++i) {
+               empty[i] = other.empty[i];
+            }
+         }
+      } else {
+         new (__builtin_addressof(handle)) Handle(other.handle);
+      }
+      return *this;
+   }
+
+   constexpr auto
+   operator=(inline_memory_handle&& other) -> inline_memory_handle& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+      if (storage_state == 1u) {
+         inline_storage.~value_type();
+      } else if (storage_state == 0u) {
+         handle.~Handle();
+      }
+      storage_state = other.storage_state;
+      if (storage_state != 0u) {
+         if (storage_state == 1u) {
+            new (__builtin_addressof(inline_storage))
+               value_type(move(other.inline_storage));
+            other.inline_storage.~value_type();
+            other.storage_state = 2u;
+         }
+      } else {
+         new (__builtin_addressof(handle)) Handle(move(other.handle));
+      }
+      other.storage_state = 0u;
+      return *this;
    }
 
    constexpr ~inline_memory_handle() {
-      if (this->is_on_stack) {
+      if (storage_state == 1u) {
          inline_storage.~value_type();
       }
    }
@@ -195,13 +293,19 @@ struct inline_memory_handle {
    // TODO: Variadic emplace.
    constexpr void
    set_inline_storage(value_type value) {
-      inline_storage = value;
+      new (__builtin_addressof(inline_storage)) value_type(move(value));
+      storage_state = 1u;
    }
 
    // Intercept a propagating call to `.set_inlined()`.
    constexpr void
    set_inlined(bool inlined) {
-      this->is_on_stack = inlined;
+      storage_state = inlined ? 2u : 0u;
+   }
+
+   constexpr void
+   set_inline_objects_live() {
+      storage_state = 1u;
    }
 
    constexpr void
@@ -224,7 +328,7 @@ struct inline_memory_handle {
    [[nodiscard]]
    constexpr auto
    is_inline() const -> bool {
-      return this->is_on_stack;
+      return storage_state != 0u;
    }
 
    // Get the allocator-specific handle type.
@@ -240,15 +344,25 @@ struct inline_memory_handle {
    }
 
    // Intercept calls to `.get_inline()`.
-   auto
+   constexpr auto
    get_inline() & -> value_type& {
-      return inline_storage;
+      return *get_inline_ptr();
    }
 
    // Intercept calls to `.get_inline()`.
-   auto
+   constexpr auto
    get_inline() const& -> value_type const& {
-      return inline_storage;
+      return *get_inline_ptr();
+   }
+
+   constexpr auto
+   get_inline_ptr() -> value_type* _Nonnull {
+      return __builtin_addressof(inline_storage);
+   }
+
+   constexpr auto
+   get_inline_ptr() const -> value_type const* _Nonnull {
+      return __builtin_addressof(inline_storage);
    }
 };
 
@@ -283,6 +397,8 @@ class allocator_interface {
    // Default static lower bound on allocation alignment. Concrete allocators
    // may shadow this with a higher alignment guarantee.
    static constexpr ualign min_alignment = 1u;
+   // Default static lower bound on allocation size.
+   static constexpr idx min_allocation_bytes = 1u;
 
  private:
    constexpr allocator_interface() = default;
@@ -455,6 +571,13 @@ class allocator_interface {
       meta_alloc_raw_maybe_allocation<has_feedback> maybe_memory,
       idx allocation_bytes, idx allocation_count, Args&&... arguments
    );
+
+   template <
+      typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+      bool has_feedback, idx inline_size = 0>
+   [[gnu::no_sanitize_address]]
+   constexpr auto
+   meta_uninit_alloc(ualign allocation_alignment, idx allocation_count);
 
  public:
    // If this allocator has pointer stability, try to allocate a `T`, and
@@ -1262,6 +1385,446 @@ class allocator_interface {
    constexpr auto
    inline_unalign_xsalloc_multi(idx count) {
       return meta_alloc<T, false, false, true, false, true, inline_size>(
+         1u, count
+      );
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   alloc_uninit() {
+      if constexpr (alignof(T) > 1) {
+         return align_alloc_uninit<T>(alignof(T));
+      } else {
+         return unalign_alloc_uninit<T>();
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xalloc_uninit() {
+      if constexpr (alignof(T) > 1) {
+         return align_xalloc_uninit<T>(alignof(T));
+      } else {
+         return unalign_xalloc_uninit<T>();
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   alloc_multi_uninit(idx count) {
+      if constexpr (alignof(T) > 1) {
+         return align_alloc_multi_uninit<T>(alignof(T), count);
+      } else {
+         return unalign_alloc_multi_uninit<T>(count);
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xalloc_multi_uninit(idx count) {
+      if constexpr (alignof(T) > 1) {
+         return align_xalloc_multi_uninit<T>(alignof(T), count);
+      } else {
+         return unalign_xalloc_multi_uninit<T>(count);
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   align_alloc_uninit(ualign alignment) {
+      return meta_uninit_alloc<T, true, true, false, false>(alignment, 1u);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   align_xalloc_uninit(ualign alignment) {
+      return meta_uninit_alloc<T, false, true, false, false>(alignment, 1u);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   unalign_alloc_uninit() {
+      return meta_uninit_alloc<T, true, false, false, false>(1u, 1u);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   unalign_xalloc_uninit() {
+      return meta_uninit_alloc<T, false, false, false, false>(1u, 1u);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   align_alloc_multi_uninit(ualign alignment, idx count) {
+      return meta_uninit_alloc<T, true, true, true, false>(alignment, count);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   align_xalloc_multi_uninit(ualign alignment, idx count) {
+      return meta_uninit_alloc<T, false, true, true, false>(alignment, count);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   unalign_alloc_multi_uninit(idx count) {
+      return meta_uninit_alloc<T, true, false, true, false>(1u, count);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   unalign_xalloc_multi_uninit(idx count) {
+      return meta_uninit_alloc<T, false, false, true, false>(1u, count);
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_alloc_uninit() {
+      if constexpr (alignof(T) > 1) {
+         return inline_align_alloc_uninit<T, inline_size>(alignof(T));
+      } else {
+         return inline_unalign_alloc_uninit<T, inline_size>();
+      }
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_xalloc_uninit() {
+      if constexpr (alignof(T) > 1) {
+         return inline_align_xalloc_uninit<T, inline_size>(alignof(T));
+      } else {
+         return inline_unalign_xalloc_uninit<T, inline_size>();
+      }
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_alloc_multi_uninit(idx count) {
+      if constexpr (alignof(T) > 1) {
+         return inline_align_alloc_multi_uninit<T, inline_size>(
+            alignof(T), count
+         );
+      } else {
+         return inline_unalign_alloc_multi_uninit<T, inline_size>(count);
+      }
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_xalloc_multi_uninit(idx count) {
+      if constexpr (alignof(T) > 1) {
+         return inline_align_xalloc_multi_uninit<T, inline_size>(
+            alignof(T), count
+         );
+      } else {
+         return inline_unalign_xalloc_multi_uninit<T, inline_size>(count);
+      }
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_alloc_uninit(ualign alignment) {
+      return meta_uninit_alloc<T, true, true, false, false, inline_size>(
+         alignment, 1u
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_xalloc_uninit(ualign alignment) {
+      return meta_uninit_alloc<T, false, true, false, false, inline_size>(
+         alignment, 1u
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_alloc_uninit() {
+      return meta_uninit_alloc<T, true, false, false, false, inline_size>(
+         1u, 1u
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_xalloc_uninit() {
+      return meta_uninit_alloc<T, false, false, false, false, inline_size>(
+         1u, 1u
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_alloc_multi_uninit(ualign alignment, idx count) {
+      return meta_uninit_alloc<T, true, true, true, false, inline_size>(
+         alignment, count
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_xalloc_multi_uninit(ualign alignment, idx count) {
+      return meta_uninit_alloc<T, false, true, true, false, inline_size>(
+         alignment, count
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_alloc_multi_uninit(idx count) {
+      return meta_uninit_alloc<T, true, false, true, false, inline_size>(
+         1u, count
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_xalloc_multi_uninit(idx count) {
+      return meta_uninit_alloc<T, false, false, true, false, inline_size>(
+         1u, count
+      );
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   salloc_uninit() {
+      if constexpr (alignof(T) > 1) {
+         return align_salloc_uninit<T>(alignof(T));
+      } else {
+         return unalign_salloc_uninit<T>();
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xsalloc_uninit() {
+      if constexpr (alignof(T) > 1) {
+         return align_xsalloc_uninit<T>(alignof(T));
+      } else {
+         return unalign_xsalloc_uninit<T>();
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   salloc_multi_uninit(idx count) {
+      if constexpr (alignof(T) > 1) {
+         return align_salloc_multi_uninit<T>(alignof(T), count);
+      } else {
+         return unalign_salloc_multi_uninit<T>(count);
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xsalloc_multi_uninit(idx count) {
+      if constexpr (alignof(T) > 1) {
+         return align_xsalloc_multi_uninit<T>(alignof(T), count);
+      } else {
+         return unalign_xsalloc_multi_uninit<T>(count);
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   align_salloc_uninit(ualign alignment) {
+      return meta_uninit_alloc<T, true, true, false, true>(alignment, 1u);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   align_xsalloc_uninit(ualign alignment) {
+      return meta_uninit_alloc<T, false, true, false, true>(alignment, 1u);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   unalign_salloc_uninit() {
+      return meta_uninit_alloc<T, true, false, false, true>(1u, 1u);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   unalign_xsalloc_uninit() {
+      return meta_uninit_alloc<T, false, false, false, true>(1u, 1u);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   align_salloc_multi_uninit(ualign alignment, idx count) {
+      return meta_uninit_alloc<T, true, true, true, true>(alignment, count);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   align_xsalloc_multi_uninit(ualign alignment, idx count) {
+      return meta_uninit_alloc<T, false, true, true, true>(alignment, count);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   unalign_salloc_multi_uninit(idx count) {
+      return meta_uninit_alloc<T, true, false, true, true>(1u, count);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   unalign_xsalloc_multi_uninit(idx count) {
+      return meta_uninit_alloc<T, false, false, true, true>(1u, count);
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_salloc_uninit() {
+      if constexpr (alignof(T) > 1) {
+         return inline_align_salloc_uninit<T, inline_size>(alignof(T));
+      } else {
+         return inline_unalign_salloc_uninit<T, inline_size>();
+      }
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_xsalloc_uninit() {
+      if constexpr (alignof(T) > 1) {
+         return inline_align_xsalloc_uninit<T, inline_size>(alignof(T));
+      } else {
+         return inline_unalign_xsalloc_uninit<T, inline_size>();
+      }
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_salloc_multi_uninit(idx count) {
+      if constexpr (alignof(T) > 1) {
+         return inline_align_salloc_multi_uninit<T, inline_size>(
+            alignof(T), count
+         );
+      } else {
+         return inline_unalign_salloc_multi_uninit<T, inline_size>(count);
+      }
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_xsalloc_multi_uninit(idx count) {
+      if constexpr (alignof(T) > 1) {
+         return inline_align_xsalloc_multi_uninit<T, inline_size>(
+            alignof(T), count
+         );
+      } else {
+         return inline_unalign_xsalloc_multi_uninit<T, inline_size>(count);
+      }
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_salloc_uninit(ualign alignment) {
+      return meta_uninit_alloc<T, true, true, false, true, inline_size>(
+         alignment, 1u
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_xsalloc_uninit(ualign alignment) {
+      return meta_uninit_alloc<T, false, true, false, true, inline_size>(
+         alignment, 1u
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_salloc_uninit() {
+      return meta_uninit_alloc<T, true, false, false, true, inline_size>(
+         1u, 1u
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_xsalloc_uninit() {
+      return meta_uninit_alloc<T, false, false, false, true, inline_size>(
+         1u, 1u
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_salloc_multi_uninit(ualign alignment, idx count) {
+      return meta_uninit_alloc<T, true, true, true, true, inline_size>(
+         alignment, count
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_xsalloc_multi_uninit(ualign alignment, idx count) {
+      return meta_uninit_alloc<T, false, true, true, true, inline_size>(
+         alignment, count
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_salloc_multi_uninit(idx count) {
+      return meta_uninit_alloc<T, true, false, true, true, inline_size>(
+         1u, count
+      );
+   }
+
+   template <typename T, idx inline_size = 64u>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_xsalloc_multi_uninit(idx count) {
+      return meta_uninit_alloc<T, false, false, true, true, inline_size>(
          1u, count
       );
    }
@@ -4030,6 +4593,32 @@ class allocator_interface {
    template <typename T>
    constexpr void
    cfree_multi(span<T> handle);
+
+   template <typename T>
+   constexpr void
+   free_multi_uninit(span<T> storage);
+
+   template <typename T>
+   constexpr void
+   cfree_multi_uninit(span<T> storage);
+
+   template <typename T>
+   constexpr void
+   free_uninit(T* _Nonnull p_storage);
+
+   template <typename T>
+   constexpr void
+   cfree_uninit(T* _Nonnull p_storage);
+
+   template <typename T>
+      requires requires { T::inline_size; }
+   constexpr void
+   free_uninit(T const& handle);
+
+   template <typename T>
+      requires requires { T::inline_size; }
+   constexpr void
+   cfree_uninit(T& handle);
 
    template <typename T>
    constexpr void

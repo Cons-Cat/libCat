@@ -28,6 +28,94 @@ struct alloc_non_trivial_huge_object {
    }
 };
 
+struct alloc_uninit_lifetime {
+   idx* _Nonnull p_live;
+
+   constexpr explicit alloc_uninit_lifetime(idx& live) : p_live(&live) {
+      ++live;
+   }
+
+   constexpr ~alloc_uninit_lifetime() {
+      *p_live = idx(*p_live - 1u);
+   }
+};
+
+template <typename Allocator>
+concept has_uninit_alloc_family =
+   requires(Allocator& allocator) {
+      allocator.template alloc_uninit<int4>();
+      allocator.template xalloc_uninit<int4>();
+      allocator.template alloc_multi_uninit<int4>(2u);
+      allocator.template xalloc_multi_uninit<int4>(2u);
+      allocator.template align_alloc_uninit<int4>(8u);
+      allocator.template align_xalloc_uninit<int4>(8u);
+      allocator.template align_alloc_multi_uninit<int4>(8u, 2u);
+      allocator.template align_xalloc_multi_uninit<int4>(8u, 2u);
+      allocator.template unalign_alloc_uninit<int4>();
+      allocator.template unalign_xalloc_uninit<int4>();
+      allocator.template unalign_alloc_multi_uninit<int4>(2u);
+      allocator.template unalign_xalloc_multi_uninit<int4>(2u);
+
+      allocator.template inline_alloc_uninit<int4>();
+      allocator.template inline_xalloc_uninit<int4>();
+      allocator.template inline_alloc_multi_uninit<int4>(2u);
+      allocator.template inline_xalloc_multi_uninit<int4>(2u);
+      allocator.template inline_align_alloc_uninit<int4>(8u);
+      allocator.template inline_align_xalloc_uninit<int4>(8u);
+      allocator.template inline_align_alloc_multi_uninit<int4>(8u, 2u);
+      allocator.template inline_align_xalloc_multi_uninit<int4>(8u, 2u);
+      allocator.template inline_unalign_alloc_uninit<int4>();
+      allocator.template inline_unalign_xalloc_uninit<int4>();
+      allocator.template inline_unalign_alloc_multi_uninit<int4>(2u);
+      allocator.template inline_unalign_xalloc_multi_uninit<int4>(2u);
+
+      allocator.template salloc_uninit<int4>();
+      allocator.template xsalloc_uninit<int4>();
+      allocator.template salloc_multi_uninit<int4>(2u);
+      allocator.template xsalloc_multi_uninit<int4>(2u);
+      allocator.template align_salloc_uninit<int4>(8u);
+      allocator.template align_xsalloc_uninit<int4>(8u);
+      allocator.template align_salloc_multi_uninit<int4>(8u, 2u);
+      allocator.template align_xsalloc_multi_uninit<int4>(8u, 2u);
+      allocator.template unalign_salloc_uninit<int4>();
+      allocator.template unalign_xsalloc_uninit<int4>();
+      allocator.template unalign_salloc_multi_uninit<int4>(2u);
+      allocator.template unalign_xsalloc_multi_uninit<int4>(2u);
+
+      allocator.template inline_salloc_uninit<int4>();
+      allocator.template inline_xsalloc_uninit<int4>();
+      allocator.template inline_salloc_multi_uninit<int4>(2u);
+      allocator.template inline_xsalloc_multi_uninit<int4>(2u);
+      allocator.template inline_align_salloc_uninit<int4>(8u);
+      allocator.template inline_align_xsalloc_uninit<int4>(8u);
+      allocator.template inline_align_salloc_multi_uninit<int4>(8u, 2u);
+      allocator.template inline_align_xsalloc_multi_uninit<int4>(8u, 2u);
+      allocator.template inline_unalign_salloc_uninit<int4>();
+      allocator.template inline_unalign_xsalloc_uninit<int4>();
+      allocator.template inline_unalign_salloc_multi_uninit<int4>(2u);
+      allocator.template inline_unalign_xsalloc_multi_uninit<int4>(2u);
+
+      allocator.free_uninit(allocator.template xalloc_uninit<int4>());
+      allocator.cfree_uninit(allocator.template xalloc_uninit<int4>());
+   };
+
+static_assert(has_uninit_alloc_family<cat::page_allocator>);
+
+consteval auto
+const_test_uninit_alloc() -> bool {
+   idx live;
+   auto maybe_storage = pager.alloc_multi_uninit<alloc_uninit_lifetime>(3u);
+   if (!maybe_storage.has_value()) {
+      return false;
+   }
+   auto storage = maybe_storage.value();
+   new (storage.data()) alloc_uninit_lifetime(live);
+   bool const constructed = live == 1u;
+   storage[0u].~alloc_uninit_lifetime();
+   pager.free_multi_uninit(storage);
+   return constructed && live == 0u;
+}
+
 consteval void
 const_test() {
    int4* p_alloc = pager.alloc<int4>(1).value();
@@ -67,9 +155,89 @@ const_test_inline_alloc_sbo16() {
    pager.free(hx);
 }
 
+$test(alloc_uninit_family) {
+   pager.reset();
+   cat::span page = pager.alloc_multi<cat::byte>(4_uki - 64u).verify();
+   $defer {
+      pager.free(page);
+   };
+   auto allocator = cat::make_linear_allocator(page);
+
+   idx live;
+   auto* p_scalar_storage =
+      allocator.alloc_uninit<alloc_uninit_lifetime>().verify();
+   cat::verify(live == 0u);
+   new (p_scalar_storage) alloc_uninit_lifetime(live);
+   cat::verify(live == 1u);
+   p_scalar_storage->~alloc_uninit_lifetime();
+   allocator.free_uninit(p_scalar_storage);
+   cat::verify(live == 0u);
+
+   auto* p_aligned_storage =
+      allocator.align_xalloc_uninit<alloc_uninit_lifetime>(16u);
+   cat::verify(cat::is_aligned(p_aligned_storage, 16u));
+   new (p_aligned_storage) alloc_uninit_lifetime(live);
+   p_aligned_storage->~alloc_uninit_lifetime();
+   allocator.free_uninit(p_aligned_storage);
+   cat::verify(live == 0u);
+
+   auto [inline_scalar, inline_bytes] =
+      allocator.inline_salloc_uninit<alloc_uninit_lifetime, 64u>().verify();
+   cat::verify(inline_scalar.is_inline());
+   cat::verify(inline_bytes == 64u);
+   new (inline_scalar.get_inline_ptr()) alloc_uninit_lifetime(live);
+   cat::verify(live == 1u);
+   inline_scalar.get_inline_ptr()->~alloc_uninit_lifetime();
+   allocator.cfree_uninit(inline_scalar);
+   cat::verify(live == 0u);
+
+   auto storage =
+      allocator.alloc_multi_uninit<alloc_uninit_lifetime>(3u).verify();
+   cat::verify(live == 0u);
+   new (storage.data()) alloc_uninit_lifetime(live);
+   cat::verify(live == 1u);
+   storage[0u].~alloc_uninit_lifetime();
+   allocator.free_multi_uninit(storage);
+   cat::verify(live == 0u);
+
+   auto [sized_storage, allocation_bytes] =
+      allocator.salloc_multi_uninit<alloc_uninit_lifetime>(3u).verify();
+   cat::verify(live == 0u);
+   allocator.free_multi_uninit(
+      cat::span<alloc_uninit_lifetime>(
+         sized_storage.data(), allocation_bytes / sizeof(alloc_uninit_lifetime)
+      )
+   );
+
+   auto inline_allocation =
+      allocator.inline_alloc_multi_uninit<alloc_uninit_lifetime, 64u>(2u)
+         .verify();
+   cat::verify(inline_allocation.is_inline());
+   cat::verify(live == 0u);
+   new (inline_allocation.get_inline_ptr()) alloc_uninit_lifetime(live);
+   inline_allocation.get_inline_ptr()->~alloc_uninit_lifetime();
+   allocator.free_uninit(inline_allocation);
+   cat::verify(live == 0u);
+
+   auto secure_storage = allocator.alloc_multi_uninit<uint8>(2u).verify();
+   secure_storage[0u] = uint8::max();
+   allocator.cfree_multi_uninit(secure_storage);
+
+   auto [secure_allocation, secure_bytes] =
+      allocator.inline_salloc_multi_uninit<uint8, 64u>(2u).verify();
+   cat::verify(secure_bytes == 64u);
+   secure_allocation.get_inline_ptr()[0u] = uint8::max();
+   allocator.cfree_uninit(secure_allocation);
+   cat::verify(
+      *reinterpret_cast<cat::byte*>(secure_allocation.get_inline_ptr())
+      == cat::byte(0u)
+   );
+}
+
 $test(alloc) {
    const_test();
    const_test_inline_alloc();
+   static_assert(const_test_uninit_alloc());
 
    // Initialize an allocator.
    pager.reset();

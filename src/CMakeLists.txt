@@ -5,7 +5,7 @@ set(CATLIB ${CMAKE_SOURCE_DIR}/src/libraries)
 
 # Per-library subdirs on the include path.
 set(CAT_INCLUDE_SUBDIRS
-  meta compare limits runtime cpuid sanitizer arithmetic
+  meta compare limits runtime new cpuid sanitizer arithmetic
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string tui format memory allocator utility file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
@@ -250,6 +250,7 @@ target_sources(cat-impl PRIVATE
 
 set(CAT_HEADER_FILES
   ${CMAKE_SOURCE_DIR}/src/global_includes.hpp
+  ${CATLIB}/new/cat/new
   ${CATLIB}/algorithm/cat/algorithm
   ${CATLIB}/dyn/cat/dyn
   ${CATLIB}/allocator/cat/allocator

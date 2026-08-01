@@ -592,7 +592,8 @@ struct dyn_equals {
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(
-      [[maybe_unused]] T const& self, [[maybe_unused]] void const* _Nonnull p_other
+      [[maybe_unused]] T const& self,
+      [[maybe_unused]] void const* _Nonnull p_other
    ) -> bool {
       [[maybe_unused]]
       T const& other = *static_cast<T const*>(p_other);
@@ -955,6 +956,7 @@ class [[gsl::Pointer]] allocator_ref
    // Mirror `Allocator::min_alignment` so generic code can query the static
    // alignment guarantee without un-erasing the held allocator type.
    static constexpr ualign min_alignment = Allocator::min_alignment;
+   static constexpr idx min_allocation_bytes = Allocator::min_allocation_bytes;
 
    // Empty allocators carry no state, so the ref can be default-constructed
    // for them. Stateful allocators must be bound to a concrete instance.
@@ -1115,6 +1117,7 @@ class [[gsl::Pointer]] allocator_ref<dyn_allocator>
    // `dyn_allocator` erases its held type, so the static alignment guarantee
    // it can promise to callers is the safe lower bound of 1 byte.
    static constexpr ualign min_alignment = 1u;
+   static constexpr idx min_allocation_bytes = 1u;
 
    allocator_ref() = delete ("`allocator_ref` cannot be default-constructed! "
                              "Pass an allocator l-value instead.");

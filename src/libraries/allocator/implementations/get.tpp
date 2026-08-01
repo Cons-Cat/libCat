@@ -24,7 +24,7 @@ allocator_interface<Derived>::get(
       if (handle.is_inline()) {
          if constexpr (T::is_multi_handle) {
             return span<value_type>{
-               __builtin_addressof(handle.get_inline()),
+               handle.get_inline_ptr(),
                handle.size(),
             };
          } else {

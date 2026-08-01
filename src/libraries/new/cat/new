@@ -1,0 +1,74 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+namespace std {
+
+enum class [[clang::enum_extensibility(open)]] align_val_t : __SIZE_TYPE__ {
+};
+
+}  // namespace std
+
+[[nodiscard, gnu::returns_nonnull]]
+auto
+operator new(unsigned long) -> void* _Nonnull;
+
+[[gnu::returns_nonnull]]
+auto
+operator new(unsigned long, void* _Nonnull p_address) -> void* _Nonnull;
+
+[[nodiscard, gnu::returns_nonnull]]
+auto
+operator new[](unsigned long) -> void* _Nonnull;
+
+[[nodiscard, gnu::returns_nonnull]]
+auto
+operator new[](unsigned long, void* _Nonnull p_address) -> void* _Nonnull;
+
+[[nodiscard, gnu::returns_nonnull]]
+auto
+operator new[](unsigned long, std::align_val_t align) -> void* _Nonnull;
+
+void
+operator delete(void* _Nullable);
+
+void
+operator delete(void* _Nullable, unsigned long);
+
+void
+operator delete[](void* _Nullable);
+
+void
+operator delete[](void* _Nullable, unsigned long);
+
+void
+operator delete[](void* _Nullable, unsigned long, std::align_val_t);
+
+namespace std {
+
+template <typename T>
+struct allocator {
+   using value_type = T;
+
+   constexpr allocator() = default;
+
+   template <typename U>
+   constexpr allocator([[maybe_unused]] allocator<U> const& other) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   allocate(__SIZE_TYPE__ count) -> T* _Nonnull {
+      return static_cast<T* _Nonnull>(::operator new(count * sizeof(T)));
+   }
+
+   constexpr void
+   deallocate(T* _Nonnull p_memory, [[maybe_unused]] __SIZE_TYPE__ count) {
+      ::operator delete(p_memory);
+   }
+};
+
+}  // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)

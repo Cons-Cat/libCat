@@ -113,6 +113,7 @@ allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
       for (idx i = 0u; i < allocation_count; ++i) {
          new (reinterpret_cast<T* _Nonnull>(&stack_handle) + i) T;
       }
+      stack_handle.set_inline_objects_live();
    } else {
       if constexpr (is_zeroed) {
          stack_handle.set_inline_storage(T{});
@@ -333,6 +334,135 @@ allocator_interface<Derived>::meta_alloc_construct(
       } else {
          if constexpr (is_multiple) {
             return return_handle(span<T>{p_allocation, allocation_count});
+         } else {
+            return return_handle(p_allocation);
+         }
+      }
+   }
+}
+
+template <typename Derived>
+template <
+   typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+   bool has_feedback, idx inline_size>
+[[gnu::no_sanitize_address]]
+constexpr auto
+allocator_interface<Derived>::meta_uninit_alloc(
+   ualign allocation_alignment, idx allocation_count
+) {
+   constexpr bool is_inline = inline_size != 0u;
+   using alias_types = meta_alloc_alias_types<
+      T, is_fail_safe, is_multiple, has_feedback, inline_size>;
+   using return_handle = alias_types::return_handle;
+   idx const allocation_bytes = allocation_count * sizeof(T);
+
+   if constexpr (is_inline) {
+      if !consteval {
+         if (allocation_bytes <= inline_size) {
+            typename alias_types::handle_type handle;
+            handle.set_inlined(true);
+            if constexpr (is_multiple) {
+               handle.set_count(inline_size / sizeof(T));
+            }
+            if constexpr (has_feedback) {
+               return return_handle(tuple{move(handle), idx(inline_size)});
+            } else {
+               return return_handle(move(handle));
+            }
+         }
+      }
+   }
+
+   if consteval {
+      std::allocator<T> allocator;
+      T* _Nonnull const p_allocation = allocator.allocate(allocation_count.raw);
+      if constexpr (is_inline) {
+         typename alias_types::underlying_handle raw_handle{p_allocation};
+         typename alias_types::handle_type handle(move(raw_handle));
+         handle.set_inlined(false);
+         if constexpr (is_multiple) {
+            handle.set_count(allocation_count);
+         }
+         if constexpr (has_feedback) {
+            return return_handle(tuple{move(handle), allocation_bytes});
+         } else {
+            return return_handle(move(handle));
+         }
+      } else if constexpr (has_feedback) {
+         if constexpr (is_multiple) {
+            return return_handle(
+               tuple{span<T>(p_allocation, allocation_count), allocation_bytes}
+            );
+         } else {
+            return return_handle(
+               sized_allocation<T* _Nonnull>{p_allocation, allocation_bytes}
+            );
+         }
+      } else {
+         if constexpr (is_multiple) {
+            return return_handle(span<T>(p_allocation, allocation_count));
+         } else {
+            return return_handle(p_allocation);
+         }
+      }
+   } else {
+      meta_alloc_raw_maybe_allocation<has_feedback> maybe_memory;
+      bool const over_aligned =
+         is_aligned && allocation_alignment > Derived::min_alignment;
+      if constexpr (has_feedback) {
+         maybe_memory = over_aligned ? this->meta_alloc_aligned_feedback(
+                                          allocation_alignment, allocation_bytes
+                                       )
+                                     : this->meta_alloc_unaligned_feedback(
+                                          allocation_alignment, allocation_bytes
+                                       );
+      } else {
+         maybe_memory = over_aligned
+                           ? this->meta_alloc_aligned(
+                                allocation_alignment, allocation_bytes
+                             )
+                           : this->meta_alloc_unaligned(allocation_bytes);
+      }
+
+      if constexpr (is_fail_safe) {
+         if (!maybe_memory.has_value()) {
+            return return_handle(nullopt);
+         }
+      }
+
+      auto [p_allocation, prepared_bytes] =
+         detail::meta_alloc_unpoison_memory<T, has_feedback>(
+            maybe_memory, allocation_bytes
+         );
+      if constexpr (is_inline) {
+         typename alias_types::underlying_handle raw_handle{p_allocation};
+         typename alias_types::handle_type handle(move(raw_handle));
+         handle.set_inlined(false);
+         if constexpr (is_multiple) {
+            if constexpr (has_feedback) {
+               handle.set_count(prepared_bytes / sizeof(T));
+            } else {
+               handle.set_count(allocation_count);
+            }
+         }
+         if constexpr (has_feedback) {
+            return return_handle(tuple{move(handle), prepared_bytes});
+         } else {
+            return return_handle(move(handle));
+         }
+      } else if constexpr (has_feedback) {
+         if constexpr (is_multiple) {
+            return return_handle(
+               tuple{span<T>(p_allocation, allocation_count), prepared_bytes}
+            );
+         } else {
+            return return_handle(
+               sized_allocation<T* _Nonnull>{p_allocation, prepared_bytes}
+            );
+         }
+      } else {
+         if constexpr (is_multiple) {
+            return return_handle(span<T>(p_allocation, allocation_count));
          } else {
             return return_handle(p_allocation);
          }

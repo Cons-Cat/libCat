@@ -242,9 +242,6 @@ struct tuple_element;
 template <__SIZE_TYPE__ index, typename T>
 using tuple_element_t = tuple_element<index, T>::type;
 
-// TODO: Does this actually have to be in `std::`?
-enum class [[clang::enum_extensibility(open)]] align_val_t : __SIZE_TYPE__ {
-};
 }  // namespace std
 
 // NOLINTEND(bugprone-std-namespace-modification)
@@ -258,9 +255,6 @@ enum class [[clang::enum_extensibility(open)]] align_val_t : __SIZE_TYPE__ {
 
 // `assert()` is used throughout the library.
 #include <cat/debug>
-
-// `no_type` is required for the `$prop()` macro.
-#include <cat/notype>
 
 // `cat::propagate_error` is a configuration point for the `$prop` macros. It
 // uses overload resolution to deduce the value that should be returned within a
@@ -318,31 +312,3 @@ enum class [[clang::enum_extensibility(open)]] align_val_t : __SIZE_TYPE__ {
 #pragma clang final(CAT_PROPAGATE_AS)
 
 #define $prop_as CAT_PROPAGATE_AS
-
-// `new` and `delete` are defined for use in a `constexpr` context.
-// P2013R5 permits these to be no-op.
-
-[[gnu::returns_nonnull]]
-auto
-operator new(unsigned long, void* _Nonnull p_address) -> void* _Nonnull;
-
-[[nodiscard, gnu::returns_nonnull]]
-auto
-operator new[](unsigned long, void* _Nonnull p_address) -> void* _Nonnull;
-
-[[nodiscard, gnu::returns_nonnull]]
-auto
-operator new[](unsigned long) -> void* _Nonnull;
-
-void
-operator delete[](void* _Nullable);
-
-void
-operator delete[](void* _Nullable, unsigned long);
-
-void
-operator delete[](void* _Nullable, unsigned long, std::align_val_t);
-
-[[nodiscard, gnu::returns_nonnull]]
-auto
-operator new[](unsigned long, std::align_val_t align) -> void* _Nonnull;

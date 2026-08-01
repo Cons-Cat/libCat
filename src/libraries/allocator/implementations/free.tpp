@@ -185,9 +185,7 @@ allocator_interface<Derived>::cfree_multi(span<T> handle) {
             p_memory[i].~T();
          }
       }
-      zero_memory_explicit(
-         p_memory, static_cast<uword>(handle.size() * sizeof(T))
-      );
+      zero_memory_explicit(p_memory, handle.size() * sizeof(T));
       delete[] p_memory;
    } else {
       if constexpr (!is_trivially_destructible<T>) {
@@ -195,13 +193,100 @@ allocator_interface<Derived>::cfree_multi(span<T> handle) {
             p_memory[i].~T();
          }
       }
-      zero_memory_explicit(
-         p_memory, static_cast<uword>(handle.size() * sizeof(T))
-      );
+      zero_memory_explicit(p_memory, handle.size() * sizeof(T));
       this->self().deallocate(
          static_cast<void const*>(p_memory), handle.size() * sizeof(T)
       );
       poison_memory_region(p_memory, sizeof(T) * handle.size());
+   }
+}
+
+template <typename Derived>
+template <typename T>
+constexpr void
+allocator_interface<Derived>::free_multi_uninit(span<T> storage) {
+   if consteval {
+      std::allocator<T> allocator;
+      allocator.deallocate(storage.data(), storage.size().raw);
+   } else {
+      // Elements are destroyed separately, so deallocate storage as bytes.
+      this->free_multi(
+         span<byte>(
+            reinterpret_cast<byte*>(storage.data()), storage.size_bytes()
+         )
+      );
+   }
+}
+
+template <typename Derived>
+template <typename T>
+constexpr void
+allocator_interface<Derived>::cfree_multi_uninit(span<T> storage) {
+   if consteval {
+      std::allocator<T> allocator;
+      allocator.deallocate(storage.data(), storage.size().raw);
+   } else {
+      // Elements are destroyed separately, so deallocate storage as bytes.
+      this->cfree_multi(
+         span<byte>(
+            reinterpret_cast<byte*>(storage.data()), storage.size_bytes()
+         )
+      );
+   }
+}
+
+template <typename Derived>
+template <typename T>
+constexpr void
+allocator_interface<Derived>::free_uninit(T* _Nonnull p_storage) {
+   if consteval {
+      std::allocator<T> allocator;
+      allocator.deallocate(p_storage, 1u);
+   } else {
+      this->self().deallocate(static_cast<void const*>(p_storage), sizeof(T));
+      poison_memory_region(p_storage, sizeof(T));
+   }
+}
+
+template <typename Derived>
+template <typename T>
+constexpr void
+allocator_interface<Derived>::cfree_uninit(T* _Nonnull p_storage) {
+   if consteval {
+      std::allocator<T> allocator;
+      allocator.deallocate(p_storage, 1u);
+   } else {
+      zero_memory_explicit(p_storage, sizeof(T));
+      this->self().deallocate(static_cast<void const*>(p_storage), sizeof(T));
+      poison_memory_region(p_storage, sizeof(T));
+   }
+}
+
+template <typename Derived>
+template <typename T>
+   requires requires { T::inline_size; }
+constexpr void
+allocator_interface<Derived>::free_uninit(T const& handle) {
+   if (!handle.is_inline()) {
+      if constexpr (T::is_multi_handle) {
+         this->free_multi_uninit(this->get(handle));
+      } else {
+         this->free_uninit(__builtin_addressof(this->get(handle)));
+      }
+   }
+}
+
+template <typename Derived>
+template <typename T>
+   requires requires { T::inline_size; }
+constexpr void
+allocator_interface<Derived>::cfree_uninit(T& handle) {
+   if (handle.is_inline()) {
+      zero_memory_explicit(handle.get_inline_ptr(), handle.raw_size());
+   } else if constexpr (T::is_multi_handle) {
+      this->cfree_multi_uninit(this->get(handle));
+   } else {
+      this->cfree_uninit(__builtin_addressof(this->get(handle)));
    }
 }
 

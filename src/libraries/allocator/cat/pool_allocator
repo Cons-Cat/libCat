@@ -96,6 +96,7 @@ class pool_allocator
 
  public:
    // Do not allocate larger than this size of one node.
+   static constexpr idx min_allocation_bytes = max_node_bytes;
    static constexpr idx max_allocation_bytes = max_node_bytes;
 
    union node_union {

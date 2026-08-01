@@ -212,6 +212,7 @@ class page_allocator : public allocator_interface<page_allocator> {
    // `mmap` always returns page-aligned memory, so the static alignment
    // guarantee is one full page (4 KiB).
    static constexpr ualign min_alignment = page_size;
+   static constexpr idx min_allocation_bytes = page_size;
 
    // Process-wide private anonymous rw RSS from the detailed memory-map file.
    [[nodiscard]]
