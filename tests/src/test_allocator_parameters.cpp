@@ -6,6 +6,10 @@
 
 #include "../unit_tests.hpp"
 
+template <typename Allocator>
+concept has_bytes_used =
+   requires(Allocator const& allocator) { allocator.bytes_used(); };
+
 $test(dyn_allocator_linear) {
    // `linear_allocator` provides native `aligned_allocate` and
    // `aligned_allocate_feedback`, so this exercises the direct-dispatch paths
@@ -85,6 +89,115 @@ $test(dyn_allocator_page) {
    // has no `allocate_feedback` of its own.
    auto handle = dyn.inline_alloc<int4>(99).verify();
    dyn.free(handle);
+}
+
+$test(basic_dyn_allocator_methods) {
+   static_assert(
+      cat::is_allocator<cat::basic_dyn_allocator<cat::dyn_reallocate>>
+   );
+   static_assert(
+      !has_bytes_used<cat::basic_dyn_allocator<cat::dyn_reallocate>>
+   );
+
+   cat::basic_dyn_allocator<cat::dyn_reallocate> dyn = pager;
+   int4* p_value = dyn.alloc<int4>(27).verify();
+   cat::verify(*p_value == 27);
+   dyn.free(p_value);
+
+   cat::dyn_allocator full = pager;
+   cat::basic_dyn_allocator<cat::dyn_reallocate> narrowed = full;
+   int4* p_narrowed = narrowed.alloc<int4>(31).verify();
+   cat::verify(*p_narrowed == 31);
+   narrowed.free(p_narrowed);
+}
+
+$test(realloc_uninit) {
+   {
+      int4* p_value = pager.alloc<int4>(17).verify();
+      p_value = pager.realloc_uninit(p_value).verify();
+      $defer {
+         pager.free_uninit(p_value);
+      };
+      cat::verify(*p_value == 17);
+   }
+
+   {
+      cat::span<int4> values = pager.alloc_multi_uninit<int4>(2u).verify();
+      values[0] = 23;
+      values[1] = 29;
+      values =
+         pager.realloc_multi_uninit(values.data(), values.size(), 4u).verify();
+      $defer {
+         pager.free_multi_uninit(values);
+      };
+      cat::verify(values[0] == 23);
+      cat::verify(values[1] == 29);
+   }
+
+   {
+      int4* p_feedback = pager.alloc<int4>(43).verify();
+      auto [p_resized, allocation_bytes] =
+         pager.resalloc_uninit(p_feedback).verify();
+      $defer {
+         pager.free_uninit(p_resized);
+      };
+      cat::verify(*p_resized == 43);
+      cat::verify(allocation_bytes >= sizeof(int4));
+   }
+
+   {
+      cat::span<int4> feedback_values =
+         pager.alloc_multi_uninit<int4>(2u).verify();
+      feedback_values[0] = 47;
+      feedback_values[1] = 53;
+      auto [resized_values, resized_bytes] =
+         pager
+            .resalloc_multi_uninit(
+               feedback_values.data(), feedback_values.size(), 4u
+            )
+            .verify();
+      $defer {
+         pager.free_multi_uninit(resized_values);
+      };
+      cat::verify(resized_values[0] == 47);
+      cat::verify(resized_values[1] == 53);
+      cat::verify(resized_bytes >= sizeof(int4) * 4u);
+   }
+
+   {
+      auto handle = pager.inline_alloc<int4>(31).verify();
+      handle = pager.inline_realloc_uninit(handle).verify();
+      $defer {
+         pager.free_uninit(handle);
+      };
+      cat::verify(pager.get(handle) == 31);
+   }
+
+   {
+      auto handle = pager.inline_alloc<int4>(59).verify();
+      auto [resized_handle, allocation_bytes] =
+         pager.inline_resalloc_uninit(handle).verify();
+      $defer {
+         pager.free_uninit(resized_handle);
+      };
+      cat::verify(pager.get(resized_handle) == 59);
+      cat::verify(allocation_bytes >= sizeof(int4));
+   }
+
+   {
+      auto multi_handle = pager.inline_alloc_multi_uninit<int4>(2u).verify();
+      cat::span inline_values = pager.get(multi_handle);
+      inline_values[0] = 37;
+      inline_values[1] = 41;
+      auto resized_handle =
+         pager.inline_realloc_multi_uninit(multi_handle, 4u).verify();
+      $defer {
+         pager.free_uninit(resized_handle);
+      };
+      inline_values = pager.get(resized_handle);
+      cat::verify(inline_values[0] == 37);
+      cat::verify(inline_values[1] == 41);
+   }
 }
 
 $test(allocator_ref) {

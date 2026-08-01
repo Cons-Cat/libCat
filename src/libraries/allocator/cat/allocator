@@ -2505,6 +2505,116 @@ class allocator_interface {
       return unalign_xrealloc_to(*this, p_handle);
    }
 
+   // Try to move an object into uninitialized storage from another allocator.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   realloc_uninit_to(auto& allocator, T* _Nonnull p_handle) {
+      return meta_realloc<
+         &allocator_interface<Derived>::alloc_uninit<T>, true, false, false>(
+         allocator, p_handle
+      );
+   }
+
+   // Try to move an object into uninitialized storage.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   realloc_uninit(T* _Nonnull p_handle) {
+      return realloc_uninit_to(*this, p_handle);
+   }
+
+   // Move an object into uninitialized storage from another allocator.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xrealloc_uninit_to(auto& allocator, T* _Nonnull p_handle) {
+      return meta_realloc<
+         &allocator_interface<Derived>::xalloc_uninit<T>, false, false, false>(
+         allocator, p_handle
+      );
+   }
+
+   // Move an object into uninitialized storage.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xrealloc_uninit(T* _Nonnull p_handle) {
+      return xrealloc_uninit_to(*this, p_handle);
+   }
+
+   // Try to move an object into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   align_realloc_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, ualign alignment
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc<
+         &allocator_interface<Derived>::align_alloc_uninit<T>, true, false,
+         false>(allocator, p_handle, alignment);
+   }
+
+   // Try to move an object into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   align_realloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
+      return align_realloc_uninit_to(*this, p_handle, alignment);
+   }
+
+   // Move an object into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   align_xrealloc_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, ualign alignment
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc<
+         &allocator_interface<Derived>::align_xalloc_uninit<T>, false, false,
+         false>(allocator, p_handle, alignment);
+   }
+
+   // Move an object into aligned uninitialized storage.
+   [[nodiscard]]
+   auto
+   align_xrealloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
+      return align_xrealloc_uninit_to(*this, p_handle, alignment);
+   }
+
+   // Try to move an object into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   unalign_realloc_uninit_to(auto& allocator, auto* _Nonnull p_handle) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc<
+         &allocator_interface<Derived>::unalign_alloc_uninit<T>, true, false,
+         false>(allocator, p_handle);
+   }
+
+   // Try to move an object into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   unalign_realloc_uninit(auto* _Nonnull p_handle) {
+      return unalign_realloc_uninit_to(*this, p_handle);
+   }
+
+   // Move an object into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   unalign_xrealloc_uninit_to(auto& allocator, auto* _Nonnull p_handle) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc<
+         &allocator_interface<Derived>::unalign_xalloc_uninit<T>, false, false,
+         false>(allocator, p_handle);
+   }
+
+   // Move an object into unaligned uninitialized storage.
+   [[nodiscard]]
+   auto
+   unalign_xrealloc_uninit(auto* _Nonnull p_handle) {
+      return unalign_xrealloc_uninit_to(*this, p_handle);
+   }
+
    // Try to move and resize an array pointer handle from this allocator into
    // another.
    template <typename T>
@@ -2649,6 +2759,142 @@ class allocator_interface {
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return unalign_xrealloc_multi_to(*this, p_handle, old_count, new_count);
+   }
+
+   // Try to resize an array with an uninitialized expanded range.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   realloc_multi_uninit_to(
+      auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::alloc_multi_uninit<T>, true, false>(
+         allocator, p_handle, old_count, new_count
+      );
+   }
+
+   // Try to resize an array with an uninitialized expanded range.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   realloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
+      return realloc_multi_uninit_to(*this, p_handle, old_count, new_count);
+   }
+
+   // Resize an array with an uninitialized expanded range.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xrealloc_multi_uninit_to(
+      auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::xalloc_multi_uninit<T>, false, false>(
+         allocator, p_handle, old_count, new_count
+      );
+   }
+
+   // Resize an array with an uninitialized expanded range.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xrealloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
+      return xrealloc_multi_uninit_to(*this, p_handle, old_count, new_count);
+   }
+
+   // Try to resize an array into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   align_realloc_multi_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
+      idx new_count
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::align_alloc_multi_uninit<T>, true,
+         false>(allocator, p_handle, old_count, new_count, alignment);
+   }
+
+   // Try to resize an array into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   align_realloc_multi_uninit(
+      auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
+   ) {
+      return align_realloc_multi_uninit_to(
+         *this, p_handle, alignment, old_count, new_count
+      );
+   }
+
+   // Resize an array into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   align_xrealloc_multi_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
+      idx new_count
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::align_xalloc_multi_uninit<T>, false,
+         false>(allocator, p_handle, old_count, new_count, alignment);
+   }
+
+   // Resize an array into aligned uninitialized storage.
+   [[nodiscard]]
+   auto
+   align_xrealloc_multi_uninit(
+      auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
+   ) {
+      return align_xrealloc_multi_uninit_to(
+         *this, p_handle, alignment, old_count, new_count
+      );
+   }
+
+   // Try to resize an array into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   unalign_realloc_multi_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::unalign_alloc_multi_uninit<T>, true,
+         false>(allocator, p_handle, old_count, new_count);
+   }
+
+   // Try to resize an array into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   unalign_realloc_multi_uninit(
+      auto* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      return unalign_realloc_multi_uninit_to(
+         *this, p_handle, old_count, new_count
+      );
+   }
+
+   // Resize an array into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   unalign_xrealloc_multi_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::unalign_xalloc_multi_uninit<T>, false,
+         false>(allocator, p_handle, old_count, new_count);
+   }
+
+   // Resize an array into unaligned uninitialized storage.
+   [[nodiscard]]
+   auto
+   unalign_xrealloc_multi_uninit(
+      auto* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      return unalign_xrealloc_multi_uninit_to(
+         *this, p_handle, old_count, new_count
+      );
    }
 
    // Try to move a pointer handle from this allocator into another, and
@@ -3038,6 +3284,122 @@ class allocator_interface {
       return inline_unalign_xrealloc_to(*this, handle);
    }
 
+   // Try to move an inline object into uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_realloc_uninit_to(auto& allocator, auto& handle) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_alloc_uninit<T, inline_size>,
+         true, false, false>(allocator, handle);
+   }
+
+   // Try to move an inline object into uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_realloc_uninit(auto& handle) {
+      return inline_realloc_uninit_to(*this, handle);
+   }
+
+   // Move an inline object into uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_xrealloc_uninit_to(auto& allocator, auto& handle) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_xalloc_uninit<T, inline_size>,
+         false, false, false>(allocator, handle);
+   }
+
+   // Move an inline object into uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_xrealloc_uninit(auto& handle) {
+      return inline_xrealloc_uninit_to(*this, handle);
+   }
+
+   // Try to move an inline object into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_realloc_uninit_to(
+      auto& allocator, auto& handle, ualign alignment
+   ) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_align_alloc_uninit<
+            T, inline_size>,
+         true, false, false>(allocator, handle, alignment);
+   }
+
+   // Try to move an inline object into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_realloc_uninit(auto& handle, ualign alignment) {
+      return inline_align_realloc_uninit_to(*this, handle, alignment);
+   }
+
+   // Move an inline object into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_xrealloc_uninit_to(
+      auto& allocator, auto& handle, ualign alignment
+   ) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_align_xalloc_uninit<
+            T, inline_size>,
+         false, false, false>(allocator, handle, alignment);
+   }
+
+   // Move an inline object into aligned uninitialized storage.
+   [[nodiscard]]
+   auto
+   inline_align_xrealloc_uninit(auto& handle, ualign alignment) {
+      return inline_align_xrealloc_uninit_to(*this, handle, alignment);
+   }
+
+   // Try to move an inline object into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_realloc_uninit_to(auto& allocator, auto& handle) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_unalign_alloc_uninit<
+            T, inline_size>,
+         true, false, false>(allocator, handle);
+   }
+
+   // Try to move an inline object into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_realloc_uninit(auto& handle) {
+      return inline_unalign_realloc_uninit_to(*this, handle);
+   }
+
+   // Move an inline object into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_xrealloc_uninit_to(auto& allocator, auto& handle) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_unalign_xalloc_uninit<
+            T, inline_size>,
+         false, false, false>(allocator, handle);
+   }
+
+   // Move an inline object into unaligned uninitialized storage.
+   [[nodiscard]]
+   auto
+   inline_unalign_xrealloc_uninit(auto& handle) {
+      return inline_unalign_xrealloc_uninit_to(*this, handle);
+   }
+
    // Move a small-size optimized array memory handle from this allocator into
    // another.
    [[nodiscard]]
@@ -3170,6 +3532,140 @@ class allocator_interface {
    auto
    inline_unalign_xrealloc_multi(auto& handle, idx new_count) {
       return inline_unalign_xrealloc_multi_to(*this, handle, new_count);
+   }
+
+   // Try to resize an inline array with an uninitialized expanded range.
+   [[nodiscard]]
+   constexpr auto
+   inline_realloc_multi_uninit_to(
+      auto& allocator, auto& handle, idx new_count
+   ) {
+      using T = typeof(this->get(handle)[0u]);
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_alloc_multi_uninit<
+            T, inline_size>,
+         true, false>(allocator, handle, new_count);
+   }
+
+   // Try to resize an inline array with an uninitialized expanded range.
+   [[nodiscard]]
+   constexpr auto
+   inline_realloc_multi_uninit(auto& handle, idx new_count) {
+      return inline_realloc_multi_uninit_to(*this, handle, new_count);
+   }
+
+   // Resize an inline array with an uninitialized expanded range.
+   [[nodiscard]]
+   constexpr auto
+   inline_xrealloc_multi_uninit_to(
+      auto& allocator, auto& handle, idx new_count
+   ) {
+      using T = typeof(this->get(handle)[0u]);
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_xalloc_multi_uninit<
+            T, inline_size>,
+         false, false>(allocator, handle, new_count);
+   }
+
+   // Resize an inline array with an uninitialized expanded range.
+   [[nodiscard]]
+   constexpr auto
+   inline_xrealloc_multi_uninit(auto& handle, idx new_count) {
+      return inline_xrealloc_multi_uninit_to(*this, handle, new_count);
+   }
+
+   // Try to resize an inline array into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_realloc_multi_uninit_to(
+      auto& allocator, auto& handle, ualign alignment, idx new_count
+   ) {
+      using T = typeof(this->get(handle)[0u]);
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_align_alloc_multi_uninit<
+            T, inline_size>,
+         true, false>(allocator, handle, new_count, alignment);
+   }
+
+   // Try to resize an inline array into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_realloc_multi_uninit(
+      auto& handle, ualign alignment, idx new_count
+   ) {
+      return inline_align_realloc_multi_uninit_to(
+         *this, handle, alignment, new_count
+      );
+   }
+
+   // Resize an inline array into aligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_xrealloc_multi_uninit_to(
+      auto& allocator, auto& handle, ualign alignment, idx new_count
+   ) {
+      using T = typeof(this->get(handle)[0u]);
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_align_xalloc_multi_uninit<
+            T, inline_size>,
+         false, false>(allocator, handle, new_count, alignment);
+   }
+
+   // Resize an inline array into aligned uninitialized storage.
+   [[nodiscard]]
+   auto
+   inline_align_xrealloc_multi_uninit(
+      auto& handle, ualign alignment, idx new_count
+   ) {
+      return inline_align_xrealloc_multi_uninit_to(
+         *this, handle, alignment, new_count
+      );
+   }
+
+   // Try to resize an inline array into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_realloc_multi_uninit_to(
+      auto& allocator, auto& handle, idx new_count
+   ) {
+      using T = typeof(this->get(handle)[0u]);
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_unalign_alloc_multi_uninit<
+            T, inline_size>,
+         true, false>(allocator, handle, new_count);
+   }
+
+   // Try to resize an inline array into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_realloc_multi_uninit(auto& handle, idx new_count) {
+      return inline_unalign_realloc_multi_uninit_to(*this, handle, new_count);
+   }
+
+   // Resize an inline array into unaligned uninitialized storage.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_xrealloc_multi_uninit_to(
+      auto& allocator, auto& handle, idx new_count
+   ) {
+      using T = typeof(this->get(handle)[0u]);
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_unalign_xalloc_multi_uninit<
+            T, inline_size>,
+         false, false>(allocator, handle, new_count);
+   }
+
+   // Resize an inline array into unaligned uninitialized storage.
+   [[nodiscard]]
+   auto
+   inline_unalign_xrealloc_multi_uninit(auto& handle, idx new_count) {
+      return inline_unalign_xrealloc_multi_uninit_to(*this, handle, new_count);
    }
 
    // Try to move a small-size optimized handle from this allocator into
@@ -3715,6 +4211,252 @@ class allocator_interface {
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return unalign_xresalloc_multi_to(*this, p_handle, old_count, new_count);
+   }
+
+   // Try to move an object into uninitialized storage and return its bytes.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   resalloc_uninit_to(auto& allocator, T* _Nonnull p_handle) {
+      return meta_realloc<
+         &allocator_interface<Derived>::salloc_uninit<T>, true, true, false>(
+         allocator, p_handle
+      );
+   }
+
+   // Try to move an object into uninitialized storage and return its bytes.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   resalloc_uninit(T* _Nonnull p_handle) {
+      return resalloc_uninit_to(*this, p_handle);
+   }
+
+   // Move an object into uninitialized storage and return its bytes.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xresalloc_uninit_to(auto& allocator, T* _Nonnull p_handle) {
+      return meta_realloc<
+         &allocator_interface<Derived>::xsalloc_uninit<T>, false, true, false>(
+         allocator, p_handle
+      );
+   }
+
+   // Move an object into uninitialized storage and return its bytes.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xresalloc_uninit(T* _Nonnull p_handle) {
+      return xresalloc_uninit_to(*this, p_handle);
+   }
+
+   // Try to move an object into aligned uninitialized storage and return bytes.
+   [[nodiscard]]
+   constexpr auto
+   align_resalloc_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, ualign alignment
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc<
+         &allocator_interface<Derived>::align_salloc_uninit<T>, true, true,
+         false>(allocator, p_handle, alignment);
+   }
+
+   // Try to move an object into aligned uninitialized storage and return bytes.
+   [[nodiscard]]
+   constexpr auto
+   align_resalloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
+      return align_resalloc_uninit_to(*this, p_handle, alignment);
+   }
+
+   // Move an object into aligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   align_xresalloc_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, ualign alignment
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc<
+         &allocator_interface<Derived>::align_xsalloc_uninit<T>, false, true,
+         false>(allocator, p_handle, alignment);
+   }
+
+   // Move an object into aligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   auto
+   align_xresalloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
+      return align_xresalloc_uninit_to(*this, p_handle, alignment);
+   }
+
+   // Try to move into unaligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   unalign_resalloc_uninit_to(auto& allocator, auto* _Nonnull p_handle) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc<
+         &allocator_interface<Derived>::unalign_salloc_uninit<T>, true, true,
+         false>(allocator, p_handle);
+   }
+
+   // Try to move into unaligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   unalign_resalloc_uninit(auto* _Nonnull p_handle) {
+      return unalign_resalloc_uninit_to(*this, p_handle);
+   }
+
+   // Move into unaligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   unalign_xresalloc_uninit_to(auto& allocator, auto* _Nonnull p_handle) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc<
+         &allocator_interface<Derived>::unalign_xsalloc_uninit<T>, false, true,
+         false>(allocator, p_handle);
+   }
+
+   // Move into unaligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   auto
+   unalign_xresalloc_uninit(auto* _Nonnull p_handle) {
+      return unalign_xresalloc_uninit_to(*this, p_handle);
+   }
+
+   // Try to resize an uninitialized array and return its allocated bytes.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   resalloc_multi_uninit_to(
+      auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::salloc_multi_uninit<T>, true, true>(
+         allocator, p_handle, old_count, new_count
+      );
+   }
+
+   // Try to resize an uninitialized array and return its allocated bytes.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   resalloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
+      return resalloc_multi_uninit_to(*this, p_handle, old_count, new_count);
+   }
+
+   // Resize an uninitialized array and return its allocated bytes.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xresalloc_multi_uninit_to(
+      auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::xsalloc_multi_uninit<T>, false, true>(
+         allocator, p_handle, old_count, new_count
+      );
+   }
+
+   // Resize an uninitialized array and return its allocated bytes.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   xresalloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
+      return xresalloc_multi_uninit_to(*this, p_handle, old_count, new_count);
+   }
+
+   // Try to resize into aligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   align_resalloc_multi_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
+      idx new_count
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::align_salloc_multi_uninit<T>, true,
+         true>(allocator, p_handle, old_count, new_count, alignment);
+   }
+
+   // Try to resize into aligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   align_resalloc_multi_uninit(
+      auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
+   ) {
+      return align_resalloc_multi_uninit_to(
+         *this, p_handle, alignment, old_count, new_count
+      );
+   }
+
+   // Resize into aligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   align_xresalloc_multi_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
+      idx new_count
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::align_xsalloc_multi_uninit<T>, false,
+         true>(allocator, p_handle, old_count, new_count, alignment);
+   }
+
+   // Resize into aligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   auto
+   align_xresalloc_multi_uninit(
+      auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
+   ) {
+      return align_xresalloc_multi_uninit_to(
+         *this, p_handle, alignment, old_count, new_count
+      );
+   }
+
+   // Try to resize into unaligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   unalign_resalloc_multi_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::unalign_salloc_multi_uninit<T>, true,
+         true>(allocator, p_handle, old_count, new_count);
+   }
+
+   // Try to resize into unaligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   unalign_resalloc_multi_uninit(
+      auto* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      return unalign_resalloc_multi_uninit_to(
+         *this, p_handle, old_count, new_count
+      );
+   }
+
+   // Resize into unaligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   unalign_xresalloc_multi_uninit_to(
+      auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      using T = typeof(this->get(p_handle));
+      return meta_realloc_multi<
+         &allocator_interface<Derived>::unalign_xsalloc_multi_uninit<T>, false,
+         true>(allocator, p_handle, old_count, new_count);
+   }
+
+   // Resize into unaligned uninitialized storage and return its bytes.
+   [[nodiscard]]
+   auto
+   unalign_xresalloc_multi_uninit(
+      auto* _Nonnull p_handle, idx old_count, idx new_count
+   ) {
+      return unalign_xresalloc_multi_uninit_to(
+         *this, p_handle, old_count, new_count
+      );
    }
 
    // Try to move a pointer handle from this allocator into another, zero-out
@@ -4278,6 +5020,256 @@ class allocator_interface {
    auto
    inline_unalign_xresalloc_multi(auto& handle, idx new_count) {
       return inline_unalign_xresalloc_multi_to(*this, handle, new_count);
+   }
+
+   // Try to move an inline object into uninitialized storage and return bytes.
+   [[nodiscard]]
+   constexpr auto
+   inline_resalloc_uninit_to(auto& allocator, auto& handle) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_salloc_uninit<T, inline_size>,
+         true, true, false>(allocator, handle);
+   }
+
+   // Try to move an inline object into uninitialized storage and return bytes.
+   [[nodiscard]]
+   constexpr auto
+   inline_resalloc_uninit(auto& handle) {
+      return inline_resalloc_uninit_to(*this, handle);
+   }
+
+   // Move an inline object into uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   inline_xresalloc_uninit_to(auto& allocator, auto& handle) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_xsalloc_uninit<T, inline_size>,
+         false, true, false>(allocator, handle);
+   }
+
+   // Move an inline object into uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   inline_xresalloc_uninit(auto& handle) {
+      return inline_xresalloc_uninit_to(*this, handle);
+   }
+
+   // Try to move inline data into aligned uninitialized storage with feedback.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_resalloc_uninit_to(
+      auto& allocator, auto& handle, ualign alignment
+   ) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_align_salloc_uninit<
+            T, inline_size>,
+         true, true, false>(allocator, handle, alignment);
+   }
+
+   // Try to move inline data into aligned uninitialized storage with feedback.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_resalloc_uninit(auto& handle, ualign alignment) {
+      return inline_align_resalloc_uninit_to(*this, handle, alignment);
+   }
+
+   // Move inline data into aligned uninitialized storage with feedback.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_xresalloc_uninit_to(
+      auto& allocator, auto& handle, ualign alignment
+   ) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_align_xsalloc_uninit<
+            T, inline_size>,
+         false, true, false>(allocator, handle, alignment);
+   }
+
+   // Move inline data into aligned uninitialized storage with feedback.
+   [[nodiscard]]
+   auto
+   inline_align_xresalloc_uninit(auto& handle, ualign alignment) {
+      return inline_align_xresalloc_uninit_to(*this, handle, alignment);
+   }
+
+   // Try to move inline data into unaligned storage with feedback.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_resalloc_uninit_to(auto& allocator, auto& handle) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_unalign_salloc_uninit<
+            T, inline_size>,
+         true, true, false>(allocator, handle);
+   }
+
+   // Try to move inline data into unaligned storage with feedback.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_resalloc_uninit(auto& handle) {
+      return inline_unalign_resalloc_uninit_to(*this, handle);
+   }
+
+   // Move inline data into unaligned storage with feedback.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_xresalloc_uninit_to(auto& allocator, auto& handle) {
+      using T = typeof(this->get(handle));
+      constexpr idx inline_size = handle.inline_size;
+      return meta_realloc<
+         &allocator_interface<Derived>::inline_unalign_xsalloc_uninit<
+            T, inline_size>,
+         false, true, false>(allocator, handle);
+   }
+
+   // Move inline data into unaligned storage with feedback.
+   [[nodiscard]]
+   auto
+   inline_unalign_xresalloc_uninit(auto& handle) {
+      return inline_unalign_xresalloc_uninit_to(*this, handle);
+   }
+
+   // Try to resize an inline uninitialized array and return its bytes.
+   template <typename Handle>
+   [[nodiscard]]
+   constexpr auto
+   inline_resalloc_multi_uninit_to(
+      auto& allocator, Handle& handle, idx new_count
+   ) {
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_salloc_multi_uninit<
+            typename Handle::value_type, inline_size>,
+         true, true>(allocator, handle, new_count);
+   }
+
+   // Try to resize an inline uninitialized array and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   inline_resalloc_multi_uninit(auto& handle, idx new_count) {
+      return inline_resalloc_multi_uninit_to(*this, handle, new_count);
+   }
+
+   // Resize an inline uninitialized array and return its bytes.
+   template <typename Handle>
+   [[nodiscard]]
+   constexpr auto
+   inline_xresalloc_multi_uninit_to(
+      auto& allocator, Handle& handle, idx new_count
+   ) {
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_xsalloc_multi_uninit<
+            typename Handle::value_type, inline_size>,
+         false, true>(allocator, handle, new_count);
+   }
+
+   // Resize an inline uninitialized array and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   inline_xresalloc_multi_uninit(auto& handle, idx new_count) {
+      return inline_xresalloc_multi_uninit_to(*this, handle, new_count);
+   }
+
+   // Try to resize aligned inline uninitialized storage and return its bytes.
+   template <typename Handle>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_resalloc_multi_uninit_to(
+      auto& allocator, Handle& handle, ualign alignment, idx new_count
+   ) {
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_align_salloc_multi_uninit<
+            typename Handle::value_type, inline_size>,
+         true, true>(allocator, handle, new_count, alignment);
+   }
+
+   // Try to resize aligned inline uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   inline_align_resalloc_multi_uninit(
+      auto& handle, ualign alignment, idx new_count
+   ) {
+      return inline_align_resalloc_multi_uninit_to(
+         *this, handle, alignment, new_count
+      );
+   }
+
+   // Resize aligned inline uninitialized storage and return its bytes.
+   template <typename Handle>
+   [[nodiscard]]
+   constexpr auto
+   inline_align_xresalloc_multi_uninit_to(
+      auto& allocator, Handle& handle, ualign alignment, idx new_count
+   ) {
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_align_xsalloc_multi_uninit<
+            typename Handle::value_type, inline_size>,
+         false, true>(allocator, handle, new_count, alignment);
+   }
+
+   // Resize aligned inline uninitialized storage and return its bytes.
+   [[nodiscard]]
+   auto
+   inline_align_xresalloc_multi_uninit(
+      auto& handle, ualign alignment, idx new_count
+   ) {
+      return inline_align_xresalloc_multi_uninit_to(
+         *this, handle, alignment, new_count
+      );
+   }
+
+   // Try to resize unaligned inline uninitialized storage and return its bytes.
+   template <typename Handle>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_resalloc_multi_uninit_to(
+      auto& allocator, Handle& handle, idx new_count
+   ) {
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_unalign_salloc_multi_uninit<
+            typename Handle::value_type, inline_size>,
+         true, true>(allocator, handle, new_count);
+   }
+
+   // Try to resize unaligned inline uninitialized storage and return its bytes.
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_resalloc_multi_uninit(auto& handle, idx new_count) {
+      return inline_unalign_resalloc_multi_uninit_to(*this, handle, new_count);
+   }
+
+   // Resize unaligned inline uninitialized storage and return its bytes.
+   template <typename Handle>
+   [[nodiscard]]
+   constexpr auto
+   inline_unalign_xresalloc_multi_uninit_to(
+      auto& allocator, Handle& handle, idx new_count
+   ) {
+      constexpr idx inline_size = handle.inline_size;
+      return inline_meta_realloc_multi<
+         &allocator_interface<Derived>::inline_unalign_xsalloc_multi_uninit<
+            typename Handle::value_type, inline_size>,
+         false, true>(allocator, handle, new_count);
+   }
+
+   // Resize unaligned inline uninitialized storage and return its bytes.
+   [[nodiscard]]
+   auto
+   inline_unalign_xresalloc_multi_uninit(auto& handle, idx new_count) {
+      return inline_unalign_xresalloc_multi_uninit_to(*this, handle, new_count);
    }
 
    // Try to move a small-size optimized handle from this allocator into
@@ -5111,7 +6103,8 @@ class allocator_interface {
 };
 
 struct dyn_allocator_friend;
-class dyn_allocator;
+template <typename... Methods>
+class basic_dyn_allocator;
 
 template <typename Allocator>
 class allocator_ref;

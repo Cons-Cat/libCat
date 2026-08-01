@@ -318,10 +318,12 @@ template <typename T>
 concept has_name =
    requires(T const& allocator) { dyn_allocator_friend::name(allocator); };
 
+}  // namespace detail
+
 struct dyn_allocate {
    using signature = auto(idx) -> maybe_ptr<void>;
 
-   template <has_allocate T>
+   template <detail::has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(T& self, idx allocation_bytes) -> maybe_ptr<void> {
@@ -332,7 +334,7 @@ struct dyn_allocate {
 struct dyn_deallocate {
    using signature = void(void const* _Nonnull, idx);
 
-   template <has_deallocate T>
+   template <detail::has_deallocate T>
    [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
    static void
    do_invoke(T& self, void const* _Nonnull p_storage, idx allocation_bytes) {
@@ -343,7 +345,7 @@ struct dyn_deallocate {
 struct dyn_reset {
    using signature = void();
 
-   template <has_reset T>
+   template <detail::has_reset T>
    [[gnu::always_inline, gnu::nodebug]]
    static void
    do_invoke(T& self) {
@@ -354,12 +356,12 @@ struct dyn_reset {
 struct dyn_aligned_allocate {
    using signature = auto(ualign, idx) -> maybe_ptr<void>;
 
-   template <has_allocate T>
+   template <detail::has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(T& self, ualign alignment, idx allocation_bytes)
       -> maybe_ptr<void> {
-      if constexpr (has_aligned_allocate<T>) {
+      if constexpr (detail::has_aligned_allocate<T>) {
          return dyn_allocator_friend::aligned_allocate(
             self, alignment, allocation_bytes
          );
@@ -384,11 +386,11 @@ struct dyn_aligned_allocate {
 struct dyn_allocate_feedback {
    using signature = auto(idx) -> maybe_sized_allocation<void*>;
 
-   template <has_allocate T>
+   template <detail::has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(T& self, idx allocation_bytes) -> maybe_sized_allocation<void*> {
-      if constexpr (has_allocate_feedback<T>) {
+      if constexpr (detail::has_allocate_feedback<T>) {
          return dyn_allocator_friend::allocate_feedback(self, allocation_bytes);
       } else {
          // If the allocator doesn't implement `allocate_feedback`, we generate
@@ -408,12 +410,12 @@ struct dyn_allocate_feedback {
 struct dyn_aligned_allocate_feedback {
    using signature = auto(ualign, idx) -> maybe_sized_allocation<void*>;
 
-   template <has_allocate T>
+   template <detail::has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(T& self, ualign alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
-      if constexpr (has_aligned_allocate_feedback<T>) {
+      if constexpr (detail::has_aligned_allocate_feedback<T>) {
          return dyn_allocator_friend::aligned_allocate_feedback(
             self, alignment, allocation_bytes
          );
@@ -421,7 +423,7 @@ struct dyn_aligned_allocate_feedback {
          // If the allocator doesn't implement `aligned_allocate_feedback`, we
          // generate a shim.
          maybe_ptr<void> result;
-         if constexpr (has_aligned_allocate<T>) {
+         if constexpr (detail::has_aligned_allocate<T>) {
             result = dyn_allocator_friend::aligned_allocate(
                self, alignment, allocation_bytes
             );
@@ -449,12 +451,12 @@ struct dyn_aligned_allocate_feedback {
 struct dyn_resize {
    using signature = auto(idx) -> maybe_non_zero<idx>;
 
-   template <has_allocate T>
+   template <detail::has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke([[maybe_unused]] T& self, [[maybe_unused]] idx minimum_bytes)
       -> maybe_non_zero<idx> {
-      if constexpr (has_resize<T>) {
+      if constexpr (detail::has_resize<T>) {
          return dyn_allocator_friend::resize(self, minimum_bytes);
       } else {
          return nullopt;
@@ -465,14 +467,14 @@ struct dyn_resize {
 struct dyn_grow {
    using signature = auto(span<byte>, idx) -> maybe<void>;
 
-   template <has_allocate T>
+   template <detail::has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(
       [[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
       [[maybe_unused]] idx new_bytes
    ) -> maybe<void> {
-      if constexpr (has_grow<T>) {
+      if constexpr (detail::has_grow<T>) {
          return dyn_allocator_friend::grow(self, allocation, new_bytes);
       } else {
          return nullopt;
@@ -483,18 +485,18 @@ struct dyn_grow {
 struct dyn_grow_feedback {
    using signature = auto(span<byte>, idx) -> maybe_non_zero<idx>;
 
-   template <has_allocate T>
+   template <detail::has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(
       [[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
       [[maybe_unused]] idx new_bytes
    ) -> maybe_non_zero<idx> {
-      if constexpr (has_grow_feedback<T>) {
+      if constexpr (detail::has_grow_feedback<T>) {
          return dyn_allocator_friend::grow_feedback(
             self, allocation, new_bytes
          );
-      } else if constexpr (has_grow<T>) {
+      } else if constexpr (detail::has_grow<T>) {
          if (
             dyn_allocator_friend::grow(self, allocation, new_bytes).has_value()
          ) {
@@ -510,14 +512,14 @@ struct dyn_grow_feedback {
 struct dyn_reallocate {
    using signature = auto(span<byte>, idx) -> maybe_ptr<void>;
 
-   template <has_allocate T>
+   template <detail::has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(
       [[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
       [[maybe_unused]] idx new_bytes
    ) -> maybe_ptr<void> {
-      if constexpr (has_reallocate<T>) {
+      if constexpr (detail::has_reallocate<T>) {
          return dyn_allocator_friend::reallocate(self, allocation, new_bytes);
       } else {
          return nullopt;
@@ -528,18 +530,18 @@ struct dyn_reallocate {
 struct dyn_reallocate_feedback {
    using signature = auto(span<byte>, idx) -> maybe_sized_allocation<void*>;
 
-   template <has_allocate T>
+   template <detail::has_allocate T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(
       [[maybe_unused]] T& self, [[maybe_unused]] span<byte> allocation,
       [[maybe_unused]] idx new_bytes
    ) -> maybe_sized_allocation<void*> {
-      if constexpr (has_reallocate_feedback<T>) {
+      if constexpr (detail::has_reallocate_feedback<T>) {
          return dyn_allocator_friend::reallocate_feedback(
             self, allocation, new_bytes
          );
-      } else if constexpr (has_reallocate<T>) {
+      } else if constexpr (detail::has_reallocate<T>) {
          maybe_ptr<void> result =
             dyn_allocator_friend::reallocate(self, allocation, new_bytes);
          if (!result.has_value()) {
@@ -559,7 +561,7 @@ struct dyn_bytes_used {
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke([[maybe_unused]] T const& self) -> idx {
-      if constexpr (has_bytes_used<T>) {
+      if constexpr (detail::has_bytes_used<T>) {
          return dyn_allocator_friend::bytes_used(self);
       } else {
          return idx(0u);
@@ -574,7 +576,7 @@ struct dyn_bytes_capacity {
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke([[maybe_unused]] T const& self) -> idx {
-      if constexpr (has_bytes_capacity<T>) {
+      if constexpr (detail::has_bytes_capacity<T>) {
          return dyn_allocator_friend::bytes_capacity(self);
       } else {
          return idx(0u);
@@ -608,7 +610,7 @@ struct dyn_equals {
    ) -> bool {
       [[maybe_unused]]
       T const& other = *static_cast<T const*>(p_other);
-      if constexpr (has_is_equivalent<T>) {
+      if constexpr (detail::has_is_equivalent<T>) {
          return dyn_allocator_friend::is_equivalent(self, other);
       } else if constexpr (__is_empty(T)) {
          return true;
@@ -625,7 +627,7 @@ struct dyn_name {
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke([[maybe_unused]] T const& self) -> str_view {
-      if constexpr (has_name<T>) {
+      if constexpr (detail::has_name<T>) {
          return dyn_allocator_friend::name(self);
       } else {
          return str_view{};
@@ -633,54 +635,49 @@ struct dyn_name {
    }
 };
 
-}  // namespace detail
-
 // Non-owning, dynamic-dispatch handle to an `Allocator`. This erases the type
-// of underlying allocators to minimize code generation. Functions' overloads
-// are encouraged to resolve this parameter unless explicitly specified.
-class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
-   friend allocator_interface<dyn_allocator>;
+// of underlying allocators to minimize code generation.
+template <typename... Methods>
+class [[gsl::Owner]] basic_dyn_allocator
+    : public allocator_interface<basic_dyn_allocator<Methods...>> {
+   friend allocator_interface<basic_dyn_allocator>;
    friend struct dyn_allocator_friend;
    template <typename>
    friend class allocator_ref;
+   template <typename...>
+   friend class basic_dyn_allocator;
 
  private:
-   dyn_ptr<
-      detail::dyn_allocate, detail::dyn_deallocate, detail::dyn_reset,
-      detail::dyn_aligned_allocate, detail::dyn_allocate_feedback,
-      detail::dyn_aligned_allocate_feedback, detail::dyn_resize,
-      detail::dyn_grow, detail::dyn_grow_feedback, detail::dyn_reallocate,
-      detail::dyn_reallocate_feedback, detail::dyn_bytes_used,
-      detail::dyn_bytes_capacity, detail::dyn_min_allocation_bytes,
-      detail::dyn_equals, detail::dyn_name>
-      m_p_allocator;
+   dyn_ptr<dyn_allocate, dyn_deallocate, Methods...> m_p_allocator;
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
    allocate(idx allocation_bytes) -> maybe_ptr<void> {
-      return dyn_invoke<detail::dyn_allocate>(*m_p_allocator, allocation_bytes);
+      return dyn_invoke<dyn_allocate>(*m_p_allocator, allocation_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
    void
    deallocate(void const* _Nonnull p_storage, idx allocation_bytes) {
-      dyn_invoke<detail::dyn_deallocate>(
-         *m_p_allocator, p_storage, allocation_bytes
-      );
+      dyn_invoke<dyn_deallocate>(*m_p_allocator, p_storage, allocation_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate(ualign alignment, idx allocation_bytes) -> maybe_ptr<void> {
-      return dyn_invoke<detail::dyn_aligned_allocate>(
+   aligned_allocate(ualign alignment, idx allocation_bytes) -> maybe_ptr<void>
+      requires(detail::contains_method<dyn_aligned_allocate, Methods...>)
+   {
+      return dyn_invoke<dyn_aligned_allocate>(
          *m_p_allocator, alignment, allocation_bytes
       );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*> {
-      return dyn_invoke<detail::dyn_allocate_feedback>(
+   allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*>
+      requires(detail::contains_method<dyn_allocate_feedback, Methods...>)
+   {
+      return dyn_invoke<dyn_allocate_feedback>(
          *m_p_allocator, allocation_bytes
       );
    }
@@ -688,66 +685,88 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    [[gnu::always_inline, gnu::nodebug]]
    auto
    aligned_allocate_feedback(ualign alignment, idx allocation_bytes)
-      -> maybe_sized_allocation<void*> {
-      return dyn_invoke<detail::dyn_aligned_allocate_feedback>(
+      -> maybe_sized_allocation<void*>
+      requires(
+         detail::contains_method<dyn_aligned_allocate_feedback, Methods...>
+      )
+   {
+      return dyn_invoke<dyn_aligned_allocate_feedback>(
          *m_p_allocator, alignment, allocation_bytes
       );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   resize(idx minimum_bytes) -> maybe_non_zero<idx> {
-      return dyn_invoke<detail::dyn_resize>(*m_p_allocator, minimum_bytes);
+   resize(idx minimum_bytes) -> maybe_non_zero<idx>
+      requires(detail::contains_method<dyn_resize, Methods...>)
+   {
+      return dyn_invoke<dyn_resize>(*m_p_allocator, minimum_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   grow(span<byte> allocation, idx new_bytes) -> maybe<void> {
-      return dyn_invoke<detail::dyn_grow>(
+   grow(span<byte> allocation, idx new_bytes) -> maybe<void>
+      requires(detail::contains_method<dyn_grow, Methods...>)
+   {
+      return dyn_invoke<dyn_grow>(*m_p_allocator, allocation, new_bytes);
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   auto
+   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
+      requires(detail::contains_method<dyn_grow_feedback, Methods...>)
+   {
+      return dyn_invoke<dyn_grow_feedback>(
          *m_p_allocator, allocation, new_bytes
       );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx> {
-      return dyn_invoke<detail::dyn_grow_feedback>(
-         *m_p_allocator, allocation, new_bytes
-      );
-   }
-
-   [[gnu::always_inline, gnu::nodebug]]
-   auto
-   reallocate(span<byte> allocation, idx new_bytes) -> maybe_ptr<void> {
-      return dyn_invoke<detail::dyn_reallocate>(
-         *m_p_allocator, allocation, new_bytes
-      );
+   reallocate(span<byte> allocation, idx new_bytes) -> maybe_ptr<void>
+      requires(detail::contains_method<dyn_reallocate, Methods...>)
+   {
+      return dyn_invoke<dyn_reallocate>(*m_p_allocator, allocation, new_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
    reallocate_feedback(span<byte> allocation, idx new_bytes)
-      -> maybe_sized_allocation<void*> {
-      return dyn_invoke<detail::dyn_reallocate_feedback>(
+      -> maybe_sized_allocation<void*>
+      requires(detail::contains_method<dyn_reallocate_feedback, Methods...>)
+   {
+      return dyn_invoke<dyn_reallocate_feedback>(
          *m_p_allocator, allocation, new_bytes
       );
    }
 
  public:
-   dyn_allocator() = delete ("`dyn_allocator` cannot be default-constructed! "
-                             "Pass an allocator l-value instead.");
+   using basic_dyn_allocator_tag = void;
 
-   // Bind to any concrete allocator. Constructing a `dyn_allocator` from
-   // another `dyn_allocator` would otherwise add superfluous indirections.
+   basic_dyn_allocator() =
+      delete ("`basic_dyn_allocator` cannot be default-constructed! Pass an "
+              "allocator l-value instead.");
+
    template <is_allocator Allocator>
-      requires(is_neither<Allocator, dyn_allocator>)
-   [[gnu::always_inline, gnu::nodebug]] constexpr dyn_allocator(
+      requires(!requires { typename Allocator::basic_dyn_allocator_tag; })
+   [[gnu::always_inline, gnu::nodebug]] constexpr basic_dyn_allocator(
       Allocator& allocator [[clang::lifetimebound]]
    )
        : m_p_allocator(__builtin_addressof(allocator)) {
    }
 
-   dyn_allocator(dyn_allocator const&) = default;
+   basic_dyn_allocator(basic_dyn_allocator const&) = default;
+
+   template <typename... Superset>
+      requires(
+         sizeof...(Superset) != sizeof...(Methods)
+         && detail::is_subset_impl<
+            type_list<Methods...>, type_list<Superset...>>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr basic_dyn_allocator(basic_dyn_allocator<Superset...> other)
+       : m_p_allocator(other.m_p_allocator) {
+   }
 
    // Value equality between two `dyn_allocator` handles. Two handles compare
    // equal when they erase the same concrete allocator type AND that type's
@@ -759,37 +778,45 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    // hidden friend, which forwards to `is_equivalent`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   is_equivalent(dyn_allocator const& other) const -> bool {
+   is_equivalent(basic_dyn_allocator const& other) const -> bool
+      requires(detail::contains_method<dyn_equals, Methods...>)
+   {
       if (m_p_allocator.type_id_ptr() != other.m_p_allocator.type_id_ptr()) {
          return false;
       }
-      return dyn_invoke<detail::dyn_equals>(
-         *m_p_allocator, other.m_p_allocator.get()
-      );
+      return dyn_invoke<dyn_equals>(*m_p_allocator, other.m_p_allocator.get());
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   bytes_used() const -> idx {
-      return dyn_invoke<detail::dyn_bytes_used>(*m_p_allocator);
+   bytes_used() const -> idx
+      requires(detail::contains_method<dyn_bytes_used, Methods...>)
+   {
+      return dyn_invoke<dyn_bytes_used>(*m_p_allocator);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   bytes_capacity() const -> idx {
-      return dyn_invoke<detail::dyn_bytes_capacity>(*m_p_allocator);
+   bytes_capacity() const -> idx
+      requires(detail::contains_method<dyn_bytes_capacity, Methods...>)
+   {
+      return dyn_invoke<dyn_bytes_capacity>(*m_p_allocator);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   minimum_allocation_bytes() const -> idx {
-      return dyn_invoke<detail::dyn_min_allocation_bytes>(*m_p_allocator);
+   minimum_allocation_bytes() const -> idx
+      requires(detail::contains_method<dyn_min_allocation_bytes, Methods...>)
+   {
+      return dyn_invoke<dyn_min_allocation_bytes>(*m_p_allocator);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   name() const -> str_view {
-      return dyn_invoke<detail::dyn_name>(*m_p_allocator);
+   name() const -> str_view
+      requires(detail::contains_method<dyn_name, Methods...>)
+   {
+      return dyn_invoke<dyn_name>(*m_p_allocator);
    }
 
    // Dispatches to the held allocator's `reset`, which is either its own
@@ -797,10 +824,18 @@ class [[gsl::Owner]] dyn_allocator : public allocator_interface<dyn_allocator> {
    // NOLINTNEXTLINE
    [[gnu::always_inline, gnu::nodebug]]
    void
-   reset() {
-      dyn_invoke<detail::dyn_reset>(*m_p_allocator);
+   reset()
+      requires(detail::contains_method<dyn_reset, Methods...>)
+   {
+      dyn_invoke<dyn_reset>(*m_p_allocator);
    }
 };
+
+using dyn_allocator = basic_dyn_allocator<
+   dyn_reallocate, dyn_reset, dyn_aligned_allocate, dyn_allocate_feedback,
+   dyn_aligned_allocate_feedback, dyn_resize, dyn_grow, dyn_grow_feedback,
+   dyn_reallocate_feedback, dyn_bytes_used, dyn_bytes_capacity,
+   dyn_min_allocation_bytes, dyn_equals, dyn_name>;
 
 namespace detail {
 // Provide `max_allocation_bytes` iff it is available.
@@ -836,11 +871,12 @@ class [[gsl::Pointer]] allocator_ref
    [[no_unique_address]]
    mutable storage_type m_storage;
 
+ public:
    // Resolves the storage to an `Allocator&` for dispatch. The `mutable`
    // storage lets this stay non-const-correct in the same way the raw
    // `Allocator*`-through-const-pointer access did before, so const methods
    // on the ref can still reach non-const allocator methods.
-   [[gnu::always_inline, gnu::nodebug]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    get_allocator() const -> Allocator& {
       if constexpr (__is_empty(Allocator)) {
@@ -850,6 +886,7 @@ class [[gsl::Pointer]] allocator_ref
       }
    }
 
+ private:
    [[gnu::always_inline, gnu::nodebug]]
    auto
    allocate(idx allocation_bytes) -> maybe_ptr<void>
@@ -1076,18 +1113,24 @@ class [[gsl::Pointer]] allocator_ref
    }
 };
 
-// By default, `allocator_ref<dyn_allocator>` would hold a `dyn_allocator*`,
-// which itself wraps a `dyn_ptr`. That means allocator_ref expresses a double
-// indirection in that case. `allocator_ref` and `dyn_allocator` are both
-// references, so it's specialized to hold the dyn_allocator by value instead.
-template <>
-class [[gsl::Pointer]] allocator_ref<dyn_allocator>
-    : public allocator_interface<allocator_ref<dyn_allocator>> {
+// A dynamic allocator is already a reference, so hold it by value.
+template <typename... Methods>
+class [[gsl::Pointer]] allocator_ref<basic_dyn_allocator<Methods...>>
+    : public allocator_interface<
+         allocator_ref<basic_dyn_allocator<Methods...>>> {
  private:
-   friend allocator_interface<allocator_ref<dyn_allocator>>;
+   friend allocator_interface<allocator_ref>;
 
-   dyn_allocator m_allocator;
+   basic_dyn_allocator<Methods...> m_allocator;
 
+ public:
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   get_allocator() const -> basic_dyn_allocator<Methods...> {
+      return m_allocator;
+   }
+
+ private:
    [[gnu::always_inline, gnu::nodebug]]
    auto
    allocate(idx allocation_bytes) -> maybe_ptr<void> {
@@ -1102,57 +1145,73 @@ class [[gsl::Pointer]] allocator_ref<dyn_allocator>
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   aligned_allocate(ualign alignment, idx allocation_bytes) -> maybe_ptr<void> {
+   aligned_allocate(ualign alignment, idx allocation_bytes) -> maybe_ptr<void>
+      requires(detail::contains_method<dyn_aligned_allocate, Methods...>)
+   {
       return m_allocator.aligned_allocate(alignment, allocation_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*> {
+   allocate_feedback(idx allocation_bytes) -> maybe_sized_allocation<void*>
+      requires(detail::contains_method<dyn_allocate_feedback, Methods...>)
+   {
       return m_allocator.allocate_feedback(allocation_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
    aligned_allocate_feedback(ualign alignment, idx allocation_bytes)
-      -> maybe_sized_allocation<void*> {
+      -> maybe_sized_allocation<void*>
+      requires(
+         detail::contains_method<dyn_aligned_allocate_feedback, Methods...>
+      )
+   {
       return m_allocator.aligned_allocate_feedback(alignment, allocation_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   resize(idx minimum_bytes) -> maybe_non_zero<idx> {
+   resize(idx minimum_bytes) -> maybe_non_zero<idx>
+      requires(detail::contains_method<dyn_resize, Methods...>)
+   {
       return m_allocator.resize(minimum_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   grow(span<byte> allocation, idx new_bytes) -> maybe<void> {
+   grow(span<byte> allocation, idx new_bytes) -> maybe<void>
+      requires(detail::contains_method<dyn_grow, Methods...>)
+   {
       return m_allocator.grow(allocation, new_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx> {
+   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
+      requires(detail::contains_method<dyn_grow_feedback, Methods...>)
+   {
       return m_allocator.grow_feedback(allocation, new_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
-   reallocate(span<byte> allocation, idx new_bytes) -> maybe_ptr<void> {
+   reallocate(span<byte> allocation, idx new_bytes) -> maybe_ptr<void>
+      requires(detail::contains_method<dyn_reallocate, Methods...>)
+   {
       return m_allocator.reallocate(allocation, new_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    auto
    reallocate_feedback(span<byte> allocation, idx new_bytes)
-      -> maybe_sized_allocation<void*> {
+      -> maybe_sized_allocation<void*>
+      requires(detail::contains_method<dyn_reallocate_feedback, Methods...>)
+   {
       return m_allocator.reallocate_feedback(allocation, new_bytes);
    }
 
  public:
-   // `dyn_allocator` erases its held type, so the static alignment guarantee
-   // it can promise to callers is the safe lower bound of 1 byte.
    static constexpr ualign min_alignment = 1u;
    static constexpr idx min_allocation_bytes = 1u;
 
@@ -1160,7 +1219,7 @@ class [[gsl::Pointer]] allocator_ref<dyn_allocator>
                              "Pass an allocator l-value instead.");
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr allocator_ref(dyn_allocator allocator)
+   constexpr allocator_ref(basic_dyn_allocator<Methods...> allocator)
        : m_allocator(allocator) {
    }
 
@@ -1168,40 +1227,49 @@ class [[gsl::Pointer]] allocator_ref<dyn_allocator>
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   bytes_used() const -> idx {
+   bytes_used() const -> idx
+      requires(detail::contains_method<dyn_bytes_used, Methods...>)
+   {
       return m_allocator.bytes_used();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   bytes_capacity() const -> idx {
+   bytes_capacity() const -> idx
+      requires(detail::contains_method<dyn_bytes_capacity, Methods...>)
+   {
       return m_allocator.bytes_capacity();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   minimum_allocation_bytes() const -> idx {
+   minimum_allocation_bytes() const -> idx
+      requires(detail::contains_method<dyn_min_allocation_bytes, Methods...>)
+   {
       return m_allocator.minimum_allocation_bytes();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   name() const -> str_view {
+   name() const -> str_view
+      requires(detail::contains_method<dyn_name, Methods...>)
+   {
       return m_allocator.name();
    }
 
-   // `operator==` is provided by
-   // `allocator_interface<allocator_ref<dyn_allocator>>`'s hidden friend, which
-   // forwards to `is_equivalent`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   is_equivalent(allocator_ref const& other) const -> bool {
+   is_equivalent(allocator_ref const& other) const -> bool
+      requires(detail::contains_method<dyn_equals, Methods...>)
+   {
       return m_allocator.is_equivalent(other.m_allocator);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    void
-   reset() {
+   reset()
+      requires(detail::contains_method<dyn_reset, Methods...>)
+   {
       m_allocator.reset();
    }
 };
