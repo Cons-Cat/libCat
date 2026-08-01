@@ -80,7 +80,8 @@ build *args:
       done; \
       if [ -z "$modes" ]; then modes="{{ last_mode }}"; fi; \
       for mode in $modes; do \
-        just _build-mode "$mode" "$san" "$verbose" "$no_warnings" "$cxx_flags"; \
+        just _build-mode "$mode" "$san" "$verbose" "$no_warnings" "$cxx_flags" \
+          || exit $?; \
       done; \
       unset CAT_JUST_BUILD_TOOL_TRAILER_B64
 
@@ -479,7 +480,8 @@ test *args:
       fi; \
       if [ -z "$modes" ]; then modes="{{ last_mode }}"; fi; \
       for mode in $modes; do \
-        just _test-mode "$mode" "$san" "$verbose" "$regex" "$list"; \
+        just _test-mode "$mode" "$san" "$verbose" "$regex" "$list" \
+          || exit $?; \
       done; \
       unset CAT_JUST_TEST_TOOL_TRAILER_B64
 
