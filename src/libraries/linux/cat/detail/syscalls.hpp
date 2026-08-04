@@ -1197,6 +1197,7 @@ sys_write(
 }
 
 // Syscall 2.
+// libC implements POSIX `creat()` via this when `creat` is unavailable.
 auto
 sys_open(
    cat::zstr_view file_path, open_mode file_mode,
@@ -1600,6 +1601,7 @@ sys_sendto(
 
 // Syscall 45. Linux names this `recvfrom`. The libCat name follows the BSD
 // `recv` family for backward source compatibility with earlier libCat code.
+// libC implements POSIX `recv()` via this.
 auto
 sys_recv(
    file_descriptor socket_descriptor, cat::span<char> buffer,
@@ -1727,6 +1729,7 @@ sys_exit(cat::int4 status);
 
 // Syscall 61. Pass `nullptr` for `p_status_output` to discard status, or for
 // `p_resource_usage` to discard resource usage.
+// libC implements POSIX `wait()`/`waitpid()` via this.
 auto
 sys_wait4(
    process_id waiting_on_id, cat::int4* _Nullable p_status_output,
@@ -1824,7 +1827,7 @@ sys_rmdir(cat::zstr_view file_path) -> scaredy_nix<void>;
 
 // Syscall 85.
 auto
-sys_creat(cat::zstr_view file_path, open_mode file_mode)
+sys_creat(cat::zstr_view file_path, file_permissions mode)
    -> scaredy_nix<file_descriptor>;
 
 // Syscall 86.
@@ -2014,6 +2017,7 @@ sys_getresgid(group_id& real, group_id& effective, group_id& saved)
    -> scaredy_nix<void>;
 
 // Syscall 121. Pass `process_id{0}` to query the calling process.
+// libC implements POSIX `getpgrp()` via this.
 auto
 sys_getpgid(process_id pid) -> scaredy_nix<process_id>;
 
@@ -2223,6 +2227,7 @@ void
 sys_exit_group(cat::int4 status);
 
 // Syscall 234.
+// libC implements POSIX `raise()` via this.
 auto
 sys_tgkill(process_id thread_group_id, process_id target, signal delivered)
    -> scaredy_nix<void>;
@@ -2234,6 +2239,7 @@ sys_waitid(wait_id type, process_id id, wait_options_flags options)
 
 // Syscall 257. `dirfd` may be `at_fdcwd` or any other directory descriptor.
 // `mode` is honored only when `flags` includes `open_flags::create`.
+// libC implements POSIX `open()` via this.
 auto
 sys_openat(
    file_descriptor dirfd, cat::zstr_view file_path, open_mode mode,
@@ -2242,6 +2248,7 @@ sys_openat(
 ) -> scaredy_nix<file_descriptor>;
 
 // Syscall 258.
+// libC implements POSIX `mkdir()` via this when `mkdir` is unavailable.
 auto
 sys_mkdirat(
    file_descriptor dirfd, cat::zstr_view file_path, file_permissions mode
@@ -2249,6 +2256,7 @@ sys_mkdirat(
 
 // Syscall 260. `flags` accepts `atfile_flags::no_follow` and
 // `atfile_flags::empty_path`.
+// libC implements POSIX `chown()`/`lchown()` via this when unavailable.
 auto
 sys_fchownat(
    file_descriptor dirfd, cat::zstr_view file_path, user_id user,
@@ -2257,6 +2265,7 @@ sys_fchownat(
 
 // Syscall 262. The kernel name is `newfstatat`. Resolves `p_file_path`
 // relative to `dirfd` (or `at_fdcwd`) and fills `out`.
+// libC implements POSIX `stat()`/`lstat()`/`fstatat()` via this.
 auto
 sys_newfstatat(
    file_descriptor dirfd, cat::zstr_view file_path, file_status& out,
@@ -2265,6 +2274,7 @@ sys_newfstatat(
 
 // Syscall 263. `flags` accepts `atfile_flags::remove_directory` to behave
 // like `sys_rmdir()`.
+// libC implements POSIX `unlink()`/`rmdir()` via this when unavailable.
 auto
 sys_unlinkat(
    file_descriptor dirfd, cat::zstr_view file_path,
@@ -2272,6 +2282,7 @@ sys_unlinkat(
 ) -> scaredy_nix<void>;
 
 // Syscall 264.
+// libC implements POSIX `rename()` via this when `rename` is unavailable.
 auto
 sys_renameat(
    file_descriptor old_dirfd, cat::zstr_view old_path,
@@ -2279,6 +2290,7 @@ sys_renameat(
 ) -> scaredy_nix<void>;
 
 // Syscall 265.
+// libC implements POSIX `link()` via this when `link` is unavailable.
 auto
 sys_linkat(
    file_descriptor old_dirfd, cat::zstr_view existing_path,
@@ -2287,6 +2299,7 @@ sys_linkat(
 ) -> scaredy_nix<void>;
 
 // Syscall 266.
+// libC implements POSIX `symlink()` via this when `symlink` is unavailable.
 auto
 sys_symlinkat(
    cat::zstr_view target_path, file_descriptor new_dirfd,
@@ -2294,6 +2307,7 @@ sys_symlinkat(
 ) -> scaredy_nix<void>;
 
 // Syscall 267.
+// libC implements POSIX `readlink()` via this when `readlink` is unavailable.
 auto
 sys_readlinkat(
    file_descriptor dirfd, cat::zstr_view file_path, cat::span<char> buffer
@@ -2311,6 +2325,7 @@ sys_readlinkat(
 }
 
 // Syscall 268.
+// libC implements POSIX `chmod()` via this when `chmod` is unavailable.
 auto
 sys_fchmodat(
    file_descriptor dirfd, cat::zstr_view file_path, file_permissions mode,
@@ -2319,6 +2334,7 @@ sys_fchmodat(
 
 // Syscall 269. `flags` accepts `atfile_flags::eaccess` (effective uid/gid
 // instead of real) and `atfile_flags::no_follow`.
+// libC implements POSIX `access()` via this when `access` is unavailable.
 auto
 sys_faccessat(
    file_descriptor dirfd, cat::zstr_view file_path, access_mode mode,
@@ -2341,6 +2357,7 @@ sys_get_robust_list(
 // Syscall 280. Update access and modification times. `p_times` is a 2-element
 // array (`{access, modification}`) or `nullptr` to set both to the current
 // time. `p_file_path` may be `nullptr` if `dirfd` itself is the target.
+// libC implements POSIX `utime()`/`utimes()` via this.
 auto
 sys_utimensat(
    file_descriptor dirfd, cat::zstr_view file_path = {},
@@ -2359,6 +2376,7 @@ sys_fallocate(
 // Syscall 288. `sys_accept()` plus `accept4_flags::nonblocking` /
 // `accept4_flags::close_exec`. Pass `nullptr` for `p_socket` and
 // `p_addr_len` to accept without retrieving the peer address.
+// libC implements POSIX `accept()` via this when `accept` is unavailable.
 auto
 sys_accept4(
    file_descriptor socket_descriptor,
@@ -2367,11 +2385,13 @@ sys_accept4(
 ) -> scaredy_nix<file_descriptor>;
 
 // Syscall 292. `sys_dup2()` plus `dup3_flags::close_exec`.
+// libC implements POSIX `dup2()` via this when `dup2` is unavailable.
 auto
 sys_dup3(file_descriptor oldfd, file_descriptor newfd, dup3_flags flags)
    -> scaredy_nix<file_descriptor>;
 
 // Syscall 293.
+// libC implements POSIX `pipe()` via this.
 auto sys_pipe2(cat::int4 (&pipefd)[2], pipe2_flags flags) -> scaredy_nix<void>;
 
 // Syscall 297. Send `s` to thread `tid` inside thread group `tgid` along
@@ -2382,6 +2402,8 @@ sys_rt_tgsigqueueinfo(
 ) -> scaredy_nix<void>;
 
 // Syscall 316. `sys_renameat()` plus `renameat2_flags`.
+// libC implements POSIX `rename()` via this when `rename`/`renameat` are
+// unavailable.
 auto
 sys_renameat2(
    file_descriptor old_dirfd, cat::zstr_view old_path,

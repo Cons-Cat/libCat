@@ -163,7 +163,11 @@ $test(syscall_io_basic) {
    auto _ = nix::sys_unlink(tmp_basic);
 
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
+      nix::sys_creat(
+         tmp_basic,
+         nix::file_permissions::user_read | nix::file_permissions::user_write
+      )
+         .verify();
    cat::verify(fd.value >= 0);
 
    cat::idx written =
@@ -208,7 +212,11 @@ $test(syscall_io_basic) {
 $test(syscall_io_vector) {
    auto _ = nix::sys_unlink(tmp_basic);
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
+      nix::sys_creat(
+         tmp_basic,
+         nix::file_permissions::user_read | nix::file_permissions::user_write
+      )
+         .verify();
 
    nix::io_vector vecs[2] = {
       nix::io_vector(
@@ -275,7 +283,11 @@ $test(syscall_pipe_dup) {
 $test(syscall_fcntl_flock) {
    auto _ = nix::sys_unlink(tmp_basic);
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
+      nix::sys_creat(
+         tmp_basic,
+         nix::file_permissions::user_read | nix::file_permissions::user_write
+      )
+         .verify();
 
    // Read the descriptor flags back. The set side requires packing a bit into
    // the syscall's third register, which is awkward to express via
@@ -297,7 +309,11 @@ $test(syscall_fcntl_flock) {
 $test(syscall_fs_metadata) {
    auto _ = nix::sys_unlink(tmp_basic);
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
+      nix::sys_creat(
+         tmp_basic,
+         nix::file_permissions::user_read | nix::file_permissions::user_write
+      )
+         .verify();
    nix::sys_write(fd, payload_short.data(), payload_short_length).verify();
    nix::sys_close(fd).verify();
    nix::sys_chmod(
@@ -360,7 +376,11 @@ $test(syscall_fs_metadata) {
 $test(syscall_fs_mode) {
    auto _ = nix::sys_unlink(tmp_basic);
    nix::file_descriptor fd =
-      nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
+      nix::sys_creat(
+         tmp_basic,
+         nix::file_permissions::user_read | nix::file_permissions::user_write
+      )
+         .verify();
 
    nix::sys_chmod(
       tmp_basic,
@@ -467,7 +487,11 @@ $test(syscall_fs_links) {
    auto unused_unlink_rename_b = nix::sys_unlink(tmp_rename_b);
 
    nix::sys_close(
-      nix::sys_creat(tmp_link_target, nix::open_mode::read_write).verify()
+      nix::sys_creat(
+         tmp_link_target,
+         nix::file_permissions::user_read | nix::file_permissions::user_write
+      )
+         .verify()
    )
       .verify();
 
@@ -488,7 +512,11 @@ $test(syscall_fs_links) {
 
    // *at variants of link/symlink/rename.
    nix::sys_close(
-      nix::sys_creat(tmp_rename_a, nix::open_mode::read_write).verify()
+      nix::sys_creat(
+         tmp_rename_a,
+         nix::file_permissions::user_read | nix::file_permissions::user_write
+      )
+         .verify()
    )
       .verify();
    nix::sys_renameat(nix::at_fdcwd, tmp_rename_a, nix::at_fdcwd, tmp_rename_b)
@@ -958,7 +986,11 @@ $test(syscall_optional_six_x) {
    if (nix::has_sys_cachestat()) {
       auto _ = nix::sys_unlink(tmp_basic);
       nix::file_descriptor fd =
-         nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify();
+         nix::sys_creat(
+            tmp_basic,
+            nix::file_permissions::user_read | nix::file_permissions::user_write
+         )
+            .verify();
       nix::sys_write(fd, payload_short.data(), payload_short_length).verify();
       nix::cachestat_range range = {.offset = 0, .length = 4};
       nix::cachestat_stats out{};
@@ -975,7 +1007,11 @@ $test(syscall_optional_six_x) {
    if (nix::has_sys_fchmodat2()) {
       auto unused_unlink = nix::sys_unlink(tmp_basic);
       nix::sys_close(
-         nix::sys_creat(tmp_basic, nix::open_mode::read_write).verify()
+         nix::sys_creat(
+            tmp_basic,
+            nix::file_permissions::user_read | nix::file_permissions::user_write
+         )
+            .verify()
       )
          .verify();
       auto fc = nix::sys_fchmodat2(nix::at_fdcwd, tmp_basic, 0644u, 0);
