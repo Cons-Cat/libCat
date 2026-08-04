@@ -303,9 +303,10 @@ template <typename T, typename... Errors>
       // `scaredy` should have at least one error type.
       sizeof...(Errors) > 0
    )
-class [[nodiscard,
-       clang::annotate("clang-tidy", "bugprone-use-after-move",
-                       "null_after_move")]] scaredy {
+class
+   [[nodiscard, clang::annotate(
+                   "clang-tidy", "bugprone-use-after-move", "null_after_move"
+                )]] scaredy {
  private:
    using storage_type = conditional<
       requires { T::predicate_function; },

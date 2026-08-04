@@ -371,9 +371,9 @@ $test(maybe_monadic_chains) {
 
    moo = cat::nullopt;
    cat::verify(moo.transform(
-                      [](int4 input) {
-                         return input * 2;
-                      }
+                     [](int4 input) {
+                        return input * 2;
+                     }
    ).is_empty());
 
    // `and_then` on a disengaged source must not invoke the callable.

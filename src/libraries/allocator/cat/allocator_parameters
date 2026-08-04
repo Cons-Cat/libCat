@@ -638,7 +638,7 @@ struct dyn_name {
 // Non-owning, dynamic-dispatch handle to an `Allocator`. This erases the type
 // of underlying allocators to minimize code generation.
 template <typename... Methods>
-class [[gsl::Owner]] basic_dyn_allocator
+class [[clang::trivial_abi, gsl::Owner]] basic_dyn_allocator
     : public allocator_interface<basic_dyn_allocator<Methods...>> {
    friend allocator_interface<basic_dyn_allocator>;
    friend struct dyn_allocator_friend;
@@ -860,7 +860,7 @@ struct max_allocation_bytes_storage<Allocator> {
 // collapses that storage so the ref folds to zero size when embedded into an
 // outer aggregate.
 template <typename Allocator>
-class [[gsl::Pointer]] allocator_ref
+class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
     : public allocator_interface<allocator_ref<Allocator>>,
       detail::max_allocation_bytes_storage<Allocator> {
  private:
@@ -1115,7 +1115,8 @@ class [[gsl::Pointer]] allocator_ref
 
 // A dynamic allocator is already a reference, so hold it by value.
 template <typename... Methods>
-class [[gsl::Pointer]] allocator_ref<basic_dyn_allocator<Methods...>>
+class [[clang::trivial_abi, gsl::Pointer]]
+allocator_ref<basic_dyn_allocator<Methods...>>
     : public allocator_interface<
          allocator_ref<basic_dyn_allocator<Methods...>>> {
  private:

@@ -9,7 +9,8 @@
 
 namespace cat {
 
-class linear_allocator : public allocator_interface<linear_allocator> {
+class [[clang::trivial_abi]] linear_allocator
+    : public allocator_interface<linear_allocator> {
  private:
    friend allocator_interface<linear_allocator>;
    friend struct dyn_allocator_friend;

@@ -10,8 +10,8 @@
 namespace cat {
 
 template <idx max_node_bytes>
-class pool_allocator
-    : public allocator_interface<pool_allocator<max_node_bytes>> {
+class [[clang::trivial_abi]]
+pool_allocator : public allocator_interface<pool_allocator<max_node_bytes>> {
  private:
    friend allocator_interface<pool_allocator>;
    friend struct dyn_allocator_friend;

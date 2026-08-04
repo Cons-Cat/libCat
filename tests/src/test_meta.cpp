@@ -573,62 +573,56 @@ $test(meta_common_comparison) {
                  weak_ordering>);
 
    static_assert(is_same<
-                 common_comparison_category_t<
-                    partial_ordering, weak_ordering>,
+                 common_comparison_category_t<partial_ordering, weak_ordering>,
                  partial_ordering>);
 
    static_assert(is_same<
-                 common_comparison_category_t<
-                    weak_ordering, partial_ordering>,
+                 common_comparison_category_t<weak_ordering, partial_ordering>,
                  partial_ordering>);
 
-   static_assert(is_same<
-                 common_comparison_category_t<
-                    partial_ordering, strong_ordering>,
-                 partial_ordering>);
+   static_assert(
+      is_same<
+         common_comparison_category_t<partial_ordering, strong_ordering>,
+         partial_ordering>
+   );
 
-   static_assert(is_same<
-                 common_comparison_category_t<
-                    strong_ordering, partial_ordering>,
-                 partial_ordering>);
+   static_assert(
+      is_same<
+         common_comparison_category_t<strong_ordering, partial_ordering>,
+         partial_ordering>
+   );
 
    // Reduces across three or more arguments. The fold weakens
    // pairwise from the left.
-   static_assert(
-      is_same<
-         common_comparison_category_t<
-            strong_ordering, strong_ordering, strong_ordering>,
-         strong_ordering>
-   );
+   static_assert(is_same<
+                 common_comparison_category_t<
+                    strong_ordering, strong_ordering, strong_ordering>,
+                 strong_ordering>);
 
-   static_assert(
-      is_same<
-         common_comparison_category_t<
-            strong_ordering, weak_ordering, strong_ordering>,
-         weak_ordering>
-   );
+   static_assert(is_same<
+                 common_comparison_category_t<
+                    strong_ordering, weak_ordering, strong_ordering>,
+                 weak_ordering>);
 
-   static_assert(
-      is_same<
-         common_comparison_category_t<
-            strong_ordering, partial_ordering, weak_ordering>,
-         partial_ordering>
-   );
+   static_assert(is_same<
+                 common_comparison_category_t<
+                    strong_ordering, partial_ordering, weak_ordering>,
+                 partial_ordering>);
 
    // Empty pack: identity for the weakening operation is the strongest
    // category. Matches `[cmp.common]` `common_comparison_category_t<>`.
    static_assert(is_same<common_comparison_category_t<>, strong_ordering>);
 
    // Single comparison-category argument is itself.
-   static_assert(is_same<
-                 common_comparison_category_t<strong_ordering>,
-                 strong_ordering>);
+   static_assert(
+      is_same<common_comparison_category_t<strong_ordering>, strong_ordering>
+   );
    static_assert(
       is_same<common_comparison_category_t<weak_ordering>, weak_ordering>
    );
-   static_assert(is_same<
-                 common_comparison_category_t<partial_ordering>,
-                 partial_ordering>);
+   static_assert(
+      is_same<common_comparison_category_t<partial_ordering>, partial_ordering>
+   );
 
    // `[cmp.common]`: any non-comparison-category argument collapses the
    // result to `void`.

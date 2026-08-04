@@ -13,8 +13,8 @@ namespace cat {
 // its own stack frame and hands that whole buffer out as a single allocation.
 // A second allocation fails until this is `free()`d or `reset()`.
 template <idx arena_bytes>
-class inplace_allocator
-    : public allocator_interface<inplace_allocator<arena_bytes>> {
+class [[clang::trivial_abi]]
+inplace_allocator : public allocator_interface<inplace_allocator<arena_bytes>> {
  private:
    friend allocator_interface<inplace_allocator>;
    friend struct dyn_allocator_friend;

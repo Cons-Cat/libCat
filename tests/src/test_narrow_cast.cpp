@@ -93,9 +93,7 @@ $test(narrow_cast_narrowing_same_signedness_int8_to_int4) {
 
    cat::iword const one_past_max =
       static_cast<cat::iword>(cat::limits<cat::int4>::max()) + 1_sz;
-   cat::verify(
-      cat::narrow_cast<cat::int4>(cat::int8{one_past_max}).is_empty()
-   );
+   cat::verify(cat::narrow_cast<cat::int4>(cat::int8{one_past_max}).is_empty());
 
    cat::iword const one_below_min =
       static_cast<cat::iword>(cat::limits<cat::int4>::min()) - 1_sz;
@@ -133,12 +131,8 @@ $test(narrow_cast_mixed_width_signed_to_unsigned) {
 $test(narrow_cast_mixed_width_unsigned_to_signed) {
    // Value above `int4::max` must be rejected without mis-promoting
    // `limits<int4>::min()` in an unsigned/signed compare.
-   cat::verify(
-      cat::narrow_cast<cat::int4>(cat::uint4{0x80000000u}).is_empty()
-   );
-   cat::verify(
-      cat::narrow_cast<cat::int4>(cat::uint4{0xFFFFFFFFu}).is_empty()
-   );
+   cat::verify(cat::narrow_cast<cat::int4>(cat::uint4{0x80000000u}).is_empty());
+   cat::verify(cat::narrow_cast<cat::int4>(cat::uint4{0xFFFFFFFFu}).is_empty());
 
    {
       auto const m = cat::narrow_cast<cat::int4>(cat::uint4{0u});
@@ -151,9 +145,7 @@ $test(narrow_cast_mixed_width_unsigned_to_signed) {
 }
 
 $test(narrow_cast_large_integrals_toward_smaller) {
-   cat::verify(
-      cat::narrow_cast<cat::int4>(cat::iword{1_sz} << 32u).is_empty()
-   );
+   cat::verify(cat::narrow_cast<cat::int4>(cat::iword{1_sz} << 32u).is_empty());
    {
       auto const m = cat::narrow_cast<cat::int4>(cat::iword{42});
       cat::verify(m.has_value() && m.value() == 42_i4);
@@ -221,9 +213,7 @@ $test(narrow_cast_fundamental_char_and_small_unsigned) {
       cat::verify(m.has_value() && m.value().raw == -5);
    }
    {
-      cat::verify(
-         cat::narrow_cast<cat::uint1>(cat::uword{300_uz}).is_empty()
-      );
+      cat::verify(cat::narrow_cast<cat::uint1>(cat::uword{300_uz}).is_empty());
    }
    {
       auto const m = cat::narrow_cast<cat::uint1>(cat::uword{0_uz});

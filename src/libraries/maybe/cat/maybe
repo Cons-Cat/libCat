@@ -715,9 +715,10 @@ struct maybe_storage_selector<T, false, false> {
 }  // namespace detail
 
 template <typename T>
-class [[nodiscard,
-        clang::annotate("clang-tidy", "bugprone-use-after-move",
-                        "null_after_move")]] maybe
+class
+   [[nodiscard, clang::annotate(
+                   "clang-tidy", "bugprone-use-after-move", "null_after_move"
+                )]] maybe
     // Inherit the random-access position protocol so `cat::iterate(maybe)`
     // auto-derives a `collection_iteration_context`. The mixin holds no
     // storage, so `sizeof(maybe<T&>)` stays pointer-sized.
@@ -1187,15 +1188,14 @@ class [[nodiscard,
    // the result and warns if the body ever regresses to `return nullptr`.
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   value(this auto const& self)
-      -> remove_pointer<remove_cvref<value_type>>* _Nonnull requires(
-         !is_void<T> && is_nonnull
-      ) {
-      if !consteval {
-         cat::assert(self.has_value());
-      }
-      return self.as_base().m_storage.value();
-   }
+   value(this auto const& self) -> remove_pointer<
+      remove_cvref<value_type>>* _Nonnull requires(!is_void<T> && is_nonnull) {
+                                             if !consteval {
+                                                cat::assert(self.has_value());
+                                             }
+                                             return self.as_base()
+                                                .m_storage.value();
+                                          }
 
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.

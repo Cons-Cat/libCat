@@ -12,7 +12,8 @@
 namespace cat {
 
 template <is_allocator Allocator>
-class named_allocator : public allocator_ref<Allocator> {
+class [[clang::trivial_abi]]
+named_allocator : public allocator_ref<Allocator> {
    using base = allocator_ref<Allocator>;
 
    str_view m_name;

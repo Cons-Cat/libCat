@@ -57,7 +57,8 @@ template <
                              ? Allocator::max_allocation_bytes
                              : 0u,
    idx chunk_bytes_param = 64u * 1'024u>
-class resizable_allocator
+class [[clang::trivial_abi]]
+resizable_allocator
     : public allocator_interface<resizable_allocator<
          Allocator, Backing, node_bytes_param, chunk_bytes_param>> {
    static_assert(

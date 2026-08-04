@@ -336,8 +336,7 @@ class variant {
          decltype(declval<Alternatives const&>() <=> declval<Alternatives const&>())...>;
       if (a.is_empty()) {
          return static_cast<result>(
-            b.has_value() ? strong_ordering::less
-                          : strong_ordering::equivalent
+            b.has_value() ? strong_ordering::less : strong_ordering::equivalent
          );
       }
       if (b.is_empty()) {

@@ -556,11 +556,11 @@ using common_comparison_category_t = common_comparison_category<Ts...>::type;
 
 namespace cat {
 
+using std::common_comparison_category;
+using std::common_comparison_category_t;
 using std::partial_ordering;
 using std::strong_ordering;
 using std::weak_ordering;
-using std::common_comparison_category;
-using std::common_comparison_category_t;
 
 template <typename T>
 concept is_common_comparison_category =
