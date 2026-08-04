@@ -152,7 +152,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
    // of bytes the request settled on.
    auto
    grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx> {
-      if (!this->grow(allocation, new_bytes).has_value()) {
+      if (this->grow(allocation, new_bytes).is_empty()) {
          return nullopt;
       }
       return new_bytes;

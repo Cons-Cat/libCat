@@ -13,7 +13,7 @@ struct min_impl {
       using result_type = iterable_value_type<Iterable>;
       auto context = iterate(incoming);
       auto maybe_minimum = next_element(context);
-      if (!maybe_minimum.has_value()) {
+      if (maybe_minimum.is_empty()) {
          return result_type{};
       }
 

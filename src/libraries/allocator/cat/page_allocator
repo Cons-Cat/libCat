@@ -147,7 +147,7 @@ class page_allocator : public allocator_interface<page_allocator> {
       scaredy result = nix::sys_mremap(
          allocation.data(), from_size, to_size, nix::mremap_flags::none
       );
-      if (!result.has_value()) {
+      if (result.is_empty()) {
          return nullopt;
       }
       return monostate;
@@ -163,7 +163,7 @@ class page_allocator : public allocator_interface<page_allocator> {
       scaredy result = nix::sys_mremap(
          allocation.data(), from_size, to_size, nix::mremap_flags::none
       );
-      if (!result.has_value()) {
+      if (result.is_empty()) {
          return nullopt;
       }
       return to_size;

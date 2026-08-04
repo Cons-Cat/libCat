@@ -26,7 +26,7 @@ $test(pool_allocator) {
    }
    // There should now be no remaining allocations, so this fails.
    cat::maybe failed_allocation = allocator.alloc<int4>();
-   cat::verify(!failed_allocation.has_value());
+   cat::verify(failed_allocation.is_empty());
 
    // Make an allocation after resetting.
    allocator.reset();
@@ -38,7 +38,7 @@ $test(pool_allocator) {
       auto* _ = allocator.alloc<int4>().verify();
    }
    failed_allocation = allocator.alloc<int4>();
-   cat::verify(!failed_allocation.has_value());
+   cat::verify(failed_allocation.is_empty());
 
    allocator.free(p_int3);
 

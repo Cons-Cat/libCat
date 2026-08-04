@@ -292,7 +292,7 @@ $test(dyn_construct_in_place) {
 // Default-constructed dyn is empty, then can be populated via `emplace`.
 $test(dyn_construct_empty) {
    dyn_move_constructor_treat_count dyn;
-   cat::verify(!dyn.has_value());
+   cat::verify(dyn.is_empty());
    cat::verify(dyn.type_descriptor() == cat::p_dyn_type_id_for<void>);
 
    dyn.emplace<kitty>(99_i4);
@@ -400,7 +400,7 @@ $test(dyn_move_construct) {
 
    auto b = cat::move(a);
    cat::verify(b.has_value());
-   cat::verify(!a.has_value());
+   cat::verify(a.is_empty());
    cat::verify(cat::dyn_invoke<treat_count>(b) == 5);
    cat::verify(move_count > moves_before);
 }
@@ -426,7 +426,7 @@ $test(dyn_move_assign) {
    dyn_move_constructor_treat_count b{kitty{2}};
    a = cat::move(b);
    cat::verify(a.has_value());
-   cat::verify(!b.has_value());
+   cat::verify(b.is_empty());
    cat::verify(cat::dyn_invoke<treat_count>(a) == 2);
 }
 
@@ -473,7 +473,7 @@ $test(dyn_reset) {
    cat::idx before = destruct_count;
 
    dyn.reset();
-   cat::verify(!dyn.has_value());
+   cat::verify(dyn.is_empty());
    cat::verify(destruct_count > before);
 }
 
@@ -520,7 +520,7 @@ $test(dyn_const_ref_basic) {
 // `dyn_ptr` is nullable and convertible from a raw pointer.
 $test(dyn_ptr_basic) {
    cat::dyn_ptr<treat_count, feed> empty;
-   cat::verify(!empty.has_value());
+   cat::verify(empty.is_empty());
    cat::verify(empty == nullptr);
    cat::verify(empty.type_id_ptr() == cat::p_dyn_type_id_for<void>);
 
@@ -539,7 +539,7 @@ $test(dyn_ptr_basic) {
 // `const_dyn_ptr` mirrors `dyn_ptr` but for const access.
 $test(dyn_const_ptr_basic) {
    cat::const_dyn_ptr<treat_count> empty;
-   cat::verify(!empty.has_value());
+   cat::verify(empty.is_empty());
 
    kitty v{33};
    cat::const_dyn_ptr<treat_count> cptr{&v};

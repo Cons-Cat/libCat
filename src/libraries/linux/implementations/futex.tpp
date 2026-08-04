@@ -86,7 +86,7 @@ basic_futex<Kind>::wait(
       *this, make_futex_op(futex_command::wait, futex_options::private_process),
       expected, p_timeout, nullptr, cat::uint4{}
    );
-   if (!result.has_value()) {
+   if (result.is_empty()) {
       return scaredy_nix<void>(result.error());
    }
    return scaredy_nix<void>(cat::monostate);

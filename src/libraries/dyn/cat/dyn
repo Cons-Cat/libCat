@@ -704,8 +704,14 @@ class [[gsl::Pointer]] dyn_ptr {
 
    [[nodiscard]]
    constexpr auto
-   operator==(decltype(nullptr)) const -> bool {
+   is_empty() const -> bool {
       return !this->has_value();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(decltype(nullptr)) const -> bool {
+      return this->is_empty();
    }
 
    // Returns `p_dyn_type_id_for<void>` if `*this == nullptr`.
@@ -842,8 +848,14 @@ class [[gsl::Pointer]] const_dyn_ptr {
 
    [[nodiscard]]
    constexpr auto
+   is_empty() const -> bool {
+      return !this->has_value();
+   }
+
+   [[nodiscard]]
+   constexpr auto
    operator==(decltype(nullptr)) const -> bool {
-      return !has_value();
+      return this->is_empty();
    }
 
    [[nodiscard]]
@@ -1169,6 +1181,12 @@ basic_dyn {
       return m_p_vtable != nullptr;
    }
 
+   [[nodiscard]]
+   constexpr auto
+   is_empty() const -> bool {
+      return !this->has_value();
+   }
+
    // True when a `dyn_ptr` to this dyn will not be invalidated by a move.
    // Heap-stored handles are stolen by `adopt_from`, so the held value's
    // address is preserved. Inline-stored handles always relocate.
@@ -1450,6 +1468,12 @@ class [[gsl::Owner]] dyn_inplace {
    constexpr auto
    has_value() const -> bool {
       return m_p_value != nullptr;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_empty() const -> bool {
+      return !this->has_value();
    }
 
    [[nodiscard]]

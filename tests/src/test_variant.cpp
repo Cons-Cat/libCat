@@ -23,7 +23,7 @@ $test(variant_basic_access) {
    cat::maybe<char&> maybe_active = v.get_if<char>();
    cat::verify(maybe_active.has_value());
    cat::maybe maybe_inactive = v.get_if<int>();
-   cat::verify(!maybe_inactive.has_value());
+   cat::verify(maybe_inactive.is_empty());
 };
 
 // `cat::variant`'s layout, including the compact `uint1` discriminant for
@@ -69,8 +69,8 @@ $test(variant_discriminant_tiers) {
    static_assert(sizeof(small_variant::maybe_discriminant) == 1);
 
    small_variant small_empty;
-   cat::verify(!small_empty.has_value());
-   cat::verify(!small_empty.index().has_value());
+   cat::verify(small_empty.is_empty());
+   cat::verify(small_empty.index().is_empty());
 
    // `value_or_niche()` reads the raw scalar; in the empty state it
    // equals `uint1_max`, which never collides with an active index in
@@ -87,8 +87,8 @@ $test(variant_discriminant_tiers) {
    static_assert(sizeof(mid_variant::maybe_discriminant) == 4);
 
    mid_variant mid_empty;
-   cat::verify(!mid_empty.has_value());
-   cat::verify(!mid_empty.index().has_value());
+   cat::verify(mid_empty.is_empty());
+   cat::verify(mid_empty.index().is_empty());
    cat::verify(
       mid_empty.index().value_or_niche() == cat::limits<cat::uint4>::max()
    );
@@ -118,7 +118,7 @@ $test(variant_discriminant_tiers) {
    // empty one decodes `nullopt` via its built-in niche. Active indices
    // are non-negative, so the niche's high-bit-set state never collides.
    cat::maybe<cat::idx> empty_idx_discriminant;
-   cat::verify(!empty_idx_discriminant.has_value());
+   cat::verify(empty_idx_discriminant.is_empty());
 
    cat::maybe<cat::idx> active_idx_discriminant = cat::idx{0u};
    cat::verify(active_idx_discriminant.has_value());
@@ -241,10 +241,10 @@ $test(variant_constexpr) {
    // Default-construction yields the empty state. `is<T>` and `.index()`
    // both observe it.
    constexpr cat::variant<int, uint4> empty_variant;
-   static_assert(!empty_variant.has_value());
+   static_assert(empty_variant.is_empty());
    static_assert(!empty_variant.is<int>());
    static_assert(!empty_variant.is<uint4>());
-   static_assert(!empty_variant.index().has_value());
+   static_assert(empty_variant.index().is_empty());
 
    // `cat::variant_size<T>` (P3664) resolves at compile time.
    static_assert(cat::variant_size<cat::variant<int, uint4>> == 2u);
@@ -530,7 +530,7 @@ $test(variant_reference_alternatives) {
    cat::verify(got.has_value());
    cat::verify(&got.value() == &my_int);
    cat::maybe<double&> missed = r1.get_if<double>();
-   cat::verify(!missed.has_value());
+   cat::verify(missed.is_empty());
 
    // Const reference alternatives bind l-values without write-through.
    int const my_const = 7;
@@ -580,7 +580,7 @@ $test(variant_inheritance) {
    // Free-function `cat::get<T>(packet)` recovers the variant base members.
    cat::verify(cat::get<int>(p) == 17);
    cat::verify(cat::get<0>(p) == 17);
-   cat::verify(!cat::get_if<char>(p).has_value());
+   cat::verify(cat::get_if<char>(p).is_empty());
    cat::verify(cat::get_ptr<int>(p) != nullptr);
    cat::verify(cat::holds_alternative<int>(p));
 };
@@ -901,11 +901,11 @@ struct destruct_tracer {
 // the empty state without UB.
 $test(variant_empty_state) {
    cat::variant<int, char, float4> v;
-   cat::verify(!v.has_value());
+   cat::verify(v.is_empty());
    cat::verify(!v.is<int>());
    cat::verify(!v.is<char>());
    cat::verify(!v.holds_alternative<int>());
-   cat::verify(!v.get_if<int>().has_value());
+   cat::verify(v.get_if<int>().is_empty());
    cat::verify(v.get_ptr<int>() == nullptr);
    cat::verify(v.get_ptr<0>() == nullptr);
 
@@ -915,7 +915,7 @@ $test(variant_empty_state) {
    cat::verify(v.get<int>() == 5);
 
    v.reset();
-   cat::verify(!v.has_value());
+   cat::verify(v.is_empty());
    cat::verify(!v.is<int>());
    cat::verify(v.get_ptr<int>() == nullptr);
 
@@ -923,18 +923,18 @@ $test(variant_empty_state) {
    cat::verify(v.has_value());
 
    v = cat::nullopt;
-   cat::verify(!v.has_value());
+   cat::verify(v.is_empty());
 
    cat::variant<int, char, float4> from_nullopt(cat::nullopt);
-   cat::verify(!from_nullopt.has_value());
+   cat::verify(from_nullopt.is_empty());
 
    // Copy of an empty variant remains empty.
    cat::variant<int, char, float4> copied = v;
-   cat::verify(!copied.has_value());
+   cat::verify(copied.is_empty());
 
    // Move of an empty variant remains empty.
    cat::variant<int, char, float4> moved = cat::move(v);
-   cat::verify(!moved.has_value());
+   cat::verify(moved.is_empty());
 };
 
 // Type-change assignment destroys the old alternative exactly once and
@@ -962,12 +962,12 @@ $test(variant_type_change_destruction) {
 
    // `reset()` destroys the held alternative once.
    v.reset();
-   cat::verify(!v.has_value());
+   cat::verify(v.is_empty());
    cat::verify(destructions == 2);
 
    // `.reset()` is idempotent on an empty variant.
    v.reset();
-   cat::verify(!v.has_value());
+   cat::verify(v.is_empty());
    cat::verify(destructions == 2);
 };
 
@@ -1018,7 +1018,7 @@ $test(variant_duplicate_alternatives) {
 
    // Default-constructed: empty.
    dup empty;
-   cat::verify(!empty.has_value());
+   cat::verify(empty.is_empty());
 
    // Build the first `int` slot.
    dup first{cat::in_place_index<0u>, 7};

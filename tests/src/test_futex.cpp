@@ -56,7 +56,7 @@ $test(futex_syscalls) {
    // `futex_command::compare_requeue` (`linux_error::again`).
    auto const cmp_requeue_result =
       futex_word.compare_requeue(1u, 1u, futex_other, 1u);
-   cat::verify(!cmp_requeue_result.has_value());
+   cat::verify(cmp_requeue_result.is_empty());
    cat::verify(cmp_requeue_result.error() == nix::linux_error::again);
 
    nix::robust_list_head head{};
@@ -86,6 +86,6 @@ $test(futex_syscalls) {
       cat::span{&waiter, 1u}, futex_waitv_call_flags::none, nullptr, cat::int4{}
    );
 
-   cat::verify(!waitv_result.has_value());
+   cat::verify(waitv_result.is_empty());
    cat::verify(waitv_result.error() == nix::linux_error::again);
 }

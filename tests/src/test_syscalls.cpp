@@ -610,7 +610,7 @@ $test(syscall_memory) {
          // A sealed mapping rejects `munmap` with `linux_error::perm`.
          auto munmap_sealed = nix::sys_munmap(p_sealed, bytes);
          cat::verify(
-            !munmap_sealed.has_value()
+            munmap_sealed.is_empty()
             && munmap_sealed.error() == nix::linux_error::perm
          );
       } else {
@@ -794,14 +794,14 @@ $test(syscall_signals_self_kill) {
    nix::process_id self_pid = nix::sys_getpid();
    auto tkill_result = nix::sys_tkill(nix::process_id{-1}, nix::signal::usr1);
    cat::verify(
-      !tkill_result.has_value()
+      tkill_result.is_empty()
       && (tkill_result.error() == nix::linux_error::srch || tkill_result.error() == nix::linux_error::inval)
    );
 
    auto tgkill_result =
       nix::sys_tgkill(self_pid, nix::process_id{-1}, nix::signal::usr1);
    cat::verify(
-      !tgkill_result.has_value()
+      tgkill_result.is_empty()
       && (tgkill_result.error() == nix::linux_error::srch || tgkill_result.error() == nix::linux_error::inval)
    );
 }
@@ -927,7 +927,7 @@ $test(syscall_io_uring) {
    nix::io_uring_params params{};
    params.flags = nix::io_uring_setup_flags::ring_disabled;
    auto setup_result = nix::sys_io_uring_setup(4u, params);
-   if (!setup_result.has_value()) {
+   if (setup_result.is_empty()) {
       // Some sandboxes deny io_uring_setup with `linux_error::perm` even
       // though probing returned true (the probe uses entries=0 which the
       // kernel rejects before checking the disabled flag).

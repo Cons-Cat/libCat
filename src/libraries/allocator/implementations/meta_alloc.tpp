@@ -425,7 +425,7 @@ allocator_interface<Derived>::meta_uninit_alloc(
       }
 
       if constexpr (is_fail_safe) {
-         if (!maybe_memory.has_value()) {
+         if (maybe_memory.is_empty()) {
             return return_handle(nullopt);
          }
       }
@@ -631,7 +631,7 @@ allocator_interface<Derived>::meta_alloc(
       }
 
       if constexpr (is_fail_safe) {
-         if (!maybe_memory.has_value()) {
+         if (maybe_memory.is_empty()) {
             return return_handle(nullopt);
          }
       }

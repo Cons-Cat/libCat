@@ -303,7 +303,7 @@ $test(raii_list_maybe_niche) {
       sizeof(cat::maybe<cat::raii::list<int4>>) == sizeof(cat::raii::list<int4>)
    );
    cat::maybe<cat::raii::list<int4>> empty_list;
-   cat::verify(!empty_list.has_value());
+   cat::verify(empty_list.is_empty());
 
    linear_arena arena;
    auto engaged = cat::raii::make_list<int4>(arena.alloc);
@@ -456,12 +456,12 @@ $test(list) {
    cat::null_allocator null_alloc = cat::make_null_allocator();
    cat::raii::list null_list = cat::raii::make_list<int>(null_alloc).value();
    cat::verify(null_list.size() == 0);
-   cat::verify(!null_list.insert(null_list.begin(), 1).has_value());
-   cat::verify(!null_list.push_back(1).has_value());
-   cat::verify(!null_list.push_front(1).has_value());
-   cat::verify(!null_list.emplace(null_list.begin(), 1).has_value());
-   cat::verify(!null_list.emplace_back(1).has_value());
-   cat::verify(!null_list.emplace_front(1).has_value());
+   cat::verify(null_list.insert(null_list.begin(), 1).is_empty());
+   cat::verify(null_list.push_back(1).is_empty());
+   cat::verify(null_list.push_front(1).is_empty());
+   cat::verify(null_list.emplace(null_list.begin(), 1).is_empty());
+   cat::verify(null_list.emplace_back(1).is_empty());
+   cat::verify(null_list.emplace_front(1).is_empty());
 
    cat::raii::forward_list forward_list_1 =
       cat::raii::make_forward_list<int4, cat::dyn_allocator>(dynamic_ref)

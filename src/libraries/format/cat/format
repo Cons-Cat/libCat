@@ -648,13 +648,13 @@ vfmt_to(
    str_view const format, detail::format_args arguments
 ) -> scaredy_format<Outputter> {
    auto result = vfmt(detail::erase_allocator(allocator), format, arguments);
-   if (!result.has_value()) {
+   if (result.is_empty()) {
       return result.template error<format_errors>();
    }
    str_view const string = result.value();
    for (idx i; i < string.size(); ++i) {
       maybe insert_result = output_iterator.insert(allocator, string[i]);
-      if (!insert_result.has_value()) {
+      if (insert_result.is_empty()) {
          allocator.free(string);
          return format_errors::out_of_memory;
       }

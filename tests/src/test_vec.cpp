@@ -245,7 +245,7 @@ void
 verify_vec_niche() {
    static_assert(sizeof(cat::maybe<Vector>) == sizeof(Vector));
    cat::maybe<Vector> empty;
-   cat::verify(!empty.has_value());
+   cat::verify(empty.is_empty());
 }
 
 template <typename Vector>
@@ -992,7 +992,7 @@ $test(vec_null_allocator_failure) {
    $defer {
       v.free(null_alloc);
    };
-   cat::verify(!v.reserve(null_alloc, 1).has_value());
+   cat::verify(v.reserve(null_alloc, 1).is_empty());
 }
 
 $test(vec_noncontiguous_replace_failure_preserves_values) {
@@ -1007,7 +1007,7 @@ $test(vec_noncontiguous_replace_failure_preserves_values) {
 
    auto const result =
       values.replace_with_range(null_alloc, 1u, 2u, noncontiguous);
-   cat::verify(!result.has_value());
+   cat::verify(result.is_empty());
    cat::verify(values.size() == 4u);
    cat::verify(values[0u] == 1_i4);
    cat::verify(values[1u] == 2_i4);
@@ -1067,7 +1067,7 @@ $test(vec_shrink_to_fit) {
    cat::null_allocator null_alloc;
    int4* const p_before_failed_shrink = v.data();
    idx const capacity_before_failed_shrink = v.capacity();
-   cat::verify(!v.shrink_to_fit(null_alloc).has_value());
+   cat::verify(v.shrink_to_fit(null_alloc).is_empty());
    cat::verify(v.data() == p_before_failed_shrink);
    cat::verify(v.capacity() == capacity_before_failed_shrink);
    cat::verify(v.size() == 2);

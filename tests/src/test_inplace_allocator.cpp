@@ -16,7 +16,7 @@ $test(inplace_allocator) {
    cat::verify(allocator.bytes_used() == 24u);
 
    // A second allocation fails because the buffer is one-shot.
-   cat::verify(!allocator.alloc<int4>().has_value());
+   cat::verify(allocator.alloc<int4>().is_empty());
 
    // Freeing the outstanding allocation makes the buffer available again.
    allocator.free(p_handle);
@@ -24,7 +24,7 @@ $test(inplace_allocator) {
 
    int4* p_handle_2 = allocator.alloc<int4>(7).or_exit();
    cat::verify(*p_handle_2 == 7);
-   cat::verify(!allocator.alloc<int4>().has_value());
+   cat::verify(allocator.alloc<int4>().is_empty());
 
    // `reset()` also releases the buffer.
    allocator.reset();
@@ -34,7 +34,7 @@ $test(inplace_allocator) {
 
    // An allocation larger than the buffer fails.
    allocator.reset();
-   cat::verify(!allocator.alloc_multi<int4>(100u).has_value());
+   cat::verify(allocator.alloc_multi<int4>(100u).is_empty());
 
    // A request that fits in the buffer reports the whole buffer's size.
    allocator.reset();
@@ -48,5 +48,5 @@ $test(inplace_allocator) {
 
    // An over-aligned request larger than the whole buffer fails.
    over_aligned.reset();
-   cat::verify(!over_aligned.align_alloc_multi<int4>(64u, 33u).has_value());
+   cat::verify(over_aligned.align_alloc_multi<int4>(64u, 33u).is_empty());
 }

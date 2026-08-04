@@ -362,7 +362,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
          if (result.has_value()) {
             maybe<iterator> inserted_iterator =
                this->insert(allocator, where, $fwd(value));
-            if (!inserted_iterator.has_value()) {
+            if (inserted_iterator.is_empty()) {
                result = nullopt;
             } else if (!inserted) {
                first = inserted_iterator.value();
@@ -371,7 +371,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
          }
       });
 
-      if (!result.has_value()) {
+      if (result.is_empty()) {
          return nullopt;
       }
       return first;
@@ -397,7 +397,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
          if (result.has_value()) {
             maybe<iterator> const appended =
                this->append_new_node(allocator, p_tail, $fwd(value));
-            if (!appended.has_value()) {
+            if (appended.is_empty()) {
                result = nullopt;
             }
          }

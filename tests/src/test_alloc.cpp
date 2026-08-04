@@ -105,7 +105,7 @@ consteval auto
 const_test_uninit_alloc() -> bool {
    idx live;
    auto maybe_storage = pager.alloc_multi_uninit<alloc_uninit_lifetime>(3u);
-   if (!maybe_storage.has_value()) {
+   if (maybe_storage.is_empty()) {
       return false;
    }
    auto storage = maybe_storage.value();

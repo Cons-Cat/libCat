@@ -23,7 +23,7 @@ struct dot_impl {
       left_context.run_while(
          [&total, &right_context](auto&& left_element) -> bool {
             auto maybe_right_element = next_element(right_context);
-            if (!maybe_right_element.has_value()) {
+            if (maybe_right_element.is_empty()) {
                return false;
             }
             total = total + ($fwd(left_element) * maybe_right_element.value());

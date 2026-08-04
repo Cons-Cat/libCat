@@ -83,7 +83,7 @@ wait_clone_thread_through_cleartid_futex(
          nix::scaredy_nix<void> const poke = nix::sys_tgkill(
             thread_group_id, child_id, static_cast<nix::signal>(0)
          );
-         if (!poke.has_value()) {
+         if (poke.is_empty()) {
             if (poke.error() == nix::linux_error::srch) {
                return nix::scaredy_nix<nix::process_id>(child_id);
             }

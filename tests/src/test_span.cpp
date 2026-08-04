@@ -284,8 +284,8 @@ $test(span_at_returns_value_or_nullopt) {
 
    cat::verify(view.at(0u).value() == 7);
    cat::verify(view.at(2u).value() == 9);
-   cat::verify(!view.at(3u).has_value());
-   cat::verify(!view.at(99u).has_value());
+   cat::verify(view.at(3u).is_empty());
+   cat::verify(view.at(99u).is_empty());
 }
 
 $test(span_front_back) {

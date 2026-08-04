@@ -228,7 +228,7 @@ $test(array_collection) {
 $test(array_at_in_and_out_of_bounds) {
    cat::array array_1{5, 6, 7, 8, 9};
    cat::verify(array_1.at(0).value() == 5);
-   cat::verify(!array_1.at(6).has_value());
+   cat::verify(array_1.at(6).is_empty());
 }
 
 $test(array_class_template_argument_deduction) {
@@ -259,9 +259,9 @@ $test(array_subspan_first_last) {
    auto _ = array_const.subspan(0u, 2u).value();
    auto _ = array_const.last(2u).value();
 
-   cat::verify(!array_1.first(99u).has_value());
-   cat::verify(!array_1.last(99u).has_value());
-   cat::verify(!array_1.subspan(0u, 99u).has_value());
+   cat::verify(array_1.first(99u).is_empty());
+   cat::verify(array_1.last(99u).is_empty());
+   cat::verify(array_1.subspan(0u, 99u).is_empty());
 }
 
 $test(array_copy_assignment) {

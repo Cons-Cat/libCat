@@ -28,7 +28,7 @@ void
 cat::default_assert_handler(source_location const& callsite) {
    detail::print_assert_location(callsite);
 
-   if (!nix::is_a_tty(nix::stdin).has_value()) {
+   if (nix::is_a_tty(nix::stdin).is_empty()) {
       eprint("assert failed with stdin not a tty; exiting.\n").or_exit();
       exit(1);
    }

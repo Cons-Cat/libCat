@@ -5798,7 +5798,7 @@ class allocator_interface {
       }();
 
       if constexpr (is_fail_safe) {
-         if (!allocation.has_value()) {
+         if (allocation.is_empty()) {
             return allocation;
          }
       }
@@ -5939,7 +5939,7 @@ class allocator_interface {
          (allocator.*alloc_function)($fwd(arguments)..., new_count);
 
       if constexpr (is_fail_safe) {
-         if (!new_handle.has_value()) {
+         if (new_handle.is_empty()) {
             return new_handle;
          }
 
@@ -6072,7 +6072,7 @@ class allocator_interface {
          (allocator.*alloc_function)($fwd(arguments)..., new_count);
 
       if constexpr (is_fail_safe) {
-         if (!new_handle.has_value()) {
+         if (new_handle.is_empty()) {
             return new_handle;
          }
 

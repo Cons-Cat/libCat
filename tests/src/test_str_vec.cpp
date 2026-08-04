@@ -42,10 +42,10 @@ $test(str_vec_maybe_niche) {
    cat::maybe<cat::wstr_vec> manual_wide_empty;
    cat::maybe<cat::raii::str_vec<>> raii_empty;
    cat::maybe<cat::raii::wstr_vec<>> raii_wide_empty;
-   cat::verify(!manual_empty.has_value());
-   cat::verify(!manual_wide_empty.has_value());
-   cat::verify(!raii_empty.has_value());
-   cat::verify(!raii_wide_empty.has_value());
+   cat::verify(manual_empty.is_empty());
+   cat::verify(manual_wide_empty.is_empty());
+   cat::verify(raii_empty.is_empty());
+   cat::verify(raii_wide_empty.is_empty());
 }
 
 $test(string_fill) {
@@ -360,17 +360,17 @@ $test(str_vec_clone_move_and_failure) {
    $defer {
       failed.free(null_alloc);
    };
-   cat::verify(!failed.push_back(null_alloc, 'x').has_value());
+   cat::verify(failed.push_back(null_alloc, 'x').is_empty());
    cat::zstr_vec zfailed;
-   cat::verify(!zfailed.push_back(null_alloc, 'x').has_value());
+   cat::verify(zfailed.push_back(null_alloc, 'x').is_empty());
 
    cat::wstr_vec wide_failed;
    $defer {
       wide_failed.free(null_alloc);
    };
-   cat::verify(!wide_failed.push_back(null_alloc, L'x').has_value());
+   cat::verify(wide_failed.push_back(null_alloc, L'x').is_empty());
    cat::wzstr_vec wzfailed;
-   cat::verify(!wzfailed.push_back(null_alloc, L'x').has_value());
+   cat::verify(wzfailed.push_back(null_alloc, L'x').is_empty());
 }
 
 $test(raii_str_vec_lifecycle) {

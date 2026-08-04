@@ -13,7 +13,7 @@ void
 verify_bitvec_niche() {
    static_assert(sizeof(cat::maybe<Vector>) == sizeof(Vector));
    cat::maybe<Vector> empty;
-   cat::verify(!empty.has_value());
+   cat::verify(empty.is_empty());
 }
 
 template <typename Vector>

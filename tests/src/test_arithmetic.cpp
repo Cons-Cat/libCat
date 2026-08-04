@@ -5742,7 +5742,7 @@ $test(arithmetic_idx_maybe_default_compact) {
 
    // Default construction is empty.
    maybe_idx empty;
-   cat::verify(!empty.has_value());
+   cat::verify(empty.is_empty());
 
    // `.value_or_niche()` returns the `common_type` of the engaged
    // `basic_idx` (unsigned size-t) and the niche `iword` (signed long) -
@@ -5761,7 +5761,7 @@ $test(arithmetic_idx_maybe_default_compact) {
 
    // Reassigning to `nullopt` returns to the niche bit pattern.
    engaged = cat::nullopt;
-   cat::verify(!engaged.has_value());
+   cat::verify(engaged.is_empty());
    cat::verify(engaged.value_or_niche() == empty_bits);
 
    // A user-provided non-default compact still works alongside the
@@ -5769,14 +5769,14 @@ $test(arithmetic_idx_maybe_default_compact) {
    // state", which is incompatible with the default but useful for
    // domain-specific encodings.
    cat::maybe<cat::sentinel<cat::idx, cat::idx{0u}>> nonzero_idx;
-   cat::verify(!nonzero_idx.has_value());
+   cat::verify(nonzero_idx.is_empty());
 
    nonzero_idx = cat::idx{1u};
    cat::verify(nonzero_idx.has_value());
    cat::verify(nonzero_idx.value() == 1u);
 
    nonzero_idx = cat::idx{0u};
-   cat::verify(!nonzero_idx.has_value());
+   cat::verify(nonzero_idx.is_empty());
 }
 
 // Helpers for the semantics tests below. `requires { T{V}; }` inside a

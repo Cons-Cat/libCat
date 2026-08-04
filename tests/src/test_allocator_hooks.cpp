@@ -80,7 +80,7 @@ $test(linear_allocator_resize_returns_nullopt) {
    cat::is_allocator auto allocator = cat::make_linear_allocator(page);
 
    cat::maybe grown = allocator.resize(64u);
-   cat::verify(!grown.has_value());
+   cat::verify(grown.is_empty());
 }
 
 // A downward-bump arena cannot grow in place without relocating the
@@ -99,11 +99,11 @@ $test(linear_allocator_reallocate_grow_always_fails) {
       reinterpret_cast<cat::byte*>(p_top), idx(4u)
    };
    cat::maybe const grew = allocator.alloc_grow(allocation, idx(8u));
-   cat::verify(!grew.has_value());
+   cat::verify(grew.is_empty());
    cat::verify(allocator.bytes_used() == used_before);
 
    cat::maybe grew_sized = allocator.alloc_grow_feedback(allocation, idx(8u));
-   cat::verify(!grew_sized.has_value());
+   cat::verify(grew_sized.is_empty());
    cat::verify(allocator.bytes_used() == used_before);
 }
 
@@ -190,7 +190,7 @@ $test(pool_allocator_resize_returns_nullopt) {
    cat::is_allocator auto pool = cat::make_pool_allocator<8>(page);
 
    cat::maybe grown = pool.resize(64u);
-   cat::verify(!grown.has_value());
+   cat::verify(grown.is_empty());
 }
 
 $test(pool_allocator_equality) {
@@ -364,7 +364,7 @@ $test(allocator_ref_folds_when_wrapping_empty_allocator) {
 
    cat::allocator_ref<cat::null_allocator> null_ref;
    cat::maybe<int4*> result = null_ref.alloc<int4>();
-   cat::verify(!result.has_value());
+   cat::verify(result.is_empty());
 }
 
 $test(allocator_ref_introspection_forwarding) {

@@ -537,7 +537,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
       // Append each bit.
       maybe<void> result = monostate;
       auto append = [&](auto&& value) {
-         if (!result.has_value()) {
+         if (result.is_empty()) {
             return;
          }
          bit_value bit;
@@ -565,7 +565,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
       // Append each bit.
       maybe<void> result = monostate;
       auto append = [&](auto&& value) {
-         if (!result.has_value()) {
+         if (result.is_empty()) {
             return;
          }
          bit_value bit;
@@ -689,12 +689,12 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
       // Insert each bit and grow as needed.
       auto insert = [&](auto&& value) {
-         if (!result.has_value()) {
+         if (result.is_empty()) {
             return;
          }
          idx const old_size = m_bit_size;
          result = resize(allocator, old_size + 1u);
-         if (!result.has_value()) {
+         if (result.is_empty()) {
             return;
          }
          for (idx i = old_size; i > insertion_position; i = idx(i - 1u)) {

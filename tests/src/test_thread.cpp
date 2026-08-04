@@ -173,6 +173,6 @@ $test(thread_clone_failure) {
          .has_value()
    );
 
-   cat::verify(!spawn_result.has_value());
+   cat::verify(spawn_result.is_empty());
    cat::verify(spawn_result.error() == nix::linux_error::again);
 }

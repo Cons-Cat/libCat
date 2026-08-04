@@ -15,7 +15,7 @@ parse_decimal(char const* _Nonnull& p_cursor) -> cat::int4 {
 auto
 nix::get_kernel_version() -> kernel_version {
    utsname uts{};
-   if (auto result = sys_uname(uts); !result.has_value()) {
+   if (auto result = sys_uname(uts); result.is_empty()) {
       // Treat as 0.0 on the rare case the syscall itself fails. The
       // startup probe falls back to "no feature present" for every
       // version-gated check.

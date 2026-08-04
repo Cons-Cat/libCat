@@ -6,7 +6,7 @@ $test(str_inplace_construct_and_concat) {
    constexpr cat::str_inplace const_string_3 = "Hello, ";
    constexpr cat::str_inplace const_string_4 = "world!";
 
-   cat::verify(!const_string_3.at(10).has_value());
+   cat::verify(const_string_3.at(10).is_empty());
 
    // TODO: Make this `constexpr`.
    cat::str_inplace hello_world = (const_string_3 + const_string_4);
@@ -59,7 +59,7 @@ $test(str_inplace_flags_and_capacity) {
    string.append("cat").verify();
    string.try_push_back('s').verify();
    cat::verify(string.size() == 4u);
-   cat::verify(!string.append("12345").has_value());
+   cat::verify(string.append("12345").is_empty());
 
    cat::str_inplace<8u> range_string;
    range_string.try_append_range(cat::str_view(string)).verify();

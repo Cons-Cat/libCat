@@ -90,7 +90,7 @@ struct address_span {
 auto
 region_addresses(cat::str_view header) -> address_span {
    cat::maybe const dash = header.find('-');
-   if (!dash.has_value()) {
+   if (dash.is_empty()) {
       return {.low = 0u, .high = 0u};
    }
    cat::uword const lo = parse_hex_uword(header.substring(0u, dash.value()));
@@ -184,7 +184,7 @@ flush_region(smaps_region const& region, smaps_totals& totals) {
 auto
 parse_kb_value(cat::str_view line) -> cat::maybe<cat::idx> {
    cat::maybe const colon = line.find(':');
-   if (!colon.has_value()) {
+   if (colon.is_empty()) {
       return cat::nullopt;
    }
    cat::str_view rest = line.remove_prefix(colon.value() + 1u);
@@ -265,7 +265,7 @@ nix::read_self_anon_smaps() -> cat::scaredy<nix::anon_smaps, nix::linux_error> {
          fd, buffer.data() + total_bytes,
          cat::idx(smaps_buffer_bytes.raw - total_bytes.raw)
       );
-      if (!read_result.has_value()) {
+      if (read_result.is_empty()) {
          auto _ = nix::sys_close(fd);
          return read_result.error();
       }

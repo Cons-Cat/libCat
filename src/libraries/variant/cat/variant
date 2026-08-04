@@ -20,8 +20,8 @@
 // also provided for "upside-down polymorphism".
 //
 // `cat::variant` is empty upon default-construction. Its emptiness can be
-// queried by `.has_value()`, like other libCat sum-types. It can similarly be
-// made empty by `.reset()` or assigning `cat::nullopt`.
+// queried by `.has_value()` or `.is_empty()`, like other libCat sum-types. It
+// can similarly be made empty by `.reset()` or assigning `cat::nullopt`.
 //
 // Selected papers informing the design:
 //
@@ -317,7 +317,7 @@ class variant {
       ) {
          return false;
       }
-      if (!a.has_value()) {
+      if (a.is_empty()) {
          return true;
       }
       return a.template recurse_compare_eq_indexed<>(b);
@@ -332,16 +332,16 @@ class variant {
    operator<=>(variant const& a, variant const& b)
       requires((is_threeway_comparable<Alternatives> && ...))
    {
-      using result = std::common_comparison_category_t<
+      using result = common_comparison_category_t<
          decltype(declval<Alternatives const&>() <=> declval<Alternatives const&>())...>;
-      if (!a.has_value()) {
+      if (a.is_empty()) {
          return static_cast<result>(
-            b.has_value() ? std::strong_ordering::less
-                          : std::strong_ordering::equivalent
+            b.has_value() ? strong_ordering::less
+                          : strong_ordering::equivalent
          );
       }
-      if (!b.has_value()) {
-         return static_cast<result>(std::strong_ordering::greater);
+      if (b.is_empty()) {
+         return static_cast<result>(strong_ordering::greater);
       }
       auto const a_index = a.m_discriminant.value_or_niche();
       auto const b_index = b.m_discriminant.value_or_niche();
@@ -964,7 +964,7 @@ class variant {
    template <idx index_value = 0u>
    constexpr auto
    recurse_compare_threeway_indexed(variant const& other) const {
-      using result = std::common_comparison_category_t<
+      using result = common_comparison_category_t<
          decltype(declval<Alternatives const&>() <=> declval<Alternatives const&>())...>;
       if constexpr (index_value < variant_size) {
          if (m_discriminant.value_or_niche() == index_value) {
@@ -978,7 +978,7 @@ class variant {
                other
             );
       } else {
-         return static_cast<result>(std::strong_ordering::equivalent);
+         return static_cast<result>(strong_ordering::equivalent);
       }
    }
 
@@ -1030,6 +1030,13 @@ class variant {
       return m_discriminant.has_value();
    }
 
+   // If this variant is disengaged, return `true`.
+   [[nodiscard]]
+   constexpr auto
+   is_empty() const -> bool {
+      return !m_discriminant.has_value();
+   }
+
    // Destroy the active alternative (if any) and return to the empty state.
    // Available only for value variants. Reference variants are immutable in
    // their active type (P4198).
@@ -1037,7 +1044,7 @@ class variant {
    reset()
       requires(!is_reference_variant)
    {
-      this->template hard_reset_indexed<>();
+      hard_reset_indexed();
    }
 
  private:

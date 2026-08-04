@@ -262,21 +262,21 @@ $test(tuple_at) {
    cat::tuple<int, int> t{1, 2};
    cat::verify(t.at(0_idx).has_value() && t.at(0_idx).value() == 1);
    cat::verify(t.at(1_idx).has_value() && t.at(1_idx).value() == 2);
-   cat::verify(!t.at(2_idx).has_value());
+   cat::verify(t.at(2_idx).is_empty());
    t.at(0_idx).assert() = 9;
    cat::verify(t[0_idx] == 9);
 
    cat::tuple<int, int> const c{3, 4};
    static_assert(cat::is_same<decltype(c.at(0_idx).value()), int const&>);
    cat::verify(c.at(0_idx).assert() == 3);
-   cat::verify(!c.at(2_idx).has_value());
+   cat::verify(c.at(2_idx).is_empty());
 
    cat::tuple<int, char> mixed{7, 'x'};
    static_assert(cat::is_same<decltype(mixed.at(0_idx).value()), int&>);
    static_assert(cat::is_same<decltype(mixed.at(1_idx).value()), char&>);
    cat::verify(mixed.at(0_idx).assert() == 7);
    cat::verify(mixed.at(1_idx).assert() == 'x');
-   cat::verify(!mixed.at(2_idx).has_value());
+   cat::verify(mixed.at(2_idx).is_empty());
 }
 
 $test(tuple_cat) {

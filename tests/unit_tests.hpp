@@ -39,7 +39,7 @@ test_fail(cat::source_location const& source_location);
       /* Linking asan causes this vector to be uninitialized. I've tried */ \
       /* `[[gnu::constructor]]` priorities to order it, but that doesn't */ \
       /* work. This hacky check works around it. */                         \
-      if (!test_fns.has_value()) {                                          \
+      if (test_fns.is_empty()) {                                          \
          /* TODO: `.or_exit() on failure.*/                                 \
          test_fns =                                                         \
             cat::raii::make_vec_reserved<void*>(pager, 4_uki / 8u).value(); \

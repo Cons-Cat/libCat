@@ -13,7 +13,7 @@ struct max_impl {
       using result_type = iterable_value_type<Iterable>;
       auto context = iterate(incoming);
       auto maybe_maximum = next_element(context);
-      if (!maybe_maximum.has_value()) {
+      if (maybe_maximum.is_empty()) {
          return result_type{};
       }
 

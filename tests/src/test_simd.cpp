@@ -860,15 +860,15 @@ $test(simd_aligned_load_returns_nullopt_when_misaligned) {
       !cat::is_aligned(cat::unconst(p_mis), int4x4::abi_type::alignment)
    );
    auto const full = cat::make_simd_loaded_aligned<int4x4>(p_mis);
-   cat::verify(!full.has_value());
+   cat::verify(full.is_empty());
 
    int4x4 const pass = {10, 20, 30, 40};
    auto const m = cat::make_simd_mask_from_count<int4x4>(2u);
    auto const masked_make =
       cat::make_simd_loaded_aligned<int4x4>[m](pass, p_mis);
-   cat::verify(!masked_make.has_value());
+   cat::verify(masked_make.is_empty());
    auto const masked_load = cat::simd_load_aligned[m](pass, p_mis);
-   cat::verify(!masked_load.has_value());
+   cat::verify(masked_load.is_empty());
 }
 
 $test(simd_load_unaligned_and_loaded_unaligned) {

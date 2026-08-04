@@ -17,13 +17,13 @@ parse_format_string(
    while (remainder.size() > 0) {
       maybe<idx> const maybe_open_brace = remainder.find('{');
       iword const to_open_brace = maybe_open_brace.value_or_niche();
-      if (!maybe_open_brace.has_value()) {
+      if (maybe_open_brace.is_empty()) {
          assert(to_open_brace == -1);
       }
 
       maybe<idx> const maybe_close_brace = remainder.find('}');
       iword const to_close_brace = maybe_close_brace.value_or_niche();
-      if (!maybe_close_brace.has_value()) {
+      if (maybe_close_brace.is_empty()) {
          assert(to_close_brace == -1);
       }
 
@@ -31,7 +31,7 @@ parse_format_string(
          for (char const& character : remainder) {
             maybe result =
                handler.m_output_iterator.insert(handler.m_allocator, character);
-            if (!result.has_value()) {
+            if (result.is_empty()) {
                return format_errors::out_of_memory;
             }
          }
@@ -41,7 +41,7 @@ parse_format_string(
       for (idx i; i < to_open_brace; ++i) {
          maybe result =
             handler.m_output_iterator.insert(handler.m_allocator, remainder[i]);
-         if (!result.has_value()) {
+         if (result.is_empty()) {
             return format_errors::out_of_memory;
          }
       }
@@ -107,7 +107,7 @@ parse_format_string(
             __builtin_unreachable();
       }
 
-      if (!parse_result.has_value()) {
+      if (parse_result.is_empty()) {
          return parse_result;
       }
 
@@ -146,7 +146,7 @@ vfmt(
    idx const initial_size = format.size() + 10u;
 
    maybe maybe_memory = allocator.alloc_multi_uninit<char>(initial_size);
-   if (!maybe_memory.has_value()) {
+   if (maybe_memory.is_empty()) {
       return format_errors::out_of_memory;
    }
 
@@ -159,7 +159,7 @@ vfmt(
    };
 
    scaredy_format<void> result = detail::parse_format_string(format, handler);
-   if (!result.has_value()) {
+   if (result.is_empty()) {
       allocator.free(span(buffer.data(), buffer.capacity()));
       return result.error<format_errors>();
    }

@@ -150,7 +150,7 @@ manual::process::spawn(
       );
    }
 
-   if (!result.has_value()) {
+   if (result.is_empty()) {
       allocator.free_multi(memory);
       this->m_p_stack_bottom = nullptr;
       this->m_stack_size = 0;

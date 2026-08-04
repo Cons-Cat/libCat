@@ -13,13 +13,13 @@ format_float_arg(
 ) -> scaredy_format<void> {
    maybe const result =
       to_chars(allocator, arguments.template get<Arg>(argument_index));
-   if (!result.has_value()) {
+   if (result.is_empty()) {
       return format_errors::out_of_memory;
    }
    str_view const new_string = result.value();
    for (idx i; i < new_string.size(); ++i) {
       maybe insert_result = output.insert(allocator, new_string[i]);
-      if (!insert_result.has_value()) {
+      if (insert_result.is_empty()) {
          return format_errors::out_of_memory;
       }
    }

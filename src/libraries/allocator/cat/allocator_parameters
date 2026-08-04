@@ -397,7 +397,7 @@ struct dyn_allocate_feedback {
          // a shim.
          maybe_ptr<void> result =
             dyn_allocator_friend::allocate(self, allocation_bytes);
-         if (!result.has_value()) {
+         if (result.is_empty()) {
             return nullopt;
          }
          return maybe_sized_allocation<void*>(
@@ -438,7 +438,7 @@ struct dyn_aligned_allocate_feedback {
                return nullopt;
             }
          }
-         if (!result.has_value()) {
+         if (result.is_empty()) {
             return nullopt;
          }
          return maybe_sized_allocation<void*>(
@@ -544,7 +544,7 @@ struct dyn_reallocate_feedback {
       } else if constexpr (detail::has_reallocate<T>) {
          maybe_ptr<void> result =
             dyn_allocator_friend::reallocate(self, allocation, new_bytes);
-         if (!result.has_value()) {
+         if (result.is_empty()) {
             return nullopt;
          }
          return maybe_sized_allocation<void*>(tuple{result.value(), new_bytes});

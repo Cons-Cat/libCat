@@ -63,12 +63,14 @@
 // does this to re-use the inaccessible word high bit of an `idx` as its niche
 // value.
 //
-// `.value()` is an unchecked accessor. For `compact` specializations,
+// `.value()` returns the held value and asserts engagement outside
+// constant evaluation. For `compact` specializations,
 // `.value_or_niche()` can read the raw bit-state of the niche even when empty.
 //
 // `.get_ptr()` is a P4189 pointer-view observer: it yields a pointer to
 // the held value when engaged or `nullptr` when disengaged. Checked
-// observers are `.assert()`, `.verify()`, and `.or_exit()`.
+// observers that always diagnose emptiness are `.assert()`, `.verify()`,
+// and `.or_exit()`.
 //
 // `cat::maybe` intentionally does not provide `operator*`, `operator->`, or
 // implicit conversion to `bool`. Truthiness testing can be replaced by
@@ -81,7 +83,7 @@
 // `cat::make_maybe<T>(arguments...)` factories.
 //
 // `maybe<void>` is not iterable, because it cannot be dereferenced, so
-// it lacks container methods `.size()`, `.data()`, and `.is_empty()`.
+// it lacks container methods `.size()` and `.data()`.
 
 namespace cat {
 namespace detail {
@@ -713,7 +715,9 @@ struct maybe_storage_selector<T, false, false> {
 }  // namespace detail
 
 template <typename T>
-class [[nodiscard]] maybe
+class [[nodiscard,
+        clang::annotate("clang-tidy", "bugprone-use-after-move",
+                        "null_after_move")]] maybe
     // Inherit the random-access position protocol so `cat::iterate(maybe)`
     // auto-derives a `collection_iteration_context`. The mixin holds no
     // storage, so `sizeof(maybe<T&>)` stays pointer-sized.
@@ -1072,7 +1076,7 @@ class [[nodiscard]] maybe
       if (this->has_value() != other.has_value()) {
          return false;
       }
-      return !this->has_value() || m_storage.value() == other.value();
+      return this->is_empty() || m_storage.value() == other.value();
    }
 
    // Engagement-only equality for `maybe<void>` pairs.
@@ -1106,7 +1110,7 @@ class [[nodiscard]] maybe
    [[nodiscard]]
    constexpr auto
    operator==(detail::nullopt_type /*nullopt*/) const -> bool {
-      return !this->has_value();
+      return this->is_empty();
    }
 
    [[nodiscard]]
@@ -1156,16 +1160,20 @@ class [[nodiscard]] maybe
    [[nodiscard]]
    constexpr auto
    is(detail::nullopt_type /*nullopt*/) const -> bool {
-      return !this->has_value();
+      return this->is_empty();
    }
 
-   // Get the stored value without checking engagement.
+   // Get the stored value. Asserts engagement outside constant evaluation.
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> decltype(auto)
       requires(!is_void<T> && !is_nonnull)
    {
-      return $fwd(self).as_base().m_storage.value();
+      auto&& base = $fwd(self).as_base();
+      if !consteval {
+         cat::assert(base.has_value());
+      }
+      return $fwd(base).m_storage.value();
    }
 
    // Overload for `maybe_ptr<T>` and other compact pointer storages whose
@@ -1182,13 +1190,21 @@ class [[nodiscard]] maybe
    value(this auto const& self)
       -> remove_pointer<remove_cvref<value_type>>* _Nonnull requires(
          !is_void<T> && is_nonnull
-      ) { return self.as_base().m_storage.value(); }
+      ) {
+      if !consteval {
+         cat::assert(self.has_value());
+      }
+      return self.as_base().m_storage.value();
+   }
 
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    constexpr auto value() const -> monostate_type
       requires(is_void<T>)
    {
+      if !consteval {
+         cat::assert(this->has_value());
+      }
       return monostate;
    }
 
@@ -1427,7 +1443,7 @@ class [[nodiscard]] maybe
 
       auto&& base = $fwd(self).as_base();
       if constexpr (is_void<return_type>) {
-         if (!base.has_value()) {
+         if (base.is_empty()) {
             $fwd(callback)();
          }
          return;
@@ -1458,7 +1474,7 @@ class [[nodiscard]] maybe
    or_exit(iword exit_code = 1) const -> monostate_type
       requires(is_void<T>)
    {
-      if (!this->has_value()) [[unlikely]] {
+      if (this->is_empty()) [[unlikely]] {
          exit(exit_code);
       }
       return monostate;
@@ -1573,14 +1589,11 @@ class [[nodiscard]] maybe
       return has_value() ? 1u : 0u;
    }
 
-   // Mirrors `cat::container_interface::is_empty` so generic container-shaped
-   // code can ask the same question of a `maybe`. Equivalent to
-   // `size() == 0u`, i.e. the negation of `has_value()`.
+   // Negation of `has_value()`. Also mirrors
+   // `cat::container_interface::is_empty` for container-shaped `maybe`s.
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool
-      requires(!is_void<T>)
-   {
+   is_empty() const -> bool {
       return !this->has_value();
    }
 

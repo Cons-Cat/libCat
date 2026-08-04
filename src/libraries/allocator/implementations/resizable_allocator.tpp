@@ -112,7 +112,7 @@ resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
 
    // 3. Out of room: pull a fresh chunk from `Backing` and carve from it.
    // Existing allocations stay where they are -- growth only adds a chunk.
-   if (!this->resize(node_bytes).has_value()) {
+   if (this->resize(node_bytes).is_empty()) {
       return nullptr;
    }
    auto* p_attempt = m_p_chunks->inner.allocate(node_bytes);

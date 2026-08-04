@@ -806,7 +806,7 @@ $test(flux_step_and_next_element) {
    auto void_step = cat::step(ctx, [&side_effect](int x) -> void {
       side_effect = x;
    });
-   cat::verify(!void_step.has_value());  // ctx already exhausted
+   cat::verify(void_step.is_empty());  // ctx already exhausted
    cat::verify(side_effect == 0);
 
    tiny_array<int, 1u> tiny = {{}, {42}};
@@ -818,7 +818,7 @@ $test(flux_step_and_next_element) {
    cat::verify(side_effect == 42);
 
    auto empty = cat::next_element(ctx);
-   cat::verify(!empty.has_value());
+   cat::verify(empty.is_empty());
 }
 
 $test(flux_fold_terminal) {
@@ -908,10 +908,10 @@ $test(flux_read_at_and_try_read_at) {
    cat::verify(in_range.verify() == 33);
 
    auto past_end = cat::try_read_at(arr, cat::idx{4u});
-   cat::verify(!past_end.has_value());
+   cat::verify(past_end.is_empty());
 
    auto far_past = cat::try_read_at(arr, cat::idx{1'000u});
-   cat::verify(!far_past.has_value());
+   cat::verify(far_past.is_empty());
 
    auto member_in_range = arr.try_read_at(cat::idx{3u});
    cat::verify(member_in_range.has_value());

@@ -309,14 +309,14 @@ $test(bitset_at) {
 
    // `const` `.at()`.
    auto _ = bits127_2.at(0u).verify();
-   cat::verify(!bits127_2.at(128u).has_value());
+   cat::verify(bits127_2.at(128u).is_empty());
 
    // Mutable `.at()`.
    cat::bitset<127> bits127 =
       cat::make_bitset<127>(cat::uint8_max >> 2u, 0b0000'0100_u8);
    bits127.at(0u).verify() = true;
    cat::verify(bits127.at(0u).has_value());
-   cat::verify(!bits127.at(128u).has_value());
+   cat::verify(bits127.at(128u).is_empty());
 }
 
 $test(bitset_from_string) {

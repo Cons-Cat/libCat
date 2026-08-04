@@ -303,7 +303,9 @@ template <typename T, typename... Errors>
       // `scaredy` should have at least one error type.
       sizeof...(Errors) > 0
    )
-class [[nodiscard]] scaredy {
+class [[nodiscard,
+       clang::annotate("clang-tidy", "bugprone-use-after-move",
+                       "null_after_move")]] scaredy {
  private:
    using storage_type = conditional<
       requires { T::predicate_function; },
@@ -471,14 +473,24 @@ class [[nodiscard]] scaredy {
       return m_storage.has_value();
    }
 
+   [[nodiscard]]
+   constexpr auto
+   is_empty() const -> bool {
+      return !this->has_value();
+   }
+
    // If the value should be discarded, consume the `maybe` with `auto _ =`
-   // instead.
+   // instead. Asserts engagement outside constant evaluation.
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
-      return $fwd(self).as_base().m_storage.value();
+      auto&& base = $fwd(self).as_base();
+      if !consteval {
+         cat::assert(base.has_value());
+      }
+      return $fwd(base).m_storage.value();
    }
 
    // Special discard-able overload for `maybe<void>`.
@@ -487,14 +499,21 @@ class [[nodiscard]] scaredy {
    value() const -> monostate_type
       requires(storage_type::is_wrapping_void)
    {
+      if !consteval {
+         cat::assert(this->has_value());
+      }
       return monostate;
    }
 
    // Get the value of some error when its type is known to the caller.
+   // Asserts that this `scaredy` holds that error outside constant evaluation.
    template <typename Error>
    [[nodiscard]]
    constexpr auto
    error() {
+      if !consteval {
+         cat::assert(this->template is<Error>());
+      }
       return m_storage.template error<Error>();
    }
 
@@ -503,6 +522,9 @@ class [[nodiscard]] scaredy {
    [[nodiscard]]
    constexpr auto
    error() const {
+      if !consteval {
+         cat::assert(this->template is<Error>());
+      }
       return m_storage.template error<Error>();
    }
 
@@ -512,6 +534,9 @@ class [[nodiscard]] scaredy {
    error()
       requires(sizeof...(Errors) == 1)
    {
+      if !consteval {
+         cat::assert(this->is_empty());
+      }
       return m_storage.template error<Errors...>();
    }
 
@@ -521,6 +546,9 @@ class [[nodiscard]] scaredy {
    error() const
       requires(sizeof...(Errors) == 1)
    {
+      if !consteval {
+         cat::assert(this->is_empty());
+      }
       return m_storage.template error<Errors...>();
    }
 
@@ -672,7 +700,7 @@ class [[nodiscard]] scaredy {
       static_assert(is_void<U> || is_specialization<U, scaredy>);
 
       auto&& base = $fwd(self).as_base();
-      if (!base.has_value()) {
+      if (base.is_empty()) {
          if constexpr (is_void<U>) {
             $fwd(callback)();
          } else {

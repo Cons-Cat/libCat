@@ -58,7 +58,7 @@ class raw_type_file {
       nix::file_descriptor file_descriptor =
          $prop(nix::sys_open(path, file_mode, flags));
       scaredy fstat_result = nix::sys_fstat(file_descriptor);
-      if (!fstat_result.has_value()) {
+      if (fstat_result.is_empty()) {
          nix::linux_error error = fstat_result.error();
          auto _ = nix::sys_close(file_descriptor);
          return error;

@@ -267,7 +267,7 @@ using tuple_element_t = tuple_element<index, T>::type;
 #define CAT_PROPAGATE(container)                                       \
    ({                                                                  \
       auto libcat_temp_expr = (container);                             \
-      if (!libcat_temp_expr.has_value()) {                             \
+      if (libcat_temp_expr.is_empty()) {                               \
          return ::cat::propagate_error(::cat::move(libcat_temp_expr)); \
       }                                                                \
       ::cat::move(libcat_temp_expr).value();                           \
@@ -284,7 +284,7 @@ using tuple_element_t = tuple_element<index, T>::type;
 #define CAT_PROPAGATE_OR(container, or_value)                          \
    ({                                                                  \
       auto libcat_temp_expr = (container);                             \
-      if (!libcat_temp_expr.has_value()) {                             \
+      if (libcat_temp_expr.is_empty()) {                               \
          return ::cat::propagate_error(::cat::move(libcat_temp_expr)); \
       }                                                                \
       (or_value);                                                      \
@@ -301,7 +301,7 @@ using tuple_element_t = tuple_element<index, T>::type;
 #define CAT_PROPAGATE_AS(container, or_value) \
    ({                                         \
       auto libcat_temp_expr = (container);    \
-      if (!libcat_temp_expr.has_value()) {    \
+      if (libcat_temp_expr.is_empty()) {      \
          return (or_value);                   \
       }                                       \
       ::cat::move(libcat_temp_expr).value();  \

@@ -20,7 +20,7 @@ $test(str_view_find_past_first_simd_chunk) {
 
    cat::str_view const haystack_past_chunk{buffer, past_first_chunk + 1u};
    cat::verify(haystack_past_chunk.find('Z').value() == past_first_chunk);
-   cat::verify(!haystack_past_chunk.find('q').has_value());
+   cat::verify(haystack_past_chunk.find('q').is_empty());
 
    char buffer2[128]{};
    buffer2[4] = 'm';

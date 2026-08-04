@@ -1054,13 +1054,13 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
 
       // Insert each element and grow as needed.
       auto insert = [&](auto&& value) {
-         if (!result.has_value()) {
+         if (result.is_empty()) {
             return;
          }
          idx const old_size = size();
          if (old_size + 1u > capacity()) {
             result = this->increase_storage(allocator);
-            if (!result.has_value()) {
+            if (result.is_empty()) {
                return;
             }
          }
@@ -1222,7 +1222,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       basic_vec<T> replacement;
       maybe<void> const appended =
          replacement.append_range(allocator, $fwd(range));
-      if (!appended.has_value()) {
+      if (appended.is_empty()) {
          replacement.free(allocator);
          return nullopt;
       }

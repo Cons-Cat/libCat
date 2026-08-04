@@ -70,16 +70,16 @@ maybe_try_fail() -> cat::maybe<int> {
 // `value_or()` on a value-typed `maybe`.
 $test(maybe_basic_value) {
    cat::maybe<int4> foo{cat::nullopt};
-   cat::verify(!foo.has_value());
+   cat::verify(foo.is_empty());
 
    cat::maybe<int4> inplace_1{};
-   cat::verify(!inplace_1.has_value());
+   cat::verify(inplace_1.is_empty());
 
    foo = 1;
    cat::verify(foo.has_value());
 
    foo = cat::nullopt;
-   cat::verify(!foo.has_value());
+   cat::verify(foo.is_empty());
 
    cat::maybe<int4> moo = 1;
    moo = 2;
@@ -96,8 +96,8 @@ $test(maybe_basic_value) {
 $test(maybe_reference_rebinding) {
    cat::maybe<int4&> ref(cat::nullopt);
    cat::maybe<int4&> ref_2 = cat::nullopt;
-   cat::verify(!ref.has_value());
-   cat::verify(!ref_2.has_value());
+   cat::verify(ref.is_empty());
+   cat::verify(ref_2.is_empty());
 
    int4 goo = 1;
    cat::maybe<int4&> boo = goo;
@@ -119,7 +119,7 @@ $test(maybe_reference_rebinding) {
    cat::verify(ref.value() == 3);
 
    ref = cat::nullopt;
-   cat::verify(!ref.has_value());
+   cat::verify(ref.is_empty());
 
    ref_2 = goo;
    cat::verify(ref_2.has_value());
@@ -136,10 +136,10 @@ $test(maybe_compact_predicate) {
       },
       -1>>
       positive(cat::nullopt);
-   cat::verify(!positive.has_value());
+   cat::verify(positive.is_empty());
 
    positive = -10;
-   cat::verify(!positive.has_value());
+   cat::verify(positive.is_empty());
 
    positive = 0;
    cat::verify(positive.has_value());
@@ -149,14 +149,14 @@ $test(maybe_compact_predicate) {
    cat::verify(positive.has_value());
 
    positive = cat::nullopt;
-   cat::verify(!positive.has_value());
+   cat::verify(positive.is_empty());
 
    // The default value of `int4` is 0, which the predicate accepts.
    decltype(positive) default_predicate{cat::in_place, 0};
    cat::verify(default_predicate.value() == 0);
 
    decltype(positive) default_predicate_empty{};
-   cat::verify(!default_predicate_empty.has_value());
+   cat::verify(default_predicate_empty.is_empty());
 }
 
 // Compact predicate over a `void` wrapper. `monotype_storage` lets the
@@ -169,7 +169,7 @@ $test(maybe_compact_void) {
       },
       -1>>
       predicate_void(cat::nullopt);
-   cat::verify(!predicate_void.has_value());
+   cat::verify(predicate_void.is_empty());
    predicate_void = cat::monostate;
    cat::verify(predicate_void.has_value());
    auto _ = predicate_void.or_exit();
@@ -185,14 +185,14 @@ $test(maybe_compact_value_conversion) {
       },
       -1>>
       non_negative(cat::nullopt);
-   cat::verify(!non_negative.has_value());
+   cat::verify(non_negative.is_empty());
 
    non_negative = 0;
    cat::verify(non_negative.has_value());
    cat::verify(non_negative.value() == 0);
 
    non_negative = -1;
-   cat::verify(!non_negative.has_value());
+   cat::verify(non_negative.is_empty());
 }
 
 constexpr auto
@@ -249,7 +249,7 @@ struct cat::default_compact_trait<test_maybe_niche::flagged_value>
 $test(maybe_sentinel_tuple) {
    using row = cat::tuple<int4*, cat::idx>;
    cat::maybe<cat::sentinel<row, row{nullptr, 0u}>> slot;
-   cat::verify(!slot.has_value());
+   cat::verify(slot.is_empty());
 
    int4 x = 7;
    slot = row{&x, 1u};
@@ -258,7 +258,7 @@ $test(maybe_sentinel_tuple) {
    cat::verify(slot.value().second() == 1u);
 
    slot = cat::nullopt;
-   cat::verify(!slot.has_value());
+   cat::verify(slot.is_empty());
 }
 
 $test(maybe_default_compact_trait_extension) {
@@ -267,14 +267,14 @@ $test(maybe_default_compact_trait_extension) {
    static_assert(sizeof(cat::maybe<flagged_value>) == sizeof(flagged_value));
 
    cat::maybe<flagged_value> value = cat::nullopt;
-   cat::verify(!value.has_value());
+   cat::verify(value.is_empty());
 
    value = flagged_value{3};
    cat::verify(value.has_value());
    cat::verify(value.value().raw == 3);
 
    value = flagged_value{-1};
-   cat::verify(!value.has_value());
+   cat::verify(value.is_empty());
 }
 
 // `sentinel_fn` supports non-structural wrapped types in `maybe`.
@@ -282,27 +282,27 @@ $test(maybe_sentinel_fn_non_structural) {
    cat::maybe<
       cat::sentinel_fn<non_structural_slot, test_non_structural_slot_nullopt>>
       slot;
-   cat::verify(!slot.has_value());
+   cat::verify(slot.is_empty());
 
    slot = non_structural_slot(7);
    cat::verify(slot.has_value());
    cat::verify(slot.value() == non_structural_slot(7));
 
    slot = cat::nullopt;
-   cat::verify(!slot.has_value());
+   cat::verify(slot.is_empty());
 }
 
 // `sentinel<T, value>` is the simpler compact form: `value` represents the
 // empty state.
 $test(maybe_sentinel_predicate) {
    cat::maybe<cat::sentinel<int4, 0>> nonzero = cat::nullopt;
-   cat::verify(!nonzero.has_value());
+   cat::verify(nonzero.is_empty());
 
    nonzero = 1;
    cat::verify(nonzero.has_value());
 
    nonzero = 0;
-   cat::verify(!nonzero.has_value());
+   cat::verify(nonzero.is_empty());
 }
 
 $test(maybe_span_basic) {
@@ -322,7 +322,7 @@ $test(maybe_span_basic) {
    cat::verify(maybe_values.value().data() == values);
 
    maybe_values = cat::nullopt;
-   cat::verify(!maybe_values.has_value());
+   cat::verify(maybe_values.is_empty());
 }
 
 // `maybe_ptr<T>` is `maybe<sentinel<T*, nullptr>>` (a pointer that can also be
@@ -336,9 +336,9 @@ $test(maybe_ptr_basic) {
    cat::verify(opt_ptr.get_ptr() == &get_addr);
 
    opt_ptr = cat::nullopt;
-   cat::verify(!opt_ptr.has_value());
+   cat::verify(opt_ptr.is_empty());
    opt_ptr = nullptr;
-   cat::verify(!opt_ptr.has_value());
+   cat::verify(opt_ptr.is_empty());
 }
 
 // Implicit conversions on assignment. `int4` accepts `int` and `short`.
@@ -371,11 +371,11 @@ $test(maybe_monadic_chains) {
    });
 
    moo = cat::nullopt;
-   cat::verify(!moo.transform(
+   cat::verify(moo.transform(
                       [](int4 input) {
                          return input * 2;
                       }
-   ).has_value());
+   ).is_empty());
 
    // `and_then` on a disengaged source must not invoke the callable.
    auto _ = moo.and_then([](int4 input) -> cat::maybe<int4> {
@@ -383,13 +383,13 @@ $test(maybe_monadic_chains) {
       return input;
    });
 
-   cat::verify(!moo.transform([](int4 input) {
-                      return input * 2;
-                   })
-                   .and_then([](int4 input) -> cat::maybe<int4> {
-                      return input;
-                   })
-                   .has_value());
+   cat::verify(moo.transform([](int4 input) {
+                     return input * 2;
+                  })
+                  .and_then([](int4 input) -> cat::maybe<int4> {
+                     return input;
+                  })
+                  .is_empty());
 }
 
 // Same chain shapes against a compact-predicate `maybe` to exercise the
@@ -403,20 +403,20 @@ $test(maybe_monadic_compact) {
       -1>>
       positive(cat::nullopt);
 
-   cat::verify(!positive
-                   .transform([](int4 input) -> int4 {
-                      return input * 2;
-                   })
-                   .has_value());
+   cat::verify(positive
+                  .transform([](int4 input) -> int4 {
+                     return input * 2;
+                  })
+                  .is_empty());
 
-   cat::verify(!positive
-                   .transform([](int4 input) {
-                      return input * 2;
-                   })
-                   .and_then([](int4 input) -> cat::maybe<int4> {
-                      return input;
-                   })
-                   .has_value());
+   cat::verify(positive
+                  .transform([](int4 input) {
+                     return input * 2;
+                  })
+                  .and_then([](int4 input) -> cat::maybe<int4> {
+                     return input;
+                  })
+                  .is_empty());
 }
 
 // Chains across function-typed callables, including `maybe<void>` results
@@ -451,7 +451,7 @@ $test(maybe_monadic_callables) {
 
    cat::maybe<int4> monadic_int;
    monadic_int = return_none(0).and_then(return_opt);
-   cat::verify(!monadic_int.has_value());
+   cat::verify(monadic_int.is_empty());
 
    monadic_int = return_opt(1).transform(return_int);
    cat::verify(monadic_int.has_value());
@@ -490,7 +490,7 @@ $test(maybe_monadic_move_only) {
 
    cat::maybe<cat::unique<int4>> monadic_move = 1;
    monadic_move = return_none(0).and_then(return_opt);
-   cat::verify(!monadic_move.has_value());
+   cat::verify(monadic_move.is_empty());
 
    monadic_move = return_opt(1).transform(return_int);
    cat::verify(monadic_move.has_value());
@@ -600,13 +600,13 @@ $test(maybe_nontrivial_value) {
 // `nullopt`, plus `in_place` for non-trivial value types.
 $test(maybe_void_construction) {
    cat::maybe<void> optvoid;
-   cat::verify(!optvoid.has_value());
+   cat::verify(optvoid.is_empty());
    cat::maybe<void> optvoid_2{cat::monostate};
    cat::verify(optvoid_2.has_value());
    cat::maybe<void> optvoid_4{cat::in_place};
    cat::verify(optvoid_4.has_value());
    cat::maybe<void> optvoid_5{cat::nullopt};
-   cat::verify(!optvoid_5.has_value());
+   cat::verify(optvoid_5.is_empty());
 
    cat::maybe<maybe_non_trivial> in_place_nontrivial_1{cat::in_place};
    auto _ = in_place_nontrivial_1.verify();
@@ -623,7 +623,7 @@ $test(maybe_void_assignment) {
    optvoid = cat::monostate;
    cat::verify(optvoid.has_value());
    optvoid = cat::nullopt;
-   cat::verify(!optvoid.has_value());
+   cat::verify(optvoid.is_empty());
 }
 
 // `maybe` is usable in a `constexpr` context across the value, compact, and
@@ -636,7 +636,7 @@ $test(maybe_constexpr) {
       // TODO: Enable these `verify()` calls when they support `constexpr`.
 
       constexpr cat::maybe<maybe_const_non_trivial> const_nontrivial_default;
-      // cat::verify(!const_nontrivial_default.has_value());
+      // cat::verify(const_nontrivial_default.is_empty());
 
       [[maybe_unused]]
       constexpr cat::maybe<maybe_const_non_trivial> const_nontrivial =
@@ -740,7 +740,7 @@ $test(maybe_type_traits) {
 $test(maybe_prop_macro) {
    auto _ = maybe_try_success().verify();
    cat::maybe fail = maybe_try_fail();
-   cat::verify(!fail.has_value());
+   cat::verify(fail.is_empty());
 }
 
 namespace {
@@ -793,7 +793,7 @@ $test(maybe_reference_no_destroy) {
 
       // Disengaging via `nullopt` assignment must not run `~tracked`.
       ref = cat::nullopt;
-      cat::verify(!ref.has_value());
+      cat::verify(ref.is_empty());
       cat::verify(dtor_counter == 0);
 
       // Rebind to the same object, still no destruction.
@@ -803,7 +803,7 @@ $test(maybe_reference_no_destroy) {
 
       // `.reset()` is also non-destructive.
       ref.reset();
-      cat::verify(!ref.has_value());
+      cat::verify(ref.is_empty());
       cat::verify(dtor_counter == 0);
 
       // `.emplace()` rebinds without destroying anything.
@@ -868,7 +868,7 @@ $test(maybe_reference_swap) {
    // Swap with a disengaged side just transfers the pointer.
    cat::maybe<int4&> empty;
    opt_a.swap(empty);
-   cat::verify(!opt_a.has_value());
+   cat::verify(opt_a.is_empty());
    cat::verify(empty.has_value());
    cat::verify(&empty.value() == &b);
 }
@@ -976,7 +976,7 @@ $test(maybe_void_monadic) {
       return 7;
    });
    cat::verify(!called);
-   cat::verify(!mapped.has_value());
+   cat::verify(mapped.is_empty());
 
    // `transform` returning `void` promotes to `maybe<void>`.
    called = false;
@@ -1002,7 +1002,7 @@ $test(maybe_void_monadic) {
       return int4{99};
    });
    cat::verify(!called);
-   cat::verify(!chained.has_value());
+   cat::verify(chained.is_empty());
 
    // `or_else` returning `maybe<void>` propagates `*this` when engaged.
    cat::maybe<void> propagated = engaged.or_else(returns_empty_void_maybe);
@@ -1048,12 +1048,12 @@ $test(maybe_reset) {
    cat::maybe<int4> v = 5;
    cat::verify(v.has_value());
    v.reset();
-   cat::verify(!v.has_value());
+   cat::verify(v.is_empty());
 
    cat::maybe<void> w = cat::monostate;
    cat::verify(w.has_value());
    w.reset();
-   cat::verify(!w.has_value());
+   cat::verify(w.is_empty());
 }
 
 // `swap()` on value `maybe`s covers the four engagement combinations.
@@ -1066,13 +1066,13 @@ $test(maybe_value_swap) {
 
    cat::maybe<int4> empty;
    a.swap(empty);
-   cat::verify(!a.has_value());
+   cat::verify(a.is_empty());
    cat::verify(empty.value() == 2);
 
    cat::maybe<int4> empty2;
    empty2.swap(a);
-   cat::verify(!empty2.has_value());
-   cat::verify(!a.has_value());
+   cat::verify(empty2.is_empty());
+   cat::verify(a.is_empty());
 }
 
 // `cat::maybe<bool>` round-trips, and is immune to the `optional<bool>` from
@@ -1084,7 +1084,7 @@ $test(maybe_value_swap) {
 // https://brevzin.github.io/c++/2023/01/18/optional-construction/
 $test(maybe_bool) {
    cat::maybe<bool> default_b;
-   cat::verify(!default_b.has_value());
+   cat::verify(default_b.is_empty());
 
    cat::maybe<bool> true_b = true;
    cat::verify(true_b.has_value());
@@ -1095,10 +1095,10 @@ $test(maybe_bool) {
    cat::verify(false_b.verify() == false);
 
    cat::maybe<bool> null_b = cat::nullopt;
-   cat::verify(!null_b.has_value());
+   cat::verify(null_b.is_empty());
 
    true_b = cat::nullopt;
-   cat::verify(!true_b.has_value());
+   cat::verify(true_b.is_empty());
    true_b = true;
    cat::verify(true_b.verify() == true);
 
@@ -1129,7 +1129,7 @@ $test(maybe_bool) {
 
    cat::maybe<int> src_empty;
    cat::maybe<bool> dst_empty(src_empty);
-   cat::verify(!dst_empty.has_value());
+   cat::verify(dst_empty.is_empty());
 }
 
 // LWG 3836 / Barry Revzin, "Getting in trouble with mixed construction"
@@ -1153,7 +1153,7 @@ $test(maybe_nested_construction) {
    // constructor would have left the outer disengaged.
    cat::maybe<cat::maybe<int>> outer_empty(empty_inner);
    cat::verify(outer_empty.has_value());
-   cat::verify(!outer_empty.value().has_value());
+   cat::verify(outer_empty.value().is_empty());
 
    // Same story for an r-value `maybe<int>`.
    cat::maybe<cat::maybe<int>> outer_rval(cat::maybe<int>{7});
@@ -1163,7 +1163,7 @@ $test(maybe_nested_construction) {
 
    cat::maybe<cat::maybe<int>> outer_rval_empty(cat::maybe<int>{});
    cat::verify(outer_rval_empty.has_value());
-   cat::verify(!outer_rval_empty.value().has_value());
+   cat::verify(outer_rval_empty.value().is_empty());
 
    // Converting copy assignment behaves the same way.
    cat::maybe<cat::maybe<int>> assigned;
@@ -1174,7 +1174,7 @@ $test(maybe_nested_construction) {
 
    assigned = empty_inner;
    cat::verify(assigned.has_value());
-   cat::verify(!assigned.value().has_value());
+   cat::verify(assigned.value().is_empty());
 
    // The guard does not block genuine cross-type conversions, which keeps
    // generic code working: `maybe<long>` is happily constructible from
@@ -1332,7 +1332,7 @@ $test(maybe_next_element) {
    cat::verify(first.value() == 21);
 
    auto second = cat::next_element(ctx);
-   cat::verify(!second.has_value());
+   cat::verify(second.is_empty());
 }
 
 // `cat::or_else(callback)` is a pipe adaptor that dispatches to
@@ -1360,7 +1360,7 @@ $test(maybe_or_else_pipe) {
    cat::maybe<int4> still_empty = empty | cat::or_else([] -> cat::maybe<int4> {
                                      return cat::nullopt;
                                   });
-   cat::verify(!still_empty.has_value());
+   cat::verify(still_empty.is_empty());
 
    // A `void`-returning fallback runs the side effect on an empty source and
    // does not run on an engaged source.

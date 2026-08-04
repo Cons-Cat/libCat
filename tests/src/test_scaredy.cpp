@@ -88,12 +88,12 @@ $test(scaredy) {
    // bytes. No storage cost exists for the error types.
    static_assert(sizeof(result) == 16);
 
-   cat::verify(!result.has_value());
+   cat::verify(result.is_empty());
    cat::verify(result.is<error_type_one>());
    cat::verify(!result.is<int8>());
 
    result = union_errors(1);
-   cat::verify(!result.has_value());
+   cat::verify(result.is_empty());
    cat::verify(result.is<error_type_two>());
    cat::verify(!result.is<int8>());
 
@@ -127,10 +127,10 @@ $test(scaredy) {
 
    // This `scaredy` adds no storage to an `int4`.
    static_assert(sizeof(predicate) == sizeof(int4));
-   cat::verify(!predicate.has_value());
+   cat::verify(predicate.is_empty());
 
    predicate = -1;
-   cat::verify(!predicate.has_value());
+   cat::verify(predicate.is_empty());
 
    predicate = 0;
    cat::verify(predicate.has_value());
@@ -139,7 +139,7 @@ $test(scaredy) {
    cat::verify(predicate.has_value());
 
    predicate = error_type_one(-1);
-   cat::verify(!predicate.has_value());
+   cat::verify(predicate.is_empty());
 
    // Test `.value_or()`.
    cat::scaredy<int4, error_type_one> is_error = error_type_one();
@@ -272,14 +272,14 @@ $test(scaredy) {
    // Test `$prop` macro.
    auto _ = scaredy_try_success().verify();
    cat::scaredy fail = scaredy_try_fail();
-   cat::verify(!fail.has_value());
+   cat::verify(fail.is_empty());
 
    // Test `$prop_or` macro for converting `scaredy` into a different type with
    // a different value.
    uint4 non_error = scaredy_try_success_2().verify();
    cat::verify(non_error == 2u);
    cat::scaredy fail2 = scaredy_try_fail_2();
-   cat::verify(!fail2.has_value());
+   cat::verify(fail2.is_empty());
 }
 
 // `.get_ptr()` on `cat::scaredy`: address-of when engaged, `nullptr` otherwise.
@@ -293,7 +293,7 @@ $test(scaredy_get_ptr) {
    cat::verify(p_active == &ok.value());
 
    cat::scaredy<int4, error_type_one> bad = error_type_one{-1};
-   cat::verify(!bad.has_value());
+   cat::verify(bad.is_empty());
    cat::verify(bad.get_ptr() == nullptr);
 
    // For a pointer-typed value the held pointer is forwarded directly.

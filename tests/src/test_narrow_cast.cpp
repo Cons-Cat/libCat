@@ -48,7 +48,7 @@ static_assert([] {
 static_assert([] {
    auto const negative = cat::narrow_cast<cat::byte>(-1);
    auto const too_large = cat::narrow_cast<cat::byte>(256u);
-   return !negative.has_value() && !too_large.has_value();
+   return negative.is_empty() && too_large.is_empty();
 }());
 
 }  // namespace
@@ -94,13 +94,13 @@ $test(narrow_cast_narrowing_same_signedness_int8_to_int4) {
    cat::iword const one_past_max =
       static_cast<cat::iword>(cat::limits<cat::int4>::max()) + 1_sz;
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::int8{one_past_max}).has_value()
+      cat::narrow_cast<cat::int4>(cat::int8{one_past_max}).is_empty()
    );
 
    cat::iword const one_below_min =
       static_cast<cat::iword>(cat::limits<cat::int4>::min()) - 1_sz;
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::int8{one_below_min}).has_value()
+      cat::narrow_cast<cat::int4>(cat::int8{one_below_min}).is_empty()
    );
 }
 
@@ -108,10 +108,10 @@ $test(narrow_cast_mixed_width_signed_to_unsigned) {
    // `int4` and `uint4` are the same width but opposite signed-ness. Needs the
    // `raw_mixed_integral_spaceship` path. Negative `int4` must not bit-cast
    // into a huge `uint4`.
-   cat::verify(!cat::narrow_cast<cat::uint4>(cat::int4{-1}).has_value());
+   cat::verify(cat::narrow_cast<cat::uint4>(cat::int4{-1}).is_empty());
    cat::verify(
-      !cat::narrow_cast<cat::uint4>(cat::int4{cat::limits<cat::int4>::min()})
-          .has_value()
+      cat::narrow_cast<cat::uint4>(cat::int4{cat::limits<cat::int4>::min()})
+         .is_empty()
    );
 
    {
@@ -134,10 +134,10 @@ $test(narrow_cast_mixed_width_unsigned_to_signed) {
    // Value above `int4::max` must be rejected without mis-promoting
    // `limits<int4>::min()` in an unsigned/signed compare.
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::uint4{0x80000000u}).has_value()
+      cat::narrow_cast<cat::int4>(cat::uint4{0x80000000u}).is_empty()
    );
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::uint4{0xFFFFFFFFu}).has_value()
+      cat::narrow_cast<cat::int4>(cat::uint4{0xFFFFFFFFu}).is_empty()
    );
 
    {
@@ -152,7 +152,7 @@ $test(narrow_cast_mixed_width_unsigned_to_signed) {
 
 $test(narrow_cast_large_integrals_toward_smaller) {
    cat::verify(
-      !cat::narrow_cast<cat::int4>(cat::iword{1_sz} << 32u).has_value()
+      cat::narrow_cast<cat::int4>(cat::iword{1_sz} << 32u).is_empty()
    );
    {
       auto const m = cat::narrow_cast<cat::int4>(cat::iword{42});
@@ -163,10 +163,10 @@ $test(narrow_cast_large_integrals_toward_smaller) {
 $test(narrow_cast_iword_to_uword_and_back) {
    // Same `sizeof` but not `is_safe_arithmetic_comparison`. Must still reject
    // negative `iword` and accept non-negative values that fit.
-   cat::verify(!cat::narrow_cast<cat::uword>(cat::iword{-1}).has_value());
+   cat::verify(cat::narrow_cast<cat::uword>(cat::iword{-1}).is_empty());
    cat::verify(
-      !cat::narrow_cast<cat::uword>(cat::iword{cat::limits<cat::iword>::min()})
-          .has_value()
+      cat::narrow_cast<cat::uword>(cat::iword{cat::limits<cat::iword>::min()})
+         .is_empty()
    );
 
    {
@@ -195,19 +195,19 @@ $test(narrow_cast_to_idx_is_maybe_of_idx) {
       // range and must be empty (also exercises `raw_mixed_integral_spaceship`
       // for unsigned vs `limits<idx>::max()`).
       cat::verify(
-         !cat::narrow_cast<cat::idx>(cat::uword{1_uz << 63u}).has_value()
+         cat::narrow_cast<cat::idx>(cat::uword{1_uz << 63u}).is_empty()
       );
    }
    {
       // Full `uword` is far above `idx` max.
       cat::verify(
-         !cat::narrow_cast<cat::idx>(cat::uword{0xFFFFFFFF'FFFFFFFF_uz})
-             .has_value()
+         cat::narrow_cast<cat::idx>(cat::uword{0xFFFFFFFF'FFFFFFFF_uz})
+            .is_empty()
       );
    }
    {
       // Negative `iword` is below `idx` min (0).
-      cat::verify(!cat::narrow_cast<cat::idx>(cat::iword{-1}).has_value());
+      cat::verify(cat::narrow_cast<cat::idx>(cat::iword{-1}).is_empty());
    }
    {
       auto const m = cat::narrow_cast<cat::idx>(cat::iword{42});
@@ -222,7 +222,7 @@ $test(narrow_cast_fundamental_char_and_small_unsigned) {
    }
    {
       cat::verify(
-         !cat::narrow_cast<cat::uint1>(cat::uword{300_uz}).has_value()
+         cat::narrow_cast<cat::uint1>(cat::uword{300_uz}).is_empty()
       );
    }
    {

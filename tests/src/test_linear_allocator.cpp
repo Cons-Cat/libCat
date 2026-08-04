@@ -42,7 +42,7 @@ $test(linear_allocator) {
    // only hold 6 `int4`s.
    for (int i = 0; i < 7; ++i) {
       cat::maybe handle = allocator.alloc<int4>();
-      if (!handle.has_value()) {
+      if (handle.is_empty()) {
          cat::verify(i == 6);
          goto overallocated;
       }

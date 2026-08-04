@@ -116,5 +116,5 @@ $test(fmt_growth_failure) {
    auto allocator = cat::make_pool_allocator<64u>(storage);
 
    auto result = cat::fmt(allocator, "{}", uint8::max());
-   cat::verify(!result.has_value());
+   cat::verify(result.is_empty());
 }
