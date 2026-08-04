@@ -11,7 +11,6 @@ extern "C"
 #ifndef CAT_BUILD_SHARED
    [[gnu::visibility("hidden")]]
 #endif
-   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
    constinit inline int4 simd_dispatch_priority = 40;
 
 }  // namespace cat::detail

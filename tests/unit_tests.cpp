@@ -6,7 +6,6 @@
 // The jump buffer must be constructed in `main()` instead of globally so that
 // it can be guaranteed to occur before any unit tests are called.
 namespace {
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 inline constinit cat::jmp_buffer* p_jump_buffer = nullptr;
 }  // namespace
 

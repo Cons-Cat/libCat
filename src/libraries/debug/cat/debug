@@ -109,7 +109,6 @@ void
 default_assert_handler(source_location const& callsite);
 
 // This variable can be mutated to change the default assert handler globally.
-// NOLINTNEXTLINE For now, this is one exception to the globals ban.
 inline detail::assert_handler assert_handler = default_assert_handler;
 
 // TODO: Allow `assert()` and `verify()` in a `constexpr` context, and make them

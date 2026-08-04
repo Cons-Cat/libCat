@@ -6,11 +6,9 @@
 
 namespace {
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 inline constinit cat::idx destruct_count = 0u;
 inline constinit cat::idx copy_count = 0u;
 inline constinit cat::idx move_count = 0u;
-// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 void
 reset_counters() {

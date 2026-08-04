@@ -14,7 +14,6 @@ struct movable {
    operator=(movable&&) {};
 };
 
-// NOLINTNEXTLINE We use a global mutable variable for this $test.
 int4 maybe_counter = 0;
 
 struct maybe_non_trivial {
