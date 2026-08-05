@@ -80,7 +80,7 @@ class raw_type_file {
       }
 
       $prop(nix::sys_close(m_file_descriptor));
-      m_file_descriptor = nix::file_descriptor{-1};
+      m_file_descriptor = nix::invalid_file_descriptor;
       m_open_mode = nix::open_mode::read_only;
       m_file_size = 0u;
       m_block_size = 0u;
@@ -90,8 +90,7 @@ class raw_type_file {
    [[nodiscard]]
    constexpr auto
    is_closed() const -> bool {
-      // When closed, `file_descriptor` is set to -1.
-      return m_file_descriptor.value == -1;
+      return m_file_descriptor.value == nix::invalid_file_descriptor.value;
    }
 
    constexpr auto
@@ -116,7 +115,7 @@ class raw_type_file {
 
  private:
    [[maybe_unused]]
-   nix::file_descriptor m_file_descriptor{-1};
+   nix::file_descriptor m_file_descriptor = nix::invalid_file_descriptor;
    nix::open_mode m_open_mode = nix::open_mode::read_only;
    idx m_file_size = 0u;
    idx m_block_size = 0u;

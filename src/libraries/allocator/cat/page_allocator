@@ -51,7 +51,7 @@ class [[clang::trivial_abi]] page_allocator
             | nix::memory_flags::populate
             | nix::memory_flags::anonymous,
          // Anonymous pages (non-files) must have -1.
-         nix::file_descriptor(-1),
+         nix::invalid_file_descriptor,
          // Anonymous pages (non-files) must have 0.
          0u
       );
@@ -131,7 +131,7 @@ class [[clang::trivial_abi]] page_allocator
          nix::memory_protection_flags::read_write
             | nix::memory_protection_flags::execute,
          nix::memory_flags::privately | nix::memory_flags::anonymous,
-         nix::file_descriptor(-1), 0u
+         nix::invalid_file_descriptor, 0u
       );
       void* _Nonnull p_new_pages = $prop_as(maybe_pages, nullopt);
       auto _ = nix::sys_munmap(p_new_pages, page_bytes);

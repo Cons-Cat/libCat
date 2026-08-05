@@ -416,7 +416,9 @@ enum class
 
 // Special `dirfd` value meaning "resolve `path` against the current working
 // directory" for any `*at()` syscall.
-inline constexpr file_descriptor at_fdcwd = {-100};
+inline constexpr file_descriptor at_fdcwd = {
+   __builtin_bit_cast(cat::uint4, cat::int4(-100)),
+};
 
 // `mode` argument to `sys_fallocate()`.
 enum class
@@ -1166,19 +1168,17 @@ struct cat::enum_flag_trait<nix::message_flags> : cat::true_trait {};
 
 namespace nix {
 
-// TODO: These can return `idx` rather than `iword`.
-
 // Syscall 0.
 auto
 sys_read(file_descriptor file_descriptor, cat::span<char> buffer)
-   -> scaredy_nix<cat::iword>;
+   -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_read(
    file_descriptor file_descriptor, char* _Nonnull p_string_buffer,
    cat::idx length
-) -> scaredy_nix<cat::iword> {
+) -> scaredy_nix<cat::idx> {
    return sys_read(file_descriptor, cat::span<char>(p_string_buffer, length));
 }
 
@@ -1274,7 +1274,7 @@ sys_lstat(cat::str_view file_path, file_status& out) -> scaredy_nix<void>;
 auto
 sys_lseek(
    file_descriptor file_descriptor, cat::iword offset, seek_whence whence
-) -> scaredy_nix<cat::iword>;
+) -> scaredy_nix<cat::idx>;
 
 // Syscall 9. `p_start_address` is a hint; passing `nullptr` lets the
 // kernel choose the mapping address.
@@ -1421,14 +1421,14 @@ sys_ioctl(
 auto
 sys_pread64(
    file_descriptor file_descriptor, cat::span<char> buffer, cat::iword offset
-) -> scaredy_nix<cat::iword>;
+) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_pread64(
    file_descriptor file_descriptor, char* _Nonnull p_buffer, cat::idx length,
    cat::iword offset
-) -> scaredy_nix<cat::iword> {
+) -> scaredy_nix<cat::idx> {
    return sys_pread64(
       file_descriptor, cat::span<char>(p_buffer, length), offset
    );
@@ -1490,14 +1490,14 @@ struct io_vector : cat::span<cat::byte> {
 // Syscall 19.
 auto
 sys_readv(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
-   -> scaredy_nix<cat::iword>;
+   -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_readv(
    file_descriptor file_descriptor, io_vector* _Nonnull p_vectors,
    cat::idx vector_count
-) -> scaredy_nix<cat::iword> {
+) -> scaredy_nix<cat::idx> {
    return sys_readv(
       file_descriptor, cat::span<io_vector>(p_vectors, vector_count)
    );
@@ -1526,7 +1526,7 @@ auto
 sys_access(cat::zstr_view file_path, access_mode mode) -> scaredy_nix<void>;
 
 // Syscall 22. `pipefd[0]` becomes the read end and `pipefd[1]` the write end.
-auto sys_pipe(cat::int4 (&pipefd)[2]) -> scaredy_nix<void>;
+auto sys_pipe(file_descriptor (&pipefd)[2]) -> scaredy_nix<void>;
 
 // Syscall 24.
 auto
@@ -1583,7 +1583,7 @@ sys_sendto(
    message_flags flags = message_flags::none,
    cat::Socket const* _Nullable p_destination_socket = nullptr,
    cat::iword addr_length = 0
-) -> scaredy_nix<cat::iword>;
+) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -1592,7 +1592,7 @@ sys_sendto(
    cat::idx buffer_length, message_flags flags = message_flags::none,
    cat::Socket const* _Nullable p_destination_socket = nullptr,
    cat::iword addr_length = 0
-) -> scaredy_nix<cat::iword> {
+) -> scaredy_nix<cat::idx> {
    return sys_sendto(
       socket_descriptor, cat::str_view(p_message_buffer, buffer_length), flags,
       p_destination_socket, addr_length
@@ -1607,7 +1607,7 @@ sys_recv(
    file_descriptor socket_descriptor, cat::span<char> buffer,
    cat::Socket const* _Nullable __restrict p_addr = nullptr,
    cat::iword const* _Nullable __restrict p_addr_length = nullptr
-) -> scaredy_nix<cat::iword>;
+) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -1616,7 +1616,7 @@ sys_recv(
    cat::idx buffer_length,
    cat::Socket const* _Nullable __restrict p_addr = nullptr,
    cat::iword const* _Nullable __restrict p_addr_length = nullptr
-) -> scaredy_nix<cat::iword> {
+) -> scaredy_nix<cat::idx> {
    return sys_recv(
       socket_descriptor,
       cat::span<char>(static_cast<char*>(p_message_buffer), buffer_length),
@@ -1653,14 +1653,14 @@ auto
 sys_sendmsg(
    file_descriptor socket_descriptor, msg_header const& message,
    message_flags flags = message_flags::none
-) -> scaredy_nix<cat::iword>;
+) -> scaredy_nix<cat::idx>;
 
 // Syscall 47. Returns the number of bytes received.
 auto
 sys_recvmsg(
    file_descriptor socket_descriptor, msg_header& message,
    message_flags flags = message_flags::none
-) -> scaredy_nix<cat::iword>;
+) -> scaredy_nix<cat::idx>;
 
 // Syscall 48. Tear down half or all of a connected socket.
 auto
@@ -1700,7 +1700,7 @@ sys_getpeername(
 auto
 sys_socketpair(
    cat::int8 protocol_family, cat::int8 type, cat::int8 protocol,
-   cat::int4 (&socket_vector)[2]
+   file_descriptor (&socket_vector)[2]
 ) -> scaredy_nix<void>;
 
 // Syscall 54.
@@ -1746,7 +1746,7 @@ auto
 sys_fcntl(
    file_descriptor file_descriptor, fcntl_command command,
    cat::no_type_ptr p_argument = nullptr
-) -> scaredy_nix<cat::iword>;
+) -> scaredy_nix<cat::idx>;
 
 // Syscall 73.
 auto
@@ -2022,12 +2022,12 @@ auto
 sys_getpgid(process_id pid) -> scaredy_nix<process_id>;
 
 // Syscall 122. Set the filesystem user id used for filesystem checks and
-// return the previous value. Pass `user_id{-1}` to query without changing.
+// return the previous value. Pass `user_id{cat::uint4_max}` to query.
 auto
 sys_setfsuid(user_id user) -> user_id;
 
 // Syscall 123. Set the filesystem group id used for filesystem checks and
-// return the previous value. Pass `group_id{-1}` to query without changing.
+// return the previous value. Pass `group_id{cat::uint4_max}` to query.
 auto
 sys_setfsgid(group_id group) -> group_id;
 
@@ -2392,7 +2392,9 @@ sys_dup3(file_descriptor oldfd, file_descriptor newfd, dup3_flags flags)
 
 // Syscall 293.
 // libC implements POSIX `pipe()` via this.
-auto sys_pipe2(cat::int4 (&pipefd)[2], pipe2_flags flags) -> scaredy_nix<void>;
+auto
+sys_pipe2(file_descriptor (&pipefd)[2], pipe2_flags flags)
+   -> scaredy_nix<void>;
 
 // Syscall 297. Send `s` to thread `tid` inside thread group `tgid` along
 // with a queued `info` payload.
@@ -2416,14 +2418,14 @@ auto
 sys_getrandom(
    cat::span<unsigned char> buffer,
    getrandom_flags flags = getrandom_flags::none
-) -> scaredy_nix<cat::iword>;
+) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_getrandom(
    void* _Nonnull p_buffer, cat::idx length,
    getrandom_flags flags = getrandom_flags::none
-) -> scaredy_nix<cat::iword> {
+) -> scaredy_nix<cat::idx> {
    return sys_getrandom(
       cat::span<unsigned char>(static_cast<unsigned char*>(p_buffer), length),
       flags
@@ -2566,7 +2568,7 @@ auto
 sys_futex_waitv(
    cat::span<futex_waitv const> waiters, futex_waitv_call_flags call_flags,
    futex_timespec const* _Nullable p_timeout, cat::int4 clock_id
-) -> scaredy_nix<cat::iword>;
+) -> scaredy_nix<cat::idx>;
 
 // `cachestat_range` describes the [`offset`, `offset + length`) byte range
 // queried by `sys_cachestat()`.

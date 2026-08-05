@@ -316,15 +316,26 @@ using scaredy_nix = cat::scaredy<
    // When the value is negative, this is some `linux_error`.
    linux_error>;
 
-// TODO: Enforce that `file_descriptor` cannot be constructed with a negative
-// value. This is an index into the kernel's file descriptor table.
 struct file_descriptor {
-   cat::int4 value;
+   cat::uint4 value;
+
+   constexpr file_descriptor() = default;
+
+   constexpr file_descriptor(cat::uint4 input) : value(input) {
+   }
+
+   explicit constexpr file_descriptor(cat::int4 input)
+      __attribute__((enable_if(input == -1, "Only -1 is a valid negative file descriptor!")))
+      : value(__builtin_bit_cast(cat::uint4, input)) {
+   }
 };
+
+static_assert(sizeof(file_descriptor) == sizeof(cat::uint4));
 
 inline constexpr nix::file_descriptor stdin = {0};
 inline constexpr nix::file_descriptor stdout = {1};
 inline constexpr nix::file_descriptor stderr = {2};
+inline constexpr nix::file_descriptor invalid_file_descriptor{-1};
 
 // TODO: This does not work, because `linux_error` is 8 bytes. If `linux_error`
 // is two or fewer bytes, it fails to union with 8-byte values properly. This
@@ -339,17 +350,27 @@ inline constexpr nix::file_descriptor stderr = {2};
 struct tty_descriptor : file_descriptor {};
 
 struct process_id {
-   // Linux supports the better part of 8-byte process IDs on 64-bit systems,
-   // but only up to 4 `cat::byte` process IDs on 32-bit systems.
-   cat::iword value;
+   cat::uint4 value;
+
+   constexpr process_id() = default;
+
+   constexpr process_id(cat::uint4 input) : value(input) {
+   }
+
+   constexpr process_id(cat::int4 input)
+      __attribute__((enable_if(input == -1, "only -1 is a valid negative process ID")))
+      : value(__builtin_bit_cast(cat::uint4, input)) {
+   }
 };
 
+static_assert(sizeof(process_id) == sizeof(cat::uint4));
+
 struct user_id {
-   cat::int4 value;
+   cat::uint4 value;
 };
 
 struct group_id {
-   cat::int4 value;
+   cat::uint4 value;
 };
 
 enum class [[clang::enum_extensibility(open)]] signal : unsigned char {

@@ -67,16 +67,16 @@ $test(syscall_identity) {
    cat::verify(tid.value == pid.value);
 
    nix::user_id uid = nix::sys_getuid();
-   cat::verify(uid.value >= 0);
+   cat::verify(uid.value >= 0u);
 
    nix::user_id euid = nix::sys_geteuid();
-   cat::verify(euid.value >= 0);
+   cat::verify(euid.value >= 0u);
 
    nix::group_id gid = nix::sys_getgid();
-   cat::verify(gid.value >= 0);
+   cat::verify(gid.value >= 0u);
 
    nix::group_id egid = nix::sys_getegid();
-   cat::verify(egid.value >= 0);
+   cat::verify(egid.value >= 0u);
 
    nix::process_id pgrp = nix::sys_getpgrp();
    cat::verify(pgrp.value > 0);
@@ -121,10 +121,12 @@ $test(syscall_credentials_set) {
 
    // `setfsuid` / `setfsgid` cannot fail. They always return the previous
    // value. Pass `-1` to query without changing.
-   nix::user_id prev_fsuid = nix::sys_setfsuid(nix::user_id{-1});
-   cat::verify(prev_fsuid.value >= 0);
-   nix::group_id prev_fsgid = nix::sys_setfsgid(nix::group_id{-1});
-   cat::verify(prev_fsgid.value >= 0);
+   nix::user_id prev_fsuid =
+      nix::sys_setfsuid(nix::user_id{cat::uint4_max});
+   cat::verify(prev_fsuid.value >= 0u);
+   nix::group_id prev_fsgid =
+      nix::sys_setfsgid(nix::group_id{cat::uint4_max});
+   cat::verify(prev_fsgid.value >= 0u);
 
    // `setpgid(self, self)` puts the calling process into its own group.
    // For a process that's already a group leader this is a no-op.
@@ -168,19 +170,21 @@ $test(syscall_io_basic) {
          nix::file_permissions::user_read | nix::file_permissions::user_write
       )
          .verify();
-   cat::verify(fd.value >= 0);
+   cat::verify(fd.value >= 0u);
 
    cat::idx written =
       nix::sys_write(fd, payload_basic.data(), payload_basic_length).verify();
    cat::verify(written == payload_basic_length);
+   nix::sys_close(fd).verify();
+   fd = nix::sys_open(tmp_basic, nix::open_mode::read_write).verify();
 
    // Rewind via `sys_lseek` and read it back.
-   cat::iword pos = nix::sys_lseek(fd, 0, nix::seek_whence::beginning).verify();
-   cat::verify(pos == 0);
+   cat::idx pos = nix::sys_lseek(fd, 0, nix::seek_whence::beginning).verify();
+   cat::verify(pos == 0u);
 
    char buffer[64] = {};
-   cat::iword got = nix::sys_read(fd, buffer, sizeof(buffer)).verify();
-   cat::verify(got == cat::iword(payload_basic_length));
+   cat::idx got = nix::sys_read(fd, buffer, sizeof(buffer)).verify();
+   cat::verify(got == payload_basic_length);
 
    // Positioned read/write don't move the file offset.
    cat::idx written_pwrite =
@@ -189,9 +193,9 @@ $test(syscall_io_basic) {
    cat::verify(written_pwrite == payload_short_length);
 
    char preadbuf[16] = {};
-   cat::iword read_pread =
+   cat::idx read_pread =
       nix::sys_pread64(fd, preadbuf, sizeof(preadbuf), 0).verify();
-   cat::verify(read_pread >= 4);
+   cat::verify(read_pread >= 4u);
    cat::verify(preadbuf[0] == 'a');
 
    nix::sys_fsync(fd).verify();
@@ -230,6 +234,8 @@ $test(syscall_io_vector) {
    };
    cat::idx written = nix::sys_writev(fd, vecs, 2u).verify();
    cat::verify(written == 13);
+   nix::sys_close(fd).verify();
+   fd = nix::sys_open(tmp_basic, nix::open_mode::read_write).verify();
 
    nix::sys_lseek(fd, 0, nix::seek_whence::beginning).verify();
 
@@ -239,8 +245,8 @@ $test(syscall_io_vector) {
       nix::io_vector(reinterpret_cast<cat::byte*>(ra), cat::idx(7)),
       nix::io_vector(reinterpret_cast<cat::byte*>(rb), cat::idx(6)),
    };
-   cat::iword got = nix::sys_readv(fd, rvecs, 2u).verify();
-   cat::verify(got == 13);
+   cat::idx got = nix::sys_readv(fd, rvecs, 2u).verify();
+   cat::verify(got == 13u);
    cat::verify(ra[0] == 'h');
    cat::verify(rb[0] == 'w');
 
@@ -251,28 +257,26 @@ $test(syscall_io_vector) {
 // pipe / dup.
 
 $test(syscall_pipe_dup) {
-   cat::int4 fds[2] = {};
+   nix::file_descriptor fds[2] = {};
    nix::sys_pipe(fds).verify();
-   nix::file_descriptor read_end{fds[0]};
-   nix::file_descriptor write_end{fds[1]};
+   nix::file_descriptor read_end = fds[0];
+   nix::file_descriptor write_end = fds[1];
 
    nix::sys_write(write_end, payload_ping.data(), payload_ping_length).verify();
    char buf[8] = {};
-   cat::iword got = nix::sys_read(read_end, buf, sizeof(buf)).verify();
-   cat::verify(got == 4);
+   cat::idx got = nix::sys_read(read_end, buf, sizeof(buf)).verify();
+   cat::verify(got == 4u);
 
    // `sys_dup` allocates the lowest free fd. `sys_dup2` overwrites a target.
    nix::file_descriptor dup_fd = nix::sys_dup(write_end).verify();
    cat::verify(dup_fd.value > write_end.value);
    nix::sys_close(dup_fd).verify();
 
-   cat::int4 second_pair[2] = {};
+   nix::file_descriptor second_pair[2] = {};
    nix::sys_pipe2(second_pair, nix::pipe2_flags::close_exec).verify();
-   nix::sys_dup3(
-      nix::file_descriptor{second_pair[1]}, write_end, nix::dup3_flags::none
-   )
+   nix::sys_dup3(second_pair[1], write_end, nix::dup3_flags::none)
       .verify();
-   nix::sys_close(nix::file_descriptor{second_pair[0]}).verify();
+   nix::sys_close(second_pair[0]).verify();
 
    nix::sys_close(read_end).verify();
    nix::sys_close(write_end).verify();
@@ -292,9 +296,9 @@ $test(syscall_fcntl_flock) {
    // Read the descriptor flags back. The set side requires packing a bit into
    // the syscall's third register, which is awkward to express via
    // `cat::no_type_ptr` here. Just exercise the get-side dispatch.
-   cat::iword flags =
+   cat::idx flags =
       nix::sys_fcntl(fd, nix::fcntl_command::get_fd_flags).verify();
-   cat::verify(flags >= 0);
+   cat::verify(flags >= 0u);
 
    // Advisory exclusive lock then unlock.
    nix::sys_flock(fd, nix::flock_op::exclusive).verify();
@@ -582,7 +586,7 @@ $test(syscall_memory) {
       nix::sys_mmap(
          nullptr, bytes, nix::memory_protection_flags::read_write,
          nix::memory_flags::privately | nix::memory_flags::anonymous,
-         nix::file_descriptor{-1}, 0
+         nix::invalid_file_descriptor, 0
       )
          .verify();
    cat::verify(p_mapping != nullptr);
@@ -627,7 +631,7 @@ $test(syscall_memory) {
          nix::sys_mmap(
             nullptr, bytes, nix::memory_protection_flags::read_write,
             nix::memory_flags::privately | nix::memory_flags::anonymous,
-            nix::file_descriptor{-1}, 0
+            nix::invalid_file_descriptor, 0
          )
             .verify();
       auto mseal_result = nix::sys_mseal(p_sealed, bytes);
@@ -683,7 +687,7 @@ $test(syscall_read_self_statm) {
       nix::sys_mmap(
          nullptr, bytes, nix::memory_protection_flags::read_write,
          nix::memory_flags::privately | nix::memory_flags::anonymous,
-         nix::file_descriptor{-1}, 0
+         nix::invalid_file_descriptor, 0
       )
          .verify();
    nix::statm after = nix::read_self_statm().verify();
@@ -709,7 +713,7 @@ $test(syscall_read_self_anon_smaps) {
          nix::memory_flags::privately
             | nix::memory_flags::populate
             | nix::memory_flags::anonymous,
-         nix::file_descriptor{-1}, 0
+         nix::invalid_file_descriptor, 0
       )
          .verify();
    static_cast<unsigned char*>(p_mapping)[0] = 42u;
@@ -725,7 +729,7 @@ $test(syscall_mremap) {
       nix::sys_mmap(
          nullptr, 2 * cat::page_size, nix::memory_protection_flags::read_write,
          nix::memory_flags::privately | nix::memory_flags::anonymous,
-         nix::file_descriptor{-1}, 0
+         nix::invalid_file_descriptor, 0
       )
          .verify();
    static_cast<unsigned char*>(p_old)[0] = 42u;
@@ -820,14 +824,19 @@ $test(syscall_signals_self_kill) {
    // Use impossible target ids so signal delivery fails without mutating the
    // current thread's signal state.
    nix::process_id self_pid = nix::sys_getpid();
-   auto tkill_result = nix::sys_tkill(nix::process_id{-1}, nix::signal::usr1);
+   auto tkill_result =
+      nix::sys_tkill(nix::process_id{cat::int4(-1)}, nix::signal::usr1);
    cat::verify(
       tkill_result.is_empty()
       && (tkill_result.error() == nix::linux_error::srch || tkill_result.error() == nix::linux_error::inval)
    );
 
    auto tgkill_result =
-      nix::sys_tgkill(self_pid, nix::process_id{-1}, nix::signal::usr1);
+      nix::sys_tgkill(
+         self_pid,
+         nix::process_id{cat::int4(-1)},
+         nix::signal::usr1
+      );
    cat::verify(
       tgkill_result.is_empty()
       && (tgkill_result.error() == nix::linux_error::srch || tgkill_result.error() == nix::linux_error::inval)
@@ -838,39 +847,39 @@ $test(syscall_signals_self_kill) {
 
 $test(syscall_socket_pair) {
    // `AF_UNIX = 1`, `SOCK_STREAM = 1`.
-   cat::int4 fds[2] = {};
+   nix::file_descriptor fds[2] = {};
    nix::sys_socketpair(1, 1, 0, fds).verify();
-   nix::file_descriptor a{fds[0]};
-   nix::file_descriptor b{fds[1]};
+   nix::file_descriptor a = fds[0];
+   nix::file_descriptor b = fds[1];
 
    // Round-trip through `send`/`recv`.
    // Use the namespace-scope null-terminated payload.
-   cat::iword sent =
+   cat::idx sent =
       nix::sys_sendto(a, payload_two.data(), payload_two_length).verify();
-   cat::verify(sent == cat::iword(payload_two_length));
+   cat::verify(sent == payload_two_length);
 
    char buffer[8] = {};
-   cat::iword got = nix::sys_recv(b, buffer, sizeof(buffer)).verify();
-   cat::verify(got == 2);
+   cat::idx got = nix::sys_recv(b, buffer, sizeof(buffer)).verify();
+   cat::verify(got == 2u);
    cat::verify(buffer[0] == 'h');
    sent = nix::sys_sendto(a, payload_two.data(), payload_two_length).verify();
-   cat::verify(sent == cat::iword(payload_two_length));
+   cat::verify(sent == payload_two_length);
    char explicit_null_buffer[8] = {};
    got =
       nix::sys_recv(
          b, explicit_null_buffer, sizeof(explicit_null_buffer), nullptr, nullptr
       )
          .verify();
-   cat::verify(got == 2);
+   cat::verify(got == 2u);
    cat::verify(explicit_null_buffer[0] == 'h');
    sent = nix::sys_sendto(a, payload_two.data(), payload_two_length).verify();
-   cat::verify(sent == cat::iword(payload_two_length));
+   cat::verify(sent == payload_two_length);
    cat::socket_unix<cat::socket_type::stream> socket_receiver(b);
    char socket_buffer[8] = {};
    got = socket_receiver
             .recieve(socket_buffer, sizeof(socket_buffer), nullptr, nullptr)
             .value();
-   cat::verify(got == 2);
+   cat::verify(got == 2u);
    cat::verify(socket_buffer[0] == 'h');
 
    // `sendmsg` / `recvmsg` round trip.
@@ -888,8 +897,8 @@ $test(syscall_socket_pair) {
    sender.p_control = nullptr;
    sender.control_length = 0u;
    sender.flags = 0;
-   cat::iword sent_msg = nix::sys_sendmsg(a, sender).verify();
-   cat::verify(sent_msg == cat::iword(payload_two_length));
+   cat::idx sent_msg = nix::sys_sendmsg(a, sender).verify();
+   cat::verify(sent_msg == payload_two_length);
 
    char recv_buf[8] = {};
    nix::io_vector iov_recv[1] = {
@@ -905,8 +914,8 @@ $test(syscall_socket_pair) {
    receiver.p_control = nullptr;
    receiver.control_length = 0u;
    receiver.flags = 0;
-   cat::iword got_msg = nix::sys_recvmsg(b, receiver).verify();
-   cat::verify(got_msg == 2);
+   cat::idx got_msg = nix::sys_recvmsg(b, receiver).verify();
+   cat::verify(got_msg == 2u);
 
    // `shutdown` half-close, then close both ends.
    nix::sys_shutdown(a, nix::shutdown_how::write).verify();
@@ -936,11 +945,11 @@ $test(syscall_socket_options) {
 
 $test(syscall_random) {
    unsigned char buffer[16] = {};
-   cat::iword got = nix::sys_getrandom(
+   cat::idx got = nix::sys_getrandom(
                        buffer, sizeof(buffer), nix::getrandom_flags::nonblocking
    )
                        .verify();
-   cat::verify(got == cat::iword(sizeof(buffer)));
+   cat::verify(got == sizeof(buffer));
 }
 
 // io_uring (gated on runtime probe).

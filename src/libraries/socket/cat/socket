@@ -154,14 +154,13 @@ struct socket_unix {
    }
 
    // TODO: Factor into `.recieve()` and `.recieve_from()`.
-   // TODO: This should return `maybe<idx>`.
    auto
    recieve(
       void* _Nonnull const p_message_buffer, iword const buffer_length,
       Socket const* _Nullable __restrict p_socket = nullptr,
       iword const* _Nullable __restrict p_socket_size = nullptr
-   ) -> maybe<iword> {
-      nix::scaredy_nix<iword> const result = nix::sys_recv(
+   ) -> maybe<idx> {
+      nix::scaredy_nix<idx> const result = nix::sys_recv(
          this->descriptor, p_message_buffer, cat::idx(buffer_length), p_socket,
          p_socket_size
       );
