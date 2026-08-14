@@ -105,9 +105,29 @@ class back_insert_stepanov_iterator
       return *this;
    }
 
- private:
+   // As in `std::back_insert_iterator`, the container is protected so that
+   // wrappers can reach it without a public accessor.
+
+ protected:
    T& m_iterable;
 };
+
+namespace detail {
+// Reach the container behind an insert iterator through its protected member.
+template <typename Outputter>
+[[nodiscard]]
+constexpr auto
+get_container(Outputter iterator) -> typename Outputter::container_type& {
+   struct accessor : Outputter {
+      constexpr accessor(Outputter base) : Outputter(base) {
+      }
+
+      using Outputter::m_iterable;
+   };
+
+   return accessor(iterator).m_iterable;
+}
+}  // namespace detail
 
 template <is_stepanov_iterable T>
 class front_insert_stepanov_iterator

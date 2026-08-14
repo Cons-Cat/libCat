@@ -6,119 +6,151 @@ namespace cat {
 namespace detail {
 namespace {
 
+// Bulk-copy a run of literal text into the output, like `{fmt}`'s `on_text`.
+auto
+append_literal(
+   format_handler<basic_dyn_allocator<dyn_reallocate>>& handler, str_view run
+) -> scaredy_format<void> {
+   maybe result =
+      get_container(handler.m_output_iterator).append(handler.m_allocator, run);
+   if (result.is_empty()) {
+      return format_errors::out_of_memory;
+   }
+   return monostate;
+}
+
 auto
 parse_format_string(
    str_view const format,
    format_handler<basic_dyn_allocator<dyn_reallocate>>& handler
 ) -> scaredy_format<void> {
-   str_view remainder = format;
    idx current_argument;
+   idx index;
+   // The start of the pending run of literal text yet to be flushed.
+   idx literal_start;
 
-   while (remainder.size() > 0) {
-      maybe<idx> const maybe_open_brace = remainder.find('{');
-      iword const to_open_brace = maybe_open_brace.value_or_niche();
-      if (maybe_open_brace.is_empty()) {
-         assert(to_open_brace == -1);
+   // Flush literal text in `[literal_start, end_index)` as one copy.
+   auto flush = [&](idx end_index) -> scaredy_format<void> {
+      if (end_index > literal_start) {
+         return append_literal(
+            handler,
+            str_view(
+               format.data() + literal_start.raw, idx(end_index - literal_start)
+            )
+         );
       }
+      return monostate;
+   };
 
-      maybe<idx> const maybe_close_brace = remainder.find('}');
-      iword const to_close_brace = maybe_close_brace.value_or_niche();
-      if (maybe_close_brace.is_empty()) {
-         assert(to_close_brace == -1);
-      }
+   while (index < format.size()) {
+      char const character = format[index];
 
-      if (to_open_brace == to_close_brace) {
-         for (char const& character : remainder) {
-            maybe result =
-               handler.m_output_iterator.insert(handler.m_allocator, character);
-            if (result.is_empty()) {
-               return format_errors::out_of_memory;
+      if (character == '{') {
+         if (index + 1u < format.size() && format[index + 1u] == '{') {
+            // Keep the first brace in the literal run, drop the second.
+            scaredy_format<void> const escaped = flush(index + 1u);
+            if (escaped.is_empty()) {
+               return escaped;
+            }
+            index += 2u;
+            literal_start = index;
+            continue;
+         }
+
+         scaredy_format<void> flushed = flush(index);
+         if (flushed.is_empty()) {
+            return flushed;
+         }
+
+         idx const field_start = index + 1u;
+         idx close_index = field_start;
+         bool found_close = false;
+         while (close_index < format.size()) {
+            if (format[close_index] == '{') {
+               return format_errors::unmatched_open_brace;
+            }
+            if (format[close_index] == '}') {
+               found_close = true;
+               break;
+            }
+            ++close_index;
+         }
+         if (!found_close) {
+            return format_errors::unmatched_open_brace;
+         }
+
+         idx cursor = field_start;
+         if (cursor < close_index) {
+            char const head = format[cursor];
+            if (head >= '0' && head <= '9') {
+               return format_errors::unknown_format_specifier;
             }
          }
-         break;
-      }
 
-      for (idx i; i < to_open_brace; ++i) {
-         maybe result =
-            handler.m_output_iterator.insert(handler.m_allocator, remainder[i]);
-         if (result.is_empty()) {
-            return format_errors::out_of_memory;
+         idx spec_begin = cursor;
+         if (cursor < close_index && format[cursor] == ':') {
+            spec_begin = cursor + 1u;
+         } else if (cursor != close_index) {
+            return format_errors::unknown_format_specifier;
          }
+
+         if (current_argument >= handler.m_arguments.m_argument_count) {
+            return format_errors::argument_type_mismatch;
+         }
+
+         str_view const parse_view(
+            format.data() + spec_begin.raw, idx(format.size() - spec_begin)
+         );
+         format_parse_context parse_context(
+            parse_view, handler.m_arguments.m_argument_count
+         );
+
+         scaredy_format<void> format_result =
+            handler.m_arguments.m_p_formatters[current_argument.raw](
+               handler.m_allocator, handler.m_output_iterator,
+               handler.m_arguments, current_argument, parse_context
+            );
+         if (format_result.is_empty()) {
+            return format_result;
+         }
+         if (
+            parse_context.begin() == parse_context.end()
+            || *parse_context.begin() != '}'
+         ) {
+            return format_errors::unmatched_open_brace;
+         }
+
+         ++current_argument;
+         index = close_index + 1u;
+         literal_start = index;
+         continue;
       }
 
-      scaredy_format<void> parse_result;
-      switch (handler.m_arguments.m_p_args_indices[current_argument.raw]
-                 .m_discriminant) {
-         case format_discriminant::int4_type:
-            if (format_arg_int4 == nullptr) {
-               return format_errors::cannot_format_argument;
+      if (character == '}') {
+         if (index + 1u < format.size() && format[index + 1u] == '}') {
+            // Keep the first brace in the literal run, drop the second.
+            scaredy_format<void> const escaped = flush(index + 1u);
+            if (escaped.is_empty()) {
+               return escaped;
             }
-            parse_result = format_arg_int4(
-               handler.m_allocator, handler.m_output_iterator,
-               handler.m_arguments, current_argument
-            );
-            break;
-         case format_discriminant::int8_type:
-            if (format_arg_int8 == nullptr) {
-               return format_errors::cannot_format_argument;
-            }
-            parse_result = format_arg_int8(
-               handler.m_allocator, handler.m_output_iterator,
-               handler.m_arguments, current_argument
-            );
-            break;
-         case format_discriminant::uint4_type:
-            if (format_arg_uint4 == nullptr) {
-               return format_errors::cannot_format_argument;
-            }
-            parse_result = format_arg_uint4(
-               handler.m_allocator, handler.m_output_iterator,
-               handler.m_arguments, current_argument
-            );
-            break;
-         case format_discriminant::uint8_type:
-            if (format_arg_uint8 == nullptr) {
-               return format_errors::cannot_format_argument;
-            }
-            parse_result = format_arg_uint8(
-               handler.m_allocator, handler.m_output_iterator,
-               handler.m_arguments, current_argument
-            );
-            break;
-         case format_discriminant::float_type:
-            if (format_arg_float == nullptr) {
-               return format_errors::cannot_format_argument;
-            }
-            parse_result = format_arg_float(
-               handler.m_allocator, handler.m_output_iterator,
-               handler.m_arguments, current_argument
-            );
-            break;
-         case format_discriminant::double_type:
-            if (format_arg_double == nullptr) {
-               return format_errors::cannot_format_argument;
-            }
-            parse_result = format_arg_double(
-               handler.m_allocator, handler.m_output_iterator,
-               handler.m_arguments, current_argument
-            );
-            break;
-         default:
-            __builtin_unreachable();
+            index += 2u;
+            literal_start = index;
+            continue;
+         }
+         return format_errors::unmatched_open_brace;
       }
 
-      if (parse_result.is_empty()) {
-         return parse_result;
-      }
-
-      ++current_argument;
-
-      idx const skip = idx(to_close_brace) + 1u;
-      char const* const p_tail = remainder.data() + skip.raw;
-      idx const tail_size = idx(remainder.size() - skip);
-      remainder = str_view(p_tail, tail_size);
+      ++index;
    }
 
+   scaredy_format<void> trailing = flush(index);
+   if (trailing.is_empty()) {
+      return trailing;
+   }
+
+   if (current_argument != handler.m_arguments.m_argument_count) {
+      return format_errors::argument_type_mismatch;
+   }
    return monostate;
 }
 
@@ -165,6 +197,33 @@ vfmt(
    }
 
    return str_view(buffer.data(), buffer.size());
+}
+
+auto
+vfmt_to_sink(
+   basic_dyn_allocator<dyn_reallocate> allocator, void* _Nonnull p_sink,
+   detail::format_flush_fn _Nonnull p_flush, str_view const format,
+   detail::format_args arguments
+) -> scaredy_format<void> {
+   // Stage into stack storage and drain into the sink, so formatting never
+   // allocates a copy of the whole result.
+   char storage[detail::format_sink_buffer_size.raw];
+   detail::format_buffer<basic_dyn_allocator<dyn_reallocate>> buffer = {
+      allocator_ref(allocator), storage, detail::format_sink_buffer_size,
+      p_sink, p_flush
+   };
+   detail::format_handler<basic_dyn_allocator<dyn_reallocate>> handler = {
+      allocator, as_back_inserter(buffer), format, arguments
+   };
+
+   scaredy_format<void> result = detail::parse_format_string(format, handler);
+   if (result.is_empty()) {
+      return result;
+   }
+   if (buffer.flush().is_empty()) {
+      return format_errors::out_of_memory;
+   }
+   return monostate;
 }
 
 auto

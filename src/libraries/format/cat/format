@@ -9,6 +9,7 @@
 #include <cat/insert_iterators>
 #include <cat/scaredy>
 #include <cat/string>
+#include <cat/variant>
 
 // TODO: Use `$prop` macros to simplify error propagation.
 
@@ -202,7 +203,124 @@ enum class [[clang::enum_extensibility(closed)]] format_errors : unsigned char {
 template <typename T = void>
 using scaredy_format = scaredy<T, format_errors>;
 
+// Parse context for a replacement field's format-spec. `begin()` points at the
+// first format-spec character (after `:`) or at `}` when the spec is empty.
+class format_parse_context {
+ private:
+   char const* _Nonnull m_begin;
+   char const* _Nonnull m_end;
+
+   // Iff `m_argument_index` is less than 0, the format string has manually
+   // indexed an argument. Otherwise, all arguments are automatically indexed.
+   iword m_argument_index = 0;
+
+ public:
+   uword const m_arguments_count;
+
+   using iterator = char const* _Nonnull;
+   using const_iterator = char const* _Nonnull;
+
+   constexpr format_parse_context(
+      str_view const in_format [[clang::lifetimebound]],
+      uword in_args_count = 0u
+   )
+       : m_begin(in_format.data()),
+         m_end(in_format.data() + in_format.size().raw),
+         m_arguments_count(in_args_count) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   begin() const -> const_iterator {
+      return m_begin;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end() const -> const_iterator {
+      return m_end;
+   }
+
+   constexpr void
+   advance_to(const_iterator p_position) {
+      m_begin = p_position;
+   }
+
+   constexpr auto
+   next_argument_index() -> iword {
+      return ++m_argument_index;
+   }
+
+   // Check if a manually indexed argument is within reasonable bounds, and
+   // check that this context is not using automatic indexing.
+   constexpr auto
+   check_argument_index(iword index) -> maybe<void> {
+      if consteval {
+         if (index >= make_signed(m_arguments_count)) {
+            return nullopt;
+         }
+      }
+
+      if (m_argument_index > 0) {
+         return nullopt;
+      }
+
+      m_argument_index = -1;
+      return monostate;
+   }
+};
+
+// Default parse accepts only empty format-specs (`{}` and `{:}`).
+template <typename CharT = char>
+struct formatter_base {
+   constexpr auto
+   parse(format_parse_context& context) const
+      -> scaredy_format<format_parse_context::const_iterator> {
+      static_assert(
+         is_same<CharT, char>, "Only `char` formatters are supported!"
+      );
+      format_parse_context::const_iterator const it = context.begin();
+      if (it == context.end()) {
+         return format_errors::unmatched_open_brace;
+      }
+      if (*it != '}') {
+         return format_errors::unknown_format_specifier;
+      }
+      return it;
+   }
+};
+
+template <typename T, typename CharT = char>
+struct formatter;
+
 namespace detail {
+template <is_allocator Allocator>
+struct format_buffer;
+
+template <is_allocator Allocator>
+using format_contiguous_output_iterator =
+   back_insert_stepanov_iterator<format_buffer<Allocator>>;
+
+struct format_args;
+
+using format_arg_fn = auto (*_Nonnull)(
+   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator,
+   format_contiguous_output_iterator<basic_dyn_allocator<dyn_reallocate>>&
+      output,
+   format_args const& arguments, idx argument_index,
+   format_parse_context& parse_context
+) -> scaredy_format<void>;
+
+template <typename T>
+auto
+format_custom_arg(
+   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator,
+   format_contiguous_output_iterator<basic_dyn_allocator<dyn_reallocate>>&
+      output,
+   format_args const& arguments, idx argument_index,
+   format_parse_context& parse_context
+) -> scaredy_format<void>;
+
 // This represents precisely 16 alternatives to fill 4 bits in
 // `format_argument_compact_index`.
 enum class [[clang::enum_extensibility(
@@ -320,14 +438,15 @@ class format_args_compact_storage {
    template <typename T>
    void
    store_argument(idx& argument_index, T&& value) {
-      // Pack `value` into `packed_args_storage`.
       iword const storage_index =
          m_arguments_indices[argument_index.raw].m_byte_index;
 
+      void const* const p_value = __builtin_addressof(value);
       copy_memory_scalar(
-         __builtin_addressof(value),
-         &(m_packed_args_storage[0]) + storage_index, sizeof(T)
+         __builtin_addressof(p_value),
+         &(m_packed_args_storage[0]) + storage_index, sizeof(p_value)
       );
+      m_formatters[argument_index.raw] = &format_custom_arg<remove_cvref<T>>;
 
       // Assign `T` to that storage.
       m_arguments_indices[argument_index.raw].m_discriminant =
@@ -338,30 +457,33 @@ class format_args_compact_storage {
                                                      // `[[likely]]` improves
                                                      // performance here.
          m_arguments_indices[argument_index.raw + 1].m_byte_index =
-            storage_index.raw + sizeof(T);
+            storage_index.raw + sizeof(p_value);
       }
 
       ++argument_index;
    }
 
  public:
+   static constexpr uword::raw_type argument_count = sizeof...(Types);
+   static constexpr uword::raw_type storage_count =
+      argument_count == 0 ? 1 : argument_count;
+
    template <typename... Us>
       requires(sizeof...(Types) == sizeof...(Us))
    format_args_compact_storage(Us&&... arguments) {
-      m_packed_args_storage[0] = {};
-      m_arguments_indices[0] = {};
-      m_arguments_indices[0].m_byte_index = 0u;
-      idx argument_index;
-      // `store_argument()` increments `argument_index`.
-      (store_argument(argument_index, $fwd(arguments)), ...);
+      if constexpr (sizeof...(Types) > 0) {
+         m_packed_args_storage[0] = {};
+         m_arguments_indices[0] = {};
+         m_arguments_indices[0].m_byte_index = 0u;
+         idx argument_index;
+         // `store_argument()` increments `argument_index`.
+         (store_argument(argument_index, $fwd(arguments)), ...);
+      }
    }
 
-   static constexpr uword::raw_type argument_count = sizeof...(Types);
-   format_argument_compact_index m_arguments_indices[argument_count];
-
-   // TODO: This array length might need to be larger if the argument's
-   // type is `format_discriminant::other_type`.
-   byte m_packed_args_storage[argument_count * 8];  // Needs work.
+   format_argument_compact_index m_arguments_indices[storage_count];
+   format_arg_fn m_formatters[storage_count];
+   byte m_packed_args_storage[storage_count * sizeof(void*)];
 };
 
 // Formatting arguments are packed into a small type-erased array to conserve
@@ -371,36 +493,46 @@ struct format_args {
    explicit constexpr format_args(
       format_args_compact_storage<Types...> const& storage
    )
-       : m_p_args_indices(&(storage.m_arguments_indices[0])),
+       : m_p_args_indices(
+            sizeof...(Types) > 0 ? &(storage.m_arguments_indices[0]) : nullptr
+         ),
+         m_p_formatters(
+            sizeof...(Types) > 0 ? &(storage.m_formatters[0]) : nullptr
+         ),
+         m_p_storage(
+            sizeof...(Types) > 0 ? &(storage.m_packed_args_storage[0]) : nullptr
+         ),
          m_argument_count(storage.argument_count) {
    }
 
-   // Unpack a formatting argument from the type-erased storage.
+   // Get a formatting argument through its borrowed address.
    template <typename T>
-   // This function loads unaligned data.
-   [[gnu::no_sanitize("alignment")]]
    auto
-   get(idx argument_index) const -> T {
+   get(idx argument_index) const -> T const& {
       // Get the storage index out from the indices array.
       iword const storage_index =
          (m_p_args_indices + argument_index)->m_byte_index;
 
-      // TODO: Make this type punning with `bit_cast`, because
-      // this `reinterpret_cast` is undefined behavior. Offset the pointer to
-      // the array of indices by the length of that array. That produces a
-      // pointer to the next struct member, which happens to be the raw storage
-      // array.
-      byte const* const p_storage = reinterpret_cast<byte const* const>(
-         m_p_args_indices + m_argument_count
-      );
-
-      byte const* p_data = p_storage + storage_index;
-      return *reinterpret_cast<T const*>(p_data);
+      byte const* p_data = m_p_storage + storage_index;
+      void const* p_argument;
+      // NOLINTNEXTLINE `memcpy()` to type pun these pointers.
+      __builtin_memcpy_inline(&p_argument, p_data, sizeof(p_argument));
+      return *static_cast<T const*>(p_argument);
    }
 
-   format_argument_compact_index const* _Nonnull m_p_args_indices;
+   format_argument_compact_index const* _Nullable m_p_args_indices;
+   format_arg_fn const* _Nullable m_p_formatters;
+   byte const* _Nullable m_p_storage;
    uword const m_argument_count;
 };
+
+// Drain `chunk` into a type-erased output sink.
+using format_flush_fn = auto (*)(void* _Nonnull p_sink, str_view chunk)
+   -> maybe<void>;
+
+// The fixed staging buffer used when formatting straight into a sink. It must
+// hold the widest single value any formatter reserves contiguously.
+constexpr idx format_sink_buffer_size = 256u;
 
 template <is_allocator Allocator>
 struct format_buffer : container_interface<format_buffer<Allocator>, char>,
@@ -414,6 +546,22 @@ struct format_buffer : container_interface<format_buffer<Allocator>, char>,
          m_p_string(p_in_string),
          m_length(in_length),
          m_max_length(in_max_length) {
+   }
+
+   // Construct a buffer that stages into fixed storage and drains into a sink
+   // instead of reallocating.
+   format_buffer(
+      allocator_ref<Allocator> in_allocator [[clang::lifetimebound]]
+      ,
+      char* _Nonnull p_in_string, idx in_max_length, void* _Nonnull p_in_sink,
+      format_flush_fn _Nonnull p_in_flush
+   )
+       : m_allocator(in_allocator),
+         m_p_string(p_in_string),
+         m_length(0u),
+         m_max_length(in_max_length),
+         m_p_sink(p_in_sink),
+         m_flush(p_in_flush) {
    }
 
    [[nodiscard, gnu::returns_nonnull]]
@@ -440,24 +588,98 @@ struct format_buffer : container_interface<format_buffer<Allocator>, char>,
       m_length = 0u;
    }
 
+   // Whether this buffer stages into a sink rather than owning its output.
+   [[nodiscard]]
    auto
-   push_back(allocator_ref<Allocator>, char character) -> maybe<void> {
-      if (m_length + 1u > m_max_length) {
-         idx const minimum_length = m_length + 1u;
-         idx const doubled_length = m_max_length * 2u;
-         idx const new_length =
-            minimum_length > doubled_length ? minimum_length : doubled_length;
+   has_sink() const -> bool {
+      return m_flush != nullptr;
+   }
 
-         span<char> new_string =
-            $prop(m_allocator.template realloc_multi_uninit<char>(
-               m_p_string, m_max_length, new_length
-            ));
-         m_p_string = new_string.data();
-         m_max_length = new_length;
+   // Drain staged chars into the sink and reuse the staging storage.
+   auto
+   flush() -> maybe<void> {
+      if (m_length > 0u) {
+         $prop(m_flush(m_p_sink, str_view(m_p_string, m_length)));
+         m_length = 0u;
       }
+      return monostate;
+   }
 
+   // Make room for at least `minimum_capacity` chars. A sink-backed buffer
+   // drains instead of growing, otherwise the storage doubles to keep
+   // amortized appends cheap.
+   auto
+   reserve(allocator_ref<Allocator>, idx minimum_capacity) -> maybe<void> {
+      if (minimum_capacity <= m_max_length) {
+         return monostate;
+      }
+      if (this->has_sink()) {
+         $prop(this->flush());
+         if (minimum_capacity > m_max_length) {
+            return nullopt;
+         }
+         return monostate;
+      }
+      idx const doubled_length = m_max_length * 2u;
+      idx const new_length =
+         minimum_capacity > doubled_length ? minimum_capacity : doubled_length;
+      span<char> new_string =
+         $prop(m_allocator.template realloc_multi_uninit<char>(
+            m_p_string, m_max_length, new_length
+         ));
+      m_p_string = new_string.data();
+      m_max_length = new_length;
+      return monostate;
+   }
+
+   // Reserve room for `count` more chars and return a pointer to the write
+   // position. Digits or bytes can be written directly, then committed.
+   auto
+   prepare_append(allocator_ref<Allocator> allocator, idx count)
+      -> maybe<char*> {
+      $prop(reserve(allocator, m_length + count));
+      return m_p_string + m_length.raw;
+   }
+
+   void
+   commit(idx count) {
+      m_length += count;
+   }
+
+   auto
+   push_back(allocator_ref<Allocator> allocator, char character)
+      -> maybe<void> {
+      $prop(reserve(allocator, m_length + 1u));
       m_p_string[m_length.raw] = character;
       ++m_length;
+      return monostate;
+   }
+
+   auto
+   append(allocator_ref<Allocator> allocator, str_view string) -> maybe<void> {
+      if (!this->has_sink()) {
+         $prop(reserve(allocator, m_length + string.size()));
+         copy_memory(string.data(), m_p_string + m_length.raw, string.size());
+         m_length += string.size();
+         return monostate;
+      }
+
+      // Stage as much as fits, draining whenever the storage fills up, so a
+      // string longer than the staging buffer still streams through.
+      char const* p_source = string.data();
+      idx remaining = string.size();
+      while (remaining > 0u) {
+         if (m_length == m_max_length) {
+            $prop(this->flush());
+         }
+         idx const free_capacity = idx(m_max_length - m_length);
+         idx const count =
+            remaining < free_capacity ? remaining : free_capacity;
+         copy_memory(p_source, m_p_string + m_length.raw, count);
+         m_length += count;
+         p_source += count.raw;
+         remaining = idx(remaining - count);
+      }
       return monostate;
    }
 
@@ -465,80 +687,8 @@ struct format_buffer : container_interface<format_buffer<Allocator>, char>,
    char* _Nonnull m_p_string;
    idx m_length;
    idx m_max_length;
-};
-
-template <is_allocator Allocator>
-using format_contiguous_output_iterator =
-   back_insert_stepanov_iterator<format_buffer<Allocator>>;
-
-// Holds the format string parsing state consisting of the string's range and a
-// counter for which arguments have previously been parsed.
-class format_parse_context {
- private:
-   // These members must be at the top so they can be `decltype`'d.
-   str_view const m_format;
-
-   // Iff `argument_index` is less than 0, the format string has manually
-   // indexed an argument. Otherwise, all arguments are automatically indexed.
-   iword m_argument_index = 0;
-
- public:
-   uword const m_arguments_count;
-
-   using iterator = decltype(m_format.begin());
-   using const_iterator = decltype(m_format.cbegin());
-
-   constexpr format_parse_context(
-      str_view const in_format [[clang::lifetimebound]],
-      uword in_args_count = 0u
-   )
-       : m_format(in_format), m_arguments_count(in_args_count) {
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   begin() const -> const_iterator {
-      return m_format.cbegin();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   end() const -> const_iterator {
-      return m_format.cend();
-   }
-
-   constexpr void
-   advance_to(iterator position) {
-      m_format.begin().advance(position.distance_to(m_format.begin()));
-   }
-
-   constexpr auto
-   next_argument_index() -> iword {
-      return ++m_argument_index;
-   }
-
-   // Check if a manually indexed argument is within reasonable bounds, a d
-   // check that this context is not using automatic indexing.
-   constexpr auto
-   check_argument_index(iword index) -> maybe<void> {
-      if consteval {
-         if (index >= make_signed(m_arguments_count)) {
-            // This index is of range.
-            return nullopt;
-         }
-      }
-
-      if (m_argument_index > 0) {
-         // This argument is manually indexed in a context where automatic
-         // indexing has been used.
-         return nullopt;
-      }
-
-      // Enable manual indexing in this context.
-      m_argument_index = -1;
-
-      return monostate;
-   }
+   void* _Nullable m_p_sink = nullptr;
+   format_flush_fn _Nullable m_flush = nullptr;
 };
 
 // TODO: Store invocable functions for different kind of arguments.
@@ -563,17 +713,9 @@ struct format_handler {
        : m_allocator(in_allocator),
          m_output_iterator(iterator),
          m_format(in_format),
-         m_arguments(in_args) {
+         m_arguments(std::move(in_args)) {
    }
 };
-
-// Type-erased argument formatters.
-using format_arg_fn = auto (*_Nullable)(
-   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator,
-   format_contiguous_output_iterator<basic_dyn_allocator<dyn_reallocate>>&
-      output,
-   format_args const& arguments, idx argument_index
-) -> scaredy_format<void>;
 
 extern format_arg_fn const format_arg_int4;
 extern format_arg_fn const format_arg_int8;
@@ -613,6 +755,442 @@ erase_allocator(allocator_ref<Allocator> allocator)
 }
 }  // namespace detail
 
+struct format_context {
+   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator;
+   detail::format_contiguous_output_iterator<
+      basic_dyn_allocator<dyn_reallocate>>& output;
+   bool debug = false;
+
+   [[nodiscard]]
+   auto
+   buffer() const
+      -> detail::format_buffer<basic_dyn_allocator<dyn_reallocate>>& {
+      return detail::get_container(output);
+   }
+
+   auto
+   append(char character) const -> scaredy_format<void> {
+      if (buffer().push_back(allocator, character).is_empty()) {
+         return format_errors::out_of_memory;
+      }
+      return monostate;
+   }
+
+   auto
+   append(str_view string) const -> scaredy_format<void> {
+      if (buffer().append(allocator, string).is_empty()) {
+         return format_errors::out_of_memory;
+      }
+      return monostate;
+   }
+};
+
+namespace detail {
+inline auto
+append_escaped(format_context& context, str_view string, char quote)
+   -> scaredy_format<void> {
+   scaredy_format<void> result = context.append(quote);
+   if (result.is_empty()) {
+      return result;
+   }
+   for (char character : string) {
+      if (character == quote || character == '\\') {
+         result = context.append('\\');
+         if (result.is_empty()) {
+            return result;
+         }
+         result = context.append(character);
+      } else if (character == '\n') {
+         result = context.append("\\n");
+      } else if (character == '\r') {
+         result = context.append("\\r");
+      } else if (character == '\t') {
+         result = context.append("\\t");
+      } else {
+         result = context.append(character);
+      }
+      if (result.is_empty()) {
+         return result;
+      }
+   }
+   return context.append(quote);
+}
+
+template <typename T>
+auto
+format_nested(format_context& context, T const& value) -> scaredy_format<void> {
+   bool const old_debug = context.debug;
+   context.debug = true;
+   scaredy_format<void> result =
+      formatter<remove_cvref<T>>{}.format(value, context);
+   context.debug = old_debug;
+   return result;
+}
+
+// Format an arithmetic value straight into the output buffer, avoiding a
+// temporary allocation and an extra copy. This mirrors `{fmt}`, which writes
+// digits directly into its output.
+template <typename T>
+auto
+append_arithmetic(format_context& context, T value) -> scaredy_format<void> {
+   format_buffer<basic_dyn_allocator<dyn_reallocate>>& buffer =
+      context.buffer();
+
+   idx max_size;
+   if constexpr (is_floating_point<T>) {
+      max_size = float_to_chars_max_size<T>();
+   } else {
+      // Room for every decimal digit, a sign, and slack.
+      max_size = idx(limits<T>::digits10) + 3u;
+   }
+
+   maybe<char*> tail = buffer.prepare_append(context.allocator, max_size);
+   if (tail.is_empty()) {
+      return format_errors::out_of_memory;
+   }
+
+   char* const p_begin = tail.value();
+   char* p_end;
+   if constexpr (is_floating_point<T>) {
+      p_end = dragonbox::to_chars(value, p_begin);
+   } else if constexpr (is_same<T, int4::raw_type>) {
+      p_end = i32toa_jeaiii(value, p_begin);
+   } else if constexpr (is_same<T, uint4::raw_type>) {
+      p_end = u32toa_jeaiii(value, p_begin);
+   } else if constexpr (is_same<T, int8::raw_type>) {
+      p_end = i64toa_jeaiii(value, p_begin);
+   } else if constexpr (is_same<T, uint8::raw_type>) {
+      p_end = u64toa_jeaiii(value, p_begin);
+   } else {
+      __builtin_unreachable();
+   }
+
+   buffer.commit(idx(p_end - p_begin));
+   return monostate;
+}
+}  // namespace detail
+
+template <typename T, typename CharT>
+struct formatter : formatter_base<CharT> {
+   auto
+   format(T const&, format_context&) const -> scaredy_format<void> {
+      return format_errors::cannot_format_argument;
+   }
+};
+
+template <typename T, typename CharT>
+   requires(
+      is_integral<T> && !is_same<remove_cvref<T>, bool>
+      && !is_same<remove_cvref<T>, char> && is_same<CharT, char>
+   )
+struct formatter<T, CharT> : formatter_base<CharT> {
+   auto
+   format(T const& value, format_context& context) const
+      -> scaredy_format<void> {
+      detail::pull_integer_format_support();
+      auto const raw = make_raw_arithmetic(value);
+      using raw_type = remove_cvref<decltype(raw)>;
+      if constexpr (sizeof(raw_type) < sizeof(int4::raw_type)) {
+         if constexpr (is_signed<raw_type>) {
+            return detail::append_arithmetic(
+               context, static_cast<int4::raw_type>(raw)
+            );
+         } else {
+            return detail::append_arithmetic(
+               context, static_cast<uint4::raw_type>(raw)
+            );
+         }
+      } else {
+         return detail::append_arithmetic(context, raw);
+      }
+   }
+};
+
+template <typename T, typename CharT>
+   requires(is_enum<T> && is_same<CharT, char>)
+struct formatter<T, CharT> : formatter_base<CharT> {
+   auto
+   format(T value, format_context& context) const -> scaredy_format<void> {
+      return formatter<underlying_type<T>, CharT>{}.format(
+         static_cast<underlying_type<T>>(value), context
+      );
+   }
+};
+
+template <typename T, typename CharT>
+   requires(is_floating_point<T> && is_same<CharT, char>)
+struct formatter<T, CharT> : formatter_base<CharT> {
+   auto
+   format(T const& value, format_context& context) const
+      -> scaredy_format<void> {
+      detail::pull_float_format_support();
+      return detail::append_arithmetic(context, make_raw_arithmetic(value));
+   }
+};
+
+template <typename CharT>
+struct formatter<bool, CharT> : formatter_base<CharT> {
+   auto
+   format(bool value, format_context& context) const -> scaredy_format<void> {
+      return context.append(value ? str_view("true") : str_view("false"));
+   }
+};
+
+template <typename CharT>
+struct formatter<char, CharT> : formatter_base<CharT> {
+   auto
+   format(char value, format_context& context) const -> scaredy_format<void> {
+      if (context.debug) {
+         return detail::append_escaped(context, str_view(&value, 1u), '\'');
+      }
+      return context.append(value);
+   }
+};
+
+template <typename T, typename CharT>
+   requires(
+      is_pointer<T> && is_same<remove_const<remove_pointer<T>>, char>
+      && is_same<CharT, char>
+   )
+struct formatter<T, CharT> : formatter_base<CharT> {
+   auto
+   format(T value, format_context& context) const -> scaredy_format<void> {
+      if (value == nullptr) {
+         return context.append("(null)");
+      }
+      str_view const string(value);
+      if (context.debug) {
+         return detail::append_escaped(context, string, '"');
+      }
+      return context.append(string);
+   }
+};
+
+template <typename T, typename CharT>
+   requires(
+      is_pointer<T> && !is_same<remove_const<remove_pointer<T>>, char>
+      && is_same<CharT, char>
+   )
+struct formatter<T, CharT> : formatter_base<CharT> {
+   auto
+   format(T value, format_context& context) const -> scaredy_format<void> {
+      __UINTPTR_TYPE__ integer = reinterpret_cast<__UINTPTR_TYPE__>(value);
+      char digits[sizeof(integer) * 2u];
+      idx length;
+      do {
+         auto const digit = integer & 0xfu;
+         digits[length.raw] =
+            static_cast<char>(digit < 10u ? digit + '0' : digit - 10u + 'a');
+         ++length;
+         integer >>= 4u;
+      } while (integer != 0u);
+
+      scaredy_format<void> result = context.append("0x");
+      if (result.is_empty()) {
+         return result;
+      }
+      iword position = make_signed(length);
+      while (position > 0) {
+         --position;
+         result = context.append(digits[position.raw]);
+         if (result.is_empty()) {
+            return result;
+         }
+      }
+      return monostate;
+   }
+};
+
+template <idx extent, typename CharT>
+struct formatter<char[extent], CharT> : formatter_base<CharT> {
+   auto
+   format(char const (&value)[extent], format_context& context) const
+      -> scaredy_format<void> {
+      str_view const string(value, extent - 1u);
+      if (context.debug) {
+         return detail::append_escaped(context, string, '"');
+      }
+      return context.append(string);
+   }
+};
+
+template <idx extent, typename CharT>
+struct formatter<char const[extent], CharT> : formatter_base<CharT> {
+   auto
+   format(char const (&value)[extent], format_context& context) const
+      -> scaredy_format<void> {
+      str_view const string(value, extent - 1u);
+      if (context.debug) {
+         return detail::append_escaped(context, string, '"');
+      }
+      return context.append(string);
+   }
+};
+
+template <typename T, typename CharT>
+   requires(
+      is_basic_string<T>
+      && is_same<remove_const<typename remove_cvref<T>::value_type>, char>
+      && is_same<CharT, char>
+   )
+struct formatter<T, CharT> : formatter_base<CharT> {
+   auto
+   format(T const& value, format_context& context) const
+      -> scaredy_format<void> {
+      str_view const string(value.data(), value.size());
+      if (context.debug) {
+         return detail::append_escaped(context, string, '"');
+      }
+      return context.append(string);
+   }
+};
+
+template <typename T, typename CharT>
+   requires(
+      is_stepanov_iterable<T> && !is_basic_string<T> && is_same<CharT, char>
+   )
+struct formatter<T, CharT> : formatter_base<CharT> {
+   auto
+   format(T const& value, format_context& context) const
+      -> scaredy_format<void> {
+      scaredy_format<void> result = context.append('[');
+      if (result.is_empty()) {
+         return result;
+      }
+      bool first = true;
+      for (auto const& element : value) {
+         if (!first) {
+            result = context.append(", ");
+            if (result.is_empty()) {
+               return result;
+            }
+         }
+         first = false;
+         result = detail::format_nested(context, element);
+         if (result.is_empty()) {
+            return result;
+         }
+      }
+      return context.append(']');
+   }
+};
+
+template <typename CharT>
+struct formatter<maybe<void>, CharT> : formatter_base<CharT> {
+   auto
+   format(maybe<void> const& value, format_context& context) const
+      -> scaredy_format<void> {
+      if (value.has_value()) {
+         return context.append("[void]");
+      }
+      return context.append("[]");
+   }
+};
+
+template <typename... Types, typename CharT>
+struct formatter<tuple<Types...>, CharT> : formatter_base<CharT> {
+ private:
+   template <idx... indices>
+   static auto
+   format_elements(
+      tuple<Types...> const& value, format_context& context,
+      index_list_type<indices...>
+      /*unused*/
+   ) -> scaredy_format<void> {
+      scaredy_format<void> result = monostate;
+      auto format_one = [&]<idx index> {
+         if (result.is_empty()) {
+            return;
+         }
+         if constexpr (index != 0u) {
+            result = context.append(", ");
+         }
+         if (!result.is_empty()) {
+            result =
+               detail::format_nested(context, value.template get<index>());
+         }
+      };
+      (format_one.template operator()<indices>(), ...);
+      return result;
+   }
+
+ public:
+   auto
+   format(tuple<Types...> const& value, format_context& context) const
+      -> scaredy_format<void> {
+      scaredy_format<void> result = context.append('(');
+      if (result.is_empty()) {
+         return result;
+      }
+      result =
+         format_elements(value, context, index_sequence_over_types<Types...>{});
+      if (result.is_empty()) {
+         return result;
+      }
+      return context.append(')');
+   }
+};
+
+template <typename... Types, typename CharT>
+struct formatter<variant<Types...>, CharT> : formatter_base<CharT> {
+ private:
+   template <idx index = 0u>
+   static auto
+   format_active(variant<Types...> const& value, format_context& context)
+      -> scaredy_format<void> {
+      if constexpr (index < sizeof...(Types)) {
+         if (value.holds_alternative(index)) {
+            return detail::format_nested(context, value.template get<index>());
+         }
+         return format_active<index + 1u>(value, context);
+      } else {
+         return format_errors::cannot_format_argument;
+      }
+   }
+
+ public:
+   auto
+   format(variant<Types...> const& value, format_context& context) const
+      -> scaredy_format<void> {
+      if (value.is_empty()) {
+         return context.append("<empty>");
+      }
+      return format_active(value, context);
+   }
+};
+
+namespace detail {
+template <typename T>
+auto
+format_custom_arg(
+   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator,
+   format_contiguous_output_iterator<basic_dyn_allocator<dyn_reallocate>>&
+      output,
+   format_args const& arguments, idx argument_index,
+   format_parse_context& parse_context
+) -> scaredy_format<void> {
+   formatter<T> value_formatter{};
+   if constexpr (requires { value_formatter.parse(parse_context); }) {
+      scaredy_format<format_parse_context::const_iterator> const parse_result =
+         value_formatter.parse(parse_context);
+      if (parse_result.is_empty()) {
+         return parse_result.template error<format_errors>();
+      }
+      parse_context.advance_to(parse_result.value());
+   } else {
+      format_parse_context::const_iterator const it = parse_context.begin();
+      if (it == parse_context.end() || *it != '}') {
+         return format_errors::unknown_format_specifier;
+      }
+   }
+
+   format_context context{.allocator = allocator, .output = output};
+   return value_formatter.format(
+      arguments.template get<T>(argument_index), context
+   );
+}
+}  // namespace detail
+
 // Type-erased formatting. Defined in `format.cpp`.
 [[nodiscard]]
 auto
@@ -620,6 +1198,15 @@ vfmt(
    basic_dyn_allocator<dyn_reallocate> allocator, str_view format,
    detail::format_args arguments
 ) -> scaredy_format<str_view>;
+
+// Type-erased formatting straight into a sink. Defined in `format.cpp`.
+[[nodiscard]]
+auto
+vfmt_to_sink(
+   basic_dyn_allocator<dyn_reallocate> allocator, void* _Nonnull p_sink,
+   detail::format_flush_fn _Nonnull p_flush, str_view format,
+   detail::format_args arguments
+) -> scaredy_format<void>;
 
 // Type-erased formatting to `stdout`. Defined in `format.cpp`.
 [[nodiscard]]
@@ -639,7 +1226,38 @@ vfmt(
    return vfmt(detail::erase_allocator(allocator), format, arguments);
 }
 
-// Format into an output iterator by type-erasing through `vfmt`.
+namespace detail {
+// The state a flush callback needs to push a chunk into an output iterator.
+template <is_allocator Allocator, typename Outputter>
+struct format_sink {
+   allocator_ref<Allocator> allocator;
+   Outputter& output_iterator;
+};
+
+// Push one chunk into the output iterator, in bulk where the destination
+// supports it.
+template <is_allocator Allocator, typename Outputter>
+auto
+flush_to_outputter(void* _Nonnull p_sink, str_view chunk) -> maybe<void> {
+   format_sink<Allocator, Outputter>& sink =
+      *static_cast<format_sink<Allocator, Outputter>*>(p_sink);
+
+   if constexpr (requires {
+                    get_container(sink.output_iterator)
+                       .append_range(sink.allocator, chunk);
+                 }) {
+      return get_container(sink.output_iterator)
+         .append_range(sink.allocator, chunk);
+   } else {
+      for (char const character : chunk) {
+         $prop(sink.output_iterator.insert(sink.allocator, character));
+      }
+      return monostate;
+   }
+}
+}  // namespace detail
+
+// Format directly into an output iterator without staging the whole result.
 template <is_allocator Allocator, typename Outputter>
 [[nodiscard]]
 auto
@@ -647,61 +1265,35 @@ vfmt_to(
    allocator_ref<Allocator> allocator, Outputter output_iterator,
    str_view const format, detail::format_args arguments
 ) -> scaredy_format<Outputter> {
-   auto result = vfmt(detail::erase_allocator(allocator), format, arguments);
+   detail::format_sink<Allocator, Outputter> sink{allocator, output_iterator};
+   scaredy_format<void> const result = vfmt_to_sink(
+      detail::erase_allocator(allocator), __builtin_addressof(sink),
+      &detail::flush_to_outputter<Allocator, Outputter>, format, arguments
+   );
    if (result.is_empty()) {
-      return result.template error<format_errors>();
+      return result.error<format_errors>();
    }
-   str_view const string = result.value();
-   for (idx i; i < string.size(); ++i) {
-      maybe insert_result = output_iterator.insert(allocator, string[i]);
-      if (insert_result.is_empty()) {
-         allocator.free(string);
-         return format_errors::out_of_memory;
-      }
-   }
-   allocator.free(string);
    return output_iterator;
 }
 
-template <typename Outputter>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-inline auto
-vfmt_to(
-   basic_dyn_allocator<dyn_reallocate> allocator, Outputter output_iterator,
-   str_view const format, detail::format_args arguments
-) -> scaredy_format<Outputter> {
-   return vfmt_to(allocator_ref(allocator), output_iterator, format, arguments);
-}
-
 // Store `arguments` in a compacted variant object. Then format a sequence of
-// `char` with those arguments, and push the result into some container.
-template <
-   is_allocator Allocator, is_output_stepanov_iterator<str_view> Outputter,
-   typename... Args>
+// `char` with those arguments, and push the result into some container. The
+// allocator keeps its concrete type so the destination container can grow
+// through its full allocation interface, matching libfmt's `format_to`.
+template <typename AllocatorLike, typename Outputter, typename... Args>
+   requires(is_allocator<remove_cvref<AllocatorLike>>)
 [[nodiscard]]
 auto
 fmt_to(
-   allocator_ref<Allocator> allocator, Outputter output_iterator,
-   str_view const format, Args&&... arguments
+   AllocatorLike&& allocator, Outputter output_iterator, str_view const format,
+   Args&&... arguments
 ) -> scaredy_format<Outputter> {
    (detail::maybe_pull_format_support<Args>(), ...);
    return vfmt_to(
-      allocator, output_iterator, format,
+      allocator_ref(allocator), output_iterator, format,
       detail::format_args(
          detail::format_args_compact_storage<Args...>($fwd(arguments)...)
       )
-   );
-}
-
-template <is_output_stepanov_iterator<str_view> Outputter, typename... Args>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-inline auto
-fmt_to(
-   basic_dyn_allocator<dyn_reallocate> allocator, Outputter output_iterator,
-   str_view const format, Args&&... arguments
-) -> scaredy_format<Outputter> {
-   return fmt_to(
-      allocator_ref(allocator), output_iterator, format, $fwd(arguments)...
    );
 }
 
@@ -846,3 +1438,5 @@ eprintln_fmt(
 }
 
 }  // namespace cat
+
+#include <cat/detail/extra_formatters.hpp>
