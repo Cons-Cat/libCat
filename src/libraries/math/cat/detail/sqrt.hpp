@@ -9,23 +9,21 @@ namespace detail {
 
 // `sqrt`/`sqrtf` for targets without libM. Clang can lower lane
 // `__builtin_sqrt`/`__builtin_sqrtf` and `__builtin_elementwise_sqrt` to.
-// those C ABI symbols. `sqrt(x)`: logarithmic identity `sqrt(x) = exp((1/2) ln
-// x)` using the same Taylor/Maclaurin `exp` and Maclaurin `artanh` `log` path
-// as above.
+// those C ABI symbols.
 [[nodiscard]]
 constexpr auto
 emulated_sqrt(double argument) -> double {
-   if (__builtin_isnan(argument)) {
+   if (is_nan(argument)) {
       return argument;
    }
-   if (__builtin_isinf(argument)) {
-      return argument < 0. ? __builtin_nan("") : argument;
+   if (argument == infinity) {
+      return argument < 0. ? limits<double>::quiet_NaN() : argument;
    }
    if (argument == 0.) {
       return argument;
    }
    if (argument < 0.) {
-      return __builtin_nan("");
+      return limits<double>::quiet_NaN();
    }
    return emulated_exp(0.5 * emulated_log(argument));
 }
@@ -55,8 +53,7 @@ rsqrt(T argument) -> T {
    return T(1) / sqrt(argument);
 }
 
-#if __has_builtin(__builtin_ia32_rsqrtss)
-[[nodiscard, gnu::target("sse"), gnu::always_inline]]
+[[nodiscard, gnu::always_inline]]
 constexpr auto
 rsqrt(float4_fast argument) -> float4_fast {
    float const approx = __builtin_ia32_rsqrtss({argument.raw})[0];
@@ -66,6 +63,5 @@ rsqrt(float4_fast argument) -> float4_fast {
       __builtin_fmaf(minus_half_x, approx * approx, three_halves);
    return approx * correction;
 }
-#endif
 
 }  // namespace cat

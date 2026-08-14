@@ -1,4 +1,4 @@
-#include <cat/math>
+#include <cat/detail/sqrt.hpp>
 
 // Clang lowers `__builtin_sqrt`/`__builtin_sqrtf` (and sometimes
 // `__builtin_elementwise_sqrt`) to `sqrt`/`sqrtf`. libCat provides these
@@ -12,7 +12,7 @@ extern "C"
 #endif
    auto
    sqrtf(float argument) -> float {
-   return cat::detail::emulated_sqrtf(argument);
+   return cat::detail::emulated_sqrt(argument);
 }
 
 extern "C"

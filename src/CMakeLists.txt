@@ -44,8 +44,14 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/longjmp.cpp
   ${CATLIB}/runtime/implementations/load_base_stack_pointer.cpp
   ${CATLIB}/new/implementations/new.cpp
+  ${CATLIB}/math/implementations/cos.cpp
+  ${CATLIB}/math/implementations/exp.cpp
+  ${CATLIB}/math/implementations/lgamma.cpp
+  ${CATLIB}/math/implementations/log.cpp
   ${CATLIB}/math/implementations/pow.cpp
+  ${CATLIB}/math/implementations/sin.cpp
   ${CATLIB}/math/implementations/sqrt.cpp
+  ${CATLIB}/math/implementations/tan.cpp
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
   ${CATLIB}/memory/implementations/copy_memory_backward.cpp
@@ -343,15 +349,22 @@ set(CAT_HEADER_FILES
   ${CATLIB}/math/cat/detail/clamp.hpp
   ${CATLIB}/math/cat/detail/div.hpp
   ${CATLIB}/math/cat/detail/dot.hpp
+  ${CATLIB}/math/cat/detail/exp.hpp
   ${CATLIB}/math/cat/detail/fma.hpp
+  ${CATLIB}/math/cat/detail/ldexp.hpp
+  ${CATLIB}/math/cat/detail/lgamma.hpp
+  ${CATLIB}/math/cat/detail/log.hpp
   ${CATLIB}/math/cat/detail/minmax.hpp
+  ${CATLIB}/math/cat/detail/modulo.hpp
   ${CATLIB}/math/cat/detail/nroot.hpp
   ${CATLIB}/math/cat/detail/pow.hpp
   ${CATLIB}/math/cat/detail/predicates.hpp
   ${CATLIB}/math/cat/detail/product.hpp
   ${CATLIB}/math/cat/detail/round_to_multiple.hpp
+  ${CATLIB}/math/cat/detail/round.hpp
   ${CATLIB}/math/cat/detail/sqrt.hpp
   ${CATLIB}/math/cat/detail/sum.hpp
+  ${CATLIB}/math/cat/detail/trigonometry.hpp
   ${CATLIB}/maybe/cat/maybe
   ${CATLIB}/maybe/implementations/narrow_cast.tpp
   ${CATLIB}/memory/cat/memory

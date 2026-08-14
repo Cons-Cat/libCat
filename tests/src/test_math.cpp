@@ -211,7 +211,7 @@ $test(math_rsqrt_cbrt_nroot) {
    cat::verify(near_one(n4 / 3.f));
 
    // Even-`n` root of a negative is `NaN`.
-   cat::verify(__builtin_isnan(cat::nroot(-16.f, 4)));
+   cat::verify(cat::is_nan(cat::nroot(-16.f, 4)));
 }
 
 $test(math_rcbrt_rnroot) {
@@ -234,6 +234,36 @@ $test(math_rcbrt_rnroot) {
    // `rnroot(x, 1) == 1 / x`.
    cat::verify(cat::rnroot(4.f, 1) == 0.25f);
    cat::verify(cat::rnroot(2.f, 1) == 0.5f);
+}
+
+$test(math_floor_ceil) {
+   using namespace cat::arithmetic_literals;
+
+   static_assert(cat::floor(3) == 3);
+   static_assert(cat::floor(-3) == -3);
+   static_assert(cat::ceil(3) == 3);
+   static_assert(cat::ceil(-3) == -3);
+   static_assert(cat::floor(1.25) == 1.);
+   static_assert(cat::floor(-1.25) == -2.);
+   static_assert(cat::ceil(1.25) == 2.);
+   static_assert(cat::ceil(-1.25) == -1.);
+
+   constexpr cat::int4 negative_integer = -3;
+   static_assert(cat::floor(negative_integer) == -3);
+   static_assert(cat::ceil(negative_integer) == -3);
+   static_assert(
+      cat::is_same<decltype(cat::floor(negative_integer)), cat::int4>
+   );
+   static_assert(
+      cat::is_same<decltype(cat::ceil(negative_integer)), cat::int4>
+   );
+
+   auto const precise_floor = cat::floor(-1.25_f4);
+   auto const fast_ceil = cat::ceil(cat::float4_fast(-1.25f));
+   static_assert(cat::is_same<decltype(precise_floor), cat::float4 const>);
+   static_assert(cat::is_same<decltype(fast_ceil), cat::float4_fast const>);
+   cat::verify(precise_floor == -2_f4);
+   cat::verify(fast_ceil == cat::float4_fast(-1.f));
 }
 
 $test(math_div_floor) {
@@ -580,6 +610,34 @@ $test(math_is_divisible_by_currying) {
    // Two-argument call still works on the unbound impl.
    cat::verify(cat::is_divisible_by(10, 5));
    cat::verify(!cat::is_divisible_by(10, 3));
+}
+
+$test(math_random_support) {
+   constexpr auto near = [](double left, double right, double tolerance) {
+      double const difference = left > right ? left - right : right - left;
+      return difference <= tolerance;
+   };
+
+   static_assert(cat::log(1.) == 0.);
+   static_assert(cat::exp(0.) == 1.);
+   static_assert(cat::cos(0.) == 1.);
+   static_assert(cat::tan(0.) == 0.);
+   static_assert(near(cat::pow(2., 3.), 8., 1e-12));
+   static_assert(near(cat::lgamma(5.), 3.1780538303479458, 1e-12));
+
+   cat::verify(cat::log(1.) == 0.);
+   cat::verify(near(cat::log(cat::exp(1.)), 1., 1e-12));
+   cat::verify(cat::exp(0.) == 1.);
+   cat::verify(cat::cos(0.) == 1.);
+   cat::verify(cat::tan(0.) == 0.);
+   cat::verify(near(cat::pow(2., 3.), 8., 1e-12));
+   cat::verify(near(cat::lgamma(5.), 3.1780538303479458, 1e-12));
+
+   cat::verify(!cat::is_finite(cat::log(0.)));
+   cat::verify(cat::log(0.) < 0.);
+   cat::verify(cat::is_nan(cat::log(-1.)));
+   cat::verify(cat::is_nan(cat::cos(static_cast<double>(cat::infinity))));
+   cat::verify(cat::exp(static_cast<double>(-cat::infinity)) == 0.);
 }
 
 $test(math_infinity) {

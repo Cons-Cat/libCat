@@ -2180,18 +2180,19 @@ $test(simd_reduce_min_max_maximum_minimum_float) {
    cat::verify(cat::simd_reduce_maximum(f)[0u] == 5_f4);
    cat::verify(cat::simd_reduce_minimum(f)[0u] == -2_f4);
 
-   float4x4 const nanish = {__builtin_nanf(""), 2_f4, 3_f4, 4_f4};
+   float4x4 const nanish = {
+      cat::limits<float>::quiet_NaN(),
+      2_f4,
+      3_f4,
+      4_f4,
+   };
    cat::verify(nanish.reduce_max()[0u] == 4_f4);
    cat::verify(nanish.reduce_min()[0u] == 2_f4);
    // `reduce_max`/`reduce_min` ignore `NaN` unless every lane is `NaN`. IEEE
    // `reduce_maximum`/`reduce_minimum` follow `maximumNumber`/`minimumNumber`
    // and can propagate `NaN` from a lane.
-   cat::verify(
-      bool(__builtin_isnan(make_raw_arithmetic(nanish.reduce_maximum()[0u])))
-   );
-   cat::verify(
-      bool(__builtin_isnan(make_raw_arithmetic(nanish.reduce_minimum()[0u])))
-   );
+   cat::verify(cat::is_nan(nanish.reduce_maximum()[0u]));
+   cat::verify(cat::is_nan(nanish.reduce_minimum()[0u]));
 }
 
 $test(simd_reduce_assoc_and_in_order_fadd) {

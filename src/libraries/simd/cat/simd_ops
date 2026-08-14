@@ -1694,12 +1694,7 @@ struct simd_ceil_impl : simd_elementwise_interface<simd_ceil_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_ceilf(static_cast<R>(make_raw_arithmetic(x))));
-      } else {
-         return T(__builtin_ceil(static_cast<R>(make_raw_arithmetic(x))));
-      }
+      return ceil(x);
    }
 };
 
@@ -1723,12 +1718,7 @@ struct simd_floor_impl : simd_elementwise_interface<simd_floor_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_floorf(static_cast<R>(make_raw_arithmetic(x))));
-      } else {
-         return T(__builtin_floor(static_cast<R>(make_raw_arithmetic(x))));
-      }
+      return floor(x);
    }
 };
 
@@ -2107,11 +2097,11 @@ struct simd_abs_impl : simd_elementwise_interface<simd_abs_impl> {
       if constexpr (is_floating_point<T>) {
          using R = raw_arithmetic_type<T>;
          if constexpr (is_same<R, float>) {
-            return T(__builtin_fabsf(static_cast<R>(make_raw_arithmetic(x))));
+            return T(abs(static_cast<R>(x)));
          }
-         return T(__builtin_fabs(static_cast<R>(make_raw_arithmetic(x))));
+         return T(abs(static_cast<R>(x)));
       }
-      if (x < T(0)) {
+      if (x < 0) {
          return static_cast<T>(-static_cast<make_unsigned_type<T>>(x));
       }
       return x;
@@ -2597,29 +2587,24 @@ simd_nroot_lane(T x, iword n) -> T {
    T const root_magnitude = [&]() -> T {
       auto const abs_raw = make_raw_arithmetic(abs_x);
       if constexpr (is_same<raw_arithmetic_type<T>, float>) {
-         return static_cast<T>(emulated_powf(
+         return pow(
             abs_raw, simd_float_divide<simd_float_precision_policy<T>>(
                         1.f, static_cast<float>(n.raw)
                      )
-         ));
+         );
       } else {
-         return static_cast<T>(emulated_pow(
-            static_cast<double>(abs_raw),
-            simd_float_divide<simd_float_precision_policy<T>>(
-               1., static_cast<double>(n.raw)
-            )
-         ));
+         return pow(
+            abs_raw, simd_float_divide<simd_float_precision_policy<T>>(
+                        1., static_cast<double>(n.raw)
+                     )
+         );
       }
    }();
    if (make_raw_arithmetic(x) < raw_arithmetic_type<T>{}) {
       if ((n.raw & 1u) != 0u) {
-         return static_cast<T>(-root_magnitude);
+         return -root_magnitude;
       }
-      if constexpr (is_same<raw_arithmetic_type<T>, float>) {
-         return static_cast<T>(__builtin_nanf(""));
-      } else {
-         return static_cast<T>(__builtin_nan(""));
-      }
+      return limits<raw_arithmetic_type<T>>::quiet_NaN();
    }
    return root_magnitude;
 }
@@ -2682,11 +2667,7 @@ simd_nroot_generic(simd<T, Abi> input, iword n) -> simd<T, Abi> {
       );
    }
    simd<T, Abi> quiet_nans{};
-   if constexpr (is_same<raw_arithmetic_type<T>, float>) {
-      quiet_nans.fill(static_cast<T>(__builtin_nanf("")));
-   } else {
-      quiet_nans.fill(static_cast<T>(__builtin_nan("")));
-   }
+   quiet_nans.fill(limits<raw_arithmetic_type<T>>::quiet_NaN());
    return simd_if_else_impl{}(input < zeros, quiet_nans, root_magnitude);
 }
 

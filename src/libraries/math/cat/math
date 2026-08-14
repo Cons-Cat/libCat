@@ -175,13 +175,18 @@ inline constexpr T tau<T> = tau<raw_arithmetic_type<T>>;
 
 }  // namespace cat
 
+// clang-format off
 #include "detail/abs.hpp"
 #include "detail/clamp.hpp"
 #include "detail/div.hpp"
 #include "detail/dot.hpp"
+#include "detail/exp.hpp"
 #include "detail/fma.hpp"
+#include "detail/log.hpp"
 #include "detail/minmax.hpp"
 #include "detail/pow.hpp"
+#include "detail/trigonometry.hpp"
+#include "detail/lgamma.hpp"
 // `pow` be included before `nroot`.
 #include "detail/nroot.hpp"
 #include "detail/predicates.hpp"
@@ -189,3 +194,4 @@ inline constexpr T tau<T> = tau<raw_arithmetic_type<T>>;
 #include "detail/round_to_multiple.hpp"
 #include "detail/sqrt.hpp"
 #include "detail/sum.hpp"
+// clang-format on
