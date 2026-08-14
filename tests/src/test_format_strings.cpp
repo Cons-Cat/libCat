@@ -145,3 +145,103 @@ $test(fmt_growth_failure) {
    auto result = cat::fmt(allocator, "{}", uint8::max());
    cat::verify(result.is_empty());
 }
+
+$test(fmt_specs_and_braces) {
+   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   $defer {
+      pager.free(page);
+   };
+   auto allocator = make_linear_allocator(page);
+
+   cat::verify(cat::fmt(allocator, "a{:}b", 7).verify() == "a7b");
+
+   allocator.reset();
+   cat::verify(cat::fmt(allocator, "{}", "cat").verify() == "cat");
+
+   allocator.reset();
+   cat::verify(cat::fmt(allocator, "{:?}", "cat").verify() == R"("cat")");
+
+   allocator.reset();
+   cat::verify(cat::fmt(allocator, "{:?}", 'x').verify() == "'x'");
+
+   allocator.reset();
+   cat::verify(cat::fmt(allocator, "{}", 'x').verify() == "x");
+
+   allocator.reset();
+   cat::verify(
+      cat::fmt(allocator, "{:?}", R"(a"b
+)")
+         .verify()
+      == R"("a\"b\n")"
+   );
+
+   allocator.reset();
+   cat::verify(
+      cat::fmt(allocator, "{:?}", R"(xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"yy)")
+         .verify()
+      == R"("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"yy")"
+   );
+
+   allocator.reset();
+   cat::verify(
+      cat::fmt(
+         allocator, "{:?}",
+         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      )
+         .verify()
+      == R"("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")"
+   );
+
+   allocator.reset();
+   auto unknown_debug_int = cat::fmt(allocator, "{:?}", 1);
+   cat::verify(unknown_debug_int.is_empty());
+   cat::verify(
+      unknown_debug_int.error() == cat::format_errors::unknown_format_specifier
+   );
+
+   allocator.reset();
+   cat::verify(cat::fmt(allocator, "x{{y}}z").verify() == "x{y}z");
+
+   allocator.reset();
+   cat::verify(cat::fmt(allocator, "{{{}{{}}}}", 1).verify() == "{1{}}");
+
+   allocator.reset();
+   auto unknown = cat::fmt(allocator, "{:x}", 1);
+   cat::verify(unknown.is_empty());
+   cat::verify(unknown.error() == cat::format_errors::unknown_format_specifier);
+
+   allocator.reset();
+   auto unmatched_open = cat::fmt(allocator, "{", 1);
+   cat::verify(unmatched_open.is_empty());
+   cat::verify(
+      unmatched_open.error() == cat::format_errors::unmatched_open_brace
+   );
+
+   allocator.reset();
+   auto unmatched_close = cat::fmt(allocator, "}", 1);
+   cat::verify(unmatched_close.is_empty());
+   cat::verify(
+      unmatched_close.error() == cat::format_errors::unmatched_open_brace
+   );
+
+   allocator.reset();
+   auto missing_arg = cat::fmt(allocator, "{} {}", 1);
+   cat::verify(missing_arg.is_empty());
+   cat::verify(
+      missing_arg.error() == cat::format_errors::argument_type_mismatch
+   );
+
+   allocator.reset();
+   auto extra_arg = cat::fmt(allocator, "{}", 1, 2);
+   cat::verify(extra_arg.is_empty());
+   cat::verify(extra_arg.error() == cat::format_errors::argument_type_mismatch);
+
+   allocator.reset();
+   large_format_value large(9);
+   auto bad_custom = cat::fmt(allocator, "{:d}", large);
+   cat::verify(bad_custom.is_empty());
+   cat::verify(
+      bad_custom.error() == cat::format_errors::unknown_format_specifier
+   );
+}
+

@@ -71,6 +71,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/format/implementations/format.cpp
   ${CATLIB}/format/implementations/format_float.cpp
   ${CATLIB}/format/implementations/format_integer.cpp
+  ${CATLIB}/format/implementations/find_debug_escape.cpp
   ${CATLIB}/linux/implementations/syscall0.cpp
   ${CATLIB}/linux/implementations/syscall1.cpp
   ${CATLIB}/linux/implementations/syscall2.cpp

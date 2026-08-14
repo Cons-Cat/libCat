@@ -7,6 +7,7 @@
 
 #include <cat/allocator_parameters>
 #include <cat/insert_iterators>
+#include <cat/iterable>
 #include <cat/scaredy>
 #include <cat/string>
 #include <cat/variant>
@@ -274,7 +275,7 @@ class format_parse_context {
 template <typename CharT = char>
 struct formatter_base {
    constexpr auto
-   parse(format_parse_context& context) const
+   parse(format_parse_context& context)
       -> scaredy_format<format_parse_context::const_iterator> {
       static_assert(
          is_same<CharT, char>, "Only `char` formatters are supported!"
@@ -284,6 +285,36 @@ struct formatter_base {
          return format_errors::unmatched_open_brace;
       }
       if (*it != '}') {
+         return format_errors::unknown_format_specifier;
+      }
+      return it;
+   }
+};
+
+// Debug format for `char` and strings: `{:?}` and `set_debug_format()`. Range
+// and tuple formatters call this on nested element formatters so strings print
+// quoted.
+template <typename CharT = char>
+struct debug_formatter : formatter_base<CharT> {
+   bool debug = false;
+
+   constexpr void
+   set_debug_format(bool set = true) {
+      debug = set;
+   }
+
+   constexpr auto
+   parse(format_parse_context& context)
+      -> scaredy_format<format_parse_context::const_iterator> {
+      format_parse_context::const_iterator it = context.begin();
+      if (it == context.end()) {
+         return format_errors::unmatched_open_brace;
+      }
+      if (*it == '?') {
+         set_debug_format();
+         ++it;
+      }
+      if (it == context.end() || *it != '}') {
          return format_errors::unknown_format_specifier;
       }
       return it;
@@ -759,7 +790,6 @@ struct format_context {
    allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator;
    detail::format_contiguous_output_iterator<
       basic_dyn_allocator<dyn_reallocate>>& output;
-   bool debug = false;
 
    [[nodiscard]]
    auto
@@ -786,45 +816,35 @@ struct format_context {
 };
 
 namespace detail {
-inline auto
+auto
 append_escaped(format_context& context, str_view string, char quote)
-   -> scaredy_format<void> {
-   scaredy_format<void> result = context.append(quote);
-   if (result.is_empty()) {
-      return result;
+   -> scaredy_format<void>;
+
+template <typename Formatter>
+constexpr void
+maybe_set_debug_format(Formatter& nested, bool set = true) {
+   if constexpr (requires { nested.set_debug_format(set); }) {
+      nested.set_debug_format(set);
    }
-   for (char character : string) {
-      if (character == quote || character == '\\') {
-         result = context.append('\\');
-         if (result.is_empty()) {
-            return result;
-         }
-         result = context.append(character);
-      } else if (character == '\n') {
-         result = context.append("\\n");
-      } else if (character == '\r') {
-         result = context.append("\\r");
-      } else if (character == '\t') {
-         result = context.append("\\t");
-      } else {
-         result = context.append(character);
-      }
-      if (result.is_empty()) {
-         return result;
-      }
-   }
-   return context.append(quote);
 }
 
 template <typename T>
 auto
 format_nested(format_context& context, T const& value) -> scaredy_format<void> {
-   bool const old_debug = context.debug;
-   context.debug = true;
-   scaredy_format<void> result =
-      formatter<remove_cvref<T>>{}.format(value, context);
-   context.debug = old_debug;
-   return result;
+   return formatter<remove_cvref<T>>{}.format(value, context);
+}
+
+template <typename String>
+auto
+format_char_string(bool debug, String const& value, format_context& context)
+   -> scaredy_format<void> {
+   char const* p_data = value.data();
+   str_view const string =
+      p_data == nullptr ? str_view() : str_view(p_data, value.size());
+   if (debug) {
+      return append_escaped(context, string, '"');
+   }
+   return context.append(string);
 }
 
 // Format an arithmetic value straight into the output buffer, avoiding a
@@ -937,10 +957,10 @@ struct formatter<bool, CharT> : formatter_base<CharT> {
 };
 
 template <typename CharT>
-struct formatter<char, CharT> : formatter_base<CharT> {
+struct formatter<char, CharT> : debug_formatter<CharT> {
    auto
    format(char value, format_context& context) const -> scaredy_format<void> {
-      if (context.debug) {
+      if (this->debug) {
          return detail::append_escaped(context, str_view(&value, 1u), '\'');
       }
       return context.append(value);
@@ -952,14 +972,14 @@ template <typename T, typename CharT>
       is_pointer<T> && is_same<remove_const<remove_pointer<T>>, char>
       && is_same<CharT, char>
    )
-struct formatter<T, CharT> : formatter_base<CharT> {
+struct formatter<T, CharT> : debug_formatter<CharT> {
    auto
    format(T value, format_context& context) const -> scaredy_format<void> {
       if (value == nullptr) {
          return context.append("(null)");
       }
       str_view const string(value);
-      if (context.debug) {
+      if (this->debug) {
          return detail::append_escaped(context, string, '"');
       }
       return context.append(string);
@@ -1002,12 +1022,12 @@ struct formatter<T, CharT> : formatter_base<CharT> {
 };
 
 template <idx extent, typename CharT>
-struct formatter<char[extent], CharT> : formatter_base<CharT> {
+struct formatter<char[extent], CharT> : debug_formatter<CharT> {
    auto
    format(char const (&value)[extent], format_context& context) const
       -> scaredy_format<void> {
       str_view const string(value, extent - 1u);
-      if (context.debug) {
+      if (this->debug) {
          return detail::append_escaped(context, string, '"');
       }
       return context.append(string);
@@ -1015,12 +1035,12 @@ struct formatter<char[extent], CharT> : formatter_base<CharT> {
 };
 
 template <idx extent, typename CharT>
-struct formatter<char const[extent], CharT> : formatter_base<CharT> {
+struct formatter<char const[extent], CharT> : debug_formatter<CharT> {
    auto
    format(char const (&value)[extent], format_context& context) const
       -> scaredy_format<void> {
       str_view const string(value, extent - 1u);
-      if (context.debug) {
+      if (this->debug) {
          return detail::append_escaped(context, string, '"');
       }
       return context.append(string);
@@ -1033,23 +1053,39 @@ template <typename T, typename CharT>
       && is_same<remove_const<typename remove_cvref<T>::value_type>, char>
       && is_same<CharT, char>
    )
-struct formatter<T, CharT> : formatter_base<CharT> {
+struct formatter<T, CharT> : debug_formatter<CharT> {
    auto
    format(T const& value, format_context& context) const
       -> scaredy_format<void> {
-      str_view const string(value.data(), value.size());
-      if (context.debug) {
-         return detail::append_escaped(context, string, '"');
-      }
-      return context.append(string);
+      return detail::format_char_string(this->debug, value, context);
    }
 };
 
 template <typename T, typename CharT>
-   requires(
-      is_stepanov_iterable<T> && !is_basic_string<T> && is_same<CharT, char>
-   )
+   requires(is_iterable<T const> && !is_basic_string<T> && is_same<CharT, char>)
 struct formatter<T, CharT> : formatter_base<CharT> {
+   using element_type = iterable_value_type<T const>;
+   formatter<element_type> underlying;
+
+   constexpr void
+   set_debug_format(bool set = true)
+      requires(requires { underlying.set_debug_format(set); })
+   {
+      underlying.set_debug_format(set);
+   }
+
+   constexpr auto
+   parse(format_parse_context& context)
+      -> scaredy_format<format_parse_context::const_iterator> {
+      scaredy_format<format_parse_context::const_iterator> result =
+         formatter_base<CharT>::parse(context);
+      if (result.is_empty()) {
+         return result;
+      }
+      detail::maybe_set_debug_format(underlying);
+      return result;
+   }
+
    auto
    format(T const& value, format_context& context) const
       -> scaredy_format<void> {
@@ -1058,18 +1094,20 @@ struct formatter<T, CharT> : formatter_base<CharT> {
          return result;
       }
       bool first = true;
-      for (auto const& element : value) {
+      auto iteration = iterate(value);
+      iteration.run_while([&](auto const& element) {
          if (!first) {
             result = context.append(", ");
             if (result.is_empty()) {
-               return result;
+               return false;
             }
          }
          first = false;
-         result = detail::format_nested(context, element);
-         if (result.is_empty()) {
-            return result;
-         }
+         result = underlying.format(element, context);
+         return !result.is_empty();
+      });
+      if (result.is_empty()) {
+         return result;
       }
       return context.append(']');
    }
@@ -1090,13 +1128,26 @@ struct formatter<maybe<void>, CharT> : formatter_base<CharT> {
 template <typename... Types, typename CharT>
 struct formatter<tuple<Types...>, CharT> : formatter_base<CharT> {
  private:
+   tuple<formatter<Types>...> m_underlying;
+
    template <idx... indices>
-   static auto
+   constexpr void
+   set_element_debug_format(index_list_type<indices...> /*unused*/, bool set) {
+      auto set_one = [&]<idx index> {
+         detail::maybe_set_debug_format(
+            m_underlying.template get<index>(), set
+         );
+      };
+      (set_one.template operator()<indices>(), ...);
+   }
+
+   template <idx... indices>
+   auto
    format_elements(
       tuple<Types...> const& value, format_context& context,
       index_list_type<indices...>
       /*unused*/
-   ) -> scaredy_format<void> {
+   ) const -> scaredy_format<void> {
       scaredy_format<void> result = monostate;
       auto format_one = [&]<idx index> {
          if (result.is_empty()) {
@@ -1106,8 +1157,9 @@ struct formatter<tuple<Types...>, CharT> : formatter_base<CharT> {
             result = context.append(", ");
          }
          if (!result.is_empty()) {
-            result =
-               detail::format_nested(context, value.template get<index>());
+            result = m_underlying.template get<index>().format(
+               value.template get<index>(), context
+            );
          }
       };
       (format_one.template operator()<indices>(), ...);
@@ -1115,6 +1167,23 @@ struct formatter<tuple<Types...>, CharT> : formatter_base<CharT> {
    }
 
  public:
+   constexpr void
+   set_debug_format(bool set = true) {
+      set_element_debug_format(index_sequence_over_types<Types...>{}, set);
+   }
+
+   constexpr auto
+   parse(format_parse_context& context)
+      -> scaredy_format<format_parse_context::const_iterator> {
+      scaredy_format<format_parse_context::const_iterator> result =
+         formatter_base<CharT>::parse(context);
+      if (result.is_empty()) {
+         return result;
+      }
+      set_debug_format();
+      return result;
+   }
+
    auto
    format(tuple<Types...> const& value, format_context& context) const
       -> scaredy_format<void> {

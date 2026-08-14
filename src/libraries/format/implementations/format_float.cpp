@@ -9,8 +9,17 @@ format_float_arg(
    allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator,
    format_contiguous_output_iterator<basic_dyn_allocator<dyn_reallocate>>&
       output,
-   format_args const& arguments, idx argument_index
+   format_args const& arguments, idx argument_index,
+   format_parse_context& parse_context
 ) -> scaredy_format<void> {
+   formatter<Arg> value_formatter{};
+   scaredy_format<format_parse_context::const_iterator> const parse_result =
+      value_formatter.parse(parse_context);
+   if (parse_result.is_empty()) {
+      return parse_result.template error<format_errors>();
+   }
+   parse_context.advance_to(parse_result.value());
+
    maybe const result =
       to_chars(allocator, arguments.template get<Arg>(argument_index));
    if (result.is_empty()) {
