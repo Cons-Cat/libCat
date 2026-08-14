@@ -26,7 +26,7 @@ class infinity_type {
    constexpr auto
    operator==(Float value) const -> bool {
       auto const raw_value = make_raw_arithmetic(value);
-      return __builtin_isinf(raw_value) != 0
+      return !is_finite(raw_value) && !is_nan(raw_value)
              && (__builtin_signbit(raw_value) != 0) == m_negative;
    }
 
@@ -109,10 +109,10 @@ class infinity_type {
    constexpr auto
    less_than(Float value) const -> bool {
       auto const raw_value = make_raw_arithmetic(value);
-      if (__builtin_isnan(raw_value) != 0) {
+      if (is_nan(raw_value)) {
          return false;
       }
-      if (__builtin_isinf(raw_value) != 0) {
+      if (!is_finite(raw_value)) {
          return m_negative && __builtin_signbit(raw_value) == 0;
       }
       return m_negative;
@@ -122,10 +122,10 @@ class infinity_type {
    constexpr auto
    greater_than(Float value) const -> bool {
       auto const raw_value = make_raw_arithmetic(value);
-      if (__builtin_isnan(raw_value) != 0) {
+      if (is_nan(raw_value)) {
          return false;
       }
-      if (__builtin_isinf(raw_value) != 0) {
+      if (!is_finite(raw_value)) {
          return !m_negative && __builtin_signbit(raw_value) != 0;
       }
       return !m_negative;

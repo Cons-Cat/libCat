@@ -192,6 +192,20 @@ concept is_raw_integral = is_integral<T> && is_raw_arithmetic<T>;
 template <typename T>
 concept is_raw_floating_point = is_floating_point<T> && is_raw_arithmetic<T>;
 
+template <is_floating_point Float>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+is_nan(Float value) -> bool {
+   return __builtin_isnan(make_raw_arithmetic(value)) != 0;
+}
+
+template <is_floating_point Float>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+is_finite(Float value) -> bool {
+   return __builtin_isfinite(make_raw_arithmetic(value)) != 0;
+}
+
 namespace detail {
 template <typename>
 struct is_idx_trait : false_trait {};
@@ -480,7 +494,7 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
          // Integral to `float`. `implicit_raw_compare_wide` does not support
          // `float` `Dest`.
          Dest const fd = static_cast<Dest>(raw);
-         if (!__builtin_isfinite(fd)) {
+         if (!is_finite(fd)) {
             return false;
          }
          return static_cast<U>(fd) == other;
@@ -488,7 +502,7 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
       // Floating to floating in floating storage only, avoiding
       // `implicit_raw_compare_wide`.
       Dest const narrowed = static_cast<Dest>(raw);
-      if (!__builtin_isfinite(narrowed)) {
+      if (!is_finite(narrowed)) {
          return false;
       }
       return static_cast<long double>(narrowed)
@@ -496,7 +510,7 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
    } else {
       if constexpr (is_floating_point<raw_value>) {
          Dest const to_dest = static_cast<Dest>(raw);
-         if (!__builtin_isfinite(static_cast<double>(to_dest))) {
+         if (!is_finite(static_cast<double>(to_dest))) {
             return false;
          }
          return static_cast<long double>(to_dest)
@@ -1367,6 +1381,18 @@ class
          );
       }
       // NOLINTEND(bugprone-branch-clone)
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   is_nan() const -> bool {
+      return cat::is_nan(raw);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   is_finite() const -> bool {
+      return cat::is_finite(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]

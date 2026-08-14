@@ -229,6 +229,22 @@ $test(arithmetic_traits_basic_int_and_basic_float) {
    static_assert(!has_sat_accessor<float4>);
 }
 
+$test(arithmetic_float_is_nan) {
+   float const raw_nan = cat::limits<float>::quiet_NaN();
+   float4 const cat_nan = raw_nan;
+   cat::verify(cat_nan.is_nan());
+   cat::verify(cat::is_nan(raw_nan));
+   cat::verify(cat::is_nan(cat_nan));
+   cat::verify(!cat_nan.is_finite());
+   cat::verify(!cat::is_finite(raw_nan));
+   cat::verify(!cat::is_finite(cat_nan));
+   cat::verify(!cat::is_nan(1.f));
+   cat::verify(!float4(1.f).is_nan());
+   cat::verify(cat::is_finite(1.f));
+   cat::verify(cat::is_finite(float4(1.f)));
+   cat::verify(float4(1.f).is_finite());
+}
+
 $test(arithmetic_ualign) {
    static_assert(cat::is_integral<ualign>);
    static_assert(cat::is_unsigned_integral<ualign>);
@@ -303,7 +319,7 @@ $test(arithmetic_precision_reference_accessors) {
       (fast_value.precise() <=> value.fast()) == std::partial_ordering::less
    );
 
-   float4 const nan_value = __builtin_nanf("");
+   float4 const nan_value = cat::limits<float>::quiet_NaN();
    cat::verify(
       (nan_value.precise() <=> 1_f4) == std::partial_ordering::unordered
    );

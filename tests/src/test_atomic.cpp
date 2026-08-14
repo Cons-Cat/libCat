@@ -412,18 +412,18 @@ $test(atomic_floating_point_min_max) {
    cat::verify(value.fetch_fminimum(1.5f) == 5.0f);
    cat::verify(value.load() == 1.5f);
 
-   value.store(__builtin_nanf(""));
+   value.store(cat::limits<float>::quiet_NaN());
    cat::float4 const propagated = value.fetch_fmaximum(2.0f);
-   cat::verify(__builtin_isnan(static_cast<float>(propagated)));
-   cat::verify(__builtin_isnan(static_cast<float>(value.load())));
+   cat::verify(cat::is_nan(propagated));
+   cat::verify(cat::is_nan(value.load()));
 
-   value.store(__builtin_nanf(""));
-   cat::verify(
-      __builtin_isnan(static_cast<float>(value.fetch_fmaximum_num(3.0f)))
-   );
+   value.store(cat::limits<float>::quiet_NaN());
+   cat::verify(cat::is_nan(value.fetch_fmaximum_num(3.0f)));
    cat::verify(value.load() == 3.0f);
    value.store(3.0f);
-   cat::verify(value.fetch_fmaximum_num(__builtin_nanf("")) == 3.0f);
+   cat::verify(
+      value.fetch_fmaximum_num(cat::limits<float>::quiet_NaN()) == 3.0f
+   );
    cat::verify(value.load() == 3.0f);
 
    value.store(-0.0f);
@@ -437,7 +437,7 @@ $test(atomic_floating_point_min_max) {
    cat::atomic<cat::float4&> reference{
       *reinterpret_cast<cat::float4*>(&storage)
    };
-   reference.fetch_fmaximum_num(__builtin_nanf(""));
+   reference.fetch_fmaximum_num(cat::limits<float>::quiet_NaN());
    cat::verify(storage == 1.0f);
 
    cat::atomic_ref_relaxed<cat::float4> bound{

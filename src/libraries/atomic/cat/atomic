@@ -125,10 +125,10 @@ constexpr auto
 fp_maximum(Fp a, Fp b) -> Fp {
    auto const ra = make_raw_arithmetic(a);
    auto const rb = make_raw_arithmetic(b);
-   if (__builtin_isnan(ra)) {
+   if (is_nan(ra)) {
       return a;
    }
-   if (__builtin_isnan(rb)) {
+   if (is_nan(rb)) {
       return b;
    }
    if (ra < rb) {
@@ -145,10 +145,10 @@ constexpr auto
 fp_minimum(Fp a, Fp b) -> Fp {
    auto const ra = make_raw_arithmetic(a);
    auto const rb = make_raw_arithmetic(b);
-   if (__builtin_isnan(ra)) {
+   if (is_nan(ra)) {
       return a;
    }
-   if (__builtin_isnan(rb)) {
+   if (is_nan(rb)) {
       return b;
    }
    if (ra < rb) {
@@ -165,10 +165,10 @@ constexpr auto
 fp_maximum_num(Fp a, Fp b) -> Fp {
    auto const ra = make_raw_arithmetic(a);
    auto const rb = make_raw_arithmetic(b);
-   if (__builtin_isnan(ra)) {
+   if (is_nan(ra)) {
       return b;
    }
-   if (__builtin_isnan(rb)) {
+   if (is_nan(rb)) {
       return a;
    }
    if (ra < rb) {
@@ -185,10 +185,10 @@ constexpr auto
 fp_minimum_num(Fp a, Fp b) -> Fp {
    auto const ra = make_raw_arithmetic(a);
    auto const rb = make_raw_arithmetic(b);
-   if (__builtin_isnan(ra)) {
+   if (is_nan(ra)) {
       return b;
    }
-   if (__builtin_isnan(rb)) {
+   if (is_nan(rb)) {
       return a;
    }
    if (ra < rb) {

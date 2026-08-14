@@ -25,11 +25,7 @@ nroot(T x, iword n) -> T {
       if ((n.raw & 1u) != 0u) {
          return -root_magnitude;
       }
-      if constexpr (is_same<raw_arithmetic_type<T>, float>) {
-         return T(__builtin_nanf(""));
-      } else {
-         return T(__builtin_nan(""));
-      }
+      return limits<T>::quiet_NaN();
    }
 
    return root_magnitude;
