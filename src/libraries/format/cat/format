@@ -1508,4 +1508,22 @@ eprintln_fmt(
 
 }  // namespace cat
 
-#include <cat/detail/extra_formatters.hpp>
+// Formatters for types on this header's include graph. Declared under those
+// types and defined in `.tpp` after `formatter_base` exists.
+#include "../../allocator/implementations/format_allocator.tpp"
+#include "../../arithmetic/implementations/format_bool2.tpp"
+#include "../../arithmetic/implementations/format_bool4.tpp"
+#include "../../arithmetic/implementations/format_overflow_reference.tpp"
+#include "../../arithmetic/implementations/format_precision_reference.tpp"
+#include "../../bit/implementations/format_bit_reference.tpp"
+#include "../../bit/implementations/format_bit_value.tpp"
+#include "../../bitset/implementations/format_bitset.tpp"
+#include "../../debug/implementations/format_source_location.tpp"
+#include "../../math/implementations/format_infinity_type.tpp"
+#include "../../scaredy/implementations/format_scaredy.tpp"
+#include "../../simd/implementations/format_simd_overflow_reference.tpp"
+#include "../../simd/implementations/format_simd_precision_reference.tpp"
+#include "../../string/implementations/format_raii_str_vec.tpp"
+#include "../../string/implementations/format_str_inplace.tpp"
+#include "../../string/implementations/format_str_vec.tpp"
+#include "../implementations/format_monostate.tpp"

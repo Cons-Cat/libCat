@@ -4,6 +4,7 @@
 
 #include <cat/allocator>
 #include <cat/allocator_parameters>
+#include <cat/format>
 #include <cat/linux>
 
 namespace cat {
@@ -12,6 +13,28 @@ inline namespace manual {
 
 struct thread {
  public:
+   struct id {
+      constexpr id() = default;
+
+      constexpr explicit id(nix::process_id native) : m_native(native) {
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      operator==(id const& other) const -> bool {
+         return m_native.value == other.m_native.value;
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      native() const -> nix::process_id {
+         return m_native;
+      }
+
+    private:
+      nix::process_id m_native{0u};
+   };
+
    thread() {
       m_handle.add_clone_flag(nix::clone_flags::thread);
       // `clone_flags::child_set_tid` pairs with `clone_flags::child_clear_tid`
@@ -56,6 +79,15 @@ struct thread {
       return m_handle.has_stack();
    }
 
+   [[nodiscard]]
+   constexpr auto
+   get_id() const -> id {
+      if (!m_handle.has_stack()) {
+         return {};
+      }
+      return id(m_handle.id());
+   }
+
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
    template <is_allocator Allocator>
    [[clang::reinitializes]]
@@ -78,11 +110,37 @@ struct thread {
 
 }  // namespace manual
 
+namespace this_thread {
+[[nodiscard]]
+inline auto
+get_id() -> thread::id {
+   return thread::id(nix::sys_gettid());
+}
+}  // namespace this_thread
+
 // TODO: Move this elsewhere.
 inline void
 relax_cpu() {
    asm volatile("pause" ::
                    : "memory");
 }
+
+template <typename CharT>
+struct formatter<thread::id, CharT> : formatter_base<CharT> {
+   auto
+   format(thread::id const& value, format_context& context) const
+      -> scaredy_format<void> {
+      return formatter<uint4, CharT>{}.format(value.native().value, context);
+   }
+};
+
+template <typename CharT>
+struct formatter<manual::thread, CharT> : formatter_base<CharT> {
+   auto
+   format(manual::thread const& value, format_context& context) const
+      -> scaredy_format<void> {
+      return formatter<thread::id, CharT>{}.format(value.get_id(), context);
+   }
+};
 
 }  // namespace cat

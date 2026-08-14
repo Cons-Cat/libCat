@@ -64,6 +64,12 @@ struct process {
       return m_p_stack_bottom != nullptr;
    }
 
+   [[nodiscard]]
+   constexpr auto
+   id() const -> process_id {
+      return m_id;
+   }
+
    // Deallocate this `process`'s stack from `allocator`. Call after `wait()`.
    template <cat::is_allocator Allocator>
    void

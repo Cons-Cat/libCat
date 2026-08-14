@@ -268,6 +268,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/implementations/meta_alloc.tpp
   ${CATLIB}/allocator/implementations/get.tpp
   ${CATLIB}/allocator/implementations/free.tpp
+  ${CATLIB}/allocator/implementations/format_allocator.tpp
   ${CATLIB}/allocator/implementations/resizable_allocator.tpp
   ${CATLIB}/allocator/cat/allocator_parameters
   # Allocator adaptors:
@@ -283,6 +284,10 @@ set(CAT_HEADER_FILES
   ${CATLIB}/arithmetic/cat/overflow_reference.hpp
   ${CATLIB}/arithmetic/cat/precision_reference.hpp
   ${CATLIB}/arithmetic/cat/arithmetic_interface
+  ${CATLIB}/arithmetic/implementations/format_bool2.tpp
+  ${CATLIB}/arithmetic/implementations/format_bool4.tpp
+  ${CATLIB}/arithmetic/implementations/format_overflow_reference.tpp
+  ${CATLIB}/arithmetic/implementations/format_precision_reference.tpp
   ${CATLIB}/array/cat/array
   ${CATLIB}/atomic/cat/atomic
   ${CATLIB}/bit/cat/bit
@@ -291,8 +296,11 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bit/cat/detail/bit_reference.hpp
   ${CATLIB}/bit/cat/detail/bit_span.hpp
   ${CATLIB}/bit/implementations/bit_checked.tpp
+  ${CATLIB}/bit/implementations/format_bit_value.tpp
+  ${CATLIB}/bit/implementations/format_bit_reference.tpp
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/bitset/cat/bitset
+  ${CATLIB}/bitset/implementations/format_bitset.tpp
   ${CATLIB}/bitvec/cat/bitvec
   ${CATLIB}/bitvec/cat/raii_bitvec
   ${CATLIB}/container/cat/container
@@ -302,11 +310,13 @@ set(CAT_HEADER_FILES
   ${CATLIB}/compare/cat/compare
   ${CATLIB}/cpuid/cat/cpuid
   ${CATLIB}/debug/cat/debug
+  ${CATLIB}/debug/implementations/format_source_location.tpp
   ${CATLIB}/file/cat/file
   ${CATLIB}/format/cat/format
   ${CATLIB}/format/cat/detail/ftoa_dragonbox.hpp
   ${CATLIB}/format/cat/detail/ftoa_dragonbox_fwd.hpp
   ${CATLIB}/format/cat/detail/itoa_jeaiii.hpp
+  ${CATLIB}/format/implementations/format_monostate.tpp
   ${CATLIB}/iterable/cat/iterable
   ${CATLIB}/iterable/cat/detail/iterable_interface.hpp
   ${CATLIB}/iterable/implementations/as_rvalue.tpp
@@ -347,6 +357,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/list/cat/raii_forward_list
   ${CATLIB}/match/cat/match
   ${CATLIB}/math/cat/math
+  ${CATLIB}/math/implementations/format_infinity_type.tpp
   ${CATLIB}/math/cat/detail/abs.hpp
   ${CATLIB}/math/cat/detail/clamp.hpp
   ${CATLIB}/math/cat/detail/div.hpp
@@ -428,6 +439,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/runtime/cat/runtime
   ${CATLIB}/sanitizer/cat/sanitizer
   ${CATLIB}/scaredy/cat/scaredy
+  ${CATLIB}/scaredy/implementations/format_scaredy.tpp
   ${CATLIB}/simd/cat/simd
   ${CATLIB}/simd/cat/detail/simd_arithmetic_policies.hpp
   ${CATLIB}/simd/cat/detail/simd_overflow_reference.hpp
@@ -439,6 +451,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/simd_ops
   ${CATLIB}/simd/cat/simd_iterator
   ${CATLIB}/simd/implementations/simd_mask_bitset.tpp
+  ${CATLIB}/simd/implementations/format_simd_overflow_reference.tpp
+  ${CATLIB}/simd/implementations/format_simd_precision_reference.tpp
   ${CATLIB}/simd/cat/detail/simd_broadcast_traits.hpp
   ${CATLIB}/simd/cat/detail/simd_range_iterator.hpp
   ${CATLIB}/simd/cat/detail/simd_avx512.hpp
@@ -484,6 +498,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/meta/implementations/constant_evaluate.tpp
   ${CATLIB}/meta/implementations/common_reference.tpp
   ${CATLIB}/string/implementations/string_ops.tpp
+  ${CATLIB}/string/implementations/format_str_vec.tpp
+  ${CATLIB}/string/implementations/format_str_inplace.tpp
+  ${CATLIB}/string/implementations/format_raii_str_vec.tpp
   ${CATLIB}/bit/implementations/is_aligned.tpp
   ${CATLIB}/bit/implementations/align_up.tpp
   ${CATLIB}/bit/implementations/align_down.tpp

@@ -8,6 +8,9 @@
 
 namespace cat {
 
+template <typename T, typename CharT>
+struct formatter;
+
 // This proxy reference wraps an arithmetic wrapper with specific overflow
 // semantics. It is intended to be obtained from the overflow accessors of
 // `cat::basic_int`, `cat::basic_idx`, and `cat::basic_intptr` (`.undef()`,
@@ -36,6 +39,9 @@ class overflow_reference
    }
 
  private:
+   template <typename, typename>
+   friend struct formatter;
+
    using wrapper_type = remove_cvref<WrappedQual>;
 
    static constexpr overflow_policies policy = overflow_policy;
@@ -1171,5 +1177,10 @@ class overflow_reference
       return view().shift_right_into(other);
    }
 };
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/arithmetic/implementations/format_overflow_reference.tpp>.
+template <typename WrappedQual, overflow_policies policy, typename CharT>
+struct formatter<overflow_reference<WrappedQual, policy>, CharT>;
 
 }  // namespace cat

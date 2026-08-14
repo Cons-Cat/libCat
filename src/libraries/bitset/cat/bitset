@@ -684,6 +684,14 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    array_type m_data = {};
 };
 
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/bitset/implementations/format_bitset.tpp>.
+template <idx bits_count, typename CharT>
+struct formatter<bitset<bits_count>, CharT>;
+
 // Subtract 1 to skip the null terminator.
 template <__SIZE_TYPE__ bits_count>
 bitset(char const (&bitstring)[bits_count]) -> bitset<idx(bits_count - 1u)>;

@@ -6110,6 +6110,12 @@ class allocator_interface {
    }
 };
 
+// Implementing allocator formatters here is a circular dependency. The
+// implementation can be found in
+// <cat/allocator/implementations/format_allocator.tpp>.
+template <typename T, typename CharT>
+struct formatter;
+
 struct dyn_allocator_friend;
 template <typename... Methods>
 class basic_dyn_allocator;

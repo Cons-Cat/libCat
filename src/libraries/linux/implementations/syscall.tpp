@@ -46,10 +46,6 @@ nix::syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
    }
    if constexpr (cat::is_void<T>) {
       return cat::monostate;
-   } else if constexpr (
-      cat::is_same<T, nix::file_descriptor> || cat::is_same<T, nix::process_id>
-   ) {
-      return T(static_cast<cat::uint4>(result));
    } else {
       return static_cast<T>(result);
    }
@@ -99,10 +95,6 @@ nix::syscall_volatile(cat::iword call, Args... parameters)
    }
    if constexpr (cat::is_void<T>) {
       return cat::monostate;
-   } else if constexpr (
-      cat::is_same<T, nix::file_descriptor> || cat::is_same<T, nix::process_id>
-   ) {
-      return T(static_cast<cat::uint4>(result));
    } else {
       return static_cast<T>(result);
    }

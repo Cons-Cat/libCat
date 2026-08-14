@@ -22,11 +22,17 @@ using precision_reference_reverse_result = basic_float<
 
 }  // namespace detail
 
+template <typename T, typename CharT>
+struct formatter;
+
 template <typename WrappedQual, precision_policies precision>
 class precision_reference {
  private:
    template <typename, precision_policies>
    friend class precision_reference;
+
+   template <typename, typename>
+   friend struct formatter;
 
  public:
    constexpr explicit precision_reference(WrappedQual& w)
@@ -498,5 +504,10 @@ class precision_reference {
       return *this;
    }
 };
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/arithmetic/implementations/format_precision_reference.tpp>.
+template <typename WrappedQual, precision_policies policy, typename CharT>
+struct formatter<precision_reference<WrappedQual, policy>, CharT>;
 
 }  // namespace cat

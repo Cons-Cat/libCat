@@ -11,6 +11,7 @@
 #include <cat/arithmetic>
 #include <cat/array>
 #include <cat/bit>
+#include <cat/format>
 #include <cat/iterable>
 #include <cat/limits>
 #include <cat/linux>
@@ -876,5 +877,193 @@ void
 seed() {
    detail::convenience_engine<Engine>().seed(nix::linux_urandom_engine{}());
 }
+
+namespace detail {
+
+template <typename Param>
+concept is_distribution_param =
+   requires {
+      typename Param::distribution_type;
+      requires is_same<Param, typename Param::distribution_type::param_type>;
+   };
+
+template <typename Distribution>
+concept is_random_distribution =
+   requires(Distribution const& distribution) {
+      typename Distribution::param_type;
+      requires is_same<
+         Distribution, typename Distribution::param_type::distribution_type>;
+      distribution.param();
+   };
+
+template <typename Value>
+auto
+append_field(
+   format_context& context, str_view label, Value const& value, bool& first
+) -> scaredy_format<void> {
+   if (!first) {
+      scaredy_format<void> result = context.append(", ");
+      if (result.is_empty()) {
+         return result;
+      }
+   }
+   first = false;
+   scaredy_format<void> result = context.append(label);
+   if (result.is_empty()) {
+      return result;
+   }
+   result = context.append('=');
+   if (result.is_empty()) {
+      return result;
+   }
+   return format_nested(context, value);
+}
+
+template <typename Param>
+auto
+format_distribution_param(Param const& parameters, format_context& context)
+   -> scaredy_format<void> {
+   scaredy_format<void> result = context.append('(');
+   if (result.is_empty()) {
+      return result;
+   }
+   bool first = true;
+
+   if constexpr (requires {
+                    parameters.t();
+                    parameters.p();
+                 }) {
+      result = append_field(context, "t", parameters.t(), first);
+      if (result.is_empty()) {
+         return result;
+      }
+      result = append_field(context, "p", parameters.p(), first);
+   } else if constexpr (requires {
+                           parameters.k();
+                           parameters.p();
+                        }) {
+      result = append_field(context, "k", parameters.k(), first);
+      if (result.is_empty()) {
+         return result;
+      }
+      result = append_field(context, "p", parameters.p(), first);
+   } else if constexpr (requires {
+                           parameters.mean();
+                           parameters.stddev();
+                        }) {
+      result = append_field(context, "mean", parameters.mean(), first);
+      if (result.is_empty()) {
+         return result;
+      }
+      result = append_field(context, "stddev", parameters.stddev(), first);
+   } else if constexpr (requires {
+                           parameters.alpha();
+                           parameters.beta();
+                        }) {
+      result = append_field(context, "alpha", parameters.alpha(), first);
+      if (result.is_empty()) {
+         return result;
+      }
+      result = append_field(context, "beta", parameters.beta(), first);
+   } else if constexpr (requires {
+                           parameters.m();
+                           parameters.n();
+                        }) {
+      result = append_field(context, "m", parameters.m(), first);
+      if (result.is_empty()) {
+         return result;
+      }
+      result = append_field(context, "n", parameters.n(), first);
+   } else if constexpr (requires {
+                           parameters.m();
+                           parameters.s();
+                        }) {
+      result = append_field(context, "m", parameters.m(), first);
+      if (result.is_empty()) {
+         return result;
+      }
+      result = append_field(context, "s", parameters.s(), first);
+   } else if constexpr (requires { parameters.mean(); }) {
+      result = append_field(context, "mean", parameters.mean(), first);
+   } else if constexpr (requires { parameters.lambda(); }) {
+      result = append_field(context, "lambda", parameters.lambda(), first);
+   } else if constexpr (requires { parameters.n(); }) {
+      result = append_field(context, "n", parameters.n(), first);
+   } else if constexpr (requires {
+                           parameters.a();
+                           parameters.b();
+                        }) {
+      result = append_field(context, "a", parameters.a(), first);
+      if (result.is_empty()) {
+         return result;
+      }
+      result = append_field(context, "b", parameters.b(), first);
+   } else if constexpr (requires { parameters.p(); }) {
+      result = append_field(context, "p", parameters.p(), first);
+   } else if constexpr (requires { parameters.probabilities(); }) {
+      result = append_field(
+         context, "probabilities", parameters.probabilities(), first
+      );
+   } else if constexpr (requires {
+                           parameters.boundaries();
+                           parameters.densities();
+                        }) {
+      result =
+         append_field(context, "boundaries", parameters.boundaries(), first);
+      if (result.is_empty()) {
+         return result;
+      }
+      result =
+         append_field(context, "densities", parameters.densities(), first);
+   } else {
+      return format_errors::cannot_format_argument;
+   }
+
+   if (result.is_empty()) {
+      return result;
+   }
+   return context.append(')');
+}
+
+}  // namespace detail
+
+template <typename CharT>
+struct formatter<seed_sequence, CharT> : formatter_base<CharT> {
+   auto
+   format(seed_sequence const& value, format_context& context) const
+      -> scaredy_format<void> {
+      scaredy_format<void> result = context.append("seed_sequence");
+      if (result.is_empty()) {
+         return result;
+      }
+      return formatter<span<uint4 const>, CharT>{}.format(
+         value.values(), context
+      );
+   }
+};
+
+template <detail::is_distribution_param Param, typename CharT>
+   requires(is_same<CharT, char>)  // TODO: Relax this constraint.
+struct formatter<Param, CharT> : formatter_base<CharT> {
+   auto
+   format(Param const& value, format_context& context) const
+      -> scaredy_format<void> {
+      scaredy_format<void> result = context.append("param");
+      if (result.is_empty()) {
+         return result;
+      }
+      return detail::format_distribution_param(value, context);
+   }
+};
+
+template <detail::is_random_distribution Distribution, typename CharT>
+   requires(is_same<CharT, char>)  // TODO: Relax this constraint.
+struct formatter<Distribution, CharT> : formatter_base<CharT> {
+   auto
+   format(Distribution const& value, format_context& context) const
+      -> scaredy_format<void> {
+      return detail::format_distribution_param(value.param(), context);
+   }
+};
 
 }  // namespace cat

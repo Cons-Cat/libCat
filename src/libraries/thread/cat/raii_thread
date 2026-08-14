@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/format>
 #include <cat/thread>
 
 namespace cat::raii {
@@ -63,6 +64,12 @@ class basic_thread {
       return m_core.has_stack();
    }
 
+   [[nodiscard]]
+   constexpr auto
+   get_id() const -> manual::thread::id {
+      return m_core.get_id();
+   }
+
    [[clang::reinitializes]]
    void
    free() {
@@ -76,3 +83,17 @@ class basic_thread {
 };
 
 }  // namespace cat::raii
+
+namespace cat {
+
+template <typename Allocator, typename CharT>
+struct formatter<raii::basic_thread<Allocator>, CharT> : formatter_base<CharT> {
+   auto
+   format(
+      raii::basic_thread<Allocator> const& value, format_context& context
+   ) const -> scaredy_format<void> {
+      return formatter<thread::id, CharT>{}.format(value.get_id(), context);
+   }
+};
+
+}  // namespace cat

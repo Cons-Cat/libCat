@@ -71,6 +71,14 @@ class infinity_type {
 
 }  // namespace detail
 
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/math/implementations/format_infinity_type.tpp>.
+template <typename CharT>
+struct formatter<detail::infinity_type, CharT>;
+
 inline constexpr detail::infinity_type infinity;
 
 template <is_arithmetic T = float8>

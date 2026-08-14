@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/arithmetic>
+#include <cat/format>
 
 // `cat::atomic` is an atomic arithmetic wrapper closely based upon
 // `std::atomic`.
@@ -2439,5 +2440,60 @@ using atomic_accessor_acq_rel =
 template <typename ElementType>
 using atomic_accessor_seq_cst =
    basic_atomic_accessor<ElementType, atomic_ref_seq_cst<ElementType>>;
+
+template <typename CharT>
+struct formatter<atomic_flag, CharT> : formatter_base<CharT> {
+   auto
+   format(atomic_flag const& value, format_context& context) const
+      -> scaredy_format<void> {
+      scaredy_format<void> result = context.append("flag(");
+      if (result.is_empty()) {
+         return result;
+      }
+      result =
+         detail::format_nested(context, value.test(memory_order::relaxed));
+      if (result.is_empty()) {
+         return result;
+      }
+      return context.append(')');
+   }
+};
+
+template <typename T, typename CharT>
+struct formatter<atomic<T>, CharT> : formatter_base<CharT> {
+   auto
+   format(atomic<T> const& value, format_context& context) const
+      -> scaredy_format<void> {
+      scaredy_format<void> result = context.append("atomic(");
+      if (result.is_empty()) {
+         return result;
+      }
+      result =
+         detail::format_nested(context, value.load(memory_order::relaxed));
+      if (result.is_empty()) {
+         return result;
+      }
+      return context.append(')');
+   }
+};
+
+template <typename T, memory_order order, typename CharT>
+struct formatter<detail::atomic_ref_bound<T, order>, CharT>
+    : formatter_base<CharT> {
+   auto
+   format(
+      detail::atomic_ref_bound<T, order> const& value, format_context& context
+   ) const -> scaredy_format<void> {
+      scaredy_format<void> result = context.append("atomic_ref(");
+      if (result.is_empty()) {
+         return result;
+      }
+      result = detail::format_nested(context, value.load());
+      if (result.is_empty()) {
+         return result;
+      }
+      return context.append(')');
+   }
+};
 
 }  // namespace cat

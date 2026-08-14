@@ -3874,6 +3874,14 @@ inline constexpr uint8 uint8_min = limits<uint8>::min();
 inline constexpr uint8 uint8_max = limits<uint8>::max();
 }  // namespace arithmetic
 
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/arithmetic/implementations/format_bool2.tpp>.
+template <typename CharT>
+struct formatter<bool2, CharT>;
+
+template <typename CharT>
+struct formatter<bool4, CharT>;
+
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_raw_arithmetic(bool2 value) -> bool2::raw_type {

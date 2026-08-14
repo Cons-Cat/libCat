@@ -584,6 +584,15 @@ class
 
 }  // namespace manual
 
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/string/implementations/format_str_vec.tpp>.
+template <bool null_terminated, typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<basic_str_vec<char, null_terminated>, CharT>;
+
 namespace detail {
 template <typename CharT, bool is_null_terminated>
 constexpr auto

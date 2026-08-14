@@ -459,6 +459,17 @@ class
    CharT m_data[storage_size]{};
 };
 
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/string/implementations/format_str_inplace.tpp>.
+template <
+   idx inline_capacity, bool null_terminated, vec_flags flags, typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<
+   basic_str_inplace<char, inline_capacity, null_terminated, flags>, CharT>;
+
 // Deduce the length of string literals without a null-terminator.
 template <idx len>
 basic_str_inplace(char const (&str)[len])

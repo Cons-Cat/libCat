@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/allocator>
+#include <cat/format>
 #include <cat/linux>
 #include <cat/maybe>
 
@@ -232,5 +233,17 @@ constexpr auto
 make_page_allocator() -> page_allocator {
    return {};
 }
+
+template <typename CharT>
+struct formatter<page_allocator, CharT> : formatter_base<CharT> {
+   auto
+   format(page_allocator const& /*value*/, format_context& context) const
+      -> scaredy_format<void> {
+      return detail::format_allocator_usage(
+         context, page_allocator::bytes_used(),
+         page_allocator::bytes_capacity(), {}
+      );
+   }
+};
 
 }  // namespace cat

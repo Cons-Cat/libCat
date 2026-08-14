@@ -4,6 +4,13 @@
 
 #include <cat/detail/simd_arithmetic_policies.hpp>
 
+namespace cat {
+
+template <typename T, typename CharT>
+struct formatter;
+
+}  // namespace cat
+
 namespace cat::detail {
 
 template <typename T, typename Abi, overflow_policies semantics>
@@ -13,6 +20,9 @@ class simd_overflow_reference
    using wrapper_type = cat::simd<T, Abi>;
 
    wrapper_type* _Nonnull m_wrapped;
+
+   template <typename, typename>
+   friend struct ::cat::formatter;
 
  public:
    constexpr explicit simd_overflow_reference(wrapper_type& w)
@@ -255,3 +265,12 @@ class simd_overflow_reference
 };
 
 }  // namespace cat::detail
+
+namespace cat {
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/simd/implementations/format_simd_overflow_reference.tpp>.
+template <typename T, typename Abi, overflow_policies policy, typename CharT>
+struct formatter<detail::simd_overflow_reference<T, Abi, policy>, CharT>;
+
+}  // namespace cat

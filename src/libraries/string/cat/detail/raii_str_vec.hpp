@@ -387,6 +387,19 @@ class
 
 }  // namespace cat::raii
 
+namespace cat {
+
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/string/implementations/format_raii_str_vec.tpp>.
+template <bool null_terminated, is_allocator Allocator, typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<raii::basic_str_vec<char, null_terminated, Allocator>, CharT>;
+
+}  // namespace cat
+
 namespace cat::detail {
 
 template <typename String, typename CharT, typename First, typename... Rest>

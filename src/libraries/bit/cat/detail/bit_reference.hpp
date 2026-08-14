@@ -163,6 +163,14 @@ class bit_reference {
    remove_cv<mask_integer_type> m_bit_mask;
 };
 
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/bit/implementations/format_bit_reference.tpp>.
+template <is_unsigned_integral Storage, typename CharT>
+struct formatter<bit_reference<Storage>, CharT>;
+
 template <is_same<bit_value> T>
 bit_reference(T) -> bit_reference<unsigned char>;
 

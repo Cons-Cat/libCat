@@ -68,6 +68,14 @@ struct monostate_type {
    }
 };
 
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/format/implementations/format_monostate.tpp>.
+template <typename CharT>
+struct formatter<monostate_type, CharT>;
+
 template <typename T, T constant_state>
 struct monotype_storage {
    constexpr monotype_storage() = default;

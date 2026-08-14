@@ -1299,6 +1299,14 @@ class bit_value {
    bool m_value;
 };
 
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/bit/implementations/format_bit_value.tpp>.
+template <typename CharT>
+struct formatter<bit_value, CharT>;
+
 inline constexpr bit_value one_bit = true;
 inline constexpr bit_value zero_bit = false;
 

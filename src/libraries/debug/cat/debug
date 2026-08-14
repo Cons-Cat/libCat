@@ -80,6 +80,14 @@ using str_view = basic_str_span<char const, false>;
 
 using std::source_location;
 
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/debug/implementations/format_source_location.tpp>.
+template <typename CharT>
+struct formatter<source_location, CharT>;
+
 // TODO: Mark these functions `[[gnu::artificial]]` or `[[gnu::nodebug]]`.
 
 void

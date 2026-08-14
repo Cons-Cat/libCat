@@ -6,6 +6,13 @@
 
 #include <cat/arithmetic>
 
+namespace cat {
+
+template <typename T, typename CharT>
+struct formatter;
+
+}  // namespace cat
+
 namespace cat::detail {
 
 template <typename WrappedQual, precision_policies precision>
@@ -40,6 +47,9 @@ class simd_precision_reference
          left_result_scalar<LeftT, LeftAbi>>>;
 
    WrappedQual* _Nonnull m_wrapped;
+
+   template <typename, typename>
+   friend struct ::cat::formatter;
 
    template <typename Result, typename Value>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -548,3 +558,12 @@ class simd_precision_reference
 };
 
 }  // namespace cat::detail
+
+namespace cat {
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/simd/implementations/format_simd_precision_reference.tpp>.
+template <typename WrappedQual, precision_policies policy, typename CharT>
+struct formatter<detail::simd_precision_reference<WrappedQual, policy>, CharT>;
+
+}  // namespace cat
