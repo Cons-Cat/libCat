@@ -581,3 +581,50 @@ $test(math_is_divisible_by_currying) {
    cat::verify(cat::is_divisible_by(10, 5));
    cat::verify(!cat::is_divisible_by(10, 3));
 }
+
+$test(math_infinity) {
+   using infinity_type = cat::remove_cvref<decltype(cat::infinity)>;
+   static_assert(cat::is_same<infinity_type, cat::detail::infinity_type>);
+   static_assert(cat::is_convertible<infinity_type, float>);
+   static_assert(cat::is_convertible<infinity_type, double>);
+   static_assert(cat::is_convertible<infinity_type, cat::float4>);
+   static_assert(cat::is_convertible<infinity_type, cat::float8>);
+
+   float const raw_value = cat::infinity;
+   cat::float8 const cat_value = cat::infinity;
+   float const negative_raw_value = -cat::infinity;
+   cat::float8 const negative_cat_value = -cat::infinity;
+   float const positive_again = -(-cat::infinity);
+   cat::verify(cat::infinity == raw_value);
+   cat::verify(cat_value == cat::infinity);
+   cat::verify(-cat::infinity == negative_raw_value);
+   cat::verify(negative_cat_value == -cat::infinity);
+   cat::verify(__builtin_signbit(negative_raw_value) != 0);
+   cat::verify(__builtin_signbit(negative_cat_value.raw) != 0);
+   cat::verify(__builtin_signbit(positive_again) == 0);
+   cat::verify(cat::infinity != 1.);
+   cat::verify(cat::infinity != negative_raw_value);
+   cat::verify(-cat::infinity != raw_value);
+
+   cat::verify(cat::infinity > 1.);
+   cat::verify(1. < cat::infinity);
+   cat::verify(cat::infinity >= raw_value);
+   cat::verify(raw_value <= cat::infinity);
+   cat::verify(!(cat::infinity < raw_value));
+   cat::verify(!(raw_value > cat::infinity));
+
+   cat::verify(-cat::infinity < cat::float8(1.));
+   cat::verify(cat::float8(1.) > -cat::infinity);
+   cat::verify(-cat::infinity <= negative_cat_value);
+   cat::verify(negative_cat_value >= -cat::infinity);
+   cat::verify(!(-cat::infinity > negative_cat_value));
+   cat::verify(!(negative_cat_value < -cat::infinity));
+   cat::verify(cat::infinity > -cat::infinity);
+}
+
+$test(math_circle_constants) {
+   cat::verify(cat::pi<> * 2. == cat::tau<>);
+   cat::verify(cat::pi<float> * 2.f == cat::tau<float>);
+   cat::verify(cat::pi<cat::int4> == 3);
+   cat::verify(cat::tau<cat::int4> == 6);
+}

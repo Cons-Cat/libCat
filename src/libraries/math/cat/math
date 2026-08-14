@@ -5,6 +5,176 @@
 #include <cat/arithmetic>
 #include <cat/utility>
 
+namespace cat {
+namespace detail {
+
+class infinity_type {
+ public:
+   template <is_floating_point Float>
+   [[nodiscard]]
+   constexpr
+   operator Float() const {
+      using raw_type = raw_arithmetic_type<Float>;
+      raw_type const value = static_cast<raw_type>(__builtin_inf());
+      return Float(m_negative ? -value : value);
+   }
+
+   constexpr auto
+   operator==(infinity_type const& other) const -> bool = default;
+
+   template <is_floating_point Float>
+   constexpr auto
+   operator==(Float value) const -> bool {
+      auto const raw_value = make_raw_arithmetic(value);
+      return __builtin_isinf(raw_value) != 0
+             && (__builtin_signbit(raw_value) != 0) == m_negative;
+   }
+
+   constexpr auto
+   operator<(infinity_type const& other) const -> bool {
+      return m_negative && !other.m_negative;
+   }
+
+   constexpr auto
+   operator>(infinity_type const& other) const -> bool {
+      return !m_negative && other.m_negative;
+   }
+
+   constexpr auto
+   operator<=(infinity_type const& other) const -> bool {
+      return !(*this > other);
+   }
+
+   constexpr auto
+   operator>=(infinity_type const& other) const -> bool {
+      return !(*this < other);
+   }
+
+   template <is_floating_point Float>
+   friend constexpr auto
+   operator<(infinity_type left, Float right) -> bool {
+      return left.less_than(right);
+   }
+
+   template <is_floating_point Float>
+   friend constexpr auto
+   operator<(Float left, infinity_type right) -> bool {
+      return right.greater_than(left);
+   }
+
+   template <is_floating_point Float>
+   friend constexpr auto
+   operator>(infinity_type left, Float right) -> bool {
+      return left.greater_than(right);
+   }
+
+   template <is_floating_point Float>
+   friend constexpr auto
+   operator>(Float left, infinity_type right) -> bool {
+      return right.less_than(left);
+   }
+
+   template <is_floating_point Float>
+   friend constexpr auto
+   operator<=(infinity_type left, Float right) -> bool {
+      return left < right || left == right;
+   }
+
+   template <is_floating_point Float>
+   friend constexpr auto
+   operator<=(Float left, infinity_type right) -> bool {
+      return left < right || left == right;
+   }
+
+   template <is_floating_point Float>
+   friend constexpr auto
+   operator>=(infinity_type left, Float right) -> bool {
+      return left > right || left == right;
+   }
+
+   template <is_floating_point Float>
+   friend constexpr auto
+   operator>=(Float left, infinity_type right) -> bool {
+      return left > right || left == right;
+   }
+
+   friend constexpr auto
+   operator-(infinity_type value) -> infinity_type {
+      value.m_negative = !value.m_negative;
+      return value;
+   }
+
+ private:
+   template <is_floating_point Float>
+   constexpr auto
+   less_than(Float value) const -> bool {
+      auto const raw_value = make_raw_arithmetic(value);
+      if (__builtin_isnan(raw_value) != 0) {
+         return false;
+      }
+      if (__builtin_isinf(raw_value) != 0) {
+         return m_negative && __builtin_signbit(raw_value) == 0;
+      }
+      return m_negative;
+   }
+
+   template <is_floating_point Float>
+   constexpr auto
+   greater_than(Float value) const -> bool {
+      auto const raw_value = make_raw_arithmetic(value);
+      if (__builtin_isnan(raw_value) != 0) {
+         return false;
+      }
+      if (__builtin_isinf(raw_value) != 0) {
+         return !m_negative && __builtin_signbit(raw_value) != 0;
+      }
+      return !m_negative;
+   }
+
+   bool m_negative = false;
+};
+
+}  // namespace detail
+
+inline constexpr detail::infinity_type infinity;
+
+template <is_arithmetic T = double>
+// NOLINTNEXTLINE We provide this magic number.
+inline constexpr T pi = 3.141592653589793238462643383279502884L;
+
+template <>
+// NOLINTNEXTLINE We provide this magic number.
+inline constexpr float pi<float> = 0x1.921fb6p+1f;
+
+template <>
+// NOLINTNEXTLINE We provide this magic number.
+inline constexpr double pi<double> = 0x1.921fb54442d18p+1;
+
+template <is_integral T>
+inline constexpr T pi<T> = 3;
+
+template <is_floating_point T>
+   requires(!is_same<T, raw_arithmetic_type<T>>)
+inline constexpr T pi<T> = pi<raw_arithmetic_type<T>>;
+
+template <is_arithmetic T = double>
+inline constexpr T tau = 6.283185307179586476925286766559005768L;
+
+template <>
+inline constexpr float tau<float> = 0x1.921fb6p+2f;
+
+template <>
+inline constexpr double tau<double> = 0x1.921fb54442d18p+2;
+
+template <is_integral T>
+inline constexpr T tau<T> = 6;
+
+template <is_floating_point T>
+   requires(!is_same<T, raw_arithmetic_type<T>>)
+inline constexpr T tau<T> = tau<raw_arithmetic_type<T>>;
+
+}  // namespace cat
+
 #include "detail/abs.hpp"
 #include "detail/clamp.hpp"
 #include "detail/div.hpp"
