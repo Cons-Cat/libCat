@@ -1,0 +1,880 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// Deterministic engines in this header are not cryptographically secure.
+// Use `nix::linux_urandom_engine` for security-sensitive randomness.
+
+#include <cat/detail/rdrand.hpp>
+#include <cat/detail/rdseed.hpp>
+
+#include <cat/arithmetic>
+#include <cat/array>
+#include <cat/bit>
+#include <cat/iterable>
+#include <cat/limits>
+#include <cat/linux>
+#include <cat/math>
+#include <cat/maybe>
+#include <cat/meta>
+#include <cat/simd>
+#include <cat/simd_ops>
+#include <cat/span>
+#include <cat/timer>
+#include <cat/utility>
+
+namespace nix {
+
+class linux_urandom_engine;
+
+}  // namespace nix
+
+namespace cat {
+
+template <typename Generator>
+concept uniform_random_bit_generator =
+   is_integral<typename remove_cvref<Generator>::result_type>
+   && requires(Generator& generator) {
+         {
+            generator()
+         } -> is_same<typename remove_cvref<Generator>::result_type>;
+         remove_cvref<Generator>::min();
+         remove_cvref<Generator>::max();
+      } && (remove_cvref<Generator>::min() < remove_cvref<Generator>::max());
+
+template <typename T>
+concept random_scalar = is_integral<T> || is_floating_point<T>;
+
+template <typename T>
+concept random_result =
+   random_scalar<T> || (is_simd<T> && random_scalar<typename T::value_type>);
+
+class random_seed {
+ public:
+   template <is_unsigned_integral T>
+   constexpr random_seed(T value) : m_value(make_raw_arithmetic(value)) {
+   }
+
+   template <is_unsigned_integral T>
+   [[nodiscard]]
+   constexpr explicit
+   operator T() const {
+      using raw = raw_arithmetic_type<T>;
+      return T(static_cast<raw>(m_value));
+   }
+
+ private:
+   unsigned __int128 m_value;
+};
+
+namespace detail {
+
+enum class xoshiro_scrambler : unsigned char {
+   plus,
+   plusplus,
+   star,
+   starstar,
+};
+
+template <xoshiro_scrambler scrambler>
+class xoshiro128_engine;
+
+template <xoshiro_scrambler scrambler>
+class xoshiro256_engine;
+
+}  // namespace detail
+
+using xoshiro128_plusplus =
+   detail::xoshiro128_engine<detail::xoshiro_scrambler::plusplus>;
+using xoshiro256_plusplus =
+   detail::xoshiro256_engine<detail::xoshiro_scrambler::plusplus>;
+
+template <typename Generator>
+concept simd_random_bit_generator =
+   is_simd<typename remove_cvref<Generator>::result_type>
+   && is_integral<typename remove_cvref<Generator>::result_type::value_type>
+   && requires(Generator& generator) { generator(); };
+
+namespace detail {
+
+template <uniform_random_bit_generator Generator>
+constexpr auto
+random_engine_word(Generator& generator) {
+   auto const value = generator();
+   auto const minimum = Generator::min();
+   return make_unsigned(value - minimum);
+}
+
+template <uniform_random_bit_generator Generator, is_unsigned_integral T>
+constexpr auto
+random_bounded(Generator& generator, T bound) -> T {
+   using raw = raw_arithmetic_type<T>;
+   using unsigned_type = make_unsigned_type<raw>;
+   unsigned_type const raw_bound = make_raw_arithmetic(bound);
+   if (raw_bound == 0) {
+      return T(random_engine_word(generator));
+   }
+   unsigned_type const threshold =
+      static_cast<unsigned_type>(-raw_bound) % raw_bound;
+   while (true) {
+      unsigned_type const value =
+         static_cast<unsigned_type>(random_engine_word(generator));
+      if (value >= threshold) {
+         return T(value % raw_bound);
+      }
+   }
+}
+
+template <is_unsigned_integral T>
+constexpr auto
+random_mix_seed(T value) -> T {
+   using raw = raw_arithmetic_type<T>;
+   using unsigned_type = make_unsigned_type<raw>;
+   unsigned_type mixed = make_raw_arithmetic(value);
+   if constexpr (sizeof(unsigned_type) == 8u) {
+      mixed += 0x9e3779b9'7f4a7c15ull;
+      mixed = (mixed ^ (mixed >> 30u)) * 0xbf58476d'1ce4e5b9ull;
+      mixed = (mixed ^ (mixed >> 27u)) * 0x94d049bb'133111ebull;
+      mixed ^= mixed >> 31u;
+   } else {
+      mixed += 0x9e3779b9u;
+      mixed = (mixed ^ (mixed >> 16u)) * 0x21f0aaadu;
+      mixed = (mixed ^ (mixed >> 15u)) * 0x735a2d97u;
+      mixed ^= mixed >> 15u;
+   }
+   return T(mixed);
+}
+
+}  // namespace detail
+
+template <
+   is_floating_point Float, idx bits, uniform_random_bit_generator Generator>
+constexpr auto
+generate_canonical(Generator& generator) -> Float {
+   using raw_float = raw_arithmetic_type<Float>;
+   using engine = remove_cvref<Generator>;
+   using raw_result = raw_arithmetic_type<typename engine::result_type>;
+   using unsigned_type = make_unsigned_type<raw_result>;
+   constexpr idx float_bits =
+      bits < limits<Float>::digits ? bits : limits<Float>::digits;
+   constexpr idx engine_bits = limits<unsigned_type>::digits;
+   constexpr idx calls = idx(float_bits + engine_bits - 1u) / engine_bits;
+   raw_float value = 0;
+   raw_float factor = 1;
+   raw_float const radix =
+      static_cast<raw_float>(static_cast<unsigned_type>(
+         make_raw_arithmetic(engine::max()) - make_raw_arithmetic(engine::min())
+      ))
+      + raw_float(1);
+   for (idx index = 0u; index < calls; ++index) {
+      value +=
+         static_cast<raw_float>(detail::random_engine_word(generator)) * factor;
+      factor *= radix;
+   }
+   return Float(value / factor);
+}
+
+template <is_floating_point Float, uniform_random_bit_generator Generator>
+constexpr auto
+generate_canonical(Generator& generator) -> Float {
+   return generate_canonical<Float, limits<Float>::digits>(generator);
+}
+
+namespace detail {
+
+template <uniform_random_bit_generator Generator>
+constexpr auto
+distribution_engine_word(Generator& generator);
+
+template <uniform_random_bit_generator Generator>
+constexpr auto
+distribution_random_bit(Generator& generator) -> bool;
+
+template <uniform_random_bit_generator Generator, is_raw_integral T>
+   requires is_unsigned<T>
+constexpr auto
+distribution_random_bounded(Generator& generator, T bound) -> T;
+
+template <is_integral Int>
+constexpr auto
+distribution_int_from_bits(make_unsigned_type<raw_arithmetic_type<Int>> value)
+   -> Int;
+
+template <is_floating_point Float>
+constexpr auto
+distribution_next_toward(Float value, Float toward) -> Float;
+
+template <is_floating_point Float, uniform_random_bit_generator Generator>
+constexpr auto
+distribution_generate_canonical(Generator& generator) -> Float;
+
+template <is_floating_point Float, uniform_random_bit_generator Generator>
+constexpr auto
+distribution_unit(Generator& generator) -> Float;
+
+template <is_integral Int, is_floating_point Float>
+constexpr auto
+distribution_integer(Float value) -> Int;
+
+template <is_integral Int, is_floating_point Float>
+constexpr auto
+geometric_sample(Float probability, Float unit) -> Int;
+
+template <is_integral Int>
+constexpr void
+distribution_add(Int& result, Int value);
+
+template <is_floating_point Float, uniform_random_bit_generator Generator>
+constexpr auto
+sampling_unit(Generator& generator) -> Float;
+
+inline constexpr idx sampling_distribution_capacity = 64u;
+
+template <is_floating_point Float>
+constexpr auto
+sampling_finite(Float value) -> bool;
+
+template <is_floating_point Float>
+constexpr auto
+sampling_interval(
+   array<Float, sampling_distribution_capacity> const& cumulative, idx size,
+   Float value
+) -> idx;
+
+template <is_integral Int>
+constexpr auto
+sampling_integer(idx value) -> Int;
+
+template <is_floating_point Float, uniform_random_bit_generator Generator>
+constexpr auto
+random_positive_canonical(Generator& generator) -> Float {
+   Float value;
+   do {
+      value = generate_canonical<Float>(generator);
+   } while (value == 0.f);
+   return value;
+}
+
+template <is_floating_point Float, uniform_random_bit_generator Generator>
+constexpr auto
+random_standard_normal(Generator& generator) -> Float {
+   constexpr Float tau_value = tau<Float>;
+   Float const radius =
+      sqrt(-2.f * log(random_positive_canonical<Float>(generator)));
+   Float const angle = tau_value * generate_canonical<Float>(generator);
+   return radius * cos(angle);
+}
+
+template <is_floating_point Float, uniform_random_bit_generator Generator>
+constexpr auto
+random_gamma(Generator& generator, Float alpha, Float beta) -> Float {
+   Float const one = 1.f;
+   if (alpha < 1.f) {
+      Float const value = random_gamma(generator, alpha + 1.f, beta);
+      Float const uniform = random_positive_canonical<Float>(generator);
+      return value * pow(uniform, one / alpha);
+   }
+
+   Float const shape_offset = alpha - one / 3.f;
+   Float const normal_scale = one / sqrt(9.f * shape_offset);
+   while (true) {
+      Float const normal = random_standard_normal<Float>(generator);
+      Float const factor = 1.f + normal_scale * normal;
+      if (factor <= 0.f) {
+         continue;
+      }
+      Float const factor_cubed = factor * factor * factor;
+      Float const uniform = random_positive_canonical<Float>(generator);
+      Float const normal_squared = normal * normal;
+      if (
+         uniform < 1.f - 0.0331f * normal_squared * normal_squared
+         || log(uniform)
+               < normal_squared / 2.f
+                    + shape_offset * (1.f - factor_cubed + log(factor_cubed))
+      ) {
+         return beta * shape_offset * factor_cubed;
+      }
+   }
+}
+
+}  // namespace detail
+
+class seed_sequence {
+ public:
+   using result_type = uint4;
+
+   constexpr seed_sequence() = default;
+
+   template <is_iterable Range>
+   constexpr seed_sequence(Range&& range) {
+      assign(range);
+   }
+
+   constexpr seed_sequence(initializer_list<uint4> values) {
+      assign(values);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_size;
+   }
+
+   template <is_random_access_collection Output>
+      requires requires(Output& output, position_type<Output> const& position) {
+                  read_at_unchecked(output, position) = uint4{};
+               }
+   constexpr void
+   generate(Output& output) const {
+      auto const first = begin_pos(output);
+      auto const last = end_pos(output);
+      idx const output_size = distance(output, first, last);
+      if (output_size == 0u) {
+         return;
+      }
+      for (idx index = 0u; index < output_size; ++index) {
+         auto position = first;
+         offset_pos(output, position, index);
+         read_at_unchecked(output, position) = 0x8b8b8b8bu;
+      }
+      idx mix_count = idx(output_size - 1u) / 2u;
+      if (output_size >= 623u) {
+         mix_count = 11u;
+      } else if (output_size >= 68u) {
+         mix_count = 7u;
+      } else if (output_size >= 39u) {
+         mix_count = 5u;
+      } else if (output_size >= 7u) {
+         mix_count = 3u;
+      }
+      idx const left = idx(output_size - mix_count) / 2u;
+      idx const right = left + mix_count;
+      idx const rounds = output_size > m_size + 1u ? output_size : m_size + 1u;
+      auto word = [&](idx index) {
+         auto position = first;
+         offset_pos(output, position, index % output_size);
+         return static_cast<__UINT32_TYPE__>(
+            make_raw_arithmetic(read_at_unchecked(output, position))
+         );
+      };
+      auto store = [&](idx index, __UINT32_TYPE__ value) {
+         auto position = first;
+         offset_pos(output, position, index % output_size);
+         read_at_unchecked(output, position) = value;
+      };
+      auto first_mix = [](__UINT32_TYPE__ value) {
+         value ^= value >> 27u;
+         return value * 1'664'525u;
+      };
+      auto second_mix = [](__UINT32_TYPE__ value) {
+         value ^= value >> 27u;
+         return value * 1'566'083'941u;
+      };
+
+      __UINT32_TYPE__ mixed =
+         first_mix(word(0u) ^ word(left) ^ word(idx(output_size - 1u)));
+      __UINT32_TYPE__ added = mixed + make_raw_arithmetic(m_size);
+      store(left, word(left) + mixed);
+      store(right, word(right) + added);
+      store(0u, added);
+
+      for (idx index = 1u; index < rounds; ++index) {
+         mixed =
+            first_mix(word(index) ^ word(index + left) ^ word(idx(index - 1u)));
+         added = mixed + make_raw_arithmetic(index);
+         if (index <= m_size) {
+            added += make_raw_arithmetic(m_values[idx(index - 1u)]);
+         }
+         store(index + left, word(index + left) + mixed);
+         store(index + right, word(index + right) + added);
+         store(index, added);
+      }
+      for (idx index = rounds; index < rounds + output_size; ++index) {
+         mixed = second_mix(
+            word(index) + word(index + left) + word(idx(index - 1u))
+         );
+         added = mixed - make_raw_arithmetic(index);
+         store(index + left, word(index + left) ^ mixed);
+         store(index + right, word(index + right) ^ added);
+         store(index, added);
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   values() const -> span<uint4 const> {
+      return {m_values.data(), m_size};
+   }
+
+ private:
+   template <is_iterable Range>
+   constexpr void
+   assign(Range&& range) {
+      iterate(range).run_while([&](auto&& value) -> bool {
+         if (m_size == m_values.size()) {
+            return false;
+         }
+         m_values[m_size] = uint4(value);
+         ++m_size;
+         return true;
+      });
+   }
+
+   array<uint4, 64u> m_values;
+   idx m_size = 0u;
+};
+
+template <is_integral Int>
+   requires(!is_bool<Int>)
+class uniform_int_distribution;
+
+template <is_floating_point Float>
+class uniform_float_distribution;
+
+template <is_floating_point Float>
+class bernoulli_distribution;
+
+template <is_integral Int, is_floating_point Float>
+   requires(!is_bool<Int>)
+class binomial_distribution;
+
+template <is_integral Int, is_floating_point Float>
+   requires(!is_bool<Int>)
+class negative_binomial_distribution;
+
+template <is_integral Int, is_floating_point Float>
+   requires(!is_bool<Int>)
+class geometric_distribution;
+
+template <is_integral Int, is_floating_point Float>
+   requires(!is_bool<Int>)
+class poisson_distribution;
+
+template <is_floating_point Float>
+class exponential_distribution;
+
+template <is_floating_point Float>
+class gamma_distribution;
+
+template <is_floating_point Float>
+class weibull_distribution;
+
+template <is_floating_point Float>
+class extreme_value_distribution;
+
+template <is_floating_point Float>
+class normal_distribution;
+
+template <is_floating_point Float>
+class lognormal_distribution;
+
+template <is_floating_point Float>
+class chi_squared_distribution;
+
+template <is_floating_point Float>
+class cauchy_distribution;
+
+template <is_floating_point Float>
+class fisher_f_distribution;
+
+template <is_floating_point Float>
+class student_t_distribution;
+
+template <is_integral Int>
+class discrete_distribution;
+
+template <is_floating_point Float>
+class piecewise_constant_distribution;
+
+template <is_floating_point Float>
+class piecewise_linear_distribution;
+
+template <is_simd Simd, detail::xoshiro_scrambler scrambler>
+   requires is_same<typename Simd::value_type, uint4>
+class simd_xoshiro128_engine;
+
+template <is_simd Simd, detail::xoshiro_scrambler scrambler>
+   requires is_same<typename Simd::value_type, uint8>
+class simd_xoshiro256_engine;
+
+template <typename Abi>
+using simd_xoshiro128_plusplus = simd_xoshiro128_engine<
+   simd<uint4, Abi>, detail::xoshiro_scrambler::plusplus>;
+
+template <typename Abi>
+using simd_xoshiro256_plusplus = simd_xoshiro256_engine<
+   simd<uint8, Abi>, detail::xoshiro_scrambler::plusplus>;
+
+}  // namespace cat
+
+#include <cat/detail/bernoulli_distribution.hpp>
+#include <cat/detail/binomial_distribution.hpp>
+#include <cat/detail/cauchy_distribution.hpp>
+#include <cat/detail/chi_squared_distribution.hpp>
+#include <cat/detail/discard_block_engine.hpp>
+#include <cat/detail/discrete_distribution.hpp>
+#include <cat/detail/distribution_helpers.hpp>
+#include <cat/detail/exponential_distribution.hpp>
+#include <cat/detail/extreme_value_distribution.hpp>
+#include <cat/detail/fisher_f_distribution.hpp>
+#include <cat/detail/gamma_distribution.hpp>
+#include <cat/detail/geometric_distribution.hpp>
+#include <cat/detail/independent_bits_engine.hpp>
+#include <cat/detail/independent_simd_engine.hpp>
+#include <cat/detail/integer_distribution_helpers.hpp>
+#include <cat/detail/linux_random.hpp>
+#include <cat/detail/lognormal_distribution.hpp>
+#include <cat/detail/negative_binomial_distribution.hpp>
+#include <cat/detail/normal_distribution.hpp>
+#include <cat/detail/pcg.hpp>
+#include <cat/detail/piecewise_constant_distribution.hpp>
+#include <cat/detail/piecewise_linear_distribution.hpp>
+#include <cat/detail/poisson_distribution.hpp>
+#include <cat/detail/sampling_distribution_helpers.hpp>
+#include <cat/detail/shuffle_order_engine.hpp>
+#include <cat/detail/simd_distribution.hpp>
+#include <cat/detail/student_t_distribution.hpp>
+#include <cat/detail/uniform_float_distribution.hpp>
+#include <cat/detail/uniform_int_distribution.hpp>
+#include <cat/detail/weibull_distribution.hpp>
+#include <cat/detail/wyrand.hpp>
+#include <cat/detail/xoshiro.hpp>
+
+namespace cat {
+
+// https://open-std.org/jtc1/sc22/wg21/docs/papers/2024/p1068r11.pdf
+template <is_iterable Range, typename Generator>
+constexpr auto
+generate_random(Range&& range, Generator&& generator) -> iteration_result {
+   if constexpr (requires { generator.generate_random($fwd(range)); }) {
+      generator.generate_random($fwd(range));
+   } else if constexpr (simd_random_bit_generator<remove_cvref<Generator>>) {
+      using simd_result = remove_cvref<Generator>::result_type;
+      simd_result values;
+      idx lane = simd_result::abi_type::lanes;
+      auto context = iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         if (lane == simd_result::abi_type::lanes) {
+            values = generator();
+            lane = 0u;
+         }
+         value = values[lane];
+         ++lane;
+         return true;
+      });
+   } else {
+      auto context = iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         value = generator();
+         return true;
+      });
+   }
+   return iteration_result::complete;
+}
+
+template <is_iterable Range, typename Generator, typename Distribution>
+constexpr auto
+generate_random(
+   Range&& range, Generator&& generator, Distribution&& distribution
+) -> iteration_result {
+   if constexpr (requires {
+                    distribution.generate_random($fwd(range), generator);
+                 }) {
+      distribution.generate_random($fwd(range), generator);
+   } else if constexpr (is_simd<decltype(distribution(generator))>) {
+      using simd_result = decltype(distribution(generator));
+      simd_result values;
+      idx lane = simd_result::abi_type::lanes;
+      auto context = iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         if (lane == simd_result::abi_type::lanes) {
+            values = distribution(generator);
+            lane = 0u;
+         }
+         value = values[lane];
+         ++lane;
+         return true;
+      });
+   } else {
+      auto context = iterate(range);
+      context.run_while([&](auto&& value) -> bool {
+         value = distribution(generator);
+         return true;
+      });
+   }
+   return iteration_result::complete;
+}
+
+}  // namespace cat
+
+namespace cat {
+
+namespace detail {
+
+template <typename Engine>
+auto
+convenience_engine() -> Engine& {
+   static thread_local Engine engine(nix::linux_urandom_engine{}());
+   return engine;
+}
+
+template <typename Distribution, typename Engine>
+auto
+random_bool() -> bool {
+   return Distribution{}(convenience_engine<Engine>());
+}
+
+template <is_simd Simd, typename Function>
+constexpr auto
+random_simd_from_lanes(Function&& function) -> Simd {
+   Simd result;
+   for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
+      result[lane] = function(lane);
+   }
+   return result;
+}
+
+template <is_simd Simd>
+struct random_narrow_simd_engine {
+   using type = xoshiro128_plusplus;
+};
+
+template <is_simd Simd, typename Engine>
+   requires is_integral<typename Simd::value_type>
+auto
+random_simd_integral_with_engine(
+   Simd lower_bound, Simd upper_bound, Engine& engine
+) -> Simd {
+   using lane_type = Simd::value_type;
+   using unsigned_lane = uint_fixed<sizeof(lane_type)>;
+   using unsigned_abi = Simd::abi_type::template make_abi_type<unsigned_lane>;
+   using unsigned_simd = simd<unsigned_lane, unsigned_abi>;
+   Simd result;
+   array<bool, Simd::abi_type::lanes> complete;
+   complete.fill(false);
+   idx remaining = Simd::abi_type::lanes;
+   while (remaining != 0u) {
+      unsigned_simd const values = engine();
+      for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
+         if (complete[lane]) {
+            continue;
+         }
+         using raw_lane = raw_arithmetic_type<lane_type>;
+         lane_type const lower_value = lower_bound[lane];
+         lane_type const upper_value = upper_bound[lane];
+         // TODO: Support a `cat::int128` type.
+         __int128 const lower =
+            static_cast<__int128>(make_raw_arithmetic(lower_value));
+         __int128 const upper =
+            static_cast<__int128>(make_raw_arithmetic(upper_value));
+         __UINT64_TYPE__ const width = static_cast<__UINT64_TYPE__>(
+            static_cast<unsigned __int128>(upper - lower) + 1u
+         );
+         __UINT64_TYPE__ const threshold = width == 0u ? 0u : -width % width;
+         __UINT64_TYPE__ const value = make_raw_arithmetic(values[lane]);
+         if (value < threshold) {
+            continue;
+         }
+         __int128 const selected =
+            lower + static_cast<__int128>(width == 0u ? value : value % width);
+         result.set_lane(lane, lane_type(static_cast<raw_lane>(selected)));
+         complete[lane] = true;
+         remaining = idx(remaining - 1u);
+      }
+   }
+   return result;
+}
+
+template <is_simd Simd>
+   requires is_integral<typename Simd::value_type>
+auto
+random_simd_integral(Simd lower_bound, Simd upper_bound) -> Simd {
+   using lane_type = Simd::value_type;
+   using unsigned_lane = uint_fixed<sizeof(lane_type)>;
+   using unsigned_abi = Simd::abi_type::template make_abi_type<unsigned_lane>;
+   if constexpr (sizeof(lane_type) < 4u) {
+      using engine_type = random_narrow_simd_engine<Simd>::type;
+      static thread_local engine_type engine(
+         uint4(random_seed(nix::linux_urandom_engine{}()))
+      );
+      return random_simd_from_lanes<Simd>([&](idx lane) {
+         return uniform_int_distribution<
+            lane_type>(lower_bound[lane], upper_bound[lane])(engine);
+      });
+   } else if constexpr (sizeof(lane_type) == 4u) {
+      using engine_type = simd_xoshiro128_plusplus<unsigned_abi>;
+      static thread_local engine_type engine(
+         uint4(random_seed(nix::linux_urandom_engine{}()))
+      );
+      return random_simd_integral_with_engine(lower_bound, upper_bound, engine);
+   } else {
+      using engine_type = simd_xoshiro256_plusplus<unsigned_abi>;
+      static thread_local engine_type engine(nix::linux_urandom_engine{}());
+      return random_simd_integral_with_engine(lower_bound, upper_bound, engine);
+   }
+}
+
+template <is_simd Simd>
+   requires is_floating_point<typename Simd::value_type>
+auto
+random_simd_float(Simd lower_bound, Simd upper_bound) -> Simd {
+   using lane_type = Simd::value_type;
+   using unsigned_lane = uint_fixed<sizeof(lane_type)>;
+   using unsigned_abi = Simd::abi_type::template make_abi_type<unsigned_lane>;
+   Simd result;
+   if constexpr (sizeof(lane_type) == 4u) {
+      using engine_type = simd_xoshiro128_plusplus<unsigned_abi>;
+      static thread_local engine_type engine(
+         uint4(random_seed(nix::linux_urandom_engine{}()))
+      );
+      auto const values = engine();
+      for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
+         lane_type const unit =
+            lane_type(
+               static_cast<float>(make_raw_arithmetic(values[lane]) >> 8u)
+            )
+            * 0x1p-24f;
+         result.set_lane(
+            lane,
+            lower_bound[lane] + (upper_bound[lane] - lower_bound[lane]) * unit
+         );
+      }
+   } else {
+      using engine_type = simd_xoshiro256_plusplus<unsigned_abi>;
+      static thread_local engine_type engine(nix::linux_urandom_engine{}());
+      auto const values = engine();
+      for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
+         lane_type const unit =
+            lane_type(
+               static_cast<double>(make_raw_arithmetic(values[lane]) >> 11u)
+            )
+            * 0x1p-53;
+         result.set_lane(
+            lane,
+            lower_bound[lane] + (upper_bound[lane] - lower_bound[lane]) * unit
+         );
+      }
+   }
+   return result;
+}
+
+}  // namespace detail
+
+// https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3689r0.pdf
+template <random_result T, typename Engine = xoshiro256_plusplus>
+auto
+random(T lower_bound, T upper_bound) -> T {
+   if constexpr (is_simd<T>) {
+      using lane_type = T::value_type;
+      if constexpr (is_integral<lane_type>) {
+         return detail::random_simd_integral(lower_bound, upper_bound);
+      } else {
+         return detail::random_simd_float(lower_bound, upper_bound);
+      }
+   } else if constexpr (is_integral<T>) {
+      return uniform_int_distribution<T>(lower_bound, upper_bound)(
+         detail::convenience_engine<Engine>()
+      );
+   } else {
+      return uniform_float_distribution<T>(lower_bound, upper_bound)(
+         detail::convenience_engine<Engine>()
+      );
+   }
+}
+
+template <random_result T, typename Engine = xoshiro256_plusplus>
+auto
+random() -> T {
+   if constexpr (is_simd<T>) {
+      using lane_type = T::value_type;
+      if constexpr (is_integral<lane_type>) {
+         return random<T, Engine>(
+            T(limits<lane_type>::min()), T(limits<lane_type>::max())
+         );
+      } else {
+         return random<T, Engine>(T(0), T(1));
+      }
+   } else if constexpr (is_integral<T>) {
+      return random<T, Engine>(limits<T>::min(), limits<T>::max());
+   } else {
+      return random<T, Engine>(0, 1);
+   }
+}
+
+template <typename Engine = xoshiro256_plusplus>
+auto
+random() -> bool {
+   return detail::random_bool<bernoulli_distribution<float8>, Engine>();
+}
+
+template <is_floating_point Probability, typename Engine = xoshiro256_plusplus>
+auto
+random(Probability probability) -> bool {
+   return bernoulli_distribution<Probability>(probability)(
+      detail::convenience_engine<Engine>()
+   );
+}
+
+template <
+   is_random_access_collection Range, typename Engine = xoshiro256_plusplus>
+decltype(auto)
+random(Range&& range) {
+   auto position = begin_pos(range);
+   auto const stop = end_pos(range);
+   iword const count = distance(range, position, stop);
+   verify(count > 0);
+   iword const offset = random<iword, Engine>(0, count - 1);
+   offset_pos(range, position, offset);
+   return read_at_unchecked(range, position);
+}
+
+template <typename T, typename Engine = xoshiro256_plusplus>
+auto
+random(initializer_list<T> values) -> T {
+   auto position = begin_pos(values);
+   auto const stop = end_pos(values);
+   iword const count = distance(values, position, stop);
+   verify(count > 0);
+   offset_pos(values, position, random<iword, Engine>(0, count - 1));
+   return read_at_unchecked(values, position);
+}
+
+template <random_result T, typename Engine = xoshiro256_plusplus>
+auto
+randn(T mean = 0, T standard_deviation = 1) -> T {
+   if constexpr (is_simd<T>) {
+      using lane_type = T::value_type;
+      T const first = detail::random_simd_float(T(0), T(1));
+      T const second = detail::random_simd_float(T(0), T(1));
+      T result;
+      for (idx lane = 0u; lane < T::abi_type::lanes; ++lane) {
+         lane_type const first_value = first[lane];
+         lane_type const second_value = second[lane];
+         constexpr lane_type minimum_unit =
+            sizeof(raw_arithmetic_type<lane_type>) == 4u ? 0x1p-24f : 0x1p-53;
+         lane_type const radius =
+            sqrt(-2.f * log(first_value == 0.f ? minimum_unit : first_value));
+         lane_type const normal = radius * cos(tau<lane_type> * second_value);
+         result.set_lane(lane, mean[lane] + standard_deviation[lane] * normal);
+      }
+      return result;
+   } else {
+      return normal_distribution<T>(mean, standard_deviation)(
+         detail::convenience_engine<Engine>()
+      );
+   }
+}
+
+template <typename Engine = xoshiro256_plusplus>
+void
+seed(random_seed value) {
+   detail::convenience_engine<Engine>().seed(value);
+}
+
+template <typename Engine = xoshiro256_plusplus>
+void
+seed() {
+   detail::convenience_engine<Engine>().seed(nix::linux_urandom_engine{}());
+}
+
+}  // namespace cat

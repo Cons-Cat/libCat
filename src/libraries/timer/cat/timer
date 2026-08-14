@@ -1,0 +1,39 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/arithmetic>
+
+namespace x64 {
+
+// https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_rdtsc
+[[nodiscard, gnu::always_inline]]
+inline auto
+read_timestamp_counter() -> cat::uint8 {
+   return __builtin_ia32_rdtsc();
+}
+
+struct timestamp_counter_and_processor {
+   cat::uint8 cycles;
+   cat::uint4 processor;
+};
+
+// https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_rdtscp
+[[nodiscard, gnu::always_inline]]
+inline auto
+read_timestamp_counter_and_processor() -> timestamp_counter_and_processor {
+   cat::uint4 low;
+   cat::uint4 high;
+   cat::uint4 processor;
+   asm volatile(R"(rdtscp
+                   lfence)"
+                : "=a"(low), "=d"(high), "=c"(processor)
+                :
+                : "memory");
+   return {
+      .cycles = cat::uint8(high) << 32u | low,
+      .processor = processor,
+   };
+}
+
+}  // namespace x64

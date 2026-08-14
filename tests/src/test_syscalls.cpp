@@ -121,11 +121,9 @@ $test(syscall_credentials_set) {
 
    // `setfsuid` / `setfsgid` cannot fail. They always return the previous
    // value. Pass `-1` to query without changing.
-   nix::user_id prev_fsuid =
-      nix::sys_setfsuid(nix::user_id{cat::uint4_max});
+   nix::user_id prev_fsuid = nix::sys_setfsuid(nix::user_id{cat::uint4_max});
    cat::verify(prev_fsuid.value >= 0u);
-   nix::group_id prev_fsgid =
-      nix::sys_setfsgid(nix::group_id{cat::uint4_max});
+   nix::group_id prev_fsgid = nix::sys_setfsgid(nix::group_id{cat::uint4_max});
    cat::verify(prev_fsgid.value >= 0u);
 
    // `setpgid(self, self)` puts the calling process into its own group.
@@ -274,8 +272,7 @@ $test(syscall_pipe_dup) {
 
    nix::file_descriptor second_pair[2] = {};
    nix::sys_pipe2(second_pair, nix::pipe2_flags::close_exec).verify();
-   nix::sys_dup3(second_pair[1], write_end, nix::dup3_flags::none)
-      .verify();
+   nix::sys_dup3(second_pair[1], write_end, nix::dup3_flags::none).verify();
    nix::sys_close(second_pair[0]).verify();
 
    nix::sys_close(read_end).verify();
@@ -831,12 +828,9 @@ $test(syscall_signals_self_kill) {
       && (tkill_result.error() == nix::linux_error::srch || tkill_result.error() == nix::linux_error::inval)
    );
 
-   auto tgkill_result =
-      nix::sys_tgkill(
-         self_pid,
-         nix::process_id{cat::int4(-1)},
-         nix::signal::usr1
-      );
+   auto tgkill_result = nix::sys_tgkill(
+      self_pid, nix::process_id{cat::int4(-1)}, nix::signal::usr1
+   );
    cat::verify(
       tgkill_result.is_empty()
       && (tgkill_result.error() == nix::linux_error::srch || tgkill_result.error() == nix::linux_error::inval)
@@ -946,9 +940,9 @@ $test(syscall_socket_options) {
 $test(syscall_random) {
    unsigned char buffer[16] = {};
    cat::idx got = nix::sys_getrandom(
-                       buffer, sizeof(buffer), nix::getrandom_flags::nonblocking
+                     buffer, sizeof(buffer), nix::getrandom_flags::nonblocking
    )
-                       .verify();
+                     .verify();
    cat::verify(got == sizeof(buffer));
 }
 

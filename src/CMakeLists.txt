@@ -9,7 +9,7 @@ set(CAT_INCLUDE_SUBDIRS
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string tui format memory allocator utility file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
-  tuple vec ring enum iterable dyn)
+  tuple vec ring enum iterable dyn random timer)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -255,6 +255,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/debug/implementations/default_assert_handler.cpp
   ${CATLIB}/debug/implementations/verify.cpp
   ${CATLIB}/debug/implementations/assert.cpp
+  ${CATLIB}/linux/implementations/cpu_temperature.cpp
 )
 
 set(CAT_HEADER_FILES
@@ -387,6 +388,41 @@ set(CAT_HEADER_FILES
   ${CATLIB}/memory/implementations/is_memory_overlapping.tpp
   ${CATLIB}/meta/cat/meta
   ${CATLIB}/notype/cat/notype
+  ${CATLIB}/random/cat/random
+  ${CATLIB}/random/cat/detail/bernoulli_distribution.hpp
+  ${CATLIB}/random/cat/detail/binomial_distribution.hpp
+  ${CATLIB}/random/cat/detail/cauchy_distribution.hpp
+  ${CATLIB}/random/cat/detail/chi_squared_distribution.hpp
+  ${CATLIB}/random/cat/detail/discard_block_engine.hpp
+  ${CATLIB}/random/cat/detail/discrete_distribution.hpp
+  ${CATLIB}/random/cat/detail/distribution_helpers.hpp
+  ${CATLIB}/random/cat/detail/exponential_distribution.hpp
+  ${CATLIB}/random/cat/detail/extreme_value_distribution.hpp
+  ${CATLIB}/random/cat/detail/fisher_f_distribution.hpp
+  ${CATLIB}/random/cat/detail/gamma_distribution.hpp
+  ${CATLIB}/random/cat/detail/geometric_distribution.hpp
+  ${CATLIB}/random/cat/detail/independent_bits_engine.hpp
+  ${CATLIB}/random/cat/detail/independent_simd_engine.hpp
+  ${CATLIB}/random/cat/detail/integer_distribution_helpers.hpp
+  ${CATLIB}/random/cat/detail/linux_random.hpp
+  ${CATLIB}/random/cat/detail/lognormal_distribution.hpp
+  ${CATLIB}/random/cat/detail/negative_binomial_distribution.hpp
+  ${CATLIB}/random/cat/detail/normal_distribution.hpp
+  ${CATLIB}/random/cat/detail/pcg.hpp
+  ${CATLIB}/random/cat/detail/piecewise_constant_distribution.hpp
+  ${CATLIB}/random/cat/detail/piecewise_linear_distribution.hpp
+  ${CATLIB}/random/cat/detail/poisson_distribution.hpp
+  ${CATLIB}/random/cat/detail/rdrand.hpp
+  ${CATLIB}/random/cat/detail/rdseed.hpp
+  ${CATLIB}/random/cat/detail/sampling_distribution_helpers.hpp
+  ${CATLIB}/random/cat/detail/shuffle_order_engine.hpp
+  ${CATLIB}/random/cat/detail/simd_distribution.hpp
+  ${CATLIB}/random/cat/detail/student_t_distribution.hpp
+  ${CATLIB}/random/cat/detail/uniform_float_distribution.hpp
+  ${CATLIB}/random/cat/detail/uniform_int_distribution.hpp
+  ${CATLIB}/random/cat/detail/weibull_distribution.hpp
+  ${CATLIB}/random/cat/detail/wyrand.hpp
+  ${CATLIB}/random/cat/detail/xoshiro.hpp
   ${CATLIB}/ring/cat/ring
   ${CATLIB}/runtime/cat/runtime
   ${CATLIB}/sanitizer/cat/sanitizer
@@ -429,6 +465,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
   ${CATLIB}/thread/cat/thread
   ${CATLIB}/thread/cat/raii_thread
+  ${CATLIB}/timer/cat/timer
   ${CATLIB}/tui/cat/tui
   ${CATLIB}/tuple/cat/tuple
   ${CATLIB}/type_list/cat/type_list

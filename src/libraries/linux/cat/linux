@@ -526,6 +526,10 @@ auto
 syscall_volatile(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
    requires(sizeof...(Args) < 7);
 
+[[nodiscard]]
+auto
+cpu_temperature() -> cat::maybe<cat::int4>;
+
 }  // namespace nix
 
 template <>
