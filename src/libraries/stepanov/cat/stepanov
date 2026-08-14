@@ -286,9 +286,8 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
 
    // If the derived iterator does not have `.advance_to()`, generate it.
    constexpr auto
-   advance_to(
-      this auto&& self, remove_cvref<decltype(self)> const& other_iterator
-   ) -> remove_cvref<decltype(self)> const& {
+   advance_to(this auto&& self, typeof_unqual(self) const& other_iterator)
+      -> typeof_unqual(self) const& {
       if (other_iterator > self) {
          while (other_iterator > self) {
             ++self;
@@ -326,10 +325,11 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
 
    constexpr auto
    operator+=(this auto&& self, auto offset) -> decltype(auto)
-      requires(detail::is_difference_type<
-               decltype(offset), remove_cvref<decltype(self)>>)
+      requires(
+         detail::is_difference_type<decltype(offset), typeof_unqual(self)>
+      )
    {
-      if constexpr (detail::has_advance<remove_cvref<decltype(self)>>) {
+      if constexpr (detail::has_advance<typeof_unqual(self)>) {
          self.advance(
             static_cast<remove_cvref<decltype(self)>::difference_type>(offset)
          );
@@ -343,7 +343,7 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
 
    constexpr auto
    operator++(this auto&& self) -> decltype(auto) {
-      if constexpr (detail::has_increment<remove_cvref<decltype(self)>>) {
+      if constexpr (detail::has_increment<typeof_unqual(self)>) {
          self.increment();
       } else {
          self.advance(
@@ -354,7 +354,7 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    }
 
    constexpr auto
-   operator++(this auto&& self, int) -> remove_cvref<decltype(self)> {
+   operator++(this auto&& self, int) -> typeof_unqual(self) {
       auto copy = self;
       ++self;
       return copy;
@@ -362,9 +362,9 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
 
    constexpr auto
    operator--(this auto&& self) -> decltype(auto)
-      requires(detail::has_bidirectional<remove_cvref<decltype(self)>>)
+      requires(detail::has_bidirectional<typeof_unqual(self)>)
    {
-      if constexpr (detail::has_decrement<remove_cvref<decltype(self)>>) {
+      if constexpr (detail::has_decrement<typeof_unqual(self)>) {
          self.decrement();
       } else {
          self.advance(
@@ -375,8 +375,8 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    }
 
    constexpr auto
-   operator--(this auto&& self, int) -> remove_cvref<decltype(self)>
-      requires(detail::has_bidirectional<remove_cvref<decltype(self)>>)
+   operator--(this auto&& self, int) -> typeof_unqual(self)
+      requires(detail::has_bidirectional<typeof_unqual(self)>)
    {
       auto copy = self;
       --self;
@@ -387,9 +387,8 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    operator[](this auto const& self [[clang::lifetimebound]], auto offset)
       -> decltype(auto)
       requires(
-         detail::has_advance<remove_cvref<decltype(self)>>
-         && detail::is_difference_type<
-            decltype(offset), remove_cvref<decltype(self)>>
+         detail::has_advance<typeof_unqual(self)>
+         && detail::is_difference_type<decltype(offset), typeof_unqual(self)>
       )
    {
       return *(self + offset);

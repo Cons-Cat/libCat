@@ -86,7 +86,7 @@ struct reverse_inplace_impl {
                                                                range.size();
                                                             }
          ) {
-            using value_type = remove_reference<decltype(*range.data())>;
+            using value_type = typeof(*range.data());
             if constexpr (is_arithmetic<value_type>) {
 #ifdef CAT_NO_CPUID
                reverse_inplace_scalar_impl(range.data(), range.size());

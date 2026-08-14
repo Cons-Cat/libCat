@@ -196,7 +196,7 @@ class simd_precision_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(U&& rhs) const -> result_type {
@@ -219,7 +219,7 @@ class simd_precision_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U&& rhs) const -> result_type {
@@ -243,7 +243,7 @@ class simd_precision_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U&& lhs) const -> result_type {
@@ -268,7 +268,7 @@ class simd_precision_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U&& rhs) const -> result_type {
@@ -300,15 +300,16 @@ class simd_precision_reference
    }
 
    template <typename Factor, typename Addend>
-      requires(
-         !cat::is_simd<remove_cvref<Factor>>
-         && !cat::is_simd<remove_cvref<Addend>>
-         && simd_broadcast_really_convertible_to<remove_cvref<Factor>, T>()
-         && simd_broadcast_really_convertible_to<remove_cvref<Addend>, T>()
-      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fma(Factor&& factor, Addend&& addend) const -> result_type {
+   fma(Factor&& factor, Addend&& addend) const -> result_type
+      requires(
+         !cat::is_simd<typeof_unqual(factor)>
+         && !cat::is_simd<typeof_unqual(addend)>
+         && simd_broadcast_really_convertible_to<typeof_unqual(factor), T>()
+         && simd_broadcast_really_convertible_to<typeof_unqual(addend), T>()
+      )
+   {
       return fma(wrapper_type($fwd(factor)), wrapper_type($fwd(addend)));
    }
 
@@ -328,7 +329,7 @@ class simd_precision_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(U&& rhs) const -> result_type {
@@ -352,7 +353,7 @@ class simd_precision_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_into(U&& lhs) const -> result_type {

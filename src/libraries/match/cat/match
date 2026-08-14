@@ -98,8 +98,7 @@ struct one_of_types : pattern {
    constexpr auto
    then_do(Callback&& callback) {
       return pattern_invocable{[&](auto& matching) -> bool {
-         using unqualified_matching =
-            remove_const<remove_reference<decltype(matching)>>;
+         using unqualified_matching = typeof_unqual(matching);
          if constexpr (has_member_is_type<unqualified_matching>) {
             // If `matching` currently holds one of `types`, then invoke
             // `callback`.
@@ -132,7 +131,7 @@ struct is_a_value_type : pattern {
    then_do(Callback&& callback) {
       return pattern_invocable{
          [&](auto& matching) -> bool {
-            using unqualified_matching = remove_cvref<decltype(matching)>;
+            using unqualified_matching = typeof_unqual(matching);
             if constexpr (has_member_is_value<unqualified_matching>) {
                // If `matching` currently holds a value equivalent to
                // `this->value`, then invoke `callback`.

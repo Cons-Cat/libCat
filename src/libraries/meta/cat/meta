@@ -168,8 +168,11 @@ using remove_const = __remove_const(T);
 template <typename T>
 using remove_volatile = __remove_volatile(T);
 
+// Clang C++ only spells this `__typeof_unqual`. Match C23 `typeof_unqual`.
+#define typeof_unqual __typeof_unqual
+
 template <typename T>
-using remove_cv = __remove_cv(T);
+using remove_cv = typeof_unqual(T);
 
 template <typename T>
 using remove_reference = __remove_reference_t(T);

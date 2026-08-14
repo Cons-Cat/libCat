@@ -20,7 +20,7 @@ copy(
    InputIterator source_begin, InputIterator source_end,
    OutputIterator destination_begin
 ) -> OutputIterator {
-   using destination_element = remove_reference<decltype(*destination_begin)>;
+   using destination_element = typeof(*destination_begin);
 
    while (source_begin != source_end) {
       // Copy assignment.
@@ -38,7 +38,7 @@ move(
    InputIterator source_begin, InputIterator source_end,
    OutputIterator destination_begin
 ) -> OutputIterator {
-   using destination_element = remove_reference<decltype(*destination_begin)>;
+   using destination_element = typeof(*destination_begin);
 
    while (source_begin != source_end) {
       // Move assignment.
@@ -57,7 +57,7 @@ relocate(
    InputIterator source_begin, InputIterator source_end,
    OutputIterator destination_begin
 ) -> OutputIterator {
-   using source_element = remove_reference<decltype(*source_begin)>;
+   using source_element = typeof(*source_begin);
    using destination_element = decltype(*destination_begin);
 
    // If the source and destination containers are contiguous, and they hold the

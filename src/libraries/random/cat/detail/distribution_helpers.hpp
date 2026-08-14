@@ -12,7 +12,7 @@ namespace cat::detail {
 template <uniform_random_bit_generator Generator>
 constexpr auto
 distribution_engine_word(Generator& generator) {
-   using engine_type = remove_cvref<Generator>;
+   using engine_type = typeof_unqual(generator);
    using raw_type = raw_arithmetic_type<typename engine_type::result_type>;
    using unsigned_type = make_unsigned_type<raw_type>;
    unsigned_type const minimum =
@@ -24,7 +24,7 @@ distribution_engine_word(Generator& generator) {
 template <uniform_random_bit_generator Generator>
 constexpr auto
 distribution_random_bit(Generator& generator) -> bool {
-   using engine_type = remove_cvref<Generator>;
+   using engine_type = typeof_unqual(generator);
    using raw_type = raw_arithmetic_type<typename engine_type::result_type>;
    using unsigned_type = make_unsigned_type<raw_type>;
    unsigned_type const maximum =
@@ -48,7 +48,7 @@ template <uniform_random_bit_generator Generator, is_raw_integral T>
    requires is_unsigned<T>
 constexpr auto
 distribution_random_bounded(Generator& generator, T bound) -> T {
-   using engine_type = remove_cvref<Generator>;
+   using engine_type = typeof_unqual(generator);
    using engine_raw = raw_arithmetic_type<typename engine_type::result_type>;
    using engine_unsigned = make_unsigned_type<engine_raw>;
    engine_unsigned const engine_span =

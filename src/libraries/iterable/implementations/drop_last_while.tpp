@@ -48,7 +48,7 @@ struct drop_last_while_view_impl : iterable_interface<> {
    constexpr auto
    iterate() {
       auto& collection = unwrap_ref(m_base);
-      using collection_type = remove_reference<decltype(collection)>;
+      using collection_type = typeof(collection);
       return collection_iteration_context<collection_type>{
          __builtin_addressof(collection),
          begin_pos(collection),
@@ -65,7 +65,7 @@ struct drop_last_while_view_impl : iterable_interface<> {
       )
    {
       auto& collection = unwrap_ref(m_base);
-      using collection_type = remove_reference<decltype(collection)>;
+      using collection_type = typeof(collection);
       return collection_iteration_context<collection_type>{
          __builtin_addressof(collection),
          begin_pos(collection),

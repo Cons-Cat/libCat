@@ -5981,7 +5981,7 @@ class allocator_interface {
       auto& allocator, auto* _Nonnull p_old_handle, idx old_count,
       idx new_count, Args&&... arguments
    ) {
-      using element_type = remove_cvref<decltype(*p_old_handle)>;
+      using element_type = typeof_unqual(*p_old_handle);
 
       // Optional optimization: when the allocator can relocate the block in a
       // single step (e.g. `mremap`) and the element type is trivially
@@ -6104,7 +6104,7 @@ class allocator_interface {
       }
 
       this->free_multi(
-         span<remove_cvref<decltype(*p_old_handle)>>(p_old_handle, old_count)
+         span<typeof_unqual(*p_old_handle)>(p_old_handle, old_count)
       );
       return new_handle;
    }

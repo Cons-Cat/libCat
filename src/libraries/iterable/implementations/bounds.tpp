@@ -78,7 +78,7 @@ template <typename T>
    requires(is_random_access_collection<T> && detail::has_contiguous_storage<T>)
 constexpr auto
 as_span(T& collection) {
-   using element = remove_reference<decltype(*collection.data())>;
+   using element = typeof(*collection.data());
    return span<element, dynamic_extent>{collection.data(), collection.size()};
 }
 

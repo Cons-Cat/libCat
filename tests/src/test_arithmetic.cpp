@@ -4841,19 +4841,19 @@ $test(arithmetic_compound_ops_match_non_compound_return_type) {
    {
       cat::wrap_int4 a;
       cat::sat_int4 b;
-      static_assert(is_same<remove_cvref<decltype(a += b)>, decltype(a + b)>);
-      static_assert(is_same<remove_cvref<decltype(a -= b)>, decltype(a - b)>);
-      static_assert(is_same<remove_cvref<decltype(a *= b)>, decltype(a * b)>);
-      static_assert(is_same<remove_cvref<decltype(a /= b)>, decltype(a / b)>);
+      static_assert(is_same<typeof_unqual(a += b), decltype(a + b)>);
+      static_assert(is_same<typeof_unqual(a -= b), decltype(a - b)>);
+      static_assert(is_same<typeof_unqual(a *= b), decltype(a * b)>);
+      static_assert(is_same<typeof_unqual(a /= b), decltype(a / b)>);
    }
    {
       cat::sat_uint4 a;
       cat::wrap_uint4 b;
-      static_assert(is_same<remove_cvref<decltype(a += b)>, decltype(a + b)>);
-      static_assert(is_same<remove_cvref<decltype(a -= b)>, decltype(a - b)>);
-      static_assert(is_same<remove_cvref<decltype(a *= b)>, decltype(a * b)>);
-      static_assert(is_same<remove_cvref<decltype(a /= b)>, decltype(a / b)>);
-      static_assert(is_same<remove_cvref<decltype(a %= b)>, decltype(a % b)>);
+      static_assert(is_same<typeof_unqual(a += b), decltype(a + b)>);
+      static_assert(is_same<typeof_unqual(a -= b), decltype(a - b)>);
+      static_assert(is_same<typeof_unqual(a *= b), decltype(a * b)>);
+      static_assert(is_same<typeof_unqual(a /= b), decltype(a / b)>);
+      static_assert(is_same<typeof_unqual(a %= b), decltype(a % b)>);
    }
 
    // LHS wider than RHS. += and *= are still defined here because
@@ -4861,16 +4861,16 @@ $test(arithmetic_compound_ops_match_non_compound_return_type) {
    {
       wrap_iword a;
       cat::int4 b;
-      static_assert(is_same<remove_cvref<decltype(a += b)>, decltype(a + b)>);
-      static_assert(is_same<remove_cvref<decltype(a -= b)>, decltype(a - b)>);
-      static_assert(is_same<remove_cvref<decltype(a *= b)>, decltype(a * b)>);
-      static_assert(is_same<remove_cvref<decltype(a /= b)>, decltype(a / b)>);
+      static_assert(is_same<typeof_unqual(a += b), decltype(a + b)>);
+      static_assert(is_same<typeof_unqual(a -= b), decltype(a - b)>);
+      static_assert(is_same<typeof_unqual(a *= b), decltype(a * b)>);
+      static_assert(is_same<typeof_unqual(a /= b), decltype(a / b)>);
    }
    {
       sat_iword a;
       cat::wrap_int4 b;
-      static_assert(is_same<remove_cvref<decltype(a += b)>, decltype(a + b)>);
-      static_assert(is_same<remove_cvref<decltype(a *= b)>, decltype(a * b)>);
+      static_assert(is_same<typeof_unqual(a += b), decltype(a + b)>);
+      static_assert(is_same<typeof_unqual(a *= b), decltype(a * b)>);
    }
 
    // RHS wider than LHS. -=, /=, %= stay LHS-shape so they are still defined.
@@ -4879,15 +4879,15 @@ $test(arithmetic_compound_ops_match_non_compound_return_type) {
    {
       cat::wrap_int4 a;
       cat::iword b;
-      static_assert(is_same<remove_cvref<decltype(a -= b)>, decltype(a - b)>);
-      static_assert(is_same<remove_cvref<decltype(a /= b)>, decltype(a / b)>);
+      static_assert(is_same<typeof_unqual(a -= b), decltype(a - b)>);
+      static_assert(is_same<typeof_unqual(a /= b), decltype(a / b)>);
    }
    {
       cat::sat_uint4 a;
       cat::uword b;
-      static_assert(is_same<remove_cvref<decltype(a -= b)>, decltype(a - b)>);
-      static_assert(is_same<remove_cvref<decltype(a /= b)>, decltype(a / b)>);
-      static_assert(is_same<remove_cvref<decltype(a %= b)>, decltype(a % b)>);
+      static_assert(is_same<typeof_unqual(a -= b), decltype(a - b)>);
+      static_assert(is_same<typeof_unqual(a /= b), decltype(a / b)>);
+      static_assert(is_same<typeof_unqual(a %= b), decltype(a % b)>);
    }
 
    // Bitwise &= / |= keep the LHS's policy whether the RHS is the same width or
@@ -4895,14 +4895,14 @@ $test(arithmetic_compound_ops_match_non_compound_return_type) {
    {
       cat::wrap_uint4 a;
       cat::sat_uint4 b;
-      static_assert(is_same<remove_cvref<decltype(a &= b)>, decltype(a & b)>);
-      static_assert(is_same<remove_cvref<decltype(a |= b)>, decltype(a | b)>);
+      static_assert(is_same<typeof_unqual(a &= b), decltype(a & b)>);
+      static_assert(is_same<typeof_unqual(a |= b), decltype(a | b)>);
    }
    {
       sat_uword a;
       cat::wrap_uint4 b;
-      static_assert(is_same<remove_cvref<decltype(a &= b)>, decltype(a & b)>);
-      static_assert(is_same<remove_cvref<decltype(a |= b)>, decltype(a | b)>);
+      static_assert(is_same<typeof_unqual(a &= b), decltype(a & b)>);
+      static_assert(is_same<typeof_unqual(a |= b), decltype(a | b)>);
    }
 
    // Shifts always return the LHS's shape regardless of the bit-count operand's
@@ -4910,26 +4910,26 @@ $test(arithmetic_compound_ops_match_non_compound_return_type) {
    {
       cat::sat_uint4 a;
       wrap_uword b;
-      static_assert(is_same<remove_cvref<decltype(a <<= b)>, decltype(a << b)>);
-      static_assert(is_same<remove_cvref<decltype(a >>= b)>, decltype(a >> b)>);
+      static_assert(is_same<typeof_unqual(a <<= b), decltype(a << b)>);
+      static_assert(is_same<typeof_unqual(a >>= b), decltype(a >> b)>);
    }
    {
       cat::wrap_int4 a;
       cat::sat_uint4 b;
-      static_assert(is_same<remove_cvref<decltype(a <<= b)>, decltype(a << b)>);
-      static_assert(is_same<remove_cvref<decltype(a >>= b)>, decltype(a >> b)>);
+      static_assert(is_same<typeof_unqual(a <<= b), decltype(a << b)>);
+      static_assert(is_same<typeof_unqual(a >>= b), decltype(a >> b)>);
    }
    {
       sat_idx a;
       cat::uword b;
-      static_assert(is_same<remove_cvref<decltype(a <<= b)>, decltype(a << b)>);
-      static_assert(is_same<remove_cvref<decltype(a >>= b)>, decltype(a >> b)>);
+      static_assert(is_same<typeof_unqual(a <<= b), decltype(a << b)>);
+      static_assert(is_same<typeof_unqual(a >>= b), decltype(a >> b)>);
    }
    {
       wrap_idx a;
       cat::uint4 b;
-      static_assert(is_same<remove_cvref<decltype(a <<= b)>, decltype(a << b)>);
-      static_assert(is_same<remove_cvref<decltype(a >>= b)>, decltype(a >> b)>);
+      static_assert(is_same<typeof_unqual(a <<= b), decltype(a << b)>);
+      static_assert(is_same<typeof_unqual(a >>= b), decltype(a >> b)>);
    }
 }
 

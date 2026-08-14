@@ -61,7 +61,7 @@ constexpr auto
 invoke(Args&&... arguments) -> Expected {
    auto const result = Hook::invoke(static_cast<Args&&>(arguments)...);
    static_assert(
-      is_same<Expected, remove_cvref<decltype(result)>>,
+      is_same<Expected, typeof_unqual(result)>,
       "simd_abi specialization: Hook::invoke must return exactly the type "
       "Expected at this call site"
    );

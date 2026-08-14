@@ -28,7 +28,7 @@ type_name() -> cat::str_view {
 
 consteval auto
 nameof(auto&& value) -> cat::str_view {
-   return type_name<cat::remove_reference<decltype(value)>>();
+   return type_name<typeof(value)>();
 }
 
 template <auto enum_value>

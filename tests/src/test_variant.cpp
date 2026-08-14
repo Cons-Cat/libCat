@@ -271,7 +271,7 @@ $test(variant_constexpr) {
    // `cat::visit` dispatches by discriminant at compile time.
    constexpr int visited = cat::visit(
       [](auto value) -> int {
-         using value_type = cat::remove_cvref<decltype(value)>;
+         using value_type = typeof_unqual(value);
          if constexpr (cat::is_same<value_type, int>) {
             return static_cast<int>(value);
          } else {
@@ -355,7 +355,7 @@ $test(variant_visit_single) {
    int hit_index = -1;
    cat::visit(
       [&](auto& value) {
-         using T = cat::remove_cvref<decltype(value)>;
+         using T = typeof_unqual(value);
          if constexpr (cat::is_same<T, int>) {
             cat::verify(value == 5);
             hit_index = 0;
@@ -372,7 +372,7 @@ $test(variant_visit_single) {
    v = 'q';
    cat::visit(
       [&](auto& value) {
-         using T = cat::remove_cvref<decltype(value)>;
+         using T = typeof_unqual(value);
          if constexpr (cat::is_same<T, char>) {
             cat::verify(value == 'q');
             hit_index = 1;
@@ -386,7 +386,7 @@ $test(variant_visit_single) {
    v = 42;
    int doubled = cat::visit(
       [](auto& value) -> int {
-         using T = cat::remove_cvref<decltype(value)>;
+         using T = typeof_unqual(value);
          if constexpr (cat::is_same<T, int>) {
             return value * 2;
          } else if constexpr (cat::is_same<T, char>) {
@@ -402,7 +402,7 @@ $test(variant_visit_single) {
    // Member-shortcut `variant.visit(callback)`.
    int member_hit = 0;
    v.visit([&](auto& value) {
-      using T = cat::remove_cvref<decltype(value)>;
+      using T = typeof_unqual(value);
       if constexpr (cat::is_same<T, int>) {
          member_hit = value;
       }
@@ -419,8 +419,8 @@ $test(variant_visit_multi) {
    bool matched = false;
    cat::visit(
       [&](auto& a_value, auto& b_value) {
-         using A = cat::remove_cvref<decltype(a_value)>;
-         using B = cat::remove_cvref<decltype(b_value)>;
+         using A = typeof_unqual(a_value);
+         using B = typeof_unqual(b_value);
          if constexpr (cat::is_same<A, int> && cat::is_same<B, char>) {
             cat::verify(a_value == 1);
             cat::verify(b_value == 'b');
@@ -436,13 +436,13 @@ $test(variant_visit_multi) {
    int sum = cat::visit(
       [](auto& x, auto& y, auto& z) -> int {
          int total = 0;
-         if constexpr (cat::is_same<cat::remove_cvref<decltype(x)>, int>) {
+         if constexpr (cat::is_same<typeof_unqual(x), int>) {
             total += x;
          }
-         if constexpr (cat::is_same<cat::remove_cvref<decltype(y)>, char>) {
+         if constexpr (cat::is_same<typeof_unqual(y), char>) {
             total += y;
          }
-         if constexpr (cat::is_same<cat::remove_cvref<decltype(z)>, int>) {
+         if constexpr (cat::is_same<typeof_unqual(z), int>) {
             total += z;
          }
          return total;
@@ -564,7 +564,7 @@ $test(variant_inheritance) {
 
    int sum_kind = cat::visit(
       [](auto& value) -> int {
-         using T = cat::remove_cvref<decltype(value)>;
+         using T = typeof_unqual(value);
          if constexpr (cat::is_same<T, int>) {
             return value;
          } else if constexpr (cat::is_same<T, char>) {
@@ -995,7 +995,7 @@ $test(variant_inheritance_shadowing) {
 
    // The member `visit` also dispatches through the variant base.
    int seen = sp.visit([](auto& value) -> int {
-      if constexpr (cat::is_same<cat::remove_cvref<decltype(value)>, int>) {
+      if constexpr (cat::is_same<typeof_unqual(value), int>) {
          return value;
       }
       return -2;
@@ -1056,7 +1056,7 @@ $test(variant_duplicate_alternatives) {
 
    // Visit observes the active slot's value.
    int from_visit = first.visit([](auto& value) -> int {
-      if constexpr (cat::is_same<cat::remove_cvref<decltype(value)>, int>) {
+      if constexpr (cat::is_same<typeof_unqual(value), int>) {
          return value;
       }
       return -1;

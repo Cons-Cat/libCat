@@ -488,7 +488,7 @@ template <typename Dest, typename U>
 constexpr auto
 raw_source_fits_implicit_storage(U const& other) -> bool {
    auto const raw = make_raw_arithmetic(other);
-   using raw_value = remove_cvref<decltype(raw)>;
+   using raw_value = typeof_unqual(raw);
    if constexpr (is_floating_point<Dest>) {
       if constexpr (is_integral<raw_value>) {
          // Integral to `float`. `implicit_raw_compare_wide` does not support
@@ -533,12 +533,12 @@ template <is_integral U>
 constexpr auto
 positive_power_of_two(U const& value) -> bool {
    auto const raw = make_raw_arithmetic(value);
-   if constexpr (is_signed_integral<remove_cvref<decltype(raw)>>) {
+   if constexpr (is_signed_integral<typeof_unqual(raw)>) {
       if (raw <= 0) {
          return false;
       }
    }
-   using unsigned_raw = make_unsigned_type<remove_cvref<decltype(raw)>>;
+   using unsigned_raw = make_unsigned_type<typeof_unqual(raw)>;
    unsigned_raw const unsigned_value = static_cast<unsigned_raw>(raw);
    return unsigned_value != 0u
           && (unsigned_value & (unsigned_value - 1u)) == 0u;

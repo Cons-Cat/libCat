@@ -374,20 +374,20 @@ struct bit_collection_interface : iterable_interface<Derived> {
    [[nodiscard]]
    constexpr auto
    read_at_unchecked(this auto& self, idx position) -> decltype(auto) {
-      using reference_type = remove_cvref<decltype(self[position])>;
+      using reference_type = typeof_unqual(self[position]);
       static_assert(is_specialization<reference_type, bit_reference>);
       return self[position];
    }
 
    constexpr auto
    iterate(this auto& self) {
-      using self_type = remove_reference<decltype(self)>;
+      using self_type = typeof(self);
       return detail::bit_iteration_context<self_type>{self, 0u, self.size()};
    }
 
    constexpr auto
    reverse_iterate(this auto& self) {
-      using self_type = remove_reference<decltype(self)>;
+      using self_type = typeof(self);
       return detail::bit_reverse_iteration_context<self_type>{
          self,
          self.size(),
