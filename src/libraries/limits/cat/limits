@@ -424,14 +424,14 @@ struct limits<float> {
       return __builtin_huge_valf();
    }
 
-   // NOLINTNEXTLINE Let this weird lettercase be used.
    static constexpr auto
+   // NOLINTNEXTLINE Let this weird lettercase be used.
    quiet_NaN() -> float {
       return __builtin_nanf("");
    }
 
-   // NOLINTNEXTLINE Let this weird lettercase be used.
    static constexpr auto
+   // NOLINTNEXTLINE Let this weird lettercase be used.
    signaling_NaN() -> float {
       return __builtin_nansf("");
    }

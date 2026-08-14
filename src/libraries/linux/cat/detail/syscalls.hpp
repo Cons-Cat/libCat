@@ -2392,8 +2392,7 @@ sys_dup3(file_descriptor oldfd, file_descriptor newfd, dup3_flags flags)
 
 // Syscall 293.
 // libC implements POSIX `pipe()` via this.
-auto
-sys_pipe2(file_descriptor (&pipefd)[2], pipe2_flags flags)
+auto sys_pipe2(file_descriptor (&pipefd)[2], pipe2_flags flags)
    -> scaredy_nix<void>;
 
 // Syscall 297. Send `s` to thread `tid` inside thread group `tgid` along

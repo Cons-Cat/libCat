@@ -324,9 +324,10 @@ struct file_descriptor {
    constexpr file_descriptor(cat::uint4 input) : value(input) {
    }
 
-   explicit constexpr file_descriptor(cat::int4 input)
-      __attribute__((enable_if(input == -1, "Only -1 is a valid negative file descriptor!")))
-      : value(__builtin_bit_cast(cat::uint4, input)) {
+   explicit constexpr file_descriptor(cat::int4 input) __attribute__((
+      enable_if(input == -1, "Only -1 is a valid negative file descriptor!")
+   ))
+       : value(__builtin_bit_cast(cat::uint4, input)) {
    }
 };
 
@@ -357,9 +358,10 @@ struct process_id {
    constexpr process_id(cat::uint4 input) : value(input) {
    }
 
-   constexpr process_id(cat::int4 input)
-      __attribute__((enable_if(input == -1, "only -1 is a valid negative process ID")))
-      : value(__builtin_bit_cast(cat::uint4, input)) {
+   constexpr process_id(cat::int4 input) __attribute__((
+      enable_if(input == -1, "only -1 is a valid negative process ID")
+   ))
+       : value(__builtin_bit_cast(cat::uint4, input)) {
    }
 };
 

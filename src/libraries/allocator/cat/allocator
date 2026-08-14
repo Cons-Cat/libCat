@@ -225,6 +225,10 @@ struct inline_memory_handle {
                value_type(move(other.inline_storage));
             other.inline_storage.~value_type();
             other.storage_state = 2u;
+         } else {
+            for (idx i; i < inline_size; ++i) {
+               empty[i] = other.empty[i];
+            }
          }
       } else {
          new (__builtin_addressof(handle)) Handle(move(other.handle));
@@ -275,6 +279,10 @@ struct inline_memory_handle {
                value_type(move(other.inline_storage));
             other.inline_storage.~value_type();
             other.storage_state = 2u;
+         } else {
+            for (idx i; i < inline_size; ++i) {
+               empty[i] = other.empty[i];
+            }
          }
       } else {
          new (__builtin_addressof(handle)) Handle(move(other.handle));
