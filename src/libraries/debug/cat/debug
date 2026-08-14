@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+// NOLINTBEGIN(bugprone-std-namespace-modification)
 namespace std {
 
 class source_location {
@@ -67,6 +68,8 @@ class source_location {
 };
 
 }  // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 namespace cat {
 

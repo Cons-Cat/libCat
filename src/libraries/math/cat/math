@@ -31,71 +31,27 @@ class infinity_type {
    }
 
    constexpr auto
-   operator<(infinity_type const& other) const -> bool {
-      return m_negative && !other.m_negative;
+   operator<=>(infinity_type const& other) const -> strong_ordering {
+      if (m_negative == other.m_negative) {
+         return strong_ordering::equal;
+      }
+      return m_negative ? strong_ordering::less : strong_ordering::greater;
    }
 
+   template <is_floating_point Float>
    constexpr auto
-   operator>(infinity_type const& other) const -> bool {
-      return !m_negative && other.m_negative;
-   }
-
-   constexpr auto
-   operator<=(infinity_type const& other) const -> bool {
-      return !(*this > other);
-   }
-
-   constexpr auto
-   operator>=(infinity_type const& other) const -> bool {
-      return !(*this < other);
-   }
-
-   template <is_floating_point Float>
-   friend constexpr auto
-   operator<(infinity_type left, Float right) -> bool {
-      return left.less_than(right);
-   }
-
-   template <is_floating_point Float>
-   friend constexpr auto
-   operator<(Float left, infinity_type right) -> bool {
-      return right.greater_than(left);
-   }
-
-   template <is_floating_point Float>
-   friend constexpr auto
-   operator>(infinity_type left, Float right) -> bool {
-      return left.greater_than(right);
-   }
-
-   template <is_floating_point Float>
-   friend constexpr auto
-   operator>(Float left, infinity_type right) -> bool {
-      return right.less_than(left);
-   }
-
-   template <is_floating_point Float>
-   friend constexpr auto
-   operator<=(infinity_type left, Float right) -> bool {
-      return left < right || left == right;
-   }
-
-   template <is_floating_point Float>
-   friend constexpr auto
-   operator<=(Float left, infinity_type right) -> bool {
-      return left < right || left == right;
-   }
-
-   template <is_floating_point Float>
-   friend constexpr auto
-   operator>=(infinity_type left, Float right) -> bool {
-      return left > right || left == right;
-   }
-
-   template <is_floating_point Float>
-   friend constexpr auto
-   operator>=(Float left, infinity_type right) -> bool {
-      return left > right || left == right;
+   operator<=>(Float value) const -> partial_ordering {
+      auto const raw_value = make_raw_arithmetic(value);
+      if (is_nan(raw_value)) {
+         return partial_ordering::unordered;
+      }
+      if (
+         !is_finite(raw_value)
+         && m_negative == (__builtin_signbit(raw_value) != 0)
+      ) {
+         return partial_ordering::equivalent;
+      }
+      return m_negative ? partial_ordering::less : partial_ordering::greater;
    }
 
    friend constexpr auto
@@ -104,33 +60,12 @@ class infinity_type {
       return value;
    }
 
+   friend constexpr auto
+   operator+(infinity_type value) -> infinity_type {
+      return value;
+   }
+
  private:
-   template <is_floating_point Float>
-   constexpr auto
-   less_than(Float value) const -> bool {
-      auto const raw_value = make_raw_arithmetic(value);
-      if (is_nan(raw_value)) {
-         return false;
-      }
-      if (!is_finite(raw_value)) {
-         return m_negative && __builtin_signbit(raw_value) == 0;
-      }
-      return m_negative;
-   }
-
-   template <is_floating_point Float>
-   constexpr auto
-   greater_than(Float value) const -> bool {
-      auto const raw_value = make_raw_arithmetic(value);
-      if (is_nan(raw_value)) {
-         return false;
-      }
-      if (!is_finite(raw_value)) {
-         return !m_negative && __builtin_signbit(raw_value) != 0;
-      }
-      return !m_negative;
-   }
-
    bool m_negative = false;
 };
 
@@ -138,9 +73,9 @@ class infinity_type {
 
 inline constexpr detail::infinity_type infinity;
 
-template <is_arithmetic T = double>
+template <is_arithmetic T = float8>
 // NOLINTNEXTLINE We provide this magic number.
-inline constexpr T pi = 3.141592653589793238462643383279502884L;
+inline constexpr T pi = 0x1.921fb54442d18469898cc51701b8p+1L;
 
 template <>
 // NOLINTNEXTLINE We provide this magic number.
@@ -151,14 +86,15 @@ template <>
 inline constexpr double pi<double> = 0x1.921fb54442d18p+1;
 
 template <is_integral T>
-inline constexpr T pi<T> = 3;
+inline constexpr T pi<T> = 0x3;
 
 template <is_floating_point T>
    requires(!is_same<T, raw_arithmetic_type<T>>)
 inline constexpr T pi<T> = pi<raw_arithmetic_type<T>>;
 
-template <is_arithmetic T = double>
-inline constexpr T tau = 6.283185307179586476925286766559005768L;
+template <is_arithmetic T = float8>
+// NOLINTNEXTLINE We provide this magic number.
+inline constexpr T tau = 0x1.921fb54442d18469898cc51701b8p+2L;
 
 template <>
 inline constexpr float tau<float> = 0x1.921fb6p+2f;
@@ -167,8 +103,9 @@ template <>
 inline constexpr double tau<double> = 0x1.921fb54442d18p+2;
 
 template <is_integral T>
-inline constexpr T tau<T> = 6;
+inline constexpr T tau<T> = 0x6;
 
+// Unwrap `cat::basic_float<T>`s to access the constant.
 template <is_floating_point T>
    requires(!is_same<T, raw_arithmetic_type<T>>)
 inline constexpr T tau<T> = tau<raw_arithmetic_type<T>>;

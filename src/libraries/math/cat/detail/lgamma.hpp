@@ -28,8 +28,8 @@ emulated_lgamma(double argument) -> double {
    bool const reflected = argument < 0.5;
    double reflection = 0.;
    if (reflected) {
-      double const sine = abs(emulated_sin(pi<> * argument));
-      reflection = emulated_log(pi<> / sine);
+      double const sine = abs(emulated_sin(pi<double> * argument));
+      reflection = emulated_log(pi<double> / sine);
       argument = 1. - argument;
    }
 

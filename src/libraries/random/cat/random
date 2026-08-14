@@ -662,7 +662,7 @@ random_simd_integral_with_engine(
          using raw_lane = raw_arithmetic_type<lane_type>;
          lane_type const lower_value = lower_bound[lane];
          lane_type const upper_value = upper_bound[lane];
-         // TODO: Support a `cat::int128` type.
+         // TODO: Support a `cat::int16` type.
          __int128 const lower =
             static_cast<__int128>(make_raw_arithmetic(lower_value));
          __int128 const upper =
@@ -817,8 +817,8 @@ random(Probability probability) -> bool {
 
 template <
    is_random_access_collection Range, typename Engine = xoshiro256_plusplus>
-decltype(auto)
-random(Range&& range) {
+auto
+random(Range&& range) -> decltype(auto) {
    auto position = begin_pos(range);
    auto const stop = end_pos(range);
    iword const count = distance(range, position, stop);

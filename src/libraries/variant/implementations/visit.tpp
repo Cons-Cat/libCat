@@ -9,21 +9,20 @@ namespace cat {
 
 namespace detail {
 
-// Single-variant switch dispatcher in batches of 32. `is_valid` short-circuits
-// the `__builtin_unreachable` branches for cases outside the variant's actual
-// size so the optimizer can prune them.
+// Single-variant switch dispatcher in batches of 32.
 //
 // The dispatcher always invokes the callback as
 // `callback.template operator()<I>(v.template get<I>())`, exposing the
 // resolved alternative index as a non-type template parameter. The
 // value-only `cat::visit` adapts to this contract by wrapping its
-// callback in a generic lambda that ignores the index; the indexed
+// callback in a generic lambda that ignores the index. The indexed
 // `cat::visit_indexed` calls it directly. This keeps the 32-way
 // `switch` body in exactly one place rather than duplicated per call
 // style.
 template <bool is_valid, typename Result>
 struct visit_dispatcher;
 
+// Prune the unreachable branches during optimization.
 template <typename Result>
 struct visit_dispatcher<false, Result> {
    template <unsigned int /*case_index*/, typename Variant, typename Callback>

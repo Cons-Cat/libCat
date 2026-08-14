@@ -38,7 +38,7 @@ using small_vec_fixed = basic_vec<
 }  // namespace manual
 
 namespace detail {
-// `maybe_vec<T>`'s is disengaged when `data() == nullptr` and `size() != 0`.
+// `maybe<vec<T>>`s are disengaged when `data() == nullptr` and `size() != 0`.
 // Every `basic_vec<T>` value either has a non-null buffer or a zero
 // size, so this bit pattern is unambiguously the empty state.
 template <typename T, vec_flags flags>
@@ -53,6 +53,8 @@ maybe_vec_nullopt() -> basic_vec<T, flags>;
 inline namespace manual {
 
 template <typename T, vec_flags flags>
+// TODO: Probably we should cut down on concepts.
+// https://solidean.com/blog/2025/sfinae-concepts-static-assert-modern-cpp/
    requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(vec<T, flags>), gsl::Owner]]
 basic_vec : public container_interface<basic_vec<T, flags>, T>,
