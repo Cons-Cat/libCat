@@ -32,7 +32,9 @@
 
 /* Entry point. `cat::detail::_start` is `extern "C"` so its symbol
    name is the unmangled `_start`. The kernel jumps here directly in
-   static builds. `ld.so` jumps here after relocation in dynamic ones. */
+   static builds. `ld.so` jumps here after relocation in dynamic ones.
+   `libcat.so` reuses this script with `-Wl,--no-entry` because it has
+   no `_start`. */
 ENTRY(_start)
 
 /* PHDRS are intentionally omitted. lld synthesises them from the

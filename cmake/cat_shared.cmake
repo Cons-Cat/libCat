@@ -136,7 +136,10 @@ target_link_options(cat-impl-shared
     # keeps `CAT_USE_SHARED` builds working without sanitizers.
     -Wl,-z,norelro
   PRIVATE
-    -fno-lto)
+    -fno-lto
+    # Shared objects have no program entry. `libcat.ld` still says
+    # `ENTRY(_start)` for executables that reuse the script.
+    -Wl,--no-entry)
 
 # Pull libC / libM into both `libcat.so`'s `DT_NEEDED` AND any consumer
 # executable's link line. libCat shims a small set of libC / libM symbols.
