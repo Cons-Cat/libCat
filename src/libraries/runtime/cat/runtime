@@ -76,6 +76,25 @@ extern "C" void
 // NOLINTNEXTLINE
 __cxa_guard_abort(cat::uword* _Nonnull p_guard);
 
+// Clang emits these for `unsigned __int128` `/` and `%` when compiler-rt is
+// not linked. Same algorithm as compiler-rt `udivmodti4`.
+extern "C" auto
+// NOLINTNEXTLINE
+__udivmodti4(
+   unsigned __int128 dividend, unsigned __int128 divisor,
+   unsigned __int128* _Nullable p_remainder
+) -> unsigned __int128;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__udivti3(unsigned __int128 dividend, unsigned __int128 divisor)
+   -> unsigned __int128;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__umodti3(unsigned __int128 dividend, unsigned __int128 divisor)
+   -> unsigned __int128;
+
 class jmp_buffer {
    // This buffer layout should vary by all ISAs.
 

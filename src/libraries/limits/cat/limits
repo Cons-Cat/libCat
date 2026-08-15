@@ -288,6 +288,50 @@ struct limits<__UINT64_TYPE__> {
    static constexpr bool is_iec559 = false;
 };
 
+template <>
+struct limits<__int128> {
+   constexpr limits() = delete;
+
+   static consteval auto
+   min() -> __int128 {
+      return -max() - 1;
+   }
+
+   static consteval auto
+   max() -> __int128 {
+      return ~__int128(0) >> 1;
+   }
+
+   static constexpr __UINT8_TYPE__ digits = 127;
+   static constexpr __UINT8_TYPE__ digits10 = 38;
+   static constexpr __UINT8_TYPE__ bits = 128;
+   static constexpr unsigned __int128 high_bit = __uint128_t(1) << 127u;
+
+   static constexpr bool is_iec559 = false;
+};
+
+template <>
+struct limits<unsigned __int128> {
+   constexpr limits() = delete;
+
+   static consteval auto
+   min() -> unsigned __int128 {
+      return 0u;
+   }
+
+   static consteval auto
+   max() -> unsigned __int128 {
+      return ~__uint128_t(0);
+   }
+
+   static constexpr __UINT8_TYPE__ digits = 128;
+   static constexpr __UINT8_TYPE__ digits10 = 38;
+   static constexpr __UINT8_TYPE__ bits = 128;
+   static constexpr unsigned __int128 high_bit = __uint128_t(1) << 127u;
+
+   static constexpr bool is_iec559 = false;
+};
+
 template <typename T>
 // On LP64, `limits<long long>` needs explicit specialization.
    requires(is_same<T, long long> && sizeof(long) == 8)

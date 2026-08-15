@@ -43,6 +43,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/setjmp.cpp
   ${CATLIB}/runtime/implementations/longjmp.cpp
   ${CATLIB}/runtime/implementations/load_base_stack_pointer.cpp
+  ${CATLIB}/runtime/implementations/__udivmodti4.cpp
   ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/math/implementations/cos.cpp
   ${CATLIB}/math/implementations/exp.cpp
