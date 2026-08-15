@@ -17,41 +17,41 @@ struct two_const {
 
 // Test a plain aggregate with no libCat tuple protocol.
 $test(magic_get_structured_bindings_plain_aggregate) {
-   three_fields s{1, 'd', true};
+   three_fields s{.a = 1, .b = 'd', .c = true};
    auto& [p0, p1, p2] = s;
    cat::verify(p0 == 1 && p1 == 'd' && p2);
    p0 = -1;
    cat::verify(s.a == -1);
-   three_fields s2{3, 'e', false};
+   three_fields s2{.a = 3, .b = 'e', .c = false};
    auto [q0, q1, q2] = s2;
    cat::verify(q0 == 3 && q1 == 'e' && !q2);
 }
 
 $test(magic_get_get_lvalue) {
-   three_fields s{1, 'z', true};
+   three_fields s{.a = 1, .b = 'z', .c = true};
    cat::verify(cat::get<0>(s) == 1);
    cat::verify(cat::get<1>(s) == 'z');
-   cat::verify(cat::get<2>(s) == true);
+   cat::verify(cat::get<2>(s));
    cat::get<0>(s) = 9;
    cat::verify(s.a == 9);
    cat::verify(cat::get<0>(s) == 9);
 }
 
 $test(magic_get_get_const_lvalue) {
-   three_fields const s{3, 'q', false};
+   three_fields const s{.a = 3, .b = 'q', .c = false};
    cat::verify(cat::get<0>(s) == 3);
    cat::verify(cat::get<1>(s) == 'q');
-   cat::verify(cat::get<2>(s) == false);
+   cat::verify(!cat::get<2>(s));
 }
 
 $test(magic_get_get_rvalue) {
-   three_fields s{7, 'r', true};
+   three_fields s{.a = 7, .b = 'r', .c = true};
    cat::int4 x = cat::get<0>(cat::move(s));  // NOLINT
    cat::verify(x == 7);
 }
 
 $test(magic_get_apply) {
-   three_fields s{2, 'k', true};
+   three_fields s{.a = 2, .b = 'k', .c = true};
    auto sum = cat::apply(
       [](cat::int4 a, char b, bool c) {
          auto _ = b;

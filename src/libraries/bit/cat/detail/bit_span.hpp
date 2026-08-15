@@ -23,7 +23,7 @@ concept has_bit_span_value_type =
    requires { typename remove_cvref<WordStorage>::value_type; };
 
 template <typename WordStorage, typename Storage>
-concept bit_span_word_container =
+concept is_bit_span_word_container =
    requires(WordStorage& storage) {
       storage.data();
       storage.size();
@@ -33,7 +33,7 @@ concept bit_span_word_container =
    && is_convertible<decltype(declval<WordStorage&>().data()), Storage*>;
 
 template <typename WordStorage, typename Storage>
-concept bit_span_bit_container =
+concept is_bit_span_bit_container =
    requires(WordStorage& storage) {
       storage.data();
       storage.size();
@@ -91,8 +91,8 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    template <typename WordStorage>
       requires(
-         detail::bit_span_word_container<WordStorage, Storage>
-         || detail::bit_span_bit_container<WordStorage, Storage>
+         detail::is_bit_span_word_container<WordStorage, Storage>
+         || detail::is_bit_span_bit_container<WordStorage, Storage>
       )
    constexpr explicit bit_span(
       WordStorage& storage [[clang::lifetimebound]]
@@ -104,8 +104,8 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    template <typename WordStorage>
       requires(
-         detail::bit_span_word_container<WordStorage, Storage>
-         || detail::bit_span_bit_container<WordStorage, Storage>
+         detail::is_bit_span_word_container<WordStorage, Storage>
+         || detail::is_bit_span_bit_container<WordStorage, Storage>
       )
    constexpr bit_span(
       WordStorage& storage [[clang::lifetimebound]]

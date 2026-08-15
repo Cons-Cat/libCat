@@ -118,18 +118,18 @@ $test(simd) {
 $test(simd_broadcast_traits) {
    using cat::detail::has_simd_broadcast_consteval_value;
    using cat::detail::simd_broadcast_really_convertible_to;
-   using cat::detail::simd_consteval_broadcast_arg;
+   using cat::detail::is_simd_consteval_broadcast_arg;
 
    static_assert(simd_broadcast_really_convertible_to<int, int4>());
    static_assert(simd_broadcast_really_convertible_to<unsigned int, uint4>());
    static_assert(simd_broadcast_really_convertible_to<float, float4>());
    static_assert(!simd_broadcast_really_convertible_to<int, float4>());
 
-   static_assert(simd_consteval_broadcast_arg<int, float4>);
-   static_assert(simd_consteval_broadcast_arg<unsigned int, float4>);
-   static_assert(!simd_consteval_broadcast_arg<int, int4>);
-   static_assert(!simd_consteval_broadcast_arg<unsigned int, uint4>);
-   static_assert(!simd_consteval_broadcast_arg<float, float4>);
+   static_assert(is_simd_consteval_broadcast_arg<int, float4>);
+   static_assert(is_simd_consteval_broadcast_arg<unsigned int, float4>);
+   static_assert(!is_simd_consteval_broadcast_arg<int, int4>);
+   static_assert(!is_simd_consteval_broadcast_arg<unsigned int, uint4>);
+   static_assert(!is_simd_consteval_broadcast_arg<float, float4>);
 
    cat::verify(has_simd_broadcast_consteval_value<int, float4>(0));
    cat::verify(has_simd_broadcast_consteval_value<int, float4>(42));
@@ -2565,8 +2565,8 @@ $test(simd_concepts) {
    static_assert(cat::is_simd_or_mask<int4x4::mask_type>);
    static_assert(cat::is_simd_integral<int4x4>);
    static_assert(!cat::is_simd_integral<float4x4>);
-   static_assert(cat::vec_floating_point<float4x4>);
-   static_assert(!cat::vec_floating_point<int4x4>);
+   static_assert(cat::is_simd_floating_point<float4x4>);
+   static_assert(!cat::is_simd_floating_point<int4x4>);
    static_assert(cat::is_simd_of<int4x4, cat::int4>);
    static_assert(!cat::is_simd_of<int4x4, cat::float4>);
    static_assert(cat::vectorizable_element<int_lane>);

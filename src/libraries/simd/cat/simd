@@ -533,7 +533,7 @@ class
    // is the same as `simd(U&&)`. Inexact conversion is undefined and is
    // rejected by failed constant evaluation on a violated `[[assume]]`.
    template <typename U>
-      requires detail::simd_consteval_broadcast_arg<remove_cvref<U>, T>
+      requires detail::is_simd_consteval_broadcast_arg<remove_cvref<U>, T>
    consteval simd(U value) {
       // These semantics are described by P3844R2.
       [[assume(

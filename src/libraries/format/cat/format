@@ -831,7 +831,7 @@ maybe_set_debug_format(Formatter& nested, bool set = true) {
 template <typename T>
 auto
 format_nested(format_context& context, T const& value) -> scaredy_format<void> {
-   return formatter<remove_cvref<T>>{}.format(value, context);
+   return formatter<T>{}.format(value, context);
 }
 
 template <typename String>
@@ -900,8 +900,8 @@ struct formatter : formatter_base<CharT> {
 
 template <typename T, typename CharT>
    requires(
-      is_integral<T> && !is_same<remove_cvref<T>, bool>
-      && !is_same<remove_cvref<T>, char> && is_same<CharT, char>
+      is_integral<T> && !is_same<typeof_unqual(T), bool>
+      && !is_same<typeof_unqual(T), char> && is_same<CharT, char>
    )
 struct formatter<T, CharT> : formatter_base<CharT> {
    auto
@@ -909,7 +909,7 @@ struct formatter<T, CharT> : formatter_base<CharT> {
       -> scaredy_format<void> {
       detail::pull_integer_format_support();
       auto const raw = make_raw_arithmetic(value);
-      using raw_type = remove_cvref<decltype(raw)>;
+      using raw_type = typeof_unqual(raw);
       if constexpr (sizeof(raw_type) < sizeof(int4::raw_type)) {
          if constexpr (is_signed<raw_type>) {
             return detail::append_arithmetic(
@@ -1050,7 +1050,7 @@ struct formatter<char const[extent], CharT> : debug_formatter<CharT> {
 template <typename T, typename CharT>
    requires(
       is_basic_string<T>
-      && is_same<remove_const<typename remove_cvref<T>::value_type>, char>
+      && is_same<remove_const<typename T::value_type>, char>
       && is_same<CharT, char>
    )
 struct formatter<T, CharT> : debug_formatter<CharT> {

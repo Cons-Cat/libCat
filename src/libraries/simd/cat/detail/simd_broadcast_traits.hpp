@@ -96,7 +96,7 @@ has_simd_broadcast_consteval_value(From f) -> bool {
 }
 
 template <typename From, typename ToLane>
-concept simd_consteval_broadcast_arg =
+concept is_simd_consteval_broadcast_arg =
    is_arithmetic<From> && is_constructible<ToLane, From>
    && !simd_broadcast_really_convertible_to<From, ToLane>()
    && requires { typename common_type<From, simd_broadcast_lane_raw<ToLane>>; }

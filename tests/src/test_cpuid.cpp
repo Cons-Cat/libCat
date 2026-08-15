@@ -1,5 +1,8 @@
 #include "../unit_tests.hpp"
 
+// TODO: We need to rethink how this is tested across different computers.
+// Currently the test is disabled. It is partially tested by extension of
+// `$simd_switch` and `cat::bitset`.
 $test(cpuid) {
    cat::verify(__builtin_cpu_supports("cmov"));
    cat::verify(__builtin_cpu_supports("mmx"));

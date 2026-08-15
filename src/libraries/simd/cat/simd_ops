@@ -38,7 +38,7 @@ concept is_simd_integral =
    is_simd<Simd> && is_integral<typename Simd::scalar_type>;
 
 template <typename Simd>
-concept vec_floating_point =
+concept is_simd_floating_point =
    is_simd<Simd> && is_floating_point<typename Simd::scalar_type>;
 
 template <typename Simd, typename T>
