@@ -59,9 +59,9 @@ class simd_distribution {
       result_type result;
       for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
          if constexpr (requires { generator.lane(lane); }) {
-            result[lane] = m_distributions[lane](generator.lane(lane));
+            result.set_lane(lane, m_distributions[lane](generator.lane(lane)));
          } else {
-            result[lane] = m_distributions[lane](generator);
+            result.set_lane(lane, m_distributions[lane](generator));
          }
       }
       return result;

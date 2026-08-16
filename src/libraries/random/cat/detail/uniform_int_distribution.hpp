@@ -95,29 +95,26 @@ class uniform_int_distribution {
       m_parameters = parameters;
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator) const -> result_type {
       return (*this)(generator, m_parameters);
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameters) const
       -> result_type {
-      using raw_type = raw_arithmetic_type<result_type>;
-      using unsigned_type = make_unsigned_type<raw_type>;
-      unsigned_type const lower =
-         static_cast<unsigned_type>(make_raw_arithmetic(parameters.a()));
-      unsigned_type const upper =
-         static_cast<unsigned_type>(make_raw_arithmetic(parameters.b()));
+      using unsigned_type = make_unsigned_type<result_type>;
+      unsigned_type const lower = unsigned_type(parameters.a());
+      unsigned_type const upper = unsigned_type(parameters.b());
       unsigned_type const bound = upper - lower + 1u;
       unsigned_type const offset =
          detail::distribution_random_bounded(generator, bound);
       return detail::distribution_int_from_bits<result_type>(lower + offset);
    }
 
-   template <uniform_random_bit_generator Engine, is_simd Simd>
+   template <is_uniform_random_bit_generator Engine, is_simd Simd>
       requires is_same<typename Simd::value_type, typename Engine::result_type>
    constexpr auto
    operator()(independent_simd_engine<Engine, Simd>& engine) const
@@ -125,7 +122,7 @@ class uniform_int_distribution {
       return (*this)(engine, m_parameters);
    }
 
-   template <uniform_random_bit_generator Engine, is_simd Simd>
+   template <is_uniform_random_bit_generator Engine, is_simd Simd>
       requires is_same<typename Simd::value_type, typename Engine::result_type>
    constexpr auto
    operator()(

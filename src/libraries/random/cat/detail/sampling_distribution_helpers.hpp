@@ -10,11 +10,9 @@
 #include <cat/random>
 #include <cat/span>
 
-namespace cat {
+namespace cat::detail {
 
-namespace detail {
-
-template <is_floating_point Float, uniform_random_bit_generator Generator>
+template <is_floating_point Float, is_uniform_random_bit_generator Generator>
 constexpr auto
 sampling_unit(Generator& generator) -> Float {
    uniform_float_distribution<Float> distribution;
@@ -51,9 +49,7 @@ sampling_interval(
 template <is_integral Int>
 constexpr auto
 sampling_integer(idx value) -> Int {
-   return Int(static_cast<raw_arithmetic_type<Int>>(value));
+   return Int(value);
 }
 
-}  // namespace detail
-
-}  // namespace cat
+}  // namespace cat::detail

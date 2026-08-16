@@ -138,8 +138,9 @@ target_link_options(cat-impl-shared
   PRIVATE
     -fno-lto
     # Shared objects have no program entry. `libcat.ld` still says
-    # `ENTRY(_start)` for executables that reuse the script.
-    -Wl,--no-entry)
+    # `ENTRY(_start)` for executables that reuse the script. This lld
+    # rejects `--no-entry`, so pin the entry address to 0 instead.
+    -Wl,-e,0)
 
 # Pull libC / libM into both `libcat.so`'s `DT_NEEDED` AND any consumer
 # executable's link line. libCat shims a small set of libC / libM symbols.

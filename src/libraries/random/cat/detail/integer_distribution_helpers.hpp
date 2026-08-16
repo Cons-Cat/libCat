@@ -13,7 +13,13 @@ namespace cat {
 
 namespace detail {
 
-template <is_floating_point Float, uniform_random_bit_generator Generator>
+template <is_floating_point Float>
+constexpr auto
+distribution_float(auto value) -> Float {
+   return Float(raw_arithmetic_type<Float>(value));
+}
+
+template <is_floating_point Float, is_uniform_random_bit_generator Generator>
 constexpr auto
 distribution_unit(Generator& generator) -> Float {
    return uniform_float_distribution<Float>{}(generator);
@@ -22,23 +28,26 @@ distribution_unit(Generator& generator) -> Float {
 template <is_integral Int, is_floating_point Float>
 constexpr auto
 distribution_integer(Float value) -> Int {
-   Float const maximum = Float(limits<Int>::max());
+   Float const maximum =
+      distribution_float<Float>(make_raw_arithmetic(limits<Int>::max()));
    if (value >= maximum) {
       return limits<Int>::max();
    }
-   if (value <= 0.0) {
+   if (value <= distribution_float<Float>(0)) {
       return 0u;
    }
-   return static_cast<Int>(value);
+   return Int(value);
 }
 
 template <is_integral Int, is_floating_point Float>
 constexpr auto
 geometric_sample(Float probability, Float unit) -> Int {
-   if (probability >= 1.0 || unit <= 0.0) {
+   Float const one = distribution_float<Float>(1);
+   Float const zero = distribution_float<Float>(0);
+   if (probability >= one || unit <= zero) {
       return 0u;
    }
-   Float const value = floor(log(1.f - unit) / log(1.f - probability));
+   Float const value = floor(log(one - unit) / log(one - probability));
    return distribution_integer<Int>(value);
 }
 

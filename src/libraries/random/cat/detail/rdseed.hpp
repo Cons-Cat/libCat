@@ -17,10 +17,10 @@ rdseed() -> cat::maybe<cat::uint8> {
    }
 
    cat::uint8 value;
-   unsigned char succeeded;
+   bool succeeded;
    asm volatile("rdseed %0\n\tsetc %1"
                 : "=r"(value), "=qm"(succeeded));
-   if (succeeded == 0u) {
+   if (!succeeded) {
       return cat::nullopt;
    }
    return value;

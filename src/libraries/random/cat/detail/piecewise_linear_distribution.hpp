@@ -122,11 +122,12 @@ class piecewise_linear_distribution {
             valid = valid && detail::sampling_finite(boundaries[index])
                     && detail::sampling_finite(boundaries[index + 1u])
                     && detail::sampling_finite(weights[index])
-                    && detail::sampling_finite(weights[index + 1u]) && width > 0
-                    && weights[index] >= 0 && weights[index + 1u] >= 0;
-            total += (weights[index] + weights[index + 1u]) * width / 2;
+                    && detail::sampling_finite(weights[index + 1u])
+                    && width > Float(0) && weights[index] >= Float(0)
+                    && weights[index + 1u] >= Float(0);
+            total += (weights[index] + weights[index + 1u]) * width / Float(2);
          }
-         valid = valid && detail::sampling_finite(total) && total > 0;
+         valid = valid && detail::sampling_finite(total) && total > Float(0);
          assert(valid);
          if (!valid) {
             set_default();
@@ -141,8 +142,8 @@ class piecewise_linear_distribution {
          Float cumulative = 0;
          for (idx index = 0u; index + 1u < m_boundary_count; ++index) {
             Float const width = m_boundaries[index + 1u] - m_boundaries[index];
-            cumulative +=
-               (m_densities[index] + m_densities[index + 1u]) * width / 2;
+            cumulative += (m_densities[index] + m_densities[index + 1u]) * width
+                          / Float(2);
             m_cumulative[index] = cumulative;
          }
          m_cumulative[idx(m_boundary_count - 2u)] = 1;
@@ -227,13 +228,13 @@ class piecewise_linear_distribution {
       return m_parameters.densities();
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator) -> result_type {
       return (*this)(generator, m_parameters);
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameters)
       -> result_type {

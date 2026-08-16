@@ -117,8 +117,8 @@ $test(simd) {
 
 $test(simd_broadcast_traits) {
    using cat::detail::has_simd_broadcast_consteval_value;
-   using cat::detail::simd_broadcast_really_convertible_to;
    using cat::detail::is_simd_consteval_broadcast_arg;
+   using cat::detail::simd_broadcast_really_convertible_to;
 
    static_assert(simd_broadcast_really_convertible_to<int, int4>());
    static_assert(simd_broadcast_really_convertible_to<unsigned int, uint4>());

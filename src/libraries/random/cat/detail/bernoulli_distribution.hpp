@@ -78,13 +78,13 @@ class bernoulli_distribution {
       m_parameters = parameters;
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator) const -> result_type {
       return (*this)(generator, m_parameters);
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameters) const
       -> result_type {
@@ -92,7 +92,7 @@ class bernoulli_distribution {
              < parameters.p();
    }
 
-   template <uniform_random_bit_generator Engine, is_simd Simd>
+   template <is_uniform_random_bit_generator Engine, is_simd Simd>
       requires is_same<typename Simd::value_type, typename Engine::result_type>
    constexpr auto
    operator()(independent_simd_engine<Engine, Simd>& engine) const
@@ -101,7 +101,7 @@ class bernoulli_distribution {
       return (*this)(engine, m_parameters);
    }
 
-   template <uniform_random_bit_generator Engine, is_simd Simd>
+   template <is_uniform_random_bit_generator Engine, is_simd Simd>
       requires is_same<typename Simd::value_type, typename Engine::result_type>
    constexpr auto
    operator()(

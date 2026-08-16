@@ -44,16 +44,17 @@ __udivmodti4(
       cat::wrap_uint8 remainder_low = 0u;
       unsigned __int128 quotient;
       if (dividend_high < divisor_low) {
-         quotient = __uint128_t(
-            udiv128_by_64(dividend_high, dividend_low, divisor_low, remainder_low)
-         );
+         quotient = __uint128_t(udiv128_by_64(
+            dividend_high, dividend_low, divisor_low, remainder_low
+         ));
       } else {
          cat::wrap_uint8 const quotient_high = dividend_high / divisor_low;
          dividend_high = dividend_high % divisor_low;
          cat::wrap_uint8 const quotient_low = udiv128_by_64(
             dividend_high, dividend_low, divisor_low, remainder_low
          );
-         quotient = (__uint128_t(quotient_high) << 64u) | __uint128_t(quotient_low);
+         quotient =
+            (__uint128_t(quotient_high) << 64u) | __uint128_t(quotient_low);
       }
       if (p_remainder != nullptr) {
          *p_remainder = __uint128_t(remainder_low);
@@ -63,8 +64,8 @@ __udivmodti4(
 
    cat::int4 shift = cat::int4(divisor_high.countl_zero())
                      - cat::int4(dividend_high.countl_zero());
-   unsigned __int128 shifted_divisor =
-      divisor << cat::make_raw_arithmetic(shift);
+   unsigned __int128 shifted_divisor = divisor
+                                       << cat::make_raw_arithmetic(shift);
    unsigned __int128 quotient = 0;
    unsigned __int128 working = dividend;
    for (; shift >= 0; --shift) {

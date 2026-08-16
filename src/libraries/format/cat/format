@@ -1049,8 +1049,7 @@ struct formatter<char const[extent], CharT> : debug_formatter<CharT> {
 
 template <typename T, typename CharT>
    requires(
-      is_basic_string<T>
-      && is_same<remove_const<typename T::value_type>, char>
+      is_basic_string<T> && is_same<remove_const<typename T::value_type>, char>
       && is_same<CharT, char>
    )
 struct formatter<T, CharT> : debug_formatter<CharT> {

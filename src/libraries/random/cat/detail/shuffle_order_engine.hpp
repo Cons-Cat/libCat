@@ -6,7 +6,7 @@
 
 namespace cat {
 
-template <uniform_random_bit_generator Engine, idx table_size>
+template <is_uniform_random_bit_generator Engine, idx table_size>
    requires(table_size > 0u)
 class shuffle_order_engine {
  public:
@@ -55,19 +55,13 @@ class shuffle_order_engine {
 
    constexpr auto
    operator()() -> result_type {
-      using raw = raw_arithmetic_type<result_type>;
-      using unsigned_type = make_unsigned_type<raw>;
-      unsigned __int128 const numerator =
-         static_cast<unsigned __int128>(static_cast<unsigned_type>(
-            make_raw_arithmetic(m_value) - make_raw_arithmetic(min())
-         ))
-         * static_cast<unsigned __int128>(make_raw_arithmetic(table_size));
-      unsigned __int128 const denominator =
-         static_cast<unsigned __int128>(static_cast<unsigned_type>(
-            make_raw_arithmetic(max()) - make_raw_arithmetic(min())
-         ))
-         + 1u;
-      idx const index(static_cast<__SIZE_TYPE__>(numerator / denominator));
+      using unsigned_type = make_unsigned_type<result_type>;
+      __uint128_t const numerator =
+         __uint128_t(make_raw_arithmetic(unsigned_type(m_value - min())))
+         * __uint128_t(make_raw_arithmetic(table_size));
+      __uint128_t const denominator =
+         __uint128_t(make_raw_arithmetic(unsigned_type(max() - min()))) + 1u;
+      idx const index(numerator / denominator);
       result_type result = m_table[index];
       m_table[index] = m_engine();
       m_value = result;

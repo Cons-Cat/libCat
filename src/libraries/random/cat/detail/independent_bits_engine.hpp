@@ -7,7 +7,7 @@
 namespace cat {
 
 template <
-   uniform_random_bit_generator Engine, idx bits,
+   is_uniform_random_bit_generator Engine, idx bits,
    is_unsigned_integral T = uint4>
    requires(bits > 0u && bits <= limits<T>::digits)
 class independent_bits_engine {
@@ -46,29 +46,26 @@ class independent_bits_engine {
 
    static consteval auto
    max() -> result_type {
-      using raw = raw_arithmetic_type<result_type>;
-      using unsigned_type = make_unsigned_type<raw>;
+      using unsigned_type = make_unsigned_type<result_type>;
       if constexpr (bits == limits<unsigned_type>::digits) {
-         return result_type(static_cast<unsigned_type>(-1));
+         return result_type::max();
       } else {
-         return result_type((unsigned_type(1) << bits.raw) - 1u);
+         return result_type((unsigned_type(1) << bits) - 1u);
       }
    }
 
    constexpr auto
    operator()() -> result_type {
-      using raw = raw_arithmetic_type<result_type>;
-      using unsigned_type = make_unsigned_type<raw>;
-      using engine_raw = raw_arithmetic_type<typename Engine::result_type>;
-      constexpr idx engine_bits =
-         limits<make_unsigned_type<engine_raw>>::digits;
+      using unsigned_type = make_unsigned_type<result_type>;
+      using engine_unsigned = make_unsigned_type<typename Engine::result_type>;
+      constexpr idx engine_bits = limits<engine_unsigned>::digits;
       unsigned_type result = 0;
       idx produced = 0u;
       while (produced < bits) {
          idx const remaining = idx(bits - produced);
          idx const take = remaining < engine_bits ? remaining : engine_bits;
          unsigned_type value =
-            static_cast<unsigned_type>(detail::random_engine_word(m_engine));
+            unsigned_type(detail::random_engine_word(m_engine));
          if (take < limits<unsigned_type>::digits) {
             value &= (unsigned_type(1) << take.raw) - 1u;
          }

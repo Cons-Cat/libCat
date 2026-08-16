@@ -434,7 +434,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/random/cat/detail/uniform_float_distribution.hpp
   ${CATLIB}/random/cat/detail/uniform_int_distribution.hpp
   ${CATLIB}/random/cat/detail/weibull_distribution.hpp
+  ${CATLIB}/random/cat/detail/splitmix.hpp
   ${CATLIB}/random/cat/detail/wyrand.hpp
+  ${CATLIB}/random/cat/detail/xoshiro_jump.hpp
   ${CATLIB}/random/cat/detail/xoshiro.hpp
   ${CATLIB}/ring/cat/ring
   ${CATLIB}/runtime/cat/runtime

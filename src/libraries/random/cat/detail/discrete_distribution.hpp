@@ -155,13 +155,13 @@ class discrete_distribution {
       return m_parameters.probabilities();
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator) -> result_type {
       return (*this)(generator, m_parameters);
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameters)
       -> result_type {

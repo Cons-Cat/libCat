@@ -98,6 +98,9 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_syscalls.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_random.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_random_combinatoric.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_pcg.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_xoshiro.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pointer_in_range.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_span.cpp

@@ -14,41 +14,51 @@ $test(random_seed_strong_type) {
 }
 
 $test(random_reference_vectors) {
-   cat::splitmix64 splitmix(1u);
+   cat::splitmix64_engine splitmix(1u);
    cat::verify(splitmix() == 0x910a2dec'89025cc1ull);
 
-   cat::xoshiro256_plusplus xoshiro(1u);
+   cat::xoshiro_pp_engine<cat::uint8> xoshiro(1u);
    cat::verify(xoshiro() == 0xcfc5d07f'6f03c29bull);
 
-   cat::simd_xoshiro256_plusplus<cat::uint8x4::abi_type> simd_xoshiro(1u);
+   cat::xoshiro_pp_engine<cat::uint8x4> simd_xoshiro(1u);
    cat::uint8x4 const simd_values = simd_xoshiro();
    cat::verify(simd_values[0u] == 0xcfc5d07f'6f03c29bull);
 
-   cat::pcg32 pcg(42u, 54u);
+   cat::pcg_engine<cat::uint4> pcg(42u, 54u);
    cat::verify(pcg() == 0xa15c02b7u);
 
-   cat::wyrand wy(0u);
+   cat::wyrand_engine wy(0u);
    cat::verify(wy() == 0x111cb3a7'8f59a58eull);
 }
 
 $test(random_engine_state_operations) {
-   cat::xoshiro256_starstar left(123u);
-   cat::xoshiro256_starstar right(123u);
+   cat::xoshiro_engine<cat::uint8> left(123u);
+   cat::xoshiro_engine<cat::uint8> right(123u);
    cat::verify(left() == right());
    left.jump();
    cat::verify(left() != right());
 
-   cat::pcg32 advanced(123u, 456u);
-   cat::pcg32 discarded(123u, 456u);
-   advanced.advance(20u);
+   cat::pcg_engine<cat::uint4> skipped(123u, 456u);
+   cat::pcg_engine<cat::uint4> discarded(123u, 456u);
+   skipped.discard(20u);
    for (cat::idx index = 0u; index < 20u; ++index) {
       static_cast<void>(discarded());
    }
-   cat::verify(advanced() == discarded());
+   cat::verify(skipped() == discarded());
 
-   cat::discard_block_engine<cat::wyrand, 5u, 3u> blocked(9u);
-   cat::independent_bits_engine<cat::wyrand, 16u, cat::uint4> bits(9u);
-   cat::shuffle_order_engine<cat::wyrand, 16u> shuffled(9u);
+   cat::splitmix64_engine split_restored(1u);
+   split_restored.discard(8u);
+   split_restored.backstep(8u);
+   cat::verify(split_restored() == cat::splitmix64_engine(1u)());
+
+   cat::wyrand_engine wy_restored(0u);
+   wy_restored.discard(8u);
+   wy_restored.backstep(8u);
+   cat::verify(wy_restored() == cat::wyrand_engine(0u)());
+
+   cat::discard_block_engine<cat::wyrand_engine, 5u, 3u> blocked(9u);
+   cat::independent_bits_engine<cat::wyrand_engine, 16u, cat::uint4> bits(9u);
+   cat::shuffle_order_engine<cat::wyrand_engine, 16u> shuffled(9u);
    cat::verify(blocked() <= blocked.max());
    cat::verify(bits() <= 0xffffu);
    cat::verify(shuffled() <= shuffled.max());
@@ -63,7 +73,7 @@ $test(random_engine_state_operations) {
 }
 
 $test(random_uniform_distributions) {
-   cat::xoshiro256_plusplus engine(987u);
+   cat::xoshiro_engine<cat::uint8> engine(987u);
    cat::uniform_int_distribution<cat::int4> integers(-8, 13);
    cat::uniform_float_distribution<cat::float8> floats(-2, 4);
 
@@ -76,7 +86,7 @@ $test(random_uniform_distributions) {
 }
 
 $test(random_distribution_families) {
-   cat::xoshiro256_plusplus engine(321u);
+   cat::xoshiro_engine<cat::uint8> engine(321u);
    cat::bernoulli_distribution<cat::float8_fast> fast_bernoulli(0.5);
    cat::binomial_distribution<cat::int4, cat::float8_fast> fast_binomial(
       10, 0.5
@@ -118,7 +128,7 @@ $test(random_distribution_families) {
 
 $test(random_bulk_and_convenience) {
    cat::array<cat::uint8, 16u> values;
-   cat::xoshiro256_plusplus engine(44u);
+   cat::xoshiro_engine<cat::uint8> engine(44u);
    cat::generate_random(values, engine);
 
    bool differs = false;
@@ -137,12 +147,43 @@ $test(random_bulk_and_convenience) {
 }
 
 $test(random_linux_sources) {
-   nix::linux_urandom_engine engine;
-   cat::uint8 const first = engine();
-   cat::uint8 const second = engine();
-   cat::verify(first != second || engine() != first);
+   static_assert(
+      cat::is_uniform_random_bit_generator<nix::sys_urandom_engine>
+   );
+   static_assert(
+      cat::is_uniform_random_bit_generator<nix::sys_random_engine>
+   );
+   static_assert(
+      cat::is_uniform_random_bit_generator<nix::dev_urandom_engine>
+   );
+   static_assert(
+      cat::is_uniform_random_bit_generator<nix::dev_random_engine>
+   );
+
+   nix::sys_urandom_engine urandom;
+   cat::uint8 const first = urandom();
+   cat::uint8 const second = urandom();
+   cat::verify(first != second || urandom() != first);
+
+   nix::sys_random_engine random;
+   cat::uint8 const blocking_first = random();
+   cat::uint8 const blocking_second = random();
+   cat::verify(blocking_first != blocking_second || random() != blocking_first);
+
+   nix::dev_urandom_engine dev_urandom;
+   cat::uint8 const file_first = dev_urandom();
+   cat::uint8 const file_second = dev_urandom();
+   cat::verify(file_first != file_second || dev_urandom() != file_first);
+
+   nix::dev_random_engine dev_random;
+   cat::uint8 const file_blocking_first = dev_random();
+   cat::uint8 const file_blocking_second = dev_random();
+   cat::verify(
+      file_blocking_first != file_blocking_second
+      || dev_random() != file_blocking_first
+   );
 
    cat::verify(x64::read_timestamp_counter() != 0u);
    auto const state = nix::make_seed_state();
-   cat::verify(state.kernel_random != 0u || engine() != 0u);
+   cat::verify(state.kernel_random != 0u || urandom() != 0u);
 }

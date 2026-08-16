@@ -50,8 +50,9 @@ class piecewise_constant_distribution {
                                ? count
                                : detail::sampling_distribution_capacity;
          for (idx index = 0u; index < usable; ++index) {
-            weights[index] =
-               function((boundaries[index] + boundaries[index + 1u]) / 2);
+            weights[index] = function(
+               (boundaries[index] + boundaries[index + 1u]) / Float(2)
+            );
          }
          assign(boundaries, {weights.data(), usable});
       }
@@ -123,11 +124,11 @@ class piecewise_constant_distribution {
             Float const width = boundaries[index + 1u] - boundaries[index];
             valid = valid && detail::sampling_finite(boundaries[index])
                     && detail::sampling_finite(boundaries[index + 1u])
-                    && detail::sampling_finite(weights[index]) && width > 0
-                    && weights[index] >= 0;
+                    && detail::sampling_finite(weights[index])
+                    && width > Float(0) && weights[index] >= Float(0);
             total += weights[index] * width;
          }
-         valid = valid && detail::sampling_finite(total) && total > 0;
+         valid = valid && detail::sampling_finite(total) && total > Float(0);
          assert(valid);
          if (!valid) {
             set_default();
@@ -227,13 +228,13 @@ class piecewise_constant_distribution {
       return m_parameters.densities();
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator) -> result_type {
       return (*this)(generator, m_parameters);
    }
 
-   template <uniform_random_bit_generator Generator>
+   template <is_uniform_random_bit_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameters)
       -> result_type {

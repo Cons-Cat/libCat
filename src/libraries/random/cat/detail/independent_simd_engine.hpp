@@ -6,7 +6,7 @@
 
 namespace cat {
 
-template <uniform_random_bit_generator Engine, is_simd Simd>
+template <is_uniform_random_bit_generator Engine, is_simd Simd>
    requires is_same<typename Simd::value_type, typename Engine::result_type>
 class independent_simd_engine {
  public:
@@ -24,7 +24,7 @@ class independent_simd_engine {
 
    constexpr void
    seed(random_seed value) {
-      auto lane_seed = static_cast<scalar_result_type>(value);
+      auto lane_seed = scalar_result_type(value);
       for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
          lane_seed =
             detail::random_mix_seed(lane_seed + scalar_result_type(lane));
@@ -36,7 +36,7 @@ class independent_simd_engine {
    operator()() -> result_type {
       result_type result;
       for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
-         result[lane] = m_engines[lane]();
+         result.set_lane(lane, m_engines[lane]());
       }
       return result;
    }
