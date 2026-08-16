@@ -7,7 +7,6 @@
 #include "../unit_tests.hpp"
 
 namespace {
-// NOLINTNEXTLINE
 inline constinit idx relocation_move_count = 0u;
 }  // namespace
 
@@ -33,14 +32,10 @@ inline constexpr bool cat::is_trivially_relocatable<relocation_only_probe> =
 
 namespace {
 
-// NOLINTNEXTLINE
 inline constinit idx destructor_count = 0u;
 
-// NOLINTNEXTLINE
 inline constinit idx lifetime_live_count = 0u;
-// NOLINTNEXTLINE
 inline constinit idx lifetime_destructor_count = 0u;
-// NOLINTNEXTLINE
 inline constinit idx lifetime_dead_assignment_count = 0u;
 
 struct lifetime_probe {

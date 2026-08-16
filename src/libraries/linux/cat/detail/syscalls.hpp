@@ -708,42 +708,42 @@ namespace detail {
 #ifndef CAT_BUILD_SHARED
 [[gnu::visibility("hidden")]]
 #endif
-constinit inline bool has_sys_cachestat_cache = false;  // NOLINT
+constinit inline bool has_sys_cachestat_cache = false;
 
 #ifndef CAT_BUILD_SHARED
 [[gnu::visibility("hidden")]]
 #endif
-constinit inline bool has_sys_fchmodat2_cache = false;  // NOLINT
+constinit inline bool has_sys_fchmodat2_cache = false;
 
 #ifndef CAT_BUILD_SHARED
 [[gnu::visibility("hidden")]]
 #endif
-constinit inline bool has_sys_map_shadow_stack_cache = false;  // NOLINT
+constinit inline bool has_sys_map_shadow_stack_cache = false;
 
 #ifndef CAT_BUILD_SHARED
 [[gnu::visibility("hidden")]]
 #endif
-constinit inline bool has_sys_futex_wake_cache = false;  // NOLINT
+constinit inline bool has_sys_futex_wake_cache = false;
 
 #ifndef CAT_BUILD_SHARED
 [[gnu::visibility("hidden")]]
 #endif
-constinit inline bool has_sys_futex_wait_cache = false;  // NOLINT
+constinit inline bool has_sys_futex_wait_cache = false;
 
 #ifndef CAT_BUILD_SHARED
 [[gnu::visibility("hidden")]]
 #endif
-constinit inline bool has_sys_futex_requeue_cache = false;  // NOLINT
+constinit inline bool has_sys_futex_requeue_cache = false;
 
 #ifndef CAT_BUILD_SHARED
 [[gnu::visibility("hidden")]]
 #endif
-constinit inline bool has_sys_mseal_cache = false;  // NOLINT
+constinit inline bool has_sys_mseal_cache = false;
 
 #ifndef CAT_BUILD_SHARED
 [[gnu::visibility("hidden")]]
 #endif
-constinit inline bool has_sys_io_uring_cache = false;  // NOLINT
+constinit inline bool has_sys_io_uring_cache = false;
 
 }  // namespace detail
 

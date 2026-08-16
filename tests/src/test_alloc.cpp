@@ -9,7 +9,7 @@ struct alloc_huge_object {
    uint1 storage[64 + 1];
 };
 
-constinit int4 alloc_counter = 0;  // NOLINT
+constinit int4 alloc_counter = 0;
 
 struct alloc_non_trivial {
    char storage;

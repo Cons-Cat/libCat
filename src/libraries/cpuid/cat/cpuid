@@ -259,7 +259,7 @@ extern "C"
 #if !defined(CAT_NO_CPUID) && !defined(CAT_BUILD_SHARED)
    [[gnu::visibility("hidden")]]
 #endif
-   constinit inline detail::cpu_model __cpu_model{};  // NOLINT
+   constinit inline detail::cpu_model __cpu_model{};
 
 // Extended x86 feature flags, such as AVX2. This is zero-intialized except for
 // a single bit that expresses baseline x86-64 feature support.

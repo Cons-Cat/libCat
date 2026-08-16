@@ -22,6 +22,7 @@ Checks: "bugprone-*,
          -readability-function-cognitive-complexity,
          -readability-redundant-parentheses, # This doesn't work reliably.
          -readability-redundant-declaration, # We need many forward declarations.
+         -cppcoreguidelines-avoid-non-const-global-variables,
          -cppcoreguidelines-pro-type-union-access,
          -cppcoreguidelines-pro-bounds-pointer-arithmetic,
          -cppcoreguidelines-pro-type-reinterpret-cast,

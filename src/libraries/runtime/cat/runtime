@@ -117,7 +117,6 @@ longjmp(jmp_buffer& jump_point, int8 return_value);
 
 }  // namespace cat
 
-// NOLINTNEXTLINE
 inline void* _Nullable __dso_handle = nullptr;
 
 extern "C" [[gnu::used]]

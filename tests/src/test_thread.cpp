@@ -11,7 +11,6 @@
 
 namespace {
 
-// NOLINTNEXTLINE
 constinit cat::atomic<int> atomic{};
 
 thread_local int tls1 = 1;
