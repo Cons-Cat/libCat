@@ -117,13 +117,11 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       if (this == __builtin_addressof(other_list)) {
          return *this;
       }
-      if !consteval {
-         cat::assert(
-            m_storage.m_p_head == nullptr && m_size == 0u,
-            "basic_list move-assigned over while still owning nodes. "
-            "Call .free(allocator) first."
-         );
-      }
+      cat::assert(
+         m_storage.m_p_head == nullptr && m_size == 0u,
+         "basic_list move-assigned over while still owning nodes. "
+         "Call .free(allocator) first."
+      );
       m_storage = other_list.m_storage;
       m_size = other_list.m_size;
 

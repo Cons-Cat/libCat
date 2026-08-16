@@ -276,9 +276,7 @@ class
       this->m_size = string.size() + static_cast<unsigned>(null_terminated);
       bool const source_is_null_terminated = string.is_null_terminated();
       if constexpr (null_terminated) {
-         if !consteval {
-            assert(source_is_null_terminated);
-         }
+         assert(source_is_null_terminated);
       }
    }
 
@@ -299,9 +297,7 @@ class
       this->m_size = string.size() + static_cast<unsigned>(null_terminated);
       bool const source_is_null_terminated = string.is_null_terminated();
       if constexpr (null_terminated) {
-         if !consteval {
-            assert(source_is_null_terminated);
-         }
+         assert(source_is_null_terminated);
       }
    }
 

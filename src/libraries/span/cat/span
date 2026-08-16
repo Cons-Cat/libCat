@@ -240,18 +240,14 @@ span
    [[nodiscard]]
    constexpr auto
    last(idx count) -> span<T> {
-      if !consteval {
-         assert(count <= size());
-      }
+      assert(count <= size());
       return subspan(idx(size() - count), count);
    }
 
    [[nodiscard]]
    constexpr auto
    last(idx count) const -> span<T const> {
-      if !consteval {
-         assert(count <= size());
-      }
+      assert(count <= size());
       return subspan(idx(size() - count), count);
    }
 
@@ -260,11 +256,9 @@ span
    [[nodiscard]]
    constexpr auto
    subspan(idx offset, idx count = dynamic_extent) -> span<T> {
-      if !consteval {
-         assert(offset <= size());
-         if (count != dynamic_extent) {
-            assert(count <= size() - offset);
-         }
+      assert(offset <= size());
+      if (count != dynamic_extent) {
+         assert(count <= size() - offset);
       }
       idx const result_size =
          (count != dynamic_extent) ? count : idx(size() - offset);
@@ -274,11 +268,9 @@ span
    [[nodiscard]]
    constexpr auto
    subspan(idx offset, idx count = dynamic_extent) const -> span<T const> {
-      if !consteval {
-         assert(offset <= size());
-         if (count != dynamic_extent) {
-            assert(count <= size() - offset);
-         }
+      assert(offset <= size());
+      if (count != dynamic_extent) {
+         assert(count <= size() - offset);
       }
       idx const result_size =
          (count != dynamic_extent) ? count : idx(size() - offset);

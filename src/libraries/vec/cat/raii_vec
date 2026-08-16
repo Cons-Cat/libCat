@@ -96,12 +96,10 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
          m_core = move(other.m_core);
       } else {
          // TODO: Implement element-wise move across non-equal allocators.
-         if !consteval {
-            cat::assert(
-               false, "raii::basic_vec move-assign across non-equal "
-                      "allocators is not yet implemented."
-            );
-         }
+         cat::assert(
+            false, "raii::basic_vec move-assign across non-equal "
+                   "allocators is not yet implemented."
+         );
       }
       return *this;
    }
@@ -119,9 +117,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
 
    constexpr void
    swap(basic_vec& other) {
-      if !consteval {
-         cat::assert(m_allocator == other.m_allocator);
-      }
+      cat::assert(m_allocator == other.m_allocator);
       m_core.swap(other.m_core);
    }
 

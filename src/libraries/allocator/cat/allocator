@@ -5771,12 +5771,10 @@ class allocator_interface {
    template <typename T>
    constexpr void
    relocate_disjoint_reserved_storage(T* _Nonnull p_destination, T& source) {
-      if !consteval {
-         uword const extent = sizeof(T);
-         assert(!is_memory_overlapping(
-            __builtin_addressof(source), extent, p_destination, extent
-         ));
-      }
+      uword const extent = sizeof(T);
+      assert(!is_memory_overlapping(
+         __builtin_addressof(source), extent, p_destination, extent
+      ));
       if constexpr (is_trivially_relocatable<T>) {
          copy_memory(__builtin_addressof(source), p_destination, sizeof(T));
       } else {
@@ -5887,8 +5885,8 @@ class allocator_interface {
       T* _Nonnull p_old_handle, T* _Nonnull p_new_handle, idx old_count
    ) {
       // TODO: Use a `relocate()` function to streamline this.
+      assert(p_new_handle != nullptr);
       if !consteval {
-         assert(p_new_handle != nullptr);
          idx const transfer_bytes = old_count * sizeof(T);
          assert(!is_memory_overlapping(
             p_old_handle, transfer_bytes, p_new_handle, transfer_bytes

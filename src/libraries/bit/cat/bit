@@ -417,9 +417,7 @@ template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 bit_repeat(T value, idx pattern_bits) -> T {
-   if !consteval {
-      assert(pattern_bits > 0u);
-   }
+   assert(pattern_bits > 0u);
    constexpr idx bits = limits<T>::digits;
    if (pattern_bits >= bits) {
       return value;

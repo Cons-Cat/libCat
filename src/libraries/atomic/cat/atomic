@@ -349,9 +349,7 @@ class atomic_overflow_reference {
    store_add(auto operand, memory_order order = memory_order::seq_cst)
       requires(!is_same<value_type, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_add(operand, order);
    }
 
@@ -359,9 +357,7 @@ class atomic_overflow_reference {
    store_sub(auto operand, memory_order order = memory_order::seq_cst)
       requires(!is_same<value_type, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_sub(operand, order);
    }
 
@@ -1039,9 +1035,7 @@ class atomic<T> {
    store_add(auto operand, memory_order order = memory_order::seq_cst)
       requires(!is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_add(operand, order);
    }
 
@@ -1049,9 +1043,7 @@ class atomic<T> {
    store_sub(auto operand, memory_order order = memory_order::seq_cst)
       requires(!is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_sub(operand, order);
    }
 
@@ -1059,9 +1051,7 @@ class atomic<T> {
    store_and(auto operand, memory_order order = memory_order::seq_cst)
       requires(is_integral<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_and(operand, order);
    }
 
@@ -1069,9 +1059,7 @@ class atomic<T> {
    store_or(auto operand, memory_order order = memory_order::seq_cst)
       requires(is_integral<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_or(operand, order);
    }
 
@@ -1079,9 +1067,7 @@ class atomic<T> {
    store_xor(auto operand, memory_order order = memory_order::seq_cst)
       requires(is_integral<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_xor(operand, order);
    }
 
@@ -1089,9 +1075,7 @@ class atomic<T> {
    store_max(T operand, memory_order order = memory_order::seq_cst)
       requires(!is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_max(operand, order);
    }
 
@@ -1099,9 +1083,7 @@ class atomic<T> {
    store_min(T operand, memory_order order = memory_order::seq_cst)
       requires(!is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_min(operand, order);
    }
 
@@ -1778,9 +1760,7 @@ class atomic<T&> {
    store_add(auto operand, memory_order order = memory_order::seq_cst)
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_add(operand, order);
    }
 
@@ -1788,9 +1768,7 @@ class atomic<T&> {
    store_sub(auto operand, memory_order order = memory_order::seq_cst)
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_sub(operand, order);
    }
 
@@ -1798,9 +1776,7 @@ class atomic<T&> {
    store_and(auto operand, memory_order order = memory_order::seq_cst)
       requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_and(operand, order);
    }
 
@@ -1808,9 +1784,7 @@ class atomic<T&> {
    store_or(auto operand, memory_order order = memory_order::seq_cst)
       requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_or(operand, order);
    }
 
@@ -1818,9 +1792,7 @@ class atomic<T&> {
    store_xor(auto operand, memory_order order = memory_order::seq_cst)
       requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_xor(operand, order);
    }
 
@@ -1828,9 +1800,7 @@ class atomic<T&> {
    store_max(T operand, memory_order order = memory_order::seq_cst)
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_max(operand, order);
    }
 
@@ -1838,9 +1808,7 @@ class atomic<T&> {
    store_min(T operand, memory_order order = memory_order::seq_cst)
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      if !consteval {
-         detail::assert_store_order(order);
-      }
+      detail::assert_store_order(order);
       auto _ = fetch_min(operand, order);
    }
 

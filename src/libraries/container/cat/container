@@ -519,9 +519,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       requires(is_array_like)
    {
       Derived& self = static_cast<Derived&>(*this);
-      if !consteval {
-         assert(index < self.size());
-      }
+      assert(index < self.size());
       return self.data()[index];
    }
 
@@ -531,9 +529,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       requires(is_array_like)
    {
       Derived const& self = static_cast<Derived const&>(*this);
-      if !consteval {
-         assert(index < self.size());
-      }
+      assert(index < self.size());
       return self.data()[index];
    }
 
@@ -543,9 +539,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       requires(is_array_like)
    {
       Derived& self = static_cast<Derived&>(*this);
-      if !consteval {
-         assert(index < self.size());
-      }
+      assert(index < self.size());
       return move(self.data()[index]);
    }
 
@@ -555,9 +549,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       requires(is_array_like)
    {
       Derived const& self = static_cast<Derived const&>(*this);
-      if !consteval {
-         assert(index < self.size());
-      }
+      assert(index < self.size());
       return self.data()[index];
    }
 
@@ -567,9 +559,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    auto
    copy_to(Other& destination) const {
       Derived const& self = static_cast<Derived const&>(*this);
-      if !consteval {
-         assert(destination.capacity() >= self.capacity());
-      }
+      assert(destination.capacity() >= self.capacity());
       return cat::copy(self.begin(), self.end(), destination.begin());
    }
 
@@ -577,9 +567,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    auto
    move_to(Other& destination) const {
       Derived const& self = static_cast<Derived const&>(*this);
-      if !consteval {
-         assert(destination.capacity() >= self.capacity());
-      }
+      assert(destination.capacity() >= self.capacity());
       return move(self.begin(), self.end(), destination.begin());
    }
 
@@ -587,9 +575,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    auto
    relocate_to(Other& destination) const {
       Derived const& self = static_cast<Derived const&>(*this);
-      if !consteval {
-         assert(destination.capacity() >= self.capacity());
-      }
+      assert(destination.capacity() >= self.capacity());
       return cat::relocate(self.begin(), self.end(), destination.begin());
    }
 };

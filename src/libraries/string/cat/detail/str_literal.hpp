@@ -102,21 +102,13 @@ class
    constexpr basic_str_literal(Iterator begin, Sentinel end) {
       for (idx index; index < fixed_size; ++index) {
          if (begin == end) {
-            if consteval {
-               __builtin_unreachable();
-            } else {
-               cat::assert(false);
-            }
+            cat::assert(false);
          }
          data_[index] = *begin;
          ++begin;
       }
       if (begin != end) {
-         if consteval {
-            __builtin_unreachable();
-         } else {
-            cat::assert(false);
-         }
+         cat::assert(false);
       }
       data_[fixed_size] = CharT{};
    }
@@ -173,9 +165,7 @@ class
    [[nodiscard]]
    constexpr auto
    at(idx position) const [[clang::lifetimebound]] -> const_reference {
-      if !consteval {
-         cat::assert(position < fixed_size);
-      }
+      cat::assert(position < fixed_size);
       return data_[position];
    }
 

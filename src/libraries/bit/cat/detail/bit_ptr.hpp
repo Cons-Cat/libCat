@@ -180,9 +180,7 @@ constexpr auto
 make_bit_ptr_from_mask(Storage* _Nonnull p_storage, Mask mask)
    -> bit_ptr<Storage> {
    Storage const storage_mask = Storage(mask);
-   if !consteval {
-      assert(has_single_bit(storage_mask));
-   }
+   assert(has_single_bit(storage_mask));
    return bit_ptr<Storage>(p_storage, countr_zero(storage_mask));
 }
 
@@ -190,9 +188,7 @@ template <is_unsigned_integral Storage, is_arithmetic Offset>
 constexpr auto
 make_bit_ptr_from_offset(Storage* _Nonnull p_storage, Offset offset)
    -> bit_ptr<Storage> {
-   if !consteval {
-      assert(offset >= 0);
-   }
+   assert(offset >= 0);
    return bit_ptr<Storage>(p_storage, idx(offset));
 }
 

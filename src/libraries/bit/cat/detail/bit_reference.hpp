@@ -77,9 +77,7 @@ class bit_reference {
    rebind(
       Storage& reference [[clang::lifetime_capture_by(this)]], Storage mask
    ) {
-      if !consteval {
-         assert(has_single_bit(mask));
-      }
+      assert(has_single_bit(mask));
       m_p_storage = __builtin_addressof(reference);
       m_bit_mask = mask;
    }
@@ -95,9 +93,7 @@ class bit_reference {
    template <is_unsigned_integral T>
    constexpr auto
    assign(Storage value) -> bit_reference& {
-      if !consteval {
-         assert(has_single_bit(value));
-      }
+      assert(has_single_bit(value));
       value & 1u ? set() : unset();
       return *this;
    }
@@ -149,9 +145,7 @@ class bit_reference {
    // This constructor is only used by the free factory functions.
    constexpr bit_reference(Storage& in_storage, Storage in_mask)
        : m_p_storage(__builtin_addressof(in_storage)), m_bit_mask(in_mask) {
-      if !consteval {
-         assert(has_single_bit(in_mask));
-      }
+      assert(has_single_bit(in_mask));
    }
 
    Storage* _Nonnull m_p_storage;
@@ -198,9 +192,7 @@ template <is_unsigned_integral Storage>
 constexpr auto
 make_bit_reference_from_offset(Storage& reference, uword offset)
    -> bit_reference<Storage> {
-   if !consteval {
-      assert(offset < limits<Storage>::bits);
-   }
+   assert(offset < limits<Storage>::bits);
    return bit_reference<Storage>(reference, Storage(1u) << offset);
 }
 

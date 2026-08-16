@@ -146,9 +146,7 @@ class [[gsl::Owner]] basic_bitvec
          return *this;
       }
       m_core.free(m_allocator);
-      if !consteval {
-         assert(m_allocator == other.m_allocator);
-      }
+      assert(m_allocator == other.m_allocator);
       m_core = move(other.m_core);
       return *this;
    }

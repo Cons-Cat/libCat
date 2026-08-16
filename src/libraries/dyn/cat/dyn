@@ -1566,9 +1566,7 @@ struct dyn_invoke_impl {
    operator()(
       basic_dyn<Allocator, inline_size, Methods...>& dyn, Args&&... arguments
    ) const {
-      if !consteval {
-         cat::assert(dyn.has_value());
-      }
+      cat::assert(dyn.has_value());
       return dyn.m_p_vtable->template fun<Method>()(
          dyn.m_p_value, $fwd(arguments)...
       );
@@ -1587,9 +1585,7 @@ struct dyn_invoke_impl {
       basic_dyn<Allocator, inline_size, Methods...> const& dyn,
       Args&&... arguments
    ) const {
-      if !consteval {
-         cat::assert(dyn.has_value());
-      }
+      cat::assert(dyn.has_value());
       return dyn.m_p_vtable->template fun<Method>()(
          dyn.m_p_value, $fwd(arguments)...
       );
@@ -1600,9 +1596,7 @@ struct dyn_invoke_impl {
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator()(dyn_inplace<Methods...>& dyn, Args&&... arguments) const {
-      if !consteval {
-         cat::assert(dyn.has_value());
-      }
+      cat::assert(dyn.has_value());
       return dyn.m_vtable.template fun<Method>()(
          dyn.m_p_value, $fwd(arguments)...
       );
@@ -1616,9 +1610,7 @@ struct dyn_invoke_impl {
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator()(dyn_inplace<Methods...> const& dyn, Args&&... arguments) const {
-      if !consteval {
-         cat::assert(dyn.has_value());
-      }
+      cat::assert(dyn.has_value());
       return dyn.m_vtable.template fun<Method>()(
          dyn.m_p_value, $fwd(arguments)...
       );

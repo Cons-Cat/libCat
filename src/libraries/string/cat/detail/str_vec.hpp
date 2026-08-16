@@ -363,9 +363,7 @@ class
    constexpr void
    erase(idx index) {
       if constexpr (null_terminated) {
-         if !consteval {
-            cat::assert(index < content_size());
-         }
+         cat::assert(index < content_size());
       }
       this->erase_raw(index, index + 1u);
    }
@@ -373,9 +371,7 @@ class
    constexpr void
    erase(idx start, idx end) {
       if constexpr (null_terminated) {
-         if !consteval {
-            cat::assert(end <= content_size());
-         }
+         cat::assert(end <= content_size());
       }
       this->erase_raw(start, end);
    }
@@ -465,9 +461,7 @@ class
       allocator_ref<Allocator> allocator, idx position, Iterable&& range
    ) -> maybe<void> {
       if constexpr (null_terminated) {
-         if !consteval {
-            cat::assert(position <= content_size());
-         }
+         cat::assert(position <= content_size());
       }
 
       if constexpr (null_terminated) {
@@ -496,10 +490,8 @@ class
       allocator_ref<Allocator> allocator, idx first, idx last, Iterable&& range
    ) -> maybe<void> {
       if constexpr (null_terminated) {
-         if !consteval {
-            cat::assert(first <= last);
-            cat::assert(last <= content_size());
-         }
+         cat::assert(first <= last);
+         cat::assert(last <= content_size());
          if (m_core.size() == 0u) {
             $prop(m_core.push_back(allocator, CharT{'\0'}));
          }
@@ -551,10 +543,8 @@ class
 
    constexpr void
    erase_raw(idx start, idx end) {
-      if !consteval {
-         cat::assert(start <= end);
-         cat::assert(end <= m_core.size());
-      }
+      cat::assert(start <= end);
+      cat::assert(end <= m_core.size());
       auto const count = end - start;
       if (count == 0u) {
          return;

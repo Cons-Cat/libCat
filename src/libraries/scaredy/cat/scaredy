@@ -481,16 +481,14 @@ class
    }
 
    // If the value should be discarded, consume the `maybe` with `auto _ =`
-   // instead. Asserts engagement outside constant evaluation.
+   // instead. Asserts engagement.
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
       auto&& base = $fwd(self).as_base();
-      if !consteval {
-         cat::assert(base.has_value());
-      }
+      cat::assert(base.has_value());
       return $fwd(base).m_storage.value();
    }
 
@@ -500,21 +498,17 @@ class
    value() const -> monostate_type
       requires(storage_type::is_wrapping_void)
    {
-      if !consteval {
-         cat::assert(this->has_value());
-      }
+      cat::assert(this->has_value());
       return monostate;
    }
 
    // Get the value of some error when its type is known to the caller.
-   // Asserts that this `scaredy` holds that error outside constant evaluation.
+   // Asserts that this `scaredy` holds that error.
    template <typename Error>
    [[nodiscard]]
    constexpr auto
    error() {
-      if !consteval {
-         cat::assert(this->template is<Error>());
-      }
+      cat::assert(this->template is<Error>());
       return m_storage.template error<Error>();
    }
 
@@ -523,9 +517,7 @@ class
    [[nodiscard]]
    constexpr auto
    error() const {
-      if !consteval {
-         cat::assert(this->template is<Error>());
-      }
+      cat::assert(this->template is<Error>());
       return m_storage.template error<Error>();
    }
 
@@ -535,9 +527,7 @@ class
    error()
       requires(sizeof...(Errors) == 1)
    {
-      if !consteval {
-         cat::assert(this->is_empty());
-      }
+      cat::assert(this->is_empty());
       return m_storage.template error<Errors...>();
    }
 
@@ -547,9 +537,7 @@ class
    error() const
       requires(sizeof...(Errors) == 1)
    {
-      if !consteval {
-         cat::assert(this->is_empty());
-      }
+      cat::assert(this->is_empty());
       return m_storage.template error<Errors...>();
    }
 

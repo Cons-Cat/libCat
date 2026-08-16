@@ -102,12 +102,10 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
       if (m_allocator == other.m_allocator) {
          m_core = move(other.m_core);
       } else {
-         if !consteval {
-            cat::assert(
-               false, "raii::basic_list move-assign across non-equal "
-                      "allocators is not yet implemented."
-            );
-         }
+         cat::assert(
+            false, "raii::basic_list move-assign across non-equal "
+                   "allocators is not yet implemented."
+         );
       }
       return *this;
    }
@@ -121,9 +119,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Swap contents; requires matching allocators.
    constexpr void
    swap(basic_list& other) {
-      if !consteval {
-         cat::assert(m_allocator == other.m_allocator);
-      }
+      cat::assert(m_allocator == other.m_allocator);
       m_core.swap(other.m_core);
    }
 

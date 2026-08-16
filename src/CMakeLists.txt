@@ -255,8 +255,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/process.cpp
   ${CATLIB}/debug/implementations/breakpoint.cpp
   ${CATLIB}/debug/implementations/default_assert_handler.cpp
-  ${CATLIB}/debug/implementations/verify.cpp
-  ${CATLIB}/debug/implementations/assert.cpp
+  ${CATLIB}/debug/implementations/assert_failure.cpp
   ${CATLIB}/linux/implementations/cpu_temperature.cpp
 )
 
@@ -311,7 +310,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/compare/cat/compare
   ${CATLIB}/cpuid/cat/cpuid
   ${CATLIB}/debug/cat/debug
+  ${CATLIB}/debug/implementations/assert.tpp
   ${CATLIB}/debug/implementations/format_source_location.tpp
+  ${CATLIB}/debug/implementations/verify.tpp
   ${CATLIB}/file/cat/file
   ${CATLIB}/format/cat/format
   ${CATLIB}/format/cat/detail/ftoa_dragonbox.hpp

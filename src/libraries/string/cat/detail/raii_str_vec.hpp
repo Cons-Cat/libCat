@@ -104,12 +104,10 @@ class
       if (m_allocator == other.m_allocator) {
          m_core = move(other.m_core);
       } else {
-         if !consteval {
-            cat::assert(
-               false, "raii::basic_str_vec move-assign across non-equal "
-                      "allocators is not yet implemented."
-            );
-         }
+         cat::assert(
+            false, "raii::basic_str_vec move-assign across non-equal "
+                   "allocators is not yet implemented."
+         );
       }
       return *this;
    }
@@ -140,9 +138,7 @@ class
 
    constexpr void
    swap(basic_str_vec& other) {
-      if !consteval {
-         cat::assert(m_allocator == other.m_allocator);
-      }
+      cat::assert(m_allocator == other.m_allocator);
       m_core.swap(other.m_core);
    }
 

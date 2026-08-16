@@ -1165,16 +1165,14 @@ class
       return this->is_empty();
    }
 
-   // Get the stored value. Asserts engagement outside constant evaluation.
+   // Get the stored value. Asserts engagement.
    [[nodiscard]]
    constexpr auto
    value(this auto&& self) -> decltype(auto)
       requires(!is_void<T> && !is_nonnull)
    {
       auto&& base = $fwd(self).as_base();
-      if !consteval {
-         cat::assert(base.has_value());
-      }
+      cat::assert(base.has_value());
       return $fwd(base).m_storage.value();
    }
 
@@ -1191,9 +1189,7 @@ class
    constexpr auto
    value(this auto const& self) -> remove_pointer<
       remove_cvref<value_type>>* _Nonnull requires(!is_void<T> && is_nonnull) {
-                                             if !consteval {
-                                                cat::assert(self.has_value());
-                                             }
+                                             cat::assert(self.has_value());
                                              return self.as_base()
                                                 .m_storage.value();
                                           }
@@ -1203,9 +1199,7 @@ class
    constexpr auto value() const -> monostate_type
       requires(is_void<T>)
    {
-      if !consteval {
-         cat::assert(this->has_value());
-      }
+      cat::assert(this->has_value());
       return monostate;
    }
 

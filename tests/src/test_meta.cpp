@@ -1,5 +1,6 @@
 #include <cat/compare>
 #include <cat/meta>
+#include <cat/string>
 #include <cat/tuple>
 
 #include "../unit_tests.hpp"
@@ -8,6 +9,43 @@ namespace {
 void
 test_is_function() {
 }
+
+consteval auto
+constexpr_assertions_pass() -> bool {
+   cat::verify(true);
+   cat::verify(true, cat::default_assert_handler);
+   cat::verify(true, "constexpr verify");
+   cat::assert(true);
+   cat::assert(true, cat::default_assert_handler);
+   cat::assert(true, "constexpr assert");
+   return true;
+}
+
+static_assert(constexpr_assertions_pass());
+
+template <bool>
+struct constexpr_assertion_result {};
+
+template <bool condition>
+concept can_constexpr_verify = requires {
+   typename constexpr_assertion_result<[] consteval {
+      cat::verify(condition);
+      return true;
+   }()>;
+};
+
+template <bool condition>
+concept can_constexpr_assert = requires {
+   typename constexpr_assertion_result<[] consteval {
+      cat::assert(condition);
+      return true;
+   }()>;
+};
+
+static_assert(can_constexpr_verify<true>);
+static_assert(!can_constexpr_verify<false>);
+static_assert(can_constexpr_assert<true>);
+static_assert(!can_constexpr_assert<false>);
 
 struct members {
    int member_variable;

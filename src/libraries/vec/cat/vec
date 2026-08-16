@@ -83,13 +83,11 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       if (this == &other) {
          return *this;
       }
-      if !consteval {
-         cat::assert(
-            data() == nullptr,
-            "basic_vec move-assigned over while still owning storage. "
-            "Call .free(allocator) first."
-         );
-      }
+      cat::assert(
+         data() == nullptr,
+         "basic_vec move-assigned over while still owning storage. "
+         "Call .free(allocator) first."
+      );
       other.annotate_size_change(other.size(), other.capacity());
       move_from(other);
       annotate_size_change(capacity(), size());
@@ -750,9 +748,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    erase(idx index)
       requires(is_assignable<T&, T &&> && !flags.is_fixed_size)
    {
-      if !consteval {
-         cat::assert(index < size());
-      }
+      cat::assert(index < size());
       T* _Nonnull const p_dst = data() + index;
       T* _Nonnull const p_src = p_dst + 1;
       T* _Nonnull const p_end = data() + size();
@@ -769,10 +765,8 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    erase(idx start, idx end)
       requires(is_assignable<T&, T &&> && !flags.is_fixed_size)
    {
-      if !consteval {
-         cat::assert(start <= end);
-         cat::assert(end <= size());
-      }
+      cat::assert(start <= end);
+      cat::assert(end <= size());
       auto const count = end - start;
       if (count == 0u) {
          return;
@@ -924,9 +918,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       -> maybe<void>
       requires(is_assignable<T&, T &&>)
    {
-      if !consteval {
-         cat::assert(position <= size());
-      }
+      cat::assert(position <= size());
       idx const count = idx(range.size());
       if (count == 0u) {
          return monostate;
@@ -962,9 +954,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
       -> maybe<void>
       requires(is_assignable<T&, T &&>)
    {
-      if !consteval {
-         cat::assert(position <= size());
-      }
+      cat::assert(position <= size());
 
       idx const range_size = idx(range.size());
       if (range_size == 0u) {
@@ -1005,9 +995,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    insert_range(
       allocator_ref<Allocator> allocator, idx position, Iterable&& range
    ) -> maybe<void> {
-      if !consteval {
-         cat::assert(position <= size());
-      }
+      cat::assert(position <= size());
       idx const count = idx(range.size());
       if (count == 0u) {
          return monostate;
@@ -1047,9 +1035,7 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    insert_range(
       allocator_ref<Allocator> allocator, idx position, Iterable&& range
    ) -> maybe<void> {
-      if !consteval {
-         cat::assert(position <= size());
-      }
+      cat::assert(position <= size());
 
       idx insertion_position = position;
       maybe<void> result = monostate;
@@ -1108,10 +1094,8 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    ) -> maybe<void>
       requires(is_assignable<T&, T &&>)
    {
-      if !consteval {
-         cat::assert(first <= last);
-         cat::assert(last <= size());
-      }
+      cat::assert(first <= last);
+      cat::assert(last <= size());
 
       idx const count = idx(range.size());
       idx const old_size = size();
@@ -1157,10 +1141,8 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    ) -> maybe<void>
       requires(is_assignable<T&, T &&>)
    {
-      if !consteval {
-         cat::assert(first <= last);
-         cat::assert(last <= size());
-      }
+      cat::assert(first <= last);
+      cat::assert(last <= size());
       idx const count = idx(range.size());
       idx const old_size = size();
       idx const removed = idx(last - first);

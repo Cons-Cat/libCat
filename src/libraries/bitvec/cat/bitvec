@@ -355,9 +355,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    [[nodiscard]]
    constexpr auto
    operator[](idx bit_index) [[clang::lifetimebound]] -> bit_reference<uword> {
-      if !consteval {
-         assert(bit_index < m_bit_size);
-      }
+      assert(bit_index < m_bit_size);
       return make_bit_reference_from_offset(
          m_words[bit_index / word_bits], bit_index % word_bits
       );
@@ -600,9 +598,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    insert_range(allocator_ref<Allocator> allocator, idx position, Range&& range)
       -> maybe<void> {
-      if !consteval {
-         assert(position <= m_bit_size);
-      }
+      assert(position <= m_bit_size);
 
       idx const count = idx(range.size());
       if (count == 0u) {
@@ -637,9 +633,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    insert_range(
       allocator_ref<Allocator> allocator, idx position, Iterable&& range
    ) -> maybe<void> {
-      if !consteval {
-         assert(position <= m_bit_size);
-      }
+      assert(position <= m_bit_size);
 
       idx const count = idx(range.size());
       if (count == 0u) {
@@ -681,9 +675,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    insert_range(
       allocator_ref<Allocator> allocator, idx position, Iterable&& range
    ) -> maybe<void> {
-      if !consteval {
-         assert(position <= m_bit_size);
-      }
+      assert(position <= m_bit_size);
       idx insertion_position = position;
       maybe<void> result = monostate;
 
@@ -735,10 +727,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    replace_with_range(
       allocator_ref<Allocator> allocator, idx first, idx last, Range&& range
    ) -> maybe<void> {
-      if !consteval {
-         assert(first <= last);
-         assert(last <= m_bit_size);
-      }
+      assert(first <= last);
+      assert(last <= m_bit_size);
       idx const count = idx(range.size());
       idx const old_size = m_bit_size;
       idx const removed = idx(last - first);
@@ -781,10 +771,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    replace_with_range(
       allocator_ref<Allocator> allocator, idx first, idx last, Iterable&& range
    ) -> maybe<void> {
-      if !consteval {
-         assert(first <= last);
-         assert(last <= m_bit_size);
-      }
+      assert(first <= last);
+      assert(last <= m_bit_size);
 
       // Erase the replaced bits.
       idx const old_size = m_bit_size;
@@ -888,9 +876,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    [[nodiscard]]
    constexpr auto
    is_subset_of(basic_bitvec const& other) const -> bool {
-      if !consteval {
-         assert(m_bit_size == other.m_bit_size);
-      }
+      assert(m_bit_size == other.m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          uword const extra_bits =
             m_words[word_index] & ~other.m_words[word_index];
@@ -905,9 +891,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    [[nodiscard]]
    constexpr auto
    intersects(basic_bitvec const& other) const -> bool {
-      if !consteval {
-         assert(m_bit_size == other.m_bit_size);
-      }
+      assert(m_bit_size == other.m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          if ((m_words[word_index] & other.m_words[word_index]) != 0u) {
             return true;
@@ -936,10 +920,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    bit_and_into(basic_bitvec const& other, basic_bitvec& result) const
       -> basic_bitvec& {
-      if !consteval {
-         assert(m_bit_size == other.m_bit_size);
-         assert(result.m_bit_size == m_bit_size);
-      }
+      assert(m_bit_size == other.m_bit_size);
+      assert(result.m_bit_size == m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          result.m_words[word_index] =
             m_words[word_index] & other.m_words[word_index];
@@ -951,10 +933,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    bit_or_into(basic_bitvec const& other, basic_bitvec& result) const
       -> basic_bitvec& {
-      if !consteval {
-         assert(m_bit_size == other.m_bit_size);
-         assert(result.m_bit_size == m_bit_size);
-      }
+      assert(m_bit_size == other.m_bit_size);
+      assert(result.m_bit_size == m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          result.m_words[word_index] =
             m_words[word_index] | other.m_words[word_index];
@@ -967,10 +947,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    bit_xor_into(basic_bitvec const& other, basic_bitvec& result) const
       -> basic_bitvec& {
-      if !consteval {
-         assert(m_bit_size == other.m_bit_size);
-         assert(result.m_bit_size == m_bit_size);
-      }
+      assert(m_bit_size == other.m_bit_size);
+      assert(result.m_bit_size == m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          result.m_words[word_index] =
             m_words[word_index] ^ other.m_words[word_index];
@@ -982,9 +960,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Store the bitwise complement of this vector in `result`.
    constexpr auto
    bit_complement_into(basic_bitvec& result) const -> basic_bitvec& {
-      if !consteval {
-         assert(result.m_bit_size == m_bit_size);
-      }
+      assert(result.m_bit_size == m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          result.m_words[word_index] = ~m_words[word_index];
       }

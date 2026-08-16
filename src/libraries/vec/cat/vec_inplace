@@ -200,9 +200,7 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
       requires(is_constructible<T, Args...>)
    constexpr auto
    unchecked_emplace_back(Args&&... arguments) [[clang::lifetimebound]] -> T& {
-      if !consteval {
-         cat::assert(!this->is_full());
-      }
+      cat::assert(!this->is_full());
       return construct_back($fwd(arguments)...);
    }
 
@@ -296,9 +294,7 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    erase(idx index)
       requires(is_move_assignable<T>)
    {
-      if !consteval {
-         cat::assert(index < size());
-      }
+      cat::assert(index < size());
       for (idx source = index + 1u; source < size(); ++source) {
          data()[idx(source - 1u)] = move(data()[source]);
       }
@@ -310,10 +306,8 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    erase(idx first, idx last)
       requires(is_move_assignable<T>)
    {
-      if !consteval {
-         cat::assert(first <= last);
-         cat::assert(last <= size());
-      }
+      cat::assert(first <= last);
+      cat::assert(last <= size());
       if (first == last) {
          return;
       }

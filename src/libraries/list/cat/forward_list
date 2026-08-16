@@ -109,13 +109,11 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       if (this == __builtin_addressof(other_list)) {
          return *this;
       }
-      if !consteval {
-         cat::assert(
-            m_storage.m_p_head == nullptr && m_size == 0u,
-            "basic_forward_list move-assigned over while still owning "
-            "nodes. Call .free(allocator) first."
-         );
-      }
+      cat::assert(
+         m_storage.m_p_head == nullptr && m_size == 0u,
+         "basic_forward_list move-assigned over while still owning "
+         "nodes. Call .free(allocator) first."
+      );
       m_storage = other_list.m_storage;
       m_size = other_list.m_size;
 
@@ -678,9 +676,7 @@ class forward_list_stepanov_iterator
    // Access the element at the iterator.
    constexpr auto
    dereference() const -> T& {
-      if !consteval {
-         assert(m_p_node);
-      }
+      assert(m_p_node);
       return m_p_node->storage;
    }
 

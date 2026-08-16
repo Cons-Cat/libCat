@@ -273,9 +273,7 @@ class
    unchecked_push_back(CharT value) -> CharT&
       requires(!flags.is_fixed_size)
    {
-      if !consteval {
-         cat::assert(size() < inline_capacity);
-      }
+      cat::assert(size() < inline_capacity);
       CharT& result = m_data[this->m_size];
       result = value;
       ++this->m_size;
@@ -350,9 +348,7 @@ class
    erase(idx index)
       requires(!flags.is_fixed_size)
    {
-      if !consteval {
-         cat::assert(index < size());
-      }
+      cat::assert(index < size());
       for (idx source = index + 1u; source < size(); ++source) {
          m_data[idx(source - 1u)] = m_data[source];
       }
@@ -364,10 +360,8 @@ class
    erase(idx first, idx last)
       requires(!flags.is_fixed_size)
    {
-      if !consteval {
-         cat::assert(first <= last);
-         cat::assert(last <= size());
-      }
+      cat::assert(first <= last);
+      cat::assert(last <= size());
       idx const count = idx(last - first);
       for (idx source = last; source < size(); ++source) {
          m_data[idx(source - count)] = m_data[source];

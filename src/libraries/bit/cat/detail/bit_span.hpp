@@ -174,9 +174,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    [[nodiscard]]
    constexpr auto
    rbegin() const -> reverse_iterator {
-      if !consteval {
-         assert(m_bit_size > 0u);
-      }
+      assert(m_bit_size > 0u);
       iterator iter = end();
       --iter;
       return reverse_iterator(iter);
@@ -193,9 +191,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    [[nodiscard]]
    constexpr auto
    crbegin() const -> const_reverse_iterator {
-      if !consteval {
-         assert(m_bit_size > 0u);
-      }
+      assert(m_bit_size > 0u);
       const_iterator iter = cend();
       --iter;
       return const_reverse_iterator(iter);
@@ -218,19 +214,15 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    [[nodiscard]]
    constexpr auto
    operator[](idx bit_index) const [[clang::lifetimebound]] -> reference {
-      if !consteval {
-         assert(bit_index < m_bit_size);
-      }
+      assert(bit_index < m_bit_size);
       return *make_bit_ptr_from_offset(m_p_storage, m_bit_offset + bit_index);
    }
 
    [[nodiscard]]
    constexpr auto
    slice(idx first, idx last) const -> bit_span {
-      if !consteval {
-         assert(first <= last);
-         assert(last <= m_bit_size);
-      }
+      assert(first <= last);
+      assert(last <= m_bit_size);
       return bit_span(m_p_storage, m_bit_offset + first, idx(last - first));
    }
 
@@ -322,9 +314,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    constexpr auto
    copy_from(bit_span source) const -> bit_span {
-      if !consteval {
-         assert(source.size() == m_bit_size);
-      }
+      assert(source.size() == m_bit_size);
       if (
          (m_bit_offset % limits<Storage>::bits) == 0u
          && (source.m_bit_offset % limits<Storage>::bits) == 0u

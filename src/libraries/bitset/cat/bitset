@@ -147,9 +147,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    constexpr auto
    operator[](idx index_bit) [[clang::lifetimebound]]
    -> bit_reference<array_type_element> {
-      if !consteval {
-         assert(index_bit < bits_count);
-      }
+      assert(index_bit < bits_count);
 
       idx const array_word = idx(
          m_data.size() - 1u - ((index_bit + leading_skipped_bits) / word_bits)
