@@ -1,28 +1,24 @@
 #pragma once
 
-#include <cat/atomic>
 #include <cat/debug>
-#include <cat/format>
-#include <cat/page_allocator>
-#include <cat/vec>
 
 // All unit tests have access to these symbols:
 using namespace cat::literals;
 using namespace cat::arithmetic;
 
-// TODO: Do we need this attribute?
-[[gnu::used]]
-constinit inline cat::page_allocator pager;
+namespace cat {
+class page_allocator;
+}
 
-constinit inline cat::atomic<cat::idx> tests_passed{};
-constinit inline cat::atomic<cat::idx> tests_failed{};
+extern cat::page_allocator pager;
 
 using constructor_fn = void (*const)();
-constinit inline cat::maybe<cat::raii::vec<void*>> test_fns;
 
-[[noreturn]]
 void
-test_fail(cat::source_location const& source_location);
+register_test(constructor_fn p_test_fn);
+
+void
+run_test_prologue(cat::str_view label, constructor_fn p_test_fn);
 
 // This macro declares a unit test named `test_name`, which is executed
 // automatically in this program's constructor calls.
@@ -34,27 +30,11 @@ test_fail(cat::source_location const& source_location);
                                                                             \
    [[gnu::constructor]]                                                     \
    void cat_register_test##test_name() {                                    \
-      /* Linking asan causes this vector to be uninitialized. I've tried */ \
-      /* `[[gnu::constructor]]` priorities to order it, but that doesn't */ \
-      /* work. This hacky check works around it. */                         \
-      if (test_fns.is_empty()) {                                          \
-         /* TODO: `.or_exit() on failure.*/                                 \
-         test_fns =                                                         \
-            cat::raii::make_vec_reserved<void*>(pager, 4_uki / 8u).value(); \
-      }                                                                     \
-      /* This is memory is pre-reserved, so `push_back` cannot fail. */     \
-      auto _ = test_fns.verify().push_back(                                 \
-         reinterpret_cast<void*>(test_##test_name##_prologue));             \
+      register_test(test_##test_name##_prologue);                            \
    }                                                                        \
                                                                             \
    void test_##test_name##_prologue() {                                     \
-      /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */   \
-      constexpr ::cat::str_view string = ": test_" #test_name "...\n";      \
-      /* Gracefully handle print failure in unit tests.*/                   \
-      auto _ = ::cat::print(string);                                        \
-      test_##test_name();                                                   \
-      ++tests_passed;                                                       \
-      return;                                                               \
+      run_test_prologue(": test_" #test_name "...\n", test_##test_name);     \
    }                                                                        \
    /* TODO: Debug IR passes. */                                             \
    void test_##test_name()

@@ -324,12 +324,15 @@ add_subdirectory(src/)
 
 option(CAT_PCH "Enable precompiled-headers for libCat headers." ON)
 if (CAT_PCH)
+  set(CAT_PCH_HEADERS
+    "${CMAKE_SOURCE_DIR}/src/global_includes.hpp"
+    "${CMAKE_SOURCE_DIR}/src/libraries/string/cat/detail/str_span.hpp"
+    "${CMAKE_SOURCE_DIR}/src/libraries/linux/cat/linux")
   # `PRIVATE` on `cat-impl` so external consumers of `cat::cat` don't inherit
   # PCH machinery. In-tree tests/examples opt-in via `REUSE_FROM cat-impl`.
   # `str_span` completes `str_view` used by assertions in global headers.
-  target_precompile_headers(cat-impl PRIVATE
-    "${CMAKE_SOURCE_DIR}/src/global_includes.hpp"
-    "${CMAKE_SOURCE_DIR}/src/libraries/string/cat/detail/str_span.hpp")
+  # `linux` amortizes the common implementation header graph.
+  target_precompile_headers(cat-impl PRIVATE ${CAT_PCH_HEADERS})
   # Strip the PCH's embedded mtime so sccache / ccache can reuse PCH-consuming
   # TUs across rebuilds. `SHELL:` keeps `-Xclang` glued to its argument.
   target_compile_options(cat-impl PRIVATE

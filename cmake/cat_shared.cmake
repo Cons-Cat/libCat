@@ -178,10 +178,10 @@ if (CAT_PCH)
   # `REUSE_FROM cat-impl` is rejected because Clang treats `-fPIC` as a
   # PCH-relevant frontend choice (`is pie differs in precompiled file`), so
   # `cat-impl-shared` gets its own PCH built with the same `-fPIC` flag the rest
-  # of its TUs use. The extra PCH compile costs ~1s once but every
+  # of its TUs use. The extra PCH compile costs once but every
   # `cat-impl-shared` source then skips re-parsing libCat's headers, which is a
-  # much bigger saving across the 88-TU build.
-  target_precompile_headers(cat-impl-shared PRIVATE ${CAT_HEADERS})
+  # much bigger saving across the implementation TUs.
+  target_precompile_headers(cat-impl-shared PRIVATE ${CAT_PCH_HEADERS})
   target_compile_options(cat-impl-shared PRIVATE
     "SHELL:-Xclang -fno-pch-timestamp")
   set_target_properties(cat-impl-shared PROPERTIES PCH_WARN_INVALID ON)

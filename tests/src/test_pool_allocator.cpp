@@ -1,3 +1,4 @@
+#include <cat/page_allocator>
 #include <cat/pool_allocator>
 
 #include "../unit_tests.hpp"

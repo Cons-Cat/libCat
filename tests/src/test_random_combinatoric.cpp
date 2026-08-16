@@ -252,9 +252,6 @@ void
 exercise_engine(Seeds... seeds) {
    Engine engine(seeds...);
    draw_engine(engine);
-   if constexpr (cat::is_uniform_random_bit_generator<Engine>) {
-      check_all_distribution_types(engine);
-   }
 }
 
 template <typename Word>
@@ -464,10 +461,16 @@ $test(random_combinatoric_pcg_and_mixers) {
    exercise_engine<cat::shuffle_order_engine<cat::wyrand_engine, 16u>>(9u);
 }
 
+$test(random_combinatoric_distributions) {
+   cat::pcg_engine<cat::uint4> narrow(42u, 54u);
+   cat::pcg_engine<cat::uint8> wide(42u, 54u);
+   check_all_distribution_types(narrow);
+   check_all_distribution_types(wide);
+}
+
 $test(random_combinatoric_linux) {
    nix::sys_urandom_engine urandom;
    draw_engine(urandom);
-   check_all_distribution_types(urandom);
 
    nix::sys_random_engine blocking;
    draw_engine(blocking);

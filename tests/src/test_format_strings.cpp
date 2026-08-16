@@ -1,3 +1,4 @@
+#include <cat/atomic>
 #include <cat/bitset>
 #include <cat/format>
 #include <cat/linear_allocator>

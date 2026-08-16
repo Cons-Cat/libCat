@@ -98,6 +98,7 @@ inline constexpr detail::nullopt_type nullopt;
 
 #include <cat/match>
 #include <cat/memory>
+#include <cat/new>
 #include <cat/runtime>
 #include <cat/utility>
 

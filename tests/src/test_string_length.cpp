@@ -1,4 +1,5 @@
 #include <cat/iterable>
+#include <cat/page_allocator>
 #include <cat/string>
 #include <cat/utility>
 

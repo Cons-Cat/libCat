@@ -1,13 +1,39 @@
 #include "./unit_tests.hpp"
 
+#include <cat/atomic>
 #include <cat/format>
 #include <cat/page_allocator>
+#include <cat/vec>
 
 // The jump buffer must be constructed in `main()` instead of globally so that
 // it can be guaranteed to occur before any unit tests are called.
 namespace {
 inline constinit cat::jmp_buffer* p_jump_buffer = nullptr;
+
+constinit cat::atomic<cat::idx> tests_passed{};
+constinit cat::atomic<cat::idx> tests_failed{};
+constinit cat::maybe<cat::raii::vec<void*>> test_fns;
 }  // namespace
+
+[[gnu::used]]
+constinit cat::page_allocator pager;
+
+void
+register_test(constructor_fn p_test_fn) {
+   if (test_fns.is_empty()) {
+      test_fns =
+         cat::raii::make_vec_reserved<void*>(pager, 4_uki / 8u).value();
+   }
+   auto _ =
+      test_fns.verify().push_back(reinterpret_cast<void*>(p_test_fn));
+}
+
+void
+run_test_prologue(cat::str_view label, constructor_fn p_test_fn) {
+   auto _ = cat::print(label);
+   p_test_fn();
+   ++tests_passed;
+}
 
 namespace cat {
 void

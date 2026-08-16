@@ -5,6 +5,7 @@
 #include <cat/linear_allocator>
 #include <cat/named_allocator>
 #include <cat/page_allocator>
+#include <cat/string>
 
 #include "../unit_tests.hpp"
 

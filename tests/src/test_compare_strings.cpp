@@ -1,3 +1,4 @@
+#include <cat/page_allocator>
 #include <cat/simd>
 #include <cat/string>
 
