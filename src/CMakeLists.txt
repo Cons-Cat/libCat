@@ -7,7 +7,7 @@ set(CATLIB ${CMAKE_SOURCE_DIR}/src/libraries)
 set(CAT_INCLUDE_SUBDIRS
   meta compare limits runtime new cpuid sanitizer arithmetic
   simd algorithm debug variant scaredy maybe match notype unique container
-  array span list string tui format memory allocator utility file
+  array span list string path tui format memory allocator utility file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
   tuple vec ring enum iterable dyn random timer)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
@@ -402,6 +402,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/memory/implementations/is_memory_overlapping.tpp
   ${CATLIB}/meta/cat/meta
   ${CATLIB}/notype/cat/notype
+  ${CATLIB}/path/cat/path
+  ${CATLIB}/path/cat/raii_path
   ${CATLIB}/random/cat/random
   ${CATLIB}/random/cat/detail/bernoulli_distribution.hpp
   ${CATLIB}/random/cat/detail/binomial_distribution.hpp

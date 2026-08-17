@@ -1,0 +1,466 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::raii::basic_path` is a dynamically-sized owning file path container
+// backed by a `cat::manual::basic_path`. It is inspired by
+// `std::filesystem::path`, but a major distinction is that its only encoding is
+// 1-byte characters across all platforms. It binds an allocator for the
+// lifetime of the container. Upon construction, the path is empty. Its first
+// allocation grows to a capacity of 48 characters by default.
+//
+// As this is an `raii` namespace container, its destructor deallocates storage
+// automatically through the bound allocator.
+//
+// The `cat::manual::basic_path` does not deallocate its own memory.
+//
+// Path joining and decomposition are lexical. They do not access the
+// filesystem, resolve symbolic links, or normalize `.` and `..` components.
+//
+// It is parameterized by an allocator and `cat::str_vec_flags`. Path storage
+// is always null-terminated and uses the pointer-size vector layout.
+//
+// A convenience type alias is provided:
+//
+//  `cat::raii::path<Allocator>`, a default `raii::basic_path`.
+
+#include <cat/path>
+
+namespace cat::detail {
+template <str_vec_flags flags>
+constexpr auto
+raii_path_has_value(raii::basic_path<dyn_allocator, flags> const& value)
+   -> bool;
+
+template <str_vec_flags flags>
+constexpr auto
+raii_path_nullopt() -> raii::basic_path<dyn_allocator, flags>;
+}  // namespace cat::detail
+
+namespace cat::raii {
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = detail::path_default_flags>
+using path = basic_path<Allocator, flags>;
+
+template <is_allocator Allocator, str_vec_flags configuration>
+class [[clang::preferred_name(path<Allocator>), gsl::Owner]]
+basic_path
+    : public container_interface<basic_path<Allocator, configuration>, char>,
+      public random_access_stepanov_iterable_interface<char> {
+ public:
+   static constexpr str_vec_flags flags =
+      manual::basic_path<configuration>::flags;
+
+   constexpr basic_path() =
+      delete ("`cat::raii::basic_path` requires an allocator.");
+
+   constexpr basic_path(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   )
+       : m_path(), m_allocator(allocator) {
+   }
+
+   constexpr basic_path(basic_path&&) = default;
+   constexpr basic_path(basic_path const&) =
+      delete ("Implicit copying of `cat::raii::basic_path` is forbidden. Call "
+              "`.clone()` or move instead.");
+   auto
+   operator=(basic_path const&) -> basic_path& =
+      delete ("Implicit copying of `cat::raii::basic_path` is forbidden. Call "
+              "`.clone()` or move instead.");
+
+   constexpr auto
+   operator=(basic_path&& other) -> basic_path& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+      m_path.free(m_allocator);
+      cat::assert(m_allocator == other.m_allocator);
+      m_path = move(other.m_path);
+      return *this;
+   }
+
+   constexpr ~basic_path() {
+      m_path.free(m_allocator);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_path const& other) const -> bool {
+      return m_path == other.m_path;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() [[clang::lifetimebound]] -> char* _Nullable {
+      return m_path.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() const [[clang::lifetimebound]] -> char const* _Nullable {
+      return m_path.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_path.size();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_path.capacity();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   empty() const -> bool {
+      return m_path.empty();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_null_terminated() const -> bool {
+      return true;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   view() const [[clang::lifetimebound]] -> str_view {
+      return m_path.view();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   native() [[clang::lifetimebound]] -> zstr_span {
+      return m_path.native();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   native() const [[clang::lifetimebound]] -> zstr_view {
+      return m_path.native();
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator zstr_span() [[clang::lifetimebound]] {
+      return native();
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator zstr_view() const [[clang::lifetimebound]] {
+      return native();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   reserve(idx minimum_capacity) -> maybe<void>
+      requires(!flags.vec.is_fixed_size)
+   {
+      return m_path.reserve(m_allocator, minimum_capacity);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   resize(idx new_size) -> maybe<void> {
+      return m_path.resize(m_allocator, new_size);
+   }
+
+   constexpr void
+   clear() {
+      m_path.clear();
+   }
+
+   constexpr void
+   reset() {
+      m_path.free(m_allocator);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   allocator(this auto&& self) -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   clone() const& -> maybe<basic_path> {
+      return clone(m_allocator);
+   }
+
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(
+      allocator_ref<NewAllocator> allocator
+   ) const& -> maybe<basic_path<NewAllocator, configuration>> {
+      auto path = m_path.clone(allocator);
+      if (path.is_empty()) {
+         return nullopt;
+      }
+      basic_path<NewAllocator, configuration> result(allocator);
+      result.m_path = move(path).value();
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   clone(
+      dyn_allocator allocator
+   ) const& -> maybe<basic_path<dyn_allocator, configuration>> {
+      return clone<dyn_allocator>(allocator);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   release() -> manual::basic_path<configuration> {
+      return move(m_path);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_absolute() const -> bool {
+      return m_path.is_absolute();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_relative() const -> bool {
+      return m_path.is_relative();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_name() const -> str_view {
+      return m_path.root_name();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_directory() const -> str_view {
+      return m_path.root_directory();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_path() const -> str_view {
+      return m_path.root_path();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   relative_path() const -> str_view {
+      return m_path.relative_path();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   parent_path() const -> str_view {
+      return m_path.parent_path();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   filename() const -> str_view {
+      return m_path.filename();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   stem() const -> str_view {
+      return m_path.stem();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   extension() const -> str_view {
+      return m_path.extension();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_name() const -> bool {
+      return m_path.has_root_name();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_directory() const -> bool {
+      return m_path.has_root_directory();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_path() const -> bool {
+      return m_path.has_root_path();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_relative_path() const -> bool {
+      return m_path.has_relative_path();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_parent_path() const -> bool {
+      return m_path.has_parent_path();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_filename() const -> bool {
+      return m_path.has_filename();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_stem() const -> bool {
+      return m_path.has_stem();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_extension() const -> bool {
+      return m_path.has_extension();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   components() const -> path_components {
+      return m_path.components();
+   }
+
+   template <is_path_segment Segment>
+   [[nodiscard]]
+   constexpr auto
+   append(Segment const& segment) -> maybe<void> {
+      return m_path.append(m_allocator, segment);
+   }
+
+ private:
+   template <is_allocator OtherAllocator, str_vec_flags other_flags>
+   friend class basic_path;
+
+   template <str_vec_flags other_flags>
+   friend constexpr auto
+   detail::raii_path_has_value(basic_path<dyn_allocator, other_flags> const&)
+      -> bool;
+
+   template <str_vec_flags other_flags>
+   friend constexpr auto
+   detail::raii_path_nullopt() -> basic_path<dyn_allocator, other_flags>;
+
+   manual::basic_path<configuration> m_path;
+   [[no_unique_address]]
+   allocator_ref<Allocator> m_allocator;
+};
+
+}  // namespace cat::raii
+
+namespace cat::detail {
+
+template <str_vec_flags flags>
+constexpr auto
+raii_path_has_value(raii::basic_path<dyn_allocator, flags> const& value)
+   -> bool {
+   return maybe_path_has_value(value.m_path);
+}
+
+inline constexpr null_allocator raii_path_niche_null_allocator{};
+
+template <str_vec_flags flags>
+constexpr auto
+raii_path_nullopt() -> raii::basic_path<dyn_allocator, flags> {
+   raii::basic_path<dyn_allocator, flags> value(
+      allocator_ref<dyn_allocator>(dyn_allocator(
+         const_cast<null_allocator&>(raii_path_niche_null_allocator)
+      ))
+   );
+   value.m_path = maybe_path_nullopt<flags>();
+   return value;
+}
+
+}  // namespace cat::detail
+
+namespace cat {
+
+template <str_vec_flags flags>
+struct default_compact_trait<raii::basic_path<dyn_allocator, flags>>
+    : identity_trait<compact<
+         raii::basic_path<dyn_allocator, flags>,
+         detail::raii_path_has_value<flags>,
+         detail::raii_path_nullopt<flags>>> {};
+
+}  // namespace cat
+
+namespace cat::raii {
+
+template <
+   is_allocator Allocator, str_vec_flags flags = detail::path_default_flags,
+   is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_path(allocator_ref<Allocator> allocator, Segment const& segment)
+   -> maybe<basic_path<Allocator, flags>> {
+   basic_path<Allocator, flags> result(allocator);
+   str_view const value = detail::path_segment_view(segment);
+   $prop(
+      result.reserve(max(value.size(), result.flags.vec.initial_growth_count))
+   );
+   $prop(result.resize(0u));
+   $prop(result.append(value));
+   return result;
+}
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_path(dyn_allocator allocator, Segment const& segment)
+   -> maybe<basic_path<dyn_allocator, flags>> {
+   return raii::make_path<dyn_allocator, flags>(allocator, segment);
+}
+
+template <
+   is_allocator Allocator, str_vec_flags flags = detail::path_default_flags>
+[[nodiscard]]
+constexpr auto
+make_path(allocator_ref<Allocator> allocator)
+   -> maybe<basic_path<Allocator, flags>> {
+   return raii::make_path<Allocator, flags>(allocator, str_view{});
+}
+
+template <str_vec_flags flags = detail::path_default_flags>
+[[nodiscard]]
+constexpr auto
+make_path(dyn_allocator allocator) -> maybe<basic_path<dyn_allocator, flags>> {
+   return raii::make_path<dyn_allocator, flags>(allocator);
+}
+
+template <is_allocator Allocator, str_vec_flags flags, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+operator/(basic_path<Allocator, flags> const& left, Segment const& right)
+   -> maybe<basic_path<Allocator, flags>> {
+   basic_path<Allocator, flags> result = $prop(left.clone());
+   $prop(result.append(right));
+   return result;
+}
+
+}  // namespace cat::raii
+
+namespace cat {
+
+template <is_allocator Allocator, str_vec_flags flags, typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<raii::basic_path<Allocator, flags>, CharT>
+    : detail::path_formatter<CharT> {};
+
+}  // namespace cat

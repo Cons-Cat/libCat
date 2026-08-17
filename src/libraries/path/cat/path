@@ -1,0 +1,1174 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::basic_path` is a dynamically-sized owning file path container. It is
+// inspired by `std::filesystem::path`, but a major distinction is that its only
+// encoding is 1-byte characters across all platforms. Upon construction, the
+// path is empty. Its first allocation grows to a capacity of 48 characters by
+// default.
+//
+// As this is a `manual` namespace container, its destructor does not deallocate
+// storage. To deallocate storage, call `.free(allocator)` or
+// `.cfree(allocator)`.
+//
+// The `cat::raii::basic_path` deallocates its own memory automatically.
+//
+// Path joining and decomposition are lexical. They do not access the
+// filesystem, resolve symbolic links, or normalize `.` and `..` components.
+// `make_path_absolute` accesses the current working directory only when its
+// base path is relative. `make_path_unique` replaces percent signs with random
+// hexadecimal digits without creating a filesystem entry.
+//
+// It is parameterized by `cat::str_vec_flags`. Path storage is always
+// null-terminated and uses the pointer-size vector layout.
+//
+// Convenience type aliases are provided:
+//
+//  `cat::path`, a default `basic_path`.
+//  `cat::path_fixed`, a fixed-size `basic_path`.
+
+#include <cat/format>
+#include <cat/linux>
+#include <cat/simd>
+#include <cat/simd_switch>
+#include <cat/string>
+
+namespace cat {
+
+namespace detail {
+
+inline constexpr str_vec_flags path_default_flags =
+   str_flags::null_terminated
+   | vec_flags::pointer_size_layout
+   | vec_flags::initial_growth(48u);
+
+template <typename Segment>
+concept is_char_basic_string =
+   is_basic_string<Segment>
+   && is_same<remove_const<typename remove_cvref<Segment>::value_type>, char>;
+
+template <typename Segment>
+   requires(is_char_basic_string<Segment>)
+[[nodiscard]]
+constexpr auto
+path_segment_view(Segment const& segment) -> str_view {
+   return str_view(segment);
+}
+
+template <idx extent>
+[[nodiscard]]
+constexpr auto
+path_segment_view(char const (&segment)[extent]) -> str_view {
+   return {segment, idx(extent - 1u)};
+}
+
+template <idx extent>
+[[nodiscard]]
+constexpr auto
+path_segment_view(char (&segment)[extent]) -> str_view {
+   return {segment, idx(extent - 1u)};
+}
+
+template <typename Segment>
+   requires(
+      !is_char_basic_string<Segment> && !is_array<Segment>
+      && requires(Segment const& segment) { str_view(segment); }
+   )
+[[nodiscard]]
+constexpr auto
+path_segment_view(Segment const& segment) -> str_view {
+   return str_view(segment);
+}
+
+[[nodiscard]]
+constexpr auto
+path_slice(str_view value, idx first, idx last) -> str_view {
+   if (first == last) {
+      return {};
+   }
+   return {value.data() + first, idx(last - first)};
+}
+
+template <bool equal>
+[[nodiscard]]
+constexpr auto
+path_find_first(str_view value, char character) -> maybe<idx> {
+   if consteval {
+      for (idx position = 0u; position < value.size(); ++position) {
+         if ((value[position] == character) == equal) {
+            return position;
+         }
+      }
+      return nullopt;
+   } else {
+      return $simd_switch($abi((avx2, sse2), {
+         constexpr idx lanes = char1x_::size();
+         idx position = 0u;
+         char1x_ characters;
+         characters.fill(character);
+         while (value.size() - position >= lanes) {
+            char1x_ chunk;
+            chunk.load_unaligned(value.data() + position);
+            auto const mask = [&] {
+               if constexpr (equal) {
+                  return chunk.equal_lanes(characters);
+               } else {
+                  return !chunk.equal_lanes(characters);
+               }
+            }();
+            if (mask.any_of()) {
+               return maybe<idx>(position + mask.find_if_true());
+            }
+            position += lanes;
+         }
+         while (position < value.size()) {
+            if ((value[position] == character) == equal) {
+               return maybe<idx>(position);
+            }
+            ++position;
+         }
+         return maybe<idx>(nullopt);
+      }));
+   }
+}
+
+template <bool equal>
+[[nodiscard]]
+constexpr auto
+path_find_last(str_view value, char character) -> maybe<idx> {
+   if consteval {
+      idx position = value.size();
+      while (position > 0u) {
+         position = idx(position - 1u);
+         if ((value[position] == character) == equal) {
+            return position;
+         }
+      }
+      return nullopt;
+   } else {
+      return $simd_switch($abi((avx2, sse2), {
+         constexpr idx lanes = char1x_::size();
+         idx end = value.size();
+         char1x_ characters;
+         characters.fill(character);
+         while (end >= lanes) {
+            idx const position = idx(end - lanes);
+            char1x_ chunk;
+            chunk.load_unaligned(value.data() + position);
+            auto const mask = [&] {
+               if constexpr (equal) {
+                  return chunk.equal_lanes(characters);
+               } else {
+                  return !chunk.equal_lanes(characters);
+               }
+            }();
+            if (mask.any_of()) {
+               return maybe<idx>(position + mask.find_last_if_true());
+            }
+            end = position;
+         }
+         while (end > 0u) {
+            end = idx(end - 1u);
+            if ((value[end] == character) == equal) {
+               return maybe<idx>(end);
+            }
+         }
+         return maybe<idx>(nullopt);
+      }));
+   }
+}
+
+[[nodiscard]]
+constexpr auto
+path_find_first_equal(str_view value, char character) -> maybe<idx> {
+   return path_find_first<true>(value, character);
+}
+
+[[nodiscard]]
+constexpr auto
+path_find_first_not_equal(str_view value, char character) -> maybe<idx> {
+   return path_find_first<false>(value, character);
+}
+
+[[nodiscard]]
+constexpr auto
+path_find_last_equal(str_view value, char character) -> maybe<idx> {
+   return path_find_last<true>(value, character);
+}
+
+[[nodiscard]]
+constexpr auto
+path_find_last_not_equal(str_view value, char character) -> maybe<idx> {
+   return path_find_last<false>(value, character);
+}
+
+[[nodiscard]]
+constexpr auto
+path_root_end(str_view value) -> idx {
+   maybe<idx> const end = path_find_first_not_equal(value, '/');
+   if (end.has_value()) {
+      return end.value();
+   }
+   return value.size();
+}
+
+[[nodiscard]]
+constexpr auto
+path_trimmed_end(str_view value) -> idx {
+   if (value.size() <= 1u) {
+      return value.size();
+   }
+   maybe<idx> const end =
+      path_find_last_not_equal(path_slice(value, 1u, value.size()), '/');
+   if (end.has_value()) {
+      return end.value() + 2u;
+   }
+   return 1u;
+}
+
+}  // namespace detail
+
+template <typename Segment>
+concept is_path_segment =
+   requires(Segment const& segment) { detail::path_segment_view(segment); };
+
+class path_component_stepanov_iterator
+    : public proxy_stepanov_iterator_interface<
+         forward_iterator_tag, str_view, str_view> {
+ public:
+   using value_type = str_view;
+   using reference = str_view;
+   using const_reference = str_view;
+
+   constexpr path_component_stepanov_iterator() = default;
+
+   constexpr path_component_stepanov_iterator(str_view value, idx position)
+       : m_value(value), m_start(position), m_end(position) {
+      seek();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   dereference() const -> str_view {
+      return detail::path_slice(m_value, m_start, m_end);
+   }
+
+   constexpr auto
+   increment() -> path_component_stepanov_iterator& {
+      m_start = m_end;
+      seek();
+      return *this;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   equal_to(path_component_stepanov_iterator const& other) const -> bool {
+      return m_value.data() == other.m_value.data()
+             && m_value.size() == other.m_value.size()
+             && m_start == other.m_start;
+   }
+
+ private:
+   constexpr void
+   seek() {
+      str_view remaining = detail::path_slice(m_value, m_start, m_value.size());
+      maybe<idx> const start =
+         detail::path_find_first_not_equal(remaining, '/');
+      if (start.is_empty()) {
+         m_start = m_value.size();
+         m_end = m_start;
+         return;
+      }
+      m_start += start.value();
+      remaining = detail::path_slice(m_value, m_start, m_value.size());
+      maybe<idx> const end = detail::path_find_first_equal(remaining, '/');
+      if (end.has_value()) {
+         m_end = m_start + end.value();
+      } else {
+         m_end = m_value.size();
+      }
+   }
+
+   str_view m_value;
+   idx m_start;
+   idx m_end;
+};
+
+class path_component_iteration_context {
+ public:
+   using element_type = str_view;
+
+   constexpr path_component_iteration_context(
+      path_component_stepanov_iterator current,
+      path_component_stepanov_iterator end
+   )
+       : m_current(current), m_end(end) {
+   }
+
+   path_component_iteration_context(path_component_iteration_context const&) =
+      delete;
+   path_component_iteration_context(path_component_iteration_context&&) =
+      delete;
+   auto
+   operator=(path_component_iteration_context const&)
+      -> path_component_iteration_context& = delete;
+   auto
+   operator=(path_component_iteration_context&&)
+      -> path_component_iteration_context& = delete;
+
+   template <is_predicate<element_type> LoopBody>
+   constexpr auto
+   run_while(LoopBody&& loop_body) -> iteration_result {
+      while (m_current != m_end) {
+         if (!loop_body(*m_current)) {
+            return iteration_result::incomplete;
+         }
+         ++m_current;
+      }
+      return iteration_result::complete;
+   }
+
+ private:
+   path_component_stepanov_iterator m_current;
+   path_component_stepanov_iterator m_end;
+};
+
+class path_components : public iterable_interface<path_components> {
+ public:
+   using value_type = str_view;
+   using iterator = path_component_stepanov_iterator;
+   using const_iterator = path_component_stepanov_iterator;
+
+   constexpr path_components() = default;
+
+   constexpr path_components(str_view value) : m_value(value) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   begin() const -> iterator {
+      return {m_value, 0u};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end() const -> iterator {
+      return {m_value, m_value.size()};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   cbegin() const -> const_iterator {
+      return begin();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   cend() const -> const_iterator {
+      return end();
+   }
+
+   constexpr auto
+   iterate() const -> path_component_iteration_context {
+      return {begin(), end()};
+   }
+
+ private:
+   str_view m_value;
+};
+
+namespace raii {
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = detail::path_default_flags>
+class basic_path;
+}  // namespace raii
+
+inline namespace manual {
+
+template <str_vec_flags configuration = detail::path_default_flags>
+class basic_path;
+
+using path = basic_path<>;
+
+template <str_vec_flags flags = detail::path_default_flags>
+using path_fixed = basic_path<vec_flags::fixed_size | flags>;
+
+}  // namespace manual
+
+namespace detail {
+template <str_vec_flags flags>
+constexpr auto
+maybe_path_has_value(basic_path<flags> const& value) -> bool;
+
+template <str_vec_flags flags>
+constexpr auto
+maybe_path_nullopt() -> basic_path<flags>;
+}  // namespace detail
+
+inline namespace manual {
+
+template <str_vec_flags configuration>
+class [[clang::preferred_name(path), gsl::Owner]]
+basic_path : public container_interface<basic_path<configuration>, char>,
+             public random_access_stepanov_iterable_interface<char> {
+ public:
+   static constexpr str_vec_flags flags = str_flags::null_terminated
+                                          | vec_flags::pointer_size_layout
+                                          | vec_flags::initial_growth(48u)
+                                          | configuration;
+
+ private:
+   static_assert(flags.str.is_null_terminated);
+   static_assert(flags.vec.uses_pointer_size_layout);
+
+   template <is_allocator Allocator, str_vec_flags other_flags>
+   friend class raii::basic_path;
+
+ public:
+   constexpr basic_path() = default;
+   constexpr basic_path(basic_path&&) = default;
+   constexpr basic_path(basic_path const&) =
+      delete ("Implicit copying of `cat::basic_path` is forbidden. Call "
+              "`.clone()` or move instead.");
+   constexpr auto
+   operator=(basic_path&&) -> basic_path& = default;
+   auto
+   operator=(basic_path const&) -> basic_path& =
+      delete ("Implicit copying of `cat::basic_path` is forbidden. Call "
+              "`.clone()` or move instead.");
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_path const& other) const -> bool {
+      return view() == other.view();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() [[clang::lifetimebound]] -> char* _Nullable {
+      return m_storage.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() const [[clang::lifetimebound]] -> char const* _Nullable {
+      return m_storage.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_storage.size();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_storage.capacity();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   empty() const -> bool {
+      return size() == 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_null_terminated() const -> bool {
+      return true;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   view() const [[clang::lifetimebound]] -> str_view {
+      return m_storage.view();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   native() [[clang::lifetimebound]] -> zstr_span {
+      return m_storage.span();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   native() const [[clang::lifetimebound]] -> zstr_view {
+      return m_storage.span();
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator zstr_span() [[clang::lifetimebound]] {
+      return native();
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator zstr_view() const [[clang::lifetimebound]] {
+      return native();
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   reserve(allocator_ref<Allocator> allocator, idx minimum_capacity)
+      -> maybe<void>
+      requires(!flags.vec.is_fixed_size)
+   {
+      return m_storage.reserve(allocator, minimum_capacity);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   reserve(dyn_allocator allocator, idx minimum_capacity) -> maybe<void>
+      requires(!flags.vec.is_fixed_size)
+   {
+      return m_storage.reserve(allocator, minimum_capacity);
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   resize(allocator_ref<Allocator> allocator, idx new_size) -> maybe<void> {
+      return m_storage.resize(allocator, new_size);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   resize(dyn_allocator allocator, idx new_size) -> maybe<void> {
+      return m_storage.resize(allocator, new_size);
+   }
+
+   constexpr void
+   clear() {
+      m_storage.clear();
+   }
+
+   constexpr void
+   reset() {
+      m_storage.reset();
+   }
+
+   template <is_allocator Allocator>
+   constexpr void
+   free(allocator_ref<Allocator> allocator) {
+      m_storage.free(allocator);
+   }
+
+   constexpr void
+   free(dyn_allocator allocator) {
+      m_storage.free(allocator);
+   }
+
+   template <is_allocator Allocator>
+   constexpr void
+   cfree(allocator_ref<Allocator> allocator) {
+      m_storage.cfree(allocator);
+   }
+
+   constexpr void
+   cfree(dyn_allocator allocator) {
+      m_storage.cfree(allocator);
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(allocator_ref<Allocator> allocator) const& -> maybe<basic_path> {
+      auto storage = m_storage.clone(allocator);
+      if (storage.is_empty()) {
+         return nullopt;
+      }
+      basic_path result;
+      result.m_storage = move(storage).value();
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   clone(dyn_allocator allocator) const& -> maybe<basic_path> {
+      return clone<dyn_allocator>(allocator);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_absolute() const -> bool {
+      return !empty() && data()[0] == '/';
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_relative() const -> bool {
+      return !is_absolute();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_name() const -> str_view {
+      return {};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_directory() const -> str_view {
+      if (!is_absolute()) {
+         return {};
+      }
+      return {data(), 1u};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_path() const -> str_view {
+      return root_directory();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   relative_path() const -> str_view {
+      idx const first = detail::path_root_end(view());
+      return detail::path_slice(view(), first, size());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   parent_path() const -> str_view {
+      str_view const value = view();
+      idx const end = detail::path_trimmed_end(value);
+      if (end == 0u) {
+         return {};
+      }
+      if (end == 1u && value[0] == '/') {
+         return detail::path_slice(value, 0u, 1u);
+      }
+
+      maybe<idx> const found =
+         detail::path_find_last_equal(detail::path_slice(value, 0u, end), '/');
+      if (found.is_empty()) {
+         return {};
+      }
+      idx const slash = found.value() + 1u;
+      if (slash == 1u) {
+         return detail::path_slice(value, 0u, slash);
+      }
+      maybe<idx> const parent_end = detail::path_find_last_not_equal(
+         detail::path_slice(value, 1u, slash), '/'
+      );
+      if (parent_end.has_value()) {
+         return detail::path_slice(value, 0u, parent_end.value() + 2u);
+      }
+      return detail::path_slice(value, 0u, 1u);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   filename() const -> str_view {
+      str_view const value = view();
+      if (value.size() == 0u || value[idx(value.size() - 1u)] == '/') {
+         return {};
+      }
+      maybe<idx> const slash = detail::path_find_last_equal(value, '/');
+      if (slash.has_value()) {
+         return detail::path_slice(value, slash.value() + 1u, value.size());
+      }
+      return value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   stem() const -> str_view {
+      str_view const name = filename();
+      if (name == "." || name == "..") {
+         return name;
+      }
+      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
+      if (dot.is_empty() || dot.value() == 0u) {
+         return name;
+      }
+      return detail::path_slice(name, 0u, dot.value());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   extension() const -> str_view {
+      str_view const name = filename();
+      if (name == "." || name == "..") {
+         return {};
+      }
+      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
+      if (dot.is_empty() || dot.value() == 0u) {
+         return {};
+      }
+      return detail::path_slice(name, dot.value(), name.size());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_name() const -> bool {
+      return false;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_directory() const -> bool {
+      return is_absolute();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_path() const -> bool {
+      return is_absolute();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_relative_path() const -> bool {
+      return relative_path().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_parent_path() const -> bool {
+      return parent_path().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_filename() const -> bool {
+      return filename().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_stem() const -> bool {
+      return stem().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_extension() const -> bool {
+      return extension().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   components() const -> path_components {
+      return view();
+   }
+
+   template <is_allocator Allocator, is_path_segment Segment>
+   [[nodiscard]]
+   constexpr auto
+   append(allocator_ref<Allocator> allocator, Segment const& segment)
+      -> maybe<void> {
+      str_view const right = detail::path_segment_view(segment);
+      if (right.size() == 0u) {
+         return monostate;
+      }
+      if (right[0] == '/') {
+         clear();
+         return m_storage.append(allocator, right);
+      }
+      if (!empty() && data()[idx(size() - 1u).raw] != '/') {
+         $prop(m_storage.push_back(allocator, '/'));
+      }
+      return m_storage.append(allocator, right);
+   }
+
+   template <is_path_segment Segment>
+   [[nodiscard]]
+   constexpr auto
+   append(dyn_allocator allocator, Segment const& segment) -> maybe<void> {
+      return append<dyn_allocator>(allocator, segment);
+   }
+
+ private:
+   template <str_vec_flags other_flags>
+   friend constexpr auto
+   detail::maybe_path_has_value(basic_path<other_flags> const&) -> bool;
+
+   template <str_vec_flags other_flags>
+   friend constexpr auto
+   detail::maybe_path_nullopt() -> basic_path<other_flags>;
+
+   basic_str_vec<char, flags> m_storage;
+};
+
+}  // namespace manual
+
+namespace detail {
+template <str_vec_flags flags>
+constexpr auto
+maybe_path_has_value(basic_path<flags> const& value) -> bool {
+   return maybe_str_vec_has_value(value.m_storage);
+}
+
+template <str_vec_flags flags>
+constexpr auto
+maybe_path_nullopt() -> basic_path<flags> {
+   basic_path<flags> value;
+   value.m_storage = maybe_str_vec_nullopt<char, basic_path<flags>::flags>();
+   return value;
+}
+}  // namespace detail
+
+template <str_vec_flags flags>
+struct default_compact_trait<basic_path<flags>>
+    : identity_trait<compact<
+         basic_path<flags>, detail::maybe_path_has_value<flags>,
+         detail::maybe_path_nullopt<flags>>> {};
+
+inline namespace manual {
+
+template <
+   is_allocator Allocator, str_vec_flags flags = detail::path_default_flags,
+   is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_path(allocator_ref<Allocator> allocator, Segment const& segment)
+   -> maybe<basic_path<flags>> {
+   basic_path<flags> result;
+   $defer {
+      result.free(allocator);
+   };
+   str_view const value = detail::path_segment_view(segment);
+   $prop(result.reserve(
+      allocator, max(value.size(), result.flags.vec.initial_growth_count)
+   ));
+   $prop(result.resize(allocator, 0u));
+   $prop(result.append(allocator, value));
+   return move(result);
+}
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_path(dyn_allocator allocator, Segment const& segment)
+   -> maybe<basic_path<flags>> {
+   return manual::make_path<dyn_allocator, flags>(allocator, segment);
+}
+
+template <
+   is_allocator Allocator, str_vec_flags flags = detail::path_default_flags>
+[[nodiscard]]
+constexpr auto
+make_path(allocator_ref<Allocator> allocator) -> maybe<basic_path<flags>> {
+   return make_path<Allocator, flags>(allocator, str_view{});
+}
+
+template <str_vec_flags flags = detail::path_default_flags>
+[[nodiscard]]
+constexpr auto
+make_path(dyn_allocator allocator) -> maybe<basic_path<flags>> {
+   return make_path<dyn_allocator, flags>(allocator);
+}
+
+template <is_allocator Allocator, str_vec_flags flags, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_path_joined(
+   allocator_ref<Allocator> allocator, basic_path<flags> const& left,
+   Segment const& right
+) -> maybe<basic_path<flags>> {
+   basic_path<flags> result = $prop(left.clone(allocator));
+   $defer {
+      result.free(allocator);
+   };
+   $prop(result.append(allocator, right));
+   return move(result);
+}
+
+template <str_vec_flags flags, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_path_joined(
+   dyn_allocator allocator, basic_path<flags> const& left, Segment const& right
+) -> maybe<basic_path<flags>> {
+   return make_path_joined<dyn_allocator>(allocator, left, right);
+}
+
+}  // namespace manual
+
+namespace detail {
+
+template <str_vec_flags flags>
+[[nodiscard]]
+auto
+path_scaredy_value(manual::basic_path<flags>&& value)
+   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   scaredy<manual::basic_path<flags>, nix::linux_error> result =
+      nix::linux_error::nomem;
+   result = move(value);
+   return result;
+}
+
+}  // namespace detail
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
+[[nodiscard]]
+auto
+make_path_current(allocator_ref<Allocator> allocator)
+   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   auto made = manual::make_path<Allocator, flags>(allocator);
+   if (made.is_empty()) {
+      return nix::linux_error::nomem;
+   }
+   manual::basic_path<flags> result = move(made).value();
+   $defer {
+      result.free(allocator);
+   };
+
+   while (true) {
+      idx capacity = result.capacity();
+      if (capacity == 0u) {
+         capacity = result.flags.vec.initial_growth_count;
+      }
+      if (result.resize(allocator, capacity).is_empty()) {
+         return nix::linux_error::nomem;
+      }
+
+      auto cwd =
+         nix::sys_getcwd(span<char>(result.data(), idx(result.size() + 1u)));
+      if (cwd.has_value()) {
+         result.resize(allocator, idx(cwd.value() - 1u)).verify();
+         return detail::path_scaredy_value(move(result));
+      }
+      if (cwd.error() != nix::linux_error::range) {
+         return cwd.error();
+      }
+      if (result.reserve(allocator, capacity * 2u).is_empty()) {
+         return nix::linux_error::nomem;
+      }
+   }
+}
+
+template <str_vec_flags flags = detail::path_default_flags>
+[[nodiscard]]
+auto
+make_path_current(dyn_allocator allocator)
+   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   return make_path_current<flags, dyn_allocator>(allocator);
+}
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment,
+   is_path_segment Base, is_allocator Allocator>
+[[nodiscard]]
+auto
+make_path_absolute(
+   Segment const& segment, Base const& base, allocator_ref<Allocator> allocator
+) -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   str_view const value = detail::path_segment_view(segment);
+   if (value.size() != 0u && value[0] == '/') {
+      auto result = make_path<Allocator, flags>(allocator, value);
+      if (result.is_empty()) {
+         return nix::linux_error::nomem;
+      }
+      return detail::path_scaredy_value(move(result).value());
+   }
+
+   str_view const base_view = detail::path_segment_view(base);
+   auto prefix = [&]() -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+      if (base_view.size() != 0u && base_view[0] == '/') {
+         auto result = make_path<Allocator, flags>(allocator, base_view);
+         if (result.is_empty()) {
+            return nix::linux_error::nomem;
+         }
+         return detail::path_scaredy_value(move(result).value());
+      }
+
+      auto cwd = make_path_current<flags, Allocator>(allocator);
+      if (cwd.is_empty()) {
+         return cwd.error();
+      }
+      manual::basic_path<flags> result = move(cwd).value();
+      $defer {
+         result.free(allocator);
+      };
+      if (result.append(allocator, base_view).is_empty()) {
+         return nix::linux_error::nomem;
+      }
+      return detail::path_scaredy_value(move(result));
+   }();
+
+   if (prefix.is_empty()) {
+      return prefix.error();
+   }
+   manual::basic_path<flags> result = move(prefix).value();
+   $defer {
+      result.free(allocator);
+   };
+   if (result.append(allocator, value).is_empty()) {
+      return nix::linux_error::nomem;
+   }
+   return detail::path_scaredy_value(move(result));
+}
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment,
+   is_path_segment Base>
+[[nodiscard]]
+auto
+make_path_absolute(
+   Segment const& segment, Base const& base, dyn_allocator allocator
+) -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   return make_path_absolute<flags, Segment, Base, dyn_allocator>(
+      segment, base, allocator
+   );
+}
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment,
+   is_allocator Allocator>
+[[nodiscard]]
+auto
+make_path_absolute(Segment const& segment, allocator_ref<Allocator> allocator)
+   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   return make_path_absolute<flags, Segment, str_view, Allocator>(
+      segment, str_view{}, allocator
+   );
+}
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
+[[nodiscard]]
+auto
+make_path_absolute(Segment const& segment, dyn_allocator allocator)
+   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   return make_path_absolute<flags, Segment, dyn_allocator>(segment, allocator);
+}
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_allocator Allocator,
+   is_path_segment Model>
+[[nodiscard]]
+auto
+make_path_unique(allocator_ref<Allocator> allocator, Model const& model)
+   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   auto made = make_path<Allocator, flags>(allocator, model);
+   if (made.is_empty()) {
+      return nix::linux_error::nomem;
+   }
+   manual::basic_path<flags> result = move(made).value();
+   $defer {
+      result.free(allocator);
+   };
+   constexpr char hex[] = "0123456789abcdef";
+
+   idx search_start = 0u;
+   while (search_start < result.size()) {
+      maybe<idx> const found = detail::path_find_first_equal(
+         str_view(
+            result.data() + search_start, idx(result.size() - search_start)
+         ),
+         '%'
+      );
+      if (found.is_empty()) {
+         break;
+      }
+      idx const index = search_start + found.value();
+      unsigned char random;
+      while (true) {
+         auto generated = nix::sys_getrandom(span(&random, 1u));
+         if (generated.has_value()) {
+            if (generated.value() == 0u) {
+               continue;
+            }
+            break;
+         }
+         if (generated.error() != nix::linux_error::intr) {
+            return generated.error();
+         }
+      }
+      result.data()[index.raw] = hex[random & 0x0fu];
+      search_start = index + 1u;
+   }
+   return detail::path_scaredy_value(move(result));
+}
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
+[[nodiscard]]
+auto
+make_path_unique(allocator_ref<Allocator> allocator)
+   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   return make_path_unique<flags>(allocator, "%%%%-%%%%-%%%%-%%%%");
+}
+
+template <
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Model>
+[[nodiscard]]
+auto
+make_path_unique(dyn_allocator allocator, Model const& model)
+   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   return make_path_unique<flags, dyn_allocator>(allocator, model);
+}
+
+template <str_vec_flags flags = detail::path_default_flags>
+[[nodiscard]]
+auto
+make_path_unique(dyn_allocator allocator)
+   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   return make_path_unique<flags, dyn_allocator>(allocator);
+}
+
+}  // namespace cat
+
+namespace cat {
+namespace detail {
+
+template <typename CharT>
+struct path_formatter : formatter_base<CharT> {
+   bool debug = false;
+
+   constexpr void
+   set_debug_format(bool set = true) {
+      debug = set;
+   }
+
+   constexpr auto
+   parse(format_parse_context& context)
+      -> scaredy_format<format_parse_context::const_iterator> {
+      format_parse_context::const_iterator p_it = context.begin();
+      if (p_it == context.end()) {
+         return format_errors::unmatched_open_brace;
+      }
+      if (*p_it == '?') {
+         set_debug_format();
+         ++p_it;
+      }
+      if (p_it != context.end() && *p_it == 'g') {
+         ++p_it;
+      }
+      if (p_it == context.end() || *p_it != '}') {
+         return format_errors::unknown_format_specifier;
+      }
+      return p_it;
+   }
+
+   template <typename Path>
+   auto
+   format(Path const& value, format_context& context) const
+      -> scaredy_format<void> {
+      if (debug) {
+         return append_escaped(context, value.view(), '"');
+      }
+      return context.append(value.view());
+   }
+};
+
+}  // namespace detail
+
+template <str_vec_flags flags, typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<manual::basic_path<flags>, CharT>
+    : detail::path_formatter<CharT> {};
+
+}  // namespace cat
+
+#include <cat/raii_path>
