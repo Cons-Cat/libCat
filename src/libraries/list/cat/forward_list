@@ -2,6 +2,19 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::basic_forward_list` is a singly-linked owning container inspired by
+// `std::forward_list`. Upon construction, the `forward_list` is empty.
+//
+// As this is a `manual` namespace container, its `.reset()` and destructor do
+// not deallocate nodes, they only call its elements' destructors. To
+// deallocate nodes, call `.free(allocator)` or `.cfree(allocator)`.
+//
+// The `cat::raii::basic_forward_list` deallocates its own memory automatically.
+//
+// Convenience type aliases are provided:
+//
+//  `cat::forward_list<T>`, a default `basic_forward_list`.
+
 #include <cat/allocator>
 #include <cat/allocator_parameters>
 #include <cat/container>
@@ -38,7 +51,6 @@ struct forward_list_storage {
 inline namespace manual {
 
 template <typename T>
-   requires(is_same<remove_cvref<T>, T>)
 class basic_forward_list;
 
 template <typename T>
@@ -59,11 +71,15 @@ maybe_forward_list_nullopt() -> basic_forward_list<T>;
 inline namespace manual {
 
 template <typename T>
-   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
     : public container_interface<basic_forward_list<T>, T>,
       public stepanov_iterable_interface<
          basic_forward_list<T>, detail::forward_list_stepanov_iterator, T> {
+   static_assert(
+      is_same<remove_cvref<T>, T>,
+      "`T` must not be cv-qualified or a reference."
+   );
+
    friend detail::forward_list_stepanov_iterator<T>;
 
    using node_type = detail::forward_list_node<T>;

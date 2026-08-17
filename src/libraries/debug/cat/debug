@@ -117,9 +117,7 @@ using assert_handler = void (*_Nonnull)(source_location const&);
 
 [[noreturn]]
 void
-assert_failed(
-   assert_handler p_assert_handler, source_location const& callsite
-);
+assert_failed(assert_handler p_assert_handler, source_location const& callsite);
 
 [[noreturn]]
 void
@@ -190,5 +188,5 @@ assert(
 
 }  // namespace cat
 
-#include "../implementations/verify.tpp"
 #include "../implementations/assert.tpp"
+#include "../implementations/verify.tpp"

@@ -147,18 +147,10 @@ $test(random_bulk_and_convenience) {
 }
 
 $test(random_linux_sources) {
-   static_assert(
-      cat::is_uniform_random_bit_generator<nix::sys_urandom_engine>
-   );
-   static_assert(
-      cat::is_uniform_random_bit_generator<nix::sys_random_engine>
-   );
-   static_assert(
-      cat::is_uniform_random_bit_generator<nix::dev_urandom_engine>
-   );
-   static_assert(
-      cat::is_uniform_random_bit_generator<nix::dev_random_engine>
-   );
+   static_assert(cat::is_uniform_random_bit_generator<nix::sys_urandom_engine>);
+   static_assert(cat::is_uniform_random_bit_generator<nix::sys_random_engine>);
+   static_assert(cat::is_uniform_random_bit_generator<nix::dev_urandom_engine>);
+   static_assert(cat::is_uniform_random_bit_generator<nix::dev_random_engine>);
 
    nix::sys_urandom_engine urandom;
    cat::uint8 const first = urandom();

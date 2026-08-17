@@ -57,12 +57,12 @@ $test(str_inplace_flags_and_capacity) {
    cat::verify(string.size() == 0u);
    cat::verify(string.capacity() == 8u);
    string.append("cat").verify();
-   string.try_push_back('s').verify();
+   string.push_back('s').verify();
    cat::verify(string.size() == 4u);
    cat::verify(string.append("12345").is_empty());
 
    cat::str_inplace<8u> range_string;
-   range_string.try_append_range(cat::str_view(string)).verify();
+   range_string.append_range(cat::str_view(string)).verify();
    cat::verify(range_string == "cats");
 
    cat::zstr_inplace<4u> terminated;
@@ -105,7 +105,7 @@ $test(str_inplace_wide_char) {
 
    cat::wstr_inplace<8u> string;
    string.append(L"cat").verify();
-   string.try_push_back(L's').verify();
+   string.push_back(L's').verify();
    cat::verify(string == L"cats");
    cat::verify(string.size() == 4u);
    cat::verify(string.capacity() == 8u);

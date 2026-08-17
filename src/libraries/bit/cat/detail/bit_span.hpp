@@ -2,6 +2,12 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::bit_span` is a non-owning view over a contiguous sequence of bits,
+// parameterized by a word `Storage` type. It is the bit analogue of
+// `cat::span`, or a fat analogue of `cat::bit_ptr`, providing bit-level
+// indexing and algorithms over untyped storage from containers such as
+// `cat::bitset` and `cat::bitvec`.
+
 #include <cat/span>
 
 namespace cat {

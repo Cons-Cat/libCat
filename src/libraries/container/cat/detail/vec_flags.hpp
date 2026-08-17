@@ -14,6 +14,9 @@ struct vec_flags {
    static vec_flags const pointer_size_layout;
    static vec_flags const fixed_size;
 
+   // TODO: We need a flag for storing size and capacity in the allocation next
+   // to a VLA that move alongside reallocation.
+
    [[nodiscard]]
    static constexpr auto
    inline_storage(idx count) -> vec_flags {

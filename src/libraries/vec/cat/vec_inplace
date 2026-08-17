@@ -2,8 +2,25 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::vec_inplace` is a fixed-capacity contiguous owning container that
+// stores its elements inline, inspired by `std::inplace_vector`. Upon
+// construction, the `vec_inplace` is empty. Size exceeding `inline_capacity`
+// fails because it cannot allocate.
+//
+// The interface is informed by the following papers:
+//
+// P0843R14  `inplace_vector`. A dynamically-resizable vector with fixed
+//           capacity and embedded storage.
+//
+// P3981R2   Better return types. `emplace_back` and `push_back` return
+//           `maybe<T&>` instead of `T*`. Unlike `std::inplace_vector`, its
+//           failable methods are not prefixed `try_` because all `vec` family
+//           methods are failable, so symmetry is preserved.
+//
+// TODO: We need a flag for storing size and capacity in the allocation next to
+// a VLA to make a safe VLA handle container.
+
 #include <cat/algorithm>
-#include <cat/array>
 #include <cat/container>
 #include <cat/iterable>
 #include <cat/maybe>
@@ -11,16 +28,16 @@
 
 namespace cat {
 
-template <typename T, idx fixed_size>
-using vec_inplace_fixed = array<T, fixed_size>;
-
 template <typename T, idx inline_capacity>
-   requires(is_same<remove_cvref<T>, T>)
 class [[clang::trivial_abi, gsl::Owner]]
 vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
               public random_access_stepanov_iterable_interface<T> {
+   static_assert(
+      is_same<remove_cvref<T>, T>,
+      "`T` must not be cv-qualified or a reference."
+   );
+
    template <typename U, idx other_capacity>
-      requires(is_same<remove_cvref<U>, U>)
    friend class vec_inplace;
 
  public:
@@ -173,7 +190,7 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
    constexpr auto
-   try_emplace_back(Args&&... arguments) [[clang::lifetimebound]] -> maybe<T&> {
+   emplace_back(Args&&... arguments) [[clang::lifetimebound]] -> maybe<T&> {
       if (this->is_full()) {
          return nullopt;
       }
@@ -182,18 +199,18 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
 
    [[nodiscard]]
    constexpr auto
-   try_push_back(T const& value) [[clang::lifetimebound]] -> maybe<T&>
+   push_back(T const& value) [[clang::lifetimebound]] -> maybe<T&>
       requires(is_copy_constructible<T>)
    {
-      return try_emplace_back(value);
+      return emplace_back(value);
    }
 
    [[nodiscard]]
    constexpr auto
-   try_push_back(T&& value) [[clang::lifetimebound]] -> maybe<T&>
+   push_back(T&& value) [[clang::lifetimebound]] -> maybe<T&>
       requires(is_move_constructible<T>)
    {
-      return try_emplace_back(move(value));
+      return emplace_back(move(value));
    }
 
    template <typename... Args>
@@ -246,7 +263,7 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
       requires(has_size<Range>)
    [[nodiscard]]
    constexpr auto
-   try_append_range(Range&& range) -> maybe<void> {
+   append_range(Range&& range) -> maybe<void> {
       idx const count = range.size();
       if (count > inline_capacity - size()) {
          return nullopt;
@@ -409,17 +426,6 @@ make_vec_inplace_filled(idx count, T const& value)
    -> maybe<vec_inplace<T, inline_capacity>> {
    vec_inplace<T, inline_capacity> result;
    $prop(result.resize(count, value));
-   return result;
-}
-
-template <typename T, idx fixed_size>
-   requires(is_default_constructible<T> && is_copy_assignable<T>)
-[[nodiscard]]
-constexpr auto
-make_vec_inplace_fixed_filled(T const& value)
-   -> vec_inplace_fixed<T, fixed_size> {
-   vec_inplace_fixed<T, fixed_size> result;
-   result.fill(value);
    return result;
 }
 

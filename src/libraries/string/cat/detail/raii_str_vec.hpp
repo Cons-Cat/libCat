@@ -2,6 +2,31 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::raii::basic_str_vec` is a dynamically-sized owning string container
+// backed by a `cat::basic_vec` of characters. It wraps a
+// `cat::manual::basic_str_vec` and binds an allocator for the lifetime of the
+// container. Upon construction, the `str_vec` is empty. When it initially
+// allocates, it grows from 0 to a capacity of 4 characters. From there,
+// exceeding capacity reallocates to double its current size.
+//
+// As this is an `raii` namespace container, its destructor deallocates storage
+// automatically through the bound allocator.
+//
+// The `cat::manual::basic_str_vec` does not deallocate its own memory.
+//
+// It is parameterized by a character type, whether the string is
+// null-terminated, and an allocator.
+//
+// Convenience type aliases are provided:
+//
+//  `cat::raii::str_vec<Allocator>`, a `raii::basic_str_vec` of `char`.
+//  `cat::raii::zstr_vec<Allocator>`, a null-terminated `raii::basic_str_vec` of
+//     `char`.
+//  `cat::raii::wstr_vec<Allocator>`, a `raii::basic_str_vec` of `wchar_t`.
+//  `cat::raii::wzstr_vec<Allocator>`, a null-terminated `raii::basic_str_vec`
+//  of
+//     `wchar_t`.
+
 #include <cat/null_allocator>
 
 #include "str_vec.hpp"
@@ -11,7 +36,6 @@ namespace cat::raii {
 template <
    typename CharT, bool is_null_terminated,
    is_allocator Allocator = dyn_allocator>
-   requires(is_same<remove_cvref<CharT>, CharT>)
 class basic_str_vec;
 
 template <is_allocator Allocator = dyn_allocator>
@@ -56,7 +80,6 @@ raii_str_vec_nullopt()
 namespace cat::raii {
 
 template <typename CharT, bool null_terminated, is_allocator Allocator>
-   requires(is_same<remove_cvref<CharT>, CharT>)
 class
    [[clang::preferred_name(str_vec<Allocator>),
      clang::preferred_name(zstr_vec<Allocator>),
@@ -65,10 +88,14 @@ class
    basic_str_vec : public container_interface<
                       basic_str_vec<CharT, null_terminated, Allocator>, CharT>,
                    public random_access_stepanov_iterable_interface<CharT> {
+   static_assert(
+      is_same<remove_cvref<CharT>, CharT>,
+      "`CharT` must not be cv-qualified or a reference."
+   );
+
    template <
       typename OtherChar, bool other_null_terminated,
       is_allocator OtherAllocator>
-      requires(is_same<remove_cvref<OtherChar>, OtherChar>)
    friend class basic_str_vec;
 
  public:

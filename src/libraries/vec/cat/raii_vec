@@ -2,6 +2,45 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::raii::basic_vec` is a dynamically-sized contiguous owning container
+// inspired by `std::vector`. It wraps a `cat::manual::basic_vec` and binds an
+// allocator for the lifetime of the container. Upon construction, the `vec` is
+// empty. Unlike `std::vector`, when it initially allocates, it grows from 0 to
+// a capacity of 4 elements. From there, exceeding capacity reallocates to
+// double its current size.
+//
+// As this is an `raii` namespace container, its destructor deallocates storage
+// automatically through the bound allocator.
+//
+// The `cat::manual::basic_vec` does not deallocate its own memory.
+//
+// It is parameterized by `cat::vec_flags`, which may toggle the following
+// features:
+//
+//  `pointer_size_layout`
+//     By default, the `vec` stores a head and tail pointer to its owned data,
+//     like libc++ and libstdc++. This has the benefit of making `.push_back()`
+//     very cheap, at the cost of making `.size()` cost an additional
+//     subtraction. Instead, this flag stores a pointer and size, making
+//     `.size()` free and `.push_back()` cost an additional addition.
+//
+//  `inline_storage(count)`
+//     Store up to `count` elements inside the vector, only allocating when its
+//     inline capacity is exceeded.
+//
+//  `fixed_size`
+//     The vector has a fixed size upon allocation and no separate capacity.
+//
+// Convenience type aliases are provided for these configurations:
+//
+//  `cat::raii::vec<T, Allocator>`, a default `raii::basic_vec`.
+//  `cat::raii::vec_fixed<T, Allocator>`, a `raii::basic_vec` with `fixed_size`
+//     flag.
+//  `cat::raii::small_vec<T, Allocator, n=4>`, a `raii::basic_vec` with
+//     `inline_storage(n)` flag.
+//  `cat::raii::small_vec_fixed<T, Allocator, n=4>`, a `raii::basic_vec` with
+//     `inline_storage(n)` and `fixed_size` flag.
+
 #include <cat/null_allocator>
 #include <cat/vec>
 
@@ -9,7 +48,6 @@ namespace cat::raii {
 
 template <
    typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
-   requires(is_same<remove_cvref<T>, T>)
 class basic_vec;
 
 // `vec<T, Allocator>` is the user-facing alias for the managed
@@ -55,12 +93,14 @@ raii_vec_nullopt() -> raii::basic_vec<T, dyn_allocator, flags>;
 namespace cat::raii {
 
 template <typename T, is_allocator Allocator, vec_flags flags>
-   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(vec<T, Allocator, flags>), gsl::Owner]]
 basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
             public random_access_stepanov_iterable_interface<T> {
+   static_assert(
+      is_same<remove_cvref<T>, T>, "`T` must not be cvref-qualified!"
+   );
+
    template <typename U, is_allocator OtherAllocator, vec_flags other_flags>
-      requires(is_same<remove_cvref<U>, U>)
    friend class basic_vec;
 
  public:

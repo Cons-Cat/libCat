@@ -2,13 +2,28 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::raii::basic_forward_list` is a singly-linked owning container inspired
+// by `std::forward_list`. It wraps a `cat::manual::basic_forward_list` and
+// binds an allocator for the lifetime of the container. Upon construction, the
+// `forward_list` is empty.
+//
+// As this is an `raii` namespace container, its destructor deallocates nodes
+// automatically through the bound allocator.
+//
+// The corresponding `cat::manual::basic_forward_list` does not deallocate its
+// own memory.
+//
+// Convenience type aliases are provided:
+//
+//  `cat::raii::forward_list<T, Allocator>`, a default
+//  `raii::basic_forward_list`.
+
 #include <cat/forward_list>
 #include <cat/null_allocator>
 
 namespace cat::raii {
 
 template <typename T, is_allocator Allocator = dyn_allocator>
-   requires(is_same<remove_cvref<T>, T>)
 class basic_forward_list;
 
 template <typename T, is_allocator Allocator = dyn_allocator>
@@ -31,15 +46,18 @@ raii_forward_list_nullopt() -> raii::basic_forward_list<T, dyn_allocator>;
 namespace cat::raii {
 
 template <typename T, is_allocator Allocator>
-   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(forward_list<T, Allocator>), gsl::Owner]]
 basic_forward_list
     : public container_interface<basic_forward_list<T, Allocator>, T>,
       public stepanov_iterable_interface<
          basic_forward_list<T, Allocator>,
          detail::forward_list_stepanov_iterator, T> {
+   static_assert(
+      is_same<remove_cvref<T>, T>,
+      "`T` must not be cv-qualified or a reference."
+   );
+
    template <typename U, is_allocator OtherAllocator>
-      requires(is_same<remove_cvref<U>, U>)
    friend class basic_forward_list;
 
    template <typename U, is_allocator A>

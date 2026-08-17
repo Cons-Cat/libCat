@@ -2,6 +2,28 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::basic_str_literal` is a structurally-typed fixed-size immutable string
+// intended for use as a non-type template parameter. It is inspired by the
+// proposed `std::basic_fixed_string`, but its name differs to clarify its
+// distinction from `cat::str_inplace_fixed` and highlight its purpose of wrapping
+// string literals.
+//
+// The interface is informed by the following papers:
+//
+// P3094R6   `basic_fixed_string`. A structural fixed string for NTTPs.
+//
+// Convenience type aliases are provided:
+//
+//  `cat::str_literal<n>`, a `basic_str_literal` of `n` `char`s.
+//
+//  `cat::u8str_literal<n>`, a `basic_str_literal` of `n` `char8_t`s.
+//
+//  `cat::u16str_literal<n>`, a `basic_str_literal` of `n` `char16_t`s.
+//
+//  `cat::u32str_literal<n>`, a `basic_str_literal` of `n` `char32_t`s.
+//
+//  `cat::wstr_literal<n>`, a `basic_str_literal` of `n` `wchar_t`s.
+
 #include <cat/array>
 #include <cat/container>
 #include <cat/debug>

@@ -1263,9 +1263,9 @@ class xoroshiro1024_engine : public detail::owned_engine<
 };
 
 template <typename T>
-class xoshiro_pp_engine : public detail::owned_engine<
-                             detail::xoshiro_selected<
-                                T, detail::xoshiro_scrambler::plusplus>> {
+class xoshiro_pp_engine
+    : public detail::owned_engine<
+         detail::xoshiro_selected<T, detail::xoshiro_scrambler::plusplus>> {
    using base = detail::owned_engine<
       detail::xoshiro_selected<T, detail::xoshiro_scrambler::plusplus>>;
 
@@ -1274,9 +1274,9 @@ class xoshiro_pp_engine : public detail::owned_engine<
 };
 
 template <typename T>
-class xoroshiro_pp_engine : public detail::owned_engine<
-                               detail::xoroshiro_selected<
-                                  T, detail::xoshiro_scrambler::plusplus>> {
+class xoroshiro_pp_engine
+    : public detail::owned_engine<
+         detail::xoroshiro_selected<T, detail::xoshiro_scrambler::plusplus>> {
    using base = detail::owned_engine<
       detail::xoroshiro_selected<T, detail::xoshiro_scrambler::plusplus>>;
 

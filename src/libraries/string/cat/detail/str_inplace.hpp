@@ -2,6 +2,38 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::basic_str_inplace` is a fixed-capacity owning string container that
+// stores its characters inline. It is a string analogue to `cat::vec_inplace`
+// and closely mirrors the API of both `cat::vec_inplace` and `cat::strvec`.
+// Upon construction, the `str_inplace` is empty.
+//
+// It is parameterized by a character type, its inline capacity, whether the
+// string is null-terminated, and `cat::vec_flags`. The `fixed_size` flag makes
+// the string a fixed size upon construction with no separate capacity.
+//
+// Convenience type aliases are provided for these configurations:
+//
+//  `cat::str_inplace<n>`, a `basic_str_inplace` of up to `n` `char`s.
+//
+//  `cat::zstr_inplace<n>`, a null-terminated `basic_str_inplace` of up to `n`
+//  `char`s.
+//
+//  `cat::wstr_inplace<n>`, a `basic_str_inplace` of up to `n` `wchar_t`s.
+//
+//  `cat::wzstr_inplace<n>`, a null-terminated `basic_str_inplace` of up to `n`
+//  `wchar_t`s .
+//
+//  `cat::str_inplace_fixed<n>`, a `str_inplace` of exactly `n` `char`s.
+//
+//  `cat::zstr_inplace_fixed<n>`, a `zstr_inplace` of exactly `n` `char`s.
+//
+//  `cat::wstr_inplace_fixed<n>`, a `wstr_inplace` of exactly `n` `wchar_t`s.
+//
+//  `cat::wzstr_inplace_fixed<n>`, a `wzstr_inplace` of exactly `n` `wchar_t`s.
+//
+// This class is non-structural, so it cannot be used as a non-type template
+// parameter unlike `cat::str_literal`.
+
 #include <cat/math>
 #include <cat/maybe>
 #include <cat/memory>
@@ -70,6 +102,11 @@ class
          CharT>,
       public random_access_stepanov_iterable_interface<CharT>,
       private detail::str_inplace_size<!flags.is_fixed_size> {
+   static_assert(
+      is_same<remove_cvref<CharT>, CharT>,
+      "`CharT` must not be cvref-qualified!"
+   );
+
  public:
    constexpr basic_str_inplace() {
       this->write_terminator();
@@ -260,7 +297,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   try_push_back(CharT value) -> maybe<CharT&>
+   push_back(CharT value) -> maybe<CharT&>
       requires(!flags.is_fixed_size)
    {
       if (size() == inline_capacity) {
@@ -303,7 +340,7 @@ class
       requires(has_size<Range> && !flags.is_fixed_size)
    [[nodiscard]]
    constexpr auto
-   try_append_range(Range&& range) -> maybe<void> {
+   append_range(Range&& range) -> maybe<void> {
       idx const count = range.size();
       if (count > inline_capacity - size()) {
          return nullopt;

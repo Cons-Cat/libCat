@@ -50,52 +50,14 @@ struct lifetime_value {
 
 static_assert([] {
    cat::vec_inplace<int4, 2u> values;
-   if (values.try_push_back(1_i4).is_empty()) {
+   if (values.push_back(1_i4).is_empty()) {
       return false;
    }
-   if (values.try_push_back(2_i4).is_empty()) {
+   if (values.push_back(2_i4).is_empty()) {
       return false;
    }
    return values.size() == 2u && values[1u] == 2_i4;
 }());
-
-$test(vec_inplace_fixed_iteration) {
-   cat::vec_inplace_fixed<int4, 4u> values{
-      1_i4,
-      2_i4,
-      3_i4,
-      4_i4,
-   };
-
-   cat::verify(values.size() == 4u);
-   cat::verify(values.capacity() == 4u);
-   cat::verify(values.is_full());
-
-   idx count;
-   for (int4 value : values) {
-      cat::verify(value == int4(count + 1u));
-      ++count;
-   }
-   cat::verify(count == values.size());
-
-   auto even_squares = values
-                          .filter([](int4 value) -> bool {
-                             return value % 2_i4 == 0_i4;
-                          })
-                          .transform([](int4 value) -> int4 {
-                             return value * value;
-                          });
-   cat::verify(even_squares.sum() == 20_i4);
-
-   values.fill(7_i4);
-   for (int4 value : values) {
-      cat::verify(value == 7_i4);
-   }
-
-   auto fixed_filled = cat::make_vec_inplace_fixed_filled<int4, 3u>(8_i4);
-   cat::verify(fixed_filled.size() == 3u);
-   cat::verify(fixed_filled[2u] == 8_i4);
-}
 
 $test(vec_inplace_default_and_access) {
    cat::vec_inplace<int4, 4u> values;
@@ -106,8 +68,8 @@ $test(vec_inplace_default_and_access) {
    cat::verify(values.is_empty());
    cat::verify(values.at(0u).is_empty());
 
-   values.try_push_back(10_i4).verify();
-   values.try_emplace_back(20_i4).verify();
+   values.push_back(10_i4).verify();
+   values.emplace_back(20_i4).verify();
 
    cat::verify(values.front() == 10_i4);
    cat::verify(values.back() == 20_i4);
@@ -115,10 +77,10 @@ $test(vec_inplace_default_and_access) {
    cat::verify(values.at(1u).verify() == 20_i4);
 }
 
-$test(vec_inplace_try_and_unchecked_push) {
+$test(vec_inplace_push_and_unchecked_push) {
    cat::vec_inplace<int4, 2u> values;
 
-   int4& first = values.try_push_back(1_i4).verify();
+   int4& first = values.push_back(1_i4).verify();
    int4& second = values.unchecked_emplace_back(2_i4);
    first = 3_i4;
    second = 4_i4;
@@ -126,8 +88,8 @@ $test(vec_inplace_try_and_unchecked_push) {
    cat::verify(values.size() == 2u);
    cat::verify(values[0u] == 3_i4);
    cat::verify(values[1u] == 4_i4);
-   cat::verify(values.try_push_back(5_i4).is_empty());
-   cat::verify(values.try_emplace_back(6_i4).is_empty());
+   cat::verify(values.push_back(5_i4).is_empty());
+   cat::verify(values.emplace_back(6_i4).is_empty());
    cat::verify(values.size() == 2u);
 }
 
@@ -164,9 +126,9 @@ $test(vec_inplace_append_and_iterate) {
    cat::array extra{4_i4, 5_i4};
    cat::vec_inplace<int4, 4u> values;
 
-   values.try_append_range(source).verify();
+   values.append_range(source).verify();
    cat::verify(values.size() == 3u);
-   cat::verify(values.try_append_range(extra).is_empty());
+   cat::verify(values.append_range(extra).is_empty());
    cat::verify(values.size() == 3u);
    values.unchecked_push_back(4_i4);
 
@@ -192,7 +154,7 @@ $test(vec_inplace_append_and_iterate) {
 $test(vec_inplace_erase_pop_and_clear) {
    cat::vec_inplace<int4, 6u> values;
    cat::array source{1_i4, 2_i4, 3_i4, 4_i4, 5_i4};
-   values.try_append_range(source).verify();
+   values.append_range(source).verify();
 
    values.erase(1u);
    cat::verify(values.size() == 4u);
@@ -217,9 +179,9 @@ $test(vec_inplace_nontrivial_lifetime) {
    lifetime_value::live_count = 0u;
    {
       cat::vec_inplace<lifetime_value, 4u> values;
-      values.try_emplace_back(1_i4).verify();
-      values.try_emplace_back(2_i4).verify();
-      values.try_emplace_back(3_i4).verify();
+      values.emplace_back(1_i4).verify();
+      values.emplace_back(2_i4).verify();
+      values.emplace_back(3_i4).verify();
       cat::verify(lifetime_value::live_count == 3u);
 
       values.erase(1u);
@@ -240,8 +202,8 @@ $test(vec_inplace_nontrivial_lifetime) {
 
 $test(vec_inplace_copy_move_and_swap) {
    cat::vec_inplace<int4, 4u> left;
-   left.try_push_back(1_i4).verify();
-   left.try_push_back(2_i4).verify();
+   left.push_back(1_i4).verify();
+   left.push_back(2_i4).verify();
 
    cat::vec_inplace<int4, 4u> copied(left);
    cat::verify(copied == left);
@@ -251,7 +213,7 @@ $test(vec_inplace_copy_move_and_swap) {
    cat::verify(copied.is_empty());
 
    cat::vec_inplace<int4, 4u> right;
-   right.try_push_back(8_i4).verify();
+   right.push_back(8_i4).verify();
    cat::swap(left, right);
    cat::verify(left.size() == 1u);
    cat::verify(left[0u] == 8_i4);
@@ -262,15 +224,15 @@ $test(vec_inplace_copy_move_and_swap) {
 $test(vec_inplace_cross_capacity_compare) {
    cat::vec_inplace<int4, 2u> small;
    cat::vec_inplace<int4, 5u> large;
-   small.try_push_back(1_i4).verify();
-   small.try_push_back(2_i4).verify();
-   large.try_push_back(1_i4).verify();
-   large.try_push_back(2_i4).verify();
+   small.push_back(1_i4).verify();
+   small.push_back(2_i4).verify();
+   large.push_back(1_i4).verify();
+   large.push_back(2_i4).verify();
 
    cat::verify(small == large);
    cat::verify((small <=> large) == 0);
 
-   large.try_push_back(3_i4).verify();
+   large.push_back(3_i4).verify();
    cat::verify(small != large);
    cat::verify((small <=> large) < 0);
    cat::verify((large <=> small) > 0);
@@ -281,6 +243,6 @@ $test(vec_inplace_zero_capacity) {
    cat::verify(values.is_empty());
    cat::verify(values.is_full());
    cat::verify(values.capacity() == 0u);
-   cat::verify(values.try_push_back(1_i4).is_empty());
+   cat::verify(values.push_back(1_i4).is_empty());
    cat::verify(values.resize(1u).is_empty());
 }

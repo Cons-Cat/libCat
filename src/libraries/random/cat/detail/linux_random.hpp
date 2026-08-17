@@ -135,10 +135,8 @@ class linux_random_file_engine {
    }
 };
 
-using dev_urandom_engine =
-   linux_random_file_engine<linux_random_file::urandom>;
-using dev_random_engine =
-   linux_random_file_engine<linux_random_file::random>;
+using dev_urandom_engine = linux_random_file_engine<linux_random_file::urandom>;
+using dev_random_engine = linux_random_file_engine<linux_random_file::random>;
 
 struct seed_state {
    cat::uint8 kernel_random;

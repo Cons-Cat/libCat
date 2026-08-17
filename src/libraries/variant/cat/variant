@@ -2,13 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/compare>
-#include <cat/match>
-#include <cat/maybe>
-#include <cat/memory>
-#include <cat/tuple>
-#include <cat/type_list>
-
 // `cat::variant<Ts...>` is primarily based upon C++26 `std::variant` but
 // implements several proposed extensions and useful features/optimizations from
 // variant-like libraries. It supports reference-type alternatives and an
@@ -56,6 +49,13 @@
 // `ts::basic_variant`.
 
 // TODO: Provide a policy for supporting non-empty variants.
+
+#include <cat/compare>
+#include <cat/match>
+#include <cat/maybe>
+#include <cat/memory>
+#include <cat/tuple>
+#include <cat/type_list>
 
 namespace cat {
 

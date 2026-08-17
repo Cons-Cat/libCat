@@ -2,6 +2,22 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::basic_str_span` is a non-owning string container over a contiguous
+// sequence of characters. It is inspired by `std::basic_string_view` and is
+// analogous to `cat::span`. It is parameterized by a character type and whether
+// the view is null-terminated.
+//
+// Convenience type aliases are provided:
+//
+//  `cat::str_view`, a `basic_str_span<char const, false>`.
+//  `cat::str_span`, a `basic_str_span<char, false>`.
+//  `cat::zstr_view`, a `basic_str_span<char const, true>`.
+//  `cat::zstr_span`, a `basic_str_span<char, true>`.
+//  `cat::wstr_view`, a `basic_str_span<wchar_t const, false>`.
+//  `cat::wstr_span`, a `basic_str_span<wchar_t, false>`.
+//  `cat::wzstr_view`, a `basic_str_span<wchar_t const, true>`.
+//  `cat::wzstr_span`, a `basic_str_span<wchar_t, true>`.
+
 #include <cat/detail/simd_impl.hpp>
 
 #include <cat/maybe>
@@ -9,7 +25,7 @@
 #include <cat/span>
 #include <cat/utility>
 
-#include "str_inplace.hpp"
+#include "./str_inplace.hpp"
 
 namespace cat {
 
@@ -31,7 +47,6 @@ class basic_str_span;
 
 inline namespace manual {
 template <typename CharT, bool is_null_terminated>
-   requires(is_same<remove_cvref<CharT>, CharT>)
 class basic_str_vec;
 }  // namespace manual
 

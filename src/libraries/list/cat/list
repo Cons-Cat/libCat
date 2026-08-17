@@ -2,6 +2,19 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::basic_list` is a doubly-linked owning container inspired by
+// `std::list`. Upon construction, the `list` is empty.
+//
+// As this is a `manual` namespace container, its `.reset()` and destructor do
+// not deallocate nodes, they only call its elements' destructors. To
+// deallocate nodes, call `.free(allocator)` or `.cfree(allocator)`.
+//
+// The `cat::raii::basic_list` deallocates its own memory automatically.
+//
+// Convenience type aliases are provided:
+//
+//  `cat::list<T>`, a default `basic_list`.
+
 #include <cat/allocator>
 #include <cat/allocator_parameters>
 #include <cat/container>
@@ -43,7 +56,6 @@ struct list_storage {
 inline namespace manual {
 
 template <typename T>
-   requires(is_same<remove_cvref<T>, T>)
 class basic_list;
 
 template <typename T>
@@ -64,11 +76,15 @@ maybe_list_nullopt() -> basic_list<T>;
 inline namespace manual {
 
 template <typename T>
-   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
     : public container_interface<basic_list<T>, T>,
       public stepanov_iterable_interface<
          basic_list<T>, detail::list_stepanov_iterator, T> {
+   static_assert(
+      is_same<remove_cvref<T>, T>,
+      "`T` must not be cv-qualified or a reference."
+   );
+
    friend detail::list_stepanov_iterator<T>;
 
    using node_type = detail::list_node<T>;

@@ -2,6 +2,43 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::basic_bitvec` is a dynamically-sized owning container of bits, backed
+// by a `cat::basic_vec` of words. Upon construction, the `bitvec` is empty.
+// When it initially allocates, it grows from 0 to a capacity of 32 bytes. From
+// there, exceeding capacity reallocates to double its current size.
+//
+// As this is a `manual` namespace container, its destructor does not deallocate
+// storage. To deallocate storage, call `.free(allocator)` or
+// `.cfree(allocator)`.
+//
+// The `cat::raii::basic_bitvec` deallocates its own memory automatically.
+//
+// It is parameterized by `cat::vec_flags`, which may toggle the following
+// features:
+//
+//  `pointer_size_layout`
+//     By default, the backing `vec` stores a head and tail pointer to its owned
+//     data, like libc++ and libstdc++. This has the benefit of making growth
+//     very cheap, at the cost of making `.size()` cost an additional
+//     subtraction. Instead, this flag stores a pointer and size, making
+//     `.size()` free and growth cost an additional addition.
+//
+//  `inline_storage(count)`
+//     Store up to `count` words inside the bitvec, only allocating when its
+//     inline capacity is exceeded. The `small_bitvec` aliases convert a bit
+//     count into word count.
+//
+//  `fixed_size`
+//     The bitvec has a fixed size upon allocation and no separate capacity.
+//
+// Convenience type aliases are provided for these configurations:
+//
+//  `cat::bitvec`, a default `basic_bitvec`.
+//  `cat::bitvec_fixed`, a `basic_bitvec` with `fixed_size` flag.
+//  `cat::small_bitvec<n=4>`, a `basic_bitvec` with inline storage for `n` bits.
+//  `cat::small_bitvec_fixed<n=4>`, a `basic_bitvec` with inline storage for `n`
+//     bits and `fixed_size` flag.
+
 #include <cat/bit>
 #include <cat/debug>
 #include <cat/iterable>

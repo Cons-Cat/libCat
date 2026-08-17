@@ -21,11 +21,9 @@ constinit cat::page_allocator pager;
 void
 register_test(constructor_fn p_test_fn) {
    if (test_fns.is_empty()) {
-      test_fns =
-         cat::raii::make_vec_reserved<void*>(pager, 4_uki / 8u).value();
+      test_fns = cat::raii::make_vec_reserved<void*>(pager, 4_uki / 8u).value();
    }
-   auto _ =
-      test_fns.verify().push_back(reinterpret_cast<void*>(p_test_fn));
+   auto _ = test_fns.verify().push_back(reinterpret_cast<void*>(p_test_fn));
 }
 
 void

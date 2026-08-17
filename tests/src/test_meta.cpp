@@ -27,20 +27,22 @@ template <bool>
 struct constexpr_assertion_result {};
 
 template <bool condition>
-concept can_constexpr_verify = requires {
-   typename constexpr_assertion_result<[] consteval {
-      cat::verify(condition);
-      return true;
-   }()>;
-};
+concept can_constexpr_verify =
+   requires {
+      typename constexpr_assertion_result<[] consteval {
+         cat::verify(condition);
+         return true;
+      }()>;
+   };
 
 template <bool condition>
-concept can_constexpr_assert = requires {
-   typename constexpr_assertion_result<[] consteval {
-      cat::assert(condition);
-      return true;
-   }()>;
-};
+concept can_constexpr_assert =
+   requires {
+      typename constexpr_assertion_result<[] consteval {
+         cat::assert(condition);
+         return true;
+      }()>;
+   };
 
 static_assert(can_constexpr_verify<true>);
 static_assert(!can_constexpr_verify<false>);
@@ -61,7 +63,7 @@ class templated_one {};
 template <typename T>
 class templated_two {};
 
-}
+}  // namespace
 
 $test(meta_is_structural) {
    using namespace cat;

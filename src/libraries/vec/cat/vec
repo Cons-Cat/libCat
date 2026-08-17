@@ -2,6 +2,43 @@
 // vim: set ft=cpp:
 #pragma once
 
+// `cat::basic_vec` is a dynamically-sized contiguous owning container inspired
+// by `std::vector`. Upon construction, the `vec` is empty. Unlike
+// `std::vector`, when it initially allocates, it grows from 0 to a capacity of
+// 4 elements. From there, exceeding capacity reallocates to double its current
+// size.
+//
+// As this is a `manual` namespace container, its `.reset()` and destructor does
+// not deallocate storage, it only calls its elements' destructors. To
+// deallocate storage, call `.free(allocator)` or `.cfree(allocator)`.
+//
+// The `cat::raii::basic_vec` deallocates its own memory automatically.
+//
+// It is paramaterized by `cat::vec_flags`, which may toggle the following
+// features:
+//
+//  `pointer_size_layout`
+//     By default, the `vec` stores a head and tail pointer to its owned data,
+//     like libc++ and libstdc++. This has the benefit of making `.push_back()`
+//     very cheap, at the cost of making `.size()` cost an additional
+//     subtraction. Instead, this flag stores a pointer and size, making
+//     `.size()` free and `.push_back()` cost an additional addition.
+//
+//  `inline_storage(count)`
+//     Store up to `count` elements inside the vector, only allocating when its
+//     inline capacity is exceeded.
+//
+//  `fixed_size`
+//     The vector has a fixed size upon allocation and no separate capacity.
+//
+// Convenience type aliases are provided for these configurations:
+//
+//  `cat::vec<T>`, a default `basic_vec`.
+//  `cat::vec_fixed<T>`, a `basic_vec` with `fixed_size` flag.
+//  `cat::small_vec<T, n=4>`, a `basic_vec` with `inline_storage(n)` flag.
+//  `cat::small_vec_fixed<T, n=4>`, a `basic_vec` with `inline_storage(n)` and
+//     `fixed_size` flag.
+
 #include <cat/algorithm>
 #include <cat/allocator>
 #include <cat/allocator_parameters>
@@ -19,7 +56,6 @@ namespace cat {
 inline namespace manual {
 
 template <typename T, vec_flags flags = {}>
-   requires(is_same<remove_cvref<T>, T>)
 class basic_vec;
 
 template <typename T, vec_flags flags = {}>
@@ -53,12 +89,13 @@ maybe_vec_nullopt() -> basic_vec<T, flags>;
 inline namespace manual {
 
 template <typename T, vec_flags flags>
-// TODO: Probably we should cut down on concepts.
-// https://solidean.com/blog/2025/sfinae-concepts-static-assert-modern-cpp/
-   requires(is_same<remove_cvref<T>, T>)
 class [[clang::preferred_name(vec<T, flags>), gsl::Owner]]
 basic_vec : public container_interface<basic_vec<T, flags>, T>,
             public random_access_stepanov_iterable_interface<T> {
+   static_assert(
+      is_same<remove_cvref<T>, T>, "`T` must not be cvref-qualified!"
+   );
+
  public:
    constexpr basic_vec() = default;
 
