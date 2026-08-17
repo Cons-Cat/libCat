@@ -11,19 +11,22 @@
 
 namespace cat {
 
-template <
-   idx inline_capacity, bool null_terminated, vec_flags flags, typename CharT>
+template <idx inline_capacity, str_vec_flags flags, typename CharT>
    requires(is_same<CharT, char>)
-struct formatter<
-   basic_str_inplace<char, inline_capacity, null_terminated, flags>, CharT>
+struct formatter<basic_str_inplace<char, inline_capacity, flags>, CharT>
     : debug_formatter<CharT> {
    auto
    format(
-      basic_str_inplace<char, inline_capacity, null_terminated, flags> const&
-         value,
+      basic_str_inplace<char, inline_capacity, flags> const& value,
       format_context& context
    ) const -> scaredy_format<void> {
-      return detail::format_char_string(this->debug, value, context);
+      char const* p_data = value.data();
+      str_view const string =
+         p_data == nullptr ? str_view() : str_view(p_data, value.size());
+      if (this->debug) {
+         return detail::append_escaped(context, string, '"');
+      }
+      return context.append(string);
    }
 };
 

@@ -17,6 +17,8 @@
 //  `cat::wstr_span`, a `basic_str_span<wchar_t, false>`.
 //  `cat::wzstr_view`, a `basic_str_span<wchar_t const, true>`.
 //  `cat::wzstr_span`, a `basic_str_span<wchar_t, true>`.
+//
+// TODO: `str_span` needs `fixed_extent` like `span`.
 
 #include <cat/detail/simd_impl.hpp>
 
@@ -25,6 +27,7 @@
 #include <cat/span>
 #include <cat/utility>
 
+#include "./str_flags.hpp"
 #include "./str_inplace.hpp"
 
 namespace cat {
@@ -46,7 +49,7 @@ template <typename CharT, bool is_null_terminated>
 class basic_str_span;
 
 inline namespace manual {
-template <typename CharT, bool is_null_terminated>
+template <typename CharT, str_vec_flags flags>
 class basic_str_vec;
 }  // namespace manual
 
@@ -138,10 +141,11 @@ class
               "literal! Consider a `str_view` instead.");
 
    // Make a `str_span` over a `str_inplace`.
-   template <idx other_capacity, vec_flags flags>
+   template <idx other_capacity, str_vec_flags flags>
+      requires(null_terminated == flags.str.is_null_terminated)
    constexpr basic_str_span(
-      basic_str_inplace<CharT, other_capacity, null_terminated, flags>&
-         other_string [[clang::lifetimebound]]
+      basic_str_inplace<CharT, other_capacity, flags>& other_string
+      [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
       this->m_size =
@@ -149,11 +153,12 @@ class
    }
 
    // Make a `str_view` over a `str_inplace`.
-   template <idx other_capacity, vec_flags flags>
-      requires(is_const<CharT>)
+   template <idx other_capacity, str_vec_flags flags>
+      requires(
+         is_const<CharT> && null_terminated == flags.str.is_null_terminated
+      )
    constexpr basic_str_span(
-      basic_str_inplace<
-         remove_const<CharT>, other_capacity, null_terminated, flags> const&
+      basic_str_inplace<remove_const<CharT>, other_capacity, flags> const&
          other_string [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
@@ -162,10 +167,10 @@ class
    }
 
    // Make a `str_span` over a `zstr_inplace`.
-   template <typename T, idx other_capacity, vec_flags flags>
-      requires(!null_terminated)
+   template <typename T, idx other_capacity, str_vec_flags flags>
+      requires(!null_terminated && flags.str.is_null_terminated)
    constexpr basic_str_span(
-      basic_str_inplace<T, other_capacity, true, flags>& other_string
+      basic_str_inplace<T, other_capacity, flags>& other_string
       [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
@@ -173,10 +178,10 @@ class
    }
 
    // Make a `str_view` over a `zstr_inplace`.
-   template <typename T, idx other_capacity, vec_flags flags>
-      requires(!null_terminated)
+   template <typename T, idx other_capacity, str_vec_flags flags>
+      requires(!null_terminated && flags.str.is_null_terminated)
    constexpr basic_str_span(
-      basic_str_inplace<T, other_capacity, true, flags> const& other_string
+      basic_str_inplace<T, other_capacity, flags> const& other_string
       [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
@@ -184,17 +189,32 @@ class
    }
 
    // Make a `str_span` over a `zstr_inplace`.
-   template <idx other_capacity, vec_flags flags>
-      requires(null_terminated && !is_const<CharT>)
+   template <idx other_capacity, str_vec_flags flags>
+      requires(null_terminated
+               && !is_const<CharT> && !flags.str.is_null_terminated)
    constexpr basic_str_span(
-      basic_str_inplace<CharT, other_capacity, false, flags> const&
+      basic_str_inplace<CharT, other_capacity, flags> const&
    ) = delete ("Cannot bind a null-terminated `zstr_span` over a "
                "non null-terminated `str_inplace`!");
 
-   template <bool other_is_null_terminated>
-      requires(!is_const<CharT> && null_terminated == other_is_null_terminated)
+   template <str_vec_flags flags>
+      requires(
+         !is_const<CharT> && null_terminated == flags.str.is_null_terminated
+      )
    constexpr basic_str_span(
-      basic_str_vec<CharT, other_is_null_terminated>& other_string
+      basic_str_vec<CharT, flags>& other_string [[clang::lifetimebound]]
+   ) {
+      this->m_p_data = other_string.data();
+      this->m_size =
+         other_string.size() + static_cast<unsigned>(null_terminated);
+   }
+
+   template <str_vec_flags flags>
+      requires(
+         is_const<CharT> && null_terminated == flags.str.is_null_terminated
+      )
+   constexpr basic_str_span(
+      basic_str_vec<remove_const<CharT>, flags> const& other_string
       [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
@@ -202,32 +222,24 @@ class
          other_string.size() + static_cast<unsigned>(null_terminated);
    }
 
-   template <bool other_is_null_terminated>
-      requires(is_const<CharT> && null_terminated == other_is_null_terminated)
+   template <str_vec_flags flags>
+      requires(
+         !is_const<CharT> && !null_terminated && flags.str.is_null_terminated
+      )
    constexpr basic_str_span(
-      basic_str_vec<remove_const<CharT>, other_is_null_terminated> const&
-         other_string [[clang::lifetimebound]]
-   ) {
-      this->m_p_data = other_string.data();
-      this->m_size =
-         other_string.size() + static_cast<unsigned>(null_terminated);
-   }
-
-   template <bool other_is_null_terminated>
-      requires(!is_const<CharT> && !null_terminated && other_is_null_terminated)
-   constexpr basic_str_span(
-      basic_str_vec<CharT, other_is_null_terminated>& other_string
-      [[clang::lifetimebound]]
+      basic_str_vec<CharT, flags>& other_string [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
       this->m_size = other_string.size();
    }
 
-   template <bool other_is_null_terminated>
-      requires(is_const<CharT> && !null_terminated && other_is_null_terminated)
+   template <str_vec_flags flags>
+      requires(
+         is_const<CharT> && !null_terminated && flags.str.is_null_terminated
+      )
    constexpr basic_str_span(
-      basic_str_vec<remove_const<CharT>, other_is_null_terminated> const&
-         other_string [[clang::lifetimebound]]
+      basic_str_vec<remove_const<CharT>, flags> const& other_string
+      [[clang::lifetimebound]]
    ) {
       this->m_p_data = other_string.data();
       this->m_size = other_string.size();
@@ -439,25 +451,21 @@ class
    // idx m_size;
 };
 
-template <
-   typename CharT, idx inline_capacity, bool null_terminated, vec_flags flags>
-basic_str_span(
-   basic_str_inplace<CharT, inline_capacity, null_terminated, flags>&
-) -> basic_str_span<CharT, null_terminated>;
+template <typename CharT, idx inline_capacity, str_vec_flags flags>
+basic_str_span(basic_str_inplace<CharT, inline_capacity, flags>&)
+   -> basic_str_span<CharT, flags.str.is_null_terminated>;
 
-template <
-   typename CharT, idx inline_capacity, bool null_terminated, vec_flags flags>
-basic_str_span(
-   basic_str_inplace<CharT, inline_capacity, null_terminated, flags> const&
-) -> basic_str_span<CharT const, null_terminated>;
+template <typename CharT, idx inline_capacity, str_vec_flags flags>
+basic_str_span(basic_str_inplace<CharT, inline_capacity, flags> const&)
+   -> basic_str_span<CharT const, flags.str.is_null_terminated>;
 
-template <typename CharT, bool null_terminated>
-basic_str_span(basic_str_vec<CharT, null_terminated>&)
-   -> basic_str_span<CharT, null_terminated>;
+template <typename CharT, str_vec_flags flags>
+basic_str_span(basic_str_vec<CharT, flags>&)
+   -> basic_str_span<CharT, flags.str.is_null_terminated>;
 
-template <typename CharT, bool null_terminated>
-basic_str_span(basic_str_vec<CharT, null_terminated> const&)
-   -> basic_str_span<CharT const, null_terminated>;
+template <typename CharT, str_vec_flags flags>
+basic_str_span(basic_str_vec<CharT, flags> const&)
+   -> basic_str_span<CharT const, flags.str.is_null_terminated>;
 
 template <typename String>
 concept is_basic_string = requires(String const& string) {

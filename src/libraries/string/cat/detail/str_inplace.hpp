@@ -7,9 +7,9 @@
 // and closely mirrors the API of both `cat::vec_inplace` and `cat::strvec`.
 // Upon construction, the `str_inplace` is empty.
 //
-// It is parameterized by a character type, its inline capacity, whether the
-// string is null-terminated, and `cat::vec_flags`. The `fixed_size` flag makes
-// the string a fixed size upon construction with no separate capacity.
+// It is parameterized by a character type, its inline capacity, and
+// `cat::str_vec_flags`. The `fixed_size` flag makes the string a fixed size
+// upon construction with no separate capacity.
 //
 // Convenience type aliases are provided for these configurations:
 //
@@ -34,6 +34,8 @@
 // This class is non-structural, so it cannot be used as a non-type template
 // parameter unlike `cat::str_literal`.
 
+#include <cat/detail/str_flags.hpp>
+
 #include <cat/math>
 #include <cat/maybe>
 #include <cat/memory>
@@ -55,41 +57,42 @@ template <>
 struct str_inplace_size<false> {};
 }  // namespace detail
 
-template <
-   typename CharT, idx inline_capacity, bool null_terminated,
-   vec_flags flags = {}>
+template <typename CharT, idx inline_capacity, str_vec_flags flags = {}>
 class basic_str_inplace;
 
-template <idx inline_capacity, vec_flags flags = {}>
-using str_inplace = basic_str_inplace<char, inline_capacity, false, flags>;
+template <idx inline_capacity, str_vec_flags flags = {}>
+using str_inplace = basic_str_inplace<char, inline_capacity, flags>;
 
-template <idx inline_capacity, vec_flags flags = {}>
-using zstr_inplace = basic_str_inplace<char, inline_capacity, true, flags>;
+template <idx inline_capacity, str_vec_flags flags = {}>
+using zstr_inplace =
+   basic_str_inplace<char, inline_capacity, str_flags::null_terminated | flags>;
 
-template <idx inline_capacity, vec_flags flags = {}>
-using wstr_inplace = basic_str_inplace<wchar_t, inline_capacity, false, flags>;
+template <idx inline_capacity, str_vec_flags flags = {}>
+using wstr_inplace = basic_str_inplace<wchar_t, inline_capacity, flags>;
 
-template <idx inline_capacity, vec_flags flags = {}>
-using wzstr_inplace = basic_str_inplace<wchar_t, inline_capacity, true, flags>;
+template <idx inline_capacity, str_vec_flags flags = {}>
+using wzstr_inplace = basic_str_inplace<
+   wchar_t, inline_capacity, str_flags::null_terminated | flags>;
 
-template <idx inline_capacity, vec_flags flags = {}>
-using str_inplace_fixed = basic_str_inplace<
-   char, inline_capacity, false, flags | vec_flags::fixed_size>;
+template <idx inline_capacity, str_vec_flags flags = {}>
+using str_inplace_fixed =
+   basic_str_inplace<char, inline_capacity, vec_flags::fixed_size | flags>;
 
-template <idx inline_capacity, vec_flags flags = {}>
+template <idx inline_capacity, str_vec_flags flags = {}>
 using zstr_inplace_fixed = basic_str_inplace<
-   char, inline_capacity, true, flags | vec_flags::fixed_size>;
+   char, inline_capacity,
+   str_flags::null_terminated | vec_flags::fixed_size | flags>;
 
-template <idx inline_capacity, vec_flags flags = {}>
-using wstr_inplace_fixed = basic_str_inplace<
-   wchar_t, inline_capacity, false, flags | vec_flags::fixed_size>;
+template <idx inline_capacity, str_vec_flags flags = {}>
+using wstr_inplace_fixed =
+   basic_str_inplace<wchar_t, inline_capacity, vec_flags::fixed_size | flags>;
 
-template <idx inline_capacity, vec_flags flags = {}>
+template <idx inline_capacity, str_vec_flags flags = {}>
 using wzstr_inplace_fixed = basic_str_inplace<
-   wchar_t, inline_capacity, true, flags | vec_flags::fixed_size>;
+   wchar_t, inline_capacity,
+   str_flags::null_terminated | vec_flags::fixed_size | flags>;
 
-template <
-   typename CharT, idx inline_capacity, bool null_terminated, vec_flags flags>
+template <typename CharT, idx inline_capacity, str_vec_flags flags>
 class
    [[clang::trivial_abi,
      clang::preferred_name(str_inplace<inline_capacity, flags>),
@@ -98,14 +101,17 @@ class
      clang::preferred_name(wzstr_inplace<inline_capacity, flags>), gsl::Owner]]
    basic_str_inplace
     : public container_interface<
-         basic_str_inplace<CharT, inline_capacity, null_terminated, flags>,
-         CharT>,
+         basic_str_inplace<CharT, inline_capacity, flags>, CharT>,
       public random_access_stepanov_iterable_interface<CharT>,
-      private detail::str_inplace_size<!flags.is_fixed_size> {
+      private detail::str_inplace_size<!flags.vec.is_fixed_size> {
    static_assert(
       is_same<remove_cvref<CharT>, CharT>,
       "`CharT` must not be cvref-qualified!"
    );
+   static constexpr str_vec_flags concatenation_flags =
+      flags.str.is_null_terminated
+         ? str_vec_flags(str_flags::null_terminated) | vec_flags{}
+         : str_flags{};
 
  public:
    constexpr basic_str_inplace() {
@@ -114,14 +120,11 @@ class
 
    constexpr basic_str_inplace(basic_str_inplace const& string) = default;
 
-   template <
-      idx other_capacity, bool other_null_terminated, vec_flags other_flags>
-      requires(!flags.is_fixed_size && other_capacity <= inline_capacity)
+   template <idx other_capacity, str_vec_flags other_flags>
+      requires(!flags.vec.is_fixed_size && other_capacity <= inline_capacity)
    constexpr auto
-   operator=(
-      basic_str_inplace<
-         CharT, other_capacity, other_null_terminated, other_flags> const& other
-   ) -> basic_str_inplace& {
+   operator=(basic_str_inplace<CharT, other_capacity, other_flags> const& other)
+      -> basic_str_inplace& {
       this->m_size = other.size();
       for (idx index; index < other.size(); ++index) {
          m_data[index] = other[index];
@@ -133,13 +136,13 @@ class
    // Construct from a string literal.
    template <idx extent>
       requires(
-         flags.is_fixed_size ? extent == inline_capacity + 1u
-                             : extent <= inline_capacity + 1u
+         flags.vec.is_fixed_size ? extent == inline_capacity + 1u
+                                 : extent <= inline_capacity + 1u
       )
    consteval basic_str_inplace(CharT const (&string)[extent]) {
       [[assume(string[extent.raw - 1u] == CharT{'\0'})]];
       idx const content_size = idx(extent - 1u);
-      if constexpr (!flags.is_fixed_size) {
+      if constexpr (!flags.vec.is_fixed_size) {
          this->m_size = content_size;
       }
       for (idx index; index < content_size; ++index) {
@@ -148,13 +151,11 @@ class
       this->write_terminator();
    }
 
-   template <
-      idx other_capacity, bool other_null_terminated, vec_flags other_flags>
+   template <idx other_capacity, str_vec_flags other_flags>
    [[nodiscard]]
    constexpr auto
    operator==(
-      basic_str_inplace<
-         CharT, other_capacity, other_null_terminated, other_flags> const& other
+      basic_str_inplace<CharT, other_capacity, other_flags> const& other
    ) const -> bool {
       if (size() != other.size()) {
          return false;
@@ -167,13 +168,11 @@ class
       return true;
    }
 
-   template <
-      idx other_capacity, bool other_null_terminated, vec_flags other_flags>
+   template <idx other_capacity, str_vec_flags other_flags>
    [[nodiscard]]
    constexpr auto
    operator<=>(
-      basic_str_inplace<
-         CharT, other_capacity, other_null_terminated, other_flags> const& other
+      basic_str_inplace<CharT, other_capacity, other_flags> const& other
    ) const {
       return span<CharT const>(data(), size())
              <=> span<CharT const>(other.data(), other.size());
@@ -212,10 +211,11 @@ class
 
    constexpr void
    swap(basic_str_inplace& other) {
-      for (idx index; index < inline_capacity + null_terminated; ++index) {
+      for (idx index; index < inline_capacity + flags.str.is_null_terminated;
+           ++index) {
          cat::swap(m_data[index], other.m_data[index]);
       }
-      if constexpr (!flags.is_fixed_size) {
+      if constexpr (!flags.vec.is_fixed_size) {
          cat::swap(this->m_size, other.m_size);
       }
    }
@@ -235,7 +235,7 @@ class
    [[nodiscard]]
    constexpr auto
    size() const -> idx {
-      if constexpr (flags.is_fixed_size) {
+      if constexpr (flags.vec.is_fixed_size) {
          return inline_capacity;
       } else {
          return this->m_size;
@@ -257,7 +257,7 @@ class
    [[nodiscard]]
    constexpr auto
    is_null_terminated() const -> bool {
-      if constexpr (null_terminated) {
+      if constexpr (flags.str.is_null_terminated) {
          return true;
       } else if (size() == 0u) {
          return false;
@@ -269,7 +269,9 @@ class
    [[nodiscard]]
    constexpr auto
    c_str() const [[clang::lifetimebound]]
-   -> CharT const* _Nonnull requires(null_terminated) { return m_data; }
+   -> CharT const* _Nonnull requires(flags.str.is_null_terminated) {
+                               return m_data;
+                            }
 
    [[nodiscard]] constexpr auto reserve(idx minimum_capacity) const
       -> maybe<void> {
@@ -282,7 +284,7 @@ class
    [[nodiscard]]
    constexpr auto
    resize(idx new_size, CharT value = CharT{'\0'}) -> maybe<void>
-      requires(!flags.is_fixed_size)
+      requires(!flags.vec.is_fixed_size)
    {
       if (new_size > inline_capacity) {
          return nullopt;
@@ -298,7 +300,7 @@ class
    [[nodiscard]]
    constexpr auto
    push_back(CharT value) -> maybe<CharT&>
-      requires(!flags.is_fixed_size)
+      requires(!flags.vec.is_fixed_size)
    {
       if (size() == inline_capacity) {
          return nullopt;
@@ -308,7 +310,7 @@ class
 
    constexpr auto
    unchecked_push_back(CharT value) -> CharT&
-      requires(!flags.is_fixed_size)
+      requires(!flags.vec.is_fixed_size)
    {
       cat::assert(size() < inline_capacity);
       CharT& result = m_data[this->m_size];
@@ -322,7 +324,7 @@ class
    [[nodiscard]]
    constexpr auto
    append(CharT const (&string)[extent]) -> maybe<void>
-      requires(!flags.is_fixed_size)
+      requires(!flags.vec.is_fixed_size)
    {
       idx const count = idx(extent - 1u);
       if (count > inline_capacity - size()) {
@@ -337,7 +339,7 @@ class
    }
 
    template <typename Range>
-      requires(has_size<Range> && !flags.is_fixed_size)
+      requires(has_size<Range> && !flags.vec.is_fixed_size)
    [[nodiscard]]
    constexpr auto
    append_range(Range&& range) -> maybe<void> {
@@ -362,7 +364,7 @@ class
    [[nodiscard]]
    constexpr auto
    pop_back() -> maybe<CharT>
-      requires(!flags.is_fixed_size)
+      requires(!flags.vec.is_fixed_size)
    {
       if (this->is_empty()) {
          return nullopt;
@@ -375,7 +377,7 @@ class
 
    constexpr void
    clear()
-      requires(!flags.is_fixed_size)
+      requires(!flags.vec.is_fixed_size)
    {
       this->m_size = 0u;
       this->write_terminator();
@@ -383,7 +385,7 @@ class
 
    constexpr void
    erase(idx index)
-      requires(!flags.is_fixed_size)
+      requires(!flags.vec.is_fixed_size)
    {
       cat::assert(index < size());
       for (idx source = index + 1u; source < size(); ++source) {
@@ -395,7 +397,7 @@ class
 
    constexpr void
    erase(idx first, idx last)
-      requires(!flags.is_fixed_size)
+      requires(!flags.vec.is_fixed_size)
    {
       cat::assert(first <= last);
       cat::assert(last <= size());
@@ -407,18 +409,19 @@ class
       this->write_terminator();
    }
 
-   template <idx other_capacity, vec_flags other_flags>
+   template <idx other_capacity, str_vec_flags other_flags>
+      requires(
+         other_flags.str.is_null_terminated == flags.str.is_null_terminated
+      )
    friend constexpr auto
    operator+(
       basic_str_inplace const& self,
-      basic_str_inplace<
-         CharT, other_capacity, null_terminated, other_flags> const&
-         other_string
+      basic_str_inplace<CharT, other_capacity, other_flags> const& other_string
    )
       -> basic_str_inplace<
-         CharT, inline_capacity + other_capacity, null_terminated> {
+         CharT, inline_capacity + other_capacity, concatenation_flags> {
       basic_str_inplace<
-         CharT, inline_capacity + other_capacity, null_terminated>
+         CharT, inline_capacity + other_capacity, concatenation_flags>
          new_string;
       for (idx i; i < self.size(); ++i) {
          new_string.unchecked_push_back(self.m_data[i]);
@@ -437,7 +440,9 @@ class
       [[assume(other_string[other_length.raw - 1u] == '\0')]];
       return self
              + basic_str_inplace<
-                CharT, idx(other_length - 1u), null_terminated>{other_string};
+                CharT, idx(other_length - 1u), concatenation_flags>{
+                other_string,
+             };
    }
 
    template <idx other_length>
@@ -446,16 +451,18 @@ class
       CharT const (&other_string)[other_length], basic_str_inplace const& self
    ) {
       [[assume(other_string[other_length.raw - 1u] == '\0')]];
-      return basic_str_inplace<CharT, idx(other_length - 1u), null_terminated>{
-                other_string
+      return basic_str_inplace<
+                CharT, idx(other_length - 1u), concatenation_flags>{
+                other_string,
              }
              + self;
    }
 
    friend constexpr auto
    operator+(basic_str_inplace const& self, CharT value)
-      -> basic_str_inplace<CharT, inline_capacity + 1u, null_terminated> {
-      basic_str_inplace<CharT, inline_capacity + 1u, null_terminated> result;
+      -> basic_str_inplace<CharT, inline_capacity + 1u, concatenation_flags> {
+      basic_str_inplace<CharT, inline_capacity + 1u, concatenation_flags>
+         result;
       for (idx index; index < self.size(); ++index) {
          result.unchecked_push_back(self[index]);
       }
@@ -465,8 +472,9 @@ class
 
    friend constexpr auto
    operator+(CharT value, basic_str_inplace const& self)
-      -> basic_str_inplace<CharT, inline_capacity + 1u, null_terminated> {
-      basic_str_inplace<CharT, inline_capacity + 1u, null_terminated> result;
+      -> basic_str_inplace<CharT, inline_capacity + 1u, concatenation_flags> {
+      basic_str_inplace<CharT, inline_capacity + 1u, concatenation_flags>
+         result;
       result.unchecked_push_back(value);
       for (idx index; index < self.size(); ++index) {
          result.unchecked_push_back(self[index]);
@@ -477,15 +485,15 @@ class
  private:
    constexpr void
    write_terminator() {
-      if constexpr (null_terminated) {
+      if constexpr (flags.str.is_null_terminated) {
          m_data[size()] = CharT{'\0'};
       }
    }
 
    static constexpr __SIZE_TYPE__ storage_size =
-      inline_capacity + null_terminated == 0u
+      inline_capacity + flags.str.is_null_terminated == 0u
          ? 1u
-         : inline_capacity + null_terminated;
+         : inline_capacity + flags.str.is_null_terminated;
 
    CharT m_data[storage_size]{};
 };
@@ -495,20 +503,18 @@ struct formatter;
 
 // Implementing this here is a circular dependency. The implementation can be
 // found in <cat/string/implementations/format_str_inplace.tpp>.
-template <
-   idx inline_capacity, bool null_terminated, vec_flags flags, typename CharT>
+template <idx inline_capacity, str_vec_flags flags, typename CharT>
    requires(is_same<CharT, char>)
-struct formatter<
-   basic_str_inplace<char, inline_capacity, null_terminated, flags>, CharT>;
+struct formatter<basic_str_inplace<char, inline_capacity, flags>, CharT>;
 
 // Deduce the length of string literals without a null-terminator.
 template <idx len>
 basic_str_inplace(char const (&str)[len])
-   -> basic_str_inplace<char, idx(len - 1u), false, vec_flags{}>;
+   -> basic_str_inplace<char, idx(len - 1u)>;
 
 template <idx len>
 basic_str_inplace(wchar_t const (&str)[len])
-   -> basic_str_inplace<wchar_t, idx(len - 1u), false, vec_flags{}>;
+   -> basic_str_inplace<wchar_t, idx(len - 1u)>;
 
 template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1u) <= padded_length)

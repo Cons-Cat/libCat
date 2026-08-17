@@ -74,17 +74,17 @@ inline namespace manual {
 using bitvec = basic_bitvec<>;
 
 template <vec_flags flags = {}>
-using bitvec_fixed = basic_bitvec<flags | vec_flags::fixed_size>;
+using bitvec_fixed = basic_bitvec<vec_flags::fixed_size | flags>;
 
 template <idx inline_count = 4u, vec_flags flags = {}>
 using small_bitvec = basic_bitvec<
-   flags | vec_flags::inline_storage(div_ceil(inline_count, word_bits))>;
+   vec_flags::inline_storage(div_ceil(inline_count, word_bits)) | flags>;
 
 template <idx inline_count = 4u, vec_flags flags = {}>
 using small_bitvec_fixed = basic_bitvec<
-   flags
-   | vec_flags::inline_storage(div_ceil(inline_count, word_bits))
-   | vec_flags::fixed_size>;
+   vec_flags::inline_storage(div_ceil(inline_count, word_bits))
+   | vec_flags::fixed_size
+   | flags>;
 
 template <vec_flags flags>
 class [[clang::preferred_name(bitvec), gsl::Owner]]
@@ -1053,10 +1053,8 @@ template <idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {}>
    allocator_ref<Allocator> allocator, idx count, bit_value value
 ) -> maybe<small_bitvec<inline_count, flags>> {
    return make_bitvec_filled<
-      Allocator,
-      flags | vec_flags::inline_storage(div_ceil(inline_count, word_bits))>(
-      allocator, count, value
-   );
+      Allocator, vec_flags::inline_storage(div_ceil(inline_count, word_bits))
+                    | flags>(allocator, count, value);
 }
 
 template <idx inline_count = 4u, vec_flags flags = {}>
@@ -1072,7 +1070,7 @@ template <is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_bitvec_fixed_filled(
    allocator_ref<Allocator> allocator, idx count, bit_value value
 ) -> maybe<bitvec_fixed<flags>> {
-   return make_bitvec_filled<Allocator, flags | vec_flags::fixed_size>(
+   return make_bitvec_filled<Allocator, vec_flags::fixed_size | flags>(
       allocator, count, value
    );
 }
@@ -1091,7 +1089,7 @@ template <idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {}>
    allocator_ref<Allocator> allocator, idx count, bit_value value
 ) -> maybe<small_bitvec_fixed<inline_count, flags>> {
    return make_small_bitvec_filled<
-      inline_count, Allocator, flags | vec_flags::fixed_size>(
+      inline_count, Allocator, vec_flags::fixed_size | flags>(
       allocator, count, value
    );
 }

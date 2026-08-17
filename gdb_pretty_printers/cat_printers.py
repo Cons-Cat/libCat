@@ -191,7 +191,8 @@ class StrInplacePrinter:
 
     def __init__(self, val: gdb.Value):
         self.m_data = val['m_data']
-        self.is_null_terminated = str(val.type.template_argument(2)) == 'true'
+        flags = val.type.template_argument(2)
+        self.is_null_terminated = str(flags['str']['is_null_terminated']) == 'true'
 
         character_type = self.m_data.type.target().strip_typedefs()
         self.m_size = self.m_data.type.sizeof // character_type.sizeof

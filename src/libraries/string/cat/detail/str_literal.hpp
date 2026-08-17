@@ -5,8 +5,8 @@
 // `cat::basic_str_literal` is a structurally-typed fixed-size immutable string
 // intended for use as a non-type template parameter. It is inspired by the
 // proposed `std::basic_fixed_string`, but its name differs to clarify its
-// distinction from `cat::str_inplace_fixed` and highlight its purpose of wrapping
-// string literals.
+// distinction from `cat::str_inplace_fixed` and highlight its purpose of
+// wrapping string literals.
 //
 // The interface is informed by the following papers:
 //

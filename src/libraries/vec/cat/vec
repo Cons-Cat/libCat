@@ -5,8 +5,8 @@
 // `cat::basic_vec` is a dynamically-sized contiguous owning container inspired
 // by `std::vector`. Upon construction, the `vec` is empty. Unlike
 // `std::vector`, when it initially allocates, it grows from 0 to a capacity of
-// 4 elements. From there, exceeding capacity reallocates to double its current
-// size.
+// 4 elements by default. From there, exceeding capacity reallocates to double
+// its current size.
 //
 // As this is a `manual` namespace container, its `.reset()` and destructor does
 // not deallocate storage, it only calls its elements' destructors. To
@@ -27,6 +27,10 @@
 //  `inline_storage(count)`
 //     Store up to `count` elements inside the vector, only allocating when its
 //     inline capacity is exceeded.
+//
+//  `initial_growth(count)`
+//     Grow to at least `count` elements on the first heap allocation instead
+//     of the default 4 elements.
 //
 //  `fixed_size`
 //     The vector has a fixed size upon allocation and no separate capacity.
@@ -61,15 +65,19 @@ class basic_vec;
 template <typename T, vec_flags flags = {}>
 using vec = basic_vec<T, flags>;
 
-template <typename T, vec_flags flags = {}>
-using vec_fixed = basic_vec<T, flags | vec_flags::fixed_size>;
+template <typename T, vec_flags flags = vec_flags{.initial_growth_count = 0u}>
+using vec_fixed = basic_vec<T, vec_flags::fixed_size | flags>;
 
-template <typename T, idx inline_count = 4u, vec_flags flags = {}>
-using small_vec = basic_vec<T, flags | vec_flags::inline_storage(inline_count)>;
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
+using small_vec = basic_vec<T, vec_flags::inline_storage(inline_count) | flags>;
 
-template <typename T, idx inline_count = 4u, vec_flags flags = {}>
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 using small_vec_fixed = basic_vec<
-   T, flags | vec_flags::inline_storage(inline_count) | vec_flags::fixed_size>;
+   T, vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
 
 }  // namespace manual
 
@@ -88,12 +96,20 @@ maybe_vec_nullopt() -> basic_vec<T, flags>;
 
 inline namespace manual {
 
-template <typename T, vec_flags flags>
-class [[clang::preferred_name(vec<T, flags>), gsl::Owner]]
-basic_vec : public container_interface<basic_vec<T, flags>, T>,
+template <typename T, vec_flags configuration>
+class [[clang::preferred_name(vec<T, configuration>), gsl::Owner]]
+basic_vec : public container_interface<basic_vec<T, configuration>, T>,
             public random_access_stepanov_iterable_interface<T> {
+ public:
+   static constexpr vec_flags flags = configuration;
+
+ private:
    static_assert(
       is_same<remove_cvref<T>, T>, "`T` must not be cvref-qualified!"
+   );
+   static_assert(
+      flags.inline_storage_count == 0u || flags.initial_growth_count == 0u,
+      "`inline_storage()` and `initial_growth()` cannot be combined!"
    );
 
  public:
@@ -299,9 +315,11 @@ basic_vec : public container_interface<basic_vec<T, flags>, T>,
    template <is_allocator Allocator>
    constexpr auto
    increase_storage(allocator_ref<Allocator> allocator) -> maybe<void> {
+      constexpr idx configured_initial_capacity =
+         flags.initial_growth_count == 0u ? 4u : flags.initial_growth_count;
       constexpr idx initial_capacity = detail::vec_storage<T, flags>::is_inline
                                           ? flags.inline_storage_count
-                                          : 4u;
+                                          : configured_initial_capacity;
       idx const minimum_capacity = max(capacity() * 2u, initial_capacity);
 
       return reserve(allocator, minimum_capacity);
@@ -1394,17 +1412,19 @@ template <typename T, vec_flags flags = {}>
 
 template <
    typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = {}>
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 [[nodiscard]] constexpr auto make_small_vec_filled(
    allocator_ref<Allocator> allocator, idx count, T const& value
 ) -> maybe<small_vec<T, inline_count, flags>> {
    return make_vec_filled<
-      T, Allocator, flags | vec_flags::inline_storage(inline_count)>(
+      T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
       allocator, count, value
    );
 }
 
-template <typename T, idx inline_count = 4u, vec_flags flags = {}>
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_small_vec_filled(dyn_allocator allocator, idx count, T const& value)
       -> maybe<small_vec<T, inline_count, flags>> {
@@ -1417,7 +1437,7 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_vec_fixed_filled(
    allocator_ref<Allocator> allocator, idx count, T const& value
 ) -> maybe<vec_fixed<T, flags>> {
-   return make_vec_filled<T, Allocator, flags | vec_flags::fixed_size>(
+   return make_vec_filled<T, Allocator, vec_flags::fixed_size | flags>(
       allocator, count, value
    );
 }
@@ -1433,17 +1453,19 @@ template <typename T, vec_flags flags = {}>
 
 template <
    typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = {}>
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 [[nodiscard]] constexpr auto make_small_vec_fixed_filled(
    allocator_ref<Allocator> allocator, idx count, T const& value
 ) -> maybe<small_vec_fixed<T, inline_count, flags>> {
    return make_small_vec_filled<
-      T, inline_count, Allocator, flags | vec_flags::fixed_size>(
+      T, inline_count, Allocator, vec_flags::fixed_size | flags>(
       allocator, count, value
    );
 }
 
-template <typename T, idx inline_count = 4u, vec_flags flags = {}>
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_small_vec_fixed_filled(
       dyn_allocator allocator, idx count, T const& value

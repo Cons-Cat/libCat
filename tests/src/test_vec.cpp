@@ -281,10 +281,21 @@ $test(raii_vec_maybe_niche) {
 
 $test(vec_flags) {
    constexpr auto flags =
-      cat::vec_flags::pointer_size_layout | cat::vec_flags::inline_storage(4u);
+      cat::vec_flags::pointer_size_layout | cat::vec_flags::initial_growth(8u);
    static_assert(flags.uses_pointer_size_layout);
    static_assert(!flags.is_fixed_size);
-   static_assert(flags.inline_storage_count == 4u);
+   static_assert(flags.inline_storage_count == 0u);
+   static_assert(flags.initial_growth_count == 8u);
+   static_assert(cat::vec_flags{}.initial_growth_count == 4u);
+   constexpr auto inline_flags =
+      cat::vec_flags::pointer_size_layout | cat::vec_flags::inline_storage(4u);
+   static_assert(inline_flags.inline_storage_count == 4u);
+   static_assert(inline_flags.initial_growth_count == 0u);
+
+   linear_arena arena;
+   cat::vec<int4, cat::vec_flags::initial_growth(8u)> values;
+   values.push_back(arena.alloc, 1_i4).verify();
+   cat::verify(values.capacity() == 8u);
 
    static_assert(sizeof(cat::vec<int4>) == sizeof(void*) * 3u);
    static_assert(

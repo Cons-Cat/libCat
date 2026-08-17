@@ -58,21 +58,22 @@ template <
 using vec = basic_vec<T, Allocator, flags>;
 
 template <
-   typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
-using vec_fixed = basic_vec<T, Allocator, flags | vec_flags::fixed_size>;
+   typename T, is_allocator Allocator = dyn_allocator,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
+using vec_fixed = basic_vec<T, Allocator, vec_flags::fixed_size | flags>;
 
 template <
    typename T, is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
-   vec_flags flags = {}>
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 using small_vec =
-   basic_vec<T, Allocator, flags | vec_flags::inline_storage(inline_count)>;
+   basic_vec<T, Allocator, vec_flags::inline_storage(inline_count) | flags>;
 
 template <
    typename T, is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
-   vec_flags flags = {}>
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 using small_vec_fixed = basic_vec<
    T, Allocator,
-   flags | vec_flags::inline_storage(inline_count) | vec_flags::fixed_size>;
+   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
 
 }  // namespace cat::raii
 
@@ -609,17 +610,19 @@ template <typename T, vec_flags flags = {}>
 
 template <
    typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = {}>
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 [[nodiscard]] constexpr auto make_small_vec_filled(
    allocator_ref<Allocator> allocator, idx count, T const& value
 ) -> maybe<small_vec<T, Allocator, inline_count, flags>> {
    return raii::make_vec_filled<
-      T, Allocator, flags | vec_flags::inline_storage(inline_count)>(
+      T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
       allocator, count, value
    );
 }
 
-template <typename T, idx inline_count = 4u, vec_flags flags = {}>
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_small_vec_filled(dyn_allocator allocator, idx count, T const& value)
       -> maybe<small_vec<T, dyn_allocator, inline_count, flags>> {
@@ -632,7 +635,7 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_vec_fixed_filled(
    allocator_ref<Allocator> allocator, idx count, T const& value
 ) -> maybe<vec_fixed<T, Allocator, flags>> {
-   return raii::make_vec_filled<T, Allocator, flags | vec_flags::fixed_size>(
+   return raii::make_vec_filled<T, Allocator, vec_flags::fixed_size | flags>(
       allocator, count, value
    );
 }
@@ -648,17 +651,19 @@ template <typename T, vec_flags flags = {}>
 
 template <
    typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = {}>
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 [[nodiscard]] constexpr auto make_small_vec_fixed_filled(
    allocator_ref<Allocator> allocator, idx count, T const& value
 ) -> maybe<small_vec_fixed<T, Allocator, inline_count, flags>> {
    return raii::make_small_vec_filled<
-      T, inline_count, Allocator, flags | vec_flags::fixed_size>(
+      T, inline_count, Allocator, vec_flags::fixed_size | flags>(
       allocator, count, value
    );
 }
 
-template <typename T, idx inline_count = 4u, vec_flags flags = {}>
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_small_vec_fixed_filled(
       dyn_allocator allocator, idx count, T const& value

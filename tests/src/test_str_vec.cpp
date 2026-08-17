@@ -19,6 +19,15 @@ struct linear_arena {
    }
 };
 
+template <typename String>
+concept can_reserve_manual_str_vec = requires(
+   String& string, cat::allocator_ref<cat::linear_allocator> allocator
+) { string.reserve(allocator, 1u); };
+
+template <typename String>
+concept can_reserve_raii_str_vec =
+   requires(String& string) { string.reserve(1u); };
+
 }  // namespace
 
 $test(str_vec_maybe_niche) {
@@ -48,6 +57,65 @@ $test(str_vec_maybe_niche) {
    cat::verify(manual_wide_empty.is_empty());
    cat::verify(raii_empty.is_empty());
    cat::verify(raii_wide_empty.is_empty());
+}
+
+$test(str_vec_flags_and_aliases) {
+   constexpr auto pointer_layout = cat::vec_flags::pointer_size_layout;
+   constexpr cat::str_vec_flags copied_flags = pointer_layout;
+   constexpr cat::str_vec_flags null_terminated =
+      cat::str_flags::null_terminated;
+   constexpr auto piped_flags = null_terminated | cat::vec_flags::fixed_size;
+   static_assert(copied_flags.vec.uses_pointer_size_layout);
+   static_assert(!copied_flags.str.is_null_terminated);
+   static_assert(piped_flags.vec.is_fixed_size);
+   static_assert(piped_flags.str.is_null_terminated);
+   static_assert(
+      cat::is_same<
+         cat::str_vec_fixed<>,
+         cat::basic_str_vec<char, pointer_layout | cat::vec_flags::fixed_size>>
+   );
+   static_assert(
+      cat::is_same<
+         cat::small_str_vec<8u>,
+         cat::basic_str_vec<
+            char, pointer_layout | cat::vec_flags::inline_storage(8u)>>
+   );
+   static_assert(cat::is_same<
+                 cat::small_wzstr_vec_fixed<8u>,
+                 cat::basic_str_vec<
+                    wchar_t, cat::str_flags::null_terminated
+                                | pointer_layout
+                                | cat::vec_flags::inline_storage(8u)
+                                | cat::vec_flags::fixed_size>>);
+   static_assert(cat::is_same<
+                 cat::raii::str_vec_fixed<>,
+                 cat::raii::basic_str_vec<
+                    char, pointer_layout | cat::vec_flags::fixed_size,
+                    cat::dyn_allocator>>);
+   static_assert(cat::is_same<
+                 cat::raii::small_zstr_vec<cat::dyn_allocator, 8u>,
+                 cat::raii::basic_str_vec<
+                    char,
+                    cat::str_flags::null_terminated
+                       | pointer_layout
+                       | cat::vec_flags::inline_storage(8u),
+                    cat::dyn_allocator>>);
+   static_assert(!can_reserve_manual_str_vec<cat::str_vec_fixed<>>);
+   static_assert(!can_reserve_raii_str_vec<cat::raii::str_vec_fixed<>>);
+
+   linear_arena arena;
+   cat::small_str_vec<8u> small;
+   small.push_back(arena.alloc, 'a').verify();
+   cat::verify(small.capacity() == 8u);
+   small.free(arena.alloc);
+
+   constexpr auto growth =
+      cat::vec_flags::pointer_size_layout | cat::vec_flags::initial_growth(8u);
+   auto grown =
+      cat::make_str_vec<cat::linear_allocator, growth>(arena.alloc, "a")
+         .verify();
+   cat::verify(grown.capacity() == 8u);
+   grown.free(arena.alloc);
 }
 
 $test(string_fill) {

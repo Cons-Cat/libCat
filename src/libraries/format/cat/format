@@ -834,19 +834,6 @@ format_nested(format_context& context, T const& value) -> scaredy_format<void> {
    return formatter<T>{}.format(value, context);
 }
 
-template <typename String>
-auto
-format_char_string(bool debug, String const& value, format_context& context)
-   -> scaredy_format<void> {
-   char const* p_data = value.data();
-   str_view const string =
-      p_data == nullptr ? str_view() : str_view(p_data, value.size());
-   if (debug) {
-      return append_escaped(context, string, '"');
-   }
-   return context.append(string);
-}
-
 // Format an arithmetic value straight into the output buffer, avoiding a
 // temporary allocation and an extra copy. This mirrors `{fmt}`, which writes
 // digits directly into its output.
@@ -1056,7 +1043,13 @@ struct formatter<T, CharT> : debug_formatter<CharT> {
    auto
    format(T const& value, format_context& context) const
       -> scaredy_format<void> {
-      return detail::format_char_string(this->debug, value, context);
+      char const* p_data = value.data();
+      str_view const string =
+         p_data == nullptr ? str_view() : str_view(p_data, value.size());
+      if (this->debug) {
+         return detail::append_escaped(context, string, '"');
+      }
+      return context.append(string);
    }
 };
 

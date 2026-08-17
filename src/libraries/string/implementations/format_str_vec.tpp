@@ -11,15 +11,20 @@
 
 namespace cat {
 
-template <bool null_terminated, typename CharT>
+template <str_vec_flags flags, typename CharT>
    requires(is_same<CharT, char>)
-struct formatter<basic_str_vec<char, null_terminated>, CharT>
-    : debug_formatter<CharT> {
+struct formatter<basic_str_vec<char, flags>, CharT> : debug_formatter<CharT> {
    auto
    format(
-      basic_str_vec<char, null_terminated> const& value, format_context& context
+      basic_str_vec<char, flags> const& value, format_context& context
    ) const -> scaredy_format<void> {
-      return detail::format_char_string(this->debug, value, context);
+      char const* p_data = value.data();
+      str_view const string =
+         p_data == nullptr ? str_view() : str_view(p_data, value.size());
+      if (this->debug) {
+         return detail::append_escaped(context, string, '"');
+      }
+      return context.append(string);
    }
 };
 
