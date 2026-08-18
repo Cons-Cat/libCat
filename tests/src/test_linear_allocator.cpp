@@ -44,12 +44,12 @@ $test(linear_allocator) {
       cat::maybe handle = allocator.alloc<int4>();
       if (handle.is_empty()) {
          cat::verify(i == 6);
-         goto overallocated;
+         break;
       }
-   }
-   cat::verify(false);
 
-overallocated:
+      cat::verify(i < 6);
+   }
+
    // Invalidate all memory handles, and allocate again.
    allocator.reset();
    for (int4 i = 0; i < 4; ++i) {
