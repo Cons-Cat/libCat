@@ -22,6 +22,21 @@ if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 23)
     "(`${CMAKE_CXX_COMPILER}`).")
 endif()
 
+# Clang accepts `-fexec-charset`, but only UTF-8. Confirm before relying on it.
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag(-fexec-charset=UTF-8 CAT_HAS_FEXEC_CHARSET_UTF8)
+if (NOT CAT_HAS_FEXEC_CHARSET_UTF8)
+  message(FATAL_ERROR
+    "libCat requires `-fexec-charset=UTF-8` "
+    "(`${CMAKE_CXX_COMPILER}` rejected it).")
+endif()
+check_cxx_compiler_flag(-finput-charset=UTF-8 CAT_HAS_FINPUT_CHARSET_UTF8)
+if (NOT CAT_HAS_FINPUT_CHARSET_UTF8)
+  message(FATAL_ERROR
+    "libCat requires `-finput-charset=UTF-8` "
+    "(`${CMAKE_CXX_COMPILER}` rejected it).")
+endif()
+
 # Unconditional ASan-runtime probe. One source of truth for the opt-in check
 # below, the RPATH block further down, and `cat_shared.cmake`'s REPL preload.
 # `-print-file-name` echoes the bare filename on miss, so `IS_ABSOLUTE` is the
@@ -110,6 +125,11 @@ list(
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   # `global_includes.hpp` must be available everywhere.
   -include global_includes.hpp
+
+  # Ordinary `char` / `str_*` literals are UTF-8. That's an important property for
+  # libCat. This is Clang's default on all platforms, but it's an explicit precondition.
+  -finput-charset=UTF-8
+  -fexec-charset=UTF-8
 
   # Enable CPU intrinsics required by the SIMD headers:
   # TODO: These should be optional.

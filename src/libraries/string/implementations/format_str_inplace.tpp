@@ -11,18 +11,16 @@
 
 namespace cat {
 
-template <idx inline_capacity, str_vec_flags flags, typename CharT>
-   requires(is_same<CharT, char>)
-struct formatter<basic_str_inplace<char, inline_capacity, flags>, CharT>
-    : debug_formatter<CharT> {
+template <typename CharT, idx inline_capacity, str_vec_flags flags>
+   requires(is_char_utf8_interconvertible<CharT>)
+struct formatter<basic_str_inplace<CharT, inline_capacity, flags>, char>
+    : debug_formatter<char> {
    auto
    format(
-      basic_str_inplace<char, inline_capacity, flags> const& value,
+      basic_str_inplace<CharT, inline_capacity, flags> const& value,
       format_context& context
    ) const -> scaredy_format<void> {
-      char const* p_data = value.data();
-      str_view const string =
-         p_data == nullptr ? str_view() : str_view(p_data, value.size());
+      str_view const string = str_view(basic_str_span<CharT const>(value));
       if (this->debug) {
          return detail::append_escaped(context, string, '"');
       }

@@ -2,7 +2,10 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/container>
+// `cat::str_flags` configures whether a string type is null-terminated.
+// This header is dependency-free so low-level headers such as `<cat/debug>`
+// and `<cat/maybe>` can use `str_flags` as a `basic_str_span` template
+// parameter without pulling in `str_vec_flags`.
 
 namespace cat {
 
@@ -28,50 +31,5 @@ struct str_flags {
 };
 
 inline constexpr str_flags str_flags::null_terminated{true};
-
-struct str_vec_flags {
-   str_flags const str;
-   vec_flags const vec = {};
-
-   constexpr str_vec_flags() = default;
-
-   constexpr str_vec_flags(str_flags flags) : str(flags) {
-   }
-
-   constexpr str_vec_flags(vec_flags flags) : vec(flags) {
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator|(str_vec_flags left, str_vec_flags right) -> str_vec_flags {
-      return str_vec_flags{left.str | right.str, left.vec | right.vec};
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator|(str_flags left, str_vec_flags right) -> str_vec_flags {
-      return str_vec_flags{left | right.str, right.vec};
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator|(str_vec_flags left, str_flags right) -> str_vec_flags {
-      return str_vec_flags{left.str | right, left.vec};
-   }
-
-   friend constexpr auto
-   operator|(str_flags string_flags, vec_flags vector_flags) -> str_vec_flags;
-
- private:
-   constexpr str_vec_flags(str_flags string_flags, vec_flags vector_flags)
-       : str(string_flags), vec(vector_flags) {
-   }
-};
-
-[[nodiscard]]
-constexpr auto
-operator|(str_flags string_flags, vec_flags vector_flags) -> str_vec_flags {
-   return str_vec_flags{string_flags, vector_flags};
-}
 
 }  // namespace cat

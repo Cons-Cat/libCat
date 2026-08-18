@@ -21,6 +21,9 @@
 //  `cat::raii::str_vec<Allocator>`, a `raii::basic_str_vec` of `char`.
 //  `cat::raii::zstr_vec<Allocator>`, a null-terminated `raii::basic_str_vec` of
 //     `char`.
+//  `cat::raii::u8str_vec` / `zu8str_vec`, likewise for `char8_t`.
+//  `cat::raii::u16str_vec` / `zu16str_vec`, likewise for `char16_t`.
+//  `cat::raii::u32str_vec` / `zu32str_vec`, likewise for `char32_t`.
 //  `cat::raii::wstr_vec<Allocator>`, a `raii::basic_str_vec` of `wchar_t`.
 //  `cat::raii::wzstr_vec<Allocator>`, a null-terminated `raii::basic_str_vec`
 //  of
@@ -50,6 +53,39 @@ using zstr_vec =
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
+using u8str_vec = basic_str_vec<char8_t, flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu8str_vec =
+   basic_str_vec<char8_t, str_flags::null_terminated | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u16str_vec = basic_str_vec<char16_t, flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu16str_vec =
+   basic_str_vec<char16_t, str_flags::null_terminated | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u32str_vec = basic_str_vec<char32_t, flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu32str_vec =
+   basic_str_vec<char32_t, str_flags::null_terminated | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec = basic_str_vec<wchar_t, flags, Allocator>;
 
 template <
@@ -69,6 +105,45 @@ template <
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_fixed = basic_str_vec<
    char, str_flags::null_terminated | vec_flags::fixed_size | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u8str_vec_fixed =
+   basic_str_vec<char8_t, vec_flags::fixed_size | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu8str_vec_fixed = basic_str_vec<
+   char8_t, str_flags::null_terminated | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u16str_vec_fixed =
+   basic_str_vec<char16_t, vec_flags::fixed_size | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu16str_vec_fixed = basic_str_vec<
+   char16_t, str_flags::null_terminated | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u32str_vec_fixed =
+   basic_str_vec<char32_t, vec_flags::fixed_size | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu32str_vec_fixed = basic_str_vec<
+   char32_t, str_flags::null_terminated | vec_flags::fixed_size | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
@@ -94,6 +169,48 @@ template <
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using small_zstr_vec = basic_str_vec<
    char,
+   str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u8str_vec = basic_str_vec<
+   char8_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu8str_vec = basic_str_vec<
+   char8_t,
+   str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u16str_vec = basic_str_vec<
+   char16_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu16str_vec = basic_str_vec<
+   char16_t,
+   str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u32str_vec = basic_str_vec<
+   char32_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu32str_vec = basic_str_vec<
+   char32_t,
    str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
    Allocator>;
 
@@ -133,6 +250,63 @@ using small_zstr_vec_fixed = basic_str_vec<
 template <
    is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
    str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u8str_vec_fixed = basic_str_vec<
+   char8_t,
+   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu8str_vec_fixed = basic_str_vec<
+   char8_t,
+   str_flags::null_terminated
+      | vec_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u16str_vec_fixed = basic_str_vec<
+   char16_t,
+   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu16str_vec_fixed = basic_str_vec<
+   char16_t,
+   str_flags::null_terminated
+      | vec_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u32str_vec_fixed = basic_str_vec<
+   char32_t,
+   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu32str_vec_fixed = basic_str_vec<
+   char32_t,
+   str_flags::null_terminated
+      | vec_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
 using small_wstr_vec_fixed = basic_str_vec<
    wchar_t,
    vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
@@ -155,11 +329,11 @@ namespace cat {
 
 template <typename CharT, str_vec_flags flags, is_allocator Allocator>
 basic_str_span(raii::basic_str_vec<CharT, flags, Allocator>&)
-   -> basic_str_span<CharT, flags.str.is_null_terminated>;
+   -> basic_str_span<CharT, flags.str>;
 
 template <typename CharT, str_vec_flags flags, is_allocator Allocator>
 basic_str_span(raii::basic_str_vec<CharT, flags, Allocator> const&)
-   -> basic_str_span<CharT const, flags.str.is_null_terminated>;
+   -> basic_str_span<CharT const, flags.str>;
 
 }  // namespace cat
 
@@ -181,6 +355,12 @@ template <typename CharT, str_vec_flags configuration, is_allocator Allocator>
 class
    [[clang::preferred_name(str_vec<Allocator>),
      clang::preferred_name(zstr_vec<Allocator>),
+     clang::preferred_name(u8str_vec<Allocator>),
+     clang::preferred_name(zu8str_vec<Allocator>),
+     clang::preferred_name(u16str_vec<Allocator>),
+     clang::preferred_name(zu16str_vec<Allocator>),
+     clang::preferred_name(u32str_vec<Allocator>),
+     clang::preferred_name(zu32str_vec<Allocator>),
      clang::preferred_name(wstr_vec<Allocator>),
      clang::preferred_name(wzstr_vec<Allocator>), gsl::Owner]]
    basic_str_vec : public container_interface<
@@ -251,11 +431,10 @@ class
       return m_core == rhs.m_core;
    }
 
-   template <bool other_is_null_terminated>
+   template <str_flags other_flags>
    [[nodiscard]]
    constexpr auto
-   operator==(basic_str_span<CharT const, other_is_null_terminated> rhs) const
-      -> bool {
+   operator==(basic_str_span<CharT const, other_flags> rhs) const -> bool {
       return m_core == rhs;
    }
 
@@ -303,34 +482,32 @@ class
 
    [[nodiscard]]
    constexpr auto
-   view() const [[clang::lifetimebound]] -> basic_str_span<CharT const, false> {
+   view() const [[clang::lifetimebound]] -> basic_str_span<CharT const> {
       return m_core.view();
    }
 
    [[nodiscard]]
    constexpr auto
-   span() [[clang::lifetimebound]]
-   -> basic_str_span<CharT, flags.str.is_null_terminated> {
+   span() [[clang::lifetimebound]] -> basic_str_span<CharT, flags.str> {
       return m_core.span();
    }
 
    [[nodiscard]]
    constexpr auto
    span() const [[clang::lifetimebound]]
-   -> basic_str_span<CharT const, flags.str.is_null_terminated> {
+   -> basic_str_span<CharT const, flags.str> {
       return m_core.span();
    }
 
    [[nodiscard]]
    constexpr
-   operator basic_str_span<CharT, flags.str.is_null_terminated>()
-      [[clang::lifetimebound]] {
+   operator basic_str_span<CharT, flags.str>() [[clang::lifetimebound]] {
       return this->span();
    }
 
    [[nodiscard]]
    constexpr
-   operator basic_str_span<CharT const, flags.str.is_null_terminated>() const
+   operator basic_str_span<CharT const, flags.str>() const
       [[clang::lifetimebound]] {
       return this->span();
    }
@@ -416,15 +593,32 @@ class
 
    [[nodiscard]]
    constexpr auto
-   append(basic_str_span<CharT const, false> string) -> maybe<void> {
+   append(basic_str_span<CharT const> string) -> maybe<void> {
       return m_core.append(m_allocator, string);
    }
 
    [[nodiscard]]
    constexpr auto
-   append(basic_str_span<CharT const, true> string) -> maybe<void> {
+   append(basic_str_span<CharT const, str_flags::null_terminated> string)
+      -> maybe<void> {
       return m_core.append(m_allocator, string);
    }
+
+   template <typename OtherChar, idx extent>
+      requires(encoding_compatible_char<CharT, OtherChar>)
+   [[nodiscard]]
+   constexpr auto
+   append(OtherChar const (&string)[extent]) -> maybe<void> {
+      return m_core.append(m_allocator, string);
+   }
+
+   template <typename OtherChar, idx extent>
+      requires(is_string_char<OtherChar>
+               && !encoding_compatible_char<CharT, OtherChar>)
+   constexpr auto
+   append(OtherChar const (&)[extent])
+      -> maybe<void> = delete ("Cannot copy between different character "
+                               "encodings! Transcode the string first.");
 
    // Append every element of `range`.
    template <is_iterable Range>
@@ -521,9 +715,9 @@ struct formatter;
 
 // Implementing this here is a circular dependency. The implementation can be
 // found in <cat/string/implementations/format_raii_str_vec.tpp>.
-template <str_vec_flags flags, is_allocator Allocator, typename CharT>
-   requires(is_same<CharT, char>)
-struct formatter<raii::basic_str_vec<char, flags, Allocator>, CharT>;
+template <typename CharT, str_vec_flags flags, is_allocator Allocator>
+   requires(is_char_utf8_interconvertible<CharT>)
+struct formatter<raii::basic_str_vec<CharT, flags, Allocator>, char>;
 
 }  // namespace cat
 
@@ -534,7 +728,7 @@ constexpr auto
 append_raii_str_vec_parts(
    String& string, First const& first, Rest const&... rest
 ) -> maybe<void> {
-   basic_str_span<CharT const, false> const view = basic_str_span(first);
+   basic_str_span<CharT const> const view = basic_str_span(first);
    $prop(string.append(view));
    if constexpr (sizeof...(Rest) == 0u) {
       return monostate;
@@ -553,7 +747,7 @@ make_raii_str_vec(allocator_ref<Allocator> allocator, Strings const&... strings)
    raii::basic_str_vec<CharT, flags, Allocator> new_string(allocator);
    idx content_size = 0u;
    ((content_size +=
-     basic_str_span<CharT const, false>(basic_str_span(strings)).size()),
+     basic_str_span<CharT const>(basic_str_span(strings)).size()),
     ...);
    $prop(new_string.reserve(
       max(content_size, new_string.flags.vec.initial_growth_count)

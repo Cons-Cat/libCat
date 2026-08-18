@@ -307,20 +307,16 @@ allocator_interface<Derived>::cfree(span<T> handle) {
 // Convenience wrappers for string allocations.
 
 template <typename Derived>
-template <typename CharT, bool is_null_terminated>
+template <typename CharT, str_flags flags>
 constexpr void
-allocator_interface<Derived>::free(
-   basic_str_span<CharT, is_null_terminated> handle
-) {
+allocator_interface<Derived>::free(basic_str_span<CharT, flags> handle) {
    this->free_multi(span<CharT>{handle.data(), handle.size()});
 }
 
 template <typename Derived>
-template <typename CharT, bool is_null_terminated>
+template <typename CharT, str_flags flags>
 constexpr void
-allocator_interface<Derived>::cfree(
-   basic_str_span<CharT, is_null_terminated> handle
-) {
+allocator_interface<Derived>::cfree(basic_str_span<CharT, flags> handle) {
    this->cfree_multi(span<CharT>{handle.data(), handle.size()});
 }
 

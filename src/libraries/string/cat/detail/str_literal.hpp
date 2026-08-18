@@ -91,7 +91,7 @@ class
    using const_iterator = CharT const*;
    using size_type = idx;
    using difference_type = iword;
-   using view_type = basic_str_span<CharT const, false>;
+   using view_type = basic_str_span<CharT const>;
 
    CharT data_[fixed_size + 1u]{};
 

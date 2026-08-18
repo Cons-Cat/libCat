@@ -71,12 +71,14 @@ class source_location {
 
 // NOLINTEND(bugprone-std-namespace-modification)
 
+#include <cat/detail/str_flags.hpp>
+
 namespace cat {
 
-template <typename CharT, bool null_terminated>
+template <typename CharT, str_flags flags>
 class basic_str_span;
 
-using str_view = basic_str_span<char const, false>;
+using str_view = basic_str_span<char const, str_flags{}>;
 
 using std::source_location;
 

@@ -23,6 +23,25 @@ def register_libcat_commands():
     cat_allocator.register_commands(register_user_command)
 
 
+def _str_flags_null_terminated(gdb_type, flags_argument):
+    # `str_flags` and `str_vec_flags` are class-type non-type template
+    # parameters. Clang emits these as optimized out, so GDB cannot read their
+    # members. Fall back to the preferred type name, whose `z` prefix marks a
+    # null-terminated string type.
+    try:
+        flags = gdb_type.template_argument(flags_argument)
+        try:
+            return str(flags['is_null_terminated']) == 'true'
+        except (gdb.error, RuntimeError):
+            return str(flags['str']['is_null_terminated']) == 'true'
+    except (gdb.error, RuntimeError):
+        # If the flag is optimized out, parse the symbol name for `z`:
+        name = str(gdb_type).rsplit('::', 1)[-1].split('<', 1)[0]
+        if name.startswith('w'):
+            name = name[1:]
+        return name.startswith('z')
+
+
 @cat_type('monostate_type')
 class MonostatePrinter:
     "Print a `cat::monostate`"
@@ -159,7 +178,7 @@ class StrSpanPrinter:
     def __init__(self, val: gdb.Value):
         self.m_p_data = val['m_p_data']
         self.m_size = val['m_size']['raw']
-        self.is_null_terminated = str(val.type.template_argument(1)) == 'true'
+        self.is_null_terminated = _str_flags_null_terminated(val.type, 1)
         return
 
     def to_string(self):
@@ -191,8 +210,7 @@ class StrInplacePrinter:
 
     def __init__(self, val: gdb.Value):
         self.m_data = val['m_data']
-        flags = val.type.template_argument(2)
-        self.is_null_terminated = str(flags['str']['is_null_terminated']) == 'true'
+        self.is_null_terminated = _str_flags_null_terminated(val.type, 2)
 
         character_type = self.m_data.type.target().strip_typedefs()
         self.m_size = self.m_data.type.sizeof // character_type.sizeof

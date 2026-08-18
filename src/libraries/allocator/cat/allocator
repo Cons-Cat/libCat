@@ -5629,13 +5629,13 @@ class allocator_interface {
    cfree(span<T> handle);
 
    // Invalidate a `basic_str_span` handle, such as `str_view` or `str_span`.
-   template <typename CharT, bool is_null_terminated>
+   template <typename CharT, str_flags flags>
    constexpr void
-   free(basic_str_span<CharT, is_null_terminated> handle);
+   free(basic_str_span<CharT, flags> handle);
 
-   template <typename CharT, bool is_null_terminated>
+   template <typename CharT, str_flags flags>
    constexpr void
-   cfree(basic_str_span<CharT, is_null_terminated> handle);
+   cfree(basic_str_span<CharT, flags> handle);
 
    // Get a non-`const` handle to the data in any memory handle. If that memory
    // handle is to a multi-allocation, this returns a `span`.

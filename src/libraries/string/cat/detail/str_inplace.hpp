@@ -18,6 +18,10 @@
 //  `cat::zstr_inplace<n>`, a null-terminated `basic_str_inplace` of up to `n`
 //  `char`s.
 //
+//  `cat::u8str_inplace<n>` / `zu8str_inplace<n>`, likewise for `char8_t`.
+//  `cat::u16str_inplace<n>` / `zu16str_inplace<n>`, likewise for `char16_t`.
+//  `cat::u32str_inplace<n>` / `zu32str_inplace<n>`, likewise for `char32_t`.
+//
 //  `cat::wstr_inplace<n>`, a `basic_str_inplace` of up to `n` `wchar_t`s.
 //
 //  `cat::wzstr_inplace<n>`, a null-terminated `basic_str_inplace` of up to `n`
@@ -27,14 +31,12 @@
 //
 //  `cat::zstr_inplace_fixed<n>`, a `zstr_inplace` of exactly `n` `char`s.
 //
-//  `cat::wstr_inplace_fixed<n>`, a `wstr_inplace` of exactly `n` `wchar_t`s.
-//
-//  `cat::wzstr_inplace_fixed<n>`, a `wzstr_inplace` of exactly `n` `wchar_t`s.
+//  Fixed variants exist for `u8` / `u16` / `u32` / `w` as well.
 //
 // This class is non-structural, so it cannot be used as a non-type template
 // parameter unlike `cat::str_literal`.
 
-#include <cat/detail/str_flags.hpp>
+#include <cat/detail/str_vec_flags.hpp>
 
 #include <cat/math>
 #include <cat/maybe>
@@ -68,6 +70,27 @@ using zstr_inplace =
    basic_str_inplace<char, inline_capacity, str_flags::null_terminated | flags>;
 
 template <idx inline_capacity, str_vec_flags flags = {}>
+using u8str_inplace = basic_str_inplace<char8_t, inline_capacity, flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using zu8str_inplace = basic_str_inplace<
+   char8_t, inline_capacity, str_flags::null_terminated | flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using u16str_inplace = basic_str_inplace<char16_t, inline_capacity, flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using zu16str_inplace = basic_str_inplace<
+   char16_t, inline_capacity, str_flags::null_terminated | flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using u32str_inplace = basic_str_inplace<char32_t, inline_capacity, flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using zu32str_inplace = basic_str_inplace<
+   char32_t, inline_capacity, str_flags::null_terminated | flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
 using wstr_inplace = basic_str_inplace<wchar_t, inline_capacity, flags>;
 
 template <idx inline_capacity, str_vec_flags flags = {}>
@@ -84,6 +107,33 @@ using zstr_inplace_fixed = basic_str_inplace<
    str_flags::null_terminated | vec_flags::fixed_size | flags>;
 
 template <idx inline_capacity, str_vec_flags flags = {}>
+using u8str_inplace_fixed =
+   basic_str_inplace<char8_t, inline_capacity, vec_flags::fixed_size | flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using zu8str_inplace_fixed = basic_str_inplace<
+   char8_t, inline_capacity,
+   str_flags::null_terminated | vec_flags::fixed_size | flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using u16str_inplace_fixed =
+   basic_str_inplace<char16_t, inline_capacity, vec_flags::fixed_size | flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using zu16str_inplace_fixed = basic_str_inplace<
+   char16_t, inline_capacity,
+   str_flags::null_terminated | vec_flags::fixed_size | flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using u32str_inplace_fixed =
+   basic_str_inplace<char32_t, inline_capacity, vec_flags::fixed_size | flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
+using zu32str_inplace_fixed = basic_str_inplace<
+   char32_t, inline_capacity,
+   str_flags::null_terminated | vec_flags::fixed_size | flags>;
+
+template <idx inline_capacity, str_vec_flags flags = {}>
 using wstr_inplace_fixed =
    basic_str_inplace<wchar_t, inline_capacity, vec_flags::fixed_size | flags>;
 
@@ -97,6 +147,12 @@ class
    [[clang::trivial_abi,
      clang::preferred_name(str_inplace<inline_capacity, flags>),
      clang::preferred_name(zstr_inplace<inline_capacity, flags>),
+     clang::preferred_name(u8str_inplace<inline_capacity, flags>),
+     clang::preferred_name(zu8str_inplace<inline_capacity, flags>),
+     clang::preferred_name(u16str_inplace<inline_capacity, flags>),
+     clang::preferred_name(zu16str_inplace<inline_capacity, flags>),
+     clang::preferred_name(u32str_inplace<inline_capacity, flags>),
+     clang::preferred_name(zu32str_inplace<inline_capacity, flags>),
      clang::preferred_name(wstr_inplace<inline_capacity, flags>),
      clang::preferred_name(wzstr_inplace<inline_capacity, flags>), gsl::Owner]]
    basic_str_inplace
@@ -150,6 +206,35 @@ class
       }
       this->write_terminator();
    }
+
+   template <typename OtherChar, idx extent>
+      requires(
+         !is_same<CharT, OtherChar>
+         && encoding_compatible_char<CharT, OtherChar>
+         && (flags.vec.is_fixed_size ? extent == inline_capacity + 1u : extent <= inline_capacity + 1u)
+      )
+   consteval basic_str_inplace(OtherChar const (&string)[extent]) {
+      [[assume(string[extent.raw - 1u] == OtherChar{'\0'})]];
+      idx const content_size = idx(extent - 1u);
+
+      if constexpr (!flags.vec.is_fixed_size) {
+         this->m_size = content_size;
+      }
+
+      for (idx index; index < content_size; ++index) {
+         m_data[index] = string[index];
+      }
+
+      this->write_terminator();
+   }
+
+   // TODO: We probably can SIMD copy and transcode these here.
+   template <typename OtherChar, idx extent>
+      requires(is_string_char<OtherChar>
+               && !encoding_compatible_char<CharT, OtherChar>)
+   consteval basic_str_inplace(OtherChar const (&)[extent]) =
+      delete ("Cannot copy between different character encodings! Transcode "
+              "the string first.");
 
    template <idx other_capacity, str_vec_flags other_flags>
    [[nodiscard]]
@@ -338,6 +423,35 @@ class
       return monostate;
    }
 
+   template <typename OtherChar, idx extent>
+      requires(
+         !flags.vec.is_fixed_size && !is_same<CharT, OtherChar>
+         && encoding_compatible_char<CharT, OtherChar>
+      )
+   [[nodiscard]]
+   constexpr auto
+   append(OtherChar const (&string)[extent]) -> maybe<void> {
+      idx const count = idx(extent - 1u);
+      if (count > inline_capacity - size()) {
+         return nullopt;
+      }
+      for (idx index; index < count; ++index) {
+         m_data[this->m_size + index] = string[index];
+      }
+      this->m_size += count;
+      this->write_terminator();
+      return monostate;
+   }
+
+   // TODO: We probably can SIMD copy and transcode these here.
+   template <typename OtherChar, idx extent>
+      requires(is_string_char<OtherChar>
+               && !encoding_compatible_char<CharT, OtherChar>)
+   constexpr auto
+   append(OtherChar const (&)[extent])
+      -> maybe<void> = delete ("Cannot copy between different character "
+                               "encodings! Transcode the string first.");
+
    template <typename Range>
       requires(has_size<Range> && !flags.vec.is_fixed_size)
    [[nodiscard]]
@@ -503,14 +617,26 @@ struct formatter;
 
 // Implementing this here is a circular dependency. The implementation can be
 // found in <cat/string/implementations/format_str_inplace.tpp>.
-template <idx inline_capacity, str_vec_flags flags, typename CharT>
-   requires(is_same<CharT, char>)
-struct formatter<basic_str_inplace<char, inline_capacity, flags>, CharT>;
+template <typename CharT, idx inline_capacity, str_vec_flags flags>
+   requires(is_char_utf8_interconvertible<CharT>)
+struct formatter<basic_str_inplace<CharT, inline_capacity, flags>, char>;
 
 // Deduce the length of string literals without a null-terminator.
 template <idx len>
 basic_str_inplace(char const (&str)[len])
    -> basic_str_inplace<char, idx(len - 1u)>;
+
+template <idx len>
+basic_str_inplace(char8_t const (&str)[len])
+   -> basic_str_inplace<char8_t, idx(len - 1u)>;
+
+template <idx len>
+basic_str_inplace(char16_t const (&str)[len])
+   -> basic_str_inplace<char16_t, idx(len - 1u)>;
+
+template <idx len>
+basic_str_inplace(char32_t const (&str)[len])
+   -> basic_str_inplace<char32_t, idx(len - 1u)>;
 
 template <idx len>
 basic_str_inplace(wchar_t const (&str)[len])

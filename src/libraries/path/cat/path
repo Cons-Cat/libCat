@@ -44,12 +44,12 @@ inline constexpr str_vec_flags path_default_flags =
    | vec_flags::initial_growth(48u);
 
 template <typename Segment>
-concept is_char_basic_string =
-   is_basic_string<Segment>
+concept is_char_safe_string =
+   is_safe_string<Segment>
    && is_same<remove_const<typename remove_cvref<Segment>::value_type>, char>;
 
 template <typename Segment>
-   requires(is_char_basic_string<Segment>)
+   requires(is_char_safe_string<Segment>)
 [[nodiscard]]
 constexpr auto
 path_segment_view(Segment const& segment) -> str_view {
@@ -72,7 +72,7 @@ path_segment_view(char (&segment)[extent]) -> str_view {
 
 template <typename Segment>
    requires(
-      !is_char_basic_string<Segment> && !is_array<Segment>
+      !is_char_safe_string<Segment> && !is_array<Segment>
       && requires(Segment const& segment) { str_view(segment); }
    )
 [[nodiscard]]

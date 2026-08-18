@@ -106,6 +106,9 @@ inline constexpr detail::nullopt_type nullopt;
 // `contiguous_position_interface` mixin. Including it here breaks a circular
 // dependency.
 #include <cat/detail/iterable_interface.hpp>
+// Including `<cat/str_span.hpp> introduces a circular dependency, and we need
+// `str_flags` to forward declare it.
+#include <cat/detail/str_flags.hpp>
 
 namespace cat {
 // Forward declarations.
@@ -153,10 +156,10 @@ concept maybe_converts_from_any_cvref =
    || is_convertible<W const, T>;
 }  // namespace detail
 
-template <typename CharT, bool null_terminated>
+template <typename CharT, str_flags flags>
 class basic_str_span;
 
-using str_view = basic_str_span<char const, false>;
+using str_view = basic_str_span<char const, str_flags{}>;
 
 // `maybe_value_storage` holds a non-reference, non-pointer, non-`void` type `T`
 // and a `bool` flag to represent holding a value or not.

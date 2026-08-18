@@ -648,3 +648,31 @@ $test(fmt_to_streams_past_staging_buffer) {
    cat::verify(output[300u] == 'z');
    cat::verify(output[301u] == ']');
 }
+
+$test(format_utf8_strings) {
+   cat::span page = pager.alloc_multi<cat::byte>(4_uki).verify();
+   $defer {
+      pager.free(page);
+   };
+   auto allocator = make_linear_allocator(page);
+
+   // When `char` / `str_*` strings are UTF-8 under Clang (`-fexec-charset`),
+   // the type system considers them interconvertible.
+
+   // Puppydog (kukkur), kitty (billi):
+   cat::str_view const greeting =
+      cat::fmt(allocator, "कुक्कुर {}", "बिल्ली").verify();
+   cat::verify(greeting == "कुक्कुर बिल्ली");
+   cat::verify(cat::fmt(allocator, "{:?}", "कुक्कुर").verify() == R"("कुक्कुर")");
+
+   // My pwetty kitty (ladle billu ^-^):
+   cat::u8str_view const utf8_word = u8"लाड़ला बिल्लू";
+   cat::verify(cat::fmt(allocator, "{}", utf8_word).verify() == "लाड़ला बिल्लू");
+   cat::verify(
+      cat::fmt(allocator, "{:?}", utf8_word).verify() == R"("लाड़ला बिल्लू")"
+   );
+
+   // Miaow:
+   cat::u8str_inplace inplace = u8"म्याऊँ";
+   cat::verify(cat::fmt(allocator, "{}", inplace).verify() == "म्याऊँ");
+}

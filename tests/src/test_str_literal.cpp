@@ -77,15 +77,19 @@ $test(str_literal_concat_compare_and_swap) {
 }
 
 $test(str_literal_character_aliases) {
-   constexpr cat::basic_str_literal utf8 = u8"cat";
-   constexpr cat::basic_str_literal utf16 = u"cat";
-   constexpr cat::basic_str_literal utf32 = U"cat";
-   constexpr cat::basic_str_literal wide = L"cat";
+   // `भारत` (Bharat) is four Devanagari code points. UTF-8 stores three bytes
+   // each. On Linux `wchar_t` is 32-bit, so wide matches UTF-32 length.
+   constexpr cat::basic_str_literal ascii = "भारत";
+   constexpr cat::basic_str_literal utf8 = u8"भारत";
+   constexpr cat::basic_str_literal utf16 = u"भारत";
+   constexpr cat::basic_str_literal utf32 = U"भारत";
+   constexpr cat::basic_str_literal wide = L"भारत";
 
-   static_assert(cat::is_same<decltype(utf8), cat::u8str_literal<3> const>);
-   static_assert(cat::is_same<decltype(utf16), cat::u16str_literal<3> const>);
-   static_assert(cat::is_same<decltype(utf32), cat::u32str_literal<3> const>);
-   static_assert(cat::is_same<decltype(wide), cat::wstr_literal<3> const>);
+   static_assert(cat::is_same<decltype(ascii), cat::str_literal<12> const>);
+   static_assert(cat::is_same<decltype(utf8), cat::u8str_literal<12> const>);
+   static_assert(cat::is_same<decltype(utf16), cat::u16str_literal<4> const>);
+   static_assert(cat::is_same<decltype(utf32), cat::u32str_literal<4> const>);
+   static_assert(cat::is_same<decltype(wide), cat::wstr_literal<4> const>);
 }
 
 $test(str_literal_wide_char) {

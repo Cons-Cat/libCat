@@ -8,6 +8,28 @@
 // is done using the `--include` flag, as in `--include global_includes.hpp`.
 // The `CMakeLists.txt` in this repository's top level directory does this.
 
+// Clang reports ordinary string-literal encoding through
+// `__clang_literal_encoding__`. libCat requires UTF-8 (`-fexec-charset=UTF-8`).
+#ifndef __clang_literal_encoding__
+#error "libCat requires Clang's `__clang_literal_encoding__` predefined macro!"
+#endif
+#ifndef __clang_wide_literal_encoding__
+#error \
+   "libCat requires Clang's `__clang_wide_literal_encoding__` predefined macro!"
+#endif
+namespace cat::detail {
+consteval auto
+literal_encoding_is_utf8() -> bool {
+   return __builtin_strcmp(__clang_literal_encoding__, "UTF-8") == 0;
+}
+}  // namespace cat::detail
+
+static_assert(
+   cat::detail::literal_encoding_is_utf8(),
+   "libCat requires `-fexec-charset=UTF-8` so ordinary `char` string literals "
+   "are UTF-8!"
+);
+
 namespace cat::detail {
 template <typename F>
 class deferrer_callback {

@@ -19,13 +19,16 @@
 //
 //  `cat::str_vec`, a `basic_str_vec` of `char`.
 //  `cat::zstr_vec`, a null-terminated `basic_str_vec` of `char`.
+//  `cat::u8str_vec` / `zu8str_vec`, likewise for `char8_t`.
+//  `cat::u16str_vec` / `zu16str_vec`, likewise for `char16_t`.
+//  `cat::u32str_vec` / `zu32str_vec`, likewise for `char32_t`.
 //  `cat::wstr_vec`, a `basic_str_vec` of `wchar_t`.
 //  `cat::wzstr_vec`, a null-terminated `basic_str_vec` of `wchar_t`.
 
 #include <cat/iterable>
 #include <cat/vec>
 
-#include "./str_flags.hpp"
+#include "./str_vec_flags.hpp"
 #include "./str_span.hpp"
 
 namespace cat {
@@ -43,6 +46,15 @@ class basic_str_vec;
 using str_vec = basic_str_vec<char>;
 using zstr_vec = basic_str_vec<
    char, str_flags::null_terminated | vec_flags::pointer_size_layout>;
+using u8str_vec = basic_str_vec<char8_t>;
+using zu8str_vec = basic_str_vec<
+   char8_t, str_flags::null_terminated | vec_flags::pointer_size_layout>;
+using u16str_vec = basic_str_vec<char16_t>;
+using zu16str_vec = basic_str_vec<
+   char16_t, str_flags::null_terminated | vec_flags::pointer_size_layout>;
+using u32str_vec = basic_str_vec<char32_t>;
+using zu32str_vec = basic_str_vec<
+   char32_t, str_flags::null_terminated | vec_flags::pointer_size_layout>;
 using wstr_vec = basic_str_vec<wchar_t>;
 using wzstr_vec = basic_str_vec<
    wchar_t, str_flags::null_terminated | vec_flags::pointer_size_layout>;
@@ -53,6 +65,27 @@ using str_vec_fixed = basic_str_vec<char, vec_flags::fixed_size | flags>;
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_fixed = basic_str_vec<
    char, str_flags::null_terminated | vec_flags::fixed_size | flags>;
+
+template <str_vec_flags flags = vec_flags::pointer_size_layout>
+using u8str_vec_fixed = basic_str_vec<char8_t, vec_flags::fixed_size | flags>;
+
+template <str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu8str_vec_fixed = basic_str_vec<
+   char8_t, str_flags::null_terminated | vec_flags::fixed_size | flags>;
+
+template <str_vec_flags flags = vec_flags::pointer_size_layout>
+using u16str_vec_fixed = basic_str_vec<char16_t, vec_flags::fixed_size | flags>;
+
+template <str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu16str_vec_fixed = basic_str_vec<
+   char16_t, str_flags::null_terminated | vec_flags::fixed_size | flags>;
+
+template <str_vec_flags flags = vec_flags::pointer_size_layout>
+using u32str_vec_fixed = basic_str_vec<char32_t, vec_flags::fixed_size | flags>;
+
+template <str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu32str_vec_fixed = basic_str_vec<
+   char32_t, str_flags::null_terminated | vec_flags::fixed_size | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec_fixed = basic_str_vec<wchar_t, vec_flags::fixed_size | flags>;
@@ -72,6 +105,42 @@ using small_zstr_vec = basic_str_vec<
    char, str_flags::null_terminated
             | vec_flags::inline_storage(inline_count)
             | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u8str_vec =
+   basic_str_vec<char8_t, vec_flags::inline_storage(inline_count) | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu8str_vec = basic_str_vec<
+   char8_t, str_flags::null_terminated
+               | vec_flags::inline_storage(inline_count)
+               | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u16str_vec =
+   basic_str_vec<char16_t, vec_flags::inline_storage(inline_count) | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu16str_vec = basic_str_vec<
+   char16_t, str_flags::null_terminated
+                | vec_flags::inline_storage(inline_count)
+                | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u32str_vec =
+   basic_str_vec<char32_t, vec_flags::inline_storage(inline_count) | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu32str_vec = basic_str_vec<
+   char32_t, str_flags::null_terminated
+                | vec_flags::inline_storage(inline_count)
+                | flags>;
 
 template <
    idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
@@ -98,6 +167,48 @@ using small_zstr_vec_fixed = basic_str_vec<
             | vec_flags::inline_storage(inline_count)
             | vec_flags::fixed_size
             | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u8str_vec_fixed = basic_str_vec<
+   char8_t,
+   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu8str_vec_fixed = basic_str_vec<
+   char8_t, str_flags::null_terminated
+               | vec_flags::inline_storage(inline_count)
+               | vec_flags::fixed_size
+               | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u16str_vec_fixed = basic_str_vec<
+   char16_t,
+   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu16str_vec_fixed = basic_str_vec<
+   char16_t, str_flags::null_terminated
+                | vec_flags::inline_storage(inline_count)
+                | vec_flags::fixed_size
+                | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_u32str_vec_fixed = basic_str_vec<
+   char32_t,
+   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+
+template <
+   idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
+using small_zu32str_vec_fixed = basic_str_vec<
+   char32_t, str_flags::null_terminated
+                | vec_flags::inline_storage(inline_count)
+                | vec_flags::fixed_size
+                | flags>;
 
 template <
    idx inline_count = 16u, str_vec_flags flags = vec_flags::pointer_size_layout>
@@ -130,6 +241,9 @@ inline namespace manual {
 template <typename CharT, str_vec_flags configuration>
 class
    [[clang::preferred_name(str_vec), clang::preferred_name(zstr_vec),
+     clang::preferred_name(u8str_vec), clang::preferred_name(zu8str_vec),
+     clang::preferred_name(u16str_vec), clang::preferred_name(zu16str_vec),
+     clang::preferred_name(u32str_vec), clang::preferred_name(zu32str_vec),
      clang::preferred_name(wstr_vec), clang::preferred_name(wzstr_vec),
      gsl::Owner]]
    basic_str_vec
@@ -170,14 +284,11 @@ class
       return compare_strings(this->view(), rhs.view());
    }
 
-   template <bool other_is_null_terminated>
+   template <str_flags other_flags>
    [[nodiscard]]
    constexpr auto
-   operator==(basic_str_span<CharT const, other_is_null_terminated> rhs) const
-      -> bool {
-      return compare_strings(
-         this->view(), basic_str_span<CharT const, false>(rhs)
-      );
+   operator==(basic_str_span<CharT const, other_flags> rhs) const -> bool {
+      return compare_strings(this->view(), basic_str_span<CharT const>(rhs));
    }
 
    constexpr auto
@@ -237,7 +348,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   view() const [[clang::lifetimebound]] -> basic_str_span<CharT const, false> {
+   view() const [[clang::lifetimebound]] -> basic_str_span<CharT const> {
       if (m_core.data() == nullptr || size() == 0u) {
          return {};
       }
@@ -246,8 +357,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   span() [[clang::lifetimebound]]
-   -> basic_str_span<CharT, flags.str.is_null_terminated> {
+   span() [[clang::lifetimebound]] -> basic_str_span<CharT, flags.str> {
       if (m_core.data() == nullptr) {
          return {};
       }
@@ -260,7 +370,7 @@ class
    [[nodiscard]]
    constexpr auto
    span() const [[clang::lifetimebound]]
-   -> basic_str_span<CharT const, flags.str.is_null_terminated> {
+   -> basic_str_span<CharT const, flags.str> {
       if (m_core.data() == nullptr) {
          return {};
       }
@@ -272,14 +382,13 @@ class
 
    [[nodiscard]]
    constexpr
-   operator basic_str_span<CharT, flags.str.is_null_terminated>()
-      [[clang::lifetimebound]] {
+   operator basic_str_span<CharT, flags.str>() [[clang::lifetimebound]] {
       return this->span();
    }
 
    [[nodiscard]]
    constexpr
-   operator basic_str_span<CharT const, flags.str.is_null_terminated>() const
+   operator basic_str_span<CharT const, flags.str>() const
       [[clang::lifetimebound]] {
       return this->span();
    }
@@ -480,8 +589,7 @@ class
    [[nodiscard]]
    constexpr auto
    append(
-      allocator_ref<Allocator> allocator,
-      basic_str_span<CharT const, false> string
+      allocator_ref<Allocator> allocator, basic_str_span<CharT const> string
    ) -> maybe<void> {
       if constexpr (!flags.str.is_null_terminated) {
          return m_core.append_range(allocator, string);
@@ -509,24 +617,62 @@ class
    constexpr auto
    append(
       allocator_ref<Allocator> allocator,
-      basic_str_span<CharT const, true> string
+      basic_str_span<CharT const, str_flags::null_terminated> string
    ) -> maybe<void> {
-      return append(allocator, basic_str_span<CharT const, false>(string));
+      return append(allocator, basic_str_span<CharT const>(string));
    }
+
+   template <is_allocator Allocator, typename OtherChar, idx extent>
+      requires(encoding_compatible_char<CharT, OtherChar>)
+   [[nodiscard]]
+   constexpr auto
+   append(allocator_ref<Allocator> allocator, OtherChar const (&string)[extent])
+      -> maybe<void> {
+      basic_str_inplace<CharT, idx(extent - 1u)> converted;
+      $prop(converted.append(string));
+      return append(allocator, basic_str_span<CharT const>(converted));
+   }
+
+   template <is_allocator Allocator, typename OtherChar, idx extent>
+      requires(is_string_char<OtherChar>
+               && !encoding_compatible_char<CharT, OtherChar>)
+   constexpr auto
+   append(allocator_ref<Allocator>, OtherChar const (&)[extent])
+      -> maybe<void> = delete ("Cannot copy between different character "
+                               "encodings! Transcode the string first.");
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append(dyn_allocator allocator, basic_str_span<CharT const, false> string)
+   append(dyn_allocator allocator, basic_str_span<CharT const> string)
       -> maybe<void> {
       return append<dyn_allocator>(allocator, string);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append(dyn_allocator allocator, basic_str_span<CharT const, true> string)
+   append(
+      dyn_allocator allocator,
+      basic_str_span<CharT const, str_flags::null_terminated> string
+   ) -> maybe<void> {
+      return append<dyn_allocator>(allocator, string);
+   }
+
+   template <typename OtherChar, idx extent>
+      requires(encoding_compatible_char<CharT, OtherChar>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   append(dyn_allocator allocator, OtherChar const (&string)[extent])
       -> maybe<void> {
       return append<dyn_allocator>(allocator, string);
    }
+
+   template <typename OtherChar, idx extent>
+      requires(is_string_char<OtherChar>
+               && !encoding_compatible_char<CharT, OtherChar>)
+   constexpr auto
+   append(dyn_allocator, OtherChar const (&)[extent])
+      -> maybe<void> = delete ("Cannot copy between different character "
+                               "encodings! Transcode the string first.");
 
    // Append every element of `range`.
    template <is_allocator Allocator, is_iterable Iterable>
@@ -678,9 +824,9 @@ struct formatter;
 
 // Implementing this here is a circular dependency. The implementation can be
 // found in <cat/string/implementations/format_str_vec.tpp>.
-template <str_vec_flags flags, typename CharT>
-   requires(is_same<CharT, char>)
-struct formatter<basic_str_vec<char, flags>, CharT>;
+template <typename CharT, str_vec_flags flags>
+   requires(is_char_utf8_interconvertible<CharT>)
+struct formatter<basic_str_vec<CharT, flags>, char>;
 
 namespace detail {
 template <typename CharT, str_vec_flags flags>
@@ -705,7 +851,7 @@ append_str_vec_parts(
    basic_str_vec<CharT, flags>& string, allocator_ref<Allocator> allocator,
    First const& first, Rest const&... rest
 ) -> maybe<void> {
-   basic_str_span<CharT const, false> const view = basic_str_span(first);
+   basic_str_span<CharT const> const view = basic_str_span(first);
    $prop(string.append(allocator, view));
    if constexpr (sizeof...(Rest) == 0u) {
       return monostate;
@@ -725,7 +871,7 @@ make_basic_str_vec(
    basic_str_vec<CharT, flags> new_string;
    idx content_size = 0u;
    ((content_size +=
-     basic_str_span<CharT const, false>(basic_str_span(strings)).size()),
+     basic_str_span<CharT const>(basic_str_span(strings)).size()),
     ...);
    $prop(new_string.reserve(
       allocator, max(content_size, new_string.flags.vec.initial_growth_count)

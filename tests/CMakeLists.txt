@@ -58,6 +58,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_string_length.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_inplace.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_literal.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_str_char_aliases.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_view_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_vec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_path.cpp
