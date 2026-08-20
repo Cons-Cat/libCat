@@ -7,10 +7,34 @@
 #include <cat/math>
 #include <cat/random>
 
+// `cat::student_t_distribution` models a standardized mean with `n` degrees
+// of freedom, similar to `std::student_t_distribution`. `Float` is the result
+// and parameter type and defaults to `float8`. The degrees of freedom are read
+// with `.n()`.
+//
+// This can be used to model standardized estimates when variance is uncertain.
+// For example, it can form a confidence interval for a small-sample mean.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    student_t_distribution<float8> student_t(8);
+//    float8 result = student_t(rng);
+//
+// Unlike `std::student_t_distribution`, this implementation supports SIMD.
+// Each degrees-of-freedom lane produces its own statistic:
+//
+//    pcg_dxsm_engine<uint8x2> rng;
+//    student_t_distribution<float8x2> simd_student_t(float8x2(8));
+//    float8x2 results = simd_student_t(rng);
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/student_t_distribution
+
 namespace cat {
 
-// https://en.cppreference.com/w/cpp/numeric/random/student_t_distribution
-template <is_floating_point Float = float8>
+template <typename Float = float8>
+   requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 class student_t_distribution {
  public:
    using result_type = Float;
@@ -64,12 +88,12 @@ class student_t_distribution {
 
    static constexpr auto
    min() -> result_type {
-      return -limits<Float>::max();
+      return -limits<Float>::infinity();
    }
 
    static constexpr auto
    max() -> result_type {
-      return limits<Float>::max();
+      return limits<Float>::infinity();
    }
 
    template <is_uniform_random_bit_generator Generator>

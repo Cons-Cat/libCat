@@ -2,18 +2,42 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/detail/integer_distribution_helpers.hpp>
-
 #include <cat/arithmetic>
 #include <cat/limits>
 #include <cat/random>
 
+#include "./distribution_helpers.hpp"
+#include "./integer_distribution_helpers.hpp"
+
+// `cat::binomial_distribution` models the number of successes in `t`
+// independent trials with success probability `p`, similar to
+// `std::binomial_distribution`. `Int` is the result type and defaults to
+// `int4`. `Float` stores `p` and defaults to `float8`. The parameters are read
+// with `.t()` and `.p()`.
+//
+// This can be used to count successes across a fixed number of independent
+// trials. For example, it can model defective items in a production batch.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    binomial_distribution<int4, float8> binomial(10, 0.25);
+//    int4 result = binomial(rng);
+//
+// Unlike `std::binomial_distribution`, this implementation supports SIMD.
+// Each trial-count lane produces its own result using the shared `p`:
+//
+//    pcg_dxsm_engine<uint4x4> rng;
+//    binomial_distribution<int4x4> simd_binomial(int4x4(10), 0.25);
+//    int4x4 results = simd_binomial(rng);
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/binomial_distribution
+
 namespace cat {
 
-// Reference:
-// https://en.cppreference.com/w/cpp/numeric/random/binomial_distribution
-template <is_integral Int = int4, is_floating_point Float = float8>
-   requires(!is_bool<Int>)
+template <typename Int = int4, is_floating_point Float = float8>
+   requires((is_integral<Int> || is_simd_integral<Int>) && !is_bool<Int>)
 class binomial_distribution {
  public:
    using result_type = Int;
@@ -87,7 +111,7 @@ class binomial_distribution {
 
    constexpr auto
    max() const -> result_type {
-      return limits<result_type>::max();
+      return t();
    }
 
    template <is_uniform_random_bit_generator Generator>
@@ -102,12 +126,27 @@ class binomial_distribution {
       -> result_type {
       result_type result = 0u;
       result_type remaining = parameters.t();
-      Float const probability = parameters.p();
-      while (remaining > 0) {
-         if (detail::distribution_unit<Float>(generator) < probability) {
-            ++result;
+      using sample_type = detail::distribution_float_result<result_type, Float>;
+      sample_type const probability =
+         detail::distribution_broadcast<sample_type>(parameters.p());
+      if constexpr (is_simd<result_type>) {
+         auto active = remaining > result_type(0);
+         while (detail::distribution_any(active)) {
+            auto const sampled =
+               detail::distribution_unit<sample_type>(generator) < probability;
+            auto const success =
+               active && detail::distribution_mask_cast<result_type>(sampled);
+            result += simd_select(success, result_type(1), result_type(0));
+            remaining -= simd_select(active, result_type(1), result_type(0));
+            active = remaining > result_type(0);
          }
-         --remaining;
+      } else {
+         while (remaining > 0) {
+            if (detail::distribution_unit<Float>(generator) < probability) {
+               ++result;
+            }
+            --remaining;
+         }
       }
       return result;
    }

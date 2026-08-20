@@ -6,10 +6,36 @@
 #include <cat/limits>
 #include <cat/random>
 
+// `cat::fisher_f_distribution` models a ratio of scaled chi-squared values.
+// It is similar to `std::fisher_f_distribution`. `m` and `n` are the numerator
+// and denominator degrees of freedom. `Float` is the result and parameter type
+// and defaults to `float8`. The parameters are read with `.m()` and `.n()`.
+//
+// This can be used to model ratios of two independent variance estimates. For
+// example, it can compare variances from two normal populations.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    fisher_f_distribution<float8> fisher_f(5, 10);
+//    float8 result = fisher_f(rng);
+//
+// Unlike `std::fisher_f_distribution`, this implementation supports SIMD.
+// Each degrees-of-freedom lane pair produces its own ratio:
+//
+//    pcg_dxsm_engine<uint8x2> rng;
+//    fisher_f_distribution<float8x2> simd_fisher_f(
+//       float8x2(5), float8x2(10)
+//    );
+//    float8x2 results = simd_fisher_f(rng);
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/fisher_f_distribution
+
 namespace cat {
 
-// https://en.cppreference.com/w/cpp/numeric/random/fisher_f_distribution
-template <is_floating_point Float = float8>
+template <typename Float = float8>
+   requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 class fisher_f_distribution {
  public:
    using result_type = Float;
@@ -84,7 +110,7 @@ class fisher_f_distribution {
 
    static constexpr auto
    max() -> result_type {
-      return limits<Float>::max();
+      return limits<Float>::infinity();
    }
 
    template <is_uniform_random_bit_generator Generator>

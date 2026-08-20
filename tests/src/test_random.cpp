@@ -126,7 +126,37 @@ $test(random_distribution_families) {
    cat::verify(linear_value >= 0 && linear_value < 2);
 }
 
+$test(random_distribution_bounds) {
+   constexpr cat::float8 infinity = cat::limits<cat::float8>::infinity();
+
+   static_assert(cat::normal_distribution<>{}.min() == -infinity);
+   static_assert(cat::normal_distribution<>{}.max() == infinity);
+   static_assert(cat::cauchy_distribution<>{}.min() == -infinity);
+   static_assert(cat::cauchy_distribution<>{}.max() == infinity);
+   static_assert(cat::student_t_distribution<>{}.min() == -infinity);
+   static_assert(cat::student_t_distribution<>{}.max() == infinity);
+   static_assert(cat::extreme_value_distribution<>{}.min() == -infinity);
+   static_assert(cat::extreme_value_distribution<>{}.max() == infinity);
+   static_assert(cat::exponential_distribution<>{}.max() == infinity);
+   static_assert(cat::gamma_distribution<>{}.max() == infinity);
+   static_assert(cat::chi_squared_distribution<>{}.max() == infinity);
+   static_assert(cat::fisher_f_distribution<>{}.max() == infinity);
+   static_assert(cat::weibull_distribution<>{}.max() == infinity);
+   static_assert(cat::lognormal_distribution<>{}.max() == infinity);
+   static_assert(cat::binomial_distribution<>(10, 0.5).max() == 10);
+
+   using wide_float = cat::float8x2;
+   wide_float const wide_infinity = cat::limits<wide_float>::infinity();
+   cat::verify(cat::cauchy_distribution<wide_float>{}.min() == -wide_infinity);
+   cat::verify(cat::cauchy_distribution<wide_float>{}.max() == wide_infinity);
+}
+
 $test(random_bulk_and_convenience) {
+   static_assert(
+      cat::is_same<
+         cat::convenience_random_engine, cat::pcg_dxsm_engine<cat::uint8>>
+   );
+
    cat::array<cat::uint8, 16u> values;
    cat::xoshiro_engine<cat::uint8> engine(44u);
    cat::generate_random(values, engine);

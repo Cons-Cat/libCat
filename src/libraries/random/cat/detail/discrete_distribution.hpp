@@ -2,18 +2,43 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/detail/sampling_distribution_helpers.hpp>
-
 #include <cat/arithmetic>
 #include <cat/array>
 #include <cat/random>
 #include <cat/span>
 #include <cat/utility>
 
+#include "./distribution_helpers.hpp"
+#include "./sampling_distribution_helpers.hpp"
+
+// `cat::discrete_distribution` selects a zero-based index from a finite set,
+// similar to `std::discrete_distribution`. Constructor weights are normalized
+// and read with `.probabilities()`. `Int` is the index result type and defaults
+// to `int4`.
+//
+// This can be used to choose among finitely many outcomes with assigned
+// weights. For example, it can select a product using market-share weights.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    discrete_distribution<int4> discrete{1, 2, 3};
+//    int4 result = discrete(rng);
+//
+// Unlike `std::discrete_distribution`, this implementation supports SIMD.
+// Each engine lane produces its own result using the shared probabilities:
+//
+//    pcg_dxsm_engine<uint4x4> rng;
+//    discrete_distribution<int4x4> simd_discrete{1, 2, 3};
+//    int4x4 results = simd_discrete(rng);
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+
 namespace cat {
 
-// https://en.cppreference.com/w/cpp/numeric/random/discrete_distribution.html
-template <is_integral Int = int4>
+template <typename Int = int4>
+   requires(is_integral<Int> || is_simd_integral<Int>)
 class discrete_distribution {
  public:
    using result_type = Int;
@@ -165,11 +190,32 @@ class discrete_distribution {
    constexpr auto
    operator()(Generator& generator, param_type const& parameters)
       -> result_type {
-      float8 const value = detail::sampling_unit<float8>(generator);
-      idx const selected = detail::sampling_interval(
-         parameters.m_cumulative, parameters.m_size, value
-      );
-      return detail::sampling_integer<result_type>(selected);
+      if constexpr (is_simd<result_type>) {
+         using sample_type = detail::distribution_sampling_float<result_type>;
+         sample_type const value =
+            detail::sampling_unit<sample_type>(generator);
+         result_type selected =
+            typename result_type::value_type(idx(parameters.m_size - 1u).raw);
+         for (idx index = parameters.m_size; index != 0u;) {
+            index = idx(index - 1u);
+            auto const choose =
+               value < detail::distribution_broadcast<sample_type>(
+                  parameters.m_cumulative[index]
+               );
+            selected = simd_select(
+               detail::distribution_mask_cast<result_type>(choose),
+               result_type(typename result_type::value_type(index.raw)),
+               selected
+            );
+         }
+         return selected;
+      } else {
+         float8 const value = detail::sampling_unit<float8>(generator);
+         idx const selected = detail::sampling_interval(
+            parameters.m_cumulative, parameters.m_size, value
+         );
+         return detail::sampling_integer<result_type>(selected);
+      }
    }
 
    [[nodiscard]]

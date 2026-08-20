@@ -2,28 +2,56 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/detail/distribution_helpers.hpp>
-#include <cat/detail/independent_simd_engine.hpp>
-
 #include <cat/arithmetic>
 #include <cat/meta>
 #include <cat/random>
 #include <cat/simd>
 
+#include "./distribution_helpers.hpp"
+
+// `cat::bernoulli_distribution` models a true/false experiment, similar to
+// `std::bernoulli_distribution`. It returns true with probability `p` and false
+// with probability `1 - p`. `p` is set in its constructor and defaults to 0.5.
+// This can be read later by `.p()`.
+//
+// This can be used to model binary outcomes with a chosen probability. For
+// example, it can model weighted or unweighted coin flips.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    auto bernoulli = bernoulli_distribution(0.5f);
+//    bool result = bernoulli(rng);  // 50% chance of true, 50% chance of false.
+//
+// Unlike `std::bernoulli_distribution`, this implementation supports SIMD.
+// Each probability lane produces its own boolean result:
+//
+//    pcg_dxsm_engine<uint8x4> rng;
+//    auto bernoulli =
+//       bernoulli_distribution(float8x4{0.1, 0.25, 0.5, 0.75});
+//    auto results = bernoulli(rng);
+//
+//    auto result0 = results[0u];  // 10% chance of true, 90% chance of false.
+//    auto result1 = results[1u];  // 25% chance of true, 75% chance of false.
+//    auto result2 = results[2u];  // 50% chance of true, 50% chance of false.
+//    auto result3 = results[3u];  // 75% chance of true, 25% chance of false.
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/bernoulli_distribution
+
 namespace cat {
 
-// https://en.cppreference.com/w/cpp/numeric/random/bernoulli_distribution
-// https://eel.is/c++draft/rand.dist.bern.bernoulli
-template <is_floating_point Float = float8>
+template <typename Float = float8>
+   requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 class bernoulli_distribution {
  public:
-   using result_type = bool;
+   using result_type = decltype(Float{} < Float{});
 
    class param_type {
     public:
       using distribution_type = bernoulli_distribution;
 
-      constexpr explicit param_type(Float probability = 0.5)
+      constexpr explicit param_type(Float probability = Float(0.5f))
           : m_probability(probability) {
       }
 
@@ -60,12 +88,12 @@ class bernoulli_distribution {
 
    static constexpr auto
    min() -> result_type {
-      return false;
+      return result_type(false);
    }
 
    static constexpr auto
    max() -> result_type {
-      return true;
+      return result_type(true);
    }
 
    constexpr auto
@@ -77,6 +105,9 @@ class bernoulli_distribution {
    param(param_type const& parameters) {
       m_parameters = parameters;
    }
+
+   // TODO: Consider using `detail::convenience_engine` by default to
+   // distributions' call operators to simplify use.
 
    template <is_uniform_random_bit_generator Generator>
    constexpr auto
@@ -90,32 +121,6 @@ class bernoulli_distribution {
       -> result_type {
       return detail::distribution_generate_canonical<Float>(generator)
              < parameters.p();
-   }
-
-   template <is_uniform_random_bit_generator Engine, is_simd Simd>
-      requires is_same<typename Simd::value_type, typename Engine::result_type>
-   constexpr auto
-   operator()(independent_simd_engine<Engine, Simd>& engine) const
-      -> fixed_size_simd_mask<
-         typename Simd::value_type, Simd::abi_type::lanes> {
-      return (*this)(engine, m_parameters);
-   }
-
-   template <is_uniform_random_bit_generator Engine, is_simd Simd>
-      requires is_same<typename Simd::value_type, typename Engine::result_type>
-   constexpr auto
-   operator()(
-      independent_simd_engine<Engine, Simd>& engine,
-      param_type const& parameters
-   ) const
-      -> fixed_size_simd_mask<
-         typename Simd::value_type, Simd::abi_type::lanes> {
-      fixed_size_simd_mask<typename Simd::value_type, Simd::abi_type::lanes>
-         result;
-      for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
-         result.set_lane(lane, (*this)(engine.lane(lane), parameters));
-      }
-      return result;
    }
 
    friend constexpr auto

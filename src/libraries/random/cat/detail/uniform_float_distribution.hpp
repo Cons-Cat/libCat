@@ -2,19 +2,41 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/detail/distribution_helpers.hpp>
-#include <cat/detail/independent_simd_engine.hpp>
-
 #include <cat/arithmetic>
 #include <cat/meta>
 #include <cat/random>
 #include <cat/simd>
 
+#include "./distribution_helpers.hpp"
+
+// `cat::uniform_float_distribution` models a continuous uniform value on the
+// half-open interval [`a`, `b`), similar to `std::uniform_real_distribution`.
+// `Float` is the result type and defaults to `float8`. The bounds are set in
+// the constructor and read with `.a()` and `.b()`.
+//
+// This can be used to sample a continuous value uniformly within an interval.
+// For example, it can model an arrival time within a fixed time window.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    uniform_float_distribution<float8> unit(0, 1);
+//    float8 result = unit(rng);
+//
+// Unlike `std::uniform_real_distribution`, this implementation supports SIMD.
+// Each bounds lane pair produces its own floating-point result:
+//
+//    pcg_dxsm_engine<uint8x2> rng;
+//    uniform_float_distribution<float8x2> units(float8x2(0), float8x2(1));
+//    float8x2 results = units(rng);
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/uniform_real_distribution
+
 namespace cat {
 
-// https://en.cppreference.com/w/cpp/numeric/random/uniform_real_distribution
-// https://eel.is/c++draft/rand.dist.uni.real
-template <is_floating_point Float = float8>
+template <typename Float = float8>
+   requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 class uniform_float_distribution {
  public:
    using result_type = Float;
@@ -111,33 +133,19 @@ class uniform_float_distribution {
       result_type const unit =
          detail::distribution_generate_canonical<result_type>(generator);
       result_type result = (result_type(1) - unit) * lower + unit * upper;
-      if (result >= upper) {
-         result = detail::distribution_next_toward(upper, lower);
-      }
-      if (result < lower) {
-         result = lower;
-      }
-      return result;
-   }
-
-   template <is_uniform_random_bit_generator Engine, is_simd Simd>
-      requires is_same<typename Simd::value_type, typename Engine::result_type>
-   constexpr auto
-   operator()(independent_simd_engine<Engine, Simd>& engine) const
-      -> fixed_size_simd<result_type, Simd::abi_type::lanes> {
-      return (*this)(engine, m_parameters);
-   }
-
-   template <is_uniform_random_bit_generator Engine, is_simd Simd>
-      requires is_same<typename Simd::value_type, typename Engine::result_type>
-   constexpr auto
-   operator()(
-      independent_simd_engine<Engine, Simd>& engine,
-      param_type const& parameters
-   ) const -> fixed_size_simd<result_type, Simd::abi_type::lanes> {
-      fixed_size_simd<result_type, Simd::abi_type::lanes> result;
-      for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
-         result.set_lane(lane, (*this)(engine.lane(lane), parameters));
+      if constexpr (is_simd<result_type>) {
+         result = simd_select(
+            result >= upper, detail::distribution_next_toward(upper, lower),
+            result
+         );
+         result = simd_select(result < lower, lower, result);
+      } else {
+         if (result >= upper) {
+            result = detail::distribution_next_toward(upper, lower);
+         }
+         if (result < lower) {
+            result = lower;
+         }
       }
       return result;
    }

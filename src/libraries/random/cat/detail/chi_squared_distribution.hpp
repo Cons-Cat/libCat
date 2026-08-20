@@ -6,10 +6,34 @@
 #include <cat/limits>
 #include <cat/random>
 
+// `cat::chi_squared_distribution` models a sum of squared standard normal
+// values with `n` degrees of freedom, similar to
+// `std::chi_squared_distribution`. `Float` is the result and parameter type
+// and defaults to `float8`. The degrees of freedom are read with `.n()`.
+//
+// This can be used to model variability estimated from normally distributed
+// samples. For example, it can model a scaled sample-variance statistic.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    chi_squared_distribution<float8> chi_squared(4);
+//    float8 result = chi_squared(rng);
+//
+// Unlike `std::chi_squared_distribution`, this implementation supports SIMD.
+// Each degrees-of-freedom lane produces its own statistic:
+//
+//    pcg_dxsm_engine<uint8x2> rng;
+//    chi_squared_distribution<float8x2> simd_chi_squared(float8x2(4));
+//    float8x2 results = simd_chi_squared(rng);
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/chi_squared_distribution
+
 namespace cat {
 
-// https://en.cppreference.com/w/cpp/numeric/random/chi_squared_distribution
-template <is_floating_point Float = float8>
+template <typename Float = float8>
+   requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 class chi_squared_distribution {
  public:
    using result_type = Float;
@@ -68,7 +92,7 @@ class chi_squared_distribution {
 
    static constexpr auto
    max() -> result_type {
-      return limits<Float>::max();
+      return limits<Float>::infinity();
    }
 
    template <is_uniform_random_bit_generator Generator>

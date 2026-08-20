@@ -2,17 +2,18 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/detail/uniform_float_distribution.hpp>
-
 #include <cat/arithmetic>
 #include <cat/array>
 #include <cat/math>
 #include <cat/random>
 #include <cat/span>
 
+#include "./uniform_float_distribution.hpp"
+
 namespace cat::detail {
 
-template <is_floating_point Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_uniform_random_bit_generator Generator>
+   requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 sampling_unit(Generator& generator) -> Float {
    uniform_float_distribution<Float> distribution;
@@ -46,7 +47,8 @@ sampling_interval(
    return first == size ? idx(size - 1u) : first;
 }
 
-template <is_integral Int>
+template <typename Int>
+   requires(is_integral<Int> || is_simd_integral<Int>)
 constexpr auto
 sampling_integer(idx value) -> Int {
    return Int(value);

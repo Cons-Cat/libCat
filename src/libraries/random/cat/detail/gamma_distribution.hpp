@@ -6,10 +6,34 @@
 #include <cat/limits>
 #include <cat/random>
 
+// `cat::gamma_distribution` models positive values with shape `alpha` and
+// scale `beta`, similar to `std::gamma_distribution`. `Float` is the result
+// and parameter type and defaults to `float8`. The parameters are read with
+// `.alpha()` and `.beta()`.
+//
+// This can be used to model total waiting time until multiple independent
+// events. For example, it can model time until the third arrival.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    gamma_distribution<float8> gamma(2, 3);
+//    float8 result = gamma(rng);
+//
+// Unlike `std::gamma_distribution`, this implementation supports SIMD.
+// Each shape and scale lane pair produces its own value:
+//
+//    pcg_dxsm_engine<uint8x2> rng;
+//    gamma_distribution<float8x2> simd_gamma(float8x2(2), float8x2(3));
+//    float8x2 results = simd_gamma(rng);
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/gamma_distribution
+
 namespace cat {
 
-// https://en.cppreference.com/w/cpp/numeric/random/gamma_distribution
-template <is_floating_point Float = float8>
+template <typename Float = float8>
+   requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 class gamma_distribution {
  public:
    using result_type = Float;
@@ -79,7 +103,7 @@ class gamma_distribution {
 
    static constexpr auto
    max() -> result_type {
-      return limits<Float>::max();
+      return limits<Float>::infinity();
    }
 
    template <is_uniform_random_bit_generator Generator>

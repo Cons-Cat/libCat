@@ -426,7 +426,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/random/cat/detail/gamma_distribution.hpp
   ${CATLIB}/random/cat/detail/geometric_distribution.hpp
   ${CATLIB}/random/cat/detail/independent_bits_engine.hpp
-  ${CATLIB}/random/cat/detail/independent_simd_engine.hpp
   ${CATLIB}/random/cat/detail/integer_distribution_helpers.hpp
   ${CATLIB}/random/cat/detail/linux_random.hpp
   ${CATLIB}/random/cat/detail/lognormal_distribution.hpp
@@ -440,7 +439,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/random/cat/detail/rdseed.hpp
   ${CATLIB}/random/cat/detail/sampling_distribution_helpers.hpp
   ${CATLIB}/random/cat/detail/shuffle_order_engine.hpp
-  ${CATLIB}/random/cat/detail/simd_distribution.hpp
   ${CATLIB}/random/cat/detail/student_t_distribution.hpp
   ${CATLIB}/random/cat/detail/uniform_float_distribution.hpp
   ${CATLIB}/random/cat/detail/uniform_int_distribution.hpp
@@ -462,6 +460,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_abi_hooks.hpp
   ${CATLIB}/simd/cat/detail/simd_extras.hpp
   ${CATLIB}/simd/cat/detail/simd_impl.hpp
+  ${CATLIB}/simd/cat/detail/simd_limits.hpp
   ${CATLIB}/simd/cat/simd_ops
   ${CATLIB}/simd/cat/simd_iterator
   ${CATLIB}/simd/implementations/simd_mask_bitset.tpp

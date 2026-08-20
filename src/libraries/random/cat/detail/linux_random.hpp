@@ -75,6 +75,8 @@ kernel_random_file_uint8(cat::zstr_view path) -> cat::uint8 {
 
 namespace nix {
 
+// `linux_getrandom_engine` is a `<cat/random>` compatible PRNG engine
+// implemented over `nyx::sys_getrandom`.
 template <getrandom_flags flags>
 class linux_getrandom_engine {
  public:
@@ -99,7 +101,9 @@ class linux_getrandom_engine {
    }
 };
 
+// Uses the urandom source, which blocks only until it is initialized.
 using sys_urandom_engine = linux_getrandom_engine<getrandom_flags::none>;
+// Uses the random source, which may block when entropy is unavailable.
 using sys_random_engine = linux_getrandom_engine<getrandom_flags::random>;
 
 enum class linux_random_file : cat::uint1::raw_type {
@@ -107,6 +111,8 @@ enum class linux_random_file : cat::uint1::raw_type {
    random,
 };
 
+// `linux_random_file_engine` is a `<cat/random>` compatible PRNG engine
+// implemented over the special files `/dev/urandom` or `/dev/random`.
 template <linux_random_file file>
 class linux_random_file_engine {
  public:
@@ -135,7 +141,9 @@ class linux_random_file_engine {
    }
 };
 
+// Uses the urandom source, which blocks only until it is initialized.
 using dev_urandom_engine = linux_random_file_engine<linux_random_file::urandom>;
+// Uses the random source, which may block when entropy is unavailable.
 using dev_random_engine = linux_random_file_engine<linux_random_file::random>;
 
 struct seed_state {

@@ -2,17 +2,43 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/detail/normal_distribution.hpp>
-
 #include <cat/arithmetic>
 #include <cat/limits>
 #include <cat/math>
 #include <cat/random>
 
+#include "./normal_distribution.hpp"
+
+// `cat::lognormal_distribution` models positive values whose logarithms are
+// normal with mean `m` and standard deviation `s`, similar to
+// `std::lognormal_distribution`. `Float` is the result and parameter type and
+// defaults to `float8`. The parameters are read with `.m()` and `.s()`.
+//
+// This can be used to model positive values driven by multiplicative effects.
+// For example, it can model an asset price at a future time.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    lognormal_distribution<float8> lognormal(0, 1);
+//    float8 result = lognormal(rng);
+//
+// Unlike `std::lognormal_distribution`, this implementation supports SIMD.
+// Each normal mean and standard-deviation lane pair produces its own result:
+//
+//    pcg_dxsm_engine<uint8x2> rng;
+//    lognormal_distribution<float8x2> simd_lognormal(
+//       float8x2(0), float8x2(1)
+//    );
+//    float8x2 results = simd_lognormal(rng);
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/lognormal_distribution
+
 namespace cat {
 
-// https://en.cppreference.com/w/cpp/numeric/random/lognormal_distribution
-template <is_floating_point Float = float8>
+template <typename Float = float8>
+   requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 class lognormal_distribution {
  public:
    using result_type = Float;
@@ -87,7 +113,7 @@ class lognormal_distribution {
 
    static constexpr auto
    max() -> result_type {
-      return limits<Float>::max();
+      return limits<Float>::infinity();
    }
 
    template <is_uniform_random_bit_generator Generator>

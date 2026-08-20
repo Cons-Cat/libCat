@@ -7,10 +7,36 @@
 #include <cat/math>
 #include <cat/random>
 
+// `cat::normal_distribution` models values around `mean` with standard
+// deviation `stddev`, similar to `std::normal_distribution`. `Float` is the
+// result and parameter type and defaults to `float8`. The parameters are read
+// with `.mean()` and `.stddev()`.
+//
+// This can be used to model measurements concentrated around an average. For
+// example, it can model variation in manufactured dimensions.
+//
+// Example usage:
+//
+//    pcg_dxsm_engine<uint8> rng;
+//    normal_distribution<float8> normal(0, 1);
+//    float8 result = normal(rng);
+//
+// Unlike `std::normal_distribution`, this implementation supports SIMD.
+// Each mean and standard-deviation lane pair produces its own value:
+//
+//    pcg_dxsm_engine<uint8x2> rng;
+//    normal_distribution<float8x2> simd_normal(
+//       float8x2(0), float8x2(1)
+//    );
+//    float8x2 results = simd_normal(rng);
+//
+// References
+//    https://en.cppreference.com/w/cpp/numeric/random/normal_distribution
+
 namespace cat {
 
-// https://en.cppreference.com/w/cpp/numeric/random/normal_distribution
-template <is_floating_point Float = float8>
+template <typename Float = float8>
+   requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 class normal_distribution {
  public:
    using result_type = Float;
@@ -80,12 +106,12 @@ class normal_distribution {
 
    static constexpr auto
    min() -> result_type {
-      return -limits<Float>::max();
+      return -limits<Float>::infinity();
    }
 
    static constexpr auto
    max() -> result_type {
-      return limits<Float>::max();
+      return limits<Float>::infinity();
    }
 
    template <is_uniform_random_bit_generator Generator>
@@ -103,11 +129,15 @@ class normal_distribution {
          m_has_spare = false;
          standard = m_spare;
       } else {
-         constexpr Float tau_value = tau<Float>;
+         using scalar = detail::random_scalar<Float>;
+         Float const tau_value = tau<scalar>;
          Float const radius = sqrt(
-            -2.f * log(detail::random_positive_canonical<Float>(generator))
+            Float(-2.f)
+            * log(detail::random_positive_canonical<Float>(generator))
          );
-         Float const angle = tau_value * generate_canonical<Float>(generator);
+         Float const angle =
+            tau_value
+            * detail::distribution_generate_canonical<Float>(generator);
          standard = radius * cos(angle);
          m_spare = radius * cos(angle - tau_value / 4.f);
          m_has_spare = true;

@@ -1571,7 +1571,14 @@ class
    fill(U value) -> simd& {
       scalar_type const fill_value = static_cast<scalar_type>(value);
       memory_lane const lane = detail::simd_lane_to_storage(fill_value);
-      this->raw = raw_type{} + lane;
+      // TODO: Really consider switching to `ext_vector_type` again.
+      // `gnu::vector_size` doesn't support broadcasting NaN in `constexpr` code
+      // so we cast it. Alternatively, reflection can generate the aggregate
+      // initialization calls similar to the previous version of `fill`.
+      using broadcast_type
+         [[clang::ext_vector_type(sizeof(raw_type) / sizeof(memory_lane))]] =
+            memory_lane;
+      this->raw = __builtin_bit_cast(raw_type, broadcast_type(lane));
       return *this;
    }
 
