@@ -131,8 +131,8 @@ list(
   -finput-charset=UTF-8
   -fexec-charset=UTF-8
 
-  # Enable CPU intrinsics required by the SIMD headers:
-  # TODO: These should be optional.
+  # Enable CPU intrinsics:
+  # TODO: These should be optional, like SIMD flags.
   -mfma
   -mlzcnt
   -mbmi
