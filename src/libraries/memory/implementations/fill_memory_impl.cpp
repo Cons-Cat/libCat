@@ -28,7 +28,7 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
       return;
    }
 
-   uword const dest_mod = (p_handle & simd_align_bytes) % simd_align_bytes;
+   uword const dest_mod = p_handle % simd_align_bytes;
    uword const padding = (simd_align_bytes - dest_mod) % simd_align_bytes;
 
    for (idx byte_index = 0u; byte_index < padding.to_idx().assert();
@@ -36,6 +36,7 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
       p_destination[byte_index] = byte_value;
    }
    bytes_remaining -= padding;
+   p_handle += padding;
 
    if (bytes_remaining <= 0) {
       return;
