@@ -70,20 +70,20 @@ simd_select(simd_mask<T, Abi> mask, simd<T, Abi> on_true, simd<T, Abi> on_false)
 namespace detail {
 
 template <typename T>
-using simd_abi_scalar = conditional<is_bool<T>, T, raw_arithmetic_type<T>>;
+using simd_abi_map_scalar = conditional<is_bool<T>, T, raw_arithmetic_type<T>>;
 
 template <typename T, typename Abi>
    requires(is_bool<T> || requires {
-               typename Abi::template make_abi_type<simd_abi_scalar<T>>;
+               typename Abi::template make_abi_type<simd_abi_map_scalar<T>>;
             })
-using simd_abi_vec =
-   simd<simd_abi_scalar<T>,
-        typename Abi::template make_abi_type<simd_abi_scalar<T>>>;
+using simd_abi_map_vector =
+   simd<simd_abi_map_scalar<T>,
+        typename Abi::template make_abi_type<simd_abi_map_scalar<T>>>;
 
 template <typename T, typename Abi>
-using simd_abi_mask_vec = simd_mask<
-   simd_abi_scalar<T>,
-   typename Abi::template make_abi_type<simd_abi_scalar<T>>>;
+using simd_abi_map_mask = simd_mask<
+   simd_abi_map_scalar<T>,
+   typename Abi::template make_abi_type<simd_abi_map_scalar<T>>>;
 
 template <typename Abi, typename T>
 inline constexpr bool is_fixed_size_simd_abi = false;
@@ -96,42 +96,42 @@ inline constexpr bool
 // non-predicated implementation?
 template <typename OpTag, typename T, typename Abi>
 concept has_simd_abi_unary_full =
-   requires(simd_abi_vec<T, Abi> input) {
+   requires(simd_abi_map_vector<T, Abi> input) {
       simd_abi::unary_full<
-         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-         typename simd_abi_vec<T, Abi>::abi_type>::invoke(input);
+         OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+         typename simd_abi_map_vector<T, Abi>::abi_type>::invoke(input);
    };
 
 // Does this unary operation on vectors of T for this ABI have a specialized
 // non-predicated implementation with an integer parameter?
 template <typename OpTag, typename T, typename Abi>
 concept has_simd_abi_unary_int =
-   requires(simd_abi_vec<T, Abi> input, iword n) {
+   requires(simd_abi_map_vector<T, Abi> input, iword n) {
       simd_abi::unary_int<
-         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-         typename simd_abi_vec<T, Abi>::abi_type>::invoke(input, n);
+         OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+         typename simd_abi_map_vector<T, Abi>::abi_type>::invoke(input, n);
    };
 
 // Does this compress operation on vectors of T for this ABI have a specialized
 // implementation?
 template <typename T, typename Abi>
 concept has_simd_abi_compress =
-   requires(simd_abi_vec<T, Abi> input, simd_abi_mask_vec<T, Abi> selector) {
+   requires(simd_abi_map_vector<T, Abi> input, simd_abi_map_mask<T, Abi> selector) {
       simd_abi::compress<
-         typename simd_abi_vec<T, Abi>::scalar_type,
-         typename simd_abi_vec<T, Abi>::abi_type>::invoke(input, selector);
+         typename simd_abi_map_vector<T, Abi>::scalar_type,
+         typename simd_abi_map_vector<T, Abi>::abi_type>::invoke(input, selector);
    };
 
 // Does this expand operation on vectors of T for this ABI have a specialized
 // implementation?
 template <typename T, typename Abi>
 concept has_simd_abi_expand = requires(
-   simd_abi_vec<T, Abi> packed, simd_abi_mask_vec<T, Abi> selector,
-   simd_abi_vec<T, Abi> background
+   simd_abi_map_vector<T, Abi> packed, simd_abi_map_mask<T, Abi> selector,
+   simd_abi_map_vector<T, Abi> background
 ) {
                                  simd_abi::expand<
-                                    typename simd_abi_vec<T, Abi>::scalar_type,
-                                    typename simd_abi_vec<T, Abi>::abi_type>::
+                                    typename simd_abi_map_vector<T, Abi>::scalar_type,
+                                    typename simd_abi_map_vector<T, Abi>::abi_type>::
                                     invoke(packed, selector, background);
                               };
 
@@ -139,10 +139,10 @@ concept has_simd_abi_expand = requires(
 // non-predicated implementation?
 template <typename OpTag, typename T, typename Abi>
 concept has_simd_abi_binary_full =
-   requires(simd_abi_vec<T, Abi> left, simd_abi_vec<T, Abi> right) {
+   requires(simd_abi_map_vector<T, Abi> left, simd_abi_map_vector<T, Abi> right) {
       simd_abi::binary_full<
-         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-         typename simd_abi_vec<T, Abi>::abi_type>::invoke(left, right);
+         OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+         typename simd_abi_map_vector<T, Abi>::abi_type>::invoke(left, right);
    };
 
 // Does this ternary operation on vectors of T for this ABI have a specialized
@@ -150,22 +150,22 @@ concept has_simd_abi_binary_full =
 template <typename OpTag, typename T, typename Abi>
 concept has_simd_abi_ternary_full =
    requires(
-      simd_abi_vec<T, Abi> x, simd_abi_vec<T, Abi> y, simd_abi_vec<T, Abi> z
+      simd_abi_map_vector<T, Abi> x, simd_abi_map_vector<T, Abi> y, simd_abi_map_vector<T, Abi> z
    ) {
       simd_abi::ternary_full<
-         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-         typename simd_abi_vec<T, Abi>::abi_type>::invoke(x, y, z);
+         OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+         typename simd_abi_map_vector<T, Abi>::abi_type>::invoke(x, y, z);
    };
 
 // Does this mixed binary operation on vectors of T and IntT for this ABI have a
 // specialized non-predicated implementation?
 template <typename OpTag, typename T, typename IntT, typename Abi>
 concept has_simd_abi_binary_mixed =
-   requires(simd_abi_vec<T, Abi> x, simd_abi_vec<IntT, Abi> y) {
+   requires(simd_abi_map_vector<T, Abi> x, simd_abi_map_vector<IntT, Abi> y) {
       simd_abi::binary_mixed<
-         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-         typename simd_abi_vec<IntT, Abi>::scalar_type,
-         typename simd_abi_vec<T, Abi>::abi_type>::invoke(x, y);
+         OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+         typename simd_abi_map_vector<IntT, Abi>::scalar_type,
+         typename simd_abi_map_vector<T, Abi>::abi_type>::invoke(x, y);
    };
 
 // Does this binary operation on vectors of T for this ABI have a specialized
@@ -173,12 +173,12 @@ concept has_simd_abi_binary_mixed =
 template <typename OpTag, typename T, typename Abi>
 concept has_simd_abi_binary_masked =
    requires(
-      simd_abi_vec<T, Abi> left, simd_abi_vec<T, Abi> right,
-      simd_abi_mask_vec<T, Abi> mask
+      simd_abi_map_vector<T, Abi> left, simd_abi_map_vector<T, Abi> right,
+      simd_abi_map_mask<T, Abi> mask
    ) {
       simd_abi::binary_masked<
-         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-         typename simd_abi_vec<T, Abi>::abi_type>::invoke(left, right, mask);
+         OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+         typename simd_abi_map_vector<T, Abi>::abi_type>::invoke(left, right, mask);
    };
 
 // Does this ternary operation on vectors of T for this ABI have a specialized
@@ -186,20 +186,20 @@ concept has_simd_abi_binary_masked =
 template <typename OpTag, typename T, typename Abi>
 concept has_simd_abi_ternary_masked =
    requires(
-      simd_abi_vec<T, Abi> x, simd_abi_vec<T, Abi> y, simd_abi_vec<T, Abi> z,
-      simd_abi_mask_vec<T, Abi> mask
+      simd_abi_map_vector<T, Abi> x, simd_abi_map_vector<T, Abi> y, simd_abi_map_vector<T, Abi> z,
+      simd_abi_map_mask<T, Abi> mask
    ) {
       simd_abi::ternary_masked<
-         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-         typename simd_abi_vec<T, Abi>::abi_type>::invoke(x, y, z, mask);
+         OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+         typename simd_abi_map_vector<T, Abi>::abi_type>::invoke(x, y, z, mask);
    };
 
 // Does this masked fill operation on vectors of T for this ABI have a
 // specialized predicated implementation?
 template <typename T, typename Abi>
 concept has_simd_abi_fill_masked = requires(
-   simd_abi_vec<T, Abi> passthrough, simd_abi_vec<T, Abi>::scalar_type fill,
-   simd_abi_mask_vec<T, Abi> lane_mask
+   simd_abi_map_vector<T, Abi> passthrough, simd_abi_map_vector<T, Abi>::scalar_type fill,
+   simd_abi_map_mask<T, Abi> lane_mask
 ) { simd_abi::fill_masked<T, Abi>::invoke(passthrough, fill, lane_mask); };
 
 template <typename OpTag, typename T, typename Abi>
@@ -207,11 +207,11 @@ template <typename OpTag, typename T, typename Abi>
 constexpr auto
 simd_abi_apply_unary_full(simd<T, Abi> const& input) -> simd<T, Abi> {
    return simd<T, Abi>(simd_abi::invoke<
-                          simd_abi_vec<T, Abi>,
+                          simd_abi_map_vector<T, Abi>,
                           simd_abi::unary_full<
-                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                             typename simd_abi_vec<T, Abi>::abi_type>>(
-                          simd_abi_vec<T, Abi>(input.raw)
+                             OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+                             typename simd_abi_map_vector<T, Abi>::abi_type>>(
+                          simd_abi_map_vector<T, Abi>(input.raw)
    )
                           .raw);
 }
@@ -221,11 +221,11 @@ template <typename OpTag, typename T, typename Abi>
 constexpr auto
 simd_abi_apply_unary_int(simd<T, Abi> const& input, iword n) -> simd<T, Abi> {
    return simd<T, Abi>(simd_abi::invoke<
-                          simd_abi_vec<T, Abi>,
+                          simd_abi_map_vector<T, Abi>,
                           simd_abi::unary_int<
-                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                             typename simd_abi_vec<T, Abi>::abi_type>>(
-                          simd_abi_vec<T, Abi>(input.raw), n
+                             OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+                             typename simd_abi_map_vector<T, Abi>::abi_type>>(
+                          simd_abi_map_vector<T, Abi>(input.raw), n
    )
                           .raw);
 }
@@ -236,12 +236,12 @@ constexpr auto
 simd_abi_apply_binary_full(simd<T, Abi> const& left, simd<T, Abi> const& right)
    -> simd<T, Abi> {
    return simd<T, Abi>(simd_abi::invoke<
-                          simd_abi_vec<T, Abi>,
+                          simd_abi_map_vector<T, Abi>,
                           simd_abi::binary_full<
-                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                             typename simd_abi_vec<T, Abi>::abi_type>>(
-                          simd_abi_vec<T, Abi>(left.raw),
-                          simd_abi_vec<T, Abi>(right.raw)
+                             OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+                             typename simd_abi_map_vector<T, Abi>::abi_type>>(
+                          simd_abi_map_vector<T, Abi>(left.raw),
+                          simd_abi_map_vector<T, Abi>(right.raw)
    )
                           .raw);
 }
@@ -254,13 +254,13 @@ simd_abi_apply_binary_masked(
    simd_mask<T, Abi> const& mask
 ) -> simd<T, Abi> {
    return simd<T, Abi>(simd_abi::invoke<
-                          simd_abi_vec<T, Abi>,
+                          simd_abi_map_vector<T, Abi>,
                           simd_abi::binary_masked<
-                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                             typename simd_abi_vec<T, Abi>::abi_type>>(
-                          simd_abi_vec<T, Abi>(left.raw),
-                          simd_abi_vec<T, Abi>(right.raw),
-                          simd_abi_mask_vec<T, Abi>(mask.raw)
+                             OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+                             typename simd_abi_map_vector<T, Abi>::abi_type>>(
+                          simd_abi_map_vector<T, Abi>(left.raw),
+                          simd_abi_map_vector<T, Abi>(right.raw),
+                          simd_abi_map_mask<T, Abi>(mask.raw)
    )
                           .raw);
 }
@@ -272,13 +272,13 @@ simd_abi_apply_ternary_full(
    simd<T, Abi> const& x, simd<T, Abi> const& y, simd<T, Abi> const& z
 ) -> simd<T, Abi> {
    return simd<T, Abi>(simd_abi::invoke<
-                          simd_abi_vec<T, Abi>,
+                          simd_abi_map_vector<T, Abi>,
                           simd_abi::ternary_full<
-                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                             typename simd_abi_vec<T, Abi>::abi_type>>(
-                          simd_abi_vec<T, Abi>(x.raw),
-                          simd_abi_vec<T, Abi>(y.raw),
-                          simd_abi_vec<T, Abi>(z.raw)
+                             OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+                             typename simd_abi_map_vector<T, Abi>::abi_type>>(
+                          simd_abi_map_vector<T, Abi>(x.raw),
+                          simd_abi_map_vector<T, Abi>(y.raw),
+                          simd_abi_map_vector<T, Abi>(z.raw)
    )
                           .raw);
 }
@@ -292,12 +292,12 @@ simd_abi_apply_ternary_masked(
 ) -> simd<T, Abi> {
    return simd<T, Abi>(
       simd_abi::invoke<
-         simd_abi_vec<T, Abi>,
+         simd_abi_map_vector<T, Abi>,
          simd_abi::ternary_masked<
-            OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-            typename simd_abi_vec<T, Abi>::abi_type>>(
-         simd_abi_vec<T, Abi>(x.raw), simd_abi_vec<T, Abi>(y.raw),
-         simd_abi_vec<T, Abi>(z.raw), simd_abi_mask_vec<T, Abi>(mask.raw)
+            OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+            typename simd_abi_map_vector<T, Abi>::abi_type>>(
+         simd_abi_map_vector<T, Abi>(x.raw), simd_abi_map_vector<T, Abi>(y.raw),
+         simd_abi_map_vector<T, Abi>(z.raw), simd_abi_map_mask<T, Abi>(mask.raw)
       )
          .raw
    );
@@ -308,13 +308,13 @@ template <typename T, typename Abi>
 constexpr auto
 simd_abi_apply_fill_masked(
    simd<T, Abi> const& passthrough,
-   typename simd_abi_vec<T, Abi>::scalar_type fill,
+   typename simd_abi_map_vector<T, Abi>::scalar_type fill,
    simd_mask<T, Abi> const& mask
 ) -> simd<T, Abi> {
    return simd<T, Abi>(
-      simd_abi::invoke<simd_abi_vec<T, Abi>, simd_abi::fill_masked<T, Abi>>(
-         simd_abi_vec<T, Abi>(passthrough.raw), fill,
-         simd_abi_mask_vec<T, Abi>(mask.raw)
+      simd_abi::invoke<simd_abi_map_vector<T, Abi>, simd_abi::fill_masked<T, Abi>>(
+         simd_abi_map_vector<T, Abi>(passthrough.raw), fill,
+         simd_abi_map_mask<T, Abi>(mask.raw)
       )
          .raw
    );
@@ -326,13 +326,13 @@ constexpr auto
 simd_abi_apply_binary_mixed(simd<T, Abi> const& x, simd<IntT, Abi> const& y)
    -> simd<T, Abi> {
    return simd<T, Abi>(simd_abi::invoke<
-                          simd_abi_vec<T, Abi>,
+                          simd_abi_map_vector<T, Abi>,
                           simd_abi::binary_mixed<
-                             OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
-                             typename simd_abi_vec<IntT, Abi>::scalar_type,
-                             typename simd_abi_vec<T, Abi>::abi_type>>(
-                          simd_abi_vec<T, Abi>(x.raw),
-                          simd_abi_vec<IntT, Abi>(y.raw)
+                             OpTag, typename simd_abi_map_vector<T, Abi>::scalar_type,
+                             typename simd_abi_map_vector<IntT, Abi>::scalar_type,
+                             typename simd_abi_map_vector<T, Abi>::abi_type>>(
+                          simd_abi_map_vector<T, Abi>(x.raw),
+                          simd_abi_map_vector<IntT, Abi>(y.raw)
    )
                           .raw);
 }
@@ -345,11 +345,11 @@ simd_abi_apply_compress(
 ) -> simd<T, Abi> {
    return simd<T, Abi>(
       simd_abi::invoke<
-         simd_abi_vec<T, Abi>, simd_abi::compress<
-                                  typename simd_abi_vec<T, Abi>::scalar_type,
-                                  typename simd_abi_vec<T, Abi>::abi_type>>(
-         simd_abi_vec<T, Abi>(input.raw),
-         simd_abi_mask_vec<T, Abi>(selector.raw)
+         simd_abi_map_vector<T, Abi>, simd_abi::compress<
+                                  typename simd_abi_map_vector<T, Abi>::scalar_type,
+                                  typename simd_abi_map_vector<T, Abi>::abi_type>>(
+         simd_abi_map_vector<T, Abi>(input.raw),
+         simd_abi_map_mask<T, Abi>(selector.raw)
       )
          .raw
    );
@@ -364,12 +364,12 @@ simd_abi_apply_expand(
 ) -> simd<T, Abi> {
    return simd<T, Abi>(
       simd_abi::invoke<
-         simd_abi_vec<T, Abi>, simd_abi::expand<
-                                  typename simd_abi_vec<T, Abi>::scalar_type,
-                                  typename simd_abi_vec<T, Abi>::abi_type>>(
-         simd_abi_vec<T, Abi>(packed_values.raw),
-         simd_abi_mask_vec<T, Abi>(selector.raw),
-         simd_abi_vec<T, Abi>(background.raw)
+         simd_abi_map_vector<T, Abi>, simd_abi::expand<
+                                  typename simd_abi_map_vector<T, Abi>::scalar_type,
+                                  typename simd_abi_map_vector<T, Abi>::abi_type>>(
+         simd_abi_map_vector<T, Abi>(packed_values.raw),
+         simd_abi_map_mask<T, Abi>(selector.raw),
+         simd_abi_map_vector<T, Abi>(background.raw)
       )
          .raw
    );
