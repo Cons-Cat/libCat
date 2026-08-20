@@ -16,6 +16,7 @@
 // P3922R1   `simd_mask` unary operators and mask-to-`simd` conversions.
 // P2638R0   Intel feedback on `std::simd`.
 // P3983R1   Object representation. Array-like layout query trait.
+// P3985R0   Concepts for `std::simd`.
 //
 // However, SIMD functions are implemented in the form of functors that generate
 // masked SIMD forms from unmasked SIMD forms using CRTP. This is inspired by
@@ -275,6 +276,31 @@ concept is_simd_mask = detail::is_cat_simd_mask<M>;
 
 template <typename X>
 concept is_simd_or_mask = is_simd<X> || is_simd_mask<X>;
+
+template <typename Simd>
+concept is_simd_integral =
+   is_simd<Simd> && is_integral<typename Simd::value_type>;
+
+template <typename Simd>
+concept is_simd_signed_integral =
+   is_simd_integral<Simd> && is_signed_integral<typename Simd::value_type>;
+
+template <typename Simd>
+concept is_simd_unsigned_integral =
+   is_simd_integral<Simd> && is_unsigned_integral<typename Simd::value_type>;
+
+template <typename Simd>
+concept is_simd_floating_point =
+   is_simd<Simd> && is_floating_point<typename Simd::value_type>;
+
+// TODO: Add `is_simd_complex` when libCat supports complex numbers.
+
+template <typename Simd>
+concept is_simd_arithmetic =
+   is_simd_integral<Simd> || is_simd_floating_point<Simd>;
+
+template <typename Simd, typename T>
+concept is_simd_of = is_simd<Simd> && is_same<typename Simd::value_type, T>;
 
 // Element type stored in `simd::raw` (`GNU` vector lanes). `T` is the logical
 // lane type (`int`, `cat::int4`, ...). Raw `bool` uses `unsigned char` storage
@@ -2647,10 +2673,7 @@ struct simd_reduce_add_impl {
    [[nodiscard]]
    constexpr auto
    operator()(Simd const& v) const -> decltype(v.reduce_add())
-      requires(
-         is_simd<Simd> && is_arithmetic<typename Simd::scalar_type>
-         && !is_bool<typename Simd::scalar_type>
-      )
+      requires(is_simd_arithmetic<Simd> && !is_bool<typename Simd::value_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_add();
@@ -2662,10 +2685,7 @@ struct simd_reduce_mul_impl {
    [[nodiscard]]
    constexpr auto
    operator()(Simd const& v) const -> decltype(v.reduce_mul())
-      requires(
-         is_simd<Simd> && is_integral<typename Simd::scalar_type>
-         && !is_bool<typename Simd::scalar_type>
-      )
+      requires(is_simd_integral<Simd> && !is_bool<typename Simd::value_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_mul();
@@ -2677,10 +2697,7 @@ struct simd_reduce_and_impl {
    [[nodiscard]]
    constexpr auto
    operator()(Simd const& v) const -> decltype(v.reduce_and())
-      requires(
-         is_simd<Simd> && is_integral<typename Simd::scalar_type>
-         && !is_bool<typename Simd::scalar_type>
-      )
+      requires(is_simd_integral<Simd> && !is_bool<typename Simd::value_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_and();
@@ -2692,10 +2709,7 @@ struct simd_reduce_or_impl {
    [[nodiscard]]
    constexpr auto
    operator()(Simd const& v) const -> decltype(v.reduce_or())
-      requires(
-         is_simd<Simd> && is_integral<typename Simd::scalar_type>
-         && !is_bool<typename Simd::scalar_type>
-      )
+      requires(is_simd_integral<Simd> && !is_bool<typename Simd::value_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_or();
@@ -2707,10 +2721,7 @@ struct simd_reduce_xor_impl {
    [[nodiscard]]
    constexpr auto
    operator()(Simd const& v) const -> decltype(v.reduce_xor())
-      requires(
-         is_simd<Simd> && is_integral<typename Simd::scalar_type>
-         && !is_bool<typename Simd::scalar_type>
-      )
+      requires(is_simd_integral<Simd> && !is_bool<typename Simd::value_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_xor();
@@ -2722,10 +2733,7 @@ struct simd_reduce_max_impl {
    [[nodiscard]]
    constexpr auto
    operator()(Simd const& v) const -> decltype(v.reduce_max())
-      requires(
-         is_simd<Simd> && is_arithmetic<typename Simd::scalar_type>
-         && !is_bool<typename Simd::scalar_type>
-      )
+      requires(is_simd_arithmetic<Simd> && !is_bool<typename Simd::value_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_max();
@@ -2737,10 +2745,7 @@ struct simd_reduce_min_impl {
    [[nodiscard]]
    constexpr auto
    operator()(Simd const& v) const -> decltype(v.reduce_min())
-      requires(
-         is_simd<Simd> && is_arithmetic<typename Simd::scalar_type>
-         && !is_bool<typename Simd::scalar_type>
-      )
+      requires(is_simd_arithmetic<Simd> && !is_bool<typename Simd::value_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_min();

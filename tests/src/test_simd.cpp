@@ -2898,8 +2898,15 @@ $test(simd_concepts) {
    static_assert(cat::is_simd_or_mask<int4x4::mask_type>);
    static_assert(cat::is_simd_integral<int4x4>);
    static_assert(!cat::is_simd_integral<float4x4>);
+   static_assert(cat::is_simd_signed_integral<int4x4>);
+   static_assert(!cat::is_simd_signed_integral<cat::uint4x4>);
+   static_assert(cat::is_simd_unsigned_integral<cat::uint4x4>);
+   static_assert(!cat::is_simd_unsigned_integral<int4x4>);
    static_assert(cat::is_simd_floating_point<float4x4>);
    static_assert(!cat::is_simd_floating_point<int4x4>);
+   static_assert(cat::is_simd_arithmetic<int4x4>);
+   static_assert(cat::is_simd_arithmetic<float4x4>);
+   static_assert(!cat::is_simd_arithmetic<int4x4::mask_type>);
    static_assert(cat::is_simd_of<int4x4, cat::int4>);
    static_assert(!cat::is_simd_of<int4x4, cat::float4>);
    static_assert(cat::vectorizable_element<int_lane>);
