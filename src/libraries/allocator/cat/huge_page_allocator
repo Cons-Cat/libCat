@@ -1,0 +1,117 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+#include <cat/linux>
+#include <cat/maybe>
+
+namespace cat {
+
+inline constexpr idx huge_page_size = 2_umi;
+
+// Allocate explicit 2 MiB huge pages from the kernel.
+class [[clang::trivial_abi]] huge_page_allocator
+    : public allocator_interface<huge_page_allocator> {
+ private:
+   friend allocator_interface<huge_page_allocator>;
+   friend struct dyn_allocator_friend;
+   template <typename>
+   friend class allocator_ref;
+
+ public:
+   constexpr huge_page_allocator() = default;
+   constexpr huge_page_allocator(huge_page_allocator const&) = default;
+   constexpr huge_page_allocator(huge_page_allocator&&) = default;
+
+   static auto
+   allocation_bytes(ualign alignment, idx requested_bytes)
+      -> maybe_non_zero<idx> {
+      assert(alignment <= huge_page_size);
+      return round_up_to_multiple_of(requested_bytes, huge_page_size);
+   }
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   static auto
+   allocate(idx requested_bytes) -> void* _Nullable {
+      idx const mapped_bytes =
+         round_up_to_multiple_of(requested_bytes, huge_page_size);
+      if (mapped_bytes == 0u) {
+         return nullptr;
+      }
+
+      scaredy result = nix::sys_mmap(
+         nullptr, mapped_bytes, nix::memory_protection_flags::read_write,
+         nix::memory_flags::privately
+            | nix::memory_flags::populate
+            | nix::memory_flags::anonymous
+            | nix::memory_flags::hugetlb
+            | nix::memory_flags::huge_2mb,
+         nix::invalid_file_descriptor, 0u
+      );
+      if (result.has_value()) {
+         return __builtin_assume_aligned(result.value(), huge_page_size.raw);
+      }
+      return nullptr;
+   }
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   static auto
+   aligned_allocate(ualign alignment, idx requested_bytes) -> void* _Nullable {
+      assert(alignment <= huge_page_size);
+      return allocate(requested_bytes);
+   }
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   static auto
+   allocate_zeroed(idx requested_bytes) -> void* _Nullable {
+      return allocate(requested_bytes);
+   }
+
+   static auto
+   allocate_zeroed_feedback(idx requested_bytes) -> sized_allocation<void*> {
+      idx const mapped_bytes =
+         round_up_to_multiple_of(requested_bytes, huge_page_size);
+      return {
+         allocate(mapped_bytes),
+         mapped_bytes,
+      };
+   }
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   static auto
+   aligned_allocate_zeroed(ualign alignment, idx requested_bytes)
+      -> void* _Nullable {
+      return aligned_allocate(alignment, requested_bytes);
+   }
+
+   static auto
+   aligned_allocate_zeroed_feedback(ualign alignment, idx requested_bytes)
+      -> sized_allocation<void*> {
+      idx const mapped_bytes =
+         round_up_to_multiple_of(requested_bytes, huge_page_size);
+      return {
+         aligned_allocate(alignment, mapped_bytes),
+         mapped_bytes,
+      };
+   }
+
+   [[clang::ownership_takes(libcat, 1)]]
+   static void
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes) {
+      idx const mapped_bytes =
+         round_up_to_multiple_of(allocation_bytes, huge_page_size);
+      nix::sys_munmap(p_storage, mapped_bytes).assert();
+   }
+
+   static constexpr ualign min_alignment = huge_page_size;
+   static constexpr idx min_allocation_bytes = huge_page_size;
+};
+
+[[nodiscard]]
+constexpr auto
+make_huge_page_allocator() -> huge_page_allocator {
+   return {};
+}
+
+}  // namespace cat

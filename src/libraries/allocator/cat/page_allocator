@@ -12,7 +12,6 @@
 
 namespace cat {
 
-// TODO: Support forcibly allocating huge pages.
 // Allocate pages from the kernel in userspace.
 class [[clang::trivial_abi]] page_allocator
     : public allocator_interface<page_allocator> {

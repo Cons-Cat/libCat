@@ -41,6 +41,7 @@ enum class
    sync = 0x80000,          // Perform synchronous page faults for the mapping.
    fixed_noreplace = 0x100000,  // `mmap_memory_flags::fixed` but do not unmap
                                 // underlying mapping.
+   huge_2mb = 21u << 26u,       // Select 2 MiB huge pages.
 };
 
 enum class

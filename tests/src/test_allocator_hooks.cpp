@@ -5,6 +5,7 @@
 
 #include <cat/allocator_parameters>
 #include <cat/bit>
+#include <cat/huge_page_allocator>
 #include <cat/linear_allocator>
 #include <cat/null_allocator>
 #include <cat/page_allocator>
@@ -15,6 +16,7 @@
 // Static alignment guarantees are part of the type, so they can be checked
 // without any test body.
 static_assert(cat::linear_allocator::min_alignment == 1u);
+static_assert(cat::huge_page_allocator::min_alignment == cat::huge_page_size);
 static_assert(cat::page_allocator::min_alignment == cat::page_size);
 static_assert(cat::null_allocator::min_alignment == cat::page_size);
 static_assert(
@@ -31,14 +33,20 @@ static_assert(cat::allocator_ref<cat::linear_allocator>::min_alignment == 1u);
 static_assert(
    cat::allocator_ref<cat::page_allocator>::min_alignment == cat::page_size
 );
+static_assert(
+   cat::allocator_ref<cat::huge_page_allocator>::min_alignment
+   == cat::huge_page_size
+);
 
 // `allocator_ref<A>` should fold to an empty type whenever `A` itself is
 // empty (a stateless / global allocator). This lets containers and other
 // holders embed the ref via `[[no_unique_address]]` without paying any
 // storage cost.
 static_assert(__is_empty(cat::page_allocator));
+static_assert(__is_empty(cat::huge_page_allocator));
 static_assert(__is_empty(cat::null_allocator));
 static_assert(__is_empty(cat::allocator_ref<cat::page_allocator>));
+static_assert(__is_empty(cat::allocator_ref<cat::huge_page_allocator>));
 static_assert(__is_empty(cat::allocator_ref<cat::null_allocator>));
 
 // Stateful allocators leave the ref as a single-pointer handle.
@@ -207,6 +215,38 @@ $test(pool_allocator_equality) {
 
    cat::verify(a1 == a2);
    cat::verify(!(a1 == b1));
+}
+
+$test(huge_page_allocator_rounds_to_two_mebibytes) {
+   cat::huge_page_allocator allocator;
+
+   cat::maybe const one_byte = allocator.allocation_bytes(1u, 1u);
+   cat::maybe const one_page =
+      allocator.allocation_bytes(1u, cat::huge_page_size);
+   cat::maybe const page_and_byte =
+      allocator.allocation_bytes(1u, cat::huge_page_size + 1u);
+
+   cat::verify(one_byte.value() == cat::huge_page_size);
+   cat::verify(one_page.value() == cat::huge_page_size);
+   cat::verify(page_and_byte.value() == cat::huge_page_size * 2u);
+}
+
+// Explicit huge-page mappings require a configured kernel pool. When one is
+// available, verify the alignment and both ends of the mapped page.
+$test(huge_page_allocator_maps_configured_pool) {
+   cat::huge_page_allocator allocator;
+   auto maybe_page = allocator.alloc_multi<cat::byte>(cat::huge_page_size);
+   if (maybe_page.is_empty()) {
+      return;
+   }
+
+   cat::span page = maybe_page.value();
+   cat::verify(cat::is_aligned(page.data(), cat::huge_page_size));
+   page[0] = cat::byte(1u);
+   page.back() = cat::byte(2u);
+   cat::verify(page[0] == cat::byte(1u));
+   cat::verify(page.back() == cat::byte(2u));
+   allocator.free(page);
 }
 
 // `page_allocator::resize` does an anonymous probe via `mmap` /`munmap`.
