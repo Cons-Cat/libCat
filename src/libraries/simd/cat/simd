@@ -302,6 +302,8 @@ concept is_simd_arithmetic =
 template <typename Simd, typename T>
 concept is_simd_of = is_simd<Simd> && is_same<typename Simd::value_type, T>;
 
+namespace detail {
+
 // Element type stored in `simd::raw` (`GNU` vector lanes). `T` is the logical
 // lane type (`int`, `cat::int4`, ...). Raw `bool` uses `unsigned char` storage
 // because `[[gnu::vector_size]]` cannot be `bool`. Other lanes use
@@ -319,7 +321,8 @@ struct simd_vector_element_trait<bool> {
 template <typename T>
 using simd_vector_element = simd_vector_element_trait<T>::type;
 
-namespace detail {
+template <typename T>
+using simd_abi_map_scalar = conditional<is_bool<T>, T, simd_vector_element<T>>;
 
 // Integral type with the same size as a mask lane, for `__builtin_bit_cast`
 // when `lane_scalar` is not an integral type (e.g. `basic_float<float>`).
@@ -329,8 +332,6 @@ using simd_mask_lane_bits_type = conditional<
    conditional<
       sizeof(LaneScalar) == 8zu, unsigned long long,
       conditional<sizeof(LaneScalar) == 2zu, unsigned short, unsigned char>>>;
-
-}  // namespace detail
 
 // Logical lane value to an element of `simd<T, Abi>::raw_type`.
 template <typename T>
@@ -361,6 +362,8 @@ simd_lane_from_raw(simd_vector_element<T> slot) -> T {
    }
    return static_cast<T>(static_cast<raw_arithmetic_type<T>>(slot));
 }
+
+}  // namespace detail
 
 template <typename T, typename Abi>
    requires(is_same<typename Abi::scalar_type, T>)
@@ -486,11 +489,6 @@ class
      clang::preferred_name(compatible_unaligned_simd<T>),
      clang::preferred_name(scalar_unaligned_simd<T>)]] alignas(Abi::alignment
                                                                   .raw) simd {
-   // `mapped_type` is the fundamental storage shape for each lane (`T` may be
-   // a libCat arithmetic wrapper). That keeps `cat::simd_abi` hooks aligned
-   // with hardware intrinsics.
-   using mapped_type = simd_vector_element<T>;
-
    struct unaligned_abi {
       using scalar_type = T;
       static constexpr idx size = Abi::size;
@@ -512,7 +510,7 @@ class
    using scalar_type = value_type;
    // Contiguous buffer / `.raw` lane element (differs from `value_type` when it
    // is a wrapper such as `cat::int4`).
-   using memory_lane = simd_vector_element<T>;
+   using memory_lane = detail::simd_vector_element<T>;
 
    using iterator = detail::simd_range_stepanov_iterator<simd>;
    using const_iterator = detail::simd_range_stepanov_iterator<simd const>;
@@ -522,7 +520,7 @@ class
    // instances of a type. We can use this to conditionally under-align SIMD.
    using raw_type
       [[gnu::vector_size(Abi::size.raw), gnu::aligned(Abi::alignment.raw)]] =
-         mapped_type;
+         memory_lane;
 
  private:
    static constexpr bool raw_storage_has_no_padding =
@@ -579,7 +577,9 @@ class
    [[gnu::nodebug]] constexpr simd(Us&&... arguments)
        // Clang requires curly braces here.
        : raw(
-            raw_type{simd_lane_to_storage(static_cast<T>($fwd(arguments)))...}
+            raw_type{
+               detail::simd_lane_to_storage(static_cast<T>($fwd(arguments)))...
+            }
          ) {
    }
 
@@ -589,7 +589,7 @@ class
    template <typename U, U... Us>
       requires(sizeof...(Us) == Abi::lanes.raw)
    [[gnu::nodebug]] constexpr simd(value_type_list<U, Us...> /*unused*/)
-       : raw(raw_type{simd_lane_to_storage(static_cast<T>(Us))...}) {
+       : raw(raw_type{detail::simd_lane_to_storage(static_cast<T>(Us))...}) {
    }
 
    // `simd` from `simd_mask` by way of unary + on the mask.
@@ -1311,7 +1311,7 @@ class
    [[nodiscard, gnu::no_sanitize("bounds"), gnu::always_inline]]
    constexpr auto
    operator[](idx index) const -> T {
-      return simd_lane_from_raw<T>(raw[index.raw]);
+      return detail::simd_lane_from_raw<T>(raw[index.raw]);
    }
 
    // Per-lane equality producing a `simd_mask`. Use `operator==` for value
@@ -1359,7 +1359,7 @@ class
    [[gnu::always_inline]]
    constexpr auto
    set_lane(idx index, scalar_type value) -> void {
-      raw[index.raw] = simd_lane_to_storage(value);
+      raw[index.raw] = detail::simd_lane_to_storage(value);
    }
 
    // P2664R11 permuting subscript `v[indices]` and C++26 multi-subscript
@@ -1569,7 +1569,7 @@ class
    constexpr auto
    fill(U value) -> simd& {
       scalar_type const fill_value = static_cast<scalar_type>(value);
-      mapped_type const lane = simd_lane_to_storage(fill_value);
+      memory_lane const lane = detail::simd_lane_to_storage(fill_value);
       this->raw = raw_type{} + lane;
       return *this;
    }
@@ -1659,12 +1659,12 @@ class
    store_aligned(memory_lane* _Nonnull p_data) const {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
-            p_data[i] = simd_lane_to_storage((*this)[i]);
+            p_data[i] = detail::simd_lane_to_storage((*this)[i]);
          }
       } else {
          if constexpr (!raw_storage_has_no_padding) {
             for (idx i = 0u; i < abi_type::lanes; ++i) {
-               p_data[i] = simd_lane_to_storage((*this)[i]);
+               p_data[i] = detail::simd_lane_to_storage((*this)[i]);
             }
          } else {
             __builtin_bit_cast(simd*, p_data)->raw = this->raw;
@@ -1678,12 +1678,12 @@ class
    store_unaligned(memory_lane* _Nonnull p_data) const {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
-            p_data[i] = simd_lane_to_storage((*this)[i]);
+            p_data[i] = detail::simd_lane_to_storage((*this)[i]);
          }
       } else {
          if constexpr (!raw_storage_has_no_padding) {
             for (idx i = 0u; i < abi_type::lanes; ++i) {
-               p_data[i] = simd_lane_to_storage((*this)[i]);
+               p_data[i] = detail::simd_lane_to_storage((*this)[i]);
             }
          } else {
             __builtin_bit_cast(unaligned_vector*, p_data)->raw = this->raw;
@@ -1743,7 +1743,7 @@ class
    partial_store(memory_lane* _Nonnull p_data, idx count) const {
       idx const n = count < abi_type::lanes ? count : abi_type::lanes;
       for (idx i = 0u; i < n; ++i) {
-         p_data[i] = simd_lane_to_storage((*this)[i]);
+         p_data[i] = detail::simd_lane_to_storage((*this)[i]);
       }
    }
 

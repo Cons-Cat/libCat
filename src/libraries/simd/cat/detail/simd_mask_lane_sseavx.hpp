@@ -1,8 +1,8 @@
 #pragma once
 
 // Default `simd_mask` lane image for libCat x64 ABIs. Xmm and ymm slots use
-// `pcmpeq`-style storage (one `simd_vector_element` per logical lane, false is
-// zero, true is all bits set in the lane). For other encodings, specialize
+// `pcmpeq`-style storage (one storage element per logical lane, false is zero,
+// true is all bits set in the lane). For other encodings, specialize
 // `simd_abi::mask_lane<YourAbi, T>`.
 //
 // Included from `<cat/simd>` after `class simd`. See `simd_mask_lane` on each
@@ -13,10 +13,10 @@ namespace cat::simd_abi {
 
 template <typename AbiTag, typename ElementT>
 struct mask_lane {
-   using lane_scalar = simd_vector_element<ElementT>;
-   using raw_type = typename simd<
-      lane_scalar,
-      typename AbiTag::template make_abi_type<lane_scalar>>::raw_type;
+   using lane_scalar = detail::simd_vector_element<ElementT>;
+   using raw_type =
+      simd<lane_scalar, typename AbiTag::template make_abi_type<lane_scalar>>::
+         raw_type;
 
    static_assert(
       AbiTag::template make_abi_type<lane_scalar>::lanes == AbiTag::lanes,

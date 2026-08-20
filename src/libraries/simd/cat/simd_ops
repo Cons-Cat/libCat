@@ -58,9 +58,6 @@ simd_select(simd_mask<T, Abi> mask, simd<T, Abi> on_true, simd<T, Abi> on_false)
 
 namespace detail {
 
-template <typename T>
-using simd_abi_map_scalar = conditional<is_bool<T>, T, raw_arithmetic_type<T>>;
-
 template <typename T, typename Abi>
    requires(is_bool<T> || requires {
                typename Abi::template make_abi_type<simd_abi_map_scalar<T>>;
