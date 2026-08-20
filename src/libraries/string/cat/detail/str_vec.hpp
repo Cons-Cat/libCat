@@ -28,8 +28,8 @@
 #include <cat/iterable>
 #include <cat/vec>
 
-#include "./str_vec_flags.hpp"
 #include "./str_span.hpp"
+#include "./str_vec_flags.hpp"
 
 namespace cat {
 

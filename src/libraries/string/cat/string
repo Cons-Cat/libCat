@@ -155,6 +155,8 @@ cat::maybe<T>::or_exit(cat::str_view const error_message, iword exit_code) & {
    }
 }
 
+#include "../implementations/string_ops.tpp"
+
 template <typename T>
 [[nodiscard]]
 auto
@@ -206,5 +208,3 @@ cat::maybe<T>::or_exit(
       exit(exit_code);
    }
 }
-
-#include "../implementations/string_ops.tpp"

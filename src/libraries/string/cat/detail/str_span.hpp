@@ -30,8 +30,8 @@
 #include <cat/span>
 #include <cat/utility>
 
-#include "./str_vec_flags.hpp"
 #include "./str_inplace.hpp"
+#include "./str_vec_flags.hpp"
 
 namespace cat {
 
