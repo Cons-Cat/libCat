@@ -10,9 +10,7 @@
 
 namespace nix {
 
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] memory_protection_flags : unsigned char {
+enum class [[clang::flag_enum]] memory_protection_flags : unsigned char {
    none = 0b000,        // Data cannot be accessed at all.
    read = 0b001,        // Data is readable.
    write = 0b010,       // Data is writable.
@@ -44,9 +42,7 @@ enum class
    huge_2mb = 21u << 26u,       // Select 2 MiB huge pages.
 };
 
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] mremap_flags : unsigned int {
+enum class [[clang::flag_enum]] mremap_flags : unsigned int {
    none = 0,            // Resize in place only. Fail if it cannot.
    may_move = 0b1,      // Allow relocating the mapping to a new address.
    fixed = 0b10,        // Relocate to a fixed address (requires `may_move`).
@@ -60,9 +56,7 @@ enum class [[clang::enum_extensibility(open)]] wait_id : unsigned char {
    file_descriptor = 3,
 };
 
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] wait_options_flags : unsigned int {
+enum class [[clang::flag_enum]] wait_options_flags : unsigned int {
    no_hang = 1,
    untraced = 2,
    stopped = 2,
@@ -93,9 +87,7 @@ enum class [[clang::enum_extensibility(open)]] futex_command : unsigned char {
 };
 
 // Bit-or this with `futex_command` to build the `op` argument to `sys_futex()`.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] futex_options : unsigned int {
+enum class [[clang::flag_enum]] futex_options : unsigned int {
    none = 0,
    private_process = 128,
    clock_realtime = 256,
@@ -116,9 +108,7 @@ enum class
 
 // `flags` argument to `sys_futex_waitv()` (syscall `futex_waitv`,
 // `man 2 futex_waitv`).
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] futex_waitv_call_flags : unsigned char {
+enum class [[clang::flag_enum]] futex_waitv_call_flags : unsigned char {
    none = 0,
 };
 
@@ -238,29 +228,23 @@ enum class [[clang::enum_extensibility(open)]] seek_whence : unsigned char {
 };
 
 // Flags argument to `sys_dup3()`. Mirrors `open_flags::close_exec`.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] dup3_flags : unsigned int {
+enum class [[clang::flag_enum]] dup3_flags : unsigned int {
    none = 0,
-   close_exec = 02000000,
+   close_exec = 0x80000,
 };
 
 // Flags argument to `sys_pipe2()`. Same encoding as the matching
 // `open_flags` bits.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] pipe2_flags : unsigned int {
+enum class [[clang::flag_enum]] pipe2_flags : unsigned int {
    none = 0,
-   nonblocking = 04000,
-   close_exec = 02000000,
-   direct = 040000,
+   nonblocking = 0x800,
+   direct = 0x4000,
+   close_exec = 0x80000,
    notification = 0x00800000,
 };
 
 // Flags argument to `sys_getrandom()`.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] getrandom_flags : unsigned int {
+enum class [[clang::flag_enum]] getrandom_flags : unsigned int {
    none = 0,
    nonblocking = 0x0001,
    random = 0x0002,
@@ -269,9 +253,7 @@ enum class
 
 // `mode` argument to `sys_access()`. `exists` (zero) tests for presence.
 // The `readable`/`writable`/`executable` bits may be combined.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] access_mode : unsigned int {
+enum class [[clang::flag_enum]] access_mode : unsigned int {
    exists = 0,
    executable = 1,
    writable = 2,
@@ -316,9 +298,7 @@ enum class [[clang::enum_extensibility(open)]] shutdown_how : unsigned int {
 };
 
 // `flags` argument to `sys_sendto()`, `sys_sendmsg()`, and `sys_recvmsg()`.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] message_flags : unsigned int {
+enum class [[clang::flag_enum]] message_flags : unsigned int {
    none = 0,
    out_of_band = 1,         // MSG_OOB
    peek = 2,                // MSG_PEEK
@@ -343,31 +323,27 @@ enum class
 
 // `flags` argument to `sys_accept4()`. Same encoding as the matching
 // `open_flags` and `pipe2_flags` bits.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] accept4_flags : unsigned int {
+enum class [[clang::flag_enum]] accept4_flags : unsigned int {
    none = 0,
-   nonblocking = 04000,
-   close_exec = 02000000,
+   nonblocking = 0x800,
+   close_exec = 0x80000,
 };
 
 // File-mode permission bits. Matches POSIX `mode_t` octal layout.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] file_permissions : unsigned int {
+enum class [[clang::flag_enum]] file_permissions : unsigned int {
    none = 0,
-   other_execute = 01,
-   other_write = 02,
-   other_read = 04,
-   group_execute = 010,
-   group_write = 020,
-   group_read = 040,
-   user_execute = 0100,
-   user_write = 0200,
-   user_read = 0400,
-   sticky = 01000,
-   set_group_id = 02000,
-   set_user_id = 04000,
+   other_execute = 0b1,
+   other_write = 0b10,
+   other_read = 0b100,
+   group_execute = 0b1000,
+   group_write = 0b1'0000,
+   group_read = 0b10'0000,
+   user_execute = 0b100'0000,
+   user_write = 0b1000'0000,
+   user_read = 0x100,
+   sticky = 0x200,
+   set_group_id = 0x400,
+   set_user_id = 0x800,
 };
 
 // `cmd` argument to `sys_fcntl()`. Only the most commonly used commands are
@@ -391,8 +367,7 @@ enum class [[clang::enum_extensibility(open)]] fcntl_command : int {
 };
 
 // `operation` argument to `sys_flock()`.
-enum class
-   [[clang::flag_enum, clang::enum_extensibility(open)]] flock_op : int {
+enum class [[clang::flag_enum]] flock_op : int {
    shared = 1,       // LOCK_SH
    exclusive = 2,    // LOCK_EX
    nonblocking = 4,  // LOCK_NB
@@ -402,8 +377,7 @@ enum class
 // `flags` argument to `*at()`-family syscalls (`sys_openat`,
 // `sys_unlinkat`, `sys_fchmodat`, etc.). Not every flag is meaningful for
 // every syscall.
-enum class
-   [[clang::flag_enum, clang::enum_extensibility(open)]] atfile_flags : int {
+enum class [[clang::flag_enum]] atfile_flags : int {
    none = 0,
    no_follow = 0x100,          // AT_SYMLINK_NOFOLLOW
    remove_directory = 0x200,   // AT_REMOVEDIR
@@ -422,8 +396,7 @@ inline constexpr file_descriptor at_fdcwd = {
 };
 
 // `mode` argument to `sys_fallocate()`.
-enum class
-   [[clang::flag_enum, clang::enum_extensibility(open)]] fallocate_flags : int {
+enum class [[clang::flag_enum]] fallocate_flags : int {
    none = 0,
    keep_size = 0x01,       // FALLOC_FL_KEEP_SIZE
    punch_hole = 0x02,      // FALLOC_FL_PUNCH_HOLE
@@ -435,9 +408,7 @@ enum class
 };
 
 // `flags` argument to `sys_renameat2()`.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] renameat2_flags : unsigned int {
+enum class [[clang::flag_enum]] renameat2_flags : unsigned int {
    none = 0,
    no_replace = 1,  // RENAME_NOREPLACE
    exchange = 2,    // RENAME_EXCHANGE
@@ -447,9 +418,7 @@ enum class
 // `flags` argument to `sys_mlockall()`. At least one of `current` or
 // `future` must be set. `on_fault` is a Linux 4.4+ extension that defers
 // locking until the page is first faulted in.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] mlockall_flags : unsigned int {
+enum class [[clang::flag_enum]] mlockall_flags : unsigned int {
    none = 0,
    current = 1,   // MCL_CURRENT
    future = 2,    // MCL_FUTURE
@@ -457,18 +426,14 @@ enum class
 };
 
 // `flags` argument to `sys_mlock2()`.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] mlock2_flags : unsigned int {
+enum class [[clang::flag_enum]] mlock2_flags : unsigned int {
    none = 0,
    on_fault = 1,  // MLOCK_ONFAULT
 };
 
 // `flags` field of `io_uring_params` (the third argument to
 // `sys_io_uring_setup()`). Mirrors the kernel's `IORING_SETUP_*` constants.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] io_uring_setup_flags : unsigned int {
+enum class [[clang::flag_enum]] io_uring_setup_flags : unsigned int {
    none = 0,
    io_poll = 1u << 0,              // IORING_SETUP_IOPOLL
    sq_poll = 1u << 1,              // IORING_SETUP_SQPOLL
@@ -491,9 +456,7 @@ enum class
 
 // `flags` argument to `sys_io_uring_enter()`. Mirrors the kernel's
 // `IORING_ENTER_*` constants.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] io_uring_enter_flags : unsigned int {
+enum class [[clang::flag_enum]] io_uring_enter_flags : unsigned int {
    none = 0,
    get_events = 1u << 0,       // IORING_ENTER_GETEVENTS
    sq_wakeup = 1u << 1,        // IORING_ENTER_SQ_WAKEUP
@@ -542,9 +505,7 @@ enum class [[clang::enum_extensibility(
 
 // `mask` bits for `sys_statx()` selecting which fields the kernel must fill
 // in the output `statx_data`.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] statx_mask : unsigned int {
+enum class [[clang::flag_enum]] statx_mask : unsigned int {
    type = 0x0001,
    mode = 0x0002,
    nlink = 0x0004,
@@ -762,10 +723,10 @@ static_assert(sizeof(utsname) == 6ull * 65ull);
 static_assert(alignof(utsname) == 1ull);
 
 enum class [[clang::enum_extensibility(open)]] open_mode : unsigned char {
-   read_only = 00,
-   write_only = 01,
+   read_only = 0b0,
+   write_only = 0b1,
    // This flag cannot be use on a FIFO.
-   read_write = 02,
+   read_write = 0b10,
 };
 
 enum class
@@ -773,34 +734,33 @@ enum class
      clang::enum_extensibility(open)]] open_flags : unsigned int {
    // This will create a new file. If that file already exists, it is no-op
    // unless combined with `open_flags::exclusive`.
-   create = 0100,
+   create = 0x40,
    // This flag can only be used in combination with `open_flags::create`. This
    // will make a syscall fail if the file already exists.
-   exclusive = 0200,
-   no_control_tty = 0400,
-   truncate = 01000,
-   append_file = 02000,
-   nonblocking = 04000,
+   exclusive = 0x80,
+   no_control_tty = 0x100,
+   truncate = 0x200,
+   append_file = 0x400,
+   nonblocking = 0x800,
    // Write I/O operations on the `file_descriptor` shall complete as defined by
    // synchronized I/O data integrity completion.
-   dsync = 010000,
-   sync = 04010000,
-   read_sync = 04010000,
-   directory = 0200000,
-   nofollow = 0400000,
-   // Close the `file_descriptor` automatically when finished with this
-   // operation.
-   close_exec = 02000000,
-
-   async = 020000,
-   direct = 040000,
-   largefile = 0100000,
-   noatime = 01000000,
-   path = 010000000,
-   temporary_file = 020200000,
+   dsync = 0x1000,
+   async = 0x2000,
+   direct = 0x4000,
+   largefile = 0x8000,
    // This flag is used by `open_file()` implicitly. It specifies that the
    // offset value is 8-bytes.
-   large_file = 0100000,
+   large_file = largefile,
+   directory = 0x10000,
+   nofollow = 0x20000,
+   noatime = 0x40000,
+   // Close the `file_descriptor` automatically when finished with this
+   // operation.
+   close_exec = 0x80000,
+   sync = 0x101000,
+   read_sync = sync,
+   path = 0x200000,
+   temporary_file = 0x410000,
 };
 
 // TODO: Comment wtf these mean.
@@ -972,102 +932,102 @@ enum class
    vwerase = 14,
    vlnext = 15,
    veol2 = 16,
-   ignbrk = 0000001,
-   brkint = 0000002,
-   ignpar = 0000004,
-   parmrk = 0000010,
-   inpck = 0000020,
-   istrip = 0000040,
-   inlcr = 0000100,
-   igncr = 0000200,
-   icrnl = 0000400,
-   iuclc = 0001000,
-   ixon = 0002000,
-   ixany = 0004000,
-   ixoff = 0010000,
-   imaxbel = 0020000,
-   iutf8 = 0040000,
-   opost = 0000001,
-   olcuc = 0000002,
-   onlcr = 0000004,
-   ocrnl = 0000010,
-   onocr = 0000020,
-   onlret = 0000040,
-   ofill = 0000100,
-   ofdel = 0000200,
-   nldly = 0000400,
-   nl0 = 0000000,
-   nl1 = 0000400,
-   crdly = 0003000,
-   cr0 = 0000000,
-   cr1 = 0001000,
-   cr2 = 0002000,
-   cr3 = 0003000,
-   tabdly = 0014000,
-   tab0 = 0000000,
-   tab1 = 0004000,
-   tab2 = 0010000,
-   tab3 = 0014000,
-   bsdly = 0020000,
-   bs0 = 0000000,
-   bs1 = 0020000,
-   ffdly = 0100000,
-   ff0 = 0000000,
-   ff1 = 0100000,
-   vtdly = 0040000,
-   vt0 = 0000000,
-   vt1 = 0040000,
-   b0 = 0000000,
-   b50 = 0000001,
-   b75 = 0000002,
-   b110 = 0000003,
-   b134 = 0000004,
-   b150 = 0000005,
-   b200 = 0000006,
-   b300 = 0000007,
-   b600 = 0000010,
-   b1200 = 0000011,
-   b1800 = 0000012,
-   b2400 = 0000013,
-   b4800 = 0000014,
-   b9600 = 0000015,
-   b19200 = 0000016,
-   b38400 = 0000017,
-   b57600 = 0010001,
-   b115200 = 0010002,
-   b230400 = 0010003,
-   b460800 = 0010004,
-   b500000 = 0010005,
-   b576000 = 0010006,
-   b921600 = 0010007,
-   b1000000 = 0010010,
-   b1152000 = 0010011,
-   b1500000 = 0010012,
-   b2000000 = 0010013,
-   b2500000 = 0010014,
-   b3000000 = 0010015,
-   b3500000 = 0010016,
-   b4000000 = 0010017,
-   csize = 0000060,
-   cs5 = 0000000,
-   cs6 = 0000020,
-   cs7 = 0000040,
-   cs8 = 0000060,
-   cstopb = 0000100,
-   cread = 0000200,
-   parenb = 0000400,
-   parodd = 0001000,
-   hupcl = 0002000,
-   clocal = 0004000,
-   isig = 0000001,
-   icanon = 0000002,
-   echo = 0000010,
-   echoe = 0000020,
-   echok = 0000040,
-   echonl = 0000100,
-   noflsh = 0000200,
-   tostop = 0000400,
-   iexten = 0100000,
+   ignbrk = 0x1,
+   brkint = 0x2,
+   ignpar = 0x4,
+   parmrk = 0x8,
+   inpck = 0x10,
+   istrip = 0x20,
+   inlcr = 0x40,
+   igncr = 0x80,
+   icrnl = 0x100,
+   iuclc = 0x200,
+   ixon = 0x400,
+   ixany = 0x800,
+   ixoff = 0x1000,
+   imaxbel = 0x2000,
+   iutf8 = 0x4000,
+   opost = 0x1,
+   olcuc = 0x2,
+   onlcr = 0x4,
+   ocrnl = 0x8,
+   onocr = 0x10,
+   onlret = 0x20,
+   ofill = 0x40,
+   ofdel = 0x80,
+   nldly = 0x100,
+   nl0 = 0x0,
+   nl1 = 0x100,
+   crdly = 0x600,
+   cr0 = 0x0,
+   cr1 = 0x200,
+   cr2 = 0x400,
+   cr3 = 0x600,
+   tabdly = 0x1800,
+   tab0 = 0x0,
+   tab1 = 0x800,
+   tab2 = 0x1000,
+   tab3 = 0x1800,
+   bsdly = 0x2000,
+   bs0 = 0x0,
+   bs1 = 0x2000,
+   ffdly = 0x8000,
+   ff0 = 0x0,
+   ff1 = 0x8000,
+   vtdly = 0x4000,
+   vt0 = 0x0,
+   vt1 = 0x4000,
+   b0 = 0x0,
+   b50 = 0x1,
+   b75 = 0x2,
+   b110 = 0x3,
+   b134 = 0x4,
+   b150 = 0x5,
+   b200 = 0x6,
+   b300 = 0x7,
+   b600 = 0x8,
+   b1200 = 0x9,
+   b1800 = 0xa,
+   b2400 = 0xb,
+   b4800 = 0xc,
+   b9600 = 0xd,
+   b19200 = 0xe,
+   b38400 = 0xf,
+   b57600 = 0x1001,
+   b115200 = 0x1002,
+   b230400 = 0x1003,
+   b460800 = 0x1004,
+   b500000 = 0x1005,
+   b576000 = 0x1006,
+   b921600 = 0x1007,
+   b1000000 = 0x1008,
+   b1152000 = 0x1009,
+   b1500000 = 0x100a,
+   b2000000 = 0x100b,
+   b2500000 = 0x100c,
+   b3000000 = 0x100d,
+   b3500000 = 0x100e,
+   b4000000 = 0x100f,
+   csize = 0x30,
+   cs5 = 0x0,
+   cs6 = 0x10,
+   cs7 = 0x20,
+   cs8 = 0x30,
+   cstopb = 0x40,
+   cread = 0x80,
+   parenb = 0x100,
+   parodd = 0x200,
+   hupcl = 0x400,
+   clocal = 0x800,
+   isig = 0x1,
+   icanon = 0x2,
+   echo = 0x8,
+   echoe = 0x10,
+   echok = 0x20,
+   echonl = 0x40,
+   noflsh = 0x80,
+   tostop = 0x100,
+   iexten = 0x8000,
    ooff = 0,
    oon = 1,
    ioff = 2,
