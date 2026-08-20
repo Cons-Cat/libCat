@@ -53,7 +53,21 @@ block(PROPAGATE CAT_ASAN_RUNTIME_PATH)
   endif()
 endblock()
 
-option(CAT_USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer." OFF)
+unset(CAT_USE_SANITIZERS CACHE)
+set(CAT_USE_ASAN OFF)
+set(CAT_USE_UBSAN OFF)
+separate_arguments(_cat_cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
+foreach(_flag IN LISTS _cat_cxx_flags)
+  if (_flag MATCHES "^-fsanitize=(.+)$")
+    string(REPLACE "," ";" _sanitizers "${CMAKE_MATCH_1}")
+    if ("address" IN_LIST _sanitizers)
+      set(CAT_USE_ASAN ON)
+    endif()
+    if ("undefined" IN_LIST _sanitizers)
+      set(CAT_USE_UBSAN ON)
+    endif()
+  endif()
+endforeach()
 
 # `CAT_THREAD_LOCAL_SIZE` controls the `thread_local` storage buffer.
 # It configures or disables the `thread_local` language feature.
@@ -72,15 +86,15 @@ if (NOT CAT_THREAD_LOCAL_SIZE STREQUAL "")
   add_compile_definitions(CAT_THREAD_LOCAL_SIZE=${CAT_THREAD_LOCAL_SIZE})
 endif()
 
-if (CAT_USE_SANITIZERS)
+if (CAT_USE_ASAN)
   if (NOT CAT_ASAN_RUNTIME_PATH)
     message(FATAL_ERROR
-      "CAT_USE_SANITIZERS=ON but `libclang_rt.asan-x86_64.so` could not be "
-      "located for `${CMAKE_CXX_COMPILER}`. Install the matching Clang ASan "
-      "runtime or reconfigure with "
-      "`-DCAT_USE_SANITIZERS=OFF`.")
+      "`-fsanitize=address` was requested but "
+      "`libclang_rt.asan-x86_64.so` could not be located for "
+      "`${CMAKE_CXX_COMPILER}`. Install the matching Clang ASan runtime or "
+      "remove `address` from `-fsanitize`.")
   endif()
-  message(VERBOSE "CAT_USE_SANITIZERS: using ${CAT_ASAN_RUNTIME_PATH}")
+  message(VERBOSE "ASan: using ${CAT_ASAN_RUNTIME_PATH}")
 endif()
 
 # Optional sccache compiler-launcher. Auto-on when `sccache` is on PATH.
@@ -165,13 +179,13 @@ if(CAT_BOUNDS_SAFETY)
     "SHELL:-Xclang -fexperimental-bounds-safety")
 endif()
 
-if(CAT_USE_SANITIZERS)
-  # Whole-program. Rides with the essentials.
-  list(
-    APPEND CAT_CXX_FLAGS_ESSENTIAL
+if(CAT_USE_UBSAN)
+  list(APPEND CAT_CXX_FLAGS_ESSENTIAL
     -fomit-frame-pointer # Required for UBsan.
-    -fsanitize=undefined
-    -fsanitize=address
+  )
+endif()
+if(CAT_USE_ASAN)
+  list(APPEND CAT_CXX_FLAGS_ESSENTIAL
     # `pthread_create` is intercepted so ASan learns each pthread stack. `clone`
     # with a user stack does not go through that path, so stack instrumentation
     # still assumes the main thread stack and faults on the mmap stack (e.g.
@@ -204,7 +218,7 @@ list(
 # conditional adds `-fvisibility=hidden` only to `Release` (`RelWithDebInfo`
 # already captured the list above), keeping `RelWithDebInfo` inspectable in
 # tools like `nm` or debuggers.
-if (NOT CAT_USE_SANITIZERS)
+if (NOT CAT_USE_ASAN AND NOT CAT_USE_UBSAN)
   list(
     APPEND CAT_CXX_FLAGS_RELEASE
     -flto=auto
@@ -261,7 +275,7 @@ list(
 
 # `-static`, `--no-pie`, and `-Wl,-N` (omagic) can't be used under any
 # dynamic linking scenario.
-if (NOT CAT_USE_SHARED AND NOT CAT_USE_SANITIZERS)
+if (NOT CAT_USE_SHARED AND NOT CAT_USE_ASAN AND NOT CAT_USE_UBSAN)
   list(
     APPEND CAT_LINK_OPTIONS_RELEASE
     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-static>"
@@ -300,10 +314,8 @@ set(CAT_CXX_STANDARD_FEATURE cxx_std_26)
 target_compile_features(cat INTERFACE ${CAT_CXX_STANDARD_FEATURE})
 set_target_properties(cat PROPERTIES CXX_EXTENSIONS ON)
 
-if (CAT_USE_SANITIZERS)
+if (CAT_USE_ASAN)
   target_link_options(cat INTERFACE
-    -fsanitize=address
-    #-fsanitize=undefined.
     -shared-libasan
     # `libcat.ld`'s `INSERT AFTER .text` splits RELRO sections under ASan + lld,
     # which lld rejects unless RELRO is disabled for this link.

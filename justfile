@@ -49,19 +49,12 @@ build_verbose(verbose) := if verbose == "-v" { "--verbose" } else { "" }
 status_verbose(verbose) := if verbose == "-v" { "--verbose" } else { "" }
 ctest_verbose(verbose) := if verbose == "-v" { "--verbose" } else { "" }
 
-# Set sanitizer flags.
-sanitizer(flag) := if flag == "san" { "-DCAT_USE_SANITIZERS=ON" } else { nosan(flag) }
-nosan(flag) := if flag == "nosan" { "-DCAT_USE_SANITIZERS=OFF" } else { "" }
-sanitizer_status(flag) := if flag == "san" { "ON" } else if flag == "nosan" { "OFF" } else { "" }
-cached_sanitizer_recipe := "_print-cached-sanitizer-status"
-requested_sanitizer_recipe := "_print-requested-sanitizer-status"
-sanitizer_status_recipe(flag) := if sanitizer_status(flag) == "" { cached_sanitizer_recipe } else { requested_sanitizer_recipe }
 # Changing sanitizer settings requires regenerating CMake.
-can_skip_configure(flag) := if sanitizer(flag) == "" { "true" } else { "false" }
+can_skip_configure(sanitizers) := if sanitizers == "" { "true" } else { "false" }
 
 # Assemble a `cmake --build` command.
 build *args:
-    @san=""; verbose=""; no_warnings="false"; cxx_flags=""; modes=""; unset CAT_JUST_BUILD_TOOL_TRAILER_B64; set -- "$@"; \
+    @asan=""; ubsan=""; verbose=""; no_warnings="false"; cxx_flags=""; modes=""; unset CAT_JUST_BUILD_TOOL_TRAILER_B64; set -- "$@"; \
       while [ $# -gt 0 ]; do \
         case "$1" in \
           --) shift; \
@@ -70,7 +63,12 @@ build *args:
               export CAT_JUST_BUILD_TOOL_TRAILER_B64; \
             fi; \
             break ;; \
-          san|nosan) san="$1"; shift ;; \
+          san) asan=ON; ubsan=ON; shift ;; \
+          nosan) asan=OFF; ubsan=OFF; shift ;; \
+          asan) asan=ON; shift ;; \
+          noasan) asan=OFF; shift ;; \
+          ubsan) ubsan=ON; shift ;; \
+          noubsan) ubsan=OFF; shift ;; \
           -v) verbose="$1"; shift ;; \
           -w) no_warnings="true"; shift ;; \
           -*) cxx_flags="${cxx_flags:+$cxx_flags }$1"; shift ;; \
@@ -78,6 +76,8 @@ build *args:
           *) printf '%s\n' "just build: unknown flag '$1'!" >&2; exit 1 ;; \
         esac; \
       done; \
+      san="${asan},${ubsan}"; \
+      if [ "$san" = "," ]; then san=""; fi; \
       if [ -z "$modes" ]; then modes="{{ last_mode }}"; fi; \
       for mode in $modes; do \
         just _build-mode "$mode" "$san" "$verbose" "$no_warnings" "$cxx_flags" \
@@ -155,7 +155,7 @@ opt-report mode=last_mode verbose="":
 
 # Per-TU IR fan-out. The grammar:
 #
-#   just ir <kind>+ <selector>+ [mode] [san|nosan] [fmt|no-fmt] [-v] \
+#   just ir <kind>+ <selector>+ [mode] [sanitizers] [fmt|no-fmt] [-v] \
 #           [pass=<pipeline>] [fn=<regex>] [-flag ...] [-- <objdump flags>]
 #
 # Kinds (at least one required): ii s intel att bc ll.
@@ -182,7 +182,7 @@ opt-report mode=last_mode verbose="":
 #                               `fmt`).
 ir *args:
     @set -e; \
-      mode=""; san=""; verbose=""; \
+      mode=""; asan=""; ubsan=""; verbose=""; \
       kinds=""; selectors=""; cxx_flags=""; \
       fmt=""; pass=""; fn=""; syntax="intel"; \
       saw_trailer=false; trailer=""; \
@@ -196,7 +196,12 @@ ir *args:
               else trailer="${trailer};${arg}"; fi; \
             done; \
             break ;; \
-          san|nosan) san="$1"; shift ;; \
+          san) asan=ON; ubsan=ON; shift ;; \
+          nosan) asan=OFF; ubsan=OFF; shift ;; \
+          asan) asan=ON; shift ;; \
+          noasan) asan=OFF; shift ;; \
+          ubsan) ubsan=ON; shift ;; \
+          noubsan) ubsan=OFF; shift ;; \
           fmt|no-fmt) fmt="$1"; shift ;; \
           ii|bc|ll|s) add_kind "$1"; shift ;; \
           intel) add_kind s; syntax="intel"; shift ;; \
@@ -225,6 +230,8 @@ ir *args:
              add_sel "$sel"; shift ;; \
         esac; \
       done; \
+      san="${asan},${ubsan}"; \
+      if [ "$san" = "," ]; then san=""; fi; \
       if [ -z "$kinds" ]; then \
         printf '%s\n' "just ir: pick at least one IR: ii, s/intel/att, bc, or ll" >&2; \
         exit 1; \
@@ -430,7 +437,7 @@ _elf-mode mode=last_mode verbose="" selector="":
       fi
 
 test *args:
-    @san=""; verbose=""; modes=""; tests=""; full="false"; list="false"; \
+    @asan=""; ubsan=""; verbose=""; modes=""; tests=""; full="false"; list="false"; \
       unset CAT_JUST_TEST_TOOL_TRAILER_B64; \
       add_test_selector() { \
         case " $tests " in \
@@ -449,7 +456,12 @@ test *args:
               export CAT_JUST_TEST_TOOL_TRAILER_B64; \
             fi; \
             break ;; \
-          san|nosan) san="$1"; shift ;; \
+          san) asan=ON; ubsan=ON; shift ;; \
+          nosan) asan=OFF; ubsan=OFF; shift ;; \
+          asan) asan=ON; shift ;; \
+          noasan) asan=OFF; shift ;; \
+          ubsan) ubsan=ON; shift ;; \
+          noubsan) ubsan=OFF; shift ;; \
           -v) verbose="$1"; shift ;; \
           debug|release|relwithdebinfo|build|all) modes="${modes:+$modes }$lower"; shift ;; \
           unit) \
@@ -461,10 +473,12 @@ test *args:
           full) full="true"; shift ;; \
           list) list="true"; shift ;; \
           *) printf '%s\n' "just test: unknown option '$arg'!" >&2; \
-             printf '%s\n' "options: unit, gdb, arithmetic, full, list, san, nosan, -v, debug, release, relwithdebinfo, build, all" >&2; \
+             printf '%s\n' "options: unit, gdb, arithmetic, full, list, san, nosan, asan, noasan, ubsan, noubsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
              exit 1 ;; \
         esac; \
       done; \
+      san="${asan},${ubsan}"; \
+      if [ "$san" = "," ]; then san=""; fi; \
       if [ "$full" = "true" ] && [ -n "$tests" ]; then \
         printf '%s\n' "just test: 'full' cannot be combined with named tests!" >&2; \
         exit 1; \
@@ -489,7 +503,7 @@ test *args:
 # Any empty fields are folded in non-verbose output.
 # The potential fields are:
 #   Build mode
-#   CAT_USE_SANITIZERS
+#   ASan, UBSan
 #   CMAKE_CXX_COMPILER
 #   CMAKE_LINKER_TYPE (or "Linker" if specified by `-fuse-ld`)
 #   ISA
@@ -661,15 +675,22 @@ status_link mode=last_mode verbose="":
     @python3 scripts/status_link_flags.py "{{ build_dir(mode) }}" "{{ cmake_config(mode) }}" "Link options" "Link libraries" {{ status_verbose(verbose) }}
 
 repl *args:
-    @mode="{{ last_mode }}"; san=""; verbose=""; set -- "$@"; \
+    @mode="{{ last_mode }}"; asan=""; ubsan=""; verbose=""; set -- "$@"; \
       while [ $# -gt 0 ]; do \
         case "$1" in \
           debug|release|relwithdebinfo) mode="$1"; shift ;; \
-          san|nosan) san="$1"; shift ;; \
+          san) asan=ON; ubsan=ON; shift ;; \
+          nosan) asan=OFF; ubsan=OFF; shift ;; \
+          asan) asan=ON; shift ;; \
+          noasan) asan=OFF; shift ;; \
+          ubsan) ubsan=ON; shift ;; \
+          noubsan) ubsan=OFF; shift ;; \
           -v) verbose="$1"; shift ;; \
           *) break ;; \
         esac; \
       done; \
+      san="${asan},${ubsan}"; \
+      if [ "$san" = "," ]; then san=""; fi; \
       just _repl "$mode" "$san" "$verbose" "$@"
 
 [private]
@@ -679,6 +700,42 @@ _noop *args:
 [private]
 _print-build-mode mode=last_mode:
     @printf '\033[1mBuild mode: \033[0m%s\n' "{{ mode(mode) }}"
+
+[private]
+_apply-sanitizers cxx_flags requests:
+    @bash -c 'set -euo pipefail; cxx_flags=$1; requests=$2; \
+      asan=false; ubsan=false; flags=(); sanitizers=(); \
+      add_sanitizer() { \
+        local value; \
+        for value in "${sanitizers[@]}"; do \
+          if [[ "${value}" == "$1" ]]; then return; fi; \
+        done; \
+        sanitizers+=("$1"); \
+      }; \
+      for flag in ${cxx_flags}; do \
+        case "${flag}" in \
+          -fsanitize=*) \
+            IFS=, read -ra values <<< "${flag#-fsanitize=}"; \
+            for value in "${values[@]}"; do \
+              case "${value}" in \
+                address) asan=true ;; \
+                undefined) ubsan=true ;; \
+                *) add_sanitizer "${value}" ;; \
+              esac; \
+            done ;; \
+          *) flags+=("${flag}") ;; \
+        esac; \
+      done; \
+      IFS=, read -r asan_request ubsan_request <<< "${requests}"; \
+      case "${asan_request}" in ON) asan=true ;; OFF) asan=false ;; esac; \
+      case "${ubsan_request}" in ON) ubsan=true ;; OFF) ubsan=false ;; esac; \
+      if [[ "${asan}" == true ]]; then add_sanitizer address; fi; \
+      if [[ "${ubsan}" == true ]]; then add_sanitizer undefined; fi; \
+      if [[ ${#sanitizers[@]} -gt 0 ]]; then \
+        joined="$(IFS=,; printf "%s" "${sanitizers[*]}")"; \
+        flags+=("-fsanitize=${joined}"); \
+      fi; \
+      printf "%s\n" "${flags[*]}"' _ "{{ cxx_flags }}" "{{ requests }}"
 
 [private]
 _build-mode mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
@@ -703,17 +760,18 @@ _build-mode mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
 _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
     @just _print-build-mode {{ mode }}
 
-    @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; clear_cached=false; \
-      cache={{ build_dir(mode) }}/CMakeCache.txt; \
-      if [[ "${no_warnings}" == true ]]; then \
-        cxx_flags="${cxx_flags:+${cxx_flags} }-Wno-everything -Wl,--no-warnings"; \
-      elif [[ -z "${cxx_flags}" && -f "${cache}" ]]; then \
-        cached_flags=""; \
+    @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; san=$3; \
+      clear_cached=false; cached_flags=""; cache={{ build_dir(mode) }}/CMakeCache.txt; \
+      if [[ -f "${cache}" ]]; then \
         while IFS= read -r line; do \
           case "${line}" in \
             CMAKE_CXX_FLAGS:STRING=*) cached_flags="${line#CMAKE_CXX_FLAGS:STRING=}" ;; \
           esac; \
         done < "${cache}"; \
+      fi; \
+      if [[ "${no_warnings}" == true ]]; then \
+        cxx_flags="${cxx_flags:+${cxx_flags} }-Wno-everything -Wl,--no-warnings"; \
+      elif [[ -z "${cxx_flags}" && -f "${cache}" ]]; then \
         if [[ " ${cached_flags} " == *" -Wno-everything "* ]]; then \
           for flag in ${cached_flags}; do \
             case "${flag}" in \
@@ -724,9 +782,13 @@ _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
           clear_cached=true; \
         fi; \
       fi; \
+      if [[ -n "${san}" ]]; then \
+        if [[ -z "${cxx_flags}" ]]; then cxx_flags="${cached_flags}"; fi; \
+        cxx_flags="$(just _apply-sanitizers "${cxx_flags}" "${san}")"; \
+      fi; \
       configure=(cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
-        {{ configure_config(mode) }} {{ sanitizer(san) }}); \
-      if [[ -n "${cxx_flags}" || "${clear_cached}" == true ]]; then \
+        {{ configure_config(mode) }}); \
+      if [[ -n "${san}" || -n "${cxx_flags}" || "${clear_cached}" == true ]]; then \
         configure+=("-DCMAKE_CXX_FLAGS=${cxx_flags}"); \
       fi; \
       if [[ "{{ can_skip_configure(san) }}" != true || -n "${cxx_flags}" \
@@ -747,7 +809,7 @@ _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
       else \
         cmake --build {{ build_dir(mode) }} \
           {{ build_config(mode) }} {{ build_verbose(verbose) }}; \
-      fi' _ "{{ no_warnings }}" "{{ cxx_flags }}"
+      fi' _ "{{ no_warnings }}" "{{ cxx_flags }}" "{{ san }}"
 
     @mkdir -p .cache
     @printf '%s\n' "{{ mode(mode) }}" > .cache/cat-build-mode
@@ -756,17 +818,18 @@ _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
 _build-custom mode="" san="" verbose="" no_warnings="false" cxx_flags="":
     @just _print-build-mode {{ mode }}
 
-    @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; clear_cached=false; \
-      cache={{ build_dir(mode) }}/CMakeCache.txt; \
-      if [[ "${no_warnings}" == true ]]; then \
-        cxx_flags="${cxx_flags:+${cxx_flags} }-Wno-everything -Wl,--no-warnings"; \
-      elif [[ -z "${cxx_flags}" && -f "${cache}" ]]; then \
-        cached_flags=""; \
+    @bash -c 'set -euo pipefail; no_warnings=$1; cxx_flags=$2; san=$3; \
+      clear_cached=false; cached_flags=""; cache={{ build_dir(mode) }}/CMakeCache.txt; \
+      if [[ -f "${cache}" ]]; then \
         while IFS= read -r line; do \
           case "${line}" in \
             CMAKE_CXX_FLAGS:STRING=*) cached_flags="${line#CMAKE_CXX_FLAGS:STRING=}" ;; \
           esac; \
         done < "${cache}"; \
+      fi; \
+      if [[ "${no_warnings}" == true ]]; then \
+        cxx_flags="${cxx_flags:+${cxx_flags} }-Wno-everything -Wl,--no-warnings"; \
+      elif [[ -z "${cxx_flags}" && -f "${cache}" ]]; then \
         if [[ " ${cached_flags} " == *" -Wno-everything "* ]]; then \
           for flag in ${cached_flags}; do \
             case "${flag}" in \
@@ -777,9 +840,12 @@ _build-custom mode="" san="" verbose="" no_warnings="false" cxx_flags="":
           clear_cached=true; \
         fi; \
       fi; \
-      configure=(cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
-        {{ sanitizer(san) }}); \
-      if [[ -n "${cxx_flags}" || "${clear_cached}" == true ]]; then \
+      if [[ -n "${san}" ]]; then \
+        if [[ -z "${cxx_flags}" ]]; then cxx_flags="${cached_flags}"; fi; \
+        cxx_flags="$(just _apply-sanitizers "${cxx_flags}" "${san}")"; \
+      fi; \
+      configure=(cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }}); \
+      if [[ -n "${san}" || -n "${cxx_flags}" || "${clear_cached}" == true ]]; then \
         configure+=("-DCMAKE_CXX_FLAGS=${cxx_flags}"); \
       fi; \
       if [[ "{{ can_skip_configure(san) }}" != true || -n "${cxx_flags}" \
@@ -798,33 +864,40 @@ _build-custom mode="" san="" verbose="" no_warnings="false" cxx_flags="":
           -- "${trailer[@]}"; \
       else \
         cmake --build {{ build_dir(mode) }} {{ build_verbose(verbose) }}; \
-      fi' _ "{{ no_warnings }}" "{{ cxx_flags }}"
+      fi' _ "{{ no_warnings }}" "{{ cxx_flags }}" "{{ san }}"
 
 [private]
 _print-sanitizer-status build_dir san="":
-    @just {{ sanitizer_status_recipe(san) }} \
-      "{{ build_dir }}" "{{ sanitizer_status(san) }}"
-
-# Colors within the range of https://blog.xoria.org/terminal-colors/
-[private]
-_print-requested-sanitizer-status _build_dir status:
-    @status="{{ status }}"; \
-      case "$status" in \
-        ON) status="$(printf '\033[36mON\033[0m')" ;; \
-        OFF) status="$(printf '\033[91mOFF\033[0m')" ;; \
+    @flags=""; asan=OFF; ubsan=OFF; source=cached; \
+      if [ -n "{{ san }}" ]; then source=requested; fi; \
+      if [ -f "{{ build_dir }}/CMakeCache.txt" ]; then \
+        flags="$(sed -n 's/^CMAKE_CXX_FLAGS:STRING=//p' "{{ build_dir }}/CMakeCache.txt")"; \
+        for flag in $flags; do \
+          case "$flag" in \
+            -fsanitize=*) \
+              values="${flag#-fsanitize=}"; \
+              old_ifs="$IFS"; IFS=,; \
+              for value in $values; do \
+                case "$value" in address) asan=ON ;; undefined) ubsan=ON ;; esac; \
+              done; \
+              IFS="$old_ifs" ;; \
+          esac; \
+        done; \
+      else \
+        asan=n/a; ubsan=n/a; \
+      fi; \
+      case "$asan" in \
+        ON) asan="$(printf '\033[36mON\033[0m')" ;; \
+        OFF) asan="$(printf '\033[91mOFF\033[0m')" ;; \
+        n/a) asan="$(printf '\033[90mn/a\033[0m')" ;; \
       esac; \
-      printf '\033[1mCAT_USE_SANITIZERS: \033[0m%s \033[90m(requested)\033[0m\n' "$status"
-
-[private]
-_print-cached-sanitizer-status build_dir _status="":
-    @status="$(printf '\033[90mn/a\033[0m')"; \
-      test ! -f "{{ build_dir }}/CMakeCache.txt" \
-        || status="$(sed -n 's/^CAT_USE_SANITIZERS:BOOL=//p' "{{ build_dir }}/CMakeCache.txt")"; \
-      case "$status" in \
-        ON) status="$(printf '\033[36mON\033[0m')" ;; \
-        OFF) status="$(printf '\033[91mOFF\033[0m')" ;; \
+      case "$ubsan" in \
+        ON) ubsan="$(printf '\033[36mON\033[0m')" ;; \
+        OFF) ubsan="$(printf '\033[91mOFF\033[0m')" ;; \
+        n/a) ubsan="$(printf '\033[90mn/a\033[0m')" ;; \
       esac; \
-      printf '\033[1mCAT_USE_SANITIZERS: \033[0m%s \033[90m(cached)\033[0m\n' "$status"
+      printf '\033[1mASan: \033[0m%s, \033[1mUBSan: \033[0m%s \033[90m(%s)\033[0m\n' \
+        "$asan" "$ubsan" "$source"
 
 [private]
 _clean-mode mode=last_mode verbose="":
@@ -865,18 +938,29 @@ _ir-mode mode=last_mode san="" verbose="" cxx_flags="" targets="":
 [private]
 _ir-config mode="release" san="" verbose="" cxx_flags="" targets="":
     @just _print-build-mode {{ mode }}
-    @bash -c 'set -euo pipefail; cxx_flags=$1; \
+    @bash -c 'set -euo pipefail; cxx_flags=$1; san=$2; \
+      if [[ -n "${san}" && -z "${cxx_flags}" \
+          && -f {{ build_dir(mode) }}/CMakeCache.txt ]]; then \
+        while IFS= read -r line; do \
+          case "${line}" in \
+            CMAKE_CXX_FLAGS:STRING=*) cxx_flags="${line#CMAKE_CXX_FLAGS:STRING=}" ;; \
+          esac; \
+        done < {{ build_dir(mode) }}/CMakeCache.txt; \
+      fi; \
+      if [[ -n "${san}" ]]; then \
+        cxx_flags="$(just _apply-sanitizers "${cxx_flags}" "${san}")"; \
+      fi; \
       configure=(cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
-        {{ configure_config(mode) }} {{ sanitizer(san) }} \
+        {{ configure_config(mode) }} \
         "-DCAT_IR_FUNCTION=${CAT_JUST_IR_FN:-}" \
         "-DCAT_IR_PASS=${CAT_JUST_IR_PASS:-}" \
         "-DCAT_IR_S_SYNTAX=${CAT_JUST_IR_SYNTAX:-intel}" \
         "-DCAT_IR_FMT=${CAT_JUST_IR_FMT:-ON}" \
         "-DCAT_IR_OBJDUMP_TRAILER=${CAT_JUST_IR_TRAILER:-}"); \
-      if [[ -n "${cxx_flags}" ]]; then \
+      if [[ -n "${san}" || -n "${cxx_flags}" ]]; then \
         configure+=("-DCMAKE_CXX_FLAGS=${cxx_flags}"); \
       fi; \
-      "${configure[@]}"' _ "{{ cxx_flags }}"
+      "${configure[@]}"' _ "{{ cxx_flags }}" "{{ san }}"
     @just status_san {{ mode }} "{{ san }}"
     @bash -c 'set -euo pipefail; targets=$1; \
       if [[ -z "${targets}" ]]; then exit 0; fi; \
@@ -976,10 +1060,27 @@ _test-config mode=last_mode san="" verbose="" test_regex="" list="false":
 _repl mode san="" verbose="" *args:
     @just _print-build-mode {{ mode }}
 
-    @test "{{ can_skip_configure(san) }}" = true \
-      && test -x {{ build_dir(mode) }}/clang-repl-libcat \
-      || cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
-        {{ configure_config(mode) }} -DCAT_BUILD_SHARED=ON {{ sanitizer(san) }}
+    @bash -c 'set -euo pipefail; san=$1; cxx_flags=""; \
+      if [[ "{{ can_skip_configure(san) }}" == true \
+          && -x {{ build_dir(mode) }}/clang-repl-libcat ]]; then \
+        exit 0; \
+      fi; \
+      if [[ -n "${san}" && -f {{ build_dir(mode) }}/CMakeCache.txt ]]; then \
+        while IFS= read -r line; do \
+          case "${line}" in \
+            CMAKE_CXX_FLAGS:STRING=*) cxx_flags="${line#CMAKE_CXX_FLAGS:STRING=}" ;; \
+          esac; \
+        done < {{ build_dir(mode) }}/CMakeCache.txt; \
+        cxx_flags="$(just _apply-sanitizers "${cxx_flags}" "${san}")"; \
+      elif [[ -n "${san}" ]]; then \
+        cxx_flags="$(just _apply-sanitizers "" "${san}")"; \
+      fi; \
+      configure=(cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
+        {{ configure_config(mode) }} -DCAT_BUILD_SHARED=ON); \
+      if [[ -n "${san}" ]]; then \
+        configure+=("-DCMAKE_CXX_FLAGS=${cxx_flags}"); \
+      fi; \
+      "${configure[@]}"' _ "{{ san }}"
 
     @just status_san {{ mode }} "{{ san }}"
     @cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \

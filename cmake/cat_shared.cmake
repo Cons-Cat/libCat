@@ -95,9 +95,9 @@ target_compile_options(cat-impl-shared
     # `-fvisibility=default` wins for the non-inline definitions `clang-repl`
     # actually needs to look up. `-fvisibility-inlines-hidden` has no inverse
     # switch, but inline functions are inlined at the JIT call site so their
-    # visibility is moot. `Debug`/`RelWithDebInfo` / any `CAT_USE_SANITIZERS=ON`
-    # build never sees the hidden flag in the first place, so this override is a
-    # no-op there.
+    # visibility is moot. `Debug`/`RelWithDebInfo` / any sanitizer build never
+    # sees the hidden flag in the first place, so this override is a no-op
+    # there.
     -fvisibility=default)
 
 target_include_directories(cat-impl-shared PUBLIC
@@ -131,9 +131,9 @@ target_link_options(cat-impl-shared
     # libCat's full self-contained `libcat.ld` keeps `.tdata` page-aligned
     # away from RELRO-backed sections, but `lld` still complains on links
     # that pull in a `.so` (the `.so`'s `.got` entries widen the RELRO
-    # region). The same flag is added under `CAT_USE_SANITIZERS` in the
-    # top-level CMakeLists for the ASan-runtime `.so`. Repeating it here
-    # keeps `CAT_USE_SHARED` builds working without sanitizers.
+    # region). The same flag is added for ASan in the top-level CMakeLists.
+    # Repeating it here keeps `CAT_USE_SHARED` builds working without
+    # sanitizers.
     -Wl,-z,norelro
   PRIVATE
     -fno-lto
@@ -215,7 +215,7 @@ endif()
 # is already probed and verified at the top of the root CMakeLists.txt;
 # clear it here when sanitizers are off so the generated wrapper does not
 # preload asan into a non-asanified `libcat.so`.
-if (NOT CAT_USE_SANITIZERS)
+if (NOT CAT_USE_ASAN)
   set(CAT_ASAN_RUNTIME_PATH "")
 endif()
 

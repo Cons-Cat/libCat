@@ -297,7 +297,7 @@ jobs:
         run: |
           cmake -S . -B build-debug -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCAT_USE_SANITIZERS=ON \
+            -DCMAKE_CXX_FLAGS=-fsanitize=address,undefined \
             -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
           cmake --build build-debug
 
@@ -340,7 +340,6 @@ jobs:
         run: |
           cmake -S . -B build-debug-nosan -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCAT_USE_SANITIZERS=OFF \
             -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
           cmake --build build-debug-nosan
 
@@ -498,7 +497,7 @@ jobs:
         run: |
           cmake -S . -B build-release-asan -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCAT_USE_SANITIZERS=ON \
+            -DCMAKE_CXX_FLAGS=-fsanitize=address,undefined \
             -DCAT_GDB_EXECUTABLE=/usr/bin/gdb
           cmake --build build-release-asan
 
@@ -633,7 +632,7 @@ jobs:
 
           cmake -S . -B build-shared -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCAT_USE_SANITIZERS=ON \
+            -DCMAKE_CXX_FLAGS=-fsanitize=address,undefined \
             -DCAT_USE_SHARED=ON
           cmake --build build-shared
 
@@ -758,7 +757,7 @@ jobs:
           cmake -S . -B build-repl-debug-asan -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_BUILD_SHARED=ON \
-            -DCAT_USE_SANITIZERS=ON \
+            -DCMAKE_CXX_FLAGS=-fsanitize=address,undefined \
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-debug-asan --target cat-impl-shared
@@ -791,7 +790,6 @@ jobs:
           cmake -S . -B build-repl-debug -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCAT_BUILD_SHARED=ON \
-            -DCAT_USE_SANITIZERS=OFF \
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-debug --target cat-impl-shared
@@ -819,7 +817,7 @@ jobs:
           cmake -S . -B build-repl-release-asan -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCAT_BUILD_SHARED=ON \
-            -DCAT_USE_SANITIZERS=ON \
+            -DCMAKE_CXX_FLAGS=-fsanitize=address,undefined \
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-release-asan --target cat-impl-shared
@@ -847,7 +845,6 @@ jobs:
           cmake -S . -B build-repl-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCAT_BUILD_SHARED=ON \
-            -DCAT_USE_SANITIZERS=OFF \
             -DCAT_BUILD_UNIT_TESTS=OFF \
             -DCAT_BUILD_ALL_EXAMPLES=OFF
           cmake --build build-repl-release --target cat-impl-shared
@@ -902,7 +899,6 @@ jobs:
       #     cmake -S . -B build-sde -G Ninja \
       #       -DCMAKE_BUILD_TYPE=Release \
       #       -DCMAKE_CXX_COMPILER=clang++ \
-      #       -DCAT_USE_SANITIZERS=OFF \
       #       -DCAT_USE_SCCACHE=OFF \
       #       -DCAT_SDE_EXECUTABLE="${CAT_SDE_EXECUTABLE}"
       #     cmake --build build-sde --target unit_tests

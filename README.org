@@ -41,26 +41,28 @@ Pass =-v= to show verbose CMake configure messages and build commands.
   just build debug relwithdebinfo -v
 #+END_SRC
 
-Developers of libCat are encouraged to enable sanitizers with =san=. Use =nosan=
-to disable them again. If neither argument is passed, CMake keeps the cached
-=CAT_USE_SANITIZERS= setting. The order of this argument is arbitrary to the
+Developers of libCat are encouraged to enable sanitizers with =san=. This enables
+=asan= and =ubsan= together. Each sanitizer may be toggled independently with
+=asan=, =noasan=, =ubsan=, and =noubsan=. =nosan= disables both. If no sanitizer
+argument is passed, the cached =CMAKE_CXX_FLAGS= setting is kept. Sanitizer
+arguments are processed from left to right and may appear anywhere among the
 build modes.
 #+BEGIN_SRC sh
   just build san
   just build nosan
+  just build ubsan
+  just build san noasan
 
   just build san debug
   just build debug san release
 #+END_SRC
 
-This will compile every translation unit with AddressSanitizer + UndefinedBehaviorSanitizer.
-Note that enabling these disables link-time optimization in =release= and =relwithdebinfo=.
+These arguments control the =-fsanitize= compiler flag. Enabling either
+sanitizer disables link-time optimization in =release= and =relwithdebinfo=.
 
 In an initial build, sanitizers are not enabled. This state may be restored by:
 #+BEGIN_SRC sh
-  just clean
-  just clean release
-  just clean all
+  just build nosan
 #+END_SRC
 
 Additional optiization or warning flags can be passed in anywhere in the command. =-w= is
@@ -395,7 +397,7 @@ sections. This compile configuration can be changed by =just build= flags.
 For an example configuration:
 #+BEGIN_SRC sh
   just status release
-  # CAT_USE_SANITIZERS: OFF (cached)
+  # ASan: OFF, UBSan: OFF (cached)
   # CMAKE_CXX_COMPILER: ./.cache/cat-llvm/bin/clang++
   # Clang nightly: July 7, 2026 at 11:16:25
   # CMAKE_LINKER_TYPE: LLD
@@ -419,7 +421,7 @@ For an example configuration:
   # Run just status -v to see all fields or flag descriptions.
     
   just status debug -v
-  # CAT_USE_SANITIZERS: OFF (cached)
+  # ASan: OFF, UBSan: OFF (cached)
   # CMAKE_CXX_COMPILER: /home/lgooch/libCat/.cache/cat-llvm/bin/clang++
   # CMAKE_LINKER_TYPE: LLD
   # ISA: default (x86_64-pc-linux-gnu)
