@@ -462,6 +462,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_broadcast_traits.hpp
   ${CATLIB}/simd/cat/detail/simd_range_iterator.hpp
   ${CATLIB}/simd/cat/detail/simd_avx512.hpp
+  ${CATLIB}/simd/cat/detail/simd_avx512_mask_ops.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_mask_ops.hpp
   ${CATLIB}/simd/cat/detail/simd_aliases.hpp
@@ -469,6 +470,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_mask_lane_sseavx.hpp
   ${CATLIB}/simd/cat/detail/simd_sse42.hpp
   ${CATLIB}/simd/cat/detail/simd_sse.hpp
+  ${CATLIB}/simd/cat/detail/simd_sse_mask_ops.hpp
   ${CATLIB}/simd/cat/detail/simd_sse_movmsk.hpp
   ${CATLIB}/simd/cat/detail/simd_sse_unary_full.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_unary_full.hpp

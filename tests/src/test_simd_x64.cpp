@@ -11,6 +11,43 @@ using cat::int4x8;
 
 namespace {
 
+template <typename Mask>
+auto
+verify_mask_hooks_match_fixed_size() -> void {
+   using T = Mask::simd_type::value_type;
+   using reference_mask = cat::fixed_size_simd_mask<T, Mask::abi_type::lanes>;
+
+   Mask sparse{};
+   reference_mask reference{};
+   for (cat::idx i = 0u; i < Mask::size(); ++i) {
+      bool const value =
+         i == 0u || i == Mask::size() / 2u || i + 1u == Mask::size();
+      sparse.set_lane(i, value);
+      reference.set_lane(i, value);
+   }
+
+   cat::verify(sparse.count_if_true() == reference.count_if_true());
+   cat::verify(sparse.find_if_true() == reference.find_if_true());
+   cat::verify(sparse.find_last_if_true() == reference.find_last_if_true());
+   cat::verify(sparse.any_of() == reference.any_of());
+   cat::verify(sparse.all_of() == reference.all_of());
+
+   auto const bits = sparse.to_bitset();
+   auto const reference_bits = reference.to_bitset();
+   for (cat::idx i = 0u; i < Mask::size(); ++i) {
+      cat::verify(bits[i] == reference_bits[i]);
+   }
+
+   Mask all_true{};
+   all_true.fill(true);
+   cat::verify(all_true.all_of());
+   cat::verify(all_true.count_if_true() == Mask::size());
+
+   Mask none{};
+   cat::verify(!none.any_of());
+   cat::verify(none.count_if_true() == 0u);
+}
+
 // Differential check helper for the AVX2 `simd_compress` hooks. The AVX path
 // in `simd_avx2_compress.hpp` runs against the scalar fallback from
 // `simd_compress_impl` on a same-width `fixed_size` reference vector, lane by
@@ -44,6 +81,19 @@ has_avx512_runtime_support() -> bool {
 [[gnu::target("avx512f,avx512cd,avx512bw,avx512dq,avx512vl")]]
 auto
 verify_avx512_abi_runtime_hooks() -> void {
+   verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint1>>();
+   verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint2>>();
+   verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint4>>();
+   verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint8>>();
+   verify_mask_hooks_match_fixed_size<
+      x64::avx512_unaligned_simd_mask<cat::uint1>>();
+   verify_mask_hooks_match_fixed_size<
+      x64::avx512_unaligned_simd_mask<cat::uint2>>();
+   verify_mask_hooks_match_fixed_size<
+      x64::avx512_unaligned_simd_mask<cat::uint4>>();
+   verify_mask_hooks_match_fixed_size<
+      x64::avx512_unaligned_simd_mask<cat::uint8>>();
+
    x64::avx512_simd<cat::uint8> const words{1u,  3u,  7u,   15u,
                                             31u, 63u, 127u, cat::uint8::max()};
    auto const counts = words.popcount();
@@ -75,6 +125,15 @@ verify_avx512_abi_runtime_hooks() -> void {
                                                      1_f4, 1_f4, 1_f4, 1_f4,
                                                      1_f4, 1_f4, 1_f4, 1_f4};
    cat::verify(cat::simd_dot(geometry, geometry) == 16_f4);
+
+   x64::avx512_simd<cat::int4> const source{1, 2,  3,  4,  5,  6,  7,  8,
+                                            9, 10, 11, 12, 13, 14, 15, 16};
+   cat::fixed_size_simd<cat::int4, 16u> const reverse{
+      15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
+   };
+   auto const permuted = cat::simd_permute(source, reverse);
+   cat::verify(permuted[0u] == 16);
+   cat::verify(permuted[15u] == 1);
 }
 
 }  // namespace
@@ -84,7 +143,7 @@ verify_avx512_abi_runtime_hooks() -> void {
 // in `simd_mask_bitset.tpp`. Reference behavior uses `simd_abi::fixed_size`
 // without ISA hooks, not `simd_abi::native` which may alias `avx_abi` on this
 // target.
-$test(simd_sse_abi_hooks_permute_and_rsqrt) {
+$test(simd_sse_permute) {
    static_assert(cat::simd_abi::scalar<int4>::size == sizeof(int4));
    static_assert(cat::simd_abi::scalar<int4>::alignment == alignof(int4));
    static_assert(cat::simd_abi::scalar<float4>::lanes == 1u);
@@ -122,7 +181,9 @@ $test(simd_sse_abi_hooks_permute_and_rsqrt) {
 
    float4x4 const fid{0_f4, 1_f4, 2_f4, 3_f4};
    cat::verify(cat::simd_permute(floats, fid) == floats);
+}
 
+$test(simd_sse_rsqrt_abi_hook) {
    x64::sse_simd<float4> const unit{4_f4, 4_f4, 4_f4, 4_f4};
    cat::fixed_size_simd<float4, 4u> const unit_ref{4_f4, 4_f4, 4_f4, 4_f4};
    auto const rr = cat::simd_rsqrt(unit);
@@ -141,6 +202,21 @@ $test(simd_sse_abi_hooks_mask_to_bitset) {
    cat::verify(bits[1u] == false);
    cat::verify(bits[2u] == true);
    cat::verify(bits[3u] == true);
+}
+
+$test(simd_sse_abi_hooks_mask_reductions_all_lane_sizes) {
+   verify_mask_hooks_match_fixed_size<x64::sse_simd_mask<cat::uint1>>();
+   verify_mask_hooks_match_fixed_size<x64::sse_simd_mask<cat::uint2>>();
+   verify_mask_hooks_match_fixed_size<x64::sse_simd_mask<cat::uint4>>();
+   verify_mask_hooks_match_fixed_size<x64::sse_simd_mask<cat::uint8>>();
+   verify_mask_hooks_match_fixed_size<
+      x64::sse_unaligned_simd_mask<cat::uint1>>();
+   verify_mask_hooks_match_fixed_size<
+      x64::sse_unaligned_simd_mask<cat::uint2>>();
+   verify_mask_hooks_match_fixed_size<
+      x64::sse_unaligned_simd_mask<cat::uint4>>();
+   verify_mask_hooks_match_fixed_size<
+      x64::sse_unaligned_simd_mask<cat::uint8>>();
 }
 
 $test(simd_dot_fast_matches_generic_results) {
@@ -164,7 +240,7 @@ $test(simd_dot_fast_matches_generic_results) {
 // `unary_full<op_rsqrt>`, plus mask reductions via `simd_avx2_mask_ops.hpp` and
 // `simd_avx2_mask_ops.hpp` mask reductions. `mask_to_bitset` via
 // `avx2_abi_mask_to_bitset`.
-$test(simd_avx_abi_hooks_permute_and_rsqrt) {
+$test(simd_avx_permute_and_rsqrt_abi_hook) {
    x64::avx_simd<float4> const fv{10_f4, 20_f4, 30_f4, 40_f4,
                                   50_f4, 60_f4, 70_f4, 80_f4};
    int4x8 const fid{0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u};
@@ -174,6 +250,14 @@ $test(simd_avx_abi_hooks_permute_and_rsqrt) {
    int4x4 const rev4{3u, 2u, 1u, 0u};
    int4x8 const rev_low{3u, 2u, 1u, 0u, 4u, 5u, 6u, 7u};
    auto const perm_avx = cat::simd_permute(fv, rev_low);
+   {
+      cat::int4 const saved_priority = cat::detail::simd_dispatch_priority;
+      cat::detail::simd_dispatch_priority = 70;
+      $defer {
+         cat::detail::simd_dispatch_priority = saved_priority;
+      };
+      cat::verify(cat::simd_permute(fv, rev_low) == perm_avx);
+   }
    cat::verify(
       cat::simd_permute(flo, rev4)
       == cat::fixed_size_simd<float4, 4u>(
