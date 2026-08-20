@@ -76,7 +76,8 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
     endif()
   endif()
   list(APPEND _cat_format_files
-    "${CMAKE_SOURCE_DIR}/tests/unit_tests.cpp")
+    "${CMAKE_SOURCE_DIR}/tests/unit_tests.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/unit_tests.hpp")
   set(_cat_format_worktree
     "${CMAKE_SOURCE_DIR}/scripts/cat_format_worktree.py")
   set(_cat_format_file_list "${_cat_format_files}")

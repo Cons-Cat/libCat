@@ -24,19 +24,19 @@ run_test_prologue(cat::str_view label, constructor_fn p_test_fn);
 // automatically in this program's constructor calls.
 // Attributes can be placed before an instantiation of the macro to modify its
 // behavior.
-#define CAT_TEST(test_name)                                                 \
-   void test_##test_name();                                                 \
-   void test_##test_name##_prologue();                                      \
-                                                                            \
-   [[gnu::constructor]]                                                     \
-   void cat_register_test##test_name() {                                    \
-      register_test(test_##test_name##_prologue);                            \
-   }                                                                        \
-                                                                            \
-   void test_##test_name##_prologue() {                                     \
-      run_test_prologue(": test_" #test_name "...\n", test_##test_name);     \
-   }                                                                        \
-   /* TODO: Debug IR passes. */                                             \
+#define CAT_TEST(test_name)                                              \
+   void test_##test_name();                                              \
+   void test_##test_name##_prologue();                                   \
+                                                                         \
+   [[gnu::constructor]]                                                  \
+   void cat_register_test##test_name() {                                 \
+      register_test(test_##test_name##_prologue);                        \
+   }                                                                     \
+                                                                         \
+   void test_##test_name##_prologue() {                                  \
+      run_test_prologue(": test_" #test_name "...\n", test_##test_name); \
+   }                                                                     \
+   /* TODO: Debug IR passes. */                                          \
    void test_##test_name()
 
 // `CAT_TEST` should never be `#undef`'d. The redefinable macro `test` exists
