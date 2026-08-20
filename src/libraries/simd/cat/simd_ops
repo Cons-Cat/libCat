@@ -3666,6 +3666,7 @@ inline constexpr detail::simd_atan_impl simd_atan{};
 inline constexpr detail::simd_sinh_impl simd_sinh{};
 inline constexpr detail::simd_cosh_impl simd_cosh{};
 inline constexpr detail::simd_tanh_impl simd_tanh{};
+// TODO: Add `simd_lgamma`.
 inline constexpr detail::simd_ceil_impl simd_ceil{};
 inline constexpr detail::simd_floor_impl simd_floor{};
 inline constexpr detail::simd_log_impl simd_log{};
@@ -3695,4 +3696,402 @@ inline constexpr detail::simd_fma_impl simd_fma{};
 inline constexpr detail::simd_fshl_impl simd_fshl{};
 inline constexpr detail::simd_fshr_impl simd_fshr{};
 inline constexpr detail::simd_ldexp_impl simd_ldexp{};
+
+// Wrap the scalar math APIs for `cat::simd` to make it interchangeable, as it
+// is a regular type.
+template <typename T, typename Abi>
+   requires(is_arithmetic<T>)
+[[nodiscard]]
+constexpr auto
+abs(simd<T, Abi> value) -> simd<T, Abi> {
+   if constexpr (is_unsigned_integral<T>) {
+      return value;
+   } else {
+      return simd_abs(value);
+   }
+}
+
+template <typename T, typename Abi>
+   requires(is_arithmetic<T>)
+[[nodiscard]]
+constexpr auto
+clamp(simd<T, Abi> value, simd<T, Abi> minimum, simd<T, Abi> maximum)
+   -> simd<T, Abi> {
+   return simd_min(simd_max(value, minimum), maximum);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+ceil(simd<T, Abi> value) -> simd<T, Abi> {
+   return simd_ceil(value);
+}
+
+template <typename T, typename Abi>
+   requires(is_integral<T>)
+[[nodiscard]]
+constexpr auto
+ceil(simd<T, Abi> value) -> simd<T, Abi> {
+   return value;
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+floor(simd<T, Abi> value) -> simd<T, Abi> {
+   return simd_floor(value);
+}
+
+template <typename T, typename Abi>
+   requires(is_integral<T>)
+[[nodiscard]]
+constexpr auto
+floor(simd<T, Abi> value) -> simd<T, Abi> {
+   return value;
+}
+
+// TODO: Add SIMD `div_ceil` and `div_floor` operations.
+
+template <typename T, typename Abi>
+   requires(is_arithmetic<T> && !is_bool<T>)
+[[nodiscard]]
+constexpr auto
+dot(simd<T, Abi> left, simd<T, Abi> right) -> T {
+   return simd_dot(left, right);
+}
+
+template <typename T, typename Abi, typename... Remaining>
+   requires(
+      is_arithmetic<T> && !is_bool<T> && sizeof...(Remaining) % 2u == 0u
+      && (is_same<remove_cvref<Remaining>, simd<T, Abi>> && ...)
+   )
+[[nodiscard]]
+constexpr auto
+dot(
+   simd<T, Abi> value_1, simd<T, Abi> value_2, simd<T, Abi> value_3,
+   simd<T, Abi> value_4, Remaining... remaining
+) -> T {
+   return dot(value_1, value_2) + dot(value_3, value_4, remaining...);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+exp(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_exp(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+fma(simd<T, Abi> value, simd<T, Abi> multiplier, simd<T, Abi> addend)
+   -> simd<T, Abi> {
+   return simd_fma(value, multiplier, addend);
+}
+
+template <typename T, typename Abi, is_arithmetic U, is_arithmetic V>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+fma(simd<T, Abi> value, U multiplier, V addend) -> simd<T, Abi> {
+   simd<T, Abi> multiplier_vector{static_cast<T>(multiplier)};
+   simd<T, Abi> addend_vector{static_cast<T>(addend)};
+   return fma(value, multiplier_vector, addend_vector);
+}
+
+// TODO: Forward integral `cat::fma` for `cat::simd`.
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+log(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_log(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+sqrt(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_sqrt(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+rsqrt(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_rsqrt(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+nroot(simd<T, Abi> argument, iword root) -> simd<T, Abi> {
+   return simd_nroot(argument, root);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+cbrt(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_cbrt(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+rnroot(simd<T, Abi> argument, iword root) -> simd<T, Abi> {
+   return simd_rnroot(argument, root);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+rcbrt(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_rcbrt(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+sin(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_sin(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+cos(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_cos(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+tan(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_tan(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+asin(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_asin(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+acos(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_acos(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+atan(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_atan(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+atan2(simd<T, Abi> y, simd<T, Abi> x) -> simd<T, Abi> {
+   return simd_atan2(y, x);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+sinh(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_sinh(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+cosh(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_cosh(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+tanh(simd<T, Abi> argument) -> simd<T, Abi> {
+   return simd_tanh(argument);
+}
+
+template <typename T, typename Abi>
+   requires(is_arithmetic<T> && !is_bool<T>)
+[[nodiscard]]
+constexpr auto
+min(simd<T, Abi> value) -> simd<T, Abi> {
+   return value;
+}
+
+template <typename T, typename Abi, typename... Remaining>
+   requires(
+      is_arithmetic<T> && !is_bool<T>
+      && (is_same<remove_cvref<Remaining>, simd<T, Abi>> && ...)
+   )
+[[nodiscard]]
+constexpr auto
+min(simd<T, Abi> first, simd<T, Abi> second, Remaining... remaining)
+   -> simd<T, Abi> {
+   simd<T, Abi> result = simd_min(first, second);
+   ((result = simd_min(result, remaining)), ...);
+   return result;
+}
+
+template <typename T, typename Abi, is_arithmetic U, typename... Remaining>
+   requires(
+      is_arithmetic<T> && !is_bool<T> && is_implicitly_convertible<U, T>
+      && ((is_same<remove_cvref<Remaining>, simd<T, Abi>> || (is_arithmetic<remove_cvref<Remaining>> && is_implicitly_convertible<remove_cvref<Remaining>, T>)) && ...)
+   )
+[[nodiscard]]
+constexpr auto
+min(simd<T, Abi> first, U second, Remaining... remaining) -> simd<T, Abi> {
+   simd<T, Abi> second_vector = second;
+   simd<T, Abi> const selected = simd_min(first, second_vector);
+   if constexpr (sizeof...(Remaining) == 0u) {
+      return selected;
+   } else {
+      return min(selected, remaining...);
+   }
+}
+
+template <typename T, typename Abi>
+   requires(is_arithmetic<T> && !is_bool<T>)
+[[nodiscard]]
+constexpr auto
+max(simd<T, Abi> value) -> simd<T, Abi> {
+   return value;
+}
+
+template <typename T, typename Abi, typename... Remaining>
+   requires(
+      is_arithmetic<T> && !is_bool<T>
+      && (is_same<remove_cvref<Remaining>, simd<T, Abi>> && ...)
+   )
+[[nodiscard]]
+constexpr auto
+max(simd<T, Abi> first, simd<T, Abi> second, Remaining... remaining)
+   -> simd<T, Abi> {
+   simd<T, Abi> result = simd_max(first, second);
+   ((result = simd_max(result, remaining)), ...);
+   return result;
+}
+
+template <typename T, typename Abi, is_arithmetic U, typename... Remaining>
+   requires(
+      is_arithmetic<T> && !is_bool<T> && is_implicitly_convertible<U, T>
+      && ((is_same<remove_cvref<Remaining>, simd<T, Abi>> || (is_arithmetic<remove_cvref<Remaining>> && is_implicitly_convertible<remove_cvref<Remaining>, T>)) && ...)
+   )
+[[nodiscard]]
+constexpr auto
+max(simd<T, Abi> first, U second, Remaining... remaining) -> simd<T, Abi> {
+   simd<T, Abi> second_vector = second;
+   simd<T, Abi> const selected = simd_max(first, second_vector);
+   if constexpr (sizeof...(Remaining) == 0u) {
+      return selected;
+   } else {
+      return max(selected, remaining...);
+   }
+}
+
+// TODO: Forward `cat::pow` for `cat::simd`.
+
+template <typename T, typename Abi>
+   requires(is_arithmetic<T>)
+[[nodiscard]]
+constexpr auto
+product(simd<T, Abi> value) -> simd<T, Abi> {
+   return value;
+}
+
+template <typename T, typename Abi, typename... Remaining>
+   requires(
+      is_arithmetic<T> && sizeof...(Remaining) > 0u
+      && (is_same<remove_cvref<Remaining>, simd<T, Abi>> && ...)
+   )
+[[nodiscard]]
+constexpr auto
+product(simd<T, Abi> first, Remaining... remaining) -> simd<T, Abi> {
+   return (first * ... * remaining);
+}
+
+template <typename T, typename Abi, is_arithmetic U, typename... Remaining>
+   requires(
+      is_arithmetic<T> && is_implicitly_convertible<U, T>
+      && ((is_same<remove_cvref<Remaining>, simd<T, Abi>> || (is_arithmetic<remove_cvref<Remaining>> && is_implicitly_convertible<remove_cvref<Remaining>, T>)) && ...)
+   )
+[[nodiscard]]
+constexpr auto
+product(simd<T, Abi> first, U second, Remaining... remaining) -> simd<T, Abi> {
+   simd<T, Abi> second_vector = second;
+   simd<T, Abi> const selected = first * second_vector;
+   if constexpr (sizeof...(Remaining) == 0u) {
+      return selected;
+   } else {
+      return product(selected, remaining...);
+   }
+}
+
+template <typename T, typename Abi>
+   requires(is_arithmetic<T>)
+[[nodiscard]]
+constexpr auto
+sum(simd<T, Abi> value) -> simd<T, Abi> {
+   return value;
+}
+
+template <typename T, typename Abi, typename... Remaining>
+   requires(
+      is_arithmetic<T> && sizeof...(Remaining) > 0u
+      && (is_same<remove_cvref<Remaining>, simd<T, Abi>> && ...)
+   )
+[[nodiscard]]
+constexpr auto
+sum(simd<T, Abi> first, Remaining... remaining) -> simd<T, Abi> {
+   return (first + ... + remaining);
+}
+
+template <typename T, typename Abi, is_arithmetic U, typename... Remaining>
+   requires(
+      is_arithmetic<T> && is_implicitly_convertible<U, T>
+      && ((is_same<remove_cvref<Remaining>, simd<T, Abi>> || (is_arithmetic<remove_cvref<Remaining>> && is_implicitly_convertible<remove_cvref<Remaining>, T>)) && ...)
+   )
+[[nodiscard]]
+constexpr auto
+sum(simd<T, Abi> first, U second, Remaining... remaining) -> simd<T, Abi> {
+   simd<T, Abi> second_vector = second;
+   simd<T, Abi> const selected = first + second_vector;
+   if constexpr (sizeof...(Remaining) == 0u) {
+      return selected;
+   } else {
+      return sum(selected, remaining...);
+   }
+}
+
+// TODO: Add SIMD round-to-multiple operations.
 }  // namespace cat

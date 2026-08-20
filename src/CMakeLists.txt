@@ -45,14 +45,21 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/load_base_stack_pointer.cpp
   ${CATLIB}/runtime/implementations/__udivmodti4.cpp
   ${CATLIB}/new/implementations/new.cpp
+  ${CATLIB}/math/implementations/acos.cpp
+  ${CATLIB}/math/implementations/asin.cpp
+  ${CATLIB}/math/implementations/atan.cpp
+  ${CATLIB}/math/implementations/atan2.cpp
   ${CATLIB}/math/implementations/cos.cpp
+  ${CATLIB}/math/implementations/cosh.cpp
   ${CATLIB}/math/implementations/exp.cpp
   ${CATLIB}/math/implementations/lgamma.cpp
   ${CATLIB}/math/implementations/log.cpp
   ${CATLIB}/math/implementations/pow.cpp
   ${CATLIB}/math/implementations/sin.cpp
+  ${CATLIB}/math/implementations/sinh.cpp
   ${CATLIB}/math/implementations/sqrt.cpp
   ${CATLIB}/math/implementations/tan.cpp
+  ${CATLIB}/math/implementations/tanh.cpp
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
   ${CATLIB}/memory/implementations/copy_memory_backward.cpp

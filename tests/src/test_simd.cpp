@@ -868,6 +868,51 @@ $test(simd_sqrt_all_lanes_non_negative) {
    cat::verify(r[3] == 4_f4);
 }
 
+$test(simd_scalar_math_api_forwarding) {
+   float4x4 const zeros{};
+   float4x4 const ones{1_f4};
+   float4x4 const values{1_f4, 4_f4, 9_f4, 16_f4};
+   float4x4 const twos{2_f4};
+
+   static_assert(cat::is_same<typeof_unqual(cat::sin(zeros)), float4x4>);
+   cat::verify(cat::abs(-values) == values);
+   cat::verify(
+      cat::clamp(values, twos, float4x4{9_f4})
+      == float4x4{2_f4, 4_f4, 9_f4, 9_f4}
+   );
+   cat::verify(cat::ceil(values) == values);
+   cat::verify(cat::floor(values) == values);
+   cat::verify(cat::exp(zeros) == cat::simd_exp(zeros));
+   cat::verify(
+      cat::fma(values, twos, ones) == cat::simd_fma(values, twos, ones)
+   );
+   cat::verify(cat::log(ones) == cat::simd_log(ones));
+   cat::verify(cat::sqrt(values) == cat::simd_sqrt(values));
+   cat::verify(cat::rsqrt(values) == cat::simd_rsqrt(values));
+   cat::verify(cat::nroot(values, 2) == cat::simd_nroot(values, 2));
+   cat::verify(cat::cbrt(values) == cat::simd_cbrt(values));
+   cat::verify(cat::rnroot(values, 2) == cat::simd_rnroot(values, 2));
+   cat::verify(cat::rcbrt(values) == cat::simd_rcbrt(values));
+   cat::verify(cat::sin(zeros) == cat::simd_sin(zeros));
+   cat::verify(cat::cos(zeros) == cat::simd_cos(zeros));
+   cat::verify(cat::tan(zeros) == cat::simd_tan(zeros));
+   cat::verify(cat::asin(zeros) == cat::simd_asin(zeros));
+   cat::verify(cat::acos(ones) == cat::simd_acos(ones));
+   cat::verify(cat::atan(zeros) == cat::simd_atan(zeros));
+   cat::verify(cat::atan2(zeros, ones) == cat::simd_atan2(zeros, ones));
+   cat::verify(cat::sinh(zeros) == cat::simd_sinh(zeros));
+   cat::verify(cat::cosh(zeros) == cat::simd_cosh(zeros));
+   cat::verify(cat::tanh(zeros) == cat::simd_tanh(zeros));
+   cat::verify(cat::min(values, twos) == cat::simd_min(values, twos));
+   cat::verify(cat::max(values, twos) == cat::simd_max(values, twos));
+   cat::verify(cat::product(values, twos) == values * twos);
+   cat::verify(cat::sum(values, twos) == values + twos);
+
+   int4x4 const integers{-5, 5, -7, 7};
+   cat::verify(cat::ceil(integers) == integers);
+   cat::verify(cat::floor(integers) == integers);
+}
+
 $test(simd_dot_and_normalize) {
    cat::float4x3 const left{1_f4, 2_f4, 3_f4};
    cat::float4x3 const right{4_f4, 5_f4, 6_f4};
@@ -875,6 +920,7 @@ $test(simd_dot_and_normalize) {
       cat::is_same<typeof_unqual(cat::simd_dot(left, right)), cat::float4>
    );
    cat::verify(cat::simd_dot(left, right) == 32_f4);
+   cat::verify(cat::dot(left, right) == cat::simd_dot(left, right));
 
    using fast_five = cat::fixed_size_simd<cat::float4_fast, 5u>;
    fast_five const five_lanes{1_f4, 2_f4, 3_f4, 4_f4, 5_f4};

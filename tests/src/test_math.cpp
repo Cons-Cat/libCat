@@ -622,6 +622,13 @@ $test(math_random_support) {
    static_assert(cat::exp(0.) == 1.);
    static_assert(cat::cos(0.) == 1.);
    static_assert(cat::tan(0.) == 0.);
+   static_assert(cat::asin(0.) == 0.);
+   static_assert(cat::acos(1.) == 0.);
+   static_assert(cat::atan(0.) == 0.);
+   static_assert(cat::atan2(0., 1.) == 0.);
+   static_assert(cat::sinh(0.) == 0.);
+   static_assert(cat::cosh(0.) == 1.);
+   static_assert(cat::tanh(0.) == 0.);
    static_assert(near(cat::pow(2., 3.), 8., 1e-12));
    static_assert(near(cat::lgamma(5.), 3.1780538303479458, 1e-12));
 
@@ -630,6 +637,16 @@ $test(math_random_support) {
    cat::verify(cat::exp(0.) == 1.);
    cat::verify(cat::cos(0.) == 1.);
    cat::verify(cat::tan(0.) == 0.);
+   cat::verify(near(cat::asin(0.5), cat::pi<double> / 6., 1e-12));
+   cat::verify(near(cat::acos(0.5), cat::pi<double> / 3., 1e-12));
+   cat::verify(near(cat::atan(1.), cat::pi<double> / 4., 1e-12));
+   cat::verify(near(cat::atan2(1., -1.), cat::pi<double> * 3. / 4., 1e-12));
+   cat::verify(near(cat::sinh(1.), 1.1752011936438014, 1e-12));
+   cat::verify(near(cat::cosh(1.), 1.5430806348152437, 1e-12));
+   cat::verify(near(cat::tanh(1.), 0.7615941559557649, 1e-12));
+   cat::verify(near(cat::sinh(1e-12), 1e-12, 1e-24));
+   cat::verify(near(cat::tanh(1e-12), 1e-12, 1e-24));
+   cat::verify(cat::tanh(1000.) == 1.);
    cat::verify(near(cat::pow(2., 3.), 8., 1e-12));
    cat::verify(near(cat::lgamma(5.), 3.1780538303479458, 1e-12));
 
