@@ -2387,7 +2387,7 @@ class
    constexpr auto
    lane_byte(idx index) const -> unsigned char const& {
       return *(
-         reinterpret_cast<unsigned char const*>(__builtin_addressof(raw))
+         reinterpret_cast<unsigned char const*>(&raw)
          + (index.raw * sizeof(lane_scalar))
       );
    }
@@ -3117,7 +3117,8 @@ struct mask_any_of {
 
 #include "cat/detail/simd_avx2_compress.hpp"
 #include "cat/detail/simd_avx2_mask_ops.hpp"
-#include "cat/detail/simd_sse_movmsk.hpp"
+#include "cat/detail/simd_avx512_mask_ops.hpp"
+#include "cat/detail/simd_sse_mask_ops.hpp"
 
 namespace std {
 

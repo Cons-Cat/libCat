@@ -126,9 +126,7 @@ verify_irregular_fixed_size_simd() {
       cat::verify(destination[i + 1u] == (selector[i] ? input[i] : -1));
    }
    cat::verify(source[0u] == -101 && source[lane_count + 1u] == -102);
-   cat::verify(
-      destination[0u] == -201 && destination[lane_count + 1u] == -202
-   );
+   cat::verify(destination[0u] == -201 && destination[lane_count + 1u] == -202);
 
    vector const packed = cat::simd_compress(input, selector);
    vector const expanded = cat::simd_expand(packed, selector, vector{-3});
