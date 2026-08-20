@@ -2913,6 +2913,46 @@ $test(simd_concepts) {
    static_assert(cat::vectorizable_element<double_lane>);
 }
 
+$test(simd_limits) {
+   static_assert(
+      cat::is_same<decltype(cat::limits<cat::int4x4>::min()), cat::int4x4>
+   );
+   static_assert(
+      cat::is_same<decltype(cat::limits<cat::float8x2>::max()), cat::float8x2>
+   );
+   static_assert(
+      cat::limits<cat::int4x4>::digits == cat::limits<cat::int4>::digits
+   );
+   static_assert(
+      cat::limits<cat::float8x2>::is_iec559
+      == cat::limits<cat::float8>::is_iec559
+   );
+   static_assert(
+      cat::limits<cat::int4x4>::min()[0u] == cat::limits<cat::int4>::min()
+   );
+   static_assert(
+      cat::limits<cat::int4x4 const>::max()[3u] == cat::limits<cat::int4>::max()
+   );
+   static_assert(
+      cat::limits<cat::float4x4>::epsilon()[2u]
+      == cat::limits<cat::float4>::epsilon()
+   );
+   static_assert(
+      cat::limits<cat::float8x2>::infinity()[1u]
+      == cat::limits<cat::float8>::infinity()
+   );
+   static_assert(
+      cat::limits<cat::float4x4>::denorm_min()[0u]
+      == cat::limits<cat::float4>::denorm_min()
+   );
+
+   constexpr cat::float4x4 quiet_nan = cat::limits<cat::float4x4>::quiet_NaN();
+   constexpr cat::float4x4 signaling_nan =
+      cat::limits<cat::float4x4 const>::signaling_NaN();
+   static_assert(quiet_nan[0u] != quiet_nan[0u]);
+   static_assert(signaling_nan[3u] != signaling_nan[3u]);
+}
+
 // `vectorized_stepanov_iterator` (Vc simdize iterator-style coverage):
 $test(simd_as_vectorized_stepanov_iterate_twice) {
    int_lane const data[8] = {1, 2, 3, 4, 5, 6, 7, 8};

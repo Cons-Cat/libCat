@@ -17,6 +17,7 @@
 // P2638R0   Intel feedback on `std::simd`.
 // P3983R1   Object representation. Array-like layout query trait.
 // P3985R0   Concepts for `std::simd`.
+// P4209R0   `numeric_limits` for `std::basic_vec`.
 //
 // However, SIMD functions are implemented in the form of functors that generate
 // masked SIMD forms from unmasked SIMD forms using CRTP. This is inspired by
@@ -1902,6 +1903,8 @@ operator/(U lhs, simd<T, Abi> const& rhs) -> simd<T, Abi> {
 }  // namespace cat
 
 #include <cat/detail/simd_overflow_reference.hpp>
+
+#include "cat/detail/simd_limits.hpp"
 
 namespace cat {
 

@@ -30,33 +30,28 @@ class basic_intptr;
 template <typename>
 struct limits {};
 
+// Unwrap any cv-qualified types.
+template <typename T>
+struct limits<T const> : limits<T> {};
+template <typename T>
+struct limits<T volatile> : limits<T> {};
+template <typename T>
+struct limits<T const volatile> : limits<T> {};
+
 // Unwrap arithmetic wrappers inside of `limits`.
 template <typename T, auto policy>
 struct limits<basic_int<T, policy>> : limits<T> {};
 
 template <typename T, auto policy>
-struct limits<basic_int<T, policy> const> : limits<T> {};
-
-template <typename T, auto policy>
 struct limits<basic_int<T const, policy>> : limits<T> {};
 
 template <typename T, auto policy>
-struct limits<basic_int<T const, policy> const> : limits<T> {};
-
-template <typename T, auto policy>
 struct limits<basic_float<T, policy>> : limits<T> {};
-
-template <typename T, auto policy>
-struct limits<basic_float<T, policy> const> : limits<T> {};
 
 // Unwrap `basic_intptr` to its storage type (same role as arithmetic wrappers
 // above).
 template <typename T, typename storage_type, overflow_policies policy>
 struct limits<basic_intptr<T, storage_type, policy>> : limits<storage_type> {};
-
-template <typename T, typename storage_type, overflow_policies policy>
-struct limits<basic_intptr<T, storage_type, policy> const>
-    : limits<storage_type> {};
 
 // TODO: Implement `min` and `max` limits in terms of Clang macros, like
 // `__LONG_LONG_MAX__`.
