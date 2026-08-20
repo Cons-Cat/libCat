@@ -495,6 +495,45 @@ $test(simd_unaligned_abi_adaptor) {
       cat::simd_abi::unaligned<cat::simd_abi::native<float>>::alignment == 1u
    );
 
+   auto verify_alignment = []<typename Simd> consteval {
+      using mask_type = Simd::mask_type;
+      static_assert(alignof(Simd) == 1u);
+      static_assert(alignof(typename Simd::raw_type) == 1u);
+      static_assert(alignof(mask_type) == 1u);
+      static_assert(alignof(typename mask_type::raw_type) == 1u);
+   };
+   verify_alignment.template operator()<
+      x64::sse_unaligned_simd<cat::uint1>>();
+   verify_alignment.template operator()<
+      x64::sse_unaligned_simd<cat::uint2>>();
+   verify_alignment.template operator()<
+      x64::sse_unaligned_simd<cat::uint4>>();
+   verify_alignment.template operator()<
+      x64::sse_unaligned_simd<cat::uint8>>();
+   verify_alignment.template operator()<
+      x64::avx_unaligned_simd<cat::uint1>>();
+   verify_alignment.template operator()<
+      x64::avx_unaligned_simd<cat::uint2>>();
+   verify_alignment.template operator()<
+      x64::avx_unaligned_simd<cat::uint4>>();
+   verify_alignment.template operator()<
+      x64::avx_unaligned_simd<cat::uint8>>();
+   verify_alignment.template operator()<
+      x64::avx512_unaligned_simd<cat::uint1>>();
+   verify_alignment.template operator()<
+      x64::avx512_unaligned_simd<cat::uint2>>();
+   verify_alignment.template operator()<
+      x64::avx512_unaligned_simd<cat::uint4>>();
+   verify_alignment.template operator()<
+      x64::avx512_unaligned_simd<cat::uint8>>();
+   verify_alignment.template operator()<cat::native_unaligned_simd<float>>();
+   verify_alignment.template operator()<
+      cat::fixed_size_unaligned_simd<cat::float4, 4u>>();
+   verify_alignment.template operator()<
+      cat::scalar_unaligned_simd<cat::float4>>();
+   verify_alignment.template operator()<
+      cat::compatible_unaligned_simd<float>>();
+
    static_assert(alignof(cat::native_unaligned_simd<float>) == 1u);
    static_assert(
       alignof(cat::fixed_size_unaligned_simd<cat::float4, 4u>) == 1u
