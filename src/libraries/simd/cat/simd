@@ -498,6 +498,11 @@ class
       [[gnu::vector_size(Abi::size.raw), gnu::aligned(Abi::alignment.raw)]] =
          mapped_type;
 
+ private:
+   static constexpr bool raw_storage_has_no_padding =
+      sizeof(raw_type) == Abi::lanes * sizeof(memory_lane);
+
+ public:
    constexpr simd() = default;
 
    constexpr simd(simd const& operand) = default;
@@ -1539,24 +1544,7 @@ class
    fill(U value) -> simd& {
       scalar_type const fill_value = static_cast<scalar_type>(value);
       mapped_type const lane = simd_lane_to_storage(fill_value);
-      if constexpr (abi_type::lanes == 2uz) {
-         this->raw = raw_type{lane, lane};
-      } else if constexpr (abi_type::lanes == 4uz) {
-         this->raw = raw_type{lane, lane, lane, lane};
-      } else if constexpr (abi_type::lanes == 8uz) {
-         this->raw = raw_type{lane, lane, lane, lane, lane, lane, lane, lane};
-      } else if constexpr (abi_type::lanes == 16uz) {
-         this->raw = raw_type{
-            lane, lane, lane, lane, lane, lane, lane, lane,
-            lane, lane, lane, lane, lane, lane, lane, lane,
-         };
-      } else if constexpr (abi_type::lanes == 32uz) {
-         this->raw = raw_type{
-            lane, lane, lane, lane, lane, lane, lane, lane, lane, lane, lane,
-            lane, lane, lane, lane, lane, lane, lane, lane, lane, lane, lane,
-            lane, lane, lane, lane, lane, lane, lane, lane, lane, lane,
-         };
-      }
+      this->raw = raw_type{} + lane;
       return *this;
    }
 
@@ -1570,13 +1558,19 @@ class
             this->set_lane(i, static_cast<T>(p_data[i]));
          }
       } else {
-         this->raw = __builtin_bit_cast(simd const*, p_data)->raw;
+         if constexpr (!raw_storage_has_no_padding) {
+            for (idx i = 0u; i < abi_type::lanes; ++i) {
+               this->set_lane(i, static_cast<T>(p_data[i]));
+            }
+         } else {
+            this->raw = __builtin_bit_cast(simd const*, p_data)->raw;
+         }
       }
       return *this;
    }
 
    // Load a vector from `data` with any alignment (gather). This may be slower
-   // than `.loaded_aligned()`.
+   // than `.load_aligned()`.
    [[gnu::always_inline]]
    constexpr auto
    load_unaligned(memory_lane const* _Nonnull p_data) -> simd& {
@@ -1585,7 +1579,14 @@ class
             this->set_lane(i, static_cast<T>(p_data[i]));
          }
       } else {
-         this->raw = __builtin_bit_cast(unaligned_vector const*, p_data)->raw;
+         if constexpr (!raw_storage_has_no_padding) {
+            for (idx i = 0u; i < abi_type::lanes; ++i) {
+               this->set_lane(i, static_cast<T>(p_data[i]));
+            }
+         } else {
+            this->raw =
+               __builtin_bit_cast(unaligned_vector const*, p_data)->raw;
+         }
       }
       return *this;
    }
@@ -1603,7 +1604,9 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   load_non_temporal(memory_lane const* _Nonnull p_data) -> simd& {
+   load_non_temporal(memory_lane const* _Nonnull p_data) -> simd&
+      requires(raw_storage_has_no_padding)
+   {
       if consteval {
          return this->load(p_data);
       } else {
@@ -1614,7 +1617,15 @@ class
       }
    }
 
-   // P3299-shaped memory (pointer + length. No `cat::span`):
+   // TODO: SVE has a masked non-temporal load instruction. How should we
+   // support this?
+   constexpr auto
+   load_non_temporal(memory_lane const* _Nonnull) -> simd&
+      requires(!raw_storage_has_no_padding)
+   = delete ("Padded `simd` cannot be loaded non-temporally! Use `.load()`, "
+             "`.load_aligned()` or `.load_unaligned()` instead.");
+
+   // P3299-shaped memory (pointer + length):
 
    // Write lanes to aligned memory (also called a "scatter").
    [[gnu::always_inline]]
@@ -1625,7 +1636,13 @@ class
             p_data[i] = simd_lane_to_storage((*this)[i]);
          }
       } else {
-         __builtin_bit_cast(simd*, p_data)->raw = this->raw;
+         if constexpr (!raw_storage_has_no_padding) {
+            for (idx i = 0u; i < abi_type::lanes; ++i) {
+               p_data[i] = simd_lane_to_storage((*this)[i]);
+            }
+         } else {
+            __builtin_bit_cast(simd*, p_data)->raw = this->raw;
+         }
       }
    }
 
@@ -1638,7 +1655,13 @@ class
             p_data[i] = simd_lane_to_storage((*this)[i]);
          }
       } else {
-         __builtin_bit_cast(unaligned_vector*, p_data)->raw = this->raw;
+         if constexpr (!raw_storage_has_no_padding) {
+            for (idx i = 0u; i < abi_type::lanes; ++i) {
+               p_data[i] = simd_lane_to_storage((*this)[i]);
+            }
+         } else {
+            __builtin_bit_cast(unaligned_vector*, p_data)->raw = this->raw;
+         }
       }
    }
 
@@ -1655,7 +1678,9 @@ class
 
    [[gnu::always_inline]]
    constexpr void
-   store_non_temporal(memory_lane* _Nonnull p_data) const {
+   store_non_temporal(memory_lane* _Nonnull p_data) const
+      requires(raw_storage_has_no_padding)
+   {
       if consteval {
          this->store(p_data);
       } else {
@@ -1664,6 +1689,14 @@ class
          );
       }
    }
+
+   // TODO: SVE has a masked non-temporal store instruction. How should we
+   // support this?
+   constexpr void
+   store_non_temporal(memory_lane* _Nonnull) const
+      requires(!raw_storage_has_no_padding)
+   = delete ("Padded `simd` cannot be stored non-temporally! Use `.store()`, "
+             "`.store_aligned()` or `.store_unaligned()` instead.");
 
    // Read at most `count` scalars from `p_data` (partial gather). Lanes at
    // `count..lanes-1` are zero-filled. If `count` exceeds `lanes`, only `lanes`

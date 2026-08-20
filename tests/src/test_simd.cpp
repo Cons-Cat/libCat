@@ -25,6 +25,27 @@ using float_lane = cat::float4::raw_type;
 using double_lane = cat::float8::raw_type;
 using mask_lane = cat::uint1::raw_type;
 
+template <typename Mask>
+void
+verify_wide_mask_bitset_words() {
+   Mask mask{};
+   cat::idx expected_count = 0u;
+   for (cat::idx i = 0u; i < Mask::size(); ++i) {
+      bool const value = i == 0u || i == 31u || i == 32u || i == 63u || i == 64u
+                         || i + 1u == Mask::size();
+      mask.set_lane(i, value);
+      if (value) {
+         ++expected_count;
+      }
+   }
+
+   auto const bits = mask.to_bitset();
+   cat::verify(bits.popcount() == expected_count);
+   for (cat::idx i = 0u; i < Mask::size(); ++i) {
+      cat::verify(bits[i] == mask[i]);
+   }
+}
+
 template <typename T>
 concept has_simd_undef_accessor = requires(T value) { value.undef(); };
 
@@ -34,6 +55,18 @@ concept has_simd_wrap_accessor = requires(T value) { value.wrap(); };
 template <typename T>
 concept has_simd_sat_accessor = requires(T value) { value.sat(); };
 
+template <typename T>
+concept has_simd_non_temporal_load =
+   requires(T value, T::memory_lane const* p_data) {
+      value.load_non_temporal(p_data);
+   };
+
+template <typename T>
+concept has_simd_non_temporal_store =
+   requires(T value, T::memory_lane* p_data) {
+      value.store_non_temporal(p_data);
+   };
+
 template <typename WideBoolSimd>
 void
 verify_widened_bool_simd_matches_bool4(
@@ -42,6 +75,75 @@ verify_widened_bool_simd_matches_bool4(
    cat::verify(ref.size() == v.size());
    for (cat::idx i = 0u; i < 4u; ++i) {
       cat::verify(v[i] == ref[i]);
+   }
+}
+
+template <cat::idx lane_count>
+void
+verify_irregular_fixed_size_simd() {
+   using vector = cat::fixed_size_simd<cat::int4, lane_count>;
+   using mask = vector::mask_type;
+
+   vector input{};
+   mask selector{};
+   cat::int4 value = 1;
+   for (cat::idx i = 0u; i < lane_count; ++i, ++value) {
+      input.set_lane(i, value);
+      selector.set_lane(i, i % 2u == 0u);
+   }
+
+   vector const doubled = input + input;
+   for (cat::idx i = 0u; i < lane_count; ++i) {
+      cat::verify(doubled[i] == input[i] * 2);
+   }
+
+   cat::verify(selector.count_if_true() == lane_count / 2u + 1u);
+   cat::verify(selector.any_of());
+   cat::verify(!selector.all_of());
+   cat::verify(selector.find_if_true() == 0u);
+   cat::verify(selector.find_last_if_true() == lane_count - 1u);
+   auto const bits = selector.to_bitset();
+   for (cat::idx i = 0u; i < lane_count; ++i) {
+      cat::verify(bits[i] == selector[i]);
+   }
+
+   cat::int4::raw_type source[lane_count.raw + 2u];
+   cat::int4::raw_type destination[lane_count.raw + 2u];
+   source[0u] = -101;
+   source[lane_count + 1u] = -102;
+   destination[0u] = -201;
+   destination[lane_count + 1u] = -202;
+   for (cat::idx i = 0u; i < lane_count; ++i) {
+      source[i + 1u] = static_cast<int_lane>(input[i]);
+      destination[i + 1u] = -1;
+   }
+
+   vector const loaded =
+      cat::simd_load_unaligned[selector](vector{-2}, source + 1u);
+   cat::simd_store_unaligned[selector](input, destination + 1u);
+   for (cat::idx i = 0u; i < lane_count; ++i) {
+      cat::verify(loaded[i] == (selector[i] ? input[i] : -2));
+      cat::verify(destination[i + 1u] == (selector[i] ? input[i] : -1));
+   }
+   cat::verify(source[0u] == -101 && source[lane_count + 1u] == -102);
+   cat::verify(
+      destination[0u] == -201 && destination[lane_count + 1u] == -202
+   );
+
+   vector const packed = cat::simd_compress(input, selector);
+   vector const expanded = cat::simd_expand(packed, selector, vector{-3});
+   cat::idx packed_index = 0u;
+   for (cat::idx i = 0u; i < lane_count; ++i) {
+      if (selector[i]) {
+         cat::verify(packed[packed_index] == input[i]);
+         cat::verify(expanded[i] == input[i]);
+         ++packed_index;
+      } else {
+         cat::verify(expanded[i] == -3);
+      }
+   }
+   for (; packed_index < lane_count; ++packed_index) {
+      cat::verify(packed[packed_index] == 0);
    }
 }
 
@@ -391,6 +493,74 @@ $test(simd_is_array_like_v) {
    cat::verify(lanes[3] == 4_f4);
 }
 
+$test(simd_arbitrary_fill_and_x3_aliases) {
+   static_assert(cat::is_same<cat::int1x3, cat::deduce_simd<cat::int1, 3u>>);
+   static_assert(cat::is_same<cat::uint2x3, cat::deduce_simd<cat::uint2, 3u>>);
+   static_assert(cat::is_same<cat::int4x3, cat::deduce_simd<cat::int4, 3u>>);
+   static_assert(cat::is_same<cat::uint8x3, cat::deduce_simd<cat::uint8, 3u>>);
+   static_assert(
+      cat::is_same<cat::float4x3, cat::deduce_simd<cat::float4, 3u>>
+   );
+   static_assert(cat::is_same<
+                 cat::float_fast_unalign_8x3,
+                 cat::deduce_unaligned_simd<cat::float8_fast, 3u>>);
+
+   cat::fixed_size_simd<int4, 1u> const one(7);
+   cat::fixed_size_simd<int4, 3u> const three(7);
+   cat::fixed_size_simd<int4, 5u> const five(7);
+   cat::fixed_size_simd<int4, 6u> const six(7);
+   cat::fixed_size_simd<int4, 7u> const seven(7);
+   cat::fixed_size_simd<int4, 65u> const wide(7);
+   cat::verify(one[0u] == 7);
+   cat::verify(three[2u] == 7);
+   cat::verify(five[4u] == 7);
+   cat::verify(six[5u] == 7);
+   cat::verify(seven[6u] == 7);
+   cat::verify(wide[64u] == 7);
+}
+
+$test(simd_irregular_five_and_nine_lane_operations) {
+   verify_irregular_fixed_size_simd<5u>();
+   verify_irregular_fixed_size_simd<9u>();
+}
+
+$test(simd_x3_memory_transfers_exact_lanes) {
+   using simd_type = cat::float4x3;
+   static_assert(!has_simd_non_temporal_load<simd_type>);
+   static_assert(!has_simd_non_temporal_store<simd_type>);
+
+   alignas(16) float_lane source[] = {-11.f, -12.f, 1.f, 2.f, 3.f, 91.f, 92.f};
+   float_lane const* const p_source = source + 2;
+
+   simd_type aligned{};
+   simd_type unaligned{};
+   simd_type defaults{};
+   aligned.load_aligned(p_source);
+   unaligned.load_unaligned(p_source);
+   defaults.load(p_source);
+   for (idx i = 0u; i < 3u; ++i) {
+      cat::verify(aligned[i] == source[i + 2u]);
+      cat::verify(unaligned[i] == aligned[i]);
+      cat::verify(defaults[i] == aligned[i]);
+   }
+   cat::verify(source[1] == -12.f && source[5] == 91.f);
+
+   simd_type const value{4_f4, 5_f4, 6_f4};
+   alignas(16) float_lane destination[] = {
+      -21.f, -22.f, 0.f, 0.f, 0.f, 81.f, 82.f,
+   };
+   float_lane* const p_destination = destination + 2;
+   value.store_aligned(p_destination);
+   cat::verify(destination[1] == -22.f && destination[5] == 81.f);
+   value.store_unaligned(p_destination);
+   cat::verify(destination[1] == -22.f && destination[5] == 81.f);
+   value.store(p_destination);
+   cat::verify(destination[1] == -22.f && destination[5] == 81.f);
+   cat::verify(
+      destination[2] == 4.f && destination[3] == 5.f && destination[4] == 6.f
+   );
+}
+
 $test(simd_abi_compatible_alias) {
    static_assert(
       !cat::is_same<cat::simd_abi::compatible<int>, cat::simd_abi::native<int>>
@@ -632,6 +802,26 @@ $test(simd_shuffle_shufflevector) {
    float4x4 fr = cat::simd_shuffle<3, 2, 1, 0>(fv);
    cat::verify(fr[0] == 40_f4);
    cat::verify(fr[3] == 10_f4);
+
+   cat::float4x3 const left{1_f4, 2_f4, 3_f4};
+   cat::float4x3 const right{4_f4, 5_f4, 6_f4};
+   auto const narrow = cat::simd_shuffle<2, 0>(left);
+   static_assert(
+      cat::is_same<typeof_unqual(narrow), cat::fixed_size_simd<cat::float4, 2u>>
+   );
+   cat::verify(narrow[0u] == 3_f4 && narrow[1u] == 1_f4);
+
+   auto const mixed = cat::simd_shuffle<0, 4, 2>(left, right);
+   static_assert(cat::is_same<typeof_unqual(mixed), cat::float4x3>);
+   cat::verify(mixed[0u] == 1_f4);
+   cat::verify(mixed[1u] == 5_f4);
+   cat::verify(mixed[2u] == 3_f4);
+
+   auto const wide = cat::simd_shuffle<0, 1, 2, 3, 4, 5>(left, right);
+   static_assert(
+      cat::is_same<typeof_unqual(wide), cat::fixed_size_simd<cat::float4, 6u>>
+   );
+   cat::verify(wide[0u] == 1_f4 && wide[5u] == 6_f4);
 }
 
 $test(simd_reverse_shufflevector) {
@@ -1622,6 +1812,21 @@ $test(simd_all_any_none_of) {
    cat::verify(mf2.find_last_if_true() == 0u);
 }
 
+$test(simd_wide_fixed_size_mask_bitsets_cross_storage_words) {
+   verify_wide_mask_bitset_words<cat::fixed_size_simd_mask<cat::uint1, 130u>>();
+   verify_wide_mask_bitset_words<cat::fixed_size_simd_mask<cat::uint2, 67u>>();
+   verify_wide_mask_bitset_words<cat::fixed_size_simd_mask<cat::uint4, 66u>>();
+   verify_wide_mask_bitset_words<cat::fixed_size_simd_mask<cat::uint8, 65u>>();
+   verify_wide_mask_bitset_words<
+      cat::fixed_size_unaligned_simd_mask<cat::uint1, 130u>>();
+   verify_wide_mask_bitset_words<
+      cat::fixed_size_unaligned_simd_mask<cat::uint2, 67u>>();
+   verify_wide_mask_bitset_words<
+      cat::fixed_size_unaligned_simd_mask<cat::uint4, 66u>>();
+   verify_wide_mask_bitset_words<
+      cat::fixed_size_unaligned_simd_mask<cat::uint8, 65u>>();
+}
+
 $test(make_simd_mask_from_count_edges) {
    auto m0 = cat::make_simd_mask_from_count<int4x4>(0u);
    cat::verify(m0.none_of());
@@ -1897,6 +2102,50 @@ $test(simd_compress_expand) {
    cat::verify(float_expanded_lanes[0] == 100_f4);
    cat::verify(float_expanded_lanes[1] == 200_f4);
    cat::verify(float_expanded_lanes[2] == 9_f4);
+}
+
+$test(simd_wide_compress_expand_cross_native_boundaries) {
+   using wide = cat::fixed_size_simd<cat::int4, 18u>;
+   wide input{};
+   wide::mask_type selector{};
+   for (cat::idx i = 0u; i < wide::size(); ++i) {
+      input.set_lane(i, static_cast<cat::int4>(i + 1u));
+      selector.set_lane(
+         i, i == 1u || i == 7u || i == 8u || i == 9u || i == 16u
+      );
+   }
+
+   wide const packed = cat::simd_compress(input, selector);
+   cat::verify(packed[0u] == 2);
+   cat::verify(packed[1u] == 8);
+   cat::verify(packed[2u] == 9);
+   cat::verify(packed[3u] == 10);
+   cat::verify(packed[4u] == 17);
+   cat::verify(packed[5u] == 0);
+
+   wide background{};
+   background.fill(-1);
+   wide const expanded = cat::simd_expand(packed, selector, background);
+   for (cat::idx i = 0u; i < wide::size(); ++i) {
+      cat::verify(expanded[i] == (selector[i] ? input[i] : cat::int4(-1)));
+   }
+}
+
+$test(simd_compact_and_partial_masked_load_constant_evaluation) {
+   static_assert([] consteval {
+      using lanes = cat::fixed_size_simd<cat::int4, 5u>;
+      lanes const input{1, 2, 3, 4, 5};
+      lanes::mask_type const selector{false, true, true, false, true};
+      lanes const packed = cat::simd_compress(input, selector);
+      lanes const expanded = cat::simd_expand(packed, selector, lanes{-1});
+      cat::int4::raw_type const source[2] = {10, 20};
+      lanes const loaded =
+         cat::make_simd_partial_loaded<lanes>[selector](lanes{-1}, source, 2u);
+      return packed[0u] == 2 && packed[1u] == 3 && packed[2u] == 5
+             && expanded[1u] == 2 && expanded[2u] == 3 && expanded[4u] == 5
+             && loaded[0u] == -1 && loaded[1u] == 20 && loaded[2u] == 0
+             && loaded[4u] == 0;
+   }());
 }
 
 // `simd_compress` is a pure permutation, so it must preserve the overflow
@@ -2960,6 +3209,12 @@ $test(simd_iota) {
    cat::verify(float_masked_iota[1] == 20_f4);
    cat::verify(float_masked_iota[2] == 2_f4);
    cat::verify(float_masked_iota[3] == 3_f4);
+
+   using wide_iota = cat::fixed_size_simd<cat::uint2, 300u>;
+   wide_iota const wide = cat::simd_iota<wide_iota>(5u);
+   cat::verify(wide[0u] == 5u);
+   cat::verify(wide[255u] == 260u);
+   cat::verify(wide[299u] == 304u);
 }
 
 $test(simd_sub_sat_masked_native_int1) {

@@ -90,21 +90,25 @@
                                                                               \
    /* int1 / uint1 vectors: */                                                \
    using int1x2 = deduce_simd<::cat::int1, 2u>;                               \
+   using int1x3 = deduce_simd<::cat::int1, 3u>;                               \
    using int1x4 = deduce_simd<::cat::int1, 4u>;                               \
    using int1x8 = deduce_simd<::cat::int1, 8u>;                               \
    using int1x16 = deduce_simd<::cat::int1, 16u>;                             \
    using int1x32 = deduce_simd<::cat::int1, 32u>;                             \
    using uint1x2 = deduce_simd<::cat::uint1, 2u>;                             \
+   using uint1x3 = deduce_simd<::cat::uint1, 3u>;                             \
    using uint1x4 = deduce_simd<::cat::uint1, 4u>;                             \
    using uint1x8 = deduce_simd<::cat::uint1, 8u>;                             \
    using uint1x16 = deduce_simd<::cat::uint1, 16u>;                           \
    using uint1x32 = deduce_simd<::cat::uint1, 32u>;                           \
    using int_unalign_1x2 = deduce_unaligned_simd<::cat::int1, 2u>;            \
+   using int_unalign_1x3 = deduce_unaligned_simd<::cat::int1, 3u>;            \
    using int_unalign_1x4 = deduce_unaligned_simd<::cat::int1, 4u>;            \
    using int_unalign_1x8 = deduce_unaligned_simd<::cat::int1, 8u>;            \
    using int_unalign_1x16 = deduce_unaligned_simd<::cat::int1, 16u>;          \
    using int_unalign_1x32 = deduce_unaligned_simd<::cat::int1, 32u>;          \
    using uint_unalign_1x2 = deduce_unaligned_simd<::cat::uint1, 2u>;          \
+   using uint_unalign_1x3 = deduce_unaligned_simd<::cat::uint1, 3u>;          \
    using uint_unalign_1x4 = deduce_unaligned_simd<::cat::uint1, 4u>;          \
    using uint_unalign_1x8 = deduce_unaligned_simd<::cat::uint1, 8u>;          \
    using uint_unalign_1x16 = deduce_unaligned_simd<::cat::uint1, 16u>;        \
@@ -119,72 +123,94 @@
                                                                               \
    /* int2 / uint2 vectors: */                                                \
    using int2x2 = deduce_simd<::cat::int2, 2u>;                               \
+   using int2x3 = deduce_simd<::cat::int2, 3u>;                               \
    using int2x4 = deduce_simd<::cat::int2, 4u>;                               \
    using int2x8 = deduce_simd<::cat::int2, 8u>;                               \
    using int2x16 = deduce_simd<::cat::int2, 16u>;                             \
    using uint2x2 = deduce_simd<::cat::uint2, 2u>;                             \
+   using uint2x3 = deduce_simd<::cat::uint2, 3u>;                             \
    using uint2x4 = deduce_simd<::cat::uint2, 4u>;                             \
    using uint2x8 = deduce_simd<::cat::uint2, 8u>;                             \
    using uint2x16 = deduce_simd<::cat::uint2, 16u>;                           \
    using int_unalign_2x2 = deduce_unaligned_simd<::cat::int2, 2u>;            \
+   using int_unalign_2x3 = deduce_unaligned_simd<::cat::int2, 3u>;            \
    using int_unalign_2x4 = deduce_unaligned_simd<::cat::int2, 4u>;            \
    using int_unalign_2x8 = deduce_unaligned_simd<::cat::int2, 8u>;            \
    using int_unalign_2x16 = deduce_unaligned_simd<::cat::int2, 16u>;          \
    using uint_unalign_2x2 = deduce_unaligned_simd<::cat::uint2, 2u>;          \
+   using uint_unalign_2x3 = deduce_unaligned_simd<::cat::uint2, 3u>;          \
    using uint_unalign_2x4 = deduce_unaligned_simd<::cat::uint2, 4u>;          \
    using uint_unalign_2x8 = deduce_unaligned_simd<::cat::uint2, 8u>;          \
    using uint_unalign_2x16 = deduce_unaligned_simd<::cat::uint2, 16u>;        \
                                                                               \
    /* int4 / uint4 vectors: */                                                \
    using int4x2 = deduce_simd<::cat::int4, 2u>;                               \
+   using int4x3 = deduce_simd<::cat::int4, 3u>;                               \
    using int4x4 = deduce_simd<::cat::int4, 4u>;                               \
    using int4x8 = deduce_simd<::cat::int4, 8u>;                               \
    using uint4x2 = deduce_simd<::cat::uint4, 2u>;                             \
+   using uint4x3 = deduce_simd<::cat::uint4, 3u>;                             \
    using uint4x4 = deduce_simd<::cat::uint4, 4u>;                             \
    using uint4x8 = deduce_simd<::cat::uint4, 8u>;                             \
    using int_unalign_4x2 = deduce_unaligned_simd<::cat::int4, 2u>;            \
+   using int_unalign_4x3 = deduce_unaligned_simd<::cat::int4, 3u>;            \
    using int_unalign_4x4 = deduce_unaligned_simd<::cat::int4, 4u>;            \
    using int_unalign_4x8 = deduce_unaligned_simd<::cat::int4, 8u>;            \
    using uint_unalign_4x2 = deduce_unaligned_simd<::cat::uint4, 2u>;          \
+   using uint_unalign_4x3 = deduce_unaligned_simd<::cat::uint4, 3u>;          \
    using uint_unalign_4x4 = deduce_unaligned_simd<::cat::uint4, 4u>;          \
    using uint_unalign_4x8 = deduce_unaligned_simd<::cat::uint4, 8u>;          \
                                                                               \
    /* int8 / uint8 vectors: */                                                \
    using int8x2 = deduce_simd<::cat::int8, 2u>;                               \
+   using int8x3 = deduce_simd<::cat::int8, 3u>;                               \
    using int8x4 = deduce_simd<::cat::int8, 4u>;                               \
    using uint8x2 = deduce_simd<::cat::uint8, 2u>;                             \
+   using uint8x3 = deduce_simd<::cat::uint8, 3u>;                             \
    using uint8x4 = deduce_simd<::cat::uint8, 4u>;                             \
    using int_unalign_8x2 = deduce_unaligned_simd<::cat::int8, 2u>;            \
+   using int_unalign_8x3 = deduce_unaligned_simd<::cat::int8, 3u>;            \
    using int_unalign_8x4 = deduce_unaligned_simd<::cat::int8, 4u>;            \
    using uint_unalign_8x2 = deduce_unaligned_simd<::cat::uint8, 2u>;          \
+   using uint_unalign_8x3 = deduce_unaligned_simd<::cat::uint8, 3u>;          \
    using uint_unalign_8x4 = deduce_unaligned_simd<::cat::uint8, 4u>;          \
                                                                               \
    /* float4 / float8 vectors: */                                             \
    using float4x2 = deduce_simd<::cat::float4, 2u>;                           \
+   using float4x3 = deduce_simd<::cat::float4, 3u>;                           \
    using float4x4 = deduce_simd<::cat::float4, 4u>;                           \
    using float4x8 = deduce_simd<::cat::float4, 8u>;                           \
    using float8x2 = deduce_simd<::cat::float8, 2u>;                           \
+   using float8x3 = deduce_simd<::cat::float8, 3u>;                           \
    using float8x4 = deduce_simd<::cat::float8, 4u>;                           \
    using float_unalign_4x2 = deduce_unaligned_simd<::cat::float4, 2u>;        \
+   using float_unalign_4x3 = deduce_unaligned_simd<::cat::float4, 3u>;        \
    using float_unalign_4x4 = deduce_unaligned_simd<::cat::float4, 4u>;        \
    using float_unalign_4x8 = deduce_unaligned_simd<::cat::float4, 8u>;        \
    using float_unalign_8x2 = deduce_unaligned_simd<::cat::float8, 2u>;        \
+   using float_unalign_8x3 = deduce_unaligned_simd<::cat::float8, 3u>;        \
    using float_unalign_8x4 = deduce_unaligned_simd<::cat::float8, 4u>;        \
                                                                               \
    /* float4_fast / float8_fast vectors: */                                   \
    using float4_fastx2 = deduce_simd<::cat::float4_fast, 2u>;                 \
+   using float4_fastx3 = deduce_simd<::cat::float4_fast, 3u>;                 \
    using float4_fastx4 = deduce_simd<::cat::float4_fast, 4u>;                 \
    using float4_fastx8 = deduce_simd<::cat::float4_fast, 8u>;                 \
    using float8_fastx2 = deduce_simd<::cat::float8_fast, 2u>;                 \
+   using float8_fastx3 = deduce_simd<::cat::float8_fast, 3u>;                 \
    using float8_fastx4 = deduce_simd<::cat::float8_fast, 4u>;                 \
    using float_fast_unalign_4x2 =                                             \
       deduce_unaligned_simd<::cat::float4_fast, 2u>;                          \
+   using float_fast_unalign_4x3 =                                             \
+      deduce_unaligned_simd<::cat::float4_fast, 3u>;                          \
    using float_fast_unalign_4x4 =                                             \
       deduce_unaligned_simd<::cat::float4_fast, 4u>;                          \
    using float_fast_unalign_4x8 =                                             \
       deduce_unaligned_simd<::cat::float4_fast, 8u>;                          \
    using float_fast_unalign_8x2 =                                             \
       deduce_unaligned_simd<::cat::float8_fast, 2u>;                          \
+   using float_fast_unalign_8x3 =                                             \
+      deduce_unaligned_simd<::cat::float8_fast, 3u>;                          \
    using float_fast_unalign_8x4 = deduce_unaligned_simd<::cat::float8_fast, 4u>;
 #pragma clang final(CAT_SIMD_ALIASES)
 
