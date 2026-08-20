@@ -58,7 +58,7 @@ wait_clone_thread_through_cleartid_futex(
             cat::uint4 const word =
                p_clear_tid->m_value.load(cat::memory_order::acquire);
             if (word == 0u) {
-               return nix::scaredy_nix<nix::process_id>(child_id);
+               return child_id;
             }
             nix::scaredy_nix<cat::idx> const slept = nix::sys_futex(
                *p_clear_tid,
@@ -76,7 +76,7 @@ wait_clone_thread_through_cleartid_futex(
             ) {
                continue;
             }
-            return nix::scaredy_nix<nix::process_id>(slept.error());
+            return slept.error();
          }
       }
       if ((spins & 127u) == 0u) {
@@ -85,9 +85,9 @@ wait_clone_thread_through_cleartid_futex(
          );
          if (poke.is_empty()) {
             if (poke.error() == nix::linux_error::srch) {
-               return nix::scaredy_nix<nix::process_id>(child_id);
+               return child_id;
             }
-            return nix::scaredy_nix<nix::process_id>(poke.error());
+            return poke.error();
          }
       } else {
          __builtin_ia32_pause();

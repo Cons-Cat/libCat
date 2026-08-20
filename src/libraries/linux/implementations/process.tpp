@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/allocator_parameters>
+#include <cat/linux>
 
 namespace nix {
 
