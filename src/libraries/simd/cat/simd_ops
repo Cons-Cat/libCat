@@ -2578,6 +2578,121 @@ struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
    }
 };
 
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard, gnu::always_inline]]
+constexpr auto
+simd_dot_associative(simd<T, Abi> left, simd<T, Abi> right) -> T {
+   auto const product = left.raw * right.raw;
+   if constexpr (Abi::lanes == 1u) {
+      return product[0u];
+   } else if constexpr (Abi::lanes == bit_ceil(Abi::lanes)) {
+      return __builtin_reduce_assoc_fadd(product);
+   } else {
+      return [&]<idx... indices>(index_list_type<indices...>) {
+         auto const padded = __builtin_shufflevector(
+            product, typename simd<T, Abi>::raw_type{},
+            static_cast<int>(
+               (indices < Abi::lanes ? indices : Abi::lanes).raw
+            )...
+         );
+         return __builtin_reduce_assoc_fadd(padded);
+      }(make_index_sequence<bit_ceil(Abi::lanes)>{});
+   }
+}
+
+template <typename Mask>
+struct simd_dot_masked_impl {
+   Mask lane_mask;
+
+   template <typename T, typename Abi>
+      requires(is_arithmetic<T> && !is_bool<T>)
+   [[nodiscard, gnu::always_inline]]
+   constexpr auto
+   operator()(simd<T, Abi> left, simd<T, Abi> right) const -> T {
+      auto const product = simd_select(lane_mask, left * right, simd<T, Abi>{});
+      return product.sum();
+   }
+};
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
+struct simd_dot_impl {
+   template <typename T, typename Abi>
+      requires(is_arithmetic<T> && !is_bool<T>)
+   [[nodiscard, gnu::always_inline]]
+   constexpr auto
+   // GLM returns a vector of `T`, but Clang optimizes this correctly when it's
+   // broadcasted.
+   operator()(simd<T, Abi> left, simd<T, Abi> right) const -> T {
+      using native_simd = simd_abi_map_vector<T, Abi>;
+      if constexpr (
+         is_floating_point<T>
+         && simd_float_precision_policy<T> == precision_policies::fast
+         && requires(native_simd native_left, native_simd native_right) {
+               simd_dot_associative(native_left, native_right);
+            }
+      ) {
+         return simd_dot_associative(
+            native_simd(left.raw), native_simd(right.raw)
+         );
+      } else {
+         return (left * right).sum();
+      }
+   }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_dot_masked_impl<simd_mask<T, Abi>> {
+      return {lane_mask};
+   }
+};
+
+#pragma clang diagnostic pop
+
+template <typename Mask>
+struct simd_normalize_masked_impl {
+   Mask lane_mask;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard, gnu::always_inline]]
+   constexpr auto
+   operator()(simd<T, Abi> input) const -> simd<T, Abi> {
+      simd<T, Abi> const active = simd_select(lane_mask, input, simd<T, Abi>{});
+      // Dot product of the active lanes, then inverse square root.
+      auto const inverse_length =
+         simd_rsqrt_lane(simd_dot_impl{}(active, active));
+      return simd_select(
+         lane_mask, input * simd<T, Abi>(inverse_length), input
+      );
+   }
+};
+
+struct simd_normalize_impl {
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard, gnu::always_inline]]
+   constexpr auto
+   operator()(simd<T, Abi> input) const -> simd<T, Abi> {
+      // Square and sum the lanes, then broadcast the inverse square root.
+      auto const inverse_length =
+         simd_rsqrt_lane(simd_dot_impl{}(input, input));
+      return input * simd<T, Abi>(inverse_length);
+   }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_normalize_masked_impl<simd_mask<T, Abi>> {
+      return {lane_mask};
+   }
+};
+
 template <typename T>
    requires(is_floating_point<T>)
 [[nodiscard]]
@@ -3498,6 +3613,8 @@ inline constexpr detail::make_simd_mask_keep_between_impl<Simd>
 
 inline constexpr detail::simd_sqrt_impl simd_sqrt{};
 inline constexpr detail::simd_rsqrt_impl simd_rsqrt{};
+inline constexpr detail::simd_dot_impl simd_dot{};
+inline constexpr detail::simd_normalize_impl simd_normalize{};
 inline constexpr detail::simd_nroot_impl simd_nroot{};
 inline constexpr detail::simd_cbrt_impl simd_cbrt{};
 inline constexpr detail::simd_rcbrt_impl simd_rcbrt{};

@@ -870,6 +870,46 @@ $test(simd_sqrt_all_lanes_non_negative) {
    cat::verify(r[3] == 4_f4);
 }
 
+$test(simd_dot_and_normalize) {
+   cat::float4x3 const left{1_f4, 2_f4, 3_f4};
+   cat::float4x3 const right{4_f4, 5_f4, 6_f4};
+   static_assert(
+      cat::is_same<typeof_unqual(cat::simd_dot(left, right)), cat::float4>
+   );
+   cat::verify(cat::simd_dot(left, right) == 32_f4);
+
+   using fast_five = cat::fixed_size_simd<cat::float4_fast, 5u>;
+   fast_five const five_lanes{1_f4, 2_f4, 3_f4, 4_f4, 5_f4};
+   cat::verify(cat::simd_dot(five_lanes, five_lanes) == 55_f4);
+
+   using fast_seventy = cat::fixed_size_simd<cat::float4_fast, 70u>;
+   fast_seventy seventy_lanes{};
+   for (cat::idx i = 0u; i < seventy_lanes.size(); ++i) {
+      seventy_lanes.set_lane(i, 1_f4);
+   }
+   cat::verify(cat::simd_dot(seventy_lanes, seventy_lanes) == 70_f4);
+
+   cat::float4x3::mask_type const sparse{true, false, true};
+   cat::verify(cat::simd_dot[sparse](left, right) == 22_f4);
+
+   cat::float4x3 const vector{3_f4, 4_f4, 0_f4};
+   cat::float4x3 const normalized = cat::simd_normalize(vector);
+   cat::verify(cat::abs(normalized[0u] - 0.6_f4) < 0.00001_f4);
+   cat::verify(cat::abs(normalized[1u] - 0.8_f4) < 0.00001_f4);
+   cat::verify(normalized[2u] == 0_f4);
+
+   cat::float4x3 const masked_input{3_f4, 4_f4, 12_f4};
+   cat::float4x3::mask_type const first_two{true, true, false};
+   cat::float4x3 const masked = cat::simd_normalize[first_two](masked_input);
+   cat::verify(cat::abs(masked[0u] - 0.6_f4) < 0.00001_f4);
+   cat::verify(cat::abs(masked[1u] - 0.8_f4) < 0.00001_f4);
+   cat::verify(masked[2u] == 12_f4);
+
+   cat::float4x3 const ordered{1e20_f4, 1_f4, -1e20_f4};
+   cat::float4x3 const ones(1_f4);
+   cat::verify(cat::simd_dot(ordered, ones) == 0_f4);
+}
+
 $test(simd_rsqrt_rcbrt_rnroot) {
    auto near_one = [](float4 value) {
       return cat::abs(value - 1_f4) < 0.001_f4;

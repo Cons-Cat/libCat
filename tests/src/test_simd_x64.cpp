@@ -69,6 +69,12 @@ verify_avx512_abi_runtime_hooks() -> void {
    for (cat::idx i = 8u; i < 16u; ++i) {
       cat::verify(bits[i]);
    }
+
+   x64::avx512_simd<cat::float4_fast> const geometry{1_f4, 1_f4, 1_f4, 1_f4,
+                                                     1_f4, 1_f4, 1_f4, 1_f4,
+                                                     1_f4, 1_f4, 1_f4, 1_f4,
+                                                     1_f4, 1_f4, 1_f4, 1_f4};
+   cat::verify(cat::simd_dot(geometry, geometry) == 16_f4);
 }
 
 }  // namespace
@@ -135,6 +141,23 @@ $test(simd_sse_abi_hooks_mask_to_bitset) {
    cat::verify(bits[1u] == false);
    cat::verify(bits[2u] == true);
    cat::verify(bits[3u] == true);
+}
+
+$test(simd_dot_fast_matches_generic_results) {
+   x64::sse_simd<cat::float4_fast> const left{1_f4, 2_f4, 3_f4, 4_f4};
+   x64::sse_simd<cat::float4_fast> const right{5_f4, 6_f4, 7_f4, 8_f4};
+   cat::verify(cat::simd_dot(left, right) == 70_f4);
+
+   cat::float4_fastx3 const xyz{
+      cat::float4_fast(1.f), cat::float4_fast(2.f), cat::float4_fast(3.f)
+   };
+   cat::verify(cat::simd_dot(xyz, xyz) == 14_f4);
+
+   x64::avx_simd<cat::float4_fast> const wide{1_f4, 2_f4, 3_f4, 4_f4,
+                                              5_f4, 6_f4, 7_f4, 8_f4};
+   x64::avx_simd<cat::float4_fast> const reversed{8_f4, 7_f4, 6_f4, 5_f4,
+                                                  4_f4, 3_f4, 2_f4, 1_f4};
+   cat::verify(cat::simd_dot(wide, reversed) == 120_f4);
 }
 
 // AVX hooks (`simd_avx2.hpp`).
