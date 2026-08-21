@@ -2344,9 +2344,7 @@ struct simd_add_sat_impl : simd_elementwise_binary_interface<
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
-      return static_cast<T>(
-         __builtin_add_sat(static_cast<T>(left), static_cast<T>(right))
-      );
+      return static_cast<T>(__builtin_add_sat(left, right));
    }
 };
 
@@ -3163,38 +3161,45 @@ struct simd_rotate_left_impl
    constexpr simd_rotate_left_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_unsigned_integral<T>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
-      if constexpr (has_simd_abi_unary_int<simd_abi::op_rotate_left, T, Abi>) {
+      if constexpr (is_signed<T>) {
+         auto const value = simd_to_unsigned_raw(input);
+         auto const counts = simd_to_unsigned_raw(simd<T, Abi>(T(count)));
+         return simd_from_unsigned_raw<T, Abi>(
+            __builtin_elementwise_fshl(value, value, counts)
+         );
+      } else if constexpr (
+         has_simd_abi_unary_int<simd_abi::op_rotate_left, T, Abi>
+      ) {
          return simd_abi_apply_unary_int<simd_abi::op_rotate_left, T, Abi>(
             input, count
          );
       } else {
-         simd<T, Abi> result{};
-#pragma clang loop vectorize(enable)
-         for (idx i = 0u; i < Abi::lanes; ++i) {
-            // `cat/maybe` is an extremely difficult circular include for
-            // `cat/simd`, so use the intrinsic directly.
-            result.set_lane(
-               i, T(__builtin_stdc_rotate_left(
-                     make_raw_arithmetic(input[i]), count.raw
-                  ))
-            );
-         }
-         return result;
+         auto const counts = simd<T, Abi>(T(count)).raw;
+         return simd<T, Abi>(
+            __builtin_elementwise_fshl(input.raw, input.raw, counts)
+         );
       }
    }
 
-   template <is_unsigned_integral T>
+   template <is_integral T>
+      requires(!is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T operand, iword count) const -> T {
       // `cat/maybe` is an extremely difficult circular include for `cat/simd`,
       // so use the intrinsic directly.
+      using raw_type = raw_arithmetic_type<T>;
+      using unsigned_type = make_unsigned_type<raw_type>;
+      auto const value =
+         __builtin_bit_cast(unsigned_type, make_raw_arithmetic(operand));
       return T(
-         __builtin_stdc_rotate_left(make_raw_arithmetic(operand), count.raw)
+         __builtin_bit_cast(
+            raw_type, __builtin_stdc_rotate_left(value, count.raw)
+         )
       );
    }
 };
@@ -3204,38 +3209,45 @@ struct simd_rotate_right_impl
    constexpr simd_rotate_right_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_unsigned_integral<T>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
-      if constexpr (has_simd_abi_unary_int<simd_abi::op_rotate_right, T, Abi>) {
+      if constexpr (is_signed<T>) {
+         auto const value = simd_to_unsigned_raw(input);
+         auto const counts = simd_to_unsigned_raw(simd<T, Abi>(T(count)));
+         return simd_from_unsigned_raw<T, Abi>(
+            __builtin_elementwise_fshr(value, value, counts)
+         );
+      } else if constexpr (
+         has_simd_abi_unary_int<simd_abi::op_rotate_right, T, Abi>
+      ) {
          return simd_abi_apply_unary_int<simd_abi::op_rotate_right, T, Abi>(
             input, count
          );
       } else {
-         simd<T, Abi> result{};
-#pragma clang loop vectorize(enable)
-         for (idx i = 0u; i < Abi::lanes; ++i) {
-            // `cat/maybe` is an extremely difficult circular include for
-            // `cat/simd`, so use the intrinsic directly.
-            result.set_lane(
-               i, T(__builtin_stdc_rotate_right(
-                     make_raw_arithmetic(input[i]), count.raw
-                  ))
-            );
-         }
-         return result;
+         auto const counts = simd<T, Abi>(T(count)).raw;
+         return simd<T, Abi>(
+            __builtin_elementwise_fshr(input.raw, input.raw, counts)
+         );
       }
    }
 
-   template <is_unsigned_integral T>
+   template <is_integral T>
+      requires(!is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T operand, iword count) const -> T {
       // `cat/maybe` is an extremely difficult circular include for `cat/simd`,
       // so use the intrinsic directly.
+      using raw_type = raw_arithmetic_type<T>;
+      using unsigned_type = make_unsigned_type<raw_type>;
+      auto const value =
+         __builtin_bit_cast(unsigned_type, make_raw_arithmetic(operand));
       return T(
-         __builtin_stdc_rotate_right(make_raw_arithmetic(operand), count.raw)
+         __builtin_bit_cast(
+            raw_type, __builtin_stdc_rotate_right(value, count.raw)
+         )
       );
    }
 };
