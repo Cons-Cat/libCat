@@ -58,19 +58,28 @@ class independent_bits_engine {
    operator()() -> result_type {
       using unsigned_type = make_unsigned_type<result_type>;
       using engine_unsigned = make_unsigned_type<typename Engine::result_type>;
-      constexpr idx engine_bits = limits<engine_unsigned>::digits;
+      engine_unsigned const engine_span =
+         engine_unsigned(Engine::max()) - engine_unsigned(Engine::min()) + 1u;
       unsigned_type result = 0;
-      idx produced = 0u;
-      while (produced < bits) {
-         idx const remaining = idx(bits - produced);
-         idx const take = remaining < engine_bits ? remaining : engine_bits;
-         unsigned_type value =
-            unsigned_type(detail::random_engine_word(m_engine));
-         if (take < limits<unsigned_type>::digits) {
-            value &= (unsigned_type(1) << take.raw) - 1u;
+      if (engine_span == 0u && is_unsigned<typename Engine::result_type>) {
+         constexpr idx engine_bits = limits<engine_unsigned>::digits;
+         idx produced = 0u;
+         while (produced < bits) {
+            idx const remaining = idx(bits - produced);
+            idx const take = remaining < engine_bits ? remaining : engine_bits;
+            unsigned_type value =
+               unsigned_type(detail::random_engine_word(m_engine));
+            if (take < limits<unsigned_type>::digits) {
+               value &= (unsigned_type(1) << take.raw) - 1u;
+            }
+            result |= value << produced.raw;
+            produced += take;
          }
-         result |= value << produced.raw;
-         produced += take;
+      } else {
+         for (idx bit = 0u; bit < bits; ++bit) {
+            result |= unsigned_type(detail::distribution_random_bit(m_engine))
+                      << bit.raw;
+         }
       }
       return result_type(result);
    }

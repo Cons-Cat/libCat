@@ -15,91 +15,133 @@ make_uint16(cat::uint8 high, cat::uint8 low) -> unsigned __int128 {
    return (static_cast<unsigned __int128>(high.raw) << 64u) | low.raw;
 }
 
-constexpr unsigned __int128 numpy_seed_zero_state =
-   make_uint16(0x1aa1b534'5996452dull, 0x09585eb7'a69561e3ull);
-constexpr unsigned __int128 numpy_seed_zero_increment =
-   make_uint16(0x418ddadb'3af71a82ull, 0x588133bc'447873a9ull);
-constexpr unsigned __int128 numpy_seed_zero_pcg64_next =
-   make_uint16(0x3c535930'f580265full, 0xc9b4b5d1'b4aff7d8ull);
-constexpr unsigned __int128 numpy_seed_zero_dxsm_next =
-   make_uint16(0xf38a4286'a8d82819ull, 0x2d6ec382'12b3b128ull);
-
-constexpr cat::array<cat::uint8, 10u> numpy_seed_zero_pcg64 = {
-   0xa30febcf'd9c2825full, 0x4510bdf8'82d9d721ull, 0x0a7d3da9'4ecde8b8ull,
-   0x043b27b6'1342f01dull, 0xd0327a78'2cde513bull, 0xe9aa5979'a6401c4eull,
-   0x9b4c7b71'80edb27full, 0xbac0495f'f8829a45ull, 0x8b2b01e7'a1dc7fbfull,
-   0xef60e807'8f56bfedull,
+struct pcg_reference_state {
+   cat::uint8 low;
+   cat::uint8 high;
 };
 
-constexpr cat::array<cat::uint8, 10u> numpy_seed_zero_dxsm = {
-   0xd97e4a14'7f788a70ull, 0x8dfa7bce'56e3a253ull, 0x13556ed9'f53d3c10ull,
-   0x55dbf1c2'41341e98ull, 0xa2cd98f7'22eb0e0aull, 0x083dfc40'7203ade8ull,
-   0xeaa083df'518f030dull, 0x44968c87'e432852bull, 0x573107b9'cb8d9eccull,
-   0x9eedd1da'50b9dacaull,
+constexpr pcg_reference_state pcg_default_multiplier = {
+   4'865'540'595'714'422'341ull,
+   2'549'297'995'355'413'924ull,
+};
+constexpr pcg_reference_state pcg_cheap_multiplier = {
+   0xda942042'e4dd58b5ull,
+   0u,
 };
 
-constexpr unsigned __int128 numpy_testset_state =
-   make_uint16(0xdcbf51ec'a8a06d6dull, 0xa11c0e6f'95be4591ull);
-constexpr unsigned __int128 numpy_testset_increment =
-   make_uint16(0x6f01e045'569d93c4ull, 0x40ac10dd'049310b5ull);
+constexpr auto
+pcg_reference_add(pcg_reference_state left, pcg_reference_state right)
+   -> pcg_reference_state {
+   cat::uint8 const low = left.low + right.low;
+   return {
+      .low = low,
+      .high = left.high + right.high + cat::uint8(low < left.low),
+   };
+}
 
-constexpr cat::array<cat::uint8, 12u> numpy_testset_pcg64 = {
-   0x60d24054'e17a0698ull, 0xd5e79d89'856e4f12ull, 0xd254972f'e64bd782ull,
-   0xf1e3072a'53c72571ull, 0xd7c1d739'3d4115c9ull, 0x77b75928'b763e1e2ull,
-   0xee6dee05'190f7909ull, 0x15f7b1c5'1d7fa319ull, 0x27e44105'f26ac2d7ull,
-   0x0cc0d88b'29e5b415ull, 0xe07b1a90'c685e361ull, 0xd2e43024'0de95e38ull,
-};
+constexpr auto
+pcg_reference_multiply(pcg_reference_state left, pcg_reference_state right)
+   -> pcg_reference_state {
+   unsigned __int128 const low_product =
+      static_cast<unsigned __int128>(left.low.raw) * right.low.raw;
+   return {
+      .low = cat::uint8(low_product),
+      .high = cat::uint8(low_product >> 64u) + left.high * right.low
+              + left.low * right.high,
+   };
+}
 
-constexpr cat::array<cat::uint8, 12u> numpy_testset_dxsm = {
-   0xdf1ddcf1'e22521feull, 0xc71b2f9c'706cf151ull, 0x6922a8cc'24ad96b2ull,
-   0x82738c54'9beccc30ull, 0x5e8415cd'b1f17580ull, 0x064c54ad'0c09cb43ull,
-   0x361a17a6'07dce278ull, 0x4346f6af'b7acad68ull, 0x6e9f14d4'f6398d6bull,
-   0xf818d434'3f8ed822ull, 0x6327647d'af508ed6ull, 0xe1d1dbe5'496a262aull,
-};
+constexpr auto
+pcg_reference_increment(pcg_reference_state sequence) -> pcg_reference_state {
+   return {
+      .low = (sequence.low << 1u) | 1u,
+      .high = (sequence.high << 1u) | (sequence.low >> 63u),
+   };
+}
 
-template <typename Engine, cat::idx size>
-void
-verify_numpy_reference(
-   cat::array<cat::uint8, size> const& expected,
-   unsigned __int128 initial_state, unsigned __int128 initial_increment
-) {
-   Engine engine;
-   engine.set_state(initial_state);
-   engine.set_stream(initial_increment >> 1u);
-   cat::verify(engine.state() == initial_state);
-   cat::verify(engine.increment() == initial_increment);
-   for (cat::uint8 value : expected) {
-      cat::verify(engine() == value);
+constexpr auto
+pcg_reference_advance(
+   pcg_reference_state state, pcg_reference_state delta,
+   pcg_reference_state multiplier, pcg_reference_state increment
+) -> pcg_reference_state {
+   pcg_reference_state accumulated_multiplier{.low = 1u, .high = 0u};
+   pcg_reference_state accumulated_increment{.low = 0u, .high = 0u};
+   while (delta.low != 0u || delta.high != 0u) {
+      if ((delta.low & 1u) != 0u) {
+         accumulated_multiplier =
+            pcg_reference_multiply(accumulated_multiplier, multiplier);
+         accumulated_increment = pcg_reference_add(
+            pcg_reference_multiply(accumulated_increment, multiplier), increment
+         );
+      }
+      increment = pcg_reference_multiply(
+         pcg_reference_add(multiplier, {1u, 0u}), increment
+      );
+      multiplier = pcg_reference_multiply(multiplier, multiplier);
+      delta.low = (delta.low >> 1u) | (delta.high << 63u);
+      delta.high >>= 1u;
+   }
+   return pcg_reference_add(
+      pcg_reference_multiply(accumulated_multiplier, state),
+      accumulated_increment
+   );
+}
+
+constexpr auto
+pcg_reference_seed(
+   pcg_reference_state initial_state, pcg_reference_state initial_sequence,
+   pcg_reference_state multiplier
+) -> pcg_reference_state {
+   pcg_reference_state const increment =
+      pcg_reference_increment(initial_sequence);
+   return pcg_reference_advance(
+      pcg_reference_add(increment, initial_state), {1u, 0u}, multiplier,
+      increment
+   );
+}
+
+constexpr auto
+pcg_reference_xsl_rr(pcg_reference_state state) -> cat::uint8 {
+   cat::uint8::raw_type const word = state.high.raw ^ state.low.raw;
+   cat::uint8::raw_type const rotation = state.high.raw >> 58u;
+   return cat::uint8((word >> rotation) | (word << ((0u - rotation) & 63u)));
+}
+
+constexpr auto
+pcg_reference_dxsm(pcg_reference_state state) -> cat::uint8 {
+   cat::uint8 high = state.high;
+   high ^= high >> 32u;
+   high *= pcg_cheap_multiplier.low;
+   high ^= high >> 48u;
+   return high * (state.low | 1u);
+}
+
+template <bool dxsm>
+constexpr auto
+pcg_reference_generate(
+   pcg_reference_state& state, pcg_reference_state multiplier,
+   pcg_reference_state increment
+) -> cat::uint8 {
+   if constexpr (dxsm) {
+      cat::uint8 const result = pcg_reference_dxsm(state);
+      state = pcg_reference_advance(state, {1u, 0u}, multiplier, increment);
+      return result;
+   } else {
+      state = pcg_reference_advance(state, {1u, 0u}, multiplier, increment);
+      return pcg_reference_xsl_rr(state);
    }
 }
 
-template <typename SimdEngine, cat::idx size>
-void
-verify_numpy_simd_reference(cat::array<cat::uint8, size> const& expected) {
-   using result_type = SimdEngine::result_type;
-   using state_type = SimdEngine::state_type;
-   constexpr cat::idx lanes = result_type::abi_type::lanes;
-
-   SimdEngine engine;
-   engine.set_state(state_type(numpy_seed_zero_state));
-   engine.set_stream(state_type(numpy_seed_zero_increment >> 1u));
-
-   // SIMD lanes are independent scalar-compatible streams. They are not a
-   // flattened NumPy stream.
-   for (cat::uint8 expected_value : expected) {
-      result_type const values = engine();
-      for (cat::idx lane = 0u; lane < lanes; ++lane) {
-         cat::verify(values[lane] == expected_value);
-      }
-   }
+constexpr auto
+pcg_reference_native(pcg_reference_state state) -> unsigned __int128 {
+   return make_uint16(state.high, state.low);
 }
 
 template <typename Engine>
 void
-verify_pcg_navigation(Engine original) {
-   using state_type = Engine::state_type;
-   state_type const short_delta = 257u;
-   state_type const long_delta = make_uint16(0x40u, 0x1d3u);
+verify_pcg_discard(Engine original) {
+   cat::uint8 const short_delta = 257u;
+   cat::uint8 const long_delta = 0x40'0000'0000'0001d3ull;
 
    Engine iterated = original;
    Engine advanced = original;
@@ -108,20 +150,120 @@ verify_pcg_navigation(Engine original) {
    }
    advanced.discard(short_delta);
    cat::verify(advanced == iterated);
-   cat::verify((advanced - original) == short_delta);
-   advanced.backstep(short_delta);
-   cat::verify(advanced == original);
 
+   advanced = original;
    advanced.discard(long_delta);
-   cat::verify((advanced - original) == long_delta);
-   advanced.backstep(long_delta);
-   cat::verify(advanced == original);
+   Engine composed = original;
+   composed.discard(long_delta / 2u);
+   composed.discard(long_delta - (long_delta / 2u));
+   cat::verify(advanced == composed);
+}
 
-   Engine reversed = original;
-   reversed.backstep(long_delta);
-   cat::verify((original - reversed) == long_delta);
-   reversed.discard(long_delta);
-   cat::verify(reversed == original);
+template <typename Engine, bool dxsm>
+void
+verify_pcg_scalar_large_advance() {
+   constexpr pcg_reference_state initial_state{
+      0xffffffff'fffffff1ull,
+      0xfedcba98'76543210ull,
+   };
+   constexpr pcg_reference_state sequence{
+      0x80000000'00000054ull,
+      0x13579bdf'2468ace0ull,
+   };
+   constexpr auto multiplier =
+      dxsm ? pcg_cheap_multiplier : pcg_default_multiplier;
+   constexpr auto increment = pcg_reference_increment(sequence);
+   constexpr cat::array<cat::uint8, 6u> deltas = {
+      0xffffffffull,
+      0x1'00000000ull,
+      0x1'00000001ull,
+      0xffffffff'ffffffffull,
+      1u,
+      0x80000000'00000000ull,
+   };
+
+   Engine engine(
+      pcg_reference_native(initial_state), pcg_reference_native(sequence)
+   );
+   pcg_reference_state reference =
+      pcg_reference_seed(initial_state, sequence, multiplier);
+
+   for (cat::uint8 delta : deltas) {
+      engine.discard(delta);
+      reference = pcg_reference_advance(
+         reference, {delta, 0u}, multiplier, increment
+      );
+
+      cat::uint8 const expected =
+         pcg_reference_generate<dxsm>(reference, multiplier, increment);
+      cat::verify(engine() == expected);
+   }
+}
+
+template <typename Engine, bool dxsm>
+void
+verify_pcg_simd_large_advance() {
+   using result_type = Engine::result_type;
+   constexpr cat::idx lanes = result_type::abi_type::lanes;
+   constexpr pcg_reference_state initial_state{
+      .low = 0xffffffff'fffffff1ull,
+      .high = 0xfedcba98'76543210ull,
+   };
+   constexpr pcg_reference_state initial_sequence{
+      .low = 0x80000000'00000054ull,
+      .high = 0x13579bdf'2468ace0ull,
+   };
+   constexpr auto multiplier =
+      dxsm ? pcg_cheap_multiplier : pcg_default_multiplier;
+   constexpr cat::array<cat::uint8, 6u> deltas = {
+      0xffffffffull,
+      0x1'00000001ull,
+      0xffffffff'ffffffffull,
+      1u,
+      0x7fffffff'ffffffffull,
+      0x80000000'00000000ull,
+   };
+
+   Engine engine(
+      pcg_reference_native(initial_state),
+      pcg_reference_native(initial_sequence)
+   );
+   cat::array<pcg_reference_state, lanes> references;
+   cat::array<pcg_reference_state, lanes> increments;
+   for (cat::idx lane = 0u; lane < lanes; ++lane) {
+      pcg_reference_state const offset{cat::uint8(lane), 0u};
+      pcg_reference_state const state =
+         pcg_reference_add(initial_state, offset);
+      pcg_reference_state const sequence =
+         pcg_reference_add(initial_sequence, offset);
+      increments[lane] = pcg_reference_increment(sequence);
+      references[lane] = pcg_reference_seed(state, sequence, multiplier);
+   }
+
+   for (cat::idx round = 0u; round < 4u; ++round) {
+      result_type packed_delta;
+      cat::array<pcg_reference_state, lanes> round_deltas;
+      for (cat::idx lane = 0u; lane < lanes; ++lane) {
+         auto const delta = deltas[(round * lanes + lane) % deltas.size()];
+         round_deltas[lane] = {delta, 0u};
+         packed_delta.set_lane(lane, delta);
+      }
+
+      engine.discard(packed_delta);
+      for (cat::idx lane = 0u; lane < lanes; ++lane) {
+         references[lane] = pcg_reference_advance(
+            references[lane], round_deltas[lane], multiplier, increments[lane]
+         );
+      }
+
+      result_type const values = engine();
+      for (cat::idx lane = 0u; lane < lanes; ++lane) {
+         cat::uint8 const expected = pcg_reference_generate<dxsm>(
+            references[lane], multiplier, increments[lane]
+         );
+         cat::verify(values[lane] == expected);
+      }
+   }
 }
 
 template <typename Engine>
@@ -144,10 +286,6 @@ pcg_shuffle(cat::array<cat::uint1, 52u>& cards, Engine& engine) {
 template <typename Engine, typename Word>
 void
 verify_pcg_high_round(Engine& engine, pcg_high::round<Word> const& expected) {
-   for (cat::idx index = 0u; index < 6u; ++index) {
-      cat::verify(engine() == expected.numbers[index]);
-   }
-   engine.backstep(6u);
    for (cat::idx index = 0u; index < 6u; ++index) {
       cat::verify(engine() == expected.numbers[index]);
    }
@@ -209,52 +347,24 @@ verify_pcg_simd_setseq() {
       cat::verify(bounded[lane] == scalar[lane](bounds[lane]));
    }
 
-   result_type const discards = cat::simd_iota<result_type>(5u);
-   engine.discard(typename SimdEngine::state_type(discards));
+   result_type const minimums = cat::simd_iota<result_type>(3u);
+   result_type const maximums = minimums + cat::simd_iota<result_type>(0u);
+   result_type const ranged = engine(minimums, maximums);
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
-      scalar[lane].discard(
-         static_cast<ScalarEngine::state_type>(discards[lane])
+      cat::verify(
+         ranged[lane] == scalar[lane](minimums[lane], maximums[lane])
       );
+   }
+
+   result_type const discards = cat::simd_iota<result_type>(5u);
+   engine.discard(discards);
+   for (cat::idx lane = 0u; lane < lanes; ++lane) {
+      scalar[lane].discard(cat::uint8(discards[lane]));
    }
    result_type const discarded = engine();
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
       cat::verify(discarded[lane] == scalar[lane]());
    }
-
-   SimdEngine lane_original(123u, 456u);
-   SimdEngine lane_advanced(123u, 456u);
-   typename SimdEngine::state_type const lane_deltas(
-      cat::simd_iota<result_type>(17u)
-   );
-   lane_advanced.discard(lane_deltas);
-   cat::verify((lane_advanced - lane_original) == lane_deltas);
-   lane_advanced.backstep(lane_deltas);
-   cat::verify(lane_advanced == lane_original);
-
-   typename SimdEngine::state_type const streams(
-      cat::simd_iota<result_type>(700u)
-   );
-   engine.set_stream(streams);
-   cat::verify(engine.stream_id() == streams);
-   for (cat::idx lane = 0u; lane < lanes; ++lane) {
-      scalar[lane].set_stream(
-         static_cast<ScalarEngine::state_type>(cat::uint8(700u) + lane)
-      );
-   }
-   result_type const restreamed = engine();
-   for (cat::idx lane = 0u; lane < lanes; ++lane) {
-      cat::verify(restreamed[lane] == scalar[lane]());
-   }
-
-   SimdEngine original(123u, 456u);
-   SimdEngine advanced(123u, 456u);
-   cat::verify(original == advanced);
-   advanced.discard(11u);
-   cat::verify((advanced - original) == typename SimdEngine::state_type(11u));
-   advanced.backstep(11u);
-   cat::verify(original == advanced);
-   static_cast<void>(advanced());
-   cat::verify(original != advanced);
 
    SimdEngine reset(42u, 54u);
    reset.seed();
@@ -263,10 +373,9 @@ verify_pcg_simd_setseq() {
    cat::verify(reset == SimdEngine(42u, 54u));
    cat::verify(SimdEngine::min() == result_type(0u));
    cat::verify(SimdEngine::max() == result_type(lane_type::max()));
-   cat::verify(SimdEngine::streams_pow2() > 0u);
 }
 
-template <typename SimdEngine, typename ScalarEngine, cat::pcg_stream stream>
+template <typename SimdEngine, typename ScalarEngine>
 void
 verify_pcg_simd_single_seed() {
    using result_type = SimdEngine::result_type;
@@ -283,93 +392,34 @@ verify_pcg_simd_single_seed() {
       }
    }
 
-   typename SimdEngine::state_type const deltas(
-      cat::simd_iota<result_type>(9u)
-   );
-   SimdEngine original(91u);
-   SimdEngine advanced(91u);
-   advanced.discard(deltas);
-   cat::verify((advanced - original) == deltas);
-   advanced.backstep(deltas);
-   cat::verify(advanced == original);
-
-   cat::verify(
-      SimdEngine::period_pow2()
-      == ((sizeof(typename result_type::value_type) * 16u) - (stream == cat::pcg_stream::mcg ? 2u : 0u))
-   );
-}
-
-template <typename SimdEngine, typename ScalarEngine>
-void
-verify_pcg_simd_wide_navigation() {
-   using result_type = SimdEngine::result_type;
-   using state_type = SimdEngine::state_type;
-   constexpr cat::idx lanes = result_type::abi_type::lanes;
-   result_type const low = cat::simd_iota<result_type>(31u);
-   result_type const high = cat::simd_iota<result_type>(1u);
-   state_type const deltas(low, high);
-
-   SimdEngine original(42u, 54u);
-   SimdEngine advanced(42u, 54u);
-   advanced.discard(deltas);
-   cat::verify((advanced - original) == deltas);
-
-   cat::array<ScalarEngine, lanes> scalar;
+   result_type const deltas = cat::simd_iota<result_type>(9u);
+   engine.discard(deltas);
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
-      scalar[lane].seed(cat::uint8(42u) + lane, cat::uint8(54u) + lane);
-      scalar[lane].discard(make_uint16(high[lane], low[lane]));
+      scalar[lane].discard(cat::uint8(deltas[lane]));
    }
-   result_type const values = advanced();
+   result_type const values = engine();
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
       cat::verify(values[lane] == scalar[lane]());
    }
-
-   SimdEngine restored(42u, 54u);
-   restored.discard(deltas);
-   restored.backstep(deltas);
-   cat::verify(restored == original);
 }
 
-template <typename SimdEngine, typename ScalarEngine>
+template <typename SimdEngine>
 void
 verify_pcg_simd_unique() {
    using result_type = SimdEngine::result_type;
-   using state_type = SimdEngine::state_type;
-   using lane_type = result_type::value_type;
    constexpr cat::idx lanes = result_type::abi_type::lanes;
    SimdEngine engine(91u);
-   state_type const stream_ids = engine.stream_id();
-   state_type const increments = engine.increment();
-   auto const stream_id_low = stream_ids.low();
-   auto const stream_id_high = stream_ids.high();
-   auto const increment_low = increments.low();
-   cat::array<ScalarEngine, lanes> scalar;
-   lane_type previous_stream_id = stream_id_low[0u];
-
-   for (cat::idx lane = 0u; lane < lanes; ++lane) {
-      cat::uint8 const sequence = cat::uint8(stream_id_low[lane])
-                                  | (cat::uint8(stream_id_high[lane]) << 32u);
-      scalar[lane].set_stream(sequence);
-      scalar[lane].seed(cat::uint8(91u) + lane);
-      cat::verify((increment_low[lane] & 1u) == 1u);
-      if (lane != 0u) {
-         cat::verify(stream_id_low[lane] == previous_stream_id + 1u);
-      }
-      previous_stream_id = stream_id_low[lane];
-   }
-
-   for (cat::idx draw = 0u; draw < 24u; ++draw) {
-      result_type const values = engine();
-      for (cat::idx lane = 0u; lane < lanes; ++lane) {
-         cat::verify(values[lane] == scalar[lane]());
-      }
+   result_type const values = engine();
+   auto previous = values[0u];
+   for (cat::idx lane = 1u; lane < lanes; ++lane) {
+      cat::verify(values[lane] != previous);
+      previous = values[lane];
    }
 
    SimdEngine const& same = engine;
    cat::verify(same == engine);
    SimdEngine copy = engine;
    cat::verify(copy != engine);
-   cat::verify(SimdEngine::streams_pow2() == (sizeof(void*) * 8u) - 1u);
 }
 
 }  // namespace
@@ -454,95 +504,84 @@ $test(pcg_dxsm_uint8) {
    );
 }
 
-$test(pcg_numpy_reference) {
-   using pcg64 = cat::pcg_engine<cat::uint8>;
-   using pcg64_dxsm = cat::pcg_dxsm_engine<cat::uint8>;
+$test(pcg_increment_shift_regression) {
+   // rkern's 2019 fix moved initseq low bit 63 into increment high bit 0.
+   // The old emulation tested bit 47 and could set high bit 47 instead.
+   // https://github.com/rkern/pcg64/commit/b9604fe16dadfb93eeefe07f4ba1cda9acf7c389
+   constexpr unsigned __int128 initial_state =
+      make_uint16(0xfedcba98'76543210ull, 0xffffffff'fffffff1ull);
+   constexpr unsigned __int128 initial_sequence =
+      make_uint16(0x13579bdf'2468ace0ull, 0x80000000'00000054ull);
+   cat::pcg_engine<cat::uint8> pcg(initial_state, initial_sequence);
+   cat::verify(pcg() == 0x69097423'7023ba37ull);
 
-   pcg64 pcg;
-   pcg.set_state(numpy_seed_zero_state);
-   pcg.set_stream(numpy_seed_zero_increment >> 1u);
-   cat::verify(pcg() == numpy_seed_zero_pcg64[0u]);
-   cat::verify(pcg.state() == numpy_seed_zero_pcg64_next);
-
-   pcg64_dxsm dxsm;
-   dxsm.set_state(numpy_seed_zero_state);
-   dxsm.set_stream(numpy_seed_zero_increment >> 1u);
-   cat::verify(dxsm() == numpy_seed_zero_dxsm[0u]);
-   cat::verify(dxsm.state() == numpy_seed_zero_dxsm_next);
-
-   // These are NumPy's seed-zero post-bootstrap state and raw outputs. State
-   // import deliberately does not reproduce NumPy SeedSequence.
-   verify_numpy_reference<pcg64>(
-      numpy_seed_zero_pcg64, numpy_seed_zero_state, numpy_seed_zero_increment
-   );
-   verify_numpy_reference<pcg64_dxsm>(
-      numpy_seed_zero_dxsm, numpy_seed_zero_state, numpy_seed_zero_increment
-   );
-
-   // NumPy's official PCG64 testset-1 and PCG64DXSM testset-1 use seed
-   // 0xdeadbeaf. The unusual beaf spelling is intentional and comes directly
-   // from NumPy's published test vectors. Raw state import does not reproduce
-   // SeedSequence or the historical DXSM bootstrap quirk.
-   verify_numpy_reference<pcg64>(
-      numpy_testset_pcg64, numpy_testset_state, numpy_testset_increment
-   );
-   verify_numpy_reference<pcg64_dxsm>(
-      numpy_testset_dxsm, numpy_testset_state, numpy_testset_increment
-   );
+   // NumPy #22472 records its compatibility seed path using the default
+   // multiplier. libCat follows O'Neill's cm_setseq DXSM contract by using
+   // the cheap multiplier for bootstrap and outputting the old state.
+   // https://github.com/numpy/numpy/issues/22472
+   // https://github.com/imneme/pcg-cpp/commit/871d0494ee9c9a7b7c43f753e3d8ca47c26f8005
+   cat::pcg_dxsm_engine<cat::uint8> dxsm(initial_state, initial_sequence);
+   cat::verify(dxsm() == 0x772998f1'6234317aull);
 }
 
-$test(pcg_navigation) {
-   verify_pcg_navigation(cat::pcg_engine<cat::uint8>(42u, 54u));
-   verify_pcg_navigation(
+$test(pcg_large_advance_reference) {
+   // NumPy #20048 found that emulated delta shifts put high bit 0 in low bit
+   // 0 instead of low bit 63. PR #20049 fixed it and PR #20080 backported it.
+   // https://github.com/numpy/numpy/issues/20048
+   // https://github.com/numpy/numpy/pull/20049
+   // https://github.com/numpy/numpy/pull/20080
+   verify_pcg_scalar_large_advance<cat::pcg_engine<cat::uint8>, false>();
+   verify_pcg_scalar_large_advance<cat::pcg_dxsm_engine<cat::uint8>, true>();
+}
+
+$test(pcg_simd_large_advance_reference) {
+   // NumPy #20048 and PRs #20049 and #20080 expose the same high-limb shift
+   // mistake guarded here in libCat's x2 and x4 two-limb SIMD arithmetic.
+   // https://github.com/numpy/numpy/issues/20048
+   // https://github.com/numpy/numpy/pull/20049
+   // https://github.com/numpy/numpy/pull/20080
+   verify_pcg_simd_large_advance<cat::pcg_engine<cat::uint8x2>, false>();
+   verify_pcg_simd_large_advance<cat::pcg_engine<cat::uint8x4>, false>();
+   verify_pcg_simd_large_advance<cat::pcg_dxsm_engine<cat::uint8x2>, true>();
+   verify_pcg_simd_large_advance<cat::pcg_dxsm_engine<cat::uint8x4>, true>();
+}
+
+$test(pcg_discard) {
+   verify_pcg_discard(cat::pcg_engine<cat::uint8>(42u, 54u));
+   verify_pcg_discard(
       cat::pcg_engine<cat::uint8, cat::pcg_stream::oneseq>(42u)
    );
-   verify_pcg_navigation(
+   verify_pcg_discard(
       cat::pcg_engine<cat::uint8, cat::pcg_stream::mcg>(42u)
    );
-   verify_pcg_navigation(cat::pcg_dxsm_engine<cat::uint8>(42u, 54u));
-   verify_pcg_navigation(
+   verify_pcg_discard(cat::pcg_dxsm_engine<cat::uint8>(42u, 54u));
+   verify_pcg_discard(
       cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::oneseq>(42u)
    );
-   verify_pcg_navigation(
+   verify_pcg_discard(
       cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::mcg>(42u)
    );
-
-   cat::pcg_engine<cat::uint8> original;
-   original.set_state(numpy_seed_zero_state);
-   original.set_stream(numpy_seed_zero_increment >> 1u);
-   auto changed = original;
-   changed.set_state(numpy_testset_state);
-   cat::verify(changed != original);
-   cat::verify(changed.stream_id() == original.stream_id());
-   changed.set_state(original.state());
-   cat::verify(changed == original);
-
-   unsigned __int128 const state = changed.state();
-   changed.set_stream(numpy_testset_increment >> 1u);
-   cat::verify(changed.state() == state);
-   cat::verify(changed.stream_id() == (numpy_testset_increment >> 1u));
-   changed.set_stream(original.stream_id());
-   cat::verify(changed == original);
 }
 
 $test(pcg_simd_uint4) {
+   using uint4x3 =
+      cat::simd<cat::uint4, cat::simd_abi::fixed_size<cat::uint4, 3u>>;
+   verify_pcg_simd_setseq<
+      cat::pcg_engine<uint4x3>, cat::pcg_engine<cat::uint4>>();
    verify_pcg_simd_setseq<
       cat::pcg_engine<cat::uint4x4>, cat::pcg_engine<cat::uint4>>();
    verify_pcg_simd_setseq<
       cat::pcg_engine<cat::uint4x8>, cat::pcg_engine<cat::uint4>>();
    verify_pcg_simd_single_seed<
       cat::pcg_engine<cat::uint4x8, cat::pcg_stream::oneseq>,
-      cat::pcg_engine<cat::uint4, cat::pcg_stream::oneseq>,
-      cat::pcg_stream::oneseq>();
+      cat::pcg_engine<cat::uint4, cat::pcg_stream::oneseq>>();
    verify_pcg_simd_single_seed<
       cat::pcg_engine<cat::uint4x8, cat::pcg_stream::mcg>,
-      cat::pcg_engine<cat::uint4, cat::pcg_stream::mcg>,
-      cat::pcg_stream::mcg>();
+      cat::pcg_engine<cat::uint4, cat::pcg_stream::mcg>>();
    verify_pcg_simd_setseq<
       cat::pcg_dxsm_engine<cat::uint4x8>, cat::pcg_dxsm_engine<cat::uint4>>();
    verify_pcg_simd_unique<
-      cat::pcg_engine<cat::uint4x4, cat::pcg_stream::unique>,
-      cat::pcg_engine<cat::uint4>>();
+      cat::pcg_engine<cat::uint4x4, cat::pcg_stream::unique>>();
 }
 
 $test(pcg_simd_uint8) {
@@ -552,66 +591,32 @@ $test(pcg_simd_uint8) {
       cat::pcg_engine<cat::uint8x4>, cat::pcg_engine<cat::uint8>>();
    verify_pcg_simd_single_seed<
       cat::pcg_engine<cat::uint8x2, cat::pcg_stream::oneseq>,
-      cat::pcg_engine<cat::uint8, cat::pcg_stream::oneseq>,
-      cat::pcg_stream::oneseq>();
+      cat::pcg_engine<cat::uint8, cat::pcg_stream::oneseq>>();
    verify_pcg_simd_single_seed<
       cat::pcg_engine<cat::uint8x4, cat::pcg_stream::oneseq>,
-      cat::pcg_engine<cat::uint8, cat::pcg_stream::oneseq>,
-      cat::pcg_stream::oneseq>();
+      cat::pcg_engine<cat::uint8, cat::pcg_stream::oneseq>>();
    verify_pcg_simd_single_seed<
       cat::pcg_engine<cat::uint8x2, cat::pcg_stream::mcg>,
-      cat::pcg_engine<cat::uint8, cat::pcg_stream::mcg>,
-      cat::pcg_stream::mcg>();
+      cat::pcg_engine<cat::uint8, cat::pcg_stream::mcg>>();
    verify_pcg_simd_single_seed<
       cat::pcg_engine<cat::uint8x4, cat::pcg_stream::mcg>,
-      cat::pcg_engine<cat::uint8, cat::pcg_stream::mcg>,
-      cat::pcg_stream::mcg>();
+      cat::pcg_engine<cat::uint8, cat::pcg_stream::mcg>>();
    verify_pcg_simd_setseq<
       cat::pcg_dxsm_engine<cat::uint8x2>, cat::pcg_dxsm_engine<cat::uint8>>();
    verify_pcg_simd_setseq<
       cat::pcg_dxsm_engine<cat::uint8x4>, cat::pcg_dxsm_engine<cat::uint8>>();
    verify_pcg_simd_single_seed<
       cat::pcg_dxsm_engine<cat::uint8x2, cat::pcg_stream::oneseq>,
-      cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::oneseq>,
-      cat::pcg_stream::oneseq>();
+      cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::oneseq>>();
    verify_pcg_simd_single_seed<
       cat::pcg_dxsm_engine<cat::uint8x4, cat::pcg_stream::oneseq>,
-      cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::oneseq>,
-      cat::pcg_stream::oneseq>();
+      cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::oneseq>>();
    verify_pcg_simd_single_seed<
       cat::pcg_dxsm_engine<cat::uint8x2, cat::pcg_stream::mcg>,
-      cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::mcg>,
-      cat::pcg_stream::mcg>();
+      cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::mcg>>();
    verify_pcg_simd_single_seed<
       cat::pcg_dxsm_engine<cat::uint8x4, cat::pcg_stream::mcg>,
-      cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::mcg>,
-      cat::pcg_stream::mcg>();
-   verify_pcg_simd_wide_navigation<
-      cat::pcg_engine<cat::uint8x2>, cat::pcg_engine<cat::uint8>>();
-   verify_pcg_simd_wide_navigation<
-      cat::pcg_engine<cat::uint8x4>, cat::pcg_engine<cat::uint8>>();
-   verify_pcg_simd_wide_navigation<
-      cat::pcg_dxsm_engine<cat::uint8x2>, cat::pcg_dxsm_engine<cat::uint8>>();
-   verify_pcg_simd_wide_navigation<
-      cat::pcg_dxsm_engine<cat::uint8x4>, cat::pcg_dxsm_engine<cat::uint8>>();
-   verify_numpy_simd_reference<cat::pcg_engine<cat::uint8x2>>(
-      numpy_seed_zero_pcg64
-   );
-   verify_numpy_simd_reference<cat::pcg_engine<cat::uint8x4>>(
-      numpy_seed_zero_pcg64
-   );
-   verify_numpy_simd_reference<cat::pcg_dxsm_engine<cat::uint8x2>>(
-      numpy_seed_zero_dxsm
-   );
-   verify_numpy_simd_reference<cat::pcg_dxsm_engine<cat::uint8x4>>(
-      numpy_seed_zero_dxsm
-   );
-}
-
-$test(pcg_simd_rxs_m_xs) {
-   verify_pcg_simd_setseq<
-      cat::pcg_engine<cat::uint8x4, cat::pcg_stream::setseq, cat::uint8x4>,
-      cat::pcg_engine<cat::uint8, cat::pcg_stream::setseq, cat::uint8>>();
+      cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::mcg>>();
 }
 
 $test(pcg_signed_arguments) {
@@ -630,16 +635,6 @@ $test(pcg_signed_arguments) {
       cat::verify(simd_signed4() == simd_unsigned4());
       cat::verify(simd_signed8() == simd_unsigned8());
    }
-}
-
-$test(pcg_simd_wrapped) {
-   using engine_type = cat::pcg_engine<cat::uint4x4, cat::pcg_stream::mcg>;
-   engine_type engine(0u);
-   cat::verify(engine.wrapped());
-   static_cast<void>(engine());
-   cat::verify(!engine.wrapped());
-   engine.backstep(1u);
-   cat::verify(engine.wrapped());
 }
 
 $test(pcg_edge_cases) {
@@ -661,12 +656,6 @@ $test(pcg_edge_cases) {
       static_cast<void>(discarded());
    }
    cat::verify(jumped() == discarded());
-
-   cat::pcg_engine<cat::uint4> restored(123u, 456u);
-   cat::pcg_engine<cat::uint4> original(123u, 456u);
-   restored.discard(20u);
-   restored.backstep(20u);
-   cat::verify(restored() == original());
 
    cat::pcg_engine<cat::uint8> wide_advanced(123u, 456u);
    cat::pcg_engine<cat::uint8> wide_discarded(123u, 456u);
@@ -701,17 +690,27 @@ $test(pcg_edge_cases) {
    cat::verify(equal_left == equal_right);
    static_cast<void>(equal_left());
    cat::verify(equal_left != equal_right);
-   cat::verify((equal_left - equal_right) == 1u);
 
    cat::pcg_engine<cat::uint4> bounded(42u, 54u);
    cat::verify(bounded(6u) < 6u);
-   cat::verify(cat::pcg_engine<cat::uint4>::period_pow2() == 64u);
-   cat::verify(
-      cat::pcg_engine<cat::uint4, cat::pcg_stream::mcg>::period_pow2() == 62u
-   );
 
-   cat::pcg_engine<cat::uint4> streamed(42u, 54u);
-   cat::pcg_engine<cat::uint4> restreamed(42u, 1u);
-   restreamed.set_stream(54u);
-   cat::verify(streamed.stream_id() == restreamed.stream_id());
+   cat::pcg_engine<cat::uint4> ranged(42u, 54u);
+   cat::pcg_engine<cat::uint4> ranged_reference = ranged;
+   for (cat::uint4 minimum = 0u; minimum < 16u; ++minimum) {
+      for (cat::uint4 maximum = minimum; maximum < 16u; ++maximum) {
+         cat::uint4 const expected =
+            minimum + ranged_reference(maximum - minimum + 1u);
+         cat::verify(ranged(minimum, maximum) == expected);
+      }
+   }
+
+   cat::pcg_engine<cat::uint4> equal_bound(42u, 54u);
+   cat::verify(equal_bound(17u, 17u) == 17u);
+
+   cat::pcg_engine<cat::uint4> full_range(42u, 54u);
+   cat::pcg_engine<cat::uint4> full_range_reference = full_range;
+   cat::verify(
+      full_range(cat::uint4::min(), cat::uint4::max())
+      == full_range_reference()
+   );
 }

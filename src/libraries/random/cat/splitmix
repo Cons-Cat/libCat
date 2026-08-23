@@ -1,0 +1,265 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// SplitMix64 is a fast non-cryptographic generator and seed expander with a
+// 8-byte state, a fixed odd Weyl increment, and a bijective 8-byte output mix.
+// It has period 2^64 and emits each 8-byte value once per complete cycle. This
+// makes it useful when small state, cheap exact skipping, or fast expansion of
+// one seed into several words matters. It is not suitable for cryptography.
+//
+// `splitmix64_engine` is the scalar spelling and is an alias for
+// `splitmix_engine<uint8>`.
+//
+//    splitmix64_engine scalar(42u);
+//    uint8 value = scalar();
+//
+// A SIMD result type selects independent lane state updated with packed
+// 8-byte arithmetic.
+//
+//    splitmix_engine<uint8x4> wide(42u);
+//    uint8x4 values = wide();
+//
+// Scalar seeding gives lane i initial state `seed + i`. Calling `set_state`
+// preserves explicit lane states, including equal states. Every call advances
+// every lane once.
+//
+// libCat extensions
+//
+// `operator()(bound)` draws from `[0, bound)`, with zero requesting the full
+// result range. `operator()(minimum, maximum)` uses the inclusive interval
+// `[minimum, maximum]`. SIMD bounds and results operate lane by lane.
+//
+// `state_type`, `state()`, and `set_state()` provide exact state export and
+// import. For SIMD engines the state contains one counter per lane.
+//
+//    splitmix64_engine source(42u);
+//    source.discard(7u);
+//    splitmix64_engine restored;
+//    restored.set_state(source.state());
+//
+// `discard(n)` is the standard engine operation. libCat also provides
+// `jump(n)` for the same exact counter skip, `jump_log2(k)` for 2^k outputs,
+// and `backstep(n)` for exact reverse movement. SIMD engines accept a separate
+// count in each lane.
+//
+//    splitmix64_engine stream(42u);
+//    stream.jump(1'000u);
+//    stream.jump_log2(20u);
+//    stream.backstep(1'000u);
+//    static_assert(splitmix64_engine::period_pow2() == 64u);
+//
+// `default_seed` and `period_pow2()` are public metadata.
+// The default seed is 1 and the period is 2^64.
+//
+//    splitmix64_engine defaulted(splitmix64_engine::default_seed);
+//
+// The paper intentionally publishes no named no-argument jump or long-jump
+// distance for SplitMix. It instead gives the exact arbitrary-distance
+// operation `seed += gamma * n`. Accordingly, `jump(n)` and `discard(n)` are
+// equivalent, and `jump_log2(k)` skips 2^k outputs. A jump of 2^64 is the
+// identity because it is one complete period. No unreferenced named distance
+// is invented here.
+//
+// The OOPSLA paper defines splittable variants with a variable gamma. Its
+// printed `mixGamma` conditional is inverted, and even the corrected weak-gamma
+// repair is not reliable for every gamma. This engine has no `split()` and
+// never varies the canonical golden gamma, so that specific class of bugs does
+// not apply here.
+//
+// SplitMix64 has passed substantial TestU01 and PractRand testing in published
+// reports, but those results do not prove ideal randomness. Its bijective
+// 8-byte design also cannot reproduce an output within one period, which is
+// detectable by sufficiently large birthday tests.
+//
+// Algorithm and fixed-gamma reference implementation
+//    https://prng.di.unimi.it/splitmix64.c
+// Original SplitMix paper
+//    https://gee.cs.oswego.edu/dl/papers/oopsla14.pdf
+// Variable-gamma bug analysis
+//    https://www.pcg-random.org/posts/bugs-in-splitmix.html
+// Independent statistical testing and discussion
+//    https://lemire.me/blog/2017/08/22/testing-non-cryptographic-random-number-generators-my-results/
+//
+// This code is tested in `tests/src/test_splitmix.cpp` against published
+// vectors and an independent reference model.
+
+#include <cat/detail/random_seed.hpp>
+
+#include <cat/arithmetic>
+#include <cat/limits>
+#include <cat/meta>
+#include <cat/simd>
+#include <cat/simd_ops>
+
+#include "detail/bounded_random.hpp"
+#include "detail/random_batch.hpp"
+
+namespace cat {
+
+template <typename T = uint8>
+   requires(is_same<T, uint8> || is_simd_of<T, uint8>)
+class splitmix_engine {
+ public:
+   using result_type = T;
+   using state_type = result_type;
+
+   static constexpr bool enable_batch_fill = true;
+   static constexpr random_seed default_seed = 1u;
+
+ private:
+   using stored_state =
+      conditional<is_simd<result_type>, result_type, wrap_uint8>;
+
+   static constexpr uint8 increment = 0x9e3779b9'7f4a7c15ull;
+
+   template <typename Word>
+   [[nodiscard]]
+   static constexpr auto
+   mix(Word value) -> Word {
+      if constexpr (is_simd<Word>) {
+         value = (value ^ (value >> 30u)) * uint8(0xbf58476d'1ce4e5b9ull);
+         value = (value ^ (value >> 27u)) * uint8(0x94d049bb'133111ebull);
+         return value ^ (value >> 31u);
+      } else {
+         value = (value ^ value.shift_right(30u)) * 0xbf58476d'1ce4e5b9ull;
+         value = (value ^ value.shift_right(27u)) * 0x94d049bb'133111ebull;
+         return value ^ value.shift_right(31u);
+      }
+   }
+
+ public:
+   constexpr splitmix_engine() {
+      seed();
+   }
+
+   constexpr explicit splitmix_engine(random_seed value) {
+      seed(value);
+   }
+
+   constexpr void
+   seed(random_seed value = default_seed) {
+      if constexpr (is_simd<result_type>) {
+         m_state = result_type(uint8(value)) + iota<result_type>(0u);
+      } else {
+         m_state = uint8(value);
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   state() const -> state_type {
+      return state_type(m_state);
+   }
+
+   constexpr void
+   set_state(state_type state) {
+      m_state = stored_state(state);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator()() -> result_type {
+      m_state += increment;
+      return result_type(mix(m_state));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator()(result_type bound) -> result_type {
+      if constexpr (is_simd<result_type>) {
+         using mask_type = result_type::mask_type;
+         return detail::lemire_bounded(bound, [&](mask_type active) {
+            result_type const next = m_state + increment;
+            m_state = simd_select(active, next, m_state);
+            return mix(next);
+         });
+      } else {
+         if (bound == 0u) {
+            return (*this)();
+         }
+         return detail::lemire_bounded(bound, [&] { return (*this)(); });
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator()(result_type minimum, result_type maximum) -> result_type {
+      return minimum + (*this)(maximum - minimum + 1u);
+   }
+
+ private:
+   friend class detail::random_batch_access;
+
+   template <typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   generate_exact_batch() -> simd<result_type, Abi>
+      requires(!is_simd<result_type>)
+   {
+      using batch_type = simd<result_type, Abi>;
+      batch_type const states =
+         batch_type(state()) + iota<batch_type>(1u) * increment;
+      discard(batch_type::abi_type::lanes);
+      return mix(states);
+   }
+
+ public:
+   [[nodiscard]]
+   static constexpr auto
+   min() -> result_type {
+      return uint8::min();
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   max() -> result_type {
+      return uint8::max();
+   }
+
+   [[nodiscard]]
+   static consteval auto
+   period_pow2() -> idx {
+      return 64u;
+   }
+
+   // Skip this many outputs.
+   constexpr void
+   discard(state_type count) {
+      m_state += increment * count;
+   }
+
+   // Apply the arbitrary-distance jump described in the SplitMix paper.
+   constexpr void
+   jump(state_type count) {
+      discard(count);
+   }
+
+   // Skip 2^log2_distance outputs.
+   constexpr void
+   jump_log2(uword log2_distance) {
+      if (log2_distance < period_pow2()) {
+         jump(state_type(uint8(1u).shift_left(log2_distance)));
+      }
+   }
+
+   // Skip this many outputs backwards.
+   constexpr void
+   backstep(state_type count) {
+      m_state -= increment * count;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(splitmix_engine const& left, splitmix_engine const& right)
+      -> bool {
+      return left.m_state == right.m_state;
+   }
+
+ private:
+   stored_state m_state;
+};
+
+using splitmix64_engine = splitmix_engine<uint8>;
+
+}  // namespace cat

@@ -18,37 +18,95 @@
 //
 // `xoshiro_engine<T>` is the `**` scramble. `xoshiro_pp_engine<T>` is `++`.
 // The same split applies to xoroshiro, xoshiro512, and xoroshiro1024.
+// Explicit scramblers are accepted only for the variants listed above.
 //
 // Not that Xoshiro has slightly inferior statistical properties to libCat's
 // default, PCG:
 //    https://www.pcg-random.org/posts/on-vignas-pcg-critique.html
 //    https://www.pcg-random.org/posts/xoshiro-repeat-flaws.html
-// However, Xoshiro might be faster.
+//
+// However, Xoshiro might be faster, especially in a batched SIMD context.
 //
 // This implementation borrows a technique from:
 //    https://github.com/nessan/xoshiro
 //    https://nessan.github.io/xoshiro/md_docs_2pages_2jump-technique.html
 //
+// libCat API extensions:
+//
+// `operator()(bound)` draws from `[0, bound)`, with zero requesting the full
+// result range. `operator()(minimum, maximum)` uses the inclusive interval
+// `[minimum, maximum]`. SIMD bounds and results operate lane by lane.
+//
+// Scalar engines accept one word for every word of raw state. `seed_words`
+// reports the required count. An all-zero state is repaired by setting its
+// first word to one. SIMD engines derive a separate lane state from one scalar
+// seed and do not expose raw state construction. No variant exposes state
+// export or later state import.
+//
+//    xoshiro_engine<uint8> engine(1u, 2u, 3u, 4u);
+//    static_assert(decltype(engine)::seed_words == 4u);
+//
+// `discard(n)` is the standard engine operation. `jump()` advances by the
+// shorter published distance to start a non-overlapping worker subsequence.
+// `long_jump()` advances by the larger distance to start a separate group of
+// worker subsequences. Neither generates the skipped values. Each SIMD lane
+// is jumped independently. Their exact distances are 2^32 and 2^48 for
+// xoroshiro64, 2^64 and 2^96 for xoshiro128 and xoroshiro128, 2^128 and 2^192
+// for xoshiro256, 2^256 and 2^384 for xoshiro512, and 2^512 and 2^768 for
+// xoroshiro1024.
+//
+//    xoshiro_engine<uint8> worker(42u);
+//    worker.jump();
+//    worker.long_jump();
+//
+// Scalar variants additionally support any power-of-two jump and generated
+// jump polynomials for exact counts. SIMD variants do not expose these
+// operations.
+//
+//    using engine_type = xoshiro_engine<uint8>;
+//    auto polynomial = engine_type::jump_polynomial(1'000u, false);
+//    engine_type exact(42u);
+//    exact.jump(polynomial);
+//    exact.jump_log2(80u);
+//
 // This code is well tested in `tests/src/test_xoshiro.cpp`, but links to
 // reference source code are provided in this file for validation.
 
 #include <cat/random>
+#include <cat/splitmix>
 
+#include "./random_batch.hpp"
 #include "./xoshiro_jump.hpp"
 
 namespace cat::detail {
 
-template <
-   typename Derived, is_simd Simd, idx state_size, bool narrow_seed = false>
+// Whiten each lane seed and space its SplitMix counter by the complete state
+// width. This removes adjacent overlapping windows. Hash collisions remain
+// probabilistically possible, unlike published Xoshiro jumps.
+constexpr auto
+xoshiro_lane_seed(uint8 seed, idx stream, idx state_size) -> uint8 {
+   if (stream == 0u) {
+      return seed;
+   }
+   uint8 const salt = random_mix_seed(stream + 0xd1b54a32'd192ed03ull);
+   uint8 const mixed = random_mix_seed(seed ^ salt);
+   uint8 const spacing =
+      uint8(stream) * uint8(state_size) * 0x9e3779b9'7f4a7c15ull;
+   return mixed.wrap() + spacing;
+}
+
+template <typename Derived, is_simd Simd, idx state_size>
 class simd_xoshiro_engine_base {
  public:
    using result_type = Simd;
 
    static constexpr random_seed default_seed = 1u;
+   static constexpr idx seed_words = state_size;
 
  protected:
    using state_word = result_type::value_type;
    using state_type = array<result_type, state_size>;
+   using mask_type = result_type::mask_type;
 
  public:
    constexpr simd_xoshiro_engine_base() {
@@ -59,13 +117,23 @@ class simd_xoshiro_engine_base {
       seed(value);
    }
 
+   template <typename... Values>
+      requires(sizeof...(Values) == state_size && sizeof...(Values) > 1u)
+   constexpr explicit simd_xoshiro_engine_base(Values... values)
+       : m_state(result_type(values)...) {
+      prevent_zero_state();
+   }
+
    constexpr void
    seed(random_seed value = default_seed) {
       auto const seed_value = uint8(value);
-      if constexpr (is_same<state_word, uint8>) {
-         result_type mixer_state =
-            seed_value
-            + iota<result_type>(0u) * state_word(0x9e3779b9'7f4a7c15ull);
+      if constexpr (sizeof(state_word) == 8u) {
+         result_type mixer_state;
+         for (idx lane = 0u; lane < result_type::abi_type::lanes; ++lane) {
+            mixer_state.set_lane(
+               lane, xoshiro_lane_seed(seed_value, lane, state_size)
+            );
+         }
          for (idx word = 0u; word < state_size; ++word) {
             mixer_state += state_word(0x9e3779b9'7f4a7c15ull);
             auto mixed = mixer_state;
@@ -76,17 +144,16 @@ class simd_xoshiro_engine_base {
             m_state[word] = mixed ^ (mixed >> 31u);
          }
       } else {
-         auto const lane_seed =
-            narrow_seed ? uint8(uint4(value)) : uint8(value);
          for (idx lane = 0u; lane < result_type::abi_type::lanes; ++lane) {
             splitmix64_engine mixer(
-               lane_seed + uint8(lane) * 0x9e3779b9'7f4a7c15ull
+               xoshiro_lane_seed(seed_value, lane, state_size)
             );
             for (idx word = 0u; word < state_size; ++word) {
                m_state[word].set_lane(lane, state_word(mixer()));
             }
          }
       }
+      prevent_zero_state();
    }
 
    [[nodiscard]]
@@ -129,6 +196,28 @@ class simd_xoshiro_engine_base {
          }
       }
       m_state = state;
+   }
+
+   constexpr void
+   prevent_zero_state() {
+      for (idx lane = 0u; lane < result_type::abi_type::lanes; ++lane) {
+         state_word combined = 0u;
+         for (idx state_index = 0u; state_index < state_size; ++state_index) {
+            combined |= m_state[state_index][lane];
+         }
+         if (combined == 0u) {
+            m_state[0u].set_lane(lane, 1u);
+         }
+      }
+   }
+
+   constexpr void
+   advance(mask_type active) {
+      state_type const previous = m_state;
+      static_cast<Derived&>(*this).next_state();
+      for (idx word = 0u; word < state_size; ++word) {
+         m_state[word] = simd_select(active, m_state[word], previous[word]);
+      }
    }
 
    state_type m_state;
@@ -274,12 +363,13 @@ template <is_simd Simd, xoshiro_scrambler scrambler>
    requires is_same<typename Simd::value_type, uint4>
 class simd_xoshiro128_engine
     : public simd_xoshiro_engine_base<
-         simd_xoshiro128_engine<Simd, scrambler>, Simd, 4u, true> {
+         simd_xoshiro128_engine<Simd, scrambler>, Simd, 4u> {
  private:
    using base = simd_xoshiro_engine_base<
-      simd_xoshiro128_engine<Simd, scrambler>, Simd, 4u, true>;
+      simd_xoshiro128_engine<Simd, scrambler>, Simd, 4u>;
    using family = xoshiro128_family<scrambler>;
    using state_word = base::state_word;
+   using mask_type = base::mask_type;
    using base::m_state;
    friend base;
 
@@ -297,6 +387,14 @@ class simd_xoshiro128_engine
    operator()() -> result_type {
       auto const result = family::scramble(m_state);
       next_state();
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   generate(mask_type active) -> result_type {
+      auto const result = family::scramble(m_state);
+      this->advance(active);
       return result;
    }
 
@@ -328,6 +426,7 @@ class simd_xoshiro256_engine
       simd_xoshiro256_engine<Simd, scrambler>, Simd, 4u>;
    using family = xoshiro256_family<scrambler>;
    using state_word = base::state_word;
+   using mask_type = base::mask_type;
    using base::m_state;
    friend base;
 
@@ -345,6 +444,14 @@ class simd_xoshiro256_engine
    operator()() -> result_type {
       auto const result = family::scramble(m_state);
       next_state();
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   generate(mask_type active) -> result_type {
+      auto const result = family::scramble(m_state);
+      this->advance(active);
       return result;
    }
 
@@ -578,9 +685,10 @@ class simd_xoroshiro_engine
    using base = simd_xoshiro_engine_base<
       simd_xoroshiro_engine<Simd, scrambler>, Simd, 2u>;
    using family = conditional<
-      is_same<typename Simd::value_type, uint4>, xoroshiro64_family<scrambler>,
+      sizeof(typename Simd::value_type) == 4u, xoroshiro64_family<scrambler>,
       xoroshiro128_family<scrambler>>;
    using state_word = base::state_word;
+   using mask_type = base::mask_type;
    using base::m_state;
    friend base;
 
@@ -598,6 +706,14 @@ class simd_xoroshiro_engine
    operator()() -> result_type {
       auto const result = family::scramble(m_state);
       next_state();
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   generate(mask_type active) -> result_type {
+      auto const result = family::scramble(m_state);
+      this->advance(active);
       return result;
    }
 
@@ -630,6 +746,7 @@ class simd_xoshiro512_engine
       simd_xoshiro512_engine<Simd, scrambler>, Simd, 8u>;
    using family = xoshiro512_family<scrambler>;
    using state_word = base::state_word;
+   using mask_type = base::mask_type;
    using base::m_state;
    friend base;
 
@@ -647,6 +764,14 @@ class simd_xoshiro512_engine
    operator()() -> result_type {
       auto const result = family::scramble(m_state);
       next_state();
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   generate(mask_type active) -> result_type {
+      auto const result = family::scramble(m_state);
+      this->advance(active);
       return result;
    }
 
@@ -774,16 +899,104 @@ class simd_xoroshiro1024_engine
    idx m_position = 0u;
 };
 
-template <typename Derived, typename Word, idx state_size>
+template <typename Word, typename Abi, idx state_size, typename Family>
+class xoshiro_bulk_session {
+ public:
+   using result_type = simd<Word, Abi>;
+
+ private:
+   using state_type = array<result_type, state_size>;
+
+ public:
+   constexpr explicit xoshiro_bulk_session(uint8 seed) {
+      initialize(m_first, seed, 0u);
+      initialize(m_second, seed, result_type::abi_type::lanes);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   first() -> result_type {
+      return next(m_first);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   second() -> result_type {
+      return next(m_second);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator()() -> result_type {
+      m_use_second = !m_use_second;
+      return m_use_second ? first() : second();
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   min() -> result_type {
+      return result_type(Word::min());
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   max() -> result_type {
+      return result_type(Word::max());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   scalar_draws() const -> idx {
+      return m_scalar_draws;
+   }
+
+ private:
+   static constexpr void
+   initialize(state_type& state, uint8 seed, idx stream_offset) {
+      for (idx lane = 0u; lane < result_type::abi_type::lanes; ++lane) {
+         idx const stream = stream_offset + lane;
+         splitmix64_engine mixer;
+         mixer.set_state(xoshiro_lane_seed(seed, stream + 1u, state_size));
+         Word combined = 0u;
+         for (idx word = 0u; word < state_size; ++word) {
+            Word const value = Word(mixer());
+            state[word].set_lane(lane, value);
+            combined |= value;
+         }
+         if (combined == 0u) {
+            state[0u].set_lane(lane, 1u);
+         }
+      }
+   }
+
+   constexpr auto
+   next(state_type& state) -> result_type {
+      result_type const result = Family::scramble(state);
+      Family::transition(state);
+      m_scalar_draws += result_type::abi_type::lanes;
+      return result;
+   }
+
+   state_type m_first;
+   state_type m_second;
+   idx m_scalar_draws = 0u;
+   bool m_use_second = false;
+};
+
+template <typename Derived, typename Word, idx state_size, typename Family>
 class xoshiro_engine_base {
  public:
    using result_type = Word;
+   static constexpr bool enable_batch_fill = false;
+   static constexpr bool enable_relaxed_bulk_fill = true;
+   static constexpr bool enable_relaxed_distribution_fill = false;
 
    static constexpr random_seed default_seed = 1u;
+   static constexpr idx seed_words = state_size;
 
  protected:
    using state_word =
-      conditional<is_same<result_type, uint4>, wrap_uint4, wrap_uint8>;
+      conditional<sizeof(result_type) == 4u, wrap_uint4, wrap_uint8>;
    using state_type = array<state_word, state_size>;
 
  public:
@@ -802,6 +1015,53 @@ class xoshiro_engine_base {
       prevent_zero_state();
    }
 
+ private:
+   friend class random_batch_access;
+
+   template <typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   generate_exact_batch() -> simd<result_type, Abi> {
+      using batch_type = simd<result_type, Abi>;
+      array<batch_type, state_size> states;
+      for (idx lane = 0u; lane < batch_type::abi_type::lanes; ++lane) {
+         for (idx word = 0u; word < state_size; ++word) {
+            states[word].set_lane(lane, result_type(m_state[word]));
+         }
+         Family::transition(m_state);
+      }
+      return Family::scramble(states);
+   }
+
+   template <typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   make_relaxed_session() const
+      -> xoshiro_bulk_session<result_type, Abi, state_size, Family> {
+      uint8 seed_hash = 0x243f6a88'85a308d3ull;
+      for (idx word = 0u; word < state_size; ++word) {
+         seed_hash = random_mix_seed(
+            seed_hash ^ uint8(result_type(m_state[word]))
+            ^ uint8(word + 1u) * 0x9e3779b9'7f4a7c15ull
+         );
+      }
+      return xoshiro_bulk_session<result_type, Abi, state_size, Family>(
+         seed_hash
+      );
+   }
+
+   template <typename Abi>
+   [[nodiscard]]
+   static constexpr auto
+   relaxed_threshold() -> idx {
+      if constexpr (sizeof(simd<result_type, Abi>) > 32u) {
+         return idx::max();
+      } else {
+         return 16u;
+      }
+   }
+
+ public:
    constexpr void
    seed(random_seed value = default_seed) {
       splitmix64_engine mixer{uint8(value)};
@@ -892,10 +1152,12 @@ class xoshiro_engine_base {
 // https://prng.di.unimi.it/xoroshiro64star.c
 // https://prng.di.unimi.it/xoroshiro64starstar.c
 template <xoshiro_scrambler scrambler>
-class xoroshiro64_engine
-    : public xoshiro_engine_base<xoroshiro64_engine<scrambler>, uint4, 2u> {
+class xoroshiro64_engine : public xoshiro_engine_base<
+                              xoroshiro64_engine<scrambler>, uint4, 2u,
+                              xoroshiro64_family<scrambler>> {
  private:
-   using base = xoshiro_engine_base<xoroshiro64_engine<scrambler>, uint4, 2u>;
+   using base = xoshiro_engine_base<
+      xoroshiro64_engine<scrambler>, uint4, 2u, xoroshiro64_family<scrambler>>;
    using family = xoroshiro64_family<scrambler>;
    using state_word = base::state_word;
    using base::m_state;
@@ -959,10 +1221,12 @@ class xoroshiro64_engine
 // https://prng.di.unimi.it/xoshiro128plusplus.c
 // https://prng.di.unimi.it/xoshiro128starstar.c
 template <xoshiro_scrambler scrambler>
-class xoshiro128_engine
-    : public xoshiro_engine_base<xoshiro128_engine<scrambler>, uint4, 4u> {
+class xoshiro128_engine : public xoshiro_engine_base<
+                             xoshiro128_engine<scrambler>, uint4, 4u,
+                             xoshiro128_family<scrambler>> {
  private:
-   using base = xoshiro_engine_base<xoshiro128_engine<scrambler>, uint4, 4u>;
+   using base = xoshiro_engine_base<
+      xoshiro128_engine<scrambler>, uint4, 4u, xoshiro128_family<scrambler>>;
    using family = xoshiro128_family<scrambler>;
    using state_word = base::state_word;
    using base::m_state;
@@ -1026,10 +1290,13 @@ class xoshiro128_engine
 // https://prng.di.unimi.it/xoroshiro128plusplus.c
 // https://prng.di.unimi.it/xoroshiro128starstar.c
 template <xoshiro_scrambler scrambler>
-class xoroshiro128_engine
-    : public xoshiro_engine_base<xoroshiro128_engine<scrambler>, uint8, 2u> {
+class xoroshiro128_engine : public xoshiro_engine_base<
+                               xoroshiro128_engine<scrambler>, uint8, 2u,
+                               xoroshiro128_family<scrambler>> {
  private:
-   using base = xoshiro_engine_base<xoroshiro128_engine<scrambler>, uint8, 2u>;
+   using base = xoshiro_engine_base<
+      xoroshiro128_engine<scrambler>, uint8, 2u,
+      xoroshiro128_family<scrambler>>;
    using family = xoroshiro128_family<scrambler>;
    using state_word = base::state_word;
    using base::m_state;
@@ -1097,10 +1364,12 @@ class xoroshiro128_engine
 // https://prng.di.unimi.it/xoshiro256plusplus.c
 // https://prng.di.unimi.it/xoshiro256starstar.c
 template <xoshiro_scrambler scrambler>
-class xoshiro256_engine
-    : public xoshiro_engine_base<xoshiro256_engine<scrambler>, uint8, 4u> {
+class xoshiro256_engine : public xoshiro_engine_base<
+                             xoshiro256_engine<scrambler>, uint8, 4u,
+                             xoshiro256_family<scrambler>> {
  private:
-   using base = xoshiro_engine_base<xoshiro256_engine<scrambler>, uint8, 4u>;
+   using base = xoshiro_engine_base<
+      xoshiro256_engine<scrambler>, uint8, 4u, xoshiro256_family<scrambler>>;
    using family = xoshiro256_family<scrambler>;
    using state_word = base::state_word;
    using base::m_state;
@@ -1169,10 +1438,12 @@ class xoshiro256_engine
 // https://prng.di.unimi.it/xoshiro512plusplus.c
 // https://prng.di.unimi.it/xoshiro512starstar.c
 template <xoshiro_scrambler scrambler>
-class xoshiro512_engine
-    : public xoshiro_engine_base<xoshiro512_engine<scrambler>, uint8, 8u> {
+class xoshiro512_engine : public xoshiro_engine_base<
+                             xoshiro512_engine<scrambler>, uint8, 8u,
+                             xoshiro512_family<scrambler>> {
  private:
-   using base = xoshiro_engine_base<xoshiro512_engine<scrambler>, uint8, 8u>;
+   using base = xoshiro_engine_base<
+      xoshiro512_engine<scrambler>, uint8, 8u, xoshiro512_family<scrambler>>;
    using family = xoshiro512_family<scrambler>;
    using state_word = base::state_word;
    using base::m_state;
@@ -1243,6 +1514,8 @@ template <xoshiro_scrambler scrambler>
 class xoroshiro1024_engine {
  public:
    using result_type = uint8;
+   static constexpr bool enable_batch_fill = false;
+   static constexpr idx seed_words = 16u;
 
    static constexpr random_seed default_seed = 1u;
 
@@ -1303,6 +1576,29 @@ class xoroshiro1024_engine {
       return result_type(result);
    }
 
+ private:
+   friend class random_batch_access;
+
+   template <typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   generate_exact_batch() -> simd<result_type, Abi> {
+      using batch_type = simd<result_type, Abi>;
+      batch_type state_0;
+      batch_type state_15;
+      for (idx lane = 0u; lane < batch_type::abi_type::lanes; ++lane) {
+         idx next = m_position + 1u;
+         if (next == state_size) {
+            next = 0u;
+         }
+         state_0.set_lane(lane, result_type(m_state[next]));
+         state_15.set_lane(lane, result_type(m_state[m_position]));
+         next_state();
+      }
+      return xoroshiro1024_scramble<scrambler>(state_0, state_15);
+   }
+
+ public:
    [[nodiscard]]
    static constexpr auto
    min() -> result_type {
@@ -1433,32 +1729,46 @@ class xoroshiro1024_engine {
 
 // https://prng.di.unimi.it/
 // Default engines are `**`. `*_pp_engine` is `++`. `+` is an explicit scramble.
+consteval auto
+xoshiro_scrambler_supported(xoshiro_scrambler scrambler) -> bool {
+   return scrambler == xoshiro_scrambler::plus
+          || scrambler == xoshiro_scrambler::plusplus
+          || scrambler == xoshiro_scrambler::starstar;
+}
+
 template <typename T>
 consteval auto
-xoshiro_word_bytes() -> idx {
-   if constexpr (is_simd<T>) {
-      return sizeof(typename T::value_type);
+xoroshiro_scrambler_supported(xoshiro_scrambler scrambler) -> bool {
+   if constexpr (sizeof(random_scalar<T>) == 4u) {
+      return scrambler == xoshiro_scrambler::star
+             || scrambler == xoshiro_scrambler::starstar;
+   } else if constexpr (sizeof(random_scalar<T>) == 8u) {
+      return xoshiro_scrambler_supported(scrambler);
+   } else {
+      return false;
    }
-   return sizeof(raw_arithmetic_type<T>);
+}
+
+consteval auto
+xoroshiro1024_scrambler_supported(xoshiro_scrambler scrambler) -> bool {
+   return scrambler == xoshiro_scrambler::plusplus
+          || scrambler == xoshiro_scrambler::star
+          || scrambler == xoshiro_scrambler::starstar;
 }
 
 template <typename T, xoshiro_scrambler scrambler>
 struct xoshiro_for;
 
 template <typename T, xoshiro_scrambler scrambler>
-   requires(!is_simd<T> && xoshiro_word_bytes<T>() == 4u)
+   requires(!is_simd<T> && (sizeof(T) == 4u || sizeof(T) == 8u))
 struct xoshiro_for<T, scrambler> {
-   using type = xoshiro128_engine<scrambler>;
-};
-
-template <typename T, xoshiro_scrambler scrambler>
-   requires(!is_simd<T> && xoshiro_word_bytes<T>() == 8u)
-struct xoshiro_for<T, scrambler> {
-   using type = xoshiro256_engine<scrambler>;
+   using type = conditional<
+      sizeof(T) == 4u, xoshiro128_engine<scrambler>,
+      xoshiro256_engine<scrambler>>;
 };
 
 template <is_simd Simd, xoshiro_scrambler scrambler>
-   requires(sizeof(typename Simd::value_type) == 4u)
+   requires(sizeof(random_scalar<Simd>) == 4u)
 struct xoshiro_for<Simd, scrambler> {
    using unsigned_lane = uint4;
    using unsigned_simd = simd<
@@ -1468,7 +1778,7 @@ struct xoshiro_for<Simd, scrambler> {
 };
 
 template <is_simd Simd, xoshiro_scrambler scrambler>
-   requires(sizeof(typename Simd::value_type) == 8u)
+   requires(sizeof(random_scalar<Simd>) == 8u)
 struct xoshiro_for<Simd, scrambler> {
    using unsigned_lane = uint8;
    using unsigned_simd = simd<
@@ -1481,49 +1791,23 @@ template <typename T, xoshiro_scrambler scrambler>
 struct xoroshiro_for;
 
 template <typename T, xoshiro_scrambler scrambler>
-   requires(!is_simd<T> && xoshiro_word_bytes<T>() == 4u)
+   requires(!is_simd<T> && (sizeof(T) == 4u || sizeof(T) == 8u))
 struct xoroshiro_for<T, scrambler> {
-   static constexpr auto mapped = (scrambler == xoshiro_scrambler::plus
-                                   || scrambler == xoshiro_scrambler::star)
-                                     ? xoshiro_scrambler::star
-                                     : xoshiro_scrambler::starstar;
-   using type = xoroshiro64_engine<mapped>;
-};
-
-template <typename T, xoshiro_scrambler scrambler>
-   requires(!is_simd<T> && xoshiro_word_bytes<T>() == 8u)
-struct xoroshiro_for<T, scrambler> {
-   static constexpr auto mapped = scrambler == xoshiro_scrambler::star
-                                     ? xoshiro_scrambler::starstar
-                                     : scrambler;
-   using type = xoroshiro128_engine<mapped>;
+   using type = conditional<
+      sizeof(T) == 4u, xoroshiro64_engine<scrambler>,
+      xoroshiro128_engine<scrambler>>;
 };
 
 template <is_simd Simd, xoshiro_scrambler scrambler>
-   requires(sizeof(typename Simd::value_type) == 4u)
+   requires(
+      sizeof(random_scalar<Simd>) == 4u || sizeof(random_scalar<Simd>) == 8u
+   )
 struct xoroshiro_for<Simd, scrambler> {
-   using unsigned_lane = uint4;
+   using unsigned_lane = uint_fixed<sizeof(random_scalar<Simd>)>;
    using unsigned_simd = simd<
       unsigned_lane,
       typename Simd::abi_type::template make_abi_type<unsigned_lane>>;
-   static constexpr auto mapped = (scrambler == xoshiro_scrambler::plus
-                                   || scrambler == xoshiro_scrambler::star)
-                                     ? xoshiro_scrambler::star
-                                     : xoshiro_scrambler::starstar;
-   using type = simd_xoroshiro_engine<unsigned_simd, mapped>;
-};
-
-template <is_simd Simd, xoshiro_scrambler scrambler>
-   requires(sizeof(typename Simd::value_type) == 8u)
-struct xoroshiro_for<Simd, scrambler> {
-   using unsigned_lane = uint8;
-   using unsigned_simd = simd<
-      unsigned_lane,
-      typename Simd::abi_type::template make_abi_type<unsigned_lane>>;
-   static constexpr auto mapped = scrambler == xoshiro_scrambler::star
-                                     ? xoshiro_scrambler::starstar
-                                     : scrambler;
-   using type = simd_xoroshiro_engine<unsigned_simd, mapped>;
+   using type = simd_xoroshiro_engine<unsigned_simd, scrambler>;
 };
 
 template <typename T, xoshiro_scrambler scrambler>
@@ -1548,20 +1832,14 @@ struct xoroshiro1024_for;
 template <typename T, xoshiro_scrambler scrambler>
    requires(!is_simd<T>)
 struct xoroshiro1024_for<T, scrambler> {
-   static constexpr auto mapped = scrambler == xoshiro_scrambler::plus
-                                     ? xoshiro_scrambler::plusplus
-                                     : scrambler;
-   using type = xoroshiro1024_engine<mapped>;
+   using type = xoroshiro1024_engine<scrambler>;
 };
 
 template <is_simd Simd, xoshiro_scrambler scrambler>
 struct xoroshiro1024_for<Simd, scrambler> {
    using unsigned_simd =
       simd<uint8, typename Simd::abi_type::template make_abi_type<uint8>>;
-   static constexpr auto mapped = scrambler == xoshiro_scrambler::plus
-                                     ? xoshiro_scrambler::plusplus
-                                     : scrambler;
-   using type = simd_xoroshiro1024_engine<unsigned_simd, mapped>;
+   using type = simd_xoroshiro1024_engine<unsigned_simd, scrambler>;
 };
 
 template <typename T, xoshiro_scrambler scrambler>
@@ -1577,19 +1855,37 @@ template <typename T, xoshiro_scrambler scrambler>
 using xoroshiro1024_selected = xoroshiro1024_for<T, scrambler>::type;
 
 template <typename Engine>
-class owned_engine {
+class xoshiro_owned_engine {
  public:
    using result_type = Engine::result_type;
+   static constexpr bool enable_batch_fill = Engine::enable_batch_fill;
+   static constexpr idx seed_words = Engine::seed_words;
+   static constexpr bool enable_relaxed_bulk_fill = [] {
+      if constexpr (requires { Engine::enable_relaxed_bulk_fill; }) {
+         return Engine::enable_relaxed_bulk_fill;
+      } else {
+         return false;
+      }
+   }();
+   static constexpr bool enable_relaxed_distribution_fill = [] {
+      if constexpr (requires { Engine::enable_relaxed_distribution_fill; }) {
+         return Engine::enable_relaxed_distribution_fill;
+      } else {
+         return false;
+      }
+   }();
 
-   constexpr owned_engine() = default;
+   constexpr xoshiro_owned_engine() = default;
 
-   constexpr explicit owned_engine(random_seed value) : m_engine(value) {
+   constexpr explicit xoshiro_owned_engine(random_seed value)
+       : m_engine(value) {
    }
 
    template <typename... Values>
       requires(sizeof...(Values) > 1u)
               && requires(Values... values) { Engine(values...); }
-   constexpr explicit owned_engine(Values... values) : m_engine(values...) {
+   constexpr explicit xoshiro_owned_engine(Values... values)
+       : m_engine(values...) {
    }
 
    constexpr void
@@ -1603,6 +1899,64 @@ class owned_engine {
       return m_engine();
    }
 
+   [[nodiscard]]
+   constexpr auto
+   operator()(result_type bound) -> result_type {
+      if constexpr (is_simd<result_type>) {
+         using mask_type = result_type::mask_type;
+         if constexpr (
+            requires(Engine& engine, mask_type active) {
+               engine.generate(active);
+            }
+         ) {
+            return lemire_bounded(bound, [&](mask_type active) {
+               return m_engine.generate(active);
+            });
+         } else {
+            return lemire_bounded(bound, [&] { return m_engine(); });
+         }
+      } else {
+         if (bound == 0u) {
+            return m_engine();
+         }
+         return lemire_bounded(bound, [&] { return m_engine(); });
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator()(result_type minimum, result_type maximum) -> result_type {
+      return minimum + (*this)(maximum - minimum + 1u);
+   }
+
+ private:
+   friend class random_batch_access;
+
+   template <typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   generate_exact_batch()
+      -> decltype(random_batch_access::exact<Abi>(declval<Engine&>())) {
+      return random_batch_access::exact<Abi>(m_engine);
+   }
+
+   template <typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   make_relaxed_session() const
+      -> decltype(random_batch_access::relaxed<Abi>(declval<Engine const&>())) {
+      return random_batch_access::relaxed<Abi>(m_engine);
+   }
+
+   template <typename Abi>
+   [[nodiscard]]
+   static constexpr auto
+   relaxed_threshold()
+      -> decltype(random_batch_access::relaxed_threshold<Abi, Engine>()) {
+      return random_batch_access::relaxed_threshold<Abi, Engine>();
+   }
+
+ public:
    [[nodiscard]]
    static constexpr auto
    min() -> result_type
@@ -1688,55 +2042,74 @@ namespace cat {
 template <
    typename T,
    detail::xoshiro_scrambler scrambler = detail::xoshiro_scrambler::starstar>
-class xoshiro_engine
-    : public detail::owned_engine<detail::xoshiro_selected<T, scrambler>> {
-   using base = detail::owned_engine<detail::xoshiro_selected<T, scrambler>>;
-
- public:
-   using base::base;
-};
-
-template <
-   typename T,
-   detail::xoshiro_scrambler scrambler = detail::xoshiro_scrambler::starstar>
-class xoroshiro_engine
-    : public detail::owned_engine<detail::xoroshiro_selected<T, scrambler>> {
-   using base = detail::owned_engine<detail::xoroshiro_selected<T, scrambler>>;
-
- public:
-   using base::base;
-};
-
-template <
-   typename T,
-   detail::xoshiro_scrambler scrambler = detail::xoshiro_scrambler::starstar>
-   requires(detail::xoshiro_word_bytes<T>() == 8u)
-class xoshiro512_engine
-    : public detail::owned_engine<detail::xoshiro512_selected<T, scrambler>> {
-   using base = detail::owned_engine<detail::xoshiro512_selected<T, scrambler>>;
-
- public:
-   using base::base;
-};
-
-template <
-   typename T,
-   detail::xoshiro_scrambler scrambler = detail::xoshiro_scrambler::starstar>
-   requires(detail::xoshiro_word_bytes<T>() == 8u)
-class xoroshiro1024_engine : public detail::owned_engine<
-                                detail::xoroshiro1024_selected<T, scrambler>> {
+   requires(
+      (sizeof(detail::random_scalar<T>) == 4u
+       || sizeof(detail::random_scalar<T>) == 8u)
+      && detail::xoshiro_scrambler_supported(scrambler)
+   )
+class xoshiro_engine : public detail::xoshiro_owned_engine<
+                          detail::xoshiro_selected<T, scrambler>> {
    using base =
-      detail::owned_engine<detail::xoroshiro1024_selected<T, scrambler>>;
+      detail::xoshiro_owned_engine<detail::xoshiro_selected<T, scrambler>>;
+
+ public:
+   using base::base;
+};
+
+template <
+   typename T,
+   detail::xoshiro_scrambler scrambler = detail::xoshiro_scrambler::starstar>
+   requires(detail::xoroshiro_scrambler_supported<T>(scrambler))
+class xoroshiro_engine : public detail::xoshiro_owned_engine<
+                            detail::xoroshiro_selected<T, scrambler>> {
+   using base =
+      detail::xoshiro_owned_engine<detail::xoroshiro_selected<T, scrambler>>;
+
+ public:
+   using base::base;
+};
+
+template <
+   typename T,
+   detail::xoshiro_scrambler scrambler = detail::xoshiro_scrambler::starstar>
+   requires(
+      sizeof(detail::random_scalar<T>) == 8u
+      && detail::xoshiro_scrambler_supported(scrambler)
+   )
+class xoshiro512_engine : public detail::xoshiro_owned_engine<
+                             detail::xoshiro512_selected<T, scrambler>> {
+   using base =
+      detail::xoshiro_owned_engine<detail::xoshiro512_selected<T, scrambler>>;
+
+ public:
+   using base::base;
+};
+
+template <
+   typename T,
+   detail::xoshiro_scrambler scrambler = detail::xoshiro_scrambler::starstar>
+   requires(
+      sizeof(detail::random_scalar<T>) == 8u
+      && detail::xoroshiro1024_scrambler_supported(scrambler)
+   )
+class xoroshiro1024_engine : public detail::xoshiro_owned_engine<
+                                detail::xoroshiro1024_selected<T, scrambler>> {
+   using base = detail::xoshiro_owned_engine<
+      detail::xoroshiro1024_selected<T, scrambler>>;
 
  public:
    using base::base;
 };
 
 template <typename T>
+   requires(
+      sizeof(detail::random_scalar<T>) == 4u
+      || sizeof(detail::random_scalar<T>) == 8u
+   )
 class xoshiro_pp_engine
-    : public detail::owned_engine<
+    : public detail::xoshiro_owned_engine<
          detail::xoshiro_selected<T, detail::xoshiro_scrambler::plusplus>> {
-   using base = detail::owned_engine<
+   using base = detail::xoshiro_owned_engine<
       detail::xoshiro_selected<T, detail::xoshiro_scrambler::plusplus>>;
 
  public:
@@ -1744,10 +2117,11 @@ class xoshiro_pp_engine
 };
 
 template <typename T>
+   requires(sizeof(detail::random_scalar<T>) == 8u)
 class xoroshiro_pp_engine
-    : public detail::owned_engine<
+    : public detail::xoshiro_owned_engine<
          detail::xoroshiro_selected<T, detail::xoshiro_scrambler::plusplus>> {
-   using base = detail::owned_engine<
+   using base = detail::xoshiro_owned_engine<
       detail::xoroshiro_selected<T, detail::xoshiro_scrambler::plusplus>>;
 
  public:
@@ -1755,11 +2129,11 @@ class xoroshiro_pp_engine
 };
 
 template <typename T>
-   requires(detail::xoshiro_word_bytes<T>() == 8u)
+   requires(sizeof(detail::random_scalar<T>) == 8u)
 class xoshiro512_pp_engine
-    : public detail::owned_engine<
+    : public detail::xoshiro_owned_engine<
          detail::xoshiro512_selected<T, detail::xoshiro_scrambler::plusplus>> {
-   using base = detail::owned_engine<
+   using base = detail::xoshiro_owned_engine<
       detail::xoshiro512_selected<T, detail::xoshiro_scrambler::plusplus>>;
 
  public:
@@ -1767,11 +2141,11 @@ class xoshiro512_pp_engine
 };
 
 template <typename T>
-   requires(detail::xoshiro_word_bytes<T>() == 8u)
+   requires(sizeof(detail::random_scalar<T>) == 8u)
 class xoroshiro1024_pp_engine
-    : public detail::owned_engine<detail::xoroshiro1024_selected<
+    : public detail::xoshiro_owned_engine<detail::xoroshiro1024_selected<
          T, detail::xoshiro_scrambler::plusplus>> {
-   using base = detail::owned_engine<
+   using base = detail::xoshiro_owned_engine<
       detail::xoroshiro1024_selected<T, detail::xoshiro_scrambler::plusplus>>;
 
  public:

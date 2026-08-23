@@ -66,13 +66,10 @@ class scripted_scalar_engine {
 
    constexpr auto
    operator()() -> result_type {
-      constexpr cat::idx canonical_bits = cat::limits<cat::float4>::digits;
-      cat::idx const word_index = m_calls / canonical_bits;
-      cat::idx const bit = m_calls % canonical_bits;
-      cat::verify(word_index < m_words.size());
+      cat::verify(m_calls < m_words.size());
+      result_type const result = m_words[m_calls][m_lane];
       ++m_calls;
-      cat::uint4 const canonical = m_words[word_index][m_lane] >> 8u;
-      return (canonical >> bit.raw) & 1u;
+      return result;
    }
 
  private:
@@ -375,10 +372,10 @@ exercise_word_engines() {
    exercise_engine<cat::xoshiro_engine<Word>>(1u);
    exercise_engine<cat::xoroshiro_engine<Word>>(1u);
    exercise_engine<cat::xoshiro_pp_engine<Word>>(1u);
-   exercise_engine<cat::xoroshiro_pp_engine<Word>>(1u);
    exercise_engine<
       cat::xoshiro_engine<Word, cat::detail::xoshiro_scrambler::plus>>(1u);
    if constexpr (sizeof(cat::raw_arithmetic_type<Word>) == 8u) {
+      exercise_engine<cat::xoroshiro_pp_engine<Word>>(1u);
       exercise_engine<cat::xoshiro512_engine<Word>>(1u);
       exercise_engine<cat::xoroshiro1024_engine<Word>>(1u);
       exercise_engine<cat::xoshiro512_pp_engine<Word>>(1u);
@@ -393,56 +390,56 @@ exercise_word_engines() {
 template <typename Simd, typename Engine>
 void
 check_simd_integer_distributions(Engine& engine) {
-   using Int = Simd::value_type;
+   using int_type = Simd::value_type;
    cat::uniform_int_distribution<Simd> uniform(Simd(0), Simd(7));
    Simd const uniform_values = uniform(engine);
    for (auto value : uniform_values) {
-      cat::verify(value >= Int(0) && value <= Int(7));
+      cat::verify(value >= int_type(0) && value <= int_type(7));
    }
 
    cat::discrete_distribution<Simd> discrete{1, 2, 3};
    Simd const discrete_values = discrete(engine);
    for (auto value : discrete_values) {
-      cat::verify(value >= Int(0) && value <= Int(2));
+      cat::verify(value >= int_type(0) && value <= int_type(2));
    }
 
    cat::binomial_distribution<Simd> binomial(Simd(8), 0.5);
    Simd const binomial_values = binomial(engine);
    for (auto value : binomial_values) {
-      cat::verify(value >= Int(0) && value <= Int(8));
+      cat::verify(value >= int_type(0) && value <= int_type(8));
    }
 
    cat::negative_binomial_distribution<Simd> negative_binomial(Simd(3), 0.5);
    Simd const negative_values = negative_binomial(engine);
    for (auto value : negative_values) {
-      cat::verify(value >= Int(0));
+      cat::verify(value >= int_type(0));
    }
 
    cat::geometric_distribution<Simd> geometric(0.5);
    Simd const geometric_values = geometric(engine);
    for (auto value : geometric_values) {
-      cat::verify(value >= Int(0));
+      cat::verify(value >= int_type(0));
    }
 
    cat::poisson_distribution<Simd> poisson(3);
    Simd const poisson_values = poisson(engine);
    for (auto value : poisson_values) {
-      cat::verify(value >= Int(0));
+      cat::verify(value >= int_type(0));
    }
 }
 
 template <typename Simd, typename Engine>
 void
 check_simd_float_distributions(Engine& engine) {
-   using Float = Simd::value_type;
+   using float_type = Simd::value_type;
    cat::uniform_float_distribution<Simd> uniform(Simd(0), Simd(1));
    Simd const uniform_values = uniform(engine);
    for (auto value : uniform_values) {
-      cat::verify(value >= Float(0) && value < Float(1));
+      cat::verify(value >= float_type(0) && value < float_type(1));
    }
 
    auto const bernoulli =
-      cat::bernoulli_distribution<Simd>(Simd(Float(0.5)))(engine);
+      cat::bernoulli_distribution<Simd>(Simd(float_type(0.5)))(engine);
    static_assert(cat::is_simd_mask<cat::remove_cvref<decltype(bernoulli)>>);
    static_cast<void>(bernoulli);
    static_cast<void>(cat::exponential_distribution<Simd>(Simd(2))(engine));
@@ -455,7 +452,7 @@ check_simd_float_distributions(Engine& engine) {
    Simd const lognormal_values =
       cat::lognormal_distribution<Simd>(Simd(0), Simd(1))(engine);
    for (auto value : lognormal_values) {
-      cat::verify(value > Float(0));
+      cat::verify(value > float_type(0));
    }
    static_cast<void>(cat::chi_squared_distribution<Simd>(Simd(2))(engine));
    static_cast<void>(cat::cauchy_distribution<Simd>(Simd(0), Simd(1))(engine));
@@ -465,19 +462,21 @@ check_simd_float_distributions(Engine& engine) {
    static_cast<void>(cat::student_t_distribution<Simd>(Simd(3))(engine));
 
    cat::piecewise_constant_distribution<Simd> constant(
-      {Float(0), Float(1), Float(2)}, {Float(1), Float(2)}
+      {float_type(0), float_type(1), float_type(2)},
+      {float_type(1), float_type(2)}
    );
    Simd const constant_values = constant(engine);
    for (auto value : constant_values) {
-      cat::verify(value >= Float(0) && value < Float(2));
+      cat::verify(value >= float_type(0) && value < float_type(2));
    }
 
    cat::piecewise_linear_distribution<Simd> linear(
-      {Float(0), Float(1), Float(2)}, {Float(1), Float(2), Float(1)}
+      {float_type(0), float_type(1), float_type(2)},
+      {float_type(1), float_type(2), float_type(1)}
    );
    Simd const linear_values = linear(engine);
    for (auto value : linear_values) {
-      cat::verify(value >= Float(0) && value < Float(2));
+      cat::verify(value >= float_type(0) && value < float_type(2));
    }
 }
 
@@ -504,7 +503,6 @@ $test(random_combinatoric_xoshiro) {
 
 $test(random_combinatoric_pcg_and_mixers) {
    exercise_engine<cat::splitmix64_engine>(1u);
-   exercise_engine<cat::wyrand_engine>(1u);
 
    exercise_engine<cat::pcg_engine<cat::uint4>>(42u, 54u);
    exercise_engine<cat::pcg_engine<cat::uint4, cat::pcg_stream::oneseq>>(42u);
@@ -531,10 +529,14 @@ $test(random_combinatoric_pcg_and_mixers) {
    );
    exercise_engine<cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::mcg>>(42u);
 
-   exercise_engine<cat::discard_block_engine<cat::wyrand_engine, 5u, 3u>>(9u);
+   exercise_engine<cat::discard_block_engine<cat::splitmix64_engine, 5u, 3u>>(
+      9u
+   );
    exercise_engine<
-      cat::independent_bits_engine<cat::wyrand_engine, 16u, cat::uint4>>(9u);
-   exercise_engine<cat::shuffle_order_engine<cat::wyrand_engine, 16u>>(9u);
+      cat::independent_bits_engine<cat::splitmix64_engine, 16u, cat::uint4>>(
+      9u
+   );
+   exercise_engine<cat::shuffle_order_engine<cat::splitmix64_engine, 16u>>(9u);
 }
 
 $test(random_combinatoric_distributions) {
@@ -586,9 +588,9 @@ $test(random_simd_distribution_deterministic_lanes) {
          cat::uint4x4{2u, 14u, 26u, cat::uint4::max()}
       );
       cat::uint4x4 const values = distribution(engine);
-      cat::verify(values[0u] == 2u);
-      cat::verify(values[1u] == 11u);
-      cat::verify(values[2u] == 23u);
+      cat::verify(values[0u] == 0u);
+      cat::verify(values[1u] == 10u);
+      cat::verify(values[2u] == 20u);
       cat::verify(values[3u] == 42u);
       cat::verify(engine.calls() == 2u);
    }

@@ -7,6 +7,87 @@
 
 namespace {
 
+template <typename T>
+concept has_xoroshiro_pp_engine =
+   requires { sizeof(cat::xoroshiro_pp_engine<T>); };
+
+template <typename T>
+concept has_xoshiro_pp_engine = requires { sizeof(cat::xoshiro_pp_engine<T>); };
+
+template <typename T>
+concept has_xoshiro512_pp_engine =
+   requires { sizeof(cat::xoshiro512_pp_engine<T>); };
+
+template <typename T>
+concept has_xoroshiro1024_pp_engine =
+   requires { sizeof(cat::xoroshiro1024_pp_engine<T>); };
+
+template <typename T, cat::detail::xoshiro_scrambler scrambler>
+concept has_xoshiro_engine =
+   requires { sizeof(cat::xoshiro_engine<T, scrambler>); };
+
+template <typename T, cat::detail::xoshiro_scrambler scrambler>
+concept has_xoroshiro_engine =
+   requires { sizeof(cat::xoroshiro_engine<T, scrambler>); };
+
+template <typename T, cat::detail::xoshiro_scrambler scrambler>
+concept has_xoshiro512_engine =
+   requires { sizeof(cat::xoshiro512_engine<T, scrambler>); };
+
+template <typename T, cat::detail::xoshiro_scrambler scrambler>
+concept has_xoroshiro1024_engine =
+   requires { sizeof(cat::xoroshiro1024_engine<T, scrambler>); };
+
+template <typename T>
+consteval auto
+has_official_xoshiro_scramblers() -> bool {
+   using scrambler = cat::detail::xoshiro_scrambler;
+   return has_xoshiro_engine<T, scrambler::plus>
+          && has_xoshiro_engine<T, scrambler::plusplus>
+          && !has_xoshiro_engine<T, scrambler::star>
+          && has_xoshiro_engine<T, scrambler::starstar>;
+}
+
+template <typename T>
+consteval auto
+has_official_xoroshiro64_scramblers() -> bool {
+   using scrambler = cat::detail::xoshiro_scrambler;
+   return !has_xoroshiro_engine<T, scrambler::plus>
+          && !has_xoroshiro_engine<T, scrambler::plusplus>
+          && has_xoroshiro_engine<T, scrambler::star>
+          && has_xoroshiro_engine<T, scrambler::starstar>;
+}
+
+template <typename T>
+consteval auto
+has_official_xoroshiro128_scramblers() -> bool {
+   using scrambler = cat::detail::xoshiro_scrambler;
+   return has_xoroshiro_engine<T, scrambler::plus>
+          && has_xoroshiro_engine<T, scrambler::plusplus>
+          && !has_xoroshiro_engine<T, scrambler::star>
+          && has_xoroshiro_engine<T, scrambler::starstar>;
+}
+
+template <typename T>
+consteval auto
+has_official_xoshiro512_scramblers() -> bool {
+   using scrambler = cat::detail::xoshiro_scrambler;
+   return has_xoshiro512_engine<T, scrambler::plus>
+          && has_xoshiro512_engine<T, scrambler::plusplus>
+          && !has_xoshiro512_engine<T, scrambler::star>
+          && has_xoshiro512_engine<T, scrambler::starstar>;
+}
+
+template <typename T>
+consteval auto
+has_official_xoroshiro1024_scramblers() -> bool {
+   using scrambler = cat::detail::xoshiro_scrambler;
+   return !has_xoroshiro1024_engine<T, scrambler::plus>
+          && has_xoroshiro1024_engine<T, scrambler::plusplus>
+          && has_xoroshiro1024_engine<T, scrambler::star>
+          && has_xoroshiro1024_engine<T, scrambler::starstar>;
+}
+
 template <typename Engine, cat::idx count, typename... Seeds>
 consteval auto
 draw_stream(Seeds... seeds) {
@@ -42,6 +123,81 @@ verify_stream(Engine& engine, cat::array<Value, count> const& expected) {
    }
 }
 
+template <typename Engine>
+void
+verify_bounded_draws() {
+   using result_type = Engine::result_type;
+   Engine bounded(42u);
+   Engine reference = bounded;
+   for (result_type bound = 0u; bound < 16u; ++bound) {
+      result_type const expected =
+         bound == 0u
+            ? reference()
+            : cat::detail::lemire_bounded(bound, [&] { return reference(); });
+      cat::verify(bounded(bound) == expected);
+   }
+
+   for (result_type minimum = 0u; minimum < 8u; ++minimum) {
+      for (result_type maximum = minimum; maximum < 8u; ++maximum) {
+         result_type const width = maximum - minimum + 1u;
+         result_type const expected =
+            minimum + cat::detail::lemire_bounded(width, [&] {
+               return reference();
+            });
+         cat::verify(bounded(minimum, maximum) == expected);
+      }
+   }
+
+   Engine full_range(42u);
+   Engine full_range_reference = full_range;
+   cat::verify(
+      full_range(result_type::min(), result_type::max())
+      == full_range_reference()
+   );
+}
+
+template <typename WideEngine, typename ScalarEngine>
+void
+verify_wide_bounded_draws() {
+   using result_type = WideEngine::result_type;
+   constexpr cat::idx lanes = result_type::abi_type::lanes;
+   WideEngine wide(42u);
+   cat::array<ScalarEngine, lanes> scalar;
+   result_type bounds;
+   result_type minimums;
+   result_type maximums;
+   for (cat::idx lane = 0u; lane < lanes; ++lane) {
+      scalar[lane].seed(
+         cat::detail::xoshiro_lane_seed(42u, lane, WideEngine::seed_words)
+      );
+      typename result_type::value_type bound = 0u;
+      if (lane == 1u) {
+         bound = 1u;
+      } else if (lane > 1u) {
+         bound = 0x80000001u + lane.raw;
+      }
+      bounds.set_lane(lane, bound);
+      minimums.set_lane(lane, typename result_type::value_type(lane + 3u));
+      maximums.set_lane(
+         lane, typename result_type::value_type(lane + 3u + lane)
+      );
+   }
+
+   for (cat::idx round = 0u; round < 3u; ++round) {
+      result_type const values = wide(bounds);
+      for (cat::idx lane = 0u; lane < lanes; ++lane) {
+         cat::verify(values[lane] == scalar[lane](bounds[lane]));
+      }
+   }
+
+   result_type const ranged = wide(minimums, maximums);
+   for (cat::idx lane = 0u; lane < lanes; ++lane) {
+      cat::verify(
+         ranged[lane] == scalar[lane](minimums[lane], maximums[lane])
+      );
+   }
+}
+
 template <typename WideEngine, typename ScalarEngine>
 void
 verify_wide_stream(cat::uint8 seed) {
@@ -51,7 +207,9 @@ verify_wide_stream(cat::uint8 seed) {
    WideEngine wide(seed);
    cat::array<ScalarEngine, lanes> scalar;
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
-      scalar[lane].seed(seed + cat::uint8(lane) * 0x9e3779b9'7f4a7c15ull);
+      scalar[lane].seed(
+         cat::detail::xoshiro_lane_seed(seed, lane, WideEngine::seed_words)
+      );
    }
 
    for (cat::idx round = 0u; round < 8u; ++round) {
@@ -60,6 +218,23 @@ verify_wide_stream(cat::uint8 seed) {
          cat::verify(values[lane] == scalar[lane]());
       }
    }
+}
+
+template <typename Engine>
+void
+verify_distinct_seed_streams(cat::uint8 left_seed, cat::uint8 right_seed) {
+   using result_type = Engine::result_type;
+   Engine left(left_seed);
+   Engine right(right_seed);
+   bool different = false;
+   for (cat::idx round = 0u; round < 8u; ++round) {
+      result_type const left_values = left();
+      result_type const right_values = right();
+      for (cat::idx lane = 0u; lane < result_type::abi_type::lanes; ++lane) {
+         different |= left_values[lane] != right_values[lane];
+      }
+   }
+   cat::verify(different);
 }
 
 template <typename WideEngine, typename ScalarEngine>
@@ -73,7 +248,9 @@ verify_wide_jumps(cat::uint8 seed) {
    cat::array<ScalarEngine, lanes> scalar_jump;
    cat::array<ScalarEngine, lanes> scalar_long_jump;
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
-      scalar_jump[lane].seed(seed + cat::uint8(lane) * 0x9e3779b9'7f4a7c15ull);
+      scalar_jump[lane].seed(
+         cat::detail::xoshiro_lane_seed(seed, lane, WideEngine::seed_words)
+      );
       scalar_long_jump[lane] = scalar_jump[lane];
    }
 
@@ -125,6 +302,38 @@ verify_discard_parity(cat::uint8 seed) {
 
 template <typename Engine>
 void
+verify_small_jump_log2() {
+   for (cat::uword log2_distance = 0u; log2_distance <= 6u; ++log2_distance) {
+      Engine jumped(1u);
+      Engine stepped(1u);
+      jumped.jump_log2(log2_distance);
+      stepped.discard(cat::uint8(1u) << log2_distance);
+      for (cat::idx round = 0u; round < 4u; ++round) {
+         verify_same_output(jumped, stepped);
+      }
+   }
+}
+
+template <
+   typename Engine, cat::uword jump_distance, cat::uword long_jump_distance>
+void
+verify_canonical_jump_log2() {
+   Engine jumped(1u);
+   Engine generated_jump(1u);
+   Engine long_jumped(1u);
+   Engine generated_long_jump(1u);
+   jumped.jump();
+   generated_jump.jump_log2(jump_distance);
+   long_jumped.long_jump();
+   generated_long_jump.jump_log2(long_jump_distance);
+   for (cat::idx round = 0u; round < 4u; ++round) {
+      verify_same_output(jumped, generated_jump);
+      verify_same_output(long_jumped, generated_long_jump);
+   }
+}
+
+template <typename Engine>
+void
 verify_seed_parity() {
    Engine defaulted;
    Engine explicitly_seeded(1u);
@@ -138,6 +347,159 @@ verify_seed_parity() {
    Engine reset;
    for (cat::idx round = 0u; round < 4u; ++round) {
       verify_same_output(defaulted, reset);
+   }
+}
+
+template <typename Engine, typename Word>
+constexpr auto
+make_raw_xoshiro_engine(cat::array<Word, 16u> const& state) -> Engine {
+   if constexpr (Engine::seed_words == 2u) {
+      return Engine(state[0u], state[1u]);
+   } else if constexpr (Engine::seed_words == 4u) {
+      return Engine(state[0u], state[1u], state[2u], state[3u]);
+   } else if constexpr (Engine::seed_words == 8u) {
+      return Engine(
+         state[0u], state[1u], state[2u], state[3u], state[4u], state[5u],
+         state[6u], state[7u]
+      );
+   } else {
+      return Engine(
+         state[0u], state[1u], state[2u], state[3u], state[4u], state[5u],
+         state[6u], state[7u], state[8u], state[9u], state[10u], state[11u],
+         state[12u], state[13u], state[14u], state[15u]
+      );
+   }
+}
+
+template <typename Engine>
+void
+verify_scalar_zero_state_prevention() {
+   cat::array<typename Engine::result_type, 16u> state{};
+   Engine engine = make_raw_xoshiro_engine<Engine>(state);
+   bool nonzero = false;
+   for (cat::idx round = 0u; round < 16u; ++round) {
+      nonzero |= engine() != 0u;
+   }
+   cat::verify(nonzero);
+}
+
+template <typename Engine>
+void
+verify_zero_seed_expansion() {
+   Engine left(0u);
+   Engine right(0u);
+   bool nonzero = false;
+   for (cat::idx round = 0u; round < 16u; ++round) {
+      auto const left_value = left();
+      auto const right_value = right();
+      if constexpr (cat::is_simd<decltype(left_value)>) {
+         using simd_type = cat::remove_cvref<decltype(left_value)>;
+         for (cat::idx lane = 0u; lane < simd_type::abi_type::lanes; ++lane) {
+            cat::verify(left_value[lane] == right_value[lane]);
+            nonzero |= left_value[lane] != 0u;
+         }
+      } else {
+         cat::verify(left_value == right_value);
+         nonzero |= left_value != 0u;
+      }
+   }
+   cat::verify(nonzero);
+}
+
+template <typename Engine, typename Word, typename Value>
+void
+verify_seed_expansion_vector(
+   cat::array<Word, 16u> const& state, Value expected_value
+) {
+   Word const expected_first(expected_value);
+   Engine seeded(0u);
+   Engine expanded = make_raw_xoshiro_engine<Engine>(state);
+   cat::verify(seeded() == expected_first);
+   cat::verify(expanded() == expected_first);
+   for (cat::idx round = 0u; round < 16u; ++round) {
+      cat::verify(seeded() == expanded());
+   }
+}
+
+template <typename WideEngine, typename ScalarEngine, typename Word>
+void
+verify_simd_seed_expansion_vector(Word expected_first) {
+   WideEngine wide(0u);
+   ScalarEngine scalar(0u);
+   auto const first = wide();
+   cat::verify(first[0u] == expected_first);
+   cat::verify(scalar() == expected_first);
+   for (cat::idx round = 0u; round < 8u; ++round) {
+      auto const values = wide();
+      cat::verify(values[0u] == scalar());
+   }
+}
+
+template <typename WideEngine, typename ScalarEngine>
+void
+verify_simd_zero_lane_prevention() {
+   using simd_type = WideEngine::result_type;
+   using scalar_word = simd_type::value_type;
+   cat::array<simd_type, 16u> wide_state{};
+   cat::array<scalar_word, 16u> scalar_state{};
+   for (cat::idx word = 0u; word < WideEngine::seed_words; ++word) {
+      scalar_state[word] = scalar_word(word + 1u);
+      wide_state[word].set_lane(1u, scalar_state[word]);
+      for (cat::idx lane = 2u; lane < simd_type::abi_type::lanes; ++lane) {
+         wide_state[word].set_lane(lane, scalar_word(word + lane + 1u));
+      }
+   }
+
+   WideEngine wide = make_raw_xoshiro_engine<WideEngine>(wide_state);
+   ScalarEngine scalar = make_raw_xoshiro_engine<ScalarEngine>(scalar_state);
+   bool zero_lane_escaped = false;
+   for (cat::idx round = 0u; round < 16u; ++round) {
+      simd_type const values = wide();
+      zero_lane_escaped |= values[0u] != 0u;
+      cat::verify(values[1u] == scalar());
+   }
+   cat::verify(zero_lane_escaped);
+}
+
+template <typename WideEngine, typename ScalarEngine>
+void
+verify_mixed_lane_jumps() {
+   using simd_type = WideEngine::result_type;
+   using scalar_word = simd_type::value_type;
+   constexpr cat::idx lanes = simd_type::abi_type::lanes;
+   cat::array<simd_type, 16u> wide_state{};
+   cat::array<cat::array<scalar_word, 16u>, lanes> scalar_states{};
+   for (cat::idx word = 0u; word < WideEngine::seed_words; ++word) {
+      for (cat::idx lane = 0u; lane < lanes; ++lane) {
+         scalar_word const value(word + lane * 17u + 1u);
+         wide_state[word].set_lane(lane, value);
+         scalar_states[lane][word] = value;
+      }
+   }
+
+   WideEngine wide_jump = make_raw_xoshiro_engine<WideEngine>(wide_state);
+   WideEngine wide_long_jump = wide_jump;
+   cat::array<ScalarEngine, lanes> scalar_jump;
+   cat::array<ScalarEngine, lanes> scalar_long_jump;
+   for (cat::idx lane = 0u; lane < lanes; ++lane) {
+      scalar_jump[lane] =
+         make_raw_xoshiro_engine<ScalarEngine>(scalar_states[lane]);
+      scalar_long_jump[lane] = scalar_jump[lane];
+   }
+
+   wide_jump.jump();
+   wide_long_jump.long_jump();
+   for (cat::idx lane = 0u; lane < lanes; ++lane) {
+      scalar_jump[lane].jump();
+      scalar_long_jump[lane].long_jump();
+   }
+   for (cat::idx round = 0u; round < 8u; ++round) {
+      simd_type const jumped = wide_jump();
+      simd_type const long_jumped = wide_long_jump();
+      for (cat::idx lane = 0u; lane < lanes; ++lane) {
+         cat::verify(jumped[lane] == scalar_jump[lane]());
+         cat::verify(long_jumped[lane] == scalar_long_jump[lane]());
+      }
    }
 }
 
@@ -199,9 +561,12 @@ constexpr cat::array<cat::uint4, 6u> xoshiro128_plus_state{
    0x00000005u, 0x00003007u, 0x01803007u,
    0x01a05c0eu, 0x0260840au, 0x43f87e19u
 };
-constexpr cat::array<cat::uint4, 6u> xoshiro128_starstar_state{
-   0x00002d00u, 0x00000000u, 0x005a7080u,
-   0x04389d80u, 0x79199d9bu, 0x61963b24u
+// rand_xoshiro xoshiro128** v1.1 update
+// https://github.com/rust-random/rand/commit/9861cc986c1d39e209761de66ffd219c561f0766
+// Catches the obsolete state word zero scrambler instead of state word one.
+constexpr cat::array<cat::uint4, 10u> xoshiro128_starstar_state{
+   0x00002d00u, 0x00000000u, 0x005a7080u, 0x04389d80u, 0x79199d9bu,
+   0x61963b24u, 0x4cb9b57au, 0xde9d7431u, 0xde458f35u, 0xfdce1a54u
 };
 constexpr cat::array<cat::uint8, 6u> xoshiro256_plus_state{
    0x00000000'00000005ull, 0x0000c000'00000007ull, 0x0000c000'18000007ull,
@@ -243,7 +608,43 @@ constexpr cat::array<cat::uint8, 6u> xoroshiro1024_starstar_state{
    0x00000000'00002d00ull, 0x00000000'00004380ull, 0x00000000'00005a00ull,
    0x00000000'00007080ull, 0x00000000'00008700ull, 0x00000000'00009d80ull
 };
+constexpr cat::array<cat::uint8, 16u> splitmix_zero_state64{
+   0xe220a839'7b1dcdafull, 0x6e789e6a'a1b965f4ull, 0x06c45d18'8009454full,
+   0xf88bb8a8'724c81ecull, 0x1b39896a'51a8749bull, 0x53cb9f0c'747ea2eaull,
+   0x2c829abe'1f4532e1ull, 0xc584133a'c916ab3cull, 0x3ee57890'41c98ac3ull,
+   0xf3b8488c'368cb0a6ull, 0x657eecdd'3cb13d09ull, 0xc2d326e0'055bdef6ull,
+   0x8621a03f'e0bbdb7bull, 0x8e1f7555'983aa92full, 0xb54e0f16'00cc4d19ull,
+   0x84bb3f97'971d80abull
+};
+constexpr cat::array<cat::uint4, 16u> splitmix_zero_state32{
+   0x7b1dcdafu, 0xa1b965f4u, 0x8009454fu, 0x724c81ecu, 0x51a8749bu, 0x747ea2eau,
+   0x1f4532e1u, 0xc916ab3cu, 0x41c98ac3u, 0x368cb0a6u, 0x3cb13d09u, 0x055bdef6u,
+   0xe0bbdb7bu, 0x983aa92fu, 0x00cc4d19u, 0x971d80abu
+};
 
+static_assert(has_xoroshiro_pp_engine<cat::uint8>);
+static_assert(!has_xoroshiro_pp_engine<cat::uint4>);
+static_assert(has_xoshiro_pp_engine<cat::uint4>);
+static_assert(!has_xoshiro_pp_engine<cat::uint2>);
+static_assert(!has_xoshiro_pp_engine<cat::uint2x2>);
+static_assert(has_xoshiro512_pp_engine<cat::uint8>);
+static_assert(!has_xoshiro512_pp_engine<cat::uint4>);
+static_assert(!has_xoshiro512_pp_engine<cat::uint4x2>);
+static_assert(has_xoroshiro1024_pp_engine<cat::uint8>);
+static_assert(!has_xoroshiro1024_pp_engine<cat::uint4>);
+static_assert(!has_xoroshiro1024_pp_engine<cat::uint4x2>);
+static_assert(has_official_xoshiro_scramblers<cat::uint4>());
+static_assert(has_official_xoshiro_scramblers<cat::uint8>());
+static_assert(has_official_xoshiro_scramblers<cat::uint4x2>());
+static_assert(has_official_xoshiro_scramblers<cat::uint8x2>());
+static_assert(has_official_xoroshiro64_scramblers<cat::uint4>());
+static_assert(has_official_xoroshiro64_scramblers<cat::uint4x2>());
+static_assert(has_official_xoroshiro128_scramblers<cat::uint8>());
+static_assert(has_official_xoroshiro128_scramblers<cat::uint8x2>());
+static_assert(has_official_xoshiro512_scramblers<cat::uint8>());
+static_assert(has_official_xoshiro512_scramblers<cat::uint8x2>());
+static_assert(has_official_xoroshiro1024_scramblers<cat::uint8>());
+static_assert(has_official_xoroshiro1024_scramblers<cat::uint8x2>());
 static_assert(
    draw_stream<cat::xoshiro_pp_engine<cat::uint8>, 10u>(1u, 2u, 3u, 4u)
    == xoshiro256_plusplus_state
@@ -292,7 +693,6 @@ static_assert(
    draw_after_long_jump<cat::xoshiro_pp_engine<cat::uint4>>(1u, 2u, 3u, 4u)
    == 0x99cc2935u
 );
-static_assert(cat::splitmix64_engine(0u)() == 0xe220a839'7b1dcdafull);
 static_assert(
    cat::is_same<cat::xoroshiro_engine<cat::int4x4>::result_type, cat::uint4x4>
 );
@@ -306,11 +706,21 @@ static_assert(
    cat::is_same<
       cat::xoroshiro1024_engine<cat::float8x4>::result_type, cat::uint8x4>
 );
+static_assert(cat::detail::xoshiro_lane_seed(7u, 0u, 4u) == 0x7u);
+static_assert(
+   cat::detail::xoshiro_lane_seed(7u, 1u, 4u) == 0x8adb8cd3'ee3796bbull
+);
+static_assert(
+   cat::detail::xoshiro_lane_seed(7u, 2u, 4u) == 0x1cfaa43a'0c5828dfull
+);
+static_assert(
+   cat::detail::xoshiro_lane_seed(7u, 1u, 16u) == 0xf5754185'e5b567b7ull
+);
 
 }  // namespace
 
 $test(xoshiro_reference_streams) {
-   cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::plus>
+   cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::star>
       star64(1u, 2u);
    verify_stream(star64, xoroshiro64_star_state);
    cat::xoroshiro_engine<cat::uint4> starstar64(1u, 2u);
@@ -365,14 +775,11 @@ $test(xoshiro_reference_streams) {
       1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u
    );
    verify_stream(starstar1024, xoroshiro1024_starstar_state);
-
-   cat::splitmix64_engine splitmix(0u);
-   cat::verify(splitmix() == 0xe220a839'7b1dcdafull);
 }
 
 $test(xoshiro_reference_jumps) {
    verify_jump_anchors<
-      cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::plus>>(
+      cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::star>>(
       0x30f52758u, 0x745aacbdu, 1u, 2u
    );
    verify_jump_anchors<cat::xoroshiro_engine<cat::uint4>>(
@@ -512,9 +919,6 @@ $test(xoshiro_simd_full_lane_streams) {
       7u
    );
    verify_wide_stream<
-      cat::xoroshiro_pp_engine<cat::int4x4>,
-      cat::xoroshiro_pp_engine<cat::uint4>>(7u);
-   verify_wide_stream<
       cat::xoroshiro_engine<cat::int8x4>, cat::xoroshiro_engine<cat::uint8>>(
       7u
    );
@@ -541,6 +945,270 @@ $test(xoshiro_simd_full_lane_streams) {
       cat::verify(minimum[lane] == 0u);
       cat::verify(maximum[lane] == cat::uint4::max());
    }
+}
+
+$test(xoshiro_lane_seed_uniqueness_and_bulk_zero_state) {
+   cat::array<cat::idx, 4u> const state_sizes{2u, 4u, 8u, 16u};
+   for (cat::idx state_size : state_sizes) {
+      cat::array<cat::uint8, 16u> seeds;
+      for (cat::idx lane = 0u; lane < seeds.size(); ++lane) {
+         seeds[lane] = cat::detail::xoshiro_lane_seed(7u, lane, state_size);
+         for (cat::idx prior = 0u; prior < lane; ++prior) {
+            cat::verify(seeds[lane] != seeds[prior]);
+         }
+      }
+   }
+
+   using abi_type = x64::avx_abi<cat::uint8>;
+   cat::xoshiro_pp_engine<cat::uint8> engine(0u);
+   auto session =
+      cat::detail::make_relaxed_random_bulk_session<abi_type>(engine);
+   auto const first = session.first();
+   auto const second = session.second();
+   for (cat::idx lane = 0u; lane < abi_type::lanes; ++lane) {
+      cat::verify(first[lane] != 0u || second[lane] != 0u);
+      for (cat::idx prior = 0u; prior < lane; ++prior) {
+         cat::verify(
+            first[lane] != first[prior] || second[lane] != second[prior]
+         );
+      }
+   }
+}
+
+$test(xoshiro_raw_and_seeded_zero_state_prevention) {
+   using scrambler = cat::detail::xoshiro_scrambler;
+
+   verify_scalar_zero_state_prevention<
+      cat::xoroshiro_engine<cat::uint4, scrambler::star>>();
+   verify_scalar_zero_state_prevention<
+      cat::xoroshiro_engine<cat::uint8, scrambler::plus>>();
+   verify_scalar_zero_state_prevention<
+      cat::xoshiro_engine<cat::uint4, scrambler::plus>>();
+   verify_scalar_zero_state_prevention<
+      cat::xoshiro_engine<cat::uint8, scrambler::plus>>();
+   verify_scalar_zero_state_prevention<
+      cat::xoshiro512_engine<cat::uint8, scrambler::plus>>();
+   verify_scalar_zero_state_prevention<
+      cat::xoroshiro1024_engine<cat::uint8, scrambler::star>>();
+
+   verify_simd_zero_lane_prevention<
+      cat::xoroshiro_engine<cat::uint4x2, scrambler::star>,
+      cat::xoroshiro_engine<cat::uint4, scrambler::star>>();
+   verify_simd_zero_lane_prevention<
+      cat::xoroshiro_engine<cat::uint8x2, scrambler::plus>,
+      cat::xoroshiro_engine<cat::uint8, scrambler::plus>>();
+   verify_simd_zero_lane_prevention<
+      cat::xoshiro_engine<cat::uint4x2, scrambler::plus>,
+      cat::xoshiro_engine<cat::uint4, scrambler::plus>>();
+   verify_simd_zero_lane_prevention<
+      cat::xoshiro_engine<cat::uint8x2, scrambler::plus>,
+      cat::xoshiro_engine<cat::uint8, scrambler::plus>>();
+   verify_simd_zero_lane_prevention<
+      cat::xoshiro512_engine<cat::uint8x2, scrambler::plus>,
+      cat::xoshiro512_engine<cat::uint8, scrambler::plus>>();
+   verify_simd_zero_lane_prevention<
+      cat::xoroshiro1024_engine<cat::uint8x2, scrambler::star>,
+      cat::xoroshiro1024_engine<cat::uint8, scrambler::star>>();
+
+   // rand_xoshiro 0.2.0 issue #787
+   // https://github.com/rust-random/rand/issues/787
+   // Catches direct zero seeding that bypasses SplitMix and leaves zero state.
+   verify_zero_seed_expansion<
+      cat::xoroshiro_engine<cat::uint4, scrambler::star>>();
+   verify_zero_seed_expansion<cat::xoroshiro_engine<cat::uint4>>();
+   verify_zero_seed_expansion<cat::xoroshiro_pp_engine<cat::uint8>>();
+   verify_zero_seed_expansion<cat::xoshiro_pp_engine<cat::uint4>>();
+   verify_zero_seed_expansion<cat::xoshiro_pp_engine<cat::uint8>>();
+   verify_zero_seed_expansion<cat::xoshiro512_pp_engine<cat::uint8>>();
+   verify_zero_seed_expansion<cat::xoroshiro1024_pp_engine<cat::uint8>>();
+}
+
+$test(xoshiro_public_seed_expansion_vectors) {
+   using scrambler = cat::detail::xoshiro_scrambler;
+
+   // rust-random rand PR #1203
+   // https://github.com/rust-random/rand/pull/1203
+   // Catches wrappers inheriting an unrelated PCG seed expansion.
+   verify_seed_expansion_vector<
+      cat::xoroshiro_engine<cat::uint4, scrambler::star>>(
+      splitmix_zero_state32, 0x3795f5d5u
+   );
+   verify_seed_expansion_vector<cat::xoroshiro_engine<cat::uint4>>(
+      splitmix_zero_state32, 0xbdb9a53eu
+   );
+   verify_seed_expansion_vector<cat::xoshiro_engine<cat::uint4>>(
+      splitmix_zero_state32, 0xcb75f2b4u
+   );
+   verify_seed_expansion_vector<cat::xoshiro_pp_engine<cat::uint4>>(
+      splitmix_zero_state32, 0x30459ba5u
+   );
+
+   verify_seed_expansion_vector<cat::xoroshiro_engine<cat::uint8>>(
+      splitmix_zero_state64, 0xdec90d52'1e93e35dull
+   );
+   verify_seed_expansion_vector<cat::xoroshiro_pp_engine<cat::uint8>>(
+      splitmix_zero_state64, 0x6f68e1e7'e2646ee1ull
+   );
+   verify_seed_expansion_vector<cat::xoshiro_engine<cat::uint8>>(
+      splitmix_zero_state64, 0x99ec5f36'cb75f2b4ull
+   );
+   verify_seed_expansion_vector<cat::xoshiro_pp_engine<cat::uint8>>(
+      splitmix_zero_state64, 0x53175d61'490b23dfull
+   );
+   verify_seed_expansion_vector<cat::xoshiro512_engine<cat::uint8>>(
+      splitmix_zero_state64, 0x99ec5f36'cb75f2b4ull
+   );
+   verify_seed_expansion_vector<cat::xoshiro512_pp_engine<cat::uint8>>(
+      splitmix_zero_state64, 0x11685366'a6071719ull
+   );
+   verify_seed_expansion_vector<cat::xoroshiro1024_engine<cat::uint8>>(
+      splitmix_zero_state64, 0x99ec5f36'cb75f2b4ull
+   );
+   verify_seed_expansion_vector<cat::xoroshiro1024_pp_engine<cat::uint8>>(
+      splitmix_zero_state64, 0x342f13d3'4cc61a52ull
+   );
+
+   verify_simd_seed_expansion_vector<
+      cat::xoroshiro_engine<cat::uint4x2, scrambler::star>,
+      cat::xoroshiro_engine<cat::uint4, scrambler::star>>(0x3795f5d5u);
+   verify_simd_seed_expansion_vector<
+      cat::xoroshiro_engine<cat::uint4x2>, cat::xoroshiro_engine<cat::uint4>>(
+      0xbdb9a53eu
+   );
+   verify_simd_seed_expansion_vector<
+      cat::xoshiro_engine<cat::uint4x2>, cat::xoshiro_engine<cat::uint4>>(
+      0xcb75f2b4u
+   );
+   verify_simd_seed_expansion_vector<
+      cat::xoshiro_pp_engine<cat::uint4x2>, cat::xoshiro_pp_engine<cat::uint4>>(
+      0x30459ba5u
+   );
+
+   verify_simd_seed_expansion_vector<
+      cat::xoroshiro_engine<cat::uint8x2>, cat::xoroshiro_engine<cat::uint8>>(
+      0xdec90d52'1e93e35dull
+   );
+   verify_simd_seed_expansion_vector<
+      cat::xoroshiro_pp_engine<cat::uint8x2>,
+      cat::xoroshiro_pp_engine<cat::uint8>>(0x6f68e1e7'e2646ee1ull);
+   verify_simd_seed_expansion_vector<
+      cat::xoshiro_engine<cat::uint8x2>, cat::xoshiro_engine<cat::uint8>>(
+      0x99ec5f36'cb75f2b4ull
+   );
+   verify_simd_seed_expansion_vector<
+      cat::xoshiro_pp_engine<cat::uint8x2>, cat::xoshiro_pp_engine<cat::uint8>>(
+      0x53175d61'490b23dfull
+   );
+   verify_simd_seed_expansion_vector<
+      cat::xoshiro512_engine<cat::uint8x2>, cat::xoshiro512_engine<cat::uint8>>(
+      0x99ec5f36'cb75f2b4ull
+   );
+   verify_simd_seed_expansion_vector<
+      cat::xoshiro512_pp_engine<cat::uint8x2>,
+      cat::xoshiro512_pp_engine<cat::uint8>>(0x11685366'a6071719ull);
+   verify_simd_seed_expansion_vector<
+      cat::xoroshiro1024_engine<cat::uint8x2>,
+      cat::xoroshiro1024_engine<cat::uint8>>(0x99ec5f36'cb75f2b4ull);
+   verify_simd_seed_expansion_vector<
+      cat::xoroshiro1024_pp_engine<cat::uint8x2>,
+      cat::xoroshiro1024_pp_engine<cat::uint8>>(0x342f13d3'4cc61a52ull);
+}
+
+$test(xoshiro128_simd_full_width_seeds) {
+   using scrambler = cat::detail::xoshiro_scrambler;
+   constexpr cat::uint8 low_seed = 0u;
+   constexpr cat::uint8 high_seed = 0x00000001'00000000ull;
+
+   verify_distinct_seed_streams<
+      cat::xoshiro_engine<cat::uint4x2, scrambler::plus>>(low_seed, high_seed);
+   verify_distinct_seed_streams<cat::xoshiro_pp_engine<cat::uint4x4>>(
+      low_seed, high_seed
+   );
+   verify_distinct_seed_streams<cat::xoshiro_engine<cat::uint4x2>>(
+      low_seed, high_seed
+   );
+
+   verify_wide_stream<
+      cat::xoshiro_engine<cat::uint4x2, scrambler::plus>,
+      cat::xoshiro_engine<cat::uint4, scrambler::plus>>(high_seed);
+   verify_wide_stream<
+      cat::xoshiro_pp_engine<cat::uint4x4>, cat::xoshiro_pp_engine<cat::uint4>>(
+      0xfedcba98'76543210ull
+   );
+   verify_wide_stream<
+      cat::xoshiro_engine<cat::uint4x2>, cat::xoshiro_engine<cat::uint4>>(
+      0x89abcdef'01234567ull
+   );
+}
+
+$test(xoshiro_simd_adversarial_seed_parity) {
+   using scrambler = cat::detail::xoshiro_scrambler;
+   constexpr cat::uint8 high_seed = 0x89abcdef'01234567ull;
+   constexpr cat::uint8 maximum_seed = cat::uint8::max();
+
+   verify_wide_stream<
+      cat::xoroshiro_engine<cat::uint4x2, scrambler::star>,
+      cat::xoroshiro_engine<cat::uint4, scrambler::star>>(high_seed);
+   verify_wide_stream<
+      cat::xoroshiro_engine<cat::uint4x4>, cat::xoroshiro_engine<cat::uint4>>(
+      maximum_seed
+   );
+
+   verify_wide_stream<
+      cat::xoshiro_engine<cat::uint4x2, scrambler::plus>,
+      cat::xoshiro_engine<cat::uint4, scrambler::plus>>(high_seed);
+   verify_wide_stream<
+      cat::xoshiro_pp_engine<cat::uint4x4>, cat::xoshiro_pp_engine<cat::uint4>>(
+      maximum_seed
+   );
+   verify_wide_stream<
+      cat::xoshiro_engine<cat::uint4x2>, cat::xoshiro_engine<cat::uint4>>(
+      high_seed
+   );
+
+   verify_wide_stream<
+      cat::xoroshiro_engine<cat::uint8x2, scrambler::plus>,
+      cat::xoroshiro_engine<cat::uint8, scrambler::plus>>(high_seed);
+   verify_wide_stream<
+      cat::xoroshiro_pp_engine<cat::uint8x4>,
+      cat::xoroshiro_pp_engine<cat::uint8>>(maximum_seed);
+   verify_wide_stream<
+      cat::xoroshiro_engine<cat::uint8x2>, cat::xoroshiro_engine<cat::uint8>>(
+      high_seed
+   );
+
+   verify_wide_stream<
+      cat::xoshiro_engine<cat::uint8x2, scrambler::plus>,
+      cat::xoshiro_engine<cat::uint8, scrambler::plus>>(high_seed);
+   verify_wide_stream<
+      cat::xoshiro_pp_engine<cat::uint8x4>, cat::xoshiro_pp_engine<cat::uint8>>(
+      maximum_seed
+   );
+   verify_wide_stream<
+      cat::xoshiro_engine<cat::uint8x2>, cat::xoshiro_engine<cat::uint8>>(
+      high_seed
+   );
+
+   verify_wide_stream<
+      cat::xoshiro512_engine<cat::uint8x2, scrambler::plus>,
+      cat::xoshiro512_engine<cat::uint8, scrambler::plus>>(high_seed);
+   verify_wide_stream<
+      cat::xoshiro512_pp_engine<cat::uint8x4>,
+      cat::xoshiro512_pp_engine<cat::uint8>>(maximum_seed);
+   verify_wide_stream<
+      cat::xoshiro512_engine<cat::uint8x2>, cat::xoshiro512_engine<cat::uint8>>(
+      high_seed
+   );
+
+   verify_wide_stream<
+      cat::xoroshiro1024_engine<cat::uint8x2, scrambler::star>,
+      cat::xoroshiro1024_engine<cat::uint8, scrambler::star>>(high_seed);
+   verify_wide_stream<
+      cat::xoroshiro1024_pp_engine<cat::uint8x4>,
+      cat::xoroshiro1024_pp_engine<cat::uint8>>(maximum_seed);
+   verify_wide_stream<
+      cat::xoroshiro1024_engine<cat::uint8x2>,
+      cat::xoroshiro1024_engine<cat::uint8>>(high_seed);
 }
 
 $test(xoshiro_simd_x2_streams) {
@@ -572,11 +1240,8 @@ $test(xoshiro_simd_x2_streams) {
       7u
    );
    verify_wide_stream<
-      cat::xoroshiro_pp_engine<cat::uint4x2>,
-      cat::xoroshiro_pp_engine<cat::uint4>>(7u);
-   verify_wide_stream<
-      cat::xoroshiro_engine<cat::uint4x2, cat::detail::xoshiro_scrambler::plus>,
-      cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::plus>>(
+      cat::xoroshiro_engine<cat::uint4x2, cat::detail::xoshiro_scrambler::star>,
+      cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::star>>(
       7u
    );
    verify_wide_stream<
@@ -613,9 +1278,9 @@ $test(xoshiro_simd_x2_streams) {
       cat::xoroshiro1024_pp_engine<cat::uint8>>(7u);
    verify_wide_stream<
       cat::xoroshiro1024_engine<
-         cat::uint8x2, cat::detail::xoshiro_scrambler::plus>,
+         cat::uint8x2, cat::detail::xoshiro_scrambler::star>,
       cat::xoroshiro1024_engine<
-         cat::uint8, cat::detail::xoshiro_scrambler::plus>>(7u);
+         cat::uint8, cat::detail::xoshiro_scrambler::star>>(7u);
 }
 
 $test(xoshiro_simd_x2_jumps) {
@@ -647,11 +1312,8 @@ $test(xoshiro_simd_x2_jumps) {
       11u
    );
    verify_wide_jumps<
-      cat::xoroshiro_pp_engine<cat::uint4x2>,
-      cat::xoroshiro_pp_engine<cat::uint4>>(11u);
-   verify_wide_jumps<
-      cat::xoroshiro_engine<cat::uint4x2, cat::detail::xoshiro_scrambler::plus>,
-      cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::plus>>(
+      cat::xoroshiro_engine<cat::uint4x2, cat::detail::xoshiro_scrambler::star>,
+      cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::star>>(
       11u
    );
    verify_wide_jumps<
@@ -688,12 +1350,27 @@ $test(xoshiro_simd_x2_jumps) {
       cat::xoroshiro1024_pp_engine<cat::uint8>>(11u);
    verify_wide_jumps<
       cat::xoroshiro1024_engine<
-         cat::uint8x2, cat::detail::xoshiro_scrambler::plus>,
+         cat::uint8x2, cat::detail::xoshiro_scrambler::star>,
       cat::xoroshiro1024_engine<
-         cat::uint8, cat::detail::xoshiro_scrambler::plus>>(11u);
+         cat::uint8, cat::detail::xoshiro_scrambler::star>>(11u);
 }
 
 $test(xoshiro_simd_full_lane_jumps) {
+   verify_mixed_lane_jumps<
+      cat::xoroshiro_engine<cat::uint4x2>, cat::xoroshiro_engine<cat::uint4>>();
+   verify_mixed_lane_jumps<
+      cat::xoroshiro_engine<cat::uint8x2>, cat::xoroshiro_engine<cat::uint8>>();
+   verify_mixed_lane_jumps<
+      cat::xoshiro_engine<cat::uint4x2>, cat::xoshiro_engine<cat::uint4>>();
+   verify_mixed_lane_jumps<
+      cat::xoshiro_engine<cat::uint8x2>, cat::xoshiro_engine<cat::uint8>>();
+   verify_mixed_lane_jumps<
+      cat::xoshiro512_engine<cat::uint8x2>,
+      cat::xoshiro512_engine<cat::uint8>>();
+   verify_mixed_lane_jumps<
+      cat::xoroshiro1024_engine<cat::uint8x2>,
+      cat::xoroshiro1024_engine<cat::uint8>>();
+
    verify_wide_jumps<
       cat::xoshiro_engine<cat::uint4x4>, cat::xoshiro_engine<cat::uint4>>(11u);
    verify_wide_jumps<
@@ -710,9 +1387,6 @@ $test(xoshiro_simd_full_lane_jumps) {
       cat::xoroshiro_engine<cat::int4x4>, cat::xoroshiro_engine<cat::uint4>>(
       11u
    );
-   verify_wide_jumps<
-      cat::xoroshiro_pp_engine<cat::int4x4>,
-      cat::xoroshiro_pp_engine<cat::uint4>>(11u);
    verify_wide_jumps<
       cat::xoroshiro_engine<cat::int8x4>, cat::xoroshiro_engine<cat::uint8>>(
       11u
@@ -798,15 +1472,6 @@ $test(xoshiro_alias_mapping) {
       cat::xoroshiro_engine<
          cat::uint4, cat::detail::xoshiro_scrambler::starstar>>(19u);
    verify_alias_parity<
-      cat::xoroshiro_pp_engine<cat::uint4>,
-      cat::xoroshiro_engine<
-         cat::uint4, cat::detail::xoshiro_scrambler::starstar>>(19u);
-   verify_alias_parity<
-      cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::plus>,
-      cat::xoroshiro_engine<cat::uint4, cat::detail::xoshiro_scrambler::star>>(
-      19u
-   );
-   verify_alias_parity<
       cat::xoroshiro_engine<cat::uint8>,
       cat::xoroshiro_engine<
          cat::uint8, cat::detail::xoshiro_scrambler::starstar>>(19u);
@@ -815,10 +1480,6 @@ $test(xoshiro_alias_mapping) {
       cat::xoroshiro_engine<
          cat::uint8, cat::detail::xoshiro_scrambler::plusplus>>(19u);
    verify_alias_parity<
-      cat::xoroshiro_engine<cat::uint8, cat::detail::xoshiro_scrambler::star>,
-      cat::xoroshiro_engine<
-         cat::uint8, cat::detail::xoshiro_scrambler::starstar>>(19u);
-   verify_alias_parity<
       cat::xoroshiro1024_engine<cat::uint8>,
       cat::xoroshiro1024_engine<
          cat::uint8, cat::detail::xoshiro_scrambler::starstar>>(19u);
@@ -826,26 +1487,24 @@ $test(xoshiro_alias_mapping) {
       cat::xoroshiro1024_pp_engine<cat::uint8>,
       cat::xoroshiro1024_engine<
          cat::uint8, cat::detail::xoshiro_scrambler::plusplus>>(19u);
-   verify_alias_parity<
-      cat::xoroshiro1024_engine<
-         cat::uint8, cat::detail::xoshiro_scrambler::plus>,
-      cat::xoroshiro1024_pp_engine<cat::uint8>>(19u);
-
-   verify_alias_parity<
-      cat::xoroshiro_engine<cat::uint4x2, cat::detail::xoshiro_scrambler::plus>,
-      cat::xoroshiro_engine<
-         cat::uint4x2, cat::detail::xoshiro_scrambler::star>>(19u);
-   verify_alias_parity<
-      cat::xoroshiro_engine<cat::uint8x2, cat::detail::xoshiro_scrambler::star>,
-      cat::xoroshiro_engine<
-         cat::uint8x2, cat::detail::xoshiro_scrambler::starstar>>(19u);
-   verify_alias_parity<
-      cat::xoroshiro1024_engine<
-         cat::uint8x2, cat::detail::xoshiro_scrambler::plus>,
-      cat::xoroshiro1024_pp_engine<cat::uint8x2>>(19u);
 }
 
 $test(xoshiro_arbitrary_jump) {
+   verify_small_jump_log2<cat::xoroshiro_engine<cat::uint4>>();
+   verify_small_jump_log2<cat::xoroshiro_engine<cat::uint8>>();
+   verify_small_jump_log2<cat::xoshiro_engine<cat::uint4>>();
+   verify_small_jump_log2<cat::xoshiro_engine<cat::uint8>>();
+   verify_small_jump_log2<cat::xoshiro512_engine<cat::uint8>>();
+   verify_small_jump_log2<cat::xoroshiro1024_engine<cat::uint8>>();
+
+   verify_canonical_jump_log2<cat::xoroshiro_engine<cat::uint4>, 32u, 48u>();
+   verify_canonical_jump_log2<cat::xoroshiro_engine<cat::uint8>, 64u, 96u>();
+   verify_canonical_jump_log2<cat::xoshiro_engine<cat::uint4>, 64u, 96u>();
+   verify_canonical_jump_log2<cat::xoshiro_engine<cat::uint8>, 128u, 192u>();
+   verify_canonical_jump_log2<cat::xoshiro512_engine<cat::uint8>, 256u, 384u>();
+   verify_canonical_jump_log2<
+      cat::xoroshiro1024_engine<cat::uint8>, 512u, 768u>();
+
    cat::xoshiro_engine<cat::uint8> official(1u, 2u, 3u, 4u);
    cat::xoshiro_engine<cat::uint8> by_log(1u, 2u, 3u, 4u);
    official.jump();
@@ -863,4 +1522,31 @@ $test(xoshiro_arbitrary_jump) {
    official128.jump();
    by_log128.jump_log2(64u);
    cat::verify(by_log128() == official128());
+}
+
+$test(xoshiro_bounded_draws) {
+   verify_bounded_draws<cat::xoshiro_engine<cat::uint4>>();
+   verify_bounded_draws<cat::xoshiro_engine<cat::uint8>>();
+   verify_bounded_draws<cat::xoroshiro_engine<cat::uint4>>();
+   verify_bounded_draws<cat::xoroshiro_engine<cat::uint8>>();
+   verify_bounded_draws<cat::xoshiro512_engine<cat::uint8>>();
+   verify_bounded_draws<cat::xoroshiro1024_engine<cat::uint8>>();
+   verify_bounded_draws<cat::xoshiro_pp_engine<cat::uint4>>();
+   verify_bounded_draws<cat::xoroshiro_pp_engine<cat::uint8>>();
+   verify_bounded_draws<cat::xoshiro512_pp_engine<cat::uint8>>();
+   verify_bounded_draws<cat::xoroshiro1024_pp_engine<cat::uint8>>();
+
+   verify_wide_bounded_draws<
+      cat::xoshiro_engine<cat::uint4x4>, cat::xoshiro_engine<cat::uint4>>();
+   verify_wide_bounded_draws<
+      cat::xoshiro_engine<cat::uint8x4>, cat::xoshiro_engine<cat::uint8>>();
+   verify_wide_bounded_draws<
+      cat::xoroshiro_engine<cat::uint4x4>,
+      cat::xoroshiro_engine<cat::uint4>>();
+   verify_wide_bounded_draws<
+      cat::xoroshiro_engine<cat::uint8x4>,
+      cat::xoroshiro_engine<cat::uint8>>();
+   verify_wide_bounded_draws<
+      cat::xoshiro512_engine<cat::uint8x4>,
+      cat::xoshiro512_engine<cat::uint8>>();
 }

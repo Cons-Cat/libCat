@@ -413,15 +413,19 @@ set(CAT_HEADER_FILES
   ${CATLIB}/path/cat/path
   ${CATLIB}/path/cat/raii_path
   ${CATLIB}/random/cat/random
+  ${CATLIB}/random/cat/splitmix
   ${CATLIB}/random/cat/detail/bernoulli_distribution.hpp
   ${CATLIB}/random/cat/detail/binomial_distribution.hpp
+  ${CATLIB}/random/cat/detail/bounded_random.hpp
   ${CATLIB}/random/cat/detail/cauchy_distribution.hpp
   ${CATLIB}/random/cat/detail/chi_squared_distribution.hpp
   ${CATLIB}/random/cat/detail/discard_block_engine.hpp
   ${CATLIB}/random/cat/detail/discrete_distribution.hpp
+  ${CATLIB}/random/cat/detail/distribution_batch.hpp
   ${CATLIB}/random/cat/detail/distribution_helpers.hpp
   ${CATLIB}/random/cat/detail/exponential_distribution.hpp
   ${CATLIB}/random/cat/detail/extreme_value_distribution.hpp
+  ${CATLIB}/random/cat/detail/fill_random.hpp
   ${CATLIB}/random/cat/detail/fisher_f_distribution.hpp
   ${CATLIB}/random/cat/detail/gamma_distribution.hpp
   ${CATLIB}/random/cat/detail/geometric_distribution.hpp
@@ -437,14 +441,14 @@ set(CAT_HEADER_FILES
   ${CATLIB}/random/cat/detail/poisson_distribution.hpp
   ${CATLIB}/random/cat/detail/rdrand.hpp
   ${CATLIB}/random/cat/detail/rdseed.hpp
+  ${CATLIB}/random/cat/detail/random_batch.hpp
+  ${CATLIB}/random/cat/detail/random_seed.hpp
   ${CATLIB}/random/cat/detail/sampling_distribution_helpers.hpp
   ${CATLIB}/random/cat/detail/shuffle_order_engine.hpp
   ${CATLIB}/random/cat/detail/student_t_distribution.hpp
   ${CATLIB}/random/cat/detail/uniform_float_distribution.hpp
   ${CATLIB}/random/cat/detail/uniform_int_distribution.hpp
   ${CATLIB}/random/cat/detail/weibull_distribution.hpp
-  ${CATLIB}/random/cat/detail/splitmix.hpp
-  ${CATLIB}/random/cat/detail/wyrand.hpp
   ${CATLIB}/random/cat/detail/xoshiro_jump.hpp
   ${CATLIB}/random/cat/detail/xoshiro.hpp
   ${CATLIB}/ring/cat/ring

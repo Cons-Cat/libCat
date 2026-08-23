@@ -41,6 +41,7 @@ template <typename Int = int4>
 class uniform_int_distribution {
  public:
    using result_type = Int;
+   static constexpr bool enable_batch_fill = false;
 
    class param_type {
     public:
@@ -128,7 +129,7 @@ class uniform_int_distribution {
       -> result_type {
       using unsigned_type = detail::random_unsigned<result_type>;
       if constexpr (is_simd<result_type>) {
-         using generator_result = typename Generator::result_type;
+         using generator_result = Generator::result_type;
          static_assert(is_simd<generator_result>);
          static_assert(
             generator_result::abi_type::lanes == result_type::abi_type::lanes
@@ -144,21 +145,9 @@ class uniform_int_distribution {
             )
          );
          unsigned_type const bound = upper - lower + 1u;
-         auto const full_range = bound.equal_lanes(unsigned_type(0u));
-         unsigned_type const divisor =
-            simd_select(full_range, unsigned_type(1u), bound);
-         unsigned_type const threshold = (unsigned_type(0u) - bound) % divisor;
-         unsigned_type offset{};
-         typename unsigned_type::mask_type pending(true);
-         while (detail::distribution_any(pending)) {
-            unsigned_type const value =
-               detail::distribution_engine_word(generator);
-            auto const accepted = pending && (full_range || value >= threshold);
-            unsigned_type const candidate =
-               simd_select(full_range, value, value % divisor);
-            offset = simd_select(accepted, candidate, offset);
-            pending = pending && !accepted;
-         }
+         unsigned_type const offset = detail::lemire_bounded(bound, [&] {
+            return detail::distribution_random_word<unsigned_type>(generator);
+         });
          return detail::distribution_int_from_bits<result_type>(lower + offset);
       } else {
          unsigned_type const lower = unsigned_type(parameters.a());

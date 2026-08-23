@@ -5,6 +5,8 @@
 // Deterministic engines in this header are not cryptographically secure.
 // Use `nix::sys_urandom_engine` or `nix::sys_random_engine` instead.
 
+#include <cat/detail/random_seed.hpp>
+#include <cat/detail/bounded_random.hpp>
 #include <cat/detail/rdrand.hpp>
 #include <cat/detail/rdseed.hpp>
 
@@ -35,23 +37,6 @@ concept is_uniform_random_bit_generator =
          Generator::min();
          Generator::max();
       };
-
-class random_seed {
- public:
-   template <is_unsigned_integral T>
-   constexpr random_seed(T value) : m_value(make_raw_arithmetic(value)) {
-   }
-
-   template <is_unsigned_integral T>
-   [[nodiscard]]
-   constexpr explicit
-   operator T() const {
-      return T(m_value);
-   }
-
- private:
-   unsigned __int128 m_value;
-};
 
 namespace detail {
 
@@ -85,31 +70,25 @@ random_engine_word(Generator& generator) {
    return make_unsigned(value - minimum);
 }
 
-// Lemire nearly-divisionless mapping of a word into `[0, bound)`.
-// The words still come from the caller engine.
-//    https://arxiv.org/abs/1805.10941
-//    https://dotat.at/@/2020-10-29-nearly-divisionless-random-numbers.html
-//    https://dotat.at/@/2023-06-21-pcg64-dxsm.html
-template <is_unsigned_integral T, typename Next>
+template <idx digits, idx engine_bits, is_unsigned_integral Unsigned>
 constexpr auto
-lemire_bounded(T bound, Next&& next) -> T {
-   using raw_type = raw_arithmetic_type<T>;
-   raw_type const limit = make_raw_arithmetic(bound);
-   raw_type raw = make_raw_arithmetic(next());
-   __uint128_t sample = __uint128_t(raw) * __uint128_t(limit);
-   uword const shift = sizeof(T) * 8u;
-   raw_type frac = raw_type(sample);
-   raw_type high = raw_type(sample >> shift);
-   if (frac < limit) {
-      raw_type const residue = (raw_type(0u) - limit) % limit;
-      while (frac < residue) {
-         raw = make_raw_arithmetic(next());
-         sample = __uint128_t(raw) * __uint128_t(limit);
-         frac = raw_type(sample);
-         high = raw_type(sample >> shift);
-      }
+random_canonical_calls(Unsigned span) -> idx {
+   if (span == 0u) {
+      return idx(digits + engine_bits - 1u) / engine_bits;
    }
-   return T(high);
+   __uint128_t const target = __uint128_t(1u) << digits.raw;
+   __uint128_t const radix = make_raw_arithmetic(span);
+   __uint128_t capacity = 1u;
+   idx calls = 0u;
+   while (capacity < target) {
+      ++calls;
+      __uint128_t const needed = (target + capacity - 1u) / capacity;
+      if (radix >= needed) {
+         break;
+      }
+      capacity *= radix;
+   }
+   return calls;
 }
 
 template <is_uniform_random_bit_generator Generator, is_unsigned_integral T>
@@ -157,19 +136,24 @@ generate_canonical(Generator& generator) -> Float {
    constexpr idx float_bits =
       bits < limits<Float>::digits ? bits : limits<Float>::digits;
    constexpr idx engine_bits = limits<unsigned_type>::digits;
-   constexpr idx calls = idx(float_bits + engine_bits - 1u) / engine_bits;
+   constexpr unsigned_type span_minus_one =
+      unsigned_type(make_raw_arithmetic(Generator::max()))
+      - unsigned_type(make_raw_arithmetic(Generator::min()));
+   constexpr unsigned_type span = span_minus_one + 1u;
+   constexpr idx calls =
+      detail::random_canonical_calls<float_bits, engine_bits>(span);
    raw_float value = 0;
    raw_float factor = 1;
-   raw_float const radix = raw_float(unsigned_type(
-                              make_raw_arithmetic(Generator::max())
-                              - make_raw_arithmetic(Generator::min())
-                           ))
-                           + raw_float(1);
+   raw_float const radix = raw_float(span_minus_one) + raw_float(1);
    for (idx index = 0u; index < calls; ++index) {
       value += raw_float(detail::random_engine_word(generator)) * factor;
       factor *= radix;
    }
-   return Float(value / factor);
+   Float const result = Float(value / factor);
+   if (result < Float(1)) {
+      return result;
+   }
+   return Float(1) - limits<Float>::epsilon() / Float(2);
 }
 
 template <is_floating_point Float, is_uniform_random_bit_generator Generator>
@@ -484,6 +468,7 @@ class piecewise_linear_distribution;
 #include <cat/detail/chi_squared_distribution.hpp>
 #include <cat/detail/discard_block_engine.hpp>
 #include <cat/detail/discrete_distribution.hpp>
+#include <cat/detail/distribution_batch.hpp>
 #include <cat/detail/distribution_helpers.hpp>
 #include <cat/detail/exponential_distribution.hpp>
 #include <cat/detail/extreme_value_distribution.hpp>
@@ -502,82 +487,21 @@ class piecewise_linear_distribution;
 #include <cat/detail/poisson_distribution.hpp>
 #include <cat/detail/sampling_distribution_helpers.hpp>
 #include <cat/detail/shuffle_order_engine.hpp>
-#include <cat/detail/splitmix.hpp>
 #include <cat/detail/student_t_distribution.hpp>
 #include <cat/detail/uniform_float_distribution.hpp>
 #include <cat/detail/uniform_int_distribution.hpp>
 #include <cat/detail/weibull_distribution.hpp>
-#include <cat/detail/wyrand.hpp>
 #include <cat/detail/xoshiro.hpp>
+
+#include <cat/splitmix>
 
 namespace cat {
 
 using convenience_random_engine = pcg_dxsm_engine<uint8>;
 
-// https://open-std.org/jtc1/sc22/wg21/docs/papers/2024/p1068r11.pdf
-template <is_iterable Range, typename Generator>
-constexpr auto
-generate_random(Range&& range, Generator&& generator) -> iteration_result {
-   if constexpr (requires { generator.generate_random($fwd(range)); }) {
-      generator.generate_random($fwd(range));
-   } else if constexpr (is_simd_random_bit_generator<remove_cvref<Generator>>) {
-      using simd_result = remove_cvref<Generator>::result_type;
-      simd_result values;
-      idx lane = simd_result::abi_type::lanes;
-      auto context = iterate(range);
-      context.run_while([&](auto&& value) -> bool {
-         if (lane == simd_result::abi_type::lanes) {
-            values = generator();
-            lane = 0u;
-         }
-         value = values[lane];
-         ++lane;
-         return true;
-      });
-   } else {
-      auto context = iterate(range);
-      context.run_while([&](auto&& value) -> bool {
-         value = generator();
-         return true;
-      });
-   }
-   return iteration_result::complete;
-}
-
-template <is_iterable Range, typename Generator, typename Distribution>
-constexpr auto
-generate_random(
-   Range&& range, Generator&& generator, Distribution&& distribution
-) -> iteration_result {
-   if constexpr (requires {
-                    distribution.generate_random($fwd(range), generator);
-                 }) {
-      distribution.generate_random($fwd(range), generator);
-   } else if constexpr (is_simd<decltype(distribution(generator))>) {
-      using simd_result = decltype(distribution(generator));
-      simd_result values;
-      idx lane = simd_result::abi_type::lanes;
-      auto context = iterate(range);
-      context.run_while([&](auto&& value) -> bool {
-         if (lane == simd_result::abi_type::lanes) {
-            values = distribution(generator);
-            lane = 0u;
-         }
-         value = values[lane];
-         ++lane;
-         return true;
-      });
-   } else {
-      auto context = iterate(range);
-      context.run_while([&](auto&& value) -> bool {
-         value = distribution(generator);
-         return true;
-      });
-   }
-   return iteration_result::complete;
-}
-
 }  // namespace cat
+
+#include <cat/detail/fill_random.hpp>
 
 namespace cat {
 

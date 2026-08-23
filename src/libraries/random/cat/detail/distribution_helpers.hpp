@@ -10,7 +10,29 @@
 #include <cat/simd>
 #include <cat/simd_ops>
 
+#include "./random_batch.hpp"
+
 namespace cat::detail {
+
+template <typename Distribution>
+struct distribution_batch_traits;
+
+template <
+   typename Abi, typename Distribution,
+   is_uniform_random_bit_generator Generator>
+[[nodiscard]]
+constexpr auto
+generate_random_distribution_batch(
+   Distribution& distribution, Generator& generator
+) -> decltype(auto) {
+   return distribution_batch_traits<Distribution>::template generate<Abi>(
+      distribution, generator
+   );
+}
+
+template <typename T, typename Abi>
+using distribution_batch_simd =
+   simd<T, ::cat::simd_abi::deduce<T, Abi::lanes, Abi>>;
 
 template <typename T>
 struct random_scalar_type {
@@ -24,6 +46,54 @@ struct random_scalar_type<simd<T, Abi>> {
 
 template <typename T>
 using random_scalar = random_scalar_type<T>::type;
+
+template <
+   typename Generator, typename Abi,
+   typename Result = random_scalar<typename Generator::result_type>>
+class distribution_batch_engine {
+ public:
+   using result_type = distribution_batch_simd<Result, Abi>;
+
+   constexpr explicit distribution_batch_engine(Generator& generator)
+       : m_generator(generator) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator()() -> result_type {
+      auto const source = [&] {
+         if constexpr (is_simd<typename Generator::result_type>) {
+            return m_generator();
+         } else {
+            using source_abi = distribution_batch_simd<
+               typename Generator::result_type, Abi>::abi_type;
+            return generate_exact_random_batch<source_abi>(m_generator);
+         }
+      }();
+      if constexpr (is_same<decltype(source), result_type>) {
+         return source;
+      } else {
+         return result_type(
+            __builtin_convertvector(source.raw, typename result_type::raw_type)
+         );
+      }
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   min() -> result_type {
+      return result_type(limits<Result>::min());
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   max() -> result_type {
+      return result_type(limits<Result>::max());
+   }
+
+ private:
+   Generator& m_generator;
+};
 
 template <typename T, typename Shape>
 struct random_rebind_type {
@@ -127,6 +197,45 @@ distribution_engine_word(Generator& generator) {
    return unsigned_type(generator()) - minimum;
 }
 
+template <
+   is_simd_unsigned_integral T, is_uniform_random_bit_generator Generator>
+constexpr auto
+distribution_random_word(Generator& generator) -> T {
+   using engine_type = typeof_unqual(generator);
+   using engine_result = engine_type::result_type;
+   using engine_unsigned = random_unsigned<engine_result>;
+   using engine_lane = engine_unsigned::value_type;
+   using lane_type = T::value_type;
+   using mask_type = engine_unsigned::mask_type;
+   static_assert(is_simd<engine_result>);
+   static_assert(engine_result::abi_type::lanes == T::abi_type::lanes);
+   static_assert(sizeof(engine_lane) == sizeof(lane_type));
+
+   engine_unsigned const maximum = engine_type::max();
+   engine_unsigned const minimum = engine_type::min();
+   engine_unsigned const span = maximum - minimum + 1u;
+   auto const full_range = span.equal_lanes(engine_unsigned(0u));
+   if (full_range.all_of()) {
+      return T(distribution_engine_word(generator));
+   }
+
+   engine_unsigned const divisor =
+      simd_select(full_range, engine_unsigned(2u), span);
+   engine_unsigned const limit = divisor - divisor % 2u;
+   T result = 0u;
+   for (idx bit = 0u; bit < limits<lane_type>::digits; ++bit) {
+      mask_type pending(true);
+      while (distribution_any(pending)) {
+         engine_unsigned const value = distribution_engine_word(generator);
+         auto const accepted = pending && (full_range || value < limit);
+         T const selected = T(value & 1u) << lane_type(bit.raw);
+         result = simd_select(accepted, result | selected, result);
+         pending = pending && !accepted;
+      }
+   }
+   return result;
+}
+
 template <is_uniform_random_bit_generator Generator>
 constexpr auto
 distribution_random_bit(Generator& generator) -> bool {
@@ -200,7 +309,7 @@ constexpr auto
 distribution_next_toward(Float value, Float toward) -> Float {
    using scalar = random_scalar<Float>;
    using raw_type = raw_arithmetic_type<scalar>;
-   using bits_scalar = conditional<sizeof(raw_type) == 4u, uint4, uint8>;
+   using bits_scalar = uint_fixed<sizeof(raw_type)>;
    using bits_type = random_rebind<bits_scalar, Float>;
    if constexpr (is_simd<Float>) {
       using bits_mask = bits_type::mask_type;
@@ -255,36 +364,75 @@ template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 distribution_generate_canonical(Generator& generator) -> Float {
+   using engine_result = Generator::result_type;
+   using engine_scalar = random_scalar<engine_result>;
+   using unsigned_scalar = make_unsigned_type<engine_scalar>;
+   using scalar = random_scalar<Float>;
+   using raw_float = raw_arithmetic_type<scalar>;
    if constexpr (is_simd<Float>) {
-      using engine_result = Generator::result_type;
       static_assert(is_simd<engine_result>);
       static_assert(engine_result::abi_type::lanes == Float::abi_type::lanes);
-      using engine_scalar = engine_result::value_type;
-      using unsigned_engine = random_unsigned<engine_result>;
-      using scalar = random_scalar<Float>;
-      static_assert(sizeof(engine_scalar) >= sizeof(scalar));
-      constexpr idx digits = limits<scalar>::digits;
-      constexpr idx engine_bits =
-         limits<make_unsigned_type<engine_scalar>>::digits;
-      unsigned_engine const bits = distribution_engine_word(generator);
-      using float_bits = random_rebind<scalar, engine_result>;
-      unsigned_engine const shifted =
-         bits >> unsigned_engine(
-            typename unsigned_engine::value_type((engine_bits - digits).raw)
-         );
-      float_bits const value(
-         __builtin_convertvector(shifted.raw, typename float_bits::raw_type)
-      );
-      return Float(value) * scalar(sizeof(scalar) == 4u ? 0x1p-24f : 0x1p-53);
    } else {
-      uint8 value = 0u;
-      for (idx bit = 0u; bit < limits<Float>::digits; ++bit) {
-         value |= uint8(distribution_random_bit(generator)) << bit.raw;
-      }
-      uint8 const denominator = uint8(1) << limits<Float>::digits;
-      using raw_type = raw_arithmetic_type<Float>;
-      return Float(raw_type(value) / raw_type(denominator));
+      static_assert(!is_simd<engine_result>);
    }
+   constexpr unsigned_scalar minimum = [] {
+      if constexpr (is_simd<engine_result>) {
+         return unsigned_scalar(Generator::min()[0u]);
+      } else {
+         return unsigned_scalar(Generator::min());
+      }
+   }();
+   constexpr unsigned_scalar maximum = [] {
+      if constexpr (is_simd<engine_result>) {
+         return unsigned_scalar(Generator::max()[0u]);
+      } else {
+         return unsigned_scalar(Generator::max());
+      }
+   }();
+   constexpr unsigned_scalar span_minus_one = maximum - minimum;
+   constexpr unsigned_scalar span = span_minus_one + 1u;
+   constexpr idx digits = limits<scalar>::digits;
+   constexpr idx engine_bits = limits<unsigned_scalar>::digits;
+   constexpr bool power_of_two = span == 0u || (span & span_minus_one) == 0u;
+   constexpr idx radix_bits =
+      span == 0u ? engine_bits : idx(bit_width(span_minus_one));
+   constexpr idx calls = random_canonical_calls<digits, engine_bits>(span);
+   auto const to_float = [](auto word) -> Float {
+      if constexpr (is_simd<Float>) {
+         using float_word = random_rebind<scalar, engine_result>;
+         return Float(float_word(
+            __builtin_convertvector(word.raw, typename float_word::raw_type)
+         ));
+      } else {
+         return Float(raw_float(word));
+      }
+   };
+   if constexpr (power_of_two && radix_bits >= digits) {
+      auto const word = distribution_engine_word(generator);
+      auto const shifted = [&] {
+         if constexpr (is_simd<engine_result>) {
+            return word >> random_unsigned<engine_result>(
+                      engine_scalar((radix_bits - digits).raw)
+                   );
+         } else {
+            return word >> (radix_bits - digits).raw;
+         }
+      }();
+      return to_float(shifted)
+             * scalar(sizeof(scalar) == 4u ? 0x1p-24f : 0x1p-53);
+   }
+   Float value = 0.f;
+   Float factor = 1.f;
+   Float const radix = Float(raw_float(span_minus_one) + raw_float(1.f));
+   for (idx index = 0u; index < calls; ++index) {
+      value += to_float(distribution_engine_word(generator)) * factor;
+      factor *= radix;
+   }
+   value /= factor;
+   Float const one = 1.f;
+   return distribution_select(
+      value < one, value, distribution_next_toward(one, Float(0.f))
+   );
 }
 
 template <typename Float, is_uniform_random_bit_generator Generator>

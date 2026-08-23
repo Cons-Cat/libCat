@@ -154,6 +154,14 @@ class normal_distribution {
    }
 
  private:
+   friend class detail::distribution_batch_access;
+
+   [[nodiscard]]
+   constexpr auto
+   batch_available() const -> bool {
+      return !m_has_spare;
+   }
+
    param_type m_parameter;
    Float m_spare = 0.f;
    bool m_has_spare = false;

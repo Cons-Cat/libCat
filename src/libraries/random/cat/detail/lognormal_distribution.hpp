@@ -137,6 +137,14 @@ class lognormal_distribution {
       -> bool = default;
 
  private:
+   friend class detail::distribution_batch_access;
+
+   [[nodiscard]]
+   constexpr auto
+   batch_available() const -> bool {
+      return detail::distribution_batch_access::available(m_normal);
+   }
+
    param_type m_parameter;
    normal_distribution<Float> m_normal;
 };

@@ -107,6 +107,16 @@ struct iterable_interface {
    constexpr auto
    reverse_inplace(this Self&& self) -> decltype(auto);
 
+   template <typename Self, typename Generator>
+   constexpr auto
+   fill_random(this Self&& self, Generator&& generator) -> decltype(auto);
+
+   template <typename Self, typename Generator, typename Distribution>
+   constexpr auto
+   fill_random(
+      this Self&& self, Generator&& generator, Distribution&& distribution
+   ) -> decltype(auto);
+
    template <typename Self>
    constexpr auto
    as_rvalue(this Self&& self);

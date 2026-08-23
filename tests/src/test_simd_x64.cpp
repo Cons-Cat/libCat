@@ -11,6 +11,66 @@ using cat::int4x8;
 
 namespace {
 
+template <typename Simd>
+constexpr auto
+rotates_match_scalar(cat::iword count) -> bool {
+   using value_type = Simd::value_type;
+   Simd input;
+   for (cat::idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
+      input.set_lane(
+         lane, value_type(cat::uint8(lane + 1u) * 0x9e3779b9'7f4a7c15ull)
+      );
+   }
+   Simd const left = cat::simd_rotate_left(input, count);
+   Simd const right = cat::simd_rotate_right(input, count);
+   for (cat::idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
+      auto const raw = cat::make_raw_arithmetic(input[lane]);
+      using raw_type = decltype(raw);
+      using unsigned_type = cat::make_unsigned_type<raw_type>;
+      auto const bits = __builtin_bit_cast(unsigned_type, raw);
+      value_type const expected_left(
+         __builtin_bit_cast(
+            raw_type, __builtin_stdc_rotate_left(bits, count.raw)
+         )
+      );
+      value_type const expected_right(
+         __builtin_bit_cast(
+            raw_type, __builtin_stdc_rotate_right(bits, count.raw)
+         )
+      );
+      if (left[lane] != expected_left || right[lane] != expected_right) {
+         return false;
+      }
+   }
+   return true;
+}
+
+template <typename Simd>
+constexpr auto
+verify_rotate_counts() -> bool {
+   using value_type = Simd::value_type;
+   constexpr cat::iword bits(sizeof(value_type) * 8u);
+   return rotates_match_scalar<Simd>(0) && rotates_match_scalar<Simd>(1)
+          && rotates_match_scalar<Simd>(bits - 1)
+          && rotates_match_scalar<Simd>(bits)
+          && rotates_match_scalar<Simd>(bits + 1)
+          && rotates_match_scalar<Simd>(-1);
+}
+
+consteval auto
+verify_constexpr_rotates() -> bool {
+   return verify_rotate_counts<cat::fixed_size_simd<cat::uint1, 16u>>()
+          && verify_rotate_counts<cat::fixed_size_simd<cat::uint2, 8u>>()
+          && verify_rotate_counts<cat::fixed_size_simd<cat::uint4, 4u>>()
+          && verify_rotate_counts<cat::fixed_size_simd<cat::uint8, 2u>>()
+          && verify_rotate_counts<cat::fixed_size_simd<cat::int1, 16u>>()
+          && verify_rotate_counts<cat::fixed_size_simd<cat::int2, 8u>>()
+          && verify_rotate_counts<cat::fixed_size_simd<cat::int4, 4u>>()
+          && verify_rotate_counts<cat::fixed_size_simd<cat::int8, 2u>>();
+}
+
+static_assert(verify_constexpr_rotates());
+
 template <typename Mask>
 auto
 verify_mask_hooks_match_fixed_size() -> void {
@@ -81,6 +141,15 @@ has_avx512_runtime_support() -> bool {
 [[gnu::target("avx512f,avx512cd,avx512bw,avx512dq,avx512vl")]]
 auto
 verify_avx512_abi_runtime_hooks() -> void {
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint1>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint2>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint4>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint8>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int1>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int2>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int4>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int8>>());
+
    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint1>>();
    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint2>>();
    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint4>>();
@@ -143,6 +212,25 @@ verify_avx512_abi_runtime_hooks() -> void {
 // in `simd_mask_bitset.tpp`. Reference behavior uses `simd_abi::fixed_size`
 // without ISA hooks, not `simd_abi::native` which may alias `avx_abi` on this
 // target.
+$test(simd_sse_avx_integer_rotates) {
+   cat::verify(verify_rotate_counts<x64::sse_simd<cat::uint1>>());
+   cat::verify(verify_rotate_counts<x64::sse_simd<cat::uint2>>());
+   cat::verify(verify_rotate_counts<x64::sse_simd<cat::uint4>>());
+   cat::verify(verify_rotate_counts<x64::sse_simd<cat::uint8>>());
+   cat::verify(verify_rotate_counts<x64::avx_simd<cat::uint1>>());
+   cat::verify(verify_rotate_counts<x64::avx_simd<cat::uint2>>());
+   cat::verify(verify_rotate_counts<x64::avx_simd<cat::uint4>>());
+   cat::verify(verify_rotate_counts<x64::avx_simd<cat::uint8>>());
+   cat::verify(verify_rotate_counts<x64::sse_simd<cat::int1>>());
+   cat::verify(verify_rotate_counts<x64::sse_simd<cat::int2>>());
+   cat::verify(verify_rotate_counts<x64::sse_simd<cat::int4>>());
+   cat::verify(verify_rotate_counts<x64::sse_simd<cat::int8>>());
+   cat::verify(verify_rotate_counts<x64::avx_simd<cat::int1>>());
+   cat::verify(verify_rotate_counts<x64::avx_simd<cat::int2>>());
+   cat::verify(verify_rotate_counts<x64::avx_simd<cat::int4>>());
+   cat::verify(verify_rotate_counts<x64::avx_simd<cat::int8>>());
+}
+
 $test(simd_sse_permute) {
    static_assert(cat::simd_abi::scalar<int4>::size == sizeof(int4));
    static_assert(cat::simd_abi::scalar<int4>::alignment == alignof(int4));
