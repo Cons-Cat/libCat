@@ -73,7 +73,7 @@ copy_memory_large(
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
                p_source_handle.get() + (vector_index * sizeof(Simd));
-            vectors[vector_index].load_unaligned(p_byte);
+            vectors[vector_index].load(p_byte);
          }
 
          prefetch_mid(p_source_handle.get() + (step_size * 2u));
@@ -90,7 +90,7 @@ copy_memory_large(
          } else {
 #pragma unroll 8
             for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
-               vectors[vector_index].store_unaligned(
+               vectors[vector_index].store(
                   p_destination_handle.get() + (vector_index * sizeof(Simd))
                );
             }
@@ -110,7 +110,7 @@ copy_memory_large(
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
                p_source_handle.get() + (vector_index * sizeof(Simd));
-            vectors[vector_index].load_unaligned(p_byte);
+            vectors[vector_index].load(p_byte);
          }
 
          prefetch_far(p_source_handle.get() + (step_size * 4u));
@@ -139,7 +139,7 @@ copy_memory_large(
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
                p_source_handle.get() + (vector_index * sizeof(Simd));
-            vectors[vector_index].load_unaligned(p_byte);
+            vectors[vector_index].load(p_byte);
          }
 
          prefetch_far(p_source_handle.get() + (step_size * 4u));
@@ -147,7 +147,7 @@ copy_memory_large(
 
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
-            vectors[vector_index].store_unaligned(
+            vectors[vector_index].store(
                p_destination_handle.get() + (vector_index * sizeof(Simd))
             );
          }

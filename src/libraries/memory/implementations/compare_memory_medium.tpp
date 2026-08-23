@@ -14,8 +14,8 @@ compare_memory_chunk(char const* _Nonnull p_left, char const* _Nonnull p_right)
    -> std::strong_ordering {
    char1x16 left_chunk;
    char1x16 right_chunk;
-   left_chunk.load_unaligned(p_left);
-   right_chunk.load_unaligned(p_right);
+   left_chunk.load(p_left);
+   right_chunk.load(p_right);
    auto const equal_mask = left_chunk.equal_lanes(right_chunk);
    if (equal_mask.all_of()) {
       return std::strong_ordering::equal;

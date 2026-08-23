@@ -32,12 +32,12 @@ copy_memory_backward_large(
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
                p_src + tail_bytes + (vector_index * sizeof(Simd));
-            vectors[vector_index].load_unaligned(p_byte);
+            vectors[vector_index].load(p_byte);
          }
 
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
-            vectors[vector_index].store_unaligned(
+            vectors[vector_index].store(
                p_dest + tail_bytes + (vector_index * sizeof(Simd))
             );
          }
@@ -56,7 +56,7 @@ copy_memory_backward_large(
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
                p_src + tail_bytes + (vector_index * sizeof(Simd));
-            vectors[vector_index].load_unaligned(p_byte);
+            vectors[vector_index].load(p_byte);
          }
 
 #pragma unroll 8

@@ -28,10 +28,10 @@ copy_memory_backward_medium(
    if (bytes_remaining <= l3_cache_size) {
       while (bytes_remaining >= 64u) {
          bytes_remaining -= 64u;
-         chunk_first.load_unaligned(p_src + bytes_remaining);
-         chunk_second.load_unaligned(p_src + bytes_remaining + 32);
-         chunk_first.store_unaligned(p_dest + bytes_remaining);
-         chunk_second.store_unaligned(p_dest + bytes_remaining + 32);
+         chunk_first.load(p_src + bytes_remaining);
+         chunk_second.load(p_src + bytes_remaining + 32);
+         chunk_first.store(p_dest + bytes_remaining);
+         chunk_second.store(p_dest + bytes_remaining + 32);
       }
    } else {
       while (bytes_remaining > 64u
@@ -42,8 +42,8 @@ copy_memory_backward_medium(
       }
       while (bytes_remaining >= 64u) {
          bytes_remaining -= 64u;
-         chunk_first.load_unaligned(p_src + bytes_remaining);
-         chunk_second.load_unaligned(p_src + bytes_remaining + 32);
+         chunk_first.load(p_src + bytes_remaining);
+         chunk_second.load(p_src + bytes_remaining + 32);
          chunk_first.store_non_temporal(p_dest + bytes_remaining);
          chunk_second.store_non_temporal(p_dest + bytes_remaining + 32);
       }

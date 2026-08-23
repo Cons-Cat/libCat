@@ -119,8 +119,8 @@ verify_irregular_fixed_size_simd() {
    }
 
    vector const loaded =
-      cat::simd_load_unaligned[selector](vector{-2}, source + 1u);
-   cat::simd_store_unaligned[selector](input, destination + 1u);
+      cat::simd_load[selector](vector{-2}, source + 1u);
+   cat::simd_store[selector](input, destination + 1u);
    for (cat::idx i = 0u; i < lane_count; ++i) {
       cat::verify(loaded[i] == (selector[i] ? input[i] : -2));
       cat::verify(destination[i + 1u] == (selector[i] ? input[i] : -1));
@@ -534,7 +534,7 @@ $test(simd_x3_memory_transfers_exact_lanes) {
    simd_type unaligned{};
    simd_type defaults{};
    aligned.load_aligned(p_source);
-   unaligned.load_unaligned(p_source);
+   unaligned.load(p_source);
    defaults.load(p_source);
    for (idx i = 0u; i < 3u; ++i) {
       cat::verify(aligned[i] == source[i + 2u]);
@@ -550,7 +550,7 @@ $test(simd_x3_memory_transfers_exact_lanes) {
    float_lane* const p_destination = destination + 2;
    value.store_aligned(p_destination);
    cat::verify(destination[1] == -22.f && destination[5] == 81.f);
-   value.store_unaligned(p_destination);
+   value.store(p_destination);
    cat::verify(destination[1] == -22.f && destination[5] == 81.f);
    value.store(p_destination);
    cat::verify(destination[1] == -22.f && destination[5] == 81.f);
@@ -1060,11 +1060,11 @@ $test(simd_eve_mask_subscript_load_store_aligned) {
    cat::verify(fr[0] == ffactory[0] && fr[3] == ffactory[3]);
 }
 
-$test(simd_eve_mask_subscript_load_store_unaligned_and_dispatch) {
+$test(simd_eve_mask_subscript_load_store_and_dispatch) {
    int_lane const src[] = {5, 6, 7, 8};
    int4x4 const pass = {99, 99, 99, 99};
    auto const m = cat::make_simd_mask_from_count<int4x4>(3u);
-   int4x4 const r = cat::simd_load_unaligned[m](pass, src);
+   int4x4 const r = cat::simd_load[m](pass, src);
    cat::verify(r[0] == 5 && r[1] == 6 && r[2] == 7 && r[3] == 99);
 
    int4x4 const s = cat::simd_load[m](pass, src);
@@ -1072,7 +1072,7 @@ $test(simd_eve_mask_subscript_load_store_unaligned_and_dispatch) {
 
    int_lane dst[4] = {0, 0, 0, 0};
    int4x4 const w = {1, 2, 3, 4};
-   cat::simd_store_unaligned[cat::make_simd_mask_from_count<int4x4>(2u)](
+   cat::simd_store[cat::make_simd_mask_from_count<int4x4>(2u)](
       w, dst
    );
    cat::verify(dst[0] == 1 && dst[1] == 2 && dst[2] == 0 && dst[3] == 0);
@@ -1085,7 +1085,7 @@ $test(simd_eve_mask_subscript_load_store_unaligned_and_dispatch) {
    float_lane const fsrc[] = {1.5f, 2.5f, 3.5f, 4.5f};
    float4x4 const fpass = {99_f4, 99_f4, 99_f4, 99_f4};
    auto const mf = cat::make_simd_mask_from_count<float4x4>(3u);
-   float4x4 const fr = cat::simd_load_unaligned[mf](fpass, fsrc);
+   float4x4 const fr = cat::simd_load[mf](fpass, fsrc);
    cat::verify(
       fr[0] == 1.5f && fr[1] == 2.5f && fr[2] == 3.5f && fr[3] == 99_f4
    );
@@ -1093,7 +1093,7 @@ $test(simd_eve_mask_subscript_load_store_unaligned_and_dispatch) {
    cat::verify(fs[0] == 1.5f && fs[3] == 99_f4);
    float_lane fdst[4] = {0.f, 0.f, 0.f, 0.f};
    float4x4 const fw = {1_f4, 2_f4, 3_f4, 4_f4};
-   cat::simd_store_unaligned[cat::make_simd_mask_from_count<float4x4>(2u)](
+   cat::simd_store[cat::make_simd_mask_from_count<float4x4>(2u)](
       fw, fdst
    );
    cat::verify(
@@ -1145,19 +1145,19 @@ $test(simd_aligned_load_returns_nullopt_when_misaligned) {
    cat::verify(masked_load.is_empty());
 }
 
-$test(simd_load_unaligned_and_loaded_unaligned) {
+$test(simd_load_and_loaded) {
    int_lane const src[] = {5, 6, 7, 8};
    int4x4 a{};
-   a.load_unaligned(src);
+   a.load(src);
    cat::verify(a[2] == 7);
-   int4x4 b = cat::make_simd_loaded_unaligned<int4x4>(src);
+   int4x4 b = cat::make_simd_loaded<int4x4>(src);
    cat::verify(b[0] == 5);
 
    float_lane const fsrc[] = {5.f, 6.f, 7.f, 8.f};
    float4x4 fa{};
-   fa.load_unaligned(fsrc);
+   fa.load(fsrc);
    cat::verify(fa[2] == 7.f);
-   float4x4 fb = cat::make_simd_loaded_unaligned<float4x4>(fsrc);
+   float4x4 fb = cat::make_simd_loaded<float4x4>(fsrc);
    cat::verify(fb[0] == 5.f);
 }
 
@@ -1226,7 +1226,7 @@ $test(simd_byte_lane_load_store_dispatch_misaligned) {
    }
 }
 
-$test(simd_store_aligned_unaligned_and_dispatch) {
+$test(simd_store_aligned_and_dispatch) {
    alignas(int4x4::abi_type::alignment.raw) int_lane buf_a[4] = {};
    int4x4 v = {100, 200, 300, 400};
    v.store_aligned(buf_a);
@@ -1234,7 +1234,7 @@ $test(simd_store_aligned_unaligned_and_dispatch) {
    cat::verify(buf_a[3] == 400);
 
    int_lane buf_u[4] = {};
-   v.store_unaligned(buf_u);
+   v.store(buf_u);
    cat::verify(buf_u[2] == 300);
 
    int_lane buf_d[4] = {};
@@ -1246,7 +1246,7 @@ $test(simd_store_aligned_unaligned_and_dispatch) {
    fv.store_aligned(fbuf_a);
    cat::verify(fbuf_a[0] == 1.5f);
    float_lane fbuf_u[4] = {};
-   fv.store_unaligned(fbuf_u);
+   fv.store(fbuf_u);
    cat::verify(fbuf_u[2] == 3.5f);
    float_lane fbuf_d[4] = {};
    fv.store(fbuf_d);
@@ -1316,41 +1316,41 @@ $test(simd_partial_store) {
    cat::verify(fout2[0] == 3.f && fout2[3] == 0.f);
 }
 
-$test(simd_load_unaligned_store_unaligned) {
+$test(simd_load_store) {
    int_lane const src[] = {-5, -4, -3, -2};
    int4x4 a{};
-   a.load_unaligned(src);
+   a.load(src);
    cat::verify(a[2] == -3);
-   int4x4 b = cat::make_simd_loaded_unaligned<int4x4>(src);
+   int4x4 b = cat::make_simd_loaded<int4x4>(src);
    cat::verify(b[0] == -5);
 
    int_lane buf[4] = {};
-   b.store_unaligned(buf);
+   b.store(buf);
    cat::verify(buf[1] == -4);
 
    int_lane buf2[4] = {};
-   b.store_unaligned(buf2);
+   b.store(buf2);
    cat::verify(buf2[3] == -2);
 
    float_lane const fsrc[] = {-5.f, -4.f, -3.f, -2.f};
    float4x4 fa{};
-   fa.load_unaligned(fsrc);
+   fa.load(fsrc);
    cat::verify(fa[2] == -3.f);
-   float4x4 fb = cat::make_simd_loaded_unaligned<float4x4>(fsrc);
+   float4x4 fb = cat::make_simd_loaded<float4x4>(fsrc);
    cat::verify(fb[0] == -5.f);
    float_lane fbuf[4] = {};
-   fb.store_unaligned(fbuf);
+   fb.store(fbuf);
    cat::verify(fbuf[1] == -4.f);
    float_lane fbuf2[4] = {};
-   fb.store_unaligned(fbuf2);
+   fb.store(fbuf2);
    cat::verify(fbuf2[3] == -2.f);
 }
 
 $test(simd_float_roundtrip) {
    float_lane const src[] = {1.5f, 2.5f, 3.5f, 4.5f};
-   float4x4 v = cat::make_simd_loaded_unaligned<float4x4>(src);
+   float4x4 v = cat::make_simd_loaded<float4x4>(src);
    float_lane dst[4] = {};
-   v.store_unaligned(dst);
+   v.store(dst);
    cat::verify(dst[0] == 1.5f);
    cat::verify(dst[3] == 4.5f);
 

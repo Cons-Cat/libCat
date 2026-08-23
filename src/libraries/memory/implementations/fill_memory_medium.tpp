@@ -30,16 +30,16 @@ fill_memory_medium(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
 
    if (byte_count <= l3_cache_size) {
       while (byte_offset + 128u < byte_count) {
-         chunk.store_unaligned(p_dest + byte_offset);
-         chunk.store_unaligned(p_dest + byte_offset + 32);
-         chunk.store_unaligned(p_dest + byte_offset + 64);
-         chunk.store_unaligned(p_dest + byte_offset + 96);
+         chunk.store(p_dest + byte_offset);
+         chunk.store(p_dest + byte_offset + 32);
+         chunk.store(p_dest + byte_offset + 64);
+         chunk.store(p_dest + byte_offset + 96);
          byte_offset += 128u;
       }
 
       while (byte_offset + 64u < byte_count) {
-         chunk.store_unaligned(p_dest + byte_offset);
-         chunk.store_unaligned(p_dest + byte_offset + 32);
+         chunk.store(p_dest + byte_offset);
+         chunk.store(p_dest + byte_offset + 32);
          byte_offset += 64u;
       }
    } else {
@@ -59,8 +59,8 @@ fill_memory_medium(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
    // Final overlapping 64-byte block. Re-storing already-filled bytes is
    // harmless because the fill value is constant, and it removes the tail
    // branch tree.
-   chunk.store_unaligned(p_dest + byte_count - 64);
-   chunk.store_unaligned(p_dest + byte_count - 32);
+   chunk.store(p_dest + byte_count - 64);
+   chunk.store(p_dest + byte_count - 32);
 }
 
 }  // namespace cat::detail

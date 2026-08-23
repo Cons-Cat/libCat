@@ -39,7 +39,6 @@ enum class [[clang::enum_extensibility(
 )]] simd_memory_flag : unsigned char {
    default_,   // Default-align a SIMD load by ABI.
    aligned,    // Over-align a SIMD load. This results in `maybe` loads.
-   unaligned,  // Unalign a SIMD load. This maps to unaligned instructions.
 };
 
 // Synthesize a blend operation between two vectors using a mask.
@@ -847,35 +846,6 @@ struct make_simd_loaded_aligned_impl
 // Builds a vector by loading from memory (gather-style transfer into lane
 // registers).
 template <is_simd Simd>
-struct make_simd_loaded_unaligned_impl
-    : simd_elementwise_factory_interface<
-         make_simd_loaded_unaligned_impl<Simd>, Simd> {
-   using simd_vector = Simd;
-
-   constexpr make_simd_loaded_unaligned_impl() = default;
-
-   [[nodiscard, gnu::always_inline, gnu::flatten]]
-   constexpr auto
-   invoke(Simd::memory_lane const* _Nonnull p_source) const -> Simd {
-      Simd result{};
-      result.load_unaligned(p_source);
-      return result;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   bind_masked(
-      simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
-   ) const
-      -> simd_load_blend_masked_impl<
-         typename Simd::scalar_type, typename Simd::abi_type> {
-      return {mask};
-   }
-};
-
-// Builds a vector by loading from memory (gather-style transfer into lane
-// registers).
-template <is_simd Simd>
 struct make_simd_loaded_impl
     : simd_elementwise_factory_interface<make_simd_loaded_impl<Simd>, Simd> {
    using simd_vector = Simd;
@@ -1111,9 +1081,9 @@ struct simd_load_impl {
 
 // Subscript yields masked scatter-style stores to a contiguous base pointer.
 //
-// `simd_store_aligned`/`simd_store_unaligned` / `simd_store` name the memory
-// contract for symmetry with `simd_load_*`. Each is only a subscript entry that
-// returns `simd_store_to_masked_impl`, like `simd_load_impl` returning
+// `simd_store_aligned`/`simd_store` name the memory contract for symmetry with
+// `simd_load_*`. Each is only a subscript entry that returns
+// `simd_store_to_masked_impl`, like `simd_load_impl` returning
 // `simd_load_blend_masked_impl`/`simd_load_aligned_blend_masked_impl`.
 struct simd_store_impl {
    template <typename T, typename Abi>
@@ -3559,10 +3529,6 @@ inline constexpr detail::make_simd_loaded_aligned_impl<Simd>
    make_simd_loaded_aligned{};
 
 template <is_simd Simd>
-inline constexpr detail::make_simd_loaded_unaligned_impl<Simd>
-   make_simd_loaded_unaligned{};
-
-template <is_simd Simd>
 inline constexpr detail::make_simd_loaded_impl<Simd> make_simd_loaded{};
 
 template <is_simd Simd>
@@ -3599,13 +3565,10 @@ inline constexpr detail::make_simd_mask_loaded_impl<SimdMask>
 // Gather-style masked loads (vector <- memory).
 inline constexpr detail::simd_load_impl<simd_memory_flag::aligned>
    simd_load_aligned{};
-inline constexpr detail::simd_load_impl<simd_memory_flag::unaligned>
-   simd_load_unaligned{};
 inline constexpr detail::simd_load_impl<simd_memory_flag::default_> simd_load{};
 
 // Scatter-style masked stores (memory <- vector).
 inline constexpr detail::simd_store_impl simd_store_aligned{};
-inline constexpr detail::simd_store_impl simd_store_unaligned{};
 inline constexpr detail::simd_store_impl simd_store{};
 
 // Indexed gather from `base` using per-lane indices.

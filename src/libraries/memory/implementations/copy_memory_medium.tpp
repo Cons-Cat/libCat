@@ -31,21 +31,21 @@ copy_memory_medium(
    x64::avx_simd<char> chunk_third;
    x64::avx_simd<char> chunk_fourth;
    while (byte_offset + 128u <= byte_count) {
-      chunk_first.load_unaligned(p_src + byte_offset);
-      chunk_second.load_unaligned(p_src + byte_offset + 32);
-      chunk_third.load_unaligned(p_src + byte_offset + 64);
-      chunk_fourth.load_unaligned(p_src + byte_offset + 96);
-      chunk_first.store_unaligned(p_dest + byte_offset);
-      chunk_second.store_unaligned(p_dest + byte_offset + 32);
-      chunk_third.store_unaligned(p_dest + byte_offset + 64);
-      chunk_fourth.store_unaligned(p_dest + byte_offset + 96);
+      chunk_first.load(p_src + byte_offset);
+      chunk_second.load(p_src + byte_offset + 32);
+      chunk_third.load(p_src + byte_offset + 64);
+      chunk_fourth.load(p_src + byte_offset + 96);
+      chunk_first.store(p_dest + byte_offset);
+      chunk_second.store(p_dest + byte_offset + 32);
+      chunk_third.store(p_dest + byte_offset + 64);
+      chunk_fourth.store(p_dest + byte_offset + 96);
       byte_offset += 128u;
    }
    if (byte_offset + 64u <= byte_count) {
-      chunk_first.load_unaligned(p_src + byte_offset);
-      chunk_second.load_unaligned(p_src + byte_offset + 32);
-      chunk_first.store_unaligned(p_dest + byte_offset);
-      chunk_second.store_unaligned(p_dest + byte_offset + 32);
+      chunk_first.load(p_src + byte_offset);
+      chunk_second.load(p_src + byte_offset + 32);
+      chunk_first.store(p_dest + byte_offset);
+      chunk_second.store(p_dest + byte_offset + 32);
       byte_offset += 64u;
    }
 

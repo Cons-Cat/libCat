@@ -100,8 +100,8 @@ compare_memory_large(
             p_left + (vector_index * vector_size);
          char const* _Nonnull const p_chunk_right =
             p_right + (vector_index * vector_size);
-         vectors_left[vector_index].load_unaligned(p_chunk_left);
-         vectors_right[vector_index].load_unaligned(p_chunk_right);
+         vectors_left[vector_index].load(p_chunk_left);
+         vectors_right[vector_index].load(p_chunk_right);
          equal_masks[vector_index] =
             vectors_left[vector_index].equal_lanes(vectors_right[vector_index]);
       }
@@ -121,8 +121,8 @@ compare_memory_large(
    while (length_iterator >= static_cast<iword>(vector_size)) {
       Simd left_vec;
       Simd right_vec;
-      left_vec.load_unaligned(p_left);
-      right_vec.load_unaligned(p_right);
+      left_vec.load(p_left);
+      right_vec.load(p_right);
 
       if (
          auto result = compare_memory_mismatch_in_chunk(

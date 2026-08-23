@@ -58,7 +58,7 @@ fill_random_batch_contiguous(
    idx index = 0u;
    while (index + Simd::abi_type::lanes <= size) {
       generate_exact_random_batch<typename Simd::abi_type>(generator)
-         .store_unaligned(p_lanes + index);
+         .store(p_lanes + index);
       index += Simd::abi_type::lanes;
    }
    while (index < size) {
@@ -98,17 +98,17 @@ fill_random_exact_bulk_contiguous(
    idx index = 0u;
 
    while (index + lanes * chain_count <= size) {
-      session.template generate<0u>().store_unaligned(p_lanes + index);
+      session.template generate<0u>().store(p_lanes + index);
       if constexpr (chain_count >= 2u) {
-         session.template generate<1u>().store_unaligned(
+         session.template generate<1u>().store(
             p_lanes + index + lanes
          );
       }
       if constexpr (chain_count == 4u) {
-         session.template generate<2u>().store_unaligned(
+         session.template generate<2u>().store(
             p_lanes + index + lanes * 2u
          );
-         session.template generate<3u>().store_unaligned(
+         session.template generate<3u>().store(
             p_lanes + index + lanes * 3u
          );
       }
@@ -121,7 +121,7 @@ fill_random_exact_bulk_contiguous(
       }
       Simd const values = session.template generate<chain>();
       if (index + lanes <= size) {
-         values.store_unaligned(p_lanes + index);
+         values.store(p_lanes + index);
          index += lanes;
          return index == size;
       }
@@ -216,13 +216,13 @@ fill_random_relaxed_bulk_contiguous(
    idx index = 0u;
    constexpr idx lanes = Simd::abi_type::lanes;
    while (index + lanes * 2u <= size) {
-      session.first().store_unaligned(p_lanes + index);
-      session.second().store_unaligned(p_lanes + index + lanes);
+      session.first().store(p_lanes + index);
+      session.second().store(p_lanes + index + lanes);
       index += lanes * 2u;
    }
    bool used_first = false;
    if (index + lanes <= size) {
-      session.first().store_unaligned(p_lanes + index);
+      session.first().store(p_lanes + index);
       index += lanes;
       used_first = true;
    }
@@ -248,7 +248,7 @@ fill_random_distribution_batch_contiguous(
       using memory_lane = Batch::memory_lane;
       memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
       while (index + Batch::abi_type::lanes <= size) {
-         generate().store_unaligned(p_lanes + index);
+         generate().store(p_lanes + index);
          index += Batch::abi_type::lanes;
       }
    } else {
@@ -579,7 +579,7 @@ fill_random_simd_contiguous(
 
    if constexpr (is_same<simd_result, Simd>) {
       while (index + Simd::abi_type::lanes <= size) {
-         generate().store_unaligned(p_lanes + index);
+         generate().store(p_lanes + index);
          index += Simd::abi_type::lanes;
       }
       if (index < size) {
@@ -599,7 +599,7 @@ fill_random_simd_contiguous(
          output.set_lane(output_lane, source_values[source_lane]);
          ++source_lane;
       }
-      output.store_unaligned(p_lanes + index);
+      output.store(p_lanes + index);
       index += Simd::abi_type::lanes;
    }
 

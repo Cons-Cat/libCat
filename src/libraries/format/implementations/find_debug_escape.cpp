@@ -50,7 +50,7 @@ struct debug_escape_scanner {
       iword remaining = p_end - p_current;
       while (remaining >= vector_size) {
          Simd chunk;
-         chunk.load_unaligned(p_current);
+         chunk.load(p_current);
          if (
             maybe<idx> const lane = first_escape_in(chunk, vector_size);
             lane.has_value()
@@ -70,7 +70,7 @@ struct debug_escape_scanner {
       alignas(Simd) char pad[sizeof(Simd)]{};
       copy_memory(p_current, pad, idx(remaining));
       Simd tail;
-      tail.load_unaligned(pad);
+      tail.load(pad);
       if (
          maybe<idx> const lane = first_escape_in(tail, idx(remaining));
          lane.has_value()

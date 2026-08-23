@@ -1607,7 +1607,7 @@ class
    // than `.load_aligned()`.
    [[gnu::always_inline]]
    constexpr auto
-   load_unaligned(memory_lane const* _Nonnull p_data) -> simd& {
+   load(memory_lane const* _Nonnull p_data) -> simd& {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             this->set_lane(i, static_cast<T>(p_data[i]));
@@ -1623,17 +1623,6 @@ class
          }
       }
       return *this;
-   }
-
-   // Load a vector from `data` (gather, aligned vs unaligned chosen from ABI).
-   [[gnu::always_inline]]
-   constexpr auto
-   load(memory_lane const* _Nonnull p_data) -> simd& {
-      if constexpr (abi_type::alignment > alignof(T) && alignof(T) > 1uz) {
-         return this->load_aligned(p_data);
-      } else {
-         return this->load_unaligned(p_data);
-      }
    }
 
    [[gnu::always_inline]]
@@ -1656,8 +1645,8 @@ class
    constexpr auto
    load_non_temporal(memory_lane const* _Nonnull) -> simd&
       requires(!raw_storage_has_no_padding)
-   = delete ("Padded `simd` cannot be loaded non-temporally! Use `.load()`, "
-             "`.load_aligned()` or `.load_unaligned()` instead.");
+   = delete ("Padded `simd` cannot be loaded non-temporally! Use `.load()` or "
+             "`.load_aligned()` instead.");
 
    // P3299-shaped memory (pointer + length):
 
@@ -1683,7 +1672,7 @@ class
    // Write lanes to arbitrarily aligned memory (scatter).
    [[gnu::always_inline]]
    constexpr void
-   store_unaligned(memory_lane* _Nonnull p_data) const {
+   store(memory_lane* _Nonnull p_data) const {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             p_data[i] = detail::simd_lane_to_storage((*this)[i]);
@@ -1696,17 +1685,6 @@ class
          } else {
             __builtin_bit_cast(unaligned_vector*, p_data)->raw = this->raw;
          }
-      }
-   }
-
-   // Write lanes to memory (scatter, aligned vs unaligned chosen from ABI).
-   [[gnu::always_inline]]
-   constexpr void
-   store(memory_lane* _Nonnull p_data) const {
-      if constexpr (abi_type::alignment > alignof(T) && alignof(T) > 1uz) {
-         this->store_aligned(p_data);
-      } else {
-         this->store_unaligned(p_data);
       }
    }
 
@@ -1729,8 +1707,8 @@ class
    constexpr void
    store_non_temporal(memory_lane* _Nonnull) const
       requires(!raw_storage_has_no_padding)
-   = delete ("Padded `simd` cannot be stored non-temporally! Use `.store()`, "
-             "`.store_aligned()` or `.store_unaligned()` instead.");
+   = delete ("Padded `simd` cannot be stored non-temporally! Use `.store()` or "
+             "`.store_aligned()` instead.");
 
    // Read at most `count` scalars from `p_data` (partial gather). Lanes at
    // `count..lanes-1` are zero-filled. If `count` exceeds `lanes`, only `lanes`

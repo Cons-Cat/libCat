@@ -53,8 +53,8 @@ fill_memory_small(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
    if (byte_count <= 32u) {
       char1x16 chunk;
       chunk.fill(byte_value);
-      chunk.store_unaligned(p_dest);
-      chunk.store_unaligned(p_dest + byte_count - 16);
+      chunk.store(p_dest);
+      chunk.store(p_dest + byte_count - 16);
       return;
    }
 
@@ -62,21 +62,21 @@ fill_memory_small(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
    chunk.fill(byte_value);
 
    if (byte_count < 64u) {
-      chunk.store_unaligned(p_dest);
-      chunk.store_unaligned(p_dest + 16);
-      chunk.store_unaligned(p_dest + byte_count - 32);
-      chunk.store_unaligned(p_dest + byte_count - 16);
+      chunk.store(p_dest);
+      chunk.store(p_dest + 16);
+      chunk.store(p_dest + byte_count - 32);
+      chunk.store(p_dest + byte_count - 16);
       return;
    }
 
-   chunk.store_unaligned(p_dest);
-   chunk.store_unaligned(p_dest + 16);
-   chunk.store_unaligned(p_dest + 32);
-   chunk.store_unaligned(p_dest + 48);
-   chunk.store_unaligned(p_dest + byte_count - 64);
-   chunk.store_unaligned(p_dest + byte_count - 48);
-   chunk.store_unaligned(p_dest + byte_count - 32);
-   chunk.store_unaligned(p_dest + byte_count - 16);
+   chunk.store(p_dest);
+   chunk.store(p_dest + 16);
+   chunk.store(p_dest + 32);
+   chunk.store(p_dest + 48);
+   chunk.store(p_dest + byte_count - 64);
+   chunk.store(p_dest + byte_count - 48);
+   chunk.store(p_dest + byte_count - 32);
+   chunk.store(p_dest + byte_count - 16);
 }
 
 }  // namespace cat::detail

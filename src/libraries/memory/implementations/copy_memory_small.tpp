@@ -61,10 +61,10 @@ copy_memory_small_16_to_31(
    char* p_dest = reinterpret_cast<char*>(p_destination);
    char1x16 head_chunk;
    char1x16 tail_chunk;
-   head_chunk.load_unaligned(p_src);
-   tail_chunk.load_unaligned(p_src + bytes - 16);
-   head_chunk.store_unaligned(p_dest);
-   tail_chunk.store_unaligned(p_dest + bytes - 16);
+   head_chunk.load(p_src);
+   tail_chunk.load(p_src + bytes - 16);
+   head_chunk.store(p_dest);
+   tail_chunk.store(p_dest + bytes - 16);
 }
 
 [[gnu::always_inline]]
@@ -79,14 +79,14 @@ copy_memory_small_32_to_63(
    char1x16 head_second;
    char1x16 tail_first;
    char1x16 tail_second;
-   head_first.load_unaligned(p_src);
-   head_second.load_unaligned(p_src + 16);
-   tail_first.load_unaligned(p_src + bytes - 32);
-   tail_second.load_unaligned(p_src + bytes - 16);
-   head_first.store_unaligned(p_dest);
-   head_second.store_unaligned(p_dest + 16);
-   tail_first.store_unaligned(p_dest + bytes - 32);
-   tail_second.store_unaligned(p_dest + bytes - 16);
+   head_first.load(p_src);
+   head_second.load(p_src + 16);
+   tail_first.load(p_src + bytes - 32);
+   tail_second.load(p_src + bytes - 16);
+   head_first.store(p_dest);
+   head_second.store(p_dest + 16);
+   tail_first.store(p_dest + bytes - 32);
+   tail_second.store(p_dest + bytes - 16);
 }
 
 [[gnu::always_inline]]
@@ -101,21 +101,21 @@ copy_memory_small_64_to_127(
    char1x16 tail_chunks[4];
 #pragma unroll
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      head_chunks[vector_index].load_unaligned(p_src + (vector_index * 16u));
+      head_chunks[vector_index].load(p_src + (vector_index * 16u));
    }
 #pragma unroll
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      tail_chunks[vector_index].load_unaligned(
+      tail_chunks[vector_index].load(
          p_src + bytes - 64 + (vector_index * 16u)
       );
    }
 #pragma unroll
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      head_chunks[vector_index].store_unaligned(p_dest + (vector_index * 16u));
+      head_chunks[vector_index].store(p_dest + (vector_index * 16u));
    }
 #pragma unroll
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      tail_chunks[vector_index].store_unaligned(
+      tail_chunks[vector_index].store(
          p_dest + bytes - 64 + (vector_index * 16u)
       );
    }

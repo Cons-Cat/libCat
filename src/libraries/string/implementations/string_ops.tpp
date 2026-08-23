@@ -32,8 +32,8 @@ cat::detail::compare_strings_detail(
                p_string_1_iterator + (i.raw * vector_size.raw);
             char const* _Nonnull const p_chunk_2 =
                p_string_2_iterator + (i.raw * vector_size.raw);
-            vectors_1[i].load_unaligned(p_chunk_1);
-            vectors_2[i].load_unaligned(p_chunk_2);
+            vectors_1[i].load(p_chunk_1);
+            vectors_2[i].load(p_chunk_2);
             comparisons[i] = vectors_1[i].equal_lanes(vectors_2[i]);
          }
 

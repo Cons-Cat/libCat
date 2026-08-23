@@ -109,7 +109,7 @@ path_find_first(str_view value, char character) -> maybe<idx> {
          characters.fill(character);
          while (value.size() - position >= lanes) {
             char1x_ chunk;
-            chunk.load_unaligned(value.data() + position);
+            chunk.load(value.data() + position);
             auto const mask = [&] {
                if constexpr (equal) {
                   return chunk.equal_lanes(characters);
@@ -155,7 +155,7 @@ path_find_last(str_view value, char character) -> maybe<idx> {
          while (end >= lanes) {
             idx const position = idx(end - lanes);
             char1x_ chunk;
-            chunk.load_unaligned(value.data() + position);
+            chunk.load(value.data() + position);
             auto const mask = [&] {
                if constexpr (equal) {
                   return chunk.equal_lanes(characters);

@@ -31,8 +31,8 @@ compare_memory_compare_chunk(
 ) -> std::strong_ordering {
    Simd left_vec;
    Simd right_vec;
-   left_vec.load_unaligned(p_left);
-   right_vec.load_unaligned(p_right);
+   left_vec.load(p_left);
+   right_vec.load(p_right);
 
    if (left_vec.equal_lanes(right_vec).all_of()) {
       return std::strong_ordering::equal;

@@ -55,10 +55,10 @@ reverse_inplace_simd_impl(Element* _Nonnull p_data, idx size) {
       right -= lanes;
       Simd left_values;
       Simd right_values;
-      left_values.load_unaligned(p_lanes + left);
-      right_values.load_unaligned(p_lanes + right);
-      simd_reverse(right_values).store_unaligned(p_lanes + left);
-      simd_reverse(left_values).store_unaligned(p_lanes + right);
+      left_values.load(p_lanes + left);
+      right_values.load(p_lanes + right);
+      simd_reverse(right_values).store(p_lanes + left);
+      simd_reverse(left_values).store(p_lanes + right);
       left += lanes;
    }
 
