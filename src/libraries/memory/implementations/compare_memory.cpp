@@ -10,11 +10,11 @@
 
 namespace cat::detail {
 
-template <typename Vector>
+template <typename Simd>
 [[nodiscard]]
 inline auto
 compare_memory_mismatch_in_chunk(
-   Vector const& left_vec, Vector const& right_vec,
+   Simd const& left_vec, Simd const& right_vec,
    char const* _Nonnull p_chunk_left, char const* _Nonnull p_chunk_right
 ) -> maybe<std::strong_ordering> {
    auto const equal_mask = left_vec.equal_lanes(right_vec);
@@ -27,15 +27,15 @@ compare_memory_mismatch_in_chunk(
    );
 }
 
-template <typename Vector>
+template <typename Simd>
 [[nodiscard]]
 inline auto
 compare_memory_batch_all_equal(
-   array<typename Vector::mask_type, 4u> const& equal_masks
+   array<typename Simd::mask_type, 4u> const& equal_masks
 ) -> bool {
-   if constexpr (sizeof(Vector) == 32u) {
+   if constexpr (sizeof(Simd) == 32u) {
       __UINT32_TYPE__ const full_mask =
-         ::x64::detail::avx2_movmsk_full_lane_mask(sizeof(Vector));
+         ::x64::detail::avx2_movmsk_full_lane_mask(sizeof(Simd));
       __UINT32_TYPE__ const differing_lanes =
          (x64::detail::avx2_abi_mask_to_bitset(equal_masks[0]) ^ full_mask)
          | (x64::detail::avx2_abi_mask_to_bitset(equal_masks[1]) ^ full_mask)
@@ -48,13 +48,13 @@ compare_memory_batch_all_equal(
           && equal_masks[2].all_of() && equal_masks[3].all_of();
 }
 
-template <typename Vector>
+template <typename Simd>
 [[nodiscard]]
 inline auto
 compare_memory_first_mismatch_in_batch(
-   array<Vector, 4u> const& vectors_left,
-   array<Vector, 4u> const& vectors_right,
-   array<typename Vector::mask_type, 4u> const& equal_masks,
+   array<Simd, 4u> const& vectors_left,
+   array<Simd, 4u> const& vectors_right,
+   array<typename Simd::mask_type, 4u> const& equal_masks,
    char const* _Nonnull p_left, char const* _Nonnull p_right, uword vector_size
 ) -> std::strong_ordering {
 #pragma unroll 4
@@ -79,7 +79,7 @@ compare_memory_first_mismatch_in_batch(
    return std::strong_ordering::equal;
 }
 
-template <typename Vector>
+template <typename Simd>
 auto
 compare_memory_large(
    byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
@@ -87,12 +87,12 @@ compare_memory_large(
    char const* _Nonnull p_left = reinterpret_cast<char const* _Nonnull>(p_lhs);
    char const* _Nonnull p_right = reinterpret_cast<char const* _Nonnull>(p_rhs);
 
-   constexpr uword vector_size = sizeof(Vector);
+   constexpr uword vector_size = sizeof(Simd);
    iword length_iterator = bytes;
 
-   array<Vector, 4u> vectors_left;
-   array<Vector, 4u> vectors_right;
-   array<typename Vector::mask_type, 4u> equal_masks;
+   array<Simd, 4u> vectors_left;
+   array<Simd, 4u> vectors_right;
+   array<typename Simd::mask_type, 4u> equal_masks;
 
    while (length_iterator >= static_cast<iword>(vector_size * 4u)) {
       for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
@@ -106,7 +106,7 @@ compare_memory_large(
             vectors_left[vector_index].equal_lanes(vectors_right[vector_index]);
       }
 
-      if (compare_memory_batch_all_equal<Vector>(equal_masks)) {
+      if (compare_memory_batch_all_equal<Simd>(equal_masks)) {
          length_iterator -= vector_size * 4u;
          p_left += vector_size * 4u;
          p_right += vector_size * 4u;
@@ -119,8 +119,8 @@ compare_memory_large(
    }
 
    while (length_iterator >= static_cast<iword>(vector_size)) {
-      Vector left_vec;
-      Vector right_vec;
+      Simd left_vec;
+      Simd right_vec;
       left_vec.load_unaligned(p_left);
       right_vec.load_unaligned(p_right);
 

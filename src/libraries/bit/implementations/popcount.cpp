@@ -32,74 +32,74 @@ popcount_words_scalar(uword const* _Nonnull p_words, idx words, uword tail_mask)
 }
 
 // Count set bits in an unmasked word buffer using a CSA SIMD accumulator.
-template <typename Vector>
-   requires(is_same<typename Vector::memory_lane, uword::raw_type>)
+template <typename Simd>
+   requires(is_same<typename Simd::memory_lane, uword::raw_type>)
 [[nodiscard]]
 auto
 popcount_words_simd_unmasked(uword const* _Nonnull p_words, idx words) -> idx {
-   using lane = Vector::memory_lane;
+   using lane = Simd::memory_lane;
 
    lane const* _Nonnull const p_lanes = reinterpret_cast<lane const*>(p_words);
-   idx const vector_words = Vector::size();
+   idx const vector_words = Simd::size();
    idx const block_words = vector_words * 16u;
 
    // Combine three bit-sliced accumulators into low and carry planes.
-   auto carry_save_adder = [](Vector& high, Vector& low, Vector first,
-                              Vector second, Vector third) {
-      Vector const first_second_xor = first ^ second;
+   auto carry_save_adder = [](Simd& high, Simd& low, Simd first,
+                              Simd second, Simd third) {
+      Simd const first_second_xor = first ^ second;
       high = (first & second) | (first_second_xor & third);
       low = first_second_xor ^ third;
    };
 
-   Vector count{};
-   Vector ones{};
-   Vector twos{};
-   Vector fours{};
-   Vector eights{};
-   Vector sixteens{};
-   Vector twos_a;
-   Vector twos_b;
-   Vector fours_a;
-   Vector fours_b;
-   Vector eights_a;
-   Vector eights_b;
+   Simd count{};
+   Simd ones{};
+   Simd twos{};
+   Simd fours{};
+   Simd eights{};
+   Simd sixteens{};
+   Simd twos_a;
+   Simd twos_b;
+   Simd fours_a;
+   Simd fours_b;
+   Simd eights_a;
+   Simd eights_b;
 
    idx word_index = 0u;
    for (; word_index + block_words <= words; word_index += block_words) {
       carry_save_adder(
          twos_a, ones, ones,
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 0u
          ),
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 1u
          )
       );
       carry_save_adder(
          twos_b, ones, ones,
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 2u
          ),
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 3u
          )
       );
       carry_save_adder(fours_a, twos, twos, twos_a, twos_b);
       carry_save_adder(
          twos_a, ones, ones,
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 4u
          ),
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 5u
          )
       );
       carry_save_adder(
          twos_b, ones, ones,
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 6u
          ),
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 7u
          )
       );
@@ -107,38 +107,38 @@ popcount_words_simd_unmasked(uword const* _Nonnull p_words, idx words) -> idx {
       carry_save_adder(eights_a, fours, fours, fours_a, fours_b);
       carry_save_adder(
          twos_a, ones, ones,
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 8u
          ),
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 9u
          )
       );
       carry_save_adder(
          twos_b, ones, ones,
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 10u
          ),
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 11u
          )
       );
       carry_save_adder(fours_a, twos, twos, twos_a, twos_b);
       carry_save_adder(
          twos_a, ones, ones,
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 12u
          ),
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 13u
          )
       );
       carry_save_adder(
          twos_b, ones, ones,
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 14u
          ),
-         make_simd_loaded_unaligned<Vector>(
+         make_simd_loaded_unaligned<Simd>(
             p_lanes + word_index + vector_words * 15u
          )
       );
@@ -149,13 +149,13 @@ popcount_words_simd_unmasked(uword const* _Nonnull p_words, idx words) -> idx {
       count += sixteens.popcount();
    }
 
-   Vector total = (count * Vector(16u)) + (eights.popcount() * Vector(8u))
-                  + (fours.popcount() * Vector(4u))
-                  + (twos.popcount() * Vector(2u)) + ones.popcount();
+   Simd total = (count * Simd(16u)) + (eights.popcount() * Simd(8u))
+                  + (fours.popcount() * Simd(4u))
+                  + (twos.popcount() * Simd(2u)) + ones.popcount();
 
    for (; word_index + vector_words <= words; word_index += vector_words) {
       total +=
-         make_simd_loaded_unaligned<Vector>(p_lanes + word_index).popcount();
+         make_simd_loaded_unaligned<Simd>(p_lanes + word_index).popcount();
    }
 
    idx count_scalar = idx(total.sum());
@@ -166,12 +166,12 @@ popcount_words_simd_unmasked(uword const* _Nonnull p_words, idx words) -> idx {
 }
 
 // Count set bits in a byte buffer by using word SIMD where possible.
-template <typename Vector>
+template <typename Simd>
 [[nodiscard]]
 auto
 popcount_bytes_simd(byte const* _Nonnull p_bytes, idx bytes) -> idx {
    idx const full_words = bytes / sizeof(uword);
-   idx count = popcount_words_simd_unmasked<Vector>(
+   idx count = popcount_words_simd_unmasked<Simd>(
       reinterpret_cast<uword const*>(p_bytes), full_words
    );
    for (idx byte_index = full_words * sizeof(uword); byte_index < bytes;
@@ -182,16 +182,16 @@ popcount_bytes_simd(byte const* _Nonnull p_bytes, idx bytes) -> idx {
 }
 
 // Count set bits in a word buffer using SIMD and a final tail mask.
-template <typename Vector>
+template <typename Simd>
 [[nodiscard]]
 auto
 popcount_words_simd(uword const* _Nonnull p_words, idx words, uword tail_mask)
    -> idx {
    if (tail_mask == uword::max()) {
-      return popcount_words_simd_unmasked<Vector>(p_words, words);
+      return popcount_words_simd_unmasked<Simd>(p_words, words);
    }
    idx const full_words = idx(words - 1u);
-   return popcount_words_simd_unmasked<Vector>(p_words, full_words)
+   return popcount_words_simd_unmasked<Simd>(p_words, full_words)
           + popcount(p_words[full_words] & tail_mask);
 }
 

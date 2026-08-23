@@ -414,10 +414,10 @@ simd_ternary_masked_lanewise_fallback(
    return result;
 }
 
-template <typename Derived, typename Mask>
+template <typename Derived, typename SimdMask>
 struct simd_unary_masked_impl {
    Derived const& self;
-   Mask mask;
+   SimdMask mask;
 
    template <typename T, typename Abi>
    [[nodiscard]]
@@ -470,10 +470,10 @@ struct simd_unary_predicate_masked_impl {
    }
 };
 
-template <typename Derived, typename Mask>
+template <typename Derived, typename SimdMask>
 struct simd_binary_masked_impl {
    Derived const& self;
-   Mask mask;
+   SimdMask mask;
 
    template <typename T, typename Abi>
    [[nodiscard]]
@@ -499,13 +499,13 @@ struct simd_binary_predicate_masked_impl {
    }
 };
 
-template <typename Derived, typename Mask>
+template <typename Derived, typename SimdMask>
 struct simd_ternary_masked_impl {
    Derived const& self;
-   Mask mask;
+   SimdMask mask;
 
    template <typename T, typename Abi>
-      requires(is_same<Mask, simd_mask<T, Abi>>)
+      requires(is_same<SimdMask, simd_mask<T, Abi>>)
    [[nodiscard]]
    constexpr auto
    operator()(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
@@ -531,15 +531,15 @@ struct simd_ternary_predicate_masked_impl {
    }
 };
 
-template <typename Derived, typename Mask>
+template <typename Derived, typename SimdMask>
 struct simd_binary_mixed_masked_impl {
    Derived const& self;
-   Mask mask;
+   SimdMask mask;
 
    template <typename T, typename IntT, typename Abi>
       requires(
          is_floating_point<T> && is_integral<IntT>
-         && is_same<Mask, simd_mask<T, Abi>>
+         && is_same<SimdMask, simd_mask<T, Abi>>
       )
    [[nodiscard]]
    constexpr auto
@@ -553,10 +553,10 @@ struct simd_binary_mixed_masked_impl {
    }
 };
 
-template <typename Derived, typename Mask>
+template <typename Derived, typename SimdMask>
 struct simd_unary_int_masked_impl {
    Derived const& self;
-   Mask mask;
+   SimdMask mask;
 
    template <typename T, typename Abi>
    [[nodiscard]]
@@ -651,9 +651,9 @@ struct simd_load_aligned_blend_masked_impl {
 // is false leave `p[i]` unchanged.
 // `simd_store_to<T, Abi>[lane_mask](base, indices, values)` binds the same type
 // for indexed scatter. Inactive lanes leave `base[indices[i]]` unchanged.
-template <typename Mask>
+template <typename SimdMask>
 struct simd_store_to_masked_impl {
-   Mask mask;
+   SimdMask mask;
 
    template <typename T, typename Abi>
    constexpr void
@@ -682,9 +682,9 @@ struct simd_store_to_masked_impl {
    }
 };
 
-template <typename Mask>
+template <typename SimdMask>
 struct simd_partial_load_blend_masked_impl {
-   Mask mask;
+   SimdMask mask;
 
    template <typename T, typename Abi>
    [[nodiscard]]
@@ -707,9 +707,9 @@ struct simd_partial_load_blend_masked_impl {
    }
 };
 
-template <typename Mask>
+template <typename SimdMask>
 struct simd_fill_blend_masked_impl {
-   Mask mask;
+   SimdMask mask;
 
    template <typename T, typename Abi, typename U>
       requires(is_convertible<U, T>)
@@ -718,7 +718,7 @@ struct simd_fill_blend_masked_impl {
    operator()(simd<T, Abi> passthrough, U value) const -> simd<T, Abi> {
       T const fill = static_cast<T>(value);
       if constexpr (
-         is_same<Mask, simd_mask<T, Abi>> && has_simd_abi_fill_masked<T, Abi>
+         is_same<SimdMask, simd_mask<T, Abi>> && has_simd_abi_fill_masked<T, Abi>
       ) {
          return simd_abi_apply_fill_masked<T, Abi>(passthrough, fill, mask);
       }
@@ -733,9 +733,9 @@ struct simd_fill_blend_masked_impl {
    }
 };
 
-template <typename Mask>
+template <typename SimdMask>
 struct simd_iota_blend_masked_impl {
-   Mask mask;
+   SimdMask mask;
 
    template <is_simd Simd>
    [[nodiscard]]
@@ -756,9 +756,9 @@ struct simd_iota_blend_masked_impl {
 
 // Masked indexed gather from `base` using per-lane indices, blending into
 // `passthrough`.
-template <typename Mask>
+template <typename SimdMask>
 struct simd_load_from_blend_masked_impl {
-   Mask mask;
+   SimdMask mask;
 
    template <typename T, typename Abi, typename IdxAbi, typename Idx>
    [[nodiscard]]
@@ -983,9 +983,9 @@ struct simd_iota_impl {
    }
 };
 
-template <typename LaneBlendMask>
+template <typename SimdMask>
 struct simd_mask_load_blend_masked_impl {
-   LaneBlendMask lane_blend_mask;
+   SimdMask lane_blend_mask;
 
    template <typename T, typename Abi>
    [[nodiscard]]
@@ -1004,9 +1004,9 @@ struct simd_mask_load_blend_masked_impl {
    }
 };
 
-template <typename LaneBlendMask>
+template <typename SimdMask>
 struct simd_mask_fill_blend_masked_impl {
-   LaneBlendMask lane_blend_mask;
+   SimdMask lane_blend_mask;
 
    template <typename T, typename Abi>
    [[nodiscard]]
@@ -1027,13 +1027,13 @@ struct simd_mask_fill_blend_masked_impl {
 // Same split as `simd_elementwise_factory_interface`. Unmasked `operator()`
 // reads from `bool const*`, `operator[]` returns a blend functor for
 // `make_simd_mask_loaded`.
-template <typename Derived, is_simd_mask M>
+template <typename Derived, is_simd_mask SimdMask>
 class simd_elementwise_mask_factory_interface {
  private:
    friend Derived;
 
  public:
-   using mask_type = M;
+   using mask_type = SimdMask;
 
    [[nodiscard]]
    constexpr auto
@@ -1043,7 +1043,7 @@ class simd_elementwise_mask_factory_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator[](M lane_blend_mask) const -> decltype(auto) {
+   operator[](SimdMask lane_blend_mask) const -> decltype(auto) {
       return static_cast<Derived const*>(this)->bind_masked(lane_blend_mask);
    }
 
@@ -1051,42 +1051,45 @@ class simd_elementwise_mask_factory_interface {
    constexpr simd_elementwise_mask_factory_interface() = default;
 };
 
-template <is_simd_mask M>
+template <is_simd_mask SimdMask>
 struct make_simd_mask_filled_impl {
    [[nodiscard]]
    constexpr auto
-   operator()(bool value) const -> M {
-      M mask{};
+   operator()(bool value) const -> SimdMask {
+      SimdMask mask{};
       mask.fill(value);
       return mask;
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](M lane_blend_mask) const -> simd_mask_fill_blend_masked_impl<M> {
+   operator[](SimdMask lane_blend_mask) const
+      -> simd_mask_fill_blend_masked_impl<SimdMask> {
       return {lane_blend_mask};
    }
 };
 
 // Builds a mask by loading lane booleans from memory (gather-style transfer).
-template <is_simd_mask M>
+template <is_simd_mask SimdMask>
 struct make_simd_mask_loaded_impl : simd_elementwise_mask_factory_interface<
-                                       make_simd_mask_loaded_impl<M>, M> {
-   using mask_type = M;
+                                       make_simd_mask_loaded_impl<SimdMask>,
+                                       SimdMask> {
+   using mask_type = SimdMask;
 
    constexpr make_simd_mask_loaded_impl() = default;
 
    [[nodiscard]]
    constexpr auto
-   invoke(bool const* _Nonnull p_data) const -> M {
-      M mask{};
+   invoke(bool const* _Nonnull p_data) const -> SimdMask {
+      SimdMask mask{};
       mask.load(p_data);
       return mask;
    }
 
    [[nodiscard]]
    constexpr auto
-   bind_masked(M lane_blend_mask) const -> simd_mask_load_blend_masked_impl<M> {
+   bind_masked(SimdMask lane_blend_mask) const
+      -> simd_mask_load_blend_masked_impl<SimdMask> {
       return {lane_blend_mask};
    }
 };
@@ -2379,7 +2382,7 @@ struct simd_sub_sat_impl : simd_elementwise_binary_interface<
    }
 };
 
-template <typename M, typename A>
+template <typename SimdMask, typename A>
 struct make_simd_mask_else;
 
 struct simd_if_else_impl {
@@ -2425,29 +2428,29 @@ struct simd_if_else_impl {
    }
 };
 
-template <typename M, typename A>
+template <typename SimdMask, typename A>
 struct make_simd_mask_else {
-   M lane_mask;
+   SimdMask lane_mask;
    A otherwise;
 };
 
-template <typename M>
+template <typename SimdMask>
 struct make_simd_mask_if_builder {
-   M lane_mask;
+   SimdMask lane_mask;
 
    template <typename Alt>
    [[nodiscard]]
    constexpr auto
-   else_(Alt&& alt) const -> make_simd_mask_else<M, remove_cvref<Alt>> {
+   else_(Alt&& alt) const -> make_simd_mask_else<SimdMask, remove_cvref<Alt>> {
       return {lane_mask, static_cast<remove_cvref<Alt>>($fwd(alt))};
    }
 };
 
 struct make_simd_mask_if_impl {
-   template <typename M>
+   template <typename SimdMask>
    [[nodiscard]]
    constexpr auto
-   operator()(M lane_mask) const -> make_simd_mask_if_builder<M> {
+   operator()(SimdMask lane_mask) const -> make_simd_mask_if_builder<SimdMask> {
       return {lane_mask};
    }
 };
@@ -2604,9 +2607,9 @@ simd_dot_associative(simd<T, Abi> left, simd<T, Abi> right) -> T {
    }
 }
 
-template <typename Mask>
+template <typename SimdMask>
 struct simd_dot_masked_impl {
-   Mask lane_mask;
+   SimdMask lane_mask;
 
    template <typename T, typename Abi>
       requires(is_arithmetic<T> && !is_bool<T>)
@@ -2656,9 +2659,9 @@ struct simd_dot_impl {
 
 #pragma clang diagnostic pop
 
-template <typename Mask>
+template <typename SimdMask>
 struct simd_normalize_masked_impl {
-   Mask lane_mask;
+   SimdMask lane_mask;
 
    template <typename T, typename Abi>
       requires(is_floating_point<T>)
@@ -3534,11 +3537,11 @@ make_simd_filled(U value) -> Simd {
    return detail::make_simd_filled_impl<Simd>{}(static_cast<U&&>(value));
 }
 
-template <is_simd_mask M>
+template <is_simd_mask SimdMask>
 [[nodiscard]]
 constexpr auto
-make_simd_mask_filled(bool value) -> M {
-   return detail::make_simd_mask_filled_impl<M>{}(value);
+make_simd_mask_filled(bool value) -> SimdMask {
+   return detail::make_simd_mask_filled_impl<SimdMask>{}(value);
 }
 
 // Factory exports. Mask-free `make_simd_*`/`iota` pairs sit next to each
@@ -3576,15 +3579,16 @@ inline constexpr detail::make_simd_filled_impl<Simd> simd_filled{};
 template <is_simd Simd>
 inline constexpr detail::simd_iota_impl<Simd> simd_iota{};
 
-// Lane blend `simd_mask_filled<M>[lane_blend_mask](passthrough, bit)`.
-// Mask-free broadcast `make_simd_mask_filled<M>(bit)` is the free function
+// Lane blend `simd_mask_filled<SimdMask>[lane_blend_mask](passthrough, bit)`.
+// Mask-free broadcast `make_simd_mask_filled<SimdMask>(bit)` is the free function
 // above.
-template <is_simd_mask M>
-inline constexpr detail::make_simd_mask_filled_impl<M> simd_mask_filled{};
+template <is_simd_mask SimdMask>
+inline constexpr detail::make_simd_mask_filled_impl<SimdMask> simd_mask_filled{};
 
 // Gather-style load of mask lanes from a `bool` buffer.
-template <is_simd_mask M>
-inline constexpr detail::make_simd_mask_loaded_impl<M> make_simd_mask_loaded{};
+template <is_simd_mask SimdMask>
+inline constexpr detail::make_simd_mask_loaded_impl<SimdMask>
+   make_simd_mask_loaded{};
 
 // Gather-style masked loads (vector <- memory).
 inline constexpr detail::simd_load_impl<simd_memory_flag::aligned>

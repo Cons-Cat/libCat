@@ -42,19 +42,19 @@ reverse_inplace_scalar_impl(Element* _Nonnull p_data, idx size) {
    }
 }
 
-template <typename Vector, typename Element>
+template <typename Simd, typename Element>
 constexpr void
 reverse_inplace_simd_impl(Element* _Nonnull p_data, idx size) {
-   constexpr idx lanes = Vector::abi_type::lanes;
-   using memory_lane = Vector::memory_lane;
+   constexpr idx lanes = Simd::abi_type::lanes;
+   using memory_lane = Simd::memory_lane;
    memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
    idx left = 0u;
    iword right = size;
 
    while (left + (lanes * 2u) <= right) {
       right -= lanes;
-      Vector left_values;
-      Vector right_values;
+      Simd left_values;
+      Simd right_values;
       left_values.load_unaligned(p_lanes + left);
       right_values.load_unaligned(p_lanes + right);
       simd_reverse(right_values).store_unaligned(p_lanes + left);

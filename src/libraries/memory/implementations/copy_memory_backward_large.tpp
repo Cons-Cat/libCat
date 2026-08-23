@@ -10,7 +10,7 @@
 
 namespace cat::detail {
 
-template <typename Vector>
+template <typename Simd>
 void
 copy_memory_backward_large(
    byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
@@ -19,10 +19,10 @@ copy_memory_backward_large(
    char* _Nonnull const p_dest = reinterpret_cast<char*>(p_destination);
 
    constexpr idx l3_cache_size = 2_umi;
-   constexpr idx step_size = sizeof(Vector) * 8u;
+   constexpr idx step_size = sizeof(Simd) * 8u;
 
    iword tail_bytes = bytes;
-   Vector vectors[8];
+   Simd vectors[8];
 
    if (tail_bytes <= l3_cache_size) {
       while (tail_bytes >= step_size) {
@@ -31,14 +31,14 @@ copy_memory_backward_large(
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
-               p_src + tail_bytes + (vector_index * sizeof(Vector));
+               p_src + tail_bytes + (vector_index * sizeof(Simd));
             vectors[vector_index].load_unaligned(p_byte);
          }
 
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             vectors[vector_index].store_unaligned(
-               p_dest + tail_bytes + (vector_index * sizeof(Vector))
+               p_dest + tail_bytes + (vector_index * sizeof(Simd))
             );
          }
       }
@@ -55,14 +55,14 @@ copy_memory_backward_large(
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
-               p_src + tail_bytes + (vector_index * sizeof(Vector));
+               p_src + tail_bytes + (vector_index * sizeof(Simd));
             vectors[vector_index].load_unaligned(p_byte);
          }
 
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             vectors[vector_index].store_non_temporal(
-               p_dest + tail_bytes + (vector_index * sizeof(Vector))
+               p_dest + tail_bytes + (vector_index * sizeof(Simd))
             );
          }
       }

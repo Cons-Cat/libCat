@@ -11,7 +11,7 @@
 
 namespace cat::detail {
 
-template <typename Vector>
+template <typename Simd>
 void
 copy_memory_large(
    byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
@@ -26,9 +26,9 @@ copy_memory_large(
    };
 
    constexpr idx l3_cache_size = 2_umi;
-   constexpr idx step_size = sizeof(Vector) * 8u;
+   constexpr idx step_size = sizeof(Simd) * 8u;
 
-   constexpr ualign simd_align = alignof(Vector);
+   constexpr ualign simd_align = alignof(Simd);
    constexpr uword simd_align_bytes = simd_align;
    uword const dest_mod =
       (p_destination_handle & simd_align_bytes) % simd_align_bytes;
@@ -62,7 +62,7 @@ copy_memory_large(
    bool const dest_simd_aligned =
       cat::is_aligned(p_destination_handle.get(), simd_align);
 
-   Vector vectors[8];
+   Simd vectors[8];
 
    if (bytes_remaining <= l3_cache_size) {
       prefetch_mid(p_source_handle.get() + step_size);
@@ -72,7 +72,7 @@ copy_memory_large(
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
-               p_source_handle.get() + (vector_index * sizeof(Vector));
+               p_source_handle.get() + (vector_index * sizeof(Simd));
             vectors[vector_index].load_unaligned(p_byte);
          }
 
@@ -80,8 +80,8 @@ copy_memory_large(
          prefetch_mid(p_source_handle.get() + (step_size * 3u));
 
          if (dest_simd_aligned) {
-            Vector* _Nonnull const p_dest =
-               __builtin_bit_cast(Vector* _Nonnull, p_destination_handle.get());
+            Simd* _Nonnull const p_dest =
+               __builtin_bit_cast(Simd* _Nonnull, p_destination_handle.get());
 
 #pragma unroll 8
             for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
@@ -91,7 +91,7 @@ copy_memory_large(
 #pragma unroll 8
             for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
                vectors[vector_index].store_unaligned(
-                  p_destination_handle.get() + (vector_index * sizeof(Vector))
+                  p_destination_handle.get() + (vector_index * sizeof(Simd))
                );
             }
          }
@@ -109,7 +109,7 @@ copy_memory_large(
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
-               p_source_handle.get() + (vector_index * sizeof(Vector));
+               p_source_handle.get() + (vector_index * sizeof(Simd));
             vectors[vector_index].load_unaligned(p_byte);
          }
 
@@ -121,7 +121,7 @@ copy_memory_large(
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             vectors[vector_index].store_non_temporal(
-               p_destination_handle.get() + (vector_index * sizeof(Vector))
+               p_destination_handle.get() + (vector_index * sizeof(Simd))
             );
          }
 
@@ -138,7 +138,7 @@ copy_memory_large(
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             char const* _Nonnull const p_byte =
-               p_source_handle.get() + (vector_index * sizeof(Vector));
+               p_source_handle.get() + (vector_index * sizeof(Simd));
             vectors[vector_index].load_unaligned(p_byte);
          }
 
@@ -148,7 +148,7 @@ copy_memory_large(
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             vectors[vector_index].store_unaligned(
-               p_destination_handle.get() + (vector_index * sizeof(Vector))
+               p_destination_handle.get() + (vector_index * sizeof(Simd))
             );
          }
 

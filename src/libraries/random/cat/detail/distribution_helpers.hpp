@@ -158,11 +158,11 @@ distribution_select(Mask mask, T on_true, T on_false) -> T {
    }
 }
 
-template <is_simd To, is_simd_mask Mask>
+template <is_simd To, is_simd_mask SimdMask>
 constexpr auto
-distribution_mask_cast(Mask mask) -> To::mask_type {
+distribution_mask_cast(SimdMask mask) -> To::mask_type {
    using result = To::mask_type;
-   static_assert(Mask::abi_type::lanes == result::abi_type::lanes);
+   static_assert(SimdMask::abi_type::lanes == result::abi_type::lanes);
    return result(__builtin_bit_cast(typename result::raw_type, mask.raw));
 }
 

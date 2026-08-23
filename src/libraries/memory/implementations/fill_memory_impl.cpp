@@ -12,15 +12,15 @@
 
 namespace cat::detail {
 
-template <typename Vector>
+template <typename Simd>
 void
 fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
    iword bytes_remaining = bytes;
    // TODO: `cat::simd` should support `cat::byte` better.
 
    cat::uintptr<char> p_handle{reinterpret_cast<char*>(p_destination)};
-   constexpr idx step_size = sizeof(Vector) * 8u;
-   constexpr ualign simd_align = alignof(Vector);
+   constexpr idx step_size = sizeof(Simd) * 8u;
+   constexpr ualign simd_align = alignof(Simd);
    constexpr uword simd_align_bytes = simd_align;
 
    if (bytes_remaining < step_size) {
@@ -42,7 +42,7 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
       return;
    }
 
-   Vector splat;
+   Simd splat;
    splat.fill(byte_value);
 
    constexpr idx l3_cache_size = 2_umi;
@@ -51,8 +51,8 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
    if (bytes_remaining <= l3_cache_size) {
       while (bytes_remaining >= step_size) {
          if (dest_simd_aligned) {
-            Vector* _Nonnull const p_dest =
-               __builtin_bit_cast(Vector* _Nonnull, p_handle.get());
+            Simd* _Nonnull const p_dest =
+               __builtin_bit_cast(Simd* _Nonnull, p_handle.get());
 #pragma unroll 8
             for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
                p_dest[vector_index] = splat;
@@ -61,7 +61,7 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
 #pragma unroll 8
             for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
                splat.store_unaligned(
-                  p_handle.get() + (vector_index * sizeof(Vector))
+                  p_handle.get() + (vector_index * sizeof(Simd))
                );
             }
          }
@@ -74,7 +74,7 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             splat.store_non_temporal(
-               p_handle.get() + (vector_index * sizeof(Vector))
+               p_handle.get() + (vector_index * sizeof(Simd))
             );
          }
 
@@ -87,7 +87,7 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
             splat.store_unaligned(
-               p_handle.get() + (vector_index * sizeof(Vector))
+               p_handle.get() + (vector_index * sizeof(Simd))
             );
          }
 
