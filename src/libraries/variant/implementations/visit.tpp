@@ -212,7 +212,7 @@ template <typename... Fs>
 constexpr auto
 invoke_cases(Fs&&... fs) {
    return [fs_tuple = make_tuple($fwd(fs)...)](auto&& v) -> decltype(auto) {
-      using variant_type = typeof_unqual(v);
+      using variant_type = __typeof_unqual(v);
       static_assert(
          sizeof...(Fs) == variant_type::variant_size,
          "`cat::invoke_cases` requires one callable per "
@@ -249,7 +249,7 @@ template <typename... Fs>
 constexpr auto
 apply_cases(Fs&&... fs) {
    return [fs_tuple = make_tuple($fwd(fs)...)](auto&& v) -> decltype(auto) {
-      using variant_type = typeof_unqual(v);
+      using variant_type = __typeof_unqual(v);
       static_assert(
          sizeof...(Fs) == variant_type::variant_size,
          "`cat::apply_cases` requires one callable per "

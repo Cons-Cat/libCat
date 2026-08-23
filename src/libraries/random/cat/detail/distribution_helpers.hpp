@@ -191,7 +191,7 @@ distribution_pow(Float base, Float exponent) -> Float {
 template <is_uniform_random_bit_generator Generator>
 constexpr auto
 distribution_engine_word(Generator& generator) {
-   using engine_type = typeof_unqual(generator);
+   using engine_type = __typeof_unqual(generator);
    using unsigned_type = random_unsigned<typename engine_type::result_type>;
    unsigned_type const minimum = engine_type::min();
    return unsigned_type(generator()) - minimum;
@@ -201,7 +201,7 @@ template <
    is_simd_unsigned_integral T, is_uniform_random_bit_generator Generator>
 constexpr auto
 distribution_random_word(Generator& generator) -> T {
-   using engine_type = typeof_unqual(generator);
+   using engine_type = __typeof_unqual(generator);
    using engine_result = engine_type::result_type;
    using engine_unsigned = random_unsigned<engine_result>;
    using engine_lane = engine_unsigned::value_type;
@@ -239,7 +239,7 @@ distribution_random_word(Generator& generator) -> T {
 template <is_uniform_random_bit_generator Generator>
 constexpr auto
 distribution_random_bit(Generator& generator) -> bool {
-   using engine_type = typeof_unqual(generator);
+   using engine_type = __typeof_unqual(generator);
    static_assert(!is_simd<typename engine_type::result_type>);
    using unsigned_type = make_unsigned_type<typename engine_type::result_type>;
    unsigned_type const maximum = engine_type::max();
@@ -260,7 +260,7 @@ distribution_random_bit(Generator& generator) -> bool {
 template <is_uniform_random_bit_generator Generator, is_unsigned_integral T>
 constexpr auto
 distribution_random_bounded(Generator& generator, T bound) -> T {
-   using engine_type = typeof_unqual(generator);
+   using engine_type = __typeof_unqual(generator);
    using engine_unsigned =
       make_unsigned_type<typename engine_type::result_type>;
    engine_unsigned const engine_span = engine_unsigned(engine_type::max())

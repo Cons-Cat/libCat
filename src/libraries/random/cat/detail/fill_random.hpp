@@ -294,7 +294,7 @@ fill_random_scalar_batch(Range&& range, Generator& generator) -> bool {
                                                              unwrapped.size();
                                                           }
    ) {
-      using value_type = typeof_unqual(*unwrapped.data());
+      using value_type = __typeof_unqual(*unwrapped.data());
       using result_type = Generator::result_type;
       if constexpr (is_same<value_type, result_type>) {
          if (
@@ -393,7 +393,7 @@ fill_random_scalar_distribution_batch(
                                                              unwrapped.size();
                                                           }
    ) {
-      using value_type = typeof_unqual(*unwrapped.data());
+      using value_type = __typeof_unqual(*unwrapped.data());
       if constexpr (!random_batch_fill_enabled<Distribution>()) {
          return false;
       }
@@ -418,7 +418,7 @@ fill_random_scalar_distribution_batch(
                >= relaxed_random_bulk_threshold<abi_type, Generator>()
             ) {
                using session_type =
-                  typeof_unqual(make_relaxed_random_bulk_session<
+                  __typeof_unqual(make_relaxed_random_bulk_session<
                                   abi_type>(generator));
                if constexpr (requires(session_type& session) {
                                 generate_random_distribution_batch<abi_type>(
@@ -455,7 +455,7 @@ fill_random_scalar_distribution_batch(
                   return false;
                }
                using session_type =
-                  typeof_unqual(make_relaxed_random_bulk_session<
+                  __typeof_unqual(make_relaxed_random_bulk_session<
                                   abi_type>(generator));
                if constexpr (requires(session_type& session) {
                                 generate_random_distribution_batch<abi_type>(
@@ -496,7 +496,7 @@ fill_random_scalar_distribution_batch(
                           );
                        }) {
             using batch_type =
-               typeof_unqual(generate_random_distribution_batch<
+               __typeof_unqual(generate_random_distribution_batch<
                                abi_type>(distribution, generator));
             if constexpr (
                (is_simd<batch_type>
@@ -523,7 +523,7 @@ fill_random_scalar_distribution_batch(
                              );
                           }) {
                using batch_type =
-                  typeof_unqual(generate_random_distribution_batch<
+                  __typeof_unqual(generate_random_distribution_batch<
                                   abi_type>(distribution, generator));
                if constexpr (
                   (is_simd<batch_type>
@@ -570,7 +570,7 @@ constexpr void
 fill_random_simd_contiguous(
    Element* _Nonnull p_data, idx size, auto&& generate
 ) {
-   using simd_result = typeof_unqual(generate());
+   using simd_result = __typeof_unqual(generate());
    simd_result source_values;
    idx source_lane = simd_result::abi_type::lanes;
    idx index = 0u;
@@ -624,7 +624,7 @@ fill_random_simd(Range&& range, auto&& generate) {
                                                              unwrapped.size();
                                                           }
    ) {
-      using value_type = typeof_unqual(*unwrapped.data());
+      using value_type = __typeof_unqual(*unwrapped.data());
       if constexpr (is_arithmetic<value_type> && !is_bool<value_type>) {
          if consteval {
             fill_random_simd_scattered<Simd>($fwd(range), $fwd(generate));

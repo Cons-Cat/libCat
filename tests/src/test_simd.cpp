@@ -805,19 +805,19 @@ $test(simd_shuffle_shufflevector) {
    cat::float4x3 const right{4_f4, 5_f4, 6_f4};
    auto const narrow = cat::simd_shuffle<2, 0>(left);
    static_assert(
-      cat::is_same<typeof_unqual(narrow), cat::fixed_size_simd<cat::float4, 2u>>
+      cat::is_same<__typeof_unqual(narrow), cat::fixed_size_simd<cat::float4, 2u>>
    );
    cat::verify(narrow[0u] == 3_f4 && narrow[1u] == 1_f4);
 
    auto const mixed = cat::simd_shuffle<0, 4, 2>(left, right);
-   static_assert(cat::is_same<typeof_unqual(mixed), cat::float4x3>);
+   static_assert(cat::is_same<__typeof_unqual(mixed), cat::float4x3>);
    cat::verify(mixed[0u] == 1_f4);
    cat::verify(mixed[1u] == 5_f4);
    cat::verify(mixed[2u] == 3_f4);
 
    auto const wide = cat::simd_shuffle<0, 1, 2, 3, 4, 5>(left, right);
    static_assert(
-      cat::is_same<typeof_unqual(wide), cat::fixed_size_simd<cat::float4, 6u>>
+      cat::is_same<__typeof_unqual(wide), cat::fixed_size_simd<cat::float4, 6u>>
    );
    cat::verify(wide[0u] == 1_f4 && wide[5u] == 6_f4);
 }
@@ -874,7 +874,7 @@ $test(simd_scalar_math_api_forwarding) {
    float4x4 const values{1_f4, 4_f4, 9_f4, 16_f4};
    float4x4 const twos{2_f4};
 
-   static_assert(cat::is_same<typeof_unqual(cat::sin(zeros)), float4x4>);
+   static_assert(cat::is_same<__typeof_unqual(cat::sin(zeros)), float4x4>);
    cat::verify(cat::abs(-values) == values);
    cat::verify(
       cat::clamp(values, twos, float4x4{9_f4})
@@ -917,7 +917,7 @@ $test(simd_dot_and_normalize) {
    cat::float4x3 const left{1_f4, 2_f4, 3_f4};
    cat::float4x3 const right{4_f4, 5_f4, 6_f4};
    static_assert(
-      cat::is_same<typeof_unqual(cat::simd_dot(left, right)), cat::float4>
+      cat::is_same<__typeof_unqual(cat::simd_dot(left, right)), cat::float4>
    );
    cat::verify(cat::simd_dot(left, right) == 32_f4);
    cat::verify(cat::dot(left, right) == cat::simd_dot(left, right));

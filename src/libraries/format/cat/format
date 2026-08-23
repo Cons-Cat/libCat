@@ -889,8 +889,8 @@ struct formatter : formatter_base<CharT> {
 
 template <typename T, typename CharT>
    requires(
-      is_integral<T> && !is_same<typeof_unqual(T), bool>
-      && !is_same<typeof_unqual(T), char> && is_same<CharT, char>
+      is_integral<T> && !is_same<__typeof_unqual(T), bool>
+      && !is_same<__typeof_unqual(T), char> && is_same<CharT, char>
    )
 struct formatter<T, CharT> : formatter_base<CharT> {
    auto
@@ -898,7 +898,7 @@ struct formatter<T, CharT> : formatter_base<CharT> {
       -> scaredy_format<void> {
       detail::pull_integer_format_support();
       auto const raw = make_raw_arithmetic(value);
-      using raw_type = typeof_unqual(raw);
+      using raw_type = __typeof_unqual(raw);
       if constexpr (sizeof(raw_type) < sizeof(int4::raw_type)) {
          if constexpr (is_signed<raw_type>) {
             return detail::append_arithmetic(

@@ -42,7 +42,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(U&& rhs) const -> wrapper_type {
@@ -56,7 +56,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U&& rhs) const -> wrapper_type {
@@ -70,7 +70,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U&& lhs) const -> wrapper_type {
@@ -84,7 +84,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U&& rhs) const -> wrapper_type {
@@ -98,7 +98,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(U&& rhs) const -> wrapper_type {
@@ -112,7 +112,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_into(U&& lhs) const -> wrapper_type {
@@ -126,7 +126,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    modulo_by(U&& rhs) const -> wrapper_type {
@@ -140,7 +140,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    modulo_into(U&& lhs) const -> wrapper_type {
@@ -154,7 +154,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_by(U&& rhs) const -> wrapper_type {
@@ -168,7 +168,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_into(U&& lhs) const -> wrapper_type {
@@ -182,7 +182,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_by(U&& rhs) const -> wrapper_type {
@@ -196,7 +196,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_into(U&& lhs) const -> wrapper_type {
@@ -210,7 +210,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U&& rhs) const -> wrapper_type {
@@ -224,7 +224,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(U&& rhs) const -> wrapper_type {
@@ -238,7 +238,7 @@ class simd_overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(simd_broadcast_really_convertible_to<typeof_unqual(U), T>())
+      requires(simd_broadcast_really_convertible_to<__typeof_unqual(U), T>())
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_xor(U&& rhs) const -> wrapper_type {

@@ -374,7 +374,7 @@ struct bit_collection_interface : iterable_interface<Derived> {
    [[nodiscard]]
    constexpr auto
    read_at_unchecked(this auto& self, idx position) -> decltype(auto) {
-      using reference_type = typeof_unqual(self[position]);
+      using reference_type = __typeof_unqual(self[position]);
       static_assert(is_specialization<reference_type, bit_reference>);
       return self[position];
    }

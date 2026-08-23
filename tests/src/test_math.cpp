@@ -658,7 +658,7 @@ $test(math_random_support) {
 }
 
 $test(math_infinity) {
-   using infinity_type = typeof_unqual(cat::infinity);
+   using infinity_type = __typeof_unqual(cat::infinity);
    static_assert(cat::is_same<infinity_type, cat::detail::infinity_type>);
    static_assert(cat::is_convertible<infinity_type, float>);
    static_assert(cat::is_convertible<infinity_type, double>);
