@@ -3159,6 +3159,10 @@ struct simd_expand_impl {
    }
 };
 
+// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
 struct simd_rotate_left_impl
     : simd_elementwise_unary_int_interface<simd_rotate_left_impl> {
    constexpr simd_rotate_left_impl() = default;
@@ -3254,6 +3258,8 @@ struct simd_rotate_right_impl
       );
    }
 };
+
+#pragma clang diagnostic pop
 
 struct simd_min_impl : simd_elementwise_binary_interface<simd_min_impl> {
    constexpr simd_min_impl() = default;

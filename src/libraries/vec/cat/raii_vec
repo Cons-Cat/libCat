@@ -671,9 +671,9 @@ template <
 ) -> maybe<raii::basic_vec<T, Allocator, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   raii::basic_vec<T, Allocator, flags> new_vector;
+   raii::basic_vec<T, Allocator, flags> new_vector(allocator);
    if constexpr (flags.is_fixed_size) {
-      $prop(new_vector.initialize_fixed(allocator, count));
+      $prop(new_vector.initialize_fixed(count));
    } else {
       $prop(new_vector.resize(count));
    }
@@ -692,9 +692,9 @@ template <
    static_assert(
       is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   raii::basic_vec<T, Allocator, flags> new_vector;
+   raii::basic_vec<T, Allocator, flags> new_vector(allocator);
    if constexpr (flags.is_fixed_size) {
-      $prop(new_vector.initialize_fixed(allocator, count));
+      $prop(new_vector.initialize_fixed(count));
    } else {
       $prop(new_vector.resize(count));
    }

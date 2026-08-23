@@ -62,6 +62,10 @@ simd_to_unsigned_raw(cat::simd<T, Abi> const& value) {
    return __builtin_bit_cast(unsigned_raw, value.raw);
 }
 
+// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
 template <typename T, typename Abi, typename UnsignedRaw>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -69,10 +73,6 @@ simd_from_unsigned_raw(UnsignedRaw const& value) -> cat::simd<T, Abi> {
    using raw_type = typename cat::simd<T, Abi>::raw_type;
    return cat::simd<T, Abi>(__builtin_bit_cast(raw_type, value));
 }
-
-// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
 
 template <typename T, typename Abi, overflow_policies policy>
    requires(is_integral<T> && !is_bool<T>)
@@ -137,8 +137,6 @@ simd_integral_mul_policy(
       return cat::simd<T, Abi>(left.raw * right.raw);
    }
 }
-
-#pragma clang diagnostic pop
 
 template <typename T, typename Abi, overflow_policies policy>
    requires(is_integral<T> && !is_bool<T>)
@@ -240,6 +238,8 @@ simd_integral_shr_policy(
       return cat::simd<T, Abi>(left.raw >> right.raw);
    }
 }
+
+#pragma clang diagnostic pop
 
 template <typename T, typename Abi>
    requires(is_floating_point<T>)
