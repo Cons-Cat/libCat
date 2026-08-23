@@ -1386,7 +1386,8 @@ make_str_vec_filled_random(
 ) -> maybe<raii::str_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    raii::str_vec<Allocator, flags> new_string =
       $prop((raii::make_str_vec_reserved<Allocator, flags>(allocator, count)));
@@ -1406,7 +1407,8 @@ make_str_vec_filled_random(
 ) -> maybe<raii::str_vec<dyn_allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_str_vec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1455,7 +1457,8 @@ make_zstr_vec_filled_random(
 ) -> maybe<raii::zstr_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    raii::zstr_vec<Allocator, flags> new_string =
       $prop((raii::make_zstr_vec_reserved<Allocator, flags>(allocator, count)));
@@ -1475,7 +1478,8 @@ make_zstr_vec_filled_random(
 ) -> maybe<raii::zstr_vec<dyn_allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_zstr_vec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1524,8 +1528,8 @@ make_wstr_vec_filled_random(
 ) -> maybe<raii::wstr_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<wchar_t&,
-      decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    raii::wstr_vec<Allocator, flags> new_string =
       $prop((raii::make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
@@ -1545,8 +1549,8 @@ make_wstr_vec_filled_random(
 ) -> maybe<raii::wstr_vec<dyn_allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<wchar_t&,
-      decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_wstr_vec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1596,8 +1600,8 @@ make_wzstr_vec_filled_random(
 ) -> maybe<raii::wzstr_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<wchar_t&,
-      decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    raii::wzstr_vec<Allocator, flags> new_string = $prop(
       (raii::make_wzstr_vec_reserved<Allocator, flags>(allocator, count))
@@ -1618,8 +1622,8 @@ make_wzstr_vec_filled_random(
 ) -> maybe<raii::wzstr_vec<dyn_allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<wchar_t&,
-      decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_wzstr_vec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)

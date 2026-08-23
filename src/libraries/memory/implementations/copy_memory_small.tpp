@@ -105,9 +105,7 @@ copy_memory_small_64_to_127(
    }
 #pragma unroll
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {
-      tail_chunks[vector_index].load(
-         p_src + bytes - 64 + (vector_index * 16u)
-      );
+      tail_chunks[vector_index].load(p_src + bytes - 64 + (vector_index * 16u));
    }
 #pragma unroll
    for (idx vector_index = 0u; vector_index < 4u; ++vector_index) {

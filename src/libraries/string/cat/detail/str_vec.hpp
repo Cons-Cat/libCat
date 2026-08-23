@@ -1391,7 +1391,8 @@ make_str_vec_filled_random(
 ) -> maybe<basic_str_vec<char, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    basic_str_vec<char, flags> new_string =
       $prop((make_str_vec_reserved<Allocator, flags>(allocator, count)));
@@ -1411,7 +1412,8 @@ make_str_vec_filled_random(
 ) -> maybe<basic_str_vec<char, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_str_vec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1460,7 +1462,8 @@ make_zstr_vec_filled_random(
 ) -> maybe<basic_str_vec<char, str_flags::null_terminated | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    basic_str_vec<char, str_flags::null_terminated | flags> new_string =
       $prop((make_zstr_vec_reserved<Allocator, flags>(allocator, count)));
@@ -1480,7 +1483,8 @@ make_zstr_vec_filled_random(
 ) -> maybe<basic_str_vec<char, str_flags::null_terminated | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_zstr_vec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1529,8 +1533,8 @@ make_wstr_vec_filled_random(
 ) -> maybe<basic_str_vec<wchar_t, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<wchar_t&,
-      decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    basic_str_vec<wchar_t, flags> new_string =
       $prop((make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
@@ -1550,8 +1554,8 @@ make_wstr_vec_filled_random(
 ) -> maybe<basic_str_vec<wchar_t, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<wchar_t&,
-      decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_wstr_vec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1600,8 +1604,8 @@ make_wzstr_vec_filled_random(
 ) -> maybe<basic_str_vec<wchar_t, str_flags::null_terminated | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<wchar_t&,
-      decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    basic_str_vec<wchar_t, str_flags::null_terminated | flags> new_string =
       $prop((make_wzstr_vec_reserved<Allocator, flags>(allocator, count)));
@@ -1621,8 +1625,8 @@ make_wzstr_vec_filled_random(
 ) -> maybe<basic_str_vec<wchar_t, str_flags::null_terminated | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
-      is_assignable<wchar_t&,
-      decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_wzstr_vec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)

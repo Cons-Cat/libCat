@@ -118,8 +118,7 @@ verify_irregular_fixed_size_simd() {
       destination[i + 1u] = -1;
    }
 
-   vector const loaded =
-      cat::simd_load[selector](vector{-2}, source + 1u);
+   vector const loaded = cat::simd_load[selector](vector{-2}, source + 1u);
    cat::simd_store[selector](input, destination + 1u);
    for (cat::idx i = 0u; i < lane_count; ++i) {
       cat::verify(loaded[i] == (selector[i] ? input[i] : -2));
@@ -805,7 +804,8 @@ $test(simd_shuffle_shufflevector) {
    cat::float4x3 const right{4_f4, 5_f4, 6_f4};
    auto const narrow = cat::simd_shuffle<2, 0>(left);
    static_assert(
-      cat::is_same<__typeof_unqual(narrow), cat::fixed_size_simd<cat::float4, 2u>>
+      cat::is_same<
+         __typeof_unqual(narrow), cat::fixed_size_simd<cat::float4, 2u>>
    );
    cat::verify(narrow[0u] == 3_f4 && narrow[1u] == 1_f4);
 
@@ -1072,9 +1072,7 @@ $test(simd_eve_mask_subscript_load_store_and_dispatch) {
 
    int_lane dst[4] = {0, 0, 0, 0};
    int4x4 const w = {1, 2, 3, 4};
-   cat::simd_store[cat::make_simd_mask_from_count<int4x4>(2u)](
-      w, dst
-   );
+   cat::simd_store[cat::make_simd_mask_from_count<int4x4>(2u)](w, dst);
    cat::verify(dst[0] == 1 && dst[1] == 2 && dst[2] == 0 && dst[3] == 0);
 
    int_lane dst2[4] = {7, 7, 7, 7};
@@ -1093,9 +1091,7 @@ $test(simd_eve_mask_subscript_load_store_and_dispatch) {
    cat::verify(fs[0] == 1.5f && fs[3] == 99_f4);
    float_lane fdst[4] = {0.f, 0.f, 0.f, 0.f};
    float4x4 const fw = {1_f4, 2_f4, 3_f4, 4_f4};
-   cat::simd_store[cat::make_simd_mask_from_count<float4x4>(2u)](
-      fw, fdst
-   );
+   cat::simd_store[cat::make_simd_mask_from_count<float4x4>(2u)](fw, fdst);
    cat::verify(
       fdst[0] == 1_f4 && fdst[1] == 2_f4 && fdst[2] == 0.f && fdst[3] == 0.f
    );

@@ -57,8 +57,9 @@ fill_random_batch_contiguous(
    memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
    idx index = 0u;
    while (index + Simd::abi_type::lanes <= size) {
-      generate_exact_random_batch<typename Simd::abi_type>(generator)
-         .store(p_lanes + index);
+      generate_exact_random_batch<typename Simd::abi_type>(generator).store(
+         p_lanes + index
+      );
       index += Simd::abi_type::lanes;
    }
    while (index < size) {
@@ -100,17 +101,11 @@ fill_random_exact_bulk_contiguous(
    while (index + lanes * chain_count <= size) {
       session.template generate<0u>().store(p_lanes + index);
       if constexpr (chain_count >= 2u) {
-         session.template generate<1u>().store(
-            p_lanes + index + lanes
-         );
+         session.template generate<1u>().store(p_lanes + index + lanes);
       }
       if constexpr (chain_count == 4u) {
-         session.template generate<2u>().store(
-            p_lanes + index + lanes * 2u
-         );
-         session.template generate<3u>().store(
-            p_lanes + index + lanes * 3u
-         );
+         session.template generate<2u>().store(p_lanes + index + lanes * 2u);
+         session.template generate<3u>().store(p_lanes + index + lanes * 3u);
       }
       index += lanes * chain_count;
    }
@@ -417,9 +412,9 @@ fill_random_scalar_distribution_batch(
                unwrapped.size()
                >= relaxed_random_bulk_threshold<abi_type, Generator>()
             ) {
-               using session_type =
-                  __typeof_unqual(make_relaxed_random_bulk_session<
-                                  abi_type>(generator));
+               using session_type = __typeof_unqual(
+                  make_relaxed_random_bulk_session<abi_type>(generator)
+               );
                if constexpr (requires(session_type& session) {
                                 generate_random_distribution_batch<abi_type>(
                                    distribution, session
@@ -454,9 +449,9 @@ fill_random_scalar_distribution_batch(
                ) {
                   return false;
                }
-               using session_type =
-                  __typeof_unqual(make_relaxed_random_bulk_session<
-                                  abi_type>(generator));
+               using session_type = __typeof_unqual(
+                  make_relaxed_random_bulk_session<abi_type>(generator)
+               );
                if constexpr (requires(session_type& session) {
                                 generate_random_distribution_batch<abi_type>(
                                    distribution, session
@@ -496,8 +491,9 @@ fill_random_scalar_distribution_batch(
                           );
                        }) {
             using batch_type =
-               __typeof_unqual(generate_random_distribution_batch<
-                               abi_type>(distribution, generator));
+               __typeof_unqual(generate_random_distribution_batch<abi_type>(
+                  distribution, generator
+               ));
             if constexpr (
                (is_simd<batch_type>
                 && is_same<value_type, typename batch_type::value_type>)
@@ -523,8 +519,9 @@ fill_random_scalar_distribution_batch(
                              );
                           }) {
                using batch_type =
-                  __typeof_unqual(generate_random_distribution_batch<
-                                  abi_type>(distribution, generator));
+                  __typeof_unqual(generate_random_distribution_batch<abi_type>(
+                     distribution, generator
+                  ));
                if constexpr (
                   (is_simd<batch_type>
                    && is_same<value_type, typename batch_type::value_type>)
@@ -704,4 +701,3 @@ fill_random(Range&& range, Generator&& generator, Distribution&& distribution)
 }
 
 }  // namespace cat
-

@@ -1491,7 +1491,8 @@ template <
 ) -> maybe<basic_vec<T, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    basic_vec<T, flags> new_vector;
    if constexpr (flags.is_fixed_size) {
@@ -1524,7 +1525,8 @@ template <
    ) -> maybe<basic_vec<T, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_vec_filled_random<T, dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1555,7 +1557,8 @@ template <
 ) -> maybe<small_vec<T, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_vec_filled_random<
       T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
@@ -1588,7 +1591,8 @@ template <
    ) -> maybe<small_vec<T, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_small_vec_filled_random<T, inline_count, dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1616,7 +1620,8 @@ template <
 ) -> maybe<vec_fixed<T, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_vec_fixed_filled_random<T, Allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1644,7 +1649,8 @@ template <
    ) -> maybe<vec_fixed<T, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_vec_fixed_filled_random<T, dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1675,7 +1681,8 @@ template <
 ) -> maybe<small_vec_fixed<T, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_small_vec_fixed_filled_random<T, inline_count, Allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -1706,7 +1713,8 @@ template <
    ) -> maybe<small_vec_fixed<T, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_small_vec_fixed_filled_random<
       T, inline_count, dyn_allocator, flags>(

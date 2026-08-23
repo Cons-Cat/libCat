@@ -783,7 +783,8 @@ constexpr auto
 make_bitset_filled_random(Generator&& generator, Distribution&& distribution)
    -> bitset<bits_count> {
    static_assert(
-      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    bitset<bits_count> result;
    result.fill_random($fwd(generator), $fwd(distribution));

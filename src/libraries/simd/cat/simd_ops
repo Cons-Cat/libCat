@@ -37,8 +37,8 @@ namespace cat {
 enum class [[clang::enum_extensibility(
    closed
 )]] simd_memory_flag : unsigned char {
-   default_,   // Default-align a SIMD load by ABI.
-   aligned,    // Over-align a SIMD load. This results in `maybe` loads.
+   default_,  // Default-align a SIMD load by ABI.
+   aligned,   // Over-align a SIMD load. This results in `maybe` loads.
 };
 
 // Synthesize a blend operation between two vectors using a mask.
@@ -717,7 +717,8 @@ struct simd_fill_blend_masked_impl {
    operator()(simd<T, Abi> passthrough, U value) const -> simd<T, Abi> {
       T const fill = static_cast<T>(value);
       if constexpr (
-         is_same<SimdMask, simd_mask<T, Abi>> && has_simd_abi_fill_masked<T, Abi>
+         is_same<SimdMask, simd_mask<T, Abi>>
+         && has_simd_abi_fill_masked<T, Abi>
       ) {
          return simd_abi_apply_fill_masked<T, Abi>(passthrough, fill, mask);
       }
@@ -1041,9 +1042,9 @@ struct make_simd_mask_filled_impl {
 
 // Builds a mask by loading lane booleans from memory (gather-style transfer).
 template <is_simd_mask SimdMask>
-struct make_simd_mask_loaded_impl : simd_elementwise_mask_factory_interface<
-                                       make_simd_mask_loaded_impl<SimdMask>,
-                                       SimdMask> {
+struct make_simd_mask_loaded_impl
+    : simd_elementwise_mask_factory_interface<
+         make_simd_mask_loaded_impl<SimdMask>, SimdMask> {
    using mask_type = SimdMask;
 
    constexpr make_simd_mask_loaded_impl() = default;
@@ -3552,10 +3553,11 @@ template <is_simd Simd>
 inline constexpr detail::simd_iota_impl<Simd> simd_iota{};
 
 // Lane blend `simd_mask_filled<SimdMask>[lane_blend_mask](passthrough, bit)`.
-// Mask-free broadcast `make_simd_mask_filled<SimdMask>(bit)` is the free function
-// above.
+// Mask-free broadcast `make_simd_mask_filled<SimdMask>(bit)` is the free
+// function above.
 template <is_simd_mask SimdMask>
-inline constexpr detail::make_simd_mask_filled_impl<SimdMask> simd_mask_filled{};
+inline constexpr detail::make_simd_mask_filled_impl<SimdMask>
+   simd_mask_filled{};
 
 // Gather-style load of mask lanes from a `bool` buffer.
 template <is_simd_mask SimdMask>

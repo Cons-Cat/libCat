@@ -60,9 +60,7 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
          } else {
 #pragma unroll 8
             for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
-               splat.store(
-                  p_handle.get() + (vector_index * sizeof(Simd))
-               );
+               splat.store(p_handle.get() + (vector_index * sizeof(Simd)));
             }
          }
 
@@ -86,9 +84,7 @@ fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
       while (bytes_remaining >= step_size) {
 #pragma unroll 8
          for (idx vector_index = 0u; vector_index < 8u; ++vector_index) {
-            splat.store(
-               p_handle.get() + (vector_index * sizeof(Simd))
-            );
+            splat.store(p_handle.get() + (vector_index * sizeof(Simd)));
          }
 
          p_handle += step_size;

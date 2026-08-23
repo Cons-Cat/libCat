@@ -441,7 +441,8 @@ make_vec_inplace_filled_random(
 ) -> maybe<vec_inplace<T, inline_capacity>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    vec_inplace<T, inline_capacity> result;
    $prop(result.resize(count));

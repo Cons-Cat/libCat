@@ -2,8 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/detail/iterable_interface.hpp>
 #include <cat/detail/fill_random.hpp>
+#include <cat/detail/iterable_interface.hpp>
+
 #include <cat/iterable>
 
 namespace cat {

@@ -792,7 +792,8 @@ template <
    Distribution&& distribution
 ) -> maybe<raii::basic_bitvec<Allocator, flags>> {
    static_assert(
-      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    raii::basic_bitvec<Allocator, flags> result(allocator);
    if constexpr (flags.is_fixed_size) {
@@ -822,7 +823,8 @@ template <vec_flags flags = {}, typename Generator, typename Distribution>
       Distribution&& distribution
    ) -> maybe<raii::basic_bitvec<dyn_allocator, flags>> {
    static_assert(
-      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_bitvec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -849,7 +851,8 @@ template <
    Distribution&& distribution
 ) -> maybe<small_bitvec<Allocator, inline_count, flags>> {
    static_assert(
-      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_small_bitvec_filled_random<
       inline_count, Allocator,
@@ -877,7 +880,8 @@ template <
       Distribution&& distribution
    ) -> maybe<small_bitvec<dyn_allocator, inline_count, flags>> {
    static_assert(
-      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_small_bitvec_filled_random<
       inline_count, dyn_allocator, flags>(
@@ -904,7 +908,8 @@ template <
    Distribution&& distribution
 ) -> maybe<raii::bitvec_fixed<Allocator, flags>> {
    static_assert(
-      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_bitvec_fixed_filled_random<Allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -929,7 +934,8 @@ template <vec_flags flags = {}, typename Generator, typename Distribution>
       Distribution&& distribution
    ) -> maybe<raii::bitvec_fixed<dyn_allocator, flags>> {
    static_assert(
-      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_bitvec_fixed_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -957,7 +963,8 @@ template <
    Distribution&& distribution
 ) -> maybe<small_bitvec_fixed<Allocator, inline_count, flags>> {
    static_assert(
-      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_small_bitvec_fixed_filled_random<
       inline_count, Allocator, flags>(
@@ -984,7 +991,8 @@ template <
       Distribution&& distribution
    ) -> maybe<small_bitvec_fixed<dyn_allocator, inline_count, flags>> {
    static_assert(
-      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_small_bitvec_fixed_filled_random<
       inline_count, dyn_allocator, flags>(

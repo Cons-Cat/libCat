@@ -502,7 +502,8 @@ make_forward_list_filled_random(
 ) -> maybe<raii::basic_forward_list<T, Allocator>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    raii::basic_forward_list<T, Allocator> new_list(allocator);
    detail::forward_list_node<T>* p_tail = nullptr;
@@ -535,7 +536,8 @@ make_forward_list_filled_random(
 ) -> maybe<raii::basic_forward_list<T, dyn_allocator>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return cat::raii::make_forward_list_filled_random<T, dyn_allocator>(
       allocator_ref<dyn_allocator>(allocator), count, $fwd(generator),

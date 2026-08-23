@@ -690,7 +690,8 @@ template <
 ) -> maybe<raii::basic_vec<T, Allocator, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    raii::basic_vec<T, Allocator, flags> new_vector(allocator);
    if constexpr (flags.is_fixed_size) {
@@ -723,7 +724,8 @@ template <
    ) -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_vec_filled_random<T, dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -754,7 +756,8 @@ template <
 ) -> maybe<small_vec<T, Allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_small_vec_filled_random<
       T, inline_count, Allocator,
@@ -787,7 +790,8 @@ template <
    ) -> maybe<small_vec<T, dyn_allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_small_vec_filled_random<
       T, inline_count, dyn_allocator, flags>(
@@ -817,7 +821,8 @@ template <
 ) -> maybe<vec_fixed<T, Allocator, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_vec_fixed_filled_random<T, Allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -845,7 +850,8 @@ template <
    ) -> maybe<vec_fixed<T, dyn_allocator, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_vec_fixed_filled_random<T, dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -876,7 +882,8 @@ template <
 ) -> maybe<small_vec_fixed<T, Allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_small_vec_fixed_filled_random<
       T, inline_count, Allocator, flags>(
@@ -908,7 +915,8 @@ template <
    ) -> maybe<small_vec_fixed<T, dyn_allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return raii::make_small_vec_fixed_filled_random<
       T, inline_count, dyn_allocator, flags>(

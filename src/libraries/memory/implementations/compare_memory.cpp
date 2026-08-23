@@ -52,8 +52,7 @@ template <typename Simd>
 [[nodiscard]]
 inline auto
 compare_memory_first_mismatch_in_batch(
-   array<Simd, 4u> const& vectors_left,
-   array<Simd, 4u> const& vectors_right,
+   array<Simd, 4u> const& vectors_left, array<Simd, 4u> const& vectors_right,
    array<typename Simd::mask_type, 4u> const& equal_masks,
    char const* _Nonnull p_left, char const* _Nonnull p_right, uword vector_size
 ) -> std::strong_ordering {

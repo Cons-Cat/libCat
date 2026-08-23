@@ -1072,7 +1072,8 @@ make_list_filled_random(
 ) -> maybe<basic_list<T>> {
    static_assert(is_default_constructible<T>);
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    basic_list<T> new_list;
    $prop(new_list.resize(allocator, count));

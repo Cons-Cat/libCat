@@ -137,7 +137,8 @@ constexpr auto
 make_array_filled_random(Generator&& generator, Distribution&& distribution)
    -> array<T, length> {
    static_assert(
-      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    array<T, length> result;
    result.fill_random($fwd(generator), $fwd(distribution));
