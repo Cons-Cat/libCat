@@ -767,6 +767,29 @@ make_bitset_filled(bit_value value) {
    return new_bitset;
 }
 
+template <idx bits_count, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_bitset_filled_random(Generator&& generator) -> bitset<bits_count> {
+   static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
+   bitset<bits_count> result;
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx bits_count, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_bitset_filled_random(Generator&& generator, Distribution&& distribution)
+   -> bitset<bits_count> {
+   static_assert(
+      is_assignable<bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   bitset<bits_count> result;
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
 // Construct a bitset with only the even-indexed bits (logical indices 0, 2, 4,
 // ...) set. Odd-indexed bits are 0.
 template <idx bits_count>

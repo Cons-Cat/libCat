@@ -427,6 +427,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/random/cat/detail/exponential_distribution.hpp
   ${CATLIB}/random/cat/detail/extreme_value_distribution.hpp
   ${CATLIB}/random/cat/detail/fill_random.hpp
+  ${CATLIB}/random/implementations/fill_random.tpp
   ${CATLIB}/random/cat/detail/fisher_f_distribution.hpp
   ${CATLIB}/random/cat/detail/gamma_distribution.hpp
   ${CATLIB}/random/cat/detail/geometric_distribution.hpp

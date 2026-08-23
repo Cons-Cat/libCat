@@ -955,8 +955,9 @@ class xoshiro_bulk_session {
    initialize(state_type& state, uint8 seed, idx stream_offset) {
       for (idx lane = 0u; lane < result_type::abi_type::lanes; ++lane) {
          idx const stream = stream_offset + lane;
-         splitmix64_engine mixer;
-         mixer.set_state(xoshiro_lane_seed(seed, stream + 1u, state_size));
+         splitmix64_engine mixer(
+            xoshiro_lane_seed(seed, stream + 1u, state_size)
+         );
          Word combined = 0u;
          for (idx word = 0u; word < state_size; ++word) {
             Word const value = Word(mixer());
@@ -1904,22 +1905,24 @@ class xoshiro_owned_engine {
    operator()(result_type bound) -> result_type {
       if constexpr (is_simd<result_type>) {
          using mask_type = result_type::mask_type;
-         if constexpr (
-            requires(Engine& engine, mask_type active) {
-               engine.generate(active);
-            }
-         ) {
+         if constexpr (requires(Engine& engine, mask_type active) {
+                          engine.generate(active);
+                       }) {
             return lemire_bounded(bound, [&](mask_type active) {
                return m_engine.generate(active);
             });
          } else {
-            return lemire_bounded(bound, [&] { return m_engine(); });
+            return lemire_bounded(bound, [&] {
+               return m_engine();
+            });
          }
       } else {
          if (bound == 0u) {
             return m_engine();
          }
-         return lemire_bounded(bound, [&] { return m_engine(); });
+         return lemire_bounded(bound, [&] {
+            return m_engine();
+         });
       }
    }
 

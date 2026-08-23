@@ -141,7 +141,7 @@ template <typename Engine>
 void
 verify_pcg_discard(Engine original) {
    cat::uint8 const short_delta = 257u;
-   cat::uint8 const long_delta = 0x40'0000'0000'0001d3ull;
+   cat::uint8 const long_delta = 0x40000000'000001d3ull;
 
    Engine iterated = original;
    Engine advanced = original;
@@ -190,9 +190,8 @@ verify_pcg_scalar_large_advance() {
 
    for (cat::uint8 delta : deltas) {
       engine.discard(delta);
-      reference = pcg_reference_advance(
-         reference, {delta, 0u}, multiplier, increment
-      );
+      reference =
+         pcg_reference_advance(reference, {delta, 0u}, multiplier, increment);
 
       cat::uint8 const expected =
          pcg_reference_generate<dxsm>(reference, multiplier, increment);
@@ -216,12 +215,9 @@ verify_pcg_simd_large_advance() {
    constexpr auto multiplier =
       dxsm ? pcg_cheap_multiplier : pcg_default_multiplier;
    constexpr cat::array<cat::uint8, 6u> deltas = {
-      0xffffffffull,
-      0x1'00000001ull,
-      0xffffffff'ffffffffull,
-      1u,
-      0x7fffffff'ffffffffull,
-      0x80000000'00000000ull,
+      0xffffffffull,          0x1'00000001ull,
+      0xffffffff'ffffffffull, 1u,
+      0x7fffffff'ffffffffull, 0x80000000'00000000ull,
    };
 
    Engine engine(
@@ -351,9 +347,7 @@ verify_pcg_simd_setseq() {
    result_type const maximums = minimums + cat::simd_iota<result_type>(0u);
    result_type const ranged = engine(minimums, maximums);
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
-      cat::verify(
-         ranged[lane] == scalar[lane](minimums[lane], maximums[lane])
-      );
+      cat::verify(ranged[lane] == scalar[lane](minimums[lane], maximums[lane]));
    }
 
    result_type const discards = cat::simd_iota<result_type>(5u);
@@ -551,9 +545,7 @@ $test(pcg_discard) {
    verify_pcg_discard(
       cat::pcg_engine<cat::uint8, cat::pcg_stream::oneseq>(42u)
    );
-   verify_pcg_discard(
-      cat::pcg_engine<cat::uint8, cat::pcg_stream::mcg>(42u)
-   );
+   verify_pcg_discard(cat::pcg_engine<cat::uint8, cat::pcg_stream::mcg>(42u));
    verify_pcg_discard(cat::pcg_dxsm_engine<cat::uint8>(42u, 54u));
    verify_pcg_discard(
       cat::pcg_dxsm_engine<cat::uint8, cat::pcg_stream::oneseq>(42u)
@@ -710,7 +702,6 @@ $test(pcg_edge_cases) {
    cat::pcg_engine<cat::uint4> full_range(42u, 54u);
    cat::pcg_engine<cat::uint4> full_range_reference = full_range;
    cat::verify(
-      full_range(cat::uint4::min(), cat::uint4::max())
-      == full_range_reference()
+      full_range(cat::uint4::min(), cat::uint4::max()) == full_range_reference()
    );
 }

@@ -6,7 +6,7 @@
 // 8-byte state, a fixed odd Weyl increment, and a bijective 8-byte output mix.
 // It has period 2^64 and emits each 8-byte value once per complete cycle. This
 // makes it useful when small state, cheap exact skipping, or fast expansion of
-// one seed into several words matters. It is not suitable for cryptography.
+// one seed into several words matters.
 //
 // `splitmix64_engine` is the scalar spelling and is an alias for
 // `splitmix_engine<uint8>`.
@@ -20,23 +20,14 @@
 //    splitmix_engine<uint8x4> wide(42u);
 //    uint8x4 values = wide();
 //
-// Scalar seeding gives lane i initial state `seed + i`. Calling `set_state`
-// preserves explicit lane states, including equal states. Every call advances
-// every lane once.
+// Scalar seeding gives lane i initial state `seed + i`. Every call advances
+// each lane once.
 //
 // libCat extensions
 //
 // `operator()(bound)` draws from `[0, bound)`, with zero requesting the full
 // result range. `operator()(minimum, maximum)` uses the inclusive interval
 // `[minimum, maximum]`. SIMD bounds and results operate lane by lane.
-//
-// `state_type`, `state()`, and `set_state()` provide exact state export and
-// import. For SIMD engines the state contains one counter per lane.
-//
-//    splitmix64_engine source(42u);
-//    source.discard(7u);
-//    splitmix64_engine restored;
-//    restored.set_state(source.state());
 //
 // `discard(n)` is the standard engine operation. libCat also provides
 // `jump(n)` for the same exact counter skip, `jump_log2(k)` for 2^k outputs,
@@ -102,7 +93,6 @@ template <typename T = uint8>
 class splitmix_engine {
  public:
    using result_type = T;
-   using state_type = result_type;
 
    static constexpr bool enable_batch_fill = true;
    static constexpr random_seed default_seed = 1u;
@@ -148,17 +138,6 @@ class splitmix_engine {
 
    [[nodiscard]]
    constexpr auto
-   state() const -> state_type {
-      return state_type(m_state);
-   }
-
-   constexpr void
-   set_state(state_type state) {
-      m_state = stored_state(state);
-   }
-
-   [[nodiscard]]
-   constexpr auto
    operator()() -> result_type {
       m_state += increment;
       return result_type(mix(m_state));
@@ -178,7 +157,9 @@ class splitmix_engine {
          if (bound == 0u) {
             return (*this)();
          }
-         return detail::lemire_bounded(bound, [&] { return (*this)(); });
+         return detail::lemire_bounded(bound, [&] {
+            return (*this)();
+         });
       }
    }
 
@@ -199,7 +180,7 @@ class splitmix_engine {
    {
       using batch_type = simd<result_type, Abi>;
       batch_type const states =
-         batch_type(state()) + iota<batch_type>(1u) * increment;
+         batch_type(result_type(m_state)) + iota<batch_type>(1u) * increment;
       discard(batch_type::abi_type::lanes);
       return mix(states);
    }
@@ -225,13 +206,13 @@ class splitmix_engine {
 
    // Skip this many outputs.
    constexpr void
-   discard(state_type count) {
+   discard(result_type count) {
       m_state += increment * count;
    }
 
    // Apply the arbitrary-distance jump described in the SplitMix paper.
    constexpr void
-   jump(state_type count) {
+   jump(result_type count) {
       discard(count);
    }
 
@@ -239,13 +220,13 @@ class splitmix_engine {
    constexpr void
    jump_log2(uword log2_distance) {
       if (log2_distance < period_pow2()) {
-         jump(state_type(uint8(1u).shift_left(log2_distance)));
+         jump(result_type(uint8(1u).shift_left(log2_distance)));
       }
    }
 
    // Skip this many outputs backwards.
    constexpr void
-   backstep(state_type count) {
+   backstep(result_type count) {
       m_state -= increment * count;
    }
 

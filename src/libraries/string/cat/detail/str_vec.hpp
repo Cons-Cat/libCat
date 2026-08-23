@@ -1349,6 +1349,286 @@ make_wzstr_vec_filled(dyn_allocator allocator, idx count, wchar_t value)
    return make_wzstr_vec_filled<dyn_allocator, flags>(allocator, count, value);
 }
 
+template <
+   is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
+   typename Generator>
+[[nodiscard]]
+constexpr auto
+make_str_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<basic_str_vec<char, flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
+   basic_str_vec<char, flags> new_string =
+      $prop((make_str_vec_reserved<Allocator, flags>(allocator, count)));
+   $prop(new_string.resize(allocator, count));
+   new_string.fill_random($fwd(generator));
+   return new_string;
+}
+
+template <
+   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_str_vec_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator
+) -> maybe<basic_str_vec<char, flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
+   return make_str_vec_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
+   typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_str_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_str_vec<char, flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(
+      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   basic_str_vec<char, flags> new_string =
+      $prop((make_str_vec_reserved<Allocator, flags>(allocator, count)));
+   $prop(new_string.resize(allocator, count));
+   new_string.fill_random($fwd(generator), $fwd(distribution));
+   return new_string;
+}
+
+template <
+   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator,
+   typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_str_vec_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_str_vec<char, flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(
+      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_str_vec_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
+   typename Generator>
+[[nodiscard]]
+constexpr auto
+make_zstr_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<basic_str_vec<char, str_flags::null_terminated | flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
+   basic_str_vec<char, str_flags::null_terminated | flags> new_string =
+      $prop((make_zstr_vec_reserved<Allocator, flags>(allocator, count)));
+   $prop(new_string.resize(allocator, count));
+   new_string.fill_random($fwd(generator));
+   return new_string;
+}
+
+template <
+   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_zstr_vec_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator
+) -> maybe<basic_str_vec<char, str_flags::null_terminated | flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
+   return make_zstr_vec_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
+   typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_zstr_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_str_vec<char, str_flags::null_terminated | flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(
+      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   basic_str_vec<char, str_flags::null_terminated | flags> new_string =
+      $prop((make_zstr_vec_reserved<Allocator, flags>(allocator, count)));
+   $prop(new_string.resize(allocator, count));
+   new_string.fill_random($fwd(generator), $fwd(distribution));
+   return new_string;
+}
+
+template <
+   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator,
+   typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_zstr_vec_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_str_vec<char, str_flags::null_terminated | flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(
+      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_zstr_vec_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
+   typename Generator>
+[[nodiscard]]
+constexpr auto
+make_wstr_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<basic_str_vec<wchar_t, flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
+   basic_str_vec<wchar_t, flags> new_string =
+      $prop((make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
+   $prop(new_string.resize(allocator, count));
+   new_string.fill_random($fwd(generator));
+   return new_string;
+}
+
+template <
+   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_wstr_vec_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator
+) -> maybe<basic_str_vec<wchar_t, flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
+   return make_wstr_vec_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
+   typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_wstr_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_str_vec<wchar_t, flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(
+      is_assignable<wchar_t&,
+      decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   basic_str_vec<wchar_t, flags> new_string =
+      $prop((make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
+   $prop(new_string.resize(allocator, count));
+   new_string.fill_random($fwd(generator), $fwd(distribution));
+   return new_string;
+}
+
+template <
+   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator,
+   typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_wstr_vec_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_str_vec<wchar_t, flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(
+      is_assignable<wchar_t&,
+      decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_wstr_vec_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
+   typename Generator>
+[[nodiscard]]
+constexpr auto
+make_wzstr_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<basic_str_vec<wchar_t, str_flags::null_terminated | flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
+   basic_str_vec<wchar_t, str_flags::null_terminated | flags> new_string =
+      $prop((make_wzstr_vec_reserved<Allocator, flags>(allocator, count)));
+   $prop(new_string.resize(allocator, count));
+   new_string.fill_random($fwd(generator));
+   return new_string;
+}
+
+template <
+   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_wzstr_vec_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator
+) -> maybe<basic_str_vec<wchar_t, str_flags::null_terminated | flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
+   return make_wzstr_vec_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
+   typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_wzstr_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_str_vec<wchar_t, str_flags::null_terminated | flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(
+      is_assignable<wchar_t&,
+      decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   basic_str_vec<wchar_t, str_flags::null_terminated | flags> new_string =
+      $prop((make_wzstr_vec_reserved<Allocator, flags>(allocator, count)));
+   $prop(new_string.resize(allocator, count));
+   new_string.fill_random($fwd(generator), $fwd(distribution));
+   return new_string;
+}
+
+template <
+   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator,
+   typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_wzstr_vec_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_str_vec<wchar_t, str_flags::null_terminated | flags>> {
+   static_assert(!flags.vec.is_fixed_size);
+   static_assert(
+      is_assignable<wchar_t&,
+      decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_wzstr_vec_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
 }  // namespace manual
 
 }  // namespace cat

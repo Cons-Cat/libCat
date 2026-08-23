@@ -131,9 +131,9 @@ verify_bounded_draws() {
    Engine reference = bounded;
    for (result_type bound = 0u; bound < 16u; ++bound) {
       result_type const expected =
-         bound == 0u
-            ? reference()
-            : cat::detail::lemire_bounded(bound, [&] { return reference(); });
+         bound == 0u ? reference() : cat::detail::lemire_bounded(bound, [&] {
+            return reference();
+         });
       cat::verify(bounded(bound) == expected);
    }
 
@@ -192,9 +192,7 @@ verify_wide_bounded_draws() {
 
    result_type const ranged = wide(minimums, maximums);
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
-      cat::verify(
-         ranged[lane] == scalar[lane](minimums[lane], maximums[lane])
-      );
+      cat::verify(ranged[lane] == scalar[lane](minimums[lane], maximums[lane]));
    }
 }
 
@@ -1541,11 +1539,9 @@ $test(xoshiro_bounded_draws) {
    verify_wide_bounded_draws<
       cat::xoshiro_engine<cat::uint8x4>, cat::xoshiro_engine<cat::uint8>>();
    verify_wide_bounded_draws<
-      cat::xoroshiro_engine<cat::uint4x4>,
-      cat::xoroshiro_engine<cat::uint4>>();
+      cat::xoroshiro_engine<cat::uint4x4>, cat::xoroshiro_engine<cat::uint4>>();
    verify_wide_bounded_draws<
-      cat::xoroshiro_engine<cat::uint8x4>,
-      cat::xoroshiro_engine<cat::uint8>>();
+      cat::xoroshiro_engine<cat::uint8x4>, cat::xoroshiro_engine<cat::uint8>>();
    verify_wide_bounded_draws<
       cat::xoshiro512_engine<cat::uint8x4>,
       cat::xoshiro512_engine<cat::uint8>>();

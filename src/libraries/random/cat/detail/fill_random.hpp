@@ -176,7 +176,7 @@ fill_random_exact_bulk(Element* _Nonnull p_data, idx size, Generator& generator)
             }
          }
 #else
-         return $simd_switch($abi((sse2, avx2, avx512), {
+         return $simd_switch($abi((sse2, avx2), {
             using vector_type = native_simd<typename Generator::result_type>;
             constexpr idx chain_count = exact_random_bulk_chain_count<
                typename vector_type::abi_type, Generator>();
@@ -294,7 +294,7 @@ fill_random_scalar_batch(Range&& range, Generator& generator) -> bool {
                                                              unwrapped.size();
                                                           }
    ) {
-      using value_type = remove_cvref<decltype(*unwrapped.data())>;
+      using value_type = typeof_unqual(*unwrapped.data());
       using result_type = Generator::result_type;
       if constexpr (is_same<value_type, result_type>) {
          if (
@@ -323,7 +323,7 @@ fill_random_scalar_batch(Range&& range, Generator& generator) -> bool {
                   return true;
                }
 #else
-               bool const filled = $simd_switch($abi((sse2, avx2, avx512), {
+               bool const filled = $simd_switch($abi((sse2, avx2), {
                   using vector_type = native_simd<result_type>;
                   if (
                      unwrapped.size() >= relaxed_random_bulk_threshold<
@@ -360,7 +360,7 @@ fill_random_scalar_batch(Range&& range, Generator& generator) -> bool {
                return true;
             }
 #else
-            return $simd_switch($abi((sse2, avx2, avx512), {
+            return $simd_switch($abi((sse2, avx2), {
                using vector_type = native_simd<result_type>;
                if constexpr (requires {
                                 generate_exact_random_batch<
@@ -393,7 +393,7 @@ fill_random_scalar_distribution_batch(
                                                              unwrapped.size();
                                                           }
    ) {
-      using value_type = remove_cvref<decltype(*unwrapped.data())>;
+      using value_type = typeof_unqual(*unwrapped.data());
       if constexpr (!random_batch_fill_enabled<Distribution>()) {
          return false;
       }
@@ -418,8 +418,8 @@ fill_random_scalar_distribution_batch(
                >= relaxed_random_bulk_threshold<abi_type, Generator>()
             ) {
                using session_type =
-                  remove_cvref<decltype(make_relaxed_random_bulk_session<
-                                        abi_type>(generator))>;
+                  typeof_unqual(make_relaxed_random_bulk_session<
+                                  abi_type>(generator));
                if constexpr (requires(session_type& session) {
                                 generate_random_distribution_batch<abi_type>(
                                    distribution, session
@@ -445,7 +445,7 @@ fill_random_scalar_distribution_batch(
                }
             }
 #else
-            bool const filled = $simd_switch($abi((sse2, avx2, avx512), {
+            bool const filled = $simd_switch($abi((sse2, avx2), {
                using abi_type = typename native_simd<
                   typename Generator::result_type>::abi_type;
                if (
@@ -455,8 +455,8 @@ fill_random_scalar_distribution_batch(
                   return false;
                }
                using session_type =
-                  remove_cvref<decltype(make_relaxed_random_bulk_session<
-                                        abi_type>(generator))>;
+                  typeof_unqual(make_relaxed_random_bulk_session<
+                                  abi_type>(generator));
                if constexpr (requires(session_type& session) {
                                 generate_random_distribution_batch<abi_type>(
                                    distribution, session
@@ -496,8 +496,8 @@ fill_random_scalar_distribution_batch(
                           );
                        }) {
             using batch_type =
-               remove_cvref<decltype(generate_random_distribution_batch<
-                                     abi_type>(distribution, generator))>;
+               typeof_unqual(generate_random_distribution_batch<
+                               abi_type>(distribution, generator));
             if constexpr (
                (is_simd<batch_type>
                 && is_same<value_type, typename batch_type::value_type>)
@@ -514,7 +514,7 @@ fill_random_scalar_distribution_batch(
             }
          }
 #else
-         return $simd_switch($abi((sse2, avx2, avx512), {
+         return $simd_switch($abi((sse2, avx2), {
             using abi_type =
                typename native_simd<typename Generator::result_type>::abi_type;
             if constexpr (requires {
@@ -523,8 +523,8 @@ fill_random_scalar_distribution_batch(
                              );
                           }) {
                using batch_type =
-                  remove_cvref<decltype(generate_random_distribution_batch<
-                                        abi_type>(distribution, generator))>;
+                  typeof_unqual(generate_random_distribution_batch<
+                                  abi_type>(distribution, generator));
                if constexpr (
                   (is_simd<batch_type>
                    && is_same<value_type, typename batch_type::value_type>)
@@ -570,7 +570,7 @@ constexpr void
 fill_random_simd_contiguous(
    Element* _Nonnull p_data, idx size, auto&& generate
 ) {
-   using simd_result = remove_cvref<decltype(generate())>;
+   using simd_result = typeof_unqual(generate());
    simd_result source_values;
    idx source_lane = simd_result::abi_type::lanes;
    idx index = 0u;
@@ -624,7 +624,7 @@ fill_random_simd(Range&& range, auto&& generate) {
                                                              unwrapped.size();
                                                           }
    ) {
-      using value_type = remove_cvref<decltype(*unwrapped.data())>;
+      using value_type = typeof_unqual(*unwrapped.data());
       if constexpr (is_arithmetic<value_type> && !is_bool<value_type>) {
          if consteval {
             fill_random_simd_scattered<Simd>($fwd(range), $fwd(generate));
@@ -634,7 +634,7 @@ fill_random_simd(Range&& range, auto&& generate) {
                unwrapped.data(), unwrapped.size(), $fwd(generate)
             );
 #else
-            $simd_switch($abi((sse2, avx2, avx512), {
+            $simd_switch($abi((sse2, avx2), {
                fill_random_simd_contiguous<native_simd<value_type>>(
                   unwrapped.data(), unwrapped.size(), $fwd(generate)
                );
@@ -703,292 +703,5 @@ fill_random(Range&& range, Generator&& generator, Distribution&& distribution)
    return iteration_result::complete;
 }
 
-namespace detail {
-
-template <typename Generator>
-struct fill_random_impl {
-   Generator generator;
-
-   template <is_iterable Range>
-      requires(!is_const<Range>)
-   friend constexpr auto
-   operator|(Range&& range, fill_random_impl self) -> decltype(auto) {
-      auto&& generator = $fwd(self).generator;
-      cat::fill_random(range, $fwd(generator));
-      return $fwd(range);
-   }
-};
-
-template <typename Generator, typename Distribution>
-struct fill_random_distribution_impl {
-   Generator generator;
-   Distribution distribution;
-
-   template <is_iterable Range>
-      requires(!is_const<Range>)
-   friend constexpr auto
-   operator|(Range&& range, fill_random_distribution_impl self)
-      -> decltype(auto) {
-      auto&& generator = $fwd(self).generator;
-      auto&& distribution = $fwd(self).distribution;
-      cat::fill_random(range, $fwd(generator), $fwd(distribution));
-      return $fwd(range);
-   }
-};
-
-template <typename Container>
-concept is_fixed_random_container =
-   is_iterable<Container> && is_default_constructible<Container>
-   && (requires { Container::size(); }
-       || (requires { Container::capacity(); }
-           && !requires(Container& value) { value.resize(idx{}); }));
-
-template <typename Container>
-concept is_resizable_random_container =
-   is_iterable<Container> && is_default_constructible<Container>
-   && (requires(Container& value) { value.resize(idx{}); }
-       || requires(Container& value) { value.initialize_fixed(idx{}); });
-
-template <typename Container, typename Allocator>
-concept is_external_allocator_random_container =
-   is_iterable<Container>
-   && is_default_constructible<Container>
-   && (requires(Container& value, Allocator&& allocator) {
-          value.resize($fwd(allocator), idx{});
-       }
-       || requires(Container& value, Allocator&& allocator) {
-             value.initialize_fixed($fwd(allocator), idx{});
-          });
-
-template <typename Container, typename Allocator>
-concept is_bound_allocator_random_container =
-   is_iterable<Container> && is_constructible<Container, Allocator>
-   && (requires(Container& value) { value.resize(idx{}); }
-       || requires(Container& value) { value.initialize_fixed(idx{}); });
-
-template <typename Container, typename Generator>
-concept is_random_generator_for =
-   requires(Generator& generator) { generator(); }
-   || requires(Container& container, Generator& generator) {
-         generator.fill_random(container);
-      };
-
-template <typename Container, typename Generator, typename Distribution>
-concept is_random_distribution_for =
-   requires(Generator& generator, Distribution& distribution) {
-      distribution(generator);
-   }
-   || requires(
-      Container& container, Generator& generator, Distribution& distribution
-   ) { distribution.fill_random(container, generator); };
-
-template <typename Container>
-constexpr auto
-prepare_random_container(Container& container, idx count) -> bool {
-   auto result = [&] {
-      if constexpr (requires { container.initialize_fixed(count); }) {
-         return container.initialize_fixed(count);
-      } else {
-         return container.resize(count);
-      }
-   }();
-   return !result.is_empty();
-}
-
-template <typename Container, typename Allocator>
-constexpr auto
-prepare_random_container(Container& container, Allocator&& allocator, idx count)
-   -> bool {
-   auto result = [&] {
-      if constexpr (requires {
-                       container.initialize_fixed($fwd(allocator), count);
-                    }) {
-         return container.initialize_fixed($fwd(allocator), count);
-      } else {
-         return container.resize($fwd(allocator), count);
-      }
-   }();
-   return !result.is_empty();
-}
-
-}  // namespace detail
-
-template <typename Generator>
-[[gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fill_random(Generator&& generator) -> detail::fill_random_impl<Generator> {
-   return {$fwd(generator)};
-}
-
-template <typename Generator, typename Distribution>
-   requires(!is_iterable<remove_cvref<Generator>>)
-[[gnu::always_inline, gnu::nodebug]]
-constexpr auto
-fill_random(Generator&& generator, Distribution&& distribution)
-   -> detail::fill_random_distribution_impl<Generator, Distribution> {
-   return {$fwd(generator), $fwd(distribution)};
-}
-
-template <typename Tag>
-template <typename Self, typename Generator>
-constexpr auto
-iterable_interface<Tag>::fill_random(this Self&& self, Generator&& generator)
-   -> decltype(auto) {
-   return $fwd(self) | cat::fill_random($fwd(generator));
-}
-
-template <typename Tag>
-template <typename Self, typename Generator, typename Distribution>
-constexpr auto
-iterable_interface<Tag>::fill_random(
-   this Self&& self, Generator&& generator, Distribution&& distribution
-) -> decltype(auto) {
-   return $fwd(self) | cat::fill_random($fwd(generator), $fwd(distribution));
-}
-
-template <typename Container, typename Generator>
-   requires(
-      detail::is_fixed_random_container<Container>
-      && detail::is_random_generator_for<Container, Generator>
-   )
-[[nodiscard]]
-constexpr auto
-make_filled_random(Generator&& generator) -> Container {
-   Container result;
-   cat::fill_random(result, $fwd(generator));
-   return result;
-}
-
-template <typename Container, typename Generator, typename Distribution>
-   requires(
-      detail::is_fixed_random_container<Container>
-      && detail::is_random_generator_for<Container, Generator>
-      && detail::is_random_distribution_for<Container, Generator, Distribution>
-   )
-[[nodiscard]]
-constexpr auto
-make_filled_random(Generator&& generator, Distribution&& distribution)
-   -> Container {
-   Container result;
-   cat::fill_random(result, $fwd(generator), $fwd(distribution));
-   return result;
-}
-
-template <typename Container, typename Generator>
-   requires(
-      detail::is_resizable_random_container<Container>
-      && detail::is_random_generator_for<Container, Generator>
-   )
-[[nodiscard]]
-constexpr auto
-make_filled_random(idx count, Generator&& generator) -> maybe<Container> {
-   Container result;
-   if (!detail::prepare_random_container(result, count)) {
-      return nullopt;
-   }
-   cat::fill_random(result, $fwd(generator));
-   return move(result);
-}
-
-template <typename Container, typename Generator, typename Distribution>
-   requires(
-      detail::is_resizable_random_container<Container>
-      && detail::is_random_generator_for<Container, Generator>
-      && detail::is_random_distribution_for<Container, Generator, Distribution>
-   )
-[[nodiscard]]
-constexpr auto
-make_filled_random(
-   idx count, Generator&& generator, Distribution&& distribution
-) -> maybe<Container> {
-   Container result;
-   if (!detail::prepare_random_container(result, count)) {
-      return nullopt;
-   }
-   cat::fill_random(result, $fwd(generator), $fwd(distribution));
-   return move(result);
-}
-
-template <typename Container, typename Allocator, typename Generator>
-   requires(
-      detail::is_external_allocator_random_container<Container, Allocator>
-      && detail::is_random_generator_for<Container, Generator>
-   )
-[[nodiscard]]
-constexpr auto
-make_filled_random(Allocator&& allocator, idx count, Generator&& generator)
-   -> maybe<Container> {
-   Container result;
-   if (!detail::prepare_random_container(result, $fwd(allocator), count)) {
-      return nullopt;
-   }
-   cat::fill_random(result, $fwd(generator));
-   return move(result);
-}
-
-template <
-   typename Container, typename Allocator, typename Generator,
-   typename Distribution>
-   requires(
-      detail::is_external_allocator_random_container<Container, Allocator>
-      && detail::is_random_generator_for<Container, Generator>
-      && detail::is_random_distribution_for<Container, Generator, Distribution>
-   )
-[[nodiscard]]
-constexpr auto
-make_filled_random(
-   Allocator&& allocator, idx count, Generator&& generator,
-   Distribution&& distribution
-) -> maybe<Container> {
-   Container result;
-   if (!detail::prepare_random_container(result, $fwd(allocator), count)) {
-      return nullopt;
-   }
-   cat::fill_random(result, $fwd(generator), $fwd(distribution));
-   return move(result);
-}
-
-namespace raii {
-
-template <typename Container, typename Allocator, typename Generator>
-   requires(
-      detail::is_bound_allocator_random_container<Container, Allocator>
-      && detail::is_random_generator_for<Container, Generator>
-   )
-[[nodiscard]]
-constexpr auto
-make_filled_random(Allocator&& allocator, idx count, Generator&& generator)
-   -> maybe<Container> {
-   Container result($fwd(allocator));
-   if (!detail::prepare_random_container(result, count)) {
-      return nullopt;
-   }
-   cat::fill_random(result, $fwd(generator));
-   return move(result);
-}
-
-template <
-   typename Container, typename Allocator, typename Generator,
-   typename Distribution>
-   requires(
-      detail::is_bound_allocator_random_container<Container, Allocator>
-      && detail::is_random_generator_for<Container, Generator>
-      && detail::is_random_distribution_for<Container, Generator, Distribution>
-   )
-[[nodiscard]]
-constexpr auto
-make_filled_random(
-   Allocator&& allocator, idx count, Generator&& generator,
-   Distribution&& distribution
-) -> maybe<Container> {
-   Container result($fwd(allocator));
-   if (!detail::prepare_random_container(result, count)) {
-      return nullopt;
-   }
-   cat::fill_random(result, $fwd(generator), $fwd(distribution));
-   return move(result);
-}
-
-}  // namespace raii
-
 }  // namespace cat
+

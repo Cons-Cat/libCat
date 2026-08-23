@@ -30,6 +30,12 @@ constexpr cat::array<cat::uint8, 8u> seed_one_reference = {
    0xe099ec6c'd7363ca5ull, 0x85e7bb0f'12278575ull,
 };
 
+// Seeds from Melissa O'Neill's "Bugs in SplitMix(es)" analysis of the
+// inverted mixGamma repair in the OOPSLA 2014 SplitMix paper. The paper
+// ports that faithfully inherit the bug fail PractRand on these seeds.
+// libCat uses Vigna's fixed-gamma form with no mixGamma, so the bug is
+// structurally impossible, but we verify correct output anyway.
+// https://www.pcg-random.org/posts/bugs-in-splitmix.html
 constexpr cat::array<cat::uint8, 16u> variable_gamma_bug_seeds = {
    0x61c88646'80b583ebull, 0x7957d809'e827ff4cull, 0x305cb877'109d0686ull,
    0xefee3e7b'93db3075ull, 0xf8364607'e9c949bdull, 0xf8d059ae'e4c53639ull,
@@ -54,18 +60,15 @@ matches_reference(cat::uint8 seed, cat::array<cat::uint8, size> const& expected)
 
 consteval auto
 verify_constexpr_navigation() -> bool {
-   cat::splitmix64_engine original(0u);
-   cat::splitmix64_engine navigated(0u);
+   constexpr reference_word initial_state = 0x12345678'90abcdefull;
+   cat::splitmix64_engine original(initial_state);
+   cat::splitmix64_engine navigated = original;
    navigated.jump(257u);
    navigated.backstep(257u);
    if (navigated != original) {
       return false;
    }
-   navigated.set_state(0x12345678'90abcdefull);
-   if (navigated.state() != 0x12345678'90abcdefull) {
-      return false;
-   }
-   reference_word reference_state = 0x12345678'90abcdefull;
+   reference_word reference_state = initial_state;
    return navigated() == reference_next(reference_state);
 }
 
@@ -102,10 +105,6 @@ verify_simd_stream(cat::uint8 seed) {
    cat::array<cat::splitmix64_engine, lanes> scalar;
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
       scalar[lane].seed(seed + lane);
-      cat::verify(wide.state()[lane] == seed + lane);
-      for (cat::idx other = 0u; other < lane; ++other) {
-         cat::verify(wide.state()[lane] != wide.state()[other]);
-      }
    }
 
    for (cat::idx draw = 0u; draw < 16u; ++draw) {
@@ -115,51 +114,37 @@ verify_simd_stream(cat::uint8 seed) {
       }
    }
 
-   Simd const saved_state = wide.state();
-   cat::splitmix_engine<Simd> restored(0u);
-   restored.set_state(saved_state);
-   cat::verify(restored == wide);
-
+   cat::splitmix_engine<Simd> navigated = wide;
    Simd const counts = cat::iota<Simd>(3u);
-   restored.discard(counts);
+   navigated.discard(counts);
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
       scalar[lane].discard(counts[lane]);
    }
-   Simd const discarded = restored();
+   Simd const discarded = navigated();
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
       cat::verify(discarded[lane] == scalar[lane]());
    }
-   restored.backstep(counts + 1u);
-   cat::verify(restored == wide);
+   navigated.backstep(counts + 1u);
+   cat::verify(navigated == wide);
 
-   cat::splitmix_engine<Simd> jumped;
-   cat::splitmix_engine<Simd> discarded_by_lane;
-   jumped.set_state(saved_state);
-   discarded_by_lane.set_state(saved_state);
+   cat::splitmix_engine<Simd> jumped = wide;
+   cat::splitmix_engine<Simd> discarded_by_lane = wide;
    jumped.jump(counts);
    discarded_by_lane.discard(counts);
    cat::verify(jumped == discarded_by_lane);
 
-   jumped.set_state(saved_state);
-   discarded_by_lane.set_state(saved_state);
+   jumped = wide;
+   discarded_by_lane = wide;
    jumped.jump_log2(9u);
    discarded_by_lane.discard(512u);
    cat::verify(jumped == discarded_by_lane);
 
-   jumped.set_state(saved_state);
+   jumped = wide;
    jumped.jump_log2(64u);
    cat::verify(jumped == wide);
    jumped.jump(Simd(cat::uint8::max()));
    jumped.jump(Simd(1u));
    cat::verify(jumped == wide);
-
-   Simd const equal_state(17u);
-   cat::splitmix_engine<Simd> explicitly_equal;
-   explicitly_equal.set_state(equal_state);
-   Simd const equal_values = explicitly_equal();
-   for (cat::idx lane = 1u; lane < lanes; ++lane) {
-      cat::verify(equal_values[lane] == equal_values[0u]);
-   }
 }
 
 template <cat::idx lanes>
@@ -175,7 +160,7 @@ verify_scalar_batch(cat::uint8 seed) {
    for (cat::idx lane = 0u; lane < lanes; ++lane) {
       cat::verify(values[lane] == scalar());
    }
-   cat::verify(batched.state() == scalar.state());
+   cat::verify(batched == scalar);
    for (cat::idx draw = 0u; draw < 8u; ++draw) {
       cat::verify(batched() == scalar());
    }
@@ -228,10 +213,40 @@ $test(splitmix_independent_reference_model) {
       }
    }
 
+   // The specific PractRand-failing seed from O'Neill's bug report.
+   // 0x61c8864680b583eb = -GOLDEN_GAMMA mod 2^64, so the first state is 0
+   // and mix(0) = 0. In the buggy mixGamma form this seed triggers the
+   // inverted repair and fails statistical tests.
    cat::splitmix64_engine zero_output(0x61c88646'80b583ebull);
    cat::verify(zero_output() == 0u);
+
+   // 0x7957d809e827ff4c produces 0xaaaaaaaaaaaaaaaa, the exact mask the
+   // buggy mixGamma XORs in. The correct fixed-gamma form passes this
+   // through the standard mix without any gamma repair.
    cat::splitmix64_engine patterned_output(0x7957d809'e827ff4cull);
    cat::verify(patterned_output() == 0xaaaaaaaa'aaaaaaacull);
+}
+
+// Regression for the lemire/testingRNG stateless off-by-one (issue #7):
+// splitmix64_stateless(x) was equivalent to splitmix64() with seed
+// (x - 1) * GOLDEN_GAMMA, not seed x. libCat has no stateless API, but
+// the batch path and discard(0) must be exact no-ops.
+// https://github.com/lemire/testingRNG/issues/7
+$test(splitmix_stateless_equivalence) {
+   for (cat::uint8 seed : variable_gamma_bug_seeds) {
+      cat::splitmix64_engine direct(seed);
+      cat::splitmix64_engine discarded(seed);
+      discarded.discard(0u);
+      cat::verify(direct == discarded);
+      cat::verify(direct() == discarded());
+   }
+
+   cat::splitmix64_engine engine(42u);
+   cat::splitmix64_engine reference = engine;
+   engine.jump(0u);
+   cat::verify(engine == reference);
+   engine.backstep(0u);
+   cat::verify(engine == reference);
 }
 
 $test(splitmix_scalar_state_navigation) {
@@ -268,12 +283,10 @@ $test(splitmix_scalar_state_navigation) {
    jumped.jump_log2(127u);
    cat::verify(jumped == original);
 
-   cat::splitmix64_engine restored;
-   restored.set_state(iterated.state());
-   cat::verify(restored == iterated);
-   restored.discard(0xffffffff'ffffffffull);
-   restored.discard(1u);
-   cat::verify(restored == iterated);
+   cat::splitmix64_engine cycled = iterated;
+   cycled.discard(0xffffffff'ffffffffull);
+   cycled.discard(1u);
+   cat::verify(cycled == iterated);
    cat::verify(cat::splitmix64_engine::period_pow2() == 64u);
 }
 
@@ -311,19 +324,18 @@ $test(splitmix_bounded_draws) {
    cat::splitmix64_engine reference = bounded;
    for (cat::uint8 bound = 0u; bound < 16u; ++bound) {
       cat::uint8 const expected =
-         bound == 0u
-            ? reference()
-            : cat::detail::lemire_bounded(bound, [&] { return reference(); });
+         bound == 0u ? reference() : cat::detail::lemire_bounded(bound, [&] {
+            return reference();
+         });
       cat::verify(bounded(bound) == expected);
    }
 
    for (cat::uint8 minimum = 0u; minimum < 8u; ++minimum) {
       for (cat::uint8 maximum = minimum; maximum < 8u; ++maximum) {
          cat::uint8 const expected =
-            minimum
-            + cat::detail::lemire_bounded(maximum - minimum + 1u, [&] {
-                 return reference();
-              });
+            minimum + cat::detail::lemire_bounded(maximum - minimum + 1u, [&] {
+               return reference();
+            });
          cat::verify(bounded(minimum, maximum) == expected);
       }
    }
@@ -331,8 +343,7 @@ $test(splitmix_bounded_draws) {
    cat::splitmix64_engine full_range(42u);
    cat::splitmix64_engine full_range_reference = full_range;
    cat::verify(
-      full_range(cat::uint8::min(), cat::uint8::max())
-      == full_range_reference()
+      full_range(cat::uint8::min(), cat::uint8::max()) == full_range_reference()
    );
 
    cat::splitmix_engine<cat::uint8x4> wide(42u);
@@ -362,8 +373,6 @@ $test(splitmix_bounded_draws) {
 
    cat::uint8x4 const ranged = wide(minimums, maximums);
    for (cat::idx lane = 0u; lane < 4u; ++lane) {
-      cat::verify(
-         ranged[lane] == scalar[lane](minimums[lane], maximums[lane])
-      );
+      cat::verify(ranged[lane] == scalar[lane](minimums[lane], maximums[lane]));
    }
 }

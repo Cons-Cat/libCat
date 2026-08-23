@@ -663,6 +663,45 @@ make_forward_list_filled(
    return new_list;
 }
 
+template <typename T, is_allocator Allocator, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_forward_list_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<basic_forward_list<T>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   basic_forward_list<T> new_list;
+   detail::forward_list_node<T>* p_tail = nullptr;
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_list.append_new_node(allocator, p_tail, T{}));
+   }
+   new_list.fill_random($fwd(generator));
+   return new_list;
+}
+
+template <
+   typename T, is_allocator Allocator, typename Generator,
+   typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_forward_list_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_forward_list<T>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   basic_forward_list<T> new_list;
+   detail::forward_list_node<T>* p_tail = nullptr;
+   for (idx i = 0u; i < count; ++i) {
+      $prop(new_list.append_new_node(allocator, p_tail, T{}));
+   }
+   new_list.fill_random($fwd(generator), $fwd(distribution));
+   return new_list;
+}
+
 }  // namespace manual
 
 namespace detail {

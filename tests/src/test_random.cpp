@@ -1,9 +1,16 @@
 #include <cat/bitset>
+#include <cat/bitvec>
+#include <cat/forward_list>
 #include <cat/list>
 #include <cat/page_allocator>
+#include <cat/path>
+#include <cat/raii_bitvec>
+#include <cat/raii_forward_list>
 #include <cat/raii_vec>
 #include <cat/random>
+#include <cat/simd>
 #include <cat/string>
+#include <cat/vec>
 #include <cat/vec_inplace>
 
 #include "../unit_tests.hpp"
@@ -52,72 +59,36 @@ struct random_fill_custom_distribution {
    }
 };
 
-template <typename Container, typename Generator>
-concept has_fixed_random_factory =
-   requires(Generator& generator) {
-      cat::make_filled_random<Container>(generator);
-   };
+struct incompatible_random_result {};
 
-template <typename Container, typename Generator>
-concept has_sized_random_factory =
-   requires(Generator& generator) {
-      cat::make_filled_random<Container>(1u, generator);
-   };
+struct incompatible_random_engine {
+   constexpr auto
+   operator()() -> incompatible_random_result {
+      return {};
+   }
+};
 
-template <typename Container, typename Allocator, typename Generator>
-concept has_allocator_random_factory =
-   requires(Allocator& allocator, Generator& generator) {
-      cat::make_filled_random<Container>(
-         cat::allocator_ref<Allocator>(allocator), 1u, generator
-      );
-   };
+struct random_bool_engine {
+   constexpr auto
+   operator()() -> bool {
+      return true;
+   }
+};
 
-template <typename Container, typename Allocator, typename Generator>
-concept has_bound_allocator_random_factory =
-   requires(Allocator& allocator, Generator& generator) {
-      cat::raii::make_filled_random<Container>(
-         cat::allocator_ref<Allocator>(allocator), 1u, generator
-      );
-   };
+struct random_char_engine {
+   constexpr auto
+   operator()() -> char {
+      return 'x';
+   }
+};
 
-template <typename Container, typename Generator>
-concept has_static_random_factory =
-   requires(Generator& generator) { Container::make_filled_random(generator); };
-
-using random_factory_engine = cat::xoshiro_engine<cat::uint8>;
-
-static_assert(
-   has_fixed_random_factory<cat::array<cat::uint8, 4u>, random_factory_engine>
-);
-static_assert(has_fixed_random_factory<cat::bitset<4u>, random_factory_engine>);
-static_assert(has_sized_random_factory<
-              cat::vec_inplace<cat::uint8, 4u>, random_factory_engine>);
-static_assert(
-   has_sized_random_factory<cat::str_inplace<4u>, random_factory_engine>
-);
-static_assert(
-   has_allocator_random_factory<
-      cat::list<cat::uint8>, cat::page_allocator, random_factory_engine>
-);
-static_assert(has_bound_allocator_random_factory<
-              cat::raii::vec<cat::uint8, cat::page_allocator>,
-              cat::page_allocator, random_factory_engine>);
-static_assert(!has_allocator_random_factory<
-              cat::raii::vec<cat::uint8, cat::page_allocator>,
-              cat::page_allocator, random_factory_engine>);
-static_assert(
-   !has_bound_allocator_random_factory<
-      cat::list<cat::uint8>, cat::page_allocator, random_factory_engine>
-);
-static_assert(
-   !has_fixed_random_factory<cat::span<cat::uint8>, random_factory_engine>
-);
-static_assert(
-   !has_sized_random_factory<cat::array<cat::uint8, 4u>, random_factory_engine>
-);
-static_assert(
-   !has_static_random_factory<cat::array<cat::uint8, 4u>, random_factory_engine>
-);
+struct random_fill_mask_distribution {
+   template <typename Generator>
+   constexpr auto
+   operator()(Generator& generator [[maybe_unused]]) {
+      return cat::uint4x4{} == cat::uint4x4{};
+   }
+};
 
 template <typename Result>
 class canonical_counting_engine {
@@ -1227,13 +1198,12 @@ $test(random_fill_xoshiro_relaxed_distributions) {
 
 $test(random_fill_factories) {
    cat::xoshiro_engine<cat::uint8> array_engine(99u);
-   auto fixed =
-      cat::make_filled_random<cat::array<cat::uint8, 13u>>(array_engine);
+   auto fixed = cat::make_array_filled_random<13u, cat::uint8>(array_engine);
    cat::verify(fixed.size() == 13u);
 
    cat::xoshiro_engine<cat::uint8> fixed_distribution_engine(100u);
    cat::uniform_int_distribution<cat::int4> fixed_distribution(-8, 12);
-   auto fixed_distributed = cat::make_filled_random<cat::array<cat::int4, 7u>>(
+   auto fixed_distributed = cat::make_array_filled_random<7u, cat::int4>(
       fixed_distribution_engine, fixed_distribution
    );
    for (cat::int4 value : fixed_distributed) {
@@ -1241,15 +1211,14 @@ $test(random_fill_factories) {
    }
 
    cat::xoshiro_engine<cat::uint8> inplace_engine(100u);
-   auto inplace = cat::make_filled_random<cat::vec_inplace<cat::uint8, 32u>>(
-                     21u, inplace_engine
-   )
-                     .verify();
+   auto inplace =
+      cat::make_vec_inplace_filled_random<cat::uint8, 32u>(21u, inplace_engine)
+         .verify();
    cat::verify(inplace.size() == 21u);
 
    cat::xoshiro_engine<cat::uint8> distributed_engine(101u);
    cat::uniform_int_distribution<cat::int4> distribution(-4, 7);
-   auto distributed = cat::make_filled_random<cat::vec_inplace<cat::int4, 16u>>(
+   auto distributed = cat::make_vec_inplace_filled_random<cat::int4, 16u>(
                          11u, distributed_engine, distribution
    )
                          .verify();
@@ -1260,26 +1229,25 @@ $test(random_fill_factories) {
 
    cat::xoshiro_engine<cat::uint8> manual_engine(102u);
    auto manual =
-      cat::make_filled_random<cat::vec<cat::uint8>>(
+      cat::make_vec_filled_random<cat::uint8>(
          cat::allocator_ref<cat::page_allocator>(pager), 19u, manual_engine
       )
          .verify();
    cat::verify(manual.size() == 19u);
    manual.free(pager);
 
-   using owned_vec = cat::raii::basic_vec<cat::uint8, cat::page_allocator>;
-   cat::xoshiro_engine<cat::uint8> owned_engine(103u);
+   cat::xoshiro_engine<cat::uint8> owned_engine(104u);
    auto owned =
-      cat::raii::make_filled_random<owned_vec>(
+      cat::raii::make_vec_filled_random<cat::uint8>(
          cat::allocator_ref<cat::page_allocator>(pager), 23u, owned_engine
       )
          .verify();
    cat::verify(owned.size() == 23u);
 
-   cat::xoshiro_engine<cat::uint8> owned_distribution_engine(104u);
+   cat::xoshiro_engine<cat::uint8> owned_distribution_engine(105u);
    cat::uniform_int_distribution<cat::uint8> owned_distribution(3u, 19u);
    auto distributed_owned =
-      cat::raii::make_filled_random<owned_vec>(
+      cat::raii::make_vec_filled_random<cat::uint8>(
          cat::allocator_ref<cat::page_allocator>(pager), 17u,
          owned_distribution_engine, owned_distribution
       )

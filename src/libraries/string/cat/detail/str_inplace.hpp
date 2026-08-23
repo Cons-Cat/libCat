@@ -756,4 +756,216 @@ make_wzstr_inplace_fixed_filled(wchar_t value)
    return result;
 }
 
+template <idx inline_capacity, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_str_inplace_filled_random(idx count, Generator&& generator)
+   -> maybe<str_inplace<inline_capacity>> {
+   static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
+   str_inplace<inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx inline_capacity, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_str_inplace_filled_random(
+   idx count, Generator&& generator, Distribution&& distribution
+) -> maybe<str_inplace<inline_capacity>> {
+   static_assert(
+      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   str_inplace<inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
+template <idx inline_capacity, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_zstr_inplace_filled_random(idx count, Generator&& generator)
+   -> maybe<zstr_inplace<inline_capacity>> {
+   static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
+   zstr_inplace<inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx inline_capacity, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_zstr_inplace_filled_random(
+   idx count, Generator&& generator, Distribution&& distribution
+) -> maybe<zstr_inplace<inline_capacity>> {
+   static_assert(
+      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   zstr_inplace<inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
+template <idx inline_capacity, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_wstr_inplace_filled_random(idx count, Generator&& generator)
+   -> maybe<wstr_inplace<inline_capacity>> {
+   static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
+   wstr_inplace<inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx inline_capacity, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_wstr_inplace_filled_random(
+   idx count, Generator&& generator, Distribution&& distribution
+) -> maybe<wstr_inplace<inline_capacity>> {
+   static_assert(
+      is_assignable<wchar_t&,
+      decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   wstr_inplace<inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
+template <idx inline_capacity, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_wzstr_inplace_filled_random(idx count, Generator&& generator)
+   -> maybe<wzstr_inplace<inline_capacity>> {
+   static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
+   wzstr_inplace<inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx inline_capacity, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_wzstr_inplace_filled_random(
+   idx count, Generator&& generator, Distribution&& distribution
+) -> maybe<wzstr_inplace<inline_capacity>> {
+   static_assert(
+      is_assignable<wchar_t&,
+      decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   wzstr_inplace<inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
+template <idx fixed_size, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_str_inplace_fixed_filled_random(Generator&& generator)
+   -> str_inplace_fixed<fixed_size> {
+   static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
+   str_inplace_fixed<fixed_size> result;
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx fixed_size, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_str_inplace_fixed_filled_random(
+   Generator&& generator, Distribution&& distribution
+) -> str_inplace_fixed<fixed_size> {
+   static_assert(
+      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   str_inplace_fixed<fixed_size> result;
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
+template <idx fixed_size, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_zstr_inplace_fixed_filled_random(Generator&& generator)
+   -> zstr_inplace_fixed<fixed_size> {
+   static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
+   zstr_inplace_fixed<fixed_size> result;
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx fixed_size, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_zstr_inplace_fixed_filled_random(
+   Generator&& generator, Distribution&& distribution
+) -> zstr_inplace_fixed<fixed_size> {
+   static_assert(
+      is_assignable<char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   zstr_inplace_fixed<fixed_size> result;
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
+template <idx fixed_size, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_wstr_inplace_fixed_filled_random(Generator&& generator)
+   -> wstr_inplace_fixed<fixed_size> {
+   static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
+   wstr_inplace_fixed<fixed_size> result;
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx fixed_size, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_wstr_inplace_fixed_filled_random(
+   Generator&& generator, Distribution&& distribution
+) -> wstr_inplace_fixed<fixed_size> {
+   static_assert(
+      is_assignable<wchar_t&,
+      decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   wstr_inplace_fixed<fixed_size> result;
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
+template <idx fixed_size, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_wzstr_inplace_fixed_filled_random(Generator&& generator)
+   -> wzstr_inplace_fixed<fixed_size> {
+   static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
+   wzstr_inplace_fixed<fixed_size> result;
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx fixed_size, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_wzstr_inplace_fixed_filled_random(
+   Generator&& generator, Distribution&& distribution
+) -> wzstr_inplace_fixed<fixed_size> {
+   static_assert(
+      is_assignable<wchar_t&,
+      decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   wzstr_inplace_fixed<fixed_size> result;
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
 }  // namespace cat

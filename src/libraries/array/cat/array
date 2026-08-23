@@ -121,6 +121,29 @@ make_array_filled(T const& value) -> array<T, length> {
    return array;
 }
 
+template <idx length, typename T, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_array_filled_random(Generator&& generator) -> array<T, length> {
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   array<T, length> result;
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <idx length, typename T, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_array_filled_random(Generator&& generator, Distribution&& distribution)
+   -> array<T, length> {
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   array<T, length> result;
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
 // Analogous to the proposed `std::aggr::get` in the P2141 paper.
 template <idx index, typename T, idx length>
    requires(index < length)

@@ -1465,6 +1465,255 @@ template <
    );
 }
 
+template <
+   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator>
+[[nodiscard]] constexpr auto make_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<basic_vec<T, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   basic_vec<T, flags> new_vector;
+   if constexpr (flags.is_fixed_size) {
+      $prop(new_vector.initialize_fixed(allocator, count));
+   } else {
+      $prop(new_vector.resize(allocator, count));
+   }
+   new_vector.fill_random($fwd(generator));
+   return new_vector;
+}
+
+template <
+   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   typename Distribution>
+[[nodiscard]] constexpr auto make_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<basic_vec<T, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   basic_vec<T, flags> new_vector;
+   if constexpr (flags.is_fixed_size) {
+      $prop(new_vector.initialize_fixed(allocator, count));
+   } else {
+      $prop(new_vector.resize(allocator, count));
+   }
+   new_vector.fill_random($fwd(generator), $fwd(distribution));
+   return new_vector;
+}
+
+template <typename T, vec_flags flags = {}, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator
+   ) -> maybe<basic_vec<T, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return make_vec_filled_random<T, dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, vec_flags flags = {}, typename Generator, typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator,
+      Distribution&& distribution
+   ) -> maybe<basic_vec<T, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_vec_filled_random<T, dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   typename T, idx inline_count = 4u, is_allocator Allocator,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator>
+[[nodiscard]] constexpr auto make_small_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<small_vec<T, inline_count, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return make_vec_filled_random<
+      T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, idx inline_count = 4u, is_allocator Allocator,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator,
+   typename Distribution>
+[[nodiscard]] constexpr auto make_small_vec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<small_vec<T, inline_count, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_vec_filled_random<
+      T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_vec_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator
+   ) -> maybe<small_vec<T, inline_count, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return make_small_vec_filled_random<T, inline_count, dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator,
+   typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_vec_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator,
+      Distribution&& distribution
+   ) -> maybe<small_vec<T, inline_count, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_small_vec_filled_random<T, inline_count, dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator>
+[[nodiscard]] constexpr auto make_vec_fixed_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<vec_fixed<T, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return make_vec_filled_random<T, Allocator, vec_flags::fixed_size | flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   typename Distribution>
+[[nodiscard]] constexpr auto make_vec_fixed_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<vec_fixed<T, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_vec_fixed_filled_random<T, Allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <typename T, vec_flags flags = {}, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_fixed_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator
+   ) -> maybe<vec_fixed<T, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return make_vec_fixed_filled_random<T, dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, vec_flags flags = {}, typename Generator, typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_fixed_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator,
+      Distribution&& distribution
+   ) -> maybe<vec_fixed<T, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_vec_fixed_filled_random<T, dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   typename T, idx inline_count = 4u, is_allocator Allocator,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator>
+[[nodiscard]] constexpr auto make_small_vec_fixed_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<small_vec_fixed<T, inline_count, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return make_small_vec_filled_random<
+      T, inline_count, Allocator, vec_flags::fixed_size | flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, idx inline_count = 4u, is_allocator Allocator,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator,
+   typename Distribution>
+[[nodiscard]] constexpr auto make_small_vec_fixed_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<small_vec_fixed<T, inline_count, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_small_vec_fixed_filled_random<T, inline_count, Allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_vec_fixed_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator
+   ) -> maybe<small_vec_fixed<T, inline_count, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return make_small_vec_fixed_filled_random<
+      T, inline_count, dyn_allocator, flags>(allocator, count, $fwd(generator));
+}
+
+template <
+   typename T, idx inline_count = 4u,
+   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator,
+   typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_small_vec_fixed_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator,
+      Distribution&& distribution
+   ) -> maybe<small_vec_fixed<T, inline_count, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_small_vec_fixed_filled_random<
+      T, inline_count, dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
 }  // namespace manual
 
 }  // namespace cat

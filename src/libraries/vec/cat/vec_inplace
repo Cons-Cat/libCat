@@ -419,4 +419,34 @@ make_vec_inplace_filled(idx count, T const& value)
    return result;
 }
 
+template <typename T, idx inline_capacity, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_vec_inplace_filled_random(idx count, Generator&& generator)
+   -> maybe<vec_inplace<T, inline_capacity>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   vec_inplace<T, inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator));
+   return result;
+}
+
+template <
+   typename T, idx inline_capacity, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_vec_inplace_filled_random(
+   idx count, Generator&& generator, Distribution&& distribution
+) -> maybe<vec_inplace<T, inline_capacity>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   vec_inplace<T, inline_capacity> result;
+   $prop(result.resize(count));
+   result.fill_random($fwd(generator), $fwd(distribution));
+   return result;
+}
+
 }  // namespace cat

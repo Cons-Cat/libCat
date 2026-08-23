@@ -660,6 +660,69 @@ make_list_filled(dyn_allocator allocator, idx count, T const& value)
    );
 }
 
+template <typename T, is_allocator Allocator, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_list_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<raii::basic_list<T, Allocator>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   raii::basic_list<T, Allocator> new_list(allocator);
+   $prop(new_list.resize(count));
+   new_list.fill_random($fwd(generator));
+   return new_list;
+}
+
+template <
+   typename T, is_allocator Allocator, typename Generator,
+   typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_list_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<raii::basic_list<T, Allocator>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   raii::basic_list<T, Allocator> new_list(allocator);
+   $prop(new_list.resize(count));
+   new_list.fill_random($fwd(generator), $fwd(distribution));
+   return new_list;
+}
+
+template <typename T, typename Generator>
+[[nodiscard]]
+constexpr auto
+make_list_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator
+) -> maybe<raii::basic_list<T, dyn_allocator>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return cat::raii::make_list_filled_random<T, dyn_allocator>(
+      allocator_ref<dyn_allocator>(allocator), count, $fwd(generator)
+   );
+}
+
+template <typename T, typename Generator, typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_list_filled_random(
+   dyn_allocator allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<raii::basic_list<T, dyn_allocator>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return cat::raii::make_list_filled_random<T, dyn_allocator>(
+      allocator_ref<dyn_allocator>(allocator), count, $fwd(generator),
+      $fwd(distribution)
+   );
+}
+
 }  // namespace cat::raii
 
 namespace cat::detail {

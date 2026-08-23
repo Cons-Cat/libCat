@@ -5,8 +5,8 @@
 // Deterministic engines in this header are not cryptographically secure.
 // Use `nix::sys_urandom_engine` or `nix::sys_random_engine` instead.
 
-#include <cat/detail/random_seed.hpp>
 #include <cat/detail/bounded_random.hpp>
+#include <cat/detail/random_seed.hpp>
 #include <cat/detail/rdrand.hpp>
 #include <cat/detail/rdseed.hpp>
 
@@ -828,3 +828,5 @@ struct formatter<Distribution, CharT> : formatter_base<CharT> {
 };
 
 }  // namespace cat
+
+#include "../implementations/fill_random.tpp"
