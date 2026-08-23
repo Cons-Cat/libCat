@@ -760,16 +760,6 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       return emplace_back<dyn_allocator>(allocator, $fwd(arguments)...);
    }
 
-   constexpr auto
-   fill(T const& value) -> basic_vec&
-      requires(is_copy_assignable<T>)
-   {
-      for (T& element : *this) {
-         element = value;
-      }
-      return *this;
-   }
-
    // Remove and return the last element. Returns `nullopt` when the vec
    // is empty.
    [[nodiscard]]

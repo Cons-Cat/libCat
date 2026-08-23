@@ -438,12 +438,6 @@ class
       return m_core == rhs;
    }
 
-   constexpr auto
-   fill(CharT value) -> basic_str_vec& {
-      m_core.fill(value);
-      return *this;
-   }
-
    constexpr void
    swap(basic_str_vec& other) {
       cat::assert(m_allocator == other.m_allocator);

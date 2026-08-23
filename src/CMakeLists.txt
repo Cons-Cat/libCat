@@ -338,6 +338,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/iterable/implementations/drop_last_while.tpp
   ${CATLIB}/iterable/implementations/drop_while.tpp
   ${CATLIB}/iterable/implementations/filter.tpp
+  ${CATLIB}/iterable/implementations/fill.tpp
   ${CATLIB}/iterable/implementations/fold.tpp
   ${CATLIB}/iterable/implementations/for_each.tpp
   ${CATLIB}/iterable/implementations/iterable_interface.tpp

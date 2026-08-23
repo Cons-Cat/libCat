@@ -291,14 +291,6 @@ class
       return compare_strings(this->view(), basic_str_span<CharT const>(rhs));
    }
 
-   constexpr auto
-   fill(CharT value) -> basic_str_vec& {
-      for (idx index; index < size(); ++index) {
-         data()[index] = value;
-      }
-      return *this;
-   }
-
    constexpr void
    swap(basic_str_vec& other) {
       m_core.swap(other.m_core);

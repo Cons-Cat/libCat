@@ -85,6 +85,12 @@ iterable_pipe_reverse_inplace(Self&& self) -> decltype(auto) {
    return $fwd(self) | reverse_inplace();
 }
 
+template <typename Self, typename Value>
+constexpr auto
+iterable_pipe_fill(Self&& self, Value value) -> decltype(auto) {
+   return $fwd(self) | fill($fwd(value));
+}
+
 template <typename Self>
 constexpr auto
 iterable_pipe_as_rvalue(Self&& self) {
@@ -259,6 +265,13 @@ template <typename Self>
 constexpr auto
 iterable_interface<Tag>::reverse_inplace(this Self&& self) -> decltype(auto) {
    return detail::iterable_pipe_reverse_inplace($fwd(self));
+}
+
+template <typename Tag>
+template <typename Self, typename Value>
+constexpr auto
+iterable_interface<Tag>::fill(this Self&& self, Value value) -> decltype(auto) {
+   return detail::iterable_pipe_fill($fwd(self), $fwd(value));
 }
 
 template <typename Tag>

@@ -631,6 +631,7 @@ struct view_interface {
 #include "../implementations/drop_last.tpp"
 #include "../implementations/drop_last_while.tpp"
 #include "../implementations/drop_while.tpp"
+#include "../implementations/fill.tpp"
 #include "../implementations/filter.tpp"
 #include "../implementations/reverse.tpp"
 #include "../implementations/take.tpp"

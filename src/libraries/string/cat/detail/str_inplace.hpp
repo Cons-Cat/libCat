@@ -467,14 +467,6 @@ class
       return monostate;
    }
 
-   constexpr auto
-   fill(CharT value) -> basic_str_inplace& {
-      for (idx index; index < size(); ++index) {
-         m_data[index] = value;
-      }
-      return *this;
-   }
-
    [[nodiscard]]
    constexpr auto
    pop_back() -> maybe<CharT>

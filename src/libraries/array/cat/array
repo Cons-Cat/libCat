@@ -51,23 +51,6 @@ array : public container_interface<array<T, length>, T>,
       return true;
    }
 
-   template <typename U>
-      requires(is_implicitly_convertible<U, T>)
-   constexpr auto
-   fill(U value) -> array& {
-      // TODO: This `fill_memory()` segfaults with optimizations enabled. Is it
-      // even necessary?
-      //
-      // if (!is_constant_evaluated() && sizeof(T) <= 8) {
-      //     // fill_memory(this->storage, value, length);
-      // } else {
-      for (unsigned long long i = 0u; i < length; ++i) {
-         this->m_data[i] = static_cast<T>(value);
-      }
-      // }
-      return *this;
-   }
-
    constexpr void
    swap(array& other) {
       for (idx index = 0u; index < length; ++index) {

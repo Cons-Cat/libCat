@@ -288,16 +288,6 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
       return result;
    }
 
-   constexpr auto
-   fill(T const& value) -> vec_inplace&
-      requires(is_copy_assignable<T>)
-   {
-      for (T& element : *this) {
-         element = value;
-      }
-      return *this;
-   }
-
    [[clang::reinitializes]]
    constexpr void
    clear() {

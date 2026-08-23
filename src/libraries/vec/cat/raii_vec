@@ -326,14 +326,6 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
       return m_core.emplace_back(m_allocator, $fwd(arguments)...);
    }
 
-   constexpr auto
-   fill(T const& value) -> basic_vec&
-      requires(is_copy_assignable<T>)
-   {
-      m_core.fill(value);
-      return *this;
-   }
-
    // Remove and return the last element. Returns `nullopt` when the vec
    // is empty.
    [[nodiscard]]
