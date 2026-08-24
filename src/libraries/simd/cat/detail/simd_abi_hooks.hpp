@@ -158,6 +158,14 @@ struct op_rotate_left {};
 
 struct op_rotate_right {};
 
+struct op_pairwise_add {};
+
+struct op_pairwise_sub {};
+
+struct op_pairwise_add_sat {};
+
+struct op_pairwise_sub_sat {};
+
 template <typename OpTag, typename T, typename Abi>
 struct unary_full {};
 

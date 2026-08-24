@@ -3456,6 +3456,110 @@ struct simd_ldexp_impl
    }
 };
 
+struct simd_pairwise_add_impl {
+   template <typename T, typename Abi>
+      requires(is_arithmetic<T> && !is_bool<T> && (Abi::lanes % 2u) == 0u)
+   [[nodiscard, gnu::always_inline]]
+   constexpr auto
+   operator()(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (
+         has_simd_abi_binary_full<simd_abi::op_pairwise_add, T, Abi>
+      ) {
+         return simd_abi_apply_binary_full<simd_abi::op_pairwise_add, T, Abi>(
+            left, right
+         );
+      } else {
+         simd<T, Abi> out{};
+         for (idx k = 0u; k < Abi::lanes; k += 2u) {
+            out.set_lane(k, left[k] + left[k + 1u]);
+            out.set_lane(k + 1u, right[k] + right[k + 1u]);
+         }
+         return out;
+      }
+   }
+};
+
+struct simd_pairwise_sub_impl {
+   template <typename T, typename Abi>
+      requires(is_arithmetic<T> && !is_bool<T> && (Abi::lanes % 2u) == 0u)
+   [[nodiscard, gnu::always_inline]]
+   constexpr auto
+   operator()(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (
+         has_simd_abi_binary_full<simd_abi::op_pairwise_sub, T, Abi>
+      ) {
+         return simd_abi_apply_binary_full<simd_abi::op_pairwise_sub, T, Abi>(
+            left, right
+         );
+      } else {
+         simd<T, Abi> out{};
+         for (idx k = 0u; k < Abi::lanes; k += 2u) {
+            out.set_lane(k, left[k] - left[k + 1u]);
+            out.set_lane(k + 1u, right[k] - right[k + 1u]);
+         }
+         return out;
+      }
+   }
+};
+
+struct simd_pairwise_add_saturating_impl {
+   template <typename T, typename Abi>
+      requires(
+         is_integral<T> && !is_bool<T> && sizeof(T) == 2
+         && (Abi::lanes % 2u) == 0u
+      )
+   [[nodiscard, gnu::always_inline]]
+   constexpr auto
+   operator()(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (
+         has_simd_abi_binary_full<simd_abi::op_pairwise_add_sat, T, Abi>
+      ) {
+         return simd_abi_apply_binary_full<
+            simd_abi::op_pairwise_add_sat, T, Abi>(left, right);
+      } else {
+         simd<T, Abi> out{};
+         for (idx k = 0u; k < Abi::lanes; k += 2u) {
+            auto const a = make_raw_arithmetic(left[k]);
+            auto const b = make_raw_arithmetic(left[k + 1u]);
+            auto const c = make_raw_arithmetic(right[k]);
+            auto const d = make_raw_arithmetic(right[k + 1u]);
+            out.set_lane(k, __builtin_elementwise_add_sat(a, b));
+            out.set_lane(k + 1u, __builtin_elementwise_add_sat(c, d));
+         }
+         return out;
+      }
+   }
+};
+
+struct simd_pairwise_sub_saturating_impl {
+   template <typename T, typename Abi>
+      requires(
+         is_integral<T> && !is_bool<T> && sizeof(T) == 2
+         && (Abi::lanes % 2u) == 0u
+      )
+   [[nodiscard, gnu::always_inline]]
+   constexpr auto
+   operator()(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (
+         has_simd_abi_binary_full<simd_abi::op_pairwise_sub_sat, T, Abi>
+      ) {
+         return simd_abi_apply_binary_full<
+            simd_abi::op_pairwise_sub_sat, T, Abi>(left, right);
+      } else {
+         simd<T, Abi> out{};
+         for (idx k = 0u; k < Abi::lanes; k += 2u) {
+            auto const a = make_raw_arithmetic(left[k]);
+            auto const b = make_raw_arithmetic(left[k + 1u]);
+            auto const c = make_raw_arithmetic(right[k]);
+            auto const d = make_raw_arithmetic(right[k + 1u]);
+            out.set_lane(k, __builtin_elementwise_sub_sat(a, b));
+            out.set_lane(k + 1u, __builtin_elementwise_sub_sat(c, d));
+         }
+         return out;
+      }
+   }
+};
+
 }  // namespace detail
 
 // Free wrappers and mask-free broadcasts (`iota`, `make_simd_filled`, lane
@@ -3667,6 +3771,13 @@ inline constexpr detail::simd_fma_impl simd_fma{};
 inline constexpr detail::simd_fshl_impl simd_fshl{};
 inline constexpr detail::simd_fshr_impl simd_fshr{};
 inline constexpr detail::simd_ldexp_impl simd_ldexp{};
+
+inline constexpr detail::simd_pairwise_add_impl simd_pairwise_add{};
+inline constexpr detail::simd_pairwise_sub_impl simd_pairwise_sub{};
+inline constexpr detail::simd_pairwise_add_saturating_impl
+   simd_pairwise_add_saturating{};
+inline constexpr detail::simd_pairwise_sub_saturating_impl
+   simd_pairwise_sub_saturating{};
 
 // Wrap the scalar math APIs for `cat::simd` to make it interchangeable, as it
 // is a regular type.

@@ -72,5 +72,28 @@ inline constexpr bool is_sse_abi_impl<sse_unaligned_abi<T>, T> = true;
 template <typename Abi, typename T>
 concept is_sse_abi = detail::is_sse_abi_impl<Abi, T>;
 
-}  // namespace x64
+// Store fence. Use after non-temporal (`movnt*`) stores so later loads see
+// them.
+[[gnu::target("sse"), gnu::always_inline]]
+inline void
+sfence() {
+   __builtin_ia32_sfence();
+}
 
+// Full memory fence. Orders prior stores and loads against later stores and
+// loads.
+[[gnu::target("sse2"), gnu::always_inline]]
+inline void
+mfence() {
+   __builtin_ia32_mfence();
+}
+
+// Load fence. Orders prior loads against later loads (and with
+// `lfence/mfence` pairs).
+[[gnu::target("sse2"), gnu::always_inline]]
+inline void
+lfence() {
+   __builtin_ia32_lfence();
+}
+
+}  // namespace x64

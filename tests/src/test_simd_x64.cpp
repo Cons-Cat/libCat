@@ -1054,3 +1054,66 @@ $test(simd_avx2_compress_with_fill_value) {
    cat::verify(byte_filled[5u] == 42);
    cat::verify(byte_filled[31u] == 42);
 }
+// AVX/AVX2 `binary_full` hooks for
+// `cat::simd_pairwise_sum`/`simd_pairwise_sub`.
+$test(simd_avx_pairwise_add_sub) {
+   x64::avx_simd<float4> const a{1_f4, 2_f4, 3_f4, 4_f4,
+                                 5_f4, 6_f4, 7_f4, 8_f4};
+   x64::avx_simd<float4> const b{9_f4,  10_f4, 11_f4, 12_f4,
+                                 13_f4, 14_f4, 15_f4, 16_f4};
+   auto const ha = cat::simd_pairwise_add(a, b);
+   cat::verify(ha[0u] == 3_f4);
+   cat::verify(ha[1u] == 19_f4);
+   cat::verify(ha[2u] == 7_f4);
+   cat::verify(ha[3u] == 23_f4);
+   cat::verify(ha[4u] == 11_f4);
+   cat::verify(ha[5u] == 27_f4);
+   cat::verify(ha[6u] == 15_f4);
+   cat::verify(ha[7u] == 31_f4);
+   auto const hs = cat::simd_pairwise_sub(a, b);
+   for (cat::idx i = 0u; i < cat::idx{8}; ++i) {
+      cat::verify(hs[i] == -1_f4);
+   }
+
+   x64::avx_simd<float8> const d{1., 2., 3., 4.};
+   x64::avx_simd<float8> const e{5., 6., 7., 8.};
+   auto const hd = cat::simd_pairwise_add(d, e);
+   cat::verify(hd[0u] == 3.);
+   cat::verify(hd[1u] == 11.);
+   cat::verify(hd[2u] == 7.);
+   cat::verify(hd[3u] == 15.);
+
+   x64::avx_simd<int4> const ia{1, 2, 3, 4, 5, 6, 7, 8};
+   x64::avx_simd<int4> const ib{9, 10, 11, 12, 13, 14, 15, 16};
+   auto const ih = cat::simd_pairwise_add(ia, ib);
+   cat::verify(ih[0u] == 3);
+   cat::verify(ih[1u] == 19);
+   cat::verify(ih[2u] == 7);
+   cat::verify(ih[3u] == 23);
+   cat::verify(ih[4u] == 11);
+   cat::verify(ih[5u] == 27);
+   cat::verify(ih[6u] == 15);
+   cat::verify(ih[7u] == 31);
+}
+
+$test(simd_avx2_pairwise_add_sub_saturating) {
+   x64::avx_simd<int2> const a{32'000, 1'000, 10, 20, 0, 0, 0, 0,
+                               0,      0,     0,  0,  0, 0, 0, 0};
+   x64::avx_simd<int2> const b{-32'000, -1'000, 0, 0, 0, 0, 0, 0,
+                               0,       0,      0, 0, 0, 0, 0, 0};
+   auto const ha = cat::simd_pairwise_add_saturating(a, b);
+   cat::verify(ha[0u] == cat::int2_max);
+   cat::verify(ha[1u] == cat::int2_min);
+   cat::verify(ha[2u] == 30);
+   cat::verify(ha[3u] == 0);
+
+   x64::avx_simd<int2> const c{-32'000, 1'000, 30, 10, 0, 0, 0, 0,
+                               0,       0,     0,  0,  0, 0, 0, 0};
+   x64::avx_simd<int2> const sb{32'000, -1'000, 5, 5, 0, 0, 0, 0,
+                                0,      0,      0, 0, 0, 0, 0, 0};
+   auto const hs = cat::simd_pairwise_sub_saturating(c, sb);
+   cat::verify(hs[0u] == cat::int2_min);
+   cat::verify(hs[1u] == cat::int2_max);
+   cat::verify(hs[2u] == 20);
+   cat::verify(hs[3u] == 0);
+}

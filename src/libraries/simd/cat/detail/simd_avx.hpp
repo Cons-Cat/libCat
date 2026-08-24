@@ -71,4 +71,19 @@ inline constexpr bool is_avx_abi_impl<avx_unaligned_abi<T>, T> = true;
 template <typename Abi, typename T>
 concept is_avx_abi = detail::is_avx_abi_impl<Abi, T>;
 
+// `vzeroall`. Zeros all ymm registers (and zmm when applicable).
+[[gnu::target("avx")]]
+inline void
+zero_avx_registers() {
+   __builtin_ia32_vzeroall();
+}
+
+// `vzeroupper`. Zeros the upper 128 bits of each ymm register for AVX-to-SSE
+// transitions.
+[[gnu::target("avx")]]
+inline void
+zero_upper_avx_registers() {
+   __builtin_ia32_vzeroupper();
+}
+
 }  // namespace x64
