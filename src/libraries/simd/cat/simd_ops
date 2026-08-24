@@ -2347,9 +2347,7 @@ struct simd_sub_sat_impl : simd_elementwise_binary_interface<
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
-      return static_cast<T>(
-         __builtin_sub_sat(static_cast<T>(left), static_cast<T>(right))
-      );
+      return static_cast<T>(__builtin_sub_sat(left, right));
    }
 };
 

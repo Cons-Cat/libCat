@@ -48,7 +48,7 @@
 #include "cat/detail/simd_broadcast_traits.hpp"
 #include "cat/detail/simd_precision_policy.hpp"
 #include "cat/detail/simd_range_iterator.hpp"
-#include "cat/detail/simd_sse42.hpp"
+#include "cat/detail/simd_sse2.hpp"
 
 // Forward declarations for ABI hook templates (partial specializations in
 // target headers supply fast paths). Primary template definitions live below.
