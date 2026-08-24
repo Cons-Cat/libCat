@@ -354,5 +354,6 @@ simd_chunked_invoke(Fn&& fn, simd<T, Abi> const& pack, Args&&... arguments) {
 
 }  // namespace cat
 
-#include <cat/detail/simd_sse2.hpp>
+#include <cat/detail/simd_sse3.hpp>
 #include <cat/detail/simd_sse42.hpp>
+#include <cat/detail/simd_ssse3.hpp>

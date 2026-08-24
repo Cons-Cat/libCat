@@ -1054,6 +1054,278 @@ $test(simd_avx2_compress_with_fill_value) {
    cat::verify(byte_filled[5u] == 42);
    cat::verify(byte_filled[31u] == 42);
 }
+
+// SSE3 intrinsics (`simd_sse3.hpp`). These are not expressed by `cat::simd`
+// lane arithmetic or the portable `simd_*` functors.
+$test(simd_sse3_add_sub_alternating) {
+   x64::sse_simd<float4> const a{10_f4, 20_f4, 30_f4, 40_f4};
+   x64::sse_simd<float4> const b{1_f4, 2_f4, 3_f4, 4_f4};
+   auto const r = x64::sse3_add_sub_alternating(a, b);
+   cat::verify(r[0u] == 9_f4);
+   cat::verify(r[1u] == 22_f4);
+   cat::verify(r[2u] == 27_f4);
+   cat::verify(r[3u] == 44_f4);
+
+   x64::sse_simd<float8> const d{10., 20.};
+   x64::sse_simd<float8> const e{1., 2.};
+   auto const rd = x64::sse3_add_sub_alternating(d, e);
+   cat::verify(rd[0u] == 9.);
+   cat::verify(rd[1u] == 22.);
+}
+
+$test(simd_sse3_pairwise_add_sub) {
+   x64::sse_simd<float4> const a{1_f4, 2_f4, 3_f4, 4_f4};
+   x64::sse_simd<float4> const b{5_f4, 6_f4, 7_f4, 8_f4};
+   auto const ha = cat::simd_pairwise_add(a, b);
+   cat::verify(ha[0u] == 3_f4);
+   cat::verify(ha[1u] == 11_f4);
+   cat::verify(ha[2u] == 7_f4);
+   cat::verify(ha[3u] == 15_f4);
+   auto const hs = cat::simd_pairwise_sub(a, b);
+   for (cat::idx i = 0u; i < cat::idx{4}; ++i) {
+      cat::verify(hs[i] == -1_f4);
+   }
+
+   x64::sse_simd<float8> const d{1., 2.};
+   x64::sse_simd<float8> const e{3., 4.};
+   cat::verify(cat::simd_pairwise_add(d, e)[0u] == 3.);
+   cat::verify(cat::simd_pairwise_add(d, e)[1u] == 7.);
+   cat::verify(cat::simd_pairwise_sub(d, e)[0u] == -1.);
+   cat::verify(cat::simd_pairwise_sub(d, e)[1u] == -1.);
+
+   x64::sse_simd<int4> const ia{1, 2, 3, 4};
+   x64::sse_simd<int4> const ib{5, 6, 7, 8};
+   auto const ih = cat::simd_pairwise_add(ia, ib);
+   cat::verify(ih[0u] == 3);
+   cat::verify(ih[1u] == 11);
+   cat::verify(ih[2u] == 7);
+   cat::verify(ih[3u] == 15);
+   auto const ihs = cat::simd_pairwise_sub(ia, ib);
+   for (cat::idx i = 0u; i < cat::idx{4}; ++i) {
+      cat::verify(ihs[i] == -1);
+   }
+
+   x64::sse_simd<int2> const wa{1, 2, 3, 4, 5, 6, 7, 8};
+   x64::sse_simd<int2> const wb{9, 10, 11, 12, 13, 14, 15, 16};
+   auto const wh = cat::simd_pairwise_add(wa, wb);
+   cat::verify(wh[0u] == 3);
+   cat::verify(wh[1u] == 19);
+   cat::verify(wh[2u] == 7);
+   cat::verify(wh[3u] == 23);
+   cat::verify(wh[4u] == 11);
+   cat::verify(wh[5u] == 27);
+   cat::verify(wh[6u] == 15);
+   cat::verify(wh[7u] == 31);
+}
+
+// Raw x86 `haddps`/`hsubps`/`phaddw`/`phaddd` shape (all a's pairs, then all
+// b's pairs), distinct from the portable `cat::simd_pairwise_*`
+// interleaved semantics).
+$test(simd_sse3_horizontal_add_sub) {
+   x64::sse_simd<float4> const a{1_f4, 2_f4, 3_f4, 4_f4};
+   x64::sse_simd<float4> const b{5_f4, 6_f4, 7_f4, 8_f4};
+   auto const ha = x64::sse3_horizontal_add(a, b);
+   cat::verify(ha[0u] == 3_f4);
+   cat::verify(ha[1u] == 7_f4);
+   cat::verify(ha[2u] == 11_f4);
+   cat::verify(ha[3u] == 15_f4);
+   auto const hs = x64::sse3_horizontal_sub(a, b);
+   for (cat::idx i = 0u; i < cat::idx{4}; ++i) {
+      cat::verify(hs[i] == -1_f4);
+   }
+
+   x64::sse_simd<int4> const ia{1, 2, 3, 4};
+   x64::sse_simd<int4> const ib{5, 6, 7, 8};
+   auto const ih = x64::ssse3_horizontal_add(ia, ib);
+   cat::verify(ih[0u] == 3);
+   cat::verify(ih[1u] == 7);
+   cat::verify(ih[2u] == 11);
+   cat::verify(ih[3u] == 15);
+
+   x64::sse_simd<int2> const wa{1, 2, 3, 4, 5, 6, 7, 8};
+   x64::sse_simd<int2> const wb{9, 10, 11, 12, 13, 14, 15, 16};
+   auto const wh = x64::ssse3_horizontal_add(wa, wb);
+   cat::verify(wh[0u] == 3);
+   cat::verify(wh[1u] == 7);
+   cat::verify(wh[2u] == 11);
+   cat::verify(wh[3u] == 15);
+   cat::verify(wh[4u] == 19);
+   cat::verify(wh[5u] == 23);
+   cat::verify(wh[6u] == 27);
+   cat::verify(wh[7u] == 31);
+}
+
+$test(simd_sse3_load_unaligned_non_temporal) {
+   cat::uint1 const buf[16] = {
+      0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u,
+   };
+   auto const v = x64::sse3_load_unaligned_non_temporal<cat::uint1>(buf);
+   for (cat::idx i = 0u; i < cat::idx{16}; ++i) {
+      cat::verify(v[i] == i);
+   }
+   auto const iv = x64::sse3_load_unaligned_non_temporal<cat::int4>(buf);
+   cat::verify(iv[0u] == 0x03020100);
+   cat::verify(iv[1u] == 0x07060504);
+   cat::verify(iv[2u] == 0x0B0A0908);
+   cat::verify(iv[3u] == 0x0F0E0D0C);
+}
+
+// SSSE3 intrinsics (`simd_ssse3.hpp`).
+$test(simd_ssse3_shuffle_bytes) {
+   x64::sse_simd<cat::uint1> const input{0u, 1u, 2u,  3u,  4u,  5u,  6u,  7u,
+                                         8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u};
+   x64::sse_simd<cat::uint1> const mask{0u,    2u,    4u,    6u,
+                                        8u,    10u,   12u,   14u,
+                                        0x80u, 0x80u, 0x80u, 0x80u,
+                                        0x80u, 0x80u, 0x80u, 0x80u};
+   auto const r = x64::ssse3_shuffle_bytes(input, mask);
+   cat::verify(r[0u] == 0u);
+   cat::verify(r[1u] == 2u);
+   cat::verify(r[2u] == 4u);
+   cat::verify(r[3u] == 6u);
+   cat::verify(r[7u] == 14u);
+   cat::verify(r[8u] == 0u);
+   cat::verify(r[15u] == 0u);
+}
+
+$test(simd_ssse3_pairwise_add_sub_saturating) {
+   x64::sse_simd<int2> const a{32'000, 1'000, 10, 20, 0, 0, 0, 0};
+   x64::sse_simd<int2> const b{-32'000, -1'000, 0, 0, 0, 0, 0, 0};
+   auto const ha = cat::simd_pairwise_add_saturating(a, b);
+   cat::verify(ha[0u] == cat::int2_max);
+   cat::verify(ha[1u] == cat::int2_min);
+   cat::verify(ha[2u] == 30);
+   cat::verify(ha[3u] == 0);
+
+   x64::sse_simd<int2> const c{-32'000, 1'000, 30, 10, 0, 0, 0, 0};
+   x64::sse_simd<int2> const sb{32'000, -1'000, 5, 5, 0, 0, 0, 0};
+   auto const hs = cat::simd_pairwise_sub_saturating(c, sb);
+   cat::verify(hs[0u] == cat::int2_min);
+   cat::verify(hs[1u] == cat::int2_max);
+   cat::verify(hs[2u] == 20);
+   cat::verify(hs[3u] == 0);
+}
+
+// Raw x86 `phaddsw`/`phsubsw` shape (all a's pairs, then all b's
+// pairs), distinct from the portable `cat::simd_pairwise_*`
+// (interleaved semantics).
+$test(simd_ssse3_horizontal_add_sub_saturating) {
+   x64::sse_simd<int2> const a{32'000, 1'000, 10, 20, 0, 0, 0, 0};
+   x64::sse_simd<int2> const b{-32'000, -1'000, 0, 0, 0, 0, 0, 0};
+   auto const ha = x64::ssse3_horizontal_add_saturating(a, b);
+   cat::verify(ha[0u] == cat::int2_max);
+   cat::verify(ha[1u] == 30);
+   cat::verify(ha[2u] == 0);
+   cat::verify(ha[4u] == cat::int2_min);
+   cat::verify(ha[5u] == 0);
+
+   x64::sse_simd<int2> const c{-32'000, 1'000, 30, 10, 0, 0, 0, 0};
+   x64::sse_simd<int2> const sb{32'000, -1'000, 5, 5, 0, 0, 0, 0};
+   auto const hs = x64::ssse3_horizontal_sub_saturating(c, sb);
+   cat::verify(hs[0u] == cat::int2_min);
+   cat::verify(hs[1u] == 20);
+   cat::verify(hs[4u] == cat::int2_max);
+   cat::verify(hs[5u] == 0);
+}
+
+$test(simd_ssse3_multiply_add_bytes) {
+   x64::sse_simd<cat::uint1> const left{1u, 2u,  3u,  4u,  5u,  6u,  7u,  8u,
+                                        9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u};
+   x64::sse_simd<int1> const right{2, 2, 2, 2, 2, 2, 2, 2,
+                                   2, 2, 2, 2, 2, 2, 2, 2};
+   auto const r = x64::ssse3_multiply_add_bytes(left, right);
+   cat::verify(r[0u] == 6);
+   cat::verify(r[1u] == 14);
+   cat::verify(r[2u] == 22);
+   cat::verify(r[3u] == 30);
+   cat::verify(r[4u] == 38);
+   cat::verify(r[5u] == 46);
+   cat::verify(r[6u] == 54);
+   cat::verify(r[7u] == 62);
+
+   x64::sse_simd<cat::uint1> const u{200u, 10u, 0u, 0u, 0u, 0u, 0u, 0u,
+                                     0u,   0u,  0u, 0u, 0u, 0u, 0u, 0u};
+   x64::sse_simd<int1> const s{-1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+   auto const r2 = x64::ssse3_multiply_add_bytes(u, s);
+   cat::verify(r2[0u] == (200 * -1) + (10 * 1));
+}
+
+$test(simd_ssse3_multiply_round_scale) {
+   x64::sse_simd<int2> const a{16'384, 16'384,        -16'384, cat::int2_min,
+                               1,      cat::int2_max, 1,       2};
+   x64::sse_simd<int2> const b{2,     4, 2, 2, cat::int2_max, 2, cat::int2_min,
+                               16'384};
+   auto const r = x64::ssse3_multiply_round_scale(a, b);
+   cat::verify(r[0u] == 1);
+   cat::verify(r[1u] == 2);
+   cat::verify(r[2u] == -1);
+   cat::verify(r[3u] == -2);
+   cat::verify(r[4u] == 1);
+   cat::verify(r[5u] == 2);
+   cat::verify(r[6u] == -1);
+   cat::verify(r[7u] == 1);
+}
+
+$test(simd_ssse3_apply_sign) {
+   x64::sse_simd<int2> const a{5, -5, 7, -7, 9, 9, 9, 9};
+   x64::sse_simd<int2> const s{1, -1, 0, 0, 2, -2, 0, 3};
+   auto const r = x64::ssse3_sign(a, s);
+   cat::verify(r[0u] == 5);
+   cat::verify(r[1u] == 5);
+   cat::verify(r[2u] == 0);
+   cat::verify(r[3u] == 0);
+   cat::verify(r[4u] == 9);
+   cat::verify(r[5u] == -9);
+   cat::verify(r[6u] == 0);
+   cat::verify(r[7u] == 9);
+
+   x64::sse_simd<int4> const da{5, -5, 7, -7};
+   x64::sse_simd<int4> const ds{1, -1, 0, 0};
+   auto const dr = x64::ssse3_sign(da, ds);
+   cat::verify(dr[0u] == 5);
+   cat::verify(dr[1u] == 5);
+   cat::verify(dr[2u] == 0);
+   cat::verify(dr[3u] == 0);
+
+   x64::sse_simd<int1> const ba{5, -5, 7, -7, 9, 9, 9, 9,
+                                1, 1,  1, 1,  1, 1, 1, 1};
+   x64::sse_simd<int1> const bs{1, -1, 0, 0, 2, -2, 0, 3,
+                                1, 1,  1, 1, 1, 1,  1, 1};
+   auto const br = x64::ssse3_sign(ba, bs);
+   cat::verify(br[0u] == 5);
+   cat::verify(br[1u] == 5);
+   cat::verify(br[2u] == 0);
+   cat::verify(br[3u] == 0);
+   cat::verify(br[7u] == 9);
+   cat::verify(br[8u] == 1);
+   cat::verify(br[15u] == 1);
+}
+
+$test(simd_ssse3_align_right) {
+   x64::sse_simd<cat::uint1> const high{0u, 1u, 2u,  3u,  4u,  5u,  6u,  7u,
+                                        8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u};
+   x64::sse_simd<cat::uint1> const low{16u, 17u, 18u, 19u, 20u, 21u, 22u, 23u,
+                                       24u, 25u, 26u, 27u, 28u, 29u, 30u, 31u};
+   auto const r1 = x64::ssse3_align_right<1u>(high, low);
+   cat::verify(r1[0u] == 17u);
+   cat::verify(r1[14u] == 31u);
+   cat::verify(r1[15u] == 0u);
+
+   auto const r0 = x64::ssse3_align_right<0u>(high, low);
+   for (cat::idx i = 0u; i < cat::idx{16}; ++i) {
+      cat::verify(r0[i] == low[i]);
+   }
+   auto const r16 = x64::ssse3_align_right<16u>(high, low);
+   for (cat::idx i = 0u; i < cat::idx{16}; ++i) {
+      cat::verify(r16[i] == high[i]);
+   }
+   auto const r8 = x64::ssse3_align_right<8u>(high, low);
+   for (cat::idx j = 0u; j < cat::idx{8}; ++j) {
+      cat::verify(r8[j] == low[j + 8u]);
+      cat::verify(r8[j + 8u] == high[j]);
+   }
+}
+
 // AVX/AVX2 `binary_full` hooks for
 // `cat::simd_pairwise_sum`/`simd_pairwise_sub`.
 $test(simd_avx_pairwise_add_sub) {
