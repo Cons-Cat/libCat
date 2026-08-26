@@ -2,11 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/detail/simd_switch_priority.hpp>
-
-#include <cat/array>
-#include <cat/utility>
-
 // `$simd_switch` is a SIMD variant selector. Entries are declared by
 // `$abi(arch, { body{ })` and dispatched at runtime. The best-fitting ABI is
 // selected during program run in constant time. A `default:` case is required
@@ -20,14 +15,17 @@
 //    int result = $simd_switch(
 //       $abi(avx512,
 //          int8x_ v = simd_iota<int8x_>();
-//          return v.sum(); // 7! = 5040
+//          return v.sum(); // 7! == 5040
 //       ),
 //       $abi((avx2, sse4_2),        // multi-arch. one body per arch.
 //          int8x_ v = simd_iota<int8x_>();
-//          return v.sum(); // 3! or 1! = 6 or 1
+//          return v.sum(); // 3! or 1! == 6 or 1
 //       ),
-//       default: cat::simd_iota<cat::int8x2>().sum(); // SSE2, so 1! = 1
+//       default: cat::simd_iota<cat::int8x2>().sum(); // SSE2, so 1! == 1
 //    );
+//
+// The order of `$abi` entries are normalized by the macro, so they can be
+// arranged by the user arbitrarily.
 //
 // Each `$abi(arch, ...)` body is wrapped in a `[&]`-capturing lambda
 // annotated with `[[gnu::target(...)]]` and an implicit
@@ -38,6 +36,11 @@
 // without needing `std::function`-style type erasure. The `default:`
 // clause is emitted verbatim into the surrounding switch body, so its
 // statements can read and write the same captures.
+//
+// The index for unique combinations of `$abi`s within a `$simd_switch`
+// expansion are aggressively globally cached, so two `$simd_switch` expansions
+// with the same set of `$abi`s share the same cached index in a jump table
+// rather than re-walking the dispatch logic each time.
 //
 // The compiler enforces that:
 //   * the last argument is a `default:` clause OR one of the listed
@@ -57,9 +60,14 @@
 // would precede the default `idx fixed_extent` forward-declaration of
 // `cat::span` in `<cat/memory>` and break `<cat/container>`.
 //
-// The implementation of this macro is unfortunately complex. But the value
-// of this feature is huge, and in my opinion, there are no elegant
-// implementations possible for it in C++ today.
+// The implementation of this macro is unfortunately complex. But it compiles
+// very efficiently, the value of this feature is huge, and in my opinion, there
+// are no elegant implementations possible for it in C++ today.
+
+#include <cat/detail/simd_switch_priority.hpp>
+
+#include <cat/array>
+#include <cat/utility>
 
 namespace cat::detail {
 
@@ -212,6 +220,31 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
 
    return permutation;
 }
+
+// Caches the selected priority for a given set of ABI priorities. The key is
+// the sorted (descending) priority list, so two `$simd_switch` expansions
+// with the same ABI set share one static `int` instead of each getting its
+// own. The cached value is the selected *priority* (not source index), so
+// each expansion maps it back to its own index with a cheap equality walk.
+template <int... priorities>
+struct simd_dispatch_cache {
+   static inline int selected_priority = -1;
+
+   [[gnu::always_inline]]
+   static auto
+   get() -> int {
+      if (selected_priority < 0) [[unlikely]] {
+         int best = -1;
+         for (int const p : {priorities...}) {
+            if (p >= 0 && int4(p) <= simd_dispatch_priority && p > best) {
+               best = p;
+            }
+         }
+         selected_priority = best;
+      }
+      return selected_priority;
+   }
+};
 
 }  // namespace cat::detail
 
@@ -391,6 +424,15 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
    ::cat::detail::simd_dispatch_meta {       \
       #arch, CAT_CONCAT(CAT_PRIORITY_, arch) \
    }
+
+// PRIORITY pass extracts just the integer priority from each entry, for
+// feeding into `simd_dispatch_cache<...>`. Bare lambdas (the default)
+// yield -1.
+#define CAT_PRIORITY_ENTRY(x) \
+   CAT_CONCAT(CAT_PRIORITY_ENTRY_, CAT_IS_PAREN(x))(x)
+#define CAT_PRIORITY_ENTRY_0(x) (-1)
+#define CAT_PRIORITY_ENTRY_1(x) CAT_PRIORITY_FROM_TUPLE_ x
+#define CAT_PRIORITY_FROM_TUPLE_(arch, ...) CAT_CONCAT(CAT_PRIORITY_, arch)
 
 // SIMD_DISPATCH pass emits one switch case per entry. `(arch, body)` tuples
 // become:
@@ -771,20 +813,22 @@ simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
       /* Source-index walk order, sorted descending by `_PRI_<arch>`. */      \
       static constexpr auto cat_simd_priority_order =                         \
          ::cat::detail::simd_dispatch_priority_permutation(meta);             \
-      /* Pick the highest-priority listed entry whose priority is supported   \
-         by the host. `cat::detail::simd_dispatch_priority` is set once at    \
-         startup by `__cpu_indicator_init` in `<cat/cpuid>`. The default      \
-         sentinel's priority is -1, so it always compares `<=` and is reached \
-         only when no real entry's priority is below the host's tier. When no \
-         `default:` is present, the baseline-coverage `static_assert` above   \
-         guarantees at least one listed entry's priority is `<=` the host's   \
-         tier. */                                                             \
+      /* Cache the selected *priority* in a shared static so that repeated    \
+         `$simd_switch` calls with the same ABI set skip the walk. The key    \
+         is the source-order priority list, so identical ABI sets share       \
+         one `int` across translation units. */                               \
+      int const cat_simd_selected_priority =                                  \
+         ::cat::detail::simd_dispatch_cache<                                  \
+            CAT_FOR_EACH_COMMA(CAT_PRIORITY_ENTRY, __VA_ARGS__)>::get();      \
+      /* Map the cached priority back to this expansion's source index.       \
+         This is a short equality walk over the priority-order permutation,   \
+         not the full `<=` comparison. */                                     \
       ::cat::idx cat_simd_selected{};                                         \
       for (::cat::idx i = 0u; i < cat_simd_priority_order.size(); ++i) {      \
          ::cat::idx const source_index = cat_simd_priority_order[i];          \
          if (                                                                 \
             meta[source_index].priority                                       \
-            <= ::cat::detail::simd_dispatch_priority                          \
+            == static_cast<int4>(cat_simd_selected_priority)                  \
          ) {                                                                  \
             cat_simd_selected = source_index;                                 \
             break;                                                            \
