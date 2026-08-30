@@ -32,15 +32,13 @@ runs:
         sudo apt-get install -y --no-install-recommends \
           ca-certificates curl gdb python3 tar xz-utils zstd
 
-    - name: Cache mise-pinned toolchain (Clang + ELFkickers)
+    - name: Cache ELFkickers
       uses: actions/cache@v4
       with:
         path: |
-          .cache/cat-llvm
-          .cache/cat-llvm-downloads
           .cache/cat-elfkickers
           .cache/cat-elfkickers-downloads
-        key: cat-toolchain-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'scripts/install_mise_llvm_debs.py', 'scripts/install_mise_elfkickers.py') }}
+        key: cat-elfkickers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'scripts/install_mise_elfkickers.py') }}
 
     - name: Install mise
       uses: jdx/mise-action@v4
@@ -51,18 +49,10 @@ runs:
         cache: false
         install: true
 
-    - name: Install Clang toolchain
-      shell: bash
-      env:
-        MISE_HTTP_TIMEOUT: 120
-      run: mise run install-clang-nightly
-
     - name: Install ELFkickers
       # Stages `.cache/cat-elfkickers/bin/{sstrip,elfls,objres,...}`, which the
       # arithmetic-negative job (and any other job that exercises the
-      # ELF-kickers-backed test machinery) needs on PATH. Mirrors the
-      # explicit `install-clang-nightly` step above so the build is sourced
-      # from the cache instead of being rebuilt per job.
+      # ELF-kickers-backed test machinery) needs on PATH.
       shell: bash
       run: mise run install-elfkickers
 
@@ -72,18 +62,12 @@ runs:
         MISE_HTTP_TIMEOUT: 120
       run: |
         set -eu
-        tool_bin=$(mise exec -- sh -c 'dirname "$(command -v clang++)"')
-        cmake_bin=$(mise exec -- sh -c 'dirname "$(command -v cmake)"')
-        just_bin=$(mise exec -- sh -c 'dirname "$(command -v just)"')
-        ninja_bin=$(mise exec -- sh -c 'dirname "$(command -v ninja)"')
-        echo "${tool_bin}" >> "${GITHUB_PATH}"
-        echo "${cmake_bin}" >> "${GITHUB_PATH}"
-        echo "${just_bin}" >> "${GITHUB_PATH}"
-        echo "${ninja_bin}" >> "${GITHUB_PATH}"
-        echo "CC=${tool_bin}/clang" >> "${GITHUB_ENV}"
-        echo "CXX=${tool_bin}/clang++" >> "${GITHUB_ENV}"
+        cc=$(mise exec -- command -v clang)
+        cxx=$(mise exec -- command -v clang++)
+        mise bin-paths >> "${GITHUB_PATH}"
+        echo "CC=${cc}" >> "${GITHUB_ENV}"
+        echo "CXX=${cxx}" >> "${GITHUB_ENV}"
         echo "CMAKE_GENERATOR=Ninja" >> "${GITHUB_ENV}"
-        echo "CAT_LLVM_BIN=${tool_bin}" >> "${GITHUB_ENV}"
 
     - name: Verify mise toolchain
       shell: bash
