@@ -54,7 +54,7 @@ build modes.
   just build san noasan
 
   just build san debug
-  just build debug san release
+  just build debug asan release
 #+END_SRC
 
 These arguments control the =-fsanitize= compiler flag. Enabling either
