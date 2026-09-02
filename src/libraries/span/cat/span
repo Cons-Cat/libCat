@@ -100,7 +100,7 @@ span
    template <is_random_access U>
    constexpr span(U& container [[clang::lifetimebound]])
       requires(is_convertible<
-                 typename U::value_type (* _Nonnull)[], T (* _Nonnull)[]>)
+                 typename U::value_type (*_Nonnull)[], T (*_Nonnull)[]>)
        : m_p_data(container.data()), m_size(container.size()) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(container.size() == fixed_extent);
@@ -164,7 +164,7 @@ span
    auto
    operator=(U& container [[clang::lifetimebound]]) -> span<T, fixed_extent>&
       requires(
-         is_convertible<typename U::value_type (* _Nonnull)[], T (* _Nonnull)[]>
+         is_convertible<typename U::value_type (*_Nonnull)[], T (*_Nonnull)[]>
       )
    {
       if constexpr (fixed_extent != dynamic_extent) {

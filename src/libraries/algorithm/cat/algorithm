@@ -113,7 +113,7 @@ lexicographical_compare_three_way(
    Left lhs_start, Left lhs_end, Right rhs_start, Right rhs_end
 )
    requires(
-      is_common_comparison_category<decltype((* lhs_start) <=> (* rhs_start))>
+      is_common_comparison_category<decltype((*lhs_start) <=> (*rhs_start))>
    )
 {
    bool exhaust_left = (lhs_start == lhs_end);

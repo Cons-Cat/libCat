@@ -55,8 +55,8 @@ using common_reference_detail_c =
 template <typename T, typename U, typename TQual, typename UQual>
    requires(
       requires { typename common_reference_detail_c<TQual, UQual>; }
-      && is_convertible<T &&, common_reference_detail_c<TQual, UQual>>
-      && is_convertible<U &&, common_reference_detail_c<TQual, UQual>>
+      && is_convertible<T&&, common_reference_detail_c<TQual, UQual>>
+      && is_convertible<U&&, common_reference_detail_c<TQual, UQual>>
    )
 struct common_reference_detail_trait<T&&, U&&, TQual, UQual> {
    using type = common_reference_detail_c<TQual, UQual>;
@@ -71,7 +71,7 @@ using common_reference_detail_d = common_reference_detail<T const&, U&>;
 template <typename T, typename U, typename TQual, typename UQual>
    requires(requires {
                typename common_reference_detail_d<TQual, UQual>;
-            } && is_convertible<T &&, common_reference_detail_d<TQual, UQual>>)
+            } && is_convertible<T&&, common_reference_detail_d<TQual, UQual>>)
 struct common_reference_detail_trait<T&&, U&, TQual, UQual> {
    using type = common_reference_detail_d<TQual, UQual>;
 };

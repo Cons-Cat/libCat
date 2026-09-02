@@ -105,7 +105,7 @@ get(S const& t) noexcept -> decltype(auto) {
 // selected element out.
 template <idx index, typename S>
    requires(
-      is_rvalue_reference<S &&> && has_aggregate_get<remove_cvref<S>>
+      is_rvalue_reference<S&&> && has_aggregate_get<remove_cvref<S>>
       && index < __builtin_structured_binding_size(remove_cvref<S>)
    )
 [[nodiscard]]

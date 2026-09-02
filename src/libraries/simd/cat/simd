@@ -972,8 +972,8 @@ class
 
    template <typename Factor, typename Addend>
       requires(
-         !is_bool<T> && is_constructible<simd, Factor &&>
-         && is_constructible<simd, Addend &&>
+         !is_bool<T> && is_constructible<simd, Factor&&>
+         && is_constructible<simd, Addend&&>
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto

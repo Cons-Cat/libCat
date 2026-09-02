@@ -26,13 +26,12 @@ _.path = [".cache/cat-llvm/bin", ".cache/cat-elfkickers/bin"]
 
 [hooks]
 postinstall = [
-   # TODO: If we upgrade to Clang 24, we should re-enable this.
-   # { task = "install-clang-nightly" },
+   { task = "install-clang-nightly" },
    { task = "install-elfkickers" },
 ]
 
 [tasks.install-clang-nightly]
-description = "Download and extract the pinned Clang 23 nightly toolchain."
+description = "Download and extract the pinned Clang 24 nightly toolchain."
 run = "python3 scripts/install_mise_llvm_debs.py"
 
 [tasks.install-elfkickers]

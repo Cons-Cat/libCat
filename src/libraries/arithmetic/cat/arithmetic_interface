@@ -297,8 +297,8 @@ struct plus_interface {
    constexpr auto
    operator+(this Derived const& self, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_binary_plus<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_binary_plus<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return self.add(move(other));
@@ -365,7 +365,7 @@ struct plus_interface {
    operator+=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_plus_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.add(move(rhs));
@@ -486,8 +486,8 @@ struct minus_interface {
    constexpr auto
    operator-(this Derived const& lhs, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_binary_subtract_by<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_binary_subtract_by<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return lhs.subtract_by(move(other));
@@ -555,7 +555,7 @@ struct minus_interface {
    operator-=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_minus_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.subtract_by(move(rhs));
@@ -676,8 +676,8 @@ struct multiply_interface {
    constexpr auto
    operator*(this Derived const& self, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_binary_multiply<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_binary_multiply<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return self.multiply(move(other));
@@ -745,7 +745,7 @@ struct multiply_interface {
    operator*=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_multiply_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.multiply(move(rhs));
@@ -826,8 +826,8 @@ struct divide_interface {
    constexpr auto
    operator/(this Derived const& self, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_binary_divide_by<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_binary_divide_by<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return self.divide_by(move(other));
@@ -895,7 +895,7 @@ struct divide_interface {
    operator/=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_divide_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.divide_by(move(rhs));
@@ -976,8 +976,8 @@ struct bit_and_interface {
    constexpr auto
    operator&(this Derived const& self, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_binary_bit_and<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_binary_bit_and<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return self.bit_and(move(other));
@@ -1045,7 +1045,7 @@ struct bit_and_interface {
    operator&=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_bit_and_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.bit_and(move(rhs));
@@ -1126,8 +1126,8 @@ struct bit_or_interface {
    constexpr auto
    operator|(this Derived const& self, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_binary_bit_or<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_binary_bit_or<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return self.bit_or(move(other));
@@ -1195,7 +1195,7 @@ struct bit_or_interface {
    operator|=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_bit_or_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.bit_or(move(rhs));
@@ -1276,8 +1276,8 @@ struct bit_xor_interface {
    constexpr auto
    operator^(this Derived const& self, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_binary_bit_xor<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_binary_bit_xor<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return self.bit_xor(move(other));
@@ -1345,7 +1345,7 @@ struct bit_xor_interface {
    operator^=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_bit_xor_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.bit_xor(move(rhs));
@@ -1426,8 +1426,8 @@ struct modulo_interface {
    constexpr auto
    operator%(this Derived const& self, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_binary_modulo_by<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_binary_modulo_by<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return self.modulo_by(move(other));
@@ -1495,7 +1495,7 @@ struct modulo_interface {
    operator%=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_modulo_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.modulo_by(move(rhs));
@@ -1576,8 +1576,8 @@ struct shift_left_interface {
    constexpr auto
    operator<<(this Derived const& self, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_shift_left_by<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_shift_left_by<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return self.shift_left_by(move(other));
@@ -1646,7 +1646,7 @@ struct shift_left_interface {
    operator<<=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_shift_left_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.shift_left_by(move(rhs));
@@ -1727,8 +1727,8 @@ struct shift_right_interface {
    constexpr auto
    operator>>(this Derived const& self, decay_derived&& other) -> decltype(auto)
       requires(
-         detail::has_shift_right_by<Derived, decay_derived &&>
-         && is_constructible<Derived, decay_derived &&>
+         detail::has_shift_right_by<Derived, decay_derived&&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       return self.shift_right_by(move(other));
@@ -1797,7 +1797,7 @@ struct shift_right_interface {
    operator>>=(Derived& self, decay_derived&& rhs) -> Derived&
       requires(
          detail::has_shift_right_assign<decay_derived, decay_derived>
-         && is_constructible<Derived, decay_derived &&>
+         && is_constructible<Derived, decay_derived&&>
       )
    {
       self = self.shift_right_by(move(rhs));

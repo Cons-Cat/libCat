@@ -15,27 +15,30 @@ import urllib.request
 
 LLVM_BASE_URL = "https://apt.llvm.org/unstable"
 LLVM_PACKAGES_INDEX_URL = f"{LLVM_BASE_URL}/dists/llvm-toolchain/main/binary-amd64/Packages.gz"
+LLVM_MAJOR = 24
 LLVM_PACKAGE_NAMES = (
-    "clang-23",
-    "clang-format-23",
-    "clangd-23",
-    "clang-tidy-23",
-    "clang-tools-23",
-    "lld-23",
-    "liblld-23",
-    "llvm-23",
-    "llvm-23-linker-tools",
-    "llvm-23-runtime",
-    "llvm-23-tools",
-    "libclang-cpp23",
-    # `libclang-rt-23-dev` is needed for sanitizer runtimes.
-    "libclang-rt-23-dev",
-    "libllvm23",
-    "bolt-23",
+    f"clang-{LLVM_MAJOR}",
+    f"clang-format-{LLVM_MAJOR}",
+    f"clangd-{LLVM_MAJOR}",
+    f"clang-tidy-{LLVM_MAJOR}",
+    f"clang-tools-{LLVM_MAJOR}",
+    f"lld-{LLVM_MAJOR}",
+    f"liblld-{LLVM_MAJOR}",
+    f"llvm-{LLVM_MAJOR}",
+    f"llvm-{LLVM_MAJOR}-linker-tools",
+    f"llvm-{LLVM_MAJOR}-runtime",
+    f"llvm-{LLVM_MAJOR}-tools",
+    f"libclang-common-{LLVM_MAJOR}-dev",
+    f"libclang-cpp{LLVM_MAJOR}",
+    f"libclang1-{LLVM_MAJOR}",
+    # This package supplies sanitizer runtimes.
+    f"libclang-rt-{LLVM_MAJOR}-dev",
+    f"libllvm{LLVM_MAJOR}",
+    f"bolt-{LLVM_MAJOR}",
 )
 DEBIAN_BASE_URL = "https://deb.debian.org/debian"
 DEBIAN_PACKAGES_INDEX_URL = f"{DEBIAN_BASE_URL}/dists/unstable/main/binary-amd64/Packages.gz"
-PACKAGE_SET_REVISION = "7"
+PACKAGE_SET_REVISION = "8"
 
 DEBIAN_PACKAGE_NAMES = (
     "gcc-16-base",
@@ -43,9 +46,6 @@ DEBIAN_PACKAGE_NAMES = (
     "libstdc++6",
     "libc6",
     "libc-gconv-modules-extra",
-    # clangd (LLVM nightly) still links abseil 20260107. Debian's re2/grpc
-    # already moved to 20260526, so both SONAMEs must be staged.
-    "libabsl20260107",
     "libabsl20260526",
     "libbsd0",
     "libedit2",
@@ -69,7 +69,8 @@ DEBIAN_PACKAGE_NAMES = (
 # `clang*` / `llvm-*` / BOLT executable. `install_wrappers` enumerates it at
 # install time so anything new the upstream debs add (e.g. `llvm-bolt`,
 # `merge-fdata`, future tools) lands on PATH automatically.
-LLVM_BIN_DIR = "usr/lib/llvm-23/bin"
+LLVM_BIN_DIR = f"usr/lib/llvm-{LLVM_MAJOR}/bin"
+LLVM_LIB_DIR = f"usr/lib/llvm-{LLVM_MAJOR}/lib"
 
 # Required tools verified by `is_current`. The actual wrapper set is the full
 # enumeration of `LLVM_BIN_DIR`; this list just guards against an upstream
@@ -96,8 +97,8 @@ REQUIRED_WRAPPERS = (
 )
 
 RUNTIME_LIBRARIES = (
-    "libLLVM-23.so",
-    "libLLVM.so.23.0",
+    f"libLLVM-{LLVM_MAJOR}.so",
+    f"libLLVM.so.{LLVM_MAJOR}.0",
     "libre2.so.11",
     "libre2.so.11.0.0",
     "libstdc++.so.6",
@@ -120,7 +121,6 @@ RUNTIME_LIBRARY_PREFIXES = (
 )
 
 REQUIRED_PREFIX_RUNTIME_LIBRARIES = (
-    "libabsl_base.so.20260107",
     "libabsl_base.so.20260526",
     "libgrpc++.so.1.51",
 )
@@ -215,9 +215,9 @@ def wrapper_text(real_path: str) -> str:
 set -e
 root="$(CDPATH= cd -- "$(dirname -- "${{BASH_SOURCE[0]}}")/.." && pwd)"
 target="${{root}}/{real_path}"
-library_path="${{root}}/runtime/lib:${{root}}/usr/lib/llvm-23/lib${{LD_LIBRARY_PATH:+:${{LD_LIBRARY_PATH}}}}"
+library_path="${{root}}/runtime/lib:${{root}}/{LLVM_LIB_DIR}${{LD_LIBRARY_PATH:+:${{LD_LIBRARY_PATH}}}}"
 export LD_LIBRARY_PATH="${{library_path}}"
-export PATH="${{root}}/usr/lib/llvm-23/bin:${{root}}/usr/bin:${{PATH}}"
+export PATH="${{root}}/{LLVM_BIN_DIR}:${{root}}/usr/bin:${{PATH}}"
 exec "${{target}}" "$@"
 """
 
@@ -234,19 +234,19 @@ def install_runtime_library(source_dir: pathlib.Path, runtime_dir: pathlib.Path,
         target.symlink_to(os.path.relpath(source, runtime_dir))
 
 
-# Debian's `strip` invocation on `libclang-rt-23-dev` clears `sh_link` on the
+# Debian's `strip` invocation on compiler-rt clears `sh_link` on the
 # `SHT_LLVM_ADDRSIG` sections embedded in every compiler-rt archive (upstream
 # llvm/llvm-project#98354). lld then warns once per affected member when
 # `--icf=safe` runs against compiler-rt. Removing the broken section silences
 # the warning and is a no-op for ICF (lld treats absent addrsig conservatively).
-# The wrapper in `bin/` is required (not the raw `usr/lib/llvm-23/bin/`
-# binary) because `llvm-objcopy` links against `libLLVM.so.23.0`, and only
-# the wrapper sets `LD_LIBRARY_PATH` to the staged `runtime/lib`.
+# The wrapper in `bin/` sets the library path needed by `llvm-objcopy`.
 def strip_compiler_rt_addrsig(root: pathlib.Path) -> None:
     objcopy = root / "bin" / "llvm-objcopy"
     if not objcopy.exists():
         raise SystemExit(f"missing llvm-objcopy wrapper: {objcopy}")
-    rt_dir = root / "usr" / "lib" / "llvm-23" / "lib" / "clang" / "23" / "lib" / "linux"
+    rt_dir = (
+        root / LLVM_LIB_DIR / "clang" / str(LLVM_MAJOR) / "lib" / "linux"
+    )
     archives = sorted(rt_dir.glob("*.a"))
     if not archives:
         return
@@ -279,10 +279,8 @@ def install_wrappers(root: pathlib.Path) -> None:
     if not llvm_bin.is_dir():
         raise SystemExit(f"missing LLVM bin dir: {llvm_bin}")
 
-    # Stage a wrapper for every executable shipped by the LLVM debs. Skipping
-    # `<name>-23` siblings keeps Debian's versioned aliases from getting their
-    # own wrappers; we recreate them as symlinks so callers that look for
-    # `clang-23`/`llvm-objdump-23` still resolve.
+    # Stage a wrapper for every executable shipped by the LLVM debs.
+    # Skip versioned siblings and recreate them as symlinks.
     staged: set[str] = set()
     for entry in sorted(llvm_bin.iterdir()):
         try:
@@ -290,13 +288,13 @@ def install_wrappers(root: pathlib.Path) -> None:
                 continue
         except OSError:
             continue
-        if entry.name.endswith("-23"):
+        if entry.name.endswith(f"-{LLVM_MAJOR}"):
             continue
         real_path = f"{LLVM_BIN_DIR}/{entry.name}"
         wrapper = bin_dir / entry.name
         wrapper.write_text(wrapper_text(real_path), encoding="utf-8")
         wrapper.chmod(0o755)
-        suffixed = bin_dir / f"{entry.name}-23"
+        suffixed = bin_dir / f"{entry.name}-{LLVM_MAJOR}"
         if suffixed.is_symlink() or suffixed.exists():
             suffixed.unlink()
         suffixed.symlink_to(entry.name)

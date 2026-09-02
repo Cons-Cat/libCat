@@ -379,7 +379,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    [[nodiscard]]
    constexpr auto
    insert_range(idx position, Range&& range) -> maybe<void>
-      requires(is_assignable<T&, T &&> && !flags.is_fixed_size)
+      requires(is_assignable<T&, T&&> && !flags.is_fixed_size)
    {
       return m_core.insert_range(m_allocator, position, $fwd(range));
    }
@@ -389,7 +389,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    [[nodiscard]]
    constexpr auto
    replace_with_range(idx first, idx last, Range&& range) -> maybe<void>
-      requires(is_assignable<T&, T &&> && !flags.is_fixed_size)
+      requires(is_assignable<T&, T&&> && !flags.is_fixed_size)
    {
       return m_core.replace_with_range(m_allocator, first, last, $fwd(range));
    }

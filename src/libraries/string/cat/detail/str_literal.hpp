@@ -119,7 +119,7 @@ class
             *iterator;
             ++iterator;
             iterator != sentinel;
-         } && is_same<remove_cvref<decltype(* declval<Iterator&>())>, CharT>
+         } && is_same<remove_cvref<decltype(*declval<Iterator&>())>, CharT>
       )
    constexpr basic_str_literal(Iterator begin, Sentinel end) {
       for (idx index; index < fixed_size; ++index) {
