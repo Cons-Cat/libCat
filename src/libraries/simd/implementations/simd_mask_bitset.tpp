@@ -63,11 +63,6 @@ template <typename T, idx lane_count>
 inline constexpr bool
    is_fixed_size_mask_abi<cat::simd_abi::fixed_size<T, lane_count>, T> = true;
 
-template <typename T, idx lane_count>
-inline constexpr bool is_fixed_size_mask_abi<
-   cat::simd_abi::unaligned<cat::simd_abi::fixed_size<T, lane_count>>, T> =
-   true;
-
 template <typename T, typename Abi>
    requires(is_fixed_size_mask_abi<Abi, T>)
 [[nodiscard, gnu::target("avx2")]]

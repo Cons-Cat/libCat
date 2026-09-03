@@ -210,7 +210,7 @@ fill_memory_detail(void* _Nonnull p_source, T value, idx const size) {
       // `remaining_bytes` so a small `size` cannot overshoot when the
       // starting pointer is misaligned by more bytes than `size`.
       while (remaining_bytes > 0
-             && !is_aligned(p_current, cat::simd_abi::native<T>::alignment)) {
+             && !is_aligned(p_current, alignof(cat::native_simd<T>))) {
          *p_current = value;
          p_current += sizeof(T);
          remaining_bytes -= sizeof(T);

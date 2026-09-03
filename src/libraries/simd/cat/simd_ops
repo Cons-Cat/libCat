@@ -618,7 +618,7 @@ struct simd_load_aligned_blend_masked_impl {
       simd<T, Abi> passthrough,
       simd<T, Abi>::memory_lane const* _Nonnull p_source
    ) const -> maybe<simd<T, Abi>> {
-      if (!is_aligned(unconst(p_source), simd<T, Abi>::abi_type::alignment)) {
+      if (!is_aligned(unconst(p_source), alignof(simd<T, Abi>))) {
          return maybe<simd<T, Abi>>{};
       }
       simd<T, Abi> result = passthrough;
@@ -825,7 +825,7 @@ struct make_simd_loaded_aligned_impl
    [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
    invoke(Simd::memory_lane const* _Nonnull p_source) const -> maybe<Simd> {
-      if (!is_aligned(unconst(p_source), Simd::abi_type::alignment)) {
+      if (!is_aligned(unconst(p_source), alignof(Simd))) {
          return maybe<Simd>{};
       }
       Simd result{};
@@ -3003,7 +3003,7 @@ template <typename T, typename Abi>
 auto
 simd_compress_wide(simd<T, Abi> input, simd_mask<T, Abi> selector)
    -> simd<T, Abi> {
-   using native_abi = x64::avx_unaligned_abi<T>;
+   using native_abi = x64::avx_abi<T>;
    using native_simd = simd<T, native_abi>;
    using native_mask = simd_mask<T, native_abi>;
 
@@ -3065,11 +3065,19 @@ struct simd_compress_impl {
          } else if constexpr (has_simd_abi_compress<T, Abi>) {
             return simd_abi_apply_compress<T, Abi>(input, selector);
          }
-      }
-      {
+
+         using bool_mask [[clang::ext_vector_type(Abi::lanes.raw)]] = bool;
+         using memory_lane = simd<T, Abi>::memory_lane;
+         using raw_mask = simd_mask<T, Abi>::raw_type;
+         simd<T, Abi> result{};
+         __builtin_masked_compress_store(
+            __builtin_convertvector(selector.raw != raw_mask{}, bool_mask),
+            input.raw, reinterpret_cast<memory_lane*>(&result.raw)
+         );
+         return result;
+      } else {
          simd<T, Abi> result{};
          idx next_packed_lane = 0u;
-#pragma clang loop vectorize_predicate(enable)
          for (idx i = 0u; i < Abi::lanes; ++i) {
             if (selector[i]) {
                result.set_lane(next_packed_lane, input[i]);

@@ -61,8 +61,8 @@ constexpr auto
 simd_to_unsigned_raw(cat::simd<T, Abi> const& value) {
    using raw_scalar = raw_arithmetic_type<T>;
    using unsigned_scalar = make_unsigned_type<raw_scalar>;
-   using unsigned_raw =
-      unsigned_scalar __attribute__((vector_size(sizeof(value.raw))));
+   using unsigned_raw [[clang::ext_vector_type(Abi::lanes.raw)]] =
+      unsigned_scalar;
    return __builtin_bit_cast(unsigned_raw, value.raw);
 }
 

@@ -154,14 +154,6 @@ verify_avx512_abi_runtime_hooks() -> void {
    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint2>>();
    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint4>>();
    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint8>>();
-   verify_mask_hooks_match_fixed_size<
-      x64::avx512_unaligned_simd_mask<cat::uint1>>();
-   verify_mask_hooks_match_fixed_size<
-      x64::avx512_unaligned_simd_mask<cat::uint2>>();
-   verify_mask_hooks_match_fixed_size<
-      x64::avx512_unaligned_simd_mask<cat::uint4>>();
-   verify_mask_hooks_match_fixed_size<
-      x64::avx512_unaligned_simd_mask<cat::uint8>>();
 
    x64::avx512_simd<cat::uint8> const words{1u,  3u,  7u,   15u,
                                             31u, 63u, 127u, cat::uint8::max()};
@@ -233,7 +225,7 @@ $test(simd_sse_avx_integer_rotates) {
 
 $test(simd_sse_permute) {
    static_assert(cat::simd_abi::scalar<int4>::size == sizeof(int4));
-   static_assert(cat::simd_abi::scalar<int4>::alignment == alignof(int4));
+   static_assert(alignof(cat::scalar_simd<int4>) == alignof(int4));
    static_assert(cat::simd_abi::scalar<float4>::lanes == 1u);
 
    x64::sse_simd<int4> const ints{10, 20, 30, 40};
@@ -297,14 +289,6 @@ $test(simd_sse_abi_hooks_mask_reductions_all_lane_sizes) {
    verify_mask_hooks_match_fixed_size<x64::sse_simd_mask<cat::uint2>>();
    verify_mask_hooks_match_fixed_size<x64::sse_simd_mask<cat::uint4>>();
    verify_mask_hooks_match_fixed_size<x64::sse_simd_mask<cat::uint8>>();
-   verify_mask_hooks_match_fixed_size<
-      x64::sse_unaligned_simd_mask<cat::uint1>>();
-   verify_mask_hooks_match_fixed_size<
-      x64::sse_unaligned_simd_mask<cat::uint2>>();
-   verify_mask_hooks_match_fixed_size<
-      x64::sse_unaligned_simd_mask<cat::uint4>>();
-   verify_mask_hooks_match_fixed_size<
-      x64::sse_unaligned_simd_mask<cat::uint8>>();
 }
 
 $test(simd_dot_fast_matches_generic_results) {
@@ -514,196 +498,11 @@ $test(simd_avx512_abi_layout_and_runtime_hooks) {
    static_assert(x64::avx512_simd<cat::uint4>::size() == 16u);
    static_assert(x64::avx512_simd<cat::uint1>::size() == 64u);
    static_assert(alignof(x64::avx512_simd<cat::uint8>) == 64u);
-   static_assert(x64::avx512_unaligned_simd<cat::uint8>::size() == 8u);
-   static_assert(alignof(x64::avx512_unaligned_simd<cat::uint8>) == 1u);
    static_assert(x64::avx512_simd_mask<cat::uint4>::size() == 16u);
 
    if (has_avx512_runtime_support()) {
       verify_avx512_abi_runtime_hooks();
    }
-}
-
-$test(simd_avx_unaligned_abi) {
-   static_assert(x64::avx_unaligned_simd<float>::size() == 8u);
-   static_assert(alignof(x64::avx_unaligned_simd<float>) == 1);
-
-   cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
-   $defer {
-      pager.free(page);
-   };
-   cat::linear_allocator allocator = cat::make_linear_allocator(page);
-
-   // Misalign allocator by 2 bytes.
-   auto* _ = allocator.alloc<short>().verify();
-   // Allocate unaligned SIMD.
-   auto* p_unaligned =
-      allocator.unalign_alloc<x64::avx_unaligned_simd<float>>().verify();
-
-   cat::verify(!cat::is_aligned(p_unaligned, 32_uz));
-   cat::verify(!cat::is_aligned(p_unaligned, 16_uz));
-   cat::verify(cat::is_aligned(p_unaligned, 2_uz));
-
-   cat::verify(!cat::is_aligned(p_unaligned->data(), 32_uz));
-   cat::verify(!cat::is_aligned(p_unaligned->data(), 16_uz));
-   cat::verify(cat::is_aligned(p_unaligned->data(), 2_uz));
-
-   p_unaligned->fill(4.f);
-
-   cat::verify(p_unaligned[0u] == 4.f);
-
-   auto const rr = cat::simd_rsqrt(*p_unaligned);
-   cat::verify(cat::abs(rr[0u] - 0.5_f4) < 0.001_f4);
-}
-
-$test(simd_sse_and_unaligned_abi) {
-   static_assert(x64::sse_unaligned_simd<float>::size() == 4u);
-   static_assert(alignof(x64::sse_unaligned_simd<float>) == 1);
-
-   cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
-   $defer {
-      pager.free(page);
-   };
-   cat::linear_allocator allocator = cat::make_linear_allocator(page);
-
-   // Misalign allocator by 2 bytes.
-   auto* _ = allocator.alloc<short>().verify();
-   // Allocate unaligned SIMD.
-   auto* p_unaligned =
-      allocator.unalign_alloc<x64::sse_unaligned_simd<float>>().verify();
-
-   cat::verify(!cat::is_aligned(p_unaligned, 16_uz));
-   cat::verify(cat::is_aligned(p_unaligned, 2_uz));
-
-   cat::verify(!cat::is_aligned(p_unaligned->data(), 16_uz));
-   cat::verify(cat::is_aligned(p_unaligned->data(), 2_uz));
-
-   p_unaligned->fill(4.f);
-
-   cat::verify(p_unaligned[0u] == 4.f);
-
-   auto const rr = cat::simd_rsqrt(*p_unaligned);
-   cat::verify(cat::abs(rr[0u] - 0.5_f4) < 0.001_f4);
-}
-
-$test(simd_avx_unaligned_abi_mask) {
-   static_assert(x64::avx_unaligned_simd_mask<float>::size() == 8u);
-   static_assert(alignof(x64::avx_unaligned_simd_mask<float>) == 1);
-
-   cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
-   $defer {
-      pager.free(page);
-   };
-   cat::linear_allocator allocator = cat::make_linear_allocator(page);
-
-   // Misalign allocator by 2 bytes.
-   auto* _ = allocator.alloc<short>().verify();
-   // Allocate unaligned mask.
-   auto* p_unaligned =
-      allocator.unalign_alloc<x64::avx_unaligned_simd_mask<float>>().verify();
-
-   cat::verify(!cat::is_aligned(p_unaligned, 32_uz));
-   cat::verify(!cat::is_aligned(p_unaligned, 16_uz));
-   cat::verify(cat::is_aligned(p_unaligned, 2_uz));
-
-   cat::verify(!cat::is_aligned(p_unaligned->data(), 32_uz));
-   cat::verify(!cat::is_aligned(p_unaligned->data(), 16_uz));
-   cat::verify(cat::is_aligned(p_unaligned->data(), 2_uz));
-
-   p_unaligned->fill(true);
-   cat::verify((*p_unaligned)[0u]);
-   cat::verify(cat::simd_all_of(*p_unaligned));
-
-   p_unaligned->fill(false);
-   cat::verify(!cat::simd_any_of(*p_unaligned));
-}
-
-$test(simd_sse_and_unaligned_abi_mask) {
-   static_assert(x64::sse_unaligned_simd_mask<float>::size() == 4u);
-   static_assert(alignof(x64::sse_unaligned_simd_mask<float>) == 1);
-
-   cat::span page = pager.alloc_multi<cat::byte>(128_uki).or_exit();
-   $defer {
-      pager.free(page);
-   };
-   cat::linear_allocator allocator = cat::make_linear_allocator(page);
-
-   // Misalign allocator by 2 bytes.
-   auto* _ = allocator.alloc<short>().verify();
-   // Allocate unaligned mask.
-   auto* p_unaligned =
-      allocator.unalign_alloc<x64::sse_unaligned_simd_mask<float>>().verify();
-
-   cat::verify(!cat::is_aligned(p_unaligned, 16_uz));
-   cat::verify(cat::is_aligned(p_unaligned, 2_uz));
-
-   cat::verify(!cat::is_aligned(p_unaligned->data(), 16_uz));
-   cat::verify(cat::is_aligned(p_unaligned->data(), 2_uz));
-
-   p_unaligned->fill(true);
-   cat::verify((*p_unaligned)[0u]);
-   cat::verify(cat::simd_all_of(*p_unaligned));
-
-   p_unaligned->fill(false);
-   cat::verify(!cat::simd_any_of(*p_unaligned));
-}
-
-$test(simd_unaligned_abi_adaptor) {
-   static_assert(cat::is_same<
-                 x64::avx_unaligned_abi<float>,
-                 cat::simd_abi::unaligned<x64::avx_abi<float>>>);
-   static_assert(cat::is_same<
-                 x64::sse_unaligned_abi<float>,
-                 cat::simd_abi::unaligned<x64::sse_abi<float>>>);
-
-   static_assert(
-      cat::simd_abi::unaligned<cat::simd_abi::native<float>>::lanes
-      == cat::simd_abi::native<float>::lanes
-   );
-   static_assert(
-      cat::simd_abi::unaligned<cat::simd_abi::native<float>>::size
-      == cat::simd_abi::native<float>::size
-   );
-   static_assert(
-      cat::simd_abi::unaligned<cat::simd_abi::native<float>>::alignment == 1u
-   );
-
-   auto verify_alignment = []<typename Simd> consteval {
-      using mask_type = Simd::mask_type;
-      static_assert(alignof(Simd) == 1u);
-      static_assert(alignof(typename Simd::raw_type) == 1u);
-      static_assert(alignof(mask_type) == 1u);
-      static_assert(alignof(typename mask_type::raw_type) == 1u);
-   };
-   verify_alignment.template operator()<x64::sse_unaligned_simd<cat::uint1>>();
-   verify_alignment.template operator()<x64::sse_unaligned_simd<cat::uint2>>();
-   verify_alignment.template operator()<x64::sse_unaligned_simd<cat::uint4>>();
-   verify_alignment.template operator()<x64::sse_unaligned_simd<cat::uint8>>();
-   verify_alignment.template operator()<x64::avx_unaligned_simd<cat::uint1>>();
-   verify_alignment.template operator()<x64::avx_unaligned_simd<cat::uint2>>();
-   verify_alignment.template operator()<x64::avx_unaligned_simd<cat::uint4>>();
-   verify_alignment.template operator()<x64::avx_unaligned_simd<cat::uint8>>();
-   verify_alignment
-      .template operator()<x64::avx512_unaligned_simd<cat::uint1>>();
-   verify_alignment
-      .template operator()<x64::avx512_unaligned_simd<cat::uint2>>();
-   verify_alignment
-      .template operator()<x64::avx512_unaligned_simd<cat::uint4>>();
-   verify_alignment
-      .template operator()<x64::avx512_unaligned_simd<cat::uint8>>();
-   verify_alignment.template operator()<cat::native_unaligned_simd<float>>();
-   verify_alignment
-      .template operator()<cat::fixed_size_unaligned_simd<cat::float4, 4u>>();
-   verify_alignment
-      .template operator()<cat::scalar_unaligned_simd<cat::float4>>();
-   verify_alignment
-      .template operator()<cat::compatible_unaligned_simd<float>>();
-
-   static_assert(alignof(cat::native_unaligned_simd<float>) == 1u);
-   static_assert(
-      alignof(cat::fixed_size_unaligned_simd<cat::float4, 4u>) == 1u
-   );
-   static_assert(alignof(cat::scalar_unaligned_simd<cat::float4>) == 1u);
-   static_assert(alignof(cat::compatible_unaligned_simd<float>) == 1u);
 }
 
 // AVX2 `simd_compress` hooks (`simd_avx2_compress.hpp`). One test per lane

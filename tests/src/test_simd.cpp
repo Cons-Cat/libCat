@@ -362,44 +362,24 @@ $test(fixed_size_simd_alignment) {
    using cat::float4;
    using cat::float8;
    using cat::int4;
-   using cat::uword;
-   using cat::simd_abi::fixed_size;
+   auto verify_alignment = []<typename T, idx lane_count> consteval {
+      using vector = fixed_size_simd<T, lane_count>;
+      using raw = vector::raw_type;
+      static_assert(vector::abi_type::size == lane_count * sizeof(T));
+      static_assert(alignof(vector) == alignof(raw));
+   };
 
-   // `x64::avx_abi` cap is 32 bytes. Alignment is the largest power of two not
-   // exceeding `min(size, 32)`, at least `alignof(T)`.
-   static_assert(simd_abi::fixed_size<float4, 1u>::size == 4u);
-   static_assert(simd_abi::fixed_size<float4, 1u>::alignment == 4u);
-   static_assert(simd_abi::fixed_size<float4, 2u>::size == 8u);
-   static_assert(simd_abi::fixed_size<float4, 2u>::alignment == 8u);
-   static_assert(simd_abi::fixed_size<float4, 3u>::size == 12u);
-   static_assert(simd_abi::fixed_size<float4, 3u>::alignment == 8u);
-   static_assert(simd_abi::fixed_size<float4, 4u>::size == 16u);
-   static_assert(simd_abi::fixed_size<float4, 4u>::alignment == 16u);
-   static_assert(simd_abi::fixed_size<float4, 6u>::size == 24u);
-   static_assert(simd_abi::fixed_size<float4, 6u>::alignment == 16u);
-   static_assert(simd_abi::fixed_size<float4, 8u>::size == 32u);
-   static_assert(simd_abi::fixed_size<float4, 8u>::alignment == 32u);
-   static_assert(simd_abi::fixed_size<float4, 16u>::size == 64u);
-   static_assert(simd_abi::fixed_size<float4, 16u>::alignment == 32u);
-
-   static_assert(simd_abi::fixed_size<float8, 2u>::size == 16u);
-   static_assert(simd_abi::fixed_size<float8, 2u>::alignment == 16u);
-   static_assert(simd_abi::fixed_size<float8, 4u>::size == 32u);
-   static_assert(simd_abi::fixed_size<float8, 4u>::alignment == 32u);
-
-   static_assert(simd_abi::fixed_size<int4, 4u>::size == 16u);
-   static_assert(simd_abi::fixed_size<int4, 4u>::alignment == 16u);
-   static_assert(simd_abi::fixed_size<int4, 8u>::size == 32u);
-   static_assert(simd_abi::fixed_size<int4, 8u>::alignment == 32u);
-
-   static_assert(alignof(fixed_size_simd<float4, 1u>) == 4u);
-   static_assert(alignof(fixed_size_simd<float4, 2u>) == 8u);
-   static_assert(alignof(fixed_size_simd<float4, 4u>) == 16u);
-   static_assert(alignof(fixed_size_simd<float4, 8u>) == 32u);
-   static_assert(alignof(fixed_size_simd<int4, 4u>) == 16u);
-   static_assert(alignof(fixed_size_simd<int4, 8u>) == 32u);
-   static_assert(alignof(fixed_size_simd<float8, 2u>) == 16u);
-   static_assert(alignof(fixed_size_simd<float8, 4u>) == 32u);
+   verify_alignment.template operator()<float4, 1u>();
+   verify_alignment.template operator()<float4, 2u>();
+   verify_alignment.template operator()<float4, 3u>();
+   verify_alignment.template operator()<float4, 4u>();
+   verify_alignment.template operator()<float4, 6u>();
+   verify_alignment.template operator()<float4, 8u>();
+   verify_alignment.template operator()<float4, 16u>();
+   verify_alignment.template operator()<float8, 2u>();
+   verify_alignment.template operator()<float8, 4u>();
+   verify_alignment.template operator()<int4, 4u>();
+   verify_alignment.template operator()<int4, 8u>();
 
    cat::verify(alignof(float4x4) == 16u);
    cat::verify(alignof(float4x8) == 32u);
@@ -450,29 +430,12 @@ $test(simd_is_array_like_v) {
    static_assert(is_simd_array_like<int1, simd_abi::fixed_size<int1, 16u>>);
    static_assert(is_simd_array_like<int1, simd_abi::fixed_size<int1, 32u>>);
 
-   // `simd_abi::fixed_size` where lanes * sizeof(`T`) is not a power of two:
-   // Clang `gnu::vector_size` rounds the storage up which leaves trailing
-   // padding, so the layout is not array-like. P3983R1 anticipates this for
-   // `fixed_size`.
+   // Irregular ext vectors have trailing padding and are not array-like.
    static_assert(!is_simd_array_like<float4, simd_abi::fixed_size<float4, 3u>>);
    static_assert(!is_simd_array_like<float4, simd_abi::fixed_size<float4, 5u>>);
    static_assert(!is_simd_array_like<float4, simd_abi::fixed_size<float4, 6u>>);
    static_assert(!is_simd_array_like<float4, simd_abi::fixed_size<float4, 7u>>);
    static_assert(!is_simd_array_like<int8, simd_abi::fixed_size<int8, 3u>>);
-
-   // The unaligned wrapper preserves the base ABI's storage size, so it
-   // inherits its array-likeness.
-   static_assert(
-      is_simd_array_like<float4, simd_abi::unaligned<simd_abi::native<float4>>>
-   );
-   static_assert(
-      is_simd_array_like<
-         float4, simd_abi::unaligned<simd_abi::fixed_size<float4, 4u>>>
-   );
-   static_assert(
-      !is_simd_array_like<
-         float4, simd_abi::unaligned<simd_abi::fixed_size<float4, 3u>>>
-   );
 
    // P3983R1 note: when the trait is `true`, `bit_cast` between `simd<T, Abi>`
    // and the corresponding `array<T, N>` is well-defined and preserves lane
@@ -498,10 +461,6 @@ $test(simd_arbitrary_fill_and_x3_aliases) {
    static_assert(
       cat::is_same<cat::float4x3, cat::deduce_simd<cat::float4, 3u>>
    );
-   static_assert(cat::is_same<
-                 cat::float_fast_unalign_8x3,
-                 cat::deduce_unaligned_simd<cat::float8_fast, 3u>>);
-
    cat::fixed_size_simd<int4, 1u> const one(7);
    cat::fixed_size_simd<int4, 3u> const three(7);
    cat::fixed_size_simd<int4, 5u> const five(7);
@@ -595,13 +554,6 @@ $test(simd_abi_deduce) {
    static_assert(
       cat::is_same<compatible_float, cat::simd_abi::compatible<float>>
    );
-
-   using unaligned_double = cat::simd_abi::deduce<
-      double, cat::simd_abi::unaligned<cat::simd_abi::native<double>>::lanes,
-      cat::simd_abi::unaligned<cat::simd_abi::native<float>>>;
-   static_assert(cat::is_same<
-                 unaligned_double,
-                 cat::simd_abi::unaligned<cat::simd_abi::native<double>>>);
 }
 
 $test(simdu) {
@@ -1011,8 +963,7 @@ $test(simd_as_vectorized_stepanov_iterator) {
 // only some lanes are defined (see tests below).
 
 $test(simd_eve_mask_subscript_load_store_aligned) {
-   alignas(int4x4::abi_type::alignment.raw)
-      int_lane const src[] = {11, 22, 33, 44};
+   alignas(int4x4) int_lane const src[] = {11, 22, 33, 44};
    int4x4 const pass = {10, 20, 30, 40};
    auto const m = cat::make_simd_mask_from_count<int4x4>(2u);
    int4x4 const r = cat::simd_load_aligned[m](pass, src).verify();
@@ -1021,7 +972,7 @@ $test(simd_eve_mask_subscript_load_store_aligned) {
    int4x4 const z = cat::simd_load_aligned[m](0, src).verify();
    cat::verify(z[0] == 11 && z[1] == 22 && z[2] == 0 && z[3] == 0);
 
-   alignas(int4x4::abi_type::alignment.raw) int_lane dst[] = {-1, -1, -1, -1};
+   alignas(int4x4) int_lane dst[] = {-1, -1, -1, -1};
    int4x4 const v = {100, 200, 300, 400};
    cat::simd_store_aligned[m](v, dst);
    cat::verify(dst[0] == 100 && dst[1] == 200 && dst[2] == -1 && dst[3] == -1);
@@ -1034,8 +985,7 @@ $test(simd_eve_mask_subscript_load_store_aligned) {
       && r[3] == factory[3]
    );
 
-   alignas(float4x4::abi_type::alignment.raw)
-      float_lane const fsrc[] = {1.1f, 2.2f, 3.3f, 4.4f};
+   alignas(float4x4) float_lane const fsrc[] = {1.1f, 2.2f, 3.3f, 4.4f};
    float4x4 const fpass = {10_f4, 20_f4, 30_f4, 40_f4};
    auto const mf = cat::make_simd_mask_from_count<float4x4>(2u);
    float4x4 const fr = cat::simd_load_aligned[mf](fpass, fsrc).verify();
@@ -1046,8 +996,7 @@ $test(simd_eve_mask_subscript_load_store_aligned) {
    cat::verify(
       fz[0] == 1.1f && fz[1] == 2.2f && fz[2] == 0_f4 && fz[3] == 0_f4
    );
-   alignas(float4x4::abi_type::alignment.raw)
-      float_lane fdst[] = {-1.f, -1.f, -1.f, -1.f};
+   alignas(float4x4) float_lane fdst[] = {-1.f, -1.f, -1.f, -1.f};
    float4x4 const fv = {100_f4, 200_f4, 300_f4, 400_f4};
    cat::simd_store_aligned[mf](fv, fdst);
    cat::verify(
@@ -1104,8 +1053,7 @@ $test(simd_eve_mask_subscript_load_store_and_dispatch) {
 }
 
 $test(simd_load_aligned_and_loaded_aligned) {
-   alignas(int4x4::abi_type::alignment.raw)
-      int_lane const src[] = {11, 22, 33, 44};
+   alignas(int4x4) int_lane const src[] = {11, 22, 33, 44};
    int4x4 a{};
    a.load_aligned(src);
    cat::verify(a[0] == 11);
@@ -1113,8 +1061,7 @@ $test(simd_load_aligned_and_loaded_aligned) {
    int4x4 const b = cat::make_simd_loaded_aligned<int4x4>(src).verify();
    cat::verify(b[1] == 22);
 
-   alignas(float4x4::abi_type::alignment.raw)
-      float_lane const fsrc[] = {1.25f, 2.25f, 3.25f, 4.25f};
+   alignas(float4x4) float_lane const fsrc[] = {1.25f, 2.25f, 3.25f, 4.25f};
    float4x4 fa{};
    fa.load_aligned(fsrc);
    cat::verify(fa[0] == 1.25f);
@@ -1123,12 +1070,9 @@ $test(simd_load_aligned_and_loaded_aligned) {
 }
 
 $test(simd_aligned_load_returns_nullopt_when_misaligned) {
-   alignas(int4x4::abi_type::alignment.raw)
-      int_lane block[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+   alignas(int4x4) int_lane block[8] = {1, 2, 3, 4, 5, 6, 7, 8};
    int_lane const* const p_mis = block + 1;
-   cat::verify(
-      !cat::is_aligned(cat::unconst(p_mis), int4x4::abi_type::alignment)
-   );
+   cat::verify(!cat::is_aligned(cat::unconst(p_mis), alignof(int4x4)));
    auto const full = cat::make_simd_loaded_aligned<int4x4>(p_mis);
    cat::verify(full.is_empty());
 
@@ -1174,7 +1118,7 @@ $test(simd_load_and_loaded_dispatch) {
 }
 
 $test(simd_non_temporal_load_store) {
-   alignas(int4x4::abi_type::alignment.raw) int_lane const src[] = {9, 8, 7, 6};
+   alignas(int4x4) int_lane const src[] = {9, 8, 7, 6};
    int4x4 a{};
    a.load_non_temporal(src);
    cat::verify(a[0] == 9);
@@ -1183,7 +1127,7 @@ $test(simd_non_temporal_load_store) {
    cat::verify(b[1] == 8);
    cat::verify(b[2] == 7);
 
-   alignas(int4x4::abi_type::alignment.raw) int_lane dst[4] = {};
+   alignas(int4x4) int_lane dst[4] = {};
    a.store_non_temporal(dst);
    cat::verify(dst[1] == 8);
    cat::verify(dst[2] == 7);
@@ -1209,11 +1153,6 @@ $test(simd_byte_lane_load_store_dispatch_misaligned) {
       cat::make_simd_loaded<cat::char1x16>(p_mis);
    cat::verify(from_loaded.equal_lanes(loaded).all_of());
 
-   cat::native_unaligned_simd<char> loose{};
-   loose.load(p_mis);
-   cat::verify(loose[0u] == p_mis[0]);
-   cat::verify(loose[last_idx] == p_mis[last_idx]);
-
    alignas(128) char scratch[128]{};
    char* const p_mis_out = scratch + 11;
    loaded.store(p_mis_out);
@@ -1223,7 +1162,7 @@ $test(simd_byte_lane_load_store_dispatch_misaligned) {
 }
 
 $test(simd_store_aligned_and_dispatch) {
-   alignas(int4x4::abi_type::alignment.raw) int_lane buf_a[4] = {};
+   alignas(int4x4) int_lane buf_a[4] = {};
    int4x4 v = {100, 200, 300, 400};
    v.store_aligned(buf_a);
    cat::verify(buf_a[0] == 100);
@@ -1237,7 +1176,7 @@ $test(simd_store_aligned_and_dispatch) {
    v.store(buf_d);
    cat::verify(buf_d[1] == 200);
 
-   alignas(float4x4::abi_type::alignment.raw) float_lane fbuf_a[4] = {};
+   alignas(float4x4) float_lane fbuf_a[4] = {};
    float4x4 fv = {1.5f, 2.5f, 3.5f, 4.5f};
    fv.store_aligned(fbuf_a);
    cat::verify(fbuf_a[0] == 1.5f);
@@ -1897,14 +1836,6 @@ $test(simd_wide_fixed_size_mask_bitsets_cross_storage_words) {
    verify_wide_mask_bitset_words<cat::fixed_size_simd_mask<cat::uint2, 67u>>();
    verify_wide_mask_bitset_words<cat::fixed_size_simd_mask<cat::uint4, 66u>>();
    verify_wide_mask_bitset_words<cat::fixed_size_simd_mask<cat::uint8, 65u>>();
-   verify_wide_mask_bitset_words<
-      cat::fixed_size_unaligned_simd_mask<cat::uint1, 130u>>();
-   verify_wide_mask_bitset_words<
-      cat::fixed_size_unaligned_simd_mask<cat::uint2, 67u>>();
-   verify_wide_mask_bitset_words<
-      cat::fixed_size_unaligned_simd_mask<cat::uint4, 66u>>();
-   verify_wide_mask_bitset_words<
-      cat::fixed_size_unaligned_simd_mask<cat::uint8, 65u>>();
 }
 
 $test(make_simd_mask_from_count_edges) {
@@ -2392,8 +2323,7 @@ $test(simd_load_from_store_to) {
       && partial_scatter_destination[6] == 9
    );
 
-   alignas(int4x4::abi_type::alignment.raw)
-      int_lane const aligned_int_source[] = {11, 22, 33, 44};
+   alignas(int4x4) int_lane const aligned_int_source[] = {11, 22, 33, 44};
    int4x4 const aligned_loaded_lanes =
       cat::make_simd_loaded_aligned<int4x4>(aligned_int_source).verify();
    cat::verify(aligned_loaded_lanes[0] == 11 && aligned_loaded_lanes[3] == 44);
@@ -3821,11 +3751,6 @@ $test(simd_dispatch_aliases_native_per_arch) {
             static_assert(cat::is_same<
                           native_simd_mask<cat::int4>,
                           cat::simd_mask<cat::int4, x64::avx_abi<cat::int4>>>);
-            static_assert(
-               cat::is_same<
-                  native_unaligned_simd<cat::int4>,
-                  cat::simd<cat::int4, x64::avx_unaligned_abi<cat::int4>>>
-            );
          }
       ),
       $abi(

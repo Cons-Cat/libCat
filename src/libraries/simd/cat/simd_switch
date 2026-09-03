@@ -478,16 +478,6 @@ struct simd_dispatch_cache {
    using NS::native_simd_mask;                                         \
    using NS::scalar_simd;                                              \
    using NS::scalar_simd_mask;                                         \
-   using NS::fixed_size_unaligned_simd;                                \
-   using NS::fixed_size_unaligned_simd_mask;                           \
-   using NS::deduce_unaligned_simd;                                    \
-   using NS::deduce_unaligned_simd_mask;                               \
-   using NS::native_unaligned_simd;                                    \
-   using NS::native_unaligned_simd_mask;                               \
-   using NS::compatible_unaligned_simd;                                \
-   using NS::compatible_unaligned_simd_mask;                           \
-   using NS::scalar_unaligned_simd;                                    \
-   using NS::scalar_unaligned_simd_mask;                               \
    /* Per-element aliases. Mirrors `CAT_SIMD_ALIASES`'s lower half. */ \
    using NS::int1x2;                                                   \
    using NS::int1x4;                                                   \
@@ -501,24 +491,9 @@ struct simd_dispatch_cache {
    using NS::uint1x16;                                                 \
    using NS::uint1x32;                                                 \
    using NS::uint1x_;                                                  \
-   using NS::int_unalign_1x2;                                          \
-   using NS::int_unalign_1x4;                                          \
-   using NS::int_unalign_1x8;                                          \
-   using NS::int_unalign_1x16;                                         \
-   using NS::int_unalign_1x32;                                         \
-   using NS::int_unalign_1x_;                                          \
-   using NS::uint_unalign_1x2;                                         \
-   using NS::uint_unalign_1x4;                                         \
-   using NS::uint_unalign_1x8;                                         \
-   using NS::uint_unalign_1x16;                                        \
-   using NS::uint_unalign_1x32;                                        \
-   using NS::uint_unalign_1x_;                                         \
    using NS::char1x16;                                                 \
    using NS::char1x32;                                                 \
    using NS::char1x_;                                                  \
-   using NS::char_unalign_1x16;                                        \
-   using NS::char_unalign_1x32;                                        \
-   using NS::char_unalign_1x_;                                         \
    using NS::int2x2;                                                   \
    using NS::int2x4;                                                   \
    using NS::int2x8;                                                   \
@@ -529,16 +504,6 @@ struct simd_dispatch_cache {
    using NS::uint2x8;                                                  \
    using NS::uint2x16;                                                 \
    using NS::uint2x_;                                                  \
-   using NS::int_unalign_2x2;                                          \
-   using NS::int_unalign_2x4;                                          \
-   using NS::int_unalign_2x8;                                          \
-   using NS::int_unalign_2x16;                                         \
-   using NS::int_unalign_2x_;                                          \
-   using NS::uint_unalign_2x2;                                         \
-   using NS::uint_unalign_2x4;                                         \
-   using NS::uint_unalign_2x8;                                         \
-   using NS::uint_unalign_2x16;                                        \
-   using NS::uint_unalign_2x_;                                         \
    using NS::int4x2;                                                   \
    using NS::int4x4;                                                   \
    using NS::int4x8;                                                   \
@@ -547,26 +512,12 @@ struct simd_dispatch_cache {
    using NS::uint4x4;                                                  \
    using NS::uint4x8;                                                  \
    using NS::uint4x_;                                                  \
-   using NS::int_unalign_4x2;                                          \
-   using NS::int_unalign_4x4;                                          \
-   using NS::int_unalign_4x8;                                          \
-   using NS::int_unalign_4x_;                                          \
-   using NS::uint_unalign_4x2;                                         \
-   using NS::uint_unalign_4x4;                                         \
-   using NS::uint_unalign_4x8;                                         \
-   using NS::uint_unalign_4x_;                                         \
    using NS::int8x2;                                                   \
    using NS::int8x4;                                                   \
    using NS::int8x_;                                                   \
    using NS::uint8x2;                                                  \
    using NS::uint8x4;                                                  \
    using NS::uint8x_;                                                  \
-   using NS::int_unalign_8x2;                                          \
-   using NS::int_unalign_8x4;                                          \
-   using NS::int_unalign_8x_;                                          \
-   using NS::uint_unalign_8x2;                                         \
-   using NS::uint_unalign_8x4;                                         \
-   using NS::uint_unalign_8x_;                                         \
    using NS::float4x2;                                                 \
    using NS::float4x4;                                                 \
    using NS::float4x8;                                                 \
@@ -574,27 +525,13 @@ struct simd_dispatch_cache {
    using NS::float8x2;                                                 \
    using NS::float8x4;                                                 \
    using NS::float8x_;                                                 \
-   using NS::float_unalign_4x2;                                        \
-   using NS::float_unalign_4x4;                                        \
-   using NS::float_unalign_4x8;                                        \
-   using NS::float_unalign_4x_;                                        \
-   using NS::float_unalign_8x2;                                        \
-   using NS::float_unalign_8x4;                                        \
-   using NS::float_unalign_8x_;                                        \
    using NS::float4_fastx2;                                            \
    using NS::float4_fastx4;                                            \
    using NS::float4_fastx8;                                            \
    using NS::float4_fastx_;                                            \
    using NS::float8_fastx2;                                            \
    using NS::float8_fastx4;                                            \
-   using NS::float8_fastx_;                                            \
-   using NS::float_fast_unalign_4x2;                                   \
-   using NS::float_fast_unalign_4x4;                                   \
-   using NS::float_fast_unalign_4x8;                                   \
-   using NS::float_fast_unalign_4x_;                                   \
-   using NS::float_fast_unalign_8x2;                                   \
-   using NS::float_fast_unalign_8x4;                                   \
-   using NS::float_fast_unalign_8x_;
+   using NS::float8_fastx_;
 #pragma clang final(CAT_SIMD_ARCH_USINGS)
 
 // Variadic FOR_EACH (up to 16 entries). `_COMMA` joins outputs with commas
