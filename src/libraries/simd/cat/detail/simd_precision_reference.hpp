@@ -73,7 +73,7 @@ class simd_precision_reference
    }
 
    constexpr void
-   rebind(WrappedQual& w [[clang::lifetime_capture_by(this)]]) {
+   rebind(WrappedQual& w [[clang::lifetime_capture_by_this]]) {
       m_wrapped = __builtin_addressof(w);
    }
 

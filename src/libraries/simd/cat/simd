@@ -540,10 +540,16 @@ class
        : raw(operand.raw) {
    }
 
-   [[gnu::nodebug]]
+// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
+   [[gnu::always_inline, gnu::nodebug]]
    constexpr simd(raw_type values)
        : raw(values) {
    }
+
+#pragma clang diagnostic pop
 
    // One scalar `value` is converted to `T` and that value is stored in every
    // lane. This is not the multi-argument per-lane constructor.
@@ -659,7 +665,7 @@ class
       return true;
    }
 
-// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpsabi"
 
@@ -1199,7 +1205,7 @@ class
       return old;
    }
 
-// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpsabi"
 
@@ -1218,7 +1224,7 @@ class
       return *this;
    }
 
-// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpsabi"
 
@@ -1288,7 +1294,7 @@ class
       return *this;
    }
 
-// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpsabi"
 
@@ -1378,7 +1384,7 @@ class
    constexpr auto
    operator[](Ts&&... lanes) const;
 
-// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
+// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpsabi"
 
@@ -2024,8 +2030,15 @@ class
 
    constexpr simd_mask(simd_mask<T, Abi>&& operand) = default;
 
+// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
+   [[gnu::always_inline, gnu::nodebug]]
    constexpr simd_mask(raw_type value) : raw(value) {
    }
+
+#pragma clang diagnostic pop
 
    constexpr simd_mask(bool value) {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3844r2.pdf

@@ -51,6 +51,10 @@ simd_integral_lanewise_op(
 // identical, so this is a pure bitcast wrapping arithmetic on the unsigned
 // twin avoids the signed-overflow UB the C++ standard would assign to a
 // signed `+`, `-`, `*`, or `<<`.
+// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpsabi"
+
 template <typename T, typename Abi>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -62,15 +66,11 @@ simd_to_unsigned_raw(cat::simd<T, Abi> const& value) {
    return __builtin_bit_cast(unsigned_raw, value.raw);
 }
 
-// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
 template <typename T, typename Abi, typename UnsignedRaw>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 simd_from_unsigned_raw(UnsignedRaw const& value) -> cat::simd<T, Abi> {
-   using raw_type = typename cat::simd<T, Abi>::raw_type;
+   using raw_type = cat::simd<T, Abi>::raw_type;
    return cat::simd<T, Abi>(__builtin_bit_cast(raw_type, value));
 }
 
