@@ -177,7 +177,7 @@ struct maybe_value_storage {
 
    // Construct `T` in-place without converting to the storage wrapper.
    template <typename... Args>
-      requires(is_constructible<T, Args && ...>)
+      requires(is_constructible<T, Args&&...>)
    constexpr maybe_value_storage(
       in_place_type /*in_place*/, Args&&... arguments
    )
@@ -480,7 +480,7 @@ struct maybe_compact_storage {
 
    // Construct the value in-place without converting to the storage wrapper.
    template <typename... Args>
-      requires(is_constructible<value_type, Args && ...>)
+      requires(is_constructible<value_type, Args&&...>)
    constexpr maybe_compact_storage(
       in_place_type /*in_place*/, Args&&... arguments
    )
@@ -818,7 +818,7 @@ class
    // storage would be uninitialized.
    template <typename... Args>
       requires(
-         !is_reference<value_type> && is_constructible<value_type, Args && ...>
+         !is_reference<value_type> && is_constructible<value_type, Args&&...>
       )
    constexpr maybe(in_place_type /*in_place*/, Args&&... arguments)
        : m_storage(in_place, $fwd(arguments)...) {
@@ -828,7 +828,7 @@ class
    // overload resolution.
    template <typename U = value_type>
       requires(
-         !is_reference<value_type> && is_constructible<value_type, U &&>
+         !is_reference<value_type> && is_constructible<value_type, U&&>
          && !is_same<remove_cvref<U>, in_place_type>
          && !is_same<remove_cvref<U>, maybe>
       )
@@ -898,9 +898,9 @@ class
 
    template <typename U>
       requires(
-         is_constructible<value_type, maybe_value_cvref<maybe<U> &&>>
+         is_constructible<value_type, maybe_value_cvref<maybe<U>&&>>
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
-         && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, maybe_value_cvref<maybe<U> &&>)))
+         && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, maybe_value_cvref<maybe<U>&&>)))
       )
    constexpr explicit(
       !is_convertible<maybe_value_cvref<maybe<U>&&>, value_type>
@@ -924,8 +924,8 @@ class
    // Assign a value by constructing or assigning the contained type directly.
    template <typename U = value_type>
       requires(
-         !is_reference<value_type> && is_constructible<value_type, U &&>
-         && is_assignable<value_type&, U &&>
+         !is_reference<value_type> && is_constructible<value_type, U&&>
+         && is_assignable<value_type&, U&&>
          && !is_same<remove_cvref<U>, in_place_type>
          && !is_same<remove_cvref<U>, maybe>
       )
@@ -969,7 +969,7 @@ class
 
    template <typename U>
       requires(
-         !is_same<U, T> && can_assign_maybe<maybe<U> &&>
+         !is_same<U, T> && can_assign_maybe<maybe<U>&&>
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
          && !detail::maybe_assigns_from_any_cvref<value_type, maybe<U>>
       )

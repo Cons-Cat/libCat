@@ -652,7 +652,7 @@ class variant {
    constexpr variant(variant&& other)
       requires(
          !is_reference_variant
-         && (is_constructible<Alternatives, Alternatives &&> && ...)
+         && (is_constructible<Alternatives, Alternatives&&> && ...)
       )
    {
       this->template move_construct_indexed<>(move(other));
@@ -676,7 +676,7 @@ class variant {
    template <is_forwarding_move T>
       requires(
          !is_reference_variant
-         && types::template is_unique<T> && is_constructible<T, T &&>
+         && types::template is_unique<T> && is_constructible<T, T&&>
       )
    // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this
    // constructor.
@@ -722,7 +722,7 @@ class variant {
    template <typename... Us>
       requires(
          !is_reference_variant && (types::template is_unique<Us> && ...)
-         && (is_constructible<Us, Us &&> && ...)
+         && (is_constructible<Us, Us&&> && ...)
       )
    constexpr variant(variant<Us...>&& other) {
       this->template construct_from_other_variant<Us...>(move(other));
@@ -793,7 +793,7 @@ class variant {
    template <is_forwarding_move T>
       requires(
          !is_reference_variant && types::template is_unique<T>
-         && is_constructible<T, T &&> && is_assignable<T&, T &&>
+         && is_constructible<T, T&&> && is_assignable<T&, T&&>
       )
    constexpr auto
    operator=(T&& operand) -> variant& {
@@ -855,8 +855,8 @@ class variant {
    operator=(variant&& operand) -> variant&
       requires(
          !is_reference_variant
-         && (is_constructible<Alternatives, Alternatives &&> && ...)
-         && (is_assignable<Alternatives&, Alternatives &&> && ...)
+         && (is_constructible<Alternatives, Alternatives&&> && ...)
+         && (is_assignable<Alternatives&, Alternatives&&> && ...)
       )
    {
       this->template move_assign_indexed<>(move(operand));
@@ -878,8 +878,8 @@ class variant {
    template <typename... Us>
       requires(
          !is_reference_variant && (types::template is_unique<Us> && ...)
-         && (is_constructible<Us, Us &&> && ...)
-         && (is_assignable<Us&, Us &&> && ...)
+         && (is_constructible<Us, Us&&> && ...)
+         && (is_assignable<Us&, Us&&> && ...)
       )
    constexpr auto
    operator=(variant<Us...>&& operand) -> variant& {
@@ -892,7 +892,7 @@ class variant {
       requires(
          is_reference_variant
          && types::template is_unique<add_lvalue_reference<remove_cvref<T>>>
-         && is_assignable<remove_cvref<T>&, T &&>
+         && is_assignable<remove_cvref<T>&, T&&>
       )
    constexpr auto
    operator=(T&& operand) -> variant& {
@@ -925,7 +925,7 @@ class variant {
    operator=(variant&& operand) -> variant&
       requires(
          is_reference_variant
-         && (is_assignable<remove_reference<Alternatives>&, remove_reference<Alternatives> &&> && ...)
+         && (is_assignable<remove_reference<Alternatives>&, remove_reference<Alternatives>&&> && ...)
       )
    {
       if (this == &operand) {

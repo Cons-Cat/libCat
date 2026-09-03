@@ -491,10 +491,8 @@ class
 
    [[nodiscard]]
    constexpr auto
-   find(
-      basic_str_span<CharT const> needle,
-      idx from_position = 0u
-   ) const -> maybe<idx> {
+   find(basic_str_span<CharT const> needle, idx from_position = 0u) const
+      -> maybe<idx> {
       if (from_position > this->m_size) {
          return nullopt;
       }

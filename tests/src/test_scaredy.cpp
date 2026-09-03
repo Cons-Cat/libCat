@@ -33,8 +33,7 @@ struct scaredy_move_only {
 
    scaredy_move_only(scaredy_move_only const&) = delete;
 
-   constexpr scaredy_move_only(scaredy_move_only&& other)
-       : value(other.value) {
+   constexpr scaredy_move_only(scaredy_move_only&& other) : value(other.value) {
       other.value = -1;
    }
 
@@ -75,8 +74,8 @@ struct scaredy_assignment_value {
    }
 
    constexpr auto
-   operator=(scaredy_assignment_value const&) -> scaredy_assignment_value& =
-      default;
+   operator=(scaredy_assignment_value const&)
+      -> scaredy_assignment_value& = default;
 
    constexpr auto
    operator=(scaredy_assignment_value&& other) -> scaredy_assignment_value& {
@@ -108,8 +107,7 @@ struct scaredy_destruct_tracer {
    }
 
    constexpr auto
-   operator=(scaredy_destruct_tracer const& other)
-      -> scaredy_destruct_tracer& {
+   operator=(scaredy_destruct_tracer const& other) -> scaredy_destruct_tracer& {
       if (this == &other) {
          return *this;
       }
@@ -287,8 +285,7 @@ $test(scaredy_default_void_and_copy) {
    static_assert([] {
       cat::scaredy<int4, error_type_one> value;
       cat::scaredy<void, error_type_one> void_value;
-      return value.has_value() && value.value() == 0
-         && void_value.has_value();
+      return value.has_value() && value.value() == 0 && void_value.has_value();
    }());
 
    cat::scaredy<void, error_type_one> void_value;
@@ -344,26 +341,22 @@ $test(scaredy_monadic_parity) {
    called = false;
    auto failed_chain = failed.and_then([&](int4 input) {
       called = true;
-      return cat::scaredy<uint8, error_type_one>{
-         static_cast<uint8>(input)
-      };
+      return cat::scaredy<uint8, error_type_one>{static_cast<uint8>(input)};
    });
    cat::verify(!called);
    cat::verify(failed_chain.is<error_type_one>());
 
-   auto mapped_void = cat::scaredy<int4, error_type_one>{6}.transform(
-      [](int4) -> void {
-      }
-   );
+   auto mapped_void =
+      cat::scaredy<int4, error_type_one>{6}.transform([](int4) -> void {
+      });
    static_assert(
       cat::is_same<decltype(mapped_void), cat::scaredy<void, error_type_one>>
    );
    cat::verify(mapped_void.has_value());
 
-   auto propagated =
-      cat::scaredy<int4, error_type_one>{5}.or_else([] {
-         return cat::scaredy<int4, error_type_one>{99};
-      });
+   auto propagated = cat::scaredy<int4, error_type_one>{5}.or_else([] {
+      return cat::scaredy<int4, error_type_one>{99};
+   });
    cat::verify(propagated.value() == 5);
 
    propagated = failed.or_else([] {

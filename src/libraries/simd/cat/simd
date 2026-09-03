@@ -2035,7 +2035,8 @@ class
 #pragma clang diagnostic ignored "-Wpsabi"
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr simd_mask(raw_type value) : raw(value) {
+   constexpr simd_mask(raw_type value)
+       : raw(value) {
    }
 
 #pragma clang diagnostic pop
