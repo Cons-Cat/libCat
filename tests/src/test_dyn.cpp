@@ -479,7 +479,7 @@ $test(dyn_reset) {
 $test(dyn_ref_basic) {
    kitty v{55};
    cat::dyn_ref<treat_count, feed> ref{v};
-   cat::verify(ref.p_type_id() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(ref.type_id() == cat::p_dyn_type_id_for<kitty>);
    cat::verify(cat::dyn_invoke<treat_count>(ref) == 55);
    cat::dyn_invoke<feed>(ref, 3_i4);
    cat::verify(cat::dyn_invoke<treat_count>(ref) == 58);
@@ -620,10 +620,10 @@ $test(dyn_type_descriptors) {
    cat::dyn_ref<treat_count> rb{b};
    cat::dyn_ref<treat_count> rc{c};
 
-   cat::verify(ra.p_type_id() == rb.p_type_id());
-   cat::verify(ra.p_type_id() != rc.p_type_id());
-   cat::verify(ra.p_type_id() == cat::p_dyn_type_id_for<kitty>);
-   cat::verify(rc.p_type_id() == cat::p_dyn_type_id_for<puppy>);
+   cat::verify(ra.type_id() == rb.type_id());
+   cat::verify(ra.type_id() != rc.type_id());
+   cat::verify(ra.type_id() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(rc.type_id() == cat::p_dyn_type_id_for<puppy>);
 }
 
 // `cat::dispatch<Method>` works with const-qualified Methods on const holders.
@@ -754,18 +754,18 @@ $test(dyn_ref_rebind) {
    puppy dog{20};
 
    cat::dyn_ref<treat_count> ref{cat};
-   cat::verify(ref.p_type_id() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(ref.type_id() == cat::p_dyn_type_id_for<kitty>);
    cat::verify(cat::dyn_invoke<treat_count>(ref) == 7);
 
    // Rebind to a different value of the same type.
    kitty other{11};
    ref.rebind(other);
-   cat::verify(ref.p_type_id() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(ref.type_id() == cat::p_dyn_type_id_for<kitty>);
    cat::verify(cat::dyn_invoke<treat_count>(ref) == 11);
 
    // Rebind to a different concrete type that also satisfies `Methods`.
    ref.rebind(dog);
-   cat::verify(ref.p_type_id() == cat::p_dyn_type_id_for<puppy>);
+   cat::verify(ref.type_id() == cat::p_dyn_type_id_for<puppy>);
    cat::verify(cat::dyn_invoke<treat_count>(ref) == 20);
 
    // `const_dyn_ref` rebinds the same way.
@@ -915,7 +915,7 @@ $test(dyn_narrowing_preserves_descriptor) {
    kitty cat{77};
    cat::dyn_ref<say, treat_count, feed> wide{cat};
    cat::dyn_ref<treat_count> narrow = wide;
-   cat::verify(narrow.p_type_id() == cat::p_dyn_type_id_for<kitty>);
+   cat::verify(narrow.type_id() == cat::p_dyn_type_id_for<kitty>);
 
    cat::dyn_ptr<say, treat_count, feed> wide_p{&cat};
    cat::dyn_ptr<treat_count> narrow_p = wide_p;

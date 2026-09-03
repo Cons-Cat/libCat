@@ -483,7 +483,7 @@ class [[gsl::Pointer]] dyn_ref {
 
    [[nodiscard]]
    constexpr auto
-   p_type_id() const -> dyn_type_id_ptr {
+   type_id() const -> dyn_type_id_ptr {
       return m_p_type_id;
    }
 
@@ -1714,7 +1714,7 @@ struct dyn_cast_impl {
    constexpr auto
    operator()(dyn_ref<Methods...> ref [[clang::lifetimebound]]) const
       -> T* _Nullable {
-      return ref.p_type_id() == p_dyn_type_id_for<T>
+      return ref.type_id() == p_dyn_type_id_for<T>
                 ? static_cast<T*>(ref.m_p_value)
                 : nullptr;
    }
