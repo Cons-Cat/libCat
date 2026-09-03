@@ -51,6 +51,44 @@ struct maybe_const_non_trivial {
    }
 };
 
+struct maybe_explicit_value {
+   int4 value;
+
+   constexpr explicit maybe_explicit_value(int4 input) : value(input) {
+   }
+
+   constexpr auto
+   operator=(int4 input) -> maybe_explicit_value& {
+      value = input;
+      return *this;
+   }
+};
+
+struct maybe_assignment_value {
+   int4 value;
+
+   constexpr maybe_assignment_value(int4 input = 0) : value(input) {
+   }
+
+   constexpr maybe_assignment_value(maybe_assignment_value const&) = default;
+
+   constexpr maybe_assignment_value(maybe_assignment_value&& other)
+       : value(other.value) {
+      other.value = -1;
+   }
+
+   constexpr auto
+   operator=(maybe_assignment_value const&)
+      -> maybe_assignment_value& = default;
+
+   constexpr auto
+   operator=(maybe_assignment_value&& other) -> maybe_assignment_value& {
+      value = other.value;
+      other.value = -1;
+      return *this;
+   }
+};
+
 auto
 maybe_try_success() -> cat::maybe<int> {
    cat::maybe<int> error{0};
@@ -86,6 +124,105 @@ $test(maybe_basic_value) {
 
    moo = cat::nullopt;
    cat::verify(moo.value_or(100) == 100);
+}
+
+$test(maybe_converting_value_construction) {
+   static_assert(cat::is_constructible<cat::maybe<cat::idx>, cat::int8>);
+   static_assert(!cat::is_convertible<cat::int8, cat::maybe<cat::idx>>);
+
+   cat::maybe<cat::idx> converted{cat::int8(3)};
+   cat::verify(converted.value() == 3u);
+}
+
+$test(maybe_converting_maybe_construction) {
+   using source_type = cat::maybe<int4>;
+   using target_type = cat::maybe<maybe_explicit_value>;
+
+   static_assert(cat::is_constructible<target_type, source_type&>);
+   static_assert(cat::is_constructible<target_type, source_type const&>);
+   static_assert(cat::is_constructible<target_type, source_type&&>);
+   static_assert(!cat::is_convertible<source_type&, target_type>);
+   static_assert(!cat::is_convertible<source_type const&, target_type>);
+   static_assert(!cat::is_convertible<source_type&&, target_type>);
+   static_assert([] {
+      source_type source = 4;
+      target_type converted(source);
+      source_type const const_source = 5;
+      target_type converted_const(const_source);
+      target_type converted_move(source_type{6});
+      return converted.value().value == 4 && converted_const.value().value == 5
+             && converted_move.value().value == 6;
+   }());
+
+   source_type source = 4;
+   target_type converted(source);
+   cat::verify(converted.value().value == 4);
+}
+
+$test(maybe_converting_maybe_assignment) {
+   static_assert([] {
+      cat::maybe<int4> source = 5;
+      cat::maybe<int4> const const_source = 6;
+      cat::maybe<maybe_explicit_value> target{cat::in_place, int4(0)};
+      target = source;
+      target.reset();
+      target = const_source;
+      target = cat::maybe<int4>{7};
+      return target.value().value == 7;
+   }());
+
+   cat::maybe<int4> source = 5;
+   cat::maybe<maybe_explicit_value> target{cat::in_place, int4(0)};
+
+   target = source;
+   cat::verify(target.value().value == 5);
+
+   target.reset();
+   target = source;
+   cat::verify(target.value().value == 5);
+}
+
+$test(maybe_value_assignment_category) {
+   static_assert([] {
+      maybe_assignment_value source{7};
+      cat::maybe<maybe_assignment_value> target{cat::in_place};
+      target = source;
+      return source.value == 7 && target.value().value == 7;
+   }());
+
+   maybe_assignment_value source{7};
+   cat::maybe<maybe_assignment_value> target{cat::in_place};
+
+   target = source;
+   cat::verify(source.value == 7);
+   cat::verify(target.value().value == 7);
+}
+
+$test(maybe_empty_reset) {
+   static_assert([] {
+      cat::maybe<maybe_const_non_trivial> empty;
+      empty.reset();
+      empty = cat::nullopt;
+      return empty.is_empty();
+   }());
+
+   maybe_counter = 0;
+   {
+      cat::maybe<maybe_non_trivial> empty;
+      empty.reset();
+      empty = cat::nullopt;
+      cat::verify(maybe_counter == 0);
+      empty.emplace();
+      cat::verify(maybe_counter == 1);
+   }
+   cat::verify(maybe_counter == 2);
+}
+
+$test(maybe_reference_assignment_safety) {
+   static_assert(!cat::is_assignable<cat::maybe<int&>&, cat::maybe<int>&&>);
+   static_assert(
+      cat::is_assignable<cat::maybe<int const&>&, cat::maybe<int&>&&>
+   );
 }
 
 // Reference rebinding semantics: assignment rebinds the held pointer rather

@@ -154,6 +154,11 @@ concept maybe_converts_from_any_cvref =
    || is_convertible<W, T> || is_constructible<T, W const&>
    || is_convertible<W const&, T> || is_constructible<T, W const>
    || is_convertible<W const, T>;
+
+template <typename T, typename W>
+concept maybe_assigns_from_any_cvref =
+   is_assignable<T&, W&> || is_assignable<T&, W> || is_assignable<T&, W const&>
+   || is_assignable<T&, W const>;
 }  // namespace detail
 
 template <typename CharT, str_flags flags>
@@ -170,11 +175,13 @@ struct maybe_value_storage {
    constexpr maybe_value_storage() : m_dummy{} {
    }
 
-   // If `T` is forwarded arguments by the `in_place` `maybe` constructor, then
-   // construct it in-place with those arguments.
+   // Construct `T` in-place without converting to the storage wrapper.
    template <typename... Args>
-   constexpr maybe_value_storage(Args... arguments) {
-      this->construct(arguments...);
+      requires(is_constructible<T, Args && ...>)
+   constexpr maybe_value_storage(
+      in_place_type /*in_place*/, Args&&... arguments
+   )
+       : m_storage($fwd(arguments)...), m_has_some(true) {
    }
 
    // If `T` is trivially-copy-constructible, use this simple copy constructor.
@@ -304,11 +311,13 @@ struct maybe_value_storage {
       return m_has_some;
    }
 
-   // Destroy the storage unconditionally.
+   // Destroy the storage iff it holds a value.
    constexpr void
    hard_reset() {
-      m_storage.~T();
-      m_has_some = false;
+      if (m_has_some) {
+         m_storage.~T();
+         m_has_some = false;
+      }
    }
 
    // Construct an object at the address of the held `storage`.
@@ -468,6 +477,15 @@ struct maybe_compact_storage {
    }();
 
    constexpr maybe_compact_storage() = default;
+
+   // Construct the value in-place without converting to the storage wrapper.
+   template <typename... Args>
+      requires(is_constructible<value_type, Args && ...>)
+   constexpr maybe_compact_storage(
+      in_place_type /*in_place*/, Args&&... arguments
+   )
+       : m_storage($fwd(arguments)...) {
+   }
 
    // Enable copy and move constructors iff `maybe_compact_storage` supports
    // them.
@@ -729,6 +747,7 @@ class
     : public detail::contiguous_position_interface<maybe<T>> {
  private:
    using storage_type = detail::maybe_storage_selector<T>::type;
+   using stored_value_type = storage_type::value_type;
 
    template <typename Self>
    [[gnu::always_inline, gnu::nodebug]]
@@ -739,6 +758,35 @@ class
       // derived class's shadowing overloads.
       // NOLINTNEXTLINE
       return (copy_cvref_from<Self&&, maybe>)$fwd(self);
+   }
+
+   template <typename Maybe>
+   using maybe_value_cvref = decltype(declval<Maybe>().value());
+
+   template <typename Maybe>
+   static constexpr bool can_assign_maybe =
+      (is_reference<stored_value_type>
+       && is_lvalue_reference<maybe_value_cvref<Maybe>>
+       && is_convertible<maybe_value_cvref<Maybe>, stored_value_type>
+       && !__reference_constructs_from_temporary(
+          stored_value_type, maybe_value_cvref<Maybe>
+       ))
+      || (!is_reference<stored_value_type> && is_constructible<stored_value_type, maybe_value_cvref<Maybe>> && is_assignable<stored_value_type&, maybe_value_cvref<Maybe>>);
+
+   template <is_maybe Maybe>
+   constexpr void
+   assign_maybe(Maybe&& input) {
+      if constexpr (is_reference<stored_value_type>) {
+         m_storage.assign($fwd(input));
+      } else if (input.has_value()) {
+         if (this->has_value()) {
+            m_storage.value() = $fwd(input).value();
+         } else {
+            m_storage.construct($fwd(input).value());
+         }
+      } else if (this->has_value()) {
+         m_storage.hard_reset();
+      }
    }
 
    // True iff this `maybe` uses compact (niche-value) storage. Only
@@ -769,36 +817,24 @@ class
    // constructed, unless they are reference types. Without this tag, the
    // storage would be uninitialized.
    template <typename... Args>
-      requires(!is_reference<value_type>)
-   constexpr maybe(in_place_type /*in_place*/, Args... arguments) {
-      m_storage.construct(arguments...);
-   }
-
-   // Forward all constructors to the `storage` member.
-
-   // A reference type cannot be copy-constructed, but other types can.
-   template <typename U>
       requires(
-         !is_reference<value_type> && is_implicitly_convertible<U, value_type>
-         && is_copy_constructible<value_type>
+         !is_reference<value_type> && is_constructible<value_type, Args && ...>
       )
-   constexpr maybe(U& input) : m_storage(static_cast<value_type>(input)) {
+   constexpr maybe(in_place_type /*in_place*/, Args&&... arguments)
+       : m_storage(in_place, $fwd(arguments)...) {
    }
 
-   template <typename U>
+   // Construct the value in-place without involving the storage wrapper in
+   // overload resolution.
+   template <typename U = value_type>
       requires(
-         !is_reference<value_type> && is_implicitly_convertible<U, value_type>
-         && is_copy_constructible<value_type>
+         !is_reference<value_type> && is_constructible<value_type, U &&>
+         && !is_same<remove_cvref<U>, in_place_type>
+         && !is_same<remove_cvref<U>, maybe>
       )
-   constexpr maybe(U const& input) : m_storage(static_cast<value_type>(input)) {
+   constexpr explicit(!is_convertible<U&&, value_type>) maybe(U&& input)
+       : m_storage(in_place, $fwd(input)) {
    }
-
-   // Produce an error message if `value_type` is not copy-constructible.
-   template <typename U>
-      requires(!is_reference<value_type>
-               && is_implicitly_convertible<U, value_type>
-               && !is_copy_constructible<value_type>)
-   constexpr maybe(U const& input) = delete;
 
    // Rebinding converting reference constructor. The dangling-temporary check
    // rejects bindings that would create a temporary referent, and the
@@ -826,48 +862,53 @@ class
                && __reference_constructs_from_temporary(value_type, U))
    constexpr maybe(U&&) = delete;
 
-   // Move constructor.
-   template <is_forwarding_move U>
-      requires(
-         !is_reference<value_type> && is_implicitly_convertible<U, value_type>
-      )
-   // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this
-   // constructor.
-   constexpr maybe(U&& input) : m_storage(move(input)) {
-   }
-
    // `maybe` can be constructed by another `maybe`. The
    // `maybe_converts_from_any_cvref` guard prevents these converting overloads
    // from hijacking nested cases like `maybe<maybe<int>>` from `maybe<int>`,
    // where the value constructor should win.
    template <typename U>
       requires(
-         is_implicitly_convertible<U, value_type>
+         is_constructible<value_type, maybe_value_cvref<maybe<U>&>>
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
-         && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, add_lvalue_reference<U>)))
+         && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, maybe_value_cvref<maybe<U>&>)))
       )
-   constexpr maybe(maybe<U>& input) {
-      m_storage.assign(input);
+   constexpr explicit(
+      !is_convertible<maybe_value_cvref<maybe<U>&>, value_type>
+   ) maybe(maybe<U>& input)
+       : m_storage(nullopt) {
+      if (input.has_value()) {
+         m_storage.construct(input.value());
+      }
    }
 
    template <typename U>
       requires(
-         is_implicitly_convertible<U, value_type>
+         is_constructible<value_type, maybe_value_cvref<maybe<U> const&>>
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
-         && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, add_lvalue_reference<U>)))
+         && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, maybe_value_cvref<maybe<U> const&>)))
       )
-   constexpr maybe(maybe<U> const& input) {
-      m_storage.assign(input);
+   constexpr explicit(
+      !is_convertible<maybe_value_cvref<maybe<U> const&>, value_type>
+   ) maybe(maybe<U> const& input)
+       : m_storage(nullopt) {
+      if (input.has_value()) {
+         m_storage.construct(input.value());
+      }
    }
 
-   template <is_forwarding_move U>
+   template <typename U>
       requires(
-         is_implicitly_convertible<U, value_type>
+         is_constructible<value_type, maybe_value_cvref<maybe<U> &&>>
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
-         && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, add_lvalue_reference<U>)))
+         && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, maybe_value_cvref<maybe<U> &&>)))
       )
-   constexpr maybe(maybe<U>&& input) {
-      m_storage.assign(move(input));
+   constexpr explicit(
+      !is_convertible<maybe_value_cvref<maybe<U>&&>, value_type>
+   ) maybe(maybe<U>&& input)
+       : m_storage(nullopt) {
+      if (input.has_value()) {
+         m_storage.construct(move(input).value());
+      }
    }
 
    // Consuming `nullopt` is forwarded to `storage`.
@@ -880,54 +921,22 @@ class
        : m_storage(value_type()) {
    }
 
-   // Any `maybe` can convert into another. Converting into a reference
-   // `maybe<U>` is only allowed from another reference `maybe` (and without a
-   // temporary-materializing conversion). Otherwise the produced reference
-   // would bind to this `maybe`'s own storage and dangle.
-   template <typename U>
+   // Assign a value by constructing or assigning the contained type directly.
+   template <typename U = value_type>
       requires(
-         !is_same<U, T> && is_implicitly_convertible<value_type, U>
-         && (!is_reference<U> || (is_reference<value_type> && !__reference_constructs_from_temporary(U, value_type)))
-      )
-   constexpr
-   operator maybe<U>() const {
-      if (this->has_value()) {
-         if constexpr (is_same<U, void>) {
-            return monostate;
-         } else {
-            return static_cast<maybe<U>::value_type>(this->value());
-         }
-      }
-      return maybe<U>{nullopt};
-   }
-
-   // Forward all assignment operators to `storage`, except when assigning
-   // `nullopt`. They should convert any implicitly convertible type into
-   // `value_type`.
-
-   // Non-reference converting copy assignment operator.
-   template <typename U>
-      requires(
-         is_implicitly_convertible<U, value_type> && !is_reference<value_type>
-         && is_copy_assignable<value_type>
-      )
-   [[clang::reinitializes]]
-   constexpr auto
-   operator=(U const& value) -> class maybe& {
-      m_storage = static_cast<value_type const&>(value);
-      return *this;
-   }
-
-   // Non-reference converting move assignment operator.
-   template <typename U>
-      requires(
-         is_implicitly_convertible<U, value_type> && !is_reference<value_type>
-         && is_move_assignable<value_type>
+         !is_reference<value_type> && is_constructible<value_type, U &&>
+         && is_assignable<value_type&, U &&>
+         && !is_same<remove_cvref<U>, in_place_type>
+         && !is_same<remove_cvref<U>, maybe>
       )
    [[clang::reinitializes]]
    constexpr auto
    operator=(U&& value) -> class maybe& {
-      m_storage = static_cast<value_type&&>($fwd(value));
+      if (this->has_value()) {
+         m_storage.value() = $fwd(value);
+      } else {
+         m_storage.construct($fwd(value));
+      }
       return *this;
    }
 
@@ -944,44 +953,43 @@ class
       return *this;
    }
 
-   // Rebinding converting `maybe` copy assignment operator.
+   // Converting `maybe` assignment operators.
    template <typename U>
       requires(
-         is_implicitly_convertible<U, value_type> && !is_reference<value_type>
-         && !is_reference<U>
+         !is_same<U, T> && can_assign_maybe<maybe<U> const&>
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
+         && !detail::maybe_assigns_from_any_cvref<value_type, maybe<U>>
       )
    [[clang::reinitializes]]
    constexpr auto
    operator=(maybe<U> const& maybe) -> class maybe& {
-      m_storage.assign(maybe);
+      assign_maybe(maybe);
       return *this;
    }
 
-   // Rebinding converting `maybe` move assignment operator.
    template <typename U>
       requires(
-         is_implicitly_convertible<U, value_type>
-         && is_move_assignable<value_type>
+         !is_same<U, T> && can_assign_maybe<maybe<U> &&>
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
+         && !detail::maybe_assigns_from_any_cvref<value_type, maybe<U>>
       )
    [[clang::reinitializes]]
    constexpr auto
    operator=(maybe<U>&& maybe) -> class maybe& {
-      m_storage.assign(move(maybe));
+      assign_maybe(move(maybe));
       return *this;
    }
 
-   // Rebinding converting `maybe` reference assignment operator.
    template <typename U>
       requires(
-         is_implicitly_convertible<U, value_type>
+         !is_same<U, T> && can_assign_maybe<maybe<U>&>
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
+         && !detail::maybe_assigns_from_any_cvref<value_type, maybe<U>>
       )
    [[clang::reinitializes]]
    constexpr auto
    operator=(maybe<U>& maybe) -> class maybe& {
-      m_storage.assign(maybe);
+      assign_maybe(maybe);
       return *this;
    }
 
@@ -989,7 +997,9 @@ class
    [[clang::reinitializes]]
    constexpr auto
    operator=(detail::nullopt_type /*nullopt*/) -> class maybe& {
-      m_storage.hard_reset();
+      if (this->has_value()) {
+         m_storage.hard_reset();
+      }
       return *this;
    }
 
@@ -1517,7 +1527,9 @@ class
    [[clang::reinitializes]]
    constexpr void
    reset() {
-      m_storage.hard_reset();
+      if (this->has_value()) {
+         m_storage.hard_reset();
+      }
    }
 
    // Swap the engagement and value of two `maybe`s. For `maybe<T&>` the held
