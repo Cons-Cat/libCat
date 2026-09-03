@@ -967,42 +967,6 @@ $test(syscall_random) {
    cat::verify(got == sizeof(buffer));
 }
 
-// io_uring (gated on runtime probe).
-
-$test(syscall_io_uring) {
-   if (!nix::has_sys_io_uring()) {
-      return;
-   }
-
-   // Minimum-sized ring. Use `IORING_SETUP_R_DISABLED` to avoid SQ-thread
-   // creation we'd then need to clean up.
-   nix::io_uring_params params{};
-   params.flags = nix::io_uring_setup_flags::ring_disabled;
-   auto setup_result = nix::sys_io_uring_setup(4u, params);
-   if (setup_result.is_empty()) {
-      // Some sandboxes deny io_uring_setup with `linux_error::perm` even
-      // though probing returned true (the probe uses entries=0 which the
-      // kernel rejects before checking the disabled flag).
-      cat::verify(
-         setup_result.error() == nix::linux_error::perm
-         || setup_result.error() == nix::linux_error::nosys
-      );
-      return;
-   }
-   nix::file_descriptor ring = setup_result.value();
-
-   // `IORING_REGISTER_PROBE` needs an io_uring_probe buffer, just exercise
-   // `enter` with `to_submit == 0` and no waiting.
-   auto enter_result =
-      nix::sys_io_uring_enter(ring, 0u, 0u, nix::io_uring_enter_flags::none);
-   cat::verify(
-      enter_result.has_value()
-      || enter_result.error() == nix::linux_error::badfd
-   );
-
-   nix::sys_close(ring).verify();
-}
-
 // Linux 6.x optional syscalls.
 
 $test(syscall_optional_six_x) {

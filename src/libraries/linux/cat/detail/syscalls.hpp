@@ -8,6 +8,8 @@
 #include <cat/linux>
 #include <cat/string>
 
+#include "io_uring.hpp"
+
 namespace nix {
 
 enum class [[clang::flag_enum]] memory_protection_flags : unsigned char {
@@ -429,78 +431,6 @@ enum class [[clang::flag_enum]] mlockall_flags : unsigned int {
 enum class [[clang::flag_enum]] mlock2_flags : unsigned int {
    none = 0,
    on_fault = 1,  // MLOCK_ONFAULT
-};
-
-// `flags` field of `io_uring_params` (the third argument to
-// `sys_io_uring_setup()`). Mirrors the kernel's `IORING_SETUP_*` constants.
-enum class [[clang::flag_enum]] io_uring_setup_flags : unsigned int {
-   none = 0,
-   io_poll = 1u << 0,              // IORING_SETUP_IOPOLL
-   sq_poll = 1u << 1,              // IORING_SETUP_SQPOLL
-   sq_affinity = 1u << 2,          // IORING_SETUP_SQ_AFF
-   completion_size = 1u << 3,      // IORING_SETUP_CQSIZE
-   clamp = 1u << 4,                // IORING_SETUP_CLAMP
-   attach_wq = 1u << 5,            // IORING_SETUP_ATTACH_WQ
-   ring_disabled = 1u << 6,        // IORING_SETUP_R_DISABLED
-   submit_all = 1u << 7,           // IORING_SETUP_SUBMIT_ALL
-   cooperative_taskrun = 1u << 8,  // IORING_SETUP_COOP_TASKRUN
-   taskrun_flag = 1u << 9,         // IORING_SETUP_TASKRUN_FLAG
-   sqe_128 = 1u << 10,             // IORING_SETUP_SQE128
-   cqe_32 = 1u << 11,              // IORING_SETUP_CQE32
-   single_issuer = 1u << 12,       // IORING_SETUP_SINGLE_ISSUER
-   defer_taskrun = 1u << 13,       // IORING_SETUP_DEFER_TASKRUN
-   no_mmap = 1u << 14,             // IORING_SETUP_NO_MMAP
-   registered_fd_only = 1u << 15,  // IORING_SETUP_REGISTERED_FD_ONLY
-   no_sq_array = 1u << 16,         // IORING_SETUP_NO_SQARRAY
-};
-
-// `flags` argument to `sys_io_uring_enter()`. Mirrors the kernel's
-// `IORING_ENTER_*` constants.
-enum class [[clang::flag_enum]] io_uring_enter_flags : unsigned int {
-   none = 0,
-   get_events = 1u << 0,       // IORING_ENTER_GETEVENTS
-   sq_wakeup = 1u << 1,        // IORING_ENTER_SQ_WAKEUP
-   sq_wait = 1u << 2,          // IORING_ENTER_SQ_WAIT
-   ext_arg = 1u << 3,          // IORING_ENTER_EXT_ARG
-   registered_ring = 1u << 4,  // IORING_ENTER_REGISTERED_RING
-};
-
-// `op` argument to `sys_io_uring_register()`. Mirrors `IORING_REGISTER_*` /
-// `IORING_UNREGISTER_*`. Newer codes can be passed via `cat::uint4` cast.
-enum class [[clang::enum_extensibility(
-   open
-)]] io_uring_register_op : unsigned int {
-   register_buffers = 0,            // IORING_REGISTER_BUFFERS
-   unregister_buffers = 1,          // IORING_UNREGISTER_BUFFERS
-   register_files = 2,              // IORING_REGISTER_FILES
-   unregister_files = 3,            // IORING_UNREGISTER_FILES
-   register_eventfd = 4,            // IORING_REGISTER_EVENTFD
-   unregister_eventfd = 5,          // IORING_UNREGISTER_EVENTFD
-   register_files_update = 6,       // IORING_REGISTER_FILES_UPDATE
-   register_eventfd_async = 7,      // IORING_REGISTER_EVENTFD_ASYNC
-   register_probe = 8,              // IORING_REGISTER_PROBE
-   register_personality = 9,        // IORING_REGISTER_PERSONALITY
-   unregister_personality = 10,     // IORING_UNREGISTER_PERSONALITY
-   register_restrictions = 11,      // IORING_REGISTER_RESTRICTIONS
-   register_enable_rings = 12,      // IORING_REGISTER_ENABLE_RINGS
-   register_files2 = 13,            // IORING_REGISTER_FILES2
-   register_files_update2 = 14,     // IORING_REGISTER_FILES_UPDATE2
-   register_buffers2 = 15,          // IORING_REGISTER_BUFFERS2
-   register_buffers_update = 16,    // IORING_REGISTER_BUFFERS_UPDATE
-   register_iowq_aff = 17,          // IORING_REGISTER_IOWQ_AFF
-   unregister_iowq_aff = 18,        // IORING_UNREGISTER_IOWQ_AFF
-   register_iowq_max_workers = 19,  // IORING_REGISTER_IOWQ_MAX_WORKERS
-   register_ring_fds = 20,          // IORING_REGISTER_RING_FDS
-   unregister_ring_fds = 21,        // IORING_UNREGISTER_RING_FDS
-   register_pbuf_ring = 22,         // IORING_REGISTER_PBUF_RING
-   unregister_pbuf_ring = 23,       // IORING_UNREGISTER_PBUF_RING
-   register_sync_cancel = 24,       // IORING_REGISTER_SYNC_CANCEL
-   register_file_alloc_range = 25,  // IORING_REGISTER_FILE_ALLOC_RANGE
-   register_pbuf_status = 26,       // IORING_REGISTER_PBUF_STATUS
-   register_napi = 27,              // IORING_REGISTER_NAPI
-   unregister_napi = 28,            // IORING_UNREGISTER_NAPI
-   register_clock = 29,             // IORING_REGISTER_CLOCK
-   register_clone_buffers = 30,     // IORING_REGISTER_CLONE_BUFFERS
 };
 
 // `mask` bits for `sys_statx()` selecting which fields the kernel must fill
@@ -1117,12 +1047,6 @@ struct cat::enum_flag_trait<nix::mlockall_flags> : cat::true_trait {};
 
 template <>
 struct cat::enum_flag_trait<nix::mlock2_flags> : cat::true_trait {};
-
-template <>
-struct cat::enum_flag_trait<nix::io_uring_setup_flags> : cat::true_trait {};
-
-template <>
-struct cat::enum_flag_trait<nix::io_uring_enter_flags> : cat::true_trait {};
 
 template <>
 struct cat::enum_flag_trait<nix::message_flags> : cat::true_trait {};
@@ -2419,62 +2343,6 @@ sys_statx(
    file_descriptor dirfd, cat::zstr_view file_path, atfile_flags flags,
    statx_mask mask, statx_data& out
 ) -> scaredy_nix<void>;
-
-// `io_sqring_offsets` is the kernel ABI for the submission-queue offsets
-// that `sys_io_uring_setup()` fills into `io_uring_params::sq_off`.
-struct io_sqring_offsets {
-   cat::uint4 head;
-   cat::uint4 tail;
-   cat::uint4 ring_mask;
-   cat::uint4 ring_entries;
-   cat::uint4 flags;
-   cat::uint4 dropped;
-   cat::uint4 array;
-   cat::uint4 reserved_1;
-   cat::uint8 user_address;
-};
-
-static_assert(sizeof(io_sqring_offsets) == 40);
-
-// `io_cqring_offsets` is the kernel ABI for the completion-queue offsets
-// that `sys_io_uring_setup()` fills into `io_uring_params::cq_off`.
-struct io_cqring_offsets {
-   cat::uint4 head;
-   cat::uint4 tail;
-   cat::uint4 ring_mask;
-   cat::uint4 ring_entries;
-   cat::uint4 overflow;
-   cat::uint4 cqes;
-   cat::uint4 flags;
-   cat::uint4 reserved_1;
-   cat::uint8 user_address;
-};
-
-static_assert(sizeof(io_cqring_offsets) == 40);
-
-// `io_uring_params` is the kernel ABI for `sys_io_uring_setup()`. The caller
-// fills `flags`, `sq_thread_*`, and (when `completion_size` is set in
-// `flags`) `cq_entries`. The kernel returns the actual ring sizing,
-// `features`, and the two offset blocks.
-struct io_uring_params {
-   cat::uint4 sq_entries;
-   cat::uint4 cq_entries;
-   io_uring_setup_flags flags;
-   cat::uint4 sq_thread_cpu;
-   cat::uint4 sq_thread_idle;
-   cat::uint4 features;
-   cat::uint4 wq_fd;
-
- private:
-   [[maybe_unused]]
-   cat::uint4 m_reserved[3];
-
- public:
-   io_sqring_offsets sq_off;
-   io_cqring_offsets cq_off;
-};
-
-static_assert(sizeof(io_uring_params) == 120);
 
 // Syscall 425 (Linux 5.1). Set up an io_uring instance with `entries` SQEs
 // and the parameters in `params`. Returns the ring file descriptor on

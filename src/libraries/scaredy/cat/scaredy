@@ -474,7 +474,7 @@ class
    // Move and convert the storage of a convertible `scaredy`.
    template <typename U>
       requires(
-         is_constructible<value_type, U &&>
+         is_constructible<value_type, U&&>
          && !detail::scaredy_converts_from_any_cvref<
             value_type, scaredy<U, Errors...>>
       )
@@ -540,7 +540,7 @@ class
    // Move-assign and convert a `scaredy`.
    template <typename U>
       requires(
-         is_constructible<value_type, U &&>
+         is_constructible<value_type, U&&>
          && !detail::scaredy_converts_from_any_cvref<
             value_type, scaredy<U, Errors...>>
          && !detail::scaredy_assigns_from_any_cvref<

@@ -364,6 +364,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/limits/cat/limits
   ${CATLIB}/linux/cat/linux
   ${CATLIB}/linux/cat/raii_process
+  ${CATLIB}/linux/cat/detail/io_uring.hpp
   ${CATLIB}/linux/cat/detail/syscalls.hpp
   ${CATLIB}/list/cat/list
   ${CATLIB}/list/cat/raii_list
