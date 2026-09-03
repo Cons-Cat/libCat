@@ -643,6 +643,7 @@ struct view_interface {
 // Terminal algorithms:
 #include "../implementations/count.tpp"
 #include "../implementations/dot.tpp"
+#include "../implementations/find.tpp"
 #include "../implementations/fold.tpp"
 #include "../implementations/for_each.tpp"
 #include "../implementations/max.tpp"

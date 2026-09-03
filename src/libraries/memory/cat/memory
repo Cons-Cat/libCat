@@ -59,6 +59,22 @@ compare_memory_scalar(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
 ) -> std::strong_ordering;
 
+// Find the first element equal to `needle`.
+template <is_equality_comparable T>
+[[nodiscard]]
+constexpr auto
+find_memory(T const* _Nonnull p_haystack, T const& needle, idx size)
+   -> maybe<idx>;
+
+// Find the first sequence equal to `[p_needle, p_needle + needle_size)`.
+template <is_equality_comparable T>
+[[nodiscard]]
+constexpr auto
+find_subspan_memory(
+   T const* _Nonnull p_haystack, T const* _Nonnull p_needle, idx size,
+   idx needle_size
+) -> maybe<idx>;
+
 // This is implemented in `<cat/span>`.
 template <typename T>
    requires(is_implicit_lifetime<T>)
@@ -142,6 +158,20 @@ auto
 compare_memory_impl(
    byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
 ) -> std::strong_ordering;
+
+// Implement the representation-safe runtime path of `find_memory`.
+auto
+find_memory_impl(
+   byte const* _Nonnull p_haystack, byte const* _Nonnull p_needle,
+   idx element_bytes, idx size
+) -> maybe<idx>;
+
+// Implement the representation-safe runtime path of `find_subspan_memory`.
+auto
+find_subspan_memory_impl(
+   byte const* _Nonnull p_haystack, byte const* _Nonnull p_needle,
+   idx element_bytes, idx size, idx needle_size
+) -> maybe<idx>;
 
 // Implement `fill_memory()` and `memset()`.
 void

@@ -63,6 +63,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_vec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_path.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_iterable_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_inplace_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
@@ -91,6 +92,7 @@ if(CAT_BUILD_UNIT_TESTS)
     # ${CMAKE_SOURCE_DIR}/tests/src/test_ring.cpp.
     ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_copy_memory.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_memory_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit_span.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit_x64.cpp

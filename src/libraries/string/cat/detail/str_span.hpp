@@ -23,10 +23,7 @@
 //
 // TODO: `str_span` needs `fixed_extent` like `span`.
 
-#include <cat/detail/simd_impl.hpp>
-
 #include <cat/maybe>
-#include <cat/simd>
 #include <cat/span>
 #include <cat/utility>
 
@@ -479,43 +476,34 @@ class
 
    [[nodiscard]]
    constexpr auto
-   find_small(CharT character, idx position = 0u) const -> maybe<idx> {
-      for (idx i = position; i < this->m_size; ++i) {
-         if (this->m_p_data[i] == character) {
-            return i;
-         }
-      }
-      return nullopt;
-   }
-
-   // TODO: Optimize different length strings.
-   [[nodiscard]]
-   constexpr auto
    find(remove_const<CharT> character, idx from_position = 0u) const
       -> maybe<idx> {
-      if constexpr (sizeof(remove_const<CharT>) != 1) {
-         return this->find_small(character, from_position);
-      } else {
-         idx const lanes = char1x16::size();
-         idx const size = this->m_size;
-
-         // TODO: Tile this loop four or eight times.
-         idx i;
-         for (i = from_position; i < size && i + lanes < size; i += lanes) {
-            // TODO: Consider aligning this load?
-            char1x16 const storage =
-               make_simd_loaded<char1x16>(this->m_p_data + i);
-            // TODO: Support a native ABI mask here.
-            auto const mask = storage.equal_lanes(character);
-            if (mask.any_of()) {
-               return i + mask.find_if_true();
-            }
-         }
-
-         // The last chunk of this string, smaller than `char1x16::lanes`, is
-         // stepped through one character at a time.
-         return this->find_small(character, i);
+      if (from_position >= this->m_size) {
+         return nullopt;
       }
+
+      return from_position
+             + $prop(find_memory(
+                this->m_p_data + from_position, character,
+                idx(this->m_size - from_position)
+             ));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   find(
+      basic_str_span<CharT const> needle,
+      idx from_position = 0u
+   ) const -> maybe<idx> {
+      if (from_position > this->m_size) {
+         return nullopt;
+      }
+
+      return from_position
+             + $prop(find_subspan_memory(
+                this->m_p_data + from_position, needle.data(),
+                idx(this->m_size - from_position), needle.size()
+             ));
    }
 
  private:

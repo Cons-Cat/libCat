@@ -64,11 +64,14 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/memory/implementations/copy_memory.cpp
   ${CATLIB}/memory/implementations/copy_memory_backward.cpp
   ${CATLIB}/memory/implementations/compare_memory.cpp
+  ${CATLIB}/memory/implementations/find_byte.cpp
+  ${CATLIB}/memory/implementations/find_memory_substr.cpp
   ${CATLIB}/memory/implementations/fill_memory_impl.cpp
   ${CATLIB}/string/implementations/memcpy.cpp
   ${CATLIB}/string/implementations/memmove.cpp
   ${CATLIB}/string/implementations/memset.cpp
   ${CATLIB}/string/implementations/memcmp.cpp
+  ${CATLIB}/string/implementations/memchr.cpp
   ${CATLIB}/string/implementations/strlen.cpp
   ${CATLIB}/string/implementations/print.cpp
   ${CATLIB}/string/implementations/println.cpp
@@ -338,8 +341,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/iterable/implementations/drop_last_while.tpp
   ${CATLIB}/iterable/implementations/drop_while.tpp
   ${CATLIB}/iterable/implementations/filter.tpp
-  ${CATLIB}/iterable/implementations/fill.tpp
-  ${CATLIB}/iterable/implementations/fold.tpp
+   ${CATLIB}/iterable/implementations/fill.tpp
+   ${CATLIB}/iterable/implementations/fold.tpp
   ${CATLIB}/iterable/implementations/for_each.tpp
   ${CATLIB}/iterable/implementations/iterable_interface.tpp
   ${CATLIB}/iterable/implementations/max.tpp
@@ -408,6 +411,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/memory/implementations/copy_memory_small.tpp
   ${CATLIB}/memory/implementations/fill_memory_medium.tpp
   ${CATLIB}/memory/implementations/fill_memory_small.tpp
+  ${CATLIB}/memory/implementations/find_memory.tpp
   ${CATLIB}/memory/implementations/is_memory_overlapping.tpp
   ${CATLIB}/meta/cat/meta
   ${CATLIB}/notype/cat/notype

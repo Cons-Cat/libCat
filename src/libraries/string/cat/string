@@ -61,6 +61,17 @@ memcmp(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, __SIZE_TYPE__ bytes
 ) -> int;
 
+// Deprecated call to `memchr()`. Consider using `cat::str_view::find()`
+// instead. `memchr()` exists because Clang lowers `__builtin_memchr()` into a
+// call to it in optimized builds.
+extern "C" [[deprecated(
+   "`std::memchr()` should not be used directly! Consider `cat::find_memory()` "
+   "or `cat::str_view::find()` instead."
+)]]
+auto
+memchr(void const* _Nonnull p_haystack, int needle, __SIZE_TYPE__ bytes)
+   -> void const* _Nonnull;
+
 }  // namespace std
 
 // Clang emits `bcmp` for equality-only memory comparisons in optimized builds.
