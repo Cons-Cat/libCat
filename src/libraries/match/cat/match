@@ -216,6 +216,12 @@ struct match_patterns {
                        this->matching.visit([](auto&) {
                        });
                     }) {
+         if constexpr (requires { this->matching.has_value(); }) {
+            if (!this->matching.has_value()) {
+               this->invoke_pattern($fwd(patterns)...);
+               return;
+            }
+         }
          this->matching.visit([&](auto& active) {
             // Unary left-fold so the patterns evaluate top-to-bottom and
             // short-circuit on the first match. The

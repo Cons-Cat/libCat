@@ -23,6 +23,126 @@ struct error_type_two {
    }
 };
 
+struct scaredy_move_only {
+   int4 value = 0;
+
+   constexpr scaredy_move_only() = default;
+
+   constexpr scaredy_move_only(int4 input) : value(input) {
+   }
+
+   scaredy_move_only(scaredy_move_only const&) = delete;
+
+   constexpr scaredy_move_only(scaredy_move_only&& other)
+       : value(other.value) {
+      other.value = -1;
+   }
+
+   auto
+   operator=(scaredy_move_only const&) -> scaredy_move_only& = delete;
+
+   constexpr auto
+   operator=(scaredy_move_only&& other) -> scaredy_move_only& {
+      value = other.value;
+      other.value = -1;
+      return *this;
+   }
+};
+
+struct scaredy_explicit_value {
+   int4 value = 0;
+
+   constexpr scaredy_explicit_value() = default;
+
+   explicit constexpr scaredy_explicit_value(int4 input) : value(input) {
+   }
+};
+
+struct scaredy_assignment_value {
+   int4 value = 0;
+
+   constexpr scaredy_assignment_value() = default;
+
+   constexpr scaredy_assignment_value(int4 input) : value(input) {
+   }
+
+   constexpr scaredy_assignment_value(scaredy_assignment_value const&) =
+      default;
+
+   constexpr scaredy_assignment_value(scaredy_assignment_value&& other)
+       : value(other.value) {
+      other.value = -1;
+   }
+
+   constexpr auto
+   operator=(scaredy_assignment_value const&) -> scaredy_assignment_value& =
+      default;
+
+   constexpr auto
+   operator=(scaredy_assignment_value&& other) -> scaredy_assignment_value& {
+      value = other.value;
+      other.value = -1;
+      return *this;
+   }
+};
+
+struct scaredy_destruct_tracer {
+   int4* p_live = nullptr;
+
+   constexpr scaredy_destruct_tracer() = default;
+
+   constexpr scaredy_destruct_tracer(int4& live) : p_live(&live) {
+      ++live;
+   }
+
+   constexpr scaredy_destruct_tracer(scaredy_destruct_tracer const& other)
+       : p_live(other.p_live) {
+      if (p_live != nullptr) {
+         ++*p_live;
+      }
+   }
+
+   constexpr scaredy_destruct_tracer(scaredy_destruct_tracer&& other)
+       : p_live(other.p_live) {
+      other.p_live = nullptr;
+   }
+
+   constexpr auto
+   operator=(scaredy_destruct_tracer const& other)
+      -> scaredy_destruct_tracer& {
+      if (this == &other) {
+         return *this;
+      }
+      if (p_live != nullptr) {
+         --*p_live;
+      }
+      p_live = other.p_live;
+      if (p_live != nullptr) {
+         ++*p_live;
+      }
+      return *this;
+   }
+
+   constexpr auto
+   operator=(scaredy_destruct_tracer&& other) -> scaredy_destruct_tracer& {
+      if (this == &other) {
+         return *this;
+      }
+      if (p_live != nullptr) {
+         --*p_live;
+      }
+      p_live = other.p_live;
+      other.p_live = nullptr;
+      return *this;
+   }
+
+   constexpr ~scaredy_destruct_tracer() {
+      if (p_live != nullptr) {
+         --*p_live;
+      }
+   }
+};
+
 auto
 one() -> error_type_one {
    error_type_one one{1};
@@ -80,6 +200,270 @@ auto
 scaredy_try_fail_2() -> cat::scaredy<cat::monostate_type, error_set> {
    cat::scaredy<int, error_set> error{error_set::one};
    return $prop_or(error, cat::monostate);
+}
+
+$test(scaredy_converting_move_paths) {
+   cat::scaredy<scaredy_move_only, error_type_one> move_only{
+      scaredy_move_only{3}
+   };
+   cat::verify(move_only.value().value == 3);
+
+   cat::scaredy<int8, error_type_one> converted{
+      cat::scaredy<int4, error_type_one>{4}
+   };
+   cat::verify(converted.value() == 4);
+
+   cat::scaredy<int8, error_type_one> converted_error{
+      cat::scaredy<int4, error_type_one>{error_type_one{4}}
+   };
+   cat::verify(converted_error.is_empty());
+   cat::verify(converted_error.error().code == 4);
+
+   cat::scaredy<int8, error_type_one> assigned = 0;
+   assigned = cat::scaredy<int4, error_type_one>{5};
+   cat::verify(assigned.value() == 5);
+   assigned = cat::scaredy<int4, error_type_one>{error_type_one{5}};
+   cat::verify(assigned.is_empty());
+   cat::verify(assigned.error().code == 5);
+}
+
+$test(scaredy_explicit_value_conversion) {
+   using source_type = cat::scaredy<int4, error_type_one>;
+   using target_type = cat::scaredy<scaredy_explicit_value, error_type_one>;
+
+   static_assert(cat::is_constructible<target_type, source_type&>);
+   static_assert(cat::is_constructible<target_type, source_type const&>);
+   static_assert(cat::is_constructible<target_type, source_type&&>);
+   static_assert(!cat::is_convertible<source_type&, target_type>);
+   static_assert(!cat::is_convertible<source_type const&, target_type>);
+   static_assert(!cat::is_convertible<source_type&&, target_type>);
+   static_assert(cat::is_assignable<target_type&, source_type const&>);
+   static_assert(cat::is_assignable<target_type&, source_type&&>);
+
+   source_type source = 7;
+   target_type converted(source);
+   cat::verify(converted.value().value == 7);
+
+   target_type assigned;
+   assigned = source;
+   cat::verify(assigned.value().value == 7);
+}
+
+$test(scaredy_nested_construction_and_assignment) {
+   using inner_type = cat::scaredy<int4, error_type_one>;
+   using outer_type = cat::scaredy<inner_type, error_type_one>;
+
+   inner_type inner = 6;
+   outer_type outer(inner);
+   cat::verify(outer.has_value());
+   cat::verify(outer.value().has_value());
+   cat::verify(outer.value().value() == 6);
+
+   inner_type inner_error = error_type_one{-1};
+   outer_type outer_error(inner_error);
+   cat::verify(outer_error.has_value());
+   cat::verify(outer_error.value().is_empty());
+
+   outer_type outer_rvalue(inner_type{7});
+   cat::verify(outer_rvalue.has_value());
+   cat::verify(outer_rvalue.value().value() == 7);
+
+   outer_type outer_rvalue_error(inner_type{error_type_one{-1}});
+   cat::verify(outer_rvalue_error.has_value());
+   cat::verify(outer_rvalue_error.value().is_empty());
+
+   outer_type assigned = error_type_one{-1};
+   assigned = inner;
+   cat::verify(assigned.has_value());
+   cat::verify(assigned.value().has_value());
+   cat::verify(assigned.value().value() == 6);
+
+   assigned = inner_error;
+   cat::verify(assigned.has_value());
+   cat::verify(assigned.value().is_empty());
+}
+
+$test(scaredy_default_void_and_copy) {
+   static_assert([] {
+      cat::scaredy<int4, error_type_one> value;
+      cat::scaredy<void, error_type_one> void_value;
+      return value.has_value() && value.value() == 0
+         && void_value.has_value();
+   }());
+
+   cat::scaredy<void, error_type_one> void_value;
+   cat::verify(void_value.has_value());
+   void_value = error_type_one{-1};
+   cat::verify(void_value.is_empty());
+   void_value = cat::monostate;
+   cat::verify(void_value.has_value());
+
+   scaredy_assignment_value source{8};
+   cat::scaredy<scaredy_assignment_value, error_type_one> target;
+   target = source;
+   cat::verify(source.value == 8);
+   cat::verify(target.value().value == 8);
+
+   cat::scaredy<int4, error_type_one> original = 9;
+   cat::scaredy<int4, error_type_one> copied = original;
+   cat::verify(original.value() == 9);
+   cat::verify(copied.value() == 9);
+}
+
+$test(scaredy_monadic_parity) {
+   auto mapped =
+      cat::scaredy<int4, error_type_one>{3}.transform([](int4 input) -> uint8 {
+         return static_cast<uint8>(input * 2);
+      });
+   static_assert(
+      cat::is_same<decltype(mapped), cat::scaredy<uint8, error_type_one>>
+   );
+   cat::verify(mapped.value() == 6u);
+
+   bool called = false;
+   cat::scaredy<int4, error_type_one> failed = error_type_one{7};
+   auto failed_mapped = failed.transform([&](int4 input) -> uint8 {
+      called = true;
+      return static_cast<uint8>(input);
+   });
+   cat::verify(!called);
+   cat::verify(failed_mapped.is<error_type_one>());
+   cat::verify(failed_mapped.error().code == 7);
+
+   auto chained =
+      cat::scaredy<int4, error_type_one>{4}.and_then([](int4 input) {
+         return cat::scaredy<uint8, error_type_one>{
+            static_cast<uint8>(input + 1)
+         };
+      });
+   static_assert(
+      cat::is_same<decltype(chained), cat::scaredy<uint8, error_type_one>>
+   );
+   cat::verify(chained.value() == 5u);
+
+   called = false;
+   auto failed_chain = failed.and_then([&](int4 input) {
+      called = true;
+      return cat::scaredy<uint8, error_type_one>{
+         static_cast<uint8>(input)
+      };
+   });
+   cat::verify(!called);
+   cat::verify(failed_chain.is<error_type_one>());
+
+   auto mapped_void = cat::scaredy<int4, error_type_one>{6}.transform(
+      [](int4) -> void {
+      }
+   );
+   static_assert(
+      cat::is_same<decltype(mapped_void), cat::scaredy<void, error_type_one>>
+   );
+   cat::verify(mapped_void.has_value());
+
+   auto propagated =
+      cat::scaredy<int4, error_type_one>{5}.or_else([] {
+         return cat::scaredy<int4, error_type_one>{99};
+      });
+   cat::verify(propagated.value() == 5);
+
+   propagated = failed.or_else([] {
+      return cat::scaredy<int4, error_type_one>{99};
+   });
+   cat::verify(propagated.value() == 99);
+
+   cat::scaredy<int4, error_type_one, error_type_two> second_error =
+      error_type_two{11};
+   auto preserved = second_error.transform([](int4 input) -> uint8 {
+      return static_cast<uint8>(input);
+   });
+   cat::verify(preserved.is<error_type_two>());
+   cat::verify(preserved.error<error_type_two>().code == 11);
+
+   using compact_type = cat::scaredy<
+      cat::compact_scaredy<
+         int4,
+         [](int4 input) {
+            return input >= 0;
+         }>,
+      error_type_one>;
+   compact_type compact_value;
+   cat::verify(compact_value.has_value());
+   cat::verify(compact_value.value() == 0);
+
+   compact_type compact_error = error_type_one{-1};
+   called = false;
+   auto compact_mapped = compact_error.transform([&](int4 input) -> int4 {
+      called = true;
+      return input * 2;
+   });
+   cat::verify(!called);
+   cat::verify(compact_mapped.is<error_type_one>());
+}
+
+$test(scaredy_void_monadic) {
+   cat::scaredy<void, error_type_one> success;
+   bool called = false;
+   auto mapped = success.transform([&]() -> int4 {
+      called = true;
+      return 12;
+   });
+   cat::verify(called);
+   cat::verify(mapped.value() == 12);
+
+   called = false;
+   cat::scaredy<void, error_type_one> failed = error_type_one{13};
+   mapped = failed.transform([&]() -> int4 {
+      called = true;
+      return 12;
+   });
+   cat::verify(!called);
+   cat::verify(mapped.is<error_type_one>());
+
+   auto chained = success.and_then([] {
+      return cat::scaredy<int4, error_type_one>{14};
+   });
+   cat::verify(chained.value() == 14);
+
+   auto mapped_void = success.transform([]() -> void {
+   });
+   static_assert(
+      cat::is_same<decltype(mapped_void), cat::scaredy<void, error_type_one>>
+   );
+   cat::verify(mapped_void.has_value());
+}
+
+$test(scaredy_nontrivial_state_changes) {
+   int4 live = 0;
+   {
+      cat::scaredy<scaredy_destruct_tracer, error_type_one> result{
+         scaredy_destruct_tracer{live}
+      };
+      cat::verify(live == 1);
+
+      result = error_type_one{-1};
+      cat::verify(live == 0);
+
+      result = scaredy_destruct_tracer{live};
+      cat::verify(live == 1);
+   }
+   cat::verify(live == 0);
+}
+
+$test(scaredy_bool_conversion) {
+   cat::scaredy<int4, error_type_one> zero = 0;
+   cat::scaredy<bool, error_type_one> converted_zero(zero);
+   cat::verify(converted_zero.has_value());
+   cat::verify(!converted_zero.value());
+
+   cat::scaredy<int4, error_type_one> nonzero = 5;
+   cat::scaredy<bool, error_type_one> converted_nonzero(nonzero);
+   cat::verify(converted_nonzero.has_value());
+   cat::verify(converted_nonzero.value());
+
+   cat::scaredy<int4, error_type_one> failed = error_type_one{6};
+   cat::scaredy<bool, error_type_one> converted_error(failed);
+   cat::verify(converted_error.is<error_type_one>());
+   cat::verify(converted_error.error().code == 6);
 }
 
 $test(scaredy) {
@@ -163,9 +547,12 @@ $test(scaredy) {
    auto increment = [](auto input) {
       return input + 1;
    };
+   auto increment_scaredy = [](int4 input) {
+      return cat::scaredy<int4, error_type_one>{input + 1};
+   };
 
    cat::scaredy<int4, error_type_one> mut_scaredy = 1;
-   auto _ = mut_scaredy.transform(increment).and_then(increment);
+   auto _ = mut_scaredy.transform(increment).and_then(increment_scaredy);
 
    // `.transform()` returning `void`.
    mut_scaredy.transform(increment).or_else([]() {
@@ -178,7 +565,7 @@ $test(scaredy) {
 
    // Test monadic member functions on a `const`-qualified `scaredy`.
    cat::scaredy<int4, error_type_one> const const_scaredy = 1;
-   auto _ = const_scaredy.transform(increment).and_then(increment);
+   auto _ = const_scaredy.transform(increment).and_then(increment_scaredy);
 
    // Test `.is()` on variant `scaredy`.
    bool matched = false;
@@ -291,6 +678,11 @@ $test(scaredy_get_ptr) {
    cat::verify(p_active != nullptr);
    cat::verify(*p_active == 42);
    cat::verify(p_active == &ok.value());
+
+   cat::scaredy<int4, error_type_one> const const_ok = int4{43};
+   int4 const* p_const = const_ok.get_ptr();
+   cat::verify(p_const == &const_ok.value());
+   cat::verify(*p_const == 43);
 
    cat::scaredy<int4, error_type_one> bad = error_type_one{-1};
    cat::verify(bad.is_empty());

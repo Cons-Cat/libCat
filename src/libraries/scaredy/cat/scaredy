@@ -8,6 +8,18 @@
 
 namespace cat {
 namespace detail {
+template <typename T, typename W>
+concept scaredy_converts_from_any_cvref =
+   is_constructible<T, W&> || is_convertible<W&, T> || is_constructible<T, W>
+   || is_convertible<W, T> || is_constructible<T, W const&>
+   || is_convertible<W const&, T> || is_constructible<T, W const>
+   || is_convertible<W const, T>;
+
+template <typename T, typename W>
+concept scaredy_assigns_from_any_cvref =
+   is_assignable<T&, W&> || is_assignable<T&, W> || is_assignable<T&, W const&>
+   || is_assignable<T&, W const>;
+
 template <typename T, typename... Errors>
 struct scaredy_variant_storage {
    using value_type = conditional<is_void<T>, monostate_type, T>;
@@ -77,7 +89,7 @@ struct scaredy_variant_storage {
       requires(is_value<U>)
    constexpr auto
    operator=(U const& operand) -> scaredy_variant_storage<T, Errors...>& {
-      m_storage = static_cast<T>(operand);
+      m_storage = static_cast<value_type>(operand);
       return *this;
    }
 
@@ -203,7 +215,7 @@ struct scaredy_compact_storage {
       requires(is_value<U>)
    constexpr auto
    operator=(U const& operand) -> scaredy_compact_storage& {
-      m_storage = static_cast<T>(operand);
+      m_storage = static_cast<value_type>(operand);
       return *this;
    }
 
@@ -346,6 +358,43 @@ class
       return (copy_cvref_from<Self&&, scaredy>)$fwd(self);
    }
 
+   template <idx error_index = 0u, typename Other>
+   static constexpr auto
+   convert_error_storage(Other&& other) -> storage_type {
+      using Error = Errors...[error_index];
+      if constexpr (error_index + 1u == sizeof...(Errors)) {
+         return storage_type($fwd(other).template error<Error>());
+      } else {
+         if (other.template is<Error>()) {
+            return storage_type($fwd(other).template error<Error>());
+         }
+         return convert_error_storage<error_index + 1u>($fwd(other));
+      }
+   }
+
+   template <typename Other>
+   static constexpr auto
+   convert_storage(Other&& other) -> storage_type {
+      if (other.has_value()) {
+         return storage_type($fwd(other).value());
+      }
+      return convert_error_storage($fwd(other));
+   }
+
+   template <typename Result, idx error_index = 0u, typename Other>
+   static constexpr auto
+   propagate_error_as(Other&& other) -> Result {
+      using Error = Errors...[error_index];
+      if constexpr (error_index + 1u == sizeof...(Errors)) {
+         return Result($fwd(other).template error<Error>());
+      } else {
+         if (other.template is<Error>()) {
+            return Result($fwd(other).template error<Error>());
+         }
+         return propagate_error_as<Result, error_index + 1u>($fwd(other));
+      }
+   }
+
    // `storage_type` constructors are used by the monadic member functions to
    // propagate errors.
    constexpr scaredy(storage_type const& in_storage) : m_storage(in_storage) {
@@ -355,35 +404,54 @@ class
    }
 
  public:
-   constexpr scaredy() = default;
+   constexpr scaredy()
+      requires(is_constructible<value_type>)
+       : m_storage(value_type{}) {
+   }
 
    // TODO: Construct from a subset of `Errors`.
 
    // Copy and convert the storage of a convertible `scaredy`.
    template <typename U>
-      requires(is_implicitly_convertible<U, value_type>)
-   constexpr scaredy(scaredy<U, Errors...> const& scaredy)
-       : m_storage(scaredy.m_storage) {
+      requires(
+         is_constructible<value_type, U const&>
+         && !detail::scaredy_converts_from_any_cvref<
+            value_type, scaredy<U, Errors...>>
+      )
+   constexpr explicit(!is_convertible<U const&, value_type>) scaredy(
+      scaredy<U, Errors...> const& other
+   )
+       : m_storage(convert_storage(other)) {
    }
 
    // Move and convert the storage of a convertible `scaredy`.
    template <typename U>
-      requires(is_implicitly_convertible<U, value_type>)
-   constexpr scaredy(scaredy<U, Errors...>&& scaredy)
-       : m_storage(move(scaredy).storage) {
+      requires(
+         is_constructible<value_type, U &&>
+         && !detail::scaredy_converts_from_any_cvref<
+            value_type, scaredy<U, Errors...>>
+      )
+   constexpr explicit(!is_convertible<U&&, value_type>) scaredy(
+      scaredy<U, Errors...>&& other
+   )
+       : m_storage(convert_storage(move(other))) {
    }
 
    // Forward a value into the storage.
    template <typename U>
       requires(is_value<U>)
-   constexpr scaredy(U const& input) : m_storage(input) {
+   constexpr explicit(!is_convertible<U const&, value_type>) scaredy(
+      U const& input
+   )
+       : m_storage(input) {
    }
 
    template <is_forwarding_move U>
       requires(is_value<U>)
    // `is_forwarding_move` sufficiently constrains this constructor.
    // NOLINTNEXTLINE
-   constexpr scaredy(U&& input) : m_storage(input) {
+   constexpr explicit(!is_convertible<U&&, value_type>) scaredy(U&& input)
+       : m_storage($fwd(input)) {
    }
 
    // Forward an error into the storage.
@@ -407,22 +475,34 @@ class
    }
 
    // Copy-assign and convert a `scaredy`.
-   template <typename U, typename... OtherErrors>
-      requires(is_value<U> && (is_error<OtherErrors> && ...))
+   template <typename U>
+      requires(
+         is_constructible<value_type, U const&>
+         && !detail::scaredy_converts_from_any_cvref<
+            value_type, scaredy<U, Errors...>>
+         && !detail::scaredy_assigns_from_any_cvref<
+            value_type, scaredy<U, Errors...>>
+      )
    [[clang::reinitializes]]
    constexpr auto
    operator=(scaredy<U, Errors...> const& operand) -> scaredy& {
-      m_storage = operand.m_storage;
+      m_storage = convert_storage(operand);
       return *this;
    }
 
    // Move-assign and convert a `scaredy`.
-   template <typename U, typename... OtherErrors>
-      requires(is_value<U> && (is_error<OtherErrors> && ...))
+   template <typename U>
+      requires(
+         is_constructible<value_type, U &&>
+         && !detail::scaredy_converts_from_any_cvref<
+            value_type, scaredy<U, Errors...>>
+         && !detail::scaredy_assigns_from_any_cvref<
+            value_type, scaredy<U, Errors...>>
+      )
    [[clang::reinitializes]]
    constexpr auto
    operator=(scaredy<U, Errors...>&& operand) -> scaredy& {
-      m_storage = operand.m_storage;
+      m_storage = convert_storage(move(operand));
       return *this;
    }
 
@@ -442,7 +522,7 @@ class
    [[clang::reinitializes]]
    constexpr auto
    operator=(U&& operand) -> scaredy& {
-      m_storage = static_cast<value_type&&>(operand);
+      m_storage = $fwd(operand);
       return *this;
    }
 
@@ -658,28 +738,78 @@ class
       detail::match_patterns (*this)($fwd(patterns)...);
    }
 
-   // If this non-`const`-qualified `scaredy` holds a value, transform it with
-   // a callback. Otherwise, propagate the error value.
-   template <is_invocable<value_type> Callback>
+   // If this `scaredy` holds a value, transform it with a callback. Otherwise,
+   // propagate the error value.
+   template <typename Callback>
+      requires(
+         (is_void<T> && is_invocable<Callback>)
+         || (!is_void<T> && is_invocable<Callback, value_type>)
+      )
    [[nodiscard]]
    constexpr auto
    transform(this auto&& self, Callback&& callback) {
-      using this_type = scaredy<T, Errors...>;
       auto&& base = $fwd(self).as_base();
-      if (base.has_value()) {
-         return this_type($fwd(callback)($fwd(base).value()));
+      if constexpr (is_void<T>) {
+         using U = decltype($fwd(callback)());
+         static_assert(!is_specialization<U, scaredy>);
+         using result_type = scaredy<U, Errors...>;
+         if (!base.has_value()) {
+            return propagate_error_as<result_type>($fwd(base));
+         }
+         if constexpr (is_void<U>) {
+            $fwd(callback)();
+            return result_type{};
+         } else {
+            return result_type($fwd(callback)());
+         }
+      } else {
+         using U = decltype($fwd(callback)($fwd(base).value()));
+         static_assert(!is_specialization<U, scaredy>);
+         using result_type = scaredy<U, Errors...>;
+         if (!base.has_value()) {
+            return propagate_error_as<result_type>($fwd(base));
+         }
+         if constexpr (is_void<U>) {
+            $fwd(callback)($fwd(base).value());
+            return result_type{};
+         } else {
+            return result_type($fwd(callback)($fwd(base).value()));
+         }
       }
-      return this_type($fwd(base).m_storage);
    }
 
-   template <is_invocable<value_type> Callback>
+   template <typename Callback>
+      requires(
+         (is_void<T> && is_invocable<Callback>)
+         || (!is_void<T> && is_invocable<Callback, value_type>)
+      )
    [[nodiscard]]
    constexpr auto
    and_then(this auto&& self, Callback&& callback) {
-      using this_type = scaredy<T, Errors...>;
       auto&& base = $fwd(self).as_base();
-      return base.has_value() ? $fwd(callback)($fwd(base).value())
-                              : this_type($fwd(base).m_storage);
+      if constexpr (is_void<T>) {
+         using result_type = decltype($fwd(callback)());
+         static_assert(
+            is_specialization<result_type, scaredy>,
+            "The callback parameter of `.and_then()` must return a "
+            "specialization of `cat::scaredy`."
+         );
+         if (base.has_value()) {
+            return $fwd(callback)();
+         }
+         return propagate_error_as<result_type>($fwd(base));
+      } else {
+         using result_type = decltype($fwd(callback)($fwd(base).value()));
+         static_assert(
+            is_specialization<result_type, scaredy>,
+            "The callback parameter of `.and_then()` must return a "
+            "specialization of `cat::scaredy`."
+         );
+         if (base.has_value()) {
+            return $fwd(callback)($fwd(base).value());
+         }
+         return propagate_error_as<result_type>($fwd(base));
+      }
    }
 
    template <is_invocable Callback>

@@ -299,6 +299,7 @@ class variant {
  public:
    // Comparison operators are declared near the top of the class to match
    // the layout used by `cat::tuple` and the other libCat sum-types.
+
    template <typename T>
    [[nodiscard]]
    friend constexpr auto
@@ -502,6 +503,38 @@ class variant {
       }
    }
 
+   template <idx index_value = 0u>
+   constexpr void
+   copy_assign_reference_indexed(variant const& other)
+      requires(is_reference_variant)
+   {
+      if constexpr (index_value < variant_size) {
+         if (m_discriminant.value_or_niche() == index_value) {
+            *detail::variant_ref_slot<index_value>(m_storage) =
+               *detail::variant_ref_slot<index_value>(other.m_storage);
+            return;
+         }
+         this->template copy_assign_reference_indexed<index_value + 1u>(other);
+      }
+   }
+
+   template <idx index_value = 0u>
+   constexpr void
+   move_assign_reference_indexed(variant&& other)
+      requires(is_reference_variant)
+   {
+      if constexpr (index_value < variant_size) {
+         if (m_discriminant.value_or_niche() == index_value) {
+            *detail::variant_ref_slot<index_value>(m_storage) =
+               move(*detail::variant_ref_slot<index_value>(other.m_storage));
+            return;
+         }
+         this->template move_assign_reference_indexed<index_value + 1u>(
+            move(other)
+         );
+      }
+   }
+
    // Type-keyed converting helpers used by the cross-variant copy/move
    // overloads below. Each source alternative must either be absent from
    // this variant's alternative pack or appear in it exactly once, so
@@ -608,13 +641,19 @@ class variant {
    }
 
    constexpr variant(variant const& other)
-      requires(!is_reference_variant)
+      requires(
+         !is_reference_variant
+         && (is_constructible<Alternatives, Alternatives const&> && ...)
+      )
    {
       this->template copy_construct_indexed<>(other);
    }
 
    constexpr variant(variant&& other)
-      requires(!is_reference_variant)
+      requires(
+         !is_reference_variant
+         && (is_constructible<Alternatives, Alternatives &&> && ...)
+      )
    {
       this->template move_construct_indexed<>(move(other));
    }
@@ -625,14 +664,20 @@ class variant {
    // overload set. Duplicate-type alternatives are unreachable via this
    // overload and must use `cat::in_place_index<I>` instead.
    template <typename T>
-      requires(!is_reference_variant && types::template is_unique<T>)
+      requires(
+         !is_reference_variant
+         && types::template is_unique<T> && is_constructible<T, T const&>
+      )
    constexpr variant(T const& input) {
       new (__builtin_addressof(this->template get<T>())) T(input);
       m_discriminant = this->alternative_index<T>;
    }
 
    template <is_forwarding_move T>
-      requires(!is_reference_variant && types::template is_unique<T>)
+      requires(
+         !is_reference_variant
+         && types::template is_unique<T> && is_constructible<T, T &&>
+      )
    // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this
    // constructor.
    constexpr variant(T&& input) {
@@ -666,9 +711,21 @@ class variant {
    // Subsume a `variant` whose alternatives are a subset of this one's
    // (value variants only).
    template <typename... Us>
-      requires(!is_reference_variant)
-   constexpr variant(variant<Us...> other) {
+      requires(
+         !is_reference_variant && (types::template is_unique<Us> && ...)
+         && (is_constructible<Us, Us const&> && ...)
+      )
+   constexpr variant(variant<Us...> const& other) {
       this->template construct_from_other_variant<Us...>(other);
+   }
+
+   template <typename... Us>
+      requires(
+         !is_reference_variant && (types::template is_unique<Us> && ...)
+         && (is_constructible<Us, Us &&> && ...)
+      )
+   constexpr variant(variant<Us...>&& other) {
+      this->template construct_from_other_variant<Us...>(move(other));
    }
 
    // Reference-variant copy and move: trivial. The held pointer is rebound
@@ -717,7 +774,10 @@ class variant {
    // if it already held `T` and assigned to uninitialized storage when the
    // active alternative was different, which is UB for non-trivial `T`.
    template <typename T>
-      requires(!is_reference_variant && types::template is_unique<T>)
+      requires(
+         !is_reference_variant && types::template is_unique<T>
+         && is_constructible<T, T const&> && is_assignable<T&, T const&>
+      )
    constexpr auto
    operator=(T const& operand) -> variant& {
       if (this->template is<T>()) {
@@ -731,7 +791,10 @@ class variant {
    }
 
    template <is_forwarding_move T>
-      requires(!is_reference_variant && types::template is_unique<T>)
+      requires(
+         !is_reference_variant && types::template is_unique<T>
+         && is_constructible<T, T &&> && is_assignable<T&, T &&>
+      )
    constexpr auto
    operator=(T&& operand) -> variant& {
       if (this->template is<T>()) {
@@ -740,6 +803,29 @@ class variant {
          this->template hard_reset_indexed<>();
          new (__builtin_addressof(this->template get<T>())) T($fwd(operand));
          m_discriminant = this->alternative_index<T>;
+      }
+      return *this;
+   }
+
+   template <typename T>
+      requires(
+         !is_reference_variant && !types::template has_type<remove_cvref<T>>
+         && requires { typename detail::fun_selected_type<T&&, Alternatives...>; }
+         && is_constructible<
+            detail::fun_selected_type<T&&, Alternatives...>, T&&>
+         && is_assignable<
+            detail::fun_selected_type<T&&, Alternatives...>&, T&&>
+      )
+   constexpr auto
+   operator=(T&& operand) -> variant& {
+      using selected = detail::fun_selected_type<T&&, Alternatives...>;
+      if (this->template is<selected>()) {
+         this->template get<selected>() = $fwd(operand);
+      } else {
+         this->template hard_reset_indexed<>();
+         new (__builtin_addressof(this->template get<selected>()))
+            selected($fwd(operand));
+         m_discriminant = this->alternative_index<selected>;
       }
       return *this;
    }
@@ -755,7 +841,11 @@ class variant {
 
    constexpr auto
    operator=(variant const& operand) -> variant&
-      requires(!is_reference_variant)
+      requires(
+         !is_reference_variant
+         && (is_constructible<Alternatives, Alternatives const&> && ...)
+         && (is_assignable<Alternatives&, Alternatives const&> && ...)
+      )
    {
       this->template copy_assign_indexed<>(operand);
       return *this;
@@ -763,14 +853,22 @@ class variant {
 
    constexpr auto
    operator=(variant&& operand) -> variant&
-      requires(!is_reference_variant)
+      requires(
+         !is_reference_variant
+         && (is_constructible<Alternatives, Alternatives &&> && ...)
+         && (is_assignable<Alternatives&, Alternatives &&> && ...)
+      )
    {
       this->template move_assign_indexed<>(move(operand));
       return *this;
    }
 
    template <typename... Us>
-      requires(!is_reference_variant)
+      requires(
+         !is_reference_variant && (types::template is_unique<Us> && ...)
+         && (is_constructible<Us, Us const&> && ...)
+         && (is_assignable<Us&, Us const&> && ...)
+      )
    constexpr auto
    operator=(variant<Us...> const& operand) -> variant& {
       this->template assign_other_variant<Us...>(operand);
@@ -778,27 +876,68 @@ class variant {
    }
 
    template <typename... Us>
-      requires(!is_reference_variant)
+      requires(
+         !is_reference_variant && (types::template is_unique<Us> && ...)
+         && (is_constructible<Us, Us &&> && ...)
+         && (is_assignable<Us&, Us &&> && ...)
+      )
    constexpr auto
    operator=(variant<Us...>&& operand) -> variant& {
       this->template assign_other_variant<Us...>(move(operand));
       return *this;
    }
 
-   // Reference-variant assignment writes through the held reference. The
-   // active alternative is fixed, so `T` must match the active type.
+   // Reference-variant assignment writes through the held reference.
    template <typename T>
-      requires(is_reference_variant && types::template is_unique<T&>)
+      requires(
+         is_reference_variant
+         && types::template is_unique<add_lvalue_reference<remove_cvref<T>>>
+         && is_assignable<remove_cvref<T>&, T &&>
+      )
    constexpr auto
-   operator=(T const& operand) -> variant& {
-      *detail::variant_ref_slot<alternative_index<T&>>(m_storage) = operand;
+   operator=(T&& operand) -> variant& {
+      using alternative = add_lvalue_reference<remove_cvref<T>>;
+      cat::assert(this->template is<alternative>());
+      *detail::variant_ref_slot<alternative_index<alternative>>(m_storage) =
+         $fwd(operand);
       return *this;
    }
 
    constexpr auto
-   operator=(variant const&) -> variant&
-      requires(is_reference_variant)
-   = default;
+   operator=(variant const& operand) -> variant&
+      requires(
+         is_reference_variant
+         && (is_assignable<remove_reference<Alternatives>&, remove_reference<Alternatives> const&> && ...)
+      )
+   {
+      if (this == &operand) {
+         return *this;
+      }
+      cat::assert(
+         m_discriminant.value_or_niche()
+         == operand.m_discriminant.value_or_niche()
+      );
+      this->template copy_assign_reference_indexed<>(operand);
+      return *this;
+   }
+
+   constexpr auto
+   operator=(variant&& operand) -> variant&
+      requires(
+         is_reference_variant
+         && (is_assignable<remove_reference<Alternatives>&, remove_reference<Alternatives> &&> && ...)
+      )
+   {
+      if (this == &operand) {
+         return *this;
+      }
+      cat::assert(
+         m_discriminant.value_or_niche()
+         == operand.m_discriminant.value_or_niche()
+      );
+      this->template move_assign_reference_indexed<>(move(operand));
+      return *this;
+   }
 
    // The `get`/`get_if`/`get_ptr` family is forward-declared here and
    // defined out-of-line in `implementations/variant_get.tpp`. The

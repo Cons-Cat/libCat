@@ -2,6 +2,55 @@
 
 #include "../unit_tests.hpp"
 
+struct variant_move_only {
+   int value;
+
+   constexpr variant_move_only(int input) : value(input) {
+   }
+
+   variant_move_only(variant_move_only const&) = delete;
+
+   constexpr variant_move_only(variant_move_only&& other) : value(other.value) {
+      other.value = -1;
+   }
+
+   auto
+   operator=(variant_move_only const&) -> variant_move_only& = delete;
+
+   constexpr auto
+   operator=(variant_move_only&& other) -> variant_move_only& {
+      value = other.value;
+      other.value = -1;
+      return *this;
+   }
+};
+
+struct variant_assignment_value {
+   int value;
+
+   constexpr variant_assignment_value(int input) : value(input) {
+   }
+
+   constexpr variant_assignment_value(variant_assignment_value const&) =
+      default;
+
+   constexpr variant_assignment_value(variant_assignment_value&& other)
+       : value(other.value) {
+      other.value = -1;
+   }
+
+   constexpr auto
+   operator=(variant_assignment_value const&)
+      -> variant_assignment_value& = default;
+
+   constexpr auto
+   operator=(variant_assignment_value&& other) -> variant_assignment_value& {
+      value = other.value;
+      other.value = -1;
+      return *this;
+   }
+};
+
 // Basic construction, type-keyed inspection, and value reassignment.
 $test(variant_basic_access) {
    cat::variant<int, char, uint4> v(1);
@@ -156,6 +205,69 @@ $test(variant_subset_construct_and_assign) {
    cat::verify(wide_from_int.is<int>());
    cat::verify(wide_from_int.holds_alternative<int>());
 };
+
+$test(variant_subset_constraints_and_move) {
+   using narrow_type = cat::variant<int, char>;
+   using wide_type = cat::variant<int, char, uint4>;
+
+   static_assert(!cat::is_constructible<narrow_type, wide_type const&>);
+   static_assert(!cat::is_assignable<narrow_type&, wide_type const&>);
+   static_assert(!cat::is_constructible<
+                 cat::variant<variant_move_only>, variant_move_only const&>);
+   static_assert(!cat::is_assignable<
+                 cat::variant<variant_move_only>&, variant_move_only const&>);
+   static_assert(!cat::is_constructible<
+                 cat::variant<variant_move_only>,
+                 cat::variant<variant_move_only> const&>);
+   static_assert(!cat::is_assignable<
+                 cat::variant<variant_move_only>&,
+                 cat::variant<variant_move_only> const&>);
+
+   cat::variant<variant_move_only> source{cat::in_place_index<0u>, 7};
+   cat::variant<variant_move_only, int> destination = cat::move(source);
+   cat::verify(destination.get<variant_move_only>().value == 7);
+   cat::verify(source.get<variant_move_only>().value == -1);
+}
+
+$test(variant_nested_construction_and_assignment) {
+   using inner_type = cat::variant<int>;
+   using outer_type = cat::variant<inner_type>;
+
+   inner_type inner = 42;
+   outer_type outer(inner);
+   cat::verify(outer.has_value());
+   cat::verify(outer.get<inner_type>().get<int>() == 42);
+
+   inner_type empty;
+   outer_type outer_empty(empty);
+   cat::verify(outer_empty.has_value());
+   cat::verify(outer_empty.get<inner_type>().is_empty());
+
+   outer_type moved(inner_type{7});
+   cat::verify(moved.get<inner_type>().get<int>() == 7);
+
+   outer = empty;
+   cat::verify(outer.has_value());
+   cat::verify(outer.get<inner_type>().is_empty());
+}
+
+$test(variant_copy_move_and_assignment_categories) {
+   cat::variant<int, char> original = 10;
+   cat::variant<int, char> copied = original;
+   cat::verify(original.get<int>() == 10);
+   cat::verify(copied.get<int>() == 10);
+
+   cat::variant<variant_assignment_value> source{cat::in_place_index<0u>, 11};
+   cat::variant<variant_assignment_value> assigned{cat::in_place_index<0u>, 0};
+   assigned = source;
+   cat::verify(source.get<variant_assignment_value>().value == 11);
+   cat::verify(assigned.get<variant_assignment_value>().value == 11);
+
+   cat::variant<variant_move_only> move_source{cat::in_place_index<0u>, 12};
+   cat::variant<variant_move_only> move_target = cat::move(move_source);
+   cat::verify(move_target.get<variant_move_only>().value == 12);
+   cat::verify(move_source.get<variant_move_only>().value == -1);
+}
 
 // Index-keyed `.get<I>()` returns a reference whose cvref matches the
 // variant's value category (deducing-this), mirroring `std::variant::get`.
@@ -348,6 +460,30 @@ $test(variant_pattern_matching) {
    cat::verify(matched);
 };
 
+$test(variant_empty_pattern_matching) {
+   cat::variant<int, char> empty;
+   bool matched = false;
+   cat::match(empty)(
+      is_a<int>().then_do([&]() {
+         matched = true;
+      }),
+      is_a<char>().then_do([&]() {
+         matched = true;
+      })
+   );
+   cat::verify(!matched);
+
+   empty.match(
+      is_a<int>().then_do([&]() {
+         matched = true;
+      }),
+      is_a<char>().then_do([&]() {
+         matched = true;
+      })
+   );
+   cat::verify(!matched);
+}
+
 // `cat::visit` single-variant dispatch (mpark v2 switch). The callback fires
 // with the active alternative, returning a common type across every branch.
 $test(variant_visit_single) {
@@ -481,6 +617,11 @@ $test(variant_get_ptr) {
    cat::verify(v.get_ptr<int>() == nullptr);
    cat::verify(v.get_ptr<char>() != nullptr);
    cat::verify(*v.get_ptr<char>() == 'k');
+
+   cat::variant<int, char, float4> const const_v{42};
+   int const* p_const = const_v.get_ptr<int>();
+   cat::verify(p_const == &const_v.get<int>());
+   cat::verify(*p_const == 42);
 };
 
 // `variant<T&, U&, ...>` per P4198. The active alternative is fixed at
@@ -505,6 +646,30 @@ $test(variant_reference_alternatives) {
    cat::verify(&r2.get<double&>() == &my_double);
    r2 = 3.5;
    cat::verify(my_double == 3.5);
+
+   int copied_from = 17;
+   cat::variant<int&, double&> copy_source(copied_from);
+   r1 = copy_source;
+   cat::verify(my_int == 17);
+   cat::verify(&r1.get<int&>() == &my_int);
+   copied_from = 18;
+   cat::verify(my_int == 17);
+
+   variant_move_only move_target{1};
+   variant_move_only move_source{2};
+   cat::variant<variant_move_only&, int&> move_target_variant(move_target);
+   cat::variant<variant_move_only&, int&> move_source_variant(move_source);
+   move_target_variant = cat::move(move_source_variant);
+   cat::verify(move_target.value == 2);
+   cat::verify(move_source.value == -1);
+   cat::verify(&move_target_variant.get<variant_move_only&>() == &move_target);
+
+   variant_move_only direct_target{3};
+   variant_move_only direct_source{4};
+   cat::variant<variant_move_only&, int&> direct_move(direct_target);
+   direct_move = cat::move(direct_source);
+   cat::verify(direct_target.value == 4);
+   cat::verify(direct_source.value == -1);
 
    // Reference variants are pointer-sized + discriminant.
    static_assert(
@@ -537,6 +702,9 @@ $test(variant_reference_alternatives) {
    cat::variant<int const&, double const&> r_const(my_const);
    cat::verify(r_const.holds_alternative<int const&>());
    cat::verify(r_const.get<int const&>() == 7);
+   static_assert(!cat::is_assignable<
+                 cat::variant<int const&, double const&>&,
+                 cat::variant<int const&, double const&> const&>);
 };
 
 // P2162 "upside-down inheritance". A type that publicly inherits from
@@ -650,6 +818,14 @@ $test(variant_converting_construction) {
    cat::verify(v4.is<int>());
    cat::verify(v4.get<int>() == 1);
 };
+
+$test(variant_converting_assignment) {
+   cat::variant<int, char const*> value = "before";
+   short input = 3;
+   value = input;
+   cat::verify(value.is<int>());
+   cat::verify(value.get<int>() == 3);
+}
 
 // Raw arithmetic to libCat arithmetic. The variant's FUN overload set
 // gates conversions on `is_convertible_without_narrowing`, which in turn
@@ -851,6 +1027,10 @@ $test(variant_compare) {
    cat::verify((empty_1 <=> v_int_3) < 0);
    cat::verify(v_int_3 > empty_1);
    cat::verify((v_int_3 <=> empty_1) > 0);
+
+   cat::verify(v_int_3 == 3);
+   cat::verify(3 == v_int_3);
+   cat::verify(!(empty_1 == 3));
 };
 
 // A non-trivial alternative type that traces destructor calls so the empty
@@ -978,6 +1158,10 @@ $test(variant_reference_no_default) {
       !__is_constructible(cat::variant<int&, double&>),
       "reference variants must be constructed with an alternative."
    );
+   static_assert(!cat::is_constructible<cat::variant<int&>, int>);
+   static_assert(!cat::is_constructible<cat::variant<int const&>, int>);
+   static_assert(cat::is_constructible<cat::variant<int&>, int&>);
+   static_assert(cat::is_constructible<cat::variant<int const&>, int&>);
    int my_int = 4;
    cat::variant<int&, double&> r(my_int);
    cat::verify(r.has_value());
