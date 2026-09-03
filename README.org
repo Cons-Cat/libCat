@@ -398,6 +398,7 @@ For an example configuration:
 #+BEGIN_SRC sh
   just status release
   # ASan: OFF, UBSan: OFF (cached)
+  # sccache: ON (/home/lgooch/.local/share/mise/installs/sccache/0.17.0/sccache-v0.17.0-x86_64-unknown-linux-musl/sccache)
   # CMAKE_CXX_COMPILER: ./.cache/cat-llvm/bin/clang++
   # Clang nightly: July 7, 2026 at 11:16:25
   # CMAKE_LINKER_TYPE: LLD
@@ -422,6 +423,7 @@ For an example configuration:
     
   just status debug -v
   # ASan: OFF, UBSan: OFF (cached)
+  # sccache: ON (/home/lgooch/.local/share/mise/installs/sccache/0.17.0/sccache-v0.17.0-x86_64-unknown-linux-musl/sccache)
   # CMAKE_CXX_COMPILER: /home/lgooch/libCat/.cache/cat-llvm/bin/clang++
   # CMAKE_LINKER_TYPE: LLD
   # ISA: default (x86_64-pc-linux-gnu)
@@ -459,12 +461,12 @@ All build options are CMake cache variables; pass them with =-D= at configure ti
 - =CAT_PCH= (default =ON=) - Enable precompiled headers for libCat's
   internal build. Private to libCat; downstream consumers of =cat= keep
   their own PCH strategy intact whether this is on or off.
-- =CAT_USE_SCCACHE= (default: =ON= if =sccache= is on =PATH=, else =OFF=)
+- =CAT_USE_SCCACHE= (default: =ON=)
   Use [[https://github.com/mozilla/sccache][sccache]] as the C++ compiler
   launcher. Combined with =-Xclang -fno-pch-timestamp= (added automatically
   for Clang + PCH builds), this gives near-100% hit rates across build
-  directories and fresh checkouts. Override the binary with
-  =-DCAT_SCCACHE_EXECUTABLE=/path/to/sccache=.
+  directories and fresh checkouts. Set this to =OFF= to disable caching, or
+  override the binary with =-DCAT_SCCACHE_EXECUTABLE=/path/to/sccache=.
 
 ** Library output
 - =CAT_BUILD_SHARED= (default =OFF=) - Also build libCat as a shared

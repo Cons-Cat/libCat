@@ -97,19 +97,11 @@ if (CAT_USE_ASAN)
   message(VERBOSE "ASan: using ${CAT_ASAN_RUNTIME_PATH}")
 endif()
 
-# Optional sccache compiler-launcher. Auto-on when `sccache` is on PATH.
-# `-DCAT_USE_SCCACHE=ON` makes it required. Pairs with `-fno-pch-timestamp`
-# below for ~100% hit rates across build dirs.
+# sccache compiler launcher. Enabled by default and paired with
+# `-fno-pch-timestamp` below for ~100% hit rates across build dirs.
 find_program(CAT_SCCACHE_EXECUTABLE sccache DOC "Path to the sccache binary.")
-block()
-  if (CAT_SCCACHE_EXECUTABLE)
-    set(_default ON)
-  else()
-    set(_default OFF)
-  endif()
-  option(CAT_USE_SCCACHE
-    "Use sccache as the compiler launcher for C and C++." ${_default})
-endblock()
+option(CAT_USE_SCCACHE
+  "Use sccache as the compiler launcher for C and C++." ON)
 
 if (CAT_USE_SCCACHE)
   if (NOT CAT_SCCACHE_EXECUTABLE)

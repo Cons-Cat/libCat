@@ -549,6 +549,7 @@ status *args:
         printf '\033[1mBuild mode: \033[0m%s \033[90m(default)\033[0m\n' "$mode"; \
       fi; \
       just status_san "$mode"; \
+      just status_sccache "$mode"; \
       just status_cxx "$mode" "$verbose"; \
       just status_linker "$mode"; \
       just status_isa "$mode"; \
@@ -579,6 +580,9 @@ status *args:
 
 status_san mode=last_mode san="":
     @just _print-sanitizer-status {{ build_dir(mode) }} "{{ san }}"
+
+status_sccache mode=last_mode:
+    @just _print-sccache-status {{ build_dir(mode) }} true
 
 status_cxx mode=last_mode verbose="":
     @cache="{{ build_dir(mode) }}/CMakeCache.txt"; \
@@ -797,6 +801,7 @@ _build-config mode="release" san="" verbose="" no_warnings="false" cxx_flags="":
         "${configure[@]}"; \
       fi; \
       just status_san {{ mode }} "{{ san }}"; \
+      just _print-sccache-status {{ build_dir(mode) }}; \
       trailer=(); \
       if [[ -n "${CAT_JUST_BUILD_TOOL_TRAILER_B64:-}" ]]; then \
         mapfile -d "" -t trailer \
@@ -854,6 +859,7 @@ _build-custom mode="" san="" verbose="" no_warnings="false" cxx_flags="":
         "${configure[@]}"; \
       fi; \
       just status_san {{ mode }} "{{ san }}"; \
+      just _print-sccache-status {{ build_dir(mode) }}; \
       trailer=(); \
       if [[ -n "${CAT_JUST_BUILD_TOOL_TRAILER_B64:-}" ]]; then \
         mapfile -d "" -t trailer \
@@ -898,6 +904,24 @@ _print-sanitizer-status build_dir san="":
       esac; \
       printf '\033[1mASan: \033[0m%s, \033[1mUBSan: \033[0m%s \033[90m(%s)\033[0m\n' \
         "$asan" "$ubsan" "$source"
+
+[private]
+_print-sccache-status build_dir show_path="false":
+    @cache="{{ build_dir }}/CMakeCache.txt"; \
+      enabled=n/a; executable=""; \
+      if [ -f "$cache" ]; then \
+        enabled="$(sed -n 's/^CAT_USE_SCCACHE:BOOL=//p' "$cache")"; \
+        executable="$(sed -n 's/^CAT_SCCACHE_EXECUTABLE:FILEPATH=//p' "$cache")"; \
+      fi; \
+      case "$enabled" in \
+        ON) value="$(printf '\033[36mON\033[0m')"; \
+          if [ "{{ show_path }}" = true ] && [ -n "$executable" ]; then \
+            value="$value ($executable)"; \
+          fi ;; \
+        OFF) value="$(printf '\033[91mOFF\033[0m')" ;; \
+        *) value="$(printf '\033[90mn/a\033[0m')" ;; \
+      esac; \
+      printf '\033[1msccache: \033[0m%s\n' "$value"
 
 [private]
 _clean-mode mode=last_mode verbose="":
