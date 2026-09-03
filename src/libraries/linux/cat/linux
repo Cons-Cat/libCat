@@ -30,7 +30,7 @@ struct signals_mask_set;
 namespace nix {
 // TODO: Consider using the names from `std::errc`.
 // NOLINTNEXTLINE
-enum class [[clang::enum_extensibility(open)]] linux_error : long long {
+enum class [[clang::enum_extensibility(open)]] linux_error : int {
    // Operation is not permitted.
    perm = -1,
    // No such file or directory.
@@ -134,7 +134,7 @@ enum class [[clang::enum_extensibility(open)]] linux_error : long long {
    // Invalid exchange.
    bade = -52,
    // Invalid request descriptor.
-   badr = 53,
+   badr = -53,
    // Exchange full.
    xfull = -54,
    // No anode.
@@ -146,13 +146,13 @@ enum class [[clang::enum_extensibility(open)]] linux_error : long long {
    // Bad font file format.
    bfont = -59,
    // Device not a stream.
-   nostr = 60,
+   nostr = -60,
    // No data available.
    nodata = -61,
    // Timer expired.
    time = -62,
    // Out of streams resources.
-   nosr = 63,
+   nosr = -63,
    // Machine is not on the network.
    nonet = -64,
    // Package not installed.
@@ -291,6 +291,8 @@ enum class [[clang::enum_extensibility(open)]] linux_error : long long {
    notrecoverable = -131,
 };
 
+static_assert(sizeof(linux_error) == sizeof(cat::int4));
+
 namespace detail {
 // Map `void` to `cat::monotype_storage` and map `T*` to `cat::intptr<T>` so
 // that these types can both hold -1.
@@ -309,10 +311,13 @@ is_positive(auto input) -> bool {
 template <typename T>
    requires(sizeof(detail::map_syscall_type<T>) <= cat::word_bytes)
 using scaredy_nix = cat::scaredy<
-   cat::compact_scaredy<
-      detail::map_syscall_type<T>,
-      // This is a `T` when it is a positive integer.
-      detail::is_positive<detail::map_syscall_type<T>>>,
+   cat::conditional<
+      sizeof(detail::map_syscall_type<T>) >= sizeof(linux_error),
+      cat::compact_scaredy<
+         detail::map_syscall_type<T>,
+         // This is a `T` when it is a positive integer.
+         detail::is_positive<detail::map_syscall_type<T>>>,
+      detail::map_syscall_type<T>>,
    // When the value is negative, this is some `linux_error`.
    linux_error>;
 
@@ -338,14 +343,10 @@ inline constexpr nix::file_descriptor stdout = {1};
 inline constexpr nix::file_descriptor stderr = {2};
 inline constexpr nix::file_descriptor invalid_file_descriptor{-1};
 
-// TODO: This does not work, because `linux_error` is 8 bytes. If `linux_error`
-// is two or fewer bytes, it fails to union with 8-byte values properly. This
-// would be a good problem to solve, but it will require rethinking the
-// `cat::scaredy` API.
-
 // Confirm that `scaredy_nix` has no size overhead.
-// static_assert(sizeof(scaredy_nix<nix::file_descriptor>)
-//               == sizeof(nix::file_descriptor));
+static_assert(
+   sizeof(scaredy_nix<nix::file_descriptor>) == sizeof(nix::file_descriptor)
+);
 
 // A `file_descriptor` that represents a tty file.
 struct tty_descriptor : file_descriptor {};

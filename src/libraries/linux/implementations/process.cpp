@@ -211,9 +211,9 @@ nix::manual::process::spawn_impl(
          syscall
          test %%rax, %%rax
          jz %l[clone_child]
-         mov %%rax, %[parent_rax]
+         mov %%eax, %[parent_eax]
          jmp %l[clone_parent])"
-      : [parent_rax] "=m"(clone_result)
+      : [parent_eax] "=m"(clone_result)
       // https://filippo.io/linux-syscall-table/
       : "a"(56), "D"(active_clone_flags), "S"(stack_top), "d"(&(m_id)),
 #if defined(CAT_THREAD_LOCAL_SIZE) && (CAT_THREAD_LOCAL_SIZE) == 0

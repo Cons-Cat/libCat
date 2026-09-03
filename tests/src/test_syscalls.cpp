@@ -53,6 +53,27 @@ is_denied_or_invalid(nix::linux_error e) -> bool {
 }
 }  // namespace
 
+$test(scaredy_nix_file_descriptor) {
+   static_assert(
+      sizeof(nix::scaredy_nix<nix::file_descriptor>)
+      == sizeof(nix::file_descriptor)
+   );
+
+   nix::scaredy_nix<nix::file_descriptor> result =
+      nix::linux_error::keyrejected;
+   cat::verify(result.is_empty());
+   cat::verify(result.error() == nix::linux_error::keyrejected);
+
+   result = nix::file_descriptor{42_u4};
+   cat::verify(result.has_value());
+   cat::verify(result.value().value == 42_u4);
+
+   static_assert(sizeof(nix::scaredy_nix<cat::idx>) == sizeof(cat::idx));
+   nix::scaredy_nix<cat::idx> wide_result = nix::linux_error::keyrejected;
+   cat::verify(wide_result.is_empty());
+   cat::verify(wide_result.error() == nix::linux_error::keyrejected);
+}
+
 // Identity / process info.
 
 $test(syscall_identity) {

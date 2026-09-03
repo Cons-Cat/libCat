@@ -170,6 +170,31 @@ template <typename T, typename Error>
 struct scaredy_compact_storage {
    using value_type = T::type;
 
+   static constexpr bool stores_enum_error_as_value =
+      is_enum<Error> && sizeof(Error) <= sizeof(value_type)
+      && is_trivially_copyable<value_type>;
+
+   using storage_integer = int_fixed<sizeof(value_type)>;
+
+   [[nodiscard]]
+   static constexpr auto
+   encode_error(Error error) -> value_type
+      requires(stores_enum_error_as_value)
+   {
+      storage_integer const widened(static_cast<underlying_type<Error>>(error));
+      return __builtin_bit_cast(value_type, widened);
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   decode_error(value_type const& storage) -> Error
+      requires(stores_enum_error_as_value)
+   {
+      storage_integer const widened =
+         __builtin_bit_cast(storage_integer, storage);
+      return static_cast<Error>(make_raw_arithmetic(widened));
+   }
+
    // `T` might have been provided `monostate_storage`, so we cannot use
    // `is_void<T>` here.
    static constexpr bool is_wrapping_void = is_monostate<value_type>;
@@ -202,10 +227,16 @@ struct scaredy_compact_storage {
    }
 
    constexpr scaredy_compact_storage(Error const& error) : m_error_code(error) {
+      if constexpr (stores_enum_error_as_value) {
+         m_storage = encode_error(error);
+      }
    }
 
    constexpr scaredy_compact_storage(Error&& error)
        : m_error_code(move(error)) {
+      if constexpr (stores_enum_error_as_value) {
+         m_storage = encode_error(error);
+      }
    }
 
    // It does not make sense for this class to have a `monostate_type`
@@ -229,13 +260,21 @@ struct scaredy_compact_storage {
 
    constexpr auto
    operator=(Error const& operand) -> scaredy_compact_storage& {
-      m_error_code = operand;
+      if constexpr (stores_enum_error_as_value) {
+         m_storage = encode_error(operand);
+      } else {
+         m_error_code = operand;
+      }
       return *this;
    }
 
    constexpr auto
    operator=(Error&& operand) -> scaredy_compact_storage& {
-      m_error_code = move(operand);
+      if constexpr (stores_enum_error_as_value) {
+         m_storage = encode_error(operand);
+      } else {
+         m_error_code = move(operand);
+      }
       return *this;
    }
 
@@ -249,7 +288,11 @@ struct scaredy_compact_storage {
    template <typename...>
    constexpr auto
    error() -> Error {
-      return m_error_code;
+      if constexpr (stores_enum_error_as_value) {
+         return decode_error(m_storage);
+      } else {
+         return m_error_code;
+      }
    }
 
    // `this_type` is variadic to give it a homogenous interface with other
@@ -257,7 +300,11 @@ struct scaredy_compact_storage {
    template <typename...>
    constexpr auto
    error() const -> Error {
-      return m_error_code;
+      if constexpr (stores_enum_error_as_value) {
+         return decode_error(m_storage);
+      } else {
+         return m_error_code;
+      }
    }
 
    [[nodiscard]]
@@ -288,7 +335,7 @@ struct scaredy_compact_storage {
       if (this->has_value()) {
          return static_cast<value_type>($fwd(in_value)) == m_storage;
       }
-      return static_cast<Error>($fwd(in_value)) == m_error_code;
+      return static_cast<Error>($fwd(in_value)) == this->error();
    }
 
    constexpr auto
@@ -427,7 +474,7 @@ class
    // Move and convert the storage of a convertible `scaredy`.
    template <typename U>
       requires(
-         is_constructible<value_type, U&&>
+         is_constructible<value_type, U &&>
          && !detail::scaredy_converts_from_any_cvref<
             value_type, scaredy<U, Errors...>>
       )
@@ -493,7 +540,7 @@ class
    // Move-assign and convert a `scaredy`.
    template <typename U>
       requires(
-         is_constructible<value_type, U&&>
+         is_constructible<value_type, U &&>
          && !detail::scaredy_converts_from_any_cvref<
             value_type, scaredy<U, Errors...>>
          && !detail::scaredy_assigns_from_any_cvref<
