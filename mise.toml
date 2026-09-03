@@ -1,10 +1,4 @@
 [tools]
-clang = "23.1.0"
-"conda:clang-format" = "23.1.0"
-"conda:clang-tools" = "23.1.0"
-"conda:clangxx" = "23.1.0"
-"conda:lld" = "23.1.0"
-"conda:llvm-tools" = "23.1.0"
 cmake = "4.3.2"
 just = "1.50.0"
 ninja = "1.13.2"
