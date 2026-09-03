@@ -1071,7 +1071,7 @@ struct reference_wrapper_impl {
    }
 
    constexpr void
-   rebind(T& target [[clang::lifetime_capture_by(this)]]) noexcept {
+   rebind(T& target [[clang::lifetime_capture_by_this]]) noexcept {
       m_p_target = __builtin_addressof(target);
    }
 

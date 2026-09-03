@@ -475,7 +475,7 @@ class [[gsl::Pointer]] dyn_ref {
          && !is_same<remove_cvref<T>, dyn_ref>
       )
    constexpr void
-   rebind(T& value [[clang::lifetime_capture_by(this)]]) {
+   rebind(T& value [[clang::lifetime_capture_by_this]]) {
       m_p_vtable = p_vtable_for<T, Methods...>;
       m_p_type_id = p_dyn_type_id_for<T>;
       m_p_value = __builtin_addressof(value);
@@ -583,7 +583,7 @@ class [[gsl::Pointer]] const_dyn_ref {
          && !is_same<remove_cvref<T>, const_dyn_ref>
       )
    constexpr void
-   rebind(T const& value [[clang::lifetime_capture_by(this)]]) {
+   rebind(T const& value [[clang::lifetime_capture_by_this]]) {
       m_p_vtable = p_vtable_for<T, Methods...>;
       m_p_type_id = p_dyn_type_id_for<T>;
       m_p_value = __builtin_addressof(value);

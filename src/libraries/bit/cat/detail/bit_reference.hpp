@@ -75,7 +75,7 @@ class bit_reference {
    // `mask` into a `Storage`.
    constexpr void
    rebind(
-      Storage& reference [[clang::lifetime_capture_by(this)]], Storage mask
+      Storage& reference [[clang::lifetime_capture_by_this]], Storage mask
    ) {
       assert(has_single_bit(mask));
       m_p_storage = __builtin_addressof(reference);
