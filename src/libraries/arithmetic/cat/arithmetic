@@ -8,8 +8,8 @@
 #include <cat/limits>
 #include <cat/meta>
 
-// `cat::basic_int`, `cat::basic_float`, `cat::basic_idx`, and
-// `cat::basic_intptr` are arithmetic wrappers which both prevent unsound
+// `cat::basic_int`, `cat::basic_float`, `cat::basic_idx`, `cat::basic_ualign`,
+// and `cat::basic_intptr` are arithmetic wrappers which both prevent unsound
 // implicit type conversions and make safe comparisons between different
 // arithmetic types.
 //
