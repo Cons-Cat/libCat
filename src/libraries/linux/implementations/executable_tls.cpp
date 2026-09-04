@@ -120,7 +120,7 @@ init_parent_process_tls() {
    using enum nix::memory_protection_flags;
    using enum nix::memory_flags;
 
-   void* const p_slab =
+   cat::byte* const p_slab =
       nix::sys_mmap(
          nullptr, slab_bytes, read_write, privately | anonymous,
          // Anonymous mappings require fd = -1 and offset = 0.

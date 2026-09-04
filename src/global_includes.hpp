@@ -209,17 +209,20 @@ namespace detail {
 
 template <typename T, T constant_state>
 consteval auto
-is_monostate_storage_impl(monotype_storage<T, constant_state>) -> bool {
+is_monostate_storage_impl(
+   monotype_storage<T, constant_state>* _Nullable p_storage [[maybe_unused]]
+) -> bool {
    return true;
 }
 
 consteval auto
-is_monostate_storage_impl(auto) -> bool {
+is_monostate_storage_impl(auto* _Nullable p_storage [[maybe_unused]]) -> bool {
    return false;
 }
 
 template <typename T>
-inline constexpr bool is_monostate_storage = is_monostate_storage_impl(T());
+inline constexpr bool is_monostate_storage =
+   is_monostate_storage_impl(static_cast<T*>(nullptr));
 
 // This is a function instead of a lambda to fix clangd crashes.
 template <typename T, T in_sentinel>

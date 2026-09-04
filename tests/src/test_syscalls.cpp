@@ -73,11 +73,8 @@ $test(scaredy_nix_file_descriptor) {
    cat::verify(wide_result.is_empty());
    cat::verify(wide_result.error() == nix::linux_error::keyrejected);
 
-   static_assert(
-      sizeof(nix::scaredy_nix<cat::byte*>) == sizeof(cat::byte*)
-   );
-   nix::scaredy_nix<cat::byte*> pointer_result =
-      nix::linux_error::keyrejected;
+   static_assert(sizeof(nix::scaredy_nix<cat::byte*>) == sizeof(cat::byte*));
+   nix::scaredy_nix<cat::byte*> pointer_result = nix::linux_error::keyrejected;
    cat::verify(pointer_result.is_empty());
    cat::verify(pointer_result.error() == nix::linux_error::keyrejected);
 }
@@ -763,12 +760,11 @@ $test(syscall_mremap) {
    // Grow to four pages, allowing the kernel to relocate the mapping. The
    // contents move with it, so the sentinel survives at the (possibly new)
    // address.
-   cat::byte* p_grown =
-      nix::sys_mremap(
-         p_old, 2 * cat::page_size, 4 * cat::page_size,
-         nix::mremap_flags::may_move
-      )
-         .verify();
+   cat::byte* p_grown = nix::sys_mremap(
+                           p_old, 2 * cat::page_size, 4 * cat::page_size,
+                           nix::mremap_flags::may_move
+   )
+                           .verify();
    cat::verify(p_grown != nullptr);
    cat::verify(p_grown[0] == 42u);
 

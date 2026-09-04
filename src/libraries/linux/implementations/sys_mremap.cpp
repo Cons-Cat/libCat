@@ -7,9 +7,9 @@ auto
 nix::sys_mremap(
    void* _Nonnull p_old_address, cat::idx old_size, cat::idx new_size,
    mremap_flags flags
-) -> nix::scaredy_nix<void*> {
+) -> nix::scaredy_nix<cat::byte*> {
    // https://filippo.io/linux-syscall-table/
-   nix::scaredy_nix<void*> result = nix::syscall_volatile<void*>(
+   nix::scaredy_nix<cat::byte*> result = nix::syscall_volatile<cat::byte*>(
       25, p_old_address, old_size, new_size, flags
    );
    if (result.has_value()) {

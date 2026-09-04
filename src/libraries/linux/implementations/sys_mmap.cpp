@@ -8,9 +8,9 @@ nix::sys_mmap(
    void* _Nullable p_start_address, cat::uword bytes_size,
    memory_protection_flags protections, memory_flags flags,
    file_descriptor file_descriptor, cat::uword page_offset
-) -> nix::scaredy_nix<void*> {
+) -> nix::scaredy_nix<cat::byte*> {
    // https://filippo.io/linux-syscall-table/
-   nix::scaredy_nix<void*> result = nix::syscall_volatile<void*>(
+   nix::scaredy_nix<cat::byte*> result = nix::syscall_volatile<cat::byte*>(
       9, p_start_address, bytes_size, protections, flags, file_descriptor,
       page_offset * cat::page_size
    );

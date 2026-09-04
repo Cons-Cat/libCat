@@ -40,6 +40,7 @@ init_syscall_probes() {
 
    // For most syscalls, we assume it is available if the kernel version is
    // at least their minimum required version.
+   // TODO: Can we generalize a data type for versions?
    nix::detail::has_sys_cachestat_cache =
       version >= nix::kernel_version{.major = 6, .minor = 5};
    nix::detail::has_sys_fchmodat2_cache =
@@ -63,7 +64,7 @@ init_syscall_probes() {
    // We make a trivial `io_uring_setup` syscall, and if it succeeds, this
    // feature is available.
    nix::io_uring_params params{};
-   auto result = nix::syscall<nix::file_descriptor>(425, 0u, &params);
+   cat::scaredy result = nix::syscall<nix::file_descriptor>(425, 1u, &params);
    if (result.has_value()) {
       auto _ = nix::sys_close(result.value());
       nix::detail::has_sys_io_uring_cache = true;

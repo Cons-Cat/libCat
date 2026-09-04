@@ -1168,7 +1168,7 @@ sys_mmap(
    void* _Nullable p_start_address, cat::uword bytes_size,
    memory_protection_flags protections, memory_flags flags,
    file_descriptor file_descriptor, cat::uword page_offset
-) -> scaredy_nix<void* _Nullable>;
+) -> scaredy_nix<cat::byte* _Nullable>;
 
 // Syscall 10. Change the protection of the page-aligned range
 // [`p_address`, `p_address + length`).
@@ -1423,7 +1423,7 @@ auto
 sys_mremap(
    void* _Nonnull p_old_address, cat::idx old_size, cat::idx new_size,
    mremap_flags flags
-) -> scaredy_nix<void*>;
+) -> scaredy_nix<cat::byte*>;
 
 // Syscall 32. Duplicate a file descriptor onto the lowest available number.
 auto

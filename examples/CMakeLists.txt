@@ -94,29 +94,12 @@ if(CAT_BUILD_EXAMPLE_CAT OR CAT_BUILD_ALL_EXAMPLES)
   set_target_properties(unixcat PROPERTIES OUTPUT_NAME cat)
 endif()
 
-option(CAT_BUILD_EXAMPLE_BENCH_FIND "Compile bench_find_libcat.cpp." OFF)
-if(CAT_BUILD_EXAMPLE_BENCH_FIND OR CAT_BUILD_ALL_EXAMPLES)
-  add_executable(bench_find_libcat ../benchmarks/find_substr/libcat.cpp)
-  target_compile_definitions(bench_find_libcat PRIVATE
-    NO_ARGC_ARGV
-    CAT_NO_STATIC_CONSTRUCTORS
-    CAT_THREAD_LOCAL_SIZE=0)
-  set_property(SOURCE
-    ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
-    PROPERTY SKIP_PRECOMPILE_HEADERS ON)
-  target_link_libraries(bench_find_libcat PRIVATE cat-examples)
-  if(CAT_PCH)
-    target_precompile_headers(bench_find_libcat REUSE_FROM cat-impl)
-  endif()
-endif()
-
 # A dummy project is required to guarantee that the directories are generated.
 # The directories must be generated for symlinking `.gdbinit` to succeed.
 # This can be skipped if one or more other examples are built.
 if(
   NOT (CAT_BUILD_ALL_EXAMPLES
   OR CAT_BUILD_LIBC_EXAMPLES
-  OR CAT_BUILD_EXAMPLE_BENCH_FIND
   OR CAT_BUILD_EXAMPLE_CAT
   OR CAT_BUILD_EXAMPLE_CLIENT_SERVER
   OR CAT_BUILD_EXAMPLE_ECHO
