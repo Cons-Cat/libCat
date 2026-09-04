@@ -238,6 +238,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_getrandom.cpp
   ${CATLIB}/linux/implementations/sys_mlock2.cpp
   ${CATLIB}/linux/implementations/sys_statx.cpp
+  ${CATLIB}/linux/implementations/io_uring.cpp
   ${CATLIB}/linux/implementations/sys_io_uring_setup.cpp
   ${CATLIB}/linux/implementations/sys_io_uring_enter.cpp
   ${CATLIB}/linux/implementations/sys_io_uring_register.cpp
@@ -362,6 +363,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/stepanov/cat/stepanov
   ${CATLIB}/stepanov/cat/insert_iterators
   ${CATLIB}/limits/cat/limits
+  ${CATLIB}/linux/cat/io_uring
   ${CATLIB}/linux/cat/linux
   ${CATLIB}/linux/cat/raii_process
   ${CATLIB}/linux/cat/detail/io_uring.hpp

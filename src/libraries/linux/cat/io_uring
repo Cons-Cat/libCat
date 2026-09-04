@@ -1,0 +1,390 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `nix::io_uring` is a lightweight RAII interface to a Linux `io_uring`
+// instance. It uses a single submission and completion queue ring allocation
+// rather than splitting it into two allocations like many implementations.
+//
+// Queue references and SQE/CQE pointers borrow storage from their `io_uring`.
+// They must not outlive the owner or be retained across its move, swap, or
+// close. An SQE must not be used after submission, and a CQE must not be used
+// after the completion queue advances past it. Queue cursor access is not
+// internally synchronized, so access to each queue must be serialized, and
+// move, swap, close, and destruction must not race with access to either queue.
+//
+// TODO: We should support an alternative `no_mmap` implementation.
+
+#include <cat/linux>
+
+namespace nix {
+
+class io_uring;
+
+class io_uring_submission_queue {
+ public:
+   // Construct an unbound queue view. An owning ring binds it before access.
+   io_uring_submission_queue() = default;
+
+   // Reserve and zero the next configured SQE slot. Returns `nullptr` when the
+   // ring is full. Fill the mapped entry before `.flush()` publishes its slot.
+   [[nodiscard]]
+   auto
+   get_sqe() [[clang::lifetimebound]] -> io_uring_sqe* _Nullable {
+      cat::uint4 const head =
+         cat::atomic<cat::uint4&>(*m_p_head).load(cat::memory_order::acquire);
+      if (m_sqe_tail.wrap() - head >= m_ring_entries) {
+         return nullptr;
+      }
+
+      cat::idx const index = m_sqe_tail & m_ring_mask;
+      auto* p_sqe = __builtin_bit_cast(
+         io_uring_sqe* _Nonnull, m_p_sqes + index * m_sqe_stride
+      );
+      __builtin_memset(p_sqe, 0, m_sqe_stride);
+      m_sqe_tail = m_sqe_tail.wrap() + 1u;
+      return p_sqe;
+   }
+
+   // Reserve and zero one 128-byte SQE. Returns `nullptr` when this format is
+   // unsupported or lacks space. Mixed mode may also reserve a padding slot.
+   [[nodiscard]]
+   auto
+   get_sqe_128() [[clang::lifetimebound]] -> io_uring_sqe* _Nullable {
+      if (
+         m_sqe_stride == sizeof(io_uring_sqe) * 2u
+         && (m_setup_flags & io_uring_setup_flags::sqe_128)
+               != io_uring_setup_flags::none
+      ) {
+         return get_sqe();
+      }
+      if (
+         (m_setup_flags & io_uring_setup_flags::sqe_mixed)
+         == io_uring_setup_flags::none
+      ) {
+         return nullptr;
+      }
+
+      cat::uint4 const head =
+         cat::atomic<cat::uint4&>(*m_p_head).load(cat::memory_order::acquire);
+      cat::uint4 const index = m_sqe_tail & m_ring_mask;
+      if (index == m_ring_mask) {
+         if (m_sqe_tail.wrap() + 2u - head >= m_ring_entries) {
+            return nullptr;
+         }
+
+         io_uring_sqe* p_padding = get_sqe();
+         p_padding->opcode = io_uring_opcode::nop;
+         p_padding->flags = io_uring_sqe_flags::cqe_skip_success;
+      } else if (m_sqe_tail.wrap() + 1u - head >= m_ring_entries) {
+         return nullptr;
+      }
+
+      cat::idx const large_index = m_sqe_tail & m_ring_mask;
+      auto* p_sqe = __builtin_bit_cast(
+         io_uring_sqe* _Nonnull, m_p_sqes + large_index * sizeof(io_uring_sqe)
+      );
+      __builtin_memset(p_sqe, 0, sizeof(io_uring_sqe) * 2u);
+      m_sqe_tail = m_sqe_tail.wrap() + 2u;
+      return p_sqe;
+   }
+
+   // Return the number of SQ ring slots reserved locally since the last flush.
+   // A mixed 128-byte SQE and its padding may account for multiple slots.
+   [[nodiscard]]
+   auto
+   ready_count() const -> cat::uint4 {
+      return m_sqe_tail.wrap() - m_sqe_head;
+   }
+
+   // Return reservable SQ ring slots using an acquired kernel head and the
+   // local reservation tail.
+   [[nodiscard]]
+   auto
+   space_left() const -> cat::uint4 {
+      cat::uint4 const head =
+         cat::atomic<cat::uint4&>(*m_p_head).load(cat::memory_order::acquire);
+      return m_ring_entries.wrap() - (m_sqe_tail.wrap() - head);
+   }
+
+   // Publish all locally reserved SQ slots with release ordering and return
+   // their count. Publication follows the setup mode and does not enter Linux.
+   [[nodiscard]]
+   auto
+   flush() -> cat::uint4 {
+      cat::uint4 const submitted = ready_count();
+      if (submitted == 0u) {
+         return 0u;
+      }
+
+      if (
+         (m_setup_flags & io_uring_setup_flags::sq_rewind)
+         != io_uring_setup_flags::none
+      ) {
+         __atomic_thread_fence(cat::memory_order::release);
+         m_sqe_head = 0u;
+         m_sqe_tail = 0u;
+         return submitted;
+      }
+
+      if (m_p_array != nullptr) {
+         for (cat::uint4 tail = m_sqe_head; tail != m_sqe_tail;
+              tail = tail.wrap() + 1u) {
+            cat::uint4 const index = tail & m_ring_mask;
+            m_p_array[index.raw] = index;
+         }
+      }
+
+      cat::atomic<cat::uint4&>(*m_p_tail).store(
+         m_sqe_tail, cat::memory_order::release
+      );
+      m_sqe_head = m_sqe_tail;
+      return submitted;
+   }
+
+   // Report whether the kernel currently requests an SQ polling thread wakeup.
+   [[nodiscard]]
+   auto
+   needs_wakeup() const -> bool {
+      cat::uint4 const flags =
+         cat::atomic<cat::uint4&>(*m_p_flags).load(cat::memory_order::relaxed);
+      return (flags & cat::to_underlying(io_uring_sq_flags::need_wakeup)) != 0u;
+   }
+
+   // Return a snapshot of the kernel-maintained dropped submission count.
+   [[nodiscard]]
+   auto
+   dropped_count() const -> cat::uint4 {
+      return cat::atomic<cat::uint4&>(*m_p_dropped)
+         .load(cat::memory_order::relaxed);
+   }
+
+ private:
+   friend class io_uring;
+
+   cat::uint4* _Nullable m_p_head = nullptr;
+   cat::uint4* _Nullable m_p_tail = nullptr;
+   cat::uint4* _Nullable m_p_flags = nullptr;
+   cat::uint4* _Nullable m_p_dropped = nullptr;
+   cat::uint4* _Nullable m_p_array = nullptr;
+   cat::byte* _Nullable m_p_sqes = nullptr;
+   cat::idx m_sqe_stride = 0u;
+   cat::uint4 m_ring_mask = 0u;
+   cat::uint4 m_ring_entries = 0u;
+   cat::uint4 m_sqe_head = 0u;
+   cat::uint4 m_sqe_tail = 0u;
+   io_uring_setup_flags m_setup_flags = io_uring_setup_flags::none;
+};
+
+class io_uring_completion_queue {
+ public:
+   // Construct an unbound queue view. An owning ring binds it before access.
+   io_uring_completion_queue() = default;
+
+   // Return the current CQE or `nullptr` when no user CQE is ready. Mixed-mode
+   // skip entries are released while searching. The pointer is current until
+   // `.advance()` or invalidation of the owning ring.
+   [[nodiscard]]
+   auto
+   peek() [[clang::lifetimebound]] -> io_uring_cqe const* _Nullable {
+      for (;;) {
+         cat::uint4 const tail = cat::atomic<cat::uint4&>(*m_p_tail).load(
+            cat::memory_order::acquire
+         );
+         if (m_cqe_head == tail) {
+            return nullptr;
+         }
+
+         io_uring_cqe const* p_cqe = current();
+         if (
+            (m_setup_flags & io_uring_setup_flags::cqe_mixed)
+               == io_uring_setup_flags::none
+            || (p_cqe->flags & io_uring_cqe_flags::skip)
+                  == io_uring_cqe_flags::none
+         ) {
+            return p_cqe;
+         }
+         advance();
+      }
+   }
+
+   // Release the current CQE to the kernel with a release store. This requires
+   // a prior `.peek()` result that was not `nullptr`. A mixed extended CQE
+   // releases two ring slots.
+   void
+   advance() {
+      io_uring_cqe const* p_cqe = current();
+      cat::uint4 step = 1u;
+      if (
+         (m_setup_flags & io_uring_setup_flags::cqe_mixed)
+            != io_uring_setup_flags::none
+         && (p_cqe->flags & io_uring_cqe_flags::extended_32)
+               != io_uring_cqe_flags::none
+      ) {
+         step = 2u;
+      }
+      m_cqe_head = m_cqe_head.wrap() + step;
+      cat::atomic<cat::uint4&>(*m_p_head).store(
+         m_cqe_head, cat::memory_order::release
+      );
+   }
+
+   // Return CQ ring slots between the local head and acquired kernel tail.
+   // Mixed extended and skipped entries mean this is not a user CQE count.
+   [[nodiscard]]
+   auto
+   ready_count() const -> cat::uint4 {
+      cat::uint4 const tail =
+         cat::atomic<cat::uint4&>(*m_p_tail).load(cat::memory_order::acquire);
+      return tail.wrap() - m_cqe_head;
+   }
+
+   // Return a snapshot of the kernel-maintained completion overflow count.
+   [[nodiscard]]
+   auto
+   overflow() const -> cat::uint4 {
+      return cat::atomic<cat::uint4&>(*m_p_overflow)
+         .load(cat::memory_order::relaxed);
+   }
+
+ private:
+   friend class io_uring;
+
+   [[nodiscard]]
+   auto
+   current() const -> io_uring_cqe const* _Nonnull {
+      cat::idx const index = m_cqe_head & m_ring_mask;
+      return __builtin_bit_cast(
+         io_uring_cqe const* _Nonnull, m_p_cqes + index * m_cqe_stride
+      );
+   }
+
+   cat::uint4* _Nullable m_p_head = nullptr;
+   cat::uint4* _Nullable m_p_tail = nullptr;
+   cat::uint4* _Nullable m_p_overflow = nullptr;
+   cat::byte* _Nullable m_p_cqes = nullptr;
+   cat::idx m_cqe_stride = 0u;
+   cat::uint4 m_ring_mask = 0u;
+   cat::uint4 m_cqe_head = 0u;
+   io_uring_setup_flags m_setup_flags = io_uring_setup_flags::none;
+};
+
+class [[gsl::Owner]] io_uring {
+ public:
+   // Transfer the complete ring into this owner and leave `other` empty.
+   io_uring(io_uring&& other);
+
+   // Ring ownership cannot be copied.
+   io_uring(io_uring const&) = delete;
+
+   // Release mappings and the descriptor. Cleanup errors are discarded and
+   // outstanding operations are not submitted, drained, or cancelled.
+   ~io_uring();
+
+   // Ring ownership cannot be copied.
+   auto
+   operator=(io_uring const&) -> io_uring& = delete;
+
+   // Release any currently owned ring, transfer `other`, and leave it empty.
+   // Self-assignment leaves the ring unchanged.
+   [[clang::reinitializes]]
+   auto
+   operator=(io_uring&& other) -> io_uring&;
+
+   // Return the mutable non-owning SQ view. The reference remains valid only
+   // while this owner retains the same initialized ring state.
+   [[nodiscard]]
+   auto
+   submission_queue() [[clang::lifetimebound]] -> io_uring_submission_queue& {
+      return m_submission_queue;
+   }
+
+   // Return the mutable non-owning CQ view. The reference remains valid only
+   // while this owner retains the same initialized ring state.
+   [[nodiscard]]
+   auto
+   completion_queue() [[clang::lifetimebound]] -> io_uring_completion_queue& {
+      return m_completion_queue;
+   }
+
+   // Return the kernel-filled setup parameters. They reset on close. The
+   // reference requires unchanged ring state.
+   [[nodiscard]]
+   auto
+   params() const [[clang::lifetimebound]] -> io_uring_params const& {
+      return m_params;
+   }
+
+   // Return the owned descriptor value without transferring it. An empty owner
+   // returns `invalid_file_descriptor`.
+   [[nodiscard]]
+   auto
+   descriptor() const -> file_descriptor {
+      return m_file_descriptor;
+   }
+
+   // Enter Linux with the supplied counts and flags without flushing local SQ
+   // reservations. Returns the kernel-reported submitted count or an error.
+   [[nodiscard]]
+   auto
+   enter(
+      cat::uint4 to_submit, cat::uint4 minimum_complete,
+      io_uring_enter_flags flags = io_uring_enter_flags::none
+   ) -> scaredy_nix<cat::idx>;
+
+   // Flush pending SQ slots without adding a completion request. Returns the
+   // submitted count, or the published slot count when SQ polling avoids the
+   // system call.
+   [[nodiscard]]
+   auto
+   submit(io_uring_enter_flags flags = io_uring_enter_flags::none)
+      -> scaredy_nix<cat::idx>;
+
+   // Flush pending SQ slots and request at least `minimum_complete`
+   // completions. Returns the submitted count, or the published slot count
+   // when SQ polling avoids the system call.
+   [[nodiscard]]
+   auto
+   submit_and_wait(
+      cat::uint4 minimum_complete,
+      io_uring_enter_flags flags = io_uring_enter_flags::none
+   ) -> scaredy_nix<cat::idx>;
+
+   // Attempt every unmap and close, returning the first cleanup error. The
+   // owner becomes empty even on error. Queue references must not be retained.
+   [[nodiscard]]
+   auto
+   close() -> scaredy_nix<void>;
+
+   // Exchange complete ring ownership and queue state. Existing queue
+   // references and mapped entry pointers must not be retained.
+   void
+   swap(io_uring& other);
+
+ private:
+   friend auto
+   make_io_uring(cat::uint4 entries, io_uring_params params)
+      -> cat::scaredy<io_uring, linux_error>;
+
+   io_uring() = default;
+
+   [[nodiscard, clang::reinitializes]]
+   auto
+   setup(cat::uint4 entries, io_uring_params params) -> scaredy_nix<void>;
+
+   file_descriptor m_file_descriptor = invalid_file_descriptor;
+   io_uring_params m_params{};
+   io_uring_submission_queue m_submission_queue;
+   io_uring_completion_queue m_completion_queue;
+   cat::span<cat::byte> m_ring_mapping = nullptr;
+   cat::span<cat::byte> m_sqe_mapping = nullptr;
+};
+
+// Create and map an owning ring using `entries` and the supplied parameters.
+// Failure releases every resource acquired during initialization.
+[[nodiscard]]
+auto
+make_io_uring(cat::uint4 entries, io_uring_params params = {})
+   -> cat::scaredy<io_uring, linux_error>;
+
+}  // namespace nix

@@ -72,6 +72,14 @@ $test(scaredy_nix_file_descriptor) {
    nix::scaredy_nix<cat::idx> wide_result = nix::linux_error::keyrejected;
    cat::verify(wide_result.is_empty());
    cat::verify(wide_result.error() == nix::linux_error::keyrejected);
+
+   static_assert(
+      sizeof(nix::scaredy_nix<cat::byte*>) == sizeof(cat::byte*)
+   );
+   nix::scaredy_nix<cat::byte*> pointer_result =
+      nix::linux_error::keyrejected;
+   cat::verify(pointer_result.is_empty());
+   cat::verify(pointer_result.error() == nix::linux_error::keyrejected);
 }
 
 // Identity / process info.
@@ -600,7 +608,7 @@ $test(syscall_fs_at_variants) {
 
 $test(syscall_memory) {
    constexpr cat::uword bytes = cat::page_size;
-   void* p_mapping =
+   cat::byte* p_mapping =
       nix::sys_mmap(
          nullptr, bytes, nix::memory_protection_flags::read_write,
          nix::memory_flags::privately | nix::memory_flags::anonymous,
@@ -609,7 +617,7 @@ $test(syscall_memory) {
          .verify();
    cat::verify(p_mapping != nullptr);
    // Touch the page to confirm it's mapped.
-   *static_cast<unsigned char*>(p_mapping) = 42u;
+   *p_mapping = cat::byte(42u);
 
    nix::sys_mprotect(p_mapping, bytes, nix::memory_protection_flags::read)
       .verify();
@@ -645,7 +653,7 @@ $test(syscall_memory) {
    // modified or unmapped, so probe it on a throwaway mapping rather than
    // `p_mapping`.
    if (nix::has_sys_mseal()) {
-      void* p_sealed =
+      cat::byte* p_sealed =
          nix::sys_mmap(
             nullptr, bytes, nix::memory_protection_flags::read_write,
             nix::memory_flags::privately | nix::memory_flags::anonymous,
@@ -701,7 +709,7 @@ $test(syscall_read_self_statm) {
    // call after a fresh mapping should report at least as much total VM.
    cat::idx const before = statm.total_pages;
    constexpr cat::uword bytes = 64u * cat::page_size;
-   void* p_mapping =
+   cat::byte* p_mapping =
       nix::sys_mmap(
          nullptr, bytes, nix::memory_protection_flags::read_write,
          nix::memory_flags::privately | nix::memory_flags::anonymous,
@@ -725,7 +733,7 @@ $test(syscall_read_self_anon_smaps) {
    cat::idx const mapped_before = smaps.mapped_bytes;
    cat::idx const resident_before = smaps.resident_bytes;
    constexpr cat::uword bytes = 64u * cat::page_size;
-   void* p_mapping =
+   cat::byte* p_mapping =
       nix::sys_mmap(
          nullptr, bytes, nix::memory_protection_flags::read_write,
          nix::memory_flags::privately
@@ -734,7 +742,7 @@ $test(syscall_read_self_anon_smaps) {
          nix::invalid_file_descriptor, 0
       )
          .verify();
-   static_cast<unsigned char*>(p_mapping)[0] = 42u;
+   p_mapping[0] = cat::byte(42u);
    nix::anon_smaps after = nix::read_self_anon_smaps().verify();
    cat::verify(after.mapped_bytes >= mapped_before);
    cat::verify(after.resident_bytes >= resident_before);
@@ -743,39 +751,40 @@ $test(syscall_read_self_anon_smaps) {
 
 $test(syscall_mremap) {
    // Map two pages and write a sentinel into the first.
-   void* p_old =
+   cat::byte* p_old =
       nix::sys_mmap(
          nullptr, 2 * cat::page_size, nix::memory_protection_flags::read_write,
          nix::memory_flags::privately | nix::memory_flags::anonymous,
          nix::invalid_file_descriptor, 0
       )
          .verify();
-   static_cast<unsigned char*>(p_old)[0] = 42u;
+   p_old[0] = cat::byte(42u);
 
    // Grow to four pages, allowing the kernel to relocate the mapping. The
    // contents move with it, so the sentinel survives at the (possibly new)
    // address.
-   void* p_grown = nix::sys_mremap(
-                      p_old, 2 * cat::page_size, 4 * cat::page_size,
-                      nix::mremap_flags::may_move
-   )
-                      .verify();
+   cat::byte* p_grown =
+      nix::sys_mremap(
+         p_old, 2 * cat::page_size, 4 * cat::page_size,
+         nix::mremap_flags::may_move
+      )
+         .verify();
    cat::verify(p_grown != nullptr);
-   cat::verify(static_cast<unsigned char*>(p_grown)[0] == 42u);
+   cat::verify(p_grown[0] == 42u);
 
    // Shrink in place: a shrink never needs to relocate, so even without
    // `may_move` it succeeds at the same address.
-   void* p_shrunk =
+   cat::byte* p_shrunk =
       nix::sys_mremap(
          p_grown, 4 * cat::page_size, cat::page_size, nix::mremap_flags::none
       )
          .verify();
    cat::verify(p_shrunk == p_grown);
-   cat::verify(static_cast<unsigned char*>(p_shrunk)[0] == 42u);
+   cat::verify(p_shrunk[0] == 42u);
 
    // A same-size remap without `may_move` is a no-op that returns the same
    // address.
-   void* p_same =
+   cat::byte* p_same =
       nix::sys_mremap(
          p_shrunk, cat::page_size, cat::page_size, nix::mremap_flags::none
       )
