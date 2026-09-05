@@ -504,6 +504,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/span/cat/span
   ${CATLIB}/span/implementations/span.tpp
   ${CATLIB}/string/cat/string
+  ${CATLIB}/string/cat/str_literal
   ${CATLIB}/string/cat/detail/str_flags.hpp
   ${CATLIB}/string/cat/detail/str_vec_flags.hpp
   ${CATLIB}/string/cat/detail/str_inplace.hpp

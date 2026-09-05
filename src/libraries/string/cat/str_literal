@@ -1,0 +1,406 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/detail/str_flags.hpp>
+
+#include <cat/compare>
+#include <cat/meta>
+
+namespace cat {
+
+template <typename CharT, str_flags flags>
+class basic_str_span;
+
+namespace detail {
+
+template <auto constant_value>
+struct str_literal_constant {
+   static constexpr auto value = constant_value;
+
+   constexpr
+   operator decltype(constant_value)() const {
+      return value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator()() const -> decltype(constant_value) {
+      return value;
+   }
+};
+
+}  // namespace detail
+
+template <typename CharT, __SIZE_TYPE__ fixed_size>
+class basic_str_literal;
+
+template <__SIZE_TYPE__ size>
+using str_literal = basic_str_literal<char, size>;
+
+template <__SIZE_TYPE__ size>
+using u8str_literal = basic_str_literal<char8_t, size>;
+
+template <__SIZE_TYPE__ size>
+using u16str_literal = basic_str_literal<char16_t, size>;
+
+template <__SIZE_TYPE__ size>
+using u32str_literal = basic_str_literal<char32_t, size>;
+
+template <__SIZE_TYPE__ size>
+using wstr_literal = basic_str_literal<wchar_t, size>;
+
+template <typename CharT, __SIZE_TYPE__ fixed_size>
+class
+   [[clang::preferred_name(str_literal<fixed_size>),
+     clang::preferred_name(u8str_literal<fixed_size>),
+     clang::preferred_name(u16str_literal<fixed_size>),
+     clang::preferred_name(u32str_literal<fixed_size>),
+     clang::preferred_name(wstr_literal<fixed_size>)]]
+   basic_str_literal {
+ public:
+   using value_type = CharT;
+   using pointer = CharT const*;
+   using const_pointer = CharT const*;
+   using reference = CharT const&;
+   using const_reference = CharT const&;
+   using iterator = CharT const*;
+   using const_iterator = CharT const*;
+   using size_type = __SIZE_TYPE__;
+   using difference_type = __PTRDIFF_TYPE__;
+   using view_type = basic_str_span<CharT const, str_flags{}>;
+
+   // NOLINTNEXTLINE(readability-identifier-naming)
+   CharT data_[fixed_size + 1]{};
+
+   basic_str_literal() = delete;
+
+   template <typename... Chars>
+      requires(
+         fixed_size > 0 && sizeof...(Chars) == fixed_size
+         && (__is_same(remove_cvref<Chars>, CharT) && ...)
+      )
+   constexpr explicit basic_str_literal(Chars... chars)
+       : data_{chars..., CharT{}} {
+   }
+
+   template <__SIZE_TYPE__ extent>
+      requires(extent == fixed_size + 1)
+   consteval basic_str_literal(CharT const (&text)[extent]) {
+      for (__SIZE_TYPE__ index = 0; index <= fixed_size; ++index) {
+         data_[index] = text[index];
+      }
+      [[assume(text[fixed_size] == CharT{})]];
+   }
+
+   template <typename OtherChar, __SIZE_TYPE__ extent>
+      requires(
+         extent == fixed_size + 1 && !__is_same(OtherChar, CharT)
+         && requires(OtherChar character) { static_cast<CharT>(character); }
+      )
+   consteval explicit basic_str_literal(OtherChar const (&text)[extent]) {
+      for (__SIZE_TYPE__ index = 0; index <= fixed_size; ++index) {
+         data_[index] = static_cast<CharT>(text[index]);
+      }
+      [[assume(text[fixed_size] == OtherChar{})]];
+   }
+
+   template <typename Iterator, typename Sentinel>
+      requires(
+         requires(Iterator iterator, Sentinel sentinel) {
+            *iterator;
+            ++iterator;
+            iterator != sentinel;
+         } && __is_same(remove_cvref<decltype(*declval<Iterator&>())>, CharT)
+      )
+   constexpr basic_str_literal(Iterator begin, Sentinel end) {
+      for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
+         if (begin == end) {
+            __builtin_trap();
+         }
+         data_[index] = *begin;
+         ++begin;
+      }
+      if (begin != end) {
+         __builtin_trap();
+      }
+   }
+
+   template <typename Range>
+      requires requires(Range const& range) {
+                  range.begin();
+                  range.end();
+                  range.size();
+               }
+   constexpr explicit basic_str_literal(Range const& range)
+       : basic_str_literal(range.begin(), range.end()) {
+   }
+
+   constexpr basic_str_literal(basic_str_literal const&) = default;
+   constexpr auto
+   operator=(basic_str_literal const&) -> basic_str_literal& = default;
+
+   static constexpr detail::str_literal_constant<fixed_size> size{};
+   static constexpr detail::str_literal_constant<fixed_size> length{};
+   static constexpr detail::str_literal_constant<fixed_size> max_size{};
+   static constexpr detail::str_literal_constant<fixed_size == 0> empty{};
+
+   [[nodiscard]]
+   constexpr auto
+   begin() const [[clang::lifetimebound]] -> const_iterator {
+      return data_;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end() const [[clang::lifetimebound]] -> const_iterator {
+      return data_ + fixed_size;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   cbegin() const [[clang::lifetimebound]] -> const_iterator {
+      return begin();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   cend() const [[clang::lifetimebound]] -> const_iterator {
+      return end();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](__SIZE_TYPE__ position) const [[clang::lifetimebound]]
+   -> const_reference {
+      return data_[position];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   at(__SIZE_TYPE__ position) const [[clang::lifetimebound]]
+   -> const_reference {
+      if (position >= fixed_size) {
+         __builtin_trap();
+      }
+      return data_[position];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   front() const [[clang::lifetimebound]] -> const_reference
+      requires(fixed_size > 0)
+   {
+      return data_[0];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   back() const [[clang::lifetimebound]] -> const_reference
+      requires(fixed_size > 0)
+   {
+      return data_[fixed_size - 1];
+   }
+
+   constexpr void
+   swap(basic_str_literal& other) {
+      for (__SIZE_TYPE__ index = 0; index <= fixed_size; ++index) {
+         CharT temporary = data_[index];
+         data_[index] = other.data_[index];
+         other.data_[index] = temporary;
+      }
+   }
+
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   c_str() const [[clang::lifetimebound]] -> const_pointer {
+      return data_;
+   }
+
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   data() const [[clang::lifetimebound]] -> const_pointer {
+      return data_;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   view() const [[clang::lifetimebound]] -> view_type;
+
+   [[nodiscard]]
+   constexpr
+   operator view_type() const [[clang::lifetimebound]];
+
+   [[nodiscard]]
+   static constexpr auto
+   is_null_terminated() -> bool {
+      return true;
+   }
+
+   template <typename Predicate>
+   [[nodiscard]]
+   constexpr auto
+   filter(Predicate&& predicate) const;
+
+   template <__SIZE_TYPE__ other_size>
+   [[nodiscard]]
+   friend constexpr auto
+   operator+(
+      basic_str_literal const& left,
+      basic_str_literal<CharT, other_size> const& right
+   ) -> basic_str_literal<CharT, fixed_size + other_size> {
+      CharT joined[fixed_size + other_size + 1]{};
+      for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
+         joined[index] = left[index];
+      }
+      for (__SIZE_TYPE__ index = 0; index < other_size; ++index) {
+         joined[fixed_size + index] = right[index];
+      }
+      return joined;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator+(basic_str_literal const& left, CharT right)
+      -> basic_str_literal<CharT, fixed_size + 1> {
+      CharT joined[fixed_size + 2]{};
+      for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
+         joined[index] = left[index];
+      }
+      joined[fixed_size] = right;
+      return joined;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator+(CharT left, basic_str_literal const& right)
+      -> basic_str_literal<CharT, fixed_size + 1> {
+      CharT joined[fixed_size + 2]{left};
+      for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
+         joined[index + 1] = right[index];
+      }
+      return joined;
+   }
+
+   template <__SIZE_TYPE__ extent>
+   [[nodiscard]]
+   consteval friend auto
+   operator+(basic_str_literal const& left, CharT const (&right)[extent])
+      -> basic_str_literal<CharT, fixed_size + extent - 1> {
+      [[assume(right[extent - 1] == CharT{})]];
+      CharT joined[fixed_size + extent]{};
+      for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
+         joined[index] = left[index];
+      }
+      for (__SIZE_TYPE__ index = 0; index < extent - 1; ++index) {
+         joined[fixed_size + index] = right[index];
+      }
+      return joined;
+   }
+
+   template <__SIZE_TYPE__ extent>
+   [[nodiscard]]
+   consteval friend auto
+   operator+(CharT const (&left)[extent], basic_str_literal const& right)
+      -> basic_str_literal<CharT, extent - 1 + fixed_size> {
+      [[assume(left[extent - 1] == CharT{})]];
+      CharT joined[extent + fixed_size]{};
+      for (__SIZE_TYPE__ index = 0; index < extent - 1; ++index) {
+         joined[index] = left[index];
+      }
+      for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
+         joined[extent - 1 + index] = right[index];
+      }
+      return joined;
+   }
+
+   template <__SIZE_TYPE__ other_size>
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(
+      basic_str_literal const& left,
+      basic_str_literal<CharT, other_size> const& right
+   ) -> bool {
+      if constexpr (fixed_size != other_size) {
+         return false;
+      } else {
+         for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
+            if (left[index] != right[index]) {
+               return false;
+            }
+         }
+         return true;
+      }
+   }
+
+   template <__SIZE_TYPE__ other_size>
+   [[nodiscard]]
+   friend constexpr auto
+   operator<=>(
+      basic_str_literal const& left,
+      basic_str_literal<CharT, other_size> const& right
+   ) -> strong_ordering {
+      constexpr __SIZE_TYPE__ common_size =
+         fixed_size < other_size ? fixed_size : other_size;
+      for (__SIZE_TYPE__ index = 0; index < common_size; ++index) {
+         if (left[index] < right[index]) {
+            return strong_ordering::less;
+         }
+         if (left[index] > right[index]) {
+            return strong_ordering::greater;
+         }
+      }
+      if constexpr (fixed_size < other_size) {
+         return strong_ordering::less;
+      } else if constexpr (fixed_size > other_size) {
+         return strong_ordering::greater;
+      } else {
+         return strong_ordering::equal;
+      }
+   }
+
+   template <__SIZE_TYPE__ extent>
+   [[nodiscard]]
+   consteval friend auto
+   operator<=>(basic_str_literal const& left, CharT const (&right)[extent])
+      -> strong_ordering {
+      [[assume(right[extent - 1] == CharT{})]];
+      constexpr __SIZE_TYPE__ right_size = extent - 1;
+      constexpr __SIZE_TYPE__ common_size =
+         fixed_size < right_size ? fixed_size : right_size;
+      for (__SIZE_TYPE__ index = 0; index < common_size; ++index) {
+         if (left[index] < right[index]) {
+            return strong_ordering::less;
+         }
+         if (left[index] > right[index]) {
+            return strong_ordering::greater;
+         }
+      }
+      if constexpr (fixed_size < right_size) {
+         return strong_ordering::less;
+      } else if constexpr (fixed_size > right_size) {
+         return strong_ordering::greater;
+      } else {
+         return strong_ordering::equal;
+      }
+   }
+};
+
+template <typename CharT, __SIZE_TYPE__ size>
+constexpr void
+swap(
+   basic_str_literal<CharT, size>& left, basic_str_literal<CharT, size>& right
+) {
+   left.swap(right);
+}
+
+template <typename CharT, typename... Rest>
+   requires((__is_same(remove_cvref<Rest>, remove_cvref<CharT>) && ...))
+basic_str_literal(CharT, Rest...)
+   -> basic_str_literal<remove_cvref<CharT>, sizeof...(Rest) + 1>;
+
+template <typename CharT, __SIZE_TYPE__ extent>
+basic_str_literal(CharT const (&)[extent])
+   -> basic_str_literal<CharT, extent - 1>;
+
+}  // namespace cat
