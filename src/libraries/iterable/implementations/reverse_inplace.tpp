@@ -46,8 +46,6 @@ template <typename Simd, typename Element>
 constexpr void
 reverse_inplace_simd_impl(Element* _Nonnull p_data, idx size) {
    constexpr idx lanes = Simd::abi_type::lanes;
-   using memory_lane = Simd::memory_lane;
-   memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
    idx left = 0u;
    iword right = size;
 
@@ -55,10 +53,10 @@ reverse_inplace_simd_impl(Element* _Nonnull p_data, idx size) {
       right -= lanes;
       Simd left_values;
       Simd right_values;
-      left_values.load(p_lanes + left);
-      right_values.load(p_lanes + right);
-      simd_reverse(right_values).store(p_lanes + left);
-      simd_reverse(left_values).store(p_lanes + right);
+      left_values.load(p_data + left);
+      right_values.load(p_data + right);
+      simd_reverse(right_values).store(p_data + left);
+      simd_reverse(left_values).store(p_data + right);
       left += lanes;
    }
 

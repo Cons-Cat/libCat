@@ -292,6 +292,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/cat/huge_page_allocator
   ${CATLIB}/allocator/cat/page_allocator
   ${CATLIB}/allocator/cat/pool_allocator
+  ${CATLIB}/arithmetic/cat/quantity
   ${CATLIB}/arithmetic/cat/arithmetic
   ${CATLIB}/arithmetic/cat/overflow_reference.hpp
   ${CATLIB}/arithmetic/cat/precision_reference.hpp

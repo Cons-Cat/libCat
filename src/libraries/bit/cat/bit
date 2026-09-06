@@ -450,164 +450,177 @@ bit_expand(T value, T mask) -> T {
    return ::x64::deposit_bits_mask(value, mask);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::countl_zero() const -> uint1
+basic_int<T, overflow_policy, quantity>::countl_zero() const -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::countl_zero(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::countl_one() const -> uint1
+basic_int<T, overflow_policy, quantity>::countl_one() const -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::countl_one(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::countr_zero() const -> uint1
+basic_int<T, overflow_policy, quantity>::countr_zero() const -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::countr_zero(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::countr_one() const -> uint1
+basic_int<T, overflow_policy, quantity>::countr_one() const -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::countr_one(*this);
 }
 
 // Count set bits in an unsigned basic integer.
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::popcount() const -> uint1
+basic_int<T, overflow_policy, quantity>::popcount() const -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::popcount(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::has_single_bit() const -> bool
+basic_int<T, overflow_policy, quantity>::has_single_bit() const -> bool
    requires(is_unsigned_integral<T>)
 {
    return cat::has_single_bit(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::bit_floor() const -> basic_int
+basic_int<T, overflow_policy, quantity>::bit_floor() const
+   -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_floor(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::bit_ceil() const -> basic_int
+basic_int<T, overflow_policy, quantity>::bit_ceil() const
+   -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_ceil(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::bit_width() const -> uint1
+basic_int<T, overflow_policy, quantity>::bit_width() const -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_width(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::byteswap() const -> basic_int
+basic_int<T, overflow_policy, quantity>::byteswap() const
+   -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::byteswap(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::shift_left(uword count) const -> basic_int
+basic_int<T, overflow_policy, quantity>::shift_left(uword count) const
+   -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::shift_left(*this, count);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::shift_right(uword count) const -> basic_int
+basic_int<T, overflow_policy, quantity>::shift_right(uword count) const
+   -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::shift_right(*this, count);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::rotate_left(uword count) const -> basic_int
+basic_int<T, overflow_policy, quantity>::rotate_left(uword count) const
+   -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::rotate_left(*this, count);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::rotate_right(uword count) const -> basic_int
+basic_int<T, overflow_policy, quantity>::rotate_right(uword count) const
+   -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::rotate_right(*this, count);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::bit_reverse() const -> basic_int
+basic_int<T, overflow_policy, quantity>::bit_reverse() const
+   -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_reverse(*this);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::bit_repeat(idx pattern_bits) const -> basic_int
+basic_int<T, overflow_policy, quantity>::bit_repeat(idx pattern_bits) const
+   -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_repeat(*this, pattern_bits);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::bit_compress(basic_int mask) const -> basic_int
+basic_int<T, overflow_policy, quantity>::bit_compress(
+   basic_int<T, overflow_policy, quantity> mask
+) const -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_compress(*this, mask);
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy>::bit_expand(basic_int mask) const -> basic_int
+basic_int<T, overflow_policy, quantity>::bit_expand(
+   basic_int<T, overflow_policy, quantity> mask
+) const -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_expand(*this, mask);
@@ -1849,8 +1862,10 @@ template <cat::is_enum_flag T>
 [[nodiscard]]
 constexpr auto
 operator|(T flag_1, T flag_2) -> T {
-   using U = cat::underlying_type<T>;
-   return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
+   using underlying = cat::underlying_type<T>;
+   return static_cast<T>(
+      static_cast<underlying>(flag_1) | static_cast<underlying>(flag_2)
+   );
 }
 
 template <cat::is_enum_flag T>
@@ -1866,8 +1881,10 @@ template <cat::is_enum_flag T>
 [[nodiscard]]
 constexpr auto
 operator&(T flag_1, T flag_2) -> T {
-   using U = cat::underlying_type<T>;
-   return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
+   using underlying = cat::underlying_type<T>;
+   return static_cast<T>(
+      static_cast<underlying>(flag_1) & static_cast<underlying>(flag_2)
+   );
 }
 
 template <cat::is_enum_flag T>

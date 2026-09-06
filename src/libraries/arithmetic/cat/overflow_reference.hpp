@@ -31,6 +31,7 @@ class overflow_reference
    }
 
    using raw_type = remove_cvref<WrappedQual>::raw_type;
+   using quantity_type = arithmetic_quantity<WrappedQual>;
 
    // Rebind this reference wrapper to a different address.
    constexpr void
@@ -43,6 +44,13 @@ class overflow_reference
    friend struct formatter;
 
    using wrapper_type = remove_cvref<WrappedQual>;
+   static constexpr auto quantity_reference = [] {
+      if constexpr (requires { wrapper_type::quantity_reference; }) {
+         return wrapper_type::quantity_reference;
+      } else {
+         return si::one;
+      }
+   }();
 
    static constexpr overflow_policies policy = overflow_policy;
    static constexpr bool supports_unsigned_bit_members =
@@ -62,7 +70,9 @@ class overflow_reference
       } else if constexpr (is_idx<wrapper_type>) {
          return basic_idx<overflow_policy>(m_wrapped->raw);
       } else {
-         return basic_int<raw_type, overflow_policy>(m_wrapped->raw);
+         return basic_int<raw_type, overflow_policy, quantity_reference>(
+            m_wrapped->raw
+         );
       }
    }
 
@@ -77,7 +87,8 @@ class overflow_reference
       } else if constexpr (is_idx<wrapper_type>) {
          return basic_idx<overflow_policies::undefined>(m_wrapped->raw);
       } else {
-         return basic_int<raw_type, overflow_policies::undefined>(
+         return basic_int<
+            raw_type, overflow_policies::undefined, quantity_reference>(
             m_wrapped->raw
          );
       }
@@ -139,7 +150,8 @@ class overflow_reference
       } else if constexpr (is_idx<wrapper_type>) {
          return basic_idx<overflow_policies::undefined>(m_wrapped->raw);
       } else {
-         return basic_int<raw_type, overflow_policies::undefined>(
+         return basic_int<
+            raw_type, overflow_policies::undefined, quantity_reference>(
             m_wrapped->raw
          );
       }
@@ -156,7 +168,10 @@ class overflow_reference
       } else if constexpr (is_idx<wrapper_type>) {
          return basic_idx<overflow_policies::wrap>(m_wrapped->raw);
       } else {
-         return basic_int<raw_type, overflow_policies::wrap>(m_wrapped->raw);
+         return basic_int<
+            raw_type, overflow_policies::wrap, quantity_reference>(
+            m_wrapped->raw
+         );
       }
    }
 
@@ -171,7 +186,8 @@ class overflow_reference
       } else if constexpr (is_idx<wrapper_type>) {
          return basic_idx<overflow_policies::saturate>(m_wrapped->raw);
       } else {
-         return basic_int<raw_type, overflow_policies::saturate>(
+         return basic_int<
+            raw_type, overflow_policies::saturate, quantity_reference>(
             m_wrapped->raw
          );
       }
@@ -540,7 +556,8 @@ class overflow_reference
       "value is out of range for implicit assignment to this "
       "arithmetic type"
    ))) {
-      *m_wrapped = basic_int<raw_type, overflow_policy>(operand);
+      *m_wrapped =
+         basic_int<raw_type, overflow_policy, quantity_reference>(operand);
       return *this;
    }
 
@@ -583,7 +600,7 @@ class overflow_reference
          && is_same<
             remove_cvref<decltype(declval<overflow_reference&>()
                                      .subtract_by(declval<U>()))>,
-            basic_int<raw_type, overflow_policy>>
+            basic_int<raw_type, overflow_policy, quantity_reference>>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -601,7 +618,7 @@ class overflow_reference
          && is_same<
             remove_cvref<decltype(declval<overflow_reference&>()
                                      .subtract_by(declval<U>()))>,
-            basic_int<raw_type, overflow_policy>>
+            basic_int<raw_type, overflow_policy, quantity_reference>>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
@@ -610,7 +627,9 @@ class overflow_reference
       "value is out of range for implicit operation on this "
       "arithmetic type"
    ))) {
-      *this = subtract_by(basic_int<raw_type, overflow_policy>(operand));
+      *this = subtract_by(
+         basic_int<raw_type, overflow_policy, quantity_reference>(operand)
+      );
       return *this;
    }
 
@@ -631,7 +650,8 @@ class overflow_reference
       "value is out of range for implicit operation on this "
       "arithmetic type"
    ))) {
-      *this = add(basic_int<raw_type, overflow_policy>(operand));
+      *this =
+         add(basic_int<raw_type, overflow_policy, quantity_reference>(operand));
       return *this;
    }
 
@@ -678,8 +698,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const
-      -> detail::promoted_type<basic_int<raw_type, overflow_policy>, U> {
+   add(U other) const {
       return view().add(other);
    }
 
@@ -694,14 +713,16 @@ class overflow_reference
          && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr basic_int<raw_type, overflow_policy>
+   friend constexpr basic_int<raw_type, overflow_policy, quantity_reference>
    operator+(overflow_reference const& self, U operand)
       __attribute__((enable_if(
          detail::raw_source_fits_implicit_storage<raw_type>(operand),
          "value is out of range for implicit operation on this "
          "arithmetic type"
       ))) {
-      return self.view().add(basic_int<raw_type, overflow_policy>(operand));
+      return self.view().add(
+         basic_int<raw_type, overflow_policy, quantity_reference>(operand)
+      );
    }
 
    template <is_arithmetic U>
@@ -711,14 +732,16 @@ class overflow_reference
          && is_signed<raw_type> != is_signed<raw_arithmetic_type<U>>
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr basic_int<raw_type, overflow_policy>
+   friend constexpr basic_int<raw_type, overflow_policy, quantity_reference>
    operator+(U operand, overflow_reference const& self)
       __attribute__((enable_if(
          detail::raw_source_fits_implicit_storage<raw_type>(operand),
          "value is out of range for implicit operation on this "
          "arithmetic type"
       ))) {
-      return self.view().add(basic_int<raw_type, overflow_policy>(operand));
+      return self.view().add(
+         basic_int<raw_type, overflow_policy, quantity_reference>(operand)
+      );
    }
 
    template <is_integral U>
@@ -760,12 +783,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> conditional<
-      (overflow_policy == overflow_policies::undefined
-       && is_signed_integral<raw_type> && is_signed_integral<U>
-       && (sizeof(raw_arithmetic_type<U>) > sizeof(raw_type))),
-      detail::promoted_type<basic_int<raw_type, overflow_policy>, U>,
-      basic_int<raw_type, overflow_policy>> {
+   subtract_by(U operand) const {
       return view().subtract_by(operand);
    }
 
@@ -809,7 +827,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const -> remove_constref<U> {
+   subtract_from(U operand) const {
       return view().subtract_from(operand);
    }
 
@@ -840,8 +858,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const
-      -> detail::promoted_type<basic_int<raw_type, overflow_policy>, U> {
+   multiply(U operand) const {
       return view().multiply(operand);
    }
 
@@ -872,7 +889,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const -> basic_int<raw_type, overflow_policy> {
+   divide_by(U operand) const {
       return view().divide_by(operand);
    }
 
@@ -948,7 +965,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U operand) const -> basic_int<raw_type, overflow_policy> {
+   modulo_by(U operand) const {
       return view().modulo_by(operand);
    }
 
@@ -1000,7 +1017,8 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U operand) const -> basic_int<raw_type, overflow_policy> {
+   bit_and(U operand) const
+      -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().bit_and(operand);
    }
 
@@ -1030,7 +1048,8 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U operand) const -> basic_int<raw_type, overflow_policy> {
+   bit_or(U operand) const
+      -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().bit_or(operand);
    }
 
@@ -1063,7 +1082,8 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> basic_int<raw_type, overflow_policy> {
+   shift_left_by(U operand) const
+      -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().shift_left_by(operand);
    }
 
@@ -1124,7 +1144,8 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> basic_int<raw_type, overflow_policy> {
+   shift_right_by(U operand) const
+      -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().shift_right_by(operand);
    }
 

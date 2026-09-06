@@ -16,6 +16,9 @@ fma(T value, U multiplier, V addend) {
 // Wrap an `fma()` intrinsic in `basic_float` precision policies. The precision
 // is determined by `value` in a left-assosciative fashion.
 template <is_floating_point T, is_arithmetic U, is_arithmetic V>
+   requires requires(T value, U multiplier, V addend) {
+               basic_float(value).fma(multiplier, addend);
+            }
 [[nodiscard]]
 constexpr auto
 fma(T value, U multiplier, V addend) {

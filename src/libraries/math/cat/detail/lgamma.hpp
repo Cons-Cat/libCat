@@ -64,6 +64,7 @@ emulated_lgamma(double argument) -> double {
 namespace cat {
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 lgamma(Float argument) -> Float {

@@ -275,6 +275,7 @@ emulated_tanh(Float argument) -> Float {
 namespace cat {
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 sin(Float argument) -> Float {
@@ -285,6 +286,7 @@ sin(Float argument) -> Float {
 }
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 cos(Float argument) -> Float {
@@ -295,6 +297,7 @@ cos(Float argument) -> Float {
 }
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 tan(Float argument) -> Float {
@@ -305,6 +308,7 @@ tan(Float argument) -> Float {
 }
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 asin(Float argument) -> Float {
@@ -315,6 +319,7 @@ asin(Float argument) -> Float {
 }
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 acos(Float argument) -> Float {
@@ -325,6 +330,7 @@ acos(Float argument) -> Float {
 }
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 atan(Float argument) -> Float {
@@ -334,21 +340,26 @@ atan(Float argument) -> Float {
    return Float(__builtin_elementwise_atan(make_raw_arithmetic(argument)));
 }
 
-template <is_floating_point Float>
+template <is_floating_point Y, is_floating_point X>
+   requires(
+      sizeof(raw_arithmetic_type<Y>) == sizeof(raw_arithmetic_type<X>)
+      && detail::is_quantity_addable<Y, X>
+   )
 [[nodiscard]]
 constexpr auto
-atan2(Float y, Float x) -> Float {
+atan2(Y y, X x) {
+   using raw_type = raw_arithmetic_type<Y>;
+   using result_type = detail::rebind_quantity_type<Y, si::one>;
+   raw_type const raw_y = detail::quantity_value_in<arithmetic_quantity<Y>>(y);
+   raw_type const raw_x = detail::quantity_value_in<arithmetic_quantity<Y>>(x);
    if consteval {
-      return Float(
-         detail::emulated_atan2(make_raw_arithmetic(y), make_raw_arithmetic(x))
-      );
+      return result_type(detail::emulated_atan2(raw_y, raw_x));
    }
-   return Float(__builtin_elementwise_atan2(
-      make_raw_arithmetic(y), make_raw_arithmetic(x)
-   ));
+   return result_type(__builtin_elementwise_atan2(raw_y, raw_x));
 }
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 sinh(Float argument) -> Float {
@@ -359,6 +370,7 @@ sinh(Float argument) -> Float {
 }
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 cosh(Float argument) -> Float {
@@ -369,6 +381,7 @@ cosh(Float argument) -> Float {
 }
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 tanh(Float argument) -> Float {

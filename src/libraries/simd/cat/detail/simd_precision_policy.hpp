@@ -9,9 +9,9 @@ template <typename T>
 inline constexpr precision_policies simd_float_precision_policy =
    precision_policies::precise;
 
-template <typename T, precision_policies policy>
+template <typename T, precision_policies policy, auto quantity>
 inline constexpr precision_policies
-   simd_float_precision_policy<basic_float<T, policy>> = policy;
+   simd_float_precision_policy<basic_float<T, policy, quantity>> = policy;
 
 template <typename T, precision_policies precision>
 struct simd_precision_scalar {
@@ -19,9 +19,11 @@ struct simd_precision_scalar {
 };
 
 template <
-   typename T, precision_policies old_precision, precision_policies precision>
-struct simd_precision_scalar<basic_float<T, old_precision>, precision> {
-   using type = basic_float<T, precision>;
+   typename T, precision_policies old_precision, auto quantity,
+   precision_policies precision>
+struct simd_precision_scalar<
+   basic_float<T, old_precision, quantity>, precision> {
+   using type = basic_float<T, precision, quantity>;
 };
 
 template <typename T, typename RawVector>

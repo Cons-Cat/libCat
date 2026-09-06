@@ -96,6 +96,44 @@ emulated_pow(Float base, Float exponent) -> Float {
 }  // namespace detail
 
 template <is_integral T, is_integral U>
+   requires is_dimensionless_arithmetic<T>
+[[nodiscard]]
+constexpr auto
+pow(T base, U exponent) -> T;
+
+template <is_floating_point T, is_arithmetic U>
+   requires(
+      is_dimensionless_arithmetic<T>
+      && (is_integral<U> || (is_floating_point<U> && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)))
+   )
+[[nodiscard]]
+constexpr auto
+pow(T base, U exponent) -> T;
+
+template <int numerator, int denominator = 1, is_arithmetic T>
+   requires(
+      denominator != 0 && (is_floating_point<T> || denominator == 1)
+      && (arithmetic_quantity<T>::scale * numerator) % denominator == 0
+   )
+[[nodiscard]]
+constexpr auto
+pow(T base) {
+   using raw_type = raw_arithmetic_type<T>;
+   using result_quantity =
+      powered_quantity<arithmetic_quantity<T>, numerator, denominator>;
+   using result_type = detail::rebind_quantity_type<T, result_quantity{}>;
+   raw_type const raw_base = make_raw_arithmetic(base);
+   if constexpr (is_integral<T>) {
+      return result_type(detail::pow_integral(raw_base, numerator));
+   } else {
+      raw_type const exponent =
+         static_cast<raw_type>(numerator) / static_cast<raw_type>(denominator);
+      return result_type(cat::pow(raw_base, exponent));
+   }
+}
+
+template <is_integral T, is_integral U>
+   requires is_dimensionless_arithmetic<T>
 [[nodiscard]]
 constexpr auto
 pow(T base, U exponent) -> T {
@@ -104,8 +142,8 @@ pow(T base, U exponent) -> T {
 
 template <is_floating_point T, is_arithmetic U>
    requires(
-      is_integral<U>
-      || (is_floating_point<U> && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>))
+      is_dimensionless_arithmetic<T>
+      && (is_integral<U> || (is_floating_point<U> && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)))
    )
 [[nodiscard]]
 constexpr auto

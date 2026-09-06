@@ -11,14 +11,12 @@ namespace detail {
 template <typename T, precision_policies fallback>
 inline constexpr precision_policies float_precision_for = fallback;
 
-template <typename T, precision_policies precision, precision_policies fallback>
+template <
+   typename T, precision_policies precision, auto quantity,
+   precision_policies fallback>
 inline constexpr precision_policies
-   float_precision_for<basic_float<T, precision>, fallback> = precision;
-
-template <typename T, typename U, precision_policies precision>
-using precision_reference_reverse_result = basic_float<
-   common_type<raw_arithmetic_type<T>, raw_arithmetic_type<U>>,
-   float_precision_for<remove_cvref<T>, precision>>;
+   float_precision_for<basic_float<T, precision, quantity>, fallback> =
+      precision;
 
 }  // namespace detail
 
@@ -40,6 +38,9 @@ class precision_reference {
    }
 
    using raw_type = remove_cvref<WrappedQual>::raw_type;
+   using quantity_type = remove_cvref<WrappedQual>::quantity_type;
+   static constexpr auto quantity_reference =
+      remove_cvref<WrappedQual>::quantity_reference;
 
    static constexpr precision_policies precision_policy = precision;
 
@@ -54,8 +55,10 @@ class precision_reference {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   view() const -> basic_float<raw_type, precision> {
-      return basic_float<raw_type, precision>(m_wrapped->raw);
+   view() const -> basic_float<raw_type, precision, quantity_reference> {
+      return basic_float<raw_type, precision, quantity_reference>(
+         m_wrapped->raw
+      );
    }
 
  public:
@@ -76,8 +79,12 @@ class precision_reference {
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   precise() && -> basic_float<raw_type, precision_policies::precise> {
-      return basic_float<raw_type, precision_policies::precise>(m_wrapped->raw);
+   precise() && -> basic_float<
+      raw_type, precision_policies::precise, quantity_reference> {
+      return basic_float<
+         raw_type, precision_policies::precise, quantity_reference>(
+         m_wrapped->raw
+      );
    }
 
    constexpr auto
@@ -97,8 +104,12 @@ class precision_reference {
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fast() && -> basic_float<raw_type, precision_policies::fast> {
-      return basic_float<raw_type, precision_policies::fast>(m_wrapped->raw);
+   fast() && -> basic_float<
+      raw_type, precision_policies::fast, quantity_reference> {
+      return basic_float<
+         raw_type, precision_policies::fast, quantity_reference>(
+         m_wrapped->raw
+      );
    }
 
    template <typename U>
@@ -121,20 +132,7 @@ class precision_reference {
    constexpr auto
    operator<=>(precision_reference<OtherWrappedQual, other_precision> rhs) const
       -> std::partial_ordering {
-      using other_raw_type =
-         precision_reference<OtherWrappedQual, other_precision>::raw_type;
-      using common = common_type<raw_type, other_raw_type>;
-      common const lhs_common = common(m_wrapped->raw);
-      common const rhs_common = common(rhs.m_wrapped->raw);
-      // NOLINTBEGIN(bugprone-branch-clone)
-      if constexpr (precision == precision_policies::precise) {
-#pragma float_control(precise, on)
-         return lhs_common <=> rhs_common;
-      } else {
-#pragma float_control(precise, off)
-         return lhs_common <=> rhs_common;
-      }
-      // NOLINTEND(bugprone-branch-clone)
+      return view() <=> rhs.view();
    }
 
    template <is_arithmetic U>
@@ -152,20 +150,7 @@ class precision_reference {
       precision_reference lhs,
       precision_reference<OtherWrappedQual, other_precision> rhs
    ) -> bool {
-      using other_raw_type =
-         precision_reference<OtherWrappedQual, other_precision>::raw_type;
-      using common = common_type<raw_type, other_raw_type>;
-      common const lhs_common = common(lhs.m_wrapped->raw);
-      common const rhs_common = common(rhs.m_wrapped->raw);
-      // NOLINTBEGIN(bugprone-branch-clone)
-      if constexpr (precision == precision_policies::precise) {
-#pragma float_control(precise, on)
-         return lhs_common == rhs_common;
-      } else {
-#pragma float_control(precise, off)
-         return lhs_common == rhs_common;
-      }
-      // NOLINTEND(bugprone-branch-clone)
+      return lhs.view() == rhs.view();
    }
 
    template <is_arithmetic U>
@@ -190,25 +175,8 @@ class precision_reference {
    template <typename OtherWrappedQual, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(precision_reference<OtherWrappedQual, other_precision> other) const
-      -> basic_float<
-         common_type<
-            raw_type, typename precision_reference<
-                         OtherWrappedQual, other_precision>::raw_type>,
-         precision> {
-      using other_raw_type =
-         precision_reference<OtherWrappedQual, other_precision>::raw_type;
-      using result_type =
-         basic_float<common_type<raw_type, other_raw_type>, precision>;
-      // NOLINTBEGIN(bugprone-branch-clone)
-      if constexpr (precision == precision_policies::precise) {
-#pragma float_control(precise, on)
-         return result_type(m_wrapped->raw + other.m_wrapped->raw);
-      } else {
-#pragma float_control(precise, off)
-         return result_type(m_wrapped->raw + other.m_wrapped->raw);
-      }
-      // NOLINTEND(bugprone-branch-clone)
+   add(precision_reference<OtherWrappedQual, other_precision> other) const {
+      return view().add(other.view());
    }
 
    template <is_arithmetic U>
@@ -224,45 +192,20 @@ class precision_reference {
    constexpr auto
    subtract_by(
       precision_reference<OtherWrappedQual, other_precision> operand
-   ) const
-      -> basic_float<
-         common_type<
-            raw_type, typename precision_reference<
-                         OtherWrappedQual, other_precision>::raw_type>,
-         precision> {
-      using other_raw_type =
-         precision_reference<OtherWrappedQual, other_precision>::raw_type;
-      using result_type =
-         basic_float<common_type<raw_type, other_raw_type>, precision>;
-      // NOLINTBEGIN(bugprone-branch-clone)
-      if constexpr (precision == precision_policies::precise) {
-#pragma float_control(precise, on)
-         return result_type(m_wrapped->raw - operand.m_wrapped->raw);
-      } else {
-#pragma float_control(precise, off)
-         return result_type(m_wrapped->raw - operand.m_wrapped->raw);
-      }
-      // NOLINTEND(bugprone-branch-clone)
+   ) const {
+      return view().subtract_by(operand.view());
    }
 
    template <is_arithmetic U>
-      requires(is_floating_point<U>)
+      requires(
+         is_floating_point<U>
+         && detail::is_quantity_addable<
+            U, basic_float<raw_type, precision, quantity_reference>>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U operand) const {
-      using result_type =
-         detail::precision_reference_reverse_result<U, raw_type, precision>;
-      constexpr precision_policies left_precision =
-         detail::float_precision_for<remove_cvref<U>, precision>;
-      // NOLINTBEGIN(bugprone-branch-clone)
-      if constexpr (left_precision == precision_policies::precise) {
-#pragma float_control(precise, on)
-         return result_type(make_raw_arithmetic(operand) - m_wrapped->raw);
-      } else {
-#pragma float_control(precise, off)
-         return result_type(make_raw_arithmetic(operand) - m_wrapped->raw);
-      }
-      // NOLINTEND(bugprone-branch-clone)
+      return view().subtract_from(operand);
    }
 
    template <is_arithmetic U>
@@ -278,25 +221,8 @@ class precision_reference {
    constexpr auto
    multiply(
       precision_reference<OtherWrappedQual, other_precision> operand
-   ) const
-      -> basic_float<
-         common_type<
-            raw_type, typename precision_reference<
-                         OtherWrappedQual, other_precision>::raw_type>,
-         precision> {
-      using other_raw_type =
-         precision_reference<OtherWrappedQual, other_precision>::raw_type;
-      using result_type =
-         basic_float<common_type<raw_type, other_raw_type>, precision>;
-      // NOLINTBEGIN(bugprone-branch-clone)
-      if constexpr (precision == precision_policies::precise) {
-#pragma float_control(precise, on)
-         return result_type(m_wrapped->raw * operand.m_wrapped->raw);
-      } else {
-#pragma float_control(precise, off)
-         return result_type(m_wrapped->raw * operand.m_wrapped->raw);
-      }
-      // NOLINTEND(bugprone-branch-clone)
+   ) const {
+      return view().multiply(operand.view());
    }
 
    template <is_arithmetic U>
@@ -312,25 +238,8 @@ class precision_reference {
    constexpr auto
    divide_by(
       precision_reference<OtherWrappedQual, other_precision> operand
-   ) const
-      -> basic_float<
-         common_type<
-            raw_type, typename precision_reference<
-                         OtherWrappedQual, other_precision>::raw_type>,
-         precision> {
-      using other_raw_type =
-         precision_reference<OtherWrappedQual, other_precision>::raw_type;
-      using result_type =
-         basic_float<common_type<raw_type, other_raw_type>, precision>;
-      // NOLINTBEGIN(bugprone-branch-clone)
-      if constexpr (precision == precision_policies::precise) {
-#pragma float_control(precise, on)
-         return result_type(m_wrapped->raw / operand.m_wrapped->raw);
-      } else {
-#pragma float_control(precise, off)
-         return result_type(m_wrapped->raw / operand.m_wrapped->raw);
-      }
-      // NOLINTEND(bugprone-branch-clone)
+   ) const {
+      return view().divide_by(operand.view());
    }
 
    template <is_raw_arithmetic U>
@@ -338,19 +247,7 @@ class precision_reference {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_into(U operand) const {
-      using result_type =
-         detail::precision_reference_reverse_result<U, raw_type, precision>;
-      constexpr precision_policies left_precision =
-         detail::float_precision_for<remove_cvref<U>, precision>;
-      // NOLINTBEGIN(bugprone-branch-clone)
-      if constexpr (left_precision == precision_policies::precise) {
-#pragma float_control(precise, on)
-         return result_type(make_raw_arithmetic(operand) / m_wrapped->raw);
-      } else {
-#pragma float_control(precise, off)
-         return result_type(make_raw_arithmetic(operand) / m_wrapped->raw);
-      }
-      // NOLINTEND(bugprone-branch-clone)
+      return view().divide_into(operand);
    }
 
    template <is_arithmetic U, is_arithmetic V>
@@ -401,7 +298,7 @@ class precision_reference {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(U lhs, precision_reference rhs)
-      -> detail::precision_reference_reverse_result<U, raw_type, precision> {
+      -> decltype(rhs.subtract_from(lhs)) {
       return rhs.subtract_from(lhs);
    }
 
@@ -439,8 +336,7 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/(U lhs, precision_reference rhs)
-      -> detail::precision_reference_reverse_result<U, raw_type, precision> {
+   operator/(U lhs, precision_reference rhs) -> decltype(rhs.divide_into(lhs)) {
       return rhs.divide_into(lhs);
    }
 
@@ -450,7 +346,7 @@ class precision_reference {
          && is_same<
             remove_cvref<
                decltype(declval<precision_reference&>().add(declval<U>()))>,
-            basic_float<raw_type, precision>>
+            basic_float<raw_type, precision, quantity_reference>>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -465,7 +361,7 @@ class precision_reference {
          && is_same<
             remove_cvref<decltype(declval<precision_reference&>()
                                      .subtract_by(declval<U>()))>,
-            basic_float<raw_type, precision>>
+            basic_float<raw_type, precision, quantity_reference>>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -480,7 +376,7 @@ class precision_reference {
          && is_same<
             remove_cvref<decltype(declval<precision_reference&>()
                                      .multiply(declval<U>()))>,
-            basic_float<raw_type, precision>>
+            basic_float<raw_type, precision, quantity_reference>>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -495,7 +391,7 @@ class precision_reference {
          && is_same<
             remove_cvref<decltype(declval<precision_reference&>()
                                      .divide_by(declval<U>()))>,
-            basic_float<raw_type, precision>>
+            basic_float<raw_type, precision, quantity_reference>>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto

@@ -50,6 +50,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_atomic.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_stepanov.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_quantity.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_simd.cpp

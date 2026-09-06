@@ -7,6 +7,7 @@
 #include <cat/debug>
 #include <cat/limits>
 #include <cat/meta>
+#include <cat/quantity>
 
 // `cat::basic_int`, `cat::basic_float`, `cat::basic_idx`, `cat::basic_ualign`,
 // and `cat::basic_intptr` are arithmetic wrappers which both prevent unsound
@@ -94,12 +95,15 @@ class overflow_reference;
 template <typename WrappedQual, precision_policies policy>
 class precision_reference;
 
-template <typename T, overflow_policies>
+template <
+   typename T, overflow_policies = overflow_policies::undefined,
+   auto quantity = si::one>
 class basic_int;
 
 template <
    typename T,
-   precision_policies precision_policy = precision_policies::precise>
+   precision_policies precision_policy = precision_policies::precise,
+   auto quantity = si::one>
 class basic_float;
 
 template <typename T, typename Storage, overflow_policies>
@@ -275,9 +279,9 @@ template <typename T>
 inline constexpr overflow_policies make_overflow_policy =
    overflow_policies::undefined;
 
-template <typename T, overflow_policies policy>
-inline constexpr overflow_policies make_overflow_policy<basic_int<T, policy>> =
-   policy;
+template <typename T, overflow_policies policy, auto quantity>
+inline constexpr overflow_policies
+   make_overflow_policy<basic_int<T, policy, quantity>> = policy;
 
 template <overflow_policies policy>
 inline constexpr overflow_policies make_overflow_policy<basic_idx<policy>> =
@@ -306,9 +310,9 @@ template <typename T>
 inline constexpr precision_policies make_precision_policy =
    precision_policies::precise;
 
-template <typename T, precision_policies precision>
+template <typename T, precision_policies precision, auto quantity>
 inline constexpr precision_policies
-   make_precision_policy<basic_float<T, precision>> = precision;
+   make_precision_policy<basic_float<T, precision, quantity>> = precision;
 
 template <typename T>
 inline constexpr precision_policies make_precision_policy<T const> =
@@ -359,15 +363,18 @@ struct rebind_overflow_policy {
 };
 
 template <
-   typename T, overflow_policies old_policy, overflow_policies new_policy>
-struct rebind_overflow_policy<basic_int<T, old_policy>, new_policy> {
-   using type = basic_int<T, new_policy>;
+   typename T, overflow_policies old_policy, auto quantity,
+   overflow_policies new_policy>
+struct rebind_overflow_policy<basic_int<T, old_policy, quantity>, new_policy> {
+   using type = basic_int<T, new_policy, quantity>;
 };
 
 template <
-   typename T, precision_policies old_precision, overflow_policies new_policy>
-struct rebind_overflow_policy<basic_float<T, old_precision>, new_policy> {
-   using type = basic_float<T, old_precision>;
+   typename T, precision_policies old_precision, auto quantity,
+   overflow_policies new_policy>
+struct rebind_overflow_policy<
+   basic_float<T, old_precision, quantity>, new_policy> {
+   using type = basic_float<T, old_precision, quantity>;
 };
 
 template <overflow_policies old_policy, overflow_policies new_policy>
@@ -607,8 +614,8 @@ raw_mixed_integral_spaceship(RawL const lhs, RawR const rhs) {
          return std::strong_ordering::greater;
       }
    }
-   using C = common_type<RawL, RawR>;
-   return static_cast<C>(lhs) <=> static_cast<C>(rhs);
+   using common = common_type<RawL, RawR>;
+   return static_cast<common>(lhs) <=> static_cast<common>(rhs);
 }
 
 // == companion to `raw_mixed_integral_spaceship`. A negative signed operand can
@@ -628,8 +635,8 @@ raw_mixed_integral_equals(RawL const lhs, RawR const rhs) -> bool {
          return false;
       }
    }
-   using C = common_type<RawL, RawR>;
-   return static_cast<C>(lhs) == static_cast<C>(rhs);
+   using common = common_type<RawL, RawR>;
+   return static_cast<common>(lhs) == static_cast<common>(rhs);
 }
 
 }  // namespace detail
@@ -1083,15 +1090,81 @@ policy_cast(U value) -> T {
    }
 }
 
+template <typename Raw>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+quantity_scale_factor(int exponent) -> Raw {
+   Raw result = 1;
+   for (int i = 0; i < exponent; ++i) {
+      result *= 10;
+   }
+   return result;
+}
+
+template <is_quantity To, is_arithmetic U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+quantity_value_in(U value) {
+   using from = arithmetic_quantity<U>;
+   auto const raw = make_raw_arithmetic(value);
+   if constexpr (
+      is_dimensionless_quantity<from> || is_dimensionless_quantity<To>
+      || __is_same(
+         __typeof_unqual(from::unit_magnitude),
+         __typeof_unqual(To::unit_magnitude)
+      )
+   ) {
+      return raw;
+   } else {
+      constexpr auto conversion = from::unit_magnitude / To::unit_magnitude;
+      using conversion_type = __typeof_unqual(conversion);
+      if constexpr (is_floating_point<__typeof_unqual(raw)>) {
+         using wide = long double;
+         wide result = static_cast<wide>(raw)
+                       * static_cast<wide>(conversion_type::numerator)
+                       / static_cast<wide>(conversion_type::denominator);
+         if constexpr (conversion_type::decimal_power > 0) {
+            return result
+                   * quantity_scale_factor<wide>(
+                      conversion_type::decimal_power
+                   );
+         } else {
+            return result
+                   / quantity_scale_factor<wide>(
+                      -conversion_type::decimal_power
+                   );
+         }
+      } else {
+         using wide = conditional<
+            is_signed<__typeof_unqual(raw)>, __int128, unsigned __int128>;
+         wide result = static_cast<wide>(raw)
+                       * static_cast<wide>(conversion_type::numerator);
+         if constexpr (conversion_type::decimal_power > 0) {
+            result *=
+               quantity_scale_factor<wide>(conversion_type::decimal_power);
+         } else {
+            result /=
+               quantity_scale_factor<wide>(-conversion_type::decimal_power);
+         }
+         return result / static_cast<wide>(conversion_type::denominator);
+      }
+   }
+}
+
 }  // namespace detail
 
-template <typename T, precision_policies precision>
+template <typename T, precision_policies precision, auto quantity>
 class
    [[clang::preferred_name(float4), clang::preferred_name(float8),
      clang::preferred_name(float4_fast), clang::preferred_name(float8_fast)]]
-   basic_float : public arithmetic_interface<basic_float<T, precision>> {
+   basic_float
+    : public arithmetic_interface<basic_float<T, precision, quantity>> {
+   static_assert(is_quantity_specifier<decltype(quantity)>);
+
  public:
    using raw_type = T;
+   using quantity_type = reference_quantity<quantity>;
+   static constexpr auto quantity_reference = quantity;
 
    static constexpr precision_policies precision_policy = precision;
 
@@ -1102,6 +1175,7 @@ class
    constexpr basic_float(basic_float&&) = default;
 
    template <is_integral U>
+      requires(detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
    consteval basic_float(U other) __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<T>(other),
@@ -1112,6 +1186,7 @@ class
    }
 
    template <is_integral U>
+      requires(detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
    consteval basic_float(U other) __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<T>(other),
@@ -1120,6 +1195,7 @@ class
    ))) = delete;
 
    template <is_integral U>
+      requires(detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit basic_float(U other) __attribute__((enable_if(
       !__builtin_constant_p(other),
@@ -1129,7 +1205,10 @@ class
    }
 
    template <is_arithmetic U>
-      requires(is_floating_point<U> && !is_safe_arithmetic_conversion<U, T>)
+      requires(
+         is_floating_point<U> && !is_safe_arithmetic_conversion<U, T>
+         && detail::is_quantity_direct_conversion<U, quantity_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_float(U other) __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<T>(other),
@@ -1140,7 +1219,8 @@ class
    }
 
    template <is_arithmetic U>
-      requires(is_floating_point<U> && !is_safe_arithmetic_conversion<U, T>)
+      requires(is_floating_point<U> && !is_safe_arithmetic_conversion<U, T>
+               && detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
    consteval basic_float(U other) __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<T>(other),
@@ -1152,6 +1232,7 @@ class
       requires(
          is_floating_point<U> && is_safe_arithmetic_conversion<U, T>
          && !detail::is_basic_float_widening<U, T>
+         && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_float(U other)
@@ -1162,13 +1243,28 @@ class
       requires(
          is_floating_point<U>
          && (!is_safe_arithmetic_conversion<U, T> || detail::is_basic_float_widening<U, T>)
+         && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit basic_float(U other)
        : raw(static_cast<T>(make_raw_arithmetic(other))) {
    }
 
+   template <is_arithmetic U>
+      requires(
+         detail::is_quantity_conversion<U, quantity_type>
+         && !detail::is_quantity_direct_conversion<U, quantity_type>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit basic_float(U other)
+       : raw(static_cast<T>(detail::quantity_value_in<quantity_type>(other))) {
+   }
+
    template <typename U>
+      requires(
+         !is_arithmetic<U> || is_raw_arithmetic<U>
+         || is_same<quantity_type, arithmetic_quantity<U>>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
    operator U() const {
@@ -1176,13 +1272,19 @@ class
    }
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<T, U>)
+      requires(
+         is_safe_arithmetic_comparison<T, U>
+         && detail::is_quantity_addable<basic_float, U>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<=>(U rhs) const {
+      using result_quantity = detail::add_quantity<basic_float, U>;
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
-      common const lhs_common = common(raw);
-      common const rhs_common = common(make_raw_arithmetic(rhs));
+      common const lhs_common =
+         common(detail::quantity_value_in<result_quantity>(*this));
+      common const rhs_common =
+         common(detail::quantity_value_in<result_quantity>(rhs));
       // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
@@ -1195,13 +1297,19 @@ class
    }
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<T, U>)
+      requires(
+         is_safe_arithmetic_comparison<T, U>
+         && detail::is_quantity_addable<basic_float, U>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator==(basic_float lhs, U rhs) -> bool {
+      using result_quantity = detail::add_quantity<basic_float, U>;
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
-      common const lhs_common = common(lhs.raw);
-      common const rhs_common = common(make_raw_arithmetic(rhs));
+      common const lhs_common =
+         common(detail::quantity_value_in<result_quantity>(lhs));
+      common const rhs_common =
+         common(detail::quantity_value_in<result_quantity>(rhs));
       // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
@@ -1211,6 +1319,24 @@ class
          return lhs_common == rhs_common;
       }
       // NOLINTEND(bugprone-branch-clone)
+   }
+
+   template <is_raw_arithmetic U>
+      requires(has_quantity<basic_float>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr bool
+   operator==(basic_float lhs, U rhs)
+      __attribute__((enable_if(rhs == U(0), ""))) {
+      return lhs.raw == T(0);
+   }
+
+   template <is_raw_arithmetic U>
+      requires(has_quantity<basic_float>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr bool
+   operator==(U lhs, basic_float rhs)
+      __attribute__((enable_if(lhs == U(0), ""))) {
+      return T(0) == rhs.raw;
    }
 
    constexpr auto
@@ -1219,7 +1345,10 @@ class
    operator=(basic_float&&) -> basic_float& = default;
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<T, U>)
+      requires(
+         is_safe_arithmetic_comparison<T, U>
+         && detail::is_quantity_direct_conversion<U, quantity_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator=(U operand) -> basic_float& {
@@ -1236,8 +1365,9 @@ class
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   precise() && -> basic_float<raw_type, precision_policies::precise> {
-      return basic_float<raw_type, precision_policies::precise>(raw);
+   precise() && -> basic_float<
+      raw_type, precision_policies::precise, quantity> {
+      return basic_float<raw_type, precision_policies::precise, quantity>(raw);
    }
 
    constexpr auto
@@ -1249,58 +1379,88 @@ class
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fast() && -> basic_float<raw_type, precision_policies::fast> {
-      return basic_float<raw_type, precision_policies::fast>(raw);
+   fast() && -> basic_float<raw_type, precision_policies::fast, quantity> {
+      return basic_float<raw_type, precision_policies::fast, quantity>(raw);
    }
 
    template <is_arithmetic U>
-      requires(is_floating_point<U>)
+      requires(
+         is_floating_point<U> && detail::is_quantity_addable<basic_float, U>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const
-      -> basic_float<common_type<T, raw_arithmetic_type<U>>, precision> {
-      using result_type =
-         basic_float<common_type<T, raw_arithmetic_type<U>>, precision>;
+   add(U other) const -> basic_float<
+      common_type<T, raw_arithmetic_type<U>>, precision,
+      detail::add_quantity<basic_float, U>{}> {
+      using result_quantity = detail::add_quantity<basic_float, U>;
+      using result_type = basic_float<
+         common_type<T, raw_arithmetic_type<U>>, precision, result_quantity{}>;
       // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
-         return result_type(raw + make_raw_arithmetic(other));
+         return result_type(
+            detail::quantity_value_in<result_quantity>(*this)
+            + detail::quantity_value_in<result_quantity>(other)
+         );
       } else {
 #pragma float_control(precise, off)
-         return result_type(raw + make_raw_arithmetic(other));
+         return result_type(
+            detail::quantity_value_in<result_quantity>(*this)
+            + detail::quantity_value_in<result_quantity>(other)
+         );
       }
       // NOLINTEND(bugprone-branch-clone)
    }
 
    template <is_arithmetic U>
-      requires(is_floating_point<U>)
+      requires(
+         is_floating_point<U> && detail::is_quantity_addable<basic_float, U>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> basic_float {
+   subtract_by(U operand) const
+      -> basic_float<T, precision, detail::add_quantity<basic_float, U>{}> {
+      using result_quantity = detail::add_quantity<basic_float, U>;
+      using result_type = basic_float<T, precision, result_quantity{}>;
       // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
-         return basic_float(raw - make_raw_arithmetic(operand));
+         return result_type(
+            detail::quantity_value_in<result_quantity>(*this)
+            - detail::quantity_value_in<result_quantity>(operand)
+         );
       } else {
 #pragma float_control(precise, off)
-         return basic_float(raw - make_raw_arithmetic(operand));
+         return result_type(
+            detail::quantity_value_in<result_quantity>(*this)
+            - detail::quantity_value_in<result_quantity>(operand)
+         );
       }
       // NOLINTEND(bugprone-branch-clone)
    }
 
    template <is_arithmetic U>
-      requires(is_floating_point<U>)
+      requires(
+         is_floating_point<U> && detail::is_quantity_addable<U, basic_float>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const -> remove_constref<U> {
-      using result_type = remove_constref<U>;
+   subtract_from(U operand) const {
+      using result_quantity = detail::add_quantity<U, basic_float>;
+      using result_type = detail::rebind_quantity_type<U, result_quantity{}>;
       // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
-         return result_type(make_raw_arithmetic(operand) - raw);
+         return result_type(
+            detail::quantity_value_in<result_quantity>(operand)
+            - detail::quantity_value_in<result_quantity>(*this)
+         );
       } else {
 #pragma float_control(precise, off)
-         return result_type(make_raw_arithmetic(operand) - raw);
+         return result_type(
+            detail::quantity_value_in<result_quantity>(operand)
+            - detail::quantity_value_in<result_quantity>(*this)
+         );
       }
       // NOLINTEND(bugprone-branch-clone)
    }
@@ -1309,10 +1469,12 @@ class
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const
-      -> basic_float<common_type<T, raw_arithmetic_type<U>>, precision> {
-      using result_type =
-         basic_float<common_type<T, raw_arithmetic_type<U>>, precision>;
+   multiply(U operand) const -> basic_float<
+      common_type<T, raw_arithmetic_type<U>>, precision,
+      detail::multiply_quantity<basic_float, U>{}> {
+      using result_type = basic_float<
+         common_type<T, raw_arithmetic_type<U>>, precision,
+         detail::multiply_quantity<basic_float, U>{}>;
       // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
@@ -1328,24 +1490,29 @@ class
       requires(is_floating_point<U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const -> basic_float {
+   divide_by(U operand) const
+      -> basic_float<T, precision, detail::divide_quantity<basic_float, U>{}> {
+      using result_type =
+         basic_float<T, precision, detail::divide_quantity<basic_float, U>{}>;
       // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
-         return basic_float(raw / make_raw_arithmetic(operand));
+         return result_type(raw / make_raw_arithmetic(operand));
       } else {
 #pragma float_control(precise, off)
-         return basic_float(raw / make_raw_arithmetic(operand));
+         return result_type(raw / make_raw_arithmetic(operand));
       }
       // NOLINTEND(bugprone-branch-clone)
    }
 
-   template <is_raw_arithmetic U>
+   template <is_arithmetic U>
       requires(is_floating_point<U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const -> remove_constref<U> {
-      using result_type = remove_constref<U>;
+   divide_into(U operand) const {
+      using result_type = basic_float<
+         common_type<raw_arithmetic_type<U>, T>, make_precision_policy<U>,
+         detail::divide_quantity<U, basic_float>{}>;
       // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
@@ -1365,18 +1532,27 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fma(U multiplier, V addend) const -> basic_float<T, precision> {
-      T const raw_multiplier = static_cast<T>(make_raw_arithmetic(multiplier));
-      T const raw_addend = static_cast<T>(make_raw_arithmetic(addend));
+   fma(U multiplier, V addend) const
+      -> basic_float<T, precision, detail::multiply_quantity<basic_float, U>{}>
+      requires(detail::is_quantity_addable<
+               basic_float<
+                  T, precision, detail::multiply_quantity<basic_float, U>{}>,
+               V>)
+   {
+      using result_type =
+         basic_float<T, precision, detail::multiply_quantity<basic_float, U>{}>;
+      T const raw_multiplier = make_raw_arithmetic(multiplier);
+      T const raw_addend =
+         detail::quantity_value_in<typename result_type::quantity_type>(addend);
       // NOLINTBEGIN(bugprone-branch-clone)
       if constexpr (precision == precision_policies::precise) {
 #pragma float_control(precise, on)
-         return basic_float<T, precision>(
+         return result_type(
             __builtin_elementwise_fma(raw, raw_multiplier, raw_addend)
          );
       } else {
 #pragma float_control(precise, off)
-         return basic_float<T, precision>(
+         return result_type(
             __builtin_elementwise_fma(raw, raw_multiplier, raw_addend)
          );
       }
@@ -1397,19 +1573,20 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   min() -> basic_float<raw_type, precision> {
+   min() -> basic_float<raw_type, precision, quantity> {
       return limits<raw_type>::min();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   max() -> basic_float<raw_type, precision> {
+   max() -> basic_float<raw_type, precision, quantity> {
       return limits<raw_type>::max();
    }
 };
 
-template <typename T, precision_policies policy>
-basic_float(basic_float<T, policy>) -> basic_float<T, policy>;
+template <typename T, precision_policies policy, auto quantity>
+basic_float(basic_float<T, policy, quantity>)
+   -> basic_float<T, policy, quantity>;
 
 basic_float(float) -> basic_float<float, precision_policies::precise>;
 basic_float(double) -> basic_float<double, precision_policies::precise>;
@@ -1420,36 +1597,40 @@ basic_float(double) -> basic_float<double, precision_policies::precise>;
 
 namespace cat {
 
-template <typename T, precision_policies precision>
+template <typename T, precision_policies precision, auto quantity>
 constexpr auto
-basic_float<T, precision>::precise() & -> precision_reference<
-   basic_float<T, precision>, precision_policies::precise> {
+basic_float<T, precision, quantity>::precise() & -> precision_reference<
+   basic_float<T, precision, quantity>, precision_policies::precise> {
    return precision_reference<
-      basic_float<T, precision>, precision_policies::precise>{*this};
+      basic_float<T, precision, quantity>, precision_policies::precise>{*this};
 }
 
-template <typename T, precision_policies precision>
+template <typename T, precision_policies precision, auto quantity>
 constexpr auto
-basic_float<T, precision>::precise() const& -> precision_reference<
-   basic_float<T, precision> const, precision_policies::precise> {
+basic_float<T, precision, quantity>::precise() const& -> precision_reference<
+   basic_float<T, precision, quantity> const, precision_policies::precise> {
    return precision_reference<
-      basic_float<T, precision> const, precision_policies::precise>{*this};
+      basic_float<T, precision, quantity> const, precision_policies::precise>{
+      *this
+   };
 }
 
-template <typename T, precision_policies precision>
+template <typename T, precision_policies precision, auto quantity>
 constexpr auto
-basic_float<T, precision>::fast() & -> precision_reference<
-   basic_float<T, precision>, precision_policies::fast> {
+basic_float<T, precision, quantity>::fast() & -> precision_reference<
+   basic_float<T, precision, quantity>, precision_policies::fast> {
    return precision_reference<
-      basic_float<T, precision>, precision_policies::fast>{*this};
+      basic_float<T, precision, quantity>, precision_policies::fast>{*this};
 }
 
-template <typename T, precision_policies precision>
+template <typename T, precision_policies precision, auto quantity>
 constexpr auto
-basic_float<T, precision>::fast() const& -> precision_reference<
-   basic_float<T, precision> const, precision_policies::fast> {
+basic_float<T, precision, quantity>::fast() const& -> precision_reference<
+   basic_float<T, precision, quantity> const, precision_policies::fast> {
    return precision_reference<
-      basic_float<T, precision> const, precision_policies::fast>{*this};
+      basic_float<T, precision, quantity> const, precision_policies::fast>{
+      *this
+   };
 }
 
 // TODO: Mark these member functions `[[gnu::nodebug]]`.
@@ -1457,8 +1638,7 @@ basic_float<T, precision>::fast() const& -> precision_reference<
 // `basic_int` represents integer values. It prevents
 // unsafe casts or operations. This is a trivial `struct` so it can be used as a
 // non-type template parameter.
-template <
-   typename T, overflow_policies overflow_policy = overflow_policies::undefined>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 class
    [[clang::preferred_name(int1), clang::preferred_name(uint1),
      clang::preferred_name(int2), clang::preferred_name(uint2),
@@ -1475,9 +1655,13 @@ class
      clang::preferred_name(sat_int8), clang::preferred_name(sat_uint8)]]
    basic_int :
     // Generate basic_int operators.
-    public arithmetic_interface<basic_int<T, overflow_policy>> {
+    public arithmetic_interface<basic_int<T, overflow_policy, quantity>> {
+   static_assert(is_quantity_specifier<decltype(quantity)>);
+
  public:
    using raw_type = T;
+   using quantity_type = reference_quantity<quantity>;
+   static constexpr auto quantity_reference = quantity;
 
    static constexpr overflow_policies policy = overflow_policy;
 
@@ -1496,6 +1680,7 @@ class
       requires(
          !is_safe_arithmetic_conversion<U, T>
          && overflow_policy == overflow_policies::undefined
+         && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_int(U other) __attribute__((enable_if(
@@ -1516,7 +1701,8 @@ class
    template <is_arithmetic U>
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy == overflow_policies::undefined
-               && make_overflow_policy<U> != overflow_policies::saturate)
+               && make_overflow_policy<U> != overflow_policies::saturate
+               && detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
    consteval basic_int(U other) __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<T>(other),
@@ -1527,7 +1713,10 @@ class
    // Constructing with safe conversions is implicit, but constructing with
    // unsafe conversions is explicit.
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_conversion<U, T>)
+      requires(
+         is_safe_arithmetic_conversion<U, T>
+         && detail::is_quantity_direct_conversion<U, quantity_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_int(U other)
        : raw(static_cast<T>(make_raw_arithmetic(other))) {
@@ -1542,6 +1731,7 @@ class
       requires(
          !is_safe_arithmetic_conversion<U, T>
          && overflow_policy == overflow_policies::undefined
+         && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit basic_int(U other)
@@ -1561,13 +1751,32 @@ class
       requires(
          !is_safe_arithmetic_conversion<U, T>
          && overflow_policy != overflow_policies::undefined
+         && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_int(U other)
        : raw(detail::policy_cast<T, overflow_policy>(other)) {
    }
 
+   template <is_arithmetic U>
+      requires(
+         detail::is_quantity_conversion<U, quantity_type>
+         && !detail::is_quantity_direct_conversion<U, quantity_type>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit basic_int(U other)
+       : raw(
+            detail::policy_cast<T, overflow_policy>(
+               detail::quantity_value_in<quantity_type>(other)
+            )
+         ) {
+   }
+
    template <typename U>
+      requires(
+         !is_arithmetic<U> || is_raw_arithmetic<U>
+         || is_same<quantity_type, arithmetic_quantity<U>>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
    operator U() const {
@@ -1582,20 +1791,48 @@ class
    }
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<T, U>)
+      requires(
+         is_safe_arithmetic_comparison<T, U>
+         && detail::is_quantity_addable<basic_int, U>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<=>(U rhs) const {
+      using result_quantity = detail::add_quantity<basic_int, U>;
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
-      return common(raw) <=> common(make_raw_arithmetic(rhs));
+      return common(detail::quantity_value_in<result_quantity>(*this))
+             <=> common(detail::quantity_value_in<result_quantity>(rhs));
    }
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<T, U>)
+      requires(
+         is_safe_arithmetic_comparison<T, U>
+         && detail::is_quantity_addable<basic_int, U>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator==(basic_int lhs, U rhs) -> bool {
-      return lhs.raw == make_raw_arithmetic(rhs);
+      using result_quantity = detail::add_quantity<basic_int, U>;
+      return detail::quantity_value_in<result_quantity>(lhs)
+             == detail::quantity_value_in<result_quantity>(rhs);
+   }
+
+   template <is_raw_arithmetic U>
+      requires(has_quantity<basic_int>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr bool
+   operator==(basic_int lhs, U rhs)
+      __attribute__((enable_if(rhs == U(0), ""))) {
+      return lhs.raw == T(0);
+   }
+
+   template <is_raw_arithmetic U>
+      requires(has_quantity<basic_int>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr bool
+   operator==(U lhs, basic_int rhs)
+      __attribute__((enable_if(lhs == U(0), ""))) {
+      return T(0) == rhs.raw;
    }
 
    // Mixed-signed-ness <=> / ==. The body widens to `common_type` after peeling
@@ -1604,26 +1841,32 @@ class
    template <is_arithmetic U>
       requires(
          !is_safe_arithmetic_comparison<T, U> && !is_idx<basic_int>
+         && detail::is_quantity_addable<basic_int, U>
          && ((is_unsigned_integral<T> && is_signed_integral<U>) || (is_signed_integral<T> && is_unsigned_integral<U>))
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<=>(basic_int lhs, U rhs) {
+      using result_quantity = detail::add_quantity<basic_int, U>;
       return detail::raw_mixed_integral_spaceship(
-         lhs.raw, make_raw_arithmetic(rhs)
+         detail::quantity_value_in<result_quantity>(lhs),
+         detail::quantity_value_in<result_quantity>(rhs)
       );
    }
 
    template <is_arithmetic U>
       requires(
          !is_safe_arithmetic_comparison<T, U> && !is_idx<basic_int>
+         && detail::is_quantity_addable<basic_int, U>
          && ((is_unsigned_integral<T> && is_signed_integral<U>) || (is_signed_integral<T> && is_unsigned_integral<U>))
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator==(basic_int lhs, U rhs) -> bool {
+      using result_quantity = detail::add_quantity<basic_int, U>;
       return detail::raw_mixed_integral_equals(
-         lhs.raw, make_raw_arithmetic(rhs)
+         detail::quantity_value_in<result_quantity>(lhs),
+         detail::quantity_value_in<result_quantity>(rhs)
       );
    }
 
@@ -1633,7 +1876,10 @@ class
    operator=(basic_int&&) -> basic_int& = default;
 
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<T, U>)
+      requires(
+         is_safe_arithmetic_comparison<T, U>
+         && detail::is_quantity_direct_conversion<U, quantity_type>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator=(U operand) -> basic_int& {
@@ -1649,23 +1895,29 @@ class
    // call site so the same-type overload of this function runs.
    template <is_arithmetic U>
       requires(
-         overflow_policy == overflow_policies::undefined
-         || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>
+         (overflow_policy == overflow_policies::undefined
+          || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>)
+         && detail::is_quantity_addable<basic_int, U>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const -> detail::promoted_type<basic_int, U> {
+   add(U other) const -> detail::rebind_quantity_type<
+      detail::promoted_type<basic_int, U>,
+      detail::add_quantity<basic_int, U>{}> {
       using enum overflow_policies;
-      using result_type = detail::promoted_type<basic_int, U>;
-      auto raw_other = make_raw_arithmetic(other);
+      using result_quantity = detail::add_quantity<basic_int, U>;
+      using result_type = detail::rebind_quantity_type<
+         detail::promoted_type<basic_int, U>, result_quantity{}>;
+      auto raw_self = detail::quantity_value_in<result_quantity>(*this);
+      auto raw_other = detail::quantity_value_in<result_quantity>(other);
       if constexpr (overflow_policy == undefined) {
          // `make_signed` is the identity on floating-point `raw_type`. For
          // integers, it widens to signed to match undefined overflow semantics.
-         return result_type(make_signed(raw) + make_signed(raw_other));
+         return result_type(make_signed(raw_self) + make_signed(raw_other));
       } else if constexpr (overflow_policy == wrap) {
-         return result_type(wrap_add(raw, raw_other));
+         return result_type(wrap_add(raw_self, raw_other));
       } else if constexpr (overflow_policy == saturate) {
-         return result_type(sat_add(raw, raw_other));
+         return result_type(sat_add(raw_self, raw_other));
       }
    }
 
@@ -1673,6 +1925,7 @@ class
       requires(
          is_unsigned_integral<T>
          && overflow_policy == overflow_policies::undefined
+         && is_dimensionless_quantity<quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
@@ -1691,23 +1944,29 @@ class
    // Generate `operator-`. uintX - uintX uses the left-hand storage width
    // without `promoted_type` widening.
    template <is_unsigned_integral U>
-      requires(is_unsigned_integral<T>)
+      requires(
+         is_unsigned_integral<T> && detail::is_quantity_addable<basic_int, U>
+      )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> basic_int {
+   subtract_by(U operand) const
+      -> basic_int<T, overflow_policy, detail::add_quantity<basic_int, U>{}> {
       using enum overflow_policies;
-      auto const rhs_raw = make_raw_arithmetic(operand);
+      using result_quantity = detail::add_quantity<basic_int, U>;
+      using result_type = basic_int<T, overflow_policy, result_quantity{}>;
+      auto const lhs_raw = detail::quantity_value_in<result_quantity>(*this);
+      auto const rhs_raw = detail::quantity_value_in<result_quantity>(operand);
       using ut = make_unsigned_type<T>;
-      ut const lhs_u = static_cast<ut>(raw);
+      ut const lhs_u = static_cast<ut>(lhs_raw);
       ut const rhs_u = static_cast<ut>(rhs_raw);
       if constexpr (overflow_policy == undefined || overflow_policy == wrap) {
-         return basic_int(static_cast<T>(lhs_u - rhs_u));
+         return result_type(static_cast<T>(lhs_u - rhs_u));
       }
       if constexpr (overflow_policy == saturate) {
          if (lhs_u >= rhs_u) {
-            return basic_int(static_cast<T>(lhs_u - rhs_u));
+            return result_type(static_cast<T>(lhs_u - rhs_u));
          }
-         return basic_int(static_cast<T>(0));
+         return result_type(static_cast<T>(0));
       }
    }
 
@@ -1719,24 +1978,34 @@ class
       requires(
          is_signed_integral<T>
          && overflow_policy == overflow_policies::undefined
+         && detail::is_quantity_addable<basic_int, U>
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> conditional<
-      (sizeof(raw_arithmetic_type<U>) > sizeof(T)),
-      detail::promoted_type<basic_int, U>, basic_int> {
-      auto const rhs_raw = make_raw_arithmetic(operand);
+   subtract_by(U operand) const -> detail::rebind_quantity_type<
+      conditional<
+         (sizeof(raw_arithmetic_type<U>) > sizeof(T)),
+         detail::promoted_type<basic_int, U>, basic_int>,
+      detail::add_quantity<basic_int, U>{}> {
+      using result_quantity = detail::add_quantity<basic_int, U>;
+      using result_type = detail::rebind_quantity_type<
+         conditional<
+            (sizeof(raw_arithmetic_type<U>) > sizeof(T)),
+            detail::promoted_type<basic_int, U>, basic_int>,
+         result_quantity{}>;
+      auto const lhs_raw = detail::quantity_value_in<result_quantity>(*this);
+      auto const rhs_raw = detail::quantity_value_in<result_quantity>(operand);
       if constexpr (sizeof(raw_arithmetic_type<U>) > sizeof(T)) {
-         using result_type = detail::promoted_type<basic_int, U>;
          using promoted_raw = raw_arithmetic_type<result_type>;
          return result_type(
-            static_cast<promoted_raw>(raw) - static_cast<promoted_raw>(rhs_raw)
+            static_cast<promoted_raw>(lhs_raw)
+            - static_cast<promoted_raw>(rhs_raw)
          );
       } else {
          using st = make_signed_type<T>;
-         st const lhs_s = static_cast<st>(raw);
+         st const lhs_s = static_cast<st>(lhs_raw);
          st const rhs_s = static_cast<st>(rhs_raw);
-         return basic_int(static_cast<T>(lhs_s - rhs_s));
+         return result_type(static_cast<T>(lhs_s - rhs_s));
       }
    }
 
@@ -1751,13 +2020,17 @@ class
             is_signed_integral<T> && is_signed_integral<U>
             && overflow_policy == overflow_policies::undefined
          )
+         && detail::is_quantity_addable<basic_int, U>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> basic_int {
+   subtract_by(U operand) const
+      -> basic_int<T, overflow_policy, detail::add_quantity<basic_int, U>{}> {
       using enum overflow_policies;
-      using result_type = basic_int;
-      auto raw_operand = make_raw_arithmetic(operand);
+      using result_quantity = detail::add_quantity<basic_int, U>;
+      using result_type = basic_int<T, overflow_policy, result_quantity{}>;
+      auto raw_self = detail::quantity_value_in<result_quantity>(*this);
+      auto raw_operand = detail::quantity_value_in<result_quantity>(operand);
       if constexpr (overflow_policy == undefined) {
          // TODO: See if using `[[gnu::assume]]` actually optimizes
          // this. if constexpr (is_unsigned<T>) { Assume there is no overflow.
@@ -1765,13 +2038,13 @@ class
          // }
          using promoted_raw = raw_arithmetic_type<result_type>;
          return result_type(
-            static_cast<promoted_raw>(raw)
+            static_cast<promoted_raw>(raw_self)
             - static_cast<promoted_raw>(raw_operand)
          );
       } else if constexpr (overflow_policy == wrap) {
-         return result_type(wrap_sub(raw, raw_operand));
+         return result_type(wrap_sub(raw_self, raw_operand));
       } else if constexpr (overflow_policy == saturate) {
-         return result_type(sat_sub(raw, raw_operand));
+         return result_type(sat_sub(raw_self, raw_operand));
       }
    }
 
@@ -1779,6 +2052,7 @@ class
       requires(
          is_unsigned_integral<T>
          && overflow_policy == overflow_policies::undefined
+         && is_dimensionless_quantity<quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
@@ -1795,11 +2069,16 @@ class
    }
 
    template <is_arithmetic U>
+      requires(detail::is_quantity_addable<U, basic_int>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const -> remove_constref<U> {
-      using result_type = remove_constref<U>;
-      return result_type(make_raw_arithmetic(operand) - raw);
+   subtract_from(U operand) const {
+      using result_quantity = detail::add_quantity<U, basic_int>;
+      using result_type = detail::rebind_quantity_type<U, result_quantity{}>;
+      return result_type(
+         detail::quantity_value_in<result_quantity>(operand)
+         - detail::quantity_value_in<result_quantity>(*this)
+      );
    }
 
    template <typename U>
@@ -1817,8 +2096,13 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const -> detail::promoted_type<basic_int, U> {
+   multiply(U operand) const -> detail::rebind_quantity_type<
+      detail::promoted_type<basic_int, U>,
+      detail::multiply_quantity<basic_int, U>{}> {
       using enum overflow_policies;
+      using result_type = detail::rebind_quantity_type<
+         detail::promoted_type<basic_int, U>,
+         detail::multiply_quantity<basic_int, U>{}>;
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::undefined) {
          // TODO: See if using `[[gnu::assume(())]]` actually optimizes
@@ -1829,14 +2113,14 @@ class
          }
          using promoted_raw =
             raw_arithmetic_type<detail::promoted_type<basic_int, U>>;
-         return promoted_raw(
+         return result_type(
             static_cast<promoted_raw>(raw)
             * static_cast<promoted_raw>(raw_operand)
          );
       } else if constexpr (overflow_policy == wrap) {
-         return wrap_mul(raw, raw_operand);
+         return result_type(wrap_mul(raw, raw_operand));
       } else if constexpr (overflow_policy == saturate) {
-         return sat_mul(raw, raw_operand);
+         return result_type(sat_mul(raw, raw_operand));
       }
    }
 
@@ -1844,6 +2128,7 @@ class
       requires(
          is_unsigned_integral<T>
          && overflow_policy == overflow_policies::undefined
+         && is_dimensionless_quantity<quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
@@ -1869,14 +2154,16 @@ class
    // Generate `operator/`. Result fits in LHS width `|a / b| <= |a|`.
    template <typename U>
       requires(
-         overflow_policy == overflow_policies::undefined
-         || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>
+         is_arithmetic<U>
+         && (overflow_policy == overflow_policies::undefined || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>)
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const -> basic_int {
+   divide_by(U operand) const -> basic_int<
+      T, overflow_policy, detail::divide_quantity<basic_int, U>{}> {
       using enum overflow_policies;
-      using result_type = basic_int;
+      using result_type =
+         basic_int<T, overflow_policy, detail::divide_quantity<basic_int, U>{}>;
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == undefined) {
          using promoted_raw = raw_arithmetic_type<result_type>;
@@ -1895,6 +2182,7 @@ class
       requires(
          is_unsigned_integral<T>
          && overflow_policy == overflow_policies::undefined
+         && is_dimensionless_quantity<quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
@@ -1911,12 +2199,14 @@ class
    }
 
    // Handle left-hand-side raw operands that are larger than this.
-   template <is_raw_arithmetic U>
+   template <is_arithmetic U>
       requires(is_safe_arithmetic_comparison<T, U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const -> remove_constref<U> {
-      using result_type = remove_constref<U>;
+   divide_into(U operand) const {
+      using result_type = detail::rebind_quantity_type<
+         detail::promoted_type<U, basic_int>,
+         detail::divide_quantity<U, basic_int>{}>;
       using promoted_raw = raw_arithmetic_type<result_type>;
       return result_type(
          static_cast<promoted_raw>(operand) / static_cast<promoted_raw>(raw)
@@ -1953,19 +2243,24 @@ class
    // narrowing a negative RHS into the unsigned LHS storage would otherwise
    // turn it into a huge value and collapse the modulo to the LHS itself.
    template <is_arithmetic U>
+      requires(detail::is_quantity_addable<basic_int, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U operand) const -> basic_int {
-      auto const rhs_raw = make_raw_arithmetic(operand);
+   modulo_by(U operand) const
+      -> basic_int<T, overflow_policy, detail::add_quantity<basic_int, U>{}> {
+      using result_quantity = detail::add_quantity<basic_int, U>;
+      using result_type = basic_int<T, overflow_policy, result_quantity{}>;
+      auto const lhs_raw = detail::quantity_value_in<result_quantity>(*this);
+      auto const rhs_raw = detail::quantity_value_in<result_quantity>(operand);
       if constexpr (
          is_unsigned_integral<T> && is_signed_integral<raw_arithmetic_type<U>>
       ) {
          T const rhs_unsigned = static_cast<T>(rhs_raw);
          T const rhs_abs =
             (rhs_raw < 0) ? static_cast<T>(-rhs_unsigned) : rhs_unsigned;
-         return basic_int(raw % rhs_abs);
+         return result_type(lhs_raw % rhs_abs);
       } else {
-         return basic_int(raw % static_cast<T>(rhs_raw));
+         return result_type(lhs_raw % static_cast<T>(rhs_raw));
       }
    }
 
@@ -1973,6 +2268,7 @@ class
       requires(
          is_unsigned_integral<T>
          && overflow_policy == overflow_policies::undefined
+         && is_dimensionless_quantity<quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
@@ -2215,47 +2511,48 @@ class
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && -> basic_int<T, overflow_policies::undefined> {
-      return basic_int<T, overflow_policies::undefined>(raw);
+   undef() && -> basic_int<T, overflow_policies::undefined, quantity> {
+      return basic_int<T, overflow_policies::undefined, quantity>(raw);
    }
 
    constexpr auto
    wrap() & -> overflow_reference<
-      basic_int<T, overflow_policy>, overflow_policies::wrap>;
+      basic_int<T, overflow_policy, quantity>, overflow_policies::wrap>;
 
    constexpr auto
    wrap() const& -> overflow_reference<
-      basic_int<T, overflow_policy> const, overflow_policies::wrap>;
+      basic_int<T, overflow_policy, quantity> const, overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && -> basic_int<T, overflow_policies::wrap> {
-      return basic_int<T, overflow_policies::wrap>(raw);
+   wrap() && -> basic_int<T, overflow_policies::wrap, quantity> {
+      return basic_int<T, overflow_policies::wrap, quantity>(raw);
    }
 
    constexpr auto
    sat() & -> overflow_reference<
-      basic_int<T, overflow_policy>, overflow_policies::saturate>;
+      basic_int<T, overflow_policy, quantity>, overflow_policies::saturate>;
 
    constexpr auto
    sat() const& -> overflow_reference<
-      basic_int<T, overflow_policy> const, overflow_policies::saturate>;
+      basic_int<T, overflow_policy, quantity> const,
+      overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && -> basic_int<T, overflow_policies::saturate> {
-      return basic_int<T, overflow_policies::saturate>(raw);
+   sat() && -> basic_int<T, overflow_policies::saturate, quantity> {
+      return basic_int<T, overflow_policies::saturate, quantity>(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   min() -> basic_int<raw_type, overflow_policy> {
+   min() -> basic_int<raw_type, overflow_policy, quantity> {
       return limits<raw_type>::min();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   max() -> basic_int<raw_type, overflow_policy> {
+   max() -> basic_int<raw_type, overflow_policy, quantity> {
       return limits<raw_type>::max();
    }
 
@@ -2274,8 +2571,8 @@ class
    // `basic_int` derives public storage from `detail::arithmetic_storage`.
 };
 
-template <typename T, overflow_policies policy>
-basic_int(basic_int<T, policy>) -> basic_int<T, policy>;
+template <typename T, overflow_policies policy, auto quantity>
+basic_int(basic_int<T, policy, quantity>) -> basic_int<T, policy, quantity>;
 
 template <is_raw_integral T>
 basic_int(T) -> basic_int<T, overflow_policies::undefined>;
@@ -2514,52 +2811,61 @@ basic_ualign(Storage) -> basic_ualign<Storage>;
 
 namespace cat {
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy>::undef() & -> overflow_reference<
-   basic_int<T, overflow_policy>, overflow_policies::undefined> {
+basic_int<T, overflow_policy, quantity>::undef() & -> overflow_reference<
+   basic_int<T, overflow_policy, quantity>, overflow_policies::undefined> {
    return overflow_reference<
-      basic_int<T, overflow_policy>, overflow_policies::undefined>{*this};
+      basic_int<T, overflow_policy, quantity>, overflow_policies::undefined>{
+      *this
+   };
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy>::undef() const& -> overflow_reference<
-   basic_int<T, overflow_policy> const, overflow_policies::undefined> {
+basic_int<T, overflow_policy, quantity>::undef() const& -> overflow_reference<
+   basic_int<T, overflow_policy, quantity> const,
+   overflow_policies::undefined> {
    return overflow_reference<
-      basic_int<T, overflow_policy> const, overflow_policies::undefined>{*this};
+      basic_int<T, overflow_policy, quantity> const,
+      overflow_policies::undefined>{*this};
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy>::wrap() & -> overflow_reference<
-   basic_int<T, overflow_policy>, overflow_policies::wrap> {
+basic_int<T, overflow_policy, quantity>::wrap() & -> overflow_reference<
+   basic_int<T, overflow_policy, quantity>, overflow_policies::wrap> {
    return overflow_reference<
-      basic_int<T, overflow_policy>, overflow_policies::wrap>{*this};
+      basic_int<T, overflow_policy, quantity>, overflow_policies::wrap>{*this};
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy>::wrap() const& -> overflow_reference<
-   basic_int<T, overflow_policy> const, overflow_policies::wrap> {
+basic_int<T, overflow_policy, quantity>::wrap() const& -> overflow_reference<
+   basic_int<T, overflow_policy, quantity> const, overflow_policies::wrap> {
    return overflow_reference<
-      basic_int<T, overflow_policy> const, overflow_policies::wrap>{*this};
+      basic_int<T, overflow_policy, quantity> const, overflow_policies::wrap>{
+      *this
+   };
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy>::sat() & -> overflow_reference<
-   basic_int<T, overflow_policy>, overflow_policies::saturate> {
+basic_int<T, overflow_policy, quantity>::sat() & -> overflow_reference<
+   basic_int<T, overflow_policy, quantity>, overflow_policies::saturate> {
    return overflow_reference<
-      basic_int<T, overflow_policy>, overflow_policies::saturate>{*this};
+      basic_int<T, overflow_policy, quantity>, overflow_policies::saturate>{
+      *this
+   };
 }
 
-template <typename T, overflow_policies overflow_policy>
+template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy>::sat() const& -> overflow_reference<
-   basic_int<T, overflow_policy> const, overflow_policies::saturate> {
+basic_int<T, overflow_policy, quantity>::sat() const& -> overflow_reference<
+   basic_int<T, overflow_policy, quantity> const, overflow_policies::saturate> {
    return overflow_reference<
-      basic_int<T, overflow_policy> const, overflow_policies::saturate>{*this};
+      basic_int<T, overflow_policy, quantity> const,
+      overflow_policies::saturate>{*this};
 }
 
 // `basic_intptr` can be constructed from any integer type or any pointer. It
@@ -3969,6 +4275,66 @@ operator""_f8(unsigned long long input) -> cat::float8 {
 consteval auto
 operator""_f8(long double input) -> cat::float8 {
    return cat::float8(input);
+}
+
+template <auto quantity>
+using quantity_int8 =
+   basic_int<int8::raw_type, overflow_policies::undefined, quantity>;
+
+template <auto quantity>
+using quantity_float8 =
+   basic_float<float8::raw_type, precision_policies::precise, quantity>;
+
+consteval auto
+operator""_m(unsigned long long input) -> quantity_int8<si::metre> {
+   return quantity_int8<si::metre>(input);
+}
+
+consteval auto
+operator""_m(long double input) -> quantity_float8<si::metre> {
+   return quantity_float8<si::metre>(input);
+}
+
+consteval auto
+operator""_s(unsigned long long input) -> quantity_int8<si::second> {
+   return quantity_int8<si::second>(input);
+}
+
+consteval auto
+operator""_s(long double input) -> quantity_float8<si::second> {
+   return quantity_float8<si::second>(input);
+}
+
+consteval auto
+operator""_g(unsigned long long input) -> quantity_int8<si::gram> {
+   return quantity_int8<si::gram>(input);
+}
+
+consteval auto
+operator""_g(long double input) -> quantity_float8<si::gram> {
+   return quantity_float8<si::gram>(input);
+}
+
+consteval auto
+operator""_kg(unsigned long long input) -> quantity_int8<si::kilogram> {
+   return quantity_int8<si::kilogram>(input);
+}
+
+consteval auto
+operator""_kg(long double input) -> quantity_float8<si::kilogram> {
+   return quantity_float8<si::kilogram>(input);
+}
+
+consteval auto
+operator""_ms2(unsigned long long input)
+   -> quantity_int8<si::metre_per_second_squared> {
+   return quantity_int8<si::metre_per_second_squared>(input);
+}
+
+consteval auto
+operator""_ms2(long double input)
+   -> quantity_float8<si::metre_per_second_squared> {
+   return quantity_float8<si::metre_per_second_squared>(input);
 }
 }  // namespace arithmetic_literals
 }  // namespace literals

@@ -465,7 +465,8 @@ class
 
  private:
    static constexpr bool raw_storage_has_no_padding =
-      sizeof(raw_type) == Abi::lanes * sizeof(memory_lane);
+      sizeof(value_type) == sizeof(memory_lane)
+      && sizeof(raw_type) == Abi::lanes * sizeof(value_type);
 
  public:
    constexpr simd() = default;
@@ -563,6 +564,7 @@ class
       requires(
          is_convertible<U, T> && OtherAbi::size == abi_type::size
          && OtherAbi::lanes == abi_type::lanes
+         && is_same<arithmetic_quantity<U>, arithmetic_quantity<T>>
       )
    [[gnu::always_inline]]
    explicit constexpr
@@ -633,9 +635,9 @@ class
 
    template <typename U, typename OtherAbi>
       requires(
-         is_floating_point<T> && is_floating_point<U> && !is_raw_arithmetic<T>
-         && !is_raw_arithmetic<U> && OtherAbi::lanes == abi_type::lanes
-         && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)
+         !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+         && OtherAbi::lanes == abi_type::lanes
+         && requires(T left, U right) { left + right; }
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
@@ -748,19 +750,15 @@ class
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator+(simd<U, OtherAbi> const& operand) const {
-      using result_scalar = detail::simd_precision_scalar<
-         T, detail::simd_float_precision_policy<T>>::type;
+      using result_scalar = remove_cvref<decltype(declval<T>() + declval<U>())>;
       using result_type = simd<
          result_scalar,
          typename abi_type::template make_abi_type<result_scalar>>;
-      // Rebind wrapper precision while preserving the raw lane bits.
-      result_type const left(
-         __builtin_bit_cast(typename result_type::raw_type, this->raw)
-      );
-      result_type const right(
-         __builtin_bit_cast(typename result_type::raw_type, operand.raw)
-      );
-      return left + right;
+      result_type result;
+      for (idx i = 0u; i < abi_type::lanes; ++i) {
+         result.set_lane(i, (*this)[i] + operand[i]);
+      }
+      return result;
    }
 
    template <typename U, typename OtherAbi>
@@ -768,6 +766,7 @@ class
          is_floating_point<T> && is_floating_point<U> && !is_raw_arithmetic<T>
          && !is_raw_arithmetic<U> && OtherAbi::lanes == abi_type::lanes
          && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)
+         && is_same<remove_cvref<decltype(declval<T>() + declval<U>())>, T>
       )
    [[gnu::always_inline]]
    constexpr auto
@@ -799,26 +798,22 @@ class
 
    template <typename U, typename OtherAbi>
       requires(
-         is_floating_point<T> && is_floating_point<U> && !is_raw_arithmetic<T>
-         && !is_raw_arithmetic<U> && OtherAbi::lanes == abi_type::lanes
-         && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)
+         !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+         && OtherAbi::lanes == abi_type::lanes
+         && requires(T left, U right) { left - right; }
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator-(simd<U, OtherAbi> const& operand) const {
-      using result_scalar = detail::simd_precision_scalar<
-         T, detail::simd_float_precision_policy<T>>::type;
+      using result_scalar = remove_cvref<decltype(declval<T>() - declval<U>())>;
       using result_type = simd<
          result_scalar,
          typename abi_type::template make_abi_type<result_scalar>>;
-      // Rebind wrapper precision while preserving the raw lane bits.
-      result_type const left(
-         __builtin_bit_cast(typename result_type::raw_type, this->raw)
-      );
-      result_type const right(
-         __builtin_bit_cast(typename result_type::raw_type, operand.raw)
-      );
-      return left - right;
+      result_type result;
+      for (idx i = 0u; i < abi_type::lanes; ++i) {
+         result.set_lane(i, (*this)[i] - operand[i]);
+      }
+      return result;
    }
 
    template <typename U, typename OtherAbi>
@@ -826,6 +821,7 @@ class
          is_floating_point<T> && is_floating_point<U> && !is_raw_arithmetic<T>
          && !is_raw_arithmetic<U> && OtherAbi::lanes == abi_type::lanes
          && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)
+         && is_same<remove_cvref<decltype(declval<T>() - declval<U>())>, T>
       )
    [[gnu::always_inline]]
    constexpr auto
@@ -836,20 +832,32 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator*(simd const& operand) const -> simd
+   operator*(simd const& operand) const
       requires(!is_bool<T>)
    {
+      using result_scalar = remove_cvref<decltype(declval<T>() * declval<T>())>;
+      using result_type = simd<
+         result_scalar,
+         typename abi_type::template make_abi_type<result_scalar>>;
+      simd raw_result;
       if constexpr (is_floating_point<T>) {
-         return detail::simd_floating_mul_policy(*this, operand);
+         raw_result = detail::simd_floating_mul_policy(*this, operand);
       } else {
-         return detail::simd_integral_mul_policy(*this, operand);
+         raw_result = detail::simd_integral_mul_policy(*this, operand);
       }
+      return result_type(
+         __builtin_bit_cast(typename result_type::raw_type, raw_result.raw)
+      );
    }
 
    [[gnu::always_inline]]
    constexpr auto
    operator*=(simd const& operand) -> simd&
-      requires(!is_bool<T>)
+      requires(
+         !is_bool<T>
+         && is_same<
+            remove_cvref<decltype(declval<simd>() * declval<simd>())>, simd>
+      )
    {
       *this = *this * operand;
       return *this;
@@ -857,26 +865,22 @@ class
 
    template <typename U, typename OtherAbi>
       requires(
-         is_floating_point<T> && is_floating_point<U> && !is_raw_arithmetic<T>
-         && !is_raw_arithmetic<U> && OtherAbi::lanes == abi_type::lanes
-         && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)
+         !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+         && OtherAbi::lanes == abi_type::lanes
+         && requires(T left, U right) { left * right; }
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator*(simd<U, OtherAbi> const& operand) const {
-      using result_scalar = detail::simd_precision_scalar<
-         T, detail::simd_float_precision_policy<T>>::type;
+      using result_scalar = remove_cvref<decltype(declval<T>() * declval<U>())>;
       using result_type = simd<
          result_scalar,
          typename abi_type::template make_abi_type<result_scalar>>;
-      // Rebind wrapper precision while preserving the raw lane bits.
-      result_type const left(
-         __builtin_bit_cast(typename result_type::raw_type, this->raw)
-      );
-      result_type const right(
-         __builtin_bit_cast(typename result_type::raw_type, operand.raw)
-      );
-      return left * right;
+      result_type result;
+      for (idx i = 0u; i < abi_type::lanes; ++i) {
+         result.set_lane(i, (*this)[i] * operand[i]);
+      }
+      return result;
    }
 
    template <typename U, typename OtherAbi>
@@ -884,6 +888,7 @@ class
          is_floating_point<T> && is_floating_point<U> && !is_raw_arithmetic<T>
          && !is_raw_arithmetic<U> && OtherAbi::lanes == abi_type::lanes
          && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)
+         && is_same<remove_cvref<decltype(declval<T>() * declval<U>())>, T>
       )
    [[gnu::always_inline]]
    constexpr auto
@@ -917,20 +922,32 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator/(simd const& operand) const -> simd
+   operator/(simd const& operand) const
       requires(!is_bool<T>)
    {
+      using result_scalar = remove_cvref<decltype(declval<T>() / declval<T>())>;
+      using result_type = simd<
+         result_scalar,
+         typename abi_type::template make_abi_type<result_scalar>>;
+      simd raw_result;
       if constexpr (is_floating_point<T>) {
-         return detail::simd_floating_div_policy(*this, operand);
+         raw_result = detail::simd_floating_div_policy(*this, operand);
       } else {
-         return detail::simd_integral_div_policy(*this, operand);
+         raw_result = detail::simd_integral_div_policy(*this, operand);
       }
+      return result_type(
+         __builtin_bit_cast(typename result_type::raw_type, raw_result.raw)
+      );
    }
 
    [[gnu::always_inline]]
    constexpr auto
    operator/=(simd const& operand) -> simd&
-      requires(!is_bool<T>)
+      requires(
+         !is_bool<T>
+         && is_same<
+            remove_cvref<decltype(declval<simd>() / declval<simd>())>, simd>
+      )
    {
       *this = *this / operand;
       return *this;
@@ -938,26 +955,22 @@ class
 
    template <typename U, typename OtherAbi>
       requires(
-         is_floating_point<T> && is_floating_point<U> && !is_raw_arithmetic<T>
-         && !is_raw_arithmetic<U> && OtherAbi::lanes == abi_type::lanes
-         && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)
+         !is_raw_arithmetic<T> && !is_raw_arithmetic<U>
+         && OtherAbi::lanes == abi_type::lanes
+         && requires(T left, U right) { left / right; }
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator/(simd<U, OtherAbi> const& operand) const {
-      using result_scalar = detail::simd_precision_scalar<
-         T, detail::simd_float_precision_policy<T>>::type;
+      using result_scalar = remove_cvref<decltype(declval<T>() / declval<U>())>;
       using result_type = simd<
          result_scalar,
          typename abi_type::template make_abi_type<result_scalar>>;
-      // Rebind wrapper precision while preserving the raw lane bits.
-      result_type const left(
-         __builtin_bit_cast(typename result_type::raw_type, this->raw)
-      );
-      result_type const right(
-         __builtin_bit_cast(typename result_type::raw_type, operand.raw)
-      );
-      return left / right;
+      result_type result;
+      for (idx i = 0u; i < abi_type::lanes; ++i) {
+         result.set_lane(i, (*this)[i] / operand[i]);
+      }
+      return result;
    }
 
    template <typename U, typename OtherAbi>
@@ -965,6 +978,7 @@ class
          is_floating_point<T> && is_floating_point<U> && !is_raw_arithmetic<T>
          && !is_raw_arithmetic<U> && OtherAbi::lanes == abi_type::lanes
          && sizeof(raw_arithmetic_type<U>) == sizeof(raw_arithmetic_type<T>)
+         && is_same<remove_cvref<decltype(declval<T>() / declval<U>())>, T>
       )
    [[gnu::always_inline]]
    constexpr auto
@@ -977,6 +991,7 @@ class
       requires(
          !is_bool<T> && is_constructible<T, remove_cvref<U>>
          && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+         && (!has_quantity<T> || !is_raw_arithmetic<remove_cvref<U>>)
       )
    [[nodiscard]]
    constexpr auto
@@ -988,6 +1003,7 @@ class
       requires(
          !is_bool<T> && is_constructible<T, remove_cvref<U>>
          && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+         && (!has_quantity<T> || !is_raw_arithmetic<remove_cvref<U>>)
       )
    [[gnu::always_inline]]
    constexpr auto
@@ -1000,6 +1016,7 @@ class
       requires(
          !is_bool<T> && is_constructible<T, remove_cvref<U>>
          && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+         && (!has_quantity<T> || !is_raw_arithmetic<remove_cvref<U>>)
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
@@ -1011,6 +1028,7 @@ class
       requires(
          !is_bool<T> && is_constructible<T, remove_cvref<U>>
          && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+         && (!has_quantity<T> || !is_raw_arithmetic<remove_cvref<U>>)
       )
    [[gnu::always_inline]]
    constexpr auto
@@ -1026,8 +1044,21 @@ class
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator*(U&& operand) const -> simd {
-      return *this * simd($fwd(operand));
+   operator*(U&& operand) const {
+      if constexpr (has_quantity<T> && is_raw_arithmetic<remove_cvref<U>>) {
+         using result_scalar =
+            remove_cvref<decltype(declval<T>() * declval<remove_cvref<U>>())>;
+         using result_type = simd<
+            result_scalar,
+            typename abi_type::template make_abi_type<result_scalar>>;
+         result_type result;
+         for (idx i = 0u; i < abi_type::lanes; ++i) {
+            result.set_lane(i, (*this)[i] * operand);
+         }
+         return result;
+      } else {
+         return *this * simd($fwd(operand));
+      }
    }
 
    template <typename U>
@@ -1038,7 +1069,7 @@ class
    [[gnu::always_inline]]
    constexpr auto
    operator*=(U&& operand) -> simd& {
-      *this *= simd($fwd(operand));
+      *this = *this * $fwd(operand);
       return *this;
    }
 
@@ -1049,8 +1080,21 @@ class
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator/(U&& operand) const -> simd {
-      return *this / simd($fwd(operand));
+   operator/(U&& operand) const {
+      if constexpr (has_quantity<T> && is_raw_arithmetic<remove_cvref<U>>) {
+         using result_scalar =
+            remove_cvref<decltype(declval<T>() / declval<remove_cvref<U>>())>;
+         using result_type = simd<
+            result_scalar,
+            typename abi_type::template make_abi_type<result_scalar>>;
+         result_type result;
+         for (idx i = 0u; i < abi_type::lanes; ++i) {
+            result.set_lane(i, (*this)[i] / operand);
+         }
+         return result;
+      } else {
+         return *this / simd($fwd(operand));
+      }
    }
 
    template <typename U>
@@ -1061,7 +1105,7 @@ class
    [[gnu::always_inline]]
    constexpr auto
    operator/=(U&& operand) -> simd& {
-      *this /= simd($fwd(operand));
+      *this = *this / $fwd(operand);
       return *this;
    }
 
@@ -1359,7 +1403,7 @@ class
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    reduce_mul() const -> simd<T, simd_abi::fixed_size<T, 1u>>
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_integral<T> && !is_bool<T> && !has_quantity<T>)
    {
       // P0918R1 parallel reductions on vector packs.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1371,7 +1415,7 @@ class
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    multiply() const -> T
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_integral<T> && !is_bool<T> && !has_quantity<T>)
    {
       return __builtin_reduce_mul(this->raw);
    }
@@ -1512,7 +1556,7 @@ class
    // Load a vector from aligned `data` (also called a "gather").
    [[gnu::always_inline]]
    constexpr auto
-   load_aligned(memory_lane const* _Nonnull p_data) -> simd& {
+   load_aligned(value_type const* _Nonnull p_data) -> simd& {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             this->set_lane(i, static_cast<T>(p_data[i]));
@@ -1523,7 +1567,7 @@ class
                this->set_lane(i, static_cast<T>(p_data[i]));
             }
          } else {
-            auto const* p_aligned = static_cast<memory_lane const*>(
+            auto const* p_aligned = static_cast<value_type const*>(
                __builtin_assume_aligned(p_data, alignof(simd))
             );
             __builtin_memcpy(&this->raw, p_aligned, sizeof(raw_type));
@@ -1536,7 +1580,7 @@ class
    // than `.load_aligned()`.
    [[gnu::always_inline]]
    constexpr auto
-   load(memory_lane const* _Nonnull p_data) -> simd& {
+   load(value_type const* _Nonnull p_data) -> simd& {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             this->set_lane(i, static_cast<T>(p_data[i]));
@@ -1555,7 +1599,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   load_non_temporal(memory_lane const* _Nonnull p_data) -> simd&
+   load_non_temporal(value_type const* _Nonnull p_data) -> simd&
       requires(raw_storage_has_no_padding)
    {
       if consteval {
@@ -1571,7 +1615,7 @@ class
    // TODO: SVE has a masked non-temporal load instruction. How should we
    // support this?
    constexpr auto
-   load_non_temporal(memory_lane const* _Nonnull) -> simd&
+   load_non_temporal(value_type const* _Nonnull) -> simd&
       requires(!raw_storage_has_no_padding)
    = delete ("Padded `simd` cannot be loaded non-temporally! Use `.load()` or "
              "`.load_aligned()` instead.");
@@ -1581,18 +1625,18 @@ class
    // Write lanes to aligned memory (also called a "scatter").
    [[gnu::always_inline]]
    constexpr void
-   store_aligned(memory_lane* _Nonnull p_data) const {
+   store_aligned(value_type* _Nonnull p_data) const {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
-            p_data[i] = detail::simd_lane_to_storage((*this)[i]);
+            p_data[i] = static_cast<value_type>((*this)[i]);
          }
       } else {
          if constexpr (!raw_storage_has_no_padding) {
             for (idx i = 0u; i < abi_type::lanes; ++i) {
-               p_data[i] = detail::simd_lane_to_storage((*this)[i]);
+               p_data[i] = static_cast<value_type>((*this)[i]);
             }
          } else {
-            auto* p_aligned = static_cast<memory_lane*>(
+            auto* p_aligned = static_cast<value_type*>(
                __builtin_assume_aligned(p_data, alignof(simd))
             );
             __builtin_memcpy(p_aligned, &this->raw, sizeof(raw_type));
@@ -1603,15 +1647,15 @@ class
    // Write lanes to arbitrarily aligned memory (scatter).
    [[gnu::always_inline]]
    constexpr void
-   store(memory_lane* _Nonnull p_data) const {
+   store(value_type* _Nonnull p_data) const {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
-            p_data[i] = detail::simd_lane_to_storage((*this)[i]);
+            p_data[i] = static_cast<value_type>((*this)[i]);
          }
       } else {
          if constexpr (!raw_storage_has_no_padding) {
             for (idx i = 0u; i < abi_type::lanes; ++i) {
-               p_data[i] = detail::simd_lane_to_storage((*this)[i]);
+               p_data[i] = static_cast<value_type>((*this)[i]);
             }
          } else {
             __builtin_memcpy(p_data, &this->raw, sizeof(raw_type));
@@ -1621,7 +1665,7 @@ class
 
    [[gnu::always_inline]]
    constexpr void
-   store_non_temporal(memory_lane* _Nonnull p_data) const
+   store_non_temporal(value_type* _Nonnull p_data) const
       requires(raw_storage_has_no_padding)
    {
       if consteval {
@@ -1636,7 +1680,7 @@ class
    // TODO: SVE has a masked non-temporal store instruction. How should we
    // support this?
    constexpr void
-   store_non_temporal(memory_lane* _Nonnull) const
+   store_non_temporal(value_type* _Nonnull) const
       requires(!raw_storage_has_no_padding)
    = delete ("Padded `simd` cannot be stored non-temporally! Use `.store()` or "
              "`.store_aligned()` instead.");
@@ -1645,7 +1689,7 @@ class
    // `count..lanes-1` are zero-filled. If `count` exceeds `lanes`, only `lanes`
    // scalars are read.
    constexpr auto
-   partial_load(memory_lane const* _Nonnull p_data, idx count) -> simd& {
+   partial_load(value_type const* _Nonnull p_data, idx count) -> simd& {
       this->fill(scalar_type{});
       idx const n = count < abi_type::lanes ? count : abi_type::lanes;
       for (idx i = 0u; i < n; ++i) {
@@ -1657,10 +1701,10 @@ class
    // Write min(`count`, `lanes`) scalars to `p_data` (partial scatter).
    // Trailing elements are untouched.
    constexpr void
-   partial_store(memory_lane* _Nonnull p_data, idx count) const {
+   partial_store(value_type* _Nonnull p_data, idx count) const {
       idx const n = count < abi_type::lanes ? count : abi_type::lanes;
       for (idx i = 0u; i < n; ++i) {
-         p_data[i] = detail::simd_lane_to_storage((*this)[i]);
+         p_data[i] = static_cast<value_type>((*this)[i]);
       }
    }
 
@@ -2280,12 +2324,13 @@ class
       typename abi_type::template make_abi_type<
          detail::simd_unary_signed_integer_from_element_t<T>>> {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3922r1.pdf
-      using I = detail::simd_unary_signed_integer_from_element_t<T>;
-      using vec = simd<I, typename abi_type::template make_abi_type<I>>;
+      using integer_type = detail::simd_unary_signed_integer_from_element_t<T>;
+      using vec = simd<
+         integer_type, typename abi_type::template make_abi_type<integer_type>>;
       vec out{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          bool const lane = (*this)[i];
-         out.set_lane(i, static_cast<I>(+static_cast<int>(lane)));
+         out.set_lane(i, static_cast<integer_type>(+static_cast<int>(lane)));
       }
       return out;
    }
@@ -2297,12 +2342,13 @@ class
       typename abi_type::template make_abi_type<
          detail::simd_unary_signed_integer_from_element_t<T>>> {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3922r1.pdf
-      using I = detail::simd_unary_signed_integer_from_element_t<T>;
-      using vec = simd<I, typename abi_type::template make_abi_type<I>>;
+      using integer_type = detail::simd_unary_signed_integer_from_element_t<T>;
+      using vec = simd<
+         integer_type, typename abi_type::template make_abi_type<integer_type>>;
       vec out{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          bool const lane = (*this)[i];
-         out.set_lane(i, static_cast<I>(-static_cast<int>(lane)));
+         out.set_lane(i, static_cast<integer_type>(-static_cast<int>(lane)));
       }
       return out;
    }
@@ -2315,13 +2361,14 @@ class
          detail::simd_unary_signed_integer_from_element_t<T>>> {
       // P3922R1.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3922r1.pdf
-      using I = detail::simd_unary_signed_integer_from_element_t<T>;
-      using vec = simd<I, typename abi_type::template make_abi_type<I>>;
+      using integer_type = detail::simd_unary_signed_integer_from_element_t<T>;
+      using vec = simd<
+         integer_type, typename abi_type::template make_abi_type<integer_type>>;
       vec out{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          bool const lane = (*this)[i];
          int const promoted = static_cast<int>(lane);
-         out.set_lane(i, static_cast<I>(~promoted));
+         out.set_lane(i, static_cast<integer_type>(~promoted));
       }
       return out;
    }

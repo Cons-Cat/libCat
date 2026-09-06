@@ -37,20 +37,34 @@ emulated_sqrtf(float argument) -> float {
 }  // namespace detail
 
 template <is_floating_point T>
+   requires(arithmetic_quantity<T>::scale % 2 == 0)
 [[nodiscard]]
 constexpr auto
-sqrt(T argument) -> T {
+sqrt(T argument) {
    using raw_type = raw_arithmetic_type<T>;
+   using result_quantity = powered_quantity<arithmetic_quantity<T>, 1, 2>;
+   using result_type = detail::rebind_quantity_type<T, result_quantity{}>;
    raw_type raw_argument = make_raw_arithmetic(argument);
 
-   return T(__builtin_elementwise_sqrt(raw_argument));
+   if consteval {
+      if constexpr (is_same<raw_type, float>) {
+         return result_type(detail::emulated_sqrtf(raw_argument));
+      } else {
+         return result_type(detail::emulated_sqrt(raw_argument));
+      }
+   }
+   return result_type(__builtin_elementwise_sqrt(raw_argument));
 }
 
 template <is_floating_point T>
+   requires(arithmetic_quantity<T>::scale % 2 == 0)
 [[nodiscard]]
 constexpr auto
-rsqrt(T argument) -> T {
-   return T(1) / sqrt(argument);
+rsqrt(T argument) {
+   using raw_type = raw_arithmetic_type<T>;
+   using result_quantity = powered_quantity<arithmetic_quantity<T>, -1, 2>;
+   using result_type = detail::rebind_quantity_type<T, result_quantity{}>;
+   return result_type(raw_type(1) / make_raw_arithmetic(sqrt(argument)));
 }
 
 [[nodiscard, gnu::always_inline]]

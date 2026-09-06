@@ -71,6 +71,7 @@ emulated_log(Float argument) -> Float {
 namespace cat {
 
 template <is_floating_point Float>
+   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
 log(Float argument) -> Float {

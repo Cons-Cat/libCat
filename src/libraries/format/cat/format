@@ -36,18 +36,21 @@ float_to_chars_max_size() -> idx {
 }  // namespace detail
 
 // Erase the type of `cat::basic_int` from redundant template instantiations.
-template <is_allocator Allocator, is_integral T, overflow_policies policy>
+template <
+   is_allocator Allocator, is_integral T, overflow_policies policy,
+   auto quantity>
 [[nodiscard]]
 auto
-to_chars(allocator_ref<Allocator> allocator, basic_int<T, policy> numeral)
-   -> maybe<str_view> {
+to_chars(
+   allocator_ref<Allocator> allocator, basic_int<T, policy, quantity> numeral
+) -> maybe<str_view> {
    return to_chars(allocator, make_raw_arithmetic(numeral));
 }
 
-template <is_integral T, overflow_policies policy>
+template <is_integral T, overflow_policies policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
-to_chars(dyn_allocator allocator, basic_int<T, policy> numeral)
+to_chars(dyn_allocator allocator, basic_int<T, policy, quantity> numeral)
    -> maybe<str_view> {
    return to_chars<dyn_allocator>(allocator, numeral);
 }
@@ -397,58 +400,60 @@ struct format_type_constant {
    template <typename T>
    constexpr void
    set_alternative() {
-      using U = remove_cvref<T>;
-      if constexpr (is_same<U, int1>) {
+      using unqualified = remove_cvref<T>;
+      if constexpr (is_same<unqualified, int1>) {
          m_discriminant = format_discriminant::int1_type;
-      } else if constexpr (is_same<U, int1::raw_type>) {
+      } else if constexpr (is_same<unqualified, int1::raw_type>) {
          m_discriminant = format_discriminant::int1_type;
-      } else if constexpr (is_same<U, int2>) {
+      } else if constexpr (is_same<unqualified, int2>) {
          m_discriminant = format_discriminant::int2_type;
-      } else if constexpr (is_same<U, int2::raw_type>) {
+      } else if constexpr (is_same<unqualified, int2::raw_type>) {
          m_discriminant = format_discriminant::int2_type;
-      } else if constexpr (is_same<U, int4>) {
+      } else if constexpr (is_same<unqualified, int4>) {
          m_discriminant = format_discriminant::int4_type;
-      } else if constexpr (is_same<U, int4::raw_type>) {
+      } else if constexpr (is_same<unqualified, int4::raw_type>) {
          m_discriminant = format_discriminant::int4_type;
-      } else if constexpr (is_same<U, int8>) {
+      } else if constexpr (is_same<unqualified, int8>) {
          m_discriminant = format_discriminant::int8_type;
-      } else if constexpr (is_same<U, int8::raw_type>) {
+      } else if constexpr (is_same<unqualified, int8::raw_type>) {
          m_discriminant = format_discriminant::int8_type;
-      } else if constexpr (is_same<U, uint1>) {
+      } else if constexpr (is_same<unqualified, uint1>) {
          m_discriminant = format_discriminant::uint1_type;
-      } else if constexpr (is_same<U, uint1::raw_type>) {
+      } else if constexpr (is_same<unqualified, uint1::raw_type>) {
          m_discriminant = format_discriminant::uint1_type;
-      } else if constexpr (is_same<U, uint2>) {
+      } else if constexpr (is_same<unqualified, uint2>) {
          m_discriminant = format_discriminant::uint2_type;
-      } else if constexpr (is_same<U, uint2::raw_type>) {
+      } else if constexpr (is_same<unqualified, uint2::raw_type>) {
          m_discriminant = format_discriminant::uint2_type;
-      } else if constexpr (is_same<U, uint4>) {
+      } else if constexpr (is_same<unqualified, uint4>) {
          m_discriminant = format_discriminant::uint4_type;
-      } else if constexpr (is_same<U, uint4::raw_type>) {
+      } else if constexpr (is_same<unqualified, uint4::raw_type>) {
          m_discriminant = format_discriminant::uint4_type;
-      } else if constexpr (is_same<U, uint8>) {
+      } else if constexpr (is_same<unqualified, uint8>) {
          m_discriminant = format_discriminant::uint8_type;
-      } else if constexpr (is_same<U, uint8::raw_type>) {
+      } else if constexpr (is_same<unqualified, uint8::raw_type>) {
          m_discriminant = format_discriminant::uint8_type;
-      } else if constexpr (is_same<U, idx>) {
+      } else if constexpr (is_same<unqualified, idx>) {
          m_discriminant = format_discriminant::uint8_type;
-      } else if constexpr (is_same<U, bool>) {
+      } else if constexpr (is_same<unqualified, bool>) {
          m_discriminant = format_discriminant::bool_type;
-      } else if constexpr (is_same<U, float4>) {
+      } else if constexpr (is_same<unqualified, float4>) {
          m_discriminant = format_discriminant::float_type;
-      } else if constexpr (is_same<U, float4::raw_type>) {
+      } else if constexpr (is_same<unqualified, float4::raw_type>) {
          m_discriminant = format_discriminant::float_type;
-      } else if constexpr (is_same<U, float8>) {
+      } else if constexpr (is_same<unqualified, float8>) {
          m_discriminant = format_discriminant::double_type;
-      } else if constexpr (is_same<U, float8::raw_type>) {
+      } else if constexpr (is_same<unqualified, float8::raw_type>) {
          m_discriminant = format_discriminant::double_type;
-      } else if constexpr (is_same<U, char const*>) {
+      } else if constexpr (is_same<unqualified, char const*>) {
          m_discriminant = format_discriminant::raw_string_type;
-      } else if constexpr (is_same<U, char8_t const*>) {
+      } else if constexpr (is_same<unqualified, char8_t const*>) {
          m_discriminant = format_discriminant::raw_string_type;
-      } else if constexpr (is_same<U, str_view> || is_same<U, u8str_view>) {
+      } else if constexpr (
+         is_same<unqualified, str_view> || is_same<unqualified, u8str_view>
+      ) {
          m_discriminant = format_discriminant::cat_string_type;
-      } else if constexpr (is_pointer<U>) {
+      } else if constexpr (is_pointer<unqualified>) {
          m_discriminant = format_discriminant::pointer_type;
       } else {
          m_discriminant = format_discriminant::other_type;
@@ -766,10 +771,10 @@ pull_float_format_support();
 template <typename T>
 constexpr void
 maybe_pull_format_support() {
-   using U = remove_cvref<T>;
-   if constexpr (is_integral<U>) {
+   using unqualified = remove_cvref<T>;
+   if constexpr (is_integral<unqualified>) {
       pull_integer_format_support();
-   } else if constexpr (is_floating_point<U>) {
+   } else if constexpr (is_floating_point<unqualified>) {
       pull_float_format_support();
    }
 }
@@ -877,6 +882,203 @@ append_arithmetic(format_context& context, T value) -> scaredy_format<void> {
    buffer.commit(idx(p_end - p_begin));
    return monostate;
 }
+
+template <int decimal_power>
+inline constexpr bool has_si_prefix =
+   decimal_power == 3 || decimal_power == 6 || decimal_power == 9
+   || decimal_power == 12 || decimal_power == 15 || decimal_power == 18
+   || decimal_power == 21 || decimal_power == 24 || decimal_power == 27
+   || decimal_power == 30;
+
+template <int decimal_power, int power>
+inline constexpr int quantity_unit_prefix = [] {
+   if constexpr (power == 0) {
+      return 0;
+   } else if constexpr (decimal_power % power != 0) {
+      return 0;
+   } else {
+      constexpr int prefix = decimal_power / power;
+      if constexpr (has_si_prefix<prefix>) {
+         return prefix;
+      } else {
+         return 0;
+      }
+   }
+}();
+
+template <int decimal_power>
+[[nodiscard]]
+constexpr auto
+si_prefix() -> str_view {
+   if constexpr (decimal_power == 3) {
+      return "k";
+   } else if constexpr (decimal_power == 6) {
+      return "M";
+   } else if constexpr (decimal_power == 9) {
+      return "G";
+   } else if constexpr (decimal_power == 12) {
+      return "T";
+   } else if constexpr (decimal_power == 15) {
+      return "P";
+   } else if constexpr (decimal_power == 18) {
+      return "E";
+   } else if constexpr (decimal_power == 21) {
+      return "Z";
+   } else if constexpr (decimal_power == 24) {
+      return "Y";
+   } else if constexpr (decimal_power == 27) {
+      return "R";
+   } else if constexpr (decimal_power == 30) {
+      return "Q";
+   } else {
+      return "";
+   }
+}
+
+template <int numerator, int denominator, int prefix_power>
+auto
+append_quantity_unit(format_context& context, str_view symbol, bool& wrote_unit)
+   -> scaredy_format<void> {
+   if (wrote_unit) {
+      $prop(context.append('*'));
+   }
+   if constexpr (has_si_prefix<prefix_power>) {
+      $prop(context.append(si_prefix<prefix_power>()));
+   }
+   $prop(context.append(symbol));
+   constexpr int exponent = numerator < 0 ? -numerator : numerator;
+   if constexpr (exponent != 1 || denominator != 1) {
+      $prop(context.append('^'));
+      $prop(append_arithmetic(context, int4::raw_type(exponent)));
+      if constexpr (denominator != 1) {
+         $prop(context.append('/'));
+         $prop(append_arithmetic(context, int4::raw_type(denominator)));
+      }
+   }
+   wrote_unit = true;
+   return monostate;
+}
+
+template <int decimal_power, typename Unit>
+struct quantity_prefix;
+
+template <int decimal_power>
+struct quantity_prefix<decimal_power, unit<>> {
+   using unit_type = void;
+   static constexpr int power = 0;
+};
+
+template <int decimal_power, typename Power, typename... Powers>
+struct quantity_prefix<decimal_power, unit<Power, Powers...>> {
+ private:
+   static constexpr int candidate =
+      Power::denominator == 1
+         ? quantity_unit_prefix<decimal_power, Power::numerator>
+         : 0;
+   using remaining = quantity_prefix<decimal_power, unit<Powers...>>;
+
+ public:
+   using unit_type = conditional<
+      candidate != 0, typename Power::unit_type, typename remaining::unit_type>;
+   static constexpr int power = candidate != 0 ? candidate : remaining::power;
+};
+
+template <typename Unit>
+struct unit_has_denominator;
+
+template <typename... Powers>
+struct unit_has_denominator<unit<Powers...>> {
+   static constexpr bool value = ((Powers::numerator < 0) || ...);
+};
+
+template <bool numerator, int prefix_power, typename PrefixUnit, typename Unit>
+struct quantity_unit_formatter;
+
+template <bool numerator, int prefix_power, typename PrefixUnit>
+struct quantity_unit_formatter<numerator, prefix_power, PrefixUnit, unit<>> {
+   static auto
+   append(format_context&, bool&) -> scaredy_format<void> {
+      return monostate;
+   }
+};
+
+template <
+   bool numerator, int prefix_power, typename PrefixUnit, typename Power,
+   typename... Powers>
+struct quantity_unit_formatter<
+   numerator, prefix_power, PrefixUnit, unit<Power, Powers...>> {
+   using power_unit = typename Power::unit_type;
+
+   static auto
+   append(format_context& context, bool& wrote_unit) -> scaredy_format<void> {
+      if constexpr (
+         (numerator && Power::numerator > 0)
+         || (!numerator && Power::numerator < 0)
+      ) {
+         constexpr int selected_prefix =
+            __is_same(power_unit, PrefixUnit) ? prefix_power : 0;
+         $prop((append_quantity_unit<
+                Power::numerator, Power::denominator, selected_prefix>(
+            context, str_view(power_unit::unit_symbol.portable().data_),
+            wrote_unit
+         )));
+      }
+      return quantity_unit_formatter<
+         numerator, prefix_power, PrefixUnit,
+         unit<Powers...>>::append(context, wrote_unit);
+   }
+};
+
+template <is_quantity Quantity>
+auto
+append_quantity_symbol(format_context& context) -> scaredy_format<void> {
+   if constexpr (is_dimensionless_quantity<Quantity>) {
+      return monostate;
+   }
+
+   $prop(context.append(' '));
+   using quantity_unit = typename Quantity::unit_type;
+   using prefix = quantity_prefix<Quantity::scale, quantity_unit>;
+   using magnitude_type = __typeof_unqual(Quantity::unit_magnitude);
+
+   if constexpr (
+      magnitude_type::numerator != 1 || magnitude_type::denominator != 1
+   ) {
+      $prop(
+         append_arithmetic(context, uint8::raw_type(magnitude_type::numerator))
+      );
+      if constexpr (magnitude_type::denominator != 1) {
+         $prop(context.append('/'));
+         $prop(append_arithmetic(
+            context, uint8::raw_type(magnitude_type::denominator)
+         ));
+      }
+      $prop(context.append(' '));
+   }
+
+   if constexpr (prefix::power == 0 && Quantity::scale != 0) {
+      $prop(context.append("10^"));
+      $prop(append_arithmetic(context, int4::raw_type(Quantity::scale)));
+      $prop(context.append(' '));
+   }
+
+   bool wrote_unit = false;
+   $prop((quantity_unit_formatter<
+          true, prefix::power, typename prefix::unit_type,
+          quantity_unit>::append(context, wrote_unit)));
+
+   if constexpr (unit_has_denominator<quantity_unit>::value) {
+      if (!wrote_unit) {
+         $prop(context.append('1'));
+      }
+      $prop(context.append('/'));
+      wrote_unit = false;
+      $prop((quantity_unit_formatter<
+             false, prefix::power, typename prefix::unit_type,
+             quantity_unit>::append(context, wrote_unit)));
+   }
+   return monostate;
+}
 }  // namespace detail
 
 template <typename T, typename CharT>
@@ -901,17 +1103,25 @@ struct formatter<T, CharT> : formatter_base<CharT> {
       using raw_type = __typeof_unqual(raw);
       if constexpr (sizeof(raw_type) < sizeof(int4::raw_type)) {
          if constexpr (is_signed<raw_type>) {
-            return detail::append_arithmetic(
-               context, static_cast<int4::raw_type>(raw)
+            $prop(
+               detail::append_arithmetic(
+                  context, static_cast<int4::raw_type>(raw)
+               )
             );
          } else {
-            return detail::append_arithmetic(
-               context, static_cast<uint4::raw_type>(raw)
+            $prop(
+               detail::append_arithmetic(
+                  context, static_cast<uint4::raw_type>(raw)
+               )
             );
          }
       } else {
-         return detail::append_arithmetic(context, raw);
+         $prop(detail::append_arithmetic(context, raw));
       }
+      if constexpr (has_quantity<T>) {
+         return detail::append_quantity_symbol<arithmetic_quantity<T>>(context);
+      }
+      return monostate;
    }
 };
 
@@ -933,7 +1143,11 @@ struct formatter<T, CharT> : formatter_base<CharT> {
    format(T const& value, format_context& context) const
       -> scaredy_format<void> {
       detail::pull_float_format_support();
-      return detail::append_arithmetic(context, make_raw_arithmetic(value));
+      $prop(detail::append_arithmetic(context, make_raw_arithmetic(value)));
+      if constexpr (has_quantity<T>) {
+         return detail::append_quantity_symbol<arithmetic_quantity<T>>(context);
+      }
+      return monostate;
    }
 };
 

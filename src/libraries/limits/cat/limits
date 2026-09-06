@@ -17,10 +17,10 @@ enum class [[clang::enum_extensibility(
    closed
 )]] precision_policies : unsigned char;
 
-template <typename T, overflow_policies>
+template <typename T, overflow_policies, auto quantity>
 class basic_int;
 
-template <typename T, precision_policies>
+template <typename T, precision_policies, auto quantity>
 class basic_float;
 
 template <typename T, typename Storage, overflow_policies overflow_policy>
@@ -41,14 +41,14 @@ template <typename T>
 struct limits<T const volatile> : limits<T> {};
 
 // Unwrap arithmetic wrappers inside of `limits`.
-template <typename T, auto policy>
-struct limits<basic_int<T, policy>> : limits<T> {};
+template <typename T, auto policy, auto quantity>
+struct limits<basic_int<T, policy, quantity>> : limits<T> {};
 
-template <typename T, auto policy>
-struct limits<basic_int<T const, policy>> : limits<T> {};
+template <typename T, auto policy, auto quantity>
+struct limits<basic_int<T const, policy, quantity>> : limits<T> {};
 
-template <typename T, auto policy>
-struct limits<basic_float<T, policy>> : limits<T> {};
+template <typename T, auto policy, auto quantity>
+struct limits<basic_float<T, policy, quantity>> : limits<T> {};
 
 // Unwrap `basic_intptr` to its storage type (same role as arithmetic wrappers
 // above).
