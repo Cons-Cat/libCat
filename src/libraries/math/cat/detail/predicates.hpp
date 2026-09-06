@@ -151,15 +151,15 @@ template <typename T, typename U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 is_divisible_by_apply(T value, U divisor) -> bool {
-   if (divisor == U(0)) {
-      return value == T(0);
+   if (divisor == 0) {
+      return value == 0;
    }
    if constexpr (is_signed<U>) {
       if (divisor == U(-1)) {
          return true;
       }
    }
-   return (value % divisor) == T(0);
+   return (value % divisor) == 0;
 }
 
 template <>

@@ -37,7 +37,7 @@ template <typename Simd>
 [[nodiscard]]
 auto
 popcount_words_simd_unmasked(uword const* _Nonnull p_words, idx words) -> idx {
-   using lane = Simd::memory_lane;
+   using lane = Simd::value_type;
 
    lane const* _Nonnull const p_lanes = reinterpret_cast<lane const*>(p_words);
    idx const vector_words = Simd::size();

@@ -15,7 +15,7 @@ round_up_to_multiple_of(T value, U multiple) -> common_type<T, U> {
    wide const wide_value = value;
    wide const wide_multiple = multiple;
 
-   if (wide_multiple == 0u) {
+   if (wide_multiple == 0) {
       return wide_value;
    }
 
@@ -26,7 +26,7 @@ round_up_to_multiple_of(T value, U multiple) -> common_type<T, U> {
 
    wide const remainder = wide_value % wide_multiple;
 
-   if (remainder == 0u) {
+   if (remainder == 0) {
       return wide_value;
    }
 
@@ -59,7 +59,7 @@ round_down_to_multiple_of(T value, U multiple) -> common_type<T, U> {
    // Floor toward negative infinity. `%` truncates toward zero, so a positive
    // remainder drops straight to the floor multiple while a negative remainder
    // sits one `multiple` above it and needs a further step down.
-   if (remainder > 0) {
+   if (make_raw_arithmetic(remainder) > 0) {
       return static_cast<wide>(wide_value - remainder);
    }
    return static_cast<wide>(wide_value - remainder - wide_multiple);

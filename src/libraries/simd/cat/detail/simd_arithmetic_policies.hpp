@@ -16,7 +16,7 @@ simd_integral_mul_sat_lanes(
 ) -> cat::simd<T, Abi> {
    cat::simd<T, Abi> out{};
    for (idx i = 0u; i < left.size(); ++i) {
-      out.set_lane(i, left[i] * right[i]);
+      out.set_lane(i, sat_mul(left[i], right[i]));
    }
    return out;
 }
@@ -150,7 +150,7 @@ simd_integral_div_policy(
    ) {
       return simd_integral_lanewise_op<T, Abi>(
          [](T l, T r) {
-            return T(sat_div(make_raw_arithmetic(l), make_raw_arithmetic(r)));
+            return sat_div(l, r);
          },
          left, right
       );
@@ -159,7 +159,7 @@ simd_integral_div_policy(
    ) {
       return simd_integral_lanewise_op<T, Abi>(
          [](T l, T r) {
-            return T(wrap_div(make_raw_arithmetic(l), make_raw_arithmetic(r)));
+            return wrap_div(l, r);
          },
          left, right
       );
@@ -185,8 +185,8 @@ simd_integral_mod_policy(
          [](T l, T r) {
             auto const lr = make_raw_arithmetic(l);
             auto const rr = make_raw_arithmetic(r);
-            if (rr == raw_scalar(-1) && lr == limits<raw_scalar>::min()) {
-               return T(raw_scalar(0));
+            if (rr == -1 && lr == limits<raw_scalar>::min()) {
+               return T(0);
             }
             return T(lr % rr);
          },

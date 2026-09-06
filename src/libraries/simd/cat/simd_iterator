@@ -18,9 +18,9 @@ concept vectorizable_element = is_trivially_copyable<T> && (sizeof(T) <= 32u);
 template <typename Lane, idx width>
 struct as_vectorized_chunk_reference {
    using value_type = deduce_simd<Lane, width>;
-   using raw_pointer = raw_arithmetic_type<Lane>*;
+   using pointer = Lane*;
 
-   raw_pointer _Nullable p_data = nullptr;
+   pointer _Nullable p_data = nullptr;
 
    [[nodiscard]]
    constexpr
@@ -49,9 +49,8 @@ class vectorized_stepanov_iterator
 
  public:
    using value_type = deduce_simd<Lane, width>;
-   using raw_pointer_element = raw_arithmetic_type<Lane>;
    using storage_pointer =
-      conditional<is_const, raw_pointer_element const*, raw_pointer_element*>;
+      conditional<is_const, Lane const*, Lane*>;
 
    storage_pointer p = nullptr;
 
@@ -106,7 +105,7 @@ class vectorized_stepanov_iterator
 template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
-as_vectorized(raw_arithmetic_type<Lane> const* _Nonnull p_lane)
+as_vectorized(Lane const* _Nonnull p_lane)
    -> vectorized_stepanov_iterator<Lane, width, true>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {
@@ -116,7 +115,7 @@ as_vectorized(raw_arithmetic_type<Lane> const* _Nonnull p_lane)
 template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
-as_vectorized(raw_arithmetic_type<Lane>* _Nonnull p_lane)
+as_vectorized(Lane* _Nonnull p_lane)
    -> vectorized_stepanov_iterator<Lane, width, false>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {

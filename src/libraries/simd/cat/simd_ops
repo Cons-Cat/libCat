@@ -581,7 +581,7 @@ struct simd_load_blend_masked_impl {
    constexpr auto
    operator()(
       simd<T, Abi> passthrough,
-      simd<T, Abi>::memory_lane const* _Nonnull p_source
+      simd<T, Abi>::value_type const* _Nonnull p_source
    ) const -> simd<T, Abi> {
       simd<T, Abi> result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
@@ -601,7 +601,7 @@ struct simd_load_blend_masked_impl {
    [[nodiscard]]
    constexpr auto
    operator()(
-      U&& passthrough_fill, simd<T, Abi>::memory_lane const* _Nonnull p_source
+      U&& passthrough_fill, simd<T, Abi>::value_type const* _Nonnull p_source
    ) const -> simd<T, Abi> {
       return (*this)(simd<T, Abi>($fwd(passthrough_fill)), p_source);
    }
@@ -616,7 +616,7 @@ struct simd_load_aligned_blend_masked_impl {
    constexpr auto
    operator()(
       simd<T, Abi> passthrough,
-      simd<T, Abi>::memory_lane const* _Nonnull p_source
+      simd<T, Abi>::value_type const* _Nonnull p_source
    ) const -> maybe<simd<T, Abi>> {
       if (!is_aligned(unconst(p_source), alignof(simd<T, Abi>))) {
          return maybe<simd<T, Abi>>{};
@@ -639,7 +639,7 @@ struct simd_load_aligned_blend_masked_impl {
    [[nodiscard]]
    constexpr auto
    operator()(
-      U&& passthrough_fill, simd<T, Abi>::memory_lane const* _Nonnull p_source
+      U&& passthrough_fill, simd<T, Abi>::value_type const* _Nonnull p_source
    ) const -> maybe<simd<T, Abi>> {
       return (*this)(simd<T, Abi>($fwd(passthrough_fill)), p_source);
    }
@@ -657,12 +657,12 @@ struct simd_store_to_masked_impl {
    template <typename T, typename Abi>
    constexpr void
    operator()(
-      simd<T, Abi> values, simd<T, Abi>::memory_lane* _Nonnull p_destination
+      simd<T, Abi> values, simd<T, Abi>::value_type* _Nonnull p_destination
    ) const {
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
          if (mask[i]) {
-            p_destination[i] = simd_lane_to_storage(values[i]);
+            p_destination[i] = values[i];
          }
       }
    }
@@ -690,7 +690,7 @@ struct simd_partial_load_blend_masked_impl {
    constexpr auto
    operator()(
       simd<T, Abi> passthrough,
-      simd<T, Abi>::memory_lane const* _Nonnull p_source, idx count
+      simd<T, Abi>::value_type const* _Nonnull p_source, idx count
    ) const -> simd<T, Abi> {
       simd<T, Abi> result = passthrough;
       idx const active_lane_count = count < Abi::lanes ? count : Abi::lanes;
@@ -741,13 +741,15 @@ struct simd_iota_blend_masked_impl {
    [[nodiscard]]
    constexpr auto
    operator()(Simd passthrough, Simd::scalar_type start) const -> Simd {
-      using T = Simd::scalar_type;
-      T const base = static_cast<T>(start);
+      using scalar_type = Simd::scalar_type;
+      scalar_type const base = static_cast<scalar_type>(start);
       Simd result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Simd::abi_type::lanes; ++i) {
          if (mask[i]) {
-            result.set_lane(i, static_cast<T>(base + static_cast<T>(i)));
+            result.set_lane(
+               i, static_cast<scalar_type>(base + static_cast<scalar_type>(i))
+            );
          }
       }
       return result;
@@ -782,7 +784,7 @@ struct simd_load_from_blend_masked_impl {
 
 // Same EVE-style split as `simd_elementwise_interface` (`simd_sqrt`, ...):
 // unmasked `operator()` and `operator[]` returning a lane-masked helper. Load
-// factories take `memory_lane const*` (`invoke`/`bind_masked`) instead of
+// factories take `value_type const*` (`invoke`/`bind_masked`) instead of
 // `simd` input / `invoke_full`/`invoke_lanewise`. `Simd` is repeated on the
 // base so signatures do not depend on `Derived` while it is incomplete.
 template <typename Derived, is_simd Simd>
@@ -795,7 +797,7 @@ class simd_elementwise_factory_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator()(Simd::memory_lane const* _Nonnull p_source) const
+   operator()(Simd::value_type const* _Nonnull p_source) const
       -> decltype(auto) {
       return static_cast<Derived const*>(this)->invoke(p_source);
    }
@@ -824,7 +826,7 @@ struct make_simd_loaded_aligned_impl
 
    [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
-   invoke(Simd::memory_lane const* _Nonnull p_source) const -> maybe<Simd> {
+   invoke(Simd::value_type const* _Nonnull p_source) const -> maybe<Simd> {
       if (!is_aligned(unconst(p_source), alignof(Simd))) {
          return maybe<Simd>{};
       }
@@ -855,7 +857,7 @@ struct make_simd_loaded_impl
 
    [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
-   invoke(Simd::memory_lane const* _Nonnull p_source) const -> Simd {
+   invoke(Simd::value_type const* _Nonnull p_source) const -> Simd {
       Simd result{};
       result.load(p_source);
       return result;
@@ -877,7 +879,7 @@ template <is_simd Simd>
 struct make_simd_loaded_non_temporal_impl {
    [[nodiscard]]
    constexpr auto
-   operator()(Simd::memory_lane const* _Nonnull p_source) const -> Simd {
+   operator()(Simd::value_type const* _Nonnull p_source) const -> Simd {
       Simd result{};
       result.load_non_temporal(p_source);
       return result;
@@ -889,7 +891,7 @@ template <is_simd Simd>
 struct make_simd_partial_loaded_impl {
    [[nodiscard]]
    constexpr auto
-   operator()(Simd::memory_lane const* _Nonnull p_source, idx count) const
+   operator()(Simd::value_type const* _Nonnull p_source, idx count) const
       -> Simd {
       Simd result{};
       result.partial_load(p_source, count);
@@ -936,12 +938,14 @@ struct simd_iota_impl {
    constexpr auto
    operator()(Simd::scalar_type start) const -> Simd {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-      using T = Simd::scalar_type;
-      T const base = static_cast<T>(start);
+      using scalar_type = Simd::scalar_type;
+      scalar_type const base = static_cast<scalar_type>(start);
       Simd result{};
 #pragma clang loop vectorize(enable)
       for (idx i = 0u; i < Simd::abi_type::lanes; ++i) {
-         result.set_lane(i, static_cast<T>(make_raw_arithmetic(base) + i.raw));
+         result.set_lane(
+            i, static_cast<scalar_type>(make_raw_arithmetic(base) + i.raw)
+         );
       }
       return result;
    }
@@ -1429,11 +1433,13 @@ struct simd_sin_impl : simd_elementwise_interface<simd_sin_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_sinf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_sinf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_sin(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_sin(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1457,11 +1463,13 @@ struct simd_cos_impl : simd_elementwise_interface<simd_cos_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_cosf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_cosf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_cos(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_cos(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1485,11 +1493,13 @@ struct simd_tan_impl : simd_elementwise_interface<simd_tan_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_tanf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_tanf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_tan(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_tan(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1513,11 +1523,13 @@ struct simd_asin_impl : simd_elementwise_interface<simd_asin_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_asinf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_asinf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_asin(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_asin(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1541,11 +1553,13 @@ struct simd_acos_impl : simd_elementwise_interface<simd_acos_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_acosf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_acosf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_acos(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_acos(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1569,11 +1583,13 @@ struct simd_atan_impl : simd_elementwise_interface<simd_atan_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_atanf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_atanf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_atan(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_atan(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1597,11 +1613,13 @@ struct simd_sinh_impl : simd_elementwise_interface<simd_sinh_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_sinhf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_sinhf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_sinh(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_sinh(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1625,11 +1643,13 @@ struct simd_cosh_impl : simd_elementwise_interface<simd_cosh_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_coshf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_coshf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_cosh(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_cosh(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1653,11 +1673,13 @@ struct simd_tanh_impl : simd_elementwise_interface<simd_tanh_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_tanhf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_tanhf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_tanh(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_tanh(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1729,11 +1751,13 @@ struct simd_log_impl : simd_elementwise_interface<simd_log_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_logf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_logf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       } else {
-         return T(__builtin_log(static_cast<R>(make_raw_arithmetic(x))));
+         return T(__builtin_log(static_cast<raw_type>(make_raw_arithmetic(x))));
       }
    }
 };
@@ -1758,11 +1782,15 @@ struct simd_log2_impl : simd_elementwise_interface<simd_log2_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_log2f(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_log2f(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       } else {
-         return T(__builtin_log2(static_cast<R>(make_raw_arithmetic(x))));
+         return T(
+            __builtin_log2(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
    }
 };
@@ -1787,11 +1815,15 @@ struct simd_log10_impl : simd_elementwise_interface<simd_log10_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_log10f(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_log10f(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       } else {
-         return T(__builtin_log10(static_cast<R>(make_raw_arithmetic(x))));
+         return T(
+            __builtin_log10(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
    }
 };
@@ -1816,11 +1848,13 @@ struct simd_exp_impl : simd_elementwise_interface<simd_exp_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_expf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_expf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       } else {
-         return T(__builtin_exp(static_cast<R>(make_raw_arithmetic(x))));
+         return T(__builtin_exp(static_cast<raw_type>(make_raw_arithmetic(x))));
       }
    }
 };
@@ -1845,11 +1879,15 @@ struct simd_exp2_impl : simd_elementwise_interface<simd_exp2_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_exp2f(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_exp2f(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       } else {
-         return T(__builtin_exp2(static_cast<R>(make_raw_arithmetic(x))));
+         return T(
+            __builtin_exp2(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
    }
 };
@@ -1874,11 +1912,13 @@ struct simd_exp10_impl : simd_elementwise_interface<simd_exp10_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_exp10f(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_exp10f(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_exp10(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_exp10(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1904,11 +1944,15 @@ struct simd_roundeven_impl : simd_elementwise_interface<simd_roundeven_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_roundevenf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_roundevenf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_roundeven(static_cast<R>(make_raw_arithmetic(x))));
+      return T(
+         __builtin_roundeven(static_cast<raw_type>(make_raw_arithmetic(x)))
+      );
    }
 };
 
@@ -1932,11 +1976,13 @@ struct simd_round_impl : simd_elementwise_interface<simd_round_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_roundf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_roundf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_round(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_round(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1960,11 +2006,13 @@ struct simd_trunc_impl : simd_elementwise_interface<simd_trunc_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_truncf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_truncf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_trunc(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_trunc(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -1990,11 +2038,15 @@ struct simd_nearbyint_impl : simd_elementwise_interface<simd_nearbyint_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_nearbyintf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_nearbyintf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_nearbyint(static_cast<R>(make_raw_arithmetic(x))));
+      return T(
+         __builtin_nearbyint(static_cast<raw_type>(make_raw_arithmetic(x)))
+      );
    }
 };
 
@@ -2018,11 +2070,13 @@ struct simd_rint_impl : simd_elementwise_interface<simd_rint_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(__builtin_rintf(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(
+            __builtin_rintf(static_cast<raw_type>(make_raw_arithmetic(x)))
+         );
       }
-      return T(__builtin_rint(static_cast<R>(make_raw_arithmetic(x))));
+      return T(__builtin_rint(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -2051,13 +2105,15 @@ struct simd_canonicalize_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
-         return T(
-            __builtin_canonicalizef(static_cast<R>(make_raw_arithmetic(x)))
-         );
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
+         return T(__builtin_canonicalizef(
+            static_cast<raw_type>(make_raw_arithmetic(x))
+         ));
       }
-      return T(__builtin_canonicalize(static_cast<R>(make_raw_arithmetic(x))));
+      return T(
+         __builtin_canonicalize(static_cast<raw_type>(make_raw_arithmetic(x)))
+      );
    }
 };
 
@@ -2082,11 +2138,11 @@ struct simd_abs_impl : simd_elementwise_interface<simd_abs_impl> {
    constexpr auto
    invoke_lanewise(T x) const -> T {
       if constexpr (is_floating_point<T>) {
-         using R = raw_arithmetic_type<T>;
-         if constexpr (is_same<R, float>) {
-            return T(abs(static_cast<R>(x)));
+         using raw_type = raw_arithmetic_type<T>;
+         if constexpr (is_same<raw_type, float>) {
+            return T(abs(static_cast<raw_type>(x)));
          }
-         return T(abs(static_cast<R>(x)));
+         return T(abs(static_cast<raw_type>(x)));
       }
       if (x < 0) {
          return static_cast<T>(-static_cast<make_unsigned_type<T>>(x));
@@ -2121,14 +2177,14 @@ struct simd_bitreverse_impl : simd_elementwise_interface<simd_bitreverse_impl> {
    invoke_lanewise(T x) const -> T {
       // P2638R0 Per-lane bit-reverse (fallback lane hook).
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-      using U = make_unsigned_type<T>;
-      U const u = static_cast<U>(x);
-      U reversed{};
-      if constexpr (sizeof(U) == 1) {
+      using unsigned_type = make_unsigned_type<T>;
+      unsigned_type const u = static_cast<unsigned_type>(x);
+      unsigned_type reversed{};
+      if constexpr (sizeof(unsigned_type) == 1) {
          reversed = __builtin_bitreverse8(static_cast<unsigned char>(u));
-      } else if constexpr (sizeof(U) == 2) {
+      } else if constexpr (sizeof(unsigned_type) == 2) {
          reversed = __builtin_bitreverse16(static_cast<unsigned short>(u));
-      } else if constexpr (sizeof(U) == 4) {
+      } else if constexpr (sizeof(unsigned_type) == 4) {
          reversed = __builtin_bitreverse32(static_cast<unsigned int>(u));
       } else {
          reversed = __builtin_bitreverse64(static_cast<unsigned long long>(u));
@@ -2159,16 +2215,16 @@ struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
-      using R = raw_arithmetic_type<T>;
-      if constexpr (is_same<R, float>) {
+      using raw_type = raw_arithmetic_type<T>;
+      if constexpr (is_same<raw_type, float>) {
          return T(__builtin_powf(
-            static_cast<R>(make_raw_arithmetic(left)),
-            static_cast<R>(make_raw_arithmetic(right))
+            static_cast<raw_type>(make_raw_arithmetic(left)),
+            static_cast<raw_type>(make_raw_arithmetic(right))
          ));
       }
       return T(__builtin_pow(
-         static_cast<R>(make_raw_arithmetic(left)),
-         static_cast<R>(make_raw_arithmetic(right))
+         static_cast<raw_type>(make_raw_arithmetic(left)),
+         static_cast<raw_type>(make_raw_arithmetic(right))
       ));
    }
 };
@@ -2200,19 +2256,19 @@ struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
       [[nodiscard]]                                                         \
       constexpr auto                                                        \
       invoke_lanewise(T left, T right) const -> T {                         \
-         using R = raw_arithmetic_type<T>;                                  \
-         if constexpr (is_same<R, float>) {                                 \
+         using raw_type = raw_arithmetic_type<T>;                           \
+         if constexpr (is_same<raw_type, float>) {                          \
             return T(                                                       \
                __builtin_##LaneStem##f(                                     \
-                  static_cast<R>(make_raw_arithmetic(left)),                \
-                  static_cast<R>(make_raw_arithmetic(right))                \
+                  static_cast<raw_type>(make_raw_arithmetic(left)),         \
+                  static_cast<raw_type>(make_raw_arithmetic(right))         \
                )                                                            \
             );                                                              \
          } else {                                                           \
             return T(                                                       \
                __builtin_##LaneStem(                                        \
-                  static_cast<R>(make_raw_arithmetic(left)),                \
-                  static_cast<R>(make_raw_arithmetic(right))                \
+                  static_cast<raw_type>(make_raw_arithmetic(left)),         \
+                  static_cast<raw_type>(make_raw_arithmetic(right))         \
                )                                                            \
             );                                                              \
          }                                                                  \
@@ -2252,10 +2308,10 @@ struct simd_minimumnum_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
-      using R = raw_arithmetic_type<T>;
+      using raw_type = raw_arithmetic_type<T>;
       return T(__builtin_fminimum_num(
-         static_cast<R>(make_raw_arithmetic(left)),
-         static_cast<R>(make_raw_arithmetic(right))
+         static_cast<raw_type>(make_raw_arithmetic(left)),
+         static_cast<raw_type>(make_raw_arithmetic(right))
       ));
    }
 };
@@ -2285,10 +2341,10 @@ struct simd_maximumnum_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
-      using R = raw_arithmetic_type<T>;
+      using raw_type = raw_arithmetic_type<T>;
       return T(__builtin_fmaximum_num(
-         static_cast<R>(make_raw_arithmetic(left)),
-         static_cast<R>(make_raw_arithmetic(right))
+         static_cast<raw_type>(make_raw_arithmetic(left)),
+         static_cast<raw_type>(make_raw_arithmetic(right))
       ));
    }
 };
@@ -2504,8 +2560,8 @@ struct simd_sqrt_impl : simd_elementwise_interface<simd_sqrt_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      using R = raw_arithmetic_type<T>;
-      return T(cat::sqrt(static_cast<R>(make_raw_arithmetic(x))));
+      using raw_type = raw_arithmetic_type<T>;
+      return T(cat::sqrt(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
 };
 
@@ -2514,11 +2570,11 @@ template <typename T>
 [[nodiscard]]
 constexpr auto
 simd_rsqrt_lane(T x) -> T {
-   using R = raw_arithmetic_type<T>;
-   R const rx = static_cast<R>(make_raw_arithmetic(x));
+   using raw_type = raw_arithmetic_type<T>;
+   raw_type const rx = static_cast<raw_type>(make_raw_arithmetic(x));
    return T(
       simd_float_divide<simd_float_precision_policy<T>>(
-         static_cast<R>(1), cat::sqrt(rx)
+         static_cast<raw_type>(1), cat::sqrt(rx)
       )
    );
 }
@@ -2676,30 +2732,29 @@ simd_nroot_lane(T x, iword n) -> T {
    if (n <= 1) {
       return x;
    }
-   if (make_raw_arithmetic(x) == raw_arithmetic_type<T>{}) {
+   auto const raw_x = make_raw_arithmetic(x);
+   if (raw_x == 0) {
       return x;
    }
-   T abs_x = (make_raw_arithmetic(x) < raw_arithmetic_type<T>{})
-                ? static_cast<T>(-x)
-                : x;
+   T abs_x = raw_x < 0 ? -x : x;
    T const root_magnitude = [&]() -> T {
       auto const abs_raw = make_raw_arithmetic(abs_x);
       if constexpr (is_same<raw_arithmetic_type<T>, float>) {
          return pow(
             abs_raw, simd_float_divide<simd_float_precision_policy<T>>(
-                        1.f, static_cast<float>(n.raw)
+                        1.f, static_cast<float>(n)
                      )
          );
       } else {
          return pow(
             abs_raw, simd_float_divide<simd_float_precision_policy<T>>(
-                        1., static_cast<double>(n.raw)
+                        1., static_cast<double>(n)
                      )
          );
       }
    }();
-   if (make_raw_arithmetic(x) < raw_arithmetic_type<T>{}) {
-      if ((n.raw & 1u) != 0u) {
+   if (raw_x < 0) {
+      if ((n.raw & 1u) != 0) {
          return -root_magnitude;
       }
       return limits<raw_arithmetic_type<T>>::quiet_NaN();
@@ -2716,18 +2771,21 @@ simd_rnroot_lane(T x, iword n) -> T {
       return x;
    }
    if (n == 1) {
-      using R = raw_arithmetic_type<T>;
-      R const rx = static_cast<R>(make_raw_arithmetic(x));
+      using raw_type = raw_arithmetic_type<T>;
+      raw_type const rx = static_cast<raw_type>(make_raw_arithmetic(x));
       return T(
          simd_float_divide<simd_float_precision_policy<T>>(
-            static_cast<R>(1), rx
+            static_cast<raw_type>(1), rx
          )
       );
    }
-   using R = raw_arithmetic_type<T>;
-   R const root = static_cast<R>(make_raw_arithmetic(simd_nroot_lane(x, n)));
+   using raw_type = raw_arithmetic_type<T>;
+   raw_type const root =
+      static_cast<raw_type>(make_raw_arithmetic(simd_nroot_lane(x, n)));
    return T(
-      simd_float_divide<simd_float_precision_policy<T>>(static_cast<R>(1), root)
+      simd_float_divide<simd_float_precision_policy<T>>(
+         static_cast<raw_type>(1), root
+      )
    );
 }
 
@@ -3269,16 +3327,16 @@ struct simd_min_impl : simd_elementwise_binary_interface<simd_min_impl> {
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
       if constexpr (is_floating_point<T>) {
-         using R = raw_arithmetic_type<T>;
-         if constexpr (is_same<R, float>) {
+         using raw_type = raw_arithmetic_type<T>;
+         if constexpr (is_same<raw_type, float>) {
             return T(__builtin_fminf(
-               static_cast<R>(make_raw_arithmetic(left)),
-               static_cast<R>(make_raw_arithmetic(right))
+               static_cast<raw_type>(make_raw_arithmetic(left)),
+               static_cast<raw_type>(make_raw_arithmetic(right))
             ));
          }
          return T(__builtin_fmin(
-            static_cast<R>(make_raw_arithmetic(left)),
-            static_cast<R>(make_raw_arithmetic(right))
+            static_cast<raw_type>(make_raw_arithmetic(left)),
+            static_cast<raw_type>(make_raw_arithmetic(right))
          ));
       } else {
          return left < right ? left : right;
@@ -3317,16 +3375,16 @@ struct simd_max_impl : simd_elementwise_binary_interface<simd_max_impl> {
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
       if constexpr (is_floating_point<T>) {
-         using R = raw_arithmetic_type<T>;
-         if constexpr (is_same<R, float>) {
+         using raw_type = raw_arithmetic_type<T>;
+         if constexpr (is_same<raw_type, float>) {
             return T(__builtin_fmaxf(
-               static_cast<R>(make_raw_arithmetic(left)),
-               static_cast<R>(make_raw_arithmetic(right))
+               static_cast<raw_type>(make_raw_arithmetic(left)),
+               static_cast<raw_type>(make_raw_arithmetic(right))
             ));
          }
          return T(__builtin_fmax(
-            static_cast<R>(make_raw_arithmetic(left)),
-            static_cast<R>(make_raw_arithmetic(right))
+            static_cast<raw_type>(make_raw_arithmetic(left)),
+            static_cast<raw_type>(make_raw_arithmetic(right))
          ));
       } else {
          return left > right ? left : right;
@@ -3388,9 +3446,9 @@ struct simd_fshl_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x, T y, T z) const -> T {
-      using U = make_unsigned_type<T>;
-      U const hi = static_cast<U>(x);
-      U const lo = static_cast<U>(y);
+      using unsigned_type = make_unsigned_type<T>;
+      unsigned_type const hi = static_cast<unsigned_type>(x);
+      unsigned_type const lo = static_cast<unsigned_type>(y);
       unsigned int const count =
          static_cast<unsigned int>(make_raw_arithmetic(z))
          % static_cast<unsigned int>(sizeof(T) * 8u);
@@ -3419,9 +3477,9 @@ struct simd_fshr_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x, T y, T z) const -> T {
-      using U = make_unsigned_type<T>;
-      U const hi = static_cast<U>(x);
-      U const lo = static_cast<U>(y);
+      using unsigned_type = make_unsigned_type<T>;
+      unsigned_type const hi = static_cast<unsigned_type>(x);
+      unsigned_type const lo = static_cast<unsigned_type>(y);
       unsigned int const count =
          static_cast<unsigned int>(make_raw_arithmetic(z))
          % static_cast<unsigned int>(sizeof(T) * 8u);
@@ -3453,14 +3511,16 @@ struct simd_ldexp_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x, IntT y) const -> T {
-      using R = raw_arithmetic_type<T>;
+      using raw_type = raw_arithmetic_type<T>;
       int const exp = static_cast<int>(make_raw_arithmetic(y));
-      if constexpr (is_same<R, float>) {
+      if constexpr (is_same<raw_type, float>) {
          return T(
-            __builtin_ldexpf(static_cast<R>(make_raw_arithmetic(x)), exp)
+            __builtin_ldexpf(static_cast<raw_type>(make_raw_arithmetic(x)), exp)
          );
       }
-      return T(__builtin_ldexp(static_cast<R>(make_raw_arithmetic(x)), exp));
+      return T(
+         __builtin_ldexp(static_cast<raw_type>(make_raw_arithmetic(x)), exp)
+      );
    }
 };
 

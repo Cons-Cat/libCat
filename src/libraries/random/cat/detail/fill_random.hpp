@@ -53,7 +53,7 @@ constexpr void
 fill_random_batch_contiguous(
    Element* _Nonnull p_data, idx size, Generator& generator
 ) {
-   using memory_lane = Simd::memory_lane;
+   using memory_lane = Simd::value_type;
    memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
    idx index = 0u;
    while (index + Simd::abi_type::lanes <= size) {
@@ -93,7 +93,7 @@ fill_random_exact_bulk_contiguous(
       make_exact_random_bulk_session<typename Simd::abi_type, chain_count>(
          generator
       );
-   using memory_lane = Simd::memory_lane;
+   using memory_lane = Simd::value_type;
    memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
    constexpr idx lanes = Simd::abi_type::lanes;
    idx index = 0u;
@@ -206,7 +206,7 @@ fill_random_relaxed_bulk_contiguous(
 ) {
    auto session =
       make_relaxed_random_bulk_session<typename Simd::abi_type>(generator);
-   using memory_lane = Simd::memory_lane;
+   using memory_lane = Simd::value_type;
    memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
    idx index = 0u;
    constexpr idx lanes = Simd::abi_type::lanes;
@@ -240,7 +240,7 @@ fill_random_distribution_batch_contiguous(
    if constexpr (
       is_simd<Batch> && is_same<Element, typename Batch::value_type>
    ) {
-      using memory_lane = Batch::memory_lane;
+      using memory_lane = Batch::value_type;
       memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
       while (index + Batch::abi_type::lanes <= size) {
          generate().store(p_lanes + index);
@@ -571,7 +571,7 @@ fill_random_simd_contiguous(
    simd_result source_values;
    idx source_lane = simd_result::abi_type::lanes;
    idx index = 0u;
-   using memory_lane = Simd::memory_lane;
+   using memory_lane = Simd::value_type;
    memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
 
    if constexpr (is_same<simd_result, Simd>) {

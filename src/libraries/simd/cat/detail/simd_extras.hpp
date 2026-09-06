@@ -99,10 +99,10 @@ constexpr auto
 simd_concat(Simd const& lower_lanes_first, Simd const& upper_lanes_second) {
    // P2638R0 glue smaller packs into one (`concat` / split story).
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
-   using T = Simd::scalar_type;
+   using scalar_type = Simd::scalar_type;
    using abi = Simd::abi_type;
-   using out_abi = simd_abi::deduce<T, idx{abi::lanes.raw * 2uz}>;
-   simd<T, out_abi> result{};
+   using out_abi = simd_abi::deduce<scalar_type, idx{abi::lanes.raw * 2uz}>;
+   simd<scalar_type, out_abi> result{};
    for (idx i = 0u; i < abi::lanes; ++i) {
       result.set_lane(i, lower_lanes_first[i]);
       result.set_lane(i + abi::lanes, upper_lanes_second[i]);
@@ -212,10 +212,10 @@ constexpr auto
 simd_interleave(
    Simd const& from_even_lane_index, Simd const& from_odd_lane_index
 ) {
-   using T = Simd::scalar_type;
+   using scalar_type = Simd::scalar_type;
    using abi = Simd::abi_type;
-   using out_abi = simd_abi::deduce<T, idx{abi::lanes.raw * 2uz}>;
-   simd<T, out_abi> result{};
+   using out_abi = simd_abi::deduce<scalar_type, idx{abi::lanes.raw * 2uz}>;
+   simd<scalar_type, out_abi> result{};
    for (idx i = 0u; i < abi::lanes; ++i) {
       result.set_lane(idx(i.raw * 2uz), from_even_lane_index[i]);
       result.set_lane(idx((i.raw * 2uz) + 1uz), from_odd_lane_index[i]);
@@ -306,7 +306,7 @@ simd_ctz(simd<T, Abi> x, simd<T, Abi> if_zero) -> simd<T, Abi> {
 template <is_simd Simd>
 constexpr auto
 simd_partial_load(
-   Simd& v, typename Simd::memory_lane const* _Nonnull p_source, idx n
+   Simd& v, typename Simd::value_type const* _Nonnull p_source, idx n
 ) -> Simd& {
    return v.partial_load(p_source, n);
 }
@@ -314,7 +314,7 @@ simd_partial_load(
 template <is_simd Simd>
 constexpr void
 simd_partial_store(
-   Simd const& v, typename Simd::memory_lane* _Nonnull p_destination, idx n
+   Simd const& v, typename Simd::value_type* _Nonnull p_destination, idx n
 ) {
    v.partial_store(p_destination, n);
 }
