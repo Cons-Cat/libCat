@@ -143,6 +143,7 @@ cat::detail::_start() {
    asm(R"(.att_syntax prefix ; # rmsbolt requires this. Try `-masm=att`
           pop %rdi        # Load `int4 argc`.
           mov %rsp, %rsi  # Load `char* argv[]`.
+          and $-16, %rsp
           call call_main
        )");
 #else
