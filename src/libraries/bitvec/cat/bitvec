@@ -39,10 +39,13 @@
 //  `cat::small_bitvec_fixed<n=4>`, a `basic_bitvec` with inline storage for `n`
 //     bits and `fixed_size` flag.
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/bit>
 #include <cat/debug>
 #include <cat/iterable>
 #include <cat/maybe>
+#include <cat/propagate>
 #include <cat/span>
 #include <cat/vec>
 

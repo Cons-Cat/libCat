@@ -24,7 +24,10 @@
 //
 //  `cat::raii::path<Allocator>`, a default `raii::basic_path`.
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/path>
+#include <cat/propagate>
 
 namespace cat::detail {
 template <str_vec_flags flags>

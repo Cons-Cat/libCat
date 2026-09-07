@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/linux>
+#include <cat/propagate>
 
 // TODO: Get this basically working.
 

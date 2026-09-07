@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cat/arithmetic>
 #include <cat/debug>
+#include <cat/defer>
+#include <cat/string>
 
 // All unit tests have access to these symbols:
 using namespace cat::literals;

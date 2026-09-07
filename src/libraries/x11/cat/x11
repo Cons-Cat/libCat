@@ -6,6 +6,7 @@
 #include <cat/bit>
 #include <cat/linux>
 #include <cat/meta>
+#include <cat/propagate>
 #include <cat/socket>
 #include <cat/string>
 

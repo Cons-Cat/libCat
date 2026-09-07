@@ -6,7 +6,7 @@
 #include <cat/detail/iterable_interface.hpp>
 
 #include <cat/algorithm>
-#include <cat/math>
+#include <cat/arithmetic>
 #include <cat/maybe>
 #include <cat/stepanov>
 

@@ -2,10 +2,11 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/tuple_fwd.hpp>
+
 #include <cat/algorithm>
 #include <cat/compare>
 #include <cat/container>
-#include <cat/memory>
 #include <cat/utility>
 
 namespace cat {

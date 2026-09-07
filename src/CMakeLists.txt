@@ -271,7 +271,6 @@ target_sources(cat-impl PRIVATE
 )
 
 set(CAT_HEADER_FILES
-  ${CMAKE_SOURCE_DIR}/src/global_includes.hpp
   ${CATLIB}/new/cat/new
   ${CATLIB}/algorithm/cat/algorithm
   ${CATLIB}/dyn/cat/dyn
@@ -311,6 +310,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bit/implementations/bit_checked.tpp
   ${CATLIB}/bit/implementations/format_bit_value.tpp
   ${CATLIB}/bit/implementations/format_bit_reference.tpp
+  ${CATLIB}/bit/implementations/narrow_cast_byte.tpp
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/bitset/cat/bitset
   ${CATLIB}/bitset/implementations/format_bitset.tpp
@@ -380,6 +380,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/math/cat/detail/clamp.hpp
   ${CATLIB}/math/cat/detail/div.hpp
   ${CATLIB}/math/cat/detail/dot.hpp
+  ${CATLIB}/math/cat/detail/emulated_fwd.hpp
   ${CATLIB}/math/cat/detail/exp.hpp
   ${CATLIB}/math/cat/detail/fma.hpp
   ${CATLIB}/math/cat/detail/ldexp.hpp
@@ -396,6 +397,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/math/cat/detail/sqrt.hpp
   ${CATLIB}/math/cat/detail/sum.hpp
   ${CATLIB}/math/cat/detail/trigonometry.hpp
+  ${CATLIB}/maybe/cat/detail/compact.hpp
   ${CATLIB}/maybe/cat/maybe
   ${CATLIB}/maybe/implementations/narrow_cast.tpp
   ${CATLIB}/memory/cat/memory
@@ -518,8 +520,11 @@ set(CAT_HEADER_FILES
   ${CATLIB}/timer/cat/timer
   ${CATLIB}/tui/cat/tui
   ${CATLIB}/tuple/cat/tuple
+  ${CATLIB}/tuple/cat/detail/tuple_fwd.hpp
   ${CATLIB}/type_list/cat/type_list
   ${CATLIB}/unique/cat/unique
+  ${CATLIB}/utility/cat/defer
+  ${CATLIB}/utility/cat/propagate
   ${CATLIB}/utility/cat/utility
   ${CATLIB}/variant/cat/variant
   ${CATLIB}/vec/cat/vec

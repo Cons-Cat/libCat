@@ -2,7 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/arithmetic>
 #include <cat/meta>
 
 // We generate arithmetic operators by finding implementations of the

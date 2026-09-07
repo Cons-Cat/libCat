@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/tuple_fwd.hpp>
+
 // `cat::span` is primarily based upon `std::span`. It is a non-owning view over
 // a contiguous sequence of `T`, parameterized by an element type and an
 // optional constant `fixed_extent`. When `fixed_extent == dynamic_extent`, its
@@ -29,6 +31,8 @@
 // `cat::span` is `[[clang::trivial_abi]]` so it passes in registers, and
 // `[[gsl::Pointer(T)]]` so it participates in Clang's lifetime analysis. It
 // matches the ABI of `nix::io_vector` for trivial syscall compatibility.
+
+#include <cat/detail/compact.hpp>
 
 #include <cat/bit>
 #include <cat/compare>

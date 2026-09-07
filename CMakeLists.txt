@@ -129,8 +129,6 @@ list(
   # TODO: Exceptions and rtti should have optional support once it's possible to
   # implement them.
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
-  # `global_includes.hpp` must be available everywhere.
-  -include global_includes.hpp
 
   # Ordinary `char` / `str_*` literals are UTF-8. That's an important property for
   # libCat. This is Clang's default on all platforms, but it's an explicit precondition.
@@ -349,12 +347,19 @@ add_subdirectory(src/)
 option(CAT_PCH "Enable precompiled-headers for libCat headers." ON)
 if (CAT_PCH)
   set(CAT_PCH_HEADERS
-    "${CMAKE_SOURCE_DIR}/src/global_includes.hpp"
+    "${CMAKE_SOURCE_DIR}/src/libraries/meta/cat/meta"
+    "${CMAKE_SOURCE_DIR}/src/libraries/maybe/cat/detail/compact.hpp"
+    "${CMAKE_SOURCE_DIR}/src/libraries/utility/cat/defer"
+    "${CMAKE_SOURCE_DIR}/src/libraries/tuple/cat/detail/tuple_fwd.hpp"
+    "${CMAKE_SOURCE_DIR}/src/libraries/maybe/cat/maybe"
+    "${CMAKE_SOURCE_DIR}/src/libraries/runtime/cat/runtime"
+    "${CMAKE_SOURCE_DIR}/src/libraries/debug/cat/debug"
+    "${CMAKE_SOURCE_DIR}/src/libraries/utility/cat/propagate"
     "${CMAKE_SOURCE_DIR}/src/libraries/string/cat/detail/str_span.hpp"
     "${CMAKE_SOURCE_DIR}/src/libraries/linux/cat/linux")
   # `PRIVATE` on `cat-impl` so external consumers of `cat::cat` don't inherit
   # PCH machinery. In-tree tests/examples opt-in via `REUSE_FROM cat-impl`.
-  # `str_span` completes `str_view` used by assertions in global headers.
+  # `str_span` completes `str_view` used by assertions.
   # `linux` amortizes the common implementation header graph.
   target_precompile_headers(cat-impl PRIVATE ${CAT_PCH_HEADERS})
   # Strip the PCH's embedded mtime so sccache / ccache can reuse PCH-consuming

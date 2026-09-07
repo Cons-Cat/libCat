@@ -24,6 +24,7 @@
 // TODO: `str_span` needs `fixed_extent` like `span`.
 
 #include <cat/maybe>
+#include <cat/propagate>
 #include <cat/span>
 #include <cat/utility>
 

@@ -2,10 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
-// Included from `global_includes.hpp` only after `<cat/maybe>` and
-// `<cat/runtime>` so `bitset` and `basic_int<>::to_idx()` are available. Do
-// not include from `<cat/simd>` to avoid pulling `bitset` while `maybe` is
-// still being parsed.
+// Included after `<cat/simd>` is complete so `bitset` and
+// `basic_int<>::to_idx()` are available without re-entering the SIMD
+// definitions.
 //
 // `mask_to_bitset` for x86 ABIs lives here so `<cat/simd>` does not pull
 // `<cat/bitset>` during its initial parse. Movmsk helpers live in
@@ -19,7 +18,6 @@
 #include <cat/detail/simd_switch_priority.hpp>
 
 #include <cat/bitset>
-#include <cat/memory>
 #include <cat/simd>
 
 namespace cat::detail::simd_abi {
@@ -81,10 +79,11 @@ fixed_size_mask_to_bitset_avx2(simd_mask<T, Abi> const& mask)
       idx const remaining{Abi::lanes.raw - lane_offset.raw};
       idx const chunk_lanes = min(remaining, native_abi::lanes);
       native_mask chunk(typename native_mask::raw_type{});
-      copy_memory(
+      __builtin_memcpy(
+         &chunk.raw,
          reinterpret_cast<unsigned char const*>(&mask.raw)
             + (lane_offset.raw * sizeof(T)),
-         &chunk.raw, chunk_lanes.raw * sizeof(T)
+         chunk_lanes.raw * sizeof(T)
       );
 
       __UINT64_TYPE__ const pattern =

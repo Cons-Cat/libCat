@@ -43,6 +43,8 @@
 //  `cat::small_vec_fixed<T, n=4>`, a `basic_vec` with `inline_storage(n)` and
 //     `fixed_size` flag.
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/algorithm>
 #include <cat/allocator>
 #include <cat/allocator_parameters>
@@ -50,6 +52,7 @@
 #include <cat/container>
 #include <cat/iterable>
 #include <cat/math>
+#include <cat/propagate>
 #include <cat/sanitizer>
 #include <cat/utility>
 

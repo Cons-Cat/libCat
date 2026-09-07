@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/compact.hpp>
+
 // `cat::maybe` is analogous to `std::optional`, used for failure handling
 // throughout libCat. It wraps either a value of type `T` or no value. It
 // supports a fully monadic API, is iterable as a range, and supports opt-in
@@ -97,7 +99,6 @@ inline constexpr detail::nullopt_type nullopt;
 }  // namespace cat
 
 #include <cat/match>
-#include <cat/memory>
 #include <cat/new>
 #include <cat/runtime>
 #include <cat/utility>
@@ -127,13 +128,6 @@ struct is_maybe_impl<maybe<U>> {
 
 template <typename T>
 concept is_maybe = detail::is_maybe_impl<remove_cvref<T>>::value;
-
-// Customization point for default niche-value storage in `maybe<T>`.
-// `operator-` Default:
-// `type = T` (no compact storage) `operator-` Specialize to `compact<...>`:
-// `maybe<T>` stores `nullopt` in a niche.
-template <typename T>
-struct default_compact_trait : identity_trait<T> {};
 
 // True when `default_compact_trait<T>::type` is a compact type.
 template <typename T>
@@ -1753,8 +1747,6 @@ using maybe_non_zero = maybe<sentinel<T, T(0)>>;
 
 // These templates have circular dependencies with `maybe`, so they are included
 // here.
-#include "../../bit/implementations/bit_checked.tpp"
-#include "../../memory/implementations/find_memory.tpp"
 #include "../implementations/narrow_cast.tpp"
 
 namespace cat {

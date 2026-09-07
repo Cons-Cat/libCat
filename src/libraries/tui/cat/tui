@@ -4,6 +4,7 @@
 
 #include <cat/allocator>
 #include <cat/memory>
+#include <cat/propagate>
 #include <cat/string>
 
 // TODO: Write unit tests for these.

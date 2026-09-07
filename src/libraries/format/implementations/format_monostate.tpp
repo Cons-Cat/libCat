@@ -4,9 +4,9 @@
 
 #include <cat/format>
 
-// `monostate_type` lives in `global_includes.hpp`, which is parsed before
-// `formatter_base` exists. The specialization is declared under the class and
-// defined here after `<cat/format>` completes `formatter_base`.
+// `monostate_type` is declared before `formatter_base` exists. The
+// specialization is declared under the class and defined here after
+// `<cat/format>` completes `formatter_base`.
 
 namespace cat {
 

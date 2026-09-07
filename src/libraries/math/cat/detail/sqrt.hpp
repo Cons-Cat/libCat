@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/emulated_fwd.hpp>
+
 #include <cat/math>
 
 namespace cat {

@@ -13,6 +13,7 @@
 #include <cat/arithmetic>
 #include <cat/array>
 #include <cat/bit>
+#include <cat/defer>
 #include <cat/format>
 #include <cat/iterable>
 #include <cat/limits>

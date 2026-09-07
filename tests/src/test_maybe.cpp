@@ -1,6 +1,7 @@
 #include <cat/iterable>
 #include <cat/maybe>
 #include <cat/memory>
+#include <cat/scaredy>
 #include <cat/tuple>
 #include <cat/unique>
 #include <cat/utility>

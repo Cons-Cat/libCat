@@ -1912,4 +1912,6 @@ using ::operator&=;
 #include "./implementations/align_down.tpp"
 #include "./implementations/align_up.tpp"
 #include "./implementations/assume_aligned.tpp"
+#include "./implementations/bit_checked.tpp"
 #include "./implementations/is_aligned.tpp"
+#include "./implementations/narrow_cast_byte.tpp"

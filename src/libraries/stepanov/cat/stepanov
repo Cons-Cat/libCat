@@ -54,6 +54,8 @@
 //    `cat::is_stepanov_bidi_iterable`
 //
 
+#include <cat/arithmetic>
+
 namespace cat {
 
 template <typename T>

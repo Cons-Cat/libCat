@@ -6,6 +6,7 @@
 #include <cat/format>
 #include <cat/linux>
 #include <cat/maybe>
+#include <cat/propagate>
 
 // TODO: Should we remove deriving from `allocator_interface` and require
 // wrapping in `allocator_ref` to reduce template monomorphization?

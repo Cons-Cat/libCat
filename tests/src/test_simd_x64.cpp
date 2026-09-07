@@ -1,3 +1,4 @@
+#include <cat/bitset>
 #include <cat/linear_allocator>
 #include <cat/page_allocator>
 #include <cat/simd>

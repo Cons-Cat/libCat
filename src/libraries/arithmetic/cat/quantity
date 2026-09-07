@@ -254,7 +254,8 @@ struct merge_dimensions<
       dimension_base_less<typename RightPower::base, typename LeftPower::base>;
    static_assert(
       same_base || left_first || right_first,
-      "Base dimensions require unique identifiers"
+      "Base dimensions require unique identifiers! Use a distinct "
+      "`base_dimension` identifier."
    );
 
    using left_tail = dimension<LeftPowers...>;
@@ -274,8 +275,8 @@ struct merge_dimensions<
          right_multiplier>::type>::type;
 
    static constexpr int combined_numerator =
-      LeftPower::numerator * RightPower::denominator
-      + RightPower::numerator * LeftPower::denominator * right_multiplier;
+      (LeftPower::numerator * RightPower::denominator)
+      + (RightPower::numerator * LeftPower::denominator * right_multiplier);
    static constexpr int combined_denominator =
       LeftPower::denominator * RightPower::denominator;
    using combined_tail =
@@ -340,9 +341,7 @@ using normalized_dimension = detail::normalized_dimension<DimensionValue>::type;
 template <Dimension Left, Dimension Right>
 [[nodiscard]]
 consteval auto
-operator*(Left left, Right right) {
-   static_cast<void>(left);
-   static_cast<void>(right);
+operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
    return multiplied_dimension<
       normalized_dimension<Left>, normalized_dimension<Right>>{};
 }
@@ -350,9 +349,7 @@ operator*(Left left, Right right) {
 template <Dimension Left, Dimension Right>
 [[nodiscard]]
 consteval auto
-operator/(Left left, Right right) {
-   static_cast<void>(left);
-   static_cast<void>(right);
+operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
    return divided_dimension<
       normalized_dimension<Left>, normalized_dimension<Right>>{};
 }
@@ -361,8 +358,7 @@ template <int numerator, int denominator = 1, Dimension DimensionValue>
    requires(denominator != 0)
 [[nodiscard]]
 consteval auto
-pow(DimensionValue dimension_value) {
-   static_cast<void>(dimension_value);
+pow([[maybe_unused]] DimensionValue dimension_value) {
    return powered_dimension<
       normalized_dimension<DimensionValue>, numerator, denominator>{};
 }
@@ -615,17 +611,14 @@ inline constexpr detail::quantity_kind<
 template <is_quantity_spec QuantitySpec>
 [[nodiscard]]
 consteval auto
-get_dimension(QuantitySpec quantity_specification) {
-   static_cast<void>(quantity_specification);
+get_dimension([[maybe_unused]] QuantitySpec quantity_specification) {
    return typename QuantitySpec::dimension_type{};
 }
 
 template <is_quantity_spec Left, is_quantity_spec Right>
 [[nodiscard]]
 consteval auto
-operator*(Left left, Right right) {
-   static_cast<void>(left);
-   static_cast<void>(right);
+operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
    using result_dimension = multiplied_dimension<
       typename Left::dimension_type, typename Right::dimension_type>;
    return derived_quantity_spec<result_dimension>{};
@@ -634,9 +627,7 @@ operator*(Left left, Right right) {
 template <is_quantity_spec Left, is_quantity_spec Right>
 [[nodiscard]]
 consteval auto
-operator/(Left left, Right right) {
-   static_cast<void>(left);
-   static_cast<void>(right);
+operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
    using result_dimension = divided_dimension<
       typename Left::dimension_type, typename Right::dimension_type>;
    return derived_quantity_spec<result_dimension>{};
@@ -646,8 +637,7 @@ template <int numerator, int denominator = 1, is_quantity_spec QuantitySpec>
    requires(denominator != 0)
 [[nodiscard]]
 consteval auto
-pow(QuantitySpec quantity_specification) {
-   static_cast<void>(quantity_specification);
+pow([[maybe_unused]] QuantitySpec quantity_specification) {
    using result_dimension = powered_dimension<
       typename QuantitySpec::dimension_type, numerator, denominator>;
    return derived_quantity_spec<result_dimension>{};
@@ -794,7 +784,8 @@ struct merge_units<
       typename RightPower::unit_type, typename LeftPower::unit_type>;
    static_assert(
       same_unit || left_first || right_first,
-      "Base units require unique identifiers"
+      "Base units require unique identifiers! Define each base unit with a "
+      "distinct type."
    );
 
    using left_tail = unit<LeftPowers...>;
@@ -923,11 +914,11 @@ template <
 [[nodiscard]]
 consteval auto
 operator*(
-   magnitude<left_numerator, left_denominator, left_power> left,
-   magnitude<right_numerator, right_denominator, right_power> right
+   [[maybe_unused]] magnitude<left_numerator, left_denominator, left_power>
+      left,
+   [[maybe_unused]] magnitude<right_numerator, right_denominator, right_power>
+      right
 ) {
-   static_cast<void>(left);
-   static_cast<void>(right);
    return normalized_magnitude<
       left_numerator * right_numerator, left_denominator * right_denominator,
       left_power + right_power>{};
@@ -940,11 +931,11 @@ template <
 [[nodiscard]]
 consteval auto
 operator/(
-   magnitude<left_numerator, left_denominator, left_power> left,
-   magnitude<right_numerator, right_denominator, right_power> right
+   [[maybe_unused]] magnitude<left_numerator, left_denominator, left_power>
+      left,
+   [[maybe_unused]] magnitude<right_numerator, right_denominator, right_power>
+      right
 ) {
-   static_cast<void>(left);
-   static_cast<void>(right);
    return normalized_magnitude<
       left_numerator * right_denominator, left_denominator * right_numerator,
       left_power - right_power>{};
@@ -1139,24 +1130,21 @@ struct prefixed_unit {
 template <is_quantity Reference>
 [[nodiscard]]
 consteval auto
-get_quantity_spec(Reference reference) {
-   static_cast<void>(reference);
+get_quantity_spec([[maybe_unused]] Reference reference) {
    return typename Reference::quantity_spec_type{};
 }
 
 template <Unit Reference>
 [[nodiscard]]
 consteval auto
-get_quantity_spec(Reference reference) {
-   static_cast<void>(reference);
+get_quantity_spec([[maybe_unused]] Reference reference) {
    return typename Reference::quantity_spec_type{};
 }
 
 template <is_quantity Reference>
 [[nodiscard]]
 consteval auto
-get_unit(Reference reference) {
-   static_cast<void>(reference);
+get_unit([[maybe_unused]] Reference reference) {
    return typename Reference::unit_type{};
 }
 
@@ -1170,18 +1158,14 @@ get_unit(Reference reference) {
 template <Unit Left, Unit Right>
 [[nodiscard]]
 consteval auto
-operator==(Left left, Right right) -> bool {
-   static_cast<void>(left);
-   static_cast<void>(right);
+operator==([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
    return __is_same(Left, Right);
 }
 
 template <Unit Left, Unit Right>
 [[nodiscard]]
 consteval auto
-equivalent(Left left, Right right) -> bool {
-   static_cast<void>(left);
-   static_cast<void>(right);
+equivalent([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
    using left_quantity = reference_quantity<Left{}>;
    using right_quantity = reference_quantity<Right{}>;
    return __is_same(
@@ -1197,8 +1181,9 @@ equivalent(Left left, Right right) -> bool {
 template <is_quantity_spec QuantitySpec, Unit UnitType>
 [[nodiscard]]
 consteval auto
-make_reference(QuantitySpec quantity_specification, UnitType unit_value) {
-   static_cast<void>(quantity_specification);
+make_reference(
+   [[maybe_unused]] QuantitySpec quantity_specification, UnitType unit_value
+) {
    if constexpr (
       __is_same(QuantitySpec, __typeof_unqual(get_quantity_spec(unit_value)))
    ) {
@@ -1350,8 +1335,7 @@ using powered_quantity = quantity_reference<
 template <UnitMagnitude Magnitude, is_quantity_specifier R>
 [[nodiscard]]
 consteval auto
-operator*(Magnitude magnitude_value, R reference_value) {
-   static_cast<void>(reference_value);
+operator*(Magnitude magnitude_value, [[maybe_unused]] R reference_value) {
    using source_quantity = reference_quantity<R{}>;
    using result_quantity = quantity_reference<
       typename source_quantity::quantity_spec_type,
@@ -1377,9 +1361,7 @@ operator*(R reference_value, Magnitude magnitude_value) {
 template <is_quantity_specifier Left, is_quantity_specifier Right>
 [[nodiscard]]
 consteval auto
-operator*(Left left, Right right) {
-   static_cast<void>(left);
-   static_cast<void>(right);
+operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
    using left_quantity = reference_quantity<Left{}>;
    using right_quantity = reference_quantity<Right{}>;
    using result_quantity = multiplied_quantity<left_quantity, right_quantity>;
@@ -1396,9 +1378,7 @@ operator*(Left left, Right right) {
 template <is_quantity_specifier Left, is_quantity_specifier Right>
 [[nodiscard]]
 consteval auto
-operator/(Left left, Right right) {
-   static_cast<void>(left);
-   static_cast<void>(right);
+operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
    using left_quantity = reference_quantity<Left{}>;
    using right_quantity = reference_quantity<Right{}>;
    using result_quantity = divided_quantity<left_quantity, right_quantity>;
@@ -1417,8 +1397,7 @@ template <int numerator, int denominator = 1, is_quantity_specifier R>
       denominator != 0
       && (reference_quantity<R{}>::scale * numerator) % denominator == 0
    )
-[[nodiscard]] consteval auto pow(R reference_value) {
-   static_cast<void>(reference_value);
+[[nodiscard]] consteval auto pow([[maybe_unused]] R reference_value) {
    using result_quantity =
       powered_quantity<reference_quantity<R{}>, numerator, denominator>;
    if constexpr (Unit<R>) {

@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/allocator>
 #include <cat/atomic>
 #include <cat/bit>

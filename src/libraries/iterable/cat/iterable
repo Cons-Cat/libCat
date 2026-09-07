@@ -4,6 +4,7 @@
 
 #include <cat/detail/iterable_interface.hpp>
 
+#include <cat/arithmetic>
 #include <cat/maybe>
 #include <cat/span>
 #include <cat/utility>

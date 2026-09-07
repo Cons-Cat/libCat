@@ -1,0 +1,41 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/utility>
+
+#define CAT_PROPAGATE(container)                                       \
+   ({                                                                  \
+      auto libcat_temp_expr = (container);                             \
+      if (libcat_temp_expr.is_empty()) {                               \
+         return ::cat::propagate_error(::cat::move(libcat_temp_expr)); \
+      }                                                                \
+      ::cat::move(libcat_temp_expr).value();                           \
+   })
+
+#pragma clang final(CAT_PROPAGATE)
+#define $prop CAT_PROPAGATE
+
+#define CAT_PROPAGATE_OR(container, or_value)                          \
+   ({                                                                  \
+      auto libcat_temp_expr = (container);                             \
+      if (libcat_temp_expr.is_empty()) {                               \
+         return ::cat::propagate_error(::cat::move(libcat_temp_expr)); \
+      }                                                                \
+      (or_value);                                                      \
+   })
+
+#pragma clang final(CAT_PROPAGATE_OR)
+#define $prop_or CAT_PROPAGATE_OR
+
+#define CAT_PROPAGATE_AS(container, or_value) \
+   ({                                         \
+      auto libcat_temp_expr = (container);    \
+      if (libcat_temp_expr.is_empty()) {      \
+         return (or_value);                   \
+      }                                       \
+      ::cat::move(libcat_temp_expr).value();  \
+   })
+
+#pragma clang final(CAT_PROPAGATE_AS)
+#define $prop_as CAT_PROPAGATE_AS

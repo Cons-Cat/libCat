@@ -24,6 +24,7 @@
 #include <cat/container>
 #include <cat/iterable>
 #include <cat/maybe>
+#include <cat/propagate>
 #include <cat/utility>
 
 namespace cat {

@@ -814,3 +814,5 @@ make_bitset_odd() {
 }
 
 }  // namespace cat
+
+#include "../../simd/implementations/simd_mask_bitset.tpp"

@@ -1,3 +1,4 @@
+#include <cat/defer>
 #include <cat/linux>
 #include <cat/math>
 #include <cat/maybe>

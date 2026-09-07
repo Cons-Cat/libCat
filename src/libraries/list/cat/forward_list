@@ -19,6 +19,7 @@
 #include <cat/allocator_parameters>
 #include <cat/container>
 #include <cat/iterable>
+#include <cat/propagate>
 #include <cat/utility>
 
 namespace cat {

@@ -58,3 +58,17 @@ Diagnostics:
     - misc-use-internal-linkage
     - misc-header-include-cycle
     - misc-include-cleaner
+
+---
+# Header commands inherit the translation unit PCH and reparse its declarations.
+# Remove the PCH so headers are diagnosed as standalone includes.
+If:
+  PathMatch: (src/libraries/.*\.(hpp|tpp)|src/libraries/[^/]+/cat/[^/.]+)
+
+CompileFlags:
+  Remove:
+    - -include-pch
+    - -include
+    - -Winvalid-pch
+  Add:
+    - -xc++

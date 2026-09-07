@@ -1,4 +1,5 @@
 #include <cat/array>
+#include <cat/bitset>
 #include <cat/iterable>
 #include <cat/linear_allocator>
 #include <cat/math>

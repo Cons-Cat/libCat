@@ -1,3 +1,4 @@
+#include <cat/defer>
 #include <cat/linux>
 
 auto

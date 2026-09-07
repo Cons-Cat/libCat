@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/tuple_fwd.hpp>
+
 // libCat SIMD is primarily based upon C++ `std::simd` proposals. There are a
 // `cat::simd` and `cat::simd_mask` class whose data representations are
 // configured by "abi" info classes. These are informed by the following papers:
@@ -40,7 +42,6 @@
 // Clang non-temporal load and store builtins back explicit memory helpers.
 
 #include <cat/arithmetic>
-#include <cat/bit>
 #include <cat/utility>
 
 #include "cat/detail/simd_avx2.hpp"
@@ -2442,7 +2443,7 @@ class
    to_uword() const -> uword {
       uword bits = 0u;
       for (idx i = 0u; i < abi_type::lanes; ++i) {
-         if (i >= word_bits) {
+         if (i / 8u >= sizeof(uword)) {
             break;
          }
          if ((*this)[i]) {

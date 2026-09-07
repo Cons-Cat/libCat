@@ -2,7 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/bit>
 #include <cat/compare>
 #include <cat/meta>
 #include <cat/simd>
@@ -10,9 +9,7 @@
 namespace cat {
 
 // `memcpy`-class copy. The `[p_source, p_source+bytes)` and
-// `[p_destination, p_destination+bytes)` intervals must not overlap (including
-// a single shared byte). Violations are rejected by `assert`. The `__restrict`
-// qualifiers communicate the non-overlap to the optimizer.
+// `[p_destination, p_destination+bytes)` intervals must not overlap.
 constexpr void
 copy_memory(
    void const* _Nonnull __restrict p_source,
@@ -386,4 +383,5 @@ relocate(T& source, T* _Nonnull p_destination) -> T* _Nonnull {
 #include "../implementations/compare_memory.tpp"
 #include "../implementations/copy_memory.tpp"
 #include "../implementations/copy_memory_backward.tpp"
+#include "../implementations/find_memory.tpp"
 #include "../implementations/is_memory_overlapping.tpp"

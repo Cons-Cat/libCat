@@ -49,8 +49,7 @@ class vectorized_stepanov_iterator
 
  public:
    using value_type = deduce_simd<Lane, width>;
-   using storage_pointer =
-      conditional<is_const, Lane const*, Lane*>;
+   using storage_pointer = conditional<is_const, Lane const*, Lane*>;
 
    storage_pointer p = nullptr;
 

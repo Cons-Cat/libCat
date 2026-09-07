@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/arithmetic>
 #include <cat/meta>
 
 namespace cat {

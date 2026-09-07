@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/arithmetic>
+#include <cat/bit>
 #include <cat/meta>
 
 namespace x64 {

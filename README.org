@@ -405,7 +405,6 @@ For an example configuration:
   # ISA: default (x86_64-pc-linux-gnu)
   # Language: gnu++26 nostdlib nostdlib++
   # #define: CMAKE_INTDIR="Release" NDEBUG
-  # Inclusion: include=global_includes.hpp
   # Exceptions: no-exceptions no-unwind-tables no-asynchronous-unwind-tables
   # RTTI: no-rtti
   # Warnings: all extra invalid-pch
@@ -434,8 +433,6 @@ For an example configuration:
   # C++ modules:
   # #define:
   #   -DCMAKE_INTDIR="Debug"
-  # Inclusion:
-  #   -include=global_includes.hpp: Include file before parsing
   # Exceptions:
   #   -fno-exceptions: Disable support for exception handling
   #   -fno-unwind-tables: n/a

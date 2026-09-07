@@ -5,6 +5,7 @@
 #include <cat/allocator>
 #include <cat/bit>
 #include <cat/container>
+#include <cat/propagate>
 #include <cat/utility>
 
 // TODO: Make `ring` be `constexpr`.
@@ -193,8 +194,8 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
       }
 
       // Increment the index, and wrap around the capacity.
-      this->current_index =
-         (this->current_index + 1) & (this->current_capacity - 1);
+      this->current_index = (make_raw_arithmetic(this->current_index) + 1)
+                            & (make_raw_arithmetic(this->current_capacity) - 1);
    }
 
  private:

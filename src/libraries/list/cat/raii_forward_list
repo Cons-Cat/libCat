@@ -18,8 +18,11 @@
 //  `cat::raii::forward_list<T, Allocator>`, a default
 //  `raii::basic_forward_list`.
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/forward_list>
 #include <cat/null_allocator>
+#include <cat/propagate>
 
 namespace cat::raii {
 

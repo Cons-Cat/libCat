@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/allocator>
+#include <cat/propagate>
 #include <cat/stepanov>
 
 namespace cat {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cat/arithmetic>
+
 // This header forward-declares Jeaiii's `int`-to-string conversion functions
 // for use by my string formatting. The implementations, and their copyright
 // notice, are located in `../../implementations/itoa_jeaiii.cpp`.

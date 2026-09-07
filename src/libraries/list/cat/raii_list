@@ -16,8 +16,11 @@
 //
 //  `cat::raii::list<T, Allocator>`, a default `raii::basic_list`.
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/list>
 #include <cat/null_allocator>
+#include <cat/propagate>
 
 namespace cat::raii {
 

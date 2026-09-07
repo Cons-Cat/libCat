@@ -212,10 +212,10 @@ endblock()
 # it twice.
 get_property(_cat_ir_impl_sources TARGET cat-impl PROPERTY SOURCES)
 
-# PCH is intentionally NOT reused from cat-impl. With `-save-temps=obj` clang
-# replays `-include global_includes.hpp` against the PCH-loaded TU, double-
-# defining its template specialisations. Skipping PCH keeps the shadow
-# compile correct at the cost of one cold libCat header pass per TU.
+# PCH is intentionally NOT reused from cat-impl. With `-save-temps=obj` Clang
+# replays the generated PCH include wrapper against the PCH-loaded TU.
+# Skipping PCH keeps the shadow compile correct at the cost of one cold libCat
+# header pass per TU.
 add_library(cat-ir-impl-lib OBJECT EXCLUDE_FROM_ALL ${_cat_ir_impl_sources})
 target_link_libraries(cat-ir-impl-lib PRIVATE cat)
 target_compile_options(cat-ir-impl-lib PRIVATE

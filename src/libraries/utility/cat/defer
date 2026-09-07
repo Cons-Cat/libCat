@@ -1,0 +1,34 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+namespace cat::detail {
+
+template <typename F>
+class deferrer_callback {
+ private:
+   F m_callback;
+
+ public:
+   template <typename T>
+   deferrer_callback(T&& f) : m_callback(f) {  // NOLINT
+   }
+
+   ~deferrer_callback() {
+      m_callback();
+   }
+};
+
+inline constinit struct {
+   template <typename F>
+   auto
+   operator<<(F&& callback) const -> deferrer_callback<F> {
+      return deferrer_callback<F>(callback);
+   }
+} const deferrer [[maybe_unused]];
+
+}  // namespace cat::detail
+
+#define CAT_DEFER auto _ = ::cat::detail::deferrer << [&]->void
+#pragma clang final(CAT_DEFER)
+#define $defer CAT_DEFER

@@ -42,8 +42,11 @@
 //  `cat::raii::small_bitvec_fixed<Allocator, n=4>`, a `raii::basic_bitvec` with
 //     inline storage for `n` bits and `fixed_size` flag.
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/bitvec>
 #include <cat/null_allocator>
+#include <cat/propagate>
 
 namespace cat::detail {
 template <vec_flags flags>

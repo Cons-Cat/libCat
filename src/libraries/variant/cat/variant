@@ -50,6 +50,8 @@
 
 // TODO: Provide a policy for supporting non-empty variants.
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/compare>
 #include <cat/match>
 #include <cat/maybe>

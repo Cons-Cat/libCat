@@ -1,6 +1,7 @@
 #include <cat/arithmetic>
 #include <cat/maybe>
 #include <cat/memory>
+#include <cat/propagate>
 #include <cat/simd>
 #include <cat/simd_switch>
 

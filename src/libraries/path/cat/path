@@ -28,8 +28,12 @@
 //  `cat::path`, a default `basic_path`.
 //  `cat::path_fixed`, a fixed-size `basic_path`.
 
+#include <cat/detail/compact.hpp>
+
+#include <cat/defer>
 #include <cat/format>
 #include <cat/linux>
+#include <cat/propagate>
 #include <cat/simd>
 #include <cat/simd_switch>
 #include <cat/string>

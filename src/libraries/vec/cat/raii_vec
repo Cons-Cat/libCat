@@ -41,7 +41,10 @@
 //  `cat::raii::small_vec_fixed<T, Allocator, n=4>`, a `raii::basic_vec` with
 //     `inline_storage(n)` and `fixed_size` flag.
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/null_allocator>
+#include <cat/propagate>
 #include <cat/vec>
 
 namespace cat::raii {

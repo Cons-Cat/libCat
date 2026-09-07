@@ -2,9 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/type_list>
-#include <cat/utility>
-
 // A `tuple` is an anonymous struct type with tuple protocol support and small
 // convenience helpers.
 //
@@ -23,6 +20,11 @@
 // This also provides convenience `.first()`, `.second()`, `.third()`,
 // `.fourth()`, and `.fifth()` accessors for the first five members, if those
 // members exist.
+
+#include <cat/detail/tuple_fwd.hpp>
+
+#include <cat/type_list>
+#include <cat/utility>
 
 namespace cat {
 template <typename... Types>
