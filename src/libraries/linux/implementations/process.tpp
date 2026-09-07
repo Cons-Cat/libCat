@@ -27,8 +27,45 @@ struct process {
       ));
 
    process() = default;
-   // TODO: Add a move constructor and move assignment operator.
+
+   process(process&& other) {
+      *this = cat::move(other);
+   }
+
    process(process const&) = delete;
+
+   auto
+   operator=(process&& other) -> process& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+
+      m_id = other.m_id;
+      m_clone_child_clear_tid_for_kernel.m_value.store(
+         other.m_clone_child_clear_tid_for_kernel.m_value.load(
+            cat::memory_order::relaxed
+         ),
+         cat::memory_order::relaxed
+      );
+      m_p_stack_bottom = other.m_p_stack_bottom;
+      m_stack_size = other.m_stack_size;
+      m_allocation_bytes = other.m_allocation_bytes;
+      m_flags = other.m_flags;
+
+      other.m_id = process_id{0};
+      other.m_clone_child_clear_tid_for_kernel.m_value.store(
+         0, cat::memory_order::relaxed
+      );
+      other.m_p_stack_bottom = nullptr;
+      other.m_stack_size = 0;
+      other.m_allocation_bytes = 0;
+      other.m_flags = default_flags;
+      return *this;
+   }
+
+   auto
+   operator=(process const&) -> process& =
+      delete ("`nix::process` is non-copyable. Try to move instead!");
 
    [[nodiscard]]
    constexpr auto
