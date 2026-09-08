@@ -6,6 +6,7 @@
 #include <cat/detail/sqrt.hpp>
 
 #include <cat/math>
+#include <cat/metric_units>
 
 // TODO: Replace these series with native libCat trigonometric kernels.
 namespace cat::detail {
@@ -274,71 +275,174 @@ emulated_tanh(Float argument) -> Float {
 
 namespace cat {
 
+namespace detail {
+
 template <is_floating_point Float>
-   requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
-sin(Float argument) -> Float {
+make_radian_argument(Float argument)
+   -> rebind_quantity_type<Float, units::radian> {
+   static_assert(
+      is_angle_quantity<Float>,
+      "`cat::sin()`, `cat::cos()`, and `cat::tan()` inputs must be `radians` "
+      "or `degrees` quantities!"
+   );
+   using radian_type = rebind_quantity_type<Float, units::radian>;
+   radian_type const radians = argument;
+   return radians;
+}
+
+template <is_floating_point Float>
+   requires(!has_quantity<Float>)
+[[nodiscard]]
+constexpr auto
+raw_sin(Float argument) -> Float {
    if consteval {
-      return Float(detail::emulated_sin(make_raw_arithmetic(argument)));
+      return Float(emulated_sin(make_raw_arithmetic(argument)));
    }
    return Float(__builtin_elementwise_sin(make_raw_arithmetic(argument)));
 }
 
 template <is_floating_point Float>
-   requires is_dimensionless_arithmetic<Float>
+   requires(!has_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-cos(Float argument) -> Float {
+raw_cos(Float argument) -> Float {
    if consteval {
-      return Float(detail::emulated_cos(make_raw_arithmetic(argument)));
+      return Float(emulated_cos(make_raw_arithmetic(argument)));
    }
    return Float(__builtin_elementwise_cos(make_raw_arithmetic(argument)));
 }
 
 template <is_floating_point Float>
-   requires is_dimensionless_arithmetic<Float>
+   requires(!has_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-tan(Float argument) -> Float {
+raw_tan(Float argument) -> Float {
    if consteval {
-      return Float(detail::emulated_tan(make_raw_arithmetic(argument)));
+      return Float(emulated_tan(make_raw_arithmetic(argument)));
    }
    return Float(__builtin_elementwise_tan(make_raw_arithmetic(argument)));
 }
 
+}  // namespace detail
+
 template <is_floating_point Float>
-   requires is_dimensionless_arithmetic<Float>
+   requires(detail::is_angle_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-asin(Float argument) -> Float {
+sin(Float argument) -> detail::rebind_quantity_type<Float, scalar> {
+   using result_type = detail::rebind_quantity_type<Float, scalar>;
+   auto const raw_argument =
+      make_raw_arithmetic(detail::make_radian_argument(argument));
    if consteval {
-      return Float(detail::emulated_asin(make_raw_arithmetic(argument)));
+      return result_type(detail::emulated_sin(raw_argument));
    }
-   return Float(__builtin_elementwise_asin(make_raw_arithmetic(argument)));
+   return result_type(__builtin_elementwise_sin(raw_argument));
 }
 
 template <is_floating_point Float>
-   requires is_dimensionless_arithmetic<Float>
+   requires(!detail::is_angle_quantity<Float>)
+constexpr void sin(Float) =
+   delete ("`cat::sin` input must be a `radians` or `degrees` quantity!");
+
+template <is_floating_point Float>
+   requires(detail::is_angle_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-acos(Float argument) -> Float {
+cos(Float argument) -> detail::rebind_quantity_type<Float, scalar> {
+   using result_type = detail::rebind_quantity_type<Float, scalar>;
+   auto const raw_argument =
+      make_raw_arithmetic(detail::make_radian_argument(argument));
    if consteval {
-      return Float(detail::emulated_acos(make_raw_arithmetic(argument)));
+      return result_type(detail::emulated_cos(raw_argument));
    }
-   return Float(__builtin_elementwise_acos(make_raw_arithmetic(argument)));
+   return result_type(__builtin_elementwise_cos(raw_argument));
 }
 
 template <is_floating_point Float>
-   requires is_dimensionless_arithmetic<Float>
+   requires(!detail::is_angle_quantity<Float>)
+constexpr void cos(Float) =
+   delete ("`cat::cos` input must be a `radians` or `degrees` quantity!");
+
+template <is_floating_point Float>
+   requires(detail::is_angle_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-atan(Float argument) -> Float {
+tan(Float argument) -> detail::rebind_quantity_type<Float, scalar> {
+   using result_type = detail::rebind_quantity_type<Float, scalar>;
+   auto const raw_argument =
+      make_raw_arithmetic(detail::make_radian_argument(argument));
    if consteval {
-      return Float(detail::emulated_atan(make_raw_arithmetic(argument)));
+      return result_type(detail::emulated_tan(raw_argument));
    }
-   return Float(__builtin_elementwise_atan(make_raw_arithmetic(argument)));
+   return result_type(__builtin_elementwise_tan(raw_argument));
 }
+
+template <is_floating_point Float>
+   requires(!detail::is_angle_quantity<Float>)
+constexpr void tan(Float) =
+   delete ("`cat::tan` input must be a `radians` or `degrees` quantity!");
+
+template <is_floating_point Float>
+   requires(is_dimensionless_arithmetic<Float>)
+[[nodiscard]]
+constexpr auto
+asin(Float argument) {
+   if consteval {
+      return detail::attach_quantity<units::radian>(
+         Float(detail::emulated_asin(make_raw_arithmetic(argument)))
+      );
+   }
+   return detail::attach_quantity<units::radian>(
+      Float(__builtin_elementwise_asin(make_raw_arithmetic(argument)))
+   );
+}
+
+template <is_floating_point Float>
+   requires(!is_dimensionless_arithmetic<Float>)
+constexpr void
+   asin(Float) = delete ("`cat::asin` input must be dimensionless!");
+
+template <is_floating_point Float>
+   requires(is_dimensionless_arithmetic<Float>)
+[[nodiscard]]
+constexpr auto
+acos(Float argument) {
+   if consteval {
+      return detail::attach_quantity<units::radian>(
+         Float(detail::emulated_acos(make_raw_arithmetic(argument)))
+      );
+   }
+   return detail::attach_quantity<units::radian>(
+      Float(__builtin_elementwise_acos(make_raw_arithmetic(argument)))
+   );
+}
+
+template <is_floating_point Float>
+   requires(!is_dimensionless_arithmetic<Float>)
+constexpr void
+   acos(Float) = delete ("`cat::acos` input must be dimensionless!");
+
+template <is_floating_point Float>
+   requires(is_dimensionless_arithmetic<Float>)
+[[nodiscard]]
+constexpr auto
+atan(Float argument) {
+   if consteval {
+      return detail::attach_quantity<units::radian>(
+         Float(detail::emulated_atan(make_raw_arithmetic(argument)))
+      );
+   }
+   return detail::attach_quantity<units::radian>(
+      Float(__builtin_elementwise_atan(make_raw_arithmetic(argument)))
+   );
+}
+
+template <is_floating_point Float>
+   requires(!is_dimensionless_arithmetic<Float>)
+constexpr void
+   atan(Float) = delete ("`cat::atan` input must be dimensionless!");
 
 template <is_floating_point Y, is_floating_point X>
    requires(
@@ -349,17 +453,27 @@ template <is_floating_point Y, is_floating_point X>
 constexpr auto
 atan2(Y y, X x) {
    using raw_type = raw_arithmetic_type<Y>;
-   using result_type = detail::rebind_quantity_type<Y, si::one>;
    raw_type const raw_y = detail::quantity_value_in<arithmetic_quantity<Y>>(y);
    raw_type const raw_x = detail::quantity_value_in<arithmetic_quantity<Y>>(x);
    if consteval {
-      return result_type(detail::emulated_atan2(raw_y, raw_x));
+      return detail::attach_quantity<units::radian>(
+         Y(detail::emulated_atan2(raw_y, raw_x))
+      );
    }
-   return result_type(__builtin_elementwise_atan2(raw_y, raw_x));
+   return detail::attach_quantity<units::radian>(
+      Y(__builtin_elementwise_atan2(raw_y, raw_x))
+   );
 }
 
+template <is_floating_point Y, is_floating_point X>
+   requires(sizeof(raw_arithmetic_type<Y>) != sizeof(raw_arithmetic_type<X>)
+            || !detail::is_quantity_addable<Y, X>)
+constexpr void atan2(Y, X) = delete (
+   "`cat::atan2` inputs must use compatible quantities and representations!"
+);
+
 template <is_floating_point Float>
-   requires is_dimensionless_arithmetic<Float>
+   requires(is_dimensionless_arithmetic<Float>)
 [[nodiscard]]
 constexpr auto
 sinh(Float argument) -> Float {
@@ -370,7 +484,7 @@ sinh(Float argument) -> Float {
 }
 
 template <is_floating_point Float>
-   requires is_dimensionless_arithmetic<Float>
+   requires(is_dimensionless_arithmetic<Float>)
 [[nodiscard]]
 constexpr auto
 cosh(Float argument) -> Float {
@@ -381,7 +495,7 @@ cosh(Float argument) -> Float {
 }
 
 template <is_floating_point Float>
-   requires is_dimensionless_arithmetic<Float>
+   requires(is_dimensionless_arithmetic<Float>)
 [[nodiscard]]
 constexpr auto
 tanh(Float argument) -> Float {

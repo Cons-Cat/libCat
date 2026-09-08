@@ -24,7 +24,9 @@ round_up_to_multiple_of(T value, U multiple) -> common_type<T, U> {
       return align_up(wide_value, wide_multiple);
    }
 
-   wide const remainder = wide_value % wide_multiple;
+   wide const remainder(
+      make_raw_arithmetic(wide_value) % make_raw_arithmetic(wide_multiple)
+   );
 
    if (remainder == 0) {
       return wide_value;
@@ -50,7 +52,9 @@ round_down_to_multiple_of(T value, U multiple) -> common_type<T, U> {
       return align_down(wide_value, wide_multiple);
    }
 
-   wide const remainder = wide_value % wide_multiple;
+   wide const remainder(
+      make_raw_arithmetic(wide_value) % make_raw_arithmetic(wide_multiple)
+   );
 
    if (remainder == 0) {
       return wide_value;

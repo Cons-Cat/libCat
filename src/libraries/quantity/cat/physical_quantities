@@ -1,0 +1,1900 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/arithmetic>
+
+namespace cat::units {
+
+inline constexpr struct dim_length : base_dimension<"L"> {
+} dim_length;
+
+inline constexpr struct dim_time : base_dimension<"T"> {
+} dim_time;
+
+inline constexpr struct dim_mass : base_dimension<"M"> {
+} dim_mass;
+
+inline constexpr struct dim_thermodynamic_temperature
+    : base_dimension<"Theta"> {
+} dim_thermodynamic_temperature;
+
+inline constexpr struct dim_electric_current : base_dimension<"I"> {
+} dim_electric_current;
+
+inline constexpr struct dim_amount_of_substance : base_dimension<"N"> {
+} dim_amount_of_substance;
+
+inline constexpr struct dim_luminous_intensity : base_dimension<"J"> {
+} dim_luminous_intensity;
+
+inline constexpr struct dim_traffic_intensity : base_dimension<"A"> {
+} dim_traffic_intensity;
+
+using dimensionless = dimension<>;
+using length_dimension_type =
+   dimension<dimension_power<__typeof_unqual(dim_length), 1>>;
+using time_dimension_type =
+   dimension<dimension_power<__typeof_unqual(dim_time), 1>>;
+using mass_dimension_type =
+   dimension<dimension_power<__typeof_unqual(dim_mass), 1>>;
+using thermodynamic_temperature_dimension_type = dimension<
+   dimension_power<__typeof_unqual(dim_thermodynamic_temperature), 1>>;
+using electric_current_dimension_type =
+   dimension<dimension_power<__typeof_unqual(dim_electric_current), 1>>;
+using amount_of_substance_dimension_type =
+   dimension<dimension_power<__typeof_unqual(dim_amount_of_substance), 1>>;
+using luminous_intensity_dimension_type =
+   dimension<dimension_power<__typeof_unqual(dim_luminous_intensity), 1>>;
+
+using scalar = scalar_quantity_spec;
+
+inline constexpr struct length : quantity_spec<dim_length> {
+} length;
+
+inline constexpr struct time : quantity_spec<dim_time> {
+} time;
+
+inline constexpr struct mass : quantity_spec<dim_mass> {
+} mass;
+
+inline constexpr struct thermodynamic_temperature
+    : quantity_spec<dim_thermodynamic_temperature> {
+} thermodynamic_temperature;
+
+inline constexpr struct electric_current : quantity_spec<dim_electric_current> {
+} electric_current;
+
+inline constexpr struct amount_of_substance
+    : quantity_spec<dim_amount_of_substance> {
+} amount_of_substance;
+
+inline constexpr struct luminous_intensity
+    : quantity_spec<dim_luminous_intensity> {
+} luminous_intensity;
+
+inline constexpr struct plane_angle : quantity_spec<dimensionless{}> {
+} plane_angle;
+
+inline constexpr struct solid_angle : quantity_spec<dimensionless{}> {
+} solid_angle;
+
+inline constexpr struct width : quantity_spec<length> {
+} width;
+
+inline constexpr struct height : quantity_spec<length> {
+} height;
+
+inline constexpr struct thickness : quantity_spec<length> {
+} thickness;
+
+inline constexpr struct radius : quantity_spec<length> {
+} radius;
+
+inline constexpr struct distance : quantity_spec<length> {
+} distance;
+
+inline constexpr struct path_length : quantity_spec<length> {
+} path_length;
+
+inline constexpr struct wavelength : quantity_spec<length> {
+} wavelength;
+
+inline constexpr struct area : quantity_spec<pow<2>(length)> {
+} area;
+
+inline constexpr struct volume : quantity_spec<pow<3>(length)> {
+} volume;
+
+inline constexpr auto duration = time;
+
+inline constexpr struct period_duration : quantity_spec<time> {
+} period_duration;
+
+inline constexpr struct frequency : quantity_spec<inverse(time)> {
+} frequency;
+
+inline constexpr struct rotational_frequency : quantity_spec<frequency> {
+} rotational_frequency;
+
+inline constexpr struct angular_frequency : quantity_spec<plane_angle / time> {
+} angular_frequency;
+
+inline constexpr struct phase_coefficient
+    : quantity_spec<plane_angle / length> {
+} phase_coefficient;
+
+inline constexpr struct wave_number : quantity_spec<inverse(length)> {
+} wave_number;
+
+inline constexpr struct curvature : quantity_spec<inverse(length)> {
+} curvature;
+
+inline constexpr struct speed : quantity_spec<length / time> {
+} speed;
+
+inline constexpr struct velocity
+    : quantity_spec<
+         speed, quantity_character{.order = quantity_tensor_order::vector}> {
+} velocity;
+
+inline constexpr struct acceleration
+    : quantity_spec<
+         speed / time,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} acceleration;
+
+inline constexpr struct jerk
+    : quantity_spec<
+         acceleration / time,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} jerk;
+
+inline constexpr struct angular_velocity
+    : quantity_spec<
+         plane_angle / time,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} angular_velocity;
+
+inline constexpr struct angular_acceleration
+    : quantity_spec<
+         angular_velocity / time,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} angular_acceleration;
+
+inline constexpr struct mass_density : quantity_spec<mass / volume> {
+} mass_density;
+
+inline constexpr struct surface_density : quantity_spec<mass / area> {
+} surface_density;
+
+inline constexpr struct linear_density : quantity_spec<mass / length> {
+} linear_density;
+
+inline constexpr struct specific_volume : quantity_spec<volume / mass> {
+} specific_volume;
+
+inline constexpr struct momentum
+    : quantity_spec<
+         mass * velocity,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} momentum;
+
+inline constexpr struct impulse
+    : quantity_spec<
+         momentum, quantity_character{.order = quantity_tensor_order::vector}> {
+} impulse;
+
+inline constexpr struct force
+    : quantity_spec<
+         mass * acceleration,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} force;
+
+inline constexpr struct weight
+    : quantity_spec<
+         force, quantity_character{.order = quantity_tensor_order::vector}> {
+} weight;
+
+inline constexpr struct pressure : quantity_spec<force / area> {
+} pressure;
+
+inline constexpr struct stress
+    : quantity_spec<
+         force / area,
+         quantity_character{.order = quantity_tensor_order::tensor}> {
+} stress;
+
+inline constexpr struct strain
+    : quantity_spec<
+         dimensionless{},
+         quantity_character{.order = quantity_tensor_order::tensor}> {
+} strain;
+
+inline constexpr struct energy : quantity_spec<force * length> {
+} energy;
+
+inline constexpr struct work : quantity_spec<energy> {
+} work;
+
+inline constexpr struct heat : quantity_spec<energy> {
+} heat;
+
+inline constexpr struct internal_energy : quantity_spec<energy> {
+} internal_energy;
+
+inline constexpr struct enthalpy : quantity_spec<energy> {
+} enthalpy;
+
+inline constexpr struct power : quantity_spec<energy / time> {
+} power;
+
+inline constexpr struct torque : quantity_spec<force * length> {
+} torque;
+
+inline constexpr struct action : quantity_spec<energy * time> {
+} action;
+
+inline constexpr struct angular_momentum
+    : quantity_spec<
+         action, quantity_character{.order = quantity_tensor_order::vector}> {
+} angular_momentum;
+
+inline constexpr struct moment_of_inertia
+    : quantity_spec<
+         mass * area,
+         quantity_character{.order = quantity_tensor_order::tensor}> {
+} moment_of_inertia;
+
+inline constexpr struct surface_tension : quantity_spec<force / length> {
+} surface_tension;
+
+inline constexpr struct dynamic_viscosity : quantity_spec<pressure * time> {
+} dynamic_viscosity;
+
+inline constexpr struct kinematic_viscosity : quantity_spec<area / time> {
+} kinematic_viscosity;
+
+inline constexpr struct volume_flow_rate : quantity_spec<volume / time> {
+} volume_flow_rate;
+
+inline constexpr struct mass_flow_rate : quantity_spec<mass / time> {
+} mass_flow_rate;
+
+inline constexpr struct heat_capacity
+    : quantity_spec<energy / thermodynamic_temperature> {
+} heat_capacity;
+
+inline constexpr struct specific_heat_capacity
+    : quantity_spec<heat_capacity / mass> {
+} specific_heat_capacity;
+
+inline constexpr struct molar_heat_capacity
+    : quantity_spec<heat_capacity / amount_of_substance> {
+} molar_heat_capacity;
+
+inline constexpr struct entropy
+    : quantity_spec<energy / thermodynamic_temperature> {
+} entropy;
+
+inline constexpr struct specific_entropy : quantity_spec<entropy / mass> {
+} specific_entropy;
+
+inline constexpr struct molar_entropy
+    : quantity_spec<entropy / amount_of_substance> {
+} molar_entropy;
+
+inline constexpr struct thermal_conductivity
+    : quantity_spec<power / (length * thermodynamic_temperature)> {
+} thermal_conductivity;
+
+inline constexpr struct heat_flux_density : quantity_spec<power / area> {
+} heat_flux_density;
+
+inline constexpr struct temperature_gradient
+    : quantity_spec<thermodynamic_temperature / length> {
+} temperature_gradient;
+
+inline constexpr struct thermal_diffusivity : quantity_spec<area / time> {
+} thermal_diffusivity;
+
+inline constexpr struct thermal_expansion_coefficient
+    : quantity_spec<inverse(thermodynamic_temperature)> {
+} thermal_expansion_coefficient;
+
+inline constexpr struct compressibility : quantity_spec<inverse(pressure)> {
+} compressibility;
+
+inline constexpr struct electric_charge
+    : quantity_spec<electric_current * time> {
+} electric_charge;
+
+inline constexpr struct volume_charge_density
+    : quantity_spec<electric_charge / volume> {
+} volume_charge_density;
+
+inline constexpr struct surface_charge_density
+    : quantity_spec<electric_charge / area> {
+} surface_charge_density;
+
+inline constexpr struct linear_charge_density
+    : quantity_spec<electric_charge / length> {
+} linear_charge_density;
+
+inline constexpr struct electric_potential
+    : quantity_spec<
+         power / electric_current,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} electric_potential;
+
+inline constexpr struct voltage : quantity_spec<electric_potential> {
+} voltage;
+
+inline constexpr struct electric_field_strength
+    : quantity_spec<
+         voltage / length,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} electric_field_strength;
+
+inline constexpr struct electric_flux_density
+    : quantity_spec<
+         electric_charge / area,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} electric_flux_density;
+
+inline constexpr struct electric_flux : quantity_spec<electric_charge> {
+} electric_flux;
+
+inline constexpr struct capacitance : quantity_spec<electric_charge / voltage> {
+} capacitance;
+
+inline constexpr struct resistance : quantity_spec<voltage / electric_current> {
+} resistance;
+
+inline constexpr struct conductance : quantity_spec<inverse(resistance)> {
+} conductance;
+
+inline constexpr struct resistivity : quantity_spec<resistance * length> {
+} resistivity;
+
+inline constexpr struct conductivity : quantity_spec<inverse(resistivity)> {
+} conductivity;
+
+inline constexpr struct permittivity : quantity_spec<capacitance / length> {
+} permittivity;
+
+inline constexpr struct electric_current_density
+    : quantity_spec<
+         electric_current / area,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} electric_current_density;
+
+inline constexpr struct electric_dipole_moment
+    : quantity_spec<
+         electric_charge * length,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} electric_dipole_moment;
+
+inline constexpr struct polarization
+    : quantity_spec<
+         electric_charge / area,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} polarization;
+
+inline constexpr struct magnetic_flux : quantity_spec<voltage * time> {
+} magnetic_flux;
+
+inline constexpr struct magnetic_flux_density
+    : quantity_spec<
+         magnetic_flux / area,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} magnetic_flux_density;
+
+inline constexpr struct magnetic_field_strength
+    : quantity_spec<
+         electric_current / length,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} magnetic_field_strength;
+
+inline constexpr struct inductance
+    : quantity_spec<magnetic_flux / electric_current> {
+} inductance;
+
+inline constexpr struct permeability : quantity_spec<inductance / length> {
+} permeability;
+
+inline constexpr struct magnetic_dipole_moment
+    : quantity_spec<
+         electric_current * area,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} magnetic_dipole_moment;
+
+inline constexpr struct magnetization
+    : quantity_spec<
+         magnetic_field_strength,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} magnetization;
+
+inline constexpr struct electric_susceptibility
+    : quantity_spec<dimensionless{}> {
+} electric_susceptibility;
+
+inline constexpr struct magnetic_susceptibility
+    : quantity_spec<dimensionless{}> {
+} magnetic_susceptibility;
+
+inline constexpr struct radiant_energy : quantity_spec<energy> {
+} radiant_energy;
+
+inline constexpr struct radiant_flux : quantity_spec<power> {
+} radiant_flux;
+
+inline constexpr struct radiant_intensity
+    : quantity_spec<radiant_flux / solid_angle> {
+} radiant_intensity;
+
+inline constexpr struct radiance : quantity_spec<radiant_intensity / area> {
+} radiance;
+
+inline constexpr struct irradiance : quantity_spec<radiant_flux / area> {
+} irradiance;
+
+inline constexpr struct radiant_exposure
+    : quantity_spec<radiant_energy / area> {
+} radiant_exposure;
+
+inline constexpr struct spectral_radiant_flux
+    : quantity_spec<radiant_flux / length> {
+} spectral_radiant_flux;
+
+inline constexpr struct spectral_irradiance
+    : quantity_spec<irradiance / length> {
+} spectral_irradiance;
+
+inline constexpr struct luminous_flux
+    : quantity_spec<luminous_intensity * solid_angle> {
+} luminous_flux;
+
+inline constexpr struct illuminance : quantity_spec<luminous_flux / area> {
+} illuminance;
+
+inline constexpr struct luminance : quantity_spec<luminous_intensity / area> {
+} luminance;
+
+inline constexpr struct luminous_energy : quantity_spec<luminous_flux * time> {
+} luminous_energy;
+
+inline constexpr struct luminous_exposure
+    : quantity_spec<luminous_energy / area> {
+} luminous_exposure;
+
+inline constexpr struct absorbed_dose : quantity_spec<energy / mass> {
+} absorbed_dose;
+
+inline constexpr struct kerma : quantity_spec<absorbed_dose> {
+} kerma;
+
+inline constexpr struct dose_equivalent : quantity_spec<energy / mass> {
+} dose_equivalent;
+
+inline constexpr struct activity : quantity_spec<inverse(time)> {
+} activity;
+
+inline constexpr struct exposure : quantity_spec<electric_charge / mass> {
+} exposure;
+
+inline constexpr struct molar_mass : quantity_spec<mass / amount_of_substance> {
+} molar_mass;
+
+inline constexpr struct molar_volume
+    : quantity_spec<volume / amount_of_substance> {
+} molar_volume;
+
+inline constexpr struct amount_concentration
+    : quantity_spec<amount_of_substance / volume> {
+} amount_concentration;
+
+inline constexpr struct mass_concentration : quantity_spec<mass / volume> {
+} mass_concentration;
+
+inline constexpr struct molality : quantity_spec<amount_of_substance / mass> {
+} molality;
+
+inline constexpr struct catalytic_activity
+    : quantity_spec<amount_of_substance / time> {
+} catalytic_activity;
+
+inline constexpr struct molar_energy
+    : quantity_spec<energy / amount_of_substance> {
+} molar_energy;
+
+inline constexpr struct chemical_potential : quantity_spec<molar_energy> {
+} chemical_potential;
+
+inline constexpr struct molar_conductivity
+    : quantity_spec<conductivity * volume / amount_of_substance> {
+} molar_conductivity;
+
+inline constexpr struct particle_number : quantity_spec<dimensionless{}> {
+} particle_number;
+
+inline constexpr struct particle_number_density
+    : quantity_spec<inverse(volume)> {
+} particle_number_density;
+
+inline constexpr struct mass_number : quantity_spec<dimensionless{}> {
+} mass_number;
+
+inline constexpr struct atomic_number : quantity_spec<dimensionless{}> {
+} atomic_number;
+
+inline constexpr struct decay_constant : quantity_spec<inverse(time)> {
+} decay_constant;
+
+inline constexpr struct half_life : quantity_spec<time> {
+} half_life;
+
+inline constexpr struct cross_section : quantity_spec<area> {
+} cross_section;
+
+inline constexpr struct stopping_power : quantity_spec<energy / length> {
+} stopping_power;
+
+inline constexpr struct linear_attenuation_coefficient
+    : quantity_spec<inverse(length)> {
+} linear_attenuation_coefficient;
+
+inline constexpr struct mass_attenuation_coefficient
+    : quantity_spec<area / mass> {
+} mass_attenuation_coefficient;
+
+inline constexpr struct lattice_plane_spacing : quantity_spec<length> {
+} lattice_plane_spacing;
+
+inline constexpr struct dislocation_density : quantity_spec<inverse(area)> {
+} dislocation_density;
+
+inline constexpr struct surface_energy : quantity_spec<energy / area> {
+} surface_energy;
+
+inline constexpr struct energy_density : quantity_spec<energy / volume> {
+} energy_density;
+
+inline constexpr struct shear_modulus : quantity_spec<stress> {
+} shear_modulus;
+
+inline constexpr struct bulk_modulus : quantity_spec<stress> {
+} bulk_modulus;
+
+inline constexpr struct poisson_ratio : quantity_spec<dimensionless{}> {
+} poisson_ratio;
+
+inline constexpr struct information_content : quantity_spec<dimensionless{}> {
+} information_content;
+
+inline constexpr struct information_entropy : quantity_spec<dimensionless{}> {
+} information_entropy;
+
+inline constexpr struct storage_capacity : quantity_spec<information_content> {
+} storage_capacity;
+
+inline constexpr struct transfer_rate
+    : quantity_spec<information_content / time> {
+} transfer_rate;
+
+inline constexpr struct modulation_rate : quantity_spec<inverse(time)> {
+} modulation_rate;
+
+inline constexpr struct spectral_power_density
+    : quantity_spec<power / frequency> {
+} spectral_power_density;
+
+inline constexpr auto density = mass_density;
+
+inline constexpr struct speed_of_light_in_vacuum : quantity_spec<speed> {
+} speed_of_light_in_vacuum;
+
+inline constexpr auto light_speed_in_vacuum = speed_of_light_in_vacuum;
+inline constexpr auto luminal_speed = speed_of_light_in_vacuum;
+
+inline constexpr struct number_of_entities : quantity_spec<dimensionless{}> {
+} number_of_entities;
+
+inline constexpr auto breadth = width;
+inline constexpr auto arc_length = path_length;
+
+inline constexpr struct angular_measure
+    : quantity_spec<dimensionless{}, arc_length / radius> {
+} angular_measure;
+
+inline constexpr struct solid_angular_measure
+    : quantity_spec<dimensionless{}, area / pow<2>(radius)> {
+} solid_angular_measure;
+
+inline constexpr auto period = period_duration;
+
+inline constexpr struct impedance
+    : quantity_spec<
+         electric_potential / electric_current,
+         quantity_character{.field = quantity_field::complex}> {
+} impedance;
+
+inline constexpr struct admittance
+    : quantity_spec<
+         inverse(impedance),
+         quantity_character{.field = quantity_field::complex}> {
+} admittance;
+
+inline constexpr struct ionizing_radiation_quality_factor
+    : quantity_spec<dimensionless{}> {
+} ionizing_radiation_quality_factor;
+
+inline constexpr struct altitude : quantity_spec<length> {
+} altitude;
+
+inline constexpr struct diameter : quantity_spec<width> {
+} diameter;
+
+inline constexpr struct radial_distance : quantity_spec<distance> {
+} radial_distance;
+
+inline constexpr struct displacement
+    : quantity_spec<
+         length, quantity_character{.order = quantity_tensor_order::vector}> {
+} displacement;
+
+inline constexpr struct position_vector
+    : quantity_spec<
+         displacement,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} position_vector;
+
+inline constexpr struct radius_of_curvature : quantity_spec<radius> {
+} radius_of_curvature;
+
+inline constexpr struct rotational_displacement
+    : quantity_spec<angular_measure, path_length / radius> {
+} rotational_displacement;
+
+inline constexpr auto angular_displacement = rotational_displacement;
+
+inline constexpr struct phase_angle : quantity_spec<angular_measure> {
+} phase_angle;
+
+inline constexpr struct acceleration_of_free_fall
+    : quantity_spec<
+         acceleration,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} acceleration_of_free_fall;
+
+inline constexpr struct time_constant : quantity_spec<duration> {
+} time_constant;
+
+inline constexpr struct rotation : quantity_spec<dimensionless{}> {
+} rotation;
+
+inline constexpr struct repetency : quantity_spec<inverse(wavelength)> {
+} repetency;
+
+inline constexpr auto wavenumber = repetency;
+
+inline constexpr struct angular_repetency : quantity_spec<inverse(wavelength)> {
+} angular_repetency;
+
+inline constexpr auto angular_wavenumber = angular_repetency;
+
+inline constexpr struct wave_vector
+    : quantity_spec<
+         angular_repetency,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} wave_vector;
+
+inline constexpr struct phase_speed
+    : quantity_spec<angular_frequency / angular_repetency> {
+} phase_speed;
+
+inline constexpr struct group_speed
+    : quantity_spec<angular_frequency / angular_repetency> {
+} group_speed;
+
+inline constexpr struct damping_coefficient
+    : quantity_spec<inverse(time_constant)> {
+} damping_coefficient;
+
+inline constexpr struct logarithmic_decrement
+    : quantity_spec<dimensionless{}, damping_coefficient * period_duration> {
+} logarithmic_decrement;
+
+inline constexpr struct attenuation : quantity_spec<inverse(distance)> {
+} attenuation;
+
+inline constexpr auto extinction = attenuation;
+
+inline constexpr struct propagation_coefficient
+    : quantity_spec<inverse(length)> {
+} propagation_coefficient;
+
+inline constexpr struct relative_mass_density
+    : quantity_spec<mass_density / mass_density> {
+} relative_mass_density;
+
+inline constexpr auto relative_density = relative_mass_density;
+
+inline constexpr auto surface_mass_density = surface_density;
+inline constexpr auto linear_mass_density = linear_density;
+
+inline constexpr struct static_friction_force
+    : quantity_spec<
+         force, quantity_character{.order = quantity_tensor_order::vector}> {
+} static_friction_force;
+
+inline constexpr auto static_friction = static_friction_force;
+
+inline constexpr struct kinetic_friction_force
+    : quantity_spec<
+         force, quantity_character{.order = quantity_tensor_order::vector}> {
+} kinetic_friction_force;
+
+inline constexpr auto dynamic_friction_force = kinetic_friction_force;
+
+inline constexpr struct rolling_resistance
+    : quantity_spec<
+         force, quantity_character{.order = quantity_tensor_order::vector}> {
+} rolling_resistance;
+
+inline constexpr auto rolling_drag = rolling_resistance;
+inline constexpr auto rolling_friction_force = rolling_resistance;
+
+inline constexpr struct drag_force
+    : quantity_spec<
+         force, quantity_character{.order = quantity_tensor_order::vector}> {
+} drag_force;
+
+inline constexpr struct moment_of_force
+    : quantity_spec<
+         position_vector * force,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} moment_of_force;
+
+inline constexpr struct angular_impulse
+    : quantity_spec<
+         angular_momentum, moment_of_force * time,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} angular_impulse;
+
+inline constexpr struct gauge_pressure : quantity_spec<pressure> {
+} gauge_pressure;
+
+inline constexpr struct normal_stress
+    : quantity_spec<
+         stress, quantity_character{.order = quantity_tensor_order::scalar}> {
+} normal_stress;
+
+inline constexpr struct shear_stress
+    : quantity_spec<
+         stress, quantity_character{.order = quantity_tensor_order::scalar}> {
+} shear_stress;
+
+inline constexpr struct relative_linear_strain
+    : quantity_spec<length / length> {
+} relative_linear_strain;
+
+inline constexpr struct shear_strain
+    : quantity_spec<
+         dimensionless{}, displacement / thickness,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} shear_strain;
+
+inline constexpr struct relative_volume_strain
+    : quantity_spec<volume / volume> {
+} relative_volume_strain;
+
+inline constexpr struct poisson_number
+    : quantity_spec<dimensionless{}, width / length> {
+} poisson_number;
+
+inline constexpr struct modulus_of_elasticity
+    : quantity_spec<normal_stress, normal_stress / relative_linear_strain> {
+} modulus_of_elasticity;
+
+inline constexpr auto young_modulus = modulus_of_elasticity;
+
+inline constexpr auto modulus_of_rigidity = shear_modulus;
+inline constexpr auto modulus_of_compression = bulk_modulus;
+
+inline constexpr struct second_axial_moment_of_area
+    : quantity_spec<pow<2>(radial_distance) * area> {
+} second_axial_moment_of_area;
+
+inline constexpr struct second_polar_moment_of_area
+    : quantity_spec<pow<2>(radial_distance) * area> {
+} second_polar_moment_of_area;
+
+inline constexpr struct section_modulus
+    : quantity_spec<second_axial_moment_of_area / radial_distance> {
+} section_modulus;
+
+inline constexpr struct static_friction_coefficient
+    : quantity_spec<
+         dimensionless{}, static_friction_force / force,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} static_friction_coefficient;
+
+inline constexpr auto static_friction_factor = static_friction_coefficient;
+inline constexpr auto coefficient_of_static_friction =
+   static_friction_coefficient;
+
+inline constexpr struct kinetic_friction_factor
+    : quantity_spec<
+         dimensionless{}, kinetic_friction_force / force,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} kinetic_friction_factor;
+
+inline constexpr auto dynamic_friction_factor = kinetic_friction_factor;
+
+inline constexpr struct rolling_resistance_factor
+    : quantity_spec<
+         force / force,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} rolling_resistance_factor;
+
+inline constexpr struct drag_coefficient
+    : quantity_spec<
+         dimensionless{}, drag_force / (mass_density * pow<2>(speed) * area),
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} drag_coefficient;
+
+inline constexpr auto drag_factor = drag_coefficient;
+
+inline constexpr struct mechanical_power
+    : quantity_spec<
+         power, force * velocity,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} mechanical_power;
+
+inline constexpr auto mechanical_work = work;
+
+inline constexpr struct mechanical_energy
+    : quantity_spec<mechanical_work, mass * pow<2>(length) / pow<2>(time)> {
+} mechanical_energy;
+
+inline constexpr struct potential_energy : quantity_spec<mechanical_energy> {
+} potential_energy;
+
+inline constexpr struct kinetic_energy
+    : quantity_spec<mechanical_energy, mass * pow<2>(speed)> {
+} kinetic_energy;
+
+inline constexpr struct mechanical_efficiency
+    : quantity_spec<mechanical_power / mechanical_power> {
+} mechanical_efficiency;
+
+inline constexpr struct mass_flow
+    : quantity_spec<
+         mass_density * velocity,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} mass_flow;
+
+inline constexpr struct mass_change_rate : quantity_spec<mass / time> {
+} mass_change_rate;
+
+inline constexpr struct linear_expansion_coefficient
+    : quantity_spec<inverse(length) * (length / thermodynamic_temperature)> {
+} linear_expansion_coefficient;
+
+inline constexpr struct cubic_expansion_coefficient
+    : quantity_spec<inverse(volume) * (volume / thermodynamic_temperature)> {
+} cubic_expansion_coefficient;
+
+inline constexpr struct relative_pressure_coefficient
+    : quantity_spec<
+         inverse(pressure) * (pressure / thermodynamic_temperature)> {
+} relative_pressure_coefficient;
+
+inline constexpr struct pressure_coefficient
+    : quantity_spec<pressure / thermodynamic_temperature> {
+} pressure_coefficient;
+
+inline constexpr struct isothermal_compressibility
+    : quantity_spec<compressibility, inverse(volume) * (volume / pressure)> {
+} isothermal_compressibility;
+
+inline constexpr struct isentropic_compressibility
+    : quantity_spec<compressibility, inverse(volume) * (volume / pressure)> {
+} isentropic_compressibility;
+
+inline constexpr auto amount_of_heat = heat;
+
+inline constexpr struct latent_heat : quantity_spec<heat> {
+} latent_heat;
+
+inline constexpr struct heat_flow_rate : quantity_spec<heat / time> {
+} heat_flow_rate;
+
+inline constexpr struct density_of_heat_flow_rate
+    : quantity_spec<heat_flow_rate / area> {
+} density_of_heat_flow_rate;
+
+inline constexpr struct coefficient_of_heat_transfer
+    : quantity_spec<density_of_heat_flow_rate / thermodynamic_temperature> {
+} coefficient_of_heat_transfer;
+
+inline constexpr struct surface_coefficient_of_heat_transfer
+    : quantity_spec<density_of_heat_flow_rate / thermodynamic_temperature> {
+} surface_coefficient_of_heat_transfer;
+
+inline constexpr struct thermal_insulance
+    : quantity_spec<inverse(coefficient_of_heat_transfer)> {
+} thermal_insulance;
+
+inline constexpr auto coefficient_of_thermal_insulance = thermal_insulance;
+
+inline constexpr struct thermal_resistance
+    : quantity_spec<thermodynamic_temperature / heat_flow_rate> {
+} thermal_resistance;
+
+inline constexpr struct thermal_conductance
+    : quantity_spec<inverse(thermal_resistance)> {
+} thermal_conductance;
+
+inline constexpr struct specific_heat_capacity_at_constant_pressure
+    : quantity_spec<specific_heat_capacity> {
+} specific_heat_capacity_at_constant_pressure;
+
+inline constexpr struct specific_heat_capacity_at_constant_volume
+    : quantity_spec<specific_heat_capacity> {
+} specific_heat_capacity_at_constant_volume;
+
+inline constexpr struct specific_heat_capacity_at_saturated_vapour_pressure
+    : quantity_spec<specific_heat_capacity> {
+} specific_heat_capacity_at_saturated_vapour_pressure;
+
+inline constexpr struct ratio_of_specific_heat_capacities
+    : quantity_spec<
+         dimensionless{}, specific_heat_capacity_at_constant_pressure
+                             / specific_heat_capacity_at_constant_volume> {
+} ratio_of_specific_heat_capacities;
+
+inline constexpr struct isentropic_exponent
+    : quantity_spec<volume / pressure*(pressure / volume)> {
+} isentropic_exponent;
+
+inline constexpr auto isentropic_expansion_factor = isentropic_exponent;
+inline constexpr auto thermodynamic_energy = internal_energy;
+
+inline constexpr struct helmholtz_energy : quantity_spec<internal_energy> {
+} helmholtz_energy;
+
+inline constexpr auto helmholtz_function = helmholtz_energy;
+
+inline constexpr struct gibbs_energy : quantity_spec<enthalpy> {
+} gibbs_energy;
+
+inline constexpr auto gibbs_function = gibbs_energy;
+
+inline constexpr struct specific_energy : quantity_spec<energy / mass> {
+} specific_energy;
+
+inline constexpr struct specific_internal_energy
+    : quantity_spec<specific_energy, internal_energy / mass> {
+} specific_internal_energy;
+
+inline constexpr auto specific_thermodynamic_energy = specific_internal_energy;
+
+inline constexpr struct specific_enthalpy
+    : quantity_spec<specific_internal_energy, enthalpy / mass> {
+} specific_enthalpy;
+
+inline constexpr struct specific_helmholtz_energy
+    : quantity_spec<specific_internal_energy, helmholtz_energy / mass> {
+} specific_helmholtz_energy;
+
+inline constexpr auto specific_helmholtz_function = specific_helmholtz_energy;
+
+inline constexpr struct specific_gibbs_energy
+    : quantity_spec<specific_enthalpy, gibbs_energy / mass> {
+} specific_gibbs_energy;
+
+inline constexpr auto specific_gibbs_function = specific_gibbs_energy;
+
+inline constexpr struct massieu_function
+    : quantity_spec<helmholtz_energy / thermodynamic_temperature> {
+} massieu_function;
+
+inline constexpr struct planck_function
+    : quantity_spec<gibbs_energy / thermodynamic_temperature> {
+} planck_function;
+
+inline constexpr struct joule_thomson_coefficient
+    : quantity_spec<thermodynamic_temperature / pressure> {
+} joule_thomson_coefficient;
+
+inline constexpr struct thermodynamic_efficiency
+    : quantity_spec<dimensionless{}, work / heat> {
+} thermodynamic_efficiency;
+
+inline constexpr struct maximum_efficiency
+    : quantity_spec<thermodynamic_temperature / thermodynamic_temperature> {
+} maximum_efficiency;
+
+inline constexpr struct specific_gas_constant : quantity_spec<entropy / mass> {
+} specific_gas_constant;
+
+inline constexpr struct mass_concentration_of_water
+    : quantity_spec<mass_density, mass / volume> {
+} mass_concentration_of_water;
+
+inline constexpr struct mass_concentration_of_water_vapour
+    : quantity_spec<mass_density, mass / volume> {
+} mass_concentration_of_water_vapour;
+
+inline constexpr struct mass_ratio_of_water_to_dry_matter
+    : quantity_spec<mass / mass> {
+} mass_ratio_of_water_to_dry_matter;
+
+inline constexpr struct mass_ratio_of_water_vapour_to_dry_gas
+    : quantity_spec<mass / mass> {
+} mass_ratio_of_water_vapour_to_dry_gas;
+
+inline constexpr struct mass_fraction_of_water
+    : quantity_spec<
+         mass_ratio_of_water_to_dry_matter
+         / mass_ratio_of_water_to_dry_matter> {
+} mass_fraction_of_water;
+
+inline constexpr struct mass_fraction_of_dry_matter
+    : quantity_spec<mass_fraction_of_water> {
+} mass_fraction_of_dry_matter;
+
+inline constexpr struct relative_humidity : quantity_spec<pressure / pressure> {
+} relative_humidity;
+
+inline constexpr struct relative_mass_concentration_of_vapour
+    : quantity_spec<
+         mass_concentration_of_water_vapour
+         / mass_concentration_of_water_vapour> {
+} relative_mass_concentration_of_vapour;
+
+inline constexpr struct relative_mass_ratio_of_vapour
+    : quantity_spec<
+         mass_ratio_of_water_vapour_to_dry_gas
+         / mass_ratio_of_water_vapour_to_dry_gas> {
+} relative_mass_ratio_of_vapour;
+
+inline constexpr struct dew_point_temperature
+    : quantity_spec<thermodynamic_temperature> {
+} dew_point_temperature;
+
+inline constexpr struct elementary_charge : quantity_spec<electric_charge> {
+} elementary_charge;
+
+inline constexpr struct electric_charge_density
+    : quantity_spec<electric_charge / volume> {
+} electric_charge_density;
+
+inline constexpr auto volume_electric_charge = electric_charge_density;
+inline constexpr auto volumic_charge = electric_charge_density;
+
+inline constexpr struct surface_density_of_electric_charge
+    : quantity_spec<electric_charge / area> {
+} surface_density_of_electric_charge;
+
+inline constexpr auto areic_electric_charge =
+   surface_density_of_electric_charge;
+inline constexpr auto areic_charge = surface_density_of_electric_charge;
+
+inline constexpr struct linear_density_of_electric_charge
+    : quantity_spec<electric_charge / length> {
+} linear_density_of_electric_charge;
+
+inline constexpr auto lineic_electric_charge =
+   linear_density_of_electric_charge;
+inline constexpr auto lineic_charge = linear_density_of_electric_charge;
+
+inline constexpr struct electric_polarization
+    : quantity_spec<
+         electric_dipole_moment / volume,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} electric_polarization;
+
+inline constexpr struct linear_electric_current_density
+    : quantity_spec<
+         surface_density_of_electric_charge * velocity,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} linear_electric_current_density;
+
+inline constexpr struct electric_potential_difference
+    : quantity_spec<
+         electric_potential,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} electric_potential_difference;
+
+inline constexpr auto electric_tension = voltage;
+
+inline constexpr struct induced_voltage : quantity_spec<voltage> {
+} induced_voltage;
+
+inline constexpr auto electric_displacement = electric_flux_density;
+
+inline constexpr struct magnetic_constant
+    : quantity_spec<electric_potential * time / (electric_current * length)> {
+} magnetic_constant;
+
+inline constexpr auto permeability_of_vacuum = magnetic_constant;
+
+inline constexpr struct phase_speed_of_electromagnetic_waves
+    : quantity_spec<angular_frequency / angular_wavenumber> {
+} phase_speed_of_electromagnetic_waves;
+
+inline constexpr struct electric_constant
+    : quantity_spec<
+         inverse(magnetic_constant* pow<2>(speed_of_light_in_vacuum))> {
+} electric_constant;
+
+inline constexpr auto permittivity_of_vacuum = electric_constant;
+
+inline constexpr struct relative_permittivity
+    : quantity_spec<dimensionless{}, permittivity / electric_constant> {
+} relative_permittivity;
+
+inline constexpr struct displacement_current_density
+    : quantity_spec<
+         electric_current_density, electric_flux_density / time,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} displacement_current_density;
+
+inline constexpr struct displacement_current
+    : quantity_spec<
+         electric_current, displacement_current_density * area,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} displacement_current;
+
+inline constexpr struct total_current : quantity_spec<electric_current> {
+} total_current;
+
+inline constexpr struct total_current_density
+    : quantity_spec<
+         electric_current_density,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} total_current_density;
+
+inline constexpr struct magnetic_vector_potential
+    : quantity_spec<
+         magnetic_flux_density * length,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} magnetic_vector_potential;
+
+inline constexpr struct protoflux
+    : quantity_spec<
+         magnetic_vector_potential * displacement,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} protoflux;
+
+inline constexpr struct linked_magnetic_flux : quantity_spec<magnetic_flux> {
+} linked_magnetic_flux;
+
+inline constexpr struct total_magnetic_flux : quantity_spec<magnetic_flux> {
+} total_magnetic_flux;
+
+inline constexpr struct magnetic_moment
+    : quantity_spec<
+         electric_current * area,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} magnetic_moment;
+
+inline constexpr auto magnetic_area_moment = magnetic_moment;
+inline constexpr auto magnetizing_field = magnetic_field_strength;
+
+inline constexpr struct relative_permeability
+    : quantity_spec<dimensionless{}, permeability / magnetic_constant> {
+} relative_permeability;
+
+inline constexpr struct magnetic_polarization
+    : quantity_spec<
+         magnetic_flux_density, magnetic_constant * magnetization,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} magnetic_polarization;
+
+inline constexpr struct coercivity
+    : quantity_spec<
+         magnetic_field_strength,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} coercivity;
+
+inline constexpr auto coercive_field_strength = coercivity;
+
+inline constexpr struct electromagnetic_energy_density
+    : quantity_spec<
+         energy_density, electric_field_strength * electric_flux_density,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} electromagnetic_energy_density;
+
+inline constexpr struct poynting_vector
+    : quantity_spec<
+         electric_field_strength * magnetic_field_strength,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} poynting_vector;
+
+inline constexpr struct source_voltage : quantity_spec<voltage> {
+} source_voltage;
+
+inline constexpr auto source_tension = source_voltage;
+
+inline constexpr struct magnetic_potential : quantity_spec<electric_current> {
+} magnetic_potential;
+
+inline constexpr struct magnetic_tension
+    : quantity_spec<
+         electric_current, magnetic_field_strength * position_vector,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} magnetic_tension;
+
+inline constexpr struct magnetomotive_force
+    : quantity_spec<
+         electric_current, magnetic_field_strength * position_vector,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} magnetomotive_force;
+
+inline constexpr struct number_of_turns_in_a_winding
+    : quantity_spec<dimensionless{}> {
+} number_of_turns_in_a_winding;
+
+inline constexpr struct reluctance
+    : quantity_spec<magnetic_tension / magnetic_flux> {
+} reluctance;
+
+inline constexpr struct permeance : quantity_spec<inverse(reluctance)> {
+} permeance;
+
+inline constexpr auto self_inductance = inductance;
+
+inline constexpr struct mutual_inductance
+    : quantity_spec<inductance, protoflux / electric_current> {
+} mutual_inductance;
+
+inline constexpr struct coupling_factor
+    : quantity_spec<
+         dimensionless{},
+         mutual_inductance / pow<1, 2>(pow<2>(self_inductance))> {
+} coupling_factor;
+
+inline constexpr struct leakage_factor
+    : quantity_spec<dimensionless{}, pow<2>(coupling_factor)> {
+} leakage_factor;
+
+inline constexpr struct electromagnetism_power
+    : quantity_spec<power, voltage * electric_current> {
+} electromagnetism_power;
+
+inline constexpr auto instantaneous_power = electromagnetism_power;
+
+inline constexpr struct phase_difference : quantity_spec<phase_angle> {
+} phase_difference;
+
+inline constexpr struct electric_current_phasor
+    : quantity_spec<
+         electric_current,
+         quantity_character{.field = quantity_field::complex}> {
+} electric_current_phasor;
+
+inline constexpr struct voltage_phasor
+    : quantity_spec<
+         voltage, quantity_character{.field = quantity_field::complex}> {
+} voltage_phasor;
+
+inline constexpr auto electric_tension_phasor = voltage_phasor;
+inline constexpr auto complex_impedance = impedance;
+
+inline constexpr struct impedance_of_vacuum
+    : quantity_spec<
+         impedance, quantity_character{.field = quantity_field::complex}> {
+} impedance_of_vacuum;
+
+inline constexpr auto wave_impedance_in_vacuum = impedance_of_vacuum;
+
+inline constexpr struct resistance_to_alternating_current
+    : quantity_spec<
+         impedance, quantity_character{.field = quantity_field::real}> {
+} resistance_to_alternating_current;
+
+inline constexpr struct reactance
+    : quantity_spec<
+         impedance, quantity_character{.field = quantity_field::real}> {
+} reactance;
+
+inline constexpr struct apparent_impedance
+    : quantity_spec<
+         impedance, quantity_character{.field = quantity_field::real}> {
+} apparent_impedance;
+
+inline constexpr auto complex_admittance = admittance;
+
+inline constexpr struct admittance_of_vacuum
+    : quantity_spec<
+         admittance, inverse(impedance_of_vacuum),
+         quantity_character{.field = quantity_field::complex}> {
+} admittance_of_vacuum;
+
+inline constexpr struct conductance_for_alternating_current
+    : quantity_spec<
+         conductance,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} conductance_for_alternating_current;
+
+inline constexpr struct susceptance
+    : quantity_spec<
+         admittance, quantity_character{.field = quantity_field::real}> {
+} susceptance;
+
+inline constexpr struct apparent_admittance
+    : quantity_spec<
+         admittance, quantity_character{.field = quantity_field::real}> {
+} apparent_admittance;
+
+inline constexpr struct quality_factor
+    : quantity_spec<dimensionless{}, reactance / resistance> {
+} quality_factor;
+
+inline constexpr struct loss_factor
+    : quantity_spec<dimensionless{}, inverse(quality_factor)> {
+} loss_factor;
+
+inline constexpr struct loss_angle : quantity_spec<angular_measure> {
+} loss_angle;
+
+inline constexpr struct active_power
+    : quantity_spec<power, inverse(period) * (instantaneous_power * time)> {
+} active_power;
+
+inline constexpr struct complex_power
+    : quantity_spec<
+         voltage_phasor * electric_current_phasor,
+         quantity_character{.field = quantity_field::complex}> {
+} complex_power;
+
+inline constexpr struct apparent_power
+    : quantity_spec<
+         complex_power, quantity_character{.field = quantity_field::real}> {
+} apparent_power;
+
+inline constexpr struct power_factor
+    : quantity_spec<dimensionless{}, active_power / apparent_power> {
+} power_factor;
+
+inline constexpr struct reactive_power
+    : quantity_spec<mass * pow<2>(length) / pow<3>(duration)> {
+} reactive_power;
+
+inline constexpr struct non_active_power
+    : quantity_spec<pow<1, 2>(pow<2>(apparent_power))> {
+} non_active_power;
+
+inline constexpr struct active_energy
+    : quantity_spec<energy, instantaneous_power * time> {
+} active_energy;
+
+inline constexpr struct speed_of_light_in_a_medium : quantity_spec<speed> {
+} speed_of_light_in_a_medium;
+
+inline constexpr struct refractive_index
+    : quantity_spec<
+         dimensionless{},
+         speed_of_light_in_vacuum / speed_of_light_in_a_medium> {
+} refractive_index;
+
+inline constexpr struct spectral_radiant_energy
+    : quantity_spec<radiant_energy / wavelength> {
+} spectral_radiant_energy;
+
+inline constexpr struct radiant_energy_density
+    : quantity_spec<energy_density, radiant_energy / volume> {
+} radiant_energy_density;
+
+inline constexpr struct spectral_radiant_energy_density_in_terms_of_wavelength
+    : quantity_spec<radiant_energy_density / wavelength> {
+} spectral_radiant_energy_density_in_terms_of_wavelength;
+
+inline constexpr struct spectral_radiant_energy_density_in_terms_of_wavenumber
+    : quantity_spec<radiant_energy_density / wavenumber> {
+} spectral_radiant_energy_density_in_terms_of_wavenumber;
+
+inline constexpr auto radiant_power = radiant_flux;
+inline constexpr auto spectral_radiant_power = spectral_radiant_flux;
+
+inline constexpr struct spectral_radiant_intensity
+    : quantity_spec<radiant_intensity / wavelength> {
+} spectral_radiant_intensity;
+
+inline constexpr struct spectral_radiance
+    : quantity_spec<radiance / wavelength> {
+} spectral_radiance;
+
+inline constexpr struct radiant_exitance : quantity_spec<radiant_flux / area> {
+} radiant_exitance;
+
+inline constexpr struct spectral_radiant_exitance
+    : quantity_spec<radiant_exitance / wavelength> {
+} spectral_radiant_exitance;
+
+inline constexpr struct spectral_radiant_exposure
+    : quantity_spec<radiant_exposure / wavelength> {
+} spectral_radiant_exposure;
+
+inline constexpr struct luminous_efficacy
+    : quantity_spec<luminous_flux / power> {
+} luminous_efficacy;
+
+inline constexpr struct luminous_efficacy_of_radiation
+    : quantity_spec<luminous_efficacy, luminous_flux / radiant_flux> {
+} luminous_efficacy_of_radiation;
+
+inline constexpr struct spectral_luminous_efficacy
+    : quantity_spec<luminous_efficacy_of_radiation> {
+} spectral_luminous_efficacy;
+
+inline constexpr struct maximum_luminous_efficacy
+    : quantity_spec<luminous_efficacy_of_radiation> {
+} maximum_luminous_efficacy;
+
+inline constexpr struct luminous_efficacy_of_source
+    : quantity_spec<luminous_efficacy> {
+} luminous_efficacy_of_source;
+
+inline constexpr struct luminous_efficiency
+    : quantity_spec<
+         luminous_efficacy_of_radiation / luminous_efficacy_of_radiation> {
+} luminous_efficiency;
+
+inline constexpr struct spectral_luminous_efficiency
+    : quantity_spec<luminous_efficiency> {
+} spectral_luminous_efficiency;
+
+inline constexpr struct luminous_exitance
+    : quantity_spec<luminous_flux / area> {
+} luminous_exitance;
+
+inline constexpr struct photon_energy : quantity_spec<energy> {
+} photon_energy;
+
+inline constexpr struct photon_number
+    : quantity_spec<number_of_entities, radiant_energy / photon_energy> {
+} photon_number;
+
+inline constexpr struct photon_flux : quantity_spec<photon_number / duration> {
+} photon_flux;
+
+inline constexpr struct photon_intensity
+    : quantity_spec<photon_flux / solid_angular_measure> {
+} photon_intensity;
+
+inline constexpr struct photon_radiance
+    : quantity_spec<photon_intensity / area> {
+} photon_radiance;
+
+inline constexpr struct photon_irradiance : quantity_spec<photon_flux / area> {
+} photon_irradiance;
+
+inline constexpr struct photon_exitance : quantity_spec<photon_flux / area> {
+} photon_exitance;
+
+inline constexpr struct photon_exposure : quantity_spec<photon_number / area> {
+} photon_exposure;
+
+inline constexpr struct colour_temperature
+    : quantity_spec<thermodynamic_temperature> {
+} colour_temperature;
+
+inline constexpr struct correlated_colour_temperature
+    : quantity_spec<thermodynamic_temperature> {
+} correlated_colour_temperature;
+
+inline constexpr struct emissivity
+    : quantity_spec<radiant_exitance / radiant_exitance> {
+} emissivity;
+
+inline constexpr struct spectral_emissivity : quantity_spec<emissivity> {
+} spectral_emissivity;
+
+inline constexpr struct absorptance
+    : quantity_spec<radiant_flux / radiant_flux> {
+} absorptance;
+
+inline constexpr struct luminous_absorptance
+    : quantity_spec<luminous_flux / luminous_flux> {
+} luminous_absorptance;
+
+inline constexpr struct reflectance
+    : quantity_spec<radiant_flux / radiant_flux> {
+} reflectance;
+
+inline constexpr struct luminous_reflectance
+    : quantity_spec<luminous_flux / luminous_flux> {
+} luminous_reflectance;
+
+inline constexpr struct transmittance
+    : quantity_spec<radiant_flux / radiant_flux> {
+} transmittance;
+
+inline constexpr struct luminous_transmittance
+    : quantity_spec<luminous_flux / luminous_flux> {
+} luminous_transmittance;
+
+inline constexpr struct radiance_factor : quantity_spec<radiance / radiance> {
+} radiance_factor;
+
+inline constexpr struct luminance_factor
+    : quantity_spec<luminance / luminance> {
+} luminance_factor;
+
+inline constexpr struct reflectance_factor
+    : quantity_spec<radiant_flux / radiant_flux> {
+} reflectance_factor;
+
+inline constexpr struct linear_absorption_coefficient
+    : quantity_spec<linear_attenuation_coefficient> {
+} linear_absorption_coefficient;
+
+inline constexpr struct mass_absorption_coefficient
+    : quantity_spec<
+         mass_attenuation_coefficient,
+         linear_absorption_coefficient / mass_density> {
+} mass_absorption_coefficient;
+
+inline constexpr struct molar_absorption_coefficient
+    : quantity_spec<
+         linear_absorption_coefficient * volume / amount_of_substance> {
+} molar_absorption_coefficient;
+
+inline constexpr struct traffic_intensity
+    : quantity_spec<dim_traffic_intensity> {
+} traffic_intensity;
+
+inline constexpr struct traffic_offered_intensity
+    : quantity_spec<traffic_intensity> {
+} traffic_offered_intensity;
+
+inline constexpr struct traffic_carried_intensity
+    : quantity_spec<traffic_intensity> {
+} traffic_carried_intensity;
+
+inline constexpr auto traffic_load = traffic_carried_intensity;
+
+inline constexpr struct mean_queue_length : quantity_spec<dimensionless{}> {
+} mean_queue_length;
+
+inline constexpr struct loss_probability : quantity_spec<dimensionless{}> {
+} loss_probability;
+
+inline constexpr struct waiting_probability : quantity_spec<dimensionless{}> {
+} waiting_probability;
+
+inline constexpr struct call_intensity : quantity_spec<inverse(duration)> {
+} call_intensity;
+
+inline constexpr auto calling_rate = call_intensity;
+
+inline constexpr struct completed_call_intensity
+    : quantity_spec<call_intensity> {
+} completed_call_intensity;
+
+inline constexpr auto storage_size = storage_capacity;
+
+inline constexpr struct equivalent_binary_storage_capacity
+    : quantity_spec<storage_capacity> {
+} equivalent_binary_storage_capacity;
+
+inline constexpr struct period_of_data_elements
+    : quantity_spec<period, inverse(transfer_rate)> {
+} period_of_data_elements;
+
+inline constexpr struct binary_digit_rate : quantity_spec<transfer_rate> {
+} binary_digit_rate;
+
+inline constexpr auto bit_rate = binary_digit_rate;
+
+inline constexpr struct period_of_binary_digits
+    : quantity_spec<period, inverse(binary_digit_rate)> {
+} period_of_binary_digits;
+
+inline constexpr auto bit_period = period_of_binary_digits;
+
+inline constexpr struct equivalent_binary_digit_rate
+    : quantity_spec<binary_digit_rate> {
+} equivalent_binary_digit_rate;
+
+inline constexpr auto equivalent_bit_rate = bit_rate;
+inline constexpr auto line_digit_rate = modulation_rate;
+
+inline constexpr struct quantizing_distortion_power : quantity_spec<power> {
+} quantizing_distortion_power;
+
+inline constexpr struct carrier_power : quantity_spec<power> {
+} carrier_power;
+
+inline constexpr struct signal_energy_per_binary_digit
+    : quantity_spec<energy, carrier_power * period_of_binary_digits> {
+} signal_energy_per_binary_digit;
+
+inline constexpr struct error_probability : quantity_spec<dimensionless{}> {
+} error_probability;
+
+inline constexpr struct hamming_distance : quantity_spec<dimensionless{}> {
+} hamming_distance;
+
+inline constexpr struct clock_frequency : quantity_spec<frequency> {
+} clock_frequency;
+
+inline constexpr auto clock_rate = clock_frequency;
+
+inline constexpr struct decision_content : quantity_spec<dimensionless{}> {
+} decision_content;
+
+inline constexpr struct lattice_vector
+    : quantity_spec<
+         displacement,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} lattice_vector;
+
+inline constexpr struct fundamental_lattice_vector
+    : quantity_spec<
+         lattice_vector,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} fundamental_lattice_vector;
+
+inline constexpr struct angular_reciprocal_lattice_vector
+    : quantity_spec<
+         wave_vector,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} angular_reciprocal_lattice_vector;
+
+inline constexpr struct fundamental_reciprocal_lattice_vector
+    : quantity_spec<
+         angular_reciprocal_lattice_vector,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} fundamental_reciprocal_lattice_vector;
+
+inline constexpr struct bragg_angle : quantity_spec<angular_measure> {
+} bragg_angle;
+
+inline constexpr struct short_range_order_parameter
+    : quantity_spec<dimensionless{}> {
+} short_range_order_parameter;
+
+inline constexpr struct long_range_order_parameter
+    : quantity_spec<dimensionless{}> {
+} long_range_order_parameter;
+
+inline constexpr struct atomic_scattering_factor
+    : quantity_spec<
+         dimensionless{},
+         quantity_character{.field = quantity_field::complex}> {
+} atomic_scattering_factor;
+
+inline constexpr struct structure_factor
+    : quantity_spec<
+         atomic_scattering_factor,
+         quantity_character{.field = quantity_field::complex}> {
+} structure_factor;
+
+inline constexpr struct burgers_vector
+    : quantity_spec<
+         displacement,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} burgers_vector;
+
+inline constexpr struct particle_position_vector
+    : quantity_spec<
+         position_vector,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} particle_position_vector;
+
+inline constexpr struct equilibrium_position_vector
+    : quantity_spec<
+         particle_position_vector,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} equilibrium_position_vector;
+
+inline constexpr struct atomic_displacement_vector
+    : quantity_spec<
+         displacement,
+         quantity_character{.order = quantity_tensor_order::vector}> {
+} atomic_displacement_vector;
+
+inline constexpr struct debye_waller_factor : quantity_spec<dimensionless{}> {
+} debye_waller_factor;
+
+inline constexpr struct fermi_angular_wavenumber
+    : quantity_spec<angular_repetency> {
+} fermi_angular_wavenumber;
+
+inline constexpr auto fermi_angular_repetency = fermi_angular_wavenumber;
+
+inline constexpr struct debye_angular_wavenumber
+    : quantity_spec<angular_repetency> {
+} debye_angular_wavenumber;
+
+inline constexpr auto debye_angular_repetency = debye_angular_wavenumber;
+
+inline constexpr struct debye_angular_frequency
+    : quantity_spec<angular_frequency> {
+} debye_angular_frequency;
+
+inline constexpr struct debye_temperature
+    : quantity_spec<thermodynamic_temperature> {
+} debye_temperature;
+
+inline constexpr struct number_of_vibrational_modes
+    : quantity_spec<number_of_entities> {
+} number_of_vibrational_modes;
+
+inline constexpr struct number_of_states : quantity_spec<number_of_entities> {
+} number_of_states;
+
+inline constexpr struct density_of_vibrational_states
+    : quantity_spec<
+         number_of_vibrational_modes / (volume * angular_frequency)> {
+} density_of_vibrational_states;
+
+inline constexpr struct thermodynamic_gruneisen_parameter
+    : quantity_spec<
+         dimensionless{},
+         cubic_expansion_coefficient
+            / (isothermal_compressibility
+               * specific_heat_capacity_at_constant_volume * mass_density)> {
+} thermodynamic_gruneisen_parameter;
+
+inline constexpr struct gruneisen_parameter : quantity_spec<dimensionless{}> {
+} gruneisen_parameter;
+
+inline constexpr struct mean_free_path : quantity_spec<distance> {
+} mean_free_path;
+
+inline constexpr struct mean_free_path_of_phonons
+    : quantity_spec<mean_free_path> {
+} mean_free_path_of_phonons;
+
+inline constexpr struct mean_free_path_of_electrons
+    : quantity_spec<mean_free_path> {
+} mean_free_path_of_electrons;
+
+inline constexpr struct energy_density_of_states
+    : quantity_spec<number_of_states / (volume * energy)> {
+} energy_density_of_states;
+
+inline constexpr struct residual_resistivity : quantity_spec<resistivity> {
+} residual_resistivity;
+
+inline constexpr struct lorenz_coefficient
+    : quantity_spec<
+         thermal_conductivity / (conductivity * thermodynamic_temperature)> {
+} lorenz_coefficient;
+
+inline constexpr struct hall_coefficient
+    : quantity_spec<
+         electric_field_strength
+            / (magnetic_flux_density * electric_current_density),
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} hall_coefficient;
+
+inline constexpr struct thermoelectric_voltage : quantity_spec<voltage> {
+} thermoelectric_voltage;
+
+inline constexpr struct seebeck_coefficient
+    : quantity_spec<thermoelectric_voltage / thermodynamic_temperature> {
+} seebeck_coefficient;
+
+inline constexpr auto thermoelectric_power = seebeck_coefficient;
+
+inline constexpr struct peltier_coefficient
+    : quantity_spec<voltage, heat_flow_rate / electric_current> {
+} peltier_coefficient;
+
+inline constexpr struct thomson_coefficient
+    : quantity_spec<
+         seebeck_coefficient,
+         heat_flow_rate / (electric_current * thermodynamic_temperature)> {
+} thomson_coefficient;
+
+inline constexpr struct work_function : quantity_spec<energy> {
+} work_function;
+
+inline constexpr struct ionization_energy : quantity_spec<energy> {
+} ionization_energy;
+
+inline constexpr struct electron_affinity : quantity_spec<energy> {
+} electron_affinity;
+
+inline constexpr struct richardson_constant
+    : quantity_spec<
+         electric_current_density / pow<2>(thermodynamic_temperature),
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} richardson_constant;
+
+inline constexpr struct fermi_energy : quantity_spec<energy> {
+} fermi_energy;
+
+inline constexpr struct gap_energy : quantity_spec<energy> {
+} gap_energy;
+
+inline constexpr struct fermi_temperature
+    : quantity_spec<thermodynamic_temperature> {
+} fermi_temperature;
+
+inline constexpr struct number_density
+    : quantity_spec<number_of_entities / volume> {
+} number_density;
+
+inline constexpr struct electron_density : quantity_spec<number_density> {
+} electron_density;
+
+inline constexpr struct hole_density : quantity_spec<number_density> {
+} hole_density;
+
+inline constexpr struct intrinsic_carrier_density
+    : quantity_spec<number_density, pow<1, 2>(electron_density* hole_density)> {
+} intrinsic_carrier_density;
+
+inline constexpr struct donor_density : quantity_spec<number_density> {
+} donor_density;
+
+inline constexpr struct acceptor_density : quantity_spec<number_density> {
+} acceptor_density;
+
+inline constexpr struct effective_mass : quantity_spec<mass> {
+} effective_mass;
+
+inline constexpr struct relaxation_time : quantity_spec<time_constant> {
+} relaxation_time;
+
+inline constexpr struct carrier_lifetime : quantity_spec<time_constant> {
+} carrier_lifetime;
+
+inline constexpr struct exchange_integral : quantity_spec<energy> {
+} exchange_integral;
+
+inline constexpr struct critical_thermodynamic_temperature
+    : quantity_spec<thermodynamic_temperature> {
+} critical_thermodynamic_temperature;
+
+inline constexpr struct curie_temperature
+    : quantity_spec<critical_thermodynamic_temperature> {
+} curie_temperature;
+
+inline constexpr struct neel_temperature
+    : quantity_spec<critical_thermodynamic_temperature> {
+} neel_temperature;
+
+inline constexpr struct superconduction_transition_temperature
+    : quantity_spec<critical_thermodynamic_temperature> {
+} superconduction_transition_temperature;
+
+inline constexpr struct critical_magnetic_flux_density
+    : quantity_spec<
+         magnetic_flux_density,
+         quantity_character{.order = quantity_tensor_order::scalar}> {
+} critical_magnetic_flux_density;
+
+inline constexpr struct thermodynamic_critical_magnetic_flux_density
+    : quantity_spec<
+         critical_magnetic_flux_density,
+         pow<1, 2>(magnetic_constant* gibbs_energy / volume)> {
+} thermodynamic_critical_magnetic_flux_density;
+
+inline constexpr struct lower_critical_magnetic_flux_density
+    : quantity_spec<critical_magnetic_flux_density> {
+} lower_critical_magnetic_flux_density;
+
+inline constexpr struct upper_critical_magnetic_flux_density
+    : quantity_spec<critical_magnetic_flux_density> {
+} upper_critical_magnetic_flux_density;
+
+inline constexpr struct superconductor_energy_gap : quantity_spec<gap_energy> {
+} superconductor_energy_gap;
+
+inline constexpr struct london_penetration_depth : quantity_spec<distance> {
+} london_penetration_depth;
+
+inline constexpr struct coherence_length : quantity_spec<distance> {
+} coherence_length;
+
+}  // namespace cat::units

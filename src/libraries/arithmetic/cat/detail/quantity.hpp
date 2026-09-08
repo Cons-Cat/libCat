@@ -333,12 +333,12 @@ struct normalized_dimension<Dimension, true> {
 }  // namespace detail
 
 template <typename T>
-concept Dimension = is_dimension<T> || is_base_dimension<T>;
+concept is_dimension_specifier = is_dimension<T> || is_base_dimension<T>;
 
-template <Dimension DimensionValue>
+template <is_dimension_specifier DimensionValue>
 using normalized_dimension = detail::normalized_dimension<DimensionValue>::type;
 
-template <Dimension Left, Dimension Right>
+template <is_dimension_specifier Left, is_dimension_specifier Right>
 [[nodiscard]]
 consteval auto
 operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
@@ -346,7 +346,7 @@ operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
       normalized_dimension<Left>, normalized_dimension<Right>>{};
 }
 
-template <Dimension Left, Dimension Right>
+template <is_dimension_specifier Left, is_dimension_specifier Right>
 [[nodiscard]]
 consteval auto
 operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
@@ -354,7 +354,8 @@ operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
       normalized_dimension<Left>, normalized_dimension<Right>>{};
 }
 
-template <int numerator, int denominator = 1, Dimension DimensionValue>
+template <
+   int numerator, int denominator = 1, is_dimension_specifier DimensionValue>
    requires(denominator != 0)
 [[nodiscard]]
 consteval auto
@@ -363,21 +364,21 @@ pow([[maybe_unused]] DimensionValue dimension_value) {
       normalized_dimension<DimensionValue>, numerator, denominator>{};
 }
 
-template <Dimension DimensionValue>
+template <is_dimension_specifier DimensionValue>
 [[nodiscard]]
 consteval auto
 inverse(DimensionValue dimension_value) {
    return pow<-1>(dimension_value);
 }
 
-template <Dimension DimensionValue>
+template <is_dimension_specifier DimensionValue>
 [[nodiscard]]
 consteval auto
 sqrt(DimensionValue dimension_value) {
    return pow<1, 2>(dimension_value);
 }
 
-template <Dimension DimensionValue>
+template <is_dimension_specifier DimensionValue>
 [[nodiscard]]
 consteval auto
 cbrt(DimensionValue dimension_value) {
@@ -425,7 +426,7 @@ struct quantity_character {
 namespace detail {
 
 template <typename T>
-inline constexpr bool is_named_quantity_specification_type = [] {
+concept is_named_quantity_specification_type = [] {
    if constexpr (requires { T::is_named_quantity_specification; }) {
       return T::is_named_quantity_specification;
    } else {
@@ -434,8 +435,7 @@ inline constexpr bool is_named_quantity_specification_type = [] {
 }();
 
 template <typename T>
-inline constexpr bool is_quantity_spec_property =
-   __is_same(T, quantity_character);
+concept is_quantity_spec_property = __is_same(T, quantity_character);
 
 struct no_quantity_parent {};
 
@@ -585,7 +585,7 @@ using common_quantity_ancestor_type =
    common_quantity_ancestor<Left, Right>::type;
 
 template <typename Left, typename Right>
-inline constexpr bool has_common_quantity_ancestor =
+concept has_common_quantity_ancestor =
    !__is_same(common_quantity_ancestor_type<Left, Right>, no_quantity_parent);
 
 template <typename QuantitySpec>
@@ -868,15 +868,20 @@ using unit_dimension = detail::unit_dimension<Unit>::type;
 
 template <
    unsigned long long numerator_value = 1,
-   unsigned long long denominator_value = 1, int decimal_power_value = 0>
+   unsigned long long denominator_value = 1, int decimal_power_value = 0,
+   int pi_power_value = 0>
    requires(numerator_value != 0 && denominator_value != 0)
 struct magnitude {
    static constexpr unsigned long long numerator = numerator_value;
    static constexpr unsigned long long denominator = denominator_value;
    static constexpr int decimal_power = decimal_power_value;
+   static constexpr int pi_power = pi_power_value;
 };
 
 namespace detail {
+
+// NOLINTNEXTLINE
+inline constexpr long double pi_value = 0x1.921fb54442d18469898cc51701b8p+1L;
 
 consteval auto
 quantity_gcd(unsigned long long left, unsigned long long right)
@@ -893,52 +898,59 @@ quantity_gcd(unsigned long long left, unsigned long long right)
 
 template <
    unsigned long long numerator, unsigned long long denominator = 1,
-   int decimal_power = 0>
+   int decimal_power = 0, int pi_power = 0>
 using normalized_magnitude = magnitude<
    numerator / detail::quantity_gcd(numerator, denominator),
-   denominator / detail::quantity_gcd(numerator, denominator), decimal_power>;
+   denominator / detail::quantity_gcd(numerator, denominator), decimal_power,
+   pi_power>;
 
 inline constexpr magnitude<> magnitude_one;
+inline constexpr magnitude<1, 1, 0, 1> mag_pi;
 
 template <typename T>
-concept UnitMagnitude = requires {
-                           T::numerator;
-                           T::denominator;
-                           T::decimal_power;
-                        };
+concept is_unit_magnitude = requires {
+                               T::numerator;
+                               T::denominator;
+                               T::decimal_power;
+                               T::pi_power;
+                            };
 
 template <
    unsigned long long left_numerator, unsigned long long left_denominator,
-   int left_power, unsigned long long right_numerator,
-   unsigned long long right_denominator, int right_power>
+   int left_power, int left_pi_power, unsigned long long right_numerator,
+   unsigned long long right_denominator, int right_power, int right_pi_power>
 [[nodiscard]]
 consteval auto
 operator*(
-   [[maybe_unused]] magnitude<left_numerator, left_denominator, left_power>
+   [[maybe_unused]] magnitude<
+      left_numerator, left_denominator, left_power, left_pi_power>
       left,
-   [[maybe_unused]] magnitude<right_numerator, right_denominator, right_power>
+   [[maybe_unused]] magnitude<
+      right_numerator, right_denominator, right_power, right_pi_power>
       right
 ) {
    return normalized_magnitude<
       left_numerator * right_numerator, left_denominator * right_denominator,
-      left_power + right_power>{};
+      left_power + right_power, left_pi_power + right_pi_power>{};
 }
 
 template <
    unsigned long long left_numerator, unsigned long long left_denominator,
-   int left_power, unsigned long long right_numerator,
-   unsigned long long right_denominator, int right_power>
+   int left_power, int left_pi_power, unsigned long long right_numerator,
+   unsigned long long right_denominator, int right_power, int right_pi_power>
 [[nodiscard]]
 consteval auto
 operator/(
-   [[maybe_unused]] magnitude<left_numerator, left_denominator, left_power>
+   [[maybe_unused]] magnitude<
+      left_numerator, left_denominator, left_power, left_pi_power>
       left,
-   [[maybe_unused]] magnitude<right_numerator, right_denominator, right_power>
+   [[maybe_unused]] magnitude<
+      right_numerator, right_denominator, right_power, right_pi_power>
       right
 ) {
    return normalized_magnitude<
       left_numerator * right_denominator, left_denominator * right_numerator,
-      left_power - right_power>{};
+      left_power - right_power, left_pi_power - right_pi_power>{};
 }
 
 template <int decimal_power>
@@ -966,6 +978,63 @@ magnitude_integer_power(unsigned long long base, unsigned long long exponent)
    return result;
 }
 
+template <auto value, int numerator, int denominator>
+consteval auto
+powered_magnitude() {
+   using magnitude_type = __typeof_unqual(value);
+   if constexpr (denominator == 1) {
+      constexpr auto absolute_power = numerator < 0 ? -numerator : numerator;
+      if constexpr (numerator < 0) {
+         return normalized_magnitude<
+            magnitude_integer_power(
+               magnitude_type::denominator, absolute_power
+            ),
+            magnitude_integer_power(magnitude_type::numerator, absolute_power),
+            magnitude_type::decimal_power * numerator,
+            magnitude_type::pi_power * numerator>{};
+      } else {
+         return normalized_magnitude<
+            magnitude_integer_power(magnitude_type::numerator, absolute_power),
+            magnitude_integer_power(
+               magnitude_type::denominator, absolute_power
+            ),
+            magnitude_type::decimal_power * numerator,
+            magnitude_type::pi_power * numerator>{};
+      }
+   } else {
+      return magnitude<
+         1, 1, magnitude_type::decimal_power * numerator / denominator,
+         magnitude_type::pi_power * numerator / denominator>{};
+   }
+}
+
+template <auto value>
+consteval auto
+magnitude_value() -> long double {
+   using magnitude_type = __typeof_unqual(value);
+   long double result = static_cast<long double>(magnitude_type::numerator)
+                        / magnitude_type::denominator;
+   if constexpr (magnitude_type::decimal_power > 0) {
+      for (int index = 0; index < magnitude_type::decimal_power; ++index) {
+         result *= 10;
+      }
+   } else {
+      for (int index = 0; index > magnitude_type::decimal_power; --index) {
+         result /= 10;
+      }
+   }
+   if constexpr (magnitude_type::pi_power > 0) {
+      for (int index = 0; index < magnitude_type::pi_power; ++index) {
+         result *= pi_value;
+      }
+   } else {
+      for (int index = 0; index > magnitude_type::pi_power; --index) {
+         result /= pi_value;
+      }
+   }
+   return result;
+}
+
 }  // namespace detail
 
 template <unsigned long long base, int numerator, int denominator = 1>
@@ -985,16 +1054,53 @@ inline constexpr auto mag_power = [] {
    }
 }();
 
+template <is_unit_magnitude Left, is_unit_magnitude Right>
+[[nodiscard]]
+consteval auto
+operator==([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
+   return detail::magnitude_value<Left{}>()
+          == detail::magnitude_value<Right{}>();
+}
+
+template <is_unit_magnitude Left, is_unit_magnitude Right>
+[[nodiscard]]
+consteval auto
+operator<=>([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
+   return detail::magnitude_value<Left{}>()
+          <=> detail::magnitude_value<Right{}>();
+}
+
+template <int numerator, int denominator = 1, is_unit_magnitude Magnitude>
+   requires(
+      denominator != 0
+      && (denominator == 1 || (Magnitude::numerator == 1 && Magnitude::denominator == 1 && (Magnitude::decimal_power * numerator) % denominator == 0 && (Magnitude::pi_power * numerator) % denominator == 0))
+   )
+[[nodiscard]]
+consteval auto
+pow([[maybe_unused]] Magnitude magnitude_value) {
+   return detail::powered_magnitude<Magnitude{}, numerator, denominator>();
+}
+
 template <
    is_quantity_spec QuantitySpec, is_unit Unit,
    auto unit_magnitude_value = magnitude_one>
-   requires requires {
-               unit_magnitude_value.numerator;
-               unit_magnitude_value.denominator;
-               unit_magnitude_value.decimal_power;
-            } && __is_same
-(typename QuantitySpec::dimension_type,
- unit_dimension<Unit>) struct quantity_reference {
+   requires(
+      requires {
+         unit_magnitude_value.numerator;
+         unit_magnitude_value.denominator;
+         unit_magnitude_value.decimal_power;
+         unit_magnitude_value.pi_power;
+      }
+      && __is_same(typename QuantitySpec::dimension_type, unit_dimension<Unit>)
+   )
+// TODO: "reference" is meant here in the sense of ISO IEC quantity
+// references. That is, a "measurement unit, a measurement procedure, a
+// reference material, or a combination of such." This, combined with a
+// value, is a "quantity".
+// https://www.iso.org/obp/ui#iso:std:iso-iec:guide:99
+//
+// The C++ stdlib will likely change this, so we will eventually as well.
+struct quantity_reference {
    using quantity_spec_type = QuantitySpec;
    using unit_type = Unit;
    using dimension_type = QuantitySpec::dimension_type;
@@ -1013,56 +1119,57 @@ struct derived_unit {
       quantity_reference<QuantitySpec, UnitExpression, unit_magnitude_value>;
 };
 
-template <typename Reference>
+template <typename Unit>
 concept is_named_unit = requires {
-                           typename Reference::quantity_spec_type;
-                           typename Reference::dimension_type;
-                           Reference::unit_symbol;
+                           typename Unit::quantity_spec_type;
+                           typename Unit::dimension_type;
+                           Unit::unit_symbol;
                         };
 
 template <typename T>
-concept Unit = is_named_unit<T> || requires {
-                                      T::is_unit_definition;
-                                      typename T::quantity_reference_type;
-                                   };
+concept is_unit_specifier =
+   is_named_unit<T> || requires {
+                          T::is_unit_definition;
+                          typename T::quantity_reference_type;
+                       };
 
 namespace detail {
 
 template <
-   typename Reference,
+   typename QuantitySpecifier,
    bool has_quantity =
-      requires { typename Reference::quantity_reference_type; },
-   bool = is_named_unit<Reference>>
+      requires { typename QuantitySpecifier::quantity_reference_type; },
+   bool = is_named_unit<QuantitySpecifier>>
 struct reference_quantity {
-   using type = Reference;
+   using type = QuantitySpecifier;
 };
 
-template <typename Reference, bool = Reference::defines_unit>
+template <typename Unit, bool = Unit::defines_unit>
 struct named_reference_quantity {
    using type = quantity_reference<
-      typename Reference::quantity_spec_type, unit<unit_power<Reference, 1>>>;
+      typename Unit::quantity_spec_type, unit<unit_power<Unit, 1>>>;
 };
 
-template <typename Reference>
-struct named_reference_quantity<Reference, true> {
+template <typename Unit>
+struct named_reference_quantity<Unit, true> {
  private:
    using definition_quantity =
-      reference_quantity<__typeof_unqual(Reference::unit_definition)>::type;
+      reference_quantity<__typeof_unqual(Unit::unit_definition)>::type;
 
  public:
    using type = quantity_reference<
-      typename Reference::quantity_spec_type,
+      typename Unit::quantity_spec_type,
       typename definition_quantity::unit_type,
       definition_quantity::unit_magnitude>;
 };
 
-template <typename Reference>
-struct reference_quantity<Reference, false, true>
-    : named_reference_quantity<Reference> {};
+template <typename Unit>
+struct reference_quantity<Unit, false, true> : named_reference_quantity<Unit> {
+};
 
-template <typename Reference, bool is_named>
-struct reference_quantity<Reference, true, is_named> {
-   using type = Reference::quantity_reference_type;
+template <typename QuantitySpecifier, bool is_named>
+struct reference_quantity<QuantitySpecifier, true, is_named> {
+   using type = QuantitySpecifier::quantity_reference_type;
 };
 
 }  // namespace detail
@@ -1072,13 +1179,6 @@ using reference_quantity =
    detail::reference_quantity<__typeof_unqual(quantity)>::type;
 
 namespace detail {
-
-template <typename>
-inline constexpr bool is_quantity_reference = false;
-
-template <typename QuantitySpec, typename Unit, auto unit_magnitude>
-inline constexpr bool is_quantity_reference<
-   quantity_reference<QuantitySpec, Unit, unit_magnitude>> = true;
 
 template <typename>
 inline constexpr bool is_generic_quantity_spec = false;
@@ -1098,7 +1198,7 @@ concept is_quantity = requires {
                       };
 
 template <typename T>
-concept is_quantity_specifier = is_quantity<T> || Unit<T>;
+concept is_quantity_specifier = is_quantity<T> || is_unit_specifier<T>;
 
 template <typename QuantitySpec, typename UnitType>
 struct reference
@@ -1106,7 +1206,7 @@ struct reference
          QuantitySpec, typename reference_quantity<UnitType{}>::unit_type,
          reference_quantity<UnitType{}>::unit_magnitude> {
    static_assert(is_quantity_spec<QuantitySpec>);
-   static_assert(Unit<UnitType>);
+   static_assert(is_unit_specifier<UnitType>);
    using requested_quantity_spec_type = QuantitySpec;
    using requested_unit_type = UnitType;
 };
@@ -1127,45 +1227,48 @@ struct prefixed_unit {
    static constexpr auto unit_symbol = symbol + unit_value.unit_symbol;
 };
 
-template <is_quantity Reference>
+template <is_quantity Quantity>
 [[nodiscard]]
 consteval auto
-get_quantity_spec([[maybe_unused]] Reference reference) {
-   return typename Reference::quantity_spec_type{};
+get_quantity_spec([[maybe_unused]] Quantity quantity) {
+   return typename Quantity::quantity_spec_type{};
 }
 
-template <Unit Reference>
+template <is_unit_specifier Unit>
 [[nodiscard]]
 consteval auto
-get_quantity_spec([[maybe_unused]] Reference reference) {
-   return typename Reference::quantity_spec_type{};
+get_quantity_spec([[maybe_unused]] Unit unit) {
+   return typename Unit::quantity_spec_type{};
 }
 
-template <is_quantity Reference>
+template <is_quantity Quantity>
 [[nodiscard]]
 consteval auto
-get_unit([[maybe_unused]] Reference reference) {
-   return typename Reference::unit_type{};
+get_unit([[maybe_unused]] Quantity quantity) {
+   return typename Quantity::unit_type{};
 }
 
-template <Unit Reference>
+template <is_unit_specifier Unit>
 [[nodiscard]]
 consteval auto
-get_unit(Reference reference) {
-   return reference;
+get_unit(Unit unit) {
+   return unit;
 }
 
-template <Unit Left, Unit Right>
+template <is_unit_specifier Left, is_unit_specifier Right>
 [[nodiscard]]
 consteval auto
 operator==([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
    return __is_same(Left, Right);
 }
 
-template <Unit Left, Unit Right>
+// Test whether two units share a canonical reference unit and magnitude, so
+// that conversions between them preserve the numerical value.
+template <is_unit_specifier Left, is_unit_specifier Right>
 [[nodiscard]]
 consteval auto
-equivalent([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
+is_equivalent([[maybe_unused]] Left left, [[maybe_unused]] Right right)
+   -> bool {
    using left_quantity = reference_quantity<Left{}>;
    using right_quantity = reference_quantity<Right{}>;
    return __is_same(
@@ -1178,7 +1281,7 @@ equivalent([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
           );
 }
 
-template <is_quantity_spec QuantitySpec, Unit UnitType>
+template <is_quantity_spec QuantitySpec, is_unit_specifier UnitType>
 [[nodiscard]]
 consteval auto
 make_reference(
@@ -1201,20 +1304,22 @@ get_dimension(R reference) {
    return typename quantity_specification::dimension_type{};
 }
 
-template <is_quantity Quantity>
-inline constexpr bool is_dimensionless_quantity =
-   __is_same(typename Quantity::dimension_type, dimension<>);
+template <typename Quantity>
+concept is_dimensionless_quantity =
+   is_quantity<Quantity>
+   && __is_same(typename Quantity::dimension_type, dimension<>);
 
 struct scalar_quantity_spec : quantity_spec<dimension<>{}> {};
 
 using scalar_quantity = quantity_reference<scalar_quantity_spec, unit<>>;
 
-template <is_quantity Left, is_quantity Right>
-inline constexpr bool is_same_quantity_dimension =
-   __is_same(typename Left::dimension_type, typename Right::dimension_type);
+template <typename Left, typename Right>
+concept is_same_quantity_dimension =
+   is_quantity<Left> && is_quantity<Right>
+   && __is_same(typename Left::dimension_type, typename Right::dimension_type);
 
-template <is_quantity Left, is_quantity Right>
-inline constexpr bool is_compatible_quantity =
+template <typename Left, typename Right>
+concept is_compatible_quantity =
    is_same_quantity_dimension<Left, Right>
    && __is_same(typename Left::unit_type, typename Right::unit_type) && (__is_same(typename Left::quantity_spec_type, typename Right::quantity_spec_type) || detail::is_generic_quantity_spec<typename Left::quantity_spec_type> || detail::is_generic_quantity_spec<typename Right::quantity_spec_type> || detail::has_common_quantity_ancestor<typename Left::quantity_spec_type, typename Right::quantity_spec_type>);
 
@@ -1259,24 +1364,6 @@ struct divided_quantity_spec {
 }  // namespace detail
 
 namespace detail {
-
-template <auto value>
-consteval auto
-magnitude_value() -> long double {
-   using magnitude_type = __typeof_unqual(value);
-   long double result = static_cast<long double>(magnitude_type::numerator)
-                        / static_cast<long double>(magnitude_type::denominator);
-   if constexpr (magnitude_type::decimal_power > 0) {
-      for (int index = 0; index < magnitude_type::decimal_power; ++index) {
-         result *= 10;
-      }
-   } else {
-      for (int index = 0; index > magnitude_type::decimal_power; --index) {
-         result /= 10;
-      }
-   }
-   return result;
-}
 
 template <typename Left, typename Right>
 consteval auto
@@ -1323,16 +1410,23 @@ using scaled_quantity = quantity_reference<
    Quantity::unit_magnitude * power_of_10<decimal_power>>;
 
 template <is_quantity Quantity, int numerator, int denominator = 1>
-   requires(denominator != 0 && Quantity::unit_magnitude.numerator == 1
-            && Quantity::unit_magnitude.denominator == 1
-            && (Quantity::scale * numerator) % denominator == 0)
+   requires(
+      denominator != 0
+      && (denominator == 1
+          || (Quantity::unit_magnitude.numerator == 1
+              && Quantity::unit_magnitude.denominator == 1
+              && (Quantity::scale * numerator) % denominator == 0
+              && (Quantity::unit_magnitude.pi_power * numerator) % denominator
+                    == 0))
+   )
 using powered_quantity = quantity_reference<
    derived_quantity_spec<powered_dimension<
       typename Quantity::dimension_type, numerator, denominator>>,
    powered_unit<typename Quantity::unit_type, numerator, denominator>,
-   power_of_10<Quantity::scale * numerator / denominator>>;
+   detail::powered_magnitude<
+      Quantity::unit_magnitude, numerator, denominator>()>;
 
-template <UnitMagnitude Magnitude, is_quantity_specifier R>
+template <is_unit_magnitude Magnitude, is_quantity_specifier R>
 [[nodiscard]]
 consteval auto
 operator*(Magnitude magnitude_value, [[maybe_unused]] R reference_value) {
@@ -1341,7 +1435,7 @@ operator*(Magnitude magnitude_value, [[maybe_unused]] R reference_value) {
       typename source_quantity::quantity_spec_type,
       typename source_quantity::unit_type,
       magnitude_value * source_quantity::unit_magnitude>;
-   if constexpr (Unit<R>) {
+   if constexpr (is_unit_specifier<R>) {
       return derived_unit<
          typename result_quantity::quantity_spec_type,
          typename result_quantity::unit_type,
@@ -1351,7 +1445,7 @@ operator*(Magnitude magnitude_value, [[maybe_unused]] R reference_value) {
    }
 }
 
-template <is_quantity_specifier R, UnitMagnitude Magnitude>
+template <is_quantity_specifier R, is_unit_magnitude Magnitude>
 [[nodiscard]]
 consteval auto
 operator*(R reference_value, Magnitude magnitude_value) {
@@ -1365,7 +1459,7 @@ operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
    using left_quantity = reference_quantity<Left{}>;
    using right_quantity = reference_quantity<Right{}>;
    using result_quantity = multiplied_quantity<left_quantity, right_quantity>;
-   if constexpr (Unit<Left> && Unit<Right>) {
+   if constexpr (is_unit_specifier<Left> && is_unit_specifier<Right>) {
       return derived_unit<
          typename result_quantity::quantity_spec_type,
          typename result_quantity::unit_type,
@@ -1382,7 +1476,7 @@ operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
    using left_quantity = reference_quantity<Left{}>;
    using right_quantity = reference_quantity<Right{}>;
    using result_quantity = divided_quantity<left_quantity, right_quantity>;
-   if constexpr (Unit<Left> && Unit<Right>) {
+   if constexpr (is_unit_specifier<Left> && is_unit_specifier<Right>) {
       return derived_unit<
          typename result_quantity::quantity_spec_type,
          typename result_quantity::unit_type,
@@ -1395,12 +1489,19 @@ operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
 template <int numerator, int denominator = 1, is_quantity_specifier R>
    requires(
       denominator != 0
-      && (reference_quantity<R{}>::scale * numerator) % denominator == 0
+      && (denominator == 1
+          || (reference_quantity<R{}>::unit_magnitude.numerator == 1
+              && reference_quantity<R{}>::unit_magnitude.denominator == 1
+              && (reference_quantity<R{}>::scale * numerator) % denominator
+                    == 0
+              && (reference_quantity<R{}>::unit_magnitude.pi_power * numerator)
+                       % denominator
+                    == 0))
    )
 [[nodiscard]] consteval auto pow([[maybe_unused]] R reference_value) {
    using result_quantity =
       powered_quantity<reference_quantity<R{}>, numerator, denominator>;
-   if constexpr (Unit<R>) {
+   if constexpr (is_unit_specifier<R>) {
       return derived_unit<
          typename result_quantity::quantity_spec_type,
          typename result_quantity::unit_type,
@@ -1431,103 +1532,13 @@ cbrt(R reference_value) {
    return pow<1, 3>(reference_value);
 }
 
-namespace isq {
-
-inline constexpr struct dim_length : base_dimension<"L"> {
-} dim_length;
-
-inline constexpr struct dim_time : base_dimension<"T"> {
-} dim_time;
-
-inline constexpr struct dim_mass : base_dimension<"M"> {
-} dim_mass;
-
-using dimensionless = dimension<>;
-using length_dimension_type =
-   dimension<dimension_power<__typeof_unqual(dim_length), 1>>;
-using time_dimension_type =
-   dimension<dimension_power<__typeof_unqual(dim_time), 1>>;
-using mass_dimension_type =
-   dimension<dimension_power<__typeof_unqual(dim_mass), 1>>;
-
-using scalar = scalar_quantity_spec;
-
-inline constexpr struct length : quantity_spec<dim_length> {
-} length;
-
-inline constexpr struct time : quantity_spec<dim_time> {
-} time;
-
-inline constexpr struct mass : quantity_spec<dim_mass> {
-} mass;
-
-}  // namespace isq
-
-namespace si {
-
-inline constexpr struct metre : named_unit<"m", kind_of<isq::length>> {
-} metre;
-
-inline constexpr struct second : named_unit<"s", kind_of<isq::time>> {
-} second;
-
-inline constexpr struct gram : named_unit<"g", kind_of<isq::mass>> {
-} gram;
-
-using scalar = scalar_quantity;
-using meters = quantity_reference<
-   __typeof_unqual(isq::length), unit<unit_power<__typeof_unqual(metre), 1>>>;
-using seconds = quantity_reference<
-   __typeof_unqual(isq::time), unit<unit_power<__typeof_unqual(second), 1>>>;
-using grams = quantity_reference<
-   __typeof_unqual(isq::mass), unit<unit_power<__typeof_unqual(gram), 1>>>;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"k", mag_power<10, 3>, unit_value> kilo;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"M", mag_power<10, 6>, unit_value> mega;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"G", mag_power<10, 9>, unit_value> giga;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"T", mag_power<10, 12>, unit_value> tera;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"P", mag_power<10, 15>, unit_value> peta;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"E", mag_power<10, 18>, unit_value> exa;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"Z", mag_power<10, 21>, unit_value> zetta;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"Y", mag_power<10, 24>, unit_value> yotta;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"R", mag_power<10, 27>, unit_value> ronna;
-
-template <auto unit_value>
-inline constexpr prefixed_unit<"Q", mag_power<10, 30>, unit_value> quetta;
-
-inline constexpr auto kilogram = kilo<gram>;
-using kilograms = reference_quantity<kilogram>;
-using meters_per_second = divided_quantity<meters, seconds>;
-using meters_per_second_squared = divided_quantity<meters_per_second, seconds>;
-
-inline constexpr scalar one;
-inline constexpr meters_per_second metre_per_second;
-inline constexpr meters_per_second_squared metre_per_second_squared;
-
-}  // namespace si
+inline constexpr scalar_quantity scalar;
 
 namespace detail {
 
 template <typename T>
 struct arithmetic_quantity_trait {
-   using type = __typeof_unqual(si::one);
+   using type = __typeof_unqual(scalar);
 };
 
 template <typename T, overflow_policies policy, auto quantity>
@@ -1565,7 +1576,19 @@ using arithmetic_quantity =
    detail::arithmetic_quantity_trait<remove_cvref<T>>::type;
 
 template <typename T>
-concept has_quantity = !is_same<arithmetic_quantity<T>, si::scalar>;
+concept has_quantity = !is_same<arithmetic_quantity<T>, scalar_quantity>;
+
+namespace detail {
+
+template <typename>
+inline constexpr bool is_radian_or_degree_reference = false;
+
+// TODO: Promote to `cat::` namespace?
+template <typename T>
+concept is_angle_quantity =
+   has_quantity<T> && is_radian_or_degree_reference<arithmetic_quantity<T>>;
+
+}  // namespace detail
 
 template <typename T>
 concept is_dimensionless_arithmetic =
@@ -1582,7 +1605,42 @@ concept is_quantity_conversion =
 template <typename From, typename To>
 concept is_quantity_direct_conversion =
    is_quantity_conversion<From, To>
-   && (is_dimensionless_quantity<arithmetic_quantity<From>> || is_dimensionless_quantity<To> || __is_same(__typeof_unqual(arithmetic_quantity<From>::unit_magnitude), __typeof_unqual(To::unit_magnitude)));
+   && (!has_quantity<From> || __is_same(__typeof_unqual(arithmetic_quantity<From>::unit_magnitude), __typeof_unqual(To::unit_magnitude)));
+
+template <is_quantity From, is_quantity To>
+[[nodiscard]]
+consteval auto
+is_integral_quantity_scale() -> bool {
+   constexpr auto conversion = From::unit_magnitude / To::unit_magnitude;
+   using conversion_type = __typeof_unqual(conversion);
+   if constexpr (conversion_type::pi_power != 0) {
+      return false;
+   } else if constexpr (conversion_type::decimal_power >= 0) {
+      auto denominator = conversion_type::denominator;
+      for (int i = 0; i < conversion_type::decimal_power; ++i) {
+         denominator /= quantity_gcd(denominator, 10ull);
+      }
+      return denominator == 1;
+   } else {
+      auto numerator = conversion_type::numerator;
+      if (numerator % conversion_type::denominator != 0) {
+         return false;
+      }
+      numerator /= conversion_type::denominator;
+      for (int i = 0; i > conversion_type::decimal_power; --i) {
+         if (numerator % 10 != 0) {
+            return false;
+         }
+         numerator /= 10;
+      }
+      return true;
+   }
+}
+
+template <typename From, typename To>
+concept is_integral_quantity_conversion =
+   is_quantity<To> && is_quantity_conversion<From, To>
+   && is_integral_quantity_scale<arithmetic_quantity<From>, To>();
 
 template <typename Left, typename Right>
 concept is_quantity_addable = is_compatible_quantity<

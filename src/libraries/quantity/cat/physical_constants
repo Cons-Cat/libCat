@@ -1,0 +1,102 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/arithmetic>
+#include <cat/math>
+#include <cat/metric_units>
+
+namespace cat::units {
+
+inline constexpr auto standard_gravity = 9.806'65 * metre / pow<2>(second);
+
+inline constexpr auto standard_atmosphere = 101'325 * pascal;
+
+inline constexpr auto standard_state_pressure = 100'000 * pascal;
+
+inline constexpr auto conventional_value_of_josephson_constant =
+   483'597.9e9 * hertz / volt;
+
+inline constexpr auto conventional_value_of_von_klitzing_constant =
+   25'812.807 * ohm;
+
+inline constexpr auto avogadro_constant = 6.022'140'76e23 / mole;
+
+inline constexpr auto boltzmann_constant = 1.380'649e-23 * joule / kelvin;
+
+inline constexpr auto hyperfine_structure_transition_frequency_of_cs =
+   9'192'631'770 * hertz;
+
+inline constexpr auto luminous_efficacy_constant = 683 * lumen / watt;
+
+inline constexpr auto elementary_charge_constant = 1.602'176'634e-19 * coulomb;
+
+inline constexpr auto planck_constant = 6.626'070'15e-34 * joule * second;
+
+inline constexpr auto speed_of_light_in_vacuum_constant =
+   299'792'458 * metre / second;
+
+inline constexpr auto reduced_planck_constant =
+   planck_constant / (pi<float8> * 2);
+
+inline constexpr auto stefan_boltzmann_constant =
+   5.670'374'419'184'431'4e-8 * watt / pow<2>(metre) / pow<4>(kelvin);
+
+// Measured constants expose only the published 2022 central decimal value.
+// libCat does not model standard uncertainty.
+
+inline constexpr auto atomic_mass_constant = 1.660'539'068'92e-27 * kilogram;
+
+inline constexpr auto bohr_magneton = 9.274'010'065'7e-24 * joule / tesla;
+
+inline constexpr auto bohr_radius = 5.291'772'105'44e-11 * metre;
+
+inline constexpr auto electron_compton_wavelength =
+   2.426'310'235'38e-12 * metre;
+
+inline constexpr auto electron_mass = 9.109'383'713'9e-31 * kilogram;
+
+inline constexpr auto fine_structure_constant = 0.007'297'352'564'3 * one;
+
+inline constexpr auto hartree_energy = 4.359'744'722'206e-18 * joule;
+
+inline constexpr auto inverse_fine_structure_constant = 137.035'999'177 * one;
+
+inline constexpr auto muon_mass = 1.883'531'627e-28 * kilogram;
+
+inline constexpr auto neutron_mass = 1.674'927'500'56e-27 * kilogram;
+
+inline constexpr auto newtonian_constant_of_gravitation =
+   6.674'30e-11 * pow<3>(metre) / kilogram / pow<2>(second);
+
+inline constexpr auto nuclear_magneton = 5.050'783'739'3e-27 * joule / tesla;
+
+inline constexpr auto proton_electron_mass_ratio = 1'836.152'673'426 * one;
+
+inline constexpr auto proton_mass = 1.672'621'925'95e-27 * kilogram;
+
+inline constexpr auto rydberg_constant = 10'973'731.568'157 / metre;
+
+inline constexpr auto vacuum_electric_permittivity =
+   8.854'187'818'8e-12 * farad / metre;
+
+inline constexpr auto vacuum_magnetic_permeability =
+   1.256'637'061'27e-6 * newton / pow<2>(ampere);
+
+inline constexpr auto josephson_constant =
+   483'597'848'416'983.63 * hertz / volt;
+
+inline constexpr auto von_klitzing_constant = 25'812.807'459'304'506 * ohm;
+
+inline constexpr auto conductance_quantum =
+   7.748'091'729'863'650'6e-5 * siemens;
+
+inline constexpr auto magnetic_flux_quantum =
+   2.067'833'848'461'929'3e-15 * weber;
+
+inline constexpr auto faraday_constant = 96'485.332'123'310'02 * coulomb / mole;
+
+inline constexpr auto molar_gas_constant =
+   8.314'462'618'153'24 * joule / mole / kelvin;
+
+}  // namespace cat::units

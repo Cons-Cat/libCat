@@ -1,0 +1,432 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/arithmetic>
+#include <cat/metric_units>
+
+namespace cat::units {
+
+inline constexpr auto nanosecond = nano<second>;
+inline constexpr auto microsecond = micro<second>;
+inline constexpr auto millisecond = milli<second>;
+
+using nanoseconds = reference_quantity<nanosecond>;
+using microseconds = reference_quantity<microsecond>;
+using milliseconds = reference_quantity<millisecond>;
+CAT_DECLARE_QUANTITY_ALIASES(nanosecond, nanosecond);
+CAT_DECLARE_QUANTITY_ALIASES(microsecond, microsecond);
+CAT_DECLARE_QUANTITY_ALIASES(millisecond, millisecond);
+
+}  // namespace cat::units
+
+namespace cat {
+
+template <auto quantity>
+using time_int8 =
+   basic_int<int8::raw_type, overflow_policies::undefined, quantity>;
+
+using duration = time_int8<units::second>;
+using nanosecond_duration = time_int8<units::nanosecond>;
+using microsecond_duration = time_int8<units::microsecond>;
+using millisecond_duration = time_int8<units::millisecond>;
+using minute_duration = time_int8<units::minute>;
+using hour_duration = time_int8<units::hour>;
+using day_duration = time_int8<units::day>;
+
+struct tai_clock;
+struct utc_clock;
+struct unix_clock;
+
+template <typename Clock>
+class affine_time_point {
+ public:
+   constexpr explicit affine_time_point(duration seconds_since_epoch)
+       : m_seconds_since_epoch(seconds_since_epoch) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   seconds_since_epoch() const -> duration {
+      return m_seconds_since_epoch;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator+(affine_time_point point, duration elapsed) -> affine_time_point {
+      return affine_time_point(point.m_seconds_since_epoch + elapsed);
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator+(duration elapsed, affine_time_point point) -> affine_time_point {
+      return point + elapsed;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator-(affine_time_point point, duration elapsed) -> affine_time_point {
+      return affine_time_point(point.m_seconds_since_epoch - elapsed);
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator-(affine_time_point left, affine_time_point right) -> duration {
+      return left.m_seconds_since_epoch - right.m_seconds_since_epoch;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator<=>(affine_time_point, affine_time_point) = default;
+
+ private:
+   duration m_seconds_since_epoch;
+};
+
+using tai_time_point = affine_time_point<tai_clock>;
+using utc_time_point = affine_time_point<utc_clock>;
+using unix_time_point = affine_time_point<unix_clock>;
+
+struct utc_date_time {
+   int4 year;
+   uint1 month;
+   uint1 day;
+   uint1 hour;
+   uint1 minute;
+   uint1 second;
+};
+
+struct utc_conversion {
+   utc_time_point value;
+   bool valid;
+};
+
+enum class unix_leap_second_mapping : uint1::raw_type {
+   previous_second,
+   next_second,
+};
+
+struct leap_second {
+   unix_time_point date;
+   duration value;
+};
+
+struct leap_second_info {
+   bool is_leap_second;
+   duration elapsed;
+};
+
+inline constexpr leap_second leap_seconds[] = {
+   {unix_time_point(78'796'800),    1},
+   {unix_time_point(94'694'400),    1},
+   {unix_time_point(126'230'400),   1},
+   {unix_time_point(157'766'400),   1},
+   {unix_time_point(189'302'400),   1},
+   {unix_time_point(220'924'800),   1},
+   {unix_time_point(252'460'800),   1},
+   {unix_time_point(283'996'800),   1},
+   {unix_time_point(315'532'800),   1},
+   {unix_time_point(362'793'600),   1},
+   {unix_time_point(394'329'600),   1},
+   {unix_time_point(425'865'600),   1},
+   {unix_time_point(489'024'000),   1},
+   {unix_time_point(567'993'600),   1},
+   {unix_time_point(631'152'000),   1},
+   {unix_time_point(662'688'000),   1},
+   {unix_time_point(709'948'800),   1},
+   {unix_time_point(741'484'800),   1},
+   {unix_time_point(773'020'800),   1},
+   {unix_time_point(820'454'400),   1},
+   {unix_time_point(867'715'200),   1},
+   {unix_time_point(915'148'800),   1},
+   {unix_time_point(1'136'073'600), 1},
+   {unix_time_point(1'230'768'000), 1},
+   {unix_time_point(1'341'100'800), 1},
+   {unix_time_point(1'435'708'800), 1},
+   {unix_time_point(1'483'228'800), 1},
+};
+
+namespace detail {
+
+inline constexpr idx leap_second_count =
+   sizeof(leap_seconds) / sizeof(leap_seconds[0]);
+
+[[nodiscard]]
+constexpr auto
+leap_second_transition(idx index) -> int8 {
+   return leap_seconds[index].date.seconds_since_epoch();
+}
+
+[[nodiscard]]
+constexpr auto
+is_gregorian_leap_year(int8 year) -> bool {
+   return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+}
+
+[[nodiscard]]
+constexpr auto
+days_in_month(int8 year, uint1 month) -> uint1 {
+   switch (month.raw) {
+      case 2:
+         return uint1(is_gregorian_leap_year(year) ? 29 : 28);
+      case 4:
+      case 6:
+      case 9:
+      case 11:
+         return 30;
+      default:
+         return 31;
+   }
+}
+
+[[nodiscard]]
+constexpr auto
+valid_utc_fields(utc_date_time value) -> bool {
+   int8 const year = value.year;
+   return value.month >= 1 && value.month <= 12 && value.day >= 1
+          && value.day <= days_in_month(year, value.month) && value.hour < 24
+          && value.minute < 60 && value.second <= 60;
+}
+
+[[nodiscard]]
+constexpr auto
+days_from_civil(int8 year, uint1 month, uint1 day) -> int8 {
+   year = year - int8(month <= 2);
+   int8 const era = (year >= 0 ? year : year - 399) / 400;
+   int8 const year_of_era = year - era * 400;
+   int8 const shifted_month = int8(month) + (month > 2 ? int8(-3) : int8(9));
+   int8 const day_of_year = (153 * shifted_month + 2) / 5 + int8(day) - 1;
+   int8 const day_of_era =
+      year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+   return era * 146'097 + day_of_era - 719'468;
+}
+
+[[nodiscard]]
+constexpr auto
+civil_from_days(int8 days) -> utc_date_time {
+   days = days + 719'468;
+   int8 const era = (days >= 0 ? days : days - 146'096) / 146'097;
+   int8 const day_of_era = days - era * 146'097;
+   int8 const year_of_era = (day_of_era - day_of_era / 1'460
+                             + day_of_era / 36'524 - day_of_era / 146'096)
+                            / 365;
+   int8 year = year_of_era + era * 400;
+   int8 const day_of_year =
+      day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+   int8 const month_prime = (5 * day_of_year + 2) / 153;
+   int8 const day = day_of_year - (153 * month_prime + 2) / 5 + 1;
+   int8 const month = month_prime + (month_prime < 10 ? 3 : -9);
+   year = year + int8(month <= 2);
+   return {
+      .year = int4(year),
+      .month = uint1(month),
+      .day = uint1(day),
+      .hour = 0,
+      .minute = 0,
+      .second = 0,
+   };
+}
+
+[[nodiscard]]
+constexpr auto
+posix_seconds_from_civil(utc_date_time value) -> int8 {
+   return days_from_civil(value.year, value.month, value.day) * 86'400
+          + int8(value.hour) * 3'600 + int8(value.minute) * 60
+          + int8(value.second);
+}
+
+[[nodiscard]]
+constexpr auto
+civil_from_posix_seconds(int8 seconds) -> utc_date_time {
+   int8 days = seconds / 86'400;
+   int8 day_seconds = seconds % 86'400;
+   if (day_seconds < 0) {
+      day_seconds = day_seconds + 86'400;
+      days = days - 1;
+   }
+   utc_date_time result = civil_from_days(days);
+   result.hour = uint1(day_seconds / 3'600);
+   day_seconds = day_seconds % 3'600;
+   result.minute = uint1(day_seconds / 60);
+   result.second = uint1(day_seconds % 60);
+   return result;
+}
+
+[[nodiscard]]
+constexpr auto
+completed_leaps_for_posix(int8 seconds) -> int8 {
+   int8 result = 0;
+   for (idx index = 0; index < leap_second_count; index = index + 1) {
+      if (seconds < leap_second_transition(index)) {
+         break;
+      }
+      result = result + 1;
+   }
+   return result;
+}
+
+[[nodiscard]]
+constexpr auto
+leap_index_for_transition(int8 transition) -> int8 {
+   for (idx index = 0; index < leap_second_count; index = index + 1) {
+      if (transition == leap_second_transition(index)) {
+         return index;
+      }
+   }
+   return -1;
+}
+
+[[nodiscard]]
+constexpr auto
+leap_index_for_atomic(int8 seconds) -> int8 {
+   for (idx index = 0; index < leap_second_count; index = index + 1) {
+      int8 const leap_second = leap_second_transition(index) + int8(index);
+      if (seconds == leap_second) {
+         return index;
+      }
+   }
+   return -1;
+}
+
+[[nodiscard]]
+constexpr auto
+completed_leaps_for_atomic(int8 seconds) -> int8 {
+   int8 result = 0;
+   for (idx index = 0; index < leap_second_count; index = index + 1) {
+      int8 const leap_second = leap_second_transition(index) + int8(index);
+      if (seconds <= leap_second) {
+         break;
+      }
+      result = result + 1;
+   }
+   return result;
+}
+
+}  // namespace detail
+
+[[nodiscard]]
+constexpr auto
+is_valid_utc(utc_date_time value) -> bool {
+   if (!detail::valid_utc_fields(value)) {
+      return false;
+   }
+   if (value.second != 60) {
+      return true;
+   }
+   if (value.hour != 23 || value.minute != 59) {
+      return false;
+   }
+   value.second = 59;
+   int8 const transition = detail::posix_seconds_from_civil(value) + 1;
+   return detail::leap_index_for_transition(transition) >= 0;
+}
+
+[[nodiscard]]
+constexpr auto
+utc_from_date_time(utc_date_time value) -> utc_conversion {
+   if (!is_valid_utc(value)) {
+      return {
+         .value = utc_time_point(0),
+         .valid = false,
+      };
+   }
+   if (value.second == 60) {
+      value.second = 59;
+      int8 const transition = detail::posix_seconds_from_civil(value) + 1;
+      int8 const leap_index = detail::leap_index_for_transition(transition);
+      return {
+         .value = utc_time_point(transition + leap_index),
+         .valid = true,
+      };
+   }
+   int8 const posix = detail::posix_seconds_from_civil(value);
+   int8 const atomic = posix + detail::completed_leaps_for_posix(posix);
+   return {
+      .value = utc_time_point(atomic),
+      .valid = true,
+   };
+}
+
+[[nodiscard]]
+constexpr auto
+date_time_from_utc(utc_time_point point) -> utc_date_time {
+   int8 const atomic = point.seconds_since_epoch();
+   int8 const leap_index = detail::leap_index_for_atomic(atomic);
+   if (leap_index >= 0) {
+      int8 const transition = detail::leap_second_transition(idx(leap_index));
+      utc_date_time result = detail::civil_from_posix_seconds(transition - 1);
+      result.second = 60;
+      return result;
+   }
+   int8 const posix = atomic - detail::completed_leaps_for_atomic(atomic);
+   return detail::civil_from_posix_seconds(posix);
+}
+
+[[nodiscard]]
+constexpr auto
+to_tai(utc_time_point point) -> tai_time_point {
+   return tai_time_point(point.seconds_since_epoch() + duration(378'691'210));
+}
+
+[[nodiscard]]
+constexpr auto
+to_utc(tai_time_point point) -> utc_time_point {
+   return utc_time_point(point.seconds_since_epoch() - duration(378'691'210));
+}
+
+[[nodiscard]]
+constexpr auto
+to_utc(unix_time_point point) -> utc_time_point {
+   int8 const posix = point.seconds_since_epoch();
+   int8 const atomic = posix + detail::completed_leaps_for_posix(posix);
+   return utc_time_point(atomic);
+}
+
+[[nodiscard]]
+constexpr auto
+to_tai(unix_time_point point) -> tai_time_point {
+   return to_tai(to_utc(point));
+}
+
+[[nodiscard]]
+constexpr auto
+to_unix(utc_time_point point, unix_leap_second_mapping leap_mapping)
+   -> unix_time_point {
+   int8 const atomic = point.seconds_since_epoch();
+   int8 const leap_index = detail::leap_index_for_atomic(atomic);
+   if (leap_index >= 0) {
+      int8 const transition = detail::leap_second_transition(idx(leap_index));
+      if (leap_mapping == unix_leap_second_mapping::previous_second) {
+         return unix_time_point(transition - 1);
+      }
+      return unix_time_point(transition);
+   }
+   int8 const posix = atomic - detail::completed_leaps_for_atomic(atomic);
+   return unix_time_point(posix);
+}
+
+[[nodiscard]]
+constexpr auto
+to_unix(tai_time_point point, unix_leap_second_mapping leap_mapping)
+   -> unix_time_point {
+   return to_unix(to_utc(point), leap_mapping);
+}
+
+[[nodiscard]]
+constexpr auto
+get_leap_second_info(utc_time_point point) -> leap_second_info {
+   int8 const atomic = point.seconds_since_epoch();
+   int8 const leap_index = detail::leap_index_for_atomic(atomic);
+   if (leap_index >= 0) {
+      return {
+         .is_leap_second = true,
+         .elapsed = leap_index + 1,
+      };
+   }
+   return {
+      .is_leap_second = false,
+      .elapsed = detail::completed_leaps_for_atomic(atomic),
+   };
+}
+
+}  // namespace cat

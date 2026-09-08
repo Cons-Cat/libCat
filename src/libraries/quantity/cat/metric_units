@@ -1,0 +1,474 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/physical_quantities>
+
+namespace cat::units {
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"q", mag_power<10, -30>, unit_value> quecto;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"r", mag_power<10, -27>, unit_value> ronto;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"y", mag_power<10, -24>, unit_value> yocto;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"z", mag_power<10, -21>, unit_value> zepto;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"a", mag_power<10, -18>, unit_value> atto;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"f", mag_power<10, -15>, unit_value> femto;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"p", mag_power<10, -12>, unit_value> pico;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"n", mag_power<10, -9>, unit_value> nano;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<
+   symbol_text{u8"µ", "u"}, mag_power<10, -6>, unit_value>
+   micro;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"m", mag_power<10, -3>, unit_value> milli;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"c", mag_power<10, -2>, unit_value> centi;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"d", mag_power<10, -1>, unit_value> deci;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"da", mag_power<10, 1>, unit_value> deca;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"h", mag_power<10, 2>, unit_value> hecto;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"k", mag_power<10, 3>, unit_value> kilo;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"M", mag_power<10, 6>, unit_value> mega;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"G", mag_power<10, 9>, unit_value> giga;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"T", mag_power<10, 12>, unit_value> tera;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"P", mag_power<10, 15>, unit_value> peta;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"E", mag_power<10, 18>, unit_value> exa;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"Z", mag_power<10, 21>, unit_value> zetta;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"Y", mag_power<10, 24>, unit_value> yotta;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"R", mag_power<10, 27>, unit_value> ronna;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"Q", mag_power<10, 30>, unit_value> quetta;
+
+inline constexpr struct metre : named_unit<"m", kind_of<length>> {
+} metre;
+
+inline constexpr auto fermi = femto<metre>;
+
+inline constexpr struct second : named_unit<"s", kind_of<time>> {
+} second;
+
+inline constexpr struct gram : named_unit<"g", kind_of<mass>> {
+} gram;
+
+inline constexpr auto kilogram = kilo<gram>;
+inline constexpr auto one = ::cat::scalar;
+
+inline constexpr struct ampere : named_unit<"A", kind_of<electric_current>> {
+} ampere;
+
+inline constexpr struct kelvin
+    : named_unit<"K", kind_of<thermodynamic_temperature>> {
+} kelvin;
+
+inline constexpr struct mole : named_unit<"mol", kind_of<amount_of_substance>> {
+} mole;
+
+inline constexpr struct candela
+    : named_unit<"cd", kind_of<luminous_intensity>> {
+} candela;
+
+inline constexpr struct radian : named_unit<"rad", kind_of<plane_angle>> {
+} radian;
+
+inline constexpr struct steradian : named_unit<"sr", kind_of<solid_angle>> {
+} steradian;
+
+inline constexpr struct hertz : named_unit<"Hz", inverse(second), frequency> {
+} hertz;
+
+inline constexpr struct newton
+    : named_unit<"N", kilogram * metre / pow<2>(second), force> {
+} newton;
+
+inline constexpr struct pascal
+    : named_unit<"Pa", newton / pow<2>(metre), pressure> {
+} pascal;
+
+inline constexpr struct joule : named_unit<"J", newton * metre, energy> {
+} joule;
+
+inline constexpr struct watt : named_unit<"W", joule / second, power> {
+} watt;
+
+inline constexpr struct coulomb
+    : named_unit<"C", ampere * second, electric_charge> {
+} coulomb;
+
+inline constexpr struct volt : named_unit<"V", watt / ampere, voltage> {
+} volt;
+
+inline constexpr struct farad : named_unit<"F", coulomb / volt, capacitance> {
+} farad;
+
+inline constexpr struct ohm
+    : named_unit<symbol_text{u8"Ω", "ohm"}, volt / ampere, resistance> {
+} ohm;
+
+inline constexpr struct siemens : named_unit<"S", ampere / volt, conductance> {
+} siemens;
+
+inline constexpr struct weber : named_unit<"Wb", volt * second, magnetic_flux> {
+} weber;
+
+inline constexpr struct tesla
+    : named_unit<"T", weber / pow<2>(metre), magnetic_flux_density> {
+} tesla;
+
+inline constexpr struct henry : named_unit<"H", weber / ampere, inductance> {
+} henry;
+
+// TODO: Add affine temperature points for absolute Celsius and Fahrenheit.
+inline constexpr struct celsius
+    : named_unit<
+         symbol_text{u8"°C", "degC"}, kelvin, thermodynamic_temperature> {
+} celsius;
+
+inline constexpr struct lumen
+    : named_unit<"lm", candela * steradian, luminous_flux> {
+} lumen;
+
+inline constexpr struct lux
+    : named_unit<"lx", lumen / pow<2>(metre), illuminance> {
+} lux;
+
+inline constexpr struct becquerel
+    : named_unit<"Bq", inverse(second), activity> {
+} becquerel;
+
+inline constexpr struct gray
+    : named_unit<"Gy", joule / kilogram, absorbed_dose> {
+} gray;
+
+inline constexpr struct sievert
+    : named_unit<"Sv", joule / kilogram, dose_equivalent> {
+} sievert;
+
+inline constexpr struct katal
+    : named_unit<"kat", mole / second, catalytic_activity> {
+} katal;
+
+inline constexpr struct minute : named_unit<"min", mag<60> * second, time> {
+} minute;
+
+inline constexpr struct hour : named_unit<"h", mag<60> * minute, time> {
+} hour;
+
+inline constexpr struct day : named_unit<"d", mag<24> * hour, time> {
+} day;
+
+inline constexpr struct degree
+    : named_unit<
+         symbol_text{u8"°", "deg"}, mag_ratio<1, 180> * mag_pi * radian,
+         plane_angle> {
+} degree;
+
+inline constexpr struct gradian
+    : named_unit<
+         symbol_text{u8"ᵍ", "grad"}, mag_ratio<1, 200> * mag_pi * radian,
+         plane_angle> {
+} gradian;
+
+inline constexpr struct arcminute
+    : named_unit<
+         symbol_text{u8"′", "arcmin"}, mag_ratio<1, 10'800> * mag_pi * radian,
+         plane_angle> {
+} arcminute;
+
+inline constexpr struct arcsecond
+    : named_unit<
+         symbol_text{u8"″", "arcsec"}, mag_ratio<1, 648'000> * mag_pi * radian,
+         plane_angle> {
+} arcsecond;
+
+inline constexpr struct revolution
+    : named_unit<"rev", mag<2> * mag_pi * radian, plane_angle> {
+} revolution;
+
+inline constexpr struct hectare
+    : named_unit<"ha", mag_power<10, 4> * pow<2>(metre), area> {
+} hectare;
+
+inline constexpr struct litre
+    : named_unit<"L", mag_power<10, -3> * pow<3>(metre), volume> {
+} litre;
+
+inline constexpr struct tonne
+    : named_unit<"t", mag_power<10, 3> * kilogram, mass> {
+} tonne;
+
+inline constexpr struct dalton
+    : named_unit<"Da", magnitude<166'053'906'660, 1, -38>{} * kilogram, mass> {
+} dalton;
+
+inline constexpr struct astronomical_unit
+    : named_unit<"au", mag<149'597'870'700> * metre, length> {
+} astronomical_unit;
+
+inline constexpr struct nautical_mile
+    : named_unit<"nmi", mag<1'852> * metre, length> {
+} nautical_mile;
+
+inline constexpr struct knot : named_unit<"kn", nautical_mile / hour, speed> {
+} knot;
+
+inline constexpr struct angstrom
+    : named_unit<
+         symbol_text{u8"Å", "angstrom"}, mag_power<10, -10> * metre, length> {
+} angstrom;
+
+inline constexpr struct electronvolt
+    : named_unit<"eV", magnitude<1'602'176'634, 1, -28>{} * joule, energy> {
+} electronvolt;
+
+inline constexpr struct bar
+    : named_unit<"bar", mag_power<10, 5> * pascal, pressure> {
+} bar;
+
+using metres = reference_quantity<metre>;
+using fermis = reference_quantity<fermi>;
+using seconds = reference_quantity<second>;
+using grams = reference_quantity<gram>;
+using kilograms = reference_quantity<kilogram>;
+using amperes = reference_quantity<ampere>;
+using kelvins = reference_quantity<kelvin>;
+using moles = reference_quantity<mole>;
+using candelas = reference_quantity<candela>;
+using radians = reference_quantity<radian>;
+using steradians = reference_quantity<steradian>;
+using hertzes = reference_quantity<hertz>;
+using newtons = reference_quantity<newton>;
+using pascals = reference_quantity<pascal>;
+using joules = reference_quantity<joule>;
+using watts = reference_quantity<watt>;
+using coulombs = reference_quantity<coulomb>;
+using volts = reference_quantity<volt>;
+using farads = reference_quantity<farad>;
+using ohms = reference_quantity<ohm>;
+using siemens_quantity = reference_quantity<siemens>;
+using webers = reference_quantity<weber>;
+using teslas = reference_quantity<tesla>;
+using henries = reference_quantity<henry>;
+using celsius_degrees = reference_quantity<celsius>;
+using lumens = reference_quantity<lumen>;
+using luxes = reference_quantity<lux>;
+using becquerels = reference_quantity<becquerel>;
+using grays = reference_quantity<gray>;
+using sieverts = reference_quantity<sievert>;
+using katals = reference_quantity<katal>;
+
+using square_metres = reference_quantity<pow<2>(metre)>;
+using cubic_metres = reference_quantity<pow<3>(metre)>;
+using reciprocal_metres = reference_quantity<inverse(metre)>;
+using metres_per_second = reference_quantity<metre / second>;
+using metres_per_second_squared = reference_quantity<metre / pow<2>(second)>;
+using kilograms_per_cubic_metre = reference_quantity<kilogram / pow<3>(metre)>;
+using moles_per_cubic_metre = reference_quantity<mole / pow<3>(metre)>;
+using amperes_per_square_metre = reference_quantity<ampere / pow<2>(metre)>;
+using volts_per_metre = reference_quantity<volt / metre>;
+using coulombs_per_square_metre = reference_quantity<coulomb / pow<2>(metre)>;
+using amperes_per_metre = reference_quantity<ampere / metre>;
+using joules_per_kelvin = reference_quantity<joule / kelvin>;
+using watts_per_square_metre = reference_quantity<watt / pow<2>(metre)>;
+
+using minutes = reference_quantity<minute>;
+using hours = reference_quantity<hour>;
+using days = reference_quantity<day>;
+using degrees = reference_quantity<degree>;
+using gradians = reference_quantity<gradian>;
+using arcminutes = reference_quantity<arcminute>;
+using arcseconds = reference_quantity<arcsecond>;
+using revolutions = reference_quantity<revolution>;
+using hectares = reference_quantity<hectare>;
+using litres = reference_quantity<litre>;
+using tonnes = reference_quantity<tonne>;
+using daltons = reference_quantity<dalton>;
+using astronomical_units = reference_quantity<astronomical_unit>;
+using nautical_miles = reference_quantity<nautical_mile>;
+using knots = reference_quantity<knot>;
+using angstroms = reference_quantity<angstrom>;
+using electronvolts = reference_quantity<electronvolt>;
+using bars = reference_quantity<bar>;
+
+inline constexpr auto square_metre = pow<2>(metre);
+inline constexpr auto cubic_metre = pow<3>(metre);
+inline constexpr auto reciprocal_metre = inverse(metre);
+inline constexpr auto metre_per_second = metre / second;
+inline constexpr auto metre_per_second_squared = metre / pow<2>(second);
+inline constexpr auto kilogram_per_cubic_metre = kilogram / pow<3>(metre);
+inline constexpr auto mole_per_cubic_metre = mole / pow<3>(metre);
+inline constexpr auto ampere_per_square_metre = ampere / pow<2>(metre);
+inline constexpr auto volt_per_metre = volt / metre;
+inline constexpr auto coulomb_per_square_metre = coulomb / pow<2>(metre);
+inline constexpr auto ampere_per_metre = ampere / metre;
+inline constexpr auto joule_per_kelvin = joule / kelvin;
+inline constexpr auto watt_per_square_metre = watt / pow<2>(metre);
+
+CAT_DECLARE_QUANTITY_ALIASES(metre, metre);
+CAT_DECLARE_QUANTITY_ALIASES(fermi, fermi);
+CAT_DECLARE_QUANTITY_ALIASES(second, second);
+CAT_DECLARE_QUANTITY_ALIASES(gram, gram);
+CAT_DECLARE_QUANTITY_ALIASES(kilogram, kilogram);
+CAT_DECLARE_QUANTITY_ALIASES(ampere, ampere);
+CAT_DECLARE_QUANTITY_ALIASES(kelvin, kelvin);
+CAT_DECLARE_QUANTITY_ALIASES(mole, mole);
+CAT_DECLARE_QUANTITY_ALIASES(candela, candela);
+CAT_DECLARE_QUANTITY_ALIASES(radian, radian);
+CAT_DECLARE_QUANTITY_ALIASES(steradian, steradian);
+CAT_DECLARE_QUANTITY_ALIASES(hertz, hertz);
+CAT_DECLARE_QUANTITY_ALIASES(newton, newton);
+CAT_DECLARE_QUANTITY_ALIASES(pascal, pascal);
+CAT_DECLARE_QUANTITY_ALIASES(joule, joule);
+CAT_DECLARE_QUANTITY_ALIASES(watt, watt);
+CAT_DECLARE_QUANTITY_ALIASES(coulomb, coulomb);
+CAT_DECLARE_QUANTITY_ALIASES(volt, volt);
+CAT_DECLARE_QUANTITY_ALIASES(farad, farad);
+CAT_DECLARE_QUANTITY_ALIASES(ohm, ohm);
+CAT_DECLARE_QUANTITY_ALIASES(siemens, siemens);
+CAT_DECLARE_QUANTITY_ALIASES(weber, weber);
+CAT_DECLARE_QUANTITY_ALIASES(tesla, tesla);
+CAT_DECLARE_QUANTITY_ALIASES(henry, henry);
+CAT_DECLARE_QUANTITY_ALIASES(celsius, celsius);
+CAT_DECLARE_QUANTITY_ALIASES(lumen, lumen);
+CAT_DECLARE_QUANTITY_ALIASES(lux, lux);
+CAT_DECLARE_QUANTITY_ALIASES(becquerel, becquerel);
+CAT_DECLARE_QUANTITY_ALIASES(gray, gray);
+CAT_DECLARE_QUANTITY_ALIASES(sievert, sievert);
+CAT_DECLARE_QUANTITY_ALIASES(katal, katal);
+CAT_DECLARE_QUANTITY_ALIASES(square_metre, square_metre);
+CAT_DECLARE_QUANTITY_ALIASES(cubic_metre, cubic_metre);
+CAT_DECLARE_QUANTITY_ALIASES(reciprocal_metre, reciprocal_metre);
+CAT_DECLARE_QUANTITY_ALIASES(metre_per_second, metre_per_second);
+CAT_DECLARE_QUANTITY_ALIASES(
+   metre_per_second_squared, metre_per_second_squared
+);
+CAT_DECLARE_QUANTITY_ALIASES(
+   kilogram_per_cubic_metre, kilogram_per_cubic_metre
+);
+CAT_DECLARE_QUANTITY_ALIASES(mole_per_cubic_metre, mole_per_cubic_metre);
+CAT_DECLARE_QUANTITY_ALIASES(ampere_per_square_metre, ampere_per_square_metre);
+CAT_DECLARE_QUANTITY_ALIASES(volt_per_metre, volt_per_metre);
+CAT_DECLARE_QUANTITY_ALIASES(
+   coulomb_per_square_metre, coulomb_per_square_metre
+);
+CAT_DECLARE_QUANTITY_ALIASES(ampere_per_metre, ampere_per_metre);
+CAT_DECLARE_QUANTITY_ALIASES(joule_per_kelvin, joule_per_kelvin);
+CAT_DECLARE_QUANTITY_ALIASES(watt_per_square_metre, watt_per_square_metre);
+CAT_DECLARE_QUANTITY_ALIASES(minute, minute);
+CAT_DECLARE_QUANTITY_ALIASES(hour, hour);
+CAT_DECLARE_QUANTITY_ALIASES(day, day);
+CAT_DECLARE_QUANTITY_ALIASES(degree, degree);
+CAT_DECLARE_QUANTITY_ALIASES(gradian, gradian);
+CAT_DECLARE_QUANTITY_ALIASES(arcminute, arcminute);
+CAT_DECLARE_QUANTITY_ALIASES(arcsecond, arcsecond);
+CAT_DECLARE_QUANTITY_ALIASES(revolution, revolution);
+CAT_DECLARE_QUANTITY_ALIASES(hectare, hectare);
+CAT_DECLARE_QUANTITY_ALIASES(litre, litre);
+CAT_DECLARE_QUANTITY_ALIASES(tonne, tonne);
+CAT_DECLARE_QUANTITY_ALIASES(dalton, dalton);
+CAT_DECLARE_QUANTITY_ALIASES(astronomical_unit, astronomical_unit);
+CAT_DECLARE_QUANTITY_ALIASES(nautical_mile, nautical_mile);
+CAT_DECLARE_QUANTITY_ALIASES(knot, knot);
+CAT_DECLARE_QUANTITY_ALIASES(angstrom, angstrom);
+CAT_DECLARE_QUANTITY_ALIASES(electronvolt, electronvolt);
+CAT_DECLARE_QUANTITY_ALIASES(bar, bar);
+
+inline constexpr auto centimetre = centi<metre>;
+
+inline constexpr struct gal : named_unit<"Gal", centimetre / pow<2>(second)> {
+} gal;
+
+inline constexpr struct dyne
+    : named_unit<"dyn", gram * centimetre / pow<2>(second)> {
+} dyne;
+
+inline constexpr struct erg : named_unit<"erg", dyne * centimetre> {
+} erg;
+
+inline constexpr struct barye
+    : named_unit<"Ba", gram / centimetre / pow<2>(second)> {
+} barye;
+
+inline constexpr struct poise : named_unit<"P", gram / centimetre / second> {
+} poise;
+
+inline constexpr struct stokes
+    : named_unit<"St", centimetre * centimetre / second> {
+} stokes;
+
+inline constexpr struct kayser : named_unit<"K", inverse(centimetre)> {
+} kayser;
+
+using centimetres = reference_quantity<centimetre>;
+using gals = reference_quantity<gal>;
+using dynes = reference_quantity<dyne>;
+using ergs = reference_quantity<erg>;
+using baryes = reference_quantity<barye>;
+using poises = reference_quantity<poise>;
+using stokeses = reference_quantity<stokes>;
+using kaysers = reference_quantity<kayser>;
+
+CAT_DECLARE_QUANTITY_ALIASES(centimetre, centimetre);
+CAT_DECLARE_QUANTITY_ALIASES(gal, gal);
+CAT_DECLARE_QUANTITY_ALIASES(dyne, dyne);
+CAT_DECLARE_QUANTITY_ALIASES(erg, erg);
+CAT_DECLARE_QUANTITY_ALIASES(barye, barye);
+CAT_DECLARE_QUANTITY_ALIASES(poise, poise);
+CAT_DECLARE_QUANTITY_ALIASES(stokes, stokes);
+CAT_DECLARE_QUANTITY_ALIASES(kayser, kayser);
+
+}  // namespace cat::units
+
+namespace cat::detail {
+
+template <>
+inline constexpr bool
+   is_radian_or_degree_reference<::cat::reference_quantity<units::radian>> =
+      true;
+
+template <>
+inline constexpr bool
+   is_radian_or_degree_reference<::cat::reference_quantity<units::degree>> =
+      true;
+
+}  // namespace cat::detail

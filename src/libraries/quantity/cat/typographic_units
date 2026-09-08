@@ -1,0 +1,63 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/imperial_units>
+#include <cat/metric_units>
+
+namespace cat::units {
+
+inline constexpr struct pica_us
+    : named_unit<"pica(us)", mag_ratio<166'044, 1'000'000> * inch> {
+} pica_us;
+
+inline constexpr struct point_us
+    : named_unit<"point(us)", mag_ratio<1, 12> * pica_us> {
+} point_us;
+
+inline constexpr struct point_dtp
+    : named_unit<"point(dtp)", mag_ratio<1, 72> * inch> {
+} point_dtp;
+
+inline constexpr struct pica_dtp
+    : named_unit<"pica(dtp)", mag<12> * point_dtp> {
+} pica_dtp;
+
+inline constexpr struct didot_point
+    : named_unit<"point(didot)", mag_ratio<3'759, 10'000'000> * metre> {
+} didot_point;
+
+inline constexpr struct cicero : named_unit<"cicero", mag<12> * didot_point> {
+} cicero;
+
+inline constexpr struct q : named_unit<"Q", mag_ratio<1, 4'000> * metre> {
+} q;
+
+inline constexpr struct h : named_unit<"H", mag_ratio<1, 4'000> * metre> {
+} h;
+
+inline constexpr struct tex_point
+    : named_unit<"point(tex)", mag_ratio<100, 7'227> * inch> {
+} tex_point;
+
+using picas_us = reference_quantity<pica_us>;
+using points_us = reference_quantity<point_us>;
+using points_dtp = reference_quantity<point_dtp>;
+using picas_dtp = reference_quantity<pica_dtp>;
+using didot_points = reference_quantity<didot_point>;
+using ciceros = reference_quantity<cicero>;
+using qs = reference_quantity<q>;
+using hs = reference_quantity<h>;
+using tex_points = reference_quantity<tex_point>;
+
+CAT_DECLARE_QUANTITY_ALIASES(pica_us, pica_us);
+CAT_DECLARE_QUANTITY_ALIASES(point_us, point_us);
+CAT_DECLARE_QUANTITY_ALIASES(point_dtp, point_dtp);
+CAT_DECLARE_QUANTITY_ALIASES(pica_dtp, pica_dtp);
+CAT_DECLARE_QUANTITY_ALIASES(didot_point, didot_point);
+CAT_DECLARE_QUANTITY_ALIASES(cicero, cicero);
+CAT_DECLARE_QUANTITY_ALIASES(q, q);
+CAT_DECLARE_QUANTITY_ALIASES(h, h);
+CAT_DECLARE_QUANTITY_ALIASES(tex_point, tex_point);
+
+}  // namespace cat::units

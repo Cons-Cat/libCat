@@ -138,8 +138,8 @@ class normal_distribution {
          Float const angle =
             tau_value
             * detail::distribution_generate_canonical<Float>(generator);
-         standard = radius * cos(angle);
-         m_spare = radius * cos(angle - tau_value / 4.f);
+         standard = radius * detail::raw_cos(angle);
+         m_spare = radius * detail::raw_cos(angle - tau_value / 4.f);
          m_has_spare = true;
       }
       return parameter.mean() + parameter.stddev() * standard;

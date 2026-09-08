@@ -159,7 +159,7 @@ is_divisible_by_apply(T value, U divisor) -> bool {
          return true;
       }
    }
-   return (value % divisor) == 0;
+   return (make_raw_arithmetic(value) % make_raw_arithmetic(divisor)) == 0;
 }
 
 template <>

@@ -1009,7 +1009,7 @@ template <
    typename... Powers>
 struct quantity_unit_formatter<
    numerator, prefix_power, PrefixUnit, unit<Power, Powers...>> {
-   using power_unit = typename Power::unit_type;
+   using power_unit = Power::unit_type;
 
    static auto
    append(format_context& context, bool& wrote_unit) -> scaredy_format<void> {
@@ -1039,7 +1039,7 @@ append_quantity_symbol(format_context& context) -> scaredy_format<void> {
    }
 
    $prop(context.append(' '));
-   using quantity_unit = typename Quantity::unit_type;
+   using quantity_unit = Quantity::unit_type;
    using prefix = quantity_prefix<Quantity::scale, quantity_unit>;
    using magnitude_type = __typeof_unqual(Quantity::unit_magnitude);
 
@@ -1064,6 +1064,17 @@ append_quantity_symbol(format_context& context) -> scaredy_format<void> {
       $prop(context.append(' '));
    }
 
+   if constexpr (magnitude_type::pi_power != 0) {
+      $prop(context.append("pi"));
+      if constexpr (magnitude_type::pi_power != 1) {
+         $prop(context.append('^'));
+         $prop(
+            append_arithmetic(context, int4::raw_type(magnitude_type::pi_power))
+         );
+      }
+      $prop(context.append(' '));
+   }
+
    bool wrote_unit = false;
    $prop((quantity_unit_formatter<
           true, prefix::power, typename prefix::unit_type,
@@ -1080,6 +1091,22 @@ append_quantity_symbol(format_context& context) -> scaredy_format<void> {
              quantity_unit>::append(context, wrote_unit)));
    }
    return monostate;
+}
+
+template <typename T>
+   requires(has_quantity<T>)
+auto
+append_arithmetic_quantity_symbol(format_context& context)
+   -> scaredy_format<void> {
+   using quantity_specifier = __typeof_unqual(T::quantity_reference);
+   if constexpr (is_named_unit<quantity_specifier>) {
+      $prop(context.append(' '));
+      return context.append(
+         str_view(quantity_specifier::unit_symbol.portable().data_)
+      );
+   } else {
+      return append_quantity_symbol<arithmetic_quantity<T>>(context);
+   }
 }
 }  // namespace detail
 
@@ -1121,7 +1148,7 @@ struct formatter<T, CharT> : formatter_base<CharT> {
          $prop(detail::append_arithmetic(context, raw));
       }
       if constexpr (has_quantity<T>) {
-         return detail::append_quantity_symbol<arithmetic_quantity<T>>(context);
+         return detail::append_arithmetic_quantity_symbol<T>(context);
       }
       return monostate;
    }
@@ -1147,7 +1174,7 @@ struct formatter<T, CharT> : formatter_base<CharT> {
       detail::pull_float_format_support();
       $prop(detail::append_arithmetic(context, make_raw_arithmetic(value)));
       if constexpr (has_quantity<T>) {
-         return detail::append_quantity_symbol<arithmetic_quantity<T>>(context);
+         return detail::append_arithmetic_quantity_symbol<T>(context);
       }
       return monostate;
    }

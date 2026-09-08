@@ -1,0 +1,40 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/arithmetic>
+
+namespace cat::units {
+
+inline constexpr struct dim_pixel : base_dimension<"px"> {
+} dim_pixel;
+
+using pixel_dimension_type =
+   dimension<dimension_power<__typeof_unqual(dim_pixel), 1>>;
+
+inline constexpr struct pixel_count : quantity_spec<dim_pixel> {
+} pixel_count;
+
+inline constexpr struct horizontal_pixel_count : quantity_spec<pixel_count> {
+} horizontal_pixel_count;
+
+inline constexpr struct vertical_pixel_count : quantity_spec<pixel_count> {
+} vertical_pixel_count;
+
+inline constexpr struct pixel : named_unit<"px", kind_of<pixel_count>> {
+} pixel;
+
+using pixels = quantity_reference<
+   __typeof_unqual(pixel_count), unit<unit_power<__typeof_unqual(pixel), 1>>>;
+
+inline constexpr auto horizontal_pixel = horizontal_pixel_count[pixel];
+inline constexpr auto vertical_pixel = vertical_pixel_count[pixel];
+
+using horizontal_pixels = reference_quantity<horizontal_pixel>;
+using vertical_pixels = reference_quantity<vertical_pixel>;
+
+CAT_DECLARE_QUANTITY_ALIASES(pixel, pixel);
+CAT_DECLARE_QUANTITY_ALIASES(horizontal_pixel, horizontal_pixel);
+CAT_DECLARE_QUANTITY_ALIASES(vertical_pixel, vertical_pixel);
+
+}  // namespace cat::units

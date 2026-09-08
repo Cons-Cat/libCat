@@ -4011,11 +4011,13 @@ rcbrt(simd<T, Abi> argument) -> simd<T, Abi> {
    return simd_rcbrt(argument);
 }
 
+namespace detail {
+
 template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-sin(simd<T, Abi> argument) -> simd<T, Abi> {
+raw_sin(simd<T, Abi> argument) -> simd<T, Abi> {
    return simd_sin(argument);
 }
 
@@ -4023,7 +4025,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-cos(simd<T, Abi> argument) -> simd<T, Abi> {
+raw_cos(simd<T, Abi> argument) -> simd<T, Abi> {
    return simd_cos(argument);
 }
 
@@ -4031,40 +4033,54 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-tan(simd<T, Abi> argument) -> simd<T, Abi> {
+raw_tan(simd<T, Abi> argument) -> simd<T, Abi> {
    return simd_tan(argument);
 }
 
+}  // namespace detail
+
 template <typename T, typename Abi>
-   requires(is_floating_point<T>)
+   requires(is_floating_point<T> && is_dimensionless_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-asin(simd<T, Abi> argument) -> simd<T, Abi> {
-   return simd_asin(argument);
+asin(simd<T, Abi> argument) {
+   using result_lane =
+      __typeof_unqual(detail::attach_quantity<units::radian>(T{}));
+   using result_type = fixed_size_simd<result_lane, Abi::lanes>;
+   return result_type(typename result_type::raw_type(simd_asin(argument).raw));
 }
 
 template <typename T, typename Abi>
-   requires(is_floating_point<T>)
+   requires(is_floating_point<T> && is_dimensionless_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-acos(simd<T, Abi> argument) -> simd<T, Abi> {
-   return simd_acos(argument);
+acos(simd<T, Abi> argument) {
+   using result_lane =
+      __typeof_unqual(detail::attach_quantity<units::radian>(T{}));
+   using result_type = fixed_size_simd<result_lane, Abi::lanes>;
+   return result_type(typename result_type::raw_type(simd_acos(argument).raw));
 }
 
 template <typename T, typename Abi>
-   requires(is_floating_point<T>)
+   requires(is_floating_point<T> && is_dimensionless_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-atan(simd<T, Abi> argument) -> simd<T, Abi> {
-   return simd_atan(argument);
+atan(simd<T, Abi> argument) {
+   using result_lane =
+      __typeof_unqual(detail::attach_quantity<units::radian>(T{}));
+   using result_type = fixed_size_simd<result_lane, Abi::lanes>;
+   return result_type(typename result_type::raw_type(simd_atan(argument).raw));
 }
 
 template <typename T, typename Abi>
-   requires(is_floating_point<T>)
+   requires(is_floating_point<T> && is_dimensionless_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-atan2(simd<T, Abi> y, simd<T, Abi> x) -> simd<T, Abi> {
-   return simd_atan2(y, x);
+atan2(simd<T, Abi> y, simd<T, Abi> x) {
+   using result_lane =
+      __typeof_unqual(detail::attach_quantity<units::radian>(T{}));
+   using result_type = fixed_size_simd<result_lane, Abi::lanes>;
+   return result_type(typename result_type::raw_type(simd_atan2(y, x).raw));
 }
 
 template <typename T, typename Abi>

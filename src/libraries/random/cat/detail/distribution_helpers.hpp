@@ -464,7 +464,7 @@ random_standard_normal(Generator& generator) -> Float {
       sqrt(Float(-2.f) * log(random_positive_canonical<Float>(generator)));
    Float const angle =
       Float(tau<scalar>) * distribution_generate_canonical<Float>(generator);
-   return radius * cos(angle);
+   return radius * raw_cos(angle);
 }
 
 template <typename Float, is_uniform_random_bit_generator Generator>

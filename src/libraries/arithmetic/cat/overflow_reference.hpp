@@ -45,10 +45,10 @@ class overflow_reference
 
    using wrapper_type = remove_cvref<WrappedQual>;
    static constexpr auto quantity_reference = [] {
-      if constexpr (requires { wrapper_type::quantity_reference; }) {
+      if constexpr (has_quantity<wrapper_type>) {
          return wrapper_type::quantity_reference;
       } else {
-         return si::one;
+         return scalar;
       }
    }();
 

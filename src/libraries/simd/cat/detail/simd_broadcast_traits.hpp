@@ -38,6 +38,10 @@ simd_broadcast_really_convertible_to() -> bool {
       return false;
    }
 
+   if constexpr (has_quantity<unqualified> || has_quantity<ToLane>) {
+      return is_convertible<unqualified, ToLane>;
+   }
+
    using to_raw = simd_broadcast_lane_raw<ToLane>;
    if constexpr (!is_arithmetic<to_raw>) {
       return false;
@@ -97,7 +101,8 @@ has_simd_broadcast_consteval_value(From f) -> bool {
 
 template <typename From, typename ToLane>
 concept is_simd_consteval_broadcast_arg =
-   is_arithmetic<From> && is_constructible<ToLane, From>
+   is_arithmetic<From> && is_constructible<ToLane, From> && !has_quantity<From>
+   && !has_quantity<ToLane>
    && !simd_broadcast_really_convertible_to<From, ToLane>()
    && requires { typename common_type<From, simd_broadcast_lane_raw<ToLane>>; }
    && (is_same<common_type<From, simd_broadcast_lane_raw<ToLane>>, simd_broadcast_lane_raw<ToLane>> || (is_same<From, int> && is_integral<simd_broadcast_lane_raw<ToLane>>) || (is_same<From, unsigned int> && is_unsigned_integral<simd_broadcast_lane_raw<ToLane>>));

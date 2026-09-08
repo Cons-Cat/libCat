@@ -1,0 +1,118 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/metric_units>
+#include <cat/physical_quantities>
+
+namespace cat::units {
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"Ki", mag_power<2, 10>, unit_value> kibi;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"Mi", mag_power<2, 20>, unit_value> mebi;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"Gi", mag_power<2, 30>, unit_value> gibi;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"Ti", mag_power<2, 40>, unit_value> tebi;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"Pi", mag_power<2, 50>, unit_value> pebi;
+
+template <auto unit_value>
+inline constexpr prefixed_unit<"Ei", mag_power<2, 60>, unit_value> exbi;
+
+inline constexpr struct erlang : named_unit<"E", scalar_quantity_spec{}> {
+} erlang;
+
+inline constexpr struct bit : named_unit<"bit", kind_of<storage_capacity>> {
+} bit;
+
+inline constexpr struct octet : named_unit<"o", mag<8> * bit> {
+} octet;
+
+inline constexpr struct byte : named_unit<"B", mag<8> * bit> {
+} byte;
+
+inline constexpr struct baud
+    : named_unit<"Bd", inverse(second), kind_of<modulation_rate>> {
+} baud;
+
+inline constexpr auto kilobit = kilo<bit>;
+inline constexpr auto megabit = mega<bit>;
+inline constexpr auto gigabit = giga<bit>;
+inline constexpr auto terabit = tera<bit>;
+inline constexpr auto kibibit = kibi<bit>;
+inline constexpr auto mebibit = mebi<bit>;
+inline constexpr auto gibibit = gibi<bit>;
+inline constexpr auto tebibit = tebi<bit>;
+inline constexpr auto pebibit = pebi<bit>;
+inline constexpr auto exbibit = exbi<bit>;
+
+inline constexpr auto kilobyte = kilo<byte>;
+inline constexpr auto megabyte = mega<byte>;
+inline constexpr auto gigabyte = giga<byte>;
+inline constexpr auto terabyte = tera<byte>;
+inline constexpr auto kibibyte = kibi<byte>;
+inline constexpr auto mebibyte = mebi<byte>;
+inline constexpr auto gibibyte = gibi<byte>;
+inline constexpr auto tebibyte = tebi<byte>;
+inline constexpr auto pebibyte = pebi<byte>;
+inline constexpr auto exbibyte = exbi<byte>;
+
+using bits = reference_quantity<bit>;
+using octets = reference_quantity<octet>;
+using bytes = reference_quantity<byte>;
+using erlangs = reference_quantity<erlang>;
+using bauds = reference_quantity<baud>;
+using kilobits = reference_quantity<kilobit>;
+using megabits = reference_quantity<megabit>;
+using gigabits = reference_quantity<gigabit>;
+using terabits = reference_quantity<terabit>;
+using kibibits = reference_quantity<kibibit>;
+using mebibits = reference_quantity<mebibit>;
+using gibibits = reference_quantity<gibibit>;
+using tebibits = reference_quantity<tebibit>;
+using pebibits = reference_quantity<pebibit>;
+using exbibits = reference_quantity<exbibit>;
+using kilobytes = reference_quantity<kilobyte>;
+using megabytes = reference_quantity<megabyte>;
+using gigabytes = reference_quantity<gigabyte>;
+using terabytes = reference_quantity<terabyte>;
+using kibibytes = reference_quantity<kibibyte>;
+using mebibytes = reference_quantity<mebibyte>;
+using gibibytes = reference_quantity<gibibyte>;
+using tebibytes = reference_quantity<tebibyte>;
+using pebibytes = reference_quantity<pebibyte>;
+using exbibytes = reference_quantity<exbibyte>;
+
+CAT_DECLARE_QUANTITY_ALIASES(bit, bit);
+CAT_DECLARE_QUANTITY_ALIASES(octet, octet);
+CAT_DECLARE_QUANTITY_ALIASES(byte, byte);
+CAT_DECLARE_QUANTITY_ALIASES(erlang, erlang);
+CAT_DECLARE_QUANTITY_ALIASES(baud, baud);
+CAT_DECLARE_QUANTITY_ALIASES(kilobit, kilobit);
+CAT_DECLARE_QUANTITY_ALIASES(megabit, megabit);
+CAT_DECLARE_QUANTITY_ALIASES(gigabit, gigabit);
+CAT_DECLARE_QUANTITY_ALIASES(terabit, terabit);
+CAT_DECLARE_QUANTITY_ALIASES(kibibit, kibibit);
+CAT_DECLARE_QUANTITY_ALIASES(mebibit, mebibit);
+CAT_DECLARE_QUANTITY_ALIASES(gibibit, gibibit);
+CAT_DECLARE_QUANTITY_ALIASES(tebibit, tebibit);
+CAT_DECLARE_QUANTITY_ALIASES(pebibit, pebibit);
+CAT_DECLARE_QUANTITY_ALIASES(exbibit, exbibit);
+CAT_DECLARE_QUANTITY_ALIASES(kilobyte, kilobyte);
+CAT_DECLARE_QUANTITY_ALIASES(megabyte, megabyte);
+CAT_DECLARE_QUANTITY_ALIASES(gigabyte, gigabyte);
+CAT_DECLARE_QUANTITY_ALIASES(terabyte, terabyte);
+CAT_DECLARE_QUANTITY_ALIASES(kibibyte, kibibyte);
+CAT_DECLARE_QUANTITY_ALIASES(mebibyte, mebibyte);
+CAT_DECLARE_QUANTITY_ALIASES(gibibyte, gibibyte);
+CAT_DECLARE_QUANTITY_ALIASES(tebibyte, tebibyte);
+CAT_DECLARE_QUANTITY_ALIASES(pebibyte, pebibyte);
+CAT_DECLARE_QUANTITY_ALIASES(exbibyte, exbibyte);
+
+}  // namespace cat::units

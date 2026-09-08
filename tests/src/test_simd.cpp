@@ -830,7 +830,6 @@ $test(simd_scalar_math_api_forwarding) {
    float4x4 const values{1_f4, 4_f4, 9_f4, 16_f4};
    float4x4 const twos{2_f4};
 
-   static_assert(cat::is_same<__typeof_unqual(cat::sin(zeros)), float4x4>);
    cat::verify(cat::abs(-values) == values);
    cat::verify(
       cat::clamp(values, twos, float4x4{9_f4})
@@ -849,13 +848,18 @@ $test(simd_scalar_math_api_forwarding) {
    cat::verify(cat::cbrt(values) == cat::simd_cbrt(values));
    cat::verify(cat::rnroot(values, 2) == cat::simd_rnroot(values, 2));
    cat::verify(cat::rcbrt(values) == cat::simd_rcbrt(values));
-   cat::verify(cat::sin(zeros) == cat::simd_sin(zeros));
-   cat::verify(cat::cos(zeros) == cat::simd_cos(zeros));
-   cat::verify(cat::tan(zeros) == cat::simd_tan(zeros));
-   cat::verify(cat::asin(zeros) == cat::simd_asin(zeros));
-   cat::verify(cat::acos(ones) == cat::simd_acos(ones));
-   cat::verify(cat::atan(zeros) == cat::simd_atan(zeros));
-   cat::verify(cat::atan2(zeros, ones) == cat::simd_atan2(zeros, ones));
+   auto const inverse_sine = cat::asin(zeros);
+   auto const inverse_cosine = cat::acos(ones);
+   auto const inverse_tangent = cat::atan(zeros);
+   auto const inverse_tangent2 = cat::atan2(zeros, ones);
+   using inverse_sine_type = __typeof_unqual(inverse_sine);
+   static_assert(
+      cat::is_same<inverse_sine_type::value_type, cat::units::radian_float4>
+   );
+   cat::verify(inverse_sine[0].raw == 0_f4);
+   cat::verify(inverse_cosine[0].raw == 0_f4);
+   cat::verify(inverse_tangent[0].raw == 0_f4);
+   cat::verify(inverse_tangent2[0].raw == 0_f4);
    cat::verify(cat::sinh(zeros) == cat::simd_sinh(zeros));
    cat::verify(cat::cosh(zeros) == cat::simd_cosh(zeros));
    cat::verify(cat::tanh(zeros) == cat::simd_tanh(zeros));

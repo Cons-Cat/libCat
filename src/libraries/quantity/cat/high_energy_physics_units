@@ -1,0 +1,44 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/astronomical_constants>
+#include <cat/math>
+#include <cat/metric_units>
+
+namespace cat::units {
+
+inline constexpr struct barn
+    : named_unit<"b", mag_power<10, -28> * pow<2>(metre)> {
+} barn;
+
+inline constexpr struct eplus
+    : named_unit<
+         symbol_text{u8"e⁺", "e+"},
+         elementary_charge_constant.quantity_reference> {
+} eplus;
+
+inline constexpr struct atmosphere
+    : named_unit<"atm", standard_atmosphere.quantity_reference> {
+} atmosphere;
+
+inline constexpr struct gauss : named_unit<"G", mag_power<10, -4> * tesla> {
+} gauss;
+
+inline constexpr struct curie
+    : named_unit<"Ci", mag_ratio<37, 10> * mag_power<10, 10> * becquerel> {
+} curie;
+
+using barns = reference_quantity<barn>;
+using elementary_charges = reference_quantity<eplus>;
+using atmospheres = reference_quantity<atmosphere>;
+using gausses = reference_quantity<gauss>;
+using curies = reference_quantity<curie>;
+
+CAT_DECLARE_QUANTITY_ALIASES(barn, barn);
+CAT_DECLARE_QUANTITY_ALIASES(eplus, eplus);
+CAT_DECLARE_QUANTITY_ALIASES(atmosphere, atmosphere);
+CAT_DECLARE_QUANTITY_ALIASES(gauss, gauss);
+CAT_DECLARE_QUANTITY_ALIASES(curie, curie);
+
+}  // namespace cat::units

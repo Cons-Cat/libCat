@@ -1,0 +1,125 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/imperial_units>
+
+namespace cat::units {
+
+inline constexpr struct hand : named_unit<"hh", mag_ratio<1, 3> * foot> {
+} hand;
+
+inline constexpr struct barleycorn : named_unit<"Bc", mag_ratio<1, 3> * inch> {
+} barleycorn;
+
+inline constexpr struct thou : named_unit<"th", mag_ratio<1, 12'000> * foot> {
+} thou;
+
+inline constexpr struct imperial_chain : named_unit<"ch", mag<22> * yard> {
+} imperial_chain;
+
+inline constexpr struct imperial_furlong
+    : named_unit<"fur", mag<10> * imperial_chain> {
+} imperial_furlong;
+
+inline constexpr struct imperial_cable
+    : named_unit<"cb", mag_ratio<1, 10> * nautical_mile> {
+} imperial_cable;
+
+inline constexpr struct imperial_link
+    : named_unit<"li", mag_ratio<1, 100> * imperial_chain> {
+} imperial_link;
+
+inline constexpr struct imperial_rod
+    : named_unit<"rd", mag<25> * imperial_link> {
+} imperial_rod;
+
+inline constexpr struct perch
+    : named_unit<"perch", imperial_rod * imperial_rod> {
+} perch;
+
+inline constexpr struct rood : named_unit<"rood", mag<40> * perch> {
+} rood;
+
+inline constexpr struct imperial_acre : named_unit<"acre", mag<4> * rood> {
+} imperial_acre;
+
+inline constexpr struct imperial_gallon
+    : named_unit<"gal", mag_ratio<454'609, 100'000> * litre> {
+} imperial_gallon;
+
+inline constexpr struct imperial_quart
+    : named_unit<"qt", mag_ratio<1, 4> * imperial_gallon> {
+} imperial_quart;
+
+inline constexpr struct imperial_pint
+    : named_unit<"pt", mag_ratio<1, 2> * imperial_quart> {
+} imperial_pint;
+
+inline constexpr struct imperial_gill
+    : named_unit<"gi", mag_ratio<1, 4> * imperial_pint> {
+} imperial_gill;
+
+inline constexpr struct imperial_fluid_ounce
+    : named_unit<"fl oz", mag_ratio<1, 5> * imperial_gill> {
+} imperial_fluid_ounce;
+
+inline constexpr auto drachm = dram;
+
+inline constexpr struct stone : named_unit<"st", mag<14> * pound> {
+} stone;
+
+inline constexpr struct quarter : named_unit<"qr", mag<2> * stone> {
+} quarter;
+
+inline constexpr struct long_hundredweight : named_unit<"cwt", mag<8> * stone> {
+} long_hundredweight;
+
+inline constexpr struct imperial_ton : named_unit<"t", mag<2'240> * pound> {
+} imperial_ton;
+
+inline constexpr auto long_ton = imperial_ton;
+
+using hands = reference_quantity<hand>;
+using barleycorns = reference_quantity<barleycorn>;
+using thous = reference_quantity<thou>;
+using imperial_chains = reference_quantity<imperial_chain>;
+using imperial_furlongs = reference_quantity<imperial_furlong>;
+using imperial_cables = reference_quantity<imperial_cable>;
+using imperial_links = reference_quantity<imperial_link>;
+using imperial_rods = reference_quantity<imperial_rod>;
+using perches = reference_quantity<perch>;
+using roods = reference_quantity<rood>;
+using imperial_acres = reference_quantity<imperial_acre>;
+using imperial_gallons = reference_quantity<imperial_gallon>;
+using imperial_quarts = reference_quantity<imperial_quart>;
+using imperial_pints = reference_quantity<imperial_pint>;
+using imperial_gills = reference_quantity<imperial_gill>;
+using imperial_fluid_ounces = reference_quantity<imperial_fluid_ounce>;
+using stones = reference_quantity<stone>;
+using quarters = reference_quantity<quarter>;
+using long_hundredweights = reference_quantity<long_hundredweight>;
+using imperial_tons = reference_quantity<imperial_ton>;
+
+CAT_DECLARE_QUANTITY_ALIASES(hand, hand);
+CAT_DECLARE_QUANTITY_ALIASES(barleycorn, barleycorn);
+CAT_DECLARE_QUANTITY_ALIASES(thou, thou);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_chain, imperial_chain);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_furlong, imperial_furlong);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_cable, imperial_cable);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_link, imperial_link);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_rod, imperial_rod);
+CAT_DECLARE_QUANTITY_ALIASES(perch, perch);
+CAT_DECLARE_QUANTITY_ALIASES(rood, rood);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_acre, imperial_acre);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_gallon, imperial_gallon);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_quart, imperial_quart);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_pint, imperial_pint);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_gill, imperial_gill);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_fluid_ounce, imperial_fluid_ounce);
+CAT_DECLARE_QUANTITY_ALIASES(stone, stone);
+CAT_DECLARE_QUANTITY_ALIASES(quarter, quarter);
+CAT_DECLARE_QUANTITY_ALIASES(long_hundredweight, long_hundredweight);
+CAT_DECLARE_QUANTITY_ALIASES(imperial_ton, imperial_ton);
+
+}  // namespace cat::units

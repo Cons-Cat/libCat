@@ -1,0 +1,64 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/metric_units>
+
+namespace cat::units {
+
+inline constexpr struct astronomical_day : named_unit<"D", day> {
+} astronomical_day;
+
+inline constexpr struct sidereal_day
+    : named_unit<"D_sid", mag_ratio<861'640'905, 10'000> * second> {
+} sidereal_day;
+
+inline constexpr struct julian_year
+    : named_unit<"a", mag_ratio<36'525, 100> * astronomical_day> {
+} julian_year;
+
+inline constexpr struct tropical_year
+    : named_unit<
+         "a_trop", mag_ratio<365'242'189, 1'000'000> * astronomical_day> {
+} tropical_year;
+
+inline constexpr struct century : named_unit<"c", mag<100> * julian_year> {
+} century;
+
+inline constexpr struct millennium
+    : named_unit<"ka", mag<1'000> * julian_year> {
+} millennium;
+
+inline constexpr struct lunar_distance
+    : named_unit<"LD", mag<384'399> * kilo<metre>> {
+} lunar_distance;
+
+inline constexpr struct light_year
+    : named_unit<"ly", mag<9'460'730'472'580'800> * metre> {
+} light_year;
+
+inline constexpr struct jansky
+    : named_unit<"Jy", mag_power<10, -26> * watt / pow<2>(metre) / hertz> {
+} jansky;
+
+using astronomical_days = reference_quantity<astronomical_day>;
+using sidereal_days = reference_quantity<sidereal_day>;
+using julian_years = reference_quantity<julian_year>;
+using tropical_years = reference_quantity<tropical_year>;
+using centuries = reference_quantity<century>;
+using millennia = reference_quantity<millennium>;
+using lunar_distances = reference_quantity<lunar_distance>;
+using light_years = reference_quantity<light_year>;
+using janskys = reference_quantity<jansky>;
+
+CAT_DECLARE_QUANTITY_ALIASES(astronomical_day, astronomical_day);
+CAT_DECLARE_QUANTITY_ALIASES(sidereal_day, sidereal_day);
+CAT_DECLARE_QUANTITY_ALIASES(julian_year, julian_year);
+CAT_DECLARE_QUANTITY_ALIASES(tropical_year, tropical_year);
+CAT_DECLARE_QUANTITY_ALIASES(century, century);
+CAT_DECLARE_QUANTITY_ALIASES(millennium, millennium);
+CAT_DECLARE_QUANTITY_ALIASES(lunar_distance, lunar_distance);
+CAT_DECLARE_QUANTITY_ALIASES(light_year, light_year);
+CAT_DECLARE_QUANTITY_ALIASES(jansky, jansky);
+
+}  // namespace cat::units

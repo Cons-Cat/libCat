@@ -3,6 +3,17 @@
 #include "../unit_tests.hpp"
 #include "cat/debug"
 
+namespace {
+
+template <typename T>
+concept has_circular_math = requires(T value) {
+                               cat::sin(value);
+                               cat::cos(value);
+                               cat::tan(value);
+                            };
+
+}  // namespace
+
 $test(math_min_max) {
    // Test `min()`.
    cat::verify(cat::min(0) == 0);
@@ -620,12 +631,19 @@ $test(math_random_support) {
 
    static_assert(cat::log(1.) == 0.);
    static_assert(cat::exp(0.) == 1.);
-   static_assert(cat::cos(0.) == 1.);
-   static_assert(cat::tan(0.) == 0.);
+   static_assert(!has_circular_math<double>);
+   static_assert(!has_circular_math<cat::float8>);
    static_assert(cat::asin(0.) == 0.);
    static_assert(cat::acos(1.) == 0.);
    static_assert(cat::atan(0.) == 0.);
    static_assert(cat::atan2(0., 1.) == 0.);
+   static_assert(
+      cat::is_same<decltype(cat::asin(0.))::quantity_type, cat::units::radians>
+   );
+   static_assert(
+      cat::is_same<
+         decltype(cat::atan2(0., 1.))::quantity_type, cat::units::radians>
+   );
    static_assert(cat::sinh(0.) == 0.);
    static_assert(cat::cosh(0.) == 1.);
    static_assert(cat::tanh(0.) == 0.);
@@ -635,12 +653,10 @@ $test(math_random_support) {
    cat::verify(cat::log(1.) == 0.);
    cat::verify(near(cat::log(cat::exp(1.)), 1., 1e-12));
    cat::verify(cat::exp(0.) == 1.);
-   cat::verify(cat::cos(0.) == 1.);
-   cat::verify(cat::tan(0.) == 0.);
-   cat::verify(near(cat::asin(0.5), cat::pi<double> / 6., 1e-12));
-   cat::verify(near(cat::acos(0.5), cat::pi<double> / 3., 1e-12));
-   cat::verify(near(cat::atan(1.), cat::pi<double> / 4., 1e-12));
-   cat::verify(near(cat::atan2(1., -1.), cat::pi<double> * 3. / 4., 1e-12));
+   cat::verify(near(cat::asin(0.5).raw, cat::pi<double> / 6., 1e-12));
+   cat::verify(near(cat::acos(0.5).raw, cat::pi<double> / 3., 1e-12));
+   cat::verify(near(cat::atan(1.).raw, cat::pi<double> / 4., 1e-12));
+   cat::verify(near(cat::atan2(1., -1.).raw, cat::pi<double> * 3. / 4., 1e-12));
    cat::verify(near(cat::sinh(1.), 1.1752011936438014, 1e-12));
    cat::verify(near(cat::cosh(1.), 1.5430806348152437, 1e-12));
    cat::verify(near(cat::tanh(1.), 0.7615941559557649, 1e-12));
@@ -653,7 +669,6 @@ $test(math_random_support) {
    cat::verify(!cat::is_finite(cat::log(0.)));
    cat::verify(cat::log(0.) < 0.);
    cat::verify(cat::is_nan(cat::log(-1.)));
-   cat::verify(cat::is_nan(cat::cos(static_cast<double>(cat::infinity))));
    cat::verify(cat::exp(static_cast<double>(-cat::infinity)) == 0.);
 }
 

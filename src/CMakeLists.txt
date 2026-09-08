@@ -9,7 +9,7 @@ set(CAT_INCLUDE_SUBDIRS
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string path tui format memory allocator utility file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
-  tuple vec ring enum iterable dyn random timer)
+  tuple vec ring enum iterable dyn random timer quantity)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -291,11 +291,26 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/cat/huge_page_allocator
   ${CATLIB}/allocator/cat/page_allocator
   ${CATLIB}/allocator/cat/pool_allocator
-  ${CATLIB}/arithmetic/cat/quantity
   ${CATLIB}/arithmetic/cat/arithmetic
+  ${CATLIB}/arithmetic/cat/detail/quantity.hpp
   ${CATLIB}/arithmetic/cat/overflow_reference.hpp
   ${CATLIB}/arithmetic/cat/precision_reference.hpp
   ${CATLIB}/arithmetic/cat/arithmetic_interface
+  ${CATLIB}/quantity/cat/quantity
+  ${CATLIB}/quantity/cat/physical_quantities
+  ${CATLIB}/quantity/cat/metric_units
+  ${CATLIB}/quantity/cat/astronomical_units
+  ${CATLIB}/quantity/cat/astronomical_constants
+  ${CATLIB}/quantity/cat/british_imperial_units
+  ${CATLIB}/quantity/cat/physical_constants
+  ${CATLIB}/quantity/cat/high_energy_physics_units
+  ${CATLIB}/quantity/cat/digital_units
+  ${CATLIB}/quantity/cat/imperial_units
+  ${CATLIB}/quantity/cat/natural_units
+  ${CATLIB}/quantity/cat/pixel_units
+  ${CATLIB}/quantity/cat/typographic_units
+  ${CATLIB}/quantity/cat/us_customary_units
+  ${CATLIB}/quantity/cat/time_points
   ${CATLIB}/arithmetic/implementations/format_bool2.tpp
   ${CATLIB}/arithmetic/implementations/format_bool4.tpp
   ${CATLIB}/arithmetic/implementations/format_overflow_reference.tpp

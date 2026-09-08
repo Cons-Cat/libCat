@@ -82,36 +82,20 @@ struct formatter<detail::infinity_type, CharT>;
 inline constexpr detail::infinity_type infinity;
 
 template <is_arithmetic T = float8>
-// NOLINTNEXTLINE We provide this magic number.
-inline constexpr T pi = 0x1.921fb54442d18469898cc51701b8p+1L;
-
-template <>
-// NOLINTNEXTLINE We provide this magic number.
-inline constexpr float pi<float> = 0x1.921fb6p+1f;
-
-template <>
-// NOLINTNEXTLINE We provide this magic number.
-inline constexpr double pi<double> = 0x1.921fb54442d18p+1;
+inline constexpr T pi = detail::pi_value;
 
 template <is_integral T>
-inline constexpr T pi<T> = 0x3;
+inline constexpr T pi<T> = 3;
 
 template <is_floating_point T>
    requires(!is_same<T, raw_arithmetic_type<T>>)
 inline constexpr T pi<T> = pi<raw_arithmetic_type<T>>;
 
 template <is_arithmetic T = float8>
-// NOLINTNEXTLINE We provide this magic number.
-inline constexpr T tau = 0x1.921fb54442d18469898cc51701b8p+2L;
-
-template <>
-inline constexpr float tau<float> = 0x1.921fb6p+2f;
-
-template <>
-inline constexpr double tau<double> = 0x1.921fb54442d18p+2;
+inline constexpr T tau = detail::pi_value * 2;
 
 template <is_integral T>
-inline constexpr T tau<T> = 0x6;
+inline constexpr T tau<T> = 6;
 
 // Unwrap `cat::basic_float<T>`s to access the constant.
 template <is_floating_point T>

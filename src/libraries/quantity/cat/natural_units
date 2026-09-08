@@ -1,0 +1,71 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/metric_units>
+
+namespace cat::units {
+
+inline constexpr struct dim_energy : base_dimension<"E"> {
+} dim_energy;
+
+inline constexpr struct natural_energy : quantity_spec<dim_energy> {
+} natural_energy;
+
+inline constexpr struct natural_mass : quantity_spec<natural_energy> {
+} natural_mass;
+
+inline constexpr struct inverse_energy
+    : quantity_spec<inverse(natural_energy)> {
+} inverse_energy;
+
+inline constexpr struct natural_duration : quantity_spec<inverse_energy> {
+} natural_duration;
+
+inline constexpr struct natural_length : quantity_spec<inverse_energy> {
+} natural_length;
+
+inline constexpr struct energy_squared : quantity_spec<pow<2>(natural_energy)> {
+} energy_squared;
+
+inline constexpr struct natural_speed : quantity_spec<dimension<>{}> {
+} natural_speed;
+
+inline constexpr struct natural_velocity : quantity_spec<natural_speed> {
+} natural_velocity;
+
+inline constexpr struct natural_angular_measure : quantity_spec<dimension<>{}> {
+} natural_angular_measure;
+
+inline constexpr struct natural_momentum : quantity_spec<natural_energy> {
+} natural_momentum;
+
+inline constexpr struct natural_acceleration : quantity_spec<natural_energy> {
+} natural_acceleration;
+
+inline constexpr struct natural_force : quantity_spec<energy_squared> {
+} natural_force;
+
+inline constexpr struct natural_electronvolt
+    : named_unit<"eV", kind_of<natural_energy>> {
+} natural_electronvolt;
+
+inline constexpr auto gigaelectronvolt = giga<natural_electronvolt>;
+inline constexpr auto inverse_gigaelectronvolt = inverse(gigaelectronvolt);
+inline constexpr auto gigaelectronvolt_squared = pow<2>(gigaelectronvolt);
+
+using natural_electronvolts = reference_quantity<natural_electronvolt>;
+using gigaelectronvolts = reference_quantity<gigaelectronvolt>;
+using inverse_gigaelectronvolts = reference_quantity<inverse_gigaelectronvolt>;
+using gigaelectronvolts_squared = reference_quantity<gigaelectronvolt_squared>;
+
+CAT_DECLARE_QUANTITY_ALIASES(natural_electronvolt, natural_electronvolt);
+CAT_DECLARE_QUANTITY_ALIASES(gigaelectronvolt, gigaelectronvolt);
+CAT_DECLARE_QUANTITY_ALIASES(
+   inverse_gigaelectronvolt, inverse_gigaelectronvolt
+);
+CAT_DECLARE_QUANTITY_ALIASES(
+   gigaelectronvolt_squared, gigaelectronvolt_squared
+);
+
+}  // namespace cat::units

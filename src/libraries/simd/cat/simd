@@ -575,6 +575,24 @@ class
       );
    }
 
+   // Implcitly convert `simd` values of compatible quantities.
+   template <typename OtherAbi, typename U>
+      requires(
+         OtherAbi::size == abi_type::size && OtherAbi::lanes == abi_type::lanes
+         && is_convertible<T, U>
+         && !is_same<arithmetic_quantity<U>, arithmetic_quantity<T>>
+      )
+   [[gnu::always_inline]]
+   constexpr
+   operator simd<U, OtherAbi>() const {
+      simd<U, OtherAbi> result;
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         U converted = T((*this)[i]);
+         result.set_lane(i, converted);
+      }
+      return result;
+   }
+
    // Copy-assign the raw value of a `simd` to this.
    constexpr auto
    operator=(simd const& operand) -> simd& = default;

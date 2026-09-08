@@ -127,7 +127,10 @@ class cauchy_distribution {
       Float const uniform =
          detail::distribution_generate_canonical<Float>(generator);
       return parameter.a()
-             + parameter.b() * tan(Float(pi<scalar>) * (uniform - Float(0.5f)));
+             + parameter.b()
+                  * detail::raw_tan(
+                     Float(pi<scalar>) * (uniform - Float(0.5f))
+                  );
    }
 
    friend constexpr auto

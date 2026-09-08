@@ -1,0 +1,184 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/imperial_units>
+
+namespace cat::units {
+
+inline constexpr struct us_cable : named_unit<"cb(us)", mag<120> * fathom> {
+} us_cable;
+
+inline constexpr struct us_survey_foot
+    : named_unit<"ft(us)", mag_ratio<1'200, 3'937> * metre> {
+} us_survey_foot;
+
+inline constexpr struct us_survey_mile
+    : named_unit<"mi(us)", mag<5'280> * us_survey_foot> {
+} us_survey_mile;
+
+inline constexpr struct us_link : named_unit<"li", mag_ratio<33, 50> * foot> {
+} us_link;
+
+inline constexpr struct us_rod : named_unit<"rd", mag<25> * us_link> {
+} us_rod;
+
+inline constexpr struct us_chain : named_unit<"ch", mag<4> * us_rod> {
+} us_chain;
+
+inline constexpr struct us_furlong : named_unit<"fur", mag<10> * us_chain> {
+} us_furlong;
+
+inline constexpr struct us_acre
+    : named_unit<"acre", mag<10> * us_chain * us_chain> {
+} us_acre;
+
+inline constexpr struct section : named_unit<"section", mag<640> * us_acre> {
+} section;
+
+inline constexpr struct us_gallon
+    : named_unit<"gal", mag<231> * inch * inch * inch> {
+} us_gallon;
+
+inline constexpr struct pottle
+    : named_unit<"pot", mag_ratio<1, 2> * us_gallon> {
+} pottle;
+
+inline constexpr struct us_quart : named_unit<"qt", mag_ratio<1, 2> * pottle> {
+} us_quart;
+
+inline constexpr struct us_pint : named_unit<"pt", mag_ratio<1, 2> * us_quart> {
+} us_pint;
+
+inline constexpr struct cup : named_unit<"c", mag_ratio<1, 2> * us_pint> {
+} cup;
+
+inline constexpr struct us_gill : named_unit<"gi", mag_ratio<1, 2> * cup> {
+} us_gill;
+
+inline constexpr struct us_fluid_ounce
+    : named_unit<"fl oz", mag_ratio<1, 4> * us_gill> {
+} us_fluid_ounce;
+
+inline constexpr struct tablespoon
+    : named_unit<"tbsp", mag_ratio<1, 2> * us_fluid_ounce> {
+} tablespoon;
+
+inline constexpr struct teaspoon
+    : named_unit<"tsp", mag_ratio<1, 3> * tablespoon> {
+} teaspoon;
+
+inline constexpr struct barrel
+    : named_unit<"bbl", mag_ratio<315, 10> * us_gallon> {
+} barrel;
+
+inline constexpr struct oil_barrel
+    : named_unit<"bbl(oil)", mag_ratio<4, 3> * barrel> {
+} oil_barrel;
+
+inline constexpr struct bushel
+    : named_unit<"bu", mag_ratio<3'523'907'016'688, 100'000'000'000> * litre> {
+} bushel;
+
+inline constexpr struct peck : named_unit<"pk", mag_ratio<1, 4> * bushel> {
+} peck;
+
+inline constexpr struct dry_gallon
+    : named_unit<"gal(dry)", mag_ratio<1, 2> * peck> {
+} dry_gallon;
+
+inline constexpr struct dry_quart
+    : named_unit<"qt(dry)", mag_ratio<1, 4> * dry_gallon> {
+} dry_quart;
+
+inline constexpr struct dry_pint
+    : named_unit<"pt(dry)", mag_ratio<1, 2> * dry_quart> {
+} dry_pint;
+
+inline constexpr struct short_hundredweight
+    : named_unit<"cwt", mag<100> * pound> {
+} short_hundredweight;
+
+inline constexpr struct us_ton : named_unit<"t", mag<2'000> * pound> {
+} us_ton;
+
+inline constexpr auto short_ton = us_ton;
+
+inline constexpr struct pennyweight : named_unit<"dwt", mag<24> * grain> {
+} pennyweight;
+
+inline constexpr struct troy_ounce : named_unit<"oz t", mag<20> * pennyweight> {
+} troy_ounce;
+
+inline constexpr struct troy_pound : named_unit<"lb t", mag<12> * troy_ounce> {
+} troy_pound;
+
+inline constexpr struct inch_of_mercury
+    : named_unit<"inHg", mag_ratio<3'386'389, 1'000> * pascal> {
+} inch_of_mercury;
+
+using us_cables = reference_quantity<us_cable>;
+using us_survey_feet = reference_quantity<us_survey_foot>;
+using us_survey_miles = reference_quantity<us_survey_mile>;
+using us_links = reference_quantity<us_link>;
+using us_rods = reference_quantity<us_rod>;
+using us_chains = reference_quantity<us_chain>;
+using us_furlongs = reference_quantity<us_furlong>;
+using us_acres = reference_quantity<us_acre>;
+using sections = reference_quantity<section>;
+using us_gallons = reference_quantity<us_gallon>;
+using pottles = reference_quantity<pottle>;
+using us_quarts = reference_quantity<us_quart>;
+using us_pints = reference_quantity<us_pint>;
+using cups = reference_quantity<cup>;
+using us_gills = reference_quantity<us_gill>;
+using us_fluid_ounces = reference_quantity<us_fluid_ounce>;
+using tablespoons = reference_quantity<tablespoon>;
+using teaspoons = reference_quantity<teaspoon>;
+using barrels = reference_quantity<barrel>;
+using oil_barrels = reference_quantity<oil_barrel>;
+using bushels = reference_quantity<bushel>;
+using pecks = reference_quantity<peck>;
+using dry_gallons = reference_quantity<dry_gallon>;
+using dry_quarts = reference_quantity<dry_quart>;
+using dry_pints = reference_quantity<dry_pint>;
+using short_hundredweights = reference_quantity<short_hundredweight>;
+using us_tons = reference_quantity<us_ton>;
+using pennyweights = reference_quantity<pennyweight>;
+using troy_ounces = reference_quantity<troy_ounce>;
+using troy_pounds = reference_quantity<troy_pound>;
+using inches_of_mercury = reference_quantity<inch_of_mercury>;
+
+CAT_DECLARE_QUANTITY_ALIASES(us_cable, us_cable);
+CAT_DECLARE_QUANTITY_ALIASES(us_survey_foot, us_survey_foot);
+CAT_DECLARE_QUANTITY_ALIASES(us_survey_mile, us_survey_mile);
+CAT_DECLARE_QUANTITY_ALIASES(us_link, us_link);
+CAT_DECLARE_QUANTITY_ALIASES(us_rod, us_rod);
+CAT_DECLARE_QUANTITY_ALIASES(us_chain, us_chain);
+CAT_DECLARE_QUANTITY_ALIASES(us_furlong, us_furlong);
+CAT_DECLARE_QUANTITY_ALIASES(us_acre, us_acre);
+CAT_DECLARE_QUANTITY_ALIASES(section, section);
+CAT_DECLARE_QUANTITY_ALIASES(us_gallon, us_gallon);
+CAT_DECLARE_QUANTITY_ALIASES(pottle, pottle);
+CAT_DECLARE_QUANTITY_ALIASES(us_quart, us_quart);
+CAT_DECLARE_QUANTITY_ALIASES(us_pint, us_pint);
+CAT_DECLARE_QUANTITY_ALIASES(cup, cup);
+CAT_DECLARE_QUANTITY_ALIASES(us_gill, us_gill);
+CAT_DECLARE_QUANTITY_ALIASES(us_fluid_ounce, us_fluid_ounce);
+CAT_DECLARE_QUANTITY_ALIASES(tablespoon, tablespoon);
+CAT_DECLARE_QUANTITY_ALIASES(teaspoon, teaspoon);
+CAT_DECLARE_QUANTITY_ALIASES(barrel, barrel);
+CAT_DECLARE_QUANTITY_ALIASES(oil_barrel, oil_barrel);
+CAT_DECLARE_QUANTITY_ALIASES(bushel, bushel);
+CAT_DECLARE_QUANTITY_ALIASES(peck, peck);
+CAT_DECLARE_QUANTITY_ALIASES(dry_gallon, dry_gallon);
+CAT_DECLARE_QUANTITY_ALIASES(dry_quart, dry_quart);
+CAT_DECLARE_QUANTITY_ALIASES(dry_pint, dry_pint);
+CAT_DECLARE_QUANTITY_ALIASES(short_hundredweight, short_hundredweight);
+CAT_DECLARE_QUANTITY_ALIASES(us_ton, us_ton);
+CAT_DECLARE_QUANTITY_ALIASES(pennyweight, pennyweight);
+CAT_DECLARE_QUANTITY_ALIASES(troy_ounce, troy_ounce);
+CAT_DECLARE_QUANTITY_ALIASES(troy_pound, troy_pound);
+CAT_DECLARE_QUANTITY_ALIASES(inch_of_mercury, inch_of_mercury);
+
+}  // namespace cat::units
