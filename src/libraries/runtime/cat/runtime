@@ -81,19 +81,169 @@ __cxa_guard_abort(cat::uword* _Nonnull p_guard);
 extern "C" auto
 // NOLINTNEXTLINE
 __udivmodti4(
-   unsigned __int128 dividend, unsigned __int128 divisor,
-   unsigned __int128* _Nullable p_remainder
-) -> unsigned __int128;
+   __uint128_t dividend, __uint128_t divisor, __uint128_t* _Nullable p_remainder
+) -> __uint128_t;
 
 extern "C" auto
 // NOLINTNEXTLINE
-__udivti3(unsigned __int128 dividend, unsigned __int128 divisor)
-   -> unsigned __int128;
+__udivti3(__uint128_t dividend, __uint128_t divisor) -> __uint128_t;
 
 extern "C" auto
 // NOLINTNEXTLINE
-__umodti3(unsigned __int128 dividend, unsigned __int128 divisor)
-   -> unsigned __int128;
+__umodti3(__uint128_t dividend, __uint128_t divisor) -> __uint128_t;
+
+// Clang emits these for `__int128` `/` and `%` when compiler-rt is
+// not linked. Same algorithm as compiler-rt `divti3` / `modti3`.
+extern "C" auto
+// NOLINTNEXTLINE
+__divti3(__int128_t dividend, __int128_t divisor) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__modti3(__int128_t dividend, __int128_t divisor) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__divmodti4(
+   __int128_t dividend, __int128_t divisor, __int128_t* _Nonnull p_remainder
+) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__multi3(__int128_t first, __int128_t second) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__negti2(__int128_t value) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__addvti3(__int128_t first, __int128_t second) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__subvti3(__int128_t first, __int128_t second) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__negvti2(__int128_t value) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__absvti2(__int128_t value) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__muloti4(__int128_t first, __int128_t second, int* _Nonnull p_overflow)
+   -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__mulvti3(__int128_t first, __int128_t second) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__ashlti3(__int128_t value, int shift) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__ashrti3(__int128_t value, int shift) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__lshrti3(__uint128_t value, int shift) -> __uint128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__clzti2(__uint128_t value) -> int;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__ctzti2(__uint128_t value) -> int;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__ffsti2(__uint128_t value) -> int;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__popcountti2(__uint128_t value) -> int;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__parityti2(__uint128_t value) -> int;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__cmpti2(__int128_t first, __int128_t second) -> int;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__ucmpti2(__uint128_t first, __uint128_t second) -> int;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__floattisf(__int128_t value) -> float;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__floattidf(__int128_t value) -> double;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__floattixf(__int128_t value) -> long double;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__floattitf(__int128_t value) -> __float128;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__floatuntisf(__uint128_t value) -> float;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__floatuntidf(__uint128_t value) -> double;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__floatuntixf(__uint128_t value) -> long double;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__floatuntitf(__uint128_t value) -> __float128;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__fixsfti(float value) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__fixdfti(double value) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__fixxfti(long double value) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__fixtfti(__float128 value) -> __int128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__fixunssfti(float value) -> __uint128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__fixunsdfti(double value) -> __uint128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__fixunsxfti(long double value) -> __uint128_t;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__fixunstfti(__float128 value) -> __uint128_t;
 
 class jmp_buffer {
    // This buffer layout should vary by all ISAs.

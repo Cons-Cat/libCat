@@ -821,6 +821,28 @@ $test(uint128_runtime_div_mod) {
    cat::verify(two_pow_80 % two_pow_64_plus_1 == two_pow_64 - 65'535u);
 }
 
+$test(int128_runtime_div_mod) {
+   __int128 const hundred = cat::deconst(__int128(100));
+   __int128 const seven = cat::deconst(__int128(7));
+   __int128 const neg_hundred = cat::deconst(-__int128(100));
+   __int128 const neg_seven = cat::deconst(-__int128(7));
+
+   cat::verify(hundred / seven == 14);
+   cat::verify(hundred % seven == 2);
+   cat::verify(neg_hundred / seven == -14);
+   cat::verify(neg_hundred % seven == -2);
+   cat::verify(hundred / neg_seven == -14);
+   cat::verify(hundred % neg_seven == 2);
+   cat::verify(neg_hundred / neg_seven == 14);
+   cat::verify(neg_hundred % neg_seven == -2);
+
+   __int128 const two_pow_64 = cat::deconst(__int128(1) << 64);
+   __int128 const three = cat::deconst(__int128(3));
+   cat::verify(two_pow_64 / three == __int128(0x55555555'55555555ull));
+   cat::verify((-two_pow_64) / three == -__int128(0x55555555'55555555ull));
+   cat::verify((-two_pow_64) / (-three) == __int128(0x55555555'55555555ull));
+}
+
 $test(arithmetic_int4_uint4_operations_and_ordering) {
    // Test `int4` constructors and assignment.
    int4 test_int4_1 = 1;

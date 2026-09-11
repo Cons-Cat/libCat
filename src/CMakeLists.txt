@@ -44,6 +44,11 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/longjmp.cpp
   ${CATLIB}/runtime/implementations/load_base_stack_pointer.cpp
   ${CATLIB}/runtime/implementations/__udivmodti4.cpp
+  ${CATLIB}/runtime/implementations/__divti3.cpp
+  ${CATLIB}/runtime/implementations/__multi3.cpp
+  ${CATLIB}/runtime/implementations/__ashlti3.cpp
+  ${CATLIB}/runtime/implementations/__clzti2.cpp
+  ${CATLIB}/runtime/implementations/__floattisf.cpp
   ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/math/implementations/acos.cpp
   ${CATLIB}/math/implementations/asin.cpp
