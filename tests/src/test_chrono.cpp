@@ -1,5 +1,6 @@
-#include <cat/chrono>
 #include <cat/detail/vdso.hpp>
+
+#include <cat/chrono>
 #include <cat/linux>
 
 #include "../unit_tests.hpp"
@@ -383,15 +384,15 @@ $test(chrono_clocks) {
    );
 
    // A wrapping clock names its kernel clock through `native()`.
-   static_assert(__is_same(
-      __typeof_unqual(cat::clock_steady::native()), monotonic_timer
-   ));
-   static_assert(__is_same(
-      __typeof_unqual(cat::clock_system::native()), realtime_timer
-   ));
-   static_assert(__is_same(
-      __typeof_unqual(cat::clock_unix::native()), realtime_timer
-   ));
+   static_assert(
+      __is_same(__typeof_unqual(cat::clock_steady::native()), monotonic_timer)
+   );
+   static_assert(
+      __is_same(__typeof_unqual(cat::clock_system::native()), realtime_timer)
+   );
+   static_assert(
+      __is_same(__typeof_unqual(cat::clock_unix::native()), realtime_timer)
+   );
    static_assert(can_sleep_until<steady_time>);
    static_assert(can_sleep_until<monotonic_timer::time_point>);
    static_assert(can_sleep_until<cat::clock_tai::time_point>);

@@ -33,9 +33,8 @@ resolve_vdso_hook(
    char const* _Nonnull p_alias
 ) -> Hook {
    if (!__atomic_load_n(&resolved, __ATOMIC_ACQUIRE)) {
-      Hook const result = __builtin_bit_cast(
-         Hook, lookup_vdso_symbol(p_vdso_name, p_alias)
-      );
+      Hook const result =
+         __builtin_bit_cast(Hook, lookup_vdso_symbol(p_vdso_name, p_alias));
       __atomic_store_n(&p_hook, result, __ATOMIC_RELAXED);
       __atomic_store_n(&resolved, true, __ATOMIC_RELEASE);
    }
@@ -68,9 +67,8 @@ vdso_clock_getres(clock_id clock, timespec& out) -> cat::maybe<cat::int4>;
 
 [[nodiscard]]
 auto
-vdso_gettimeofday(
-   timeval* _Nullable p_time, timezone* _Nullable p_timezone
-) -> cat::maybe<cat::int4>;
+vdso_gettimeofday(timeval* _Nullable p_time, timezone* _Nullable p_timezone)
+   -> cat::maybe<cat::int4>;
 
 [[nodiscard]]
 auto
@@ -78,8 +76,7 @@ vdso_time(cat::int8* _Nullable p_time) -> cat::maybe<cat::int8>;
 
 [[nodiscard]]
 auto
-vdso_getrandom(
-   cat::span<unsigned char> buffer, getrandom_flags flags
-) -> cat::maybe<cat::int8>;
+vdso_getrandom(cat::span<unsigned char> buffer, getrandom_flags flags)
+   -> cat::maybe<cat::int8>;
 
 }  // namespace nix::detail

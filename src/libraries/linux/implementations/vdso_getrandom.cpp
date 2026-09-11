@@ -33,8 +33,7 @@ initialize_getrandom_state() {
    );
    if (
       !query_result.has_value() || query_result.value() != 0
-      || params.state_size == 0u
-      || params.state_size > cat::page_size
+      || params.state_size == 0u || params.state_size > cat::page_size
    ) {
       return;
    }
@@ -76,8 +75,7 @@ nix::detail::vdso_getrandom(
    }
 
    cat::maybe<cat::int8> const result = call_vdso_hook(
-      p_hook,
-      buffer.data(), buffer.size(),
+      p_hook, buffer.data(), buffer.size(),
       cat::uint4(static_cast<unsigned int>(flags)), p_getrandom_state,
       getrandom_state_size
    );

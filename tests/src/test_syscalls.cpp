@@ -1,5 +1,6 @@
-#include <cat/linux>
 #include <cat/detail/vdso.hpp>
+
+#include <cat/linux>
 #include <cat/socket>
 
 #include "../unit_tests.hpp"
@@ -968,9 +969,8 @@ $test(syscall_socket_options) {
 $test(syscall_random) {
    unsigned char buffer[16] = {};
 #ifndef CAT_NO_VDSO
-   cat::maybe<cat::int8> const vdso_result = nix::detail::vdso_getrandom(
-      buffer, nix::getrandom_flags::nonblocking
-   );
+   cat::maybe<cat::int8> const vdso_result =
+      nix::detail::vdso_getrandom(buffer, nix::getrandom_flags::nonblocking);
    if (vdso_result.has_value()) {
       cat::verify(vdso_result.value() == sizeof(buffer));
    }

@@ -2925,6 +2925,9 @@ struct anon_smaps {
 // Read every field of `/proc/self/statm`. Propagates `linux_error` from
 // `open(2)`/`read(2)` (`noent`, `mfile`, `nfile`, `nomem`, `intr`, ...).
 // Malformed kernel output aborts via `assert`. Process-wide and not idempotent.
+// `resident_pages` and `shared_pages` are approximate, because the kernel reads
+// them from per-CPU counters that lag behind unmapping, so they may exceed
+// `total_pages`. `read_self_anon_smaps` reports exact numbers instead.
 [[nodiscard]]
 auto
 read_self_statm() -> cat::scaredy<statm, nix::linux_error>;

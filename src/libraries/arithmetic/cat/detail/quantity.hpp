@@ -1124,18 +1124,16 @@ concept is_named_unit = requires {
                         };
 
 template <typename T>
-concept is_unit_specifier =
-   is_named_unit<T> || requires {
-                          T::is_unit_definition;
-                          typename T::reference_type;
-                       };
+concept is_unit_specifier = is_named_unit<T> || requires {
+                                                   T::is_unit_definition;
+                                                   typename T::reference_type;
+                                                };
 
 namespace detail {
 
 template <
    typename QuantitySpecifier,
-   bool has_quantity =
-      requires { typename QuantitySpecifier::reference_type; },
+   bool has_quantity = requires { typename QuantitySpecifier::reference_type; },
    bool = is_named_unit<QuantitySpecifier>>
 struct reference_quantity {
    using type = QuantitySpecifier;
@@ -1143,8 +1141,8 @@ struct reference_quantity {
 
 template <typename Unit, bool = Unit::defines_unit>
 struct named_reference_quantity {
-   using type = reference<
-      typename Unit::quantity_spec_type, unit<unit_power<Unit, 1>>>;
+   using type =
+      reference<typename Unit::quantity_spec_type, unit<unit_power<Unit, 1>>>;
 };
 
 template <typename Unit>
