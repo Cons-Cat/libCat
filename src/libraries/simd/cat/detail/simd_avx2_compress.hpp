@@ -209,11 +209,12 @@ struct compress<T, Abi> {
       compress_detail::compress_byte_buffer_32 buffer{};
       unsigned int byte_offset = 0u;
       for (unsigned int c = 0u; c < 4u; ++c) {
-         unsigned int const submask = (lane_bits >> (c * 4u)) & 0xFu;
+         __UINT64_TYPE__ const submask = (lane_bits >> (c * 4u)) & 0xFu;
          __UINT64_TYPE__ const word_bit_mask =
-            __builtin_ia32_pdep_di(submask, 0x00010001'00010001ULL) * 0xFFFFULL;
+            __builtin_elementwise_pdep(submask, 0x00010001'00010001UL)
+            * 0xFFFFUL;
          __UINT64_TYPE__ const compressed =
-            __builtin_ia32_pext_di(in_chunks.q[c], word_bit_mask);
+            __builtin_elementwise_pext(in_chunks.q[c], word_bit_mask);
          __builtin_memcpy(
             &buffer.b[byte_offset], &compressed, sizeof(compressed)
          );
@@ -245,11 +246,11 @@ struct compress<T, Abi> {
       compress_detail::compress_byte_buffer_32 buffer{};
       unsigned int byte_offset = 0u;
       for (unsigned int c = 0u; c < 4u; ++c) {
-         unsigned int const submask = (lane_bits >> (c * 8u)) & 0xFFu;
+         __UINT64_TYPE__ const submask = (lane_bits >> (c * 8u)) & 0xFFu;
          __UINT64_TYPE__ const byte_bit_mask =
-            __builtin_ia32_pdep_di(submask, 0x01010101'01010101ULL) * 0xFFULL;
+            __builtin_elementwise_pdep(submask, 0x01010101'01010101UL) * 0xFFUL;
          __UINT64_TYPE__ const compressed =
-            __builtin_ia32_pext_di(in_chunks.q[c], byte_bit_mask);
+            __builtin_elementwise_pext(in_chunks.q[c], byte_bit_mask);
          __builtin_memcpy(
             &buffer.b[byte_offset], &compressed, sizeof(compressed)
          );
