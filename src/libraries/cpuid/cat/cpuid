@@ -273,7 +273,62 @@ extern "C"
          cat::bitset<32>{}
       );
 
+struct tsc_support {
+   bool is_sampled = false;
+   bool is_invariant = false;
+};
+
+// Query invariant timestamp counter support.
+// An invariant timestamp counter ticks at a constant rate independent of the
+// core's frequency, and does not stop in deep sleep states. This is necessary
+// for use as a clock source.
+extern "C"
+#if !defined(CAT_NO_CPUID) && !defined(CAT_BUILD_SHARED)
+   [[gnu::visibility("hidden")]]
+#endif
+   constinit inline tsc_support invariant_tsc_support{};
+
+// A TSC exists when CPUID leaf 1 sets EDX bit 4, and it is invariant when
+// leaf `0x80000007` sets EDX bit 8.
+[[nodiscard]]
+inline auto
+sample_invariant_tsc(cat::uint4 max_leaf, cat::uint4 max_extended_leaf)
+   -> bool {
+   if (max_leaf < 1u || max_extended_leaf < 0x80000007u) {
+      return false;
+   }
+
+   auto&& [_, _, _, feature_edx] = cpuid(1u);
+   cat::bitset feature_edx_bits = cat::make_bitset<32>(feature_edx);
+   if (!feature_edx_bits[4]) {
+      return false;
+   }
+
+   auto&& [_, _, _, power_edx] = cpuid(0x80000007u);
+   cat::bitset power_edx_bits = cat::make_bitset<32>(power_edx);
+   return power_edx_bits[8].is_set();
+}
+
 }  // namespace detail
+
+[[nodiscard]]
+inline auto
+has_invariant_tsc() -> bool {
+   if (!detail::invariant_tsc_support.is_sampled) {
+      // Also covers `CAT_NO_CPUID`, which never runs `__cpu_indicator_init()`.
+      // Racing threads here all compute the same answer.
+      auto&& [max_leaf, _, _, _] = cpuid(0u);
+      auto&& [max_extended_leaf, _, _, _] = cpuid(0x80000000u);
+      detail::invariant_tsc_support = {
+         .is_sampled = true,
+         .is_invariant =
+            detail::sample_invariant_tsc(max_leaf, max_extended_leaf),
+      };
+   }
+
+   return detail::invariant_tsc_support.is_invariant;
+}
+
 }  // namespace x64
 
 namespace cat::detail {

@@ -692,9 +692,10 @@ $test(syscall_read_self_statm) {
    // The process must have a non-zero virtual size and a non-zero RSS.
    cat::verify(statm.total_pages > 0u);
    cat::verify(statm.resident_pages > 0u);
-   // RSS is a subset of the total mapped pages.
-   cat::verify(statm.resident_pages <= statm.total_pages);
-   // Shared pages are a subset of resident pages.
+   // `resident` and `shared` are approximate reads of the kernel's per-CPU RSS
+   // counters, so they can both exceed the exact `total_pages`. Only their
+   // mutual consistency is guaranteed, because the kernel derives `resident`
+   // from `shared` plus a non-negative anonymous count.
    cat::verify(statm.shared_pages <= statm.resident_pages);
    // The text segment is always present and resident for a running binary.
    cat::verify(statm.text_pages > 0u);

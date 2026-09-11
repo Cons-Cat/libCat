@@ -48,8 +48,17 @@
 // nanoseconds). The use of microseconds in libc++ clocks is a historical error
 // frozen in ABI.
 //
-// Platform-specific clocks can be found in
-// `src/linux/implementations/clock_timerfd.tpp`.
+// Platform-specific clocks are:
+//
+//   `nix::clock_timerfd`
+//      A clock API for Linux timers that conforms to `cat::is_clock`.
+//      This is used inside `cat::clock_system` and `cat::clock_steady`.
+//      Implementation: `src/linux/implementations/clock_timerfd.tpp`
+//
+//   `x64::clock_tsc`
+//      A calibrated monotonic clock backed by the invariant x86-64 timestamp
+//      counter (instruction `rdtsc`).
+//      Implementation: `src/libraries/chrono/implementations/clock_tsc.cpp`
 //
 // TODO: Introduce calendar abstractions.
 // https://www.benjoffe.com/fast-day-of-week
@@ -293,3 +302,41 @@ sleep_until(time_point<Clock, Duration> const& point) -> maybe<void> {
 }
 
 }  // namespace cat
+
+namespace x64 {
+
+// TODO: Investigate a fast tracing start/elapsed TSC timer like
+// `TscCacheTimer` referenced by the below blog post.
+
+// The implementation of this clock is inspired by the tscns library:
+// https://github.com/MengRao/tscns
+// As well as the findings of:
+// https://www.hmpcabral.com/2026/04/26/the-fastest-linux-timestamps/
+class clock_tsc {
+ public:
+   using duration = cat::units::nanosecond_int8;
+   using time_point = cat::time_point<clock_tsc, duration>;
+
+   static constexpr bool is_steady = true;
+
+   // Reads use `lfence` followed by `rdtsc`.
+   [[nodiscard]]
+   static auto
+   now() -> cat::maybe<time_point>;
+
+   // Calibrate the timestamp counter. This aligns it with
+   // `CLOCK_MONOTONIC_RAW`. 20 milliseconds is a good compromise between
+   // accuracy and performance, but up to 1 second can improve accuracy.
+   [[nodiscard]]
+   static auto
+   initialize(duration calibration_time = 20 * cat::units::millisecond) -> bool;
+
+   // After a period of 3 seconds, the timestamp counter can lose accuracy.
+   // It may be recalibrated to restore accuracy. There is no need to do this
+   // for tight timing ranges.
+   // Recalibration aligns it with `CLOCK_MONOTONIC_RAW`.
+   static void
+   calibrate();
+};
+
+}  // namespace x64

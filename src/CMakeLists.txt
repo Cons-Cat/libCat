@@ -66,6 +66,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/math/implementations/sqrt.cpp
   ${CATLIB}/math/implementations/tan.cpp
   ${CATLIB}/math/implementations/tanh.cpp
+  ${CATLIB}/chrono/implementations/clock_tsc.cpp
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
   ${CATLIB}/memory/implementations/copy_memory_backward.cpp
