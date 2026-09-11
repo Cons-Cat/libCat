@@ -9,7 +9,7 @@ set(CAT_INCLUDE_SUBDIRS
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string path tui format memory allocator utility file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
-  tuple vec ring enum iterable dyn random timer quantity)
+  tuple vec ring enum iterable dyn random timer chrono quantity)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -219,6 +219,9 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_sched_getaffinity.cpp
   ${CATLIB}/linux/implementations/sys_getdents64.cpp
   ${CATLIB}/linux/implementations/sys_set_tid_address.cpp
+  ${CATLIB}/linux/implementations/sys_clock_gettime.cpp
+  ${CATLIB}/linux/implementations/sys_clock_getres.cpp
+  ${CATLIB}/linux/implementations/sys_clock_nanosleep.cpp
   ${CATLIB}/linux/implementations/sys_exit_group.cpp
   ${CATLIB}/linux/implementations/sys_tgkill.cpp
   ${CATLIB}/linux/implementations/sys_waitid.cpp
@@ -320,7 +323,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/quantity/cat/pixel_units
   ${CATLIB}/quantity/cat/typographic_units
   ${CATLIB}/quantity/cat/us_customary_units
-  ${CATLIB}/quantity/cat/time_points
+  ${CATLIB}/quantity/cat/time_units
   ${CATLIB}/arithmetic/implementations/format_bool2.tpp
   ${CATLIB}/arithmetic/implementations/format_bool4.tpp
   ${CATLIB}/arithmetic/implementations/format_overflow_reference.tpp
@@ -543,6 +546,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/thread/cat/thread
   ${CATLIB}/thread/cat/raii_thread
   ${CATLIB}/timer/cat/timer
+  ${CATLIB}/chrono/cat/chrono
   ${CATLIB}/tui/cat/tui
   ${CATLIB}/tuple/cat/tuple
   ${CATLIB}/tuple/cat/detail/tuple_fwd.hpp
@@ -559,6 +563,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/x11/cat/x11
   ${CATLIB}/linux/implementations/syscall.tpp
   ${CATLIB}/linux/implementations/timespec.tpp
+  ${CATLIB}/linux/implementations/clock_timerfd.tpp
   ${CATLIB}/linux/implementations/process.tpp
   ${CATLIB}/linux/implementations/futex.tpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp

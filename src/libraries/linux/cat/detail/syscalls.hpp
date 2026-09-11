@@ -181,6 +181,92 @@ make_timespec(Duration elapsed) -> timespec;
 static_assert(sizeof(timespec) == 16);
 static_assert(sizeof(itimerspec) == 32);
 
+// A steady clock never reads backwards when the wall clock is set. The
+// guarantees of each clock id are described where this is defined, in
+// <cat/linux/implementations/clock_timerfd.tpp>.
+[[nodiscard]]
+consteval auto
+is_steady_clock_id(clock_id clock) -> bool;
+
+// `cat/chrono` compatible API for Linux `timerfd`.
+template <clock_id clock = clock_id::monotonic>
+class clock_timerfd {
+ public:
+   using duration = cat::units::nanosecond_int8;
+   using time_point = cat::time_point<clock_timerfd, duration>;
+
+   static constexpr clock_id id = clock;
+   static constexpr bool is_steady = is_steady_clock_id(clock);
+
+   [[nodiscard]]
+   static auto
+   now() -> cat::maybe<time_point>;
+
+   explicit constexpr clock_timerfd(file_descriptor descriptor)
+       : m_descriptor(descriptor) {
+   }
+
+   [[nodiscard]]
+   auto
+   descriptor() const -> file_descriptor {
+      return m_descriptor;
+   }
+
+   auto
+   set(
+      itimerspec const& value,
+      timerfd_set_flags flags = timerfd_set_flags::none,
+      itimerspec* _Nullable p_old = nullptr
+   ) -> scaredy_nix<void>;
+
+   template <cat::is_duration Duration>
+   auto
+   set(
+      Duration value, Duration interval = Duration(0),
+      timerfd_set_flags flags = timerfd_set_flags::none
+   ) -> scaredy_nix<void> {
+      itimerspec const spec = {
+         .interval = make_timespec(interval),
+         .value = make_timespec(value),
+      };
+      return set(spec, flags);
+   }
+
+   auto
+   get(itimerspec& out) const -> scaredy_nix<void>;
+
+   [[nodiscard]]
+   auto
+   wait() const -> scaredy_nix<cat::uint8>;
+
+   auto
+   close() -> scaredy_nix<void>;
+
+ private:
+   file_descriptor m_descriptor;
+};
+
+template <clock_id clock = clock_id::monotonic>
+[[nodiscard]]
+auto
+create_clock_timerfd(timerfd_flags flags = timerfd_flags::close_exec)
+   -> scaredy_nix<clock_timerfd<clock>>;
+
+}  // namespace nix
+
+namespace cat {
+
+// Sleep an absolute deadline on a kernel clock. Defined in
+// <cat/linux/implementations/clock_timerfd.tpp>.
+template <nix::clock_id clock, is_duration Duration>
+[[nodiscard]]
+auto
+sleep_until(time_point<nix::clock_timerfd<clock>, Duration> const& point)
+   -> maybe<void>;
+
+}  // namespace cat
+
+namespace nix {
 
 // Kernel `sys_futex()` only cares about the address of this 32-bit word.
 struct futex_word {
@@ -2344,11 +2430,6 @@ auto
 sys_timerfd_create(clock_id clock, timerfd_flags flags = timerfd_flags::none)
    -> scaredy_nix<file_descriptor>;
 
-// Syscall 283. Create a timer file descriptor for `clock`.
-auto
-sys_timerfd_create(clock_id clock, timerfd_flags flags = timerfd_flags::none)
-   -> scaredy_nix<file_descriptor>;
-
 // Syscall 285. Manipulate the on-disk allocation of `file_descriptor` over
 // the byte range [`offset`, `offset + length`).
 auto
@@ -2858,7 +2939,7 @@ read_self_anon_smaps() -> cat::scaredy<anon_smaps, nix::linux_error>;
 
 }  // namespace nix
 
+#include "implementations/clock_timerfd.tpp"
 #include "implementations/futex.tpp"
 #include "implementations/process.tpp"
-#include "implementations/timespec.tpp"
 #include "implementations/timespec.tpp"

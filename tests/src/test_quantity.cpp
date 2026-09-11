@@ -777,17 +777,18 @@ $test(quantity_time_utc_leap_second) {
    static_assert(before.valid);
    static_assert(leap.valid);
    static_assert(after.valid);
-   static_assert(leap.value - before.value == cat::duration(1));
-   static_assert(after.value - leap.value == cat::duration(1));
-   static_assert(after.value - before.value == cat::duration(2));
+   static_assert(leap.value - before.value == cat::units::second_int8(1));
+   static_assert(after.value - leap.value == cat::units::second_int8(1));
+   static_assert(after.value - before.value == cat::units::second_int8(2));
    static_assert(cat::date_time_from_utc(leap.value).second == 60);
    static_assert(cat::get_leap_second_info(leap.value).is_leap_second);
    static_assert(
-      cat::get_leap_second_info(leap.value).elapsed == cat::duration(27)
+      cat::get_leap_second_info(leap.value).elapsed
+      == cat::units::second_int8(27)
    );
    static_assert(
-      cat::leap_seconds[26].date.seconds_since_epoch()
-      == cat::duration(1'483'228'800)
+      cat::leap_seconds[26].date.time_since_epoch()
+      == cat::units::second_int8(1'483'228'800)
    );
 }
 
@@ -814,13 +815,14 @@ $test(quantity_time_utc_validation_and_unix_mapping) {
       cat::to_unix(leap.value, cat::unix_leap_second_mapping::previous_second);
    constexpr auto next =
       cat::to_unix(leap.value, cat::unix_leap_second_mapping::next_second);
-   static_assert(next - previous == cat::duration(1));
-   static_assert(cat::to_utc(next) == leap.value + cat::duration(1));
+   static_assert(next - previous == cat::units::second_int8(1));
+   static_assert(cat::to_utc(next) == leap.value + cat::units::second_int8(1));
 
-   constexpr cat::utc_time_point utc_epoch(cat::duration(0));
+   constexpr cat::utc_time_point utc_epoch(cat::units::second_int8(0));
    constexpr auto tai_epoch_coordinate = cat::to_tai(utc_epoch);
    static_assert(
-      tai_epoch_coordinate.seconds_since_epoch() == cat::duration(378'691'210)
+      tai_epoch_coordinate.time_since_epoch()
+      == cat::units::second_int8(378'691'210)
    );
    static_assert(cat::to_utc(tai_epoch_coordinate) == utc_epoch);
 }

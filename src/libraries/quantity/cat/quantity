@@ -13,6 +13,6 @@
 #include <cat/physical_constants>
 #include <cat/physical_quantities>
 #include <cat/pixel_units>
-#include <cat/time_points>
+#include <cat/time_units>
 #include <cat/typographic_units>
 #include <cat/us_customary_units>

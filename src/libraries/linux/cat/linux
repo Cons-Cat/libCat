@@ -11,6 +11,7 @@
 #include <cat/notype>
 #include <cat/scaredy>
 #include <cat/span>
+#include <cat/time_units>
 #include <cat/utility>
 
 // Forward declarations.

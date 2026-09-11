@@ -1,0 +1,295 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat/chrono` is an adaptation of the `chrono` standard library. It makes
+// several notable changes to better fit the libCat programming model.
+//
+// Top among them is that time is represented as `cat::unit::` quantities. These
+// are defined in the more generalized `cat/time_units` header. By extension,
+// there is no `duration_cast` so `cat::basic_int` type-safe conversions should
+// be used instead. Note that there are no `rep`, `period`, or `.count()`
+// members in duration quantities.
+//
+// The following clocks are provided:
+//
+//   `cat::clock_system`
+//      A portable abstraction over OS-specific nanosecond clocks WITHOUT a
+//      monotonic guarantee. Unlike `std::chrono::system_clock`, it provides a
+//      `.native()` method to access the underlying clock
+//
+//   `cat::clock_steady`
+//      A portable abstraction over OS-specific nanosecond clocks WITH a
+//      monotonic guarantee. Unlike `std::chrono::steady_clock`, it provides a
+//      `.native()` method to access the underlying clock.
+//
+//   `cat::clock_unix`
+//      A clock that is based on the Unix epoch.
+//
+//   `cat::clock_tai`
+//      A clock that is based on the International Atomic Time (TAI) epoch.
+//
+//   `cat::clock_utc`
+//      A clock that is based on the Coordinated Universal Time (UTC) epoch.
+//
+//   `cat::clock_gps`
+//      A clock that is based on the Global Positioning System (GPS) epoch.
+//
+//   `cat::clock_scaled`
+//      A clock adaptor that scales its time elapsed by a constant.
+//
+// There is no `cat::clock_high_resolution`, because
+// `std::chrono::high_resolution_clock` is poorly defined. `cat::clock_steady`
+// should be used instead.
+//
+// For these clocks, nanoseconds are the common duration type. This is the
+// correct choice, as it is platform native to every targeted operating system,
+// despite being inconsistent with libc++ (although libstdc++ agrees with
+// nanoseconds). The use of microseconds in libc++ clocks is a historical error
+// frozen in ABI.
+//
+// Platform-specific clocks can be found in
+// `src/linux/implementations/clock_timerfd.tpp`.
+//
+// TODO: Introduce calendar abstractions.
+// https://www.benjoffe.com/fast-day-of-week
+// https://forum.orekit.org/t/revamping-dates-handling/3850
+
+#include <cat/linux>
+#include <cat/maybe>
+#include <cat/propagate>
+#include <cat/time_units>
+
+namespace cat {
+
+template <typename Clock>
+concept is_clock = requires {
+                      requires is_duration<typename Clock::duration>;
+                      typename Clock::time_point;
+                      { Clock::is_steady } -> is_convertible<bool>;
+                      {
+                         Clock::now()
+                      } -> is_same<maybe<typename Clock::time_point>>;
+                   };
+
+struct clock_system {
+ private:
+   // TODO: Generalize this to other platforms.
+   using timer = nix::clock_timerfd<nix::clock_id::realtime>;
+
+ public:
+   using duration = timer::duration;
+   using time_point = cat::time_point<clock_system, duration>;
+
+   static constexpr bool is_steady = timer::is_steady;
+
+   [[nodiscard]]
+   static auto
+   now() -> maybe<time_point> {
+      return time_point($prop(m_timer.now()).time_since_epoch());
+   }
+
+   [[nodiscard]]
+   static auto
+   native() -> timer& {
+      return m_timer;
+   }
+
+ private:
+   // An unarmed `timerfd` still reads the kernel clock it names.
+   static inline timer m_timer{nix::invalid_file_descriptor};
+};
+
+struct clock_steady {
+ private:
+   // TODO: Generalize this to other platforms.
+   using timer = nix::clock_timerfd<nix::clock_id::monotonic>;
+
+ public:
+   using duration = timer::duration;
+   using time_point = cat::time_point<clock_steady, duration>;
+
+   static constexpr bool is_steady = timer::is_steady;
+
+   [[nodiscard]]
+   static auto
+   now() -> maybe<time_point> {
+      return time_point($prop(m_timer.now()).time_since_epoch());
+   }
+
+   [[nodiscard]]
+   static auto
+   native() -> timer& {
+      return m_timer;
+   }
+
+ private:
+   static inline timer m_timer{nix::invalid_file_descriptor};
+};
+
+struct clock_unix {
+ private:
+   using timer = nix::clock_timerfd<nix::clock_id::realtime>;
+
+ public:
+   using duration = timer::duration;
+   using time_point = cat::time_point<clock_unix, duration>;
+
+   static constexpr bool is_steady = timer::is_steady;
+
+   [[nodiscard]]
+   static auto
+   now() -> maybe<time_point> {
+      return time_point($prop(m_timer.now()).time_since_epoch());
+   }
+
+   [[nodiscard]]
+   static auto
+   native() -> timer& {
+      return m_timer;
+   }
+
+ private:
+   static inline timer m_timer{nix::invalid_file_descriptor};
+};
+
+struct clock_tai {
+   using duration = units::nanosecond_int8;
+   using time_point = cat::time_point<clock_tai, duration>;
+
+   static constexpr bool is_steady = false;
+
+   [[nodiscard]]
+   static auto
+   now() -> maybe<time_point> {
+      nix::timespec value;
+      $prop_as(nix::sys_clock_gettime(nix::clock_id::tai, value), nullopt);
+      return time_point(value.to_nanoseconds() + 378'691'200 * units::second);
+   }
+};
+
+struct clock_utc {
+   using duration = units::nanosecond_int8;
+   using time_point = cat::time_point<clock_utc, duration>;
+
+   static constexpr bool is_steady = false;
+
+   [[nodiscard]]
+   static auto
+   now() -> maybe<time_point> {
+      nix::timespec value;
+      $prop_as(nix::sys_clock_gettime(nix::clock_id::tai, value), nullopt);
+      return time_point(value.to_nanoseconds() - 10 * units::second);
+   }
+};
+
+struct clock_gps {
+   using duration = units::nanosecond_int8;
+   using time_point = cat::time_point<clock_gps, duration>;
+
+   static constexpr bool is_steady = false;
+
+   [[nodiscard]]
+   static auto
+   now() -> maybe<time_point> {
+      nix::timespec value;
+      $prop_as(nix::sys_clock_gettime(nix::clock_id::tai, value), nullopt);
+      return time_point(value.to_nanoseconds() - 315'964'819 * units::second);
+   }
+};
+
+template <is_clock Clock>
+struct clock_scaled {
+   using duration = Clock::duration;
+   using time_point = cat::time_point<clock_scaled, duration>;
+
+   static constexpr bool is_steady = false;
+
+   [[nodiscard]]
+   static auto
+   now() -> maybe<time_point> {
+      duration const elapsed = $prop(Clock::now()).time_since_epoch();
+      return time_point(duration(elapsed.raw * m_speed.raw));
+   }
+
+   template <is_floating_point Speed>
+   static void
+   set_speed(Speed speed) {
+      m_speed = speed;
+   }
+
+ private:
+   static inline float8 m_speed = 1.0;
+};
+
+template <is_duration Duration>
+[[nodiscard]]
+inline auto
+sleep_for(Duration elapsed) -> maybe<void> {
+   // TODO: Generalize this to other platforms.
+   nix::timespec remaining = nix::make_timespec(elapsed);
+   while (true) {
+      auto result = nix::sys_nanosleep(remaining, &remaining);
+      if (result.has_value()) {
+         return monostate;
+      }
+      // A signal interrupts the sleep with the unslept time remaining.
+      if (result.error() != nix::linux_error::intr) {
+         return nullopt;
+      }
+   }
+}
+
+// A clock which wraps a kernel clock shares its epoch, so the deadline is
+// slept against that kernel clock. The `nix::clock_timerfd` overload lives
+// with the timer in `clock_timerfd.tpp`.
+template <is_duration Duration>
+[[nodiscard]]
+auto
+sleep_until(time_point<clock_system, Duration> const& point) -> maybe<void> {
+   using timer = __typeof_unqual(clock_system::native());
+   return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
+}
+
+template <is_duration Duration>
+[[nodiscard]]
+auto
+sleep_until(time_point<clock_steady, Duration> const& point) -> maybe<void> {
+   using timer = __typeof_unqual(clock_steady::native());
+   return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
+}
+
+template <is_duration Duration>
+[[nodiscard]]
+auto
+sleep_until(time_point<clock_unix, Duration> const& point) -> maybe<void> {
+   using timer = __typeof_unqual(clock_unix::native());
+   return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
+}
+
+// Any clock can be slept against by reading it and sleeping the difference.
+template <is_clock Clock, is_duration Duration>
+[[nodiscard]]
+auto
+sleep_until(time_point<Clock, Duration> const& point) -> maybe<void> {
+   using duration = Clock::duration;
+   duration const deadline = point.time_since_epoch();
+   duration elapsed = $prop(Clock::now()).time_since_epoch();
+
+   if constexpr (Clock::is_steady) {
+      // A steady clock never jumps, so one relative sleep reaches the deadline.
+      if (elapsed < deadline) {
+         $prop(sleep_for(deadline - elapsed));
+      }
+   } else {
+      // An unsteady clock can jump either way, so it is read again every time.
+      while (elapsed < deadline) {
+         $prop(sleep_for(deadline - elapsed));
+         elapsed = $prop(Clock::now()).time_since_epoch();
+      }
+   }
+
+   return monostate;
+}
+
+}  // namespace cat

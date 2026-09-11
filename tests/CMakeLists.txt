@@ -53,6 +53,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_quantity.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_quantity_catalog.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_quantity_format_catalog.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_runtime.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_simd.cpp
@@ -105,6 +106,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_io_uring.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_syscalls.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_chrono.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_random.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_random_combinatoric.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pcg.cpp

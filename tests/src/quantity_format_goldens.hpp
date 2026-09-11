@@ -174,6 +174,7 @@
    apply(pixel, "1 px", "1E0 px") \
    apply(horizontal_pixel, "1 px", "1E0 px") \
    apply(vertical_pixel, "1 px", "1E0 px") \
+   apply(femtosecond, "1 fs", "1E0 fs") \
    apply(nanosecond, "1 ns", "1E0 ns") \
    apply(microsecond, "1 us", "1E0 us") \
    apply(millisecond, "1 ms", "1E0 ms") \

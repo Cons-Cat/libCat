@@ -194,6 +194,9 @@ $test(quantity_catalog_alias_coverage) {
    static_assert(cat::units::didot_point_float4(5.0).raw == 5.0);
    static_assert(cat::units::eplus_float8(6.0).raw == 6.0);
    static_assert(cat::units::nanosecond_int8(7).raw == 7);
+   static_assert(cat::units::picosecond_int8(8).raw == 8);
+   static_assert(cat::units::femtosecond_int8(9).raw == 9);
+   static_assert(cat::units::attosecond_int8(10).raw == 10);
 }
 
 $test(quantity_catalog_constants) {
