@@ -24,7 +24,7 @@ inline constexpr struct vertical_pixel_count : quantity_spec<pixel_count> {
 inline constexpr struct pixel : named_unit<"px", kind_of<pixel_count>> {
 } pixel;
 
-using pixels = quantity_reference<
+using pixels = reference<
    __typeof_unqual(pixel_count), unit<unit_power<__typeof_unqual(pixel), 1>>>;
 
 inline constexpr auto horizontal_pixel = horizontal_pixel_count[pixel];

@@ -45,7 +45,7 @@ inline constexpr struct ratio : cat::quantity_spec<cat::dimension<>{}> {
 } ratio;
 
 using ratio_quantity =
-   cat::quantity_reference<__typeof_unqual(ratio), cat::unit<>>;
+   cat::reference<__typeof_unqual(ratio), cat::unit<>>;
 inline constexpr ratio_quantity ratio_reference;
 using ratio_float = quantity_float<ratio_reference>;
 
@@ -59,11 +59,11 @@ struct item_count : cat::quantity_spec<item_dimension_type{}> {};
 struct item : cat::named_unit<"item", item_count{}> {};
 
 using items =
-   cat::quantity_reference<item_count, cat::unit<cat::unit_power<item, 1>>>;
+   cat::reference<item_count, cat::unit<cat::unit_power<item, 1>>>;
 
 struct damaged_item_count : cat::quantity_spec<item_dimension_type{}> {};
 
-using damaged_items = cat::quantity_reference<
+using damaged_items = cat::reference<
    damaged_item_count, cat::unit<cat::unit_power<item, 1>>>;
 inline constexpr items item_reference;
 inline constexpr damaged_items damaged_item_reference;

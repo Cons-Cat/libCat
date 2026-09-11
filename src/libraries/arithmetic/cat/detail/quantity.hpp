@@ -404,9 +404,6 @@ concept has_dimension_type = requires { typename Equation::dimension_type; };
 
 }  // namespace detail
 
-template <typename QuantitySpec, typename UnitType>
-struct reference;
-
 enum class quantity_tensor_order : unsigned char {
    scalar,
    vector,
@@ -1100,7 +1097,7 @@ template <
 // https://www.iso.org/obp/ui#iso:std:iso-iec:guide:99
 //
 // The C++ stdlib will likely change this, so we will eventually as well.
-struct quantity_reference {
+struct reference {
    using quantity_spec_type = QuantitySpec;
    using unit_type = Unit;
    using dimension_type = QuantitySpec::dimension_type;
@@ -1115,8 +1112,8 @@ struct derived_unit {
    static constexpr bool is_unit_definition = true;
    using quantity_spec_type = QuantitySpec;
    using dimension_type = QuantitySpec::dimension_type;
-   using quantity_reference_type =
-      quantity_reference<QuantitySpec, UnitExpression, unit_magnitude_value>;
+   using reference_type =
+      reference<QuantitySpec, UnitExpression, unit_magnitude_value>;
 };
 
 template <typename Unit>
@@ -1130,7 +1127,7 @@ template <typename T>
 concept is_unit_specifier =
    is_named_unit<T> || requires {
                           T::is_unit_definition;
-                          typename T::quantity_reference_type;
+                          typename T::reference_type;
                        };
 
 namespace detail {
@@ -1138,7 +1135,7 @@ namespace detail {
 template <
    typename QuantitySpecifier,
    bool has_quantity =
-      requires { typename QuantitySpecifier::quantity_reference_type; },
+      requires { typename QuantitySpecifier::reference_type; },
    bool = is_named_unit<QuantitySpecifier>>
 struct reference_quantity {
    using type = QuantitySpecifier;
@@ -1146,7 +1143,7 @@ struct reference_quantity {
 
 template <typename Unit, bool = Unit::defines_unit>
 struct named_reference_quantity {
-   using type = quantity_reference<
+   using type = reference<
       typename Unit::quantity_spec_type, unit<unit_power<Unit, 1>>>;
 };
 
@@ -1157,7 +1154,7 @@ struct named_reference_quantity<Unit, true> {
       reference_quantity<__typeof_unqual(Unit::unit_definition)>::type;
 
  public:
-   using type = quantity_reference<
+   using type = reference<
       typename Unit::quantity_spec_type,
       typename definition_quantity::unit_type,
       definition_quantity::unit_magnitude>;
@@ -1169,7 +1166,7 @@ struct reference_quantity<Unit, false, true> : named_reference_quantity<Unit> {
 
 template <typename QuantitySpecifier, bool is_named>
 struct reference_quantity<QuantitySpecifier, true, is_named> {
-   using type = QuantitySpecifier::quantity_reference_type;
+   using type = QuantitySpecifier::reference_type;
 };
 
 }  // namespace detail
@@ -1200,17 +1197,6 @@ concept is_quantity = requires {
 template <typename T>
 concept is_quantity_specifier = is_quantity<T> || is_unit_specifier<T>;
 
-template <typename QuantitySpec, typename UnitType>
-struct reference
-    : quantity_reference<
-         QuantitySpec, typename reference_quantity<UnitType{}>::unit_type,
-         reference_quantity<UnitType{}>::unit_magnitude> {
-   static_assert(is_quantity_spec<QuantitySpec>);
-   static_assert(is_unit_specifier<UnitType>);
-   using requested_quantity_spec_type = QuantitySpec;
-   using requested_unit_type = UnitType;
-};
-
 template <symbol_text symbol, auto magnitude, auto unit_value>
    requires is_named_unit<__typeof_unqual(unit_value)>
 struct prefixed_unit {
@@ -1221,7 +1207,7 @@ struct prefixed_unit {
    static constexpr bool is_unit_definition = true;
    using quantity_spec_type = base_quantity::quantity_spec_type;
    using dimension_type = base_quantity::dimension_type;
-   using quantity_reference_type = quantity_reference<
+   using reference_type = reference<
       quantity_spec_type, typename base_quantity::unit_type,
       base_quantity::unit_magnitude * magnitude>;
    static constexpr auto unit_symbol = symbol + unit_value.unit_symbol;
@@ -1292,7 +1278,10 @@ make_reference(
    ) {
       return unit_value;
    } else {
-      return reference<QuantitySpec, UnitType>{};
+      using unit_quantity = reference_quantity<UnitType{}>;
+      return reference<
+         QuantitySpec, typename unit_quantity::unit_type,
+         unit_quantity::unit_magnitude>{};
    }
 }
 
@@ -1311,7 +1300,7 @@ concept is_dimensionless_quantity =
 
 struct scalar_quantity_spec : quantity_spec<dimension<>{}> {};
 
-using scalar_quantity = quantity_reference<scalar_quantity_spec, unit<>>;
+using scalar_quantity = reference<scalar_quantity_spec, unit<>>;
 
 template <typename Left, typename Right>
 concept is_same_quantity_dimension =
@@ -1382,12 +1371,12 @@ common_unit_magnitude() {
 
 template <is_quantity Left, is_quantity Right>
    requires(is_compatible_quantity<Left, Right>)
-using common_quantity = quantity_reference<
+using common_quantity = reference<
    typename detail::common_quantity_spec<Left, Right>::type,
    typename Left::unit_type, detail::common_unit_magnitude<Left, Right>()>;
 
 template <is_quantity Left, is_quantity Right>
-using multiplied_quantity = quantity_reference<
+using multiplied_quantity = reference<
    typename detail::multiplied_quantity_spec<
       Left, Right,
       multiplied_dimension<
@@ -1396,7 +1385,7 @@ using multiplied_quantity = quantity_reference<
    Left::unit_magnitude * Right::unit_magnitude>;
 
 template <is_quantity Left, is_quantity Right>
-using divided_quantity = quantity_reference<
+using divided_quantity = reference<
    typename detail::divided_quantity_spec<
       Left, Right,
       divided_dimension<
@@ -1405,7 +1394,7 @@ using divided_quantity = quantity_reference<
    Left::unit_magnitude / Right::unit_magnitude>;
 
 template <is_quantity Quantity, int decimal_power>
-using scaled_quantity = quantity_reference<
+using scaled_quantity = reference<
    typename Quantity::quantity_spec_type, typename Quantity::unit_type,
    Quantity::unit_magnitude * power_of_10<decimal_power>>;
 
@@ -1419,7 +1408,7 @@ template <is_quantity Quantity, int numerator, int denominator = 1>
               && (Quantity::unit_magnitude.pi_power * numerator) % denominator
                     == 0))
    )
-using powered_quantity = quantity_reference<
+using powered_quantity = reference<
    derived_quantity_spec<powered_dimension<
       typename Quantity::dimension_type, numerator, denominator>>,
    powered_unit<typename Quantity::unit_type, numerator, denominator>,
@@ -1431,7 +1420,7 @@ template <is_unit_magnitude Magnitude, is_quantity_specifier R>
 consteval auto
 operator*(Magnitude magnitude_value, [[maybe_unused]] R reference_value) {
    using source_quantity = reference_quantity<R{}>;
-   using result_quantity = quantity_reference<
+   using result_quantity = reference<
       typename source_quantity::quantity_spec_type,
       typename source_quantity::unit_type,
       magnitude_value * source_quantity::unit_magnitude>;
