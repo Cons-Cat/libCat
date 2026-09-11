@@ -49,6 +49,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/__ashlti3.cpp
   ${CATLIB}/runtime/implementations/__clzti2.cpp
   ${CATLIB}/runtime/implementations/__floattisf.cpp
+  ${CATLIB}/runtime/implementations/__eqtf2.cpp
   ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/math/implementations/acos.cpp
   ${CATLIB}/math/implementations/asin.cpp
@@ -130,6 +131,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_sched_yield.cpp
   ${CATLIB}/linux/implementations/sys_dup.cpp
   ${CATLIB}/linux/implementations/sys_dup2.cpp
+  ${CATLIB}/linux/implementations/sys_nanosleep.cpp
   ${CATLIB}/linux/implementations/sys_getpid.cpp
   ${CATLIB}/linux/implementations/sys_socket.cpp
   ${CATLIB}/linux/implementations/sys_connect.cpp
@@ -235,6 +237,9 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_get_robust_list.cpp
   ${CATLIB}/linux/implementations/sys_utimensat.cpp
   ${CATLIB}/linux/implementations/sys_fallocate.cpp
+  ${CATLIB}/linux/implementations/sys_timerfd_create.cpp
+  ${CATLIB}/linux/implementations/sys_timerfd_settime.cpp
+  ${CATLIB}/linux/implementations/sys_timerfd_gettime.cpp
   ${CATLIB}/linux/implementations/sys_accept4.cpp
   ${CATLIB}/linux/implementations/sys_dup3.cpp
   ${CATLIB}/linux/implementations/sys_pipe2.cpp
@@ -553,6 +558,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/vec/cat/detail/vec_storage.hpp
   ${CATLIB}/x11/cat/x11
   ${CATLIB}/linux/implementations/syscall.tpp
+  ${CATLIB}/linux/implementations/timespec.tpp
   ${CATLIB}/linux/implementations/process.tpp
   ${CATLIB}/linux/implementations/futex.tpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp

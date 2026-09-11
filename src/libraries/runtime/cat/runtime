@@ -245,6 +245,10 @@ extern "C" auto
 // NOLINTNEXTLINE
 __fixunstfti(__float128 value) -> __uint128_t;
 
+extern "C" auto
+// NOLINTNEXTLINE
+__eqtf2(__float128 first, __float128 second) -> int;
+
 class jmp_buffer {
    // This buffer layout should vary by all ISAs.
 
