@@ -65,6 +65,33 @@ $test(quantity_catalog_si) {
       cat::is_equivalent(cat::units::hertz, cat::inverse(cat::units::second))
    );
    static_assert(cat::is_equivalent(
+      cat::units::millihertz, cat::units::milli<cat::units::hertz>
+   ));
+   static_assert(cat::is_equivalent(
+      cat::units::kilohertz, cat::units::kilo<cat::units::hertz>
+   ));
+   static_assert(cat::is_equivalent(
+      cat::units::megahertz, cat::units::mega<cat::units::hertz>
+   ));
+   static_assert(cat::is_equivalent(
+      cat::units::gigahertz, cat::units::giga<cat::units::hertz>
+   ));
+   static_assert(cat::is_equivalent(
+      cat::units::terahertz, cat::units::tera<cat::units::hertz>
+   ));
+   static_assert(cat::is_equivalent(
+      cat::units::attohertz, cat::units::atto<cat::units::hertz>
+   ));
+   static_assert(cat::is_equivalent(
+      cat::units::exahertz, cat::units::exa<cat::units::hertz>
+   ));
+   static_assert(
+      cat::units::hertz_int8(cat::units::kilohertz_int8(1)).raw == 1'000
+   );
+   static_assert(!cat::is_duration<cat::units::hertz_int8>);
+   static_assert(!cat::is_duration<cat::units::kilohertz_int8>);
+   static_assert(!cat::is_duration<cat::units::millihertz_int8>);
+   static_assert(cat::is_equivalent(
       cat::units::litre, cat::mag_power<10, -3> * cat::units::cubic_metre
    ));
    static_assert(cat::is_equivalent(

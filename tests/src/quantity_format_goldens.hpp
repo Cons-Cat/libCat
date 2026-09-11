@@ -14,6 +14,18 @@
    apply(radian, "1 rad", "1E0 rad") \
    apply(steradian, "1 sr", "1E0 sr") \
    apply(hertz, "1 Hz", "1E0 Hz") \
+   apply(attohertz, "1 aHz", "1E0 aHz") \
+   apply(femtohertz, "1 fHz", "1E0 fHz") \
+   apply(picohertz, "1 pHz", "1E0 pHz") \
+   apply(nanohertz, "1 nHz", "1E0 nHz") \
+   apply(microhertz, "1 uHz", "1E0 uHz") \
+   apply(millihertz, "1 mHz", "1E0 mHz") \
+   apply(kilohertz, "1 kHz", "1E0 kHz") \
+   apply(megahertz, "1 MHz", "1E0 MHz") \
+   apply(gigahertz, "1 GHz", "1E0 GHz") \
+   apply(terahertz, "1 THz", "1E0 THz") \
+   apply(petahertz, "1 PHz", "1E0 PHz") \
+   apply(exahertz, "1 EHz", "1E0 EHz") \
    apply(newton, "1 N", "1E0 N") \
    apply(pascal, "1 Pa", "1E0 Pa") \
    apply(joule, "1 J", "1E0 J") \

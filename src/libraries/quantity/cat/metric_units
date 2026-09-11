@@ -117,6 +117,19 @@ inline constexpr struct steradian : named_unit<"sr", kind_of<solid_angle>> {
 inline constexpr struct hertz : named_unit<"Hz", inverse(second), frequency> {
 } hertz;
 
+inline constexpr auto attohertz = atto<hertz>;
+inline constexpr auto femtohertz = femto<hertz>;
+inline constexpr auto picohertz = pico<hertz>;
+inline constexpr auto nanohertz = nano<hertz>;
+inline constexpr auto microhertz = micro<hertz>;
+inline constexpr auto millihertz = milli<hertz>;
+inline constexpr auto kilohertz = kilo<hertz>;
+inline constexpr auto megahertz = mega<hertz>;
+inline constexpr auto gigahertz = giga<hertz>;
+inline constexpr auto terahertz = tera<hertz>;
+inline constexpr auto petahertz = peta<hertz>;
+inline constexpr auto exahertz = exa<hertz>;
+
 inline constexpr struct newton
     : named_unit<"N", kilogram * metre / pow<2>(second), force> {
 } newton;
@@ -277,6 +290,18 @@ using candelas = reference_quantity<candela>;
 using radians = reference_quantity<radian>;
 using steradians = reference_quantity<steradian>;
 using hertzes = reference_quantity<hertz>;
+using attohertzes = reference_quantity<attohertz>;
+using femtohertzes = reference_quantity<femtohertz>;
+using picohertzes = reference_quantity<picohertz>;
+using nanohertzes = reference_quantity<nanohertz>;
+using microhertzes = reference_quantity<microhertz>;
+using millihertzes = reference_quantity<millihertz>;
+using kilohertzes = reference_quantity<kilohertz>;
+using megahertzes = reference_quantity<megahertz>;
+using gigahertzes = reference_quantity<gigahertz>;
+using terahertzes = reference_quantity<terahertz>;
+using petahertzes = reference_quantity<petahertz>;
+using exahertzes = reference_quantity<exahertz>;
 using newtons = reference_quantity<newton>;
 using pascals = reference_quantity<pascal>;
 using joules = reference_quantity<joule>;
@@ -356,6 +381,18 @@ CAT_DECLARE_QUANTITY_ALIASES(candela, candela);
 CAT_DECLARE_QUANTITY_ALIASES(radian, radian);
 CAT_DECLARE_QUANTITY_ALIASES(steradian, steradian);
 CAT_DECLARE_QUANTITY_ALIASES(hertz, hertz);
+CAT_DECLARE_QUANTITY_ALIASES(attohertz, attohertz);
+CAT_DECLARE_QUANTITY_ALIASES(femtohertz, femtohertz);
+CAT_DECLARE_QUANTITY_ALIASES(picohertz, picohertz);
+CAT_DECLARE_QUANTITY_ALIASES(nanohertz, nanohertz);
+CAT_DECLARE_QUANTITY_ALIASES(microhertz, microhertz);
+CAT_DECLARE_QUANTITY_ALIASES(millihertz, millihertz);
+CAT_DECLARE_QUANTITY_ALIASES(kilohertz, kilohertz);
+CAT_DECLARE_QUANTITY_ALIASES(megahertz, megahertz);
+CAT_DECLARE_QUANTITY_ALIASES(gigahertz, gigahertz);
+CAT_DECLARE_QUANTITY_ALIASES(terahertz, terahertz);
+CAT_DECLARE_QUANTITY_ALIASES(petahertz, petahertz);
+CAT_DECLARE_QUANTITY_ALIASES(exahertz, exahertz);
 CAT_DECLARE_QUANTITY_ALIASES(newton, newton);
 CAT_DECLARE_QUANTITY_ALIASES(pascal, pascal);
 CAT_DECLARE_QUANTITY_ALIASES(joule, joule);
