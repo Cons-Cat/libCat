@@ -120,10 +120,67 @@ inline constexpr cat::uint4 futex_owner_died_flag{0x40000000u};
 inline constexpr cat::uint4 futex_tid_mask{0x3fffffffu};
 inline constexpr cat::uint4 futex_bitset_match_any{0xffffffffu};
 
-struct futex_timespec {
-   cat::int8 seconds;
-   cat::int8 nanoseconds;
+enum class [[clang::enum_extensibility(open)]] clock_id : int {
+   realtime = 0,
+   monotonic = 1,
+   process_cpu_time = 2,
+   thread_cpu_time = 3,
+   monotonic_raw = 4,
+   realtime_coarse = 5,
+   monotonic_coarse = 6,
+   boottime = 7,
+   realtime_alarm = 8,
+   boottime_alarm = 9,
+   tai = 11,
 };
+
+enum class [[clang::flag_enum]] clock_nanosleep_flags : unsigned int {
+   none = 0,
+   absolute = 1,
+};
+
+enum class [[clang::flag_enum]] timerfd_flags : unsigned int {
+   none = 0,
+   nonblocking = 0x800,
+   close_exec = 0x80000,
+};
+
+enum class [[clang::flag_enum]] timerfd_set_flags : unsigned int {
+   none = 0,
+   absolute = 1,
+   cancel_on_set = 2,
+};
+
+// A `timespec` counts whole seconds plus a fractional nanoseconds. This format
+// is consumed by syscalls.
+struct timespec {
+   cat::units::second_int8 seconds;
+   cat::units::nanosecond_int8 nanoseconds;
+
+   // Add `seconds` and `nanoseconds` as a quantity of
+   // `cat::units::nanoseconds`.
+   [[nodiscard]]
+   constexpr auto
+   to_nanoseconds() const -> cat::units::nanosecond_int8;
+};
+
+using futex_timespec = timespec;
+
+struct itimerspec {
+   // Period of a recurring timer. The value 0 arms a one-shot timer instead.
+   timespec interval;
+   // Time until the next expiration. The value 0 disarms the timer.
+   timespec value;
+};
+
+template <cat::is_duration Duration>
+[[nodiscard]]
+constexpr auto
+make_timespec(Duration elapsed) -> timespec;
+
+static_assert(sizeof(timespec) == 16);
+static_assert(sizeof(itimerspec) == 32);
+
 
 // Kernel `sys_futex()` only cares about the address of this 32-bit word.
 struct futex_word {
@@ -1051,6 +1108,15 @@ struct cat::enum_flag_trait<nix::mlock2_flags> : cat::true_trait {};
 template <>
 struct cat::enum_flag_trait<nix::message_flags> : cat::true_trait {};
 
+template <>
+struct cat::enum_flag_trait<nix::clock_nanosleep_flags> : cat::true_trait {};
+
+template <>
+struct cat::enum_flag_trait<nix::timerfd_flags> : cat::true_trait {};
+
+template <>
+struct cat::enum_flag_trait<nix::timerfd_set_flags> : cat::true_trait {};
+
 namespace nix {
 
 // Syscall 0.
@@ -1434,6 +1500,13 @@ sys_dup(file_descriptor fd) -> scaredy_nix<file_descriptor>;
 auto
 sys_dup2(file_descriptor oldfd, file_descriptor newfd)
    -> scaredy_nix<file_descriptor>;
+
+// Syscall 35. Sleep for `request`. `p_remaining` receives leftover time if
+// the wait is interrupted.
+auto
+sys_nanosleep(
+   timespec const& request, timespec* _Nullable p_remaining = nullptr
+) -> scaredy_nix<void>;
 
 // Syscall 39.
 auto
@@ -2105,6 +2178,22 @@ sys_getdents64(
 auto
 sys_set_tid_address(cat::int4& tid) -> process_id;
 
+// Syscall 228. Fill `out` with the current value of `clock`.
+auto
+sys_clock_gettime(clock_id clock, timespec& out) -> scaredy_nix<void>;
+
+// Syscall 229. Fill `out` with the resolution of `clock`.
+auto
+sys_clock_getres(clock_id clock, timespec& out) -> scaredy_nix<void>;
+
+// Syscall 230. Sleep on `clock` until `request`. Relative unless `flags`
+// includes `clock_nanosleep_flags::absolute`.
+auto
+sys_clock_nanosleep(
+   clock_id clock, clock_nanosleep_flags flags, timespec const& request,
+   timespec* _Nullable p_remaining = nullptr
+) -> scaredy_nix<void>;
+
 // Syscall 231. Terminate every thread in the calling thread group with
 // `status` as the exit code.
 [[noreturn]]
@@ -2250,6 +2339,16 @@ sys_utimensat(
    atfile_flags flags = atfile_flags::none
 ) -> scaredy_nix<void>;
 
+// Syscall 283. Create a timer file descriptor for `clock`.
+auto
+sys_timerfd_create(clock_id clock, timerfd_flags flags = timerfd_flags::none)
+   -> scaredy_nix<file_descriptor>;
+
+// Syscall 283. Create a timer file descriptor for `clock`.
+auto
+sys_timerfd_create(clock_id clock, timerfd_flags flags = timerfd_flags::none)
+   -> scaredy_nix<file_descriptor>;
+
 // Syscall 285. Manipulate the on-disk allocation of `file_descriptor` over
 // the byte range [`offset`, `offset + length`).
 auto
@@ -2257,6 +2356,20 @@ sys_fallocate(
    file_descriptor file_descriptor, fallocate_flags mode, cat::iword offset,
    cat::iword length
 ) -> scaredy_nix<void>;
+
+// Syscall 286. Arm `file_descriptor` with `value`. `p_old` receives the
+// previous setting when non-null.
+auto
+sys_timerfd_settime(
+   file_descriptor file_descriptor, timerfd_set_flags flags,
+   itimerspec const& value, itimerspec* _Nullable p_old = nullptr
+) -> scaredy_nix<void>;
+
+// Syscall 287. Fill `out` with the remaining time and interval of
+// `file_descriptor`.
+auto
+sys_timerfd_gettime(file_descriptor file_descriptor, itimerspec& out)
+   -> scaredy_nix<void>;
 
 // Syscall 288. `sys_accept()` plus `accept4_flags::nonblocking` /
 // `accept4_flags::close_exec`. Pass `nullptr` for `p_socket` and
@@ -2747,3 +2860,5 @@ read_self_anon_smaps() -> cat::scaredy<anon_smaps, nix::linux_error>;
 
 #include "implementations/futex.tpp"
 #include "implementations/process.tpp"
+#include "implementations/timespec.tpp"
+#include "implementations/timespec.tpp"
