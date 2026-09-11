@@ -1,4 +1,7 @@
 #include <cat/cpuid>
+#ifndef CAT_NO_VDSO
+#include <cat/detail/vdso.hpp>
+#endif
 #include <cat/linux>
 #include <cat/runtime>
 
@@ -33,7 +36,7 @@ call_static_constructors() {
 }
 #endif
 
-[[gnu::always_inline]]
+[[clang::always_inline]]
 inline void
 init_syscall_probes() {
    nix::kernel_version const version = nix::get_kernel_version();
@@ -75,17 +78,43 @@ init_syscall_probes() {
    }
 }
 
+#ifndef CAT_NO_VDSO
+constexpr cat::uword at_sysinfo_ehdr = 33u;
+
+void
+init_vdso(cat::uword const* _Nonnull p_stack) {
+   cat::uword const argc = p_stack[0];
+   cat::uword const* p_auxiliary = p_stack + argc + 2;
+   while (*p_auxiliary != 0) {
+      ++p_auxiliary;
+   }
+   ++p_auxiliary;
+
+   while (p_auxiliary[0] != 0) {
+      if (p_auxiliary[0] == at_sysinfo_ehdr) {
+         nix::detail::initialize_vdso(
+            __builtin_bit_cast(void const*, p_auxiliary[1])
+         );
+         return;
+      }
+      p_auxiliary += 2;
+   }
+}
+#endif
+
 extern "C" {
 [[noreturn, gnu::no_stack_protector, gnu::no_sanitize_address]]
-#ifndef NO_ARGC_ARGV
+#if defined(NO_ARGC_ARGV) && defined(CAT_NO_VDSO)
+void
+call_main() {
+#else
 [[gnu::used]]
 void
-call_main(int argc, char* const* pp_argv)
-#else
-void
-call_main()
+call_main([[maybe_unused]] cat::uword const* _Nonnull p_stack) {
+#ifndef CAT_NO_VDSO
+   init_vdso(p_stack);
 #endif
-{
+#endif
 #ifndef CAT_NO_CPUID
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
@@ -101,7 +130,7 @@ call_main()
    && (!defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0)
    // Set up `%fs` so the parent process can access `thread_local` values. Must
    // run before `call_static_constructors` because a constructor body
-   // could touch a `thread_local`. The buffer is intentionally leaked
+   // could touch a `thread_local`. The buffer is deliberately leaked
    // (kernel reclaims at `_exit`). Only emitted under static, non-PIE
    // links where no dynamic loader has set `%fs` for us first.
    // `CAT_STATIC_LINKED` is set by the top-level `CMakeLists.txt`.
@@ -113,6 +142,8 @@ call_main()
 #ifdef NO_ARGC_ARGV
    [[clang::always_inline]] cat::exit(main());
 #else
+   int const argc = static_cast<int>(p_stack[0]);
+   auto const* const pp_argv = __builtin_bit_cast(char* const*, p_stack + 1);
    [[clang::always_inline]] cat::exit(main(argc, pp_argv));
 #endif
 }
@@ -120,33 +151,20 @@ call_main()
 
 }  // namespace
 
+// The kernel stack is required for argv and for the vDSO auxv.
+#if defined(NO_ARGC_ARGV) && defined(CAT_NO_VDSO)
 extern "C" [[gnu::used, gnu::no_stack_protector]]
-#ifndef NO_ARGC_ARGV
-// If arguments are loaded, this must be `naked` to prevent pushing `%rbp`
-// first, which misaligns argument loading.
-[[gnu::naked]]
-#else
-// The kernel hands `_start` a 16-aligned `%rsp` with no return address, so
-// the standard `pushq %rbp` prologue would leave `%rbp` 8-aligned and crash
-// any inlined SIMD load that addresses locals off `%rbp` (e.g. SIMD spills
-// from `__cpu_indicator_init`). `force_align_arg_pointer` emits an alternate
-// prologue that realigns the frame to 16 bytes before establishing `%rbp`.
-[[gnu::force_align_arg_pointer]]
-#endif
 void
 cat::detail::_start() {
-   // `NO_ARGC_ARGV` can defined from a CMake target to skip argument loading.
-   // The argument loading version must stay in `asm`. `_start` is `gnu::naked`
-   // so the prologue won't push `%rbp` before reading `argc`/`argv` off the
-   // kernel-supplied stack.
-#ifndef NO_ARGC_ARGV
+   [[clang::always_inline]] call_main();
+}
+#else
+extern "C" [[gnu::used, gnu::no_stack_protector, gnu::naked]]
+void
+cat::detail::_start() {
    asm(R"(.att_syntax prefix ; # rmsbolt requires this. Try `-masm=att`
-          pop %rdi        # Load `int4 argc`.
-          mov %rsp, %rsi  # Load `char* argv[]`.
-          and $-16, %rsp
+          mov %rsp, %rdi  # Preserve the kernel initial stack.
           call call_main
        )");
-#else
-   [[clang::always_inline]] call_main();
-#endif
 }
+#endif

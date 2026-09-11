@@ -1,4 +1,5 @@
 #include <cat/chrono>
+#include <cat/detail/vdso.hpp>
 #include <cat/linux>
 
 #include "../unit_tests.hpp"
@@ -117,6 +118,37 @@ $test(clock_syscalls) {
       .verify();
 }
 
+#ifndef CAT_NO_VDSO
+$test(vdso_time_hooks) {
+   nix::timespec now;
+   cat::maybe<cat::int4> const result =
+      nix::detail::vdso_clock_gettime(nix::clock_id::monotonic, now);
+   cat::verify(result.has_value());
+   cat::verify(result.value() == 0);
+   cat::verify(now.to_nanoseconds() > nanoseconds(0));
+
+   nix::timespec resolution;
+   cat::maybe<cat::int4> const resolution_result =
+      nix::detail::vdso_clock_getres(nix::clock_id::monotonic, resolution);
+   if (resolution_result.has_value()) {
+      cat::verify(resolution_result.value() == 0);
+      cat::verify(resolution.to_nanoseconds() > nanoseconds(0));
+   }
+
+   nix::detail::timeval wall_time;
+   cat::maybe<cat::int4> const gettimeofday_result =
+      nix::detail::vdso_gettimeofday(&wall_time, nullptr);
+   if (gettimeofday_result.has_value()) {
+      cat::verify(gettimeofday_result.value() == 0);
+      cat::verify(wall_time.seconds > 0);
+   }
+
+   cat::maybe<cat::int8> const time_result = nix::detail::vdso_time(nullptr);
+   if (time_result.has_value()) {
+      cat::verify(time_result.value() > 0);
+   }
+}
+#endif
 
 $test(timerfd_syscalls) {
    nix::file_descriptor const fd =

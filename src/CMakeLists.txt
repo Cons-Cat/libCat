@@ -283,6 +283,14 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/cpu_temperature.cpp
 )
 
+if(NOT CAT_NO_VDSO)
+  target_sources(cat-impl PRIVATE
+    ${CATLIB}/linux/implementations/vdso.cpp
+    ${CATLIB}/linux/implementations/vdso_clock.cpp
+    ${CATLIB}/linux/implementations/vdso_time.cpp
+    ${CATLIB}/linux/implementations/vdso_getrandom.cpp)
+endif()
+
 set(CAT_HEADER_FILES
   ${CATLIB}/new/cat/new
   ${CATLIB}/algorithm/cat/algorithm
@@ -395,6 +403,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/linux/cat/io_uring
   ${CATLIB}/linux/cat/linux
   ${CATLIB}/linux/cat/raii_process
+  ${CATLIB}/linux/cat/detail/vdso.hpp
   ${CATLIB}/linux/cat/detail/io_uring.hpp
   ${CATLIB}/linux/cat/detail/syscalls.hpp
   ${CATLIB}/list/cat/list

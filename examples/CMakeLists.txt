@@ -25,6 +25,7 @@ if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
     CAT_NO_STATIC_CONSTRUCTORS
     CAT_NO_CPUID
     CAT_NO_SYSCALL_PROBES
+    CAT_NO_VDSO
     CAT_THREAD_LOCAL_SIZE=0)
   set_property(SOURCE
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
@@ -50,6 +51,7 @@ if(CAT_BUILD_EXAMPLE_ECHO OR CAT_BUILD_ALL_EXAMPLES)
     CAT_NO_STATIC_CONSTRUCTORS
     CAT_NO_CPUID
     CAT_NO_SYSCALL_PROBES
+    CAT_NO_VDSO
     CAT_THREAD_LOCAL_SIZE=0)
   set_property(SOURCE
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp

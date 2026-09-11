@@ -116,6 +116,8 @@ endif()
 # Bitcode-aware AR/RANLIB so `libcat.a` stays loadable by LTO and `clang-repl`.
 include(${CMAKE_SOURCE_DIR}/cmake/llvm_archivers.cmake)
 
+option(CAT_NO_VDSO "Disable Linux vDSO runtime hooks." OFF)
+
 # Two flag tiers: `ESSENTIAL` = usage requirements every consumer must honor (on
 # `cat` `INTERFACE`). `INTERNAL` = libCat's own warnings/diagnostics/per- config
 # codegen (`PRIVATE` on `cat-impl`, re-propagated to in-tree tests/ examples via
@@ -142,6 +144,10 @@ list(
   -mbmi
   -mbmi2
 )
+
+if(CAT_NO_VDSO)
+  list(APPEND CAT_CXX_FLAGS_ESSENTIAL -DCAT_NO_VDSO)
+endif()
 
 list(
   APPEND CAT_CXX_FLAGS_COMMON
