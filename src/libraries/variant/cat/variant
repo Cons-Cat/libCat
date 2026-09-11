@@ -27,7 +27,7 @@
 // P4198R0   `variant<T&>`. When every alternative is a reference type the
 //           active alternative is fixed at construction. Assignment writes
 //           through the held reference instead of swapping the active type.
-//           Tuple integration is intentionally not extended.
+//           Tuple integration is not extended.
 //           `get_ptr()` on optional and variant. `.get_ptr<T>()` returns a
 //           pointer to the held value when `T` is active, otherwise
 //           `nullptr`. `.get_ptr<index>()` is the index-typed overload.
@@ -275,8 +275,7 @@ class variant {
    // `uint4_max - 1`, and `idx` (libCat's canonical 63-bit signed index
    // type) for the unbounded case. The max value of each tier is reserved
    // as the empty-state niche, so active indices are always strictly less
-   // than the max. `uint2` is intentionally skipped because it pessimizes
-   // codegen on x86-64.
+   // than the max. `uint2` is skipped because it pessimizes codegen on x86-64.
    using alternative_index_type = conditional<
       (types::size() < uint1_max), uint1,
       conditional<(types::size() < uint4_max), uint4, idx>>;

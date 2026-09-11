@@ -23,8 +23,8 @@
 //    backwards.
 //
 // `noisy_box` is a third fixture used only for the ownership-policy tests: it
-// is intentionally non-trivially-copyable so an adaptor will reject it as an
-// l-value base, forcing the caller through `cat::ref`/`cat::cref` to opt-in.
+// is non-trivially-copyable so an adaptor will reject it as an l-value base,
+// forcing the caller through `cat::ref`/`cat::cref` to opt-in.
 template <typename T, cat::idx extent>
 struct tiny_array
     : cat::contiguous_collection_interface<tiny_array<T, extent>> {
@@ -369,8 +369,7 @@ static_assert(cat::is_iterable<tiny_list<int, 8u>>);
 static_assert(cat::is_collection<cat::initializer_list<int>>);
 static_assert(cat::is_random_access_collection<cat::initializer_list<int>>);
 static_assert(cat::is_contiguous_iterable<cat::initializer_list<int>>);
-// `tiny_list` is intentionally `iterable`-only. Position protocol must not be
-// inferred.
+// `tiny_list` is `iterable`-only. Position protocol must not be inferred.
 static_assert(!cat::is_collection<tiny_list<int, 8u>>);
 
 // Refinement hierarchy: `tiny_array` walks all the way up to random access.

@@ -55,10 +55,10 @@
 // `CAT_SUP_<arch>`, `CAT_PRIORITY_<arch>` macros below and an (optionally
 // empty) `cat::detail::simd_<arch>` namespace.
 //
-// `<cat/simd_switch>` is intentionally *not* re-included by `<cat/simd>`,
-// because pulling `<cat/array>` and `<cat/string>` mid-`<cat/simd>` parse
-// would precede the default `idx fixed_extent` forward-declaration of
-// `cat::span` in `<cat/memory>` and break `<cat/container>`.
+// `<cat/simd_switch>` is *not* re-included by `<cat/simd>`, because pulling
+// `<cat/array>` and `<cat/string>` mid-`<cat/simd>` parse would precede the
+// default `idx fixed_extent` forward-declaration of `cat::span` in
+// `<cat/memory>` and break `<cat/container>`.
 //
 // The implementation of this macro is unfortunately complex. But it compiles
 // very efficiently, the value of this feature is huge, and in my opinion, there

@@ -729,10 +729,9 @@ $test(meta_is_convertible_without_narrowing) {
    static_assert(!is_convertible_without_narrowing<uint4, int4>);
 
    // libCat safe-float cross-precision conversions are `explicit` in
-   // either direction (basic_float intentionally never converts a runtime
-   // float between widths implicitly), so the `is_convertible`
-   // precondition fails and the trait is `false` regardless of the
-   // narrowing rule.
+   // either direction (`basic_float` never converts a runtime float between
+   // widths implicitly), so the `is_convertible` precondition fails and the
+   // trait is `false` regardless of the narrowing rule.
    static_assert(!is_convertible_without_narrowing<float4, float8>);
    static_assert(!is_convertible_without_narrowing<float8, float4>);
 

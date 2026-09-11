@@ -2049,7 +2049,7 @@ $test(arithmetic_implicit_intptr_uintptr_constexpr_const) {
 
 // Compile-time-known cross-signed-ness constant operands work for the
 // offset-style arithmetic operators on `intptr`/`uintptr` (+=, -=, +, -).
-// Multiplicative and modulo operators are intentionally not tested here.
+// Multiplicative and modulo operators are not tested here.
 // `basic_intptr` predates the relaxed `promoted_type` and would need a
 // separate cleanup to participate.
 $test(arithmetic_intptr_uintptr_all_operators_constexpr_const) {

@@ -1331,8 +1331,7 @@ $test(maybe_nested_construction) {
 
 // `cat::maybe<T>` participates in the cat iterable / collection protocol as a
 // contiguous range of size 0 or 1, mirroring the C++26 `std::optional` view
-// from P3168R1. `maybe<void>` has no traversable value and is intentionally
-// not iterable.
+// from P3168R1. `maybe<void>` has no traversable value and is not iterable.
 //
 // P3168R1 Give `std::optional` range support.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3168r1.html

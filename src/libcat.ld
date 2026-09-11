@@ -37,10 +37,9 @@
    no `_start`. */
 ENTRY(_start)
 
-/* PHDRS are intentionally omitted. lld synthesises them from the
-   section flag bands below, which keeps `-Wl,-N` (omagic) effective:
-   it merges adjacent compatible LOADs into a single R+W+X segment
-   for the size-optimised Release configuration. */
+/* PHDRS are omitted. lld synthesises them from the section flag bands below,
+   which keeps `-Wl,-N` (omagic) effective: it merges adjacent compatible
+   LOADs into a single R+W+X segment for the size-optimised Release configuration. */
 
 SECTIONS {
    /* Image base. `SEGMENT_START("text-segment", 0x200000)` matches
@@ -50,9 +49,9 @@ SECTIONS {
       ELF header + program-header table that lld writes at the start
       of the file: without it, the first content section would land
       at vaddr 0x200000 while still living at file offset
-      `sizeof(Ehdr) + N*sizeof(Phdr)`, and the kernel would reject
-      the LOAD because `vaddr - file_offset` must be a multiple of
-      the page size. */
+      `sizeof(elf_header) + N*sizeof(elf_program_header)`, and the kernel
+      would reject the LOAD because `vaddr - file_offset` must be a
+      multiple of the page size. */
    . = SEGMENT_START("text-segment", 0x200000) + SIZEOF_HEADERS;
 
    /* Read-only band ====================================================

@@ -490,7 +490,7 @@ $test(dyn_ref_basic) {
    // `Method::do_invoke<T>`, this `static_assert` would not compile.
    //
    // `dyn_ref` subset-narrowing (`dyn_ref<wide...>` to `dyn_ref<narrow...>`)
-   // is intentionally not exercised: `detail::narrow_vtable` reads the
+   // is deliberately not exercised: `detail::narrow_vtable` reads the
    // narrower vtable out of the wider one via `reinterpret_cast`, which is
    // not a constant expression even in C++26.
    static_assert([] consteval {

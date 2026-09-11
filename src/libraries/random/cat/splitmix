@@ -45,12 +45,11 @@
 //
 //    splitmix64_engine defaulted(splitmix64_engine::default_seed);
 //
-// The paper intentionally publishes no named no-argument jump or long-jump
-// distance for SplitMix. It instead gives the exact arbitrary-distance
-// operation `seed += gamma * n`. Accordingly, `jump(n)` and `discard(n)` are
-// equivalent, and `jump_log2(k)` skips 2^k outputs. A jump of 2^64 is the
-// identity because it is one complete period. No unreferenced named distance
-// is invented here.
+// The paper does not publish a named no-argument jump or long-jump distance for
+// SplitMix. It instead gives the exact arbitrary-distance operation `seed +=
+// gamma * n`. Accordingly, `jump(n)` and `discard(n)` are equivalent, and
+// `jump_log2(k)` skips 2^k outputs. A jump of 2^64 is the identity because it
+// is one complete period. No unreferenced named distance is invented here.
 //
 // The OOPSLA paper defines splittable variants with a variable gamma. Its
 // printed `mixGamma` conditional is inverted, and even the corrected weak-gamma

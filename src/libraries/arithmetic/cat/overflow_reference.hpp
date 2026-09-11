@@ -587,12 +587,7 @@ class overflow_reference
 
    // -=. The `arithmetic_interface`-provided friend `operator-=` only fires
    // when `subtract_by` returns `Derived`, which is never true for
-   // `overflow_reference` (it always returns the underlying arithmetic
-   // wrapper). We mirror the += family with a dedicated member that writes the
-   // result back through the wrapped storage. SFINAE intentionally rejects the
-   // promoting case. `subtract_by` returns a wider type for signed undefined
-   // LHS with a wider RHS, and that wider value would silently narrow to the
-   // LHS storage on assignment.
+   // `overflow_reference`.
    template <is_arithmetic U>
       requires(
          is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>

@@ -74,7 +74,7 @@
 // observers that always diagnose emptiness are `.assert()`, `.verify()`,
 // and `.or_exit()`.
 //
-// `cat::maybe` intentionally does not provide `operator*`, `operator->`, or
+// `cat::maybe` deliberately does not provide `operator*`, `operator->`, or
 // implicit conversion to `bool`. Truthiness testing can be replaced by
 // `.has_value()`, and that otherwise causes many subtle type safety concerns,
 // such as: https://brevzin.github.io/c++/2023/01/18/optional-construction/

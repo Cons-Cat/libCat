@@ -3348,7 +3348,7 @@ basic_intptr :
    }
 
    // Generate `operator&`. Only available for unsigned pointer storage (e.g.
-   // `uintptr<T>`). `intptr<T>` intentionally opts out of bitwise.
+   // `uintptr<T>`). `intptr<T>` opts out of bitwise.
    template <typename U>
       requires(is_unsigned_integral<Storage>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -3619,10 +3619,10 @@ basic_idx :
    // which the compiler can only do for constant expressions, so runtime
    // operands fall through to the generic constructor below.
    //
-   // `iword`/`uword` are intentionally permitted here so that their
-   // compile-time-known values can implicitly become a `basic_idx`. Runtime
-   // `iword`/`uword` operands fall through to the generic constructor below,
-   // which keeps `explicit_word_for_index_ctor` types `explicit`.
+   // `iword`/`uword` are permitted here so that their compile-time-known
+   // values can implicitly become a `basic_idx`. Runtime `iword`/`uword`
+   // operands fall through to the generic constructor below, which keeps
+   // `explicit_word_for_index_ctor` types `explicit`.
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_idx(U other) __attribute__((enable_if(
