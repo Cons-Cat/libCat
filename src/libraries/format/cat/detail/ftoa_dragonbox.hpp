@@ -30,10 +30,6 @@
 #define JKJ_DRAGONBOX_HAS_BUILTIN(x) false
 #endif
 
-#if defined(_MSC_VER)
-#include <intrin.h>
-#endif
-
 namespace cat::detail::dragonbox {
 namespace detail {
 template <class T>
