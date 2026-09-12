@@ -350,6 +350,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bit/implementations/narrow_cast_byte.tpp
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/bitset/cat/bitset
+  ${CATLIB}/bitset/cat/bitset_shared
   ${CATLIB}/bitset/implementations/format_bitset.tpp
   ${CATLIB}/bitvec/cat/bitvec
   ${CATLIB}/bitvec/cat/raii_bitvec

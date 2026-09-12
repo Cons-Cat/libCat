@@ -56,6 +56,10 @@ concept has_address = requires(Atomic atomic) { atomic.address(); };
 template <typename Atomic>
 concept has_store_add = requires(Atomic atomic) { atomic.store_add(1); };
 
+struct pointer_base {};
+
+struct pointer_derived : pointer_base {};
+
 consteval auto
 constexpr_atomic_value_operations() -> bool {
    cat::atomic<int> value{3};
@@ -252,6 +256,33 @@ $test(atomic_store_load_assignment_conversion) {
    cat::atomic<cat::uint4> word;
    word.store(1u);
    cat::verify(word.load() == 1u);
+}
+
+$test(atomic_store_conversions) {
+   pointer_base base;
+   pointer_derived derived;
+
+   cat::atomic<pointer_base*> pointer{&base};
+   pointer.store(0);
+   cat::verify(pointer.load() == nullptr);
+   pointer.store(&derived);
+   cat::verify(pointer.load() == &derived);
+
+   pointer_base* p_storage = &base;
+   cat::atomic<pointer_base*&> pointer_reference{p_storage};
+   pointer_reference.store(0);
+   cat::verify(p_storage == nullptr);
+   pointer_reference.store(&derived);
+   cat::verify(p_storage == &derived);
+
+   cat::atomic<cat::uint4> integer;
+   integer.store(1u);
+   cat::verify(integer.load() == 1u);
+
+   cat::uint4 integer_storage = 0u;
+   cat::atomic<cat::uint4&> integer_reference{integer_storage};
+   integer_reference.store(2u);
+   cat::verify(integer_storage == 2u);
 }
 
 $test(atomic_exchange) {

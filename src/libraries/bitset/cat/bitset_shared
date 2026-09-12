@@ -1,0 +1,794 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::bitset_shared` is a fixed-size lock-free concurrent bitset.
+//
+// https://github.com/facebook/folly/blob/main/folly/ConcurrentBitSet.h
+//
+// Per-bit waits recheck their bit after word changes. Notifications wake the
+// containing word, and `notify_one` wakes all of its waiters to protect packed
+// bits.
+//
+// Multiword queries and transformations load words independently. Mutating
+// transformations publish one word at a time.
+
+#include <cat/array>
+#include <cat/atomic>
+#include <cat/bitset>
+
+namespace cat {
+
+template <idx bits_count>
+class bitset_shared {
+ public:
+   using storage_type = bitset<bits_count>::storage_type;
+   using value_type = bit_value;
+   using const_value_type = bit_value const;
+   using const_reference = bool;
+   using size_type = idx;
+   using difference_type = iword;
+
+   static constexpr idx storage_array_size =
+      bitset<bits_count>::storage_array_size;
+   static constexpr idx storage_element_size =
+      bitset<bits_count>::storage_element_size;
+   static constexpr idx leading_skipped_bits =
+      bitset<bits_count>::leading_skipped_bits;
+   static constexpr idx leading_bytes_bits =
+      bitset<bits_count>::leading_bytes_bits;
+   static constexpr bool is_always_lock_free =
+      atomic<storage_type>::is_always_lock_free;
+   static constexpr bool notify_is_always_lock_free =
+      atomic<storage_type>::notify_is_always_lock_free;
+   static constexpr bool wait_is_always_signal_safe =
+      atomic<storage_type>::wait_is_always_signal_safe;
+   static_assert(is_always_lock_free);
+
+   class reference {
+    public:
+      constexpr reference(reference const&) = default;
+
+      constexpr auto
+      operator=(reference const& other) -> reference& {
+         if (this != &other) {
+            auto _ = assign(other.test());
+         }
+         return *this;
+      }
+
+      constexpr auto
+      operator=(bool value) -> reference& {
+         auto _ = assign(value);
+         return *this;
+      }
+
+      constexpr
+      operator bool() const {
+         return test();
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      test(memory_order order = memory_order::seq_cst) const -> bool {
+         return has_bit(m_word->load(order));
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      assign(bool value, memory_order order = memory_order::seq_cst) const
+         -> bool {
+         return value ? set(order) : reset(order);
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      set(memory_order order = memory_order::seq_cst) const -> bool {
+         return has_bit(m_word->fetch_or(m_mask, order));
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      reset(memory_order order = memory_order::seq_cst) const -> bool {
+         return has_bit(m_word->fetch_and(~m_mask, order));
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      flip(memory_order order = memory_order::seq_cst) const -> bool {
+         return has_bit(m_word->fetch_xor(m_mask, order));
+      }
+
+      constexpr void
+      wait(bool old, memory_order order = memory_order::seq_cst) const {
+         wait_for_bit(*m_word, m_mask, old, order);
+      }
+
+      constexpr void
+      notify_one() const {
+         notify_word(*m_word);
+      }
+
+      constexpr void
+      notify_all() const {
+         notify_word(*m_word);
+      }
+
+    private:
+      friend class bitset_shared;
+
+      constexpr reference(atomic<storage_type>& word, storage_type mask)
+          : m_word(&word), m_mask(mask) {
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      has_bit(storage_type word) const -> bool {
+         return (word & m_mask) != storage_type(0u);
+      }
+
+      atomic<storage_type>* m_word;
+      storage_type m_mask;
+   };
+
+   constexpr bitset_shared() = default;
+
+   constexpr bitset_shared(bitset_shared const& other) {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].store(other.m_data[word.raw].load());
+      }
+   }
+
+   constexpr bitset_shared(bitset_shared&& other) : bitset_shared(other) {
+   }
+
+   constexpr bitset_shared(bitset<bits_count> const& bits) {
+      store(bits, memory_order::relaxed);
+   }
+
+   template <__SIZE_TYPE__ bitstring_size>
+   consteval bitset_shared(char const (&bitstring)[bitstring_size])
+       : bitset_shared(bitset<bits_count>(bitstring)) {
+   }
+
+   constexpr auto
+   operator=(bitset_shared const& other) -> bitset_shared& {
+      if (this != &other) {
+         for (idx word; word < storage_array_size; ++word) {
+            m_data[word.raw].store(other.m_data[word.raw].load());
+         }
+      }
+      return *this;
+   }
+
+   constexpr auto
+   operator=(bitset_shared&& other) -> bitset_shared& {
+      return *this = other;
+   }
+
+   constexpr auto
+   operator=(bitset<bits_count> const& bits) -> bitset_shared& {
+      store(bits);
+      return *this;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   notify_is_lock_free() noexcept -> bool {
+      return notify_is_always_lock_free;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   wait_is_signal_safe() noexcept -> bool {
+      return wait_is_always_signal_safe;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   size() -> idx {
+      return bits_count;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index) [[clang::lifetimebound]] -> reference {
+      assert(index < bits_count);
+      return reference(m_data[storage_index(index).raw], bit_mask(index));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index) const -> bool {
+      return test(index);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   at(idx index) [[clang::lifetimebound]] -> maybe<reference> {
+      if (index < bits_count) {
+         return (*this)[index];
+      }
+      return nullopt;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   at(idx index) const -> maybe<bool> {
+      if (index < bits_count) {
+         return test(index);
+      }
+      return nullopt;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   test(idx index, memory_order order = memory_order::seq_cst) const -> bool {
+      assert(index < bits_count);
+      storage_type const word = m_data[storage_index(index).raw].load(order);
+      return (word & bit_mask(index)) != storage_type(0u);
+   }
+
+   constexpr auto
+   assign(idx index, bool value, memory_order order = memory_order::seq_cst)
+      -> bool {
+      return (*this)[index].assign(value, order);
+   }
+
+   constexpr auto
+   set(idx index, memory_order order = memory_order::seq_cst) -> bool {
+      return (*this)[index].set(order);
+   }
+
+   constexpr auto
+   reset(idx index, memory_order order = memory_order::seq_cst) -> bool {
+      return (*this)[index].reset(order);
+   }
+
+   constexpr auto
+   flip(idx index, memory_order order = memory_order::seq_cst) -> bool {
+      return (*this)[index].flip(order);
+   }
+
+   constexpr void
+   wait(idx index, bool old, memory_order order = memory_order::seq_cst) const {
+      assert(index < bits_count);
+      idx const word = storage_index(index);
+      wait_for_bit(m_data[word.raw], bit_mask(index), old, order);
+   }
+
+   constexpr void
+   notify_one(idx index) {
+      assert(index < bits_count);
+      notify_word(m_data[storage_index(index).raw]);
+   }
+
+   constexpr void
+   notify_all(idx index) {
+      assert(index < bits_count);
+      notify_word(m_data[storage_index(index).raw]);
+   }
+
+   // Each storage word is loaded independently.
+   [[nodiscard]]
+   constexpr auto
+   load(memory_order order = memory_order::seq_cst) const
+      -> bitset<bits_count> {
+      array<storage_type, storage_array_size> words;
+      for (idx word; word < storage_array_size; ++word) {
+         words[word.raw] = m_data[word.raw].load(order);
+      }
+
+      bitset<bits_count> loaded;
+      for (idx index; index < bits_count; ++index) {
+         storage_type const word = words[storage_index(index).raw];
+         loaded[index] = (word & bit_mask(index)) != storage_type(0u);
+      }
+      return loaded;
+   }
+
+   [[nodiscard]]
+   explicit constexpr
+   operator bitset<bits_count>() const {
+      return load();
+   }
+
+   constexpr void
+   store(
+      bitset<bits_count> const& bits, memory_order order = memory_order::seq_cst
+   ) {
+      array<storage_type, storage_array_size> const words =
+         words_from_bitset(bits);
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].store(words[word.raw], order);
+      }
+   }
+
+   // Equality compares independent word snapshots.
+   [[nodiscard]]
+   constexpr auto
+   equals(
+      bitset_shared const& other, memory_order order = memory_order::seq_cst
+   ) const -> bool {
+      if (this == &other) {
+         return true;
+      }
+      for (idx word; word < storage_array_size; ++word) {
+         if (
+            m_data[word.raw].load(order) != other.m_data[word.raw].load(order)
+         ) {
+            return false;
+         }
+      }
+      return true;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(bitset_shared const& other) const -> bool {
+      return equals(other);
+   }
+
+   // Bitwise results contain independent word snapshots.
+   [[nodiscard]]
+   constexpr auto
+   bit_and(
+      bitset_shared const& other, memory_order order = memory_order::seq_cst
+   ) const -> bitset_shared {
+      bitset_shared result;
+      for (idx word; word < storage_array_size; ++word) {
+         result.m_data[word.raw].store(
+            m_data[word.raw].load(order) & other.m_data[word.raw].load(order),
+            memory_order::relaxed
+         );
+      }
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bit_or(
+      bitset_shared const& other, memory_order order = memory_order::seq_cst
+   ) const -> bitset_shared {
+      bitset_shared result;
+      for (idx word; word < storage_array_size; ++word) {
+         result.m_data[word.raw].store(
+            m_data[word.raw].load(order) | other.m_data[word.raw].load(order),
+            memory_order::relaxed
+         );
+      }
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bit_complement(memory_order order = memory_order::seq_cst) const
+      -> bitset_shared {
+      bitset_shared result;
+      for (idx word; word < storage_array_size; ++word) {
+         result.m_data[word.raw].store(
+            sanitize(word, ~m_data[word.raw].load(order)), memory_order::relaxed
+         );
+      }
+      return result;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator&(bitset_shared const& lhs, bitset_shared const& rhs)
+      -> bitset_shared {
+      return lhs.bit_and(rhs);
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator|(bitset_shared const& lhs, bitset_shared const& rhs)
+      -> bitset_shared {
+      return lhs.bit_or(rhs);
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator^(bitset_shared const& lhs, bitset_shared const& rhs)
+      -> bitset_shared {
+      bitset_shared result;
+      for (idx word; word < storage_array_size; ++word) {
+         result.m_data[word.raw].store(
+            storage_type(
+               lhs.m_data[word.raw].load().raw ^ rhs.m_data[word.raw].load().raw
+            ),
+            memory_order::relaxed
+         );
+      }
+      return result;
+   }
+
+   [[nodiscard]]
+   friend constexpr auto
+   operator~(bitset_shared const& self) -> bitset_shared {
+      return self.bit_complement();
+   }
+
+   constexpr auto
+   operator&=(bitset_shared const& other) -> bitset_shared& {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].fetch_and(other.m_data[word.raw].load());
+      }
+      return *this;
+   }
+
+   constexpr auto
+   operator|=(bitset_shared const& other) -> bitset_shared& {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].fetch_or(other.m_data[word.raw].load());
+      }
+      return *this;
+   }
+
+   constexpr auto
+   operator^=(bitset_shared const& other) -> bitset_shared& {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].fetch_xor(other.m_data[word.raw].load());
+      }
+      return *this;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   popcount(memory_order order = memory_order::seq_cst) const -> idx {
+      idx count;
+      for (idx word; word < storage_array_size; ++word) {
+         count += cat::popcount(m_data[word.raw].load(order));
+      }
+      return count;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_single_bit(memory_order order = memory_order::seq_cst) const -> bool {
+      return popcount(order) == 1u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   any_of(memory_order order = memory_order::seq_cst) const -> bool {
+      for (idx word; word < storage_array_size; ++word) {
+         if (m_data[word.raw].load(order) != storage_type(0u)) {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   none_of(memory_order order = memory_order::seq_cst) const -> bool {
+      return !any_of(order);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   all_of(memory_order order = memory_order::seq_cst) const -> bool {
+      return popcount(order) == bits_count;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bit_width(memory_order order = memory_order::seq_cst) const -> idx {
+      return load(order).bit_width();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   countl_zero(memory_order order = memory_order::seq_cst) const -> idx {
+      return load(order).countl_zero();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   countl_one(memory_order order = memory_order::seq_cst) const -> idx {
+      return load(order).countl_one();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   countr_zero(memory_order order = memory_order::seq_cst) const -> idx {
+      return load(order).countr_zero();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   countr_one(memory_order order = memory_order::seq_cst) const -> idx {
+      return load(order).countr_one();
+   }
+
+   constexpr auto
+   clear(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].store(storage_type(0u), order);
+      }
+      return *this;
+   }
+
+   constexpr auto
+   fill(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].store(sanitize(word, storage_type::max()), order);
+      }
+      return *this;
+   }
+
+   constexpr auto
+   fill(bool value, memory_order order = memory_order::seq_cst)
+      -> bitset_shared& {
+      return value ? fill(order) : clear(order);
+   }
+
+   constexpr auto
+   set_even(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].fetch_or(sanitize(word, even_bits_pattern), order);
+      }
+      return *this;
+   }
+
+   constexpr auto
+   set_odd(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].fetch_or(sanitize(word, odd_bits_pattern), order);
+      }
+      return *this;
+   }
+
+   constexpr auto
+   unset_even(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].fetch_and(~even_bits_pattern, order);
+      }
+      return *this;
+   }
+
+   constexpr auto
+   unset_odd(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+      for (idx word; word < storage_array_size; ++word) {
+         m_data[word.raw].fetch_and(~odd_bits_pattern, order);
+      }
+      return *this;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   rotate_left(iword shift, memory_order order = memory_order::seq_cst) const
+      -> bitset_shared {
+      return bitset_shared(load(order).rotate_left(shift));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   rotate_right(iword shift, memory_order order = memory_order::seq_cst) const
+      -> bitset_shared {
+      return bitset_shared(load(order).rotate_right(shift));
+   }
+
+   // Reversal reads and publishes independent word snapshots.
+   constexpr void
+   reverse_inplace() {
+      bitset<bits_count> reversed = load();
+      reversed.reverse_inplace();
+      store(reversed);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   load(idx word, memory_order order = memory_order::seq_cst) const
+      -> storage_type {
+      assert(word < storage_array_size);
+      return m_data[word.raw].load(order);
+   }
+
+   constexpr void
+   store(
+      idx word, storage_type value, memory_order order = memory_order::seq_cst
+   ) {
+      assert(word < storage_array_size);
+      m_data[word.raw].store(sanitize(word, value), order);
+   }
+
+   constexpr auto
+   exchange(
+      idx word, storage_type value, memory_order order = memory_order::seq_cst
+   ) -> storage_type {
+      assert(word < storage_array_size);
+      return m_data[word.raw].exchange(sanitize(word, value), order);
+   }
+
+   constexpr auto
+   compare_exchange_weak(
+      idx word, storage_type& expected, storage_type desired,
+      memory_order success_order, memory_order failure_order
+   ) -> bool {
+      assert(word < storage_array_size);
+      assert_compare_exchange_orders(success_order, failure_order);
+      return m_data[word.raw].compare_exchange_weak(
+         expected, sanitize(word, desired), success_order, failure_order
+      );
+   }
+
+   constexpr auto
+   compare_exchange_weak(
+      idx word, storage_type& expected, storage_type desired,
+      memory_order order = memory_order::seq_cst
+   ) -> bool {
+      assert(word < storage_array_size);
+      assert_compare_exchange_orders(
+         order, detail::cmpexch_failure_order(order)
+      );
+      return m_data[word.raw].compare_exchange_weak(
+         expected, sanitize(word, desired), order
+      );
+   }
+
+   constexpr auto
+   compare_exchange_strong(
+      idx word, storage_type& expected, storage_type desired,
+      memory_order success_order, memory_order failure_order
+   ) -> bool {
+      assert(word < storage_array_size);
+      assert_compare_exchange_orders(success_order, failure_order);
+      return m_data[word.raw].compare_exchange_strong(
+         expected, sanitize(word, desired), success_order, failure_order
+      );
+   }
+
+   constexpr auto
+   compare_exchange_strong(
+      idx word, storage_type& expected, storage_type desired,
+      memory_order order = memory_order::seq_cst
+   ) -> bool {
+      assert(word < storage_array_size);
+      assert_compare_exchange_orders(
+         order, detail::cmpexch_failure_order(order)
+      );
+      return m_data[word.raw].compare_exchange_strong(
+         expected, sanitize(word, desired), order
+      );
+   }
+
+   constexpr auto
+   fetch_or(
+      idx word, storage_type value, memory_order order = memory_order::seq_cst
+   ) -> storage_type {
+      assert(word < storage_array_size);
+      return m_data[word.raw].fetch_or(sanitize(word, value), order);
+   }
+
+   constexpr auto
+   fetch_and(
+      idx word, storage_type value, memory_order order = memory_order::seq_cst
+   ) -> storage_type {
+      assert(word < storage_array_size);
+      return m_data[word.raw].fetch_and(sanitize(word, value), order);
+   }
+
+   constexpr auto
+   fetch_xor(
+      idx word, storage_type value, memory_order order = memory_order::seq_cst
+   ) -> storage_type {
+      assert(word < storage_array_size);
+      return m_data[word.raw].fetch_xor(sanitize(word, value), order);
+   }
+
+ private:
+   static constexpr storage_type every_other_bit_pattern =
+      storage_type::max() / storage_type(3u);
+
+   static constexpr storage_type even_bits_pattern =
+      (leading_skipped_bits % 2u == 1u) ? ~every_other_bit_pattern
+                                        : every_other_bit_pattern;
+
+   static constexpr storage_type odd_bits_pattern = ~even_bits_pattern;
+
+   [[nodiscard]]
+   static constexpr auto
+   words_from_bitset(bitset<bits_count> const& bits)
+      -> array<storage_type, storage_array_size> {
+      array<storage_type, storage_array_size> words = {};
+      for (idx index; index < bits_count; ++index) {
+         if (bits[index]) {
+            words[storage_index(index).raw] |= bit_mask(index);
+         }
+      }
+      return words;
+   }
+
+   static constexpr void
+   wait_for_bit(
+      atomic<storage_type> const& word, storage_type mask, bool old,
+      memory_order order
+   ) {
+      detail::assert_load_order(order);
+      storage_type observed = word.load(order);
+      while (((observed & mask) != storage_type(0u)) == old) {
+         word.wait(observed, order);
+         observed = word.load(order);
+      }
+   }
+
+   static constexpr void
+   notify_word(atomic<storage_type>& word) {
+      // Another packed bit must not consume the only wake.
+      word.notify_all();
+   }
+
+   static constexpr void
+   assert_compare_exchange_orders(
+      memory_order success_order, memory_order failure_order
+   ) {
+      memory_order const success = success_order & detail::mask;
+      memory_order const failure = failure_order & detail::mask;
+
+      assert(
+         success == memory_order::relaxed || success == memory_order::acquire
+         || success == memory_order::release || success == memory_order::acq_rel
+         || success == memory_order::seq_cst
+      );
+      assert(
+         failure == memory_order::relaxed
+         || (failure == memory_order::acquire && (success == memory_order::acquire || success == memory_order::acq_rel || success == memory_order::seq_cst))
+         || (failure == memory_order::seq_cst && success == memory_order::seq_cst)
+      );
+   }
+
+   static constexpr storage_type padding_mask = [] {
+      if constexpr (bits_count == 0u) {
+         return storage_type(0u);
+      } else if constexpr (leading_skipped_bits == 0u) {
+         return storage_type::max();
+      } else {
+         return ~storage_type((storage_type(1u) << leading_skipped_bits) - 1u);
+      }
+   }();
+
+   [[nodiscard]]
+   static constexpr auto
+   storage_index(idx index) -> idx {
+      return idx(
+         storage_array_size - 1u - ((index + leading_skipped_bits) / word_bits)
+      );
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   bit_mask(idx index) -> storage_type {
+      uword offset = index + leading_skipped_bits;
+      if constexpr (storage_array_size > 1u) {
+         offset.raw &= word_bits.raw - 1u;
+      }
+      return storage_type(1u) << offset;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   sanitize(idx word, storage_type value) -> storage_type {
+      if (word == storage_array_size - 1u) {
+         return value & padding_mask;
+      }
+      return value;
+   }
+
+   array<atomic<storage_type>, storage_array_size> m_data;
+};
+
+template <__SIZE_TYPE__ bits_count>
+bitset_shared(char const (&bitstring)[bits_count])
+   -> bitset_shared<idx(bits_count - 1u)>;
+
+template <idx bits_count, is_unsigned_integral... Arguments>
+   requires(detail::are_bitset_arguments_same_size<Arguments...>)
+[[nodiscard]]
+constexpr auto
+make_bitset_shared(Arguments... arguments) -> bitset_shared<bits_count> {
+   return bitset_shared<bits_count>(make_bitset<bits_count>(arguments...));
+}
+
+}  // namespace cat

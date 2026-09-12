@@ -647,9 +647,9 @@ class atomic<T> {
    }
 
    constexpr void
-   store(auto storing, memory_order operand = memory_order::seq_cst) {
+   store(T storing, memory_order operand = memory_order::seq_cst) {
       if consteval {
-         m_value = T(storing);
+         m_value = storing;
          return;
       }
 
@@ -658,7 +658,11 @@ class atomic<T> {
       assert(test_value != memory_order::acquire);
       assert(test_value != memory_order::acq_rel);
 
-      __atomic_store_n(storage_ptr(), make_raw_arithmetic(storing), operand);
+      if constexpr (is_pointer<T>) {
+         __atomic_store_n(storage_ptr(), storing, operand);
+      } else {
+         __atomic_store_n(storage_ptr(), make_raw_arithmetic(storing), operand);
+      }
    }
 
    constexpr auto
@@ -683,9 +687,13 @@ class atomic<T> {
          return observed;
       }
 
-      return T(
-         __atomic_exchange_n(storage_ptr(), make_raw_arithmetic(operand), order)
-      );
+      if constexpr (is_pointer<T>) {
+         return __atomic_exchange_n(storage_ptr(), operand, order);
+      } else {
+         return T(__atomic_exchange_n(
+            storage_ptr(), make_raw_arithmetic(operand), order
+         ));
+      }
    }
 
    constexpr auto
@@ -709,11 +717,19 @@ class atomic<T> {
       assert(test_value2 != memory_order::acq_rel);
       assert(test_value2 <= test_value1);
 
-      raw_value observed = make_raw_arithmetic(operand);
       // The `_n` builtin requires integer or pointer storage; floating-point
       // storage uses the generic `__atomic_compare_exchange` form that does
       // bytewise comparison of the value representation.
-      if constexpr (is_floating_point<T>) {
+      if constexpr (is_pointer<T>) {
+         T observed = operand;
+         bool const result = __atomic_compare_exchange_n(
+            storage_ptr(), &observed, success_value, 1, success_order,
+            failure_order
+         );
+         operand = observed;
+         return result;
+      } else if constexpr (is_floating_point<T>) {
+         raw_value observed = make_raw_arithmetic(operand);
          raw_value desired = make_raw_arithmetic(success_value);
          bool const result = __atomic_compare_exchange(
             storage_ptr(), &observed, &desired, 1, success_order, failure_order
@@ -721,6 +737,7 @@ class atomic<T> {
          operand = T(observed);
          return result;
       } else {
+         raw_value observed = make_raw_arithmetic(operand);
          raw_value const desired = make_raw_arithmetic(success_value);
          bool const result = __atomic_compare_exchange_n(
             storage_ptr(), &observed, desired, 1, success_order, failure_order
@@ -760,8 +777,16 @@ class atomic<T> {
       assert(test_value2 != memory_order::acq_rel);
       assert(test_value2 <= test_value1);
 
-      raw_value observed = make_raw_arithmetic(operand);
-      if constexpr (is_floating_point<T>) {
+      if constexpr (is_pointer<T>) {
+         T observed = operand;
+         bool const result = __atomic_compare_exchange_n(
+            storage_ptr(), &observed, success_value, 0, success_order,
+            failure_order
+         );
+         operand = observed;
+         return result;
+      } else if constexpr (is_floating_point<T>) {
+         raw_value observed = make_raw_arithmetic(operand);
          raw_value desired = make_raw_arithmetic(success_value);
          bool const result = __atomic_compare_exchange(
             storage_ptr(), &observed, &desired, 0, success_order, failure_order
@@ -769,6 +794,7 @@ class atomic<T> {
          operand = T(observed);
          return result;
       } else {
+         raw_value observed = make_raw_arithmetic(operand);
          raw_value const desired = make_raw_arithmetic(success_value);
          bool const result = __atomic_compare_exchange_n(
             storage_ptr(), &observed, desired, 0, success_order, failure_order
@@ -802,8 +828,12 @@ class atomic<T> {
       detail::assert_load_order(failure);
       assert((failure & detail::mask) <= (success & detail::mask));
 
-      raw_value const observed = __atomic_load_n(storage_ptr(), success);
-      return observed == make_raw_arithmetic(expected);
+      if constexpr (is_pointer<T>) {
+         return __atomic_load_n(storage_ptr(), success) == expected;
+      } else {
+         raw_value const observed = __atomic_load_n(storage_ptr(), success);
+         return observed == make_raw_arithmetic(expected);
+      }
    }
 
    [[nodiscard]]
@@ -830,12 +860,21 @@ class atomic<T> {
       detail::assert_load_order(failure);
       assert((failure & detail::mask) <= (success & detail::mask));
 
-      raw_value const observed = __atomic_load_n(storage_ptr(), success);
-      if (observed == make_raw_arithmetic(expected)) {
-         return true;
+      if constexpr (is_pointer<T>) {
+         T const observed = __atomic_load_n(storage_ptr(), success);
+         if (observed == expected) {
+            return true;
+         }
+         expected = observed;
+         return false;
+      } else {
+         raw_value const observed = __atomic_load_n(storage_ptr(), success);
+         if (observed == make_raw_arithmetic(expected)) {
+            return true;
+         }
+         expected = T(observed);
+         return false;
       }
-      expected = T(observed);
-      return false;
    }
 
    constexpr auto
@@ -1360,11 +1399,11 @@ class atomic<T&> {
    }
 
    constexpr void
-   store(auto storing, memory_order operand = memory_order::seq_cst)
+   store(value_type storing, memory_order operand = memory_order::seq_cst)
       requires(!is_const<T>)
    {
       if consteval {
-         *m_p_value = T(storing);
+         *m_p_value = storing;
          return;
       }
 
@@ -1373,7 +1412,11 @@ class atomic<T&> {
       assert(test_value != memory_order::acquire);
       assert(test_value != memory_order::acq_rel);
 
-      __atomic_store_n(storage_ptr(), make_raw_arithmetic(storing), operand);
+      if constexpr (is_pointer<T>) {
+         __atomic_store_n(storage_ptr(), storing, operand);
+      } else {
+         __atomic_store_n(storage_ptr(), make_raw_arithmetic(storing), operand);
+      }
    }
 
    constexpr auto
