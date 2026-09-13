@@ -30,6 +30,7 @@ inline constexpr cat::zstr_view tmp_dir = "/tmp/libcat_test_dir";
 inline constexpr cat::zstr_view tmp_dir_inside = "/tmp/libcat_test_dir/file";
 inline constexpr cat::zstr_view tmp_truncate = "/tmp/libcat_test_truncate";
 inline constexpr cat::zstr_view tmp_atfile = "/tmp/libcat_test_atfile";
+inline constexpr cat::zstr_view tmp_msync = "/tmp/libcat_test_msync";
 
 // Inline payloads used by tests that write data to `tmp_basic`.
 inline constexpr cat::zstr_view payload_basic = "libcat syscall test\n";
@@ -618,6 +619,12 @@ $test(syscall_memory) {
    // Touch the page to confirm it's mapped.
    *p_mapping = cat::byte(42u);
 
+   nix::sys_madvise(p_mapping, bytes, nix::madvise_advice::normal).verify();
+   nix::sys_madvise(p_mapping, bytes, nix::madvise_advice::random).verify();
+   nix::sys_madvise(p_mapping, bytes, nix::madvise_advice::sequential).verify();
+   nix::sys_madvise(p_mapping, bytes, nix::madvise_advice::willneed).verify();
+   nix::sys_madvise(p_mapping, bytes, nix::madvise_advice::dontneed).verify();
+
    nix::sys_mprotect(p_mapping, bytes, nix::memory_protection_flags::read)
       .verify();
 
@@ -683,6 +690,39 @@ $test(syscall_memory) {
    cat::verify(p_brk != nullptr);
 
    nix::sys_munmap(p_mapping, bytes).verify();
+
+   // `msync` flushes a file-backed mapping. Anonymous ranges also accept it.
+   auto unused_unlink_msync = nix::sys_unlink(tmp_msync);
+   nix::file_descriptor fd =
+      nix::sys_openat(
+         nix::at_fdcwd, tmp_msync, nix::open_mode::read_write,
+         nix::open_flags::create | nix::open_flags::truncate,
+         nix::file_permissions::user_read | nix::file_permissions::user_write
+      )
+         .verify();
+   nix::sys_ftruncate(fd, bytes).verify();
+   cat::byte* p_file_map =
+      nix::sys_mmap(
+         nullptr, bytes, nix::memory_protection_flags::read_write,
+         nix::memory_flags::shared, fd, 0
+      )
+         .verify();
+   p_file_map[0] = cat::byte(7u);
+   nix::sys_msync(p_file_map, bytes, nix::msync_flags::sync).verify();
+   nix::sys_msync(p_file_map, bytes, nix::msync_flags::async).verify();
+   nix::sys_msync(
+      p_file_map, bytes, nix::msync_flags::sync | nix::msync_flags::invalidate
+   )
+      .verify();
+   auto msync_both = nix::sys_msync(
+      p_file_map, bytes, nix::msync_flags::async | nix::msync_flags::sync
+   );
+   cat::verify(
+      msync_both.is_empty() && msync_both.error() == nix::linux_error::inval
+   );
+   nix::sys_munmap(p_file_map, bytes).verify();
+   nix::sys_close(fd).verify();
+   nix::sys_unlink(tmp_msync).verify();
 }
 
 // `/proc/self/statm` parsing.

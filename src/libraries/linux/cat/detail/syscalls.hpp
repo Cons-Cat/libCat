@@ -51,6 +51,42 @@ enum class [[clang::flag_enum]] mremap_flags : unsigned int {
    dont_unmap = 0b100,  // Keep the old mapping mapped (Linux 5.7+).
 };
 
+// `flags` argument to `sys_msync()`. Exactly one of `async` or `sync` must
+// be set. `invalidate` may be combined with either.
+enum class [[clang::flag_enum]] msync_flags : unsigned int {
+   async = 1,       // MS_ASYNC
+   invalidate = 2,  // MS_INVALIDATE
+   sync = 4,        // MS_SYNC
+};
+
+// `advice` argument to `sys_madvise()`. These are exclusive values, not
+// combinable flags.
+enum class [[clang::enum_extensibility(open)]] madvise_advice : unsigned int {
+   normal = 0,            // MADV_NORMAL
+   random = 1,            // MADV_RANDOM
+   sequential = 2,        // MADV_SEQUENTIAL
+   willneed = 3,          // MADV_WILLNEED
+   dontneed = 4,          // MADV_DONTNEED
+   free = 8,              // MADV_FREE
+   remove = 9,            // MADV_REMOVE
+   dontfork = 10,         // MADV_DONTFORK
+   dofork = 11,           // MADV_DOFORK
+   mergeable = 12,        // MADV_MERGEABLE
+   unmergeable = 13,      // MADV_UNMERGEABLE
+   hugepage = 14,         // MADV_HUGEPAGE
+   nohugepage = 15,       // MADV_NOHUGEPAGE
+   dontdump = 16,         // MADV_DONTDUMP
+   dodump = 17,           // MADV_DODUMP
+   wipeonfork = 18,       // MADV_WIPEONFORK
+   keeponfork = 19,       // MADV_KEEPONFORK
+   cold = 20,             // MADV_COLD
+   pageout = 21,          // MADV_PAGEOUT
+   populate_read = 22,    // MADV_POPULATE_READ
+   populate_write = 23,   // MADV_POPULATE_WRITE
+   dontneed_locked = 24,  // MADV_DONTNEED_LOCKED
+   collapse = 25,         // MADV_COLLAPSE
+};
+
 enum class [[clang::enum_extensibility(open)]] wait_id : unsigned char {
    all = 0,
    process_id = 1,
@@ -1126,6 +1162,9 @@ template <>
 struct cat::enum_flag_trait<nix::mremap_flags> : cat::true_trait {};
 
 template <>
+struct cat::enum_flag_trait<nix::msync_flags> : cat::true_trait {};
+
+template <>
 struct cat::enum_flag_trait<nix::open_flags> : cat::true_trait {};
 
 template <>
@@ -1576,6 +1615,43 @@ sys_mremap(
    void* _Nonnull p_old_address, cat::idx old_size, cat::idx new_size,
    mremap_flags flags
 ) -> scaredy_nix<cat::byte*>;
+
+// Syscall 26. Flush the page-aligned range
+// [`p_address`, `p_address + length`) to its backing file.
+auto
+sys_msync(cat::span<cat::byte const> memory, msync_flags flags)
+   -> scaredy_nix<void>;
+
+[[nodiscard, gnu::always_inline]]
+inline auto
+sys_msync(void const* _Nonnull p_address, cat::idx length, msync_flags flags)
+   -> scaredy_nix<void> {
+   return sys_msync(
+      cat::span(
+         __builtin_bit_cast(cat::byte const* _Nonnull, p_address), length
+      ),
+      flags
+   );
+}
+
+// Syscall 28. Advise the kernel about the page-aligned range
+// [`p_address`, `p_address + length`).
+auto
+sys_madvise(cat::span<cat::byte const> memory, madvise_advice advice)
+   -> scaredy_nix<void>;
+
+[[nodiscard, gnu::always_inline]]
+inline auto
+sys_madvise(
+   void const* _Nonnull p_address, cat::idx length, madvise_advice advice
+) -> scaredy_nix<void> {
+   return sys_madvise(
+      cat::span(
+         __builtin_bit_cast(cat::byte const* _Nonnull, p_address), length
+      ),
+      advice
+   );
+}
 
 // Syscall 32. Duplicate a file descriptor onto the lowest available number.
 auto

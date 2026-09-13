@@ -121,6 +121,8 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_mprotect.cpp
   ${CATLIB}/linux/implementations/sys_munmap.cpp
   ${CATLIB}/linux/implementations/sys_mremap.cpp
+  ${CATLIB}/linux/implementations/sys_msync.cpp
+  ${CATLIB}/linux/implementations/sys_madvise.cpp
   ${CATLIB}/linux/implementations/sys_brk.cpp
   ${CATLIB}/linux/implementations/sys_rt_sigaction.cpp
   ${CATLIB}/linux/implementations/sys_rt_sigprocmask.cpp
