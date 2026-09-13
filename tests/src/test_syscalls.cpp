@@ -579,7 +579,7 @@ $test(syscall_fs_at_variants) {
    nix::sys_close(fd).verify();
 
    nix::open_how how = {
-      .flags = cat::uint8{cat::to_underlying(nix::open_mode::read_write)},
+      .flags = static_cast<unsigned char>(nix::open_mode::read_write),
       .mode = 0u,
       .resolve = 0u,
    };
@@ -897,13 +897,25 @@ $test(syscall_socket_pair) {
    cat::verify(explicit_null_buffer[0] == 'h');
    sent = nix::sys_sendto(a, payload_two.data(), payload_two_length).verify();
    cat::verify(sent == payload_two_length);
-   cat::socket_unix<cat::socket_type::stream> socket_receiver(b);
+   cat::socket_handle socket_receiver = cat::socket_handle::adopt(
+      b.value == nix::invalid_file_descriptor.value
+         ? cat::native_handle()
+         : cat::detail::native_handle_access::make(
+              b.value, cat::native_handle_disposition::readable
+                          | cat::native_handle_disposition::writable
+                          | cat::native_handle_disposition::socket
+                          | cat::native_handle_disposition::kernel_handle
+           )
+   );
    char socket_buffer[8] = {};
-   got = socket_receiver
-            .recieve(socket_buffer, sizeof(socket_buffer), nullptr, nullptr)
-            .value();
+   got = socket_receiver.receive(socket_buffer).value();
    cat::verify(got == 2u);
    cat::verify(socket_buffer[0] == 'h');
+   cat::native_handle const received = socket_receiver.release();
+   cat::iword const received_value =
+      cat::detail::native_handle_access::value(received);
+   b = received_value == -1 ? nix::invalid_file_descriptor
+                            : nix::file_descriptor(cat::uint4(received_value));
 
    // `sendmsg` / `recvmsg` round trip.
    nix::io_vector iov_send[1] = {
@@ -953,7 +965,7 @@ $test(syscall_socket_options) {
 
    // `SOL_SOCKET = 1`, `SO_RCVBUF = 8`. The kernel may double the buffer
    // size on set, just verify the call paths execute.
-   cat::int4 buf_size = cat::int4(cat::page_size.raw);
+   cat::int4 buf_size = cat::int4(cat::page_size);
    nix::sys_setsockopt(sock, 1, 8, &buf_size, sizeof(buf_size)).verify();
 
    cat::int4 read_back = 0;

@@ -3,185 +3,484 @@
 #pragma once
 
 #include <cat/array>
-#include <cat/linux>
+#include <cat/bit>
+#include <cat/file_path>
+#include <cat/io>
+#include <cat/span>
 #include <cat/string>
-
-// TODO: Socket `concept`.
-// TODO: Socket types for sequenced packets.
 
 namespace cat {
 
-// Basic Socket type that any other sockets must convert into.
-struct Socket {
-   uint2 family;
-   char data[14];
+enum class [[clang::enum_extensibility(closed)]] socket_domain : unsigned char {
+   local,
+   ipv4,
+   ipv6,
 };
 
 enum class [[clang::enum_extensibility(closed)]] socket_type : unsigned char {
-   stream = 1,
-   data_gram = 2,
-   raw = 3,
-   reliable_data_gram = 4,
-   sequenced_packet = 5,
-   datagram_congestion_control = 6,
+   stream,
+   datagram,
+   raw,
+   reliable_datagram,
+   sequenced_packet,
+   datagram_congestion_control,
 };
 
-template <int2 in_family, socket_type in_type, int4 in_protocol>
-struct socket_attributes {
-   int2 const family = in_family;
-   static constexpr socket_type type = in_type;
-   static constexpr int4 protocol = in_protocol;
+enum class [[clang::flag_enum]] socket_flags : unsigned short {
+   none = 0,
+   nonblocking = 0x01,
 };
 
-template <socket_type type, int4 protocol = 0>
-struct socket_unix {
-   // TODO: Create flags that corresponds to the value of `protocol`.
+enum class [[clang::flag_enum]] socket_message_flags : unsigned short {
+   none = 0,
+   out_of_band = 0x001,
+   peek = 0x002,
+   dont_route = 0x004,
+   truncated = 0x008,
+   dont_wait = 0x010,
+   end_of_record = 0x020,
+   wait_all = 0x040,
+   no_signal = 0x080,
+};
 
-   socket_unix() = default;
+enum class [[clang::enum_extensibility(
+   closed
+)]] socket_shutdown : unsigned char {
+   read = 0,
+   write = 1,
+   read_write = 2,
+};
 
-   socket_unix(nix::file_descriptor in_descriptor) {
-      this->descriptor = in_descriptor;
+}  // namespace cat
+
+template <>
+struct cat::enum_flag_trait<cat::socket_flags> : cat::true_trait {};
+
+template <>
+struct cat::enum_flag_trait<cat::socket_message_flags> : cat::true_trait {};
+
+namespace cat {
+
+class socket_handle;
+
+class unix_socket_address {
+ public:
+   constexpr unix_socket_address() = default;
+
+   explicit unix_socket_address(file_path const& socket_path);
+
+   [[nodiscard]]
+   static auto
+   create(file_path const& socket_path)
+      -> scaredy<unix_socket_address, io_error>;
+
+   [[nodiscard]]
+   constexpr auto
+   domain() const -> socket_domain {
+      return socket_domain::local;
    }
 
-   // Get the size of this struct, not considering the `file_descriptor` that it
-   // holds.
-   auto
-   get_size() -> iword {
-      return iword(sizeof(attributes) + path_name.size());
+   [[nodiscard]]
+   constexpr auto
+   is_abstract() const -> bool {
+      return m_length > family_size && m_path[0] == '\0';
    }
 
-   // Create and return a `Socket`.
-   auto
-   create() -> maybe<void> {
-      scaredy result = nix::sys_socket(
-         this->attributes.family, static_cast<int>(type), protocol
-      );
-      if (result.has_value()) {
-         this->descriptor = result.value();
-         return monostate;
+   [[nodiscard]]
+   constexpr auto
+   path_size() const -> idx {
+      if (m_length <= family_size) {
+         return 0u;
       }
-      return nullopt;
-   }
-
-   // Connect a `Socket`.
-   auto
-   connect() -> maybe<void> {
-      scaredy result =
-         nix::sys_connect(this->descriptor, this, this->get_size());
-      if (result.has_value()) {
-         return monostate;
+      idx size = idx(m_length - family_size);
+      idx const last = idx(size - 1u);
+      if (!is_abstract() && m_path[last] == '\0') {
+         size = last;
       }
-      return nullopt;
+      return size;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   path_data() const -> char const* _Nonnull {
+      return m_path;
+   }
+
+ private:
+   friend class socket_handle;
+
+   static constexpr uint1 family_size = sizeof(uint2);
+   static constexpr uint1 max_size = sizeof(uint2) + 108u;
+
+   [[nodiscard]]
+   static constexpr auto
+   path_fits(file_path const& socket_path) -> bool {
+      if (socket_path.empty()) {
+         return true;
+      }
+      idx const capacity = socket_path.data()[0] == '\0' ? 108u : 107u;
+      return socket_path.size() <= capacity;
+   }
+
+   void
+   assign(file_path const& socket_path);
+
+   constexpr void
+   set_size(iword size) {
+      m_length = size <= max_size ? uint1(size) : max_size;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   address_size() const -> iword {
+      return m_length;
+   }
+
+   uint2 m_family = 1u;
+   char m_path[108] = {};
+   uint1 m_length = family_size;
+};
+
+class ipv4_socket_address {
+ public:
+   constexpr ipv4_socket_address()
+       : m_address(make_array_filled<4u>(uint1(0u))) {
+   }
+
+   constexpr ipv4_socket_address(array<uint1, 4u> address, uint2 port)
+       : m_port(network_order(port)), m_address(address) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   domain() const -> socket_domain {
+      return socket_domain::ipv4;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   address() const -> array<uint1, 4u> const& {
+      return m_address;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   port() const -> uint2 {
+      return network_order(m_port);
+   }
+
+ private:
+   friend class socket_handle;
+
+   [[nodiscard]]
+   static constexpr auto
+   network_order(uint2 value) -> uint2 {
+      if constexpr (is_target_little_endian) {
+         return byteswap(value);
+      }
+      return value;
+   }
+
+   uint2 m_family = 2u;
+   uint2 m_port = 0u;
+   array<uint1, 4u> m_address;
+   [[maybe_unused]]
+   char m_zero[8] = {};
+};
+
+static_assert(sizeof(ipv4_socket_address) == 16);
+
+class ipv6_socket_address {
+ public:
+   constexpr ipv6_socket_address()
+       : m_address(make_array_filled<16u>(uint1(0u))) {
+   }
+
+   constexpr ipv6_socket_address(
+      array<uint1, 16u> address, uint2 port, uint4 flow_info = 0u,
+      uint4 scope_id = 0u
+   )
+       : m_port(network_order(port)),
+         m_flow_info(network_order(flow_info)),
+         m_address(address),
+         m_scope_id(scope_id) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   domain() const -> socket_domain {
+      return socket_domain::ipv6;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   address() const -> array<uint1, 16u> const& {
+      return m_address;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   port() const -> uint2 {
+      return network_order(m_port);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   flow_info() const -> uint4 {
+      return network_order(m_flow_info);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   scope_id() const -> uint4 {
+      return m_scope_id;
+   }
+
+ private:
+   friend class socket_handle;
+
+   template <typename T>
+   [[nodiscard]]
+   static constexpr auto
+   network_order(T value) -> T {
+      if constexpr (is_target_little_endian) {
+         return byteswap(value);
+      }
+      return value;
+   }
+
+   uint2 m_family = 10u;
+   uint2 m_port = 0u;
+   uint4 m_flow_info = 0u;
+   array<uint1, 16u> m_address;
+   uint4 m_scope_id = 0u;
+};
+
+static_assert(sizeof(ipv6_socket_address) == 28);
+
+class socket_handle {
+ public:
+   constexpr socket_handle() = default;
+
+   socket_handle(socket_handle const&) = delete;
+
+   constexpr socket_handle(socket_handle&& other) : m_handle(other.release()) {
    }
 
    auto
-   send_string(
-      str_view const message,
-      nix::message_flags flags = nix::message_flags::none,
-      cat::Socket const* _Nonnull p_destination_socket = nullptr,
-      iword const addr_length = 0
-   ) -> maybe<void> {
-      scaredy result = nix::sys_sendto(
-         this->descriptor, message, flags, p_destination_socket, addr_length
-      );
-      if (result.has_value()) {
-         return monostate;
-      }
-      return nullopt;
+   operator=(socket_handle const&) -> socket_handle& = delete;
+
+   [[clang::reinitializes]]
+   auto
+   operator=(socket_handle&& other) -> socket_handle&;
+
+   ~socket_handle();
+
+   [[nodiscard]]
+   static constexpr auto
+   adopt(cat::native_handle handle) -> socket_handle {
+      return socket_handle(move(handle));
+   }
+
+   [[nodiscard]]
+   static auto
+   create(
+      socket_domain domain, socket_type type,
+      socket_flags flags = socket_flags::none, int4 protocol = 0
+   ) -> scaredy<socket_handle, io_error>;
+
+   [[nodiscard]]
+   constexpr auto
+   native_handle() const -> cat::native_handle {
+      return m_handle;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_open() const -> bool {
+      return m_handle.is_valid();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   release() -> cat::native_handle {
+      return move(m_handle);
    }
 
    auto
-   send_struct(
-      auto const& message_struct,
-      nix::message_flags flags = nix::message_flags::none,
-      cat::Socket const* _Nonnull p_destination_socket = nullptr,
-      iword const addr_length = 0
-   ) -> maybe<void> {
-      scaredy result = nix::sys_sendto(
-         this->descriptor,
-         __builtin_bit_cast(char const* _Nonnull, &message_struct),
-         sizeof(message_struct), flags, p_destination_socket, addr_length
-      );
-      if (result.has_value()) {
-         return monostate;
-      }
-      return nullopt;
-   }
+   close() -> scaredy<void, io_error>;
 
    auto
-   bind() -> maybe<void> {
-      scaredy result = nix::sys_bind(this->descriptor, this, this->get_size());
-      if (result.has_value()) {
-         return monostate;
-      }
-      return nullopt;
-   }
+   bind(unix_socket_address const& address) const -> scaredy<void, io_error>;
 
    auto
-   listen(int8 backlog) -> maybe<void> {
-      scaredy result = nix::sys_listen(this->descriptor, backlog);
-      if (result.has_value()) {
-         return monostate;
-      }
-      return nullopt;
-   }
+   bind(ipv4_socket_address const& address) const -> scaredy<void, io_error>;
 
    auto
-   accept(
-      nix::file_descriptor listening_socket, void* _Nullable p_socket = nullptr,
-      iword const* _Nullable p_addr_len = nullptr
-   ) -> maybe<void> {
-      scaredy result = nix::sys_accept(listening_socket, p_socket, p_addr_len);
-      if (result.has_value()) {
-         return monostate;
-      }
-      return nullopt;
-   }
+   bind(ipv6_socket_address const& address) const -> scaredy<void, io_error>;
 
    auto
-   accept(
-      socket_unix<type, protocol> const& listening_socket,
-      void* _Nullable p_socket = nullptr,
-      iword const* _Nullable p_addr_len = nullptr
-   ) -> maybe<void> {
-      scaredy result =
-         nix::sys_accept(listening_socket.descriptor, p_socket, p_addr_len);
-      if (result.has_value()) {
-         this->descriptor = result.value();
-         return monostate;
-      }
-      return nullopt;
-   }
-
-   // TODO: Factor into `.recieve()` and `.recieve_from()`.
-   auto
-   recieve(
-      void* _Nonnull const p_message_buffer, iword const buffer_length,
-      Socket const* _Nullable __restrict p_socket = nullptr,
-      iword const* _Nullable __restrict p_socket_size = nullptr
-   ) -> maybe<idx> {
-      nix::scaredy_nix<idx> const result = nix::sys_recv(
-         this->descriptor, p_message_buffer, cat::idx(buffer_length), p_socket,
-         p_socket_size
-      );
-      if (result.has_value()) {
-         return result.value();
-      }
-      return nullopt;
-   }
+   bind(file_path const& socket_path) const -> scaredy<void, io_error>;
 
    auto
-   close() -> maybe<void> {
-      scaredy result = nix::sys_close(this->descriptor);
-      if (result.has_value()) {
-         return monostate;
-      }
-      return nullopt;
+   connect(unix_socket_address const& address) const -> scaredy<void, io_error>;
+
+   auto
+   connect(ipv4_socket_address const& address) const -> scaredy<void, io_error>;
+
+   auto
+   connect(ipv6_socket_address const& address) const -> scaredy<void, io_error>;
+
+   auto
+   connect(file_path const& socket_path) const -> scaredy<void, io_error>;
+
+   auto
+   listen(int8 backlog) const -> scaredy<void, io_error>;
+
+   [[nodiscard]]
+   auto
+   accept4(socket_flags flags = socket_flags::none) const
+      -> scaredy<socket_handle, io_error>;
+
+   [[nodiscard]]
+   auto
+   accept4(
+      unix_socket_address& address, socket_flags flags = socket_flags::none
+   ) const -> scaredy<socket_handle, io_error>;
+
+   [[nodiscard]]
+   auto
+   accept4(
+      ipv4_socket_address& address, socket_flags flags = socket_flags::none
+   ) const -> scaredy<socket_handle, io_error>;
+
+   [[nodiscard]]
+   auto
+   accept4(
+      ipv6_socket_address& address, socket_flags flags = socket_flags::none
+   ) const -> scaredy<socket_handle, io_error>;
+
+   auto
+   shutdown(socket_shutdown how) const -> scaredy<void, io_error>;
+
+   [[nodiscard]]
+   auto
+   send(
+      str_view buffer, socket_message_flags flags = socket_message_flags::none
+   ) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   receive(
+      span<char> buffer, socket_message_flags flags = socket_message_flags::none
+   ) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   send_to(
+      str_view buffer, unix_socket_address const& address,
+      socket_message_flags flags = socket_message_flags::none
+   ) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   send_to(
+      str_view buffer, ipv4_socket_address const& address,
+      socket_message_flags flags = socket_message_flags::none
+   ) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   send_to(
+      str_view buffer, ipv6_socket_address const& address,
+      socket_message_flags flags = socket_message_flags::none
+   ) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   receive_from(
+      span<char> buffer, unix_socket_address& address,
+      socket_message_flags flags = socket_message_flags::none
+   ) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   receive_from(
+      span<char> buffer, ipv4_socket_address& address,
+      socket_message_flags flags = socket_message_flags::none
+   ) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   receive_from(
+      span<char> buffer, ipv6_socket_address& address,
+      socket_message_flags flags = socket_message_flags::none
+   ) const -> scaredy<idx, io_error>;
+
+   auto
+   getsockname(unix_socket_address& address) const -> scaredy<void, io_error>;
+
+   auto
+   getsockname(ipv4_socket_address& address) const -> scaredy<void, io_error>;
+
+   auto
+   getsockname(ipv6_socket_address& address) const -> scaredy<void, io_error>;
+
+   auto
+   getpeername(unix_socket_address& address) const -> scaredy<void, io_error>;
+
+   auto
+   getpeername(ipv4_socket_address& address) const -> scaredy<void, io_error>;
+
+   auto
+   getpeername(ipv6_socket_address& address) const -> scaredy<void, io_error>;
+
+ private:
+   explicit constexpr socket_handle(cat::native_handle handle)
+       : m_handle(move(handle)) {
    }
 
-   socket_attributes<static_cast<short>(1), type, protocol> const attributes;
-   cat::str_inplace<108> path_name;
-   nix::file_descriptor descriptor;
+   [[nodiscard]]
+   auto
+   bind_address(void const* _Nonnull p_address, iword size) const
+      -> scaredy<void, io_error>;
+
+   [[nodiscard]]
+   auto
+   connect_address(void const* _Nonnull p_address, iword size) const
+      -> scaredy<void, io_error>;
+
+   [[nodiscard]]
+   auto
+   accept_address(
+      void* _Nullable p_address, iword* _Nullable p_size, socket_flags flags
+   ) const -> scaredy<socket_handle, io_error>;
+
+   [[nodiscard]]
+   auto
+   send_to_address(
+      str_view buffer, socket_message_flags flags,
+      void const* _Nullable p_address, iword size
+   ) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   receive_from_address(
+      span<char> buffer, socket_message_flags flags, void* _Nullable p_address,
+      iword* _Nullable p_size
+   ) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   get_socket_name(void* _Nonnull p_address, iword& size) const
+      -> scaredy<void, io_error>;
+
+   [[nodiscard]]
+   auto
+   get_peer_name(void* _Nonnull p_address, iword& size) const
+      -> scaredy<void, io_error>;
+
+   cat::native_handle m_handle;
 };
 
 }  // namespace cat

@@ -1,0 +1,234 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/bit>
+#include <cat/utility>
+
+namespace cat {
+
+namespace detail {
+struct native_handle_access;
+}
+
+enum class [[clang::enum_extensibility(open)]] io_error : int {
+   unknown = 0,
+   operation_not_permitted = 1,
+   no_such_file_or_directory = 2,
+   interrupted = 4,
+   input_output = 5,
+   bad_file_descriptor = 9,
+   would_block = 11,
+   out_of_memory = 12,
+   permission_denied = 13,
+   resource_busy = 16,
+   file_exists = 17,
+   cross_device_link = 18,
+   not_a_directory = 20,
+   is_a_directory = 21,
+   invalid_argument = 22,
+   too_many_open_files = 24,
+   file_too_large = 27,
+   no_space_on_device = 28,
+   illegal_seek = 29,
+   read_only_file_system = 30,
+   broken_pipe = 32,
+   filename_too_long = 36,
+   function_not_supported = 38,
+   directory_not_empty = 39,
+   too_many_symbolic_link_levels = 40,
+   operation_not_supported = 95,
+   address_in_use = 98,
+   address_not_available = 99,
+   network_down = 100,
+   network_unreachable = 101,
+   connection_aborted = 103,
+   connection_reset = 104,
+   not_connected = 107,
+   connection_refused = 111,
+   host_unreachable = 113,
+   already_connected = 114,
+   in_progress = 115,
+};
+
+enum class [[clang::enum_extensibility(closed)]] seek_origin : unsigned char {
+   beginning,
+   current,
+   end,
+};
+
+enum class [[clang::flag_enum]] file_permissions : unsigned short {
+   none = 0,
+   other_execute = 0x001,
+   other_write = 0x002,
+   other_read = 0x004,
+   group_execute = 0x008,
+   group_write = 0x010,
+   group_read = 0x020,
+   user_execute = 0x040,
+   user_write = 0x080,
+   user_read = 0x100,
+   sticky = 0x200,
+   set_group_id = 0x400,
+   set_user_id = 0x800,
+};
+
+enum class [[clang::flag_enum]] native_handle_disposition : unsigned short {
+   none = 0,
+   readable = 0x0001,
+   writable = 0x0002,
+   append_only = 0x0004,
+   nonblocking = 0x0008,
+   seekable = 0x0010,
+   kernel_handle = 0x0020,
+   file = 0x0040,
+   socket = 0x0080,
+};
+
+}  // namespace cat
+
+template <>
+struct cat::enum_flag_trait<cat::file_permissions> : cat::true_trait {};
+
+template <>
+struct cat::enum_flag_trait<cat::native_handle_disposition> : cat::true_trait {
+};
+
+namespace cat {
+
+class native_handle {
+ public:
+   constexpr native_handle() = default;
+
+   constexpr native_handle(native_handle const&) = default;
+
+   constexpr native_handle(native_handle&& other)
+       : m_value(other.m_value), m_disposition(other.m_disposition) {
+      other.reset();
+   }
+
+   constexpr auto
+   operator=(native_handle const&) -> native_handle& = default;
+
+   constexpr auto
+   operator=(native_handle&& other) -> native_handle& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+      m_value = other.m_value;
+      m_disposition = other.m_disposition;
+      other.reset();
+      return *this;
+   }
+
+   constexpr auto
+   operator==(native_handle const&) const -> bool = default;
+
+   [[nodiscard]]
+   explicit constexpr
+   operator bool() const {
+      return is_valid();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_valid() const -> bool {
+      return m_value != -1 && m_disposition != native_handle_disposition::none;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_readable() const -> bool {
+      return has(native_handle_disposition::readable);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_writable() const -> bool {
+      return has(native_handle_disposition::writable);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_append_only() const -> bool {
+      return has(native_handle_disposition::append_only);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_nonblocking() const -> bool {
+      return has(native_handle_disposition::nonblocking);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_seekable() const -> bool {
+      return has(native_handle_disposition::seekable);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_kernel_handle() const -> bool {
+      return has(native_handle_disposition::kernel_handle);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_file() const -> bool {
+      return has(native_handle_disposition::file);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_socket() const -> bool {
+      return has(native_handle_disposition::socket);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   disposition() const -> native_handle_disposition {
+      return m_disposition;
+   }
+
+   constexpr void
+   reset() {
+      m_value = -1;
+      m_disposition = native_handle_disposition::none;
+   }
+
+ private:
+   friend struct detail::native_handle_access;
+
+   constexpr native_handle(iword value, native_handle_disposition disposition)
+       : m_value(value), m_disposition(disposition) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has(native_handle_disposition disposition) const -> bool {
+      return (m_disposition & disposition) != native_handle_disposition::none;
+   }
+
+   iword m_value = -1;
+   native_handle_disposition m_disposition = native_handle_disposition::none;
+};
+
+namespace detail {
+
+struct native_handle_access {
+   [[nodiscard]]
+   static constexpr auto
+   make(iword value, native_handle_disposition disposition) -> native_handle {
+      return native_handle(value, disposition);
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   value(native_handle const& handle) -> iword {
+      return handle.m_value;
+   }
+};
+
+}  // namespace detail
+
+}  // namespace cat

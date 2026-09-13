@@ -1625,7 +1625,7 @@ auto
 sys_sendto(
    file_descriptor socket_descriptor, cat::str_view buffer,
    message_flags flags = message_flags::none,
-   cat::Socket const* _Nullable p_destination_socket = nullptr,
+   void const* _Nullable p_destination_socket = nullptr,
    cat::iword addr_length = 0
 ) -> scaredy_nix<cat::idx>;
 
@@ -1634,7 +1634,7 @@ inline auto
 sys_sendto(
    file_descriptor socket_descriptor, char const* _Nonnull p_message_buffer,
    cat::idx buffer_length, message_flags flags = message_flags::none,
-   cat::Socket const* _Nullable p_destination_socket = nullptr,
+   void const* _Nullable p_destination_socket = nullptr,
    cat::iword addr_length = 0
 ) -> scaredy_nix<cat::idx> {
    return sys_sendto(
@@ -1649,21 +1649,47 @@ sys_sendto(
 auto
 sys_recv(
    file_descriptor socket_descriptor, cat::span<char> buffer,
-   cat::Socket const* _Nullable __restrict p_addr = nullptr,
-   cat::iword const* _Nullable __restrict p_addr_length = nullptr
+   message_flags flags = message_flags::none,
+   void* _Nullable __restrict p_addr = nullptr,
+   cat::iword* _Nullable __restrict p_addr_length = nullptr
 ) -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_recv(
+   file_descriptor socket_descriptor, cat::span<char> buffer,
+   void* _Nullable __restrict p_addr,
+   cat::iword* _Nullable __restrict p_addr_length
+) -> scaredy_nix<cat::idx> {
+   return sys_recv(
+      socket_descriptor, buffer, message_flags::none, p_addr, p_addr_length
+   );
+}
+
+[[nodiscard, gnu::always_inline]]
+inline auto
+sys_recv(
    file_descriptor socket_descriptor, void* _Nonnull p_message_buffer,
-   cat::idx buffer_length,
-   cat::Socket const* _Nullable __restrict p_addr = nullptr,
-   cat::iword const* _Nullable __restrict p_addr_length = nullptr
+   cat::idx buffer_length, message_flags flags = message_flags::none,
+   void* _Nullable __restrict p_addr = nullptr,
+   cat::iword* _Nullable __restrict p_addr_length = nullptr
 ) -> scaredy_nix<cat::idx> {
    return sys_recv(
       socket_descriptor,
       cat::span<char>(static_cast<char*>(p_message_buffer), buffer_length),
+      flags, p_addr, p_addr_length
+   );
+}
+
+[[nodiscard, gnu::always_inline]]
+inline auto
+sys_recv(
+   file_descriptor socket_descriptor, void* _Nonnull p_message_buffer,
+   cat::idx buffer_length, void* _Nullable __restrict p_addr,
+   cat::iword* _Nullable __restrict p_addr_length
+) -> scaredy_nix<cat::idx> {
+   return sys_recv(
+      socket_descriptor, p_message_buffer, buffer_length, message_flags::none,
       p_addr, p_addr_length
    );
 }
@@ -1728,14 +1754,14 @@ sys_listen(file_descriptor socket_descriptor, cat::int8 backlog)
 // output it holds the actual size.
 auto
 sys_getsockname(
-   file_descriptor socket_descriptor, cat::Socket& out_socket,
+   file_descriptor socket_descriptor, void* _Nonnull p_out_socket,
    cat::iword& inout_addr_length
 ) -> scaredy_nix<void>;
 
 // Syscall 52. Fill `out_socket` with the address of the connected peer.
 auto
 sys_getpeername(
-   file_descriptor socket_descriptor, cat::Socket& out_socket,
+   file_descriptor socket_descriptor, void* _Nonnull p_out_socket,
    cat::iword& inout_addr_length
 ) -> scaredy_nix<void>;
 
@@ -2458,8 +2484,7 @@ sys_timerfd_gettime(file_descriptor file_descriptor, itimerspec& out)
 // libC implements POSIX `accept()` via this when `accept` is unavailable.
 auto
 sys_accept4(
-   file_descriptor socket_descriptor,
-   cat::Socket* _Nullable __restrict p_socket,
+   file_descriptor socket_descriptor, void* _Nullable __restrict p_socket,
    cat::iword* _Nullable __restrict p_addr_len, accept4_flags flags
 ) -> scaredy_nix<file_descriptor>;
 
@@ -2718,7 +2743,7 @@ wait_pid(
    wait_options_flags options
 ) -> scaredy_nix<process_id>;
 
-// Create and return a `cat::SocketLocal` (also known as Unix socket).
+// Create and return a local socket file descriptor.
 auto
 create_socket_local(cat::int8 type, cat::int8 protocol)
    -> scaredy_nix<file_descriptor>;
@@ -2852,7 +2877,7 @@ struct file_status {
 
    time_spec last_access_time;
    time_spec last_modification_time;
-   time_spec creation_time;
+   time_spec status_change_time;
 
  private:
    // The kernel's trailing `long __unused[3]` (24 bytes on x86-64), not 4-byte

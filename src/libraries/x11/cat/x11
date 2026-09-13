@@ -4,6 +4,7 @@
 
 #include <cat/allocator>
 #include <cat/bit>
+#include <cat/defer>
 #include <cat/linux>
 #include <cat/meta>
 #include <cat/propagate>
@@ -423,7 +424,7 @@ struct visual_packet {
 };
 
 struct connection {
-   nix::file_descriptor socket_descriptor;
+   cat::socket_handle socket;
    x11::server_reply_header header;
    x11::connection_response_info* _Nullable p_setup;
    // TODO: A `p_vendor_name` could go here. Consider it?
@@ -435,18 +436,28 @@ struct connection {
 
 // TODO: Propagate errors instead of panicking.
 auto
-handshake(
-   cat::is_allocator auto& allocator,
-   cat::socket_unix<cat::socket_type::stream>& socket
-) -> cat::maybe<x11::connection> {
+handshake(cat::is_allocator auto& allocator, cat::socket_handle socket)
+   -> cat::maybe<x11::connection> {
    x11::connection x_connection{};
 
    // Send a request with default-initialized fields.
-   socket.send_struct(x11::connection_request_info()).or_exit();
+   x11::connection_request_info request{};
+   socket
+      .send(
+         cat::str_view(
+            __builtin_bit_cast(char const* _Nonnull, &request), sizeof(request)
+         )
+      )
+      .or_exit();
 
-   x_connection.socket_descriptor = socket.descriptor;
-   // TODO: Is the return of `.recieve` important here?
-   auto _ = socket.recieve(&x_connection.header, sizeof(x_connection.header))
+   // TODO: Is the return of `.receive` important here?
+   auto _ = socket
+               .receive(
+                  cat::span<char>(
+                     __builtin_bit_cast(char* _Nonnull, &x_connection.header),
+                     sizeof(x_connection.header)
+                  )
+               )
                .or_exit();
 
    // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
@@ -454,7 +465,7 @@ handshake(
       x_connection.header.success_code
       == x11::server_reply_header::success_code_type::failure
    ) {
-      // return Failure(x_connection.header.success_code);
+      // return Failure(x_connection.header.success_code)
       return cat::nullopt;
    }
 
@@ -462,19 +473,20 @@ handshake(
    // packets is unknown and potentially a very large amount.
    // TODO: Deallocate this somehow.
    auto memory = $prop(allocator.template alloc_multi<connection_response_info>(
-      cat::idx(x_connection.header.message_length.raw * 4u)
+      x_connection.header.message_length * 4u
    ));
 
    x_connection.p_setup = memory.data();
 
-   // TODO: Remove `raw`.
-   // TODO: Is the return of `.recieve` important here?
-   auto _ =
-      socket
-         .recieve(
-            x_connection.p_setup, x_connection.header.message_length.raw * 4
-         )
-         .or_exit();
+   // TODO: Is the return of `.receive` important here?
+   auto _ = socket
+               .receive(
+                  cat::span<char>(
+                     __builtin_bit_cast(char* _Nonnull, x_connection.p_setup),
+                     x_connection.header.message_length * 4u
+                  )
+               )
+               .or_exit();
 
    // Copy pointers to that recieved data from the allocated buffer into
    // `connection`.
@@ -493,12 +505,12 @@ handshake(
          static_cast<void*>(p_iterator)
       );
    p_iterator += sizeof(x11::pixel_map_format_packet)
-                 * x_connection.p_setup->pixel_map_formats_count.raw;
+                 * cat::idx(x_connection.p_setup->pixel_map_formats_count);
 
    x_connection.p_root_windows =
       static_cast<x11::root_window_packet*>(static_cast<void*>(p_iterator));
    p_iterator += sizeof(x11::root_window_packet)
-                 * x_connection.p_setup->root_windows_count.raw;
+                 * cat::idx(x_connection.p_setup->root_windows_count);
 
    x_connection.p_depths =
       static_cast<x11::depth_packet*>(static_cast<void*>(p_iterator));
@@ -507,7 +519,8 @@ handshake(
    x_connection.p_visuals =
       static_cast<x11::visual_packet*>(static_cast<void*>(p_iterator));
 
-   return x_connection;
+   x_connection.socket = cat::move(socket);
+   return cat::move(x_connection);
 }
 
 // TODO: Improve error handling. Union X11 errors and Linux errors.
@@ -515,12 +528,23 @@ handshake(
 auto
 initiate_connection(cat::is_allocator auto& allocator)
    -> cat::maybe<x11::connection> {
-   cat::socket_unix<cat::socket_type::stream> socket;
-   socket.path_name = x11::socket_path;
+   cat::file_path socket_path =
+      $prop(cat::make_file_path(allocator, x11::socket_path));
+   $defer {
+      socket_path.free(allocator);
+   };
 
-   $prop(socket.create());
-   $prop(socket.connect());
-   return x11::handshake(allocator, socket);
+   auto socket_result = cat::socket_handle::create(
+      cat::socket_domain::local, cat::socket_type::stream
+   );
+   if (socket_result.is_empty()) {
+      return cat::nullopt;
+   }
+   cat::socket_handle socket = cat::move(socket_result).value();
+   if (socket.connect(socket_path).is_empty()) {
+      return cat::nullopt;
+   }
+   return x11::handshake(allocator, cat::move(socket));
 }
 
 struct create_window_request_info {

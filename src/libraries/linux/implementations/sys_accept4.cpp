@@ -2,8 +2,7 @@
 
 auto
 nix::sys_accept4(
-   file_descriptor socket_descriptor,
-   cat::Socket* _Nullable __restrict p_socket,
+   file_descriptor socket_descriptor, void* _Nullable __restrict p_socket,
    cat::iword* _Nullable __restrict p_addr_len, accept4_flags flags
 ) -> nix::scaredy_nix<file_descriptor> {
    // https://filippo.io/linux-syscall-table/

@@ -1,7 +1,6 @@
 #include <cat/linux>
 
-// Make a connection over a `cat::Socket`. This returns a new socket which has
-// been connected to. This new `cat::Socket` is not in a listening state.
+// Accept a socket connection and return its file descriptor.
 auto
 nix::sys_accept(
    file_descriptor socket_descriptor, void* _Nullable __restrict p_socket,

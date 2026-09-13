@@ -2,124 +2,294 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/linux>
-#include <cat/propagate>
-
-// TODO: Get this basically working.
+#include <cat/file_path>
+#include <cat/io>
+#include <cat/span>
+#include <cat/string>
 
 namespace cat {
 
-enum class [[clang::enum_extensibility(
-   closed
-)]] file_open_mode : unsigned char {
+enum class [[clang::enum_extensibility(closed)]] file_access : unsigned char {
    read,
    write,
    append,
+   read_write,
 };
 
-enum class [[clang::enum_extensibility(
-   closed
-)]] file_seek_mode : unsigned char {
-   set,
-   current,
-   end,
+enum class [[clang::enum_extensibility(closed)]] file_creation : unsigned char {
+   open_existing,
+   create_new,
+   open_or_create,
+   truncate_existing,
 };
 
-class raw_type_file {
+enum class [[clang::flag_enum]] file_flags : unsigned int {
+   none = 0,
+   nonblocking = 0x01,
+   data_sync = 0x02,
+   direct = 0x04,
+   directory = 0x08,
+   no_follow = 0x10,
+   no_access_time = 0x20,
+   sync = 0x40,
+};
+
+}  // namespace cat
+
+template <>
+struct cat::enum_flag_trait<cat::file_flags> : cat::true_trait {};
+
+namespace cat {
+
+class file_handle {
  public:
-   constexpr raw_type_file() = default;
-   constexpr raw_type_file(raw_type_file const&) = default;
-   constexpr raw_type_file(raw_type_file&&) = default;
+   constexpr file_handle() = default;
 
-   auto
-   open(zstr_view const path, file_open_mode mode = file_open_mode::read)
-      -> scaredy<void, nix::linux_error> {
-      nix::open_mode file_mode = nix::open_mode::read_only;
-      nix::open_flags flags = nix::open_flags(0);
+   file_handle(file_handle const&) = delete;
 
-      switch (mode) {
-         case file_open_mode::read:
-            file_mode = nix::open_mode::read_only;
-            break;
-         case file_open_mode::write:
-            file_mode = nix::open_mode::write_only;
-            flags = nix::open_flags::create | nix::open_flags::truncate;
-            break;
-         case file_open_mode::append:
-            file_mode = nix::open_mode::write_only;
-            flags = nix::open_flags::create | nix::open_flags::append_file;
-            break;
-      }
-
-      if (!is_closed()) {
-         $prop(close());
-      }
-
-      // Get the status of the opened file.
-      nix::file_descriptor file_descriptor =
-         $prop(nix::sys_open(path, file_mode, flags));
-      scaredy fstat_result = nix::sys_fstat(file_descriptor);
-      if (fstat_result.is_empty()) {
-         nix::linux_error error = fstat_result.error();
-         auto _ = nix::sys_close(file_descriptor);
-         return error;
-      }
-
-      nix::file_status status = fstat_result.value();
-      m_file_descriptor = file_descriptor;
-      m_open_mode = file_mode;
-      m_file_size = status.file_size;
-      m_block_size = status.block_size;
-
-      return {};
+   constexpr file_handle(file_handle&& other) : m_handle(other.release()) {
    }
 
    auto
-   close() -> scaredy<void, nix::linux_error> {
-      if (is_closed()) {
-         return scaredy<void, nix::linux_error>{};
-      }
+   operator=(file_handle const&) -> file_handle& = delete;
 
-      $prop(nix::sys_close(m_file_descriptor));
-      m_file_descriptor = nix::invalid_file_descriptor;
-      m_open_mode = nix::open_mode::read_only;
-      m_file_size = 0u;
-      m_block_size = 0u;
-      return scaredy<void, nix::linux_error>{};
+   [[clang::reinitializes]]
+   auto
+   operator=(file_handle&& other) -> file_handle&;
+
+   ~file_handle();
+
+   [[nodiscard]]
+   static constexpr auto
+   adopt(cat::native_handle handle) -> file_handle {
+      return file_handle(move(handle));
+   }
+
+   [[nodiscard]]
+   static auto
+   open(
+      file_path const& file_path, file_access access = file_access::read,
+      file_creation creation = file_creation::open_existing,
+      file_flags flags = file_flags::none,
+      file_permissions permissions = file_permissions::user_read
+                                     | file_permissions::user_write
+                                     | file_permissions::group_read
+                                     | file_permissions::other_read
+   ) -> scaredy<file_handle, io_error>;
+
+   [[nodiscard]]
+   static auto
+   open_at(
+      file_handle const& directory, file_path const& file_path,
+      file_access access = file_access::read,
+      file_creation creation = file_creation::open_existing,
+      file_flags flags = file_flags::none,
+      file_permissions permissions = file_permissions::user_read
+                                     | file_permissions::user_write
+                                     | file_permissions::group_read
+                                     | file_permissions::other_read
+   ) -> scaredy<file_handle, io_error>;
+
+   [[nodiscard]]
+   constexpr auto
+   native_handle() const -> cat::native_handle {
+      return m_handle;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_closed() const -> bool {
-      return m_file_descriptor.value == nix::invalid_file_descriptor.value;
+   is_open() const -> bool {
+      return m_handle.is_valid();
    }
 
+   [[nodiscard]]
    constexpr auto
-   is_readable() const -> bool {
-      // `open_mode` is an enumerated value, not a bitfield, so `read_only`
-      // (zero) cannot be tested with a bitwise mask.
-      if (is_closed()) {
-         return false;
-      }
-      return m_open_mode == nix::open_mode::read_only
-             || m_open_mode == nix::open_mode::read_write;
+   release() -> cat::native_handle {
+      return move(m_handle);
    }
 
-   constexpr auto
-   is_writeable() const -> bool {
-      if (is_closed()) {
-         return false;
-      }
-      return m_open_mode == nix::open_mode::write_only
-             || m_open_mode == nix::open_mode::read_write;
-   }
+   auto
+   close() -> scaredy<void, io_error>;
+
+   [[nodiscard]]
+   auto
+   read(span<char> buffer) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   write(str_view buffer) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   read_at(span<char> buffer, iword offset) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   write_at(str_view buffer, iword offset) const -> scaredy<idx, io_error>;
+
+   [[nodiscard]]
+   auto
+   seek(iword offset, seek_origin origin) const -> scaredy<idx, io_error>;
+
+   auto
+   truncate(iword size) const -> scaredy<void, io_error>;
+
+   auto
+   sync() const -> scaredy<void, io_error>;
+
+   auto
+   data_sync() const -> scaredy<void, io_error>;
 
  private:
-   [[maybe_unused]]
-   nix::file_descriptor m_file_descriptor = nix::invalid_file_descriptor;
-   nix::open_mode m_open_mode = nix::open_mode::read_only;
-   idx m_file_size = 0u;
-   idx m_block_size = 0u;
+   explicit constexpr file_handle(cat::native_handle handle)
+       : m_handle(move(handle)) {
+   }
+
+   [[nodiscard]]
+   static auto
+   open_from(
+      cat::native_handle directory, file_path const& file_path,
+      file_access access, file_creation creation, file_flags flags,
+      file_permissions permissions
+   ) -> scaredy<file_handle, io_error>;
+
+   cat::native_handle m_handle;
+};
+
+class mapped_file_handle {
+ public:
+   constexpr mapped_file_handle() = default;
+
+   mapped_file_handle(mapped_file_handle const&) = delete;
+
+   constexpr mapped_file_handle(mapped_file_handle&& other)
+       : m_file(move(other).m_file),
+         m_p_mapping(other.m_p_mapping),
+         m_mapping_length(other.m_mapping_length) {
+      other.m_p_mapping = nullptr;
+      other.m_mapping_length = 0u;
+   }
+
+   auto
+   operator=(mapped_file_handle const&) -> mapped_file_handle& = delete;
+
+   [[clang::reinitializes]]
+   auto
+   operator=(mapped_file_handle&& other) -> mapped_file_handle&;
+
+   ~mapped_file_handle();
+
+   [[nodiscard]]
+   static auto
+   open(
+      file_path const& file_path, file_access access = file_access::read,
+      file_creation creation = file_creation::open_existing,
+      file_flags flags = file_flags::none,
+      file_permissions permissions = file_permissions::user_read
+                                     | file_permissions::user_write
+                                     | file_permissions::group_read
+                                     | file_permissions::other_read
+   ) -> scaredy<mapped_file_handle, io_error>;
+
+   [[nodiscard]]
+   static auto
+   open_at(
+      file_handle const& directory, file_path const& file_path,
+      file_access access = file_access::read,
+      file_creation creation = file_creation::open_existing,
+      file_flags flags = file_flags::none,
+      file_permissions permissions = file_permissions::user_read
+                                     | file_permissions::user_write
+                                     | file_permissions::group_read
+                                     | file_permissions::other_read
+   ) -> scaredy<mapped_file_handle, io_error>;
+
+   [[nodiscard]]
+   static auto
+   map(file_handle&& file) -> scaredy<mapped_file_handle, io_error>;
+
+   [[nodiscard]]
+   constexpr auto
+   native_handle() const -> cat::native_handle {
+      return m_file.native_handle();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_open() const -> bool {
+      return m_file.is_open();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_mapped() const -> bool {
+      return m_p_mapping != nullptr;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   address() const -> byte const* _Nullable {
+      return m_p_mapping;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   mutable_address() -> scaredy<byte* _Nullable, io_error> {
+      if (!native_handle().is_writable()) {
+         return io_error::permission_denied;
+      }
+      return m_p_mapping;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   view() const -> span<byte const> {
+      if (!is_mapped()) {
+         return nullptr;
+      }
+      return {m_p_mapping, m_mapping_length};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   mutable_view() -> scaredy<span<byte>, io_error> {
+      if (!native_handle().is_writable()) {
+         return io_error::permission_denied;
+      }
+      if (!is_mapped()) {
+         return span<byte>(nullptr);
+      }
+      return span<byte>(m_p_mapping, m_mapping_length);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   mapping_length() const -> idx {
+      return m_mapping_length;
+   }
+
+   [[nodiscard]]
+   auto
+   release() -> scaredy<cat::native_handle, io_error>;
+
+   auto
+   close() -> scaredy<void, io_error>;
+
+ private:
+   constexpr mapped_file_handle(
+      file_handle&& file, byte* _Nullable p_mapping, idx mapping_length
+   )
+       : m_file(move(file)),
+         m_p_mapping(p_mapping),
+         m_mapping_length(mapping_length) {
+   }
+
+   auto
+   unmap() -> scaredy<void, io_error>;
+
+   file_handle m_file;
+   byte* _Nullable m_p_mapping = nullptr;
+   idx m_mapping_length = 0u;
 };
 
 }  // namespace cat

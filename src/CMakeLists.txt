@@ -7,7 +7,7 @@ set(CATLIB ${CMAKE_SOURCE_DIR}/src/libraries)
 set(CAT_INCLUDE_SUBDIRS
   meta compare limits runtime new cpuid sanitizer arithmetic
   simd algorithm debug variant scaredy maybe match notype unique container
-  array span list string path tui format memory allocator utility file
+  array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
   tuple vec ring enum iterable dyn random timer chrono quantity)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
@@ -114,6 +114,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/allocator/implementations/page_allocator.cpp
   ${CATLIB}/linux/implementations/sys_stat.cpp
   ${CATLIB}/linux/implementations/sys_fstat.cpp
+  ${CATLIB}/linux/implementations/inode.cpp
   ${CATLIB}/linux/implementations/sys_lstat.cpp
   ${CATLIB}/linux/implementations/sys_lseek.cpp
   ${CATLIB}/linux/implementations/sys_mmap.cpp
@@ -271,6 +272,9 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/clonearguments.cpp
   ${CATLIB}/linux/implementations/executable_tls.cpp
   ${CATLIB}/linux/implementations/create_socket_local.cpp
+  ${CATLIB}/file/implementations/file.cpp
+  ${CATLIB}/file/implementations/mapped_file.cpp
+  ${CATLIB}/socket/implementations/socket.cpp
   ${CATLIB}/linux/implementations/is_a_tty.cpp
   ${CATLIB}/linux/implementations/tty_get_attributes.cpp
   ${CATLIB}/linux/implementations/tty_set_attributes.cpp
@@ -366,6 +370,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/debug/implementations/assert.tpp
   ${CATLIB}/debug/implementations/format_source_location.tpp
   ${CATLIB}/debug/implementations/verify.tpp
+  ${CATLIB}/io/cat/io
   ${CATLIB}/file/cat/file
   ${CATLIB}/format/cat/format
   ${CATLIB}/format/cat/detail/ftoa_dragonbox.hpp
@@ -404,6 +409,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/stepanov/cat/stepanov
   ${CATLIB}/stepanov/cat/insert_iterators
   ${CATLIB}/limits/cat/limits
+  ${CATLIB}/linux/cat/inode
   ${CATLIB}/linux/cat/io_uring
   ${CATLIB}/linux/cat/linux
   ${CATLIB}/linux/cat/raii_process

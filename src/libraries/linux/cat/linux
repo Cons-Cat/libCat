@@ -14,12 +14,6 @@
 #include <cat/time_units>
 #include <cat/utility>
 
-// Forward declarations.
-
-namespace cat {
-struct Socket;
-}
-
 namespace nix {
 inline namespace manual {
 struct process;

@@ -66,6 +66,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_view_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_vec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_file_path.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_file.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
@@ -108,6 +109,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_io_uring.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_syscalls.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_socket.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_chrono.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_clock_tsc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_random.cpp

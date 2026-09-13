@@ -8,6 +8,6 @@ main() -> int {
    cat::page_allocator allocator;
    // TODO: Work on this more.
    [[maybe_unused]]
-   x11::connection x_connection = x11::initiate_connection(allocator).or_exit(
-      "Failed to create an X context!");
+   x11::connection x_connection =
+      x11::initiate_connection(allocator).verify();
 }

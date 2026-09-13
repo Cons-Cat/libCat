@@ -209,5 +209,8 @@ nix::inode_status(file_descriptor descriptor)
 auto
 nix::inode_status(cat::native_handle handle)
    -> cat::scaredy<inode, linux_error> {
-   return inode_status(to_file_descriptor(handle));
+   cat::iword const value = cat::detail::native_handle_access::value(handle);
+   return inode_status(
+      value == -1 ? invalid_file_descriptor : file_descriptor(cat::uint4(value))
+   );
 }
