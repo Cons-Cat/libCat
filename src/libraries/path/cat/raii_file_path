@@ -34,8 +34,7 @@ template <str_vec_flags flags>
 constexpr auto
 raii_file_path_has_value(
    raii::basic_file_path<dyn_allocator, flags> const& value
-)
-   -> bool;
+) -> bool;
 
 template <str_vec_flags flags>
 constexpr auto
@@ -378,8 +377,7 @@ template <str_vec_flags flags>
 constexpr auto
 raii_file_path_has_value(
    raii::basic_file_path<dyn_allocator, flags> const& value
-)
-   -> bool {
+) -> bool {
    return maybe_file_path_has_value(value.m_path);
 }
 

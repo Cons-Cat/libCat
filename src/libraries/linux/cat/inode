@@ -1,0 +1,66 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `nix::inode` is a lightweight wrapper around the Linux inodes.
+// It is primarily inspired by LLFIO, the implementation of a C++ proposal.
+
+#include <cat/io>
+#include <cat/linux>
+
+namespace nix {
+
+enum class [[clang::flag_enum]] inode_validity : unsigned int {
+   none = 0,
+   type = 0x0001,
+   permissions = 0x0002,
+   hard_link_count = 0x0004,
+   user = 0x0008,
+   group = 0x0010,
+   access_time = 0x0020,
+   modification_time = 0x0040,
+   change_time = 0x0080,
+   number = 0x0100,
+   size = 0x0200,
+   allocated_size = 0x0400,
+   birth_time = 0x0800,
+   device = 0x1000,
+   io_block_size = 0x2000,
+};
+
+struct inode_timestamp {
+   cat::int8 seconds;
+   cat::uint4 nanoseconds;
+};
+
+struct inode {
+   inode_validity validity;
+   file_type type;
+   file_permissions permissions;
+   cat::uint4 device_major;
+   cat::uint4 device_minor;
+   cat::uint8 number;
+   user_id user;
+   group_id group;
+   cat::uint8 hard_link_count;
+   cat::idx size;
+   cat::idx allocated_size;
+   cat::idx io_block_size;
+   inode_timestamp access_time;
+   inode_timestamp modification_time;
+   inode_timestamp change_time;
+   inode_timestamp birth_time;
+};
+
+[[nodiscard]]
+auto
+inode_status(file_descriptor descriptor) -> cat::scaredy<inode, linux_error>;
+
+[[nodiscard]]
+auto
+inode_status(cat::native_handle handle) -> cat::scaredy<inode, linux_error>;
+
+}  // namespace nix
+
+template <>
+struct cat::enum_flag_trait<nix::inode_validity> : cat::true_trait {};
