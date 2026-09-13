@@ -9,7 +9,7 @@ set(CAT_INCLUDE_SUBDIRS
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
-  tuple vec ring enum iterable dyn random timer chrono quantity)
+  tuple vec ring enum iterable dyn random timer chrono quantity stacktrace)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -42,7 +42,6 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/__cxa_pure_virtual.cpp
   ${CATLIB}/runtime/implementations/setjmp.cpp
   ${CATLIB}/runtime/implementations/longjmp.cpp
-  ${CATLIB}/runtime/implementations/load_base_stack_pointer.cpp
   ${CATLIB}/runtime/implementations/__udivmodti4.cpp
   ${CATLIB}/runtime/implementations/__divti3.cpp
   ${CATLIB}/runtime/implementations/__multi3.cpp
@@ -289,6 +288,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/debug/implementations/default_assert_handler.cpp
   ${CATLIB}/debug/implementations/assert_failure.cpp
   ${CATLIB}/linux/implementations/cpu_temperature.cpp
+  ${CATLIB}/stacktrace/implementations/stacktrace.cpp
 )
 
 if(NOT CAT_NO_VDSO)
@@ -564,6 +564,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/string/cat/detail/str_span.hpp
   ${CATLIB}/string/cat/detail/str_vec.hpp
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
+  ${CATLIB}/stacktrace/cat/stacktrace
   ${CATLIB}/thread/cat/thread
   ${CATLIB}/thread/cat/raii_thread
   ${CATLIB}/timer/cat/timer

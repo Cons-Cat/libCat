@@ -117,6 +117,8 @@ endif()
 include(${CMAKE_SOURCE_DIR}/cmake/llvm_archivers.cmake)
 
 option(CAT_NO_VDSO "Disable Linux vDSO runtime hooks." OFF)
+option(CAT_NO_STACKTRACE
+  "Omit frame pointers. Disables reliable `%rbp` stack traces." OFF)
 
 # Two flag tiers: `ESSENTIAL` = usage requirements every consumer must honor (on
 # `cat` `INTERFACE`). `INTERNAL` = libCat's own warnings/diagnostics/per- config
@@ -175,11 +177,6 @@ if(CAT_BOUNDS_SAFETY)
     "SHELL:-Xclang -fexperimental-bounds-safety")
 endif()
 
-if(CAT_USE_UBSAN)
-  list(APPEND CAT_CXX_FLAGS_ESSENTIAL
-    -fomit-frame-pointer # Required for UBsan.
-  )
-endif()
 if(CAT_USE_ASAN)
   list(APPEND CAT_CXX_FLAGS_ESSENTIAL
     # `pthread_create` is intercepted so ASan learns each pthread stack. `clone`
@@ -202,6 +199,9 @@ list(
   -ffunction-sections -fdata-sections
   # TODO: Consider why no-plt instead of relro.
   -fno-plt
+
+  # Without stack traces, `%rsp` can be reallocated for lower register pressure.
+  $<IF:$<BOOL:${CAT_NO_STACKTRACE}>,-fomit-frame-pointer,-fno-omit-frame-pointer>
 )
 
 list(

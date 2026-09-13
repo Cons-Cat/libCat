@@ -19,9 +19,16 @@ _start();  // NOLINT
 void
 exit(iword exit_code = 0);
 
-[[gnu::returns_nonnull]]
-auto
-load_base_stack_pointer() -> void* _Nonnull;
+// This must be inlined to sample the stack pointer on the stack frame it is
+// called from.
+[[gnu::always_inline, gnu::returns_nonnull]]
+inline auto
+get_stack_pointer() -> void* _Nonnull {
+   void* _Nonnull p_stack;
+   asm volatile("mov %%rsp, %[rsp]"
+                : [rsp] "=r"(p_stack));
+   return p_stack;
+}
 
 // This must be inlined to align the stack pointer on the stack frame it is
 // called from.

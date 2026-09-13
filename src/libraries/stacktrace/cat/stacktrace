@@ -1,0 +1,159 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::stacktrace` captures a snapshot of the current thread's call stack by
+// walking frame pointers. It is inspired by `std::basic_stacktrace`, but its
+// allocator is always explicit. Frames are stored inside the trace until its
+// inline storage is exceeded, at which point the trace grows through its
+// allocator. There is no fixed depth limit.
+
+#include <cat/container>
+#include <cat/propagate>
+#include <cat/raii_vec>
+
+namespace cat {
+
+class stacktrace_entry {
+ public:
+   constexpr stacktrace_entry() = default;
+
+   explicit constexpr stacktrace_entry(void* _Nullable native)
+       : m_native(native) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   native() const -> void* _Nullable {
+      return m_native;
+   }
+
+   [[nodiscard]]
+   constexpr explicit
+   operator bool() const {
+      return m_native != nullptr;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(stacktrace_entry const& other) const -> bool = default;
+
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(stacktrace_entry const& other) const {
+      return uintptr<void>(m_native) <=> uintptr<void>(other.m_native);
+   }
+
+ private:
+   void* _Nullable m_native = nullptr;
+};
+
+class stacktrace
+    : public container_interface<stacktrace, stacktrace_entry>,
+      public random_access_stepanov_iterable_interface<stacktrace_entry> {
+ private:
+   // Traces this shallow are captured without allocating. Deeper traces grow
+   // through the allocator, so this is not a bound on depth.
+   static constexpr idx inline_frames = 64u;
+
+   using storage =
+      raii::small_vec<stacktrace_entry, dyn_allocator, inline_frames>;
+
+ public:
+   constexpr stacktrace() =
+      delete ("`cat::stacktrace` cannot be created without an allocator.");
+
+   constexpr explicit stacktrace(dyn_allocator allocator)
+       : m_frames(allocator) {
+   }
+
+   constexpr stacktrace(stacktrace&&) = default;
+
+   constexpr auto
+   operator=(stacktrace&&) -> stacktrace& = default;
+
+   constexpr stacktrace(stacktrace const&) =
+      delete ("Implicit copying of `cat::stacktrace` is forbidden. Call "
+              "`.clone()` or move instead!");
+
+   auto
+   operator=(stacktrace const&)
+      -> stacktrace& = delete ("Implicit copying of `cat::stacktrace` is "
+                               "forbidden. Call `.clone()` or move instead!");
+
+   // Capture the callers of this function, dropping the innermost `skip`
+   // frames and stopping after `max_depth` frames have been stored. By
+   // default the whole walkable stack is captured. This fails only when
+   // `allocator` cannot store a trace deeper than `inline_frames`.
+   [[nodiscard, gnu::noinline, clang::disable_tail_calls]]
+   static auto
+   current(dyn_allocator allocator, idx skip = 0u, idx max_depth = idx::max())
+      -> maybe<stacktrace>;
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_frames.size();
+   }
+
+   // Number of frames this trace can hold before it grows again.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_frames.capacity();
+   }
+
+   // Number of frames a trace can theoretically hold, bounded by the address
+   // space rather than any allocator's actual ceiling.
+   [[nodiscard]]
+   static constexpr auto
+   max_size() -> idx {
+      return storage::max_size();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index) const [[clang::lifetimebound]]
+   -> stacktrace_entry const& {
+      assert(index < size());
+      return m_frames[index];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() [[clang::lifetimebound]] -> stacktrace_entry* _Nullable {
+      return m_frames.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() const [[clang::lifetimebound]] -> stacktrace_entry const* _Nullable {
+      return m_frames.data();
+   }
+
+   constexpr void
+   swap(stacktrace& other) {
+      m_frames.swap(other.m_frames);
+   }
+
+   // Deep-copy this trace through its own allocator.
+   [[nodiscard]]
+   constexpr auto
+   clone() const -> maybe<stacktrace> {
+      return stacktrace($prop(m_frames.clone()));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(stacktrace const& other) const -> bool {
+      return m_frames == other.m_frames;
+   }
+
+ private:
+   constexpr explicit stacktrace(storage&& frames) : m_frames(move(frames)) {
+   }
+
+   storage m_frames;
+};
+
+}  // namespace cat
