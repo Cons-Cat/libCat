@@ -61,7 +61,8 @@ verify_bitset_shared_value_operations() {
    cat::verify(left.load() == left_value);
    cat::verify(static_cast<cat::bitset<bits_count>>(right) == right_value);
    cat::verify(left.equals(left, cat::memory_order::relaxed));
-   cat::verify(left == left);
+   cat::bitset_shared<bits_count> equal_left(left);
+   cat::verify(left == equal_left);
    cat::verify((left != right) == (left_value != right_value));
 
    cat::verify(

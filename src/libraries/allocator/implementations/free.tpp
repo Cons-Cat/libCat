@@ -26,15 +26,15 @@ allocator_interface<Derived>::free(T const& handle) {
          p_memory = __builtin_addressof(this->get(handle));
       }
 
-      poison_memory_region(p_memory, sizeof(value_type));
-
-      // if constexpr (is_destructible<value_type>) {
-      for (idx i = 0u; i < handle.size(); ++i) {
-         p_memory[i].~value_type();
+      if constexpr (is_destructible<value_type>) {
+         for (idx i = 0u; i < handle.size(); ++i) {
+            p_memory[i].~value_type();
+         }
       }
-      // }
-      this->self().deallocate(
-         static_cast<void const*>(p_memory), handle.raw_size()
+
+      // Default to ASan poisoning the memory.
+      detail::release_allocator_storage(
+         this->self(), static_cast<void const*>(p_memory), handle.raw_size()
       );
    }
    // If this is small-size optimized, storage lives in the handle and is
@@ -62,8 +62,10 @@ allocator_interface<Derived>::free(T* _Nonnull p_memory) {
          p_memory->~T();
       }
 
-      this->self().deallocate(static_cast<void const*>(p_memory), sizeof(T));
-      poison_memory_region(p_memory, sizeof(T));
+      // Default to ASan poisoning the memory.
+      detail::release_allocator_storage(
+         this->self(), static_cast<void const*>(p_memory), sizeof(T)
+      );
    }
 }
 
@@ -94,11 +96,12 @@ allocator_interface<Derived>::free_multi(span<T> handle) {
             p_memory[i].~T();
          }
       }
-      this->self().deallocate(
-         static_cast<void const*>(p_memory), handle.size() * sizeof(T)
-      );
 
-      poison_memory_region(p_memory, sizeof(T) * handle.size());
+      // Default to ASan poisoning the memory.
+      detail::release_allocator_storage(
+         this->self(), static_cast<void const*>(p_memory),
+         handle.size() * sizeof(T)
+      );
    }
 }
 
@@ -116,8 +119,6 @@ allocator_interface<Derived>::cfree(T& handle) {
          p_memory = __builtin_addressof(this->get(handle));
       }
 
-      poison_memory_region(p_memory, sizeof(value_type));
-
       for (idx i = 0u; i < handle.size(); ++i) {
          p_memory[i].~value_type();
       }
@@ -125,8 +126,10 @@ allocator_interface<Derived>::cfree(T& handle) {
          static_cast<void*>(const_cast<value_type*>(p_memory)),
          handle.raw_size()
       );
-      this->self().deallocate(
-         static_cast<void const*>(p_memory), handle.raw_size()
+
+      // Default to ASan poisoning the memory.
+      detail::release_allocator_storage(
+         this->self(), static_cast<void const*>(p_memory), handle.raw_size()
       );
    } else {
       zero_memory_explicit(
@@ -158,8 +161,11 @@ allocator_interface<Derived>::cfree(T* _Nonnull p_memory) {
          p_memory->~T();
       }
       zero_memory_explicit(p_memory, sizeof(T));
-      this->self().deallocate(static_cast<void const*>(p_memory), sizeof(T));
-      poison_memory_region(p_memory, sizeof(T));
+
+      // Default to ASan poisoning the memory.
+      detail::release_allocator_storage(
+         this->self(), static_cast<void const*>(p_memory), sizeof(T)
+      );
    }
 }
 
@@ -194,10 +200,12 @@ allocator_interface<Derived>::cfree_multi(span<T> handle) {
          }
       }
       zero_memory_explicit(p_memory, handle.size() * sizeof(T));
-      this->self().deallocate(
-         static_cast<void const*>(p_memory), handle.size() * sizeof(T)
+
+      // Default to ASan poisoning the memory.
+      detail::release_allocator_storage(
+         this->self(), static_cast<void const*>(p_memory),
+         handle.size() * sizeof(T)
       );
-      poison_memory_region(p_memory, sizeof(T) * handle.size());
    }
 }
 
@@ -243,8 +251,10 @@ allocator_interface<Derived>::free_uninit(T* _Nonnull p_storage) {
       std::allocator<T> allocator;
       allocator.deallocate(p_storage, 1u);
    } else {
-      this->self().deallocate(static_cast<void const*>(p_storage), sizeof(T));
-      poison_memory_region(p_storage, sizeof(T));
+      // Default to ASan poisoning the memory.
+      detail::release_allocator_storage(
+         this->self(), static_cast<void const*>(p_storage), sizeof(T)
+      );
    }
 }
 
@@ -257,8 +267,11 @@ allocator_interface<Derived>::cfree_uninit(T* _Nonnull p_storage) {
       allocator.deallocate(p_storage, 1u);
    } else {
       zero_memory_explicit(p_storage, sizeof(T));
-      this->self().deallocate(static_cast<void const*>(p_storage), sizeof(T));
-      poison_memory_region(p_storage, sizeof(T));
+
+      // Default to ASan poisoning the memory.
+      detail::release_allocator_storage(
+         this->self(), static_cast<void const*>(p_storage), sizeof(T)
+      );
    }
 }
 

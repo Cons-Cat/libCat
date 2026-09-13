@@ -338,7 +338,7 @@ struct dyn_deallocate {
    [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
    static void
    do_invoke(T& self, void const* _Nonnull p_storage, idx allocation_bytes) {
-      dyn_allocator_friend::deallocate(self, p_storage, allocation_bytes);
+      detail::release_allocator_storage(self, p_storage, allocation_bytes);
    }
 };
 

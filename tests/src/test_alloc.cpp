@@ -1,6 +1,8 @@
 #include <cat/bit>
+#include <cat/inplace_allocator>
 #include <cat/linear_allocator>
 #include <cat/page_allocator>
+#include <cat/sanitizer>
 
 #include "../unit_tests.hpp"
 
@@ -100,6 +102,26 @@ concept has_uninit_alloc_family =
    };
 
 static_assert(has_uninit_alloc_family<cat::page_allocator>);
+
+#if __has_feature(address_sanitizer)
+$test(allocator_default_deallocation_poisoning) {
+   auto allocator = cat::make_inplace_allocator<64u>();
+   cat::span allocation = allocator.alloc_multi_uninit<cat::byte>(32u).verify();
+   cat::byte* const p_storage = allocation.data();
+
+   allocator.free_multi_uninit(allocation);
+   cat::verify(cat::__asan_address_is_poisoned(p_storage) != 0);
+   cat::verify(cat::__asan_address_is_poisoned(p_storage + 31u) != 0);
+
+   allocation = allocator.alloc_multi_uninit<cat::byte>(32u).verify();
+   cat::verify(allocation.data() == p_storage);
+   cat::verify(cat::__asan_address_is_poisoned(p_storage) == 0);
+   cat::verify(cat::__asan_address_is_poisoned(p_storage + 31u) == 0);
+   p_storage[0] = cat::byte(1u);
+   p_storage[31u] = cat::byte(2u);
+   allocator.free_multi_uninit(allocation);
+}
+#endif
 
 consteval auto
 const_test_uninit_alloc() -> bool {

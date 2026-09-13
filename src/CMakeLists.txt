@@ -110,6 +110,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_close.cpp
   ${CATLIB}/linux/implementations/read_self_statm.cpp
   ${CATLIB}/linux/implementations/read_self_anon_smaps.cpp
+  ${CATLIB}/allocator/implementations/musl_allocator.cpp
   ${CATLIB}/allocator/implementations/page_allocator.cpp
   ${CATLIB}/linux/implementations/sys_stat.cpp
   ${CATLIB}/linux/implementations/sys_fstat.cpp
@@ -311,6 +312,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/cat/inplace_allocator
   ${CATLIB}/allocator/cat/linear_allocator
   ${CATLIB}/allocator/cat/huge_page_allocator
+  ${CATLIB}/allocator/cat/musl_allocator
   ${CATLIB}/allocator/cat/page_allocator
   ${CATLIB}/allocator/cat/pool_allocator
   ${CATLIB}/arithmetic/cat/arithmetic

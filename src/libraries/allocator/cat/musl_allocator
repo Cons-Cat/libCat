@@ -1,0 +1,314 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+#include <cat/atomic>
+#include <cat/random>
+
+// Adapted from musl mallocng. See ../MUSL-COPYRIGHT.
+
+namespace cat {
+
+namespace detail {
+struct musl_allocator_factory;
+
+template <bool is_shared>
+struct musl_context;
+
+template <bool is_shared, typename Context>
+struct musl_context_pointer;
+
+template <typename Context>
+struct musl_context_pointer<false, Context> {
+   Context* _Nullable value = nullptr;
+
+   auto
+   load(memory_order order = memory_order::relaxed) const
+      -> Context* _Nullable {
+      static_cast<void>(order);
+      return value;
+   }
+
+   void
+   store(
+      Context* _Nullable p_desired, memory_order order = memory_order::relaxed
+   ) {
+      static_cast<void>(order);
+      value = p_desired;
+   }
+
+   auto
+   exchange(
+      Context* _Nullable p_desired, memory_order order = memory_order::relaxed
+   ) -> Context* _Nullable {
+      static_cast<void>(order);
+      Context* const p_previous = value;
+      value = p_desired;
+      return p_previous;
+   }
+
+   auto
+   compare_exchange_strong(
+      Context* _Nullable& expected, Context* _Nullable p_desired,
+      memory_order success = memory_order::relaxed,
+      memory_order failure = memory_order::relaxed
+   ) -> bool {
+      static_cast<void>(success);
+      static_cast<void>(failure);
+      if (value == expected) {
+         value = p_desired;
+         return true;
+      }
+      expected = value;
+      return false;
+   }
+};
+
+template <typename Context>
+struct musl_context_pointer<true, Context> {
+   atomic<Context*> value{nullptr};
+
+   auto
+   load(memory_order order = memory_order::seq_cst) const
+      -> Context* _Nullable {
+      return value.load(order);
+   }
+
+   void
+   store(
+      Context* _Nullable p_desired, memory_order order = memory_order::seq_cst
+   ) {
+      value.store(p_desired, order);
+   }
+
+   auto
+   exchange(
+      Context* _Nullable p_desired, memory_order order = memory_order::seq_cst
+   ) -> Context* _Nullable {
+      return value.exchange(p_desired, order);
+   }
+
+   auto
+   compare_exchange_strong(
+      Context* _Nullable& expected, Context* _Nullable p_desired,
+      memory_order success = memory_order::seq_cst,
+      memory_order failure = memory_order::seq_cst
+   ) -> bool {
+      return value.compare_exchange_strong(
+         expected, p_desired, success, failure
+      );
+   }
+};
+}  // namespace detail
+
+template <bool is_shared>
+class basic_musl_allocator
+    : public allocator_interface<basic_musl_allocator<is_shared>> {
+ private:
+   using self_type = basic_musl_allocator;
+   using context = detail::musl_context<is_shared>;
+   using context_pointer = detail::musl_context_pointer<is_shared, context>;
+
+   friend allocator_interface<self_type>;
+   friend struct dyn_allocator_friend;
+   friend struct detail::musl_allocator_factory;
+   template <typename>
+   friend class allocator_ref;
+
+   context_pointer m_p_context{};
+   uint8 m_secret = 0u;
+
+   explicit basic_musl_allocator(uint8 secret) : m_secret(secret) {
+      verify(secret != 0u);
+   }
+
+   auto
+   ensure_context() -> context* _Nullable;
+
+   auto
+   allocation_bytes(ualign alignment, idx requested_bytes)
+      -> maybe_non_zero<idx>;
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   auto
+   allocate(idx requested_bytes) -> void* _Nullable;
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   auto
+   aligned_allocate(ualign alignment, idx requested_bytes) -> void* _Nullable;
+
+   auto
+   allocate_feedback(idx requested_bytes) -> maybe_sized_allocation<void*>;
+
+   auto
+   aligned_allocate_feedback(ualign alignment, idx requested_bytes)
+      -> maybe_sized_allocation<void*>;
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   auto
+   allocate_zeroed(idx requested_bytes) -> void* _Nullable;
+
+   auto
+   allocate_zeroed_feedback(idx requested_bytes)
+      -> maybe_sized_allocation<void*>;
+
+   [[gnu::malloc, clang::ownership_returns(libcat)]]
+   auto
+   aligned_allocate_zeroed(ualign alignment, idx requested_bytes)
+      -> void* _Nullable;
+
+   auto
+   aligned_allocate_zeroed_feedback(ualign alignment, idx requested_bytes)
+      -> maybe_sized_allocation<void*>;
+
+   [[clang::ownership_takes(libcat, 2)]]
+   void
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes);
+
+   [[clang::ownership_takes(libcat, 3)]]
+   friend void
+   deallocate_release_customization(
+      [[maybe_unused]] detail::allocator_release_tag release_tag,
+      self_type& allocator, void const* _Nonnull p_storage, idx allocation_bytes
+   ) {
+      allocator.deallocate(p_storage, allocation_bytes);
+   }
+
+   auto
+   grow(span<byte> allocation, idx new_bytes) -> maybe<void>;
+
+   auto
+   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>;
+
+   auto
+   reallocate_memory(
+      span<byte> allocation, idx new_bytes, uword* _Nullable p_feedback_bytes
+   ) -> void* _Nullable;
+
+   auto
+   reallocate(span<byte> allocation, idx new_bytes) -> void* _Nullable;
+
+   auto
+   reallocate_feedback(span<byte> allocation, idx new_bytes)
+      -> maybe_sized_allocation<void*>;
+
+ public:
+   static constexpr ualign min_alignment = 16u;
+   static constexpr idx min_allocation_bytes = 1u;
+
+   constexpr basic_musl_allocator() = default;
+   basic_musl_allocator(basic_musl_allocator const&) =
+      delete ("`basic_musl_allocator` owns an independent mallocng context.");
+   auto
+   operator=(basic_musl_allocator const&) -> basic_musl_allocator& = delete;
+
+   basic_musl_allocator(basic_musl_allocator&& other) noexcept;
+   auto
+   operator=(basic_musl_allocator&& other) noexcept -> basic_musl_allocator&;
+   ~basic_musl_allocator();
+
+   void
+   reset();
+
+   [[nodiscard]]
+   auto
+   bytes_used() const -> idx;
+
+   [[nodiscard]]
+   auto
+   bytes_capacity() const -> idx;
+
+   [[nodiscard]]
+   auto
+   is_equivalent(basic_musl_allocator const& other) const -> bool;
+};
+
+using musl_allocator = basic_musl_allocator<false>;
+using musl_allocator_shared = basic_musl_allocator<true>;
+
+namespace detail {
+struct musl_allocator_factory {
+   template <bool is_shared>
+   static auto
+   from_secret(uint8 secret) -> basic_musl_allocator<is_shared> {
+      return basic_musl_allocator<is_shared>(secret);
+   }
+};
+
+template <typename Generator>
+using musl_generator_result = decltype(declval<Generator&>()());
+
+template <typename Generator>
+concept is_failable_musl_generator =
+   (is_maybe<musl_generator_result<Generator>>
+    || is_scaredy<musl_generator_result<Generator>>)
+   && requires(musl_generator_result<Generator>& result) {
+         requires is_unsigned_integral<remove_cvref<decltype(result.value())>>;
+         requires sizeof(remove_cvref<decltype(result.value())>) >= 8u;
+      };
+
+template <bool is_shared, typename Generator>
+   requires is_uniform_random_bit_generator<remove_cvref<Generator>>
+auto
+make_musl_allocator_from(Generator&& generator)
+   -> basic_musl_allocator<is_shared> {
+   while (true) {
+      uint8 const secret = uniform_int_distribution<uint8>{}(generator);
+      if (secret != 0u) {
+         return musl_allocator_factory::from_secret<is_shared>(secret);
+      }
+   }
+}
+
+template <bool is_shared, typename Generator>
+   requires is_failable_musl_generator<remove_cvref<Generator>>
+auto
+make_musl_allocator_from(Generator&& generator) {
+   while (true) {
+      auto generated = generator();
+      if (generated.has_value() && generated.value() == 0u) {
+         continue;
+      }
+      return move(generated).transform([](auto secret) {
+         return musl_allocator_factory::from_secret<is_shared>(uint8(secret));
+      });
+   }
+}
+}  // namespace detail
+
+[[nodiscard]]
+inline auto
+make_musl_allocator() -> musl_allocator {
+   return {};
+}
+
+[[nodiscard]]
+inline auto
+make_musl_allocator_shared() -> musl_allocator_shared {
+   return {};
+}
+
+template <typename Generator>
+   requires(
+      is_uniform_random_bit_generator<remove_cvref<Generator>>
+      || detail::is_failable_musl_generator<remove_cvref<Generator>>
+   )
+[[nodiscard]]
+inline auto
+make_musl_allocator(Generator&& generator) {
+   return detail::make_musl_allocator_from<false>($fwd(generator));
+}
+
+template <typename Generator>
+   requires(
+      is_uniform_random_bit_generator<remove_cvref<Generator>>
+      || detail::is_failable_musl_generator<remove_cvref<Generator>>
+   )
+[[nodiscard]]
+inline auto
+make_musl_allocator_shared(Generator&& generator) {
+   return detail::make_musl_allocator_from<true>($fwd(generator));
+}
+
+}  // namespace cat

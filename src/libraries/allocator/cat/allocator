@@ -382,7 +382,7 @@ using sized_allocation = tuple<T, idx>;
 
 namespace detail {
 // Engaged whenever the allocation pointer is non-null, so any null pointer is
-// the empty niche regardless of the reported byte count. This lets fallible
+// the empty niche regardless of the reported byte count. This lets failable
 // sized allocations return `{nullptr, any_size}` without a separate null check.
 template <is_pointer T>
 constexpr auto
@@ -395,6 +395,20 @@ template <is_pointer T>
 using maybe_sized_allocation = maybe<compact<
    sized_allocation<T>, &detail::sized_allocation_engaged<T>,
    sized_allocation<T>{nullptr, 0u}>>;
+
+struct dyn_allocator_friend;
+
+namespace detail {
+struct allocator_release_tag {};
+
+// Some allocators require careful asan poisoning, which can be overridden by
+// this hook.
+template <typename Allocator>
+constexpr void
+release_allocator_storage(
+   Allocator& allocator, void const* _Nonnull p_storage, idx allocation_bytes
+);
+}
 
 template <typename Derived>
 class allocator_interface {
@@ -412,6 +426,45 @@ class allocator_interface {
  private:
    constexpr allocator_interface() = default;
    friend Derived;
+   friend struct dyn_allocator_friend;
+
+   [[clang::ownership_takes(libcat, 2)]]
+   static constexpr void
+   release_storage(
+      Derived& allocator, void const* _Nonnull p_storage, idx allocation_bytes
+   ) {
+      if constexpr (requires {
+                       deallocate_release_customization(
+                          detail::allocator_release_tag{}, allocator, p_storage,
+                          allocation_bytes
+                       );
+                    }) {
+         deallocate_release_customization(
+            detail::allocator_release_tag{}, allocator, p_storage,
+            allocation_bytes
+         );
+      } else if constexpr (requires { allocator.get_allocator(); }) {
+         auto&& underlying = allocator.get_allocator();
+         detail::release_allocator_storage(
+            underlying, p_storage, allocation_bytes
+         );
+      } else if constexpr (requires {
+                              typename Derived::basic_dyn_allocator_tag;
+                           }) {
+         allocator.deallocate(p_storage, allocation_bytes);
+      } else {
+         allocator.deallocate(p_storage, allocation_bytes);
+         poison_memory_region(p_storage, allocation_bytes);
+      }
+   }
+
+   friend constexpr void
+   allocator_release(
+      [[maybe_unused]] detail::allocator_release_tag release_tag,
+      Derived& allocator, void const* _Nonnull p_storage, idx allocation_bytes
+   ) {
+      release_storage(allocator, p_storage, allocation_bytes);
+   }
 
    static constexpr bool has_allocate =
       requires(Derived& allocator) { allocator.allocate(1u); };
@@ -6017,9 +6070,12 @@ class allocator_interface {
 
                element_type* _Nullable p_new = nullptr;
                idx settled_bytes = new_bytes;
-               if constexpr (requires(span<byte> bytes, idx count) {
-                                allocator.reallocate_feedback(bytes, count);
-                             }) {
+               if constexpr (
+                  has_feedback
+                  && requires(span<byte> bytes, idx count) {
+                        allocator.reallocate_feedback(bytes, count);
+                     }
+               ) {
                   if (
                      auto const moved = allocator.reallocate_feedback(
                         old_allocation, new_bytes
@@ -6030,13 +6086,28 @@ class allocator_interface {
                         reinterpret_cast<element_type*>(moved.value().first());
                      settled_bytes = moved.value().second();
                   }
+               } else if constexpr (requires(span<byte> bytes, idx count) {
+                                       allocator.reallocate(bytes, count);
+                                    }) {
+                  auto const moved =
+                     allocator.reallocate(old_allocation, new_bytes);
+                  if constexpr (is_pointer<remove_cvref<decltype(moved)>>) {
+                     p_new = reinterpret_cast<element_type*>(moved);
+                  } else {
+                     if (moved.has_value()) {
+                        p_new = reinterpret_cast<element_type*>(moved.value());
+                     }
+                  }
                } else {
                   if (
-                     auto const moved =
-                        allocator.reallocate(old_allocation, new_bytes);
+                     auto const moved = allocator.reallocate_feedback(
+                        old_allocation, new_bytes
+                     );
                      moved.has_value()
                   ) {
-                     p_new = reinterpret_cast<element_type*>(moved.value());
+                     p_new =
+                        reinterpret_cast<element_type*>(moved.value().first());
+                     settled_bytes = moved.value().second();
                   }
                }
 
@@ -6109,13 +6180,26 @@ class allocator_interface {
    }
 };
 
+namespace detail {
+template <typename Allocator>
+constexpr void
+// Some allocators require careful asan poisoning, which can be overridden by
+// this hook.
+release_allocator_storage(
+   Allocator& allocator, void const* _Nonnull p_storage, idx allocation_bytes
+) {
+   allocator_release(
+      allocator_release_tag{}, allocator, p_storage, allocation_bytes
+   );
+}
+}
+
 // Implementing allocator formatters here is a circular dependency. The
 // implementation can be found in
 // <cat/allocator/implementations/format_allocator.tpp>.
 template <typename T, typename CharT>
 struct formatter;
 
-struct dyn_allocator_friend;
 template <typename... Methods>
 class basic_dyn_allocator;
 

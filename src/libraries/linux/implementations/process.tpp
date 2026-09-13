@@ -148,14 +148,20 @@ manual::process::spawn(
    cat::is_allocator auto& allocator, cat::idx const stack_size,
    Callback&& callback, Args&&... arguments
 ) -> scaredy_nix<void> {
+   using arguments_type =
+      decltype(cat::tuple{$fwd(callback), $fwd(arguments)...});
+
    // Allocate a stack for this process.
    // TODO: This should union allocator and linux errors.
    // TODO: Use size feedback.
    cat::idx const thread_local_slab_bytes =
       detail::clone_thread_local_buffer_min_bytes();
+   constexpr cat::idx arguments_padding =
+      alignof(arguments_type) - 1u + sizeof(arguments_type);
    cat::span<cat::byte> memory = $prop_as(
       allocator.template align_alloc_multi<cat::byte>(
-         16u, stack_size + thread_local_slab_bytes
+         cat::max(16u, alignof(arguments_type)),
+         stack_size + thread_local_slab_bytes + arguments_padding
       ),
       linux_error::inval
    );
@@ -176,22 +182,29 @@ manual::process::spawn(
          p_stack_bottom, stack_size, reinterpret_cast<void*>(callback), nullptr
       );
    } else {
-      // If there are arguments, `callback` must be wrapped in a lambda that has
-      // tuple storage.
-      static cat::tuple tuple_args{$fwd(callback), $fwd(arguments)...};
+      cat::byte* const p_arguments_storage = cat::align_up(
+         p_stack_bottom + stack_size + thread_local_slab_bytes,
+         alignof(arguments_type)
+      );
+      auto* const p_arguments = new (p_arguments_storage)
+         arguments_type{$fwd(callback), $fwd(arguments)...};
 
       // Unary + converts this lambda to function pointer.
       static auto* _Nonnull p_entry =
          +[] [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
-          (cat::tuple<Callback, Args...>* p_arguments) {
+          (arguments_type* p_arguments) {
              auto&& [fn, ... pack_args] = *p_arguments;
              $fwd(fn)($fwd(pack_args)...);
+             p_arguments->~arguments_type();
           };
 
       result = this->spawn_impl(
          p_stack_bottom, stack_size, reinterpret_cast<void*>(p_entry),
-         reinterpret_cast<void*>(&tuple_args)
+         reinterpret_cast<void*>(p_arguments)
       );
+      if (result.is_empty()) {
+         p_arguments->~arguments_type();
+      }
    }
 
    if (result.is_empty()) {

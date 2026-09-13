@@ -71,6 +71,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_inplace_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_musl_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pool_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_parameters.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_hooks.cpp
@@ -101,6 +102,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit_span.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit_x64.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_bitset_shared.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitvec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_stringify.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
