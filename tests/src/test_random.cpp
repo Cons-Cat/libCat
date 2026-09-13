@@ -1,9 +1,9 @@
 #include <cat/bitset>
 #include <cat/bitvec>
+#include <cat/file_path>
 #include <cat/forward_list>
 #include <cat/list>
 #include <cat/page_allocator>
-#include <cat/path>
 #include <cat/raii_bitvec>
 #include <cat/raii_forward_list>
 #include <cat/raii_vec>

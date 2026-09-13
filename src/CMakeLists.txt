@@ -462,8 +462,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/memory/implementations/is_memory_overlapping.tpp
   ${CATLIB}/meta/cat/meta
   ${CATLIB}/notype/cat/notype
-  ${CATLIB}/path/cat/path
-  ${CATLIB}/path/cat/raii_path
+  ${CATLIB}/path/cat/file_path
+  ${CATLIB}/path/cat/raii_file_path
   ${CATLIB}/random/cat/random
   ${CATLIB}/random/cat/splitmix
   ${CATLIB}/random/cat/detail/bernoulli_distribution.hpp

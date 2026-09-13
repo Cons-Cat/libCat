@@ -2,31 +2,32 @@
 // vim: set ft=cpp:
 #pragma once
 
-// `cat::basic_path` is a dynamically-sized owning file path container. It is
-// inspired by `std::filesystem::path`, but a major distinction is that its only
-// encoding is 1-byte characters across all platforms. Upon construction, the
-// path is empty. Its first allocation grows to a capacity of 48 characters by
-// default.
+// `cat::basic_file_path` is a dynamically-sized owning file path container. It
+// is inspired by `std::filesystem::path`, but a major distinction is that its
+// only encoding is 1-byte characters across all platforms. Upon construction,
+// the path is empty. Its first allocation grows to a capacity of 48 characters
+// by default.
+// TODO: On Windows, it should transcode utf8 to utf16 lazily.
 //
 // As this is a `manual` namespace container, its destructor does not deallocate
 // storage. To deallocate storage, call `.free(allocator)` or
 // `.cfree(allocator)`.
 //
-// The `cat::raii::basic_path` deallocates its own memory automatically.
+// The `cat::raii::basic_file_path` deallocates its own memory automatically.
 //
 // Path joining and decomposition are lexical. They do not access the
 // filesystem, resolve symbolic links, or normalize `.` and `..` components.
-// `make_path_absolute` accesses the current working directory only when its
-// base path is relative. `make_path_unique` replaces percent signs with random
-// hexadecimal digits without creating a filesystem entry.
+// `make_file_path_absolute` accesses the current working directory only when
+// its base path is relative. `make_file_path_unique` replaces percent signs
+// with random hexadecimal digits without creating a filesystem entry.
 //
 // It is parameterized by `cat::str_vec_flags`. Path storage is always
 // null-terminated and uses the pointer-size vector layout.
 //
 // Convenience type aliases are provided:
 //
-//  `cat::path`, a default `basic_path`.
-//  `cat::path_fixed`, a fixed-size `basic_path`.
+//  `cat::file_path`, a default `basic_file_path`.
+//  `cat::file_path_fixed`, a fixed-size `basic_file_path`.
 
 #include <cat/detail/compact.hpp>
 
@@ -386,66 +387,65 @@ namespace raii {
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = detail::path_default_flags>
-class basic_path;
+class basic_file_path;
 }  // namespace raii
 
 inline namespace manual {
 
-template <str_vec_flags configuration = detail::path_default_flags>
-class basic_path;
+template <str_vec_flags flags = detail::path_default_flags>
+class basic_file_path;
 
-using path = basic_path<>;
+using file_path = basic_file_path<>;
 
 template <str_vec_flags flags = detail::path_default_flags>
-using path_fixed = basic_path<vec_flags::fixed_size | flags>;
+using file_path_fixed = basic_file_path<vec_flags::fixed_size | flags>;
 
 }  // namespace manual
 
 namespace detail {
 template <str_vec_flags flags>
 constexpr auto
-maybe_path_has_value(basic_path<flags> const& value) -> bool;
+maybe_file_path_has_value(basic_file_path<flags> const& value) -> bool;
 
 template <str_vec_flags flags>
 constexpr auto
-maybe_path_nullopt() -> basic_path<flags>;
+maybe_file_path_nullopt() -> basic_file_path<flags>;
 }  // namespace detail
 
 inline namespace manual {
 
-template <str_vec_flags configuration>
-class [[clang::preferred_name(path), gsl::Owner]]
-basic_path : public container_interface<basic_path<configuration>, char>,
-             public random_access_stepanov_iterable_interface<char> {
- public:
-   static constexpr str_vec_flags flags = str_flags::null_terminated
-                                          | vec_flags::pointer_size_layout
-                                          | vec_flags::initial_growth(48u)
-                                          | configuration;
-
+template <str_vec_flags flags>
+class [[clang::preferred_name(file_path), gsl::Owner]]
+basic_file_path : public container_interface<basic_file_path<flags>, char>,
+                  public random_access_stepanov_iterable_interface<char> {
  private:
-   static_assert(flags.str.is_null_terminated);
-   static_assert(flags.vec.uses_pointer_size_layout);
+   static constexpr str_vec_flags m_flags = str_flags::null_terminated
+                                            | vec_flags::pointer_size_layout
+                                            | vec_flags::initial_growth(48u)
+                                            | flags;
+
+   static_assert(m_flags.str.is_null_terminated);
+   static_assert(m_flags.vec.uses_pointer_size_layout);
 
    template <is_allocator Allocator, str_vec_flags other_flags>
-   friend class raii::basic_path;
+   friend class raii::basic_file_path;
 
  public:
-   constexpr basic_path() = default;
-   constexpr basic_path(basic_path&&) = default;
-   constexpr basic_path(basic_path const&) =
-      delete ("Implicit copying of `cat::basic_path` is forbidden. Call "
+   constexpr basic_file_path() = default;
+   constexpr basic_file_path(basic_file_path&&) = default;
+   constexpr basic_file_path(basic_file_path const&) =
+      delete ("Implicit copying of `cat::basic_file_path` is forbidden. Call "
               "`.clone()` or move instead.");
    constexpr auto
-   operator=(basic_path&&) -> basic_path& = default;
+   operator=(basic_file_path&&) -> basic_file_path& = default;
    auto
-   operator=(basic_path const&) -> basic_path& =
-      delete ("Implicit copying of `cat::basic_path` is forbidden. Call "
+   operator=(basic_file_path const&) -> basic_file_path& =
+      delete ("Implicit copying of `cat::basic_file_path` is forbidden. Call "
               "`.clone()` or move instead.");
 
    [[nodiscard]]
    constexpr auto
-   operator==(basic_path const& other) const -> bool {
+   operator==(basic_file_path const& other) const -> bool {
       return view() == other.view();
    }
 
@@ -520,7 +520,7 @@ basic_path : public container_interface<basic_path<configuration>, char>,
    constexpr auto
    reserve(allocator_ref<Allocator> allocator, idx minimum_capacity)
       -> maybe<void>
-      requires(!flags.vec.is_fixed_size)
+      requires(!m_flags.vec.is_fixed_size)
    {
       return m_storage.reserve(allocator, minimum_capacity);
    }
@@ -528,7 +528,7 @@ basic_path : public container_interface<basic_path<configuration>, char>,
    [[nodiscard]]
    constexpr auto
    reserve(dyn_allocator allocator, idx minimum_capacity) -> maybe<void>
-      requires(!flags.vec.is_fixed_size)
+      requires(!m_flags.vec.is_fixed_size)
    {
       return m_storage.reserve(allocator, minimum_capacity);
    }
@@ -581,19 +581,19 @@ basic_path : public container_interface<basic_path<configuration>, char>,
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<Allocator> allocator) const& -> maybe<basic_path> {
+   clone(allocator_ref<Allocator> allocator) const& -> maybe<basic_file_path> {
       auto storage = m_storage.clone(allocator);
       if (storage.is_empty()) {
          return nullopt;
       }
-      basic_path result;
+      basic_file_path result;
       result.m_storage = move(storage).value();
       return result;
    }
 
    [[nodiscard]]
    constexpr auto
-   clone(dyn_allocator allocator) const& -> maybe<basic_path> {
+   clone(dyn_allocator allocator) const& -> maybe<basic_file_path> {
       return clone<dyn_allocator>(allocator);
    }
 
@@ -776,7 +776,7 @@ basic_path : public container_interface<basic_path<configuration>, char>,
          clear();
          return m_storage.append(allocator, right);
       }
-      if (!empty() && data()[idx(size() - 1u).raw] != '/') {
+      if (!empty() && (*this)[idx(size() - 1u)] != '/') {
          $prop(m_storage.push_back(allocator, '/'));
       }
       return m_storage.append(allocator, right);
@@ -792,13 +792,14 @@ basic_path : public container_interface<basic_path<configuration>, char>,
  private:
    template <str_vec_flags other_flags>
    friend constexpr auto
-   detail::maybe_path_has_value(basic_path<other_flags> const&) -> bool;
+   detail::maybe_file_path_has_value(basic_file_path<other_flags> const&)
+      -> bool;
 
    template <str_vec_flags other_flags>
    friend constexpr auto
-   detail::maybe_path_nullopt() -> basic_path<other_flags>;
+   detail::maybe_file_path_nullopt() -> basic_file_path<other_flags>;
 
-   basic_str_vec<char, flags> m_storage;
+   basic_str_vec<char, m_flags> m_storage;
 };
 
 }  // namespace manual
@@ -806,24 +807,25 @@ basic_path : public container_interface<basic_path<configuration>, char>,
 namespace detail {
 template <str_vec_flags flags>
 constexpr auto
-maybe_path_has_value(basic_path<flags> const& value) -> bool {
+maybe_file_path_has_value(basic_file_path<flags> const& value) -> bool {
    return maybe_str_vec_has_value(value.m_storage);
 }
 
 template <str_vec_flags flags>
 constexpr auto
-maybe_path_nullopt() -> basic_path<flags> {
-   basic_path<flags> value;
-   value.m_storage = maybe_str_vec_nullopt<char, basic_path<flags>::flags>();
+maybe_file_path_nullopt() -> basic_file_path<flags> {
+   basic_file_path<flags> value;
+   value.m_storage =
+      maybe_str_vec_nullopt<char, basic_file_path<flags>::m_flags>();
    return value;
 }
 }  // namespace detail
 
 template <str_vec_flags flags>
-struct default_compact_trait<basic_path<flags>>
+struct default_compact_trait<basic_file_path<flags>>
     : identity_trait<compact<
-         basic_path<flags>, detail::maybe_path_has_value<flags>,
-         detail::maybe_path_nullopt<flags>>> {};
+         basic_file_path<flags>, detail::maybe_file_path_has_value<flags>,
+         detail::maybe_file_path_nullopt<flags>>> {};
 
 inline namespace manual {
 
@@ -832,15 +834,19 @@ template <
    is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_path(allocator_ref<Allocator> allocator, Segment const& segment)
-   -> maybe<basic_path<flags>> {
-   basic_path<flags> result;
+make_file_path(allocator_ref<Allocator> allocator, Segment const& segment)
+   -> maybe<basic_file_path<flags>> {
+   basic_file_path<flags> result;
    $defer {
       result.free(allocator);
    };
    str_view const value = detail::path_segment_view(segment);
    $prop(result.reserve(
-      allocator, max(value.size(), result.flags.vec.initial_growth_count)
+      allocator,
+      max(
+         value.size(),
+         (detail::path_default_flags | flags).vec.initial_growth_count
+      )
    ));
    $prop(result.resize(allocator, 0u));
    $prop(result.append(allocator, value));
@@ -851,34 +857,35 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_path(dyn_allocator allocator, Segment const& segment)
-   -> maybe<basic_path<flags>> {
-   return manual::make_path<dyn_allocator, flags>(allocator, segment);
+make_file_path(dyn_allocator allocator, Segment const& segment)
+   -> maybe<basic_file_path<flags>> {
+   return manual::make_file_path<dyn_allocator, flags>(allocator, segment);
 }
 
 template <
    is_allocator Allocator, str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_path(allocator_ref<Allocator> allocator) -> maybe<basic_path<flags>> {
-   return make_path<Allocator, flags>(allocator, str_view{});
+make_file_path(allocator_ref<Allocator> allocator)
+   -> maybe<basic_file_path<flags>> {
+   return make_file_path<Allocator, flags>(allocator, str_view{});
 }
 
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_path(dyn_allocator allocator) -> maybe<basic_path<flags>> {
-   return make_path<dyn_allocator, flags>(allocator);
+make_file_path(dyn_allocator allocator) -> maybe<basic_file_path<flags>> {
+   return make_file_path<dyn_allocator, flags>(allocator);
 }
 
 template <is_allocator Allocator, str_vec_flags flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_path_joined(
-   allocator_ref<Allocator> allocator, basic_path<flags> const& left,
+make_file_path_joined(
+   allocator_ref<Allocator> allocator, basic_file_path<flags> const& left,
    Segment const& right
-) -> maybe<basic_path<flags>> {
-   basic_path<flags> result = $prop(left.clone(allocator));
+) -> maybe<basic_file_path<flags>> {
+   basic_file_path<flags> result = $prop(left.clone(allocator));
    $defer {
       result.free(allocator);
    };
@@ -889,10 +896,11 @@ make_path_joined(
 template <str_vec_flags flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_path_joined(
-   dyn_allocator allocator, basic_path<flags> const& left, Segment const& right
-) -> maybe<basic_path<flags>> {
-   return make_path_joined<dyn_allocator>(allocator, left, right);
+make_file_path_joined(
+   dyn_allocator allocator, basic_file_path<flags> const& left,
+   Segment const& right
+) -> maybe<basic_file_path<flags>> {
+   return make_file_path_joined<dyn_allocator>(allocator, left, right);
 }
 
 }  // namespace manual
@@ -902,9 +910,9 @@ namespace detail {
 template <str_vec_flags flags>
 [[nodiscard]]
 auto
-path_scaredy_value(manual::basic_path<flags>&& value)
-   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   scaredy<manual::basic_path<flags>, nix::linux_error> result =
+path_scaredy_value(manual::basic_file_path<flags>&& value)
+   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   scaredy<manual::basic_file_path<flags>, nix::linux_error> result =
       nix::linux_error::nomem;
    result = move(value);
    return result;
@@ -916,13 +924,13 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_path_current(allocator_ref<Allocator> allocator)
-   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   auto made = manual::make_path<Allocator, flags>(allocator);
+make_file_path_current(allocator_ref<Allocator> allocator)
+   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   auto made = manual::make_file_path<Allocator, flags>(allocator);
    if (made.is_empty()) {
       return nix::linux_error::nomem;
    }
-   manual::basic_path<flags> result = move(made).value();
+   manual::basic_file_path<flags> result = move(made).value();
    $defer {
       result.free(allocator);
    };
@@ -930,7 +938,8 @@ make_path_current(allocator_ref<Allocator> allocator)
    while (true) {
       idx capacity = result.capacity();
       if (capacity == 0u) {
-         capacity = result.flags.vec.initial_growth_count;
+         capacity =
+            (detail::path_default_flags | flags).vec.initial_growth_count;
       }
       if (result.resize(allocator, capacity).is_empty()) {
          return nix::linux_error::nomem;
@@ -954,9 +963,9 @@ make_path_current(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
-make_path_current(dyn_allocator allocator)
-   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   return make_path_current<flags, dyn_allocator>(allocator);
+make_file_path_current(dyn_allocator allocator)
+   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   return make_file_path_current<flags, dyn_allocator>(allocator);
 }
 
 template <
@@ -964,12 +973,12 @@ template <
    is_path_segment Base, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_path_absolute(
+make_file_path_absolute(
    Segment const& segment, Base const& base, allocator_ref<Allocator> allocator
-) -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
    str_view const value = detail::path_segment_view(segment);
    if (value.size() != 0u && value[0] == '/') {
-      auto result = make_path<Allocator, flags>(allocator, value);
+      auto result = make_file_path<Allocator, flags>(allocator, value);
       if (result.is_empty()) {
          return nix::linux_error::nomem;
       }
@@ -977,20 +986,21 @@ make_path_absolute(
    }
 
    str_view const base_view = detail::path_segment_view(base);
-   auto prefix = [&]() -> scaredy<manual::basic_path<flags>, nix::linux_error> {
+   auto prefix =
+      [&]() -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
       if (base_view.size() != 0u && base_view[0] == '/') {
-         auto result = make_path<Allocator, flags>(allocator, base_view);
+         auto result = make_file_path<Allocator, flags>(allocator, base_view);
          if (result.is_empty()) {
             return nix::linux_error::nomem;
          }
          return detail::path_scaredy_value(move(result).value());
       }
 
-      auto cwd = make_path_current<flags, Allocator>(allocator);
+      auto cwd = make_file_path_current<flags, Allocator>(allocator);
       if (cwd.is_empty()) {
          return cwd.error();
       }
-      manual::basic_path<flags> result = move(cwd).value();
+      manual::basic_file_path<flags> result = move(cwd).value();
       $defer {
          result.free(allocator);
       };
@@ -1003,7 +1013,7 @@ make_path_absolute(
    if (prefix.is_empty()) {
       return prefix.error();
    }
-   manual::basic_path<flags> result = move(prefix).value();
+   manual::basic_file_path<flags> result = move(prefix).value();
    $defer {
       result.free(allocator);
    };
@@ -1018,10 +1028,10 @@ template <
    is_path_segment Base>
 [[nodiscard]]
 auto
-make_path_absolute(
+make_file_path_absolute(
    Segment const& segment, Base const& base, dyn_allocator allocator
-) -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   return make_path_absolute<flags, Segment, Base, dyn_allocator>(
+) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   return make_file_path_absolute<flags, Segment, Base, dyn_allocator>(
       segment, base, allocator
    );
 }
@@ -1031,9 +1041,10 @@ template <
    is_allocator Allocator>
 [[nodiscard]]
 auto
-make_path_absolute(Segment const& segment, allocator_ref<Allocator> allocator)
-   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   return make_path_absolute<flags, Segment, str_view, Allocator>(
+make_file_path_absolute(
+   Segment const& segment, allocator_ref<Allocator> allocator
+) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   return make_file_path_absolute<flags, Segment, str_view, Allocator>(
       segment, str_view{}, allocator
    );
 }
@@ -1042,9 +1053,11 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 auto
-make_path_absolute(Segment const& segment, dyn_allocator allocator)
-   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   return make_path_absolute<flags, Segment, dyn_allocator>(segment, allocator);
+make_file_path_absolute(Segment const& segment, dyn_allocator allocator)
+   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   return make_file_path_absolute<flags, Segment, dyn_allocator>(
+      segment, allocator
+   );
 }
 
 template <
@@ -1052,13 +1065,13 @@ template <
    is_path_segment Model>
 [[nodiscard]]
 auto
-make_path_unique(allocator_ref<Allocator> allocator, Model const& model)
-   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   auto made = make_path<Allocator, flags>(allocator, model);
+make_file_path_unique(allocator_ref<Allocator> allocator, Model const& model)
+   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   auto made = make_file_path<Allocator, flags>(allocator, model);
    if (made.is_empty()) {
       return nix::linux_error::nomem;
    }
-   manual::basic_path<flags> result = move(made).value();
+   manual::basic_file_path<flags> result = move(made).value();
    $defer {
       result.free(allocator);
    };
@@ -1089,7 +1102,7 @@ make_path_unique(allocator_ref<Allocator> allocator, Model const& model)
             return generated.error();
          }
       }
-      result.data()[index.raw] = hex[random & 0x0fu];
+      result[index] = hex[random & 0x0fu];
       search_start = index + 1u;
    }
    return detail::path_scaredy_value(move(result));
@@ -1099,26 +1112,26 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_path_unique(allocator_ref<Allocator> allocator)
-   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   return make_path_unique<flags>(allocator, "%%%%-%%%%-%%%%-%%%%");
+make_file_path_unique(allocator_ref<Allocator> allocator)
+   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   return make_file_path_unique<flags>(allocator, "%%%%-%%%%-%%%%-%%%%");
 }
 
 template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Model>
 [[nodiscard]]
 auto
-make_path_unique(dyn_allocator allocator, Model const& model)
-   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   return make_path_unique<flags, dyn_allocator>(allocator, model);
+make_file_path_unique(dyn_allocator allocator, Model const& model)
+   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   return make_file_path_unique<flags, dyn_allocator>(allocator, model);
 }
 
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
-make_path_unique(dyn_allocator allocator)
-   -> scaredy<manual::basic_path<flags>, nix::linux_error> {
-   return make_path_unique<flags, dyn_allocator>(allocator);
+make_file_path_unique(dyn_allocator allocator)
+   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+   return make_file_path_unique<flags, dyn_allocator>(allocator);
 }
 
 }  // namespace cat
@@ -1170,9 +1183,9 @@ struct path_formatter : formatter_base<CharT> {
 
 template <str_vec_flags flags, typename CharT>
    requires(is_same<CharT, char>)
-struct formatter<manual::basic_path<flags>, CharT>
+struct formatter<manual::basic_file_path<flags>, CharT>
     : detail::path_formatter<CharT> {};
 
 }  // namespace cat
 
-#include <cat/raii_path>
+#include <cat/raii_file_path>

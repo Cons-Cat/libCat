@@ -1,5 +1,5 @@
+#include <cat/file_path>
 #include <cat/page_allocator>
-#include <cat/path>
 
 #include "../unit_tests.hpp"
 
@@ -13,8 +13,8 @@ static_assert(cat::detail::path_find_last_equal("a/b/c", '/').value() == 3u);
 static_assert(
    cat::detail::path_find_last_not_equal("abc///", '/').value() == 2u
 );
-static_assert(cat::is_iterable<cat::path>);
-static_assert(cat::is_stepanov_iterable<cat::path>);
+static_assert(cat::is_iterable<cat::file_path>);
+static_assert(cat::is_stepanov_iterable<cat::file_path>);
 static_assert(cat::is_iterable<cat::path_components>);
 static_assert(cat::is_stepanov_iterable<cat::path_components>);
 static_assert(
@@ -24,16 +24,16 @@ static_assert(
 template <cat::is_path_segment Segment>
 void
 verify_path_string_type(Segment const& segment) {
-   auto manual = cat::make_path(pager, segment).verify();
+   auto manual = cat::make_file_path(pager, segment).verify();
    $defer {
       manual.free(pager);
    };
    cat::verify(manual == "leaf");
 
-   auto managed = cat::raii::make_path(pager, segment).verify();
+   auto managed = cat::raii::make_file_path(pager, segment).verify();
    cat::verify(managed == "leaf");
 
-   auto base = cat::raii::make_path(pager, "root").verify();
+   auto base = cat::raii::make_file_path(pager, "root").verify();
    auto joined = (base / segment).verify();
    cat::verify(joined == "root/leaf");
 }
@@ -41,39 +41,33 @@ verify_path_string_type(Segment const& segment) {
 }  // namespace
 
 $test(path_maybe_niche) {
-   static_assert(sizeof(cat::maybe<cat::path>) == sizeof(cat::path));
+   static_assert(sizeof(cat::maybe<cat::file_path>) == sizeof(cat::file_path));
    static_assert(
-      sizeof(cat::maybe<cat::raii::path<>>) == sizeof(cat::raii::path<>)
+      sizeof(cat::maybe<cat::raii::file_path<>>)
+      == sizeof(cat::raii::file_path<>)
    );
 
-   cat::maybe<cat::path> manual_empty;
-   cat::maybe<cat::raii::path<>> raii_empty;
+   cat::maybe<cat::file_path> manual_empty;
+   cat::maybe<cat::raii::file_path<>> raii_empty;
    cat::verify(manual_empty.is_empty());
    cat::verify(raii_empty.is_empty());
 
-   auto manual = cat::make_path(pager, "manual");
+   auto manual = cat::make_file_path(pager, "manual");
    $defer {
       manual.value().free(pager);
    };
    cat::verify(manual.has_value());
    cat::verify(manual.value() == "manual");
 
-   auto managed = cat::raii::make_path(pager, "managed");
+   auto managed = cat::raii::make_file_path(pager, "managed");
    cat::verify(managed.has_value());
    cat::verify(managed.value() == "managed");
 }
 
 $test(path_flags_and_factories) {
-   static_assert(cat::path::flags.str.is_null_terminated);
-   static_assert(cat::path::flags.vec.uses_pointer_size_layout);
-   static_assert(cat::path::flags.vec.initial_growth_count == 48u);
-   static_assert(cat::path_fixed<>::flags.vec.is_fixed_size);
    constexpr auto custom_growth = cat::vec_flags::initial_growth(64u);
-   static_assert(
-      cat::basic_path<custom_growth>::flags.vec.initial_growth_count == 64u
-   );
 
-   auto manual = cat::make_path(pager, "alpha").verify();
+   auto manual = cat::make_file_path(pager, "alpha").verify();
    cat::verify(manual == "alpha");
    cat::verify(manual.capacity() == 48u);
    cat::verify(manual.data()[manual.size()] == '\0');
@@ -82,19 +76,25 @@ $test(path_flags_and_factories) {
 
    char text[] = "beta";
    char const* p_text = text;
-   auto from_pointer = cat::make_path(pager, p_text).verify();
+   auto from_pointer = cat::make_file_path(pager, p_text).verify();
    cat::verify(from_pointer == "beta");
 
-   auto managed = cat::raii::make_path(pager, cat::str_view("gamma")).verify();
+   auto managed =
+      cat::raii::make_file_path(pager, cat::str_view("gamma")).verify();
    cat::verify(managed == "gamma");
    cat::verify(managed.data()[managed.size()] == '\0');
-   cat::path released = managed.release();
+   cat::file_path released = managed.release();
+   auto custom =
+      cat::make_file_path<cat::page_allocator, custom_growth>(pager, "delta")
+         .verify();
    $defer {
+      custom.free(pager);
       released.free(pager);
       from_pointer.free(pager);
       manual.free(pager);
    };
    cat::verify(released == "gamma");
+   cat::verify(custom.capacity() == 64u);
 }
 
 $test(path_string_type_interop) {
@@ -137,7 +137,7 @@ $test(path_string_type_interop) {
 }
 
 $test(path_join) {
-   auto manual = cat::make_path(pager, "alpha").verify();
+   auto manual = cat::make_file_path(pager, "alpha").verify();
    manual.append(pager, "beta").verify();
    cat::verify(manual == "alpha/beta");
    manual.append(pager, "").verify();
@@ -145,14 +145,14 @@ $test(path_join) {
    manual.append(pager, "/rooted").verify();
    cat::verify(manual == "/rooted");
 
-   auto joined = cat::make_path_joined(pager, manual, "leaf").verify();
+   auto joined = cat::make_file_path_joined(pager, manual, "leaf").verify();
    $defer {
       joined.free(pager);
       manual.free(pager);
    };
    cat::verify(joined == "/rooted/leaf");
 
-   auto managed = cat::raii::make_path(pager, "one").verify();
+   auto managed = cat::raii::make_file_path(pager, "one").verify();
    auto managed_joined = (managed / "two").verify();
    cat::verify(managed == "one");
    cat::verify(managed_joined == "one/two");
@@ -162,7 +162,7 @@ $test(path_join) {
 
 $test(path_decomposition_and_components) {
    auto value =
-      cat::raii::make_path(pager, "/alpha//beta/file.tar.gz").verify();
+      cat::raii::make_file_path(pager, "/alpha//beta/file.tar.gz").verify();
    cat::verify(value.is_absolute());
    cat::verify(!value.is_relative());
    cat::verify(value.root_name().size() == 0u);
@@ -209,7 +209,7 @@ $test(path_decomposition_and_components) {
    });
    cat::verify(index == 3u);
 
-   auto dots = cat::raii::make_path(pager, "a/./../.profile").verify();
+   auto dots = cat::raii::make_file_path(pager, "a/./../.profile").verify();
    cat::str_view dot_expected[] = {"a", ".", "..", ".profile"};
    index = 0u;
    for (cat::str_view component : dots.components()) {
@@ -246,7 +246,7 @@ $test(path_simd_scan_boundaries) {
    }
 
    auto value =
-      cat::raii::make_path(pager, cat::str_view(text, length)).verify();
+      cat::raii::make_file_path(pager, cat::str_view(text, length)).verify();
    cat::verify(value.size() == 203u);
    cat::verify(value.relative_path().size() == 170u);
    cat::verify(value.parent_path().size() == 98u);
@@ -271,7 +271,7 @@ $test(path_simd_scan_boundaries) {
       character = '/';
    }
    auto root =
-      cat::raii::make_path(pager, cat::str_view(slashes, 65u)).verify();
+      cat::raii::make_file_path(pager, cat::str_view(slashes, 65u)).verify();
    cat::verify(root.relative_path().size() == 0u);
    cat::verify(root.parent_path() == "/");
    cat::verify(root.filename().size() == 0u);
@@ -286,13 +286,13 @@ $test(path_simd_scan_boundaries) {
       trailing[index] = '/';
    }
    auto with_trailing =
-      cat::raii::make_path(pager, cat::str_view(trailing, 106u)).verify();
+      cat::raii::make_file_path(pager, cat::str_view(trailing, 106u)).verify();
    cat::verify(with_trailing.parent_path() == "/");
    cat::verify(with_trailing.filename().size() == 0u);
 }
 
 $test(path_formatter) {
-   auto manual = cat::make_path(pager, "alpha/beta").verify();
+   auto manual = cat::make_file_path(pager, "alpha/beta").verify();
    $defer {
       manual.free(pager);
    };
@@ -301,35 +301,36 @@ $test(path_formatter) {
    cat::verify(cat::fmt(pager, "{:?}", manual).verify() == R"("alpha/beta")");
    cat::verify(cat::fmt(pager, "{:?g}", manual).verify() == R"("alpha/beta")");
 
-   auto managed = cat::raii::make_path(pager, "a\nb").verify();
+   auto managed = cat::raii::make_file_path(pager, "a\nb").verify();
    cat::verify(cat::fmt(pager, "{}", managed).verify() == "a\nb");
    cat::verify(cat::fmt(pager, "{:?}", managed).verify() == R"("a\nb")");
 }
 
 $test(path_current_absolute_and_unique) {
-   auto cwd = cat::make_path_current(pager).verify();
+   auto cwd = cat::make_file_path_current(pager).verify();
    cat::verify(cwd.is_absolute());
    cat::verify(!cwd.empty());
    cat::verify(cwd.data()[cwd.size()] == '\0');
 
    auto explicit_base =
-      cat::make_path_absolute("child", "/tmp/base", pager).verify();
+      cat::make_file_path_absolute("child", "/tmp/base", pager).verify();
    cat::verify(explicit_base == "/tmp/base/child");
 
    auto relative_base =
-      cat::make_path_absolute("child", "base", pager).verify();
-   auto expected = cat::make_path_joined(pager, cwd, "base").verify();
+      cat::make_file_path_absolute("child", "base", pager).verify();
+   auto expected = cat::make_file_path_joined(pager, cwd, "base").verify();
    expected.append(pager, "child").verify();
    cat::verify(relative_base == expected);
 
    auto absolute_input =
-      cat::make_path_absolute("/already/absolute", "/ignored", pager).verify();
+      cat::make_file_path_absolute("/already/absolute", "/ignored", pager)
+         .verify();
    cat::verify(absolute_input == "/already/absolute");
 
-   auto unchanged = cat::make_path_unique(pager, "fixed-name").verify();
+   auto unchanged = cat::make_file_path_unique(pager, "fixed-name").verify();
    cat::verify(unchanged == "fixed-name");
 
-   auto unique = cat::make_path_unique(pager, "tmp-%%%%-%%").verify();
+   auto unique = cat::make_file_path_unique(pager, "tmp-%%%%-%%").verify();
    $defer {
       unique.free(pager);
       unchanged.free(pager);
@@ -361,7 +362,7 @@ $test(path_current_absolute_and_unique) {
       model[position] = '%';
    }
    auto boundary_unique =
-      cat::make_path_unique(pager, cat::str_view(model, 66u)).verify();
+      cat::make_file_path_unique(pager, cat::str_view(model, 66u)).verify();
    $defer {
       boundary_unique.free(pager);
    };
