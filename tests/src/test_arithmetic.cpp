@@ -23,6 +23,32 @@ concept has_wrap_accessor = requires(T value) { value.wrap(); };
 template <typename T>
 concept has_sat_accessor = requires(T value) { value.sat(); };
 
+template <typename T>
+concept has_prefix_increment = requires(T value) { ++value; };
+
+template <typename T>
+concept has_postfix_increment = requires(T value) { value++; };
+
+template <typename T>
+concept has_prefix_decrement = requires(T value) { --value; };
+
+template <typename T>
+concept has_postfix_decrement = requires(T value) { value--; };
+
+// Built-in prefix yields an l-value, so it chains. Built-in postfix yields a
+// prvalue, so it does not.
+template <typename T>
+concept has_chained_prefix_increment = requires(T value) { ++ ++value; };
+
+template <typename T>
+concept has_chained_prefix_decrement = requires(T value) { -- --value; };
+
+template <typename T>
+concept has_chained_postfix_increment = requires(T value) { value++ ++; };
+
+template <typename T>
+concept has_chained_postfix_decrement = requires(T value) { value-- --; };
+
 using namespace cat::literals;
 using namespace cat::arithmetic;
 
@@ -3124,9 +3150,146 @@ $test(arithmetic_uintptr_increment_and_decrement) {
    // Test `intptr` increment and decrement operators.
    uintptr<void> uincptr{0xb07a70e5};
    cat::verify(++uincptr == 0xb07a70e6);
-   cat::verify(uincptr++ == 0xb07a70e7);
+   cat::verify(uincptr++ == 0xb07a70e6);
    cat::verify(--uincptr == 0xb07a70e6);
-   cat::verify(uincptr-- == 0xb07a70e5);
+   cat::verify(uincptr-- == 0xb07a70e6);
+}
+
+// The increment and decrement operators mirror the built-in integer operators,
+// so every step is checked against the same operation on a raw integer.
+$test(arithmetic_idx_increment_matches_raw_unsigned) {
+   static_assert(has_prefix_increment<idx> == has_prefix_increment<unsigned>);
+   static_assert(has_postfix_increment<idx> == has_postfix_increment<unsigned>);
+   static_assert(
+      has_chained_prefix_increment<idx>
+      == has_chained_prefix_increment<unsigned>
+   );
+   static_assert(
+      has_chained_postfix_increment<idx>
+      == has_chained_postfix_increment<unsigned>
+   );
+
+   // `idx` forbids decrementing because it could underflow.
+   static_assert(!has_prefix_decrement<idx>);
+   static_assert(!has_postfix_decrement<idx>);
+
+   unsigned raw = 3u;
+   idx index = 3u;
+
+   unsigned const raw_old = raw++;
+   idx const old = index++;
+   cat::verify(old == raw_old);
+   cat::verify(index == raw);
+
+   unsigned const raw_new = ++raw;
+   idx const next = ++index;
+   cat::verify(next == raw_new);
+   cat::verify(index == raw);
+
+   ++ ++raw;
+   ++ ++index;
+   cat::verify(index == raw);
+
+   // Subscripting with postfix reads the old element.
+   char const buffer[4] = {10, 20, 30, 40};
+   raw = 1u;
+   index = 1u;
+   cat::verify(buffer[index++] == buffer[raw++]);
+   cat::verify(index == raw);
+}
+
+$test(arithmetic_int4_increment_matches_raw_int) {
+   static_assert(has_prefix_increment<int4> == has_prefix_increment<int>);
+   static_assert(has_postfix_increment<int4> == has_postfix_increment<int>);
+   static_assert(has_prefix_decrement<int4> == has_prefix_decrement<int>);
+   static_assert(has_postfix_decrement<int4> == has_postfix_decrement<int>);
+   static_assert(
+      has_chained_prefix_increment<int4> == has_chained_prefix_increment<int>
+   );
+   static_assert(
+      has_chained_prefix_decrement<int4> == has_chained_prefix_decrement<int>
+   );
+   static_assert(
+      has_chained_postfix_increment<int4> == has_chained_postfix_increment<int>
+   );
+   static_assert(
+      has_chained_postfix_decrement<int4> == has_chained_postfix_decrement<int>
+   );
+
+   int raw = 3;
+   int4 value = 3;
+
+   int const raw_old_increment = raw++;
+   int4 const old_increment = value++;
+   cat::verify(old_increment == raw_old_increment);
+   cat::verify(value == raw);
+
+   int const raw_new_increment = ++raw;
+   int4 const new_increment = ++value;
+   cat::verify(new_increment == raw_new_increment);
+   cat::verify(value == raw);
+
+   int const raw_old_decrement = raw--;
+   int4 const old_decrement = value--;
+   cat::verify(old_decrement == raw_old_decrement);
+   cat::verify(value == raw);
+
+   int const raw_new_decrement = --raw;
+   int4 const new_decrement = --value;
+   cat::verify(new_decrement == raw_new_decrement);
+   cat::verify(value == raw);
+
+   ++ ++raw;
+   ++ ++value;
+   -- --raw;
+   -- --value;
+   cat::verify(value == raw);
+
+   // Postfix inside a larger expression contributes the old value.
+   raw = 1;
+   value = 1;
+   int const raw_expression = raw++ * 10;
+   int4 const expression = value++ * 10;
+   cat::verify(expression == raw_expression);
+   cat::verify(value == raw);
+}
+
+$test(arithmetic_uint4_increment_matches_raw_unsigned) {
+   static_assert(has_prefix_increment<uint4> == has_prefix_increment<unsigned>);
+   static_assert(
+      has_postfix_increment<uint4> == has_postfix_increment<unsigned>
+   );
+   static_assert(has_prefix_decrement<uint4> == has_prefix_decrement<unsigned>);
+   static_assert(
+      has_postfix_decrement<uint4> == has_postfix_decrement<unsigned>
+   );
+   static_assert(
+      has_chained_postfix_increment<uint4>
+      == has_chained_postfix_increment<unsigned>
+   );
+   static_assert(
+      has_chained_postfix_decrement<uint4>
+      == has_chained_postfix_decrement<unsigned>
+   );
+
+   unsigned raw = 3u;
+   uint4 value = 3u;
+
+   unsigned const raw_old_increment = raw++;
+   uint4 const old_increment = value++;
+   cat::verify(old_increment == raw_old_increment);
+   cat::verify(value == raw);
+
+   cat::verify(++value == ++raw);
+   cat::verify(value == raw);
+
+   unsigned const raw_old_decrement = raw--;
+   uint4 const old_decrement = value--;
+   cat::verify(old_decrement == raw_old_decrement);
+   cat::verify(value == raw);
+
+   cat::verify(--value == --raw);
+   cat::verify(value == raw);
 }
 
 $test(arithmetic_spaceship_three_way_and_inequality) {

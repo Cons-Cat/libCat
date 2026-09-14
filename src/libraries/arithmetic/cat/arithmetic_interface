@@ -416,9 +416,10 @@ struct plus_interface {
       return other;
    }
 
-   // Unary ++ operators.
+   // Unary ++ operators. These mirror the built-in integer operators, so they
+   // only apply to l-values, prefix yields the new value as an l-value, and
+   // postfix yields a copy of the old value as a prvalue.
 
-   // `this` is an l-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator++(Derived& self) -> Derived&
@@ -428,32 +429,14 @@ struct plus_interface {
       return self;
    }
 
-   // `this` is an r-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator++(Derived&& self) -> Derived
+   operator++(Derived& self, int) -> Derived
       requires(detail::has_unary_increment<Derived>)
    {
-      return move(self).add(Derived(1));
-   }
-
-   // `this` is an l-value.
-   [[gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator++(Derived& self, int) -> Derived&
-      requires(detail::has_unary_increment<Derived>)
-   {
-      self = self.add(Derived(1));
-      return self;
-   }
-
-   // `this` is an r-value.
-   [[gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator++(Derived&& self, int) -> Derived
-      requires(detail::has_unary_increment<Derived>)
-   {
-      return move(self).add(Derived(1));
+      Derived const old = self;
+      ++self;
+      return old;
    }
 };
 
@@ -606,9 +589,9 @@ struct minus_interface {
       return other;
    }
 
-   // Unary -- operators.
+   // Unary -- operators. These mirror the built-in integer operators, as the
+   // ++ operators do.
 
-   // `this` is an l-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator--(Derived& self) -> Derived&
@@ -618,32 +601,14 @@ struct minus_interface {
       return self;
    }
 
-   // `this` is an r-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator--(Derived&& self) -> Derived
+   operator--(Derived& self, int) -> Derived
       requires(detail::has_unary_decrement<Derived>)
    {
-      return move(self).subtract_by(static_cast<decay_derived::raw_type>(1));
-   }
-
-   // `this` is an l-value.
-   [[gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator--(Derived& self, int) -> Derived&
-      requires(detail::has_unary_decrement<Derived>)
-   {
-      self = self.subtract_by(static_cast<decay_derived::raw_type>(1));
-      return self;
-   }
-
-   // `this` is an r-value.
-   [[gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator--(Derived&& self, int) -> Derived
-      requires(detail::has_unary_decrement<Derived>)
-   {
-      return move(self).subtract_by(static_cast<decay_derived::raw_type>(1));
+      Derived const old = self;
+      --self;
+      return old;
    }
 };
 

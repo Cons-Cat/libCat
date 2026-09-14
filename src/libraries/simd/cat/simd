@@ -1167,7 +1167,7 @@ class
       return *this;
    }
 
-   [[nodiscard, gnu::always_inline]]
+   [[gnu::always_inline]]
    constexpr auto
    operator++(int) -> simd
       requires(is_arithmetic<T> && !is_bool<T>)
@@ -1186,7 +1186,7 @@ class
       return *this;
    }
 
-   [[nodiscard, gnu::always_inline]]
+   [[gnu::always_inline]]
    constexpr auto
    operator--(int) -> simd
       requires(is_arithmetic<T> && !is_bool<T>)
