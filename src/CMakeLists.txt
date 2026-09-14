@@ -9,7 +9,8 @@ set(CAT_INCLUDE_SUBDIRS
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
-  tuple vec ring enum iterable dyn random timer chrono quantity stacktrace)
+  tuple vec ring enum iterable dyn random timer chrono quantity stacktrace
+  demangle)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -289,7 +290,19 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/debug/implementations/assert_failure.cpp
   ${CATLIB}/linux/implementations/cpu_temperature.cpp
   ${CATLIB}/stacktrace/implementations/stacktrace.cpp
+  ${CATLIB}/stacktrace/implementations/dwarf_line.cpp
+  ${CATLIB}/stacktrace/implementations/format_stacktrace.cpp
+  ${CATLIB}/demangle/implementations/demangle.cpp
 )
+
+# We compile demangling separately because it's a cold code path that
+# bloats massively under speed optimizations.
+set_source_files_properties(
+  ${CATLIB}/demangle/implementations/demangle.cpp
+  TARGET_DIRECTORY cat-impl
+  PROPERTIES
+    COMPILE_OPTIONS -Os
+    SKIP_PRECOMPILE_HEADERS ON)
 
 if(NOT CAT_NO_VDSO)
   target_sources(cat-impl PRIVATE
@@ -565,6 +578,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/string/cat/detail/str_vec.hpp
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
   ${CATLIB}/stacktrace/cat/stacktrace
+  ${CATLIB}/demangle/cat/demangle
   ${CATLIB}/thread/cat/thread
   ${CATLIB}/thread/cat/raii_thread
   ${CATLIB}/timer/cat/timer

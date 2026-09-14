@@ -1,4 +1,7 @@
+#include <cat/array>
+#include <cat/format>
 #include <cat/iterable>
+#include <cat/linear_allocator>
 #include <cat/meta>
 #include <cat/null_allocator>
 #include <cat/page_allocator>
@@ -8,7 +11,45 @@
 #include <cat/thread>
 #include <cat/utility>
 
+#include "../../src/libraries/stacktrace/implementations/dwarf_line.hpp"
 #include "../unit_tests.hpp"
+
+struct frame_capture {
+   cat::stacktrace trace;
+   idx inner_line = 0u;
+   idx middle_line = 0u;
+   idx outer_line = 0u;
+};
+
+// These have C linkage so that their symbols are stable across build modes
+// and need no demangling.
+extern "C" [[gnu::noinline, clang::disable_tail_calls]]
+void
+cat_test_capture_one_frame(cat::dyn_allocator allocator, frame_capture& out) {
+   out.trace = cat::stacktrace::current(allocator, 0u, 1u).verify();
+   out.inner_line = __LINE__ - 1u;
+}
+
+extern "C" [[gnu::noinline, clang::disable_tail_calls]]
+void
+cat_test_frame_inner(cat::dyn_allocator allocator, frame_capture& out) {
+   out.trace = cat::stacktrace::current(allocator, 0u, 3u).verify();
+   out.inner_line = __LINE__ - 1u;
+}
+
+extern "C" [[gnu::noinline, clang::disable_tail_calls]]
+void
+cat_test_frame_middle(cat::dyn_allocator allocator, frame_capture& out) {
+   cat_test_frame_inner(allocator, out);
+   out.middle_line = __LINE__ - 1u;
+}
+
+extern "C" [[gnu::noinline, clang::disable_tail_calls]]
+void
+cat_test_frame_outer(cat::dyn_allocator allocator, frame_capture& out) {
+   cat_test_frame_middle(allocator, out);
+   out.outer_line = __LINE__ - 1u;
+}
 
 namespace {
 
@@ -75,6 +116,12 @@ deep_maybe_trace(cat::dyn_allocator allocator, idx remaining)
    return deep_maybe_trace(allocator, remaining.raw - 1u);
 }
 
+auto
+has_prefix(cat::str_view string, cat::str_view prefix) -> bool {
+   return string.size() >= prefix.size()
+          && string.substring(0u, prefix.size()) == prefix;
+}
+
 }  // namespace
 
 $test(stacktrace_on_child_thread) {
@@ -122,8 +169,162 @@ $test(stacktrace_current_captures_caller) {
    );
 }
 
+$test(stacktrace_formatting) {
+   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   $defer {
+      pager.free(page);
+   };
+   auto allocator = cat::make_linear_allocator(page);
+
+   cat::stacktrace_entry const empty{};
+   cat::verify(cat::fmt(allocator, "{}", empty).verify() == "0x0");
+
+   allocator.reset();
+   cat::stacktrace const one =
+      cat::stacktrace::current(allocator, 0u, 1u).verify();
+   cat::verify(one.size() == 1u);
+   cat::str_view const entry_string =
+      cat::fmt(allocator, "{}", one[0u]).verify();
+   cat::verify(
+      entry_string == cat::fmt(allocator, "{}", one[0u].native()).verify()
+   );
+
+   cat::str_view const header = "Stack trace:\n";
+   frame_capture captured{.trace = cat::stacktrace(allocator)};
+   cat_test_capture_one_frame(allocator, captured);
+   cat::str_view const formatted =
+      cat::fmt(allocator, "{}", captured.trace).verify();
+
+   // Release builds carry no DWARF, so the location falls back to
+   // `<unknown>` while the symbol still resolves through `.symtab`.
+   bool const has_line_info =
+      formatted.find("test_stacktrace.cpp:").has_value();
+   cat::str_view const location =
+      has_line_info
+         ? cat::fmt(allocator, "test_stacktrace.cpp:{}", captured.inner_line)
+              .verify()
+         : cat::str_view("<unknown>");
+   cat::str_view const expected =
+      cat::fmt(
+         allocator, "{}#1 {} cat_test_capture_one_frame()\n", header, location
+      )
+         .verify();
+   cat::verify(formatted == expected);
+
+   cat::str_view const first_frame =
+      cat::fmt(allocator, "{}", captured.trace[0u]).verify();
+   cat::verify(
+      cat::fmt(allocator, "[{}]", captured.trace[0u]).verify()
+      == cat::fmt(allocator, "[{}]", first_frame).verify()
+   );
+
+   cat::stacktrace const none =
+      cat::stacktrace::current(allocator, 0u, 0u).verify();
+   cat::verify(cat::fmt(allocator, "{}", none).verify() == header);
+}
+
+// Three `noinline` frames are walked, symbolized, and formatted. Capturing
+// exactly three keeps the whole string predictable.
+$test(stacktrace_formatting_three_frames) {
+   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   $defer {
+      pager.free(page);
+   };
+   auto allocator = cat::make_linear_allocator(page);
+
+   frame_capture captured{.trace = cat::stacktrace(allocator)};
+   cat_test_frame_outer(allocator, captured);
+   cat::verify(captured.trace.size() >= 3u);
+   cat::verify(captured.trace.size() == 3u);
+
+   cat::str_view const formatted =
+      cat::fmt(allocator, "{}", captured.trace).verify();
+   bool const has_line_info =
+      formatted.find("test_stacktrace.cpp:").has_value();
+   auto location = [&](idx line) -> cat::str_view {
+      if (!has_line_info) {
+         return "<unknown>";
+      }
+      return cat::fmt(allocator, "test_stacktrace.cpp:{}", line).verify();
+   };
+
+   cat::str_view const expected =
+      cat::fmt(
+         allocator,
+         "Stack trace:\n"
+         "#1 {} cat_test_frame_inner()\n"
+         "#2 {} cat_test_frame_middle()\n"
+         "#3 {} cat_test_frame_outer()\n",
+         location(captured.inner_line), location(captured.middle_line),
+         location(captured.outer_line)
+      )
+         .verify();
+   cat::verify(formatted == expected);
+}
+
+$test(stacktrace_dwarf_forms) {
+   cat::array<cat::byte, 32u> bytes{};
+   cat::span<cat::byte const> const input(bytes);
+
+   struct form_case {
+      cat::uint8 form;
+      idx size;
+   };
+
+   for (form_case const entry : {
+           form_case{.form = 0x01u, .size = 8u },
+           form_case{.form = 0x03u, .size = 2u },
+           form_case{.form = 0x04u, .size = 4u },
+           form_case{.form = 0x05u, .size = 2u },
+           form_case{.form = 0x06u, .size = 4u },
+           form_case{.form = 0x07u, .size = 8u },
+           form_case{.form = 0x08u, .size = 1u },
+           form_case{.form = 0x09u, .size = 1u },
+           form_case{.form = 0x0au, .size = 1u },
+           form_case{.form = 0x0bu, .size = 1u },
+           form_case{.form = 0x0cu, .size = 1u },
+           form_case{.form = 0x0du, .size = 1u },
+           form_case{.form = 0x0eu, .size = 4u },
+           form_case{.form = 0x0fu, .size = 1u },
+           form_case{.form = 0x17u, .size = 4u },
+           form_case{.form = 0x18u, .size = 1u },
+           form_case{.form = 0x19u, .size = 0u },
+           form_case{.form = 0x1au, .size = 1u },
+           form_case{.form = 0x1bu, .size = 1u },
+           form_case{.form = 0x1du, .size = 4u },
+           form_case{.form = 0x1eu, .size = 16u},
+           form_case{.form = 0x1fu, .size = 4u },
+           form_case{.form = 0x20u, .size = 8u },
+           form_case{.form = 0x21u, .size = 0u },
+           form_case{.form = 0x22u, .size = 1u },
+           form_case{.form = 0x23u, .size = 1u },
+           form_case{.form = 0x25u, .size = 1u },
+           form_case{.form = 0x26u, .size = 2u },
+           form_case{.form = 0x27u, .size = 3u },
+           form_case{.form = 0x28u, .size = 4u },
+           form_case{.form = 0x29u, .size = 1u },
+           form_case{.form = 0x2au, .size = 2u },
+           form_case{.form = 0x2bu, .size = 3u },
+           form_case{.form = 0x2cu, .size = 4u },
+   }) {
+      cat::maybe<idx> const size =
+         cat::detail::decode_dwarf_form_size(input, entry.form);
+      cat::verify(size.has_value());
+      cat::verify(size.value() == entry.size);
+   }
+
+   cat::verify(
+      cat::detail::decode_dwarf_form_size(input, 0x0eu, 8u).verify() == 8u
+   );
+   cat::verify(
+      cat::detail::decode_dwarf_form_size(input, 0x01u, 4u, 4u).verify() == 4u
+   );
+   cat::verify(cat::detail::decode_dwarf_form_size(input, 0xffu).is_empty());
+}
+
 $test(stacktrace_depth_and_skip) {
-   cat::stacktrace const none = cat::stacktrace::current(pager, 0u, 0u).verify();
+   cat::stacktrace const none =
+      cat::stacktrace::current(pager, 0u, 0u).verify();
    cat::verify(none.is_empty());
    cat::verify(none.size() == 0u);
 
@@ -253,12 +454,13 @@ $test(stacktrace_iteration) {
    idx reverse_index = const_trace.size();
    auto reversed = frames | cat::reverse();
    auto reverse_context = cat::iterate(reversed);
-   auto const reverse_result =
-      reverse_context.run_while([&](cat::stacktrace_entry const& frame) -> bool {
+   auto const reverse_result = reverse_context.run_while(
+      [&](cat::stacktrace_entry const& frame) -> bool {
          reverse_index.raw -= 1u;
          cat::verify(frame == const_trace[reverse_index]);
          return true;
-      });
+      }
+   );
    cat::verify(reverse_result == cat::iteration_result::complete);
    cat::verify(reverse_index == 0u);
 

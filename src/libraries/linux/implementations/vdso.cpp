@@ -1,9 +1,11 @@
 #include <cat/detail/vdso.hpp>
 
+#include <cat/array>
+
 namespace {
 
 struct elf_header {
-   unsigned char identification[16];
+   cat::array<cat::uint1, 16u> identification;
    cat::uint2 type;
    cat::uint2 machine;
    cat::uint4 version;

@@ -24,7 +24,7 @@ is_readable_frame(
    if (address <= stack_low || address >= stack_high) {
       return false;
    }
-   
+
    return is_aligned(p_frame, alignof(stack_frame));
 }
 

@@ -9,6 +9,7 @@
 // allocator. There is no fixed depth limit.
 
 #include <cat/container>
+#include <cat/format>
 #include <cat/propagate>
 #include <cat/raii_vec>
 
@@ -154,6 +155,41 @@ class stacktrace
    }
 
    storage m_frames;
+};
+
+namespace detail {
+
+[[nodiscard]]
+inline auto
+format_stacktrace_entry(stacktrace_entry entry, format_context& context)
+   -> scaredy_format<void> {
+   return format_nested(context, entry.native());
+}
+
+[[nodiscard]]
+auto
+format_stacktrace(stacktrace const& trace, format_context& context)
+   -> scaredy_format<void>;
+}  // namespace detail
+
+template <typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<stacktrace_entry, CharT> : formatter_base<CharT> {
+   auto
+   format(stacktrace_entry value, format_context& context) const
+      -> scaredy_format<void> {
+      return detail::format_stacktrace_entry(value, context);
+   }
+};
+
+template <typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<stacktrace, CharT> : formatter_base<CharT> {
+   auto
+   format(stacktrace const& value, format_context& context) const
+      -> scaredy_format<void> {
+      return detail::format_stacktrace(value, context);
+   }
 };
 
 }  // namespace cat

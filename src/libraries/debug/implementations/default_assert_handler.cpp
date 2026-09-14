@@ -4,6 +4,15 @@
 #include <cat/linux>
 #include <cat/string>
 
+namespace cat::detail {
+
+#ifndef CAT_NO_STACKTRACE
+void
+print_failing_stacktrace();
+#endif
+
+}
+
 void
 cat::detail::print_assert_location(source_location const& callsite) {
    // Format the line number into a stack buffer. Avoid `fmt` so assert does not
@@ -29,16 +38,26 @@ cat::default_assert_handler(source_location const& callsite) {
    detail::print_assert_location(callsite);
 
    if (nix::is_a_tty(nix::stdin).is_empty()) {
-      eprint("assert failed with stdin not a tty; exiting.\n").or_exit();
+      eprint("Program is not running in an interactive tty!.\n").or_exit();
       exit(1);
    }
 
    // TODO: Colorize this input prompt.
-   print("Press: 1 (Continue), 2 (Debug), 3 (Abort)\n").or_exit();
+#ifdef CAT_NO_STACKTRACE
+   constexpr str_view prompt = "Press: 1 (Continue), 2 (Debug), 3 (Abort)\n";
+#else
+   constexpr str_view prompt =
+      "Press: 1 (Continue), 2 (Debug), 3 (Stack trace), 4 (Abort)\n";
+#endif
+   print(prompt).or_exit();
 
    while (true) {
       unsigned char const input = nix::read_char().or_exit();
+#ifdef CAT_NO_STACKTRACE
       if (input >= '1' && input <= '3') {
+#else
+      if (input >= '1' && input <= '4') {
+#endif
          // ASCII trick that converts an inputted `char` to a digit.
          uint1 const digit = input - 49_u1;
 
@@ -48,12 +67,18 @@ cat::default_assert_handler(source_location const& callsite) {
                // Ignore the assert failure.
                return;
             case 1:
-               // Historically this called `breakpoint()` (`int3`). That
-               // surfaces as SIGTRAP under Release plus sanitizers or ambiguous
-               // stdin. Attach a debugger at `default_assert_handler` instead.
-               eprint("Debug trap is disabled; exiting.\n").or_exit();
-               exit(1);
+               // Break into a debugger.
+               breakpoint();
+               return;
             case 2:
+#ifndef CAT_NO_STACKTRACE
+               // Print a trace, then ask again.
+               detail::print_failing_stacktrace();
+               print(prompt).or_exit();
+               continue;
+#endif
+               [[fallthrough]];
+            case 3:
                {
                   // Abort the program.
                   eprint("Program aborted!\n").or_exit();
