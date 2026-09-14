@@ -143,7 +143,7 @@ class
    static constexpr detail::str_literal_constant<fixed_size> size{};
    static constexpr detail::str_literal_constant<fixed_size> length{};
    static constexpr detail::str_literal_constant<fixed_size> max_size{};
-   static constexpr detail::str_literal_constant<fixed_size == 0> empty{};
+   static constexpr detail::str_literal_constant<fixed_size == 0> is_empty{};
 
    [[nodiscard]]
    constexpr auto

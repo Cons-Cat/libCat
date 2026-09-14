@@ -475,12 +475,6 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   empty() const -> bool {
-      return size() == 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
    is_null_terminated() const -> bool {
       return true;
    }
@@ -600,7 +594,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    [[nodiscard]]
    constexpr auto
    is_absolute() const -> bool {
-      return !empty() && data()[0] == '/';
+      return !this->is_empty() && data()[0] == '/';
    }
 
    [[nodiscard]]
@@ -776,7 +770,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
          clear();
          return m_storage.append(allocator, right);
       }
-      if (!empty() && (*this)[idx(size() - 1u)] != '/') {
+      if (!this->is_empty() && (*this)[idx(size() - 1u)] != '/') {
          $prop(m_storage.push_back(allocator, '/'));
       }
       return m_storage.append(allocator, right);

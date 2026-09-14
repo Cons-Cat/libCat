@@ -149,13 +149,6 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
       return m_core.size();
    }
 
-   // Return whether the `cat::raii::basic_list` is empty.
-   [[nodiscard]]
-   constexpr auto
-   empty() const -> bool {
-      return m_core.empty();
-   }
-
    // Return capacity in elements.
    [[nodiscard]]
    constexpr auto

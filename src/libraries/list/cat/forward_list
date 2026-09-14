@@ -158,13 +158,6 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       return m_size;
    }
 
-   // Return whether the `cat::basic_forward_list` is empty.
-   [[nodiscard]]
-   constexpr auto
-   empty() const -> bool {
-      return m_size == 0u;
-   }
-
    // Return theoretical capacity based on size type.
    [[nodiscard]]
    constexpr auto

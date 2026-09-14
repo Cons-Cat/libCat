@@ -167,13 +167,6 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       return m_size;
    }
 
-   // Return whether the `cat::basic_list` has no elements.
-   [[nodiscard]]
-   constexpr auto
-   empty() const -> bool {
-      return m_size == 0u;
-   }
-
    // Return theoretical maximum capacity based on size type.
    [[nodiscard]]
    constexpr auto
@@ -694,7 +687,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    constexpr auto
    prepend_range(allocator_ref<Allocator> allocator, Iterable&& range)
       -> maybe<void> {
-      if (this->empty()) {
+      if (this->is_empty()) {
          return this->append_range(allocator, $fwd(range));
       }
 

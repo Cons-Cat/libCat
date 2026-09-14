@@ -309,7 +309,7 @@ $test(path_formatter) {
 $test(path_current_absolute_and_unique) {
    auto cwd = cat::make_file_path_current(pager).verify();
    cat::verify(cwd.is_absolute());
-   cat::verify(!cwd.empty());
+   cat::verify(!cwd.is_empty());
    cat::verify(cwd.data()[cwd.size()] == '\0');
 
    auto explicit_base =

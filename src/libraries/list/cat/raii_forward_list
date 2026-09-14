@@ -159,13 +159,6 @@ basic_forward_list
       return m_core.size();
    }
 
-   // Return whether the `cat::raii::basic_forward_list` is empty.
-   [[nodiscard]]
-   constexpr auto
-   empty() const -> bool {
-      return m_core.empty();
-   }
-
    // Return capacity in elements.
    [[nodiscard]]
    constexpr auto

@@ -123,12 +123,6 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   empty() const -> bool {
-      return m_path.empty();
-   }
-
-   [[nodiscard]]
-   constexpr auto
    is_null_terminated() const -> bool {
       return true;
    }

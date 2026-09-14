@@ -149,13 +149,13 @@ unix_socket_address::assign(file_path const& socket_path) {
    for (idx index = 0u; index < socket_path.size(); ++index) {
       m_path[index] = socket_path[index];
    }
-   bool const abstract = !socket_path.empty() && socket_path[0u] == '\0';
-   if (!abstract && !socket_path.empty()) {
+   bool const abstract = !socket_path.is_empty() && socket_path[0u] == '\0';
+   if (!abstract && !socket_path.is_empty()) {
       m_path[socket_path.size()] = '\0';
    }
    m_length = uint1(
       family_size + socket_path.size()
-      + uint1(!abstract && !socket_path.empty())
+      + uint1(!abstract && !socket_path.is_empty())
    );
 }
 

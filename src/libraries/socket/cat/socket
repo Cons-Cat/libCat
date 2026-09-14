@@ -115,7 +115,7 @@ class unix_socket_address {
    [[nodiscard]]
    static constexpr auto
    path_fits(file_path const& socket_path) -> bool {
-      if (socket_path.empty()) {
+      if (socket_path.is_empty()) {
          return true;
       }
       idx const capacity = socket_path.data()[0] == '\0' ? 108u : 107u;

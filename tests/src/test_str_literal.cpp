@@ -18,8 +18,8 @@ $test(str_literal_construction_and_access) {
    static_assert(text.size() == 3u);
    static_assert(text.length() == 3u);
    static_assert(text.max_size() == 3u);
-   static_assert(!text.empty());
-   static_assert(empty.empty());
+   static_assert(!text.is_empty());
+   static_assert(empty.is_empty());
    static_assert(text.front() == 'c');
    static_assert(text.back() == 't');
    static_assert(text.at(1u) == 'a');
