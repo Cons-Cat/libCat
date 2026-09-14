@@ -70,6 +70,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_demangle.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_inplace_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_musl_allocator.cpp

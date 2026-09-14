@@ -1,0 +1,111 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::demangle` converts Itanium C++ ABI names to readable signatures.
+// Unsupported and malformed names are returned unchanged.
+
+#include <cat/allocator>
+#include <cat/string>
+
+namespace cat {
+
+namespace detail {
+class demangle_parser;
+}
+
+class demangled_name {
+ public:
+   demangled_name(demangled_name const&) = delete;
+   demangled_name(demangled_name&& other);
+
+   auto
+   operator=(demangled_name const&) -> demangled_name& = delete;
+
+   auto
+   operator=(demangled_name&& other) -> demangled_name&;
+
+   ~demangled_name();
+
+   [[nodiscard]]
+   auto
+   view() const [[clang::lifetimebound]] -> str_view {
+      return {m_p_data, m_size};
+   }
+
+   [[nodiscard]]
+   operator str_view() const [[clang::lifetimebound]] {
+      return view();
+   }
+
+ private:
+   friend class detail::demangle_parser;
+   friend auto
+   demangle(basic_dyn_allocator<dyn_reallocate> allocator, str_view mangled)
+      -> maybe<demangled_name>;
+
+   explicit demangled_name(basic_dyn_allocator<dyn_reallocate> allocator);
+
+   [[nodiscard]]
+   auto
+   size() const -> idx {
+      return m_size;
+   }
+
+   [[nodiscard]]
+   auto
+   is_empty() const -> bool {
+      return m_size == 0u;
+   }
+
+   [[nodiscard]]
+   auto
+   back() const -> char {
+      return m_p_data[m_size.raw - 1u];
+   }
+
+   auto
+   append(char value) -> maybe<void>;
+
+   auto
+   append(str_view value) -> maybe<void>;
+
+   auto
+   grow(idx minimum_capacity) -> bool;
+
+   void
+   reset();
+
+   basic_dyn_allocator<dyn_reallocate> m_allocator;
+   char* _Nullable m_p_data = nullptr;
+   idx m_size = 0u;
+   idx m_capacity = 0u;
+};
+
+[[nodiscard]]
+auto
+demangle(basic_dyn_allocator<dyn_reallocate> allocator, str_view mangled)
+   -> maybe<demangled_name>;
+
+template <is_allocator Allocator>
+[[nodiscard]]
+auto
+demangle(allocator_ref<Allocator> allocator, str_view mangled)
+   -> maybe<demangled_name> {
+   if constexpr (is_same<Allocator, basic_dyn_allocator<dyn_reallocate>>) {
+      return demangle(allocator.get_allocator(), mangled);
+   } else {
+      return demangle(
+         basic_dyn_allocator<dyn_reallocate>(allocator.get_allocator()), mangled
+      );
+   }
+}
+
+template <is_allocator Allocator>
+[[nodiscard]]
+auto
+demangle(Allocator& allocator, str_view mangled) -> maybe<demangled_name> {
+   return demangle(allocator_ref(allocator), mangled);
+}
+
+}  // namespace cat
