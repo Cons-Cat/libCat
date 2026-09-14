@@ -275,6 +275,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/executable_tls.cpp
   ${CATLIB}/linux/implementations/create_socket_local.cpp
   ${CATLIB}/file/implementations/file.cpp
+  ${CATLIB}/file/implementations/get_executable_path.cpp
   ${CATLIB}/file/implementations/mapped_file.cpp
   ${CATLIB}/socket/implementations/socket.cpp
   ${CATLIB}/linux/implementations/is_a_tty.cpp

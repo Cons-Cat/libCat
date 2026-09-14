@@ -9,6 +9,12 @@
 
 namespace cat {
 
+// Path of the running executable, read from `/proc/self/exe`. This is empty
+// when the link cannot be read or its target exceeds 1 kibibyte.
+[[nodiscard]]
+auto
+get_executable_path(dyn_allocator allocator) -> maybe<file_path>;
+
 enum class [[clang::enum_extensibility(closed)]] file_access : unsigned char {
    read,
    write,

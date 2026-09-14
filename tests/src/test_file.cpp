@@ -5,6 +5,19 @@
 
 #include "../unit_tests.hpp"
 
+$test(file_executable_path) {
+   cat::file_path executable = cat::get_executable_path(pager).verify();
+   $defer {
+      executable.free(pager);
+   };
+
+   cat::verify(!executable.is_empty());
+   cat::verify(executable.is_absolute());
+   cat::verify(executable.data()[executable.size()] == '\0');
+   cat::verify(executable.filename() == "unit_tests");
+   nix::sys_access(executable.native(), nix::access_mode::exists).verify();
+}
+
 $test(file_handle_lifecycle) {
    auto file_path =
       cat::make_file_path_unique(pager, "/tmp/libcat-file-lifecycle-%%%%")
