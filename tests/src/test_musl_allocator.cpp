@@ -333,7 +333,8 @@ verify_child_hardening(void (*p_test)(nix::file_descriptor)) {
    cat::int4 child_status;
    nix::sys_wait4(
       child.id(), &child_status, nix::wait_options_flags::none, nullptr
-   ).verify();
+   )
+      .verify();
    nix::sys_close(pipe[1]).verify();
 
    char markers[2] = {};

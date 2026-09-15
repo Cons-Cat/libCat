@@ -13,7 +13,8 @@ struct cat::detail::symbolizer {
    cat::span<cat::byte const> bytes;
    cat::file_path path;
    // One mapping-wide slide: runtime `__ehdr_start` minus `p_vaddr` of the
-   // `PT_LOAD` at file offset 0. `ET_EXEC` is 0, since preferred VAs are runtime.
+   // `PT_LOAD` at file offset 0. `ET_EXEC` is 0, since preferred VAs are
+   // runtime.
    cat::uint8 load_bias = 0u;
 };
 
@@ -200,8 +201,9 @@ load_executable(cat::detail::symbolizer& symbols, cat::dyn_allocator allocator)
 
 [[nodiscard]]
 auto
-contains_runtime_address(cat::detail::symbolizer const& symbols, cat::uint8 address)
-   -> bool {
+contains_runtime_address(
+   cat::detail::symbolizer const& symbols, cat::uint8 address
+) -> bool {
    elf_header const& header = *object_at<elf_header>(symbols.bytes, 0u);
    auto const* const p_program_headers = __builtin_bit_cast(
       elf_program_header const*,
@@ -253,7 +255,9 @@ lookup_in_table(
       object_at<elf_section_header>(symbols.bytes, strings_offset);
    if (
       p_strings_header == nullptr
-      || !contains(symbols.bytes, p_strings_header->offset, p_strings_header->size)
+      || !contains(
+         symbols.bytes, p_strings_header->offset, p_strings_header->size
+      )
    ) {
       return {};
    }
@@ -299,8 +303,9 @@ lookup_in_table(
 
 [[nodiscard]]
 auto
-lookup_symbol(cat::detail::symbolizer const& symbols, cat::uint8 relative_address)
-   -> found_symbol {
+lookup_symbol(
+   cat::detail::symbolizer const& symbols, cat::uint8 relative_address
+) -> found_symbol {
    elf_header const& header = *object_at<elf_header>(symbols.bytes, 0u);
    cat::uint8 const sections_size =
       cat::uint8(header.section_header_count) * sizeof(elf_section_header);
@@ -334,12 +339,15 @@ auto
 resolve(cat::detail::symbolizer const& symbols, cat::stacktrace_entry entry)
    -> resolved_frame {
    cat::uint8 const address = __builtin_bit_cast(cat::uint8, entry.native());
-   if (symbols.bytes.is_empty() || !contains_runtime_address(symbols, address)) {
+   if (
+      symbols.bytes.is_empty() || !contains_runtime_address(symbols, address)
+   ) {
       return {};
    }
    cat::uint8 const relative_address = address - symbols.load_bias - 1u;
    return {
-      .source = cat::detail::resolve_dwarf_line(symbols.bytes, relative_address),
+      .source =
+         cat::detail::resolve_dwarf_line(symbols.bytes, relative_address),
       .symbol = lookup_symbol(symbols, relative_address),
    };
 }
@@ -569,8 +577,9 @@ format_short_frame(
 
 auto
 format_context_frame(
-   cat::idx index, cat::detail::symbolizer const& symbols, resolved_frame resolved,
-   cat::stacktrace_entry entry, cat::format_context& context
+   cat::idx index, cat::detail::symbolizer const& symbols,
+   resolved_frame resolved, cat::stacktrace_entry entry,
+   cat::format_context& context
 ) -> cat::scaredy_format<void> {
    return context.append('#')
       .and_then([&] {
@@ -683,7 +692,8 @@ format_stacktrace_frame(
    format_context& context, bool debug
 ) -> scaredy_format<void> {
    symbolizer const unloaded{};
-   symbolizer const& symbols = p_symbolizer != nullptr ? *p_symbolizer : unloaded;
+   symbolizer const& symbols =
+      p_symbolizer != nullptr ? *p_symbolizer : unloaded;
    resolved_frame const resolved = resolve(symbols, entry);
    if (debug) {
       return format_context_frame(number, symbols, resolved, entry, context);

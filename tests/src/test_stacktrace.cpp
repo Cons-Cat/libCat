@@ -376,7 +376,8 @@ $test(stacktrace_drop_while_frames) {
       outer.p_function == __builtin_bit_cast(void*, &cat_test_frame_outer)
    );
    cat::verify(
-      cat::detail::resolve_stacktrace_frame(p_symbolizer, {}).p_function == nullptr
+      cat::detail::resolve_stacktrace_frame(p_symbolizer, {}).p_function
+      == nullptr
    );
 
    auto belongs_to =
@@ -389,8 +390,8 @@ $test(stacktrace_drop_while_frames) {
       } else if (entry == captured.trace[2u]) {
          p_function = outer.p_function;
       } else {
-         p_function =
-            cat::detail::resolve_stacktrace_frame(p_symbolizer, entry).p_function;
+         p_function = cat::detail::resolve_stacktrace_frame(p_symbolizer, entry)
+                         .p_function;
       }
       return ((p_function == __builtin_bit_cast(void*, functions)) || ...);
    };
@@ -424,11 +425,10 @@ $test(stacktrace_drop_while_frames) {
    );
 
    // One leading frame is internal, so `#1` is the frame after it.
-   cat::str_view const after_inner = format_dropped(
-      [&](cat::stacktrace_entry entry) {
+   cat::str_view const after_inner =
+      format_dropped([&](cat::stacktrace_entry entry) {
          return belongs_to(entry, &cat_test_frame_inner);
-      }
-   );
+      });
    bool const has_line_info =
       after_inner.find("test_stacktrace.cpp:").has_value();
    auto location = [&](idx line) -> cat::str_view {
