@@ -10,14 +10,14 @@ verify(bool invariant_expression, source_location const& callsite) {
       [[assume(invariant_expression)]];
    } else {
       if (!invariant_expression) [[unlikely]] {
-         detail::assert_failed(assert_handler, callsite);
+         detail::assert_failed(current_assert_handler(), callsite);
       }
    }
 }
 
 constexpr void
 verify(
-   bool invariant_expression, detail::assert_handler p_assert_handler,
+   bool invariant_expression, assert_handler p_assert_handler,
    source_location const& callsite
 ) {
    if consteval {
@@ -38,7 +38,9 @@ verify(
       [[assume(invariant_expression)]];
    } else {
       if (!invariant_expression) [[unlikely]] {
-         detail::assert_failed(error_string, assert_handler, callsite);
+         detail::assert_failed(
+            error_string, current_assert_handler(), callsite
+         );
       }
    }
 }
@@ -46,7 +48,7 @@ verify(
 constexpr void
 verify(
    bool invariant_expression, str_view const& error_string,
-   detail::assert_handler p_assert_handler, source_location const& callsite
+   assert_handler p_assert_handler, source_location const& callsite
 ) {
    if consteval {
       [[assume(invariant_expression)]];

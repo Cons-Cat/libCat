@@ -54,6 +54,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_quantity_catalog.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_quantity_format_catalog.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_runtime.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_assert_handler.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_simd.cpp

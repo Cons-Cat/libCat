@@ -59,7 +59,7 @@ main() -> int {
    parent_thread_id = cat::this_thread::get_id();
 
    // Change the default assert handler.
-   cat::assert_handler = &cat::test_fail;
+   cat::set_global_assert_handler(&cat::test_fail);
 
    // Set the jump buffer pointer before any constructors are called.
    cat::jmp_buffer jump_buffer;
@@ -72,6 +72,8 @@ main() -> int {
       if (cat::setjmp(jump_buffer)) {
          // Jump here when a test fails, skipping the rest of a test's
          // constructor function.
+         cat::set_global_assert_handler(&cat::test_fail);
+         cat::detail::reset_local_assert_handlers();
          continue;
       }
       (reinterpret_cast<constructor_fn>(test_fns.value()[i]))();

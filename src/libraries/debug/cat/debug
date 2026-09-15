@@ -114,26 +114,30 @@ nop() {
    }
 }
 
-// This is exposed so that `unit_tests.hpp` can use it. Its implementation is in
-// `assert_handler.cpp`.
+using assert_handler = void (*_Nonnull)(source_location const&);
+
 namespace detail {
 void
 print_assert_location(
    source_location const& callsite = source_location::current()
 );
 
-using assert_handler = void (*_Nonnull)(source_location const&);
+struct assert_handler_frame {
+   assert_handler handler;
+   assert_handler_frame* _Nullable p_previous = nullptr;
+};
 
-[[noreturn]]
 void
 assert_failed(assert_handler p_assert_handler, source_location const& callsite);
 
-[[noreturn]]
 void
 assert_failed(
    str_view const& error_string, assert_handler p_assert_handler,
    source_location const& callsite
 );
+
+void
+reset_local_assert_handlers();
 }  // namespace detail
 
 #ifndef CAT_NO_STACKTRACE
@@ -143,9 +147,44 @@ assert_failed(
 void
 default_assert_handler(source_location const& callsite);
 
-// This variable can be mutated to change the default assert handler globally.
-// TODO: We need global, block, and thread local scope assert handlers.
-inline detail::assert_handler assert_handler = default_assert_handler;
+// Get the assert handler at the caller's scope.
+[[nodiscard]]
+auto
+current_assert_handler() -> assert_handler;
+
+// This changes the process-wide fallback handler. This operation is atomic, but
+// not thread-safe. It's susceptible to data races, but will always store a
+// valid function pointer.
+void
+set_global_assert_handler(assert_handler p_handler);
+
+// This changes the calling thread's handler, which takes precedence over the
+// global handler.
+void
+set_thread_local_assert_handler(assert_handler p_handler);
+
+// The calling thread inherits the global handler again.
+void
+reset_thread_local_assert_handler();
+
+// RAII block-scope guard for setting an assert handler.
+class [[nodiscard]] scoped_assert_handler {
+ public:
+   explicit scoped_assert_handler(assert_handler p_handler);
+
+   scoped_assert_handler(scoped_assert_handler const&) = delete;
+   scoped_assert_handler(scoped_assert_handler&&) = delete;
+
+   auto
+   operator=(scoped_assert_handler const&) -> scoped_assert_handler& = delete;
+   auto
+   operator=(scoped_assert_handler&&) -> scoped_assert_handler& = delete;
+
+   ~scoped_assert_handler();
+
+ private:
+   detail::assert_handler_frame m_frame;
+};
 
 // TODO: Fancier `$assert()` macro with expression decomposition.
 // TODO: `assert_eq()`, `assert_gt()`, etc. functions.
@@ -158,7 +197,7 @@ verify(
 
 constexpr void
 verify(
-   bool invariant_expression, detail::assert_handler p_assert_handler,
+   bool invariant_expression, assert_handler p_assert_handler,
    source_location const& callsite = source_location::current()
 );
 
@@ -171,7 +210,7 @@ verify(
 constexpr void
 verify(
    bool invariant_expression, str_view const& error_string,
-   detail::assert_handler p_assert_handler,
+   assert_handler p_assert_handler,
    source_location const& callsite = source_location::current()
 );
 
@@ -183,7 +222,7 @@ assert(
 
 constexpr void
 assert(
-   bool invariant_expression, detail::assert_handler p_assert_handler,
+   bool invariant_expression, assert_handler p_assert_handler,
    source_location const& callsite = source_location::current()
 );
 
@@ -196,7 +235,7 @@ assert(
 constexpr void
 assert(
    bool invariant_expression, str_view const& error_string,
-   detail::assert_handler p_assert_handler,
+   assert_handler p_assert_handler,
    source_location const& callsite = source_location::current()
 );
 

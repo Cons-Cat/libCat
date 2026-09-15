@@ -13,10 +13,9 @@ namespace {
 // Spelling out the overloads of `cat::detail::assert_failed()` makes them
 // addressable below.
 using assert_failed_function =
-   void (*_Nonnull)(cat::detail::assert_handler, cat::source_location const&);
+   void (*_Nonnull)(cat::assert_handler, cat::source_location const&);
 using assert_failed_message_function = void (*_Nonnull)(
-   cat::str_view const&, cat::detail::assert_handler,
-   cat::source_location const&
+   cat::str_view const&, cat::assert_handler, cat::source_location const&
 );
 
 // Compare an address to the above functions' addresses.

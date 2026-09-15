@@ -21,7 +21,7 @@ assert(bool invariant_expression, source_location const& callsite) {
 
 constexpr void
 assert(
-   bool invariant_expression, detail::assert_handler p_assert_handler,
+   bool invariant_expression, assert_handler p_assert_handler,
    source_location const& callsite
 ) {
    if consteval {
@@ -52,7 +52,7 @@ assert(
 constexpr void
 assert(
    bool invariant_expression, str_view const& error_string,
-   detail::assert_handler p_assert_handler, source_location const& callsite
+   assert_handler p_assert_handler, source_location const& callsite
 ) {
    if consteval {
       [[assume(invariant_expression)]];

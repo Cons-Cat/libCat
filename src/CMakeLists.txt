@@ -289,6 +289,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/debug/implementations/breakpoint.cpp
   ${CATLIB}/debug/implementations/default_assert_handler.cpp
   ${CATLIB}/debug/implementations/assert_failure.cpp
+  ${CATLIB}/debug/implementations/scoped_assert_handler.cpp
   ${CATLIB}/linux/implementations/cpu_temperature.cpp
   ${CATLIB}/stacktrace/implementations/stacktrace.cpp
   ${CATLIB}/stacktrace/implementations/dwarf_line.cpp

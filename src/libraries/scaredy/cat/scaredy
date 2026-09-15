@@ -712,7 +712,19 @@ class
    auto
    assert(
       this auto&& self,
-      void (*p_assert_handler)(source_location const&) = assert_handler,
+      source_location const& callsite = source_location::current()
+   ) -> auto&&
+      requires(!storage_type::is_wrapping_void)
+   {
+      auto&& base = $fwd(self).as_base();
+      cat::assert(base.has_value(), callsite);
+      return $fwd(base).value();
+   }
+
+   auto
+   assert(
+      this auto&& self,
+      void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) -> auto&&
       requires(!storage_type::is_wrapping_void)
@@ -725,8 +737,18 @@ class
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
+   assert(source_location const& callsite = source_location::current()) const
+      -> monostate_type
+      requires(storage_type::is_wrapping_void)
+   {
+      cat::assert(has_value(), callsite);
+      return monostate;
+   }
+
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   auto
    assert(
-      void (*p_assert_handler)(source_location const&) = assert_handler,
+      void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) const -> monostate_type
       requires(storage_type::is_wrapping_void)
@@ -738,7 +760,19 @@ class
    auto
    verify(
       this auto&& self,
-      void (*p_assert_handler)(source_location const&) = assert_handler,
+      source_location const& callsite = source_location::current()
+   ) -> auto&&
+      requires(!storage_type::is_wrapping_void)
+   {
+      auto&& base = $fwd(self).as_base();
+      cat::verify(base.has_value(), callsite);
+      return $fwd(base).value();
+   }
+
+   auto
+   verify(
+      this auto&& self,
+      void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) -> auto&&
       requires(!storage_type::is_wrapping_void)
@@ -751,8 +785,17 @@ class
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
+   verify(source_location const& callsite = source_location::current()) const
+      -> monostate_type
+      requires(storage_type::is_wrapping_void)
+   {
+      cat::verify(has_value(), callsite);
+      return monostate;
+   }
+
+   auto
    verify(
-      void (*p_assert_handler)(source_location const&) = assert_handler,
+      void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) const -> monostate_type
       requires(storage_type::is_wrapping_void)

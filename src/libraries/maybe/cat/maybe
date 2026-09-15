@@ -1292,8 +1292,19 @@ class
    auto
    assert(
       this auto&& self,
-      void (*_Nonnull p_assert_handler)(source_location const&) =
-         assert_handler,
+      source_location const& callsite = source_location::current()
+   ) -> decltype(auto)
+      requires(!is_void<value_type>)
+   {
+      auto&& base = $fwd(self).as_base();
+      cat::assert(base.has_value(), callsite);
+      return $fwd(base).value();
+   }
+
+   auto
+   assert(
+      this auto&& self,
+      void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) -> decltype(auto)
       requires(!is_void<value_type>)
@@ -1306,9 +1317,18 @@ class
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
+   assert(source_location const& callsite = source_location::current()) const
+      -> monostate_type
+      requires(is_void<value_type>)
+   {
+      cat::assert(has_value(), callsite);
+      return monostate;
+   }
+
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   auto
    assert(
-      void (*_Nonnull p_assert_handler)(source_location const&) =
-         assert_handler,
+      void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) const -> monostate_type
       requires(is_void<value_type>)
@@ -1322,8 +1342,19 @@ class
    auto
    verify(
       this auto&& self,
-      void (*_Nonnull p_assert_handler)(source_location const&) =
-         assert_handler,
+      source_location const& callsite = source_location::current()
+   ) -> decltype(auto)
+      requires(!is_void<value_type>)
+   {
+      auto&& base = $fwd(self).as_base();
+      cat::verify(base.has_value(), callsite);
+      return $fwd(base).value();
+   }
+
+   auto
+   verify(
+      this auto&& self,
+      void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) -> decltype(auto)
       requires(!is_void<value_type>)
@@ -1335,9 +1366,17 @@ class
 
    // Special discard-able overload for `maybe<void>`.
    auto
+   verify(source_location const& callsite = source_location::current()) const
+      -> monostate_type
+      requires(is_void<value_type>)
+   {
+      cat::verify(has_value(), callsite);
+      return monostate;
+   }
+
+   auto
    verify(
-      void (*_Nonnull p_assert_handler)(source_location const&) =
-         assert_handler,
+      void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) const -> monostate_type
       requires(is_void<value_type>)
