@@ -95,6 +95,7 @@ enum class [[clang::enum_extensibility(open)]] wait_id : unsigned char {
 };
 
 enum class [[clang::flag_enum]] wait_options_flags : unsigned int {
+   none = 0,
    no_hang = 1,
    untraced = 2,
    stopped = 2,

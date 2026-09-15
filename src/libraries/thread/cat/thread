@@ -116,6 +116,11 @@ inline auto
 get_id() -> thread::id {
    return thread::id(nix::sys_gettid());
 }
+
+inline void
+yield() {
+   nix::sys_sched_yield().verify();
+}
 }  // namespace this_thread
 
 // TODO: Move this elsewhere.

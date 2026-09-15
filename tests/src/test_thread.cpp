@@ -37,6 +37,34 @@ function_2() {
 
 }  // namespace
 
+$test(this_thread) {
+   cat::thread::id const original_id = cat::this_thread::get_id();
+   cat::verify(original_id == cat::this_thread::get_id());
+
+   cat::atomic<cat::uint4> observed_id{};
+   cat::thread worker;
+   worker
+      .spawn(
+         pager, 1_umi,
+         [&observed_id] {
+            cat::this_thread::yield();
+            observed_id.store(
+               cat::this_thread::get_id().native().value,
+               cat::memory_order::release
+            );
+         }
+      )
+      .verify();
+   cat::thread::id const worker_id = worker.get_id();
+   worker.join().verify();
+   worker.free(pager);
+
+   cat::verify(worker_id != original_id);
+   cat::verify(
+      observed_id.load(cat::memory_order::acquire) == worker_id.native().value
+   );
+}
+
 $test(thread) {
    cat::thread threads[5];
    nix::process non_thread_child;

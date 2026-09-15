@@ -13,6 +13,14 @@ namespace {
 static_assert(cat::musl_allocator::min_alignment == 16u);
 static_assert(cat::musl_allocator::min_allocation_bytes == 1u);
 
+constexpr char child_armed = 1;
+constexpr char child_returned = 3;
+
+void
+mark_child(nix::file_descriptor marker, char value) {
+   nix::sys_write(marker, &value, 1u).verify();
+}
+
 template <typename Allocator>
 concept exposes_deallocate_poisons =
    requires { Allocator::deallocate_poisons; };
@@ -188,9 +196,9 @@ corrupt_slot_index(nix::file_descriptor marker) {
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<unsigned char*>(p_allocation);
    p_bytes[-3] = static_cast<unsigned char>((p_bytes[-3] & 0xe0u) | 31u);
+   mark_child(marker, child_armed);
    deallocate_bytes(allocator, p_allocation, 32u);
-   char const failed = 1;
-   nix::sys_write(marker, &failed, 1u).verify();
+   mark_child(marker, child_returned);
 }
 
 void
@@ -198,20 +206,23 @@ deallocate_with_wrong_size(nix::file_descriptor marker) {
    cat::musl_allocator allocator;
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
+   mark_child(marker, child_armed);
    deallocate_bytes(allocator, p_allocation, 31u);
-   char const failed = 1;
-   nix::sys_write(marker, &failed, 1u).verify();
+   mark_child(marker, child_returned);
 }
 
 void
 double_free(nix::file_descriptor marker) {
    cat::musl_allocator allocator;
    void* const p_allocation = allocate_bytes(allocator, 32u);
+   [[maybe_unused]]
+   void* const p_neighbor = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
+   cat::verify(p_neighbor != nullptr);
    deallocate_bytes(allocator, p_allocation, 32u);
+   mark_child(marker, child_armed);
    deallocate_bytes(allocator, p_allocation, 32u);
-   char const failed = 1;
-   nix::sys_write(marker, &failed, 1u).verify();
+   mark_child(marker, child_returned);
 }
 
 void
@@ -220,9 +231,9 @@ deallocate_misaligned_pointer(nix::file_descriptor marker) {
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<cat::byte*>(p_allocation);
+   mark_child(marker, child_armed);
    deallocate_bytes(allocator, p_bytes + 1u, 31u);
-   char const failed = 1;
-   nix::sys_write(marker, &failed, 1u).verify();
+   mark_child(marker, child_returned);
 }
 
 void
@@ -231,9 +242,9 @@ deallocate_foreign_pointer(nix::file_descriptor marker) {
    void* const p_context = allocate_bytes(allocator, 1u);
    cat::verify(p_context != nullptr);
    alignas(16) cat::byte foreign[32] = {};
+   mark_child(marker, child_armed);
    deallocate_bytes(allocator, foreign, 32u);
-   char const failed = 1;
-   nix::sys_write(marker, &failed, 1u).verify();
+   mark_child(marker, child_returned);
 }
 
 void
@@ -242,10 +253,10 @@ grow_with_wrong_size(nix::file_descriptor marker) {
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
    cat::span allocation{static_cast<cat::byte*>(p_allocation), 31u};
+   mark_child(marker, child_armed);
    [[maybe_unused]]
    cat::maybe<void> const result = allocator.alloc_grow(allocation, 32u);
-   char const failed = 1;
-   nix::sys_write(marker, &failed, 1u).verify();
+   mark_child(marker, child_returned);
 }
 
 void
@@ -254,9 +265,9 @@ deallocate_after_reset(nix::file_descriptor marker) {
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
    allocator.reset();
+   mark_child(marker, child_armed);
    deallocate_bytes(allocator, p_allocation, 32u);
-   char const failed = 1;
-   nix::sys_write(marker, &failed, 1u).verify();
+   mark_child(marker, child_returned);
 }
 
 void
@@ -266,9 +277,9 @@ corrupt_extended_offset(nix::file_descriptor marker) {
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<unsigned char*>(p_allocation);
    p_bytes[-4] = 1u;
+   mark_child(marker, child_armed);
    deallocate_bytes(allocator, p_allocation, 32u);
-   char const failed = 1;
-   nix::sys_write(marker, &failed, 1u).verify();
+   mark_child(marker, child_returned);
 }
 
 void
@@ -278,9 +289,9 @@ corrupt_size_trailer(nix::file_descriptor marker) {
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<unsigned char*>(p_allocation);
    p_bytes[12] = 1u;
+   mark_child(marker, child_armed);
    deallocate_bytes(allocator, p_allocation, 12u);
-   char const failed = 1;
-   nix::sys_write(marker, &failed, 1u).verify();
+   mark_child(marker, child_returned);
 }
 
 template <typename Allocator>
@@ -318,18 +329,20 @@ verify_child_hardening(void (*p_test)(nix::file_descriptor)) {
    nix::sys_pipe(pipe).verify();
 
    nix::process child;
-   auto const p_test_assert_handler = cat::assert_handler;
-   cat::assert_handler = cat::default_assert_handler;
-   child.spawn(pager, 16_uki, p_test, pipe[1]).verify();
+   child.spawn(pager, 1_umi, p_test, pipe[1]).verify();
+   cat::int4 child_status;
+   nix::sys_wait4(
+      child.id(), &child_status, nix::wait_options_flags::none, nullptr
+   ).verify();
    nix::sys_close(pipe[1]).verify();
-   child.wait().verify();
-   cat::assert_handler = p_test_assert_handler;
 
-   char marker = 0;
-   idx const bytes = nix::sys_read(pipe[0], &marker, 1u).verify();
+   char markers[2] = {};
+   idx const bytes = nix::sys_read(pipe[0], markers, 2u).verify();
    nix::sys_close(pipe[0]).verify();
    child.free(pager);
-   cat::verify(bytes == 0u);
+   cat::verify(child_status == 1u << 8u);
+   cat::verify(bytes == 1u);
+   cat::verify(markers[0] == child_armed);
 }
 
 template <typename Allocator>

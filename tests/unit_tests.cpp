@@ -3,12 +3,14 @@
 #include <cat/atomic>
 #include <cat/format>
 #include <cat/page_allocator>
+#include <cat/thread>
 #include <cat/vec>
 
 // The jump buffer must be constructed in `main()` instead of globally so that
 // it can be guaranteed to occur before any unit tests are called.
 namespace {
 inline constinit cat::jmp_buffer* p_jump_buffer = nullptr;
+constinit cat::thread::id parent_thread_id;
 
 constinit cat::atomic<cat::idx> tests_passed{};
 constinit cat::atomic<cat::idx> tests_failed{};
@@ -36,6 +38,9 @@ run_test_prologue(cat::str_view label, constructor_fn p_test_fn) {
 namespace cat {
 void
 test_fail(cat::source_location const& source_location) {
+   if (this_thread::get_id() != parent_thread_id) {
+      nix::sys_exit(1);
+   }
    cat::detail::print_assert_location(source_location);
    // Gracefully handle print in tests.
    auto _ = cat::println();
@@ -51,6 +56,8 @@ extern constructor_fn __init_array_end[];
 
 auto
 main() -> int {
+   parent_thread_id = cat::this_thread::get_id();
+
    // Change the default assert handler.
    cat::assert_handler = &cat::test_fail;
 
