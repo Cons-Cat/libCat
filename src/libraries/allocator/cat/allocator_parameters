@@ -757,6 +757,10 @@ class [[clang::trivial_abi, gsl::Owner]] basic_dyn_allocator
 
    basic_dyn_allocator(basic_dyn_allocator const&) = default;
 
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator=(basic_dyn_allocator const&) -> basic_dyn_allocator& = default;
+
    template <typename... Superset>
       requires(
          sizeof...(Superset) != sizeof...(Methods)
