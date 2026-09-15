@@ -158,6 +158,7 @@ list(
   APPEND CAT_CXX_FLAGS_COMMON
   # Enable most warnings.
   -Wall -Wextra
+  -Wimplicit-fallthrough
   -Wno-unused-function
   -Wno-missing-braces # This breaks `cat::tuple`.
 
