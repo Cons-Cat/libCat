@@ -34,8 +34,15 @@ class precision_reference {
 
  public:
    constexpr explicit precision_reference(WrappedQual& w)
-       : m_wrapped(__builtin_addressof(w)) {
+       : m_wrapped(addressof(w)) {
    }
+
+   // P3207R0. This type is reference-like.
+   friend constexpr void
+   operator&(precision_reference const volatile&) = delete;
+
+   friend constexpr void
+   operator&(precision_reference const volatile&&) = delete;
 
    using raw_type = remove_cvref<WrappedQual>::raw_type;
    using quantity_type = remove_cvref<WrappedQual>::quantity_type;
@@ -47,7 +54,7 @@ class precision_reference {
    // Rebind this reference wrapper to a different address.
    constexpr void
    rebind(WrappedQual& w [[clang::lifetime_capture_by_this]]) {
-      m_wrapped = __builtin_addressof(w);
+      m_wrapped = addressof(w);
    }
 
  private:

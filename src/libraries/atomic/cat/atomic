@@ -219,8 +219,14 @@ class atomic_overflow_reference {
    using raw_value = remove_cvref<AtomicQual>::raw_value;
 
    constexpr explicit atomic_overflow_reference(AtomicQual& atomic)
-       : m_p_atomic(__builtin_addressof(atomic)) {
+       : m_p_atomic(addressof(atomic)) {
    }
+
+   friend constexpr void
+   operator&(atomic_overflow_reference const volatile&) = delete;
+
+   friend constexpr void
+   operator&(atomic_overflow_reference const volatile&&) = delete;
 
    // `std::atomic_ref` is not rebindable. Keep this disabled until we have
    // matching evidence.

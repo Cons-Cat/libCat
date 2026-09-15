@@ -397,14 +397,14 @@ struct maybe_reference_storage {
    template <typename U>
       requires(is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
    constexpr maybe_reference_storage(U& in_value)
-       : p_storage(__builtin_addressof(static_cast<value_type>(in_value))) {
+       : p_storage(addressof(static_cast<value_type>(in_value))) {
    }
 
    // Rebind the held pointer. The referent is never destroyed, even when the
    // wrapper transitions through `nullopt`.
    constexpr auto
    operator=(value_type option) -> maybe_reference_storage& {
-      this->p_storage = __builtin_addressof(option);
+      this->p_storage = addressof(option);
       return *this;
    }
 
@@ -432,7 +432,7 @@ struct maybe_reference_storage {
       requires(is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
    constexpr void
    construct(U& referent) {
-      this->p_storage = __builtin_addressof(static_cast<value_type>(referent));
+      this->p_storage = addressof(static_cast<value_type>(referent));
    }
 
    // Copy or clear the held pointer based on whether `maybe` is engaged. The
@@ -441,8 +441,7 @@ struct maybe_reference_storage {
    constexpr void
    assign(Maybe&& maybe) {
       if (maybe.has_value()) {
-         this->p_storage =
-            __builtin_addressof(static_cast<value_type>(maybe.value()));
+         this->p_storage = addressof(static_cast<value_type>(maybe.value()));
       } else {
          this->p_storage = nullptr;
       }

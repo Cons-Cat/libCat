@@ -986,6 +986,27 @@ concept is_predicate = requires(Callback c, Args&&... args) {
                           } -> is_convertible<bool>;
                        };
 
+template <typename T>
+concept is_unary_addressable = requires(remove_reference<T>& value) { &value; };
+
+// Unary `&` is deleted on reference-like types, so generic code
+// that forms a `T*` must not call `__builtin_addressof` on an unconstrained
+// template parameter. `cat::addressof` is well-formed only when unary `&`
+// is.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3207r0.html
+template <typename T>
+   requires(is_unary_addressable<T>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+addressof(T& value) -> T* _Nonnull {
+   return __builtin_addressof(value);
+}
+
+template <typename T>
+constexpr void
+addressof(T const&&) = delete ("This type is not addressable! It may have been "
+                               "a deduced reference-like wrapper type.");
+
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <typename T>
 struct proxy_arrow_result {
@@ -1094,14 +1115,14 @@ struct reference_wrapper_impl {
       U&& target [[clang::lifetimebound]]
    ) noexcept(noexcept(detail::
                           reference_wrapper_bind<T>(static_cast<U&&>(target))))
-       : m_p_target(__builtin_addressof(
+       : m_p_target(addressof(
             detail::reference_wrapper_bind<T>(static_cast<U&&>(target))
          )) {
    }
 
    constexpr void
    rebind(T& target [[clang::lifetime_capture_by_this]]) noexcept {
-      m_p_target = __builtin_addressof(target);
+      m_p_target = addressof(target);
    }
 
    constexpr void
@@ -1134,6 +1155,13 @@ struct reference_wrapper_impl {
 template <typename T>
 struct reference_wrapper : detail::reference_wrapper_impl<T> {
    using detail::reference_wrapper_impl<T>::reference_wrapper_impl;
+
+   // P3207R0. This type is reference-like.
+   friend constexpr void
+   operator&(reference_wrapper const volatile&) = delete;
+
+   friend constexpr void
+   operator&(reference_wrapper const volatile&&) = delete;
 };
 
 template <typename T>

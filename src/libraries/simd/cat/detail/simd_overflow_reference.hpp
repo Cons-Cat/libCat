@@ -26,13 +26,21 @@ class simd_overflow_reference
 
  public:
    constexpr explicit simd_overflow_reference(wrapper_type& w)
-       : m_wrapped(__builtin_addressof(w)) {
+       : m_wrapped(addressof(w)) {
    }
+
+   // P3207R0. This type is reference-like. Friend deletion keeps binary
+   // `operator&` from `arithmetic_interface` visible.
+   friend constexpr void
+   operator&(simd_overflow_reference const volatile&) = delete;
+
+   friend constexpr void
+   operator&(simd_overflow_reference const volatile&&) = delete;
 
    // Rebind this reference wrapper to a different address.
    constexpr void
    rebind(wrapper_type& w [[clang::lifetime_capture_by_this]]) {
-      m_wrapped = __builtin_addressof(w);
+      m_wrapped = addressof(w);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]

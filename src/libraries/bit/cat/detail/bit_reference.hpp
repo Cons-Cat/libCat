@@ -11,13 +11,11 @@ class bit_reference {
    constexpr bit_reference(bit_reference<Storage>&&) = default;
 
    constexpr bit_reference(bit_value& other)
-       : m_p_storage(__builtin_addressof(detail::get_bit_value(other))),
-         m_bit_mask(1u) {
+       : m_p_storage(addressof(detail::get_bit_value(other))), m_bit_mask(1u) {
    }
 
    constexpr bit_reference(bit_value const& other)
-       : m_p_storage(__builtin_addressof(detail::get_bit_value(other))),
-         m_bit_mask(1u) {
+       : m_p_storage(addressof(detail::get_bit_value(other))), m_bit_mask(1u) {
    }
 
    // You cannot take a reference of r-values.
@@ -71,6 +69,13 @@ class bit_reference {
       return this->is_set();
    }
 
+   // P3207R0. This type is reference-like.
+   friend constexpr void
+   operator&(bit_reference const volatile&) = delete;
+
+   friend constexpr void
+   operator&(bit_reference const volatile&&) = delete;
+
    // Rebind this `bit_reference` to a different bit position specified by
    // `mask` into a `Storage`.
    constexpr void
@@ -78,7 +83,7 @@ class bit_reference {
       Storage& reference [[clang::lifetime_capture_by_this]], Storage mask
    ) {
       assert(has_single_bit(mask));
-      m_p_storage = __builtin_addressof(reference);
+      m_p_storage = addressof(reference);
       m_bit_mask = mask;
    }
 
@@ -144,7 +149,7 @@ class bit_reference {
 
    // This constructor is only used by the free factory functions.
    constexpr bit_reference(Storage& in_storage, Storage in_mask)
-       : m_p_storage(__builtin_addressof(in_storage)), m_bit_mask(in_mask) {
+       : m_p_storage(addressof(in_storage)), m_bit_mask(in_mask) {
       assert(has_single_bit(in_mask));
    }
 

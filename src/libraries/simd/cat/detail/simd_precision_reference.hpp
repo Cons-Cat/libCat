@@ -69,12 +69,20 @@ class simd_precision_reference
 
  public:
    constexpr explicit simd_precision_reference(WrappedQual& w)
-       : m_wrapped(__builtin_addressof(w)) {
+       : m_wrapped(addressof(w)) {
    }
+
+   // P3207R0. This type is reference-like. Friend deletion keeps binary
+   // `operator&` from `arithmetic_interface` visible.
+   friend constexpr void
+   operator&(simd_precision_reference const volatile&) = delete;
+
+   friend constexpr void
+   operator&(simd_precision_reference const volatile&&) = delete;
 
    constexpr void
    rebind(WrappedQual& w [[clang::lifetime_capture_by_this]]) {
-      m_wrapped = __builtin_addressof(w);
+      m_wrapped = addressof(w);
    }
 
    template <typename OtherT, typename OtherAbi>

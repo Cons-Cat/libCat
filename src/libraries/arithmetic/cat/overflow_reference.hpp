@@ -27,16 +27,24 @@ class overflow_reference
          overflow_reference<WrappedQual, overflow_policy>> {
  public:
    constexpr explicit overflow_reference(WrappedQual& w)
-       : m_wrapped(__builtin_addressof(w)) {
+       : m_wrapped(addressof(w)) {
    }
 
    using raw_type = remove_cvref<WrappedQual>::raw_type;
    using quantity_type = arithmetic_quantity<WrappedQual>;
 
+   // P3207R0. This type is reference-like. Friend deletion keeps binary
+   // `operator&` from `arithmetic_interface` visible.
+   friend constexpr void
+   operator&(overflow_reference const volatile&) = delete;
+
+   friend constexpr void
+   operator&(overflow_reference const volatile&&) = delete;
+
    // Rebind this reference wrapper to a different address.
    constexpr void
    rebind(WrappedQual& w [[clang::lifetime_capture_by_this]]) {
-      m_wrapped = __builtin_addressof(w);
+      m_wrapped = addressof(w);
    }
 
  private:
