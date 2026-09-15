@@ -5,6 +5,13 @@
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 namespace std {
 
+// Declaring `std::source_location` is unfortunate, but it's the best way to
+// implement the feature. `__builtin_source_location()` requires it, and
+// `_M_function_name` is populated by the contents of `__PRETTY_FUNCTION__`,
+// which is the only way to do that. `__builtin_FUNCSIG()` is an alternative
+// similar intrinsic, in the MSVC style, but GCC/Clang style is nicer and we
+// would need to evaluate a `consteval` parser to make the output equivalent.
+
 class source_location {
  private:
    // Clang requires these variables be declared at the top, not the bottom.
@@ -129,14 +136,19 @@ assert_failed(
 );
 }  // namespace detail
 
+#ifndef CAT_NO_STACKTRACE
+// Tail call optimization puts `cat::fmt()` calls into the stack trace.
+[[clang::disable_tail_calls]]
+#endif
 void
 default_assert_handler(source_location const& callsite);
 
 // This variable can be mutated to change the default assert handler globally.
+// TODO: We need global, block, and thread local scope assert handlers.
 inline detail::assert_handler assert_handler = default_assert_handler;
 
-// TODO: Fancier `ASSERT()` macro with expression decomposition.
-// TODO: `assert_eq()`, `assert_gt()`, etc.
+// TODO: Fancier `$assert()` macro with expression decomposition.
+// TODO: `assert_eq()`, `assert_gt()`, etc. functions.
 
 constexpr void
 verify(

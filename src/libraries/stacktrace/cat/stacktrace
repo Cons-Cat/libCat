@@ -19,20 +19,20 @@ class stacktrace_entry {
  public:
    constexpr stacktrace_entry() = default;
 
-   explicit constexpr stacktrace_entry(void* _Nullable native)
-       : m_native(native) {
+   explicit constexpr stacktrace_entry(void* _Nullable p_native)
+       : m_p_native(p_native) {
    }
 
    [[nodiscard]]
    constexpr auto
    native() const -> void* _Nullable {
-      return m_native;
+      return m_p_native;
    }
 
    [[nodiscard]]
    constexpr explicit
    operator bool() const {
-      return m_native != nullptr;
+      return m_p_native != nullptr;
    }
 
    [[nodiscard]]
@@ -42,11 +42,11 @@ class stacktrace_entry {
    [[nodiscard]]
    constexpr auto
    operator<=>(stacktrace_entry const& other) const {
-      return uintptr<void>(m_native) <=> uintptr<void>(other.m_native);
+      return uintptr<void>(m_p_native) <=> uintptr<void>(other.m_p_native);
    }
 
  private:
-   void* _Nullable m_native = nullptr;
+   void* _Nullable m_p_native = nullptr;
 };
 
 class stacktrace
@@ -159,36 +159,96 @@ class stacktrace
 
 namespace detail {
 
-[[nodiscard]]
-inline auto
-format_stacktrace_entry(stacktrace_entry entry, format_context& context)
-   -> scaredy_format<void> {
-   return format_nested(context, entry.native());
-}
+// Mapped executable used to resolve symbols and source lines.
+struct symbolizer;
 
 [[nodiscard]]
 auto
-format_stacktrace(stacktrace const& trace, format_context& context)
+load_symbolizer() -> symbolizer* _Nullable;
+
+void
+unload_symbolizer(symbolizer* _Nullable p_symbolizer);
+
+// What the ELF lookup knows about one frame. `p_function` is the entry point
+// of the function that contains the frame, which identifies the frame even
+// in a build that carries no DWARF. The strings borrow the mapping, so they
+// last only until it is unloaded.
+struct frame_origin {
+   str_view file;
+   uint8 line = 0u;
+   str_view symbol;
+   void* _Nullable p_function = nullptr;
+};
+
+[[nodiscard]]
+auto
+resolve_stacktrace_frame(
+   symbolizer const* _Nullable p_symbolizer, stacktrace_entry entry
+) -> frame_origin;
+
+[[nodiscard]]
+auto
+format_stacktrace_frame(
+   symbolizer const* _Nullable p_symbolizer, idx number, stacktrace_entry entry,
+   format_context& context, bool debug
+) -> scaredy_format<void>;
+
+[[nodiscard]]
+auto
+format_stacktrace_entry_context(stacktrace_entry entry, format_context& context)
    -> scaredy_format<void>;
+
+[[nodiscard]]
+inline auto
+format_stacktrace_entry(
+   stacktrace_entry entry, format_context& context, bool debug
+) -> scaredy_format<void> {
+   if (!debug) {
+      return format_nested(context, entry.native());
+   }
+   return format_stacktrace_entry_context(entry, context);
+}
 }  // namespace detail
 
 template <typename CharT>
    requires(is_same<CharT, char>)
-struct formatter<stacktrace_entry, CharT> : formatter_base<CharT> {
+struct formatter<stacktrace_entry, CharT> : debug_formatter<CharT> {
    auto
    format(stacktrace_entry value, format_context& context) const
       -> scaredy_format<void> {
-      return detail::format_stacktrace_entry(value, context);
+      return detail::format_stacktrace_entry(value, context, this->debug);
    }
 };
 
-template <typename CharT>
-   requires(is_same<CharT, char>)
-struct formatter<stacktrace, CharT> : formatter_base<CharT> {
+// Frames are numbered from `#1`, most recent first, across whatever the
+// sequence yields, so trimming frames before formatting renumbers the rest.
+template <typename Frames>
+   requires(
+      is_iterable<Frames const>
+      && is_same<iterable_value_type<Frames const>, stacktrace_entry>
+   )
+struct formatter<Frames, char> : debug_formatter<char> {
    auto
-   format(stacktrace const& value, format_context& context) const
+   format(Frames const& value, format_context& context) const
       -> scaredy_format<void> {
-      return detail::format_stacktrace(value, context);
+      scaredy_format<void> result = context.append("Stack trace:\n");
+      if (result.is_empty()) {
+         return result;
+      }
+
+      detail::symbolizer* _Nullable const p_symbolizer =
+         detail::load_symbolizer();
+      idx number = 0u;
+      auto iteration = iterate(value);
+      iteration.run_while([&](stacktrace_entry const& entry) -> bool {
+         ++number;
+         result = detail::format_stacktrace_frame(
+            p_symbolizer, number, entry, context, this->debug
+         );
+         return result.has_value();
+      });
+      detail::unload_symbolizer(p_symbolizer);
+      return result;
    }
 };
 

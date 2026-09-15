@@ -13,7 +13,7 @@ struct source_location {
 
 [[nodiscard]]
 auto
-resolve_dwarf_line(span<byte const> image, uint8 address) -> source_location;
+resolve_dwarf_line(span<byte const> elf, uint8 address) -> source_location;
 
 [[nodiscard]]
 auto

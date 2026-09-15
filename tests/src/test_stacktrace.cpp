@@ -61,7 +61,6 @@ struct capture_pair {
 [[gnu::noinline, clang::disable_tail_calls]]
 auto
 capture_traces() -> capture_pair {
-   cat::nop();
    return {
       .full = cat::stacktrace::current(pager).verify(),
       .skipped = cat::stacktrace::current(pager, 1u).verify(),
@@ -71,31 +70,27 @@ capture_traces() -> capture_pair {
 [[gnu::noinline, clang::disable_tail_calls]]
 auto
 inner_trace() -> cat::stacktrace {
-   cat::nop();
    return cat::stacktrace::current(pager).verify();
 }
 
 [[gnu::noinline, clang::disable_tail_calls]]
 auto
 middle_trace() -> cat::stacktrace {
-   cat::nop();
    return inner_trace();
 }
 
 [[gnu::noinline, clang::disable_tail_calls]]
 auto
 outer_trace() -> cat::stacktrace {
-   cat::nop();
    return middle_trace();
 }
 
 // Recurse `remaining` times before capturing, to produce a trace deeper than
 // this `stacktrace`'s inline storage.
-// NOLINTNEXTLINE(misc-no-recursion)
 [[gnu::noinline, clang::disable_tail_calls]]
 auto
+// NOLINTNEXTLINE
 deep_trace(idx remaining) -> cat::stacktrace {
-   cat::nop();
    if (remaining == 0u) {
       return cat::stacktrace::current(pager).verify();
    }
@@ -104,12 +99,11 @@ deep_trace(idx remaining) -> cat::stacktrace {
 
 // Recurse before capturing through an allocator that may refuse to grow the
 // trace.
-// NOLINTNEXTLINE(misc-no-recursion)
 [[gnu::noinline, clang::disable_tail_calls]]
 auto
+// NOLINTNEXTLINE
 deep_maybe_trace(cat::dyn_allocator allocator, idx remaining)
    -> cat::maybe<cat::stacktrace> {
-   cat::nop();
    if (remaining == 0u) {
       return cat::stacktrace::current(allocator);
    }
@@ -196,20 +190,51 @@ $test(stacktrace_formatting) {
       cat::fmt(allocator, "{}", captured.trace).verify();
 
    // Release builds carry no DWARF, so the location falls back to
-   // `<unknown>` while the symbol still resolves through `.symtab`.
+   // `<missing-file>` while the symbol still resolves through `.symtab`.
    bool const has_line_info =
       formatted.find("test_stacktrace.cpp:").has_value();
    cat::str_view const location =
       has_line_info
          ? cat::fmt(allocator, "test_stacktrace.cpp:{}", captured.inner_line)
               .verify()
-         : cat::str_view("<unknown>");
+         : cat::str_view("<missing-file>");
    cat::str_view const expected =
       cat::fmt(
          allocator, "{}#1 {} cat_test_capture_one_frame()\n", header, location
       )
          .verify();
    cat::verify(formatted == expected);
+
+   cat::str_view const contextual =
+      cat::fmt(allocator, "{:?}", captured.trace).verify();
+   cat::verify(has_prefix(contextual, "Stack trace:\n#1 Object \""));
+   cat::verify(contextual.find("\", at 0x").has_value());
+   cat::verify(
+      contextual.find(", in cat_test_capture_one_frame()\n").has_value()
+   );
+   if (has_line_info) {
+      cat::str_view const source =
+         cat::fmt(
+            allocator, "Source \"tests/src/test_stacktrace.cpp\", line {}, in ",
+            captured.inner_line
+         )
+            .verify();
+      cat::verify(contextual.find(source).has_value());
+      cat::verify(contextual
+                     .find(
+                        "out.trace = cat::stacktrace::current(allocator, 0u, "
+                        "1u).verify();"
+                     )
+                     .has_value());
+      cat::verify(contextual.find("   > ").has_value());
+   }
+
+   cat::str_view const contextual_entry =
+      cat::fmt(allocator, "{:?}", captured.trace[0u]).verify();
+   cat::verify(has_prefix(contextual_entry, "#1 Object \""));
+   cat::verify(
+      contextual_entry.find(", in cat_test_capture_one_frame()\n").has_value()
+   );
 
    cat::str_view const first_frame =
       cat::fmt(allocator, "{}", captured.trace[0u]).verify();
@@ -243,7 +268,7 @@ $test(stacktrace_formatting_three_frames) {
       formatted.find("test_stacktrace.cpp:").has_value();
    auto location = [&](idx line) -> cat::str_view {
       if (!has_line_info) {
-         return "<unknown>";
+         return "<missing-file>";
       }
       return cat::fmt(allocator, "test_stacktrace.cpp:{}", line).verify();
    };
@@ -260,6 +285,203 @@ $test(stacktrace_formatting_three_frames) {
       )
          .verify();
    cat::verify(formatted == expected);
+}
+
+// A trace piped through the take family prints like a whole trace, and what
+// remains is renumbered from `#1`.
+$test(stacktrace_formatting_dropped_frames) {
+   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   $defer {
+      pager.free(page);
+   };
+   auto allocator = cat::make_linear_allocator(page);
+
+   frame_capture captured{.trace = cat::stacktrace(allocator)};
+   cat_test_frame_outer(allocator, captured);
+   cat::verify(captured.trace.size() == 3u);
+
+   cat::span<cat::stacktrace_entry const> frames(captured.trace);
+   cat::str_view const formatted =
+      cat::fmt(allocator, "{}", frames | cat::drop(1u)).verify();
+   bool const has_line_info =
+      formatted.find("test_stacktrace.cpp:").has_value();
+   auto location = [&](idx line) -> cat::str_view {
+      if (!has_line_info) {
+         return "<missing-file>";
+      }
+      return cat::fmt(allocator, "test_stacktrace.cpp:{}", line).verify();
+   };
+
+   cat::str_view const expected =
+      cat::fmt(
+         allocator,
+         "Stack trace:\n"
+         "#1 {} cat_test_frame_middle()\n"
+         "#2 {} cat_test_frame_outer()\n",
+         location(captured.middle_line), location(captured.outer_line)
+      )
+         .verify();
+   cat::verify(formatted == expected);
+
+   // Dropping every frame leaves only the header.
+   cat::verify(
+      cat::fmt(allocator, "{}", frames | cat::drop(3u)).verify()
+      == "Stack trace:\n"
+   );
+
+   cat::str_view const contextual =
+      cat::fmt(allocator, "{:?}", frames | cat::drop(2u)).verify();
+   cat::verify(has_prefix(contextual, "Stack trace:\n#1 Object \""));
+   cat::verify(contextual.find(", in cat_test_frame_outer()\n").has_value());
+   cat::verify(contextual.find("#2 ").is_empty());
+}
+
+// The assert handler hides its own frames by recognizing them rather than by
+// counting them, because an optimizing build inlines a varying number of them
+// away. This exercises that mechanism over a chain of known functions, so it
+// holds whether or not the build carries DWARF.
+$test(stacktrace_drop_while_frames) {
+   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   $defer {
+      pager.free(page);
+   };
+   auto allocator = cat::make_linear_allocator(page);
+
+   frame_capture captured{.trace = cat::stacktrace(allocator)};
+   cat_test_frame_outer(allocator, captured);
+   cat::verify(captured.trace.size() == 3u);
+
+   cat::detail::symbolizer* _Nullable const p_symbolizer =
+      cat::detail::load_symbolizer();
+   $defer {
+      cat::detail::unload_symbolizer(p_symbolizer);
+   };
+
+   // A frame resolves to the entry point of the function containing it, which
+   // is what identifies it without a frame count.
+   cat::detail::frame_origin const inner =
+      cat::detail::resolve_stacktrace_frame(p_symbolizer, captured.trace[0u]);
+   cat::detail::frame_origin const middle =
+      cat::detail::resolve_stacktrace_frame(p_symbolizer, captured.trace[1u]);
+   cat::detail::frame_origin const outer =
+      cat::detail::resolve_stacktrace_frame(p_symbolizer, captured.trace[2u]);
+   cat::verify(inner.symbol == "cat_test_frame_inner");
+   cat::verify(
+      inner.p_function == __builtin_bit_cast(void*, &cat_test_frame_inner)
+   );
+   cat::verify(
+      middle.p_function == __builtin_bit_cast(void*, &cat_test_frame_middle)
+   );
+   cat::verify(
+      outer.p_function == __builtin_bit_cast(void*, &cat_test_frame_outer)
+   );
+   cat::verify(
+      cat::detail::resolve_stacktrace_frame(p_symbolizer, {}).p_function == nullptr
+   );
+
+   auto belongs_to =
+      [&](cat::stacktrace_entry entry, auto... functions) -> bool {
+      void* _Nullable p_function = nullptr;
+      if (entry == captured.trace[0u]) {
+         p_function = inner.p_function;
+      } else if (entry == captured.trace[1u]) {
+         p_function = middle.p_function;
+      } else if (entry == captured.trace[2u]) {
+         p_function = outer.p_function;
+      } else {
+         p_function =
+            cat::detail::resolve_stacktrace_frame(p_symbolizer, entry).p_function;
+      }
+      return ((p_function == __builtin_bit_cast(void*, functions)) || ...);
+   };
+
+   cat::span<cat::stacktrace_entry const> frames(captured.trace);
+   auto format_dropped = [&](auto predicate) -> cat::str_view {
+      return cat::fmt(allocator, "{}", frames | cat::drop_while(predicate))
+         .verify();
+   };
+   auto yields_from = [&](auto predicate, idx start) {
+      auto remaining = frames | cat::drop_while(predicate);
+      idx index = start;
+      auto context = cat::iterate(remaining);
+      auto const result =
+         context.run_while([&](cat::stacktrace_entry const& entry) -> bool {
+            cat::verify(index < frames.size());
+            cat::verify(entry == frames[index]);
+            ++index;
+            return true;
+         });
+      cat::verify(result == cat::iteration_result::complete);
+      cat::verify(index == frames.size());
+   };
+
+   // A predicate that never holds drops nothing.
+   yields_from(
+      [](cat::stacktrace_entry) {
+         return false;
+      },
+      0u
+   );
+
+   // One leading frame is internal, so `#1` is the frame after it.
+   cat::str_view const after_inner = format_dropped(
+      [&](cat::stacktrace_entry entry) {
+         return belongs_to(entry, &cat_test_frame_inner);
+      }
+   );
+   bool const has_line_info =
+      after_inner.find("test_stacktrace.cpp:").has_value();
+   auto location = [&](idx line) -> cat::str_view {
+      if (!has_line_info) {
+         return "<missing-file>";
+      }
+      return cat::fmt(allocator, "test_stacktrace.cpp:{}", line).verify();
+   };
+   cat::verify(
+      after_inner
+      == cat::fmt(
+            allocator,
+            "Stack trace:\n"
+            "#1 {} cat_test_frame_middle()\n"
+            "#2 {} cat_test_frame_outer()\n",
+            location(captured.middle_line), location(captured.outer_line)
+      )
+            .verify()
+   );
+
+   // Two are, so the same predicate shape lands on `#1` anyway.
+   cat::verify(
+      format_dropped([&](cat::stacktrace_entry entry) {
+         return belongs_to(
+            entry, &cat_test_frame_inner, &cat_test_frame_middle
+         );
+      })
+      == cat::fmt(
+            allocator, "Stack trace:\n#1 {} cat_test_frame_outer()\n",
+            location(captured.outer_line)
+      )
+            .verify()
+   );
+
+   // A trace that is internal all the way down honestly prints nothing but
+   // its header.
+   cat::verify(
+      format_dropped([&](cat::stacktrace_entry entry) {
+         return belongs_to(
+            entry, &cat_test_frame_inner, &cat_test_frame_middle,
+            &cat_test_frame_outer
+         );
+      })
+      == "Stack trace:\n"
+   );
+
+   // Only leading frames are dropped, so an internal frame further out stays.
+   yields_from(
+      [&](cat::stacktrace_entry entry) {
+         return belongs_to(entry, &cat_test_frame_middle);
+      },
+      0u
+   );
 }
 
 $test(stacktrace_dwarf_forms) {

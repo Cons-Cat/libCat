@@ -5,6 +5,9 @@
 #include <cat/span>
 #include <cat/string>
 
+// TODO: It may be theoretically possible for a recursive assert to be triggered
+// here from `default_assert_handler()`. We should look into that.
+
 namespace {
 
 struct elf_header {
@@ -94,7 +97,7 @@ struct reader {
       }
       value = 0u;
       for (cat::idx index = 0u; index < size; ++index) {
-         value |= cat::uint8(bytes[position + index].value) << (index.raw * 8u);
+         value |= cat::uint8(bytes[position + index].value) << (index * 8u);
       }
       position += size;
       return true;
@@ -174,11 +177,11 @@ struct reader {
 
    [[nodiscard]]
    auto
-   skip(cat::uint8 size) -> bool {
+   skip(cat::idx size) -> bool {
       if (size > limit - position) {
          return false;
       }
-      position += cat::idx(size);
+      position += size;
       return true;
    }
 
@@ -192,9 +195,13 @@ struct reader {
       if (position == limit) {
          return false;
       }
+      cat::maybe<cat::idx> const length =
+         cat::narrow_cast<cat::idx>(position - begin);
+      if (length.is_empty()) {
+         return false;
+      }
       value = cat::str_view(
-         __builtin_bit_cast(char const*, bytes.data() + begin),
-         cat::idx(position.raw - begin.raw)
+         __builtin_bit_cast(char const*, bytes.data() + begin), length.value()
       );
       ++position;
       return true;
@@ -205,17 +212,24 @@ struct reader {
 auto
 contains(cat::span<cat::byte const> bytes, cat::uint8 offset, cat::uint8 size)
    -> bool {
-   return offset <= bytes.size() && size <= bytes.size() - cat::idx(offset);
+   cat::maybe<cat::idx> const idx_offset = cat::narrow_cast<cat::idx>(offset);
+   cat::maybe<cat::idx> const idx_size = cat::narrow_cast<cat::idx>(size);
+   if (idx_offset.is_empty() || idx_size.is_empty()) {
+      return false;
+   }
+   return idx_offset.value() <= bytes.size()
+          && idx_size.value() <= bytes.size() - idx_offset.value();
 }
 
 [[nodiscard]]
 auto
 bounded_string(cat::span<cat::byte const> bytes, cat::uint8 offset)
    -> cat::str_view {
-   if (offset >= bytes.size()) {
+   cat::maybe<cat::idx> const idx_offset = cat::narrow_cast<cat::idx>(offset);
+   if (idx_offset.is_empty() || idx_offset.value() >= bytes.size()) {
       return {};
    }
-   reader input(bytes, cat::idx(offset), bytes.size());
+   reader input(bytes, idx_offset.value(), bytes.size());
    cat::str_view result;
    if (!input.read_string(result)) {
       return {};
@@ -226,49 +240,49 @@ bounded_string(cat::span<cat::byte const> bytes, cat::uint8 offset)
 [[nodiscard]]
 auto
 section_name(
-   cat::span<cat::byte const> image, elf_section_header const& strings,
+   cat::span<cat::byte const> elf, elf_section_header const& strings,
    cat::uint4 offset
 ) -> cat::str_view {
-   if (
-      offset >= strings.size || !contains(image, strings.offset, strings.size)
-   ) {
+   if (offset >= strings.size || !contains(elf, strings.offset, strings.size)) {
       return {};
    }
-   return bounded_string(image, strings.offset + offset);
+   return bounded_string(elf, strings.offset + offset);
 }
 
 [[nodiscard]]
 auto
-find_sections(cat::span<cat::byte const> image) -> dwarf_sections {
-   if (image.size() < sizeof(elf_header)) {
+find_sections(cat::span<cat::byte const> elf) -> dwarf_sections {
+   if (elf.size() < sizeof(elf_header)) {
       return {};
    }
    auto const* const p_header =
-      __builtin_bit_cast(elf_header const*, image.data());
+      __builtin_bit_cast(elf_header const*, elf.data());
    cat::uint8 const sections_size =
       cat::uint8(p_header->section_header_count) * sizeof(elf_section_header);
    if (
       p_header->section_header_size != sizeof(elf_section_header)
       || p_header->section_name_index >= p_header->section_header_count
-      || !contains(image, p_header->section_header_offset, sections_size)
+      || !contains(elf, p_header->section_header_offset, sections_size)
    ) {
       return {};
    }
    auto const* const p_sections = __builtin_bit_cast(
       elf_section_header const*,
-      image.data() + cat::idx(p_header->section_header_offset)
+      elf.data()
+         + cat::narrow_cast<cat::idx>(p_header->section_header_offset).assert()
    );
    elf_section_header const& names =
-      p_sections[cat::idx(p_header->section_name_index).raw];
+      p_sections[cat::idx(p_header->section_name_index)];
    dwarf_sections result;
    for (cat::idx index = 0u; index < p_header->section_header_count; ++index) {
       elf_section_header const& section = p_sections[index];
-      if (!contains(image, section.offset, section.size)) {
+      if (!contains(elf, section.offset, section.size)) {
          continue;
       }
-      cat::str_view const name = section_name(image, names, section.name);
+      cat::str_view const name = section_name(elf, names, section.name);
       cat::span<cat::byte const> const bytes(
-         image.data() + cat::idx(section.offset), cat::idx(section.size)
+         elf.data() + cat::narrow_cast<cat::idx>(section.offset).assert(),
+         cat::narrow_cast<cat::idx>(section.size).assert()
       );
       if (name == ".debug_line") {
          result.line = bytes;
@@ -291,14 +305,22 @@ read_offset(reader& input, cat::idx size, cat::uint8& value) -> bool {
 auto
 skip_block(reader& input, cat::idx length_size) -> bool {
    cat::uint8 length = 0u;
-   return input.read_unsigned(length_size, length) && input.skip(length);
+   if (!input.read_unsigned(length_size, length)) {
+      return false;
+   }
+   cat::maybe<cat::idx> const count = cat::narrow_cast<cat::idx>(length);
+   return count.has_value() && input.skip(count.value());
 }
 
 [[nodiscard]]
 auto
 skip_uleb_block(reader& input) -> bool {
    cat::uint8 length = 0u;
-   return input.read_uleb(length) && input.skip(length);
+   if (!input.read_uleb(length)) {
+      return false;
+   }
+   cat::maybe<cat::idx> const count = cat::narrow_cast<cat::idx>(length);
+   return count.has_value() && input.skip(count.value());
 }
 
 [[nodiscard]]
@@ -465,7 +487,11 @@ parse_v5_table(
       return false;
    }
    header.files = input.position;
-   header.file_count = cat::idx(file_count);
+   cat::maybe<cat::idx> const count = cat::narrow_cast<cat::idx>(file_count);
+   if (count.is_empty()) {
+      return false;
+   }
+   header.file_count = count.value();
    for (cat::uint8 entry = 0u; entry < file_count; ++entry) {
       reader formats(input.bytes, header.file_formats, formats_end);
       for (cat::idx index = 0u; index < file_format_count; ++index) {
@@ -532,10 +558,14 @@ parse_header(
       return false;
    }
    header.offset_size = offset_size;
-   if (unit_length > input.limit - input.position) {
+   cat::maybe<cat::idx> const unit_bytes =
+      cat::narrow_cast<cat::idx>(unit_length);
+   if (
+      unit_bytes.is_empty() || unit_bytes.value() > input.limit - input.position
+   ) {
       return false;
    }
-   header.unit_end = input.position + cat::idx(unit_length);
+   header.unit_end = input.position + unit_bytes.value();
    next_unit = header.unit_end;
    input.limit = header.unit_end;
    if (
@@ -557,7 +587,12 @@ parse_header(
    if (!read_offset(input, offset_size, header_length)) {
       return false;
    }
-   cat::idx const header_end = input.position + cat::idx(header_length);
+   cat::maybe<cat::idx> const header_bytes =
+      cat::narrow_cast<cat::idx>(header_length);
+   if (header_bytes.is_empty()) {
+      return false;
+   }
+   cat::idx const header_end = input.position + header_bytes.value();
    if (header_end > input.limit) {
       return false;
    }
@@ -686,6 +721,22 @@ advance_address(
 
 [[nodiscard]]
 auto
+add_line(cat::uint8& line, cat::int8 delta) -> bool {
+   cat::maybe<cat::int8> const as_signed = cat::narrow_cast<cat::int8>(line);
+   if (as_signed.is_empty()) {
+      return false;
+   }
+   cat::maybe<cat::uint8> const updated =
+      cat::narrow_cast<cat::uint8>(as_signed.value() + delta);
+   if (updated.is_empty()) {
+      return false;
+   }
+   line = updated.value();
+   return true;
+}
+
+[[nodiscard]]
+auto
 matches_row(
    dwarf_sections const& sections, line_header const& header,
    line_row const& previous, line_row const& current, cat::uint8 address,
@@ -720,13 +771,14 @@ run_program(
       bool end_sequence = false;
       if (opcode == 0u) {
          cat::uint8 length = 0u;
-         if (
-            !input.read_uleb(length) || length == 0u
-            || length > input.limit - input.position
-         ) {
+         if (!input.read_uleb(length) || length == 0u) {
             return {};
          }
-         cat::idx const extended_end = input.position + cat::idx(length);
+         cat::maybe<cat::idx> const count = cat::narrow_cast<cat::idx>(length);
+         if (count.is_empty() || count.value() > input.limit - input.position) {
+            return {};
+         }
+         cat::idx const extended_end = input.position + count.value();
          cat::uint1 extended = 0u;
          if (!input.read_u1(extended)) {
             return {};
@@ -736,9 +788,12 @@ run_program(
             end_sequence = true;
          } else if (extended == 2u) {
             cat::uint8 new_address = 0u;
-            if (!input.read_unsigned(
-                   cat::idx(extended_end.raw - input.position.raw), new_address
-                )) {
+            cat::maybe<cat::idx> const remaining =
+               cat::narrow_cast<cat::idx>(extended_end - input.position);
+            if (
+               remaining.is_empty()
+               || !input.read_unsigned(remaining.value(), new_address)
+            ) {
                return {};
             }
             row.address = new_address;
@@ -759,10 +814,12 @@ run_program(
                advance_address(row, header, operand);
                break;
             case 3u:
-               if (!input.read_sleb(signed_operand)) {
+               if (
+                  !input.read_sleb(signed_operand)
+                  || !add_line(row.line, signed_operand)
+               ) {
                   return {};
                }
-               row.line = cat::uint8(cat::int8(row.line) + signed_operand);
                break;
             case 4u:
                if (!input.read_uleb(row.file)) {
@@ -811,10 +868,16 @@ run_program(
       } else {
          cat::uint8 const adjusted = opcode - header.opcode_base;
          advance_address(row, header, adjusted / header.line_range);
-         row.line = cat::uint8(
-            cat::int8(row.line) + header.line_base
-            + cat::int8(adjusted % header.line_range)
-         );
+         cat::maybe<cat::int8> const remainder =
+            cat::narrow_cast<cat::int8>(adjusted % header.line_range);
+         if (
+            remainder.is_empty()
+            || !add_line(
+               row.line, cat::int8(header.line_base) + remainder.value()
+            )
+         ) {
+            return {};
+         }
          emit = true;
       }
       if (emit) {
@@ -852,9 +915,9 @@ cat::detail::decode_dwarf_form_size(
 }
 
 auto
-cat::detail::resolve_dwarf_line(span<byte const> image, uint8 address)
+cat::detail::resolve_dwarf_line(span<byte const> elf, uint8 address)
    -> source_location {
-   dwarf_sections const sections = find_sections(image);
+   dwarf_sections const sections = find_sections(elf);
    if (sections.line.is_empty()) {
       return {};
    }
