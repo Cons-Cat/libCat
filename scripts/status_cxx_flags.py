@@ -493,7 +493,7 @@ def flag_matches(kind: str, flag: str) -> bool:
         )
     if kind == "lifetime":
         return (
-            flag in ("-Wdangling", "-Wdangling-gsl", "-fexperimental-bounds-safety")
+            flag in ("-Wdangling", "-Wdangling-gsl")
             or flag.startswith("-Wlifetime")
             or flag.startswith("-lifetime")
             or flag.startswith("-fanalyzer")

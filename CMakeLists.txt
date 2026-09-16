@@ -169,17 +169,11 @@ list(
   # Use Clang extensions.
   -Wno-gnu
 
-  # Lifetime analysis and bounds-safety.
+  # Lifetime analysis.
   -Wdangling
   -Wdangling-gsl
   # TODO: -Wlifetime-safety-permissive.
 )
-
-option(CAT_BOUNDS_SAFETY "Enable Clang experimental bounds-safety." ON)
-if(CAT_BOUNDS_SAFETY)
-  list(APPEND CAT_CXX_FLAGS_COMMON
-    "SHELL:-Xclang -fexperimental-bounds-safety")
-endif()
 
 if(CAT_USE_ASAN)
   list(APPEND CAT_CXX_FLAGS_ESSENTIAL

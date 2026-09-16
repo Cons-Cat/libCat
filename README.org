@@ -409,7 +409,7 @@ For an example configuration:
   # RTTI: no-rtti
   # Warnings: all extra invalid-pch
   # Disabled warnings: unused-function unknown-pragmas missing-braces unqualified-std-cast-call main redundant-consteval-if gnu
-  # Lifetime/Analysis: dangling dangling-gsl experimental-bounds-safety
+  # Lifetime/Analysis: dangling dangling-gsl
   # Features: no-plt no-pch-timestamp
   # Architecture: sse4.2 avx2 fma lzcnt bmi bmi2 fsgsbase
   # Optimization: O3
