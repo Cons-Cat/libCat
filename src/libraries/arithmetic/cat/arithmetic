@@ -96,10 +96,10 @@ enum class [[clang::enum_extensibility(
    fast,
 };
 
-template <typename WrappedQual, overflow_policies policy>
+template <typename Int, overflow_policies policy>
 class overflow_reference;
 
-template <typename WrappedQual, precision_policies policy>
+template <is_floating_point Float, precision_policies policy>
 class precision_reference;
 
 template <

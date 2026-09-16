@@ -11,13 +11,12 @@
 
 namespace cat {
 
-template <typename WrappedQual, overflow_policies policy, typename CharT>
-struct formatter<overflow_reference<WrappedQual, policy>, CharT>
+template <typename Int, overflow_policies policy, typename CharT>
+struct formatter<overflow_reference<Int, policy>, CharT>
     : formatter_base<CharT> {
    auto
    format(
-      overflow_reference<WrappedQual, policy> const& value,
-      format_context& context
+      overflow_reference<Int, policy> const& value, format_context& context
    ) const -> scaredy_format<void> {
       auto temporary = value.view();
       return detail::format_nested(context, temporary);

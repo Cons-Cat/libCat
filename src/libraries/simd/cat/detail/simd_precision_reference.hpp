@@ -15,12 +15,11 @@ struct formatter;
 
 namespace cat::detail {
 
-template <typename WrappedQual, precision_policies precision>
+template <is_simd Simd, precision_policies precision>
 class simd_precision_reference
-    : public arithmetic_interface<
-         simd_precision_reference<WrappedQual, precision>> {
+    : public arithmetic_interface<simd_precision_reference<Simd, precision>> {
  private:
-   using wrapper_type = remove_cvref<WrappedQual>;
+   using wrapper_type = __typeof_unqual(Simd);
    using T = wrapper_type::value_type;
    using abi_type = wrapper_type::abi_type;
    using result_scalar = simd_precision_scalar<T, precision>::type;
@@ -46,7 +45,7 @@ class simd_precision_reference
       typename LeftAbi::template make_abi_type<
          left_result_scalar<LeftT, LeftAbi>>>;
 
-   WrappedQual* _Nonnull m_wrapped;
+   Simd* _Nonnull m_wrapped;
 
    template <typename, typename>
    friend struct ::cat::formatter;
@@ -61,14 +60,14 @@ class simd_precision_reference
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    assign_result(result_type value) -> void
-      requires(!is_const<WrappedQual>)
+      requires(!is_const<Simd>)
    {
       m_wrapped->raw =
          __builtin_bit_cast(typename wrapper_type::raw_type, value.raw);
    }
 
  public:
-   constexpr explicit simd_precision_reference(WrappedQual& w)
+   constexpr explicit simd_precision_reference(Simd& w)
        : m_wrapped(addressof(w)) {
    }
 
@@ -81,7 +80,7 @@ class simd_precision_reference
    operator&(simd_precision_reference const volatile&&) = delete;
 
    constexpr void
-   rebind(WrappedQual& w [[clang::lifetime_capture_by_this]]) {
+   rebind(Simd& w [[clang::lifetime_capture_by_this]]) {
       m_wrapped = addressof(w);
    }
 
@@ -170,32 +169,33 @@ class simd_precision_reference
    }
 
    constexpr auto
-   precise() & -> simd_precision_reference<
-      WrappedQual, precision_policies::precise> {
-      return simd_precision_reference<WrappedQual, precision_policies::precise>(
+   precise() & -> simd_precision_reference<Simd, precision_policies::precise> {
+      return simd_precision_reference<Simd, precision_policies::precise>(
          *m_wrapped
       );
    }
 
    constexpr auto
    precise() const& -> simd_precision_reference<
-      WrappedQual const, precision_policies::precise> {
-      return simd_precision_reference<
-         WrappedQual const, precision_policies::precise>(*m_wrapped);
+      Simd const, precision_policies::precise> {
+      return simd_precision_reference<Simd const, precision_policies::precise>(
+         *m_wrapped
+      );
    }
 
    constexpr auto
-   fast() & -> simd_precision_reference<WrappedQual, precision_policies::fast> {
-      return simd_precision_reference<WrappedQual, precision_policies::fast>(
+   fast() & -> simd_precision_reference<Simd, precision_policies::fast> {
+      return simd_precision_reference<Simd, precision_policies::fast>(
          *m_wrapped
       );
    }
 
    constexpr auto
    fast() const& -> simd_precision_reference<
-      WrappedQual const, precision_policies::fast> {
-      return simd_precision_reference<
-         WrappedQual const, precision_policies::fast>(*m_wrapped);
+      Simd const, precision_policies::fast> {
+      return simd_precision_reference<Simd const, precision_policies::fast>(
+         *m_wrapped
+      );
    }
 
    template <typename OtherT, typename OtherAbi>
@@ -510,7 +510,7 @@ class simd_precision_reference
 
    template <typename U>
       requires(
-         !is_const<WrappedQual>
+         !is_const<Simd>
          && requires(
             simd_precision_reference self, U&& operand
          ) { self + static_cast<U&&>(operand); }
@@ -524,7 +524,7 @@ class simd_precision_reference
 
    template <typename U>
       requires(
-         !is_const<WrappedQual>
+         !is_const<Simd>
          && requires(
             simd_precision_reference self, U&& operand
          ) { self - static_cast<U&&>(operand); }
@@ -538,7 +538,7 @@ class simd_precision_reference
 
    template <typename U>
       requires(
-         !is_const<WrappedQual>
+         !is_const<Simd>
          && requires(
             simd_precision_reference self, U&& operand
          ) { self * static_cast<U&&>(operand); }
@@ -552,7 +552,7 @@ class simd_precision_reference
 
    template <typename U>
       requires(
-         !is_const<WrappedQual>
+         !is_const<Simd>
          && requires(
             simd_precision_reference self, U&& operand
          ) { self / static_cast<U&&>(operand); }
@@ -571,7 +571,8 @@ namespace cat {
 
 // Implementing this here is a circular dependency. The implementation can be
 // found in <cat/simd/implementations/format_simd_precision_reference.tpp>.
-template <typename WrappedQual, precision_policies policy, typename CharT>
-struct formatter<detail::simd_precision_reference<WrappedQual, policy>, CharT>;
+template <
+   is_simd_floating_point Simd, precision_policies policy, typename CharT>
+struct formatter<detail::simd_precision_reference<Simd, policy>, CharT>;
 
 }  // namespace cat

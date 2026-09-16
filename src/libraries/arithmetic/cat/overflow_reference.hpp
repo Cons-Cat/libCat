@@ -21,17 +21,15 @@ struct formatter;
 // In the past, we had expressed overflow accessors through `union` punning and
 // `reinterpret_cast`. These approaches violated lifetime semantics and were not
 // `constexpr`-friendly.
-template <typename WrappedQual, overflow_policies overflow_policy>
+template <typename Int, overflow_policies overflow_policy>
 class overflow_reference
-    : public arithmetic_interface<
-         overflow_reference<WrappedQual, overflow_policy>> {
+    : public arithmetic_interface<overflow_reference<Int, overflow_policy>> {
  public:
-   constexpr explicit overflow_reference(WrappedQual& w)
-       : m_wrapped(addressof(w)) {
+   constexpr explicit overflow_reference(Int& w) : m_wrapped(addressof(w)) {
    }
 
-   using raw_type = remove_cvref<WrappedQual>::raw_type;
-   using quantity_type = arithmetic_quantity<WrappedQual>;
+   using raw_type = __typeof_unqual(declval<Int>().raw);
+   using quantity_type = arithmetic_quantity<Int>;
 
    // P3207R0. This type is reference-like. Friend deletion keeps binary
    // `operator&` from `arithmetic_interface` visible.
@@ -43,7 +41,7 @@ class overflow_reference
 
    // Rebind this reference wrapper to a different address.
    constexpr void
-   rebind(WrappedQual& w [[clang::lifetime_capture_by_this]]) {
+   rebind(Int& w [[clang::lifetime_capture_by_this]]) {
       m_wrapped = addressof(w);
    }
 
@@ -51,7 +49,7 @@ class overflow_reference
    template <typename, typename>
    friend struct formatter;
 
-   using wrapper_type = remove_cvref<WrappedQual>;
+   using wrapper_type = __typeof_unqual(Int);
    static constexpr auto quantity_reference = [] {
       if constexpr (has_quantity<wrapper_type>) {
          return wrapper_type::quantity_reference;
@@ -65,7 +63,7 @@ class overflow_reference
       is_unsigned_integral<raw_type> && !detail::is_basic_intptr<wrapper_type>
       && !is_idx<wrapper_type>;
 
-   WrappedQual* _Nonnull m_wrapped;
+   Int* _Nonnull m_wrapped;
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -104,45 +102,36 @@ class overflow_reference
 
  public:
    constexpr auto
-   undef() & -> overflow_reference<WrappedQual, overflow_policies::undefined> {
-      return overflow_reference<WrappedQual, overflow_policies::undefined>(
-         *m_wrapped
-      );
+   undef() & -> overflow_reference<Int, overflow_policies::undefined> {
+      return overflow_reference<Int, overflow_policies::undefined>(*m_wrapped);
    }
 
    constexpr auto
    undef() const& -> overflow_reference<
-      WrappedQual const, overflow_policies::undefined> {
-      return overflow_reference<
-         WrappedQual const, overflow_policies::undefined>(*m_wrapped);
-   }
-
-   constexpr auto
-   wrap() & -> overflow_reference<WrappedQual, overflow_policies::wrap> {
-      return overflow_reference<WrappedQual, overflow_policies::wrap>(
+      Int const, overflow_policies::undefined> {
+      return overflow_reference<Int const, overflow_policies::undefined>(
          *m_wrapped
       );
    }
 
    constexpr auto
-   wrap() const& -> overflow_reference<
-      WrappedQual const, overflow_policies::wrap> {
-      return overflow_reference<WrappedQual const, overflow_policies::wrap>(
-         *m_wrapped
-      );
+   wrap() & -> overflow_reference<Int, overflow_policies::wrap> {
+      return overflow_reference<Int, overflow_policies::wrap>(*m_wrapped);
    }
 
    constexpr auto
-   sat() & -> overflow_reference<WrappedQual, overflow_policies::saturate> {
-      return overflow_reference<WrappedQual, overflow_policies::saturate>(
-         *m_wrapped
-      );
+   wrap() const& -> overflow_reference<Int const, overflow_policies::wrap> {
+      return overflow_reference<Int const, overflow_policies::wrap>(*m_wrapped);
    }
 
    constexpr auto
-   sat() const& -> overflow_reference<
-      WrappedQual const, overflow_policies::saturate> {
-      return overflow_reference<WrappedQual const, overflow_policies::saturate>(
+   sat() & -> overflow_reference<Int, overflow_policies::saturate> {
+      return overflow_reference<Int, overflow_policies::saturate>(*m_wrapped);
+   }
+
+   constexpr auto
+   sat() const& -> overflow_reference<Int const, overflow_policies::saturate> {
+      return overflow_reference<Int const, overflow_policies::saturate>(
          *m_wrapped
       );
    }
@@ -515,7 +504,7 @@ class overflow_reference
    // a constant expression at the call site (lost once `operand` becomes a
    // function parameter here).
    template <is_integral U>
-      requires(!is_const<WrappedQual> && is_idx<wrapper_type>)
+      requires(!is_const<Int> && is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
    operator=(U other) __attribute__((enable_if(
@@ -528,7 +517,7 @@ class overflow_reference
 
    template <is_arithmetic U>
       requires(
-         is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         is_safe_arithmetic_comparison<raw_type, U> && !is_const<Int>
          && !detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
@@ -540,7 +529,7 @@ class overflow_reference
 
    template <detail::is_basic_intptr U>
       requires(
-         !is_const<WrappedQual> && detail::is_basic_intptr<wrapper_type>
+         !is_const<Int> && detail::is_basic_intptr<wrapper_type>
          && is_constructible<wrapper_type, U>
       )
    [[gnu::always_inline, gnu::nodebug]]
@@ -554,7 +543,7 @@ class overflow_reference
    // wrapped storage. Mirrors the `basic_int` `enable_if` constructor.
    template <is_arithmetic U>
       requires(
-         !is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         !is_safe_arithmetic_comparison<raw_type, U> && !is_const<Int>
          && !detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
@@ -571,7 +560,7 @@ class overflow_reference
 
    template <is_integral U>
       requires(
-         is_safe_arithmetic_conversion<U, raw_type> && !is_const<WrappedQual>
+         is_safe_arithmetic_conversion<U, raw_type> && !is_const<Int>
          && detail::is_basic_intptr<wrapper_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
@@ -583,7 +572,7 @@ class overflow_reference
 
    template <is_arithmetic U>
       requires(
-         is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         is_safe_arithmetic_comparison<raw_type, U> && !is_const<Int>
          && !detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
@@ -598,7 +587,7 @@ class overflow_reference
    // `overflow_reference`.
    template <is_arithmetic U>
       requires(
-         is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         is_safe_arithmetic_comparison<raw_type, U> && !is_const<Int>
          && !detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>
          && is_same<
             remove_cvref<decltype(declval<overflow_reference&>()
@@ -616,7 +605,7 @@ class overflow_reference
    // storage. Mirrors the += overload above.
    template <is_arithmetic U>
       requires(
-         !is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         !is_safe_arithmetic_comparison<raw_type, U> && !is_const<Int>
          && !detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>
          && is_same<
             remove_cvref<decltype(declval<overflow_reference&>()
@@ -643,7 +632,7 @@ class overflow_reference
    // inside the body).
    template <is_arithmetic U>
       requires(
-         !is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
+         !is_safe_arithmetic_comparison<raw_type, U> && !is_const<Int>
          && !detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
@@ -660,7 +649,7 @@ class overflow_reference
 
    template <is_integral U>
       requires(
-         is_safe_arithmetic_conversion<U, raw_type> && !is_const<WrappedQual>
+         is_safe_arithmetic_conversion<U, raw_type> && !is_const<Int>
          && detail::is_basic_intptr<wrapper_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
@@ -674,7 +663,7 @@ class overflow_reference
    // sum through `raw` directly for the same reason as the `idx` `operator=`
    // above.
    template <is_arithmetic U>
-      requires(!is_const<WrappedQual> && is_idx<wrapper_type>)
+      requires(!is_const<Int> && is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
    operator+=(U operand) __attribute__((enable_if(
@@ -1204,7 +1193,7 @@ class overflow_reference
 
 // Implementing this here is a circular dependency. The implementation can be
 // found in <cat/arithmetic/implementations/format_overflow_reference.tpp>.
-template <typename WrappedQual, overflow_policies policy, typename CharT>
-struct formatter<overflow_reference<WrappedQual, policy>, CharT>;
+template <typename Int, overflow_policies policy, typename CharT>
+struct formatter<overflow_reference<Int, policy>, CharT>;
 
 }  // namespace cat

@@ -2830,6 +2830,9 @@ $test(simd_chunked_invoke) {
 
 $test(simd_concepts) {
    static_assert(cat::is_simd<int4x4>);
+   static_assert(cat::is_simd<int4x4 const>);
+   static_assert(!cat::is_simd<int4x4&>);
+   static_assert(!cat::is_simd<int4x4 const&>);
    static_assert(cat::is_simd<float4x4>);
    static_assert(!cat::is_simd<int_lane>);
    static_assert(cat::is_simd_mask<int4x4::mask_type>);
@@ -2842,6 +2845,7 @@ $test(simd_concepts) {
    static_assert(cat::is_simd_unsigned_integral<cat::uint4x4>);
    static_assert(!cat::is_simd_unsigned_integral<int4x4>);
    static_assert(cat::is_simd_floating_point<float4x4>);
+   static_assert(cat::is_simd_floating_point<float4x4 const>);
    static_assert(!cat::is_simd_floating_point<int4x4>);
    static_assert(cat::is_simd_arithmetic<int4x4>);
    static_assert(cat::is_simd_arithmetic<float4x4>);

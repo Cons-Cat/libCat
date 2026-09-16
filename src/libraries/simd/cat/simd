@@ -235,7 +235,7 @@ using simd_unary_signed_integer_from_element_t = cat::int_fixed<sizeof(T)>;
 }  // namespace detail
 
 template <typename Simd>
-concept is_simd = detail::is_cat_simd<Simd>;
+concept is_simd = detail::is_cat_simd<__typeof_unqual(Simd)>;
 
 template <typename SimdMask>
 concept is_simd_mask = detail::is_cat_simd_mask<SimdMask>;
@@ -353,7 +353,7 @@ namespace detail {
 template <typename T, typename Abi, overflow_policies>
 class simd_overflow_reference;
 
-template <typename WrappedQual, precision_policies>
+template <is_simd Simd, precision_policies>
 class simd_precision_reference;
 
 // Forward declarations for arithmetic helpers used by `simd` operators below.

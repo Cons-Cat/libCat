@@ -23,18 +23,17 @@ inline constexpr precision_policies
 template <typename T, typename CharT>
 struct formatter;
 
-template <typename WrappedQual, precision_policies precision>
+template <is_floating_point Float, precision_policies precision>
 class precision_reference {
  private:
-   template <typename, precision_policies>
+   template <is_floating_point OtherFloat, precision_policies other_precision>
    friend class precision_reference;
 
    template <typename, typename>
    friend struct formatter;
 
  public:
-   constexpr explicit precision_reference(WrappedQual& w)
-       : m_wrapped(addressof(w)) {
+   constexpr explicit precision_reference(Float& w) : m_wrapped(addressof(w)) {
    }
 
    // P3207R0. This type is reference-like.
@@ -44,21 +43,21 @@ class precision_reference {
    friend constexpr void
    operator&(precision_reference const volatile&&) = delete;
 
-   using raw_type = remove_cvref<WrappedQual>::raw_type;
-   using quantity_type = remove_cvref<WrappedQual>::quantity_type;
-   static constexpr auto quantity_reference =
-      remove_cvref<WrappedQual>::quantity_reference;
+   using float_type = __typeof_unqual(Float);
+   using raw_type = __typeof_unqual(declval<Float>().raw);
+   using quantity_type = float_type::quantity_type;
+   static constexpr auto quantity_reference = float_type::quantity_reference;
 
    static constexpr precision_policies precision_policy = precision;
 
    // Rebind this reference wrapper to a different address.
    constexpr void
-   rebind(WrappedQual& w [[clang::lifetime_capture_by_this]]) {
+   rebind(Float& w [[clang::lifetime_capture_by_this]]) {
       m_wrapped = addressof(w);
    }
 
  private:
-   WrappedQual* _Nonnull m_wrapped;
+   Float* _Nonnull m_wrapped;
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -70,18 +69,18 @@ class precision_reference {
 
  public:
    constexpr auto
-   precise() & -> precision_reference<
-      WrappedQual, precision_policies::precise> {
-      return precision_reference<WrappedQual, precision_policies::precise>(
+   precise() & -> precision_reference<Float, precision_policies::precise> {
+      return precision_reference<Float, precision_policies::precise>(
          *m_wrapped
       );
    }
 
    constexpr auto
    precise() const& -> precision_reference<
-      WrappedQual const, precision_policies::precise> {
-      return precision_reference<
-         WrappedQual const, precision_policies::precise>(*m_wrapped);
+      Float const, precision_policies::precise> {
+      return precision_reference<Float const, precision_policies::precise>(
+         *m_wrapped
+      );
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -95,16 +94,13 @@ class precision_reference {
    }
 
    constexpr auto
-   fast() & -> precision_reference<WrappedQual, precision_policies::fast> {
-      return precision_reference<WrappedQual, precision_policies::fast>(
-         *m_wrapped
-      );
+   fast() & -> precision_reference<Float, precision_policies::fast> {
+      return precision_reference<Float, precision_policies::fast>(*m_wrapped);
    }
 
    constexpr auto
-   fast() const& -> precision_reference<
-      WrappedQual const, precision_policies::fast> {
-      return precision_reference<WrappedQual const, precision_policies::fast>(
+   fast() const& -> precision_reference<Float const, precision_policies::fast> {
+      return precision_reference<Float const, precision_policies::fast>(
          *m_wrapped
       );
    }
@@ -134,10 +130,10 @@ class precision_reference {
       return view() <=> rhs;
    }
 
-   template <typename OtherWrappedQual, precision_policies other_precision>
+   template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator<=>(precision_reference<OtherWrappedQual, other_precision> rhs) const
+   operator<=>(precision_reference<OtherFloat, other_precision> rhs) const
       -> std::partial_ordering {
       return view() <=> rhs.view();
    }
@@ -150,20 +146,18 @@ class precision_reference {
       return lhs.view() == rhs;
    }
 
-   template <typename OtherWrappedQual, precision_policies other_precision>
+   template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator==(
       precision_reference lhs,
-      precision_reference<OtherWrappedQual, other_precision> rhs
+      precision_reference<OtherFloat, other_precision> rhs
    ) -> bool {
       return lhs.view() == rhs.view();
    }
 
    template <is_arithmetic U>
-      requires(
-         is_safe_arithmetic_comparison<raw_type, U> && !is_const<WrappedQual>
-      )
+      requires(is_safe_arithmetic_comparison<raw_type, U> && !is_const<Float>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator=(U operand) -> precision_reference& {
@@ -179,10 +173,10 @@ class precision_reference {
       return view().add(other);
    }
 
-   template <typename OtherWrappedQual, precision_policies other_precision>
+   template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(precision_reference<OtherWrappedQual, other_precision> other) const {
+   add(precision_reference<OtherFloat, other_precision> other) const {
       return view().add(other.view());
    }
 
@@ -194,12 +188,10 @@ class precision_reference {
       return view().subtract_by(operand);
    }
 
-   template <typename OtherWrappedQual, precision_policies other_precision>
+   template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(
-      precision_reference<OtherWrappedQual, other_precision> operand
-   ) const {
+   subtract_by(precision_reference<OtherFloat, other_precision> operand) const {
       return view().subtract_by(operand.view());
    }
 
@@ -223,12 +215,10 @@ class precision_reference {
       return view().multiply(operand);
    }
 
-   template <typename OtherWrappedQual, precision_policies other_precision>
+   template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(
-      precision_reference<OtherWrappedQual, other_precision> operand
-   ) const {
+   multiply(precision_reference<OtherFloat, other_precision> operand) const {
       return view().multiply(operand.view());
    }
 
@@ -240,12 +230,10 @@ class precision_reference {
       return view().divide_by(operand);
    }
 
-   template <typename OtherWrappedQual, precision_policies other_precision>
+   template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(
-      precision_reference<OtherWrappedQual, other_precision> operand
-   ) const {
+   divide_by(precision_reference<OtherFloat, other_precision> operand) const {
       return view().divide_by(operand.view());
    }
 
@@ -349,7 +337,7 @@ class precision_reference {
 
    template <is_arithmetic U>
       requires(
-         !is_const<WrappedQual>
+         !is_const<Float>
          && is_same<
             remove_cvref<
                decltype(declval<precision_reference&>().add(declval<U>()))>,
@@ -364,7 +352,7 @@ class precision_reference {
 
    template <is_arithmetic U>
       requires(
-         !is_const<WrappedQual>
+         !is_const<Float>
          && is_same<
             remove_cvref<decltype(declval<precision_reference&>()
                                      .subtract_by(declval<U>()))>,
@@ -379,7 +367,7 @@ class precision_reference {
 
    template <is_arithmetic U>
       requires(
-         !is_const<WrappedQual>
+         !is_const<Float>
          && is_same<
             remove_cvref<decltype(declval<precision_reference&>()
                                      .multiply(declval<U>()))>,
@@ -394,7 +382,7 @@ class precision_reference {
 
    template <is_arithmetic U>
       requires(
-         !is_const<WrappedQual>
+         !is_const<Float>
          && is_same<
             remove_cvref<decltype(declval<precision_reference&>()
                                      .divide_by(declval<U>()))>,
@@ -410,7 +398,7 @@ class precision_reference {
 
 // Implementing this here is a circular dependency. The implementation can be
 // found in <cat/arithmetic/implementations/format_precision_reference.tpp>.
-template <typename WrappedQual, precision_policies policy, typename CharT>
-struct formatter<precision_reference<WrappedQual, policy>, CharT>;
+template <is_floating_point Float, precision_policies policy, typename CharT>
+struct formatter<precision_reference<Float, policy>, CharT>;
 
 }  // namespace cat
