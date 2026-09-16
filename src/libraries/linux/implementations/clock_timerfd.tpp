@@ -64,11 +64,12 @@ nix::clock_timerfd<clock>::close() -> nix::scaredy_nix<void> {
    return sys_close(m_descriptor);
 }
 
-// Optimize `cat::sleep_until` for `nix::clock_timerfd`.
+// Optimize `cat::this_thread::sleep_until` for `nix::clock_timerfd`.
 template <nix::clock_id clock, cat::is_duration Duration>
 auto
-cat::sleep_until(time_point<nix::clock_timerfd<clock>, Duration> const& point)
-   -> maybe<void> {
+cat::this_thread::sleep_until(
+   time_point<nix::clock_timerfd<clock>, Duration> const& point
+) -> maybe<void> {
    nix::timespec const request = nix::make_timespec(point.time_since_epoch());
    while (true) {
       scaredy result = nix::sys_clock_nanosleep(

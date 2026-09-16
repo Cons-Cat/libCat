@@ -291,7 +291,7 @@ create_clock_timerfd(timerfd_flags flags = timerfd_flags::close_exec)
 
 }  // namespace nix
 
-namespace cat {
+namespace cat::this_thread {
 
 // Sleep an absolute deadline on a kernel clock. Defined in
 // <cat/linux/implementations/clock_timerfd.tpp>.
@@ -301,7 +301,7 @@ auto
 sleep_until(time_point<nix::clock_timerfd<clock>, Duration> const& point)
    -> maybe<void>;
 
-}  // namespace cat
+}  // namespace cat::this_thread
 
 namespace nix {
 

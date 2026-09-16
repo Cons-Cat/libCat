@@ -2,6 +2,7 @@
 
 #include <cat/chrono>
 #include <cat/linux>
+#include <cat/thread>
 
 #include "../unit_tests.hpp"
 
@@ -22,7 +23,8 @@ using monotonic_timer = nix::clock_timerfd<nix::clock_id::monotonic>;
 using realtime_timer = nix::clock_timerfd<nix::clock_id::realtime>;
 
 template <typename Point>
-concept can_sleep_until = requires(Point point) { cat::sleep_until(point); };
+concept can_sleep_until =
+   requires(Point point) { cat::this_thread::sleep_until(point); };
 
 auto
 clock_gettime_ok(nix::clock_id clock) -> bool {
@@ -404,13 +406,13 @@ $test(chrono_clocks) {
    static_assert(
       __is_same(decltype(cat::clock_steady::now()), cat::maybe<steady_time>)
    );
-   static_assert(
-      __is_same(decltype(cat::sleep_for(milliseconds(1))), cat::maybe<void>)
-   );
+   static_assert(__is_same(
+      decltype(cat::this_thread::sleep_for(milliseconds(1))), cat::maybe<void>
+   ));
 
    cat::clock_steady::time_point const start =
       cat::clock_steady::now().verify();
-   cat::sleep_for(milliseconds(1)).verify();
+   cat::this_thread::sleep_for(milliseconds(1)).verify();
    cat::clock_steady::time_point const after_sleep =
       cat::clock_steady::now().verify();
    cat::verify(after_sleep > start);
@@ -422,7 +424,7 @@ $test(chrono_clocks) {
 
    cat::clock_steady::time_point const soon =
       cat::clock_steady::now().verify() + milliseconds(1);
-   cat::sleep_until(soon).verify();
+   cat::this_thread::sleep_until(soon).verify();
    cat::verify(cat::clock_steady::now().verify() >= soon);
 }
 
@@ -509,36 +511,38 @@ $test(chrono_scaled_clock) {
 
 $test(chrono_sleep_until) {
    static_assert(__is_same(
-      decltype(cat::sleep_until(scaled_clock::time_point{})), cat::maybe<void>
+      decltype(cat::this_thread::sleep_until(scaled_clock::time_point{})),
+      cat::maybe<void>
    ));
 
    // A scaled clock names no kernel clock, so it sleeps relative to its own
    // `now()`. A deadline which has already passed returns without sleeping.
    scaled_clock::time_point const passed = scaled_clock::now().verify();
-   cat::sleep_until(passed).verify();
+   cat::this_thread::sleep_until(passed).verify();
    cat::verify(scaled_clock::now().verify() >= passed);
 
    cat::clock_tai::time_point const tai = cat::clock_tai::now().verify();
-   cat::sleep_until(tai - milliseconds(1)).verify();
+   cat::this_thread::sleep_until(tai - milliseconds(1)).verify();
    cat::clock_gps::time_point const gps = cat::clock_gps::now().verify();
-   cat::sleep_until(gps - milliseconds(1)).verify();
+   cat::this_thread::sleep_until(gps - milliseconds(1)).verify();
 
    // A kernel clock is slept against absolutely, so a deadline in the past
    // returns at once and a deadline ahead of it is reached.
-   cat::sleep_until(monotonic_timer::time_point(nanoseconds(0))).verify();
+   cat::this_thread::sleep_until(monotonic_timer::time_point(nanoseconds(0)))
+      .verify();
    monotonic_timer::time_point const soon =
       monotonic_timer::now().verify() + milliseconds(1);
-   cat::sleep_until(soon).verify();
+   cat::this_thread::sleep_until(soon).verify();
    cat::verify(monotonic_timer::now().verify() >= soon);
 
    // A clock which wraps a kernel clock is slept against that clock.
    cat::clock_unix::time_point const unix_soon =
       cat::clock_unix::now().verify() + milliseconds(1);
-   cat::sleep_until(unix_soon).verify();
+   cat::this_thread::sleep_until(unix_soon).verify();
    cat::verify(cat::clock_unix::now().verify() >= unix_soon);
 
    cat::clock_system::time_point const system_soon =
       cat::clock_system::now().verify() + milliseconds(1);
-   cat::sleep_until(system_soon).verify();
+   cat::this_thread::sleep_until(system_soon).verify();
    cat::verify(cat::clock_system::now().verify() >= system_soon);
 }

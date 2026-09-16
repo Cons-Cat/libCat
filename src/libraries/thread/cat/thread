@@ -4,6 +4,7 @@
 
 #include <cat/allocator>
 #include <cat/allocator_parameters>
+#include <cat/chrono>
 #include <cat/format>
 #include <cat/linux>
 
@@ -120,6 +121,72 @@ get_id() -> thread::id {
 inline void
 yield() {
    nix::sys_sched_yield().verify();
+}
+
+template <is_duration Duration>
+[[nodiscard]]
+inline auto
+sleep_for(Duration elapsed) -> maybe<void> {
+   // TODO: Generalize this to other platforms.
+   nix::timespec remaining = nix::make_timespec(elapsed);
+   while (true) {
+      auto result = nix::sys_nanosleep(remaining, &remaining);
+      if (result.has_value()) {
+         return monostate;
+      }
+      // A signal interrupts the sleep with the unslept time remaining.
+      if (result.error() != nix::linux_error::intr) {
+         return nullopt;
+      }
+   }
+}
+
+template <is_duration Duration>
+[[nodiscard]]
+auto
+sleep_until(time_point<clock_system, Duration> const& point) -> maybe<void> {
+   using timer = __typeof_unqual(clock_system::native());
+   return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
+}
+
+template <is_duration Duration>
+[[nodiscard]]
+auto
+sleep_until(time_point<clock_steady, Duration> const& point) -> maybe<void> {
+   using timer = __typeof_unqual(clock_steady::native());
+   return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
+}
+
+template <is_duration Duration>
+[[nodiscard]]
+auto
+sleep_until(time_point<clock_unix, Duration> const& point) -> maybe<void> {
+   using timer = __typeof_unqual(clock_unix::native());
+   return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
+}
+
+template <is_clock Clock, is_duration Duration>
+[[nodiscard]]
+auto
+sleep_until(time_point<Clock, Duration> const& point) -> maybe<void> {
+   using duration = Clock::duration;
+   duration const deadline = point.time_since_epoch();
+   duration elapsed = $prop(Clock::now()).time_since_epoch();
+
+   if constexpr (Clock::is_steady) {
+      // A steady clock never jumps, so one relative sleep reaches the deadline.
+      if (elapsed < deadline) {
+         $prop(sleep_for(deadline - elapsed));
+      }
+   } else {
+      // An unsteady clock can jump either way, so it is read again every time.
+      while (elapsed < deadline) {
+         $prop(sleep_for(deadline - elapsed));
+         elapsed = $prop(Clock::now()).time_since_epoch();
+      }
+   }
+
+   return monostate;
 }
 }  // namespace this_thread
 
