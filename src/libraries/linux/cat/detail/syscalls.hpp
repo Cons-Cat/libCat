@@ -775,7 +775,7 @@ auto
 get_kernel_version() -> kernel_version;
 
 namespace detail {
-// Per-check probe results, populated once in `_start()`.
+// These runtime feature checks are initialized in `_start()`.
 // Each check is stored in a separate variable for dead-store elimination.
 #ifndef CAT_BUILD_SHARED
 [[gnu::visibility("hidden")]]

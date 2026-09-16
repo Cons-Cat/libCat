@@ -91,7 +91,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
   # `cat-impl` owns libCat's `.cpp`s; `_start.cpp` rides on `cat`'s
-  # `INTERFACE_SOURCES` for its per-consumer `NO_ARGC_ARGV` branch.
+  # `INTERFACE_SOURCES` for its per-consumer `CAT_NO_ARGC_ARGV` branch.
   # Both lists feed `compile_commands.json`, but `INTERFACE_SOURCES` still
   # carries `$<BUILD_INTERFACE:...>`/`$<INSTALL_INTERFACE:...>` generator
   # expressions -- the empty `INSTALL_INTERFACE` result is skipped in script

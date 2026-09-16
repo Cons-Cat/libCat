@@ -311,7 +311,7 @@ jobs:
         if: ${{ !cancelled() }}
         # End-to-end smoke test of the example binaries on top of the
         # `_start.cpp` / `<cat/cpuid>` plumbing the unit tests don't exercise:
-        # `hello` runs the `NO_ARGC_ARGV` + `CAT_NO_STATIC_CONSTRUCTORS` +
+        # `hello` runs the `CAT_NO_ARGC_ARGV` + `CAT_NO_STATIC_CONSTRUCTORS` +
         # `CAT_NO_CPUID` minimal `_start` path; `echo` runs the
         # naked-`_start` argv pickup off the kernel-supplied stack. Same
         # check is repeated for the nosan and Release configurations so any

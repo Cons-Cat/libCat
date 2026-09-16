@@ -306,7 +306,7 @@ list(
 # links `cat-impl` (or `cat-impl-shared`, see `CAT_USE_SHARED` below). The
 # wiring happens further down once both targets exist. `_start.cpp` is the one
 # source that stays on `cat` `INTERFACE` because its body switches on the per-
-# consumer `NO_ARGC_ARGV` define.
+# consumer `CAT_NO_ARGC_ARGV` define.
 add_library(cat INTERFACE)
 
 # C++26 + GNU extensions.
@@ -337,9 +337,9 @@ target_link_options(cat INTERFACE ${CAT_LINK_OPTIONS})
 # `target_link_libraries(cat INTERFACE gcc)`.
 
 # `cat-impl` deliberately does NOT link `cat`. That would drag `_start.cpp`
-# (`cat`'s `INTERFACE_SOURCES`) into the archive with the wrong `NO_ARGC_ARGV`
-# setting. Its actual usage requirements come in via generator expressions so
-# there is still one source of truth on `cat`.
+# (`cat`'s `INTERFACE_SOURCES`) into the archive with the wrong
+# `CAT_NO_ARGC_ARGV` setting. Its actual usage requirements come in via
+# generator expressions so there is still one source of truth on `cat`.
 add_library(cat-impl STATIC)
 set_target_properties(cat-impl PROPERTIES OUTPUT_NAME cat)
 target_compile_features(cat-impl PRIVATE ${CAT_CXX_STANDARD_FEATURE})
@@ -383,10 +383,10 @@ set_target_properties(cat-impl PROPERTIES PCH_WARN_INVALID ON)
 # set on `cat`, `cat-impl`, or `cat-impl-shared`. That would export PCH usage
 # requirements through `cat::cat[-impl[-shared]]` and bake `cat-impl`'s default
 # `gnu::naked` `_start` declaration into every consumer. Fatal for any TU that
-# defines `NO_ARGC_ARGV` (`unit_tests`, `hello`, external no-args programs),
-# which would then hit "non-asm statement in naked function" on the call to
-# `call_main_noargs()`. `REUSE_FROM cat-impl` is unaffected: it writes on the
-# consumer target, not on `cat-impl`'s `INTERFACE`.
+# defines `CAT_NO_ARGC_ARGV` (`unit_tests`, `hello`, external no-args
+# programs), which would then hit "non-asm statement in naked function" on
+# the call to `call_main_noargs()`. `REUSE_FROM cat-impl` is unaffected: it
+# writes on the consumer target, not on `cat-impl`'s `INTERFACE`.
 function(_cat_assert_no_interface_pch)
   set(_targets cat cat-impl)
   if (TARGET cat-impl-shared)

@@ -127,16 +127,17 @@ if(CAT_BUILD_UNIT_TESTS)
 
   add_executable(unit_tests unit_tests.cpp)
 
-  # Pin `NO_ARGC_ARGV` to `_start.cpp` only (keeps the rest of `unit_tests`'s
-  # compile commands byte-equal to `cat-impl`'s so `REUSE_FROM cat-impl` below
-  # passes PCH validation). `SKIP_PRECOMPILE_HEADERS` on the same TU because
-  # `cat-impl`'s PCH bakes `_start` as `gnu::naked` and reusing it here would
-  # leave the no-args body all-asm ("non-asm statement in naked function").
+  # Pin `CAT_NO_ARGC_ARGV` to `_start.cpp` only (keeps the rest of
+  # `unit_tests`'s compile commands byte-equal to `cat-impl`'s so
+  # `REUSE_FROM cat-impl` below passes PCH validation).
+  # `SKIP_PRECOMPILE_HEADERS` on the same TU because `cat-impl`'s PCH bakes
+  # `_start` as `gnu::naked` and reusing it here would leave the no-args body
+  # all-asm ("non-asm statement in naked function").
   set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
     TARGET_DIRECTORY unit_tests
     PROPERTIES
-      COMPILE_DEFINITIONS "NO_ARGC_ARGV"
+      COMPILE_DEFINITIONS "CAT_NO_ARGC_ARGV"
       SKIP_PRECOMPILE_HEADERS ON)
   target_link_libraries(unit_tests PRIVATE cat-tests)
   # `CAT_LINK_OPTIONS` arrives transitively from `cat`'s
@@ -165,7 +166,7 @@ if(CAT_BUILD_UNIT_TESTS)
       ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
       TARGET_DIRECTORY gdb_pretty_printer_fixture
       PROPERTIES
-        COMPILE_DEFINITIONS "NO_ARGC_ARGV"
+        COMPILE_DEFINITIONS "CAT_NO_ARGC_ARGV"
         SKIP_PRECOMPILE_HEADERS ON)
     target_link_libraries(gdb_pretty_printer_fixture PRIVATE cat-tests-base)
     target_compile_options(gdb_pretty_printer_fixture PRIVATE -ggdb3 -gfull -O0)
@@ -212,7 +213,7 @@ if(CAT_BUILD_UNIT_TESTS)
   # set_source_files_properties(
   #   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
   #   TARGET_DIRECTORY unit_tests_cpuid
-  #   PROPERTIES COMPILE_DEFINITIONS "NO_ARGC_ARGV")
+  #   PROPERTIES COMPILE_DEFINITIONS "CAT_NO_ARGC_ARGV")
   # target_link_libraries(unit_tests_cpuid PRIVATE cat-tests-base)
   # if(CAT_PCH)
   #   target_precompile_headers(unit_tests_cpuid REUSE_FROM cat-impl)

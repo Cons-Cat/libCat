@@ -7,7 +7,7 @@
 
 // We could use a single K&R `main(...)` but that linkage causes trouble for
 // LTO, so we specify both of these forms.
-#ifndef NO_ARGC_ARGV
+#ifndef CAT_NO_ARGC_ARGV
 auto
 main(int argc, char* const* pp_argv) -> int;
 #else
@@ -38,7 +38,7 @@ call_static_constructors() {
 
 [[clang::always_inline]]
 inline void
-init_syscall_probes() {
+detect_syscall_support() {
    nix::kernel_version const version = nix::get_kernel_version();
 
    // For most syscalls, we assume it is available if the kernel version is
@@ -104,7 +104,7 @@ init_vdso(cat::uword const* _Nonnull p_stack) {
 
 extern "C" {
 [[noreturn, gnu::no_stack_protector, gnu::no_sanitize_address]]
-#if defined(NO_ARGC_ARGV) && defined(CAT_NO_VDSO)
+#if defined(CAT_NO_ARGC_ARGV) && defined(CAT_NO_VDSO)
 void
 call_main() {
 #else
@@ -124,7 +124,7 @@ call_main([[maybe_unused]] cat::uword const* _Nonnull p_stack) {
    // `CAT_NO_SYSCALL_PROBES` for binaries that never query the
    // `has_sys_*` family, to skip the two startup syscalls
    // (`sys_uname` + `sys_io_uring_setup`).
-   init_syscall_probes();
+   detect_syscall_support();
 #endif
 #if defined(CAT_STATIC_LINKED) \
    && (!defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0)
@@ -139,7 +139,7 @@ call_main([[maybe_unused]] cat::uword const* _Nonnull p_stack) {
 #ifndef CAT_NO_STATIC_CONSTRUCTORS
    call_static_constructors();
 #endif
-#ifdef NO_ARGC_ARGV
+#ifdef CAT_NO_ARGC_ARGV
    [[clang::always_inline]] cat::exit(main());
 #else
    int const argc = static_cast<int>(p_stack[0]);
@@ -152,13 +152,14 @@ call_main([[maybe_unused]] cat::uword const* _Nonnull p_stack) {
 }  // namespace
 
 // The kernel stack is required for argv and for the vDSO auxv.
-#if defined(NO_ARGC_ARGV) && defined(CAT_NO_VDSO)
+#if defined(CAT_NO_ARGC_ARGV) && defined(CAT_NO_VDSO)
 extern "C" [[gnu::used, gnu::no_stack_protector]]
 void
 cat::detail::_start() {
    [[clang::always_inline]] call_main();
 }
 #else
+// This can be inlined by BOLT, but not by Clang LTO.
 extern "C" [[gnu::used, gnu::no_stack_protector, gnu::naked]]
 void
 cat::detail::_start() {

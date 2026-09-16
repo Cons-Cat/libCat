@@ -157,7 +157,7 @@ target_link_options(cat-impl-shared PUBLIC
   -lc)
 
 # `_start.cpp` lives on `cat`'s `INTERFACE_SOURCES` (each consumer compiles it
-# with their own `NO_ARGC_ARGV`). Mirror the entry on `cat-impl-shared` so
+# with their own `CAT_NO_ARGC_ARGV`). Mirror the entry on `cat-impl-shared` so
 # consumers that link the `.so` directly (or via `cat`-with- `CAT_USE_SHARED`)
 # still get a valid program entry point.
 target_sources(cat-impl-shared INTERFACE

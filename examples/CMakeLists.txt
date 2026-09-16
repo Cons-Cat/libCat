@@ -21,7 +21,7 @@ if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
   # `hello` is compiled with aggressive optimization flags so that the binary is
   # as small as possible.
   target_compile_definitions(hello PRIVATE
-    NO_ARGC_ARGV
+    CAT_NO_ARGC_ARGV
     CAT_NO_STATIC_CONSTRUCTORS
     CAT_NO_CPUID
     CAT_NO_SYSCALL_PROBES

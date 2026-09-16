@@ -29,7 +29,7 @@ set_property(TARGET cat-impl APPEND PROPERTY INTERFACE_LINK_DEPENDS
   "${LIBCAT_LINKER_SCRIPT}")
 
 # `_start.cpp` stays on `cat` `INTERFACE` because consumers select between its
-# argc/argv vs. no-args branches via `NO_ARGC_ARGV`. All other impls are
+# argc/argv vs. no-args branches via `CAT_NO_ARGC_ARGV`. All other impls are
 # flag-independent and live in `cat-impl` (`libcat.a`).
 target_sources(cat INTERFACE
   "${CATLIB}/runtime/implementations/_start.cpp")
