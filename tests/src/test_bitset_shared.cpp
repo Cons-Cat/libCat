@@ -25,24 +25,24 @@ verify_wait_transitions(cat::idx index) {
       .spawn(
          pager, worker_stack_size,
          [&bits, &started, &phase, &completed, index] {
-            started.store(true, cat::memory_order::release);
+            started.release() = true;
             bits.wait(index, false, cat::memory_order::acquire);
-            phase.store(1u, cat::memory_order::release);
+            phase.release() = 1u;
             bits[index].wait(true, cat::memory_order::acquire);
-            completed.store(true, cat::memory_order::release);
+            completed.release() = true;
          }
       )
       .verify();
 
-   started.wait(false, cat::memory_order::acquire);
+   started.acquire().wait(false);
    bits.set(index, cat::memory_order::release);
    bits.notify_one(index);
-   phase.wait(0u, cat::memory_order::acquire);
+   phase.acquire().wait(0u);
    bits.reset(index, cat::memory_order::release);
    bits[index].notify_one();
 
    waiter.join().verify();
-   cat::verify(completed.load(cat::memory_order::acquire));
+   cat::verify(completed.acquire());
    cat::verify(!bits.test(index, cat::memory_order::relaxed));
 }
 
@@ -336,27 +336,27 @@ $test(bitset_shared_wait_rechecks_same_word_changes) {
       .spawn(
          pager, worker_stack_size,
          [&bits, &started, &completed] {
-            started.store(true, cat::memory_order::release);
+            started.release() = true;
             bits.wait(64u, false, cat::memory_order::acquire);
-            completed.store(true, cat::memory_order::release);
+            completed.release() = true;
          }
       )
       .verify();
 
-   started.wait(false, cat::memory_order::acquire);
+   started.acquire().wait(false);
    bits.set(2u, cat::memory_order::release);
    bits.notify_one(64u);
    for (cat::idx repetition; repetition < 100'000u; ++repetition) {
       cat::relax_cpu();
    }
-   bool const returned_early = completed.load(cat::memory_order::acquire);
+   bool const returned_early = completed.acquire();
 
    bits.set(64u, cat::memory_order::release);
    bits.notify_all(64u);
    waiter.join().verify();
 
    cat::verify(!returned_early);
-   cat::verify(completed.load(cat::memory_order::acquire));
+   cat::verify(completed.acquire());
 }
 
 $test(bitset_shared_wait_ignores_different_word_changes) {
@@ -373,27 +373,27 @@ $test(bitset_shared_wait_ignores_different_word_changes) {
       .spawn(
          pager, worker_stack_size,
          [&bits, &started, &completed] {
-            started.store(true, cat::memory_order::release);
+            started.release() = true;
             bits[64u].wait(false, cat::memory_order::seq_cst);
-            completed.store(true, cat::memory_order::release);
+            completed.release() = true;
          }
       )
       .verify();
 
-   started.wait(false, cat::memory_order::acquire);
+   started.acquire().wait(false);
    bits.set(65u, cat::memory_order::release);
    bits.notify_all(65u);
    for (cat::idx repetition; repetition < 100'000u; ++repetition) {
       cat::relax_cpu();
    }
-   bool const returned_early = completed.load(cat::memory_order::acquire);
+   bool const returned_early = completed.acquire();
 
    bits.set(64u, cat::memory_order::release);
    bits[64u].notify_one();
    waiter.join().verify();
 
    cat::verify(!returned_early);
-   cat::verify(completed.load(cat::memory_order::acquire));
+   cat::verify(completed.acquire());
 }
 
 $test(bitset_shared_wait_immediate_and_notifications) {

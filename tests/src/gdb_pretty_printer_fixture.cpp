@@ -1,5 +1,6 @@
 #include <cat/arithmetic>
 #include <cat/array>
+#include <cat/atomic>
 #include <cat/bit>
 #include <cat/bitset>
 #include <cat/linear_allocator>
@@ -226,6 +227,47 @@ cat::int4 cat_gdb_arithmetic_value = 42;
 wrap_int4 cat_gdb_arithmetic_wrap_value = 250;
 
 [[gnu::used, gnu::retain]]
+cat::int4 cat_gdb_overflow_storage = 31;
+
+[[gnu::used, gnu::retain]]
+auto cat_gdb_overflow_reference_value = cat_gdb_overflow_storage.wrap();
+
+[[gnu::used, gnu::retain]]
+cat::atomic<int> cat_gdb_atomic_value{42};
+
+[[gnu::used, gnu::retain]]
+int cat_gdb_atomic_reference_storage = 52;
+
+[[gnu::used, gnu::retain]]
+cat::atomic<int&> cat_gdb_atomic_reference_value{
+   cat_gdb_atomic_reference_storage
+};
+
+[[gnu::used, gnu::retain]]
+cat::atomic<int> const cat_gdb_const_atomic_value{62};
+
+[[gnu::used, gnu::retain]]
+auto cat_gdb_memory_order_reference_value = cat_gdb_atomic_value.release();
+
+[[gnu::used, gnu::retain]]
+auto cat_gdb_const_memory_order_reference_value =
+   cat_gdb_const_atomic_value.acquire();
+
+[[gnu::used, gnu::retain]]
+cat::atomic<cat::uint4> cat_gdb_atomic_combined_storage{72u};
+
+[[gnu::used, gnu::retain]]
+auto cat_gdb_atomic_overflow_value = cat_gdb_atomic_combined_storage.wrap();
+
+[[gnu::used, gnu::retain]]
+auto cat_gdb_atomic_wrap_release_value =
+   cat_gdb_atomic_combined_storage.wrap().release();
+
+[[gnu::used, gnu::retain]]
+auto cat_gdb_atomic_release_wrap_value =
+   cat_gdb_atomic_combined_storage.release().wrap();
+
+[[gnu::used, gnu::retain]]
 cat::idx cat_gdb_index_value = 7u;
 
 [[gnu::used, gnu::retain]]
@@ -444,6 +486,9 @@ cat_gdb_pretty_printer_breakpoint() {
    asm volatile("" ::"g"(&cat_gdb_monostate_value),
                 "g"(&cat_gdb_arithmetic_value),
                 "g"(&cat_gdb_arithmetic_wrap_value),
+                "g"(&cat_gdb_atomic_value),
+                "g"(&cat_gdb_atomic_reference_value),
+                "g"(&cat_gdb_const_atomic_value),
                 "g"(&cat_gdb_index_value),
                 "g"(&cat_gdb_byte_value),
                 "g"(&cat_gdb_span_value),

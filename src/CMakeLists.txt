@@ -362,6 +362,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/arithmetic/implementations/format_precision_reference.tpp
   ${CATLIB}/array/cat/array
   ${CATLIB}/atomic/cat/atomic
+  ${CATLIB}/atomic/cat/memory_order_reference.hpp
   ${CATLIB}/bit/cat/bit
   ${CATLIB}/bit/cat/detail/bit_iterable.hpp
   ${CATLIB}/bit/cat/detail/bit_ptr.hpp

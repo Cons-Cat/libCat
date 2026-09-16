@@ -54,7 +54,7 @@ template <bool is_shared>
 void
 musl_add_counter(musl_counter_storage<is_shared>& counter, uword amount) {
    if constexpr (is_shared) {
-      uword const old = counter.fetch_add(amount, memory_order::relaxed);
+      uword const old = counter.relaxed().fetch_add(amount);
       verify(old <= limits<uword>::max() - amount);
    } else {
       verify(counter <= limits<uword>::max() - amount);
@@ -66,7 +66,7 @@ template <bool is_shared>
 void
 musl_subtract_counter(musl_counter_storage<is_shared>& counter, uword amount) {
    if constexpr (is_shared) {
-      uword const old = counter.fetch_sub(amount, memory_order::relaxed);
+      uword const old = counter.relaxed().fetch_sub(amount);
       verify(old >= amount);
    } else {
       verify(counter >= amount);
@@ -106,8 +106,7 @@ struct musl_alloc_lock<true> {
       }
 
       for (;;) {
-         uint4 const previous =
-            word.m_value.exchange(2u, memory_order::acq_rel);
+         uint4 const previous = word.m_value.acq_rel().exchange(2u);
          if (previous == 0u) {
             return;
          }
@@ -118,7 +117,7 @@ struct musl_alloc_lock<true> {
 
    void
    unlock() {
-      uint4 const previous = word.m_value.exchange(0u, memory_order::release);
+      uint4 const previous = word.m_value.release().exchange(0u);
       verify(previous != 0u);
       if (previous == 2u) {
          auto const ignored = word.wake();

@@ -41,21 +41,15 @@ struct process {
       }
 
       m_id = other.m_id;
-      m_clone_child_clear_tid_for_kernel.m_value.store(
-         other.m_clone_child_clear_tid_for_kernel.m_value.load(
-            cat::memory_order::relaxed
-         ),
-         cat::memory_order::relaxed
-      );
+      m_clone_child_clear_tid_for_kernel.m_value.relaxed() =
+         other.m_clone_child_clear_tid_for_kernel.m_value.relaxed().load();
       m_p_stack_bottom = other.m_p_stack_bottom;
       m_stack_size = other.m_stack_size;
       m_allocation_bytes = other.m_allocation_bytes;
       m_flags = other.m_flags;
 
       other.m_id = process_id{0};
-      other.m_clone_child_clear_tid_for_kernel.m_value.store(
-         0, cat::memory_order::relaxed
-      );
+      other.m_clone_child_clear_tid_for_kernel.m_value.relaxed() = 0;
       other.m_p_stack_bottom = nullptr;
       other.m_stack_size = 0;
       other.m_allocation_bytes = 0;

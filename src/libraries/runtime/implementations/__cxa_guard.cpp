@@ -30,7 +30,7 @@ __cxa_guard_acquire(cat::uword* _Nonnull p_guard) -> int {
    cat::atomic<cat::uint1&> done{done_ref(p_guard)};
    cat::atomic<cat::uint1&> lock{lock_ref(p_guard)};
 
-   if (done.load(cat::memory_order::acquire) != 0u) {
+   if (done.acquire() != 0u) {
       return 0;
    }
 
@@ -42,9 +42,9 @@ __cxa_guard_acquire(cat::uword* _Nonnull p_guard) -> int {
       __builtin_ia32_pause();
    }
 
-   if (done.load(cat::memory_order::acquire) != 0u) {
+   if (done.acquire() != 0u) {
       // Another thread finished while we were spinning.
-      lock.store(0u, cat::memory_order::release);
+      lock.release() = 0u;
       return 0;
    }
    return 1;

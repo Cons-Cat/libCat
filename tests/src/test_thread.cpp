@@ -48,10 +48,7 @@ $test(this_thread) {
          pager, 1_umi,
          [&observed_id] {
             cat::this_thread::yield();
-            observed_id.store(
-               cat::this_thread::get_id().native().value,
-               cat::memory_order::release
-            );
+            observed_id.release() = cat::this_thread::get_id().native().value;
          }
       )
       .verify();
@@ -60,9 +57,7 @@ $test(this_thread) {
    worker.free(pager);
 
    cat::verify(worker_id != original_id);
-   cat::verify(
-      observed_id.load(cat::memory_order::acquire) == worker_id.native().value
-   );
+   cat::verify(observed_id.acquire().load() == worker_id.native().value);
 }
 
 $test(thread) {

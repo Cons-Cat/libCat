@@ -81,8 +81,8 @@ main() -> int {
 
    // `tests_passed` and `tests_failed` are modified within the `$test`
    // macro.
-   cat::idx const n_passed = tests_passed.load(cat::memory_order::relaxed);
-   cat::idx const n_failed = tests_failed.load(cat::memory_order::relaxed);
+   cat::idx const n_passed = tests_passed.relaxed();
+   cat::idx const n_failed = tests_failed.relaxed();
 
    auto _ = cat::print_fmt(
       pager, "\n{} tests passed.\n{} tests failed.\n", n_passed, n_failed

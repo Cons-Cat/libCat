@@ -308,11 +308,11 @@ verify_cross_thread_release(Allocator& allocator) {
          pager, 1'024_uki,
          [&allocator, allocation, &released] {
             allocator.free_multi_uninit(allocation);
-            released.store(true, cat::memory_order::release);
+            released.release() = true;
          }
       )
       .verify();
-   while (!released.load(cat::memory_order::acquire)) {
+   while (!released.acquire()) {
       cat::relax_cpu();
    }
 #if __has_feature(address_sanitizer)
@@ -977,8 +977,8 @@ $test(musl_allocator_shared_lock_wakeup_stress) {
          .spawn(
             pager, 1'024_uki,
             [&allocator, &ready, &start, index, iteration_count] {
-               ready.fetch_add(1u, cat::memory_order::release);
-               while (!start.load(cat::memory_order::acquire)) {
+               ready.release().fetch_add(1u);
+               while (!start.acquire()) {
                   cat::relax_cpu();
                }
                shared_contention_worker_impl(allocator, index, iteration_count);
@@ -986,10 +986,10 @@ $test(musl_allocator_shared_lock_wakeup_stress) {
          )
          .verify();
    }
-   while (ready.load(cat::memory_order::acquire) != thread_count) {
+   while (ready.acquire().load() != thread_count) {
       cat::relax_cpu();
    }
-   start.store(true, cat::memory_order::release);
+   start.release() = true;
    for (idx index; index < thread_count; ++index) {
       threads[index].join().verify();
       threads[index].free(pager);
@@ -1010,7 +1010,7 @@ $test(musl_allocator_shared_aligned_accounting_is_final) {
       .spawn(
          pager, 1'024_uki,
          [&allocator, &start, &done, allocation_bytes] {
-            while (!start.load(cat::memory_order::acquire)) {
+            while (!start.acquire()) {
                cat::relax_cpu();
             }
             for (idx iteration; iteration < 20'000u; ++iteration) {
@@ -1018,12 +1018,12 @@ $test(musl_allocator_shared_aligned_accounting_is_final) {
                   aligned_allocate_bytes(allocator, 64u, allocation_bytes);
                deallocate_bytes(allocator, p_allocation, allocation_bytes);
             }
-            done.store(true, cat::memory_order::release);
+            done.release() = true;
          }
       )
       .verify();
-   start.store(true, cat::memory_order::release);
-   while (!done.load(cat::memory_order::acquire)) {
+   start.release() = true;
+   while (!done.acquire()) {
       idx const used = allocator.bytes_used();
       cat::verify(used == 0u || used == allocation_bytes);
    }

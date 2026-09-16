@@ -133,6 +133,58 @@ class BytePrinter:
         return str(hex(self.value))
 
 
+def _referenced_value(val: gdb.Value):
+    while val.type.strip_typedefs().code in (
+        gdb.TYPE_CODE_REF,
+        gdb.TYPE_CODE_RVALUE_REF,
+    ):
+        val = val.referenced_value()
+    return val
+
+
+def _atomic_value(val: gdb.Value):
+    val = _referenced_value(val)
+    for field in ('m_value', 'm_p_value', 'm_p_atomic', 'm_reference'):
+        try:
+            value = val[field]
+        except (gdb.error, RuntimeError):
+            continue
+        if field == 'm_p_value':
+            return value.dereference()
+        if field == 'm_value':
+            return value
+        if field == 'm_p_atomic':
+            value = value.dereference()
+        return _atomic_value(value)
+    raise gdb.GdbError('libCat atomic value storage not found')
+
+
+@cat_type('atomic')
+@cat_type('atomic_flag')
+@cat_type('memory_order_reference')
+@cat_type('atomic_overflow_reference', 'cat::detail')
+@cat_type('atomic_ref_bound', 'cat::detail')
+class AtomicPrinter:
+    "Print a `cat::atomic` or atomic reference view"
+
+    def __init__(self, val: gdb.Value):
+        self.value = _atomic_value(val)
+
+    def to_string(self):
+        return self.value
+
+
+@cat_type('overflow_reference')
+class OverflowReferencePrinter:
+    "Print a `cat::overflow_reference`"
+
+    def __init__(self, val: gdb.Value):
+        self.value = _referenced_value(val)['m_wrapped'].dereference()
+
+    def to_string(self):
+        return self.value
+
+
 @cat_type('span')
 class SpanPrinter:
     "Print a `cat::span`"

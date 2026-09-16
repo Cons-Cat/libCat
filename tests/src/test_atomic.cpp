@@ -1,4 +1,6 @@
 #include <cat/atomic>
+#include <cat/linear_allocator>
+#include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
 
@@ -23,6 +25,55 @@ concept has_runtime_load_order =
 template <typename Atomic>
 concept has_runtime_store_order =
    requires(Atomic& atomic) { atomic.store(1, cat::memory_order::relaxed); };
+
+template <typename Atomic>
+concept has_relaxed_order_store =
+   requires(Atomic& atomic) { atomic.relaxed().store(1); };
+
+template <typename Atomic>
+concept has_relaxed_order_assignment =
+   requires(Atomic& atomic) { atomic.relaxed() = 1; };
+
+template <typename Atomic>
+concept has_rvalue_relaxed_order =
+   requires { cat::declval<Atomic&&>().relaxed(); };
+
+template <typename Atomic>
+concept has_atomic_order_overflow_composition = requires(Atomic& atomic) {
+                                                   atomic.relaxed().undef();
+                                                   atomic.undef().relaxed();
+                                                   atomic.acquire().undef();
+                                                   atomic.undef().acquire();
+                                                   atomic.release().undef();
+                                                   atomic.undef().release();
+                                                   atomic.acq_rel().undef();
+                                                   atomic.undef().acq_rel();
+                                                   atomic.seq_cst().undef();
+                                                   atomic.undef().seq_cst();
+                                                   atomic.relaxed().wrap();
+                                                   atomic.wrap().relaxed();
+                                                   atomic.acquire().wrap();
+                                                   atomic.wrap().acquire();
+                                                   atomic.release().wrap();
+                                                   atomic.wrap().release();
+                                                   atomic.acq_rel().wrap();
+                                                   atomic.wrap().acq_rel();
+                                                   atomic.seq_cst().wrap();
+                                                   atomic.wrap().seq_cst();
+                                                   atomic.relaxed().sat();
+                                                   atomic.sat().relaxed();
+                                                   atomic.acquire().sat();
+                                                   atomic.sat().acquire();
+                                                   atomic.release().sat();
+                                                   atomic.sat().release();
+                                                   atomic.acq_rel().sat();
+                                                   atomic.sat().acq_rel();
+                                                   atomic.seq_cst().sat();
+                                                   atomic.sat().seq_cst();
+                                                };
+
+template <typename Reference>
+concept has_reference_address = requires(Reference& reference) { &reference; };
 
 template <typename T>
 concept has_atomic_specialization = requires { sizeof(cat::atomic<T>); };
@@ -174,9 +225,36 @@ constexpr_atomic_reference_operations() -> bool {
    return reference.fetch_add(2) == 6 && value == 8;
 }
 
+consteval auto
+constexpr_atomic_order_operations() -> bool {
+   cat::atomic<int> value{1};
+   value.relaxed().store(2);
+   value.acquire().store(3);
+   if (value.release().load() != 3) {
+      return false;
+   }
+   if (value.acq_rel().exchange(4) != 3) {
+      return false;
+   }
+   value.seq_cst().store(6);
+   if (value.load() != 6) {
+      return false;
+   }
+
+   int storage = 7;
+   cat::atomic<int&> reference{storage};
+   reference.release().store(8);
+   return reference.acquire().load() == 8;
+}
+
 }  // namespace
 
 $test(atomic_memory_order_helpers) {
+   static_assert(cat::is_atomic<cat::atomic<int>>);
+   static_assert(cat::is_atomic<cat::atomic<int> const>);
+   static_assert(!cat::is_atomic<cat::atomic<int>&>);
+   static_assert(!cat::is_atomic<cat::atomic<int> volatile>);
+   static_assert(!cat::is_atomic<int>);
    static_assert(cat::memory_order_relaxed == cat::memory_order::relaxed);
    static_assert(cat::memory_order_acquire == cat::memory_order::acquire);
    static_assert(cat::memory_order_release == cat::memory_order::release);
@@ -184,6 +262,15 @@ $test(atomic_memory_order_helpers) {
    static_assert(cat::memory_order_seq_cst == cat::memory_order::seq_cst);
    static_assert(constexpr_atomic_value_operations());
    static_assert(constexpr_atomic_reference_operations());
+   static_assert(constexpr_atomic_order_operations());
+   static_assert(
+      cat::detail::atomic_store_order(cat::memory_order::acquire)
+      == cat::memory_order::relaxed
+   );
+   static_assert(
+      cat::detail::atomic_store_order(cat::memory_order::acq_rel)
+      == cat::memory_order::release
+   );
    static_assert(
       cat::detail::cmpexch_failure_order(cat::memory_order::seq_cst)
       == cat::memory_order::seq_cst
@@ -709,6 +796,168 @@ $test(atomic_ref_bound) {
    cat::atomic_ref_relaxed<cat::sat_uint1> sat_ref{sat_storage};
    cat::verify(sat_ref.fetch_add(2u) == 254u);
    cat::verify(sat_storage == cat::limits<cat::sat_uint1>::max());
+}
+
+$test(memory_order_reference) {
+   cat::atomic<int> value{0};
+   static_assert(cat::is_same<
+                 decltype(value.relaxed()),
+                 cat::memory_order_reference<
+                    cat::atomic<int>, cat::memory_order::relaxed>>);
+   static_assert(cat::is_same<
+                 decltype(value.acquire()),
+                 cat::memory_order_reference<
+                    cat::atomic<int>, cat::memory_order::acquire>>);
+   static_assert(cat::is_same<
+                 decltype(value.release()),
+                 cat::memory_order_reference<
+                    cat::atomic<int>, cat::memory_order::release>>);
+   static_assert(cat::is_same<
+                 decltype(value.acq_rel()),
+                 cat::memory_order_reference<
+                    cat::atomic<int>, cat::memory_order::acq_rel>>);
+   static_assert(cat::is_same<
+                 decltype(value.seq_cst()),
+                 cat::memory_order_reference<
+                    cat::atomic<int>, cat::memory_order::seq_cst>>);
+   static_assert(cat::is_copy_constructible<decltype(value.relaxed())>);
+   static_assert(!cat::is_copy_assignable<decltype(value.relaxed())>);
+   static_assert(!has_reference_address<decltype(value.relaxed())>);
+   static_assert(cat::is_same<decltype(value.relaxed() = 1), int>);
+   static_assert(cat::is_convertible<decltype(value.acquire()), int>);
+
+   cat::verify((value.relaxed() = 1) == 1);
+   cat::verify(value.load() == 1);
+   cat::memory_order_reference<cat::atomic<int>, cat::memory_order::relaxed>
+      direct{value};
+   direct.store(1);
+   cat::verify(value.acquire().load() == 1);
+   value.acquire().store(2);
+   cat::verify(value.release().load() == 2);
+   value.release().store(3);
+   cat::verify(value.acq_rel().exchange(4) == 3);
+   cat::verify(value.seq_cst().fetch_add(2) == 4);
+   cat::verify(value.load() == 6);
+   int loaded = value.acquire();
+   cat::verify(loaded == 6);
+   cat::verify(value.seq_cst() == 6);
+
+   cat::atomic<bool> flag{true};
+   cat::verify(flag.acquire());
+
+   cat::atomic<int> const& read_only_value = value;
+   int const_loaded = read_only_value.acquire();
+   cat::verify(const_loaded == 6);
+   cat::verify(read_only_value.acquire().load() == 6);
+   static_assert(!has_relaxed_order_store<cat::atomic<int> const>);
+   static_assert(!has_relaxed_order_assignment<cat::atomic<int> const>);
+   static_assert(!has_rvalue_relaxed_order<cat::atomic<int>>);
+
+   int storage = 7;
+   cat::atomic<int&> reference{storage};
+   static_assert(cat::is_same<
+                 decltype(reference.relaxed()),
+                 cat::memory_order_reference<
+                    cat::atomic<int&>, cat::memory_order::relaxed>>);
+   auto ordered_reference = reference.release();
+   cat::verify((ordered_reference = 8) == 8);
+   cat::verify(storage == 8);
+   int reference_loaded = reference.acquire();
+   cat::verify(reference_loaded == 8);
+   cat::atomic<int&> const const_reference{storage};
+   const_reference.relaxed().store(9);
+   cat::verify(storage == 9);
+
+   cat::atomic<int const&> read_only_reference{storage};
+   cat::verify(read_only_reference.seq_cst().load() == 9);
+   static_assert(!has_relaxed_order_store<cat::atomic<int const&>>);
+   static_assert(!has_relaxed_order_assignment<cat::atomic<int const&>>);
+
+   cat::atomic<cat::sat_uint1> byte{cat::limits<cat::sat_uint1>::max()};
+   byte.relaxed().fetch_add(1u);
+   cat::verify(byte.load() == cat::limits<cat::sat_uint1>::max());
+   byte.sat().release().fetch_sub(1u);
+   cat::verify(byte.load() == 254u);
+
+   cat::atomic<cat::uint1> boundary{cat::limits<cat::uint1>::max()};
+   static_assert(
+      has_atomic_order_overflow_composition<cat::atomic<cat::uint1>>
+   );
+   static_assert(
+      !has_atomic_order_overflow_composition<cat::atomic<cat::uint1> const>
+   );
+   static_assert(cat::is_same<
+                 decltype(boundary.relaxed().wrap()),
+                 decltype(boundary.wrap().relaxed())>);
+   static_assert(cat::is_same<
+                 decltype(boundary.acquire().wrap()),
+                 decltype(boundary.wrap().acquire())>);
+   static_assert(cat::is_same<
+                 decltype(boundary.release().wrap()),
+                 decltype(boundary.wrap().release())>);
+   static_assert(cat::is_same<
+                 decltype(boundary.acq_rel().wrap()),
+                 decltype(boundary.wrap().acq_rel())>);
+   static_assert(cat::is_same<
+                 decltype(boundary.seq_cst().wrap()),
+                 decltype(boundary.wrap().seq_cst())>);
+   static_assert(cat::is_same<
+                 decltype(boundary.relaxed().undef()),
+                 decltype(boundary.undef().relaxed())>);
+   static_assert(
+      cat::is_same<
+         decltype(boundary.relaxed().sat()), decltype(boundary.sat().relaxed())>
+   );
+
+   cat::verify(
+      boundary.relaxed().wrap().fetch_add(1u) == cat::limits<cat::uint1>::max()
+   );
+   cat::verify(boundary.load() == 0u);
+   boundary.store(cat::limits<cat::uint1>::max());
+   cat::verify(
+      boundary.wrap().relaxed().fetch_add(1u) == cat::limits<cat::uint1>::max()
+   );
+   cat::verify(boundary.load() == 0u);
+   boundary.store(cat::limits<cat::uint1>::max());
+   boundary.relaxed().sat().fetch_add(1u);
+   cat::verify(boundary.load() == cat::limits<cat::uint1>::max());
+   boundary.sat().relaxed().fetch_add(1u);
+   cat::verify(boundary.load() == cat::limits<cat::uint1>::max());
+
+   auto combined = boundary.release().wrap();
+   combined.store(12u);
+   cat::uint1 combined_loaded = combined;
+   cat::verify(combined_loaded == 12u);
+   cat::verify((combined = 13u) == 13u);
+   cat::verify(combined.load() == 13u);
+
+   cat::uint1 boundary_storage = cat::limits<cat::uint1>::max();
+   cat::atomic<cat::uint1&> boundary_reference{boundary_storage};
+   boundary_reference.release().wrap().fetch_add(1u);
+   cat::verify(boundary_storage == 0u);
+   boundary_storage = cat::limits<cat::uint1>::max();
+   boundary_reference.wrap().release().fetch_add(1u);
+   cat::verify(boundary_storage == 0u);
+}
+
+$test(memory_order_reference_format) {
+   cat::span page = pager.alloc_multi<cat::byte>(1_ki).verify();
+   $defer {
+      pager.free(page);
+   };
+   auto allocator = cat::make_linear_allocator(page);
+
+   cat::atomic<cat::uint1> value{42u};
+   auto wrap_release =
+      cat::fmt(allocator, "{}", value.wrap().release()).verify();
+   auto release_wrap =
+      cat::fmt(allocator, "{}", value.release().wrap()).verify();
+   auto sat_acquire = cat::fmt(allocator, "{}", value.sat().acquire()).verify();
+
+   cat::verify(wrap_release == "atomic_ref(42)");
+   cat::verify(release_wrap == wrap_release);
+   cat::verify(sat_acquire == wrap_release);
+   cat::verify(value.load() == 42u);
 }
 
 $test(atomic_accessor) {

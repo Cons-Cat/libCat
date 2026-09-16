@@ -9,9 +9,45 @@
 // `std::atomic`.
 //
 // Atomic references are spelled `cat::atomic<T&>`, mirroring `cat::maybe<T&>`.
+// Deprecated volatile support and the `consume` memory order are removed.
+//
 // Overflow semantics of `cat::basic_int` are supported, as is the syntax of
-// its `.wrap()`, `.sat()`, etc. members. Deprecated volatile support and the
-// `consume` memory order are removed.
+// its `.wrap()`, `.sat()`, etc. accessors. For example:
+//
+//    atomic<uint4> value = uint4::max();
+//    // Saturate at max value:
+//    value.sat().fetch_add(1u); // 4'294'967'295
+//    // Wrap to min value:
+//    value.fetch_add(1u);       // 0
+//
+//    atomic<uint4, overflow_policies::saturate> value = uint4::max();
+//    value.fetch_add(1u); // 1
+//
+// A `cat::memory_order_reference`, analogous to
+// `cat::atomic_overflow_reference`, is also provided to simplify memory order
+// loads and stores, with similar accessors. For example:
+//
+//    atomic<int4> value = 0;
+//    // Similar to `value.fetch_add(1u, memory_order::relaxed)`:
+//    value.relaxed() += 1u;
+//
+//    // Similar to `value.fetch_add(1u, memory_order::acquire)`:
+//    value.acquire() += 1u;
+//
+//    // Similar to `value.fetch_add(1u, memory_order::release)`:
+//    value.release() += 1u;
+//
+//    // Similar to `value.fetch_add(1u, memory_order::acq_rel)`:
+//    value.acq_rel() += 1u;
+//
+//    // Similar to `value.fetch_add(1u, memory_order::seq_cst)`:
+//    value.seq_cst() += 1u;
+//
+//    // Similar to `result.store(
+//                         value1.load(memory_order::relaxed)
+//                         + value2.load(memory_order::acquire),
+//                      memory_order::relaxed)`:
+//    result.relaxed() = value1.relaxed() + value2.acquire();
 //
 // This class is also informed by the following papers:
 //
@@ -51,6 +87,24 @@ inline constexpr memory_order memory_order_acquire = memory_order::acquire;
 inline constexpr memory_order memory_order_release = memory_order::release;
 inline constexpr memory_order memory_order_acq_rel = memory_order::acq_rel;
 inline constexpr memory_order memory_order_seq_cst = memory_order::seq_cst;
+
+template <typename T>
+class atomic;
+
+namespace detail {
+template <typename>
+struct is_atomic_trait : false_trait {};
+
+template <typename T>
+struct is_atomic_trait<atomic<T>> : true_trait {};
+}  // namespace detail
+
+template <typename T>
+concept is_atomic = !is_reference<T> && !is_volatile<T>
+                    && detail::is_atomic_trait<__typeof_unqual(T)>::value;
+
+template <is_atomic Atomic, memory_order order>
+class memory_order_reference;
 
 namespace detail {
 enum
@@ -95,6 +149,17 @@ cmpexch_failure_order(memory_order order) -> memory_order {
          order & detail::memory_order_modifier::modifier_mask
       )
    );
+}
+
+constexpr auto
+atomic_store_order(memory_order order) -> memory_order {
+   if (order == memory_order::acquire) {
+      return memory_order::relaxed;
+   }
+   if (order == memory_order::acq_rel) {
+      return memory_order::release;
+   }
+   return order;
 }
 
 constexpr void
@@ -212,13 +277,14 @@ atomic_default_overflow_policy() -> overflow_policies {
    return overflow_policies::wrap;
 }
 
-template <typename AtomicQual, overflow_policies overflow_policy>
+template <is_atomic Atomic, overflow_policies overflow_policy>
 class atomic_overflow_reference {
  public:
-   using value_type = remove_cvref<AtomicQual>::value_type;
-   using raw_value = remove_cvref<AtomicQual>::raw_value;
+   using atomic_type = __typeof_unqual(Atomic);
+   using value_type = atomic_type::value_type;
+   using raw_value = atomic_type::raw_value;
 
-   constexpr explicit atomic_overflow_reference(AtomicQual& atomic)
+   constexpr explicit atomic_overflow_reference(Atomic& atomic)
        : m_p_atomic(addressof(atomic)) {
    }
 
@@ -367,6 +433,21 @@ class atomic_overflow_reference {
       auto _ = fetch_sub(operand, order);
    }
 
+   constexpr auto
+   relaxed() const;
+
+   constexpr auto
+   acquire() const;
+
+   constexpr auto
+   release() const;
+
+   constexpr auto
+   acq_rel() const;
+
+   constexpr auto
+   seq_cst() const;
+
  private:
    template <bool return_new, typename Operation>
    constexpr auto
@@ -407,7 +488,7 @@ class atomic_overflow_reference {
       return value_type(cat::sat_sub(raw_observed, raw_operand));
    }
 
-   AtomicQual* _Nonnull m_p_atomic;
+   Atomic* _Nonnull m_p_atomic;
 };
 }  // namespace detail
 
@@ -492,9 +573,6 @@ class atomic_flag {
 static_assert(atomic_flag::is_always_lock_free);
 
 template <typename T>
-class atomic;
-
-template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 class atomic<T> {
  public:
@@ -535,6 +613,71 @@ class atomic<T> {
       store(operand);
       return operand;
    }
+
+   constexpr auto
+   relaxed() & -> memory_order_reference<atomic, memory_order::relaxed>;
+
+   constexpr auto
+   relaxed() const& -> memory_order_reference<
+      atomic const, memory_order::relaxed>;
+
+   constexpr auto
+   relaxed() && = delete;
+
+   constexpr auto
+   relaxed() const&& = delete;
+
+   constexpr auto
+   acquire() & -> memory_order_reference<atomic, memory_order::acquire>;
+
+   constexpr auto
+   acquire() const& -> memory_order_reference<
+      atomic const, memory_order::acquire>;
+
+   constexpr auto
+   acquire() && = delete;
+
+   constexpr auto
+   acquire() const&& = delete;
+
+   constexpr auto
+   release() & -> memory_order_reference<atomic, memory_order::release>;
+
+   constexpr auto
+   release() const& -> memory_order_reference<
+      atomic const, memory_order::release>;
+
+   constexpr auto
+   release() && = delete;
+
+   constexpr auto
+   release() const&& = delete;
+
+   constexpr auto
+   acq_rel() & -> memory_order_reference<atomic, memory_order::acq_rel>;
+
+   constexpr auto
+   acq_rel() const& -> memory_order_reference<
+      atomic const, memory_order::acq_rel>;
+
+   constexpr auto
+   acq_rel() && = delete;
+
+   constexpr auto
+   acq_rel() const&& = delete;
+
+   constexpr auto
+   seq_cst() & -> memory_order_reference<atomic, memory_order::seq_cst>;
+
+   constexpr auto
+   seq_cst() const& -> memory_order_reference<
+      atomic const, memory_order::seq_cst>;
+
+   constexpr auto
+   seq_cst() && = delete;
+
+   constexpr auto
+   seq_cst() const&& = delete;
 
    constexpr auto
    undef() & -> detail::atomic_overflow_reference<
@@ -1149,7 +1292,10 @@ class atomic<T> {
    }
 
  private:
-   template <typename AtomicQual, overflow_policies overflow_policy>
+   template <is_atomic Atomic, memory_order order>
+   friend class memory_order_reference;
+
+   template <is_atomic Atomic, overflow_policies overflow_policy>
    friend class detail::atomic_overflow_reference;
 
    constexpr auto
@@ -1225,6 +1371,8 @@ class atomic<T> {
 
 // P3323R1: `atomic<T&>` supports `const T`. Only load, wait, compare, and
 // read-only introspection are available.
+// TODO: Consider deleting unary `operator&` from atomic reference types under
+// P3207R0.
 template <typename T>
    requires(!is_volatile<T>)
 class atomic<T&> {
@@ -1278,6 +1426,41 @@ class atomic<T&> {
       store(operand);
       return operand;
    }
+
+   constexpr auto
+   relaxed() & -> memory_order_reference<atomic, memory_order::relaxed>;
+
+   constexpr auto
+   relaxed() const& -> memory_order_reference<
+      atomic const, memory_order::relaxed>;
+
+   constexpr auto
+   acquire() & -> memory_order_reference<atomic, memory_order::acquire>;
+
+   constexpr auto
+   acquire() const& -> memory_order_reference<
+      atomic const, memory_order::acquire>;
+
+   constexpr auto
+   release() & -> memory_order_reference<atomic, memory_order::release>;
+
+   constexpr auto
+   release() const& -> memory_order_reference<
+      atomic const, memory_order::release>;
+
+   constexpr auto
+   acq_rel() & -> memory_order_reference<atomic, memory_order::acq_rel>;
+
+   constexpr auto
+   acq_rel() const& -> memory_order_reference<
+      atomic const, memory_order::acq_rel>;
+
+   constexpr auto
+   seq_cst() & -> memory_order_reference<atomic, memory_order::seq_cst>;
+
+   constexpr auto
+   seq_cst() const& -> memory_order_reference<
+      atomic const, memory_order::seq_cst>;
 
    constexpr auto
    undef() & -> detail::atomic_overflow_reference<
@@ -1882,7 +2065,10 @@ class atomic<T&> {
    }
 
  private:
-   template <typename AtomicQual, overflow_policies overflow_policy>
+   template <is_atomic Atomic, memory_order order>
+   friend class memory_order_reference;
+
+   template <is_atomic Atomic, overflow_policies overflow_policy>
    friend class detail::atomic_overflow_reference;
 
    // P3860R1 converting ctor needs access to other cv-specializations' state.
@@ -1967,7 +2153,9 @@ using atomic_unsigned_lock_free = atomic<uword>;
 
 namespace detail {
 // P3323R1: `atomic_ref_bound` mirrors `atomic<T&>` const handling.
-template <typename T, memory_order memory_order_value>
+template <
+   typename T, memory_order memory_order_value,
+   overflow_policies overflow_policy = atomic_default_overflow_policy<T>()>
    requires(!is_volatile<T>)
 class atomic_ref_bound {
  public:
@@ -1995,10 +2183,11 @@ class atomic_ref_bound {
 
    // P3860R1: cv-conversion constructor between bound atomic refs of the same
    // memory ordering and cv-similar `T`.
-   template <typename U>
+   template <typename U, overflow_policies other_overflow_policy>
       requires(is_same<remove_cv<U>, remove_cv<T>> && is_convertible<U*, T*>)
    constexpr atomic_ref_bound(
-      atomic_ref_bound<U, memory_order_value> const& other
+      atomic_ref_bound<U, memory_order_value, other_overflow_policy> const&
+         other
    ) noexcept
        : m_reference(other.m_reference) {
    }
@@ -2059,6 +2248,34 @@ class atomic_ref_bound {
    }
 
    constexpr auto
+   undef() const
+      -> atomic_ref_bound<T, memory_order_value, overflow_policies::undefined>
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      return atomic_ref_bound<
+         T, memory_order_value, overflow_policies::undefined>(*this);
+   }
+
+   constexpr auto
+   wrap() const
+      -> atomic_ref_bound<T, memory_order_value, overflow_policies::wrap>
+      requires(!is_const<T> && !is_same<T, bool>)
+   {
+      return atomic_ref_bound<T, memory_order_value, overflow_policies::wrap>(
+         *this
+      );
+   }
+
+   constexpr auto
+   sat() const
+      -> atomic_ref_bound<T, memory_order_value, overflow_policies::saturate>
+      requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
+   {
+      return atomic_ref_bound<
+         T, memory_order_value, overflow_policies::saturate>(*this);
+   }
+
+   constexpr auto
    exchange(value_type desired) const -> value_type
       requires(!is_const<T>)
    {
@@ -2101,10 +2318,10 @@ class atomic_ref_bound {
    fetch_add(auto operand) const -> T
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      if constexpr (
-         atomic_default_overflow_policy<T>() == overflow_policies::saturate
-      ) {
+      if constexpr (overflow_policy == overflow_policies::saturate) {
          return m_reference.sat().fetch_add(operand, memory_ordering);
+      } else if constexpr (overflow_policy == overflow_policies::undefined) {
+         return m_reference.undef().fetch_add(operand, memory_ordering);
       } else {
          return m_reference.wrap().fetch_add(operand, memory_ordering);
       }
@@ -2114,10 +2331,10 @@ class atomic_ref_bound {
    fetch_sub(auto operand) const -> T
       requires(!is_const<T> && !is_same<T, bool>)
    {
-      if constexpr (
-         atomic_default_overflow_policy<T>() == overflow_policies::saturate
-      ) {
+      if constexpr (overflow_policy == overflow_policies::saturate) {
          return m_reference.sat().fetch_sub(operand, memory_ordering);
+      } else if constexpr (overflow_policy == overflow_policies::undefined) {
+         return m_reference.undef().fetch_sub(operand, memory_ordering);
       } else {
          return m_reference.wrap().fetch_sub(operand, memory_ordering);
       }
@@ -2344,25 +2561,25 @@ class atomic_ref_bound {
 
  private:
    // P3860R1 converting ctor needs access to other cv-specializations' state.
-   template <typename U, memory_order other_order>
+   template <
+      typename U, memory_order other_order,
+      overflow_policies other_overflow_policy>
       requires(!is_volatile<U>)
    friend class atomic_ref_bound;
 
    static constexpr memory_order store_ordering =
-      memory_order_value == memory_order::acq_rel ? memory_order::release
-                                                  : memory_order_value;
+      atomic_store_order(memory_order_value);
    static constexpr memory_order load_ordering =
-      memory_order_value == memory_order::acq_rel ? memory_order::acquire
-                                                  : memory_order_value;
+      cmpexch_failure_order2(memory_order_value);
 
    constexpr auto
    add_fetch(auto operand) const -> T
       requires(!is_const<T>)
    {
-      if constexpr (
-         atomic_default_overflow_policy<T>() == overflow_policies::saturate
-      ) {
+      if constexpr (overflow_policy == overflow_policies::saturate) {
          return m_reference.sat().add_fetch(operand, memory_ordering);
+      } else if constexpr (overflow_policy == overflow_policies::undefined) {
+         return m_reference.undef().add_fetch(operand, memory_ordering);
       } else {
          return m_reference.wrap().add_fetch(operand, memory_ordering);
       }
@@ -2372,10 +2589,10 @@ class atomic_ref_bound {
    sub_fetch(auto operand) const -> T
       requires(!is_const<T>)
    {
-      if constexpr (
-         atomic_default_overflow_policy<T>() == overflow_policies::saturate
-      ) {
+      if constexpr (overflow_policy == overflow_policies::saturate) {
          return m_reference.sat().sub_fetch(operand, memory_ordering);
+      } else if constexpr (overflow_policy == overflow_policies::undefined) {
+         return m_reference.undef().sub_fetch(operand, memory_ordering);
       } else {
          return m_reference.wrap().sub_fetch(operand, memory_ordering);
       }
@@ -2399,6 +2616,30 @@ class atomic_ref_bound {
    mutable atomic<T&> m_reference;
 };
 }  // namespace detail
+
+namespace detail {
+template <is_atomic Atomic>
+struct memory_order_traits;
+
+template <typename T>
+struct memory_order_traits<atomic<T>> {
+   using target_type = remove_reference<T>;
+   static constexpr bool is_reference = cat::is_reference<T>;
+};
+
+template <typename T>
+struct memory_order_traits<atomic<T> const> {
+   using target_type = conditional<
+      is_reference<T>, remove_reference<T>, remove_reference<T> const>;
+   static constexpr bool is_reference = cat::is_reference<T>;
+};
+}  // namespace detail
+
+}  // namespace cat
+
+#include <cat/memory_order_reference.hpp>
+
+namespace cat {
 
 template <typename T>
 using atomic_ref_relaxed = detail::atomic_ref_bound<T, memory_order::relaxed>;
@@ -2494,12 +2735,15 @@ struct formatter<atomic<T>, CharT> : formatter_base<CharT> {
    }
 };
 
-template <typename T, memory_order order, typename CharT>
-struct formatter<detail::atomic_ref_bound<T, order>, CharT>
+template <
+   typename T, memory_order order, overflow_policies overflow_policy,
+   typename CharT>
+struct formatter<detail::atomic_ref_bound<T, order, overflow_policy>, CharT>
     : formatter_base<CharT> {
    auto
    format(
-      detail::atomic_ref_bound<T, order> const& value, format_context& context
+      detail::atomic_ref_bound<T, order, overflow_policy> const& value,
+      format_context& context
    ) const -> scaredy_format<void> {
       scaredy_format<void> result = context.append("atomic_ref(");
       if (result.is_empty()) {
@@ -2512,5 +2756,12 @@ struct formatter<detail::atomic_ref_bound<T, order>, CharT>
       return context.append(')');
    }
 };
+
+template <is_atomic Atomic, memory_order order, typename CharT>
+struct formatter<memory_order_reference<Atomic, order>, CharT>
+    : formatter<
+         detail::atomic_ref_bound<
+            typename detail::memory_order_traits<Atomic>::target_type, order>,
+         CharT> {};
 
 }  // namespace cat
