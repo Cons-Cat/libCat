@@ -40,6 +40,14 @@
 // specializations of a `cat::simd_abi::mask_lane` class. An example may be
 // found in `cat/detail/simd_mask_lane_sseavx.hpp`.
 // Clang non-temporal load and store builtins back explicit memory helpers.
+//
+// Unlike `std::simd`, we support arbitrary length SIMD vectors. For example:
+//
+//    int4x3 triple{1, 2, 3};
+//    int4x3 const doubled = triple + triple; // {2, 4, 6}
+//
+//    fixed_size_simd<float4, 71u> huge{};
+//    auto const roots = simd_sqrt(huge);
 
 #include <cat/arithmetic>
 #include <cat/utility>
