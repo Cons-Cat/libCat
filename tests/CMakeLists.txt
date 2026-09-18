@@ -2,6 +2,48 @@
 # `cat-gdb-examples`). See `cmake/gdb_symlink.cmake`.
 cat_gdb_symlink(cat-gdb-tests)
 
+# Clang `-verify` ill-formed checks for `cat/arithmetic`.
+set(_cat_arith_verify_src
+  "${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic_verify.cpp")
+set(_cat_arith_verify_incs "-I${CMAKE_SOURCE_DIR}/src")
+foreach(_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
+  list(APPEND _cat_arith_verify_incs
+    "-I${CMAKE_SOURCE_DIR}/src/libraries/${_subdir}")
+endforeach()
+add_test(
+  NAME ArithmeticTypeCheck
+  COMMAND
+    ${CMAKE_CXX_COMPILER}
+    -fsyntax-only
+    -std=gnu++26
+    -ferror-limit=0
+    -fno-exceptions
+    -fno-rtti
+    -fno-unwind-tables
+    -fno-asynchronous-unwind-tables
+    -nostdlib
+    -nostdlib++
+    -finput-charset=UTF-8
+    -fexec-charset=UTF-8
+    -mfma
+    -mlzcnt
+    -mbmi
+    -mbmi2
+    -Wno-gnu
+    -Wno-unqualified-std-cast-call
+    -Wno-unused-variable
+    -Wno-unused-value
+    -Xclang -verify
+    -Xclang -verify-ignore-unexpected=note
+    -Xclang -verify-ignore-unexpected=warning
+    ${_cat_arith_verify_incs}
+    ${_cat_arith_verify_src})
+set_tests_properties(
+  ArithmeticTypeCheck
+  PROPERTIES
+    LABELS "arithmetic")
+
+
 # `cat-tests-base` holds the flags/links needed to match `cat-impl`'s compile
 # commands (so `REUSE_FROM cat-impl` passes PCH validation) but no test sources.
 # A focused single-test binary would link `cat-tests-base` and add only its own

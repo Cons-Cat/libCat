@@ -171,7 +171,7 @@ jobs:
         run: |
           set -eu
           if [ "${CAT_FORCE_RUN}" = "true" ] || grep -Eq \
-            '^src/libraries/(meta|arithmetic)/|^cmake/cat_arithmetic_neg(ative|_cases|_matrix)\.cmake$|^tests/CMakeLists\.txt$|^\.github/workflows/ci\.yml$' \
+            '^src/libraries/(meta|arithmetic|bit)/|^tests/src/test_arithmetic_verify\.cpp$|^tests/CMakeLists\.txt$|^\.github/workflows/ci\.yml$' \
             "${CAT_CHANGED_FILES}"
           then
             arithmetic_negative="true"
@@ -600,8 +600,8 @@ jobs:
             );
 
   arithmetic-negative:
-    # Must-reject arithmetic probes are expensive. Run them only when the
-    # arithmetic/meta surface or the negative-test machinery changes.
+    # Clang `-verify` arithmetic type check. Run when the arithmetic/meta/bit
+    # surface or the verify TU changes.
     runs-on: ubuntu-24.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.arithmetic_negative == 'true' }}
