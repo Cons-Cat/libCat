@@ -146,6 +146,24 @@ $test(span_data_size_extent_observers) {
    static_assert(cat::is_same<decltype(const_span.data()), int4 const*>);
 }
 
+$test(span_subscript_compile_time_bounds) {
+   int4 values[3] = {1, 2, 3};
+   cat::span<int4, 3_idx> fixed{values, 3u};
+   cat::span<int4, 3_idx> const constant{values, 3u};
+   cat::span<int4> dynamic{values, 3u};
+   idx runtime = 3u;
+
+   static_assert(cat::is_same<decltype(fixed[2u]), int4&>);
+   static_assert(cat::is_same<decltype(fixed[3u]), void>);
+   static_assert(cat::is_same<decltype(constant[0u]), int4 const&>);
+   static_assert(cat::is_same<decltype(constant[3u]), void>);
+   static_assert(cat::is_same<decltype(cat::move(fixed)[0u]), int4>);
+   static_assert(cat::is_same<decltype(cat::move(fixed)[3u]), void>);
+   static_assert(cat::is_same<decltype(dynamic[3u]), int4&>);
+   static_assert(cat::is_same<decltype(dynamic[999u]), int4&>);
+   static_assert(cat::is_same<decltype(fixed[runtime]), int4&>);
+}
+
 $test(span_initializer_list_constraints) {
    bool values[4] = {true, false, true, false};
    bool* p_values = values;

@@ -328,3 +328,20 @@ $test(array_three_way_and_equality_runtime) {
    cat::verify(a == b);
    cat::verify(a != c);
 }
+
+$test(array_subscript_compile_time_bounds) {
+   cat::array<int4, 3u> values{1, 2, 3};
+   cat::array<int4, 3u> const constant{1, 2, 3};
+   idx runtime = 3u;
+
+   static_assert(cat::is_same<decltype(values[0u]), int4&>);
+   static_assert(cat::is_same<decltype(values[2u]), int4&>);
+   static_assert(cat::is_same<decltype(values[3u]), void>);
+   static_assert(cat::is_same<decltype(constant[0u]), int4 const&>);
+   static_assert(cat::is_same<decltype(constant[3u]), void>);
+   static_assert(cat::is_same<decltype(cat::move(values)[0u]), int4>);
+   static_assert(cat::is_same<decltype(cat::move(values)[3u]), void>);
+   static_assert(cat::is_same<decltype(cat::move(constant)[0u]), int4>);
+   static_assert(cat::is_same<decltype(cat::move(constant)[3u]), void>);
+   static_assert(cat::is_same<decltype(values[runtime]), int4&>);
+}

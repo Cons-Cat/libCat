@@ -1,4 +1,6 @@
+#include <cat/meta>
 #include <cat/string>
+#include <cat/utility>
 
 #include "../unit_tests.hpp"
 
@@ -131,4 +133,18 @@ $test(str_inplace_wide_char) {
    cat::verify(zfilled == L"bbb");
    cat::verify(fixed_filled == L"ccc");
    cat::verify(zfixed_filled == L"ddd");
+}
+
+$test(str_inplace_subscript_compile_time_bounds) {
+   cat::str_inplace<8u> string;
+   cat::str_inplace<8u> const constant;
+   idx runtime = 8u;
+
+   static_assert(cat::is_same<decltype(string[7u]), char&>);
+   static_assert(cat::is_same<decltype(string[8u]), void>);
+   static_assert(cat::is_same<decltype(constant[0u]), char const&>);
+   static_assert(cat::is_same<decltype(constant[8u]), void>);
+   static_assert(cat::is_same<decltype(cat::move(string)[0u]), char>);
+   static_assert(cat::is_same<decltype(cat::move(string)[8u]), void>);
+   static_assert(cat::is_same<decltype(string[runtime]), char&>);
 }

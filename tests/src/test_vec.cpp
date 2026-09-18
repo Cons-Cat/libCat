@@ -1,7 +1,9 @@
 #include <cat/iterable>
 #include <cat/linear_allocator>
+#include <cat/meta>
 #include <cat/null_allocator>
 #include <cat/page_allocator>
+#include <cat/utility>
 #include <cat/vec>
 
 #include "../unit_tests.hpp"
@@ -562,6 +564,17 @@ $test(vec_default_construct) {
    cat::verify(v.size() == 0);
    cat::verify(v.capacity() == 0);
    cat::verify(v.is_empty());
+}
+
+$test(vec_subscript_runtime_extent) {
+   cat::vec<int4> heap;
+   cat::vec<int4> const constant;
+   idx runtime = 100u;
+
+   static_assert(cat::is_same<decltype(heap[100u]), int4&>);
+   static_assert(cat::is_same<decltype(constant[100u]), int4 const&>);
+   static_assert(cat::is_same<decltype(cat::move(heap)[0u]), int4>);
+   static_assert(cat::is_same<decltype(heap[runtime]), int4&>);
 }
 
 $test(vec_push_back) {

@@ -1,5 +1,7 @@
 #include <cat/array>
 #include <cat/iterable>
+#include <cat/meta>
+#include <cat/utility>
 #include <cat/vec_inplace>
 
 #include "../unit_tests.hpp"
@@ -245,4 +247,20 @@ $test(vec_inplace_zero_capacity) {
    cat::verify(values.capacity() == 0u);
    cat::verify(values.push_back(1_i4).is_empty());
    cat::verify(values.resize(1u).is_empty());
+}
+
+$test(vec_inplace_subscript_compile_time_bounds) {
+   cat::vec_inplace<int4, 4u> values;
+   cat::vec_inplace<int4, 4u> const constant;
+   cat::vec_inplace<int4, 0u> empty;
+   idx runtime = 4u;
+
+   static_assert(cat::is_same<decltype(values[3u]), int4&>);
+   static_assert(cat::is_same<decltype(values[4u]), void>);
+   static_assert(cat::is_same<decltype(constant[0u]), int4 const&>);
+   static_assert(cat::is_same<decltype(constant[4u]), void>);
+   static_assert(cat::is_same<decltype(cat::move(values)[0u]), int4>);
+   static_assert(cat::is_same<decltype(cat::move(values)[4u]), void>);
+   static_assert(cat::is_same<decltype(empty[0u]), void>);
+   static_assert(cat::is_same<decltype(values[runtime]), int4&>);
 }

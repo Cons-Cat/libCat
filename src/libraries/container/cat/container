@@ -29,6 +29,23 @@ concept is_contiguous =
                   };
 
 namespace detail {
+// Get the constant length of a container if possible.
+template <typename C>
+consteval auto
+constant_extent() -> idx {
+   if constexpr (requires { C::size(); }) {
+      return C::size();
+   } else if constexpr (requires { C::capacity(); }) {
+      return C::capacity();
+   } else if constexpr (requires { C::extent; }) {
+      return C::extent;
+   } else {
+      // If there is no constant length, presume the bound of `idx` is the
+      // limit.
+      return idx::max();
+   }
+}
+
 // If `.capacity()` is provided.
 template <typename T>
 concept has_capacity = requires(T t) { t.capacity(); };
@@ -513,6 +530,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       "Placing a `cat::span` over an r-value would immediately dangle!"
    );
 
+   template <typename Self = Derived>
    [[nodiscard]]
    constexpr auto
    operator[](idx index) & [[clang::lifetimebound]] -> T&
@@ -523,6 +541,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       return self.data()[index];
    }
 
+   template <typename Self = Derived>
    [[nodiscard]]
    constexpr auto
    operator[](idx index) const& [[clang::lifetimebound]] -> T const&
@@ -533,6 +552,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       return self.data()[index];
    }
 
+   template <typename Self = Derived>
    [[nodiscard]]
    constexpr auto
    operator[](idx index) && -> T
@@ -543,6 +563,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       return move(self.data()[index]);
    }
 
+   template <typename Self = Derived>
    [[nodiscard]]
    constexpr auto
    operator[](idx index) const&& -> T
@@ -551,6 +572,42 @@ class container_interface : public contiguous_collection_interface<Derived> {
       Derived const& self = static_cast<Derived const&>(*this);
       assert(index < self.size());
       return self.data()[index];
+   }
+
+   // A constant subscript that is out of constant bounds selects one of these
+   // guards instead.
+
+   template <typename Self = Derived>
+   constexpr void
+   operator[](idx index) &
+      requires(is_array_like)
+   __attribute__((enable_if(index >= detail::constant_extent<Self>(), ""))) {
+      static_assert(false, "Index is out of bounds!");
+   }
+
+   template <typename Self = Derived>
+   constexpr void
+   operator[](idx index) const&
+      requires(is_array_like)
+   __attribute__((enable_if(index >= detail::constant_extent<Self>(), ""))) {
+      static_assert(false, "Index is out of bounds!");
+   }
+
+   template <typename Self = Derived>
+      constexpr void
+      operator[](idx index)
+      && requires(is_array_like) __attribute__((
+         enable_if(index >= detail::constant_extent<Self>(), "")
+      )) {
+      static_assert(false, "Index is out of bounds!");
+   }
+
+   template <typename Self = Derived>
+   constexpr void
+   operator[](idx index) const&&
+      requires(is_array_like)
+   __attribute__((enable_if(index >= detail::constant_extent<Self>(), ""))) {
+      static_assert(false, "Index is out of bounds!");
    }
 
    // Member-access syntax algorithms.
