@@ -71,29 +71,49 @@ $test(str_vec_flags_and_aliases) {
    static_assert(piped_flags.str.is_null_terminated);
    static_assert(
       cat::is_same<
-         cat::str_vec_fixed<>,
-         cat::basic_str_vec<char, pointer_layout | cat::vec_flags::fixed_size>>
+         cat::str_vec_fixed<>, cat::basic_str_vec<
+                                  char, pointer_layout
+                                           | cat::vec_flags::inline_storage(22u)
+                                           | cat::vec_flags::fixed_size>>
    );
    static_assert(
       cat::is_same<
-         cat::small_str_vec<8u>,
+         cat::str_vec_big<>,
          cat::basic_str_vec<
-            char, pointer_layout | cat::vec_flags::inline_storage(8u)>>
+            char, cat::vec_flags::initial_growth(4u) | pointer_layout>>
+   );
+   static_assert(
+      cat::is_same<
+         cat::str_vec_small<8u>,
+         cat::basic_str_vec<
+            char, cat::vec_flags::inline_storage(8u) | pointer_layout>>
    );
    static_assert(cat::is_same<
-                 cat::small_wzstr_vec_fixed<8u>,
+                 cat::raii::str_vec_small<cat::dyn_allocator, 8u>,
+                 cat::raii::basic_str_vec<
+                    char, cat::vec_flags::inline_storage(8u) | pointer_layout,
+                    cat::dyn_allocator>>);
+   static_assert(cat::is_same<
+                 cat::wzstr_vec_fixed<
+                    pointer_layout | cat::vec_flags::inline_storage(8u)>,
                  cat::basic_str_vec<
                     wchar_t, cat::str_flags::null_terminated
                                 | pointer_layout
                                 | cat::vec_flags::inline_storage(8u)
                                 | cat::vec_flags::fixed_size>>);
+   static_assert(
+      cat::is_same<
+         cat::raii::str_vec_fixed<>, cat::raii::basic_str_vec<
+                                        char,
+                                        pointer_layout
+                                           | cat::vec_flags::inline_storage(22u)
+                                           | cat::vec_flags::fixed_size,
+                                        cat::dyn_allocator>>
+   );
    static_assert(cat::is_same<
-                 cat::raii::str_vec_fixed<>,
-                 cat::raii::basic_str_vec<
-                    char, pointer_layout | cat::vec_flags::fixed_size,
-                    cat::dyn_allocator>>);
-   static_assert(cat::is_same<
-                 cat::raii::small_zstr_vec<cat::dyn_allocator, 8u>,
+                 cat::raii::zstr_vec<
+                    cat::dyn_allocator,
+                    pointer_layout | cat::vec_flags::inline_storage(8u)>,
                  cat::raii::basic_str_vec<
                     char,
                     cat::str_flags::null_terminated
@@ -104,7 +124,7 @@ $test(str_vec_flags_and_aliases) {
    static_assert(!can_reserve_raii_str_vec<cat::raii::str_vec_fixed<>>);
 
    linear_arena arena;
-   cat::small_str_vec<8u> small;
+   cat::str_vec_small<8u> small;
    small.push_back(arena.alloc, 'a').verify();
    cat::verify(small.capacity() == 8u);
    small.free(arena.alloc);
@@ -426,20 +446,20 @@ $test(str_vec_clone_move_and_failure) {
    cat::verify(cloned.data() == nullptr);
 
    cat::null_allocator null_alloc;
-   cat::str_vec failed;
+   cat::str_vec_big<> failed;
    $defer {
       failed.free(null_alloc);
    };
    cat::verify(failed.push_back(null_alloc, 'x').is_empty());
-   cat::zstr_vec zfailed;
+   cat::zstr_vec_big<> zfailed;
    cat::verify(zfailed.push_back(null_alloc, 'x').is_empty());
 
-   cat::wstr_vec wide_failed;
+   cat::wstr_vec_big<> wide_failed;
    $defer {
       wide_failed.free(null_alloc);
    };
    cat::verify(wide_failed.push_back(null_alloc, L'x').is_empty());
-   cat::wzstr_vec wzfailed;
+   cat::wzstr_vec_big<> wzfailed;
    cat::verify(wzfailed.push_back(null_alloc, L'x').is_empty());
 }
 

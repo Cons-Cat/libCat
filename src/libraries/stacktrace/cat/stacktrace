@@ -58,7 +58,7 @@ class stacktrace
    static constexpr idx inline_frames = 64u;
 
    using storage =
-      raii::small_vec<stacktrace_entry, dyn_allocator, inline_frames>;
+      raii::vec_small<stacktrace_entry, dyn_allocator, inline_frames>;
 
  public:
    constexpr stacktrace() =

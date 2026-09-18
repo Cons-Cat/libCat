@@ -14,6 +14,7 @@
 // Convenience type aliases are provided:
 //
 //  `cat::forward_list<T>`, a default `basic_forward_list`.
+//  `cat::raii::forward_list<T>`, a default `raii::basic_forward_list`.
 
 #include <cat/allocator>
 #include <cat/allocator_parameters>
@@ -21,6 +22,9 @@
 #include <cat/iterable>
 #include <cat/propagate>
 #include <cat/utility>
+
+// TODO: Add an `forward_list_intrusive`.
+// TODO: Add a `forward_list_small`/`forward_list_big`.
 
 namespace cat {
 

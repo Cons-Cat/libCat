@@ -39,32 +39,33 @@ $test(bitvec_flags_and_niches) {
    verify_bitvec_niche<cat::bitvec>();
    verify_bitvec_niche<
       cat::basic_bitvec<cat::vec_flags::pointer_size_layout>>();
-   verify_bitvec_niche<cat::small_bitvec<>>();
-   verify_bitvec_niche<
-      cat::small_bitvec<4u, cat::vec_flags::pointer_size_layout>>();
+   verify_bitvec_niche<cat::bitvec_big<>>();
+   verify_bitvec_niche<cat::basic_bitvec<
+      cat::vec_flags::inline_storage(1u)
+      | cat::vec_flags::pointer_size_layout>>();
 
    verify_bitvec_niche<cat::raii::bitvec<>>();
    verify_bitvec_niche<cat::raii::basic_bitvec<
       cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
-   verify_bitvec_niche<cat::raii::small_bitvec<>>();
-   verify_bitvec_niche<cat::raii::small_bitvec<
-      cat::dyn_allocator, 4u, cat::vec_flags::pointer_size_layout>>();
+   verify_bitvec_niche<cat::raii::bitvec_big<>>();
+   verify_bitvec_niche<cat::raii::bitvec_big<
+      cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
 
-   cat::small_bitvec<> small;
+   cat::bitvec small;
    small.resize(pager, 4u).verify();
    cat::verify(small.capacity() >= 4u);
    small.free(pager);
 
-   cat::raii::small_bitvec<> managed{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> managed{cat::dyn_allocator(pager)};
    managed.resize(4u).verify();
    cat::verify(managed.capacity() >= 4u);
 }
 
 $test(bitvec_fixed_size_variants) {
    static_assert(!can_change_manual_bitvec_size<cat::bitvec_fixed<>>);
-   static_assert(!can_change_manual_bitvec_size<cat::small_bitvec_fixed<>>);
+   static_assert(!can_change_manual_bitvec_size<cat::bitvec_big_fixed<>>);
    static_assert(!can_change_raii_bitvec_size<cat::raii::bitvec_fixed<>>);
-   static_assert(!can_change_raii_bitvec_size<cat::raii::small_bitvec_fixed<>>);
+   static_assert(!can_change_raii_bitvec_size<cat::raii::bitvec_big_fixed<>>);
 
    cat::bitvec_fixed<> bits;
    bits.initialize_fixed(pager, 70u, true).verify();
@@ -86,10 +87,10 @@ $test(bitvec_fixed_size_variants) {
    cat::verify(inplace[2u]);
 
    auto filled = cat::make_bitvec_filled(pager, 5u, true).verify();
-   auto small_filled = cat::make_small_bitvec_filled(pager, 5u, true).verify();
+   auto small_filled = cat::make_bitvec_filled(pager, 5u, true).verify();
    auto fixed_filled = cat::make_bitvec_fixed_filled(pager, 5u, true).verify();
    auto small_fixed_filled =
-      cat::make_small_bitvec_fixed_filled(pager, 5u, true).verify();
+      cat::make_bitvec_fixed_filled(pager, 5u, true).verify();
    cat::verify(filled.all());
    cat::verify(small_filled.all());
    cat::verify(fixed_filled.all());
@@ -101,12 +102,12 @@ $test(bitvec_fixed_size_variants) {
 
    auto raii_filled = cat::raii::make_bitvec_filled(pager, 5u, true).verify();
    auto raii_small_filled =
-      cat::raii::make_small_bitvec_filled(pager, 5u, true).verify();
+      cat::raii::make_bitvec_filled(pager, 5u, true).verify();
    auto raii_fixed_filled =
       cat::raii::make_bitvec_fixed_filled(pager, 5u, true).verify();
    auto raii_small_fixed_filled =
-      cat::raii::make_small_bitvec_fixed_filled(pager, 5u, true).verify();
-   auto ordered = cat::raii::make_small_bitvec_filled<8u, cat::page_allocator>(
+      cat::raii::make_bitvec_fixed_filled(pager, 5u, true).verify();
+   auto ordered = cat::raii::make_bitvec_small_filled<8u, cat::page_allocator>(
                      pager, 5u, true
    )
                      .verify();
@@ -222,6 +223,19 @@ $test(bitvec_equality) {
 }
 
 $test(bitvec_manual_core) {
+   static_assert(cat::is_same<
+                 cat::bitvec_small<65u>,
+                 cat::basic_bitvec<cat::vec_flags::inline_storage(2u)>>);
+   static_assert(
+      cat::is_same<
+         cat::bitvec_small_fixed<65u>,
+         cat::basic_bitvec<
+            cat::vec_flags::inline_storage(2u) | cat::vec_flags::fixed_size>>
+   );
+   static_assert(cat::is_same<
+                 cat::raii::bitvec_small<cat::dyn_allocator, 65u>,
+                 cat::raii::basic_bitvec<
+                    cat::dyn_allocator, cat::vec_flags::inline_storage(2u)>>);
    static_assert(cat::is_same<cat::bitvec::storage_type, cat::uword>);
    static_assert(cat::is_same<cat::bitvec::value_type, cat::bit_value>);
    static_assert(
@@ -503,9 +517,10 @@ $test(bitvec_append_range) {
    verify_manual.template operator()<cat::bitvec>();
    verify_manual.template
    operator()<cat::basic_bitvec<cat::vec_flags::pointer_size_layout>>();
-   verify_manual.template operator()<cat::small_bitvec<>>();
-   verify_manual.template
-   operator()<cat::small_bitvec<4u, cat::vec_flags::pointer_size_layout>>();
+   verify_manual.template operator()<cat::bitvec_big<>>();
+   verify_manual.template operator()<cat::basic_bitvec<
+      cat::vec_flags::inline_storage(1u)
+      | cat::vec_flags::pointer_size_layout>>();
 
    auto verify_raii = [&]<typename Vector> {
       Vector bits{cat::dyn_allocator(pager)};
@@ -516,9 +531,9 @@ $test(bitvec_append_range) {
    verify_raii.template operator()<cat::raii::bitvec<>>();
    verify_raii.template operator()<cat::raii::basic_bitvec<
       cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
-   verify_raii.template operator()<cat::raii::small_bitvec<>>();
-   verify_raii.template operator()<cat::raii::small_bitvec<
-      cat::dyn_allocator, 4u, cat::vec_flags::pointer_size_layout>>();
+   verify_raii.template operator()<cat::raii::bitvec_big<>>();
+   verify_raii.template operator()<cat::raii::bitvec_big<
+      cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
 
    cat::bitvec manual_bits;
    manual_bits.append_range(pager, source).verify();

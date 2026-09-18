@@ -5,8 +5,7 @@
 // `cat::raii::basic_str_vec` is a dynamically-sized owning string container
 // backed by a `cat::basic_vec` of characters. It wraps a
 // `cat::manual::basic_str_vec` and binds an allocator for the lifetime of the
-// container. Upon construction, the `str_vec` is empty. Its allocation and
-// growth behavior is configured by `cat::str_vec_flags`.
+// container. Upon construction, the `str_vec` is empty.
 //
 // As this is an `raii` namespace container, its destructor deallocates storage
 // automatically through the bound allocator.
@@ -14,20 +13,51 @@
 // The `cat::manual::basic_str_vec` does not deallocate its own memory.
 //
 // It is parameterized by a character type, `cat::str_vec_flags`, and an
-// allocator.
+// allocator. Those flags combine `cat::str_flags` with the `cat::vec_flags` of
+// the backing `vec`, and may toggle the following features:
 //
-// Convenience type aliases are provided:
+//  `null_terminated`
+//     The string reserves one character of its storage for a null terminator.
 //
-//  `cat::raii::str_vec<Allocator>`, a `raii::basic_str_vec` of `char`.
-//  `cat::raii::zstr_vec<Allocator>`, a null-terminated `raii::basic_str_vec` of
-//     `char`.
-//  `cat::raii::u8str_vec` / `zu8str_vec`, likewise for `char8_t`.
-//  `cat::raii::u16str_vec` / `zu16str_vec`, likewise for `char16_t`.
-//  `cat::raii::u32str_vec` / `zu32str_vec`, likewise for `char32_t`.
-//  `cat::raii::wstr_vec<Allocator>`, a `raii::basic_str_vec` of `wchar_t`.
-//  `cat::raii::wzstr_vec<Allocator>`, a null-terminated `raii::basic_str_vec`
-//  of
-//     `wchar_t`.
+//  `pointer_size_layout`
+//     By default, the backing `vec` stores a head and tail pointer to its owned
+//     characters, like libc++ and libstdc++. This has the benefit of making
+//     `.push_back()` very cheap, at the cost of making `.size()` cost an
+//     additional subtraction. Instead, this flag stores a pointer and size,
+//     making `.size()` free and `.push_back()` cost an additional addition.
+//     Every `raii::str_vec` alias enables this flag by default.
+//
+//  `inline_storage(count)`
+//     Store up to `count` characters inside the string, only allocating when
+//     its inline capacity is exceeded.
+//
+//  `initial_growth(count)`
+//     Grow to at least `count` characters on the first heap allocation instead
+//     of the default 4 characters.
+//
+//  `fixed_size`
+//     The string has a fixed size upon allocation and no separate capacity.
+//
+// Convenience type aliases are provided for these configurations:
+//
+//  `cat::raii::str_vec<Allocator>`, with 22 inline `char`s.
+//  `cat::raii::str_vec_fixed<Allocator>`, a `raii::basic_str_vec` with
+//     `fixed_size` flag.
+//  `cat::raii::str_vec_small<Allocator, n>`, with `n` inline characters.
+//  `cat::raii::str_vec_small_fixed<Allocator, n>`, with `n` inline characters
+//     and `fixed_size`.
+//  `cat::raii::str_vec_big<Allocator>`, without inline storage.
+//  `cat::raii::str_vec_big_fixed<Allocator>`, without inline storage and with
+//     `fixed_size` flag.
+//
+// Every alias has a null-terminated variant, such as `cat::raii::zstr_vec`,
+// and variants for other character types, such as `cat::raii::u8str_vec`,
+// `cat::raii::u16str_vec`, `cat::raii::u32str_vec`, `cat::raii::wstr_vec`, and
+// `cat::raii::wzstr_vec`.
+//
+// By default, non small-size optimized `str_vec`s grow from 0 to a capacity of
+// 4 characters in their initial allocation. Reallocations grow to double their
+// current size from there.
 
 #include <cat/null_allocator>
 
@@ -42,283 +72,486 @@ class basic_str_vec;
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using str_vec = basic_str_vec<char, flags, Allocator>;
+using str_vec =
+   basic_str_vec<char, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using zstr_vec =
-   basic_str_vec<char, str_flags::null_terminated | flags, Allocator>;
+using zstr_vec = basic_str_vec<
+   char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using u8str_vec = basic_str_vec<char8_t, flags, Allocator>;
+using u8str_vec =
+   basic_str_vec<char8_t, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using zu8str_vec =
-   basic_str_vec<char8_t, str_flags::null_terminated | flags, Allocator>;
+using zu8str_vec = basic_str_vec<
+   char8_t, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using u16str_vec = basic_str_vec<char16_t, flags, Allocator>;
+using u16str_vec =
+   basic_str_vec<char16_t, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using zu16str_vec =
-   basic_str_vec<char16_t, str_flags::null_terminated | flags, Allocator>;
+using zu16str_vec = basic_str_vec<
+   char16_t,
+   str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using u32str_vec = basic_str_vec<char32_t, flags, Allocator>;
+using u32str_vec =
+   basic_str_vec<char32_t, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using zu32str_vec =
-   basic_str_vec<char32_t, str_flags::null_terminated | flags, Allocator>;
+using zu32str_vec = basic_str_vec<
+   char32_t,
+   str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using wstr_vec = basic_str_vec<wchar_t, flags, Allocator>;
+using wstr_vec =
+   basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using wzstr_vec =
-   basic_str_vec<wchar_t, str_flags::null_terminated | flags, Allocator>;
+using wzstr_vec = basic_str_vec<
+   wchar_t, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using str_vec_fixed =
-   basic_str_vec<char, vec_flags::fixed_size | flags, Allocator>;
+using str_vec_fixed = basic_str_vec<
+   char, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_fixed = basic_str_vec<
-   char, str_flags::null_terminated | vec_flags::fixed_size | flags, Allocator>;
+   char,
+   str_flags::null_terminated
+      | vec_flags::fixed_size
+      | vec_flags::inline_storage(22u)
+      | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using u8str_vec_fixed =
-   basic_str_vec<char8_t, vec_flags::fixed_size | flags, Allocator>;
+using u8str_vec_fixed = basic_str_vec<
+   char8_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec_fixed = basic_str_vec<
-   char8_t, str_flags::null_terminated | vec_flags::fixed_size | flags,
+   char8_t,
+   str_flags::null_terminated
+      | vec_flags::fixed_size
+      | vec_flags::inline_storage(22u)
+      | flags,
    Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using u16str_vec_fixed =
-   basic_str_vec<char16_t, vec_flags::fixed_size | flags, Allocator>;
+using u16str_vec_fixed = basic_str_vec<
+   char16_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec_fixed = basic_str_vec<
-   char16_t, str_flags::null_terminated | vec_flags::fixed_size | flags,
+   char16_t,
+   str_flags::null_terminated
+      | vec_flags::fixed_size
+      | vec_flags::inline_storage(22u)
+      | flags,
    Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using u32str_vec_fixed =
-   basic_str_vec<char32_t, vec_flags::fixed_size | flags, Allocator>;
+using u32str_vec_fixed = basic_str_vec<
+   char32_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec_fixed = basic_str_vec<
-   char32_t, str_flags::null_terminated | vec_flags::fixed_size | flags,
+   char32_t,
+   str_flags::null_terminated
+      | vec_flags::fixed_size
+      | vec_flags::inline_storage(22u)
+      | flags,
    Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using wstr_vec_fixed =
-   basic_str_vec<wchar_t, vec_flags::fixed_size | flags, Allocator>;
+using wstr_vec_fixed = basic_str_vec<
+   wchar_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   Allocator>;
 
 template <
    is_allocator Allocator = dyn_allocator,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec_fixed = basic_str_vec<
-   wchar_t, str_flags::null_terminated | vec_flags::fixed_size | flags,
+   wchar_t,
+   str_flags::null_terminated
+      | vec_flags::fixed_size
+      | vec_flags::inline_storage(22u)
+      | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_str_vec = basic_str_vec<
+using str_vec_small = basic_str_vec<
    char, vec_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_zstr_vec = basic_str_vec<
+using zstr_vec_small = basic_str_vec<
    char,
    str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_u8str_vec = basic_str_vec<
+using u8str_vec_small = basic_str_vec<
    char8_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_zu8str_vec = basic_str_vec<
+using zu8str_vec_small = basic_str_vec<
    char8_t,
    str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_u16str_vec = basic_str_vec<
+using u16str_vec_small = basic_str_vec<
    char16_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_zu16str_vec = basic_str_vec<
+using zu16str_vec_small = basic_str_vec<
    char16_t,
    str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_u32str_vec = basic_str_vec<
+using u32str_vec_small = basic_str_vec<
    char32_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_zu32str_vec = basic_str_vec<
+using zu32str_vec_small = basic_str_vec<
    char32_t,
    str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_wstr_vec = basic_str_vec<
+using wstr_vec_small = basic_str_vec<
    wchar_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_wzstr_vec = basic_str_vec<
+using wzstr_vec_small = basic_str_vec<
    wchar_t,
    str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_str_vec_fixed = basic_str_vec<
+using str_vec_small_fixed = basic_str_vec<
    char,
    vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_zstr_vec_fixed = basic_str_vec<
+using zstr_vec_small_fixed = basic_str_vec<
    char,
    str_flags::null_terminated
       | vec_flags::inline_storage(inline_count)
+      | vec_flags::inline_storage(inline_count)
       | vec_flags::fixed_size
       | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_u8str_vec_fixed = basic_str_vec<
+using u8str_vec_small_fixed = basic_str_vec<
    char8_t,
    vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_zu8str_vec_fixed = basic_str_vec<
+using zu8str_vec_small_fixed = basic_str_vec<
    char8_t,
    str_flags::null_terminated
       | vec_flags::inline_storage(inline_count)
+      | vec_flags::inline_storage(inline_count)
       | vec_flags::fixed_size
       | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_u16str_vec_fixed = basic_str_vec<
+using u16str_vec_small_fixed = basic_str_vec<
    char16_t,
    vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_zu16str_vec_fixed = basic_str_vec<
+using zu16str_vec_small_fixed = basic_str_vec<
    char16_t,
    str_flags::null_terminated
       | vec_flags::inline_storage(inline_count)
-      | vec_flags::fixed_size
-      | flags,
-   Allocator>;
-
-template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
-   str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_u32str_vec_fixed = basic_str_vec<
-   char32_t,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
-   Allocator>;
-
-template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
-   str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_zu32str_vec_fixed = basic_str_vec<
-   char32_t,
-   str_flags::null_terminated
       | vec_flags::inline_storage(inline_count)
       | vec_flags::fixed_size
       | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_wstr_vec_fixed = basic_str_vec<
+using u32str_vec_small_fixed = basic_str_vec<
+   char32_t,
+   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator, idx inline_count,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu32str_vec_small_fixed = basic_str_vec<
+   char32_t,
+   str_flags::null_terminated
+      | vec_flags::inline_storage(inline_count)
+      | vec_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator, idx inline_count,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using wstr_vec_small_fixed = basic_str_vec<
    wchar_t,
    vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator, idx inline_count = 16u,
+   is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using small_wzstr_vec_fixed = basic_str_vec<
+using wzstr_vec_small_fixed = basic_str_vec<
    wchar_t,
    str_flags::null_terminated
       | vec_flags::inline_storage(inline_count)
+      | vec_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using str_vec_big =
+   basic_str_vec<char, vec_flags::initial_growth(4u) | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zstr_vec_big = basic_str_vec<
+   char, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u8str_vec_big =
+   basic_str_vec<char8_t, vec_flags::initial_growth(4u) | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu8str_vec_big = basic_str_vec<
+   char8_t, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u16str_vec_big =
+   basic_str_vec<char16_t, vec_flags::initial_growth(4u) | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu16str_vec_big = basic_str_vec<
+   char16_t, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u32str_vec_big =
+   basic_str_vec<char32_t, vec_flags::initial_growth(4u) | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu32str_vec_big = basic_str_vec<
+   char32_t, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using wstr_vec_big =
+   basic_str_vec<wchar_t, vec_flags::initial_growth(4u) | flags, Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using wzstr_vec_big = basic_str_vec<
+   wchar_t, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using str_vec_big_fixed = basic_str_vec<
+   char, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zstr_vec_big_fixed = basic_str_vec<
+   char,
+   str_flags::null_terminated
+      | vec_flags::initial_growth(4u)
+      | vec_flags::initial_growth(4u)
+      | vec_flags::fixed_size
+      | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u8str_vec_big_fixed = basic_str_vec<
+   char8_t, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu8str_vec_big_fixed = basic_str_vec<
+   char8_t,
+   str_flags::null_terminated
+      | vec_flags::initial_growth(4u)
+      | vec_flags::initial_growth(4u)
+      | vec_flags::fixed_size
+      | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u16str_vec_big_fixed = basic_str_vec<
+   char16_t, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu16str_vec_big_fixed = basic_str_vec<
+   char16_t,
+   str_flags::null_terminated
+      | vec_flags::initial_growth(4u)
+      | vec_flags::initial_growth(4u)
+      | vec_flags::fixed_size
+      | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using u32str_vec_big_fixed = basic_str_vec<
+   char32_t, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using zu32str_vec_big_fixed = basic_str_vec<
+   char32_t,
+   str_flags::null_terminated
+      | vec_flags::initial_growth(4u)
+      | vec_flags::initial_growth(4u)
+      | vec_flags::fixed_size
+      | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using wstr_vec_big_fixed = basic_str_vec<
+   wchar_t, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
+   Allocator>;
+
+template <
+   is_allocator Allocator = dyn_allocator,
+   str_vec_flags flags = vec_flags::pointer_size_layout>
+using wzstr_vec_big_fixed = basic_str_vec<
+   wchar_t,
+   str_flags::null_terminated
+      | vec_flags::initial_growth(4u)
+      | vec_flags::initial_growth(4u)
       | vec_flags::fixed_size
       | flags,
    Allocator>;
@@ -960,7 +1193,8 @@ make_str_vec(
    allocator_ref<Allocator> allocator, First const& first, Second const& second,
    Strings const&... strings
 ) -> maybe<raii::str_vec<Allocator, flags>> {
-   return detail::make_raii_str_vec<char, flags, Allocator>(
+   return detail::make_raii_str_vec<
+      char, vec_flags::inline_storage(22u) | flags, Allocator>(
       allocator, first, second, strings...
    );
 }
@@ -989,9 +1223,8 @@ make_zstr_vec(
    Strings const&... strings
 ) -> maybe<raii::zstr_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
-      char, str_flags::null_terminated | flags, Allocator>(
-      allocator, first, second, strings...
-   );
+      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+      Allocator>(allocator, first, second, strings...);
 }
 
 template <
@@ -1017,7 +1250,8 @@ make_wstr_vec(
    allocator_ref<Allocator> allocator, First const& first, Second const& second,
    Strings const&... strings
 ) -> maybe<raii::wstr_vec<Allocator, flags>> {
-   return detail::make_raii_str_vec<wchar_t, flags, Allocator>(
+   return detail::make_raii_str_vec<
+      wchar_t, vec_flags::inline_storage(22u) | flags, Allocator>(
       allocator, first, second, strings...
    );
 }
@@ -1046,9 +1280,9 @@ make_wzstr_vec(
    Strings const&... strings
 ) -> maybe<raii::wzstr_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
-      wchar_t, str_flags::null_terminated | flags, Allocator>(
-      allocator, first, second, strings...
-   );
+      wchar_t,
+      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+      Allocator>(allocator, first, second, strings...);
 }
 
 template <

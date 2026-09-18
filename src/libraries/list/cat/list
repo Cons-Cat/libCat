@@ -14,6 +14,7 @@
 // Convenience type aliases are provided:
 //
 //  `cat::list<T>`, a default `basic_list`.
+//  `cat::raii::list<T>`, a default `raii::basic_list`.
 
 #include <cat/allocator>
 #include <cat/allocator_parameters>
@@ -22,7 +23,8 @@
 #include <cat/propagate>
 #include <cat/utility>
 
-// TODO: Add an `intrusive_list`.
+// TODO: Add an `list_intrusive`.
+// TODO: Add a `list_small`/`list_big`.
 
 namespace cat {
 

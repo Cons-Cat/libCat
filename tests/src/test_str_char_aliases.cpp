@@ -91,22 +91,36 @@ $test(str_inplace_character_aliases) {
 }
 
 $test(str_vec_character_aliases) {
-   static_assert(cat::is_same<cat::u8str_vec, cat::basic_str_vec<char8_t>>);
+   static_assert(
+      cat::is_same<
+         cat::u8str_vec, cat::basic_str_vec<
+                            char8_t, cat::vec_flags::inline_storage(22u)
+                                        | cat::vec_flags::pointer_size_layout>>
+   );
    static_assert(cat::is_same<
                  cat::zu16str_vec,
                  cat::basic_str_vec<
                     char16_t, cat::str_flags::null_terminated
-                                 | cat::vec_flags::pointer_size_layout>>);
-   static_assert(cat::is_same<
-                 cat::small_u32str_vec<8u>,
-                 cat::basic_str_vec<
-                    char32_t, cat::vec_flags::inline_storage(8u)
+                                 | cat::vec_flags::inline_storage(22u)
                                  | cat::vec_flags::pointer_size_layout>>);
    static_assert(
       cat::is_same<
-         cat::raii::u8str_vec<>,
+         cat::raii::u32str_vec<
+            cat::dyn_allocator, cat::vec_flags::inline_storage(8u)
+                                   | cat::vec_flags::pointer_size_layout>,
          cat::raii::basic_str_vec<
-            char8_t, cat::vec_flags::pointer_size_layout, cat::dyn_allocator>>
+            char32_t,
+            cat::vec_flags::inline_storage(8u)
+               | cat::vec_flags::pointer_size_layout,
+            cat::dyn_allocator>>
+   );
+   static_assert(
+      cat::is_same<
+         cat::raii::u8str_vec<>, cat::raii::basic_str_vec<
+                                    char8_t,
+                                    cat::vec_flags::inline_storage(22u)
+                                       | cat::vec_flags::pointer_size_layout,
+                                    cat::dyn_allocator>>
    );
    static_assert(cat::is_same<
                  cat::raii::zu32str_vec_fixed<>,
@@ -114,6 +128,7 @@ $test(str_vec_character_aliases) {
                     char32_t,
                     cat::str_flags::null_terminated
                        | cat::vec_flags::fixed_size
+                       | cat::vec_flags::inline_storage(22u)
                        | cat::vec_flags::pointer_size_layout,
                     cat::dyn_allocator>>);
 

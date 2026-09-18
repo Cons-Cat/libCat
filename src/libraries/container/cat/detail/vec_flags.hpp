@@ -10,7 +10,7 @@ struct vec_flags {
    bool const uses_pointer_size_layout = false;
    bool const is_fixed_size = false;
    idx const inline_storage_count = 0u;
-   idx const initial_growth_count = inline_storage_count == 0u ? 4u : 0u;
+   idx const initial_growth_count = 0u;
 
    static vec_flags const pointer_size_layout;
    static vec_flags const fixed_size;
@@ -59,12 +59,10 @@ struct vec_flags {
 
 inline constexpr vec_flags vec_flags::pointer_size_layout{
    .uses_pointer_size_layout = true,
-   .initial_growth_count = 0u,
 };
 
 inline constexpr vec_flags vec_flags::fixed_size{
    .is_fixed_size = true,
-   .initial_growth_count = 0u,
 };
 
 }  // namespace cat

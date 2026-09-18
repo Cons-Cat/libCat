@@ -3,9 +3,7 @@
 #pragma once
 
 // `cat::basic_bitvec` is a dynamically-sized owning container of bits, backed
-// by a `cat::basic_vec` of words. Upon construction, the `bitvec` is empty.
-// When it initially allocates, it grows from 0 to a capacity of 32 bytes. From
-// there, exceeding capacity reallocates to double its current size.
+// by a `cat::basic_vec` of words.
 //
 // As this is a `manual` namespace container, its destructor does not deallocate
 // storage. To deallocate storage, call `.free(allocator)` or
@@ -17,28 +15,31 @@
 // features:
 //
 //  `pointer_size_layout`
-//     By default, the backing `vec` stores a head and tail pointer to its owned
-//     data, like libc++ and libstdc++. This has the benefit of making growth
-//     very cheap, at the cost of making `.size()` cost an additional
-//     subtraction. Instead, this flag stores a pointer and size, making
-//     `.size()` free and growth cost an additional addition.
+//     By default, the backing `vec` stores head and tail pointers to its owned
+//     data. This flag stores a pointer and size instead.
 //
 //  `inline_storage(count)`
 //     Store up to `count` words inside the bitvec, only allocating when its
-//     inline capacity is exceeded. The `small_bitvec` aliases convert a bit
-//     count into word count.
+//     inline capacity is exceeded. The `make_bitvec_small` factories convert a
+//     bit count into word count.
 //
 //  `fixed_size`
 //     The bitvec has a fixed size upon allocation and no separate capacity.
 //
 // Convenience type aliases are provided for these configurations:
 //
-//  `cat::bitvec`, a default `basic_bitvec`.
+//  `cat::bitvec`, a `basic_bitvec` with 32 inline bits in one word.
 //  `cat::bitvec_fixed`, a `basic_bitvec` with `fixed_size` flag.
-//  `cat::small_bitvec<n=4>`, a `basic_bitvec` with inline storage for `n` bits.
-//  `cat::small_bitvec_fixed<n=4>`, a `basic_bitvec` with inline storage for `n`
-//     bits and `fixed_size` flag.
-
+//  `cat::bitvec_small<n>`, a `basic_bitvec` with inline storage for `n` bits.
+//  `cat::bitvec_small_fixed<n>`, with inline storage for `n` bits and
+//     `fixed_size`.
+//  `cat::bitvec_big`, a `basic_bitvec` without inline storage.
+//  `cat::bitvec_big_fixed`, a `basic_bitvec` without inline storage and with
+//     `fixed_size` flag.
+//
+// By default, non small-size optimized `bitvec`s grow from 0 to a capacity of
+// 32 bytes in their initial allocation. Reallocations grow to double their
+// current size from there.
 #include <cat/detail/compact.hpp>
 
 #include <cat/bit>
@@ -74,20 +75,28 @@ maybe_bitvec_nullopt() -> basic_bitvec<flags>;
 
 inline namespace manual {
 
-using bitvec = basic_bitvec<>;
+using bitvec = basic_bitvec<vec_flags::inline_storage(1u)>;
 
 template <vec_flags flags = {}>
-using bitvec_fixed = basic_bitvec<vec_flags::fixed_size | flags>;
+using bitvec_fixed =
+   basic_bitvec<vec_flags::inline_storage(1u) | vec_flags::fixed_size | flags>;
 
-template <idx inline_count = 4u, vec_flags flags = {}>
-using small_bitvec = basic_bitvec<
+template <idx inline_count, vec_flags flags = {}>
+using bitvec_small = basic_bitvec<
    vec_flags::inline_storage(div_ceil(inline_count, word_bits)) | flags>;
 
-template <idx inline_count = 4u, vec_flags flags = {}>
-using small_bitvec_fixed = basic_bitvec<
+template <idx inline_count, vec_flags flags = {}>
+using bitvec_small_fixed = basic_bitvec<
    vec_flags::inline_storage(div_ceil(inline_count, word_bits))
    | vec_flags::fixed_size
    | flags>;
+
+template <vec_flags flags = {}>
+using bitvec_big = basic_bitvec<vec_flags::initial_growth(4u) | flags>;
+
+template <vec_flags flags = {}>
+using bitvec_big_fixed =
+   basic_bitvec<vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags>;
 
 template <vec_flags flags>
 class [[clang::preferred_name(bitvec), gsl::Owner]]
@@ -1034,8 +1043,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 template <is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_bitvec_filled(
    allocator_ref<Allocator> allocator, idx count, bit_value value
-) -> maybe<basic_bitvec<flags>> {
-   basic_bitvec<flags> result;
+) -> maybe<basic_bitvec<vec_flags::inline_storage(1u) | flags>> {
+   basic_bitvec<vec_flags::inline_storage(1u) | flags> result;
    if constexpr (flags.is_fixed_size) {
       $prop(result.initialize_fixed(allocator, count, value));
    } else {
@@ -1047,26 +1056,42 @@ template <is_allocator Allocator, vec_flags flags = {}>
 template <vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_filled(dyn_allocator allocator, idx count, bit_value value)
-      -> maybe<basic_bitvec<flags>> {
+      -> maybe<basic_bitvec<vec_flags::inline_storage(1u) | flags>> {
    return make_bitvec_filled<dyn_allocator, flags>(allocator, count, value);
 }
 
-template <idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {}>
-[[nodiscard]] constexpr auto make_small_bitvec_filled(
+template <idx inline_count, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_bitvec_small_filled(
    allocator_ref<Allocator> allocator, idx count, bit_value value
-) -> maybe<small_bitvec<inline_count, flags>> {
+) -> maybe<bitvec_small<inline_count, flags>> {
    return make_bitvec_filled<
       Allocator, vec_flags::inline_storage(div_ceil(inline_count, word_bits))
                     | flags>(allocator, count, value);
 }
 
-template <idx inline_count = 4u, vec_flags flags = {}>
+template <idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_bitvec_filled(dyn_allocator allocator, idx count, bit_value value)
-      -> maybe<small_bitvec<inline_count, flags>> {
-   return make_small_bitvec_filled<inline_count, dyn_allocator, flags>(
+   make_bitvec_small_filled(dyn_allocator allocator, idx count, bit_value value)
+      -> maybe<bitvec_small<inline_count, flags>> {
+   return make_bitvec_small_filled<inline_count, dyn_allocator, flags>(
       allocator, count, value
    );
+}
+
+template <is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_bitvec_big_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<bitvec_big<flags>> {
+   return make_bitvec_filled<Allocator, vec_flags::initial_growth(4u) | flags>(
+      allocator, count, value
+   );
+}
+
+template <vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_big_filled(dyn_allocator allocator, idx count, bit_value value)
+      -> maybe<bitvec_big<flags>> {
+   return make_bitvec_big_filled<dyn_allocator, flags>(allocator, count, value);
 }
 
 template <is_allocator Allocator, vec_flags flags = {}>
@@ -1087,22 +1112,41 @@ template <vec_flags flags = {}>
    );
 }
 
-template <idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {}>
-[[nodiscard]] constexpr auto make_small_bitvec_fixed_filled(
+template <idx inline_count, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_bitvec_small_fixed_filled(
    allocator_ref<Allocator> allocator, idx count, bit_value value
-) -> maybe<small_bitvec_fixed<inline_count, flags>> {
-   return make_small_bitvec_filled<
+) -> maybe<bitvec_small_fixed<inline_count, flags>> {
+   return make_bitvec_small_filled<
       inline_count, Allocator, vec_flags::fixed_size | flags>(
       allocator, count, value
    );
 }
 
-template <idx inline_count = 4u, vec_flags flags = {}>
+template <idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_bitvec_fixed_filled(
+   make_bitvec_small_fixed_filled(
       dyn_allocator allocator, idx count, bit_value value
-   ) -> maybe<small_bitvec_fixed<inline_count, flags>> {
-   return make_small_bitvec_fixed_filled<inline_count, dyn_allocator, flags>(
+   ) -> maybe<bitvec_small_fixed<inline_count, flags>> {
+   return make_bitvec_small_fixed_filled<inline_count, dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
+
+template <is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_bitvec_big_fixed_filled(
+   allocator_ref<Allocator> allocator, idx count, bit_value value
+) -> maybe<bitvec_big_fixed<flags>> {
+   return make_bitvec_big_filled<Allocator, vec_flags::fixed_size | flags>(
+      allocator, count, value
+   );
+}
+
+template <vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_big_fixed_filled(
+      dyn_allocator allocator, idx count, bit_value value
+   ) -> maybe<bitvec_big_fixed<flags>> {
+   return make_bitvec_big_fixed_filled<dyn_allocator, flags>(
       allocator, count, value
    );
 }
@@ -1110,9 +1154,9 @@ template <idx inline_count = 4u, vec_flags flags = {}>
 template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
 [[nodiscard]] constexpr auto make_bitvec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
-) -> maybe<basic_bitvec<flags>> {
+) -> maybe<basic_bitvec<vec_flags::inline_storage(1u) | flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
-   basic_bitvec<flags> result;
+   basic_bitvec<vec_flags::inline_storage(1u) | flags> result;
    if constexpr (flags.is_fixed_size) {
       $prop(result.initialize_fixed(allocator, count));
    } else {
@@ -1128,12 +1172,12 @@ template <
 [[nodiscard]] constexpr auto make_bitvec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<basic_bitvec<flags>> {
+) -> maybe<basic_bitvec<vec_flags::inline_storage(1u) | flags>> {
    static_assert(
       is_assignable<
          bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   basic_bitvec<flags> result;
+   basic_bitvec<vec_flags::inline_storage(1u) | flags> result;
    if constexpr (flags.is_fixed_size) {
       $prop(result.initialize_fixed(allocator, count));
    } else {
@@ -1147,7 +1191,7 @@ template <vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator
-   ) -> maybe<basic_bitvec<flags>> {
+   ) -> maybe<basic_bitvec<vec_flags::inline_storage(1u) | flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return make_bitvec_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator)
@@ -1159,7 +1203,7 @@ template <vec_flags flags = {}, typename Generator, typename Distribution>
    make_bitvec_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator,
       Distribution&& distribution
-   ) -> maybe<basic_bitvec<flags>> {
+   ) -> maybe<basic_bitvec<vec_flags::inline_storage(1u) | flags>> {
    static_assert(
       is_assignable<
          bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
@@ -1170,11 +1214,11 @@ template <vec_flags flags = {}, typename Generator, typename Distribution>
 }
 
 template <
-   idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {},
+   idx inline_count, is_allocator Allocator, vec_flags flags = {},
    typename Generator>
-[[nodiscard]] constexpr auto make_small_bitvec_filled_random(
+[[nodiscard]] constexpr auto make_bitvec_small_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
-) -> maybe<small_bitvec<inline_count, flags>> {
+) -> maybe<bitvec_small<inline_count, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return make_bitvec_filled_random<
       Allocator, vec_flags::inline_storage(div_ceil(inline_count, word_bits))
@@ -1182,47 +1226,100 @@ template <
 }
 
 template <
-   idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {},
+   idx inline_count, is_allocator Allocator, vec_flags flags = {},
    typename Generator, typename Distribution>
-[[nodiscard]] constexpr auto make_small_bitvec_filled_random(
+[[nodiscard]] constexpr auto make_bitvec_small_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<small_bitvec<inline_count, flags>> {
+) -> maybe<bitvec_small<inline_count, flags>> {
    static_assert(
       is_assignable<
          bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_small_bitvec_filled_random<
+   return make_bitvec_small_filled_random<
       inline_count, Allocator,
       vec_flags::inline_storage(div_ceil(inline_count, word_bits)) | flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
 
-template <idx inline_count = 4u, vec_flags flags = {}, typename Generator>
+template <idx inline_count, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_bitvec_filled_random(
+   make_bitvec_small_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator
-   ) -> maybe<small_bitvec<inline_count, flags>> {
+   ) -> maybe<bitvec_small<inline_count, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
-   return make_small_bitvec_filled_random<inline_count, dyn_allocator, flags>(
+   return make_bitvec_small_filled_random<inline_count, dyn_allocator, flags>(
       allocator, count, $fwd(generator)
    );
 }
 
 template <
-   idx inline_count = 4u, vec_flags flags = {}, typename Generator,
+   idx inline_count, vec_flags flags = {}, typename Generator,
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_bitvec_filled_random(
+   make_bitvec_small_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator,
       Distribution&& distribution
-   ) -> maybe<small_bitvec<inline_count, flags>> {
+   ) -> maybe<bitvec_small<inline_count, flags>> {
    static_assert(
       is_assignable<
          bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_small_bitvec_filled_random<inline_count, dyn_allocator, flags>(
+   return make_bitvec_small_filled_random<inline_count, dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
+[[nodiscard]] constexpr auto make_bitvec_big_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<bitvec_big<flags>> {
+   static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
+   return make_bitvec_filled_random<
+      Allocator, vec_flags::initial_growth(4u) | flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   typename Distribution>
+[[nodiscard]] constexpr auto make_bitvec_big_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<bitvec_big<flags>> {
+   static_assert(
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_bitvec_big_filled_random<Allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <vec_flags flags = {}, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_big_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator
+   ) -> maybe<bitvec_big<flags>> {
+   static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
+   return make_bitvec_big_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <vec_flags flags = {}, typename Generator, typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_big_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator,
+      Distribution&& distribution
+   ) -> maybe<bitvec_big<flags>> {
+   static_assert(
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_bitvec_big_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1280,58 +1377,111 @@ template <vec_flags flags = {}, typename Generator, typename Distribution>
 }
 
 template <
-   idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {},
+   idx inline_count, is_allocator Allocator, vec_flags flags = {},
    typename Generator>
-[[nodiscard]] constexpr auto make_small_bitvec_fixed_filled_random(
+[[nodiscard]] constexpr auto make_bitvec_small_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
-) -> maybe<small_bitvec_fixed<inline_count, flags>> {
+) -> maybe<bitvec_small_fixed<inline_count, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
-   return make_small_bitvec_filled_random<
+   return make_bitvec_small_filled_random<
       inline_count, Allocator, vec_flags::fixed_size | flags>(
       allocator, count, $fwd(generator)
    );
 }
 
 template <
-   idx inline_count = 4u, is_allocator Allocator, vec_flags flags = {},
+   idx inline_count, is_allocator Allocator, vec_flags flags = {},
    typename Generator, typename Distribution>
-[[nodiscard]] constexpr auto make_small_bitvec_fixed_filled_random(
+[[nodiscard]] constexpr auto make_bitvec_small_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<small_bitvec_fixed<inline_count, flags>> {
+) -> maybe<bitvec_small_fixed<inline_count, flags>> {
    static_assert(
       is_assignable<
          bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_small_bitvec_fixed_filled_random<inline_count, Allocator, flags>(
+   return make_bitvec_small_fixed_filled_random<inline_count, Allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
 
-template <idx inline_count = 4u, vec_flags flags = {}, typename Generator>
+template <idx inline_count, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_bitvec_fixed_filled_random(
+   make_bitvec_small_fixed_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator
-   ) -> maybe<small_bitvec_fixed<inline_count, flags>> {
+   ) -> maybe<bitvec_small_fixed<inline_count, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
-   return make_small_bitvec_fixed_filled_random<
+   return make_bitvec_small_fixed_filled_random<
       inline_count, dyn_allocator, flags>(allocator, count, $fwd(generator));
 }
 
 template <
-   idx inline_count = 4u, vec_flags flags = {}, typename Generator,
+   idx inline_count, vec_flags flags = {}, typename Generator,
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_bitvec_fixed_filled_random(
+   make_bitvec_small_fixed_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator,
       Distribution&& distribution
-   ) -> maybe<small_bitvec_fixed<inline_count, flags>> {
+   ) -> maybe<bitvec_small_fixed<inline_count, flags>> {
    static_assert(
       is_assignable<
          bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_small_bitvec_fixed_filled_random<
+   return make_bitvec_small_fixed_filled_random<
       inline_count, dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
+[[nodiscard]] constexpr auto make_bitvec_big_fixed_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<bitvec_big_fixed<flags>> {
+   static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
+   return make_bitvec_big_filled_random<
+      Allocator, vec_flags::fixed_size | flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   typename Distribution>
+[[nodiscard]] constexpr auto make_bitvec_big_fixed_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<bitvec_big_fixed<flags>> {
+   static_assert(
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_bitvec_big_fixed_filled_random<Allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <vec_flags flags = {}, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_big_fixed_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator
+   ) -> maybe<bitvec_big_fixed<flags>> {
+   static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
+   return make_bitvec_big_fixed_filled_random<dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <vec_flags flags = {}, typename Generator, typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_bitvec_big_fixed_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator,
+      Distribution&& distribution
+   ) -> maybe<bitvec_big_fixed<flags>> {
+   static_assert(
+      is_assignable<
+         bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return make_bitvec_big_fixed_filled_random<dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }

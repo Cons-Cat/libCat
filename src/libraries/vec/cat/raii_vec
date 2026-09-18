@@ -3,11 +3,9 @@
 #pragma once
 
 // `cat::raii::basic_vec` is a dynamically-sized contiguous owning container
-// inspired by `std::vector`. It wraps a `cat::manual::basic_vec` and binds an
-// allocator for the lifetime of the container. Upon construction, the `vec` is
-// empty. Unlike `std::vector`, when it initially allocates, it grows from 0 to
-// a capacity of 4 elements. From there, exceeding capacity reallocates to
-// double its current size.
+// inspired by `std::vector`, `llvm::SmallVector`, `boost::small_vector`, and
+// `absl::InlinedVector`. It wraps a `cat::manual::basic_vec` and binds an
+// allocator for the container.
 //
 // As this is an `raii` namespace container, its destructor deallocates storage
 // automatically through the bound allocator.
@@ -33,13 +31,19 @@
 //
 // Convenience type aliases are provided for these configurations:
 //
-//  `cat::raii::vec<T, Allocator>`, a default `raii::basic_vec`.
+//  `cat::raii::vec<T, Allocator>`, with 4 inline elements.
 //  `cat::raii::vec_fixed<T, Allocator>`, a `raii::basic_vec` with `fixed_size`
 //     flag.
-//  `cat::raii::small_vec<T, Allocator, n=4>`, a `raii::basic_vec` with
-//     `inline_storage(n)` flag.
-//  `cat::raii::small_vec_fixed<T, Allocator, n=4>`, a `raii::basic_vec` with
-//     `inline_storage(n)` and `fixed_size` flag.
+//  `cat::raii::vec_small<T, Allocator, n>`, with `n` inline elements.
+//  `cat::raii::vec_small_fixed<T, Allocator, n>`, with `n` inline elements and
+//     `fixed_size`.
+//  `cat::raii::vec_big<T, Allocator>`, without inline storage.
+//  `cat::raii::vec_big_fixed<T, Allocator>`, without inline storage and with
+//     `fixed_size` flag.
+//
+// By default, non small-size optimized `vec`s grow from 0 to a capacity of 4
+// elements in their initial allocation. Reallocations grow to double their
+// current size from there.
 
 #include <cat/detail/compact.hpp>
 
@@ -58,25 +62,32 @@ class basic_vec;
 // the `[[clang::preferred_name]]` attribute can reference it.
 template <
    typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
-using vec = basic_vec<T, Allocator, flags>;
+using vec = basic_vec<T, Allocator, vec_flags::inline_storage(4u) | flags>;
 
 template <
-   typename T, is_allocator Allocator = dyn_allocator,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
-using vec_fixed = basic_vec<T, Allocator, vec_flags::fixed_size | flags>;
+   typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
+using vec_fixed = basic_vec<
+   T, Allocator, vec_flags::inline_storage(4u) | vec_flags::fixed_size | flags>;
 
 template <
-   typename T, is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
-using small_vec =
+   typename T, is_allocator Allocator, idx inline_count, vec_flags flags = {}>
+using vec_small =
    basic_vec<T, Allocator, vec_flags::inline_storage(inline_count) | flags>;
 
 template <
-   typename T, is_allocator Allocator = dyn_allocator, idx inline_count = 4u,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
-using small_vec_fixed = basic_vec<
+   typename T, is_allocator Allocator, idx inline_count, vec_flags flags = {}>
+using vec_small_fixed = basic_vec<
    T, Allocator,
    vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+
+template <
+   typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
+using vec_big = basic_vec<T, Allocator, vec_flags::initial_growth(4u) | flags>;
+
+template <
+   typename T, is_allocator Allocator = dyn_allocator, vec_flags flags = {}>
+using vec_big_fixed = basic_vec<
+   T, Allocator, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags>;
 
 }  // namespace cat::raii
 
@@ -486,22 +497,22 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
 
 template <typename T, is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_vec(allocator_ref<Allocator> allocator)
-   -> maybe<raii::basic_vec<T, Allocator, flags>> {
-   return raii::basic_vec<T, Allocator, flags>(allocator);
+   -> maybe<raii::vec<T, Allocator, flags>> {
+   return raii::vec<T, Allocator, flags>(allocator);
 }
 
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec(dyn_allocator allocator)
-      -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
-   return raii::basic_vec<T, dyn_allocator, flags>(allocator);
+      -> maybe<raii::vec<T, dyn_allocator, flags>> {
+   return raii::vec<T, dyn_allocator, flags>(allocator);
 }
 
 template <typename T, is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto
    make_vec(allocator_ref<Allocator> allocator, initializer_list<T> values)
-      -> maybe<raii::basic_vec<T, Allocator, flags>> {
-   raii::basic_vec<T, Allocator, flags> new_vector(allocator);
+      -> maybe<raii::vec<T, Allocator, flags>> {
+   raii::vec<T, Allocator, flags> new_vector(allocator);
    if constexpr (flags.is_fixed_size) {
       $prop(new_vector.initialize_fixed(values.size()));
    } else {
@@ -522,8 +533,8 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec(dyn_allocator allocator, initializer_list<T> values)
-      -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
-   raii::basic_vec<T, dyn_allocator, flags> new_vector(allocator);
+      -> maybe<raii::vec<T, dyn_allocator, flags>> {
+   raii::vec<T, dyn_allocator, flags> new_vector(allocator);
    if constexpr (flags.is_fixed_size) {
       $prop(new_vector.initialize_fixed(values.size()));
    } else {
@@ -544,8 +555,8 @@ template <typename T, vec_flags flags = {}>
 template <typename T, is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto
    make_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
-      -> maybe<raii::basic_vec<T, Allocator, flags>> {
-   raii::basic_vec<T, Allocator, flags> new_vector(allocator);
+      -> maybe<raii::vec<T, Allocator, flags>> {
+   raii::vec<T, Allocator, flags> new_vector(allocator);
    if constexpr (flags.is_fixed_size) {
       $prop(new_vector.initialize_fixed(capacity));
    } else {
@@ -557,8 +568,8 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_reserved(dyn_allocator allocator, idx capacity)
-      -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
-   raii::basic_vec<T, dyn_allocator, flags> new_vector(allocator);
+      -> maybe<raii::vec<T, dyn_allocator, flags>> {
+   raii::vec<T, dyn_allocator, flags> new_vector(allocator);
    if constexpr (flags.is_fixed_size) {
       $prop(new_vector.initialize_fixed(capacity));
    } else {
@@ -570,8 +581,8 @@ template <typename T, vec_flags flags = {}>
 template <typename T, is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_vec_filled(
    allocator_ref<Allocator> allocator, idx count, T const& value
-) -> maybe<raii::basic_vec<T, Allocator, flags>> {
-   raii::basic_vec<T, Allocator, flags> new_vector =
+) -> maybe<raii::vec<T, Allocator, flags>> {
+   raii::vec<T, Allocator, flags> new_vector =
       $prop((raii::make_vec_reserved<T, Allocator, flags>(allocator, count)));
    // TODO: Call a vectorized fill memory function.
    // TODO: Forward from the last `value`.
@@ -588,8 +599,8 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_filled(dyn_allocator allocator, idx count, T const& value)
-      -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
-   raii::basic_vec<T, dyn_allocator, flags> new_vector =
+      -> maybe<raii::vec<T, dyn_allocator, flags>> {
+   raii::vec<T, dyn_allocator, flags> new_vector =
       $prop((raii::make_vec_reserved<T, flags>(allocator, count)));
    // TODO: Call a vectorized fill memory function.
    // TODO: Forward from the last `value`.
@@ -604,24 +615,40 @@ template <typename T, vec_flags flags = {}>
 }
 
 template <
-   typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
-[[nodiscard]] constexpr auto make_small_vec_filled(
+   typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_vec_small_filled(
    allocator_ref<Allocator> allocator, idx count, T const& value
-) -> maybe<small_vec<T, Allocator, inline_count, flags>> {
+) -> maybe<vec_small<T, Allocator, inline_count, flags>> {
    return raii::make_vec_filled<
       T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
       allocator, count, value
    );
 }
 
-template <
-   typename T, idx inline_count = 4u,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
+template <typename T, idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_vec_filled(dyn_allocator allocator, idx count, T const& value)
-      -> maybe<small_vec<T, dyn_allocator, inline_count, flags>> {
-   return raii::make_small_vec_filled<T, inline_count, dyn_allocator, flags>(
+   make_vec_small_filled(dyn_allocator allocator, idx count, T const& value)
+      -> maybe<vec_small<T, dyn_allocator, inline_count, flags>> {
+   return raii::make_vec_small_filled<T, inline_count, dyn_allocator, flags>(
+      allocator, count, value
+   );
+}
+
+template <typename T, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_vec_big_filled(
+   allocator_ref<Allocator> allocator, idx count, T const& value
+) -> maybe<vec_big<T, Allocator, flags>> {
+   return raii::make_vec_filled<
+      T, Allocator, vec_flags::initial_growth(4u) | flags>(
+      allocator, count, value
+   );
+}
+
+template <typename T, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_big_filled(dyn_allocator allocator, idx count, T const& value)
+      -> maybe<vec_big<T, dyn_allocator, flags>> {
+   return raii::make_vec_big_filled<T, dyn_allocator, flags>(
       allocator, count, value
    );
 }
@@ -645,36 +672,50 @@ template <typename T, vec_flags flags = {}>
 }
 
 template <
-   typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
-[[nodiscard]] constexpr auto make_small_vec_fixed_filled(
+   typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_vec_small_fixed_filled(
    allocator_ref<Allocator> allocator, idx count, T const& value
-) -> maybe<small_vec_fixed<T, Allocator, inline_count, flags>> {
-   return raii::make_small_vec_filled<
+) -> maybe<vec_small_fixed<T, Allocator, inline_count, flags>> {
+   return raii::make_vec_small_filled<
       T, inline_count, Allocator, vec_flags::fixed_size | flags>(
       allocator, count, value
    );
 }
 
-template <
-   typename T, idx inline_count = 4u,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}>
+template <typename T, idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_vec_fixed_filled(
+   make_vec_small_fixed_filled(
       dyn_allocator allocator, idx count, T const& value
-   ) -> maybe<small_vec_fixed<T, dyn_allocator, inline_count, flags>> {
-   return raii::make_small_vec_fixed_filled<
+   ) -> maybe<vec_small_fixed<T, dyn_allocator, inline_count, flags>> {
+   return raii::make_vec_small_fixed_filled<
       T, inline_count, dyn_allocator, flags>(allocator, count, value);
+}
+
+template <typename T, is_allocator Allocator, vec_flags flags = {}>
+[[nodiscard]] constexpr auto make_vec_big_fixed_filled(
+   allocator_ref<Allocator> allocator, idx count, T const& value
+) -> maybe<vec_big_fixed<T, Allocator, flags>> {
+   return raii::make_vec_big_filled<
+      T, Allocator, vec_flags::fixed_size | flags>(allocator, count, value);
+}
+
+template <typename T, vec_flags flags = {}>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_big_fixed_filled(dyn_allocator allocator, idx count, T const& value)
+      -> maybe<vec_big_fixed<T, dyn_allocator, flags>> {
+   return raii::make_vec_big_fixed_filled<T, dyn_allocator, flags>(
+      allocator, count, value
+   );
 }
 
 template <
    typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator>
 [[nodiscard]] constexpr auto make_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
-) -> maybe<raii::basic_vec<T, Allocator, flags>> {
+) -> maybe<raii::vec<T, Allocator, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   raii::basic_vec<T, Allocator, flags> new_vector(allocator);
+   raii::vec<T, Allocator, flags> new_vector(allocator);
    if constexpr (flags.is_fixed_size) {
       $prop(new_vector.initialize_fixed(count));
    } else {
@@ -690,13 +731,13 @@ template <
 [[nodiscard]] constexpr auto make_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<raii::basic_vec<T, Allocator, flags>> {
+) -> maybe<raii::vec<T, Allocator, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   raii::basic_vec<T, Allocator, flags> new_vector(allocator);
+   raii::vec<T, Allocator, flags> new_vector(allocator);
    if constexpr (flags.is_fixed_size) {
       $prop(new_vector.initialize_fixed(count));
    } else {
@@ -710,7 +751,7 @@ template <typename T, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator
-   ) -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
+   ) -> maybe<raii::vec<T, dyn_allocator, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
    return raii::make_vec_filled_random<T, dyn_allocator, flags>(
@@ -724,7 +765,7 @@ template <
    make_vec_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator,
       Distribution&& distribution
-   ) -> maybe<raii::basic_vec<T, dyn_allocator, flags>> {
+   ) -> maybe<raii::vec<T, dyn_allocator, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
       is_assignable<
@@ -736,11 +777,11 @@ template <
 }
 
 template <
-   typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator>
-[[nodiscard]] constexpr auto make_small_vec_filled_random(
+   typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {},
+   typename Generator>
+[[nodiscard]] constexpr auto make_vec_small_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
-) -> maybe<small_vec<T, Allocator, inline_count, flags>> {
+) -> maybe<vec_small<T, Allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
    return raii::make_vec_filled_random<
@@ -750,19 +791,18 @@ template <
 }
 
 template <
-   typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator,
-   typename Distribution>
-[[nodiscard]] constexpr auto make_small_vec_filled_random(
+   typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {},
+   typename Generator, typename Distribution>
+[[nodiscard]] constexpr auto make_vec_small_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<small_vec<T, Allocator, inline_count, flags>> {
+) -> maybe<vec_small<T, Allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return raii::make_small_vec_filled_random<
+   return raii::make_vec_small_filled_random<
       T, inline_count, Allocator,
       vec_flags::inline_storage(inline_count) | flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
@@ -770,34 +810,91 @@ template <
 }
 
 template <
-   typename T, idx inline_count = 4u,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator>
+   typename T, idx inline_count, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_vec_filled_random(
+   make_vec_small_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator
-   ) -> maybe<small_vec<T, dyn_allocator, inline_count, flags>> {
+   ) -> maybe<vec_small<T, dyn_allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   return raii::make_small_vec_filled_random<
+   return raii::make_vec_small_filled_random<
       T, inline_count, dyn_allocator, flags>(allocator, count, $fwd(generator));
 }
 
 template <
-   typename T, idx inline_count = 4u,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator,
+   typename T, idx inline_count, vec_flags flags = {}, typename Generator,
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_vec_filled_random(
+   make_vec_small_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator,
       Distribution&& distribution
-   ) -> maybe<small_vec<T, dyn_allocator, inline_count, flags>> {
+   ) -> maybe<vec_small<T, dyn_allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return raii::make_small_vec_filled_random<
+   return raii::make_vec_small_filled_random<
       T, inline_count, dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator>
+[[nodiscard]] constexpr auto make_vec_big_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<vec_big<T, Allocator, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return raii::make_vec_filled_random<
+      T, Allocator, vec_flags::initial_growth(4u) | flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   typename Distribution>
+[[nodiscard]] constexpr auto make_vec_big_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<vec_big<T, Allocator, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return raii::make_vec_big_filled_random<T, Allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <typename T, vec_flags flags = {}, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_big_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator
+   ) -> maybe<vec_big<T, dyn_allocator, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return raii::make_vec_big_filled_random<T, dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, vec_flags flags = {}, typename Generator, typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_big_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator,
+      Distribution&& distribution
+   ) -> maybe<vec_big<T, dyn_allocator, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return raii::make_vec_big_filled_random<T, dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -862,67 +959,123 @@ template <
 }
 
 template <
-   typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator>
-[[nodiscard]] constexpr auto make_small_vec_fixed_filled_random(
+   typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {},
+   typename Generator>
+[[nodiscard]] constexpr auto make_vec_small_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
-) -> maybe<small_vec_fixed<T, Allocator, inline_count, flags>> {
+) -> maybe<vec_small_fixed<T, Allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   return raii::make_small_vec_filled_random<
+   return raii::make_vec_small_filled_random<
       T, inline_count, Allocator, vec_flags::fixed_size | flags>(
       allocator, count, $fwd(generator)
    );
 }
 
 template <
-   typename T, idx inline_count = 4u, is_allocator Allocator,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator,
-   typename Distribution>
-[[nodiscard]] constexpr auto make_small_vec_fixed_filled_random(
+   typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {},
+   typename Generator, typename Distribution>
+[[nodiscard]] constexpr auto make_vec_small_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<small_vec_fixed<T, Allocator, inline_count, flags>> {
+) -> maybe<vec_small_fixed<T, Allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return raii::make_small_vec_fixed_filled_random<
+   return raii::make_vec_small_fixed_filled_random<
       T, inline_count, Allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
 
 template <
-   typename T, idx inline_count = 4u,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator>
+   typename T, idx inline_count, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_vec_fixed_filled_random(
+   make_vec_small_fixed_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator
-   ) -> maybe<small_vec_fixed<T, dyn_allocator, inline_count, flags>> {
+   ) -> maybe<vec_small_fixed<T, dyn_allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   return raii::make_small_vec_fixed_filled_random<
+   return raii::make_vec_small_fixed_filled_random<
       T, inline_count, dyn_allocator, flags>(allocator, count, $fwd(generator));
 }
 
 template <
-   typename T, idx inline_count = 4u,
-   vec_flags flags = vec_flags{.initial_growth_count = 0u}, typename Generator,
+   typename T, idx inline_count, vec_flags flags = {}, typename Generator,
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_small_vec_fixed_filled_random(
+   make_vec_small_fixed_filled_random(
       dyn_allocator allocator, idx count, Generator&& generator,
       Distribution&& distribution
-   ) -> maybe<small_vec_fixed<T, dyn_allocator, inline_count, flags>> {
+   ) -> maybe<vec_small_fixed<T, dyn_allocator, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return raii::make_small_vec_fixed_filled_random<
+   return raii::make_vec_small_fixed_filled_random<
       T, inline_count, dyn_allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <
+   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator>
+[[nodiscard]] constexpr auto make_vec_big_fixed_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) -> maybe<vec_big_fixed<T, Allocator, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return raii::make_vec_big_filled_random<
+      T, Allocator, vec_flags::fixed_size | flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   typename Distribution>
+[[nodiscard]] constexpr auto make_vec_big_fixed_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) -> maybe<vec_big_fixed<T, Allocator, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return raii::make_vec_big_fixed_filled_random<T, Allocator, flags>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+template <typename T, vec_flags flags = {}, typename Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_big_fixed_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator
+   ) -> maybe<vec_big_fixed<T, dyn_allocator, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   return raii::make_vec_big_fixed_filled_random<T, dyn_allocator, flags>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <
+   typename T, vec_flags flags = {}, typename Generator, typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
+   make_vec_big_fixed_filled_random(
+      dyn_allocator allocator, idx count, Generator&& generator,
+      Distribution&& distribution
+   ) -> maybe<vec_big_fixed<T, dyn_allocator, flags>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   return raii::make_vec_big_fixed_filled_random<T, dyn_allocator, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }

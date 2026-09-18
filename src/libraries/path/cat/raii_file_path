@@ -6,8 +6,7 @@
 // container backed by a `cat::manual::basic_file_path`. It is inspired by
 // `std::filesystem::path`, but a major distinction is that its only encoding is
 // 1-byte characters across all platforms. It binds an allocator for the
-// lifetime of the container. Upon construction, the path is empty. Its first
-// allocation grows to a capacity of 48 characters by default.
+// lifetime of the container. Upon construction, the path is empty.
 //
 // As this is an `raii` namespace container, its destructor deallocates storage
 // automatically through the bound allocator.
@@ -18,11 +17,34 @@
 // filesystem, resolve symbolic links, or normalize `.` and `..` components.
 //
 // It is parameterized by an allocator and `cat::str_vec_flags`. Path storage
-// is always null-terminated and uses the pointer-size vector layout.
+// is always null-terminated and uses the pointer-size vector layout. Those
+// flags may toggle the following features:
+//
+//  `inline_storage(count)`
+//     Store up to `count` characters inside the path, only allocating when its
+//     inline capacity is exceeded.
+//
+//  `initial_growth(count)`
+//     Grow to at least `count` characters on the first heap allocation, when
+//     `inline_storage` is disabled.
+//
+//  `fixed_size`
+//     The path has a fixed size upon allocation and no separate capacity.
 //
 // A convenience type alias is provided:
 //
-//  `cat::raii::file_path<Allocator>`, a default `raii::basic_file_path`.
+//  `cat::raii::file_path<Allocator>`, a `raii::basic_file_path` with 256
+//     inline characters.
+//
+// 256 inline characters is a size borrowed from LLVM. Their measurements found
+// this tradeoff ideal.
+// TODO: Furthor research that.
+// TODO: Provide a `cat::file_path_small[_fixed]` alias.
+// TODO: Provide a `cat::file_path_inplace` container.
+//
+// When `inline_storage` is disabled, `file_path`s grow from 0 to a capacity of
+// their `initial_growth` count in their initial allocation. Reallocations grow
+// to double their current size from there.
 
 #include <cat/detail/compact.hpp>
 
@@ -413,10 +435,9 @@ make_file_path(allocator_ref<Allocator> allocator, Segment const& segment)
    -> maybe<basic_file_path<Allocator, flags>> {
    basic_file_path<Allocator, flags> result(allocator);
    str_view const value = detail::path_segment_view(segment);
-   $prop(result.reserve(max(
-      value.size(),
-      (detail::path_default_flags | flags).vec.initial_growth_count
-   )));
+   $prop(
+      result.reserve(max(value.size(), detail::path_initial_capacity(flags)))
+   );
    $prop(result.resize(0u));
    $prop(result.append(value));
    return result;

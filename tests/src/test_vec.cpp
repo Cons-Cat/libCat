@@ -163,7 +163,7 @@ struct foo {
 
 consteval auto
 const_func() -> int4 {
-   cat::vec<int> vector;
+   cat::vec_big<int> vector;
    auto _ = vector.resize<cat::page_allocator>(pager, 8);
 
    vector[0] = 1;
@@ -177,7 +177,7 @@ const_func() -> int4 {
 
 consteval auto
 vec_consteval_reserve_preserves_values() -> bool {
-   cat::vec<int4> values;
+   cat::vec_big<int4> values;
    auto _ = values.push_back(pager, 11_i4);
    auto _ = values.push_back(pager, 22_i4);
    auto _ = values.reserve(pager, 16u);
@@ -189,7 +189,7 @@ vec_consteval_reserve_preserves_values() -> bool {
 
 consteval auto
 vec_consteval_growth_preserves_values() -> bool {
-   cat::vec<int4> values;
+   cat::vec_big<int4> values;
    for (idx i = 0u; i < 9u; ++i) {
       auto _ = values.push_back(pager, int4(i + 1u));
    }
@@ -205,7 +205,7 @@ consteval auto
 vec_consteval_resize_lifetimes() -> bool {
    idx live = 0u;
    constexpr_lifetime_probe value(live, 7_i4);
-   cat::vec<constexpr_lifetime_probe> values;
+   cat::vec_big<constexpr_lifetime_probe> values;
    auto _ = values.resize(pager, 3u, value);
    bool result = live == 4u;
    auto _ = values.resize(pager, 1u, value);
@@ -263,18 +263,17 @@ concept can_reserve_raii = requires(Vector& vector) { vector.reserve(1u); };
 $test(vec_maybe_niche) {
    verify_vec_niche<cat::vec<int4>>();
    verify_vec_niche<cat::vec<int4, cat::vec_flags::pointer_size_layout>>();
-   verify_vec_niche<cat::small_vec<int4>>();
-   verify_vec_niche<
-      cat::small_vec<int4, 4u, cat::vec_flags::pointer_size_layout>>();
+   verify_vec_niche<cat::vec_big<int4>>();
+   verify_vec_niche<cat::vec<int4, cat::vec_flags::pointer_size_layout>>();
 }
 
 $test(raii_vec_maybe_niche) {
    verify_vec_niche<cat::raii::vec<int4>>();
    verify_vec_niche<cat::raii::vec<
       int4, cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
-   verify_vec_niche<cat::raii::small_vec<int4>>();
-   verify_vec_niche<cat::raii::small_vec<
-      int4, cat::dyn_allocator, 4u, cat::vec_flags::pointer_size_layout>>();
+   verify_vec_niche<cat::raii::vec_big<int4>>();
+   verify_vec_niche<cat::raii::vec_big<
+      int4, cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
 
    linear_arena arena;
    auto engaged = cat::raii::make_vec<int4>(arena.alloc);
@@ -288,27 +287,44 @@ $test(vec_flags) {
    static_assert(!flags.is_fixed_size);
    static_assert(flags.inline_storage_count == 0u);
    static_assert(flags.initial_growth_count == 8u);
-   static_assert(cat::vec_flags{}.initial_growth_count == 4u);
+   static_assert(cat::vec_flags{}.initial_growth_count == 0u);
    constexpr auto inline_flags =
       cat::vec_flags::pointer_size_layout | cat::vec_flags::inline_storage(4u);
    static_assert(inline_flags.inline_storage_count == 4u);
    static_assert(inline_flags.initial_growth_count == 0u);
+   static_assert(cat::vec<int4>::flags.inline_storage_count == 4u);
+   static_assert(cat::vec<int4>::flags.initial_growth_count == 0u);
+   static_assert(cat::vec_big<int4>::flags.inline_storage_count == 0u);
+   static_assert(cat::vec_big<int4>::flags.initial_growth_count == 4u);
+   static_assert(cat::vec_small<int4, 8u>::flags.inline_storage_count == 8u);
+   static_assert(
+      cat::is_same<
+         cat::raii::vec_small<int4, cat::dyn_allocator, 8u>,
+         cat::raii::basic_vec<
+            int4, cat::dyn_allocator, cat::vec_flags::inline_storage(8u)>>
+   );
+   static_assert(
+      cat::vec<int4, cat::vec_flags::inline_storage(8u)>::flags
+         .inline_storage_count
+      == 8u
+   );
 
    linear_arena arena;
    cat::vec<int4, cat::vec_flags::initial_growth(8u)> values;
    values.push_back(arena.alloc, 1_i4).verify();
    cat::verify(values.capacity() == 8u);
 
-   static_assert(sizeof(cat::vec<int4>) == sizeof(void*) * 3u);
+   static_assert(sizeof(cat::vec_big<int4>) == sizeof(void*) * 3u);
    static_assert(
-      sizeof(cat::vec<int4, cat::vec_flags::pointer_size_layout>)
+      sizeof(cat::vec_big<int4, cat::vec_flags::pointer_size_layout>)
       == sizeof(void*) * 3u
    );
    static_assert(
-      sizeof(cat::vec<int4, cat::vec_flags::fixed_size>) == sizeof(void*) * 2u
+      sizeof(cat::vec_big<int4, cat::vec_flags::fixed_size>)
+      == sizeof(void*) * 2u
    );
    static_assert(
-      sizeof(cat::vec<
+      sizeof(cat::vec_big<
              int4,
              cat::vec_flags::fixed_size | cat::vec_flags::pointer_size_layout>)
       == sizeof(void*) * 2u
@@ -321,21 +337,21 @@ $test(fixed_vec_aliases) {
          cat::vec_fixed<int4>, cat::vec<int4, cat::vec_flags::fixed_size>>
    );
    static_assert(cat::is_same<
-                 cat::small_vec_fixed<int4>,
-                 cat::small_vec<int4, 4u, cat::vec_flags::fixed_size>>);
+                 cat::vec_big_fixed<int4>,
+                 cat::vec_big<int4, cat::vec_flags::fixed_size>>);
    static_assert(
       cat::is_same<
          cat::raii::vec_fixed<int4>,
          cat::raii::vec<int4, cat::dyn_allocator, cat::vec_flags::fixed_size>>
    );
    static_assert(cat::is_same<
-                 cat::raii::small_vec_fixed<int4>,
-                 cat::raii::small_vec<
-                    int4, cat::dyn_allocator, 4u, cat::vec_flags::fixed_size>>);
+                 cat::raii::vec_big_fixed<int4>,
+                 cat::raii::vec_big<
+                    int4, cat::dyn_allocator, cat::vec_flags::fixed_size>>);
    static_assert(!can_change_vec_size<cat::vec_fixed<int4>>);
-   static_assert(!can_change_vec_size<cat::small_vec_fixed<int4>>);
+   static_assert(!can_change_vec_size<cat::vec_big_fixed<int4>>);
    static_assert(!can_reserve_raii<cat::raii::vec_fixed<int4>>);
-   static_assert(!can_reserve_raii<cat::raii::small_vec_fixed<int4>>);
+   static_assert(!can_reserve_raii<cat::raii::vec_big_fixed<int4>>);
 }
 
 $test(fixed_size_vec) {
@@ -353,7 +369,7 @@ $test(fixed_size_vec) {
    cat::verify(values[1u] == 2_i4);
    values.free(arena.alloc);
 
-   cat::small_vec_fixed<int4> inline_values =
+   cat::vec_fixed<int4> inline_values =
       cat::make_vec<
          int4, cat::linear_allocator,
          cat::vec_flags::fixed_size | cat::vec_flags::inline_storage(4u)>(
@@ -368,12 +384,11 @@ $test(fixed_size_vec) {
 $test(vec_fill_families) {
    linear_arena arena;
 
-   auto small =
-      cat::make_small_vec_filled<int4>(arena.alloc, 3u, 1_i4).verify();
+   auto small = cat::make_vec_filled<int4>(arena.alloc, 3u, 1_i4).verify();
    auto fixed =
       cat::make_vec_fixed_filled<int4>(arena.alloc, 3u, 2_i4).verify();
    auto small_fixed =
-      cat::make_small_vec_fixed_filled<int4>(arena.alloc, 3u, 3_i4).verify();
+      cat::make_vec_fixed_filled<int4>(arena.alloc, 3u, 3_i4).verify();
 
    small.fill(4_i4);
    fixed.fill(5_i4);
@@ -387,14 +402,13 @@ $test(vec_fill_families) {
    small_fixed.free(arena.alloc);
 
    auto raii_small =
-      cat::raii::make_small_vec_filled<int4>(arena.alloc, 3u, 1_i4).verify();
+      cat::raii::make_vec_filled<int4>(arena.alloc, 3u, 1_i4).verify();
    auto raii_fixed =
       cat::raii::make_vec_fixed_filled<int4>(arena.alloc, 3u, 2_i4).verify();
    auto raii_small_fixed =
-      cat::raii::make_small_vec_fixed_filled<int4>(arena.alloc, 3u, 3_i4)
-         .verify();
+      cat::raii::make_vec_fixed_filled<int4>(arena.alloc, 3u, 3_i4).verify();
    auto ordered =
-      cat::raii::make_small_vec_filled<int4, 8u, cat::linear_allocator>(
+      cat::raii::make_vec_small_filled<int4, 8u, cat::linear_allocator>(
          arena.alloc, 3u, 7_i4
       )
          .verify();
@@ -408,11 +422,11 @@ $test(vec_fill_families) {
    cat::verify(ordered[2u] == 7_i4);
 }
 
-$test(small_vec_inline_storage) {
+$test(vec_big_inline_storage) {
    linear_arena arena;
    idx const bytes_before = arena.alloc.bytes_used();
 
-   cat::small_vec<int4, 8u> values;
+   cat::vec_small<int4, 8u> values;
    for (idx i = 0u; i < 8u; ++i) {
       values.push_back(arena.alloc, int4(i)).verify();
    }
@@ -423,7 +437,7 @@ $test(small_vec_inline_storage) {
    cat::verify(values.size() == 9u);
    values.free(arena.alloc);
 
-   cat::raii::small_vec<int4, cat::linear_allocator, 8u> managed(arena.alloc);
+   cat::raii::vec_small<int4, cat::linear_allocator, 8u> managed(arena.alloc);
    managed.push_back(1_i4).verify();
    cat::verify(managed[0] == 1_i4);
 }
@@ -443,9 +457,10 @@ $test(vec_append_range_variants) {
    verify_manual.template operator()<cat::vec<int4>>();
    verify_manual.template
    operator()<cat::vec<int4, cat::vec_flags::pointer_size_layout>>();
-   verify_manual.template operator()<cat::small_vec<int4>>();
-   verify_manual.template
-   operator()<cat::small_vec<int4, 4u, cat::vec_flags::pointer_size_layout>>();
+   verify_manual.template operator()<cat::vec_big<int4>>();
+   verify_manual.template operator()<cat::vec<
+      int4, cat::vec_flags::inline_storage(4u)
+               | cat::vec_flags::pointer_size_layout>>();
 
    auto verify_raii = [&]<typename Vector> {
       Vector values(cat::dyn_allocator(arena.alloc));
@@ -457,9 +472,9 @@ $test(vec_append_range_variants) {
    verify_raii.template operator()<cat::raii::vec<int4>>();
    verify_raii.template operator()<cat::raii::vec<
       int4, cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
-   verify_raii.template operator()<cat::raii::small_vec<int4>>();
-   verify_raii.template operator()<cat::raii::small_vec<
-      int4, cat::dyn_allocator, 4u, cat::vec_flags::pointer_size_layout>>();
+   verify_raii.template operator()<cat::raii::vec_big<int4>>();
+   verify_raii.template operator()<cat::raii::vec_big<
+      int4, cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
 }
 
 $test(vec_iterable_range_modifiers) {
@@ -581,7 +596,7 @@ $test(vec_push_back) {
    linear_arena arena;
    cat::allocator_ref allocator_reference = arena.alloc;
 
-   cat::vec<int4> v;
+   cat::vec_big<int4> v;
    $defer {
       v.free(arena.alloc);
    };
@@ -697,7 +712,7 @@ $test(vec_emplace_back_starts_element_lifetime) {
 
 $test(vec_reset_preserves_capacity) {
    linear_arena arena;
-   cat::vec<int4> v;
+   cat::vec_big<int4> v;
    $defer {
       v.free(arena.alloc);
    };
@@ -779,7 +794,7 @@ $test(vec_compare_trivial_equality) {
 $test(vec_compare_manual_and_raii) {
    linear_arena arena;
    cat::vec<int4> manual;
-   cat::small_vec<int4, 4u> small;
+   cat::vec_small<int4, 4u> small;
    manual.push_back(arena.alloc, 1_i4).verify();
    manual.push_back(arena.alloc, 2_i4).verify();
    small.push_back(arena.alloc, 1_i4).verify();
@@ -1007,7 +1022,7 @@ $test(vec_container_algorithms) {
 
 $test(vec_null_allocator_failure) {
    cat::null_allocator null_alloc;
-   cat::vec<int4> v;
+   cat::vec_big<int4> v;
    $defer {
       v.free(null_alloc);
    };
@@ -1074,7 +1089,7 @@ $test(vec_shrink_to_fit) {
    // worst-case capacity forever, which is the libCat analog of the
    // Rust `collect::<Vec<_>>()` footgun.
    linear_arena arena;
-   cat::vec<int4> v;
+   cat::vec_big<int4> v;
    $defer {
       v.free(arena.alloc);
    };
@@ -1165,7 +1180,7 @@ $test(vec_element_destructors) {
 $test(fixed_inline_vec_free_destroys_all_elements) {
    linear_arena arena;
    lifetime_destructor_count = 0u;
-   cat::small_vec_fixed<lifetime_probe> values;
+   cat::vec_fixed<lifetime_probe> values;
    values.initialize_fixed<cat::linear_allocator>(arena.alloc, 3u).verify();
    lifetime_destructor_count = 0u;
 
@@ -1176,7 +1191,7 @@ $test(fixed_inline_vec_free_destroys_all_elements) {
 $test(fixed_inline_vec_cfree_destroys_all_elements) {
    linear_arena arena;
    lifetime_destructor_count = 0u;
-   cat::small_vec_fixed<lifetime_probe> values;
+   cat::vec_fixed<lifetime_probe> values;
    values.initialize_fixed<cat::linear_allocator>(arena.alloc, 3u).verify();
    lifetime_destructor_count = 0u;
 
@@ -1352,7 +1367,7 @@ $test(raii_vec_shrink_to_fit) {
 
    v.shrink_to_fit().verify();
    cat::verify(v.size() == 2);
-   cat::verify(v.capacity() == 2);
+   cat::verify(v.capacity() == 4u);
    cat::verify(v[0] == 31);
 
    v.reset();

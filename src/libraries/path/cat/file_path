@@ -4,10 +4,12 @@
 
 // `cat::basic_file_path` is a dynamically-sized owning file path container. It
 // is inspired by `std::filesystem::path`, but a major distinction is that its
-// only encoding is 1-byte characters across all platforms. Upon construction,
-// the path is empty. Its first allocation grows to a capacity of 48 characters
-// by default.
-// TODO: On Windows, it should transcode utf8 to utf16 lazily.
+// only encoding is utf8 characters across all platforms.
+// TODO: On Windows, this will mean the UTF-8 Active Code Page is used over `A`
+// family syscalls.
+// TODO: We should extend to opaque native encodings as well.
+//
+// Upon construction, the path is empty.
 //
 // As this is a `manual` namespace container, its destructor does not deallocate
 // storage. To deallocate storage, call `.free(allocator)` or
@@ -22,12 +24,34 @@
 // with random hexadecimal digits without creating a filesystem entry.
 //
 // It is parameterized by `cat::str_vec_flags`. Path storage is always
-// null-terminated and uses the pointer-size vector layout.
+// null-terminated and uses the pointer-size vector layout. Those flags may
+// toggle the following features:
+//
+//  `inline_storage(count)`
+//     Store up to `count` characters inside the path, only allocating when its
+//     inline capacity is exceeded.
+//
+//  `initial_growth(count)`
+//     Grow to at least `count` characters on the first heap allocation, when
+//     `inline_storage` is disabled.
+//
+//  `fixed_size`
+//     The path has a fixed size upon allocation and no separate capacity.
 //
 // Convenience type aliases are provided:
 //
-//  `cat::file_path`, a default `basic_file_path`.
-//  `cat::file_path_fixed`, a fixed-size `basic_file_path`.
+//  `cat::file_path`, a `basic_file_path` with 256 inline characters.
+//  `cat::file_path_fixed`, a `basic_file_path` with `fixed_size` flag.
+//
+// 256 inline characters is a size borrowed from LLVM. Their measurements found
+// this tradeoff ideal.
+// TODO: Furthor research that.
+// TODO: Provide a `cat::file_path_small[_fixed]` alias.
+// TODO: Provide a `cat::file_path_inplace` container.
+//
+// When `inline_storage` is disabled, `file_path`s grow from 0 to a capacity of
+// their `initial_growth` count in their initial allocation. Reallocations grow
+// to double their current size from there.
 
 #include <cat/detail/compact.hpp>
 
@@ -46,7 +70,17 @@ namespace detail {
 inline constexpr str_vec_flags path_default_flags =
    str_flags::null_terminated
    | vec_flags::pointer_size_layout
-   | vec_flags::initial_growth(48u);
+   | vec_flags::inline_storage(256u);
+
+// Path storage always reserves one character for its null terminator.
+[[nodiscard]]
+constexpr auto
+path_initial_capacity(str_vec_flags flags) -> idx {
+   vec_flags const vector = (path_default_flags | flags).vec;
+   return vector.inline_storage_count != 0u
+             ? idx(vector.inline_storage_count - 1u)
+             : vector.initial_growth_count;
+}
 
 template <typename Segment>
 concept is_char_safe_string =
@@ -421,7 +455,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
  private:
    static constexpr str_vec_flags m_flags = str_flags::null_terminated
                                             | vec_flags::pointer_size_layout
-                                            | vec_flags::initial_growth(48u)
+                                            | vec_flags::inline_storage(256u)
                                             | flags;
 
    static_assert(m_flags.str.is_null_terminated);
@@ -836,11 +870,7 @@ make_file_path(allocator_ref<Allocator> allocator, Segment const& segment)
    };
    str_view const value = detail::path_segment_view(segment);
    $prop(result.reserve(
-      allocator,
-      max(
-         value.size(),
-         (detail::path_default_flags | flags).vec.initial_growth_count
-      )
+      allocator, max(value.size(), detail::path_initial_capacity(flags))
    ));
    $prop(result.resize(allocator, 0u));
    $prop(result.append(allocator, value));
@@ -932,8 +962,7 @@ make_file_path_current(allocator_ref<Allocator> allocator)
    while (true) {
       idx capacity = result.capacity();
       if (capacity == 0u) {
-         capacity =
-            (detail::path_default_flags | flags).vec.initial_growth_count;
+         capacity = detail::path_initial_capacity(flags);
       }
       if (result.resize(allocator, capacity).is_empty()) {
          return nix::linux_error::nomem;

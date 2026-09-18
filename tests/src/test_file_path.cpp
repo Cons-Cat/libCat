@@ -69,7 +69,7 @@ $test(path_flags_and_factories) {
 
    auto manual = cat::make_file_path(pager, "alpha").verify();
    cat::verify(manual == "alpha");
-   cat::verify(manual.capacity() == 48u);
+   cat::verify(manual.capacity() == 255u);
    cat::verify(manual.data()[manual.size()] == '\0');
    cat::zstr_view native = manual;
    cat::verify(native == "alpha");
