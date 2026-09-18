@@ -202,7 +202,7 @@ load_executable(cat::detail::symbolizer& symbols, cat::dyn_allocator allocator)
 [[nodiscard]]
 auto
 contains_runtime_address(
-   cat::detail::symbolizer const& symbols, cat::uint8 address
+   cat::detail::symbolizer const& symbols, cat::uintptr<void> address
 ) -> bool {
    elf_header const& header = *object_at<elf_header>(symbols.bytes, 0u);
    auto const* const p_program_headers = __builtin_bit_cast(
@@ -338,7 +338,7 @@ lookup_symbol(
 auto
 resolve(cat::detail::symbolizer const& symbols, cat::stacktrace_entry entry)
    -> resolved_frame {
-   cat::uint8 const address = __builtin_bit_cast(cat::uint8, entry.native());
+   cat::uintptr<void> const address = entry.native_handle();
    if (
       symbols.bytes.is_empty() || !contains_runtime_address(symbols, address)
    ) {
@@ -595,7 +595,7 @@ format_context_frame(
          return context.append("\", at ");
       })
       .and_then([&] {
-         return cat::detail::format_nested(context, entry.native());
+         return cat::detail::format_nested(context, entry.native_handle());
       })
       .and_then([&] {
          return context.append(", in ");

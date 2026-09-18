@@ -157,26 +157,26 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   native() [[clang::lifetimebound]] -> zstr_span {
-      return m_path.native();
+   native_handle() [[clang::lifetimebound]] -> zstr_span {
+      return m_path.native_handle();
    }
 
    [[nodiscard]]
    constexpr auto
-   native() const [[clang::lifetimebound]] -> zstr_view {
-      return m_path.native();
+   native_handle() const [[clang::lifetimebound]] -> zstr_view {
+      return m_path.native_handle();
    }
 
    [[nodiscard]]
    constexpr
    operator zstr_span() [[clang::lifetimebound]] {
-      return native();
+      return native_handle();
    }
 
    [[nodiscard]]
    constexpr
    operator zstr_view() const [[clang::lifetimebound]] {
-      return native();
+      return native_handle();
    }
 
    [[nodiscard]]

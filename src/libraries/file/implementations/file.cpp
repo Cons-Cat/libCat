@@ -260,7 +260,7 @@ file_handle::open_from(
                                          : nix::file_descriptor(uint4(value));
    }
    nix::scaredy_nix<nix::file_descriptor> result = nix::sys_openat(
-      directory_descriptor, file_path.native(), mode, flags,
+      directory_descriptor, file_path.native_handle(), mode, flags,
       static_cast<nix::file_permissions>(permissions)
    );
    if (result.has_value()) {

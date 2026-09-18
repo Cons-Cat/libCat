@@ -25,7 +25,7 @@ class stacktrace_entry {
 
    [[nodiscard]]
    constexpr auto
-   native() const -> void* _Nullable {
+   native_handle() const -> void* _Nullable {
       return m_p_native;
    }
 
@@ -204,7 +204,7 @@ format_stacktrace_entry(
    stacktrace_entry entry, format_context& context, bool debug
 ) -> scaredy_format<void> {
    if (!debug) {
-      return format_nested(context, entry.native());
+      return format_nested(context, entry.native_handle());
    }
    return format_stacktrace_entry_context(entry, context);
 }

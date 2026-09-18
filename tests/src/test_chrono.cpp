@@ -385,16 +385,16 @@ $test(chrono_clocks) {
       !__is_same(monotonic_timer::time_point, realtime_timer::time_point)
    );
 
-   // A wrapping clock names its kernel clock through `native()`.
-   static_assert(
-      __is_same(__typeof_unqual(cat::clock_steady::native()), monotonic_timer)
-   );
-   static_assert(
-      __is_same(__typeof_unqual(cat::clock_system::native()), realtime_timer)
-   );
-   static_assert(
-      __is_same(__typeof_unqual(cat::clock_unix::native()), realtime_timer)
-   );
+   // A wrapping clock names its kernel clock through `native_handle()`.
+   static_assert(__is_same(
+      __typeof_unqual(cat::clock_steady::native_handle()), monotonic_timer
+   ));
+   static_assert(__is_same(
+      __typeof_unqual(cat::clock_system::native_handle()), realtime_timer
+   ));
+   static_assert(__is_same(
+      __typeof_unqual(cat::clock_unix::native_handle()), realtime_timer
+   ));
    static_assert(can_sleep_until<steady_time>);
    static_assert(can_sleep_until<monotonic_timer::time_point>);
    static_assert(can_sleep_until<cat::clock_tai::time_point>);

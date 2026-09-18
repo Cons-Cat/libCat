@@ -521,26 +521,26 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   native() [[clang::lifetimebound]] -> zstr_span {
+   native_handle() [[clang::lifetimebound]] -> zstr_span {
       return m_storage.span();
    }
 
    [[nodiscard]]
    constexpr auto
-   native() const [[clang::lifetimebound]] -> zstr_view {
+   native_handle() const [[clang::lifetimebound]] -> zstr_view {
       return m_storage.span();
    }
 
    [[nodiscard]]
    constexpr
    operator zstr_span() [[clang::lifetimebound]] {
-      return native();
+      return native_handle();
    }
 
    [[nodiscard]]
    constexpr
    operator zstr_view() const [[clang::lifetimebound]] {
-      return native();
+      return native_handle();
    }
 
    template <is_allocator Allocator>

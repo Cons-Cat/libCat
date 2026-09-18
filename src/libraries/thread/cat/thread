@@ -28,7 +28,7 @@ struct thread {
 
       [[nodiscard]]
       constexpr auto
-      native() const -> nix::process_id {
+      native_handle() const -> nix::process_id {
          return m_native;
       }
 
@@ -145,7 +145,7 @@ template <is_duration Duration>
 [[nodiscard]]
 auto
 sleep_until(time_point<clock_system, Duration> const& point) -> maybe<void> {
-   using timer = __typeof_unqual(clock_system::native());
+   using timer = __typeof_unqual(clock_system::native_handle());
    return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
 }
 
@@ -153,7 +153,7 @@ template <is_duration Duration>
 [[nodiscard]]
 auto
 sleep_until(time_point<clock_steady, Duration> const& point) -> maybe<void> {
-   using timer = __typeof_unqual(clock_steady::native());
+   using timer = __typeof_unqual(clock_steady::native_handle());
    return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
 }
 
@@ -161,7 +161,7 @@ template <is_duration Duration>
 [[nodiscard]]
 auto
 sleep_until(time_point<clock_unix, Duration> const& point) -> maybe<void> {
-   using timer = __typeof_unqual(clock_unix::native());
+   using timer = __typeof_unqual(clock_unix::native_handle());
    return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
 }
 
@@ -202,7 +202,9 @@ struct formatter<thread::id, CharT> : formatter_base<CharT> {
    auto
    format(thread::id const& value, format_context& context) const
       -> scaredy_format<void> {
-      return formatter<uint4, CharT>{}.format(value.native().value, context);
+      return formatter<uint4, CharT>{}.format(
+         value.native_handle().value, context
+      );
    }
 };
 

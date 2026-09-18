@@ -137,7 +137,7 @@ $test(stacktrace_on_child_thread) {
             cat::stacktrace trace = cat::stacktrace::current(pager).verify();
             frame_count = trace.size();
             if (!trace.is_empty()) {
-               p_instruction = trace[0u].native();
+               p_instruction = trace[0u].native_handle();
             }
          }
       )
@@ -157,7 +157,7 @@ $test(stacktrace_current_captures_caller) {
    cat::verify(trace.size() <= cat::stacktrace::max_size());
    cat::verify(trace.size() <= trace.capacity());
    cat::verify(bool{trace[0u]});
-   cat::verify(trace[0u].native() != nullptr);
+   cat::verify(trace[0u].native_handle() != nullptr);
    static_assert(
       cat::is_same<decltype(trace[0u]), cat::stacktrace_entry const&>
    );
@@ -180,7 +180,8 @@ $test(stacktrace_formatting) {
    cat::str_view const entry_string =
       cat::fmt(allocator, "{}", one[0u]).verify();
    cat::verify(
-      entry_string == cat::fmt(allocator, "{}", one[0u].native()).verify()
+      entry_string
+      == cat::fmt(allocator, "{}", one[0u].native_handle()).verify()
    );
 
    cat::str_view const header = "Stack trace:\n";
@@ -594,7 +595,7 @@ $test(stacktrace_allocation_failure) {
 $test(stacktrace_entry_and_container) {
    cat::stacktrace_entry const empty{};
    cat::verify(!bool{empty});
-   cat::verify(empty.native() == nullptr);
+   cat::verify(empty.native_handle() == nullptr);
 
    cat::stacktrace first = cat::stacktrace::current(pager).verify();
    cat::stacktrace second = first.clone().verify();

@@ -15,7 +15,8 @@ $test(file_executable_path) {
    cat::verify(executable.is_absolute());
    cat::verify(executable.data()[executable.size()] == '\0');
    cat::verify(executable.filename() == "unit_tests");
-   nix::sys_access(executable.native(), nix::access_mode::exists).verify();
+   nix::sys_access(executable.native_handle(), nix::access_mode::exists)
+      .verify();
 }
 
 $test(file_handle_lifecycle) {
@@ -23,7 +24,7 @@ $test(file_handle_lifecycle) {
       cat::make_file_path_unique(pager, "/tmp/libcat-file-lifecycle-%%%%")
          .verify();
    $defer {
-      auto _ = nix::sys_unlink(file_path.native());
+      auto _ = nix::sys_unlink(file_path.native_handle());
       file_path.free(pager);
    };
 
@@ -72,7 +73,7 @@ $test(file_handle_io_and_metadata) {
    auto file_path =
       cat::make_file_path_unique(pager, "/tmp/libcat-file-io-%%%%").verify();
    $defer {
-      auto _ = nix::sys_unlink(file_path.native());
+      auto _ = nix::sys_unlink(file_path.native_handle());
       file_path.free(pager);
    };
 
@@ -137,15 +138,15 @@ $test(file_handle_anchored_open) {
          .verify();
    auto child_path = cat::make_file_path(pager, "child").verify();
    $defer {
-      auto _ = nix::sys_rmdir(directory_path.native());
+      auto _ = nix::sys_rmdir(directory_path.native_handle());
       child_path.free(pager);
       directory_path.free(pager);
    };
 
    nix::sys_mkdir(
-      directory_path.native(), nix::file_permissions::user_read
-                                  | nix::file_permissions::user_write
-                                  | nix::file_permissions::user_execute
+      directory_path.native_handle(), nix::file_permissions::user_read
+                                         | nix::file_permissions::user_write
+                                         | nix::file_permissions::user_execute
    )
       .verify();
 
@@ -168,7 +169,7 @@ $test(file_handle_anchored_open) {
    nix::sys_unlinkat(
       directory_value == -1 ? nix::invalid_file_descriptor
                             : nix::file_descriptor(cat::uint4(directory_value)),
-      child_path.native(), nix::atfile_flags::none
+      child_path.native_handle(), nix::atfile_flags::none
    )
       .verify();
    directory.close().verify();
@@ -179,7 +180,7 @@ $test(mapped_file_handle_read_only) {
       cat::make_file_path_unique(pager, "/tmp/libcat-mapped-read-%%%%")
          .verify();
    $defer {
-      auto _ = nix::sys_unlink(file_path.native());
+      auto _ = nix::sys_unlink(file_path.native_handle());
       file_path.free(pager);
    };
 
@@ -222,7 +223,7 @@ $test(mapped_file_handle_shared_write_and_move) {
       cat::make_file_path_unique(pager, "/tmp/libcat-mapped-write-%%%%")
          .verify();
    $defer {
-      auto _ = nix::sys_unlink(file_path.native());
+      auto _ = nix::sys_unlink(file_path.native_handle());
       file_path.free(pager);
    };
 
@@ -276,7 +277,7 @@ $test(mapped_file_handle_empty_and_append) {
       cat::make_file_path_unique(pager, "/tmp/libcat-mapped-empty-%%%%")
          .verify();
    $defer {
-      auto _ = nix::sys_unlink(file_path.native());
+      auto _ = nix::sys_unlink(file_path.native_handle());
       file_path.free(pager);
    };
 

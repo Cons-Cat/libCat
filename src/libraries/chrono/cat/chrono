@@ -16,12 +16,12 @@
 //   `cat::clock_system`
 //      A portable abstraction over OS-specific nanosecond clocks WITHOUT a
 //      monotonic guarantee. Unlike `std::chrono::system_clock`, it provides a
-//      `.native()` method to access the underlying clock
+//      `.native_handle()` method to access the underlying clock
 //
 //   `cat::clock_steady`
 //      A portable abstraction over OS-specific nanosecond clocks WITH a
 //      monotonic guarantee. Unlike `std::chrono::steady_clock`, it provides a
-//      `.native()` method to access the underlying clock.
+//      `.native_handle()` method to access the underlying clock.
 //
 //   `cat::clock_unix`
 //      A clock that is based on the Unix epoch.
@@ -100,7 +100,7 @@ struct clock_system {
 
    [[nodiscard]]
    static auto
-   native() -> timer& {
+   native_handle() -> timer& {
       return m_timer;
    }
 
@@ -128,7 +128,7 @@ struct clock_steady {
 
    [[nodiscard]]
    static auto
-   native() -> timer& {
+   native_handle() -> timer& {
       return m_timer;
    }
 
@@ -154,7 +154,7 @@ struct clock_unix {
 
    [[nodiscard]]
    static auto
-   native() -> timer& {
+   native_handle() -> timer& {
       return m_timer;
    }
 
