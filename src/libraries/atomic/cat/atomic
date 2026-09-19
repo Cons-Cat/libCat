@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/machine_pause.hpp>
+
 #include <cat/arithmetic>
 #include <cat/format>
 
@@ -176,11 +178,6 @@ assert_store_order(memory_order order) {
 
    assert(test_value != memory_order::acquire);
    assert(test_value != memory_order::acq_rel);
-}
-
-inline void
-atomic_pause_once() {
-   __builtin_ia32_pause();
 }
 
 // P3008R6 helpers. These mirror IEEE 754-2019 minimum/maximum and
@@ -542,7 +539,7 @@ class atomic_flag {
    void
    wait(bool old, memory_order order = memory_order::seq_cst) const {
       while (test(order) == old) {
-         detail::atomic_pause_once();
+         machine_pause();
       }
    }
 
@@ -1279,7 +1276,7 @@ class atomic<T> {
    wait(T old, memory_order order = memory_order::seq_cst) const {
       detail::assert_load_order(order);
       while (load(order) == old) {
-         detail::atomic_pause_once();
+         machine_pause();
       }
    }
 
@@ -2048,7 +2045,7 @@ class atomic<T&> {
    wait(value_type old, memory_order order = memory_order::seq_cst) const {
       detail::assert_load_order(order);
       while (load(order) == old) {
-         detail::atomic_pause_once();
+         machine_pause();
       }
    }
 

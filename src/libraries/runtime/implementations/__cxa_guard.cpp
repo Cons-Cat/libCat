@@ -39,7 +39,7 @@ __cxa_guard_acquire(cat::uword* _Nonnull p_guard) -> int {
            expected, 1u, cat::memory_order::acquire, cat::memory_order::relaxed
         );
         expected = 0u) {
-      __builtin_ia32_pause();
+      cat::machine_pause();
    }
 
    if (done.acquire() != 0u) {

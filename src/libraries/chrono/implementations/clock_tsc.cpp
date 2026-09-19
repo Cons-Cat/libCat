@@ -86,7 +86,7 @@ read_conversion() -> conversion {
    for (;;) {
       cat::uint4 const before = state.sequence.acquire();
       if ((before & 1u) != 0u) {
-         __builtin_ia32_pause();
+         cat::machine_pause();
          continue;
       }
 
@@ -239,9 +239,7 @@ x64::clock_tsc::initialize(duration calibration_time) -> bool {
    }
 
    while ((initialized = state.initialized.acquire()) == initializing) {
-      // `__builtin_ia32_pause()` marks a spin wait so SMT can run the sibling
-      // thread.
-      __builtin_ia32_pause();
+      cat::machine_pause();
    }
    return initialized == ready;
 }

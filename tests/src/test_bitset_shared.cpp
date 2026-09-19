@@ -347,7 +347,7 @@ $test(bitset_shared_wait_rechecks_same_word_changes) {
    bits.set(2u, cat::memory_order::release);
    bits.notify_one(64u);
    for (cat::idx repetition; repetition < 100'000u; ++repetition) {
-      cat::relax_cpu();
+      cat::machine_pause();
    }
    bool const returned_early = completed.acquire();
 
@@ -384,7 +384,7 @@ $test(bitset_shared_wait_ignores_different_word_changes) {
    bits.set(65u, cat::memory_order::release);
    bits.notify_all(65u);
    for (cat::idx repetition; repetition < 100'000u; ++repetition) {
-      cat::relax_cpu();
+      cat::machine_pause();
    }
    bool const returned_early = completed.acquire();
 

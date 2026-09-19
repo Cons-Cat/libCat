@@ -88,7 +88,7 @@ wait_clone_thread_through_cleartid_futex(
             return poke.error();
          }
       } else {
-         __builtin_ia32_pause();
+         cat::machine_pause();
       }
       ++spins;
       if ((spins & 1'023u) == 0u) {
@@ -250,10 +250,10 @@ auto
 nix::manual::process::wait() const -> scaredy_nix<process_id> {
    // Spin until the kernel publishes the child tid for
    // `clone_flags::parent_set_tid`. Use an acquire load so this synchronizes
-   // with that store. `pause` hints the spin loop on x86.
+   // with that store. `machine_pause` hints the spin loop on x86.
    // TODO: Implement a high level spin-lock.
    while (__atomic_load_n(&m_id.value.raw, cat::memory_order::acquire) == 0) {
-      __builtin_ia32_pause();
+      cat::machine_pause();
    }
 
    nix::clone_flags const flags = m_flags;

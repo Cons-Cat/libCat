@@ -313,7 +313,7 @@ verify_cross_thread_release(Allocator& allocator) {
       )
       .verify();
    while (!released.acquire()) {
-      cat::relax_cpu();
+      cat::machine_pause();
    }
 #if __has_feature(address_sanitizer)
    cat::verify(cat::__asan_address_is_poisoned(p_storage) != 0);
@@ -979,7 +979,7 @@ $test(musl_allocator_shared_lock_wakeup_stress) {
             [&allocator, &ready, &start, index, iteration_count] {
                ready.release().fetch_add(1u);
                while (!start.acquire()) {
-                  cat::relax_cpu();
+                  cat::machine_pause();
                }
                shared_contention_worker_impl(allocator, index, iteration_count);
             }
@@ -987,7 +987,7 @@ $test(musl_allocator_shared_lock_wakeup_stress) {
          .verify();
    }
    while (ready.acquire().load() != thread_count) {
-      cat::relax_cpu();
+      cat::machine_pause();
    }
    start.release() = true;
    for (idx index; index < thread_count; ++index) {
@@ -1011,7 +1011,7 @@ $test(musl_allocator_shared_aligned_accounting_is_final) {
          pager, 1'024_uki,
          [&allocator, &start, &done, allocation_bytes] {
             while (!start.acquire()) {
-               cat::relax_cpu();
+               cat::machine_pause();
             }
             for (idx iteration; iteration < 20'000u; ++iteration) {
                void* const p_allocation =

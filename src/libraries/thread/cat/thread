@@ -190,13 +190,6 @@ sleep_until(time_point<Clock, Duration> const& point) -> maybe<void> {
 }
 }  // namespace this_thread
 
-// TODO: Move this elsewhere.
-inline void
-relax_cpu() {
-   asm volatile("pause" ::
-                   : "memory");
-}
-
 template <typename CharT>
 struct formatter<thread::id, CharT> : formatter_base<CharT> {
    auto
