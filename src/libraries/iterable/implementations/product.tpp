@@ -11,9 +11,8 @@ struct product_impl {
    friend constexpr auto
    operator|(Iterable&& incoming, product_impl /*product_impl*/) {
       iterable_value_type<Iterable> total = 1;
-      auto context = iterate(incoming);
 
-      context.run_while([&total](auto&& element) -> bool {
+      iterate(incoming).run_while([&total](auto&& element) -> bool {
          total = total * $fwd(element);
          return true;
       });

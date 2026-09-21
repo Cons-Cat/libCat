@@ -889,7 +889,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       operator=(list_iteration_context&&) -> list_iteration_context& = delete;
 
       // Iterate while predicate returns true for each element.
-      template <typename Pred>
+      template <is_predicate<element_type> Pred>
       constexpr auto
       run_while(Pred&& pred) -> iteration_result {
          while (m_p_node != nullptr) {
@@ -926,7 +926,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
          -> list_reverse_iteration_context& = delete;
 
       // Iterate in reverse while predicate returns true for each element.
-      template <typename Pred>
+      template <is_predicate<element_type> Pred>
       constexpr auto
       run_while(Pred&& pred) -> iteration_result {
          while (m_p_node != nullptr) {

@@ -1367,8 +1367,7 @@ struct formatter<T, CharT> : formatter_base<CharT> {
          return result;
       }
       bool first = true;
-      auto iteration = iterate(value);
-      iteration.run_while([&](auto const& element) {
+      iterate(value).run_while([&](auto const& element) {
          if (!first) {
             result = context.append(", ");
             if (result.is_empty()) {

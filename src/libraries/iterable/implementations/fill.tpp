@@ -28,8 +28,7 @@ struct fill_impl {
                                                         }) {
          range.fill(self.m_value);
       } else {
-         auto context = iterate(range);
-         context.run_while([&self](auto&& element) -> bool {
+         iterate(range).run_while([&self](auto&& element) -> bool {
             element = self.m_value;
             return true;
          });

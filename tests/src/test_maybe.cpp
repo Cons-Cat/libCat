@@ -1374,8 +1374,7 @@ $test(maybe_data_and_size) {
 $test(maybe_iterate_run_while) {
    cat::maybe<int4> engaged = 11;
    int4 sum = 0;
-   auto ctx = cat::iterate(engaged);
-   ctx.run_while([&sum](int4 const& x) -> bool {
+   cat::iterate(engaged).run_while([&sum](int4 const& x) -> bool {
       sum = sum + x;
       return true;
    });
@@ -1383,11 +1382,11 @@ $test(maybe_iterate_run_while) {
 
    cat::maybe<int4> empty;
    int4 calls = 0;
-   auto empty_ctx = cat::iterate(empty);
-   auto const result = empty_ctx.run_while([&calls](int4 const&) -> bool {
-      ++calls;
-      return true;
-   });
+   auto const result =
+      cat::iterate(empty).run_while([&calls](int4 const&) -> bool {
+         ++calls;
+         return true;
+      });
    cat::verify(result == cat::iteration_result::complete);
    cat::verify(calls == 0);
 }

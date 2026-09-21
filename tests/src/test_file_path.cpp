@@ -191,8 +191,7 @@ $test(path_decomposition_and_components) {
    cat::verify(index == 3u);
 
    cat::idx character_count = 0u;
-   auto characters = cat::iterate(value);
-   characters.run_while([&](char character) {
+   cat::iterate(value).run_while([&](char character) {
       cat::verify(character == value[character_count]);
       ++character_count;
       return true;
@@ -201,8 +200,7 @@ $test(path_decomposition_and_components) {
 
    auto components = value.components();
    index = 0u;
-   auto component_context = cat::iterate(components);
-   component_context.run_while([&](cat::str_view component) {
+   cat::iterate(components).run_while([&](cat::str_view component) {
       cat::verify(component == expected[index]);
       ++index;
       return true;

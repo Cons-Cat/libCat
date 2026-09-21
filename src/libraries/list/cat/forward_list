@@ -558,7 +558,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
          -> forward_list_iteration_context& = delete;
 
       // Iterate while predicate returns true for each element.
-      template <typename Pred>
+      template <is_predicate<element_type> Pred>
       constexpr auto
       run_while(Pred&& pred) -> iteration_result {
          while (m_p_node != nullptr) {

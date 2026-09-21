@@ -21,8 +21,7 @@ struct to_impl {
          // optimization.
          result.append_range($fwd(range)).assert();
       } else {
-         auto context = iterate(incoming);
-         context.run_while([&result](auto&& element) -> bool {
+         iterate(incoming).run_while([&result](auto&& element) -> bool {
             result.push_back($fwd(element));
             return true;
          });

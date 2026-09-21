@@ -477,18 +477,37 @@ inline constexpr detail::iterate_fn iterate{};
 // context by pr-value.
 inline constexpr detail::reverse_iterate_fn reverse_iterate{};
 
-// `is_iterable<T>` holds when `cat::iterate(t)` is a valid call for `T&`. It is
-// the single-pass entry concept that every view adaptor and terminal algorithm
-// targets.
+// Structural shape of a uniquely owned loop object.
+template <typename IterationContext>
+concept is_iteration_context =
+   requires(
+      IterationContext& context,
+      bool (*p_predicate)(typename IterationContext::element_type)
+   ) {
+      typename IterationContext::element_type;
+      { context.run_while(p_predicate) } -> is_same<iteration_result>;
+   }
+   && !is_copy_constructible<IterationContext>
+   && !is_move_constructible<IterationContext>
+   && !is_copy_assignable<IterationContext>
+   && !is_move_assignable<IterationContext>;
+
+// `is_iterable<T>` holds when `cat::iterate(t)` returns an iteration context.
+// It is the single-pass entry concept that every view adaptor and terminal
+// algorithm targets.
 template <typename T>
-concept is_iterable = requires(T& t) { iterate(t); };
+concept is_iterable = requires(T& t) {
+                         { iterate(t) } -> is_iteration_context;
+                      };
 
 // `is_reverse_iterable<T>` holds when `cat::reverse_iterate(t)` is a valid
-// call. Every bidirectional collection satisfies it for free via the
-// auto-derived adapter, and any iterable can opt-in by writing a member
+// iteration context. Every bidirectional collection satisfies it for free via
+// the auto-derived adapter, and any iterable can opt-in by writing a member
 // `.reverse_iterate()`.
 template <typename T>
-concept is_reverse_iterable = requires(T& t) { reverse_iterate(t); };
+concept is_reverse_iterable = requires(T& t) {
+                                 { reverse_iterate(t) } -> is_iteration_context;
+                              };
 
 // `is_contiguous_iterable<T>` holds when `T` is an iterable and has both
 // `.data()` and `.size()` methods.
@@ -521,29 +540,6 @@ template <typename Iterable>
 concept is_borrow_acceptable = !is_lvalue_reference<Iterable>
                                || is_trivially_copyable<remove_cvref<Iterable>>
                                || cat::is_reference_wrapper<Iterable>;
-
-// Structural shape of a loop object (`element_type`, `run_while`, and unique
-// ownership).
-template <typename IterationContext>
-concept is_iteration_context =
-   requires { typename IterationContext::element_type; }
-   && !is_copy_constructible<IterationContext>
-   && !is_move_constructible<IterationContext>
-   && !is_copy_assignable<IterationContext>
-   && !is_move_assignable<IterationContext>;
-
-// `run_while(iteration_context, callback)` is a forwarding shim around
-// `iteration_context.run_while`. It exists so generic code never has to spell
-// `iteration_context.run_while(...)` directly.
-// TODO: Do we need this?
-template <
-   is_iteration_context IterationContext,
-   is_predicate<typename IterationContext::element_type> Callback>
-constexpr auto
-run_while(IterationContext& iteration_context, Callback&& callback)
-   -> iteration_result {
-   return iteration_context.run_while($fwd(callback));
-}
 
 // `next_element(context)` pulls one element off the context, returning a
 // disengaged `maybe` when the context has been exhausted. This is the safe

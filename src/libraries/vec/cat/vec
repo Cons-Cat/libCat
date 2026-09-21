@@ -918,8 +918,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
             result = this->push_back(allocator, $fwd(value));
          }
       };
-      auto context = cat::iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
          append($fwd(value));
          return true;
       });
@@ -944,8 +943,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
             result = this->push_back(allocator, $fwd(value));
          }
       };
-      auto context = cat::iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
          append($fwd(value));
          return true;
       });
@@ -1069,8 +1067,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
          write_growth_slot(i, old_size, $fwd(value));
          ++i;
       };
-      auto context = cat::iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
          insert($fwd(value));
          return true;
       });
@@ -1116,8 +1113,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
          ++insertion_position;
       };
 
-      auto context = cat::iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
          insert($fwd(value));
          return true;
       });

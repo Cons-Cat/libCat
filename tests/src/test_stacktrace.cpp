@@ -405,14 +405,14 @@ $test(stacktrace_drop_while_frames) {
    auto yields_from = [&](auto predicate, idx start) {
       auto remaining = frames | cat::drop_while(predicate);
       idx index = start;
-      auto context = cat::iterate(remaining);
-      auto const result =
-         context.run_while([&](cat::stacktrace_entry const& entry) -> bool {
+      auto const result = cat::iterate(remaining).run_while(
+         [&](cat::stacktrace_entry const& entry) -> bool {
             cat::verify(index < frames.size());
             cat::verify(entry == frames[index]);
             ++index;
             return true;
-         });
+         }
+      );
       cat::verify(result == cat::iteration_result::complete);
       cat::verify(index == frames.size());
    };
@@ -676,8 +676,7 @@ $test(stacktrace_iteration) {
 
    idx reverse_index = const_trace.size();
    auto reversed = frames | cat::reverse();
-   auto reverse_context = cat::iterate(reversed);
-   auto const reverse_result = reverse_context.run_while(
+   auto const reverse_result = cat::iterate(reversed).run_while(
       [&](cat::stacktrace_entry const& frame) -> bool {
          reverse_index.raw -= 1u;
          cat::verify(frame == const_trace[reverse_index]);
@@ -691,14 +690,14 @@ $test(stacktrace_iteration) {
       idx index = trace.size();
       idx taken = 0u;
       auto last_two = frames | cat::reverse() | cat::take(2u);
-      auto context = cat::iterate(last_two);
-      auto const result =
-         context.run_while([&](cat::stacktrace_entry const& frame) -> bool {
+      auto const result = cat::iterate(last_two).run_while(
+         [&](cat::stacktrace_entry const& frame) -> bool {
             index.raw -= 1u;
             cat::verify(frame == trace[index]);
             ++taken;
             return true;
-         });
+         }
+      );
       cat::verify(result == cat::iteration_result::complete);
       cat::verify(taken == 2u);
    }

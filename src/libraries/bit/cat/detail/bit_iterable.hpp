@@ -277,7 +277,7 @@ class bit_iteration_context {
    auto
    operator=(bit_iteration_context&&) -> bit_iteration_context& = delete;
 
-   template <typename LoopBody>
+   template <is_predicate<element_type> LoopBody>
    constexpr auto
    run_while(LoopBody&& loop_body) -> iteration_result {
       while (m_position < m_stop) {
@@ -314,7 +314,7 @@ class bit_reverse_iteration_context {
    operator=(bit_reverse_iteration_context&&)
       -> bit_reverse_iteration_context& = delete;
 
-   template <typename LoopBody>
+   template <is_predicate<element_type> LoopBody>
    constexpr auto
    run_while(LoopBody&& loop_body) -> iteration_result {
       while (m_stop < m_position) {

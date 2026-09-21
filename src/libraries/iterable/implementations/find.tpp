@@ -40,11 +40,9 @@ struct find_impl {
       }
 
       // Otherwise, fall back to a conventional iterator loop.
-      auto context = iterate(incoming);
-
       maybe<idx> maybe_position{nullopt};
       idx position = 0u;
-      context.run_while(
+      iterate(incoming).run_while(
          [&self, &maybe_position, &position](auto&& element) -> bool {
             if (element == self.needle) {
                maybe_position = position;

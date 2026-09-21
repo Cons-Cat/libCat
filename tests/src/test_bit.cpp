@@ -26,7 +26,20 @@ struct proxy_bit_popcount_context {
 
    using element_type = cat::bit_reference<cat::uint1>;
 
-   template <typename Predicate>
+   constexpr proxy_bit_popcount_context(cat::uint1* p_storage)
+       : m_p_storage(p_storage) {
+   }
+
+   proxy_bit_popcount_context(proxy_bit_popcount_context const&) = delete;
+   proxy_bit_popcount_context(proxy_bit_popcount_context&&) = delete;
+   auto
+   operator=(proxy_bit_popcount_context const&)
+      -> proxy_bit_popcount_context& = delete;
+   auto
+   operator=(proxy_bit_popcount_context&&)
+      -> proxy_bit_popcount_context& = delete;
+
+   template <cat::is_predicate<element_type> Predicate>
    constexpr auto
    run_while(Predicate&& predicate) -> cat::iteration_result {
       for (cat::uword bit_offset = 0u; bit_offset < 8u; ++bit_offset) {

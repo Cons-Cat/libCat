@@ -78,7 +78,7 @@ class tiny_list : public cat::iterable_interface<> {
       auto
       operator=(iteration_context&&) -> iteration_context& = delete;
 
-      template <typename Pred>
+      template <cat::is_predicate<element_type> Pred>
       constexpr auto
       run_while(Pred&& pred) -> cat::iteration_result {
          while (m_current != capacity) {

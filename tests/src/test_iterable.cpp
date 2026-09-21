@@ -108,7 +108,7 @@ class tiny_list : public cat::iterable_interface<> {
       auto
       operator=(iteration_context&&) -> iteration_context& = delete;
 
-      template <typename Pred>
+      template <cat::is_predicate<element_type> Pred>
       constexpr auto
       run_while(Pred&& pred) -> cat::iteration_result {
          while (m_current != capacity) {
@@ -159,7 +159,7 @@ class tiny_list : public cat::iterable_interface<> {
       operator=(reverse_iteration_context&&)
          -> reverse_iteration_context& = delete;
 
-      template <typename Pred>
+      template <cat::is_predicate<element_type> Pred>
       constexpr auto
       run_while(Pred&& pred) -> cat::iteration_result {
          while (m_remaining.raw > 0u) {
@@ -362,10 +362,33 @@ concept is_applicable_view_adaptor =
       cat::move(adaptor).apply($fwd(iterable));
    };
 
+struct unique_context_shape {
+   unique_context_shape() = default;
+   unique_context_shape(unique_context_shape const&) = delete;
+   unique_context_shape(unique_context_shape&&) = delete;
+   auto
+   operator=(unique_context_shape const&) -> unique_context_shape& = delete;
+   auto
+   operator=(unique_context_shape&&) -> unique_context_shape& = delete;
+};
+
+struct context_without_run_while : unique_context_shape {
+   using element_type = int;
+};
+
+struct context_with_wrong_result : unique_context_shape {
+   using element_type = int;
+
+   auto
+   run_while(bool (*)(int)) -> bool;
+};
+
 static_assert(cat::is_position<cat::idx>);
 static_assert(cat::is_collection<tiny_array<int, 4u>>);
 static_assert(cat::is_iterable<tiny_array<int, 4u>>);
 static_assert(cat::is_iterable<tiny_list<int, 8u>>);
+static_assert(!cat::is_iteration_context<context_without_run_while>);
+static_assert(!cat::is_iteration_context<context_with_wrong_result>);
 static_assert(cat::is_collection<cat::initializer_list<int>>);
 static_assert(cat::is_random_access_collection<cat::initializer_list<int>>);
 static_assert(cat::is_contiguous_iterable<cat::initializer_list<int>>);
@@ -383,7 +406,20 @@ struct sized_count_iteration_context {
 
    using element_type = int;
 
-   template <typename Pred>
+   constexpr sized_count_iteration_context(bool* p_iteration_used)
+       : m_p_iteration_used(p_iteration_used) {
+   }
+
+   sized_count_iteration_context(sized_count_iteration_context const&) = delete;
+   sized_count_iteration_context(sized_count_iteration_context&&) = delete;
+   auto
+   operator=(sized_count_iteration_context const&)
+      -> sized_count_iteration_context& = delete;
+   auto
+   operator=(sized_count_iteration_context&&)
+      -> sized_count_iteration_context& = delete;
+
+   template <cat::is_predicate<element_type> Pred>
    constexpr auto
    run_while(Pred&& /*pred*/) -> cat::iteration_result {
       *m_p_iteration_used = true;
@@ -435,8 +471,7 @@ $test(flux_collection_basics) {
    // Direct iterate + `run_while`.
    {
       int total = 0;
-      auto ctx = cat::iterate(arr);
-      ctx.run_while([&total](int const& x) -> bool {
+      cat::iterate(arr).run_while([&total](int const& x) -> bool {
          total += x;
          return true;
       });
@@ -608,8 +643,7 @@ $test(flux_take_and_drop_variants) {
 
    auto verify_view = [](auto&& view, cat::initializer_list<int> expected) {
       cat::idx i = 0u;
-      auto context = cat::iterate(view);
-      auto const result = context.run_while([&](int value) -> bool {
+      auto const result = cat::iterate(view).run_while([&](int value) -> bool {
          cat::verify(i < expected.size());
          cat::verify(value == expected.data()[i]);
          ++i;
@@ -748,9 +782,9 @@ $test(flux_run_while_pause_resume) {
 }
 
 $test(flux_run_while_immediate_interrupt) {
-   // Stop on the first element, then continue with the `run_while(ctx, f)` free
-   // shim. Confirms the cursor is advanced for the read that ran the body, so
-   // the next pass skips that element.
+   // Stop on the first element, then continue with the same context. Confirms
+   // the cursor is advanced for the read that ran the body, so the next pass
+   // skips that element.
    tiny_array<int, 4u> arr = {
       {},
       {1, 2, 3, 4}
@@ -766,7 +800,7 @@ $test(flux_run_while_immediate_interrupt) {
    cat::verify(calls == 1);
 
    int rest_sum = 0;
-   auto const second = cat::run_while(ctx, [&rest_sum](int const& x) -> bool {
+   auto const second = ctx.run_while([&rest_sum](int const& x) -> bool {
       rest_sum += x;
       return true;
    });
@@ -857,8 +891,7 @@ $test(flux_reverse_collection) {
    {
       int seen[5] = {};
       cat::idx i = 0u;
-      auto ctx = cat::reverse_iterate(arr);
-      ctx.run_while([&seen, &i](int const& x) -> bool {
+      cat::reverse_iterate(arr).run_while([&seen, &i](int const& x) -> bool {
          seen[i] = x;
          ++i;
          return true;
@@ -1573,8 +1606,9 @@ $test(flux_iterate_const_collection) {
    );
 }
 
-// Structural checks: iteration contexts are non-copyable and expose
-// `element_type`. Element/value aliases match the context.
+// Structural checks: iteration contexts are uniquely owned and expose a
+// `run_while` member for their `element_type`. Element/value aliases match the
+// context.
 $test(flux_iteration_context_and_element_traits) {
    using arr4 = tiny_array<int, 4u>;
    static_assert(

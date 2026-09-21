@@ -11,14 +11,13 @@ struct popcount_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, popcount_impl /*popcount_impl*/) -> idx {
-      if constexpr (requires { cat::popcount(incoming); }) {
-         return cat::popcount(incoming);
+      if constexpr (requires { popcount(incoming); }) {
+         return popcount(incoming);
       } else {
          idx count = 0u;
-         auto context = iterate(incoming);
-         context.run_while([&count](auto&& element) -> bool {
-            if constexpr (requires { cat::popcount(element); }) {
-               count += cat::popcount(element);
+         iterate(incoming).run_while([&count](auto&& element) -> bool {
+            if constexpr (requires { popcount(element); }) {
+               count += popcount(element);
             } else if (element) {
                ++count;
             }

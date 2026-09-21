@@ -15,9 +15,8 @@ struct count_impl {
       }
 
       idx element_count{};
-      auto context = iterate(incoming);
 
-      context.run_while([&element_count](auto&&) -> bool {
+      iterate(incoming).run_while([&element_count](auto&&) -> bool {
          ++element_count;
          return true;
       });

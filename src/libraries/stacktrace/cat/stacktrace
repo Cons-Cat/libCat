@@ -239,8 +239,7 @@ struct formatter<Frames, char> : debug_formatter<char> {
       detail::symbolizer* _Nullable const p_symbolizer =
          detail::load_symbolizer();
       idx number = 0u;
-      auto iteration = iterate(value);
-      iteration.run_while([&](stacktrace_entry const& entry) -> bool {
+      iterate(value).run_while([&](stacktrace_entry const& entry) -> bool {
          ++number;
          result = detail::format_stacktrace_frame(
             p_symbolizer, number, entry, context, this->debug

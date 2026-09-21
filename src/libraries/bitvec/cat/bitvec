@@ -591,8 +591,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
          bit = value;
          result = push_back(allocator, bit);
       };
-      auto context = cat::iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
          append($fwd(value));
          return true;
       });
@@ -619,8 +618,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
          bit = value;
          result = push_back(allocator, bit);
       };
-      auto context = cat::iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
          append($fwd(value));
          return true;
       });
@@ -705,8 +703,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
          (*this)[i].assign(bit);
          ++i;
       };
-      auto context = cat::iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
          insert($fwd(value));
          return true;
       });
@@ -746,8 +743,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
          (*this)[insertion_position].assign(bit);
          ++insertion_position;
       };
-      auto context = cat::iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
          insert($fwd(value));
          return true;
       });

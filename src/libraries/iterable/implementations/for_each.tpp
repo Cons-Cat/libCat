@@ -13,9 +13,7 @@ struct for_each_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, for_each_impl self) -> Callback {
-      auto context = iterate(incoming);
-
-      context.run_while([&self](auto&& element) -> bool {
+      iterate(incoming).run_while([&self](auto&& element) -> bool {
          self.callback($fwd(element));
          return true;
       });

@@ -550,8 +550,7 @@ constexpr void
 fill_random_simd_scattered(Range&& range, auto&& generate) {
    Simd values;
    idx lane = Simd::abi_type::lanes;
-   auto context = iterate(range);
-   context.run_while([&](auto&& value) -> bool {
+   iterate(range).run_while([&](auto&& value) -> bool {
       if (lane == Simd::abi_type::lanes) {
          values = generate();
          lane = 0u;
@@ -661,8 +660,7 @@ fill_random(Range&& range, Generator&& generator) -> iteration_result {
       });
    } else if (detail::fill_random_scalar_batch(range, generator)) {
    } else {
-      auto context = iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      iterate(range).run_while([&](auto&& value) -> bool {
          value = generator();
          return true;
       });
@@ -691,8 +689,7 @@ fill_random(Range&& range, Generator&& generator, Distribution&& distribution)
       )
    ) {
    } else {
-      auto context = iterate(range);
-      context.run_while([&](auto&& value) -> bool {
+      iterate(range).run_while([&](auto&& value) -> bool {
          value = distribution(generator);
          return true;
       });

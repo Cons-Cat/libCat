@@ -14,8 +14,7 @@ struct fold_impl {
    template <is_iterable Iterable>
    friend constexpr auto
    operator|(Iterable&& incoming, fold_impl self) -> Init {
-      auto context = iterate(incoming);
-      context.run_while([&self](auto&& element) -> bool {
+      iterate(incoming).run_while([&self](auto&& element) -> bool {
          self.init = self.callback(move(self.init), $fwd(element));
          return true;
       });

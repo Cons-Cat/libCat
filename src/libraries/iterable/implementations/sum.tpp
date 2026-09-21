@@ -11,9 +11,8 @@ struct sum_impl {
    friend constexpr auto
    operator|(Iterable&& incoming, sum_impl /*sum_impl*/) {
       iterable_value_type<Iterable> total{};
-      auto context = iterate(incoming);
 
-      context.run_while([&total](auto&& element) -> bool {
+      iterate(incoming).run_while([&total](auto&& element) -> bool {
          total = total + $fwd(element);
          return true;
       });
