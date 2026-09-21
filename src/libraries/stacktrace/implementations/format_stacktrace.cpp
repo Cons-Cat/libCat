@@ -77,6 +77,7 @@ static_assert(sizeof(elf_program_header) == 56);
 static_assert(sizeof(elf_section_header) == 64);
 static_assert(sizeof(elf_symbol) == 24);
 
+// ELF header start address. This array is filled by the linker.
 extern "C" char __ehdr_start[];
 
 struct found_symbol {
@@ -93,7 +94,7 @@ struct resolved_frame {
 auto
 contains(cat::span<cat::byte const> bytes, cat::uint8 offset, cat::uint8 size)
    -> bool {
-   return offset <= bytes.size() && size <= bytes.size() - cat::idx(offset);
+   return offset <= bytes.size() && size <= bytes.size() - offset;
 }
 
 template <typename T>
@@ -104,7 +105,7 @@ object_at(cat::span<cat::byte const> bytes, cat::uint8 offset)
    if (!contains(bytes, offset, sizeof(T))) {
       return nullptr;
    }
-   return __builtin_bit_cast(T const*, bytes.data() + cat::idx(offset));
+   return __builtin_bit_cast(T const*, bytes.data() + offset);
 }
 
 [[nodiscard]]
@@ -142,10 +143,9 @@ initialize_load_bias(cat::detail::symbolizer& symbols) -> bool {
 
    auto const* const p_program_headers = __builtin_bit_cast(
       elf_program_header const*,
-      symbols.bytes.data() + cat::idx(header.program_header_offset)
+      symbols.bytes.data() + header.program_header_offset
    );
-   cat::uint8 const runtime_header =
-      reinterpret_cast<__UINTPTR_TYPE__>(__ehdr_start);
+   cat::uintptr<void> const runtime_header = __ehdr_start;
    for (cat::idx index = 0u; index < header.program_header_count; ++index) {
       elf_program_header const& program = p_program_headers[index];
       if (program.type == 1u && program.offset == 0u) {
@@ -153,6 +153,7 @@ initialize_load_bias(cat::detail::symbolizer& symbols) -> bool {
          return true;
       }
    }
+
    return false;
 }
 
@@ -207,7 +208,7 @@ contains_runtime_address(
    elf_header const& header = *object_at<elf_header>(symbols.bytes, 0u);
    auto const* const p_program_headers = __builtin_bit_cast(
       elf_program_header const*,
-      symbols.bytes.data() + cat::idx(header.program_header_offset)
+      symbols.bytes.data() + header.program_header_offset
    );
    for (cat::idx index = 0u; index < header.program_header_count; ++index) {
       elf_program_header const& program = p_program_headers[index];
@@ -219,6 +220,7 @@ contains_runtime_address(
          return true;
       }
    }
+
    return false;
 }
 
@@ -227,7 +229,7 @@ auto
 bounded_string(char const* _Nonnull p_string, cat::idx maximum_size)
    -> cat::str_view {
    cat::idx length = 0u;
-   while (length < maximum_size && p_string[length.raw] != '\0') {
+   while (length < maximum_size && p_string[length] != '\0') {
       ++length;
    }
    return {p_string, length};
@@ -252,7 +254,7 @@ lookup_in_table(
       header.section_header_offset
       + cat::uint8(table.link) * sizeof(elf_section_header);
    elf_section_header const* const p_strings_header =
-      object_at<elf_section_header>(symbols.bytes, strings_offset);
+      object_at<elf_section_header>(symbols.bytes, cat::idx(strings_offset));
    if (
       p_strings_header == nullptr
       || !contains(
@@ -263,12 +265,12 @@ lookup_in_table(
    }
 
    auto const* const p_symbols = __builtin_bit_cast(
-      elf_symbol const*, symbols.bytes.data() + cat::idx(table.offset)
+      elf_symbol const*, symbols.bytes.data() + table.offset
    );
    auto const* const p_strings = __builtin_bit_cast(
-      char const*, symbols.bytes.data() + cat::idx(p_strings_header->offset)
+      char const*, symbols.bytes.data() + p_strings_header->offset
    );
-   cat::idx const symbol_count = cat::idx(table.size / sizeof(elf_symbol));
+   cat::idx const symbol_count = cat::idx(table.size) / sizeof(elf_symbol);
    elf_symbol const* p_best = nullptr;
    for (cat::idx index = 0u; index < symbol_count; ++index) {
       elf_symbol const& symbol = p_symbols[index];
@@ -279,16 +281,19 @@ lookup_in_table(
       ) {
          continue;
       }
+
       if (
          (symbol.size == 0u && symbol.value != relative_address)
          || (symbol.size != 0u && relative_address - symbol.value >= symbol.size)
       ) {
          continue;
       }
+
       if (p_best == nullptr || symbol.value > p_best->value) {
          p_best = &symbol;
       }
    }
+
    if (p_best == nullptr) {
       return {};
    }
@@ -318,7 +323,7 @@ lookup_symbol(
 
    auto const* const p_sections = __builtin_bit_cast(
       elf_section_header const*,
-      symbols.bytes.data() + cat::idx(header.section_header_offset)
+      symbols.bytes.data() + header.section_header_offset
    );
    for (cat::uint4 type : {2u, 11u}) {
       for (cat::idx index = 0u; index < header.section_header_count; ++index) {
@@ -331,6 +336,7 @@ lookup_symbol(
          }
       }
    }
+
    return {};
 }
 
@@ -344,6 +350,7 @@ resolve(cat::detail::symbolizer const& symbols, cat::stacktrace_entry entry)
    ) {
       return {};
    }
+
    cat::uint8 const relative_address = address - symbols.load_bias - 1u;
    return {
       .source =
@@ -376,6 +383,7 @@ format_signature(cat::str_view symbol, cat::format_context& context)
    if (symbol.is_empty()) {
       return context.append("<unknown-symbol>");
    }
+
    cat::maybe<cat::demangled_name> const demangled =
       cat::demangle(context.allocator.get_allocator(), symbol);
    cat::str_view const name =
@@ -411,6 +419,7 @@ format_source_line(
          return context.append(' ');
       });
    }
+
    return cat::move(result)
       .and_then([&] {
          return cat::detail::format_nested(context, line_number);
@@ -434,13 +443,17 @@ open_source(
    if (source.file.size() >= path.size()) {
       return cat::nullopt;
    }
+
    cat::copy_memory(source.file.data(), path.data(), source.file.size());
    path[source.file.size()] = '\0';
+
    nix::scaredy_nix<nix::file_descriptor> opened =
       nix::sys_open(path.data(), nix::open_mode::read_only);
+
    if (opened.has_value()) {
       return opened.value();
    }
+
    if (!source.file.is_empty() && source.file[0u] == '/') {
       return cat::nullopt;
    }
@@ -448,26 +461,33 @@ open_source(
    cat::idx prefix = object_path.size();
    while (prefix > 0u) {
       do {
+         // -1 can not underflow here.
          prefix.raw -= 1u;
       } while (prefix > 0u && object_path[prefix] != '/');
+
       if (prefix == 0u) {
          break;
       }
+
       cat::idx const path_size = prefix + 1u + source.file.size();
       if (path_size >= path.size()) {
          continue;
       }
+
       cat::copy_memory(object_path.data(), path.data(), prefix);
       path[prefix] = '/';
+
       cat::copy_memory(
-         source.file.data(), path.data() + prefix.raw + 1u, source.file.size()
+         source.file.data(), path.data() + prefix + 1u, source.file.size()
       );
+
       path[path_size] = '\0';
       opened = nix::sys_open(path.data(), nix::open_mode::read_only);
       if (opened.has_value()) {
          return opened.value();
       }
    }
+
    return cat::nullopt;
 }
 
@@ -479,31 +499,40 @@ format_source_snippet(
    cat::array<char, 4'096u> path;
    cat::maybe<nix::file_descriptor> const opened =
       open_source(source, object_path, path);
+
    if (opened.is_empty()) {
       return cat::monostate;
    }
+
    nix::file_descriptor const descriptor = opened.value();
    $defer {
       auto _ = nix::sys_close(descriptor);
    };
+
    cat::scaredy<nix::file_status, nix::linux_error> const status =
       nix::sys_fstat(descriptor);
+
    if (status.is_empty() || status.value().file_size == 0u) {
       return cat::monostate;
    }
+
    nix::scaredy_nix<cat::byte*> mapped = nix::sys_mmap(
       nullptr, status.value().file_size, nix::memory_protection_flags::read,
       nix::memory_flags::privately, descriptor, 0u
    );
+
    if (mapped.is_empty()) {
       return cat::monostate;
    }
+
    cat::span<cat::byte const> const bytes(
       mapped.value(), status.value().file_size
    );
+
    $defer {
       auto _ = nix::sys_munmap(bytes);
    };
+
    cat::str_view const contents(
       __builtin_bit_cast(char const*, bytes.data()), bytes.size()
    );
@@ -513,31 +542,38 @@ format_source_snippet(
    cat::idx const width = decimal_width(last);
    cat::uint8 line_number = 1u;
    cat::idx line_begin = 0u;
+
    for (cat::idx index = 0u; index <= contents.size(); ++index) {
       if (index != contents.size() && contents[index] != '\n') {
          continue;
       }
+
       if (line_number >= first && line_number <= last) {
          cat::idx line_end = index;
+         // -1 can not underflow here.
          if (
             line_end > line_begin && contents.data()[line_end.raw - 1u] == '\r'
          ) {
             line_end.raw -= 1u;
          }
+
          $prop(format_source_line(
             line_number,
             cat::str_view(
-               contents.data() + line_begin.raw, cat::idx(line_end - line_begin)
+               contents.data() + line_begin, cat::idx(line_end - line_begin)
             ),
             source.line, width, context
          ));
       }
+
       if (line_number >= last || index == contents.size()) {
          break;
       }
+
       ++line_number;
       line_begin = index + 1u;
    }
+
    return cat::monostate;
 }
 
@@ -648,6 +684,7 @@ load_symbolizer() -> symbolizer* _Nullable {
    if (p_symbolizer.is_empty()) {
       return nullptr;
    }
+
    // A partly loaded ELF still knows the executable's path, which is worth
    // printing even when no symbol resolves.
    auto _ = load_executable(*p_symbolizer.value(), allocator);
@@ -659,6 +696,7 @@ unload_symbolizer(symbolizer* _Nullable p_symbolizer) {
    if (p_symbolizer == nullptr) {
       return;
    }
+
    page_allocator allocator;
    auto _ = nix::sys_munmap(p_symbolizer->bytes);
    p_symbolizer->path.free(allocator);
@@ -672,6 +710,7 @@ resolve_stacktrace_frame(
    if (p_symbolizer == nullptr) {
       return {};
    }
+
    resolved_frame const resolved = resolve(*p_symbolizer, entry);
    frame_origin origin{
       .file = resolved.source.file,
@@ -683,6 +722,7 @@ resolve_stacktrace_frame(
          void*, resolved.symbol.relative_address + p_symbolizer->load_bias
       );
    }
+
    return origin;
 }
 

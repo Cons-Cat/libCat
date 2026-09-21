@@ -6,7 +6,35 @@
 // walking frame pointers. It is inspired by `std::basic_stacktrace`, but its
 // allocator is always explicit. Frames are stored inside the trace until its
 // inline storage is exceeded, at which point the trace grows through its
-// allocator. There is no fixed depth limit.
+// allocator.
+//
+// It is primarily useful for printing to users. The default formatter prints it
+// in the form:
+//    Stack trace:
+//    #1 meow.cpp:8 main()
+//    #2 _start.cpp:143 _start()
+//
+// When compiled with debug symbols, it can be formatted with contextual details
+// using the `{:?}` format specifier in the form:
+// clang-format off
+//
+// Stack trace:
+//    #1 Object "/home/exe/path/meow", at 0x5879ee8880e4, in main()
+//       Source "your/src/meow.cpp", line 8, in main()
+//          6: main() -> int {
+//          7:    cat::page_allocator allocator;
+//       >  8:    cat::stacktrace const trace = cat::stacktrace::current(allocator).value();
+//          9:    auto _ = cat::print_fmt(allocator, "{:?}\n", trace);
+//         10:    // Meow meow meow meow? (transl. Tum ko kya mila?)
+//    #2 Object "/home/executable/path/meow", at 0x5879ee892771, in _start()
+//       Source "src/libraries/runtime/implementations/_start.cpp", line 143, in _start()
+//         141: #endif
+//         142: #ifdef CAT_NO_ARGC_ARGV
+//       > 143:    int const exit_code = main();
+//         144: #else
+//         145:    int const argc = static_cast<int>(p_stack[0]);
+//
+// clang-format on
 
 #include <cat/container>
 #include <cat/format>
@@ -17,22 +45,24 @@ namespace cat {
 
 class stacktrace_entry {
  public:
+   using native_handle_type = void* _Nullable;
+
    constexpr stacktrace_entry() = default;
 
-   explicit constexpr stacktrace_entry(void* _Nullable p_native)
+   explicit constexpr stacktrace_entry(native_handle_type p_native)
        : m_p_native(p_native) {
    }
 
    [[nodiscard]]
    constexpr auto
-   native_handle() const -> void* _Nullable {
+   native_handle() const -> native_handle_type {
       return m_p_native;
    }
 
    [[nodiscard]]
-   constexpr explicit
-   operator bool() const {
-      return m_p_native != nullptr;
+   constexpr auto
+   is_empty() const -> bool {
+      return m_p_native == nullptr;
    }
 
    [[nodiscard]]
@@ -41,12 +71,10 @@ class stacktrace_entry {
 
    [[nodiscard]]
    constexpr auto
-   operator<=>(stacktrace_entry const& other) const {
-      return uintptr<void>(m_p_native) <=> uintptr<void>(other.m_p_native);
-   }
+   operator<=>(stacktrace_entry const&) const = default;
 
  private:
-   void* _Nullable m_p_native = nullptr;
+   native_handle_type m_p_native = nullptr;
 };
 
 class stacktrace
@@ -62,7 +90,7 @@ class stacktrace
 
  public:
    constexpr stacktrace() =
-      delete ("`cat::stacktrace` cannot be created without an allocator.");
+      delete ("`cat::stacktrace` cannot be created without an allocator!");
 
    constexpr explicit stacktrace(dyn_allocator allocator)
        : m_frames(allocator) {

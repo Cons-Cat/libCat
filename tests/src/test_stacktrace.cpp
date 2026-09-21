@@ -156,7 +156,7 @@ $test(stacktrace_current_captures_caller) {
    cat::verify(!trace.is_empty());
    cat::verify(trace.size() <= cat::stacktrace::max_size());
    cat::verify(trace.size() <= trace.capacity());
-   cat::verify(bool{trace[0u]});
+   cat::verify(!trace[0u].is_empty());
    cat::verify(trace[0u].native_handle() != nullptr);
    static_assert(
       cat::is_same<decltype(trace[0u]), cat::stacktrace_entry const&>
@@ -553,7 +553,7 @@ $test(stacktrace_depth_and_skip) {
 
    cat::stacktrace const one = cat::stacktrace::current(pager, 0u, 1u).verify();
    cat::verify(one.size() == 1u);
-   cat::verify(bool{one[0u]});
+   cat::verify(!one[0u].is_empty());
 
    cat::stacktrace const skipped_all =
       cat::stacktrace::current(pager, 1'024u).verify();
@@ -594,7 +594,7 @@ $test(stacktrace_allocation_failure) {
 
 $test(stacktrace_entry_and_container) {
    cat::stacktrace_entry const empty{};
-   cat::verify(!bool{empty});
+   cat::verify(empty.is_empty());
    cat::verify(empty.native_handle() == nullptr);
 
    cat::stacktrace first = cat::stacktrace::current(pager).verify();
@@ -611,7 +611,7 @@ $test(stacktrace_entry_and_container) {
 
    idx count = 0u;
    for (cat::stacktrace_entry const& frame : other) {
-      cat::verify(bool{frame});
+      cat::verify(!frame.is_empty());
       cat::verify(frame == other[count]);
       count = count + 1u;
    }

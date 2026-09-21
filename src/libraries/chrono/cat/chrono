@@ -87,6 +87,7 @@ struct clock_system {
    using timer = nix::clock_timerfd<nix::clock_id::realtime>;
 
  public:
+   using native_handle_type = timer;
    using duration = timer::duration;
    using time_point = cat::time_point<clock_system, duration>;
 
@@ -100,7 +101,7 @@ struct clock_system {
 
    [[nodiscard]]
    static auto
-   native_handle() -> timer& {
+   native_handle() -> native_handle_type& {
       return m_timer;
    }
 
@@ -115,6 +116,7 @@ struct clock_steady {
    using timer = nix::clock_timerfd<nix::clock_id::monotonic>;
 
  public:
+   using native_handle_type = timer;
    using duration = timer::duration;
    using time_point = cat::time_point<clock_steady, duration>;
 
@@ -128,7 +130,7 @@ struct clock_steady {
 
    [[nodiscard]]
    static auto
-   native_handle() -> timer& {
+   native_handle() -> native_handle_type& {
       return m_timer;
    }
 
@@ -141,6 +143,7 @@ struct clock_unix {
    using timer = nix::clock_timerfd<nix::clock_id::realtime>;
 
  public:
+   using native_handle_type = timer;
    using duration = timer::duration;
    using time_point = cat::time_point<clock_unix, duration>;
 
@@ -154,7 +157,7 @@ struct clock_unix {
 
    [[nodiscard]]
    static auto
-   native_handle() -> timer& {
+   native_handle() -> native_handle_type& {
       return m_timer;
    }
 

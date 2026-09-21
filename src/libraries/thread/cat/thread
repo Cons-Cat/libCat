@@ -15,26 +15,28 @@ inline namespace manual {
 struct thread {
  public:
    struct id {
+      using native_handle_type = nix::process_id;
+
       constexpr id() = default;
 
-      constexpr explicit id(nix::process_id native) : m_native(native) {
+      constexpr explicit id(native_handle_type native) : m_native(native) {
       }
 
       [[nodiscard]]
       constexpr auto
-      operator==(id const& other) const -> bool {
-         return m_native.value == other.m_native.value;
-      }
+      operator==(id const&) const -> bool = default;
 
       [[nodiscard]]
       constexpr auto
-      native_handle() const -> nix::process_id {
+      native_handle() const -> native_handle_type {
          return m_native;
       }
 
     private:
-      nix::process_id m_native{0u};
+      native_handle_type m_native{0u};
    };
+
+   using native_handle_type = nix::process;
 
    thread() {
       m_handle.add_clone_flag(nix::clone_flags::thread);
@@ -76,6 +78,18 @@ struct thread {
    }
 
    [[nodiscard]]
+   auto
+   native_handle() -> native_handle_type& {
+      return m_handle;
+   }
+
+   [[nodiscard]]
+   auto
+   native_handle() const -> native_handle_type const& {
+      return m_handle;
+   }
+
+   [[nodiscard]]
    constexpr auto
    get_id() const -> id {
       if (!m_handle.has_stack()) {
@@ -101,7 +115,7 @@ struct thread {
 
  private:
    // This is platform-specific hidden code.
-   nix::process m_handle;
+   native_handle_type m_handle;
 };
 
 }  // namespace manual
@@ -140,7 +154,8 @@ template <is_duration Duration>
 [[nodiscard]]
 auto
 sleep_until(time_point<clock_system, Duration> const& point) -> maybe<void> {
-   using timer = __typeof_unqual(clock_system::native_handle());
+   // Unwrap a `cat::clock_system` to use the optimized native implementation.
+   using timer = clock_system::native_handle_type;
    return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
 }
 
@@ -148,7 +163,8 @@ template <is_duration Duration>
 [[nodiscard]]
 auto
 sleep_until(time_point<clock_steady, Duration> const& point) -> maybe<void> {
-   using timer = __typeof_unqual(clock_steady::native_handle());
+   // Unwrap a `cat::clock_steady` to use the optimized native implementation.
+   using timer = clock_steady::native_handle_type;
    return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
 }
 
@@ -156,7 +172,8 @@ template <is_duration Duration>
 [[nodiscard]]
 auto
 sleep_until(time_point<clock_unix, Duration> const& point) -> maybe<void> {
-   using timer = __typeof_unqual(clock_unix::native_handle());
+   // Unwrap a `cat::clock_unix` to use the optimized native implementation.
+   using timer = clock_unix::native_handle_type;
    return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
 }
 
