@@ -27,8 +27,10 @@ template <nix::clock_id clock>
 auto
 nix::clock_timerfd<clock>::now() -> cat::maybe<time_point> {
    timespec value;
-   $prop_as(sys_clock_gettime(id, value), cat::nullopt);
-   return time_point(value.to_nanoseconds());
+   return $prop_as_or(
+      sys_clock_gettime(id, value), cat::nullopt,
+      time_point(value.to_nanoseconds())
+   );
 }
 
 template <nix::clock_id clock>

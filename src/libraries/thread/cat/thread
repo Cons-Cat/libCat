@@ -55,23 +55,18 @@ struct thread {
       is_allocator auto& allocator, idx stack_size,
       is_invocable<Args...> auto&& callback, Args&&... arguments
    ) -> maybe<void> {
-      scaredy result = m_handle.spawn(
-         allocator, stack_size, $fwd(callback), $fwd(arguments)...
+      return $prop_as_or(
+         m_handle.spawn(
+            allocator, stack_size, $fwd(callback), $fwd(arguments)...
+         ),
+         nullopt, monostate
       );
-      if (result.has_value()) {
-         return monostate;
-      }
-      return nullopt;
    }
 
    [[nodiscard]]
    auto
    join() const -> maybe<void> {
-      scaredy result = m_handle.wait();
-      if (result.has_value()) {
-         return monostate;
-      }
-      return nullopt;
+      return $prop_as_or(m_handle.wait(), nullopt, monostate);
    }
 
    [[nodiscard]]

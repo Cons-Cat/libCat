@@ -200,6 +200,18 @@ scaredy_try_fail_2() -> cat::scaredy<cat::monostate_type, error_set> {
    return $prop_or(error, cat::monostate);
 }
 
+auto
+scaredy_try_success_as_or() -> cat::maybe<cat::uint4> {
+   cat::scaredy<int, error_set> error{1};
+   return $prop_as_or(error, cat::nullopt, 2_u4);
+}
+
+auto
+scaredy_try_fail_as_or() -> cat::maybe<void> {
+   cat::scaredy<int, error_set> error{error_set::one};
+   return $prop_as_or(error, cat::nullopt, cat::monostate);
+}
+
 $test(scaredy_converting_move_paths) {
    cat::scaredy<scaredy_move_only, error_type_one> move_only{
       scaredy_move_only{3}
@@ -660,6 +672,10 @@ $test(scaredy) {
    cat::verify(non_error == 2u);
    cat::scaredy fail2 = scaredy_try_fail_2();
    cat::verify(fail2.is_empty());
+
+   cat::uint4 as_or_ok = scaredy_try_success_as_or().verify();
+   cat::verify(as_or_ok == 2u);
+   cat::verify(scaredy_try_fail_as_or().is_empty());
 }
 
 // `.get_ptr()` on `cat::scaredy`: address-of when engaged, `nullptr` otherwise.

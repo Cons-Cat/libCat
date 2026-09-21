@@ -4,6 +4,7 @@
 
 #include <cat/utility>
 
+// If an error-like container is empty, propagate its error out of the caller.
 #define CAT_PROPAGATE(container)                                       \
    ({                                                                  \
       auto libcat_temp_expr = (container);                             \
@@ -16,6 +17,8 @@
 #pragma clang final(CAT_PROPAGATE)
 #define $prop CAT_PROPAGATE
 
+// If an error-like container is empty, propagate its error out of the caller,
+// otherwise, evaluate to an `or_value` rather than its own `.value()`.
 #define CAT_PROPAGATE_OR(container, or_value)                          \
    ({                                                                  \
       auto libcat_temp_expr = (container);                             \
@@ -28,14 +31,31 @@
 #pragma clang final(CAT_PROPAGATE_OR)
 #define $prop_or CAT_PROPAGATE_OR
 
-#define CAT_PROPAGATE_AS(container, or_value) \
+// If an error-like container is empty, rather than propagating its error,
+// evaluate to an `as_value`. Otherwise, unwrap the container as `.value()`.
+#define CAT_PROPAGATE_AS(container, as_value) \
    ({                                         \
       auto libcat_temp_expr = (container);    \
       if (libcat_temp_expr.is_empty()) {      \
-         return (or_value);                   \
+         return (as_value);                   \
       }                                       \
       ::cat::move(libcat_temp_expr).value();  \
    })
 
 #pragma clang final(CAT_PROPAGATE_AS)
 #define $prop_as CAT_PROPAGATE_AS
+
+// If an error-like container is empty, rather than propagating its error,
+// propagate an `or_value` out of the caller. Otherwise, evaluate to an
+// `as_value` rather than its own `.value()`.
+#define CAT_PROPAGATE_AS_OR(container, as_value, or_value) \
+   ({                                                      \
+      auto libcat_temp_expr = (container);                 \
+      if (libcat_temp_expr.is_empty()) {                   \
+         return (as_value);                                \
+      }                                                    \
+      (or_value);                                          \
+   })
+
+#pragma clang final(CAT_PROPAGATE_AS_OR)
+#define $prop_as_or CAT_PROPAGATE_AS_OR
