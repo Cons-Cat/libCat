@@ -18,6 +18,7 @@ class memory_order_reference
 
  public:
    using base::operator=;
+   using value_type = base::value_type;
 
    explicit constexpr memory_order_reference(
       Atomic& atomic [[clang::lifetimebound]]
@@ -35,6 +36,94 @@ class memory_order_reference
 
    friend constexpr void
    operator&(memory_order_reference const volatile&&) = delete;
+
+   template <typename U>
+      requires(
+         !is_memory_order_reference<U>
+         && is_weakly_equality_comparable<value_type, U>
+      )
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(memory_order_reference lhs, U const& rhs) -> bool {
+      return lhs.load() == rhs;
+   }
+
+   template <typename U>
+      requires(
+         !is_memory_order_reference<U>
+         && is_weakly_equality_comparable<U, value_type>
+      )
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(U const& lhs, memory_order_reference rhs) -> bool {
+      return lhs == rhs.load();
+   }
+
+   template <is_memory_order_reference U>
+      requires is_weakly_equality_comparable<value_type, typename U::value_type>
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(memory_order_reference lhs, U const& rhs) -> bool {
+      return lhs.load() == rhs.load();
+   }
+
+   template <typename U>
+      requires(
+         !is_memory_order_reference<U>
+         && is_weakly_equality_comparable<value_type, U>
+      )
+   [[nodiscard]]
+   friend constexpr auto
+   operator!=(memory_order_reference lhs, U const& rhs) -> bool {
+      return !(lhs == rhs);
+   }
+
+   template <typename U>
+      requires(
+         !is_memory_order_reference<U>
+         && is_weakly_equality_comparable<U, value_type>
+      )
+   [[nodiscard]]
+   friend constexpr auto
+   operator!=(U const& lhs, memory_order_reference rhs) -> bool {
+      return !(lhs == rhs);
+   }
+
+   template <is_memory_order_reference U>
+      requires is_weakly_equality_comparable<value_type, typename U::value_type>
+   [[nodiscard]]
+   friend constexpr auto
+   operator!=(memory_order_reference lhs, U const& rhs) -> bool {
+      return !(lhs == rhs);
+   }
+
+   template <typename U>
+      requires(
+         !is_memory_order_reference<U> && is_threeway_comparable<value_type, U>
+      )
+   [[nodiscard]]
+   friend constexpr auto
+   operator<=>(memory_order_reference lhs, U const& rhs) {
+      return lhs.load() <=> rhs;
+   }
+
+   template <typename U>
+      requires(
+         !is_memory_order_reference<U> && is_threeway_comparable<U, value_type>
+      )
+   [[nodiscard]]
+   friend constexpr auto
+   operator<=>(U const& lhs, memory_order_reference rhs) {
+      return lhs <=> rhs.load();
+   }
+
+   template <is_memory_order_reference U>
+      requires is_threeway_comparable<value_type, typename U::value_type>
+   [[nodiscard]]
+   friend constexpr auto
+   operator<=>(memory_order_reference lhs, U const& rhs) {
+      return lhs.load() <=> rhs.load();
+   }
 
  private:
    static constexpr auto

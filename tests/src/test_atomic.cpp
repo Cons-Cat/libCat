@@ -34,6 +34,40 @@ template <typename Atomic>
 concept has_relaxed_order_assignment =
    requires(Atomic& atomic) { atomic.relaxed() = 1; };
 
+template <typename Reference>
+concept has_order_reference_comparison =
+   requires(Reference left, Reference right) {
+      left == 1;
+      1 == left;
+      left != 2;
+      2 != left;
+      left < 2;
+      0 < left;
+      left == right;
+      left != right;
+      left < right;
+      right > left;
+   };
+
+template <
+   typename Reference, typename EqualReference, typename GreaterReference>
+void
+verify_order_reference_comparisons(
+   Reference reference, EqualReference equal_reference,
+   GreaterReference greater_reference
+) {
+   cat::verify(reference == 6);
+   cat::verify(6 == reference);
+   cat::verify(reference != 7);
+   cat::verify(7 != reference);
+   cat::verify(reference < 7);
+   cat::verify(5 < reference);
+   cat::verify(reference == equal_reference);
+   cat::verify(reference != greater_reference);
+   cat::verify(reference < greater_reference);
+   cat::verify(greater_reference > reference);
+}
+
 template <typename Atomic>
 concept has_rvalue_relaxed_order =
    requires { cat::declval<Atomic&&>().relaxed(); };
@@ -231,6 +265,12 @@ constexpr_atomic_order_operations() -> bool {
    value.relaxed().store(2);
    value.acquire().store(3);
    if (value.release().load() != 3) {
+      return false;
+   }
+   if (value.acquire() != 3 || value.acquire() == 4) {
+      return false;
+   }
+   if (!(value.acquire() < 4) || !(2 < value.acquire())) {
       return false;
    }
    if (value.acq_rel().exchange(4) != 3) {
@@ -549,7 +589,7 @@ $test(atomic_floating_point_min_max) {
    cat::verify(value.load() == 0.0f);
    value.store(0.0f);
    cat::verify(value.fetch_fminimum(-0.0f) == 0.0f);
-   cat::verify(__builtin_signbit(static_cast<float>(value.load())));
+   cat::verify(__builtin_signbit(static_cast<float>(value.load())) != 0);
 
    float storage = 1.0f;
    cat::atomic<cat::float4&> reference{
@@ -841,14 +881,38 @@ $test(memory_order_reference) {
    int loaded = value.acquire();
    cat::verify(loaded == 6);
    cat::verify(value.seq_cst() == 6);
+   cat::atomic<int> equal_value{6};
+   cat::atomic<int> greater_value{7};
+   verify_order_reference_comparisons(
+      value.relaxed(), equal_value.relaxed(), greater_value.relaxed()
+   );
+   verify_order_reference_comparisons(
+      value.acquire(), equal_value.acquire(), greater_value.acquire()
+   );
+   verify_order_reference_comparisons(
+      value.release(), equal_value.release(), greater_value.release()
+   );
+   verify_order_reference_comparisons(
+      value.acq_rel(), equal_value.acq_rel(), greater_value.acq_rel()
+   );
+   verify_order_reference_comparisons(
+      value.seq_cst(), equal_value.seq_cst(), greater_value.seq_cst()
+   );
+   static_assert(has_order_reference_comparison<decltype(value.relaxed())>);
+   static_assert(has_order_reference_comparison<decltype(value.acquire())>);
+   static_assert(has_order_reference_comparison<decltype(value.release())>);
+   static_assert(has_order_reference_comparison<decltype(value.acq_rel())>);
+   static_assert(has_order_reference_comparison<decltype(value.seq_cst())>);
 
    cat::atomic<bool> flag{true};
    cat::verify(flag.acquire());
+   cat::verify(flag.acquire() == true);
 
    cat::atomic<int> const& read_only_value = value;
    int const_loaded = read_only_value.acquire();
    cat::verify(const_loaded == 6);
    cat::verify(read_only_value.acquire().load() == 6);
+   cat::verify(read_only_value.acquire() == value.acquire());
    static_assert(!has_relaxed_order_store<cat::atomic<int> const>);
    static_assert(!has_relaxed_order_assignment<cat::atomic<int> const>);
    static_assert(!has_rvalue_relaxed_order<cat::atomic<int>>);
@@ -938,6 +1002,12 @@ $test(memory_order_reference) {
    boundary_storage = cat::limits<cat::uint1>::max();
    boundary_reference.wrap().release().fetch_add(1u);
    cat::verify(boundary_storage == 0u);
+
+   cat::atomic<idx> entered;
+   constexpr idx thread_count = 4;
+   entered.release() = thread_count;
+   cat::verify(!(entered.acquire() != thread_count));
+   cat::verify(entered.acquire() == thread_count);
 }
 
 $test(memory_order_reference_format) {

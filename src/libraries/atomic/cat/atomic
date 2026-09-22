@@ -2152,6 +2152,32 @@ namespace detail {
 // P3323R1: `atomic_ref_bound` mirrors `atomic<T&>` const handling.
 template <
    typename T, memory_order memory_order_value,
+   overflow_policies overflow_policy>
+   requires(!is_volatile<T>)
+class atomic_ref_bound;
+
+template <typename>
+struct is_memory_order_reference_trait : false_trait {};
+
+template <
+   typename T, memory_order memory_order_value,
+   overflow_policies overflow_policy>
+struct is_memory_order_reference_trait<
+   atomic_ref_bound<T, memory_order_value, overflow_policy>> : true_trait {};
+
+template <is_atomic Atomic, memory_order order>
+struct is_memory_order_reference_trait<memory_order_reference<Atomic, order>>
+    : true_trait {};
+}  // namespace detail
+
+template <typename T>
+concept is_memory_order_reference =
+   detail::is_memory_order_reference_trait<remove_cvref<T>>::value;
+
+namespace detail {
+
+template <
+   typename T, memory_order memory_order_value,
    overflow_policies overflow_policy = atomic_default_overflow_policy<T>()>
    requires(!is_volatile<T>)
 class atomic_ref_bound {
@@ -2613,6 +2639,99 @@ class atomic_ref_bound {
    mutable atomic<T&> m_reference;
 };
 }  // namespace detail
+
+template <is_memory_order_reference AtomicReference, typename U>
+   requires(
+      !is_memory_order_reference<U>
+      && is_weakly_equality_comparable<typename AtomicReference::value_type, U>
+   )
+[[nodiscard]]
+constexpr auto
+operator==(AtomicReference const& lhs, U const& rhs) -> bool {
+   return lhs.load() == rhs;
+}
+
+template <typename U, is_memory_order_reference AtomicReference>
+   requires(
+      !is_memory_order_reference<U>
+      && is_weakly_equality_comparable<U, typename AtomicReference::value_type>
+   )
+[[nodiscard]]
+constexpr auto
+operator==(U const& lhs, AtomicReference const& rhs) -> bool {
+   return lhs == rhs.load();
+}
+
+template <is_memory_order_reference AtomicReference, typename U>
+   requires(
+      !is_memory_order_reference<U>
+      && is_weakly_equality_comparable<typename AtomicReference::value_type, U>
+   )
+[[nodiscard]]
+constexpr auto
+operator!=(AtomicReference const& lhs, U const& rhs) -> bool {
+   return !(lhs == rhs);
+}
+
+template <typename U, is_memory_order_reference AtomicReference>
+   requires(
+      !is_memory_order_reference<U>
+      && is_weakly_equality_comparable<U, typename AtomicReference::value_type>
+   )
+[[nodiscard]]
+constexpr auto
+operator!=(U const& lhs, AtomicReference const& rhs) -> bool {
+   return !(lhs == rhs);
+}
+
+template <is_memory_order_reference Left, is_memory_order_reference Right>
+   requires is_weakly_equality_comparable<
+      typename Left::value_type, typename Right::value_type>
+[[nodiscard]]
+constexpr auto
+operator==(Left const& lhs, Right const& rhs) -> bool {
+   return lhs.load() == rhs.load();
+}
+
+template <is_memory_order_reference Left, is_memory_order_reference Right>
+   requires is_weakly_equality_comparable<
+      typename Left::value_type, typename Right::value_type>
+[[nodiscard]]
+constexpr auto
+operator!=(Left const& lhs, Right const& rhs) -> bool {
+   return !(lhs == rhs);
+}
+
+template <is_memory_order_reference AtomicReference, typename U>
+   requires(
+      !is_memory_order_reference<U>
+      && is_threeway_comparable<typename AtomicReference::value_type, U>
+   )
+[[nodiscard]]
+constexpr auto
+operator<=>(AtomicReference const& lhs, U const& rhs) {
+   return lhs.load() <=> rhs;
+}
+
+template <typename U, is_memory_order_reference AtomicReference>
+   requires(
+      !is_memory_order_reference<U>
+      && is_threeway_comparable<U, typename AtomicReference::value_type>
+   )
+[[nodiscard]]
+constexpr auto
+operator<=>(U const& lhs, AtomicReference const& rhs) {
+   return lhs <=> rhs.load();
+}
+
+template <is_memory_order_reference Left, is_memory_order_reference Right>
+   requires is_threeway_comparable<
+      typename Left::value_type, typename Right::value_type>
+[[nodiscard]]
+constexpr auto
+operator<=>(Left const& lhs, Right const& rhs) {
+   return lhs.load() <=> rhs.load();
+}
 
 namespace detail {
 template <is_atomic Atomic>
