@@ -9,7 +9,7 @@ set(CAT_INCLUDE_SUBDIRS
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
-  tuple vec ring enum iterable dyn random timer chrono quantity stacktrace
+  tuple vec ring enum iterable dyn random timer chrono mutex quantity stacktrace
   demangle)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
@@ -583,6 +583,10 @@ set(CAT_HEADER_FILES
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
   ${CATLIB}/stacktrace/cat/stacktrace
   ${CATLIB}/demangle/cat/demangle
+  ${CATLIB}/mutex/cat/mutex
+  ${CATLIB}/mutex/cat/mutex_spin
+  ${CATLIB}/mutex/cat/detail/parking_lot.hpp
+  ${CATLIB}/mutex/cat/detail/word_lock.hpp
   ${CATLIB}/thread/cat/thread
   ${CATLIB}/thread/cat/raii_thread
   ${CATLIB}/timer/cat/timer

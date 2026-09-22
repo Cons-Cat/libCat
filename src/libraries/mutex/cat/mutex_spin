@@ -1,0 +1,88 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::mutex_spin` is inspired by the Intel Thread Building Blocks
+// `tbb::spin_mutex`. It is an exponential-backoff "TTAS" (test-test-and-set)
+// spin lock primarily intended for implementing other synchronization
+// primitives. TTAS mutexes are useful for very short wait timespans, spanning
+// only a few microseconds.
+
+#include <cat/atomic>
+#include <cat/chrono>
+#include <cat/mutex>
+#include <cat/thread>
+
+namespace cat {
+
+class mutex_spin {
+ public:
+   constexpr mutex_spin() = default;
+
+   mutex_spin(mutex_spin const&) = delete;
+   auto
+   operator=(mutex_spin const&) -> mutex_spin& = delete;
+
+   void
+   lock() {
+      uint1 count = 1;
+      while (m_flag.test(memory_order::relaxed)
+             || m_flag.test_and_set(memory_order::acquire)) {
+         backoff(count);
+      }
+   }
+
+   [[nodiscard]]
+   auto
+   try_lock() -> bool {
+      return !m_flag.test(memory_order::relaxed)
+             && !m_flag.test_and_set(memory_order::acquire);
+   }
+
+   template <is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_lock_for(Duration timeout) -> bool {
+      clock_steady::time_point const now = clock_steady::now().verify();
+      return try_lock_until(now + clock_steady::duration(timeout));
+   }
+
+   template <is_clock Clock, is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_lock_until(time_point<Clock, Duration> timeout) -> bool {
+      typename Clock::duration const deadline = timeout.time_since_epoch();
+      uint1 count = 1;
+      while (!try_lock()) {
+         typename Clock::duration const now =
+            Clock::now().verify().time_since_epoch();
+         if (now >= deadline) {
+            return false;
+         }
+         backoff(count);
+      }
+      return true;
+   }
+
+   void
+   unlock() {
+      m_flag.clear(memory_order::release);
+   }
+
+ private:
+   static void
+   backoff(uint1& count) {
+      // 16 spins is the limit used by Intel Thread Building Blocks.
+      if (count <= 16u) {
+         machine_pause(count);
+         count = count * 2u;
+      } else {
+         // Yield to the kernel once spinning too long.
+         this_thread::yield();
+      }
+   }
+
+   atomic_flag m_flag;
+};
+
+}  // namespace cat

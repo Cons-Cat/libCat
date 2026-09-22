@@ -1,0 +1,395 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// This header provides `cat::mutex`, a general purpose mutex implementation,
+// and a `cat::mutex_fair` adaptor.
+//
+// `cat::mutex` is generally recommended for most locks. It implements a similar
+// API to `std::mutex` and `std::timed_mutex`, but is far more efficient and
+// provides more features. It is based upon `WTF::Lock` and
+// `parking_lot::Mutex`.
+//    https://webkit.org/blog/6161/locking-in-webkit/
+//    https://github.com/amanieu/parking_lot
+//
+// `cat::mutex` is only 1 byte large, supports opt-in fair locking, guarantees
+// eventual fairness on its slow path, scales well under contention, and is
+// appropriate for both short and long waits. This design is extremely
+// versatile, and reaching for another lock should be rare.
+//
+// Like `std::mutex`, it is not an RAII class, so a `$defer` block is
+// recommended to scope unlocking.
+//
+// It conforms to the `is_mutex` concept, and provides the additional members:
+//
+// .unlock_fair()
+//    Unlock with a fairness guarantee. The oldest waiter will acquire the lock.
+//
+// .yield_to_waiters()
+//    Permit other `cat::mutex` to barge this caller when this is locked. That
+//    barging is unfair.
+//
+// The "parking lot" runtime requires allocating a trivial hash table before
+// unlocking is sound. This must be done with `alloc_mutex_runtime(allocator)`.
+//
+// The "parking lot" mutex was passed over for Rust's mutex refactor, because
+// their design performs much better under very high lock contention, with only
+// slightly worse performance under common contention. The parking lot also
+// requires a runtime, which is not a thin abstraction.
+//
+// Call `alloc_mutex_runtime` at application startup to back
+// its hash table with caller-provided storage.
+// TODO: We should consider how to do this on freestanding.
+//
+// However, Rust's mutex lacks some useful features, such as fair unlocking, so
+// the parking lot design is preferred for libCat.
+
+#include <cat/allocator>
+#include <cat/atomic>
+#include <cat/chrono>
+#include <cat/meta>
+#include <cat/thread>
+
+namespace cat {
+
+template <typename Mutex>
+concept is_mutex = requires(
+   Mutex& mutex, clock_steady::duration timeout,
+   time_point<clock_steady, clock_steady::duration> deadline
+) {
+                      mutex.lock();
+                      { mutex.try_lock() } -> is_implicitly_convertible<bool>;
+                      mutex.unlock();
+                      {
+                         mutex.try_lock_for(timeout)
+                      } -> is_implicitly_convertible<bool>;
+                      {
+                         mutex.try_lock_until(deadline)
+                      } -> is_implicitly_convertible<bool>;
+                   };
+
+template <typename Mutex>
+concept is_mutex_fair =
+   is_mutex<Mutex> && requires(Mutex& mutex) { mutex.unlock_fair(); };
+
+template <is_allocator Allocator>
+[[nodiscard]]
+auto
+alloc_mutex_runtime(allocator_ref<Allocator> allocator, idx thread_count)
+   -> maybe<void>;
+
+[[nodiscard]]
+auto
+alloc_mutex_runtime(dyn_allocator allocator, idx thread_count) -> maybe<void>;
+
+// Call only after all `cat::mutex` users are quiescent.
+template <is_allocator Allocator>
+void
+free_mutex_runtime(allocator_ref<Allocator> allocator);
+
+// Call only after all `cat::mutex` users are quiescent.
+void
+free_mutex_runtime(dyn_allocator allocator);
+
+// Call only after all `cat::mutex` users are quiescent.
+template <is_allocator Allocator>
+void
+cfree_mutex_runtime(allocator_ref<Allocator> allocator);
+
+// Call only after all `cat::mutex` users are quiescent.
+void
+cfree_mutex_runtime(dyn_allocator allocator);
+
+}  // namespace cat
+
+#include <cat/detail/parking_lot.hpp>
+
+namespace cat {
+
+class mutex {
+ public:
+   constexpr mutex() = default;
+
+   mutex(mutex const&) = delete;
+   mutex(mutex&&) = delete;
+
+   auto
+   operator=(mutex const&) -> mutex& = delete;
+   auto
+   operator=(mutex&&) -> mutex& = delete;
+
+   void
+   lock() {
+      uint1 expected = 0;
+      if (!m_state.compare_exchange_weak(
+             expected, locked_bit, memory_order::acquire, memory_order::relaxed
+          )) {
+         lock_slow();
+      }
+   }
+
+   [[nodiscard]]
+   auto
+   try_lock() -> bool {
+      uint1 state = m_state.load(memory_order::relaxed);
+      for (;;) {
+         if ((state & locked_bit) != 0) {
+            return false;
+         }
+         if (
+            m_state.compare_exchange_weak(
+               state, state | locked_bit, memory_order::acquire,
+               memory_order::relaxed
+            )
+         ) {
+            return true;
+         }
+      }
+   }
+
+   template <is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_lock_for(Duration timeout) -> bool {
+      clock_steady::time_point const now = clock_steady::now().verify();
+      return try_lock_until(now + clock_steady::duration(timeout));
+   }
+
+   template <is_clock Clock, is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_lock_until(time_point<Clock, Duration> timeout) -> bool {
+      if (try_lock()) {
+         return true;
+      }
+      return lock_slow(timeout);
+   }
+
+   void
+   yield_to_waiters() {
+      if ((m_state.load(memory_order::relaxed) & parked_bit) != 0) {
+         unlock_slow<true>();
+         lock();
+      }
+   }
+
+   void
+   unlock() {
+      uint1 expected = locked_bit;
+      if (!m_state.compare_exchange_strong(
+             expected, 0, memory_order::release, memory_order::relaxed
+          )) {
+         unlock_slow();
+      }
+   }
+
+   void
+   unlock_fair() {
+      uint1 expected = locked_bit;
+      if (!m_state.compare_exchange_strong(
+             expected, 0, memory_order::release, memory_order::relaxed
+          )) {
+         unlock_slow<true>();
+      }
+   }
+
+ private:
+   static constexpr uint1 locked_bit = 0b01;
+   static constexpr uint1 parked_bit = 0b10;
+
+   class spin_wait {
+    public:
+      auto
+      spin() -> bool {
+         if (m_counter >= 10) {
+            return false;
+         }
+         m_counter = m_counter + 1;
+         if (m_counter <= 3) {
+            machine_pause(uint1(1) << m_counter);
+         } else {
+            this_thread::yield();
+         }
+         return true;
+      }
+
+      void
+      reset() {
+         m_counter = 0;
+      }
+
+    private:
+      uint1 m_counter = 0;
+   };
+
+   auto
+   lock_slow() -> bool {
+      return lock_slow(maybe<clock_steady::time_point>(nullopt));
+   }
+
+   template <is_clock Clock, is_duration Duration>
+   [[gnu::noinline]]
+   auto
+   lock_slow(time_point<Clock, Duration> timeout) -> bool {
+      return lock_slow(maybe<time_point<Clock, Duration>>(timeout));
+   }
+
+   template <is_clock Clock, is_duration Duration>
+   auto
+   lock_slow(maybe<time_point<Clock, Duration>> timeout) -> bool {
+      spin_wait spinwait;
+      uint1 state = m_state.load(memory_order::relaxed);
+      for (;;) {
+         if ((state & locked_bit) == 0) {
+            if (
+               m_state.compare_exchange_weak(
+                  state, state | locked_bit, memory_order::acquire,
+                  memory_order::relaxed
+               )
+            ) {
+               return true;
+            }
+            continue;
+         }
+
+         if ((state & parked_bit) == 0 && spinwait.spin()) {
+            state = m_state.load(memory_order::relaxed);
+            continue;
+         }
+
+         if ((state & parked_bit) == 0) {
+            if (!m_state.compare_exchange_weak(
+                   state, state | parked_bit, memory_order::relaxed,
+                   memory_order::relaxed
+                )) {
+               continue;
+            }
+         }
+
+         uword const key = __builtin_bit_cast(uword, this);
+         detail::mutex_parking_lot::park_result result;
+         if (!timeout.has_value()) {
+            result = detail::mutex_parking_lot::park(
+               key,
+               [this] {
+                  return m_state.load(memory_order::relaxed)
+                         == (locked_bit | parked_bit);
+               },
+               [] {
+               }
+            );
+         } else {
+            result = detail::mutex_parking_lot::park_until(
+               key,
+               [this] {
+                  return m_state.load(memory_order::relaxed)
+                         == (locked_bit | parked_bit);
+               },
+               [] {
+               },
+               [this](bool is_last_thread) {
+                  if (is_last_thread) {
+                     m_state.fetch_and(~parked_bit, memory_order::relaxed);
+                  }
+               },
+               timeout.value()
+            );
+         }
+         if (
+            result.m_status == detail::mutex_parking_lot::park_status::unparked
+            && result.m_token
+                  == detail::mutex_parking_lot::unpark_token::handoff
+         ) {
+            return true;
+         }
+         if (
+            result.m_status == detail::mutex_parking_lot::park_status::timed_out
+         ) {
+            return false;
+         }
+
+         spinwait.reset();
+         state = m_state.load(memory_order::relaxed);
+      }
+   }
+
+   template <bool force_fair = false>
+   [[gnu::noinline]]
+   void
+   unlock_slow() {
+      uword const key = __builtin_bit_cast(uword, this);
+      detail::mutex_parking_lot::unpark_one(
+         key, [this](detail::mutex_parking_lot::unpark_result const result) {
+            if (
+               result.m_unparked_threads != 0
+               && (result.m_be_fair || force_fair)
+            ) {
+               if (!result.m_have_more_threads) {
+                  m_state.store(locked_bit, memory_order::relaxed);
+               }
+               return detail::mutex_parking_lot::unpark_token::handoff;
+            }
+
+            if (result.m_have_more_threads) {
+               m_state.store(parked_bit, memory_order::release);
+            } else {
+               m_state.store(0, memory_order::release);
+            }
+            return detail::mutex_parking_lot::unpark_token::normal;
+         }
+      );
+   }
+
+   atomic<uint1> m_state;
+};
+
+// `cat::mutex_fair` is an adaptor around `is_mutex_fair` types to guarantee
+// that all
+// `.unlock()` calls are fair.
+template <is_mutex_fair Mutex = mutex>
+class mutex_fair {
+ public:
+   constexpr explicit mutex_fair(Mutex& mutex [[clang::lifetimebound]])
+       : m_p_mutex(addressof(mutex)) {
+   }
+
+   void
+   lock() {
+      m_p_mutex->lock();
+   }
+
+   [[nodiscard]]
+   auto
+   try_lock() -> bool {
+      return m_p_mutex->try_lock();
+   }
+
+   template <is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_lock_for(Duration timeout) -> bool {
+      return m_p_mutex->try_lock_for(timeout);
+   }
+
+   template <is_clock Clock, is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_lock_until(time_point<Clock, Duration> timeout) -> bool {
+      return m_p_mutex->try_lock_until(timeout);
+   }
+
+   void
+   unlock() {
+      m_p_mutex->unlock_fair();
+   }
+
+   void
+   unlock_fair() {
+      m_p_mutex->unlock_fair();
+   }
+
+ private:
+   Mutex* _Nonnull m_p_mutex;
+};
+
+}  // namespace cat
