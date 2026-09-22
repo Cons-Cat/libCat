@@ -128,30 +128,36 @@ call_main([[maybe_unused]] cat::uword const* _Nonnull p_stack) {
 #endif
 #if defined(CAT_STATIC_LINKED) \
    && (!defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0)
-   // Set up `%fs` so the parent process can access `thread_local` values. Must
-   // run before `call_static_constructors` because a constructor body
-   // could touch a `thread_local`. The buffer is deliberately leaked
-   // (kernel reclaims at `_exit`). Only emitted under static, non-PIE
-   // links where no dynamic loader has set `%fs` for us first.
-   // `CAT_STATIC_LINKED` is set by the top-level `CMakeLists.txt`.
+   // Set up `%fs` so the parent process can access `thread_local` values. The
+   // buffer is deliberately leaked (kernel reclaims at `_exit`). Only emitted
+   // under static, non-PIE links where no dynamic loader has set `%fs` for us
+   // first. `CAT_STATIC_LINKED` is set by the top-level `CMakeLists.txt`.
    nix::detail::init_parent_process_tls();
 #endif
 #ifndef CAT_NO_STATIC_CONSTRUCTORS
+   // We must run static constructors AFTER all other runtime setup, so we can
+   // potentially use runtime features inside the constructors.
    call_static_constructors();
 #endif
 #ifdef CAT_NO_ARGC_ARGV
-   [[clang::always_inline]] cat::exit(main());
+   cat::int4 const exit_code = main();
 #else
    int const argc = static_cast<int>(p_stack[0]);
    auto const* const pp_argv = __builtin_bit_cast(char* const*, p_stack + 1);
-   [[clang::always_inline]] cat::exit(main(argc, pp_argv));
+   cat::int4 const exit_code = main(argc, pp_argv);
 #endif
+   // Program cleanup code.
+#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
+   cat::__cxa_thread_finalize();
+#endif
+   [[clang::always_inline]] cat::exit(exit_code);
 }
 }  // extern "C"
 
 }  // namespace
 
-// The kernel stack is required for argv and for the vDSO auxv.
+// We cannot inline `main()` when loading argc/argv, because that must precede
+// subtracting a stack frame.
 #if defined(CAT_NO_ARGC_ARGV) && defined(CAT_NO_VDSO)
 extern "C" [[gnu::used, gnu::no_stack_protector]]
 void

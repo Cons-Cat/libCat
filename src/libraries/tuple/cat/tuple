@@ -78,15 +78,10 @@ struct tuple_element {
       return storage == other.storage;
    }
 
-   // `operator[]` lives here on each `tuple_element<index, T>` instead of on
-   // `tuple` so every slot supplies its own overload with Clang `enable_if`
-   // tying that overload to one `index`. For a compile-time `idx`, overload
-   // resolution leaves exactly one viable `[]` and that overload returns this
-   // slot's `T` with the right value category. A single `tuple::operator[]`
-   // cannot express that per-index overload set across heterogeneous `T...`.
-   // `tuple` still exposes subscript by inheriting every base `[]` through
-   // `type_map`'s `using types::operator[]...`, which `tuple::get` uses as
-   // `$fwd(self)[subscript]`.
+   // Per-slot constant-index access lives on each `tuple_element`. The
+   // non-empty storage map inherits those overloads into one set.
+
+   [[gnu::always_inline]]
    constexpr T&
    operator[](idx subscript) & [[clang::lifetimebound]] __attribute__((
       enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
@@ -94,6 +89,7 @@ struct tuple_element {
       return this->storage;
    }
 
+   [[gnu::always_inline]]
    constexpr T const&
    operator[](idx subscript) const& [[clang::lifetimebound]] __attribute__((
       enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
@@ -115,6 +111,7 @@ struct tuple_element {
       return this->storage;
    }
 
+   [[gnu::always_inline]]
    constexpr T&&
    operator[](idx subscript) && [[clang::lifetimebound]] __attribute__((
       enable_if(subscript == index, "index in `cat::tuple` is out of bounds!")
@@ -126,16 +123,15 @@ struct tuple_element {
       }
    }
 
-   constexpr typename subscript_const_rv_return<T>::type
+   [[gnu::always_inline]]
+   constexpr subscript_const_rv_return<T>::type
    operator[](idx subscript) const&& [[clang::lifetimebound]] __attribute__((
       enable_if(subscript == index, "index in `cat::tuple` is out of bounds!")
    )) {
       if constexpr (is_reference<T>) {
          return this->storage;
       } else {
-         return static_cast<typename subscript_const_rv_return<T>::type>(
-            this->storage
-         );
+         return static_cast<subscript_const_rv_return<T>::type>(this->storage);
       }
    }
 
@@ -145,15 +141,15 @@ struct tuple_element {
 
 // Deriving from a variadic list of types allows `tuple` to be an aggregate
 // type.
-template <typename... types>
-struct type_map : types... {
+template <typename... Types>
+struct type_map : Types... {
    constexpr auto
    operator<=>(type_map const&) const = default;
    constexpr auto
    operator==(type_map const&) const -> bool = default;
 
-   using types::operator[]...;
-   using types::at...;
+   using Types::operator[]...;
+   using Types::at...;
 };
 
 template <>
@@ -163,6 +159,7 @@ struct type_map<> {
    constexpr auto
    operator==(type_map const&) const -> bool = default;
 
+   // Empty tuples have no `tuple_element` base to provide this diagnostic.
    constexpr auto
    operator[](idx) const
       -> void = delete ("Cannot subscript an empty `cat::tuple`!");
@@ -304,15 +301,16 @@ struct tuple : detail::tuple_storage<
       swap_impl(other, index_sequence_over_types<Types...>{});
    }
 
-   // Get a non-`const` reference to the N'th stored variable.
+   // Get the indexed stored variable.
    template <idx index>
       requires(index < types::size())
+   [[gnu::always_inline]]
    constexpr auto
    get(this auto&& self) -> decltype(auto) {
       return $fwd(self)[index];
    }
 
-   // `at(index)` yields `nullopt` when index is out of range.
+   // The size-wide `.at()` fallback belongs here because it needs `types`.
    [[nodiscard]]
    constexpr maybe<void>
    at(idx const index) const __attribute__((
@@ -432,7 +430,7 @@ concept is_tuple = detail::is_tuple_impl<decay<Tuple>>::value;
 // Analogous to the proposed `std::aggr::get` in the P2141 paper.
 template <idx index, typename Tuple>
    requires(is_tuple<Tuple>)
-[[nodiscard]]
+[[nodiscard, gnu::always_inline]]
 constexpr auto
 get(Tuple&& tuple) -> decltype(auto) {
    return $fwd(tuple).template get<index>();

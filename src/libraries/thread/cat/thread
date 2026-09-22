@@ -73,8 +73,8 @@ struct thread {
 
    [[nodiscard]]
    constexpr auto
-   has_stack() const -> bool {
-      return m_handle.has_stack();
+   is_empty() const -> bool {
+      return m_handle.is_empty();
    }
 
    [[nodiscard]]
@@ -92,7 +92,7 @@ struct thread {
    [[nodiscard]]
    constexpr auto
    get_id() const -> id {
-      if (!m_handle.has_stack()) {
+      if (m_handle.is_empty()) {
          return {};
       }
       return id(m_handle.id());
@@ -111,6 +111,21 @@ struct thread {
    void
    free(dyn_allocator allocator) {
       free<dyn_allocator>(allocator);
+   }
+
+   // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
+   template <is_allocator Allocator>
+   [[clang::reinitializes]]
+   void
+   cfree(allocator_ref<Allocator> allocator) {
+      m_handle.cfree(allocator);
+   }
+
+   // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   void
+   cfree(dyn_allocator allocator) {
+      cfree<dyn_allocator>(allocator);
    }
 
  private:

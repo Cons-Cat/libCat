@@ -65,6 +65,26 @@ void
 // NOLINTNEXTLINE
 __cxa_pure_virtual();
 
+// Itanium C++ ABI `thread_local` destructor registration.
+extern "C" auto
+// NOLINTNEXTLINE
+__cxa_thread_atexit(
+   void (*_Nonnull p_invocable)(void* _Nullable), void* _Nullable p_arg,
+   void* _Nullable p_dso_handle
+) -> int;
+
+extern "C" auto
+// NOLINTNEXTLINE
+__cxa_thread_atexit_impl(
+   void (*_Nonnull p_invocable)(void* _Nullable), void* _Nullable p_arg,
+   void* _Nullable p_dso_handle
+) -> int;
+
+// Run this thread's `thread_local` destructors last-in-first-out.
+extern "C" void
+// NOLINTNEXTLINE
+__cxa_thread_finalize();
+
 // Itanium C++ ABI 3.3.2 thread-safe static initialisation. The compiler
 // emits a fast `if (guard_byte_0 == 0)` check at the call site, then
 // only calls `__cxa_guard_acquire` when the static hasn't been

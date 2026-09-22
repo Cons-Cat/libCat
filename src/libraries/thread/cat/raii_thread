@@ -35,7 +35,7 @@ class basic_thread {
    operator=(basic_thread&&) -> basic_thread& = delete;
 
    ~basic_thread() {
-      if (!m_core.has_stack()) {
+      if (m_core.is_empty()) {
          return;
       }
       auto _ = m_core.join();
@@ -60,8 +60,8 @@ class basic_thread {
 
    [[nodiscard]]
    constexpr auto
-   has_stack() const -> bool {
-      return m_core.has_stack();
+   is_empty() const -> bool {
+      return m_core.is_empty();
    }
 
    [[nodiscard]]
@@ -74,6 +74,12 @@ class basic_thread {
    void
    free() {
       m_core.free(m_allocator);
+   }
+
+   [[clang::reinitializes]]
+   void
+   cfree() {
+      m_core.cfree(m_allocator);
    }
 
  private:

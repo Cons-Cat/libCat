@@ -110,8 +110,7 @@ struct musl_alloc_lock<true> {
          if (previous == 0u) {
             return;
          }
-         auto const ignored = word.wait(2u);
-         static_cast<void>(ignored);
+         auto _ = word.wait(2u);
       }
    }
 
@@ -120,8 +119,7 @@ struct musl_alloc_lock<true> {
       uint4 const previous = word.m_value.release().exchange(0u);
       verify(previous != 0u);
       if (previous == 2u) {
-         auto const ignored = word.wake();
-         static_cast<void>(ignored);
+         auto _ = word.wake();
       }
    }
 };

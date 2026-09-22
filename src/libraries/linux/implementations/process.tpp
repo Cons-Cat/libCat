@@ -4,8 +4,29 @@
 
 #include <cat/allocator_parameters>
 #include <cat/linux>
+#include <cat/runtime>
 
 namespace nix {
+
+namespace detail {
+
+template <typename Arguments>
+// Clone child runs on its own `%fs` TLS base that the ASan runtime does not
+// know about.
+[[noreturn, gnu::noinline, gnu::no_sanitize_address]]
+void
+clone_continuation(Arguments* _Nonnull p_arguments) {
+   auto&& [callback, ... arguments] = *p_arguments;
+   $fwd(callback)($fwd(arguments)...);
+   p_arguments->~Arguments();
+#if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
+   cat::__cxa_thread_finalize();
+#endif
+   // Exit with success.
+   nix::sys_exit(0);
+}
+
+}  // namespace detail
 
 inline namespace manual {
 
@@ -13,7 +34,7 @@ inline namespace manual {
 struct process {
    // `clone_flags::csignal` must carry `signal::child_stopped`, otherwise
    // `clone` leaves `exit_signal` at 0. `clone_flags::set_tls` is merged in
-   // `spawn_impl` when the executable has a `PT_TLS` image so each clone child
+   // `prepare_spawn` when the executable has a `PT_TLS` image so each child
    // receives an initialized `%fs` base.
    static constexpr clone_flags default_flags =
       clone_flags::virtual_memory
@@ -28,11 +49,11 @@ struct process {
 
    process() = default;
 
+   process(process const&) = delete;
+
    process(process&& other) {
       *this = cat::move(other);
    }
-
-   process(process const&) = delete;
 
    auto
    operator=(process&& other) -> process& {
@@ -40,7 +61,7 @@ struct process {
          return *this;
       }
 
-      m_id = other.m_id;
+      m_id.relaxed() = other.m_id.relaxed().load();
       m_clone_child_clear_tid_for_kernel.m_value.relaxed() =
          other.m_clone_child_clear_tid_for_kernel.m_value.relaxed().load();
       m_p_stack_bottom = other.m_p_stack_bottom;
@@ -48,7 +69,7 @@ struct process {
       m_allocation_bytes = other.m_allocation_bytes;
       m_flags = other.m_flags;
 
-      other.m_id = process_id{0};
+      other.m_id.relaxed() = 0u;
       other.m_clone_child_clear_tid_for_kernel.m_value.relaxed() = 0;
       other.m_p_stack_bottom = nullptr;
       other.m_stack_size = 0;
@@ -92,14 +113,14 @@ struct process {
 
    [[nodiscard]]
    constexpr auto
-   has_stack() const -> bool {
-      return m_p_stack_bottom != nullptr;
+   is_empty() const -> bool {
+      return m_p_stack_bottom == nullptr;
    }
 
    [[nodiscard]]
    constexpr auto
    id() const -> process_id {
-      return m_id;
+      return m_id.relaxed().load();
    }
 
    // Deallocate this `process`'s stack from `allocator`. Call after `wait()`.
@@ -114,14 +135,30 @@ struct process {
       free<cat::dyn_allocator>(allocator);
    }
 
+   // Deallocate this `process`'s stack from `allocator`. Call after `wait()`.
+   template <cat::is_allocator Allocator>
+   void
+   cfree(cat::allocator_ref<Allocator> allocator);
+
+   // Deallocate this `process`'s stack from `allocator`. Call after `wait()`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   void
+   cfree(cat::dyn_allocator allocator) {
+      cfree<cat::dyn_allocator>(allocator);
+   }
+
  private:
    auto
-   spawn_impl(
-      cat::uintptr<void> stack, cat::idx stack_size, void* _Nonnull p_function,
-      void* _Nullable p_args_struct
+   prepare_spawn(
+      cat::uintptr<void> stack, cat::idx stack_size,
+      cat::uintptr<void>& stack_top, clone_flags& active_clone_flags,
+      void const* _Nullable& p_clear_tid_for_clone,
+      void* _Nullable& p_tls_thread_pointer
    ) -> scaredy_nix<void>;
 
-   process_id m_id{0};
+   // The kernel publishes the child tid here for
+   // `clone_flags::parent_set_tid`, concurrently with the parent's `wait()`.
+   cat::atomic<cat::uint4> m_id{};
    // `clone_flags::child_clear_tid` must not use `m_id` as the clear-tid word.
    // The kernel stores the child tid here, clears it to zero at thread exit,
    // and wakes waiters with `futex_command::wake` and `futex_options::none`.
@@ -145,9 +182,6 @@ manual::process::spawn(
    using arguments_type =
       decltype(cat::tuple{$fwd(callback), $fwd(arguments)...});
 
-   // Allocate a stack for this process.
-   // TODO: This should union allocator and linux errors.
-   // TODO: Use size feedback.
    cat::idx const thread_local_slab_bytes =
       detail::clone_thread_local_buffer_min_bytes();
    constexpr cat::idx arguments_padding =
@@ -165,40 +199,50 @@ manual::process::spawn(
 
    cat::byte* p_stack_bottom = memory.data();
 
-   scaredy_nix<void> result;
-   if constexpr (
-      sizeof...(Args) == 0
-      && (__is_pointer(Callback) || __is_function(__remove_reference_t(Callback)))
-   ) {
-      // If there are no arguments, and `callback` is a pointer, it can be
-      // called almost directly.
-      result = this->spawn_impl(
-         p_stack_bottom, stack_size, reinterpret_cast<void*>(callback), nullptr
+   cat::byte* const p_arguments_storage = cat::align_up(
+      p_stack_bottom + stack_size + thread_local_slab_bytes,
+      alignof(arguments_type)
+   );
+   auto* const p_arguments = new (p_arguments_storage)
+      arguments_type{$fwd(callback), $fwd(arguments)...};
+
+   cat::uintptr<void> stack_top;
+   clone_flags active_clone_flags;
+   void const* _Nullable p_clear_tid_for_clone;
+   void* _Nullable p_tls_thread_pointer;
+   scaredy_nix<void> result = this->prepare_spawn(
+      p_stack_bottom, stack_size, stack_top, active_clone_flags,
+      p_clear_tid_for_clone, p_tls_thread_pointer
+   );
+
+   if (result.has_value()) {
+      cat::iword syscall_number = 56;
+      asm goto volatile(
+         R"(mov %[cleartid], %%r10
+            mov %[tls], %%r8
+            mov %[arguments], %%r12
+            syscall
+            test %%rax, %%rax
+            jz 1f
+            mov %%eax, %[parent_eax]
+            jmp %l[clone_parent]
+         1:
+            mov %%r12, %%rdi
+            call %P[continuation]
+            ud2)"
+         : [parent_eax] "=m"(result), [syscall_number] "+a"(syscall_number),
+           [active_clone_flags] "+D"(active_clone_flags)
+         : "S"(stack_top), "d"(&(m_id)), [tls] "r"(p_tls_thread_pointer),
+           [cleartid] "r"(p_clear_tid_for_clone), [arguments] "r"(p_arguments),
+           [continuation] "i"(&detail::clone_continuation<arguments_type>)
+         : "r8", "r10", "r12", "rcx", "r11", "cc", "memory"
+         : clone_parent
       );
+      __builtin_unreachable();
+
+clone_parent:
    } else {
-      cat::byte* const p_arguments_storage = cat::align_up(
-         p_stack_bottom + stack_size + thread_local_slab_bytes,
-         alignof(arguments_type)
-      );
-      auto* const p_arguments = new (p_arguments_storage)
-         arguments_type{$fwd(callback), $fwd(arguments)...};
-
-      // Unary + converts this lambda to function pointer.
-      static auto* _Nonnull p_entry =
-         +[] [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
-          (arguments_type* p_arguments) {
-             auto&& [fn, ... pack_args] = *p_arguments;
-             $fwd(fn)($fwd(pack_args)...);
-             p_arguments->~arguments_type();
-          };
-
-      result = this->spawn_impl(
-         p_stack_bottom, stack_size, reinterpret_cast<void*>(p_entry),
-         reinterpret_cast<void*>(p_arguments)
-      );
-      if (result.is_empty()) {
-         p_arguments->~arguments_type();
-      }
+      p_arguments->~arguments_type();
    }
 
    if (result.is_empty()) {
@@ -218,6 +262,21 @@ void
 manual::process::free(cat::allocator_ref<Allocator> allocator) {
    if (m_p_stack_bottom != nullptr) {
       allocator.free_multi(
+         cat::span<cat::byte>(
+            static_cast<cat::byte*>(m_p_stack_bottom), m_allocation_bytes
+         )
+      );
+      m_p_stack_bottom = nullptr;
+      m_stack_size = 0;
+      m_allocation_bytes = 0;
+   }
+}
+
+template <cat::is_allocator Allocator>
+void
+manual::process::cfree(cat::allocator_ref<Allocator> allocator) {
+   if (m_p_stack_bottom != nullptr) {
+      allocator.cfree_multi(
          cat::span<cat::byte>(
             static_cast<cat::byte*>(m_p_stack_bottom), m_allocation_bytes
          )

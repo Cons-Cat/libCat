@@ -1,4 +1,6 @@
 #include <cat/linux>
+#include <cat/runtime>
+#include <cat/thread>
 
 extern "C" {
 // Supplied by `src/libcat.ld`. Decoded via `link_absolute_symbol`.
@@ -99,15 +101,49 @@ wait_clone_thread_through_cleartid_futex(
 
 }  // namespace
 
+[[nodiscard]]
 auto
-nix::manual::process::spawn_impl(
-   cat::uintptr<void> stack, cat::idx stack_size, void* p_function,
-   void* p_args_struct
+nix::manual::process::wait() const -> scaredy_nix<process_id> {
+   process_id child_id;
+   cat::uint1 count = 1u;
+   for (;;) {
+      cat::uint4 const observed = m_id.load(cat::memory_order::acquire);
+      if (observed != 0u) {
+         child_id = observed;
+         break;
+      }
+
+      if (count <= 16u) {
+         cat::machine_pause(count);
+         count = count * 2u;
+      } else {
+         cat::this_thread::yield();
+      }
+   }
+
+   nix::clone_flags const flags = m_flags;
+   constexpr nix::clone_flags thread_cleartid_join =
+      nix::clone_flags::thread | nix::clone_flags::child_set_tid;
+
+   if ((flags & thread_cleartid_join) != thread_cleartid_join) {
+      return wait_clone_child_through_waitid(child_id);
+   }
+
+   return wait_clone_thread_through_cleartid_futex(
+      child_id,
+      const_cast<nix::futex_word*>(&m_clone_child_clear_tid_for_kernel)
+   );
+}
+
+auto
+nix::manual::process::prepare_spawn(
+   cat::uintptr<void> stack, cat::idx stack_size, cat::uintptr<void>& stack_top,
+   clone_flags& active_clone_flags,
+   void const* _Nullable& p_clear_tid_for_clone,
+   void* _Nullable& p_tls_thread_pointer
 ) -> scaredy_nix<void> {
    m_stack_size = stack_size;
    m_p_stack_bottom = stack.get();
-
-   cat::uintptr<void> stack_top;
 
 #if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
 #ifdef CAT_THREAD_LOCAL_SIZE
@@ -160,6 +196,7 @@ nix::manual::process::spawn_impl(
 
    stack_top = tls_thread_pointer;
    stack_top -= thread_local_slab_bytes;
+   p_tls_thread_pointer = tls_thread_pointer.get();
 #else
    // `CAT_THREAD_LOCAL_SIZE == 0`. Consumer promises no `thread_local` in
    // the executable: skip the clone-time `thread_local` buffer carve-out, the
@@ -167,102 +204,24 @@ nix::manual::process::spawn_impl(
    // entirely. Pairs with `_start.cpp`'s matching skip of
    // `init_main_thread_tls`.
    stack_top = stack + m_stack_size;
+   p_tls_thread_pointer = nullptr;
 #endif
 
    // 32-byte alignment is required for AVX2 support.
    stack_top = cat::align_down(stack_top, 32u);
 
-   // Place a pointer to function arguments on the new stack. Use the inline
-   // form so no libc call sneaks in between this and the inline-asm syscall
-   // below.
-   stack_top -= 8;
-   __builtin_memcpy_inline(stack_top.get(), &p_args_struct, 8);  // NOLINT
-
-   // Place a pointer to function on the new stack. 8 is the size of a pointer,
-   // such as `p_function`.
-   stack_top -= 8;
-   __builtin_memcpy_inline(stack_top.get(), &p_function, 8);  // NOLINT
-
-   // This syscall is made manually here because it's important to be careful
-   // with the stack and registers and not introduce a new stack frame. Parent
-   // and child share `clone_flags::virtual_memory`, so they must not both spill
-   // `%rax` through one C variable. That would race. Only the parent executes
-   // the `mov` into `clone_result` (`asm goto`). The child jumps away before
-   // that store.
-   nix::clone_flags active_clone_flags = m_flags;
+   active_clone_flags = m_flags;
 #if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
    if (tls_memory_size > 0u) {
       active_clone_flags |= nix::clone_flags::set_tls;
    }
 #endif
 
-   void const* p_clear_tid_for_clone = nullptr;
+   p_clear_tid_for_clone = nullptr;
    if (cat::to_underlying(m_flags & nix::clone_flags::child_set_tid) != 0u) {
       p_clear_tid_for_clone =
          static_cast<void*>(&m_clone_child_clear_tid_for_kernel.m_value);
    }
 
-   nix::scaredy_nix<void> clone_result;
-   asm goto volatile(
-      R"(mov %[cleartid], %%r10
-         mov %[tls], %%r8
-         syscall
-         test %%rax, %%rax
-         jz %l[clone_child]
-         mov %%eax, %[parent_eax]
-         jmp %l[clone_parent])"
-      : [parent_eax] "=m"(clone_result)
-      // https://filippo.io/linux-syscall-table/
-      : "a"(56), "D"(active_clone_flags), "S"(stack_top), "d"(&(m_id)),
-#if defined(CAT_THREAD_LOCAL_SIZE) && (CAT_THREAD_LOCAL_SIZE) == 0
-        // No TLS slab was carved, so `clone_flags::set_tls` is never set in
-        // `active_clone_flags` and the kernel ignores R8. Pass `nullptr`.
-        [tls] "r"(nullptr),
-#else
-        [tls] "r"(tls_thread_pointer.get()),
-#endif
-        [cleartid] "r"(p_clear_tid_for_clone)
-      : "rcx", "r11", "memory"
-      : clone_child, clone_parent
-   );
-
-clone_child:
-   asm volatile(
-      // https://filippo.io/linux-syscall-table/
-      R"(pop %%rax
-         pop %%rdi
-         call *%%rax
-         mov $60, %%eax
-         xor %%edi, %%edi
-         syscall)"
-      :
-      :
-      : "rax", "rdi", "rsp", "rcx", "r11", "cc", "memory"
-   );
-   __builtin_unreachable();
-
-clone_parent:
-   return clone_result;
-}
-
-[[nodiscard]]
-auto
-nix::manual::process::wait() const -> scaredy_nix<process_id> {
-   // Spin until the kernel publishes the child tid for
-   // `clone_flags::parent_set_tid`. Use an acquire load so this synchronizes
-   // with that store. `machine_pause` hints the spin loop on x86.
-   // TODO: Implement a high level spin-lock.
-   while (__atomic_load_n(&m_id.value.raw, cat::memory_order::acquire) == 0) {
-      cat::machine_pause();
-   }
-
-   nix::clone_flags const flags = m_flags;
-   nix::clone_flags const thread_cleartid_join =
-      nix::clone_flags::thread | nix::clone_flags::child_set_tid;
-   if ((flags & thread_cleartid_join) != thread_cleartid_join) {
-      return wait_clone_child_through_waitid(m_id);
-   }
-   return wait_clone_thread_through_cleartid_futex(
-      m_id, const_cast<nix::futex_word*>(&m_clone_child_clear_tid_for_kernel)
-   );
+   return cat::monostate;
 }

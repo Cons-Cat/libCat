@@ -361,6 +361,10 @@ struct process_id {
    ))
        : value(__builtin_bit_cast(cat::uint4, input)) {
    }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(process_id const&) const -> bool = default;
 };
 
 static_assert(sizeof(process_id) == sizeof(cat::uint4));

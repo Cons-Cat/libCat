@@ -87,9 +87,9 @@ basic_futex<Kind>::wait(
       expected, p_timeout, nullptr, cat::uint4{}
    );
    if (result.is_empty()) {
-      return scaredy_nix<void>(result.error());
+      return result.error();
    }
-   return scaredy_nix<void>(cat::monostate);
+   return cat::monostate;
 }
 
 template <class Kind>

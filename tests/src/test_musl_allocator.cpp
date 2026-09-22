@@ -1170,6 +1170,11 @@ $test(musl_allocator_rejects_overflow) {
 }
 
 $test(musl_allocator_hardening) {
+#if __has_feature(address_sanitizer) \
+   || __has_feature(undefined_behavior_sanitizer)
+   // Sanitizers trap the intentional allocator corruption below.
+   return;
+#endif
    verify_child_hardening(corrupt_slot_index);
    verify_child_hardening(deallocate_with_wrong_size);
    verify_child_hardening(double_free);
