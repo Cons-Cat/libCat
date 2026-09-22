@@ -8,6 +8,8 @@
 
 namespace {
 
+constexpr idx worker_stack_size = 16_uki;
+
 constinit cat::atomic<int4> destroyed_markers{};
 constinit cat::atomic<int4> recorded_order{};
 constinit cat::atomic<idx> bulk_destructors{};
@@ -52,13 +54,19 @@ $test(thread_atexit_worker_threads) {
    int4 const before = destroyed_markers.load();
    constexpr idx thread_count = 4;
    cat::thread threads[thread_count];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
 
    for (idx index; index < thread_count; ++index) {
-      threads[index].spawn(pager, 1_umi, touch_local_marker).verify();
+      threads[index]
+         .spawn(g_tests_alloc_musl, worker_stack_size, touch_local_marker)
+         .verify();
    }
    for (idx index; index < thread_count; ++index) {
       threads[index].join().verify();
-      threads[index].free(pager);
    }
 
    cat::verify(destroyed_markers.load() == before + 4);
@@ -68,9 +76,12 @@ $test(thread_atexit_runs_last_in_first_out) {
    recorded_order.store(0, cat::memory_order::relaxed);
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [] {
             cat::verify(
                cat::__cxa_thread_atexit_impl(record_tag, &first_tag, nullptr)
@@ -86,7 +97,6 @@ $test(thread_atexit_runs_last_in_first_out) {
       )
       .verify();
    worker.join().verify();
-   worker.free(pager);
 
    cat::verify(recorded_order.load() == 321);
 }
@@ -95,9 +105,12 @@ $test(thread_atexit_grows_destructor_list) {
    bulk_destructors.store(0, cat::memory_order::relaxed);
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [] {
             for (idx index; index < 300; ++index) {
                cat::verify(
@@ -111,24 +124,29 @@ $test(thread_atexit_grows_destructor_list) {
       )
       .verify();
    worker.join().verify();
-   worker.free(pager);
 
    cat::verify(bulk_destructors.load() == 300);
 }
 
 $test(thread_atexit_parking_lot_threads_exit) {
    constexpr idx thread_count = 4;
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, thread_count)
+      .verify();
 
    cat::mutex mutex;
    cat::atomic<idx> entered;
    cat::thread threads[thread_count];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
    mutex.lock();
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            pager, 1_umi,
+            g_tests_alloc_musl, worker_stack_size,
             [&] {
                ++entered;
                mutex.lock();
@@ -146,8 +164,7 @@ $test(thread_atexit_parking_lot_threads_exit) {
    mutex.unlock();
    for (idx index; index < thread_count; ++index) {
       threads[index].join().verify();
-      threads[index].free(pager);
    }
 
-   cat::free_mutex_runtime<cat::allocator_page>(pager);
+   cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
 }

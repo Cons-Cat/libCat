@@ -57,9 +57,9 @@ static_assert(
 );
 
 $test(allocator_linear_bytes_used_and_capacity) {
-   cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
@@ -81,9 +81,9 @@ $test(allocator_linear_bytes_used_and_capacity) {
 }
 
 $test(allocator_linear_resize_returns_nullopt) {
-   cat::span page = pager.alloc_multi<cat::byte>(32u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
@@ -94,9 +94,9 @@ $test(allocator_linear_resize_returns_nullopt) {
 // A downward-bump arena cannot grow in place without relocating the
 // allocation's start address, so `reallocate` always rejects grow requests.
 $test(allocator_linear_reallocate_grow_always_fails) {
-   cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
@@ -118,9 +118,9 @@ $test(allocator_linear_reallocate_grow_always_fails) {
 // Shrink is honored in place. The released tail bytes stay reserved until
 // `reset()` to preserve `p_storage`, so `bytes_used` is unchanged.
 $test(allocator_linear_reallocate_shrink_succeeds) {
-   cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
@@ -150,11 +150,11 @@ $test(allocator_linear_reallocate_shrink_succeeds) {
 // as equivalent. They have independent bump pointers but govern the same
 // memory range.
 $test(allocator_linear_equality) {
-   cat::span page_a = pager.alloc_multi<cat::byte>(32u).verify();
-   cat::span page_b = pager.alloc_multi<cat::byte>(32u).verify();
+   cat::span page_a = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
+   cat::span page_b = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
    $defer {
-      pager.free(page_a);
-      pager.free(page_b);
+      g_tests_alloc.free(page_a);
+      g_tests_alloc.free(page_b);
    };
 
    cat::is_allocator auto a1 = cat::make_allocator_linear(page_a);
@@ -168,9 +168,9 @@ $test(allocator_linear_equality) {
 }
 
 $test(allocator_pool_bytes_used_and_capacity) {
-   cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto pool = cat::make_allocator_pool<8>(page);
 
@@ -191,9 +191,9 @@ $test(allocator_pool_bytes_used_and_capacity) {
 }
 
 $test(allocator_pool_resize_returns_nullopt) {
-   cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto pool = cat::make_allocator_pool<8>(page);
 
@@ -202,11 +202,11 @@ $test(allocator_pool_resize_returns_nullopt) {
 }
 
 $test(allocator_pool_equality) {
-   cat::span page_a = pager.alloc_multi<cat::byte>(64u).verify();
-   cat::span page_b = pager.alloc_multi<cat::byte>(64u).verify();
+   cat::span page_a = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
+   cat::span page_b = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
    $defer {
-      pager.free(page_a);
-      pager.free(page_b);
+      g_tests_alloc.free(page_a);
+      g_tests_alloc.free(page_b);
    };
 
    cat::is_allocator auto a1 = cat::make_allocator_pool<8>(page_a);
@@ -321,9 +321,9 @@ $test(allocator_page_reallocate_grow_is_in_place_or_fails) {
 // Allocator names default to an empty `str_view` on bare allocators.
 // The named wrapper adaptors are tested separately.
 $test(default_allocator_name_is_empty) {
-   cat::span page = pager.alloc_multi<cat::byte>(32u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
@@ -335,9 +335,9 @@ $test(default_allocator_name_is_empty) {
 // allocators are stateful, so the values must agree with the underlying
 // objects.
 $test(allocator_dyn_introspection_forwarding) {
-   cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
@@ -356,11 +356,11 @@ $test(allocator_dyn_introspection_forwarding) {
 // do not. Two handles erasing different types do not, regardless of the
 // underlying memory.
 $test(allocator_dyn_equality) {
-   cat::span page_a = pager.alloc_multi<cat::byte>(32u).verify();
-   cat::span page_b = pager.alloc_multi<cat::byte>(32u).verify();
+   cat::span page_a = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
+   cat::span page_b = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
    $defer {
-      pager.free(page_a);
-      pager.free(page_b);
+      g_tests_alloc.free(page_a);
+      g_tests_alloc.free(page_b);
    };
    cat::is_allocator auto linear_a1 = cat::make_allocator_linear(page_a);
    cat::is_allocator auto linear_a2 = cat::make_allocator_linear(page_a);
@@ -408,9 +408,9 @@ $test(allocator_ref_folds_when_wrapping_empty_allocator) {
 }
 
 $test(allocator_ref_introspection_forwarding) {
-   cat::span page = pager.alloc_multi<cat::byte>(32u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
@@ -428,11 +428,11 @@ $test(allocator_ref_introspection_forwarding) {
 // if they hold pointers to distinct linear allocator instances over that
 // arena.
 $test(allocator_ref_equality_uses_is_equivalent) {
-   cat::span page_a = pager.alloc_multi<cat::byte>(32u).verify();
-   cat::span page_b = pager.alloc_multi<cat::byte>(32u).verify();
+   cat::span page_a = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
+   cat::span page_b = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
    $defer {
-      pager.free(page_a);
-      pager.free(page_b);
+      g_tests_alloc.free(page_a);
+      g_tests_alloc.free(page_b);
    };
    cat::is_allocator auto linear = cat::make_allocator_linear(page_a);
    cat::is_allocator auto linear_address_lias =

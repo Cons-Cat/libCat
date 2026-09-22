@@ -226,14 +226,14 @@ verify_all_ones(auto const& vector) {
    }
 }
 
-// Boilerplate for tests that need a fast scratch arena: a page-backed
-// linear allocator that frees its page when the helper destructs.
+// Boilerplate for tests that need a fast scratch arena.
 struct linear_arena {
-   cat::span<cat::byte> page = pager.alloc_multi<cat::byte>(4_uki).verify();
+   cat::span<cat::byte> page =
+      g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
    cat::allocator_linear alloc = cat::make_allocator_linear(page);
 
    ~linear_arena() {
-      pager.free(page);
+      g_tests_alloc.free(page);
    }
 };
 
@@ -801,7 +801,7 @@ $test(vec_compare_manual_and_raii) {
    small.push_back(arena.alloc, 2_i4).verify();
 
    cat::raii::basic_vec<int4, cat::allocator_linear> linear(arena.alloc);
-   cat::raii::vec<int4> dynamic{cat::allocator_dyn(pager)};
+   cat::raii::vec<int4> dynamic{cat::allocator_dyn(g_tests_alloc)};
    linear.push_back(1_i4).verify();
    linear.push_back(2_i4).verify();
    dynamic.push_back(1_i4).verify();
@@ -1392,9 +1392,9 @@ $test(vec_collection) {
    using flux_test_vec = cat::vec<int>;
    static_assert(cat::is_random_access_collection<flux_test_vec>);
 
-   auto vec_values = cat::make_vec_filled(pager, 3, 0).verify();
+   auto vec_values = cat::make_vec_filled(g_tests_alloc, 3, 0).verify();
    $defer {
-      vec_values.free(pager);
+      vec_values.free(g_tests_alloc);
    };
    vec_values[0] = 5;
    vec_values[1] = 6;
@@ -1413,7 +1413,7 @@ $test(vec_collection) {
    cat::verify(vec_values[2] == 7);
 
    cat::raii::vec managed_values =
-      cat::raii::make_vec_filled(pager, 3u, 0).verify();
+      cat::raii::make_vec_filled(g_tests_alloc, 3u, 0).verify();
    managed_values[0] = 8;
    managed_values[1] = 9;
    managed_values[2] = 10;
@@ -1439,9 +1439,9 @@ $test(vec_collection) {
 
 $test(vec_reverse_inplace_simd) {
    cat::vec<int> values;
-   values.resize(pager, 65u, 0).verify();
+   values.resize(g_tests_alloc, 65u, 0).verify();
    $defer {
-      values.free(pager);
+      values.free(g_tests_alloc);
    };
 
    for (cat::idx i = 0u; i < values.size(); ++i) {
@@ -1459,9 +1459,9 @@ $test(vec_reverse_inplace_simd) {
    }
 
    cat::vec<cat::int4> wrapped_values;
-   wrapped_values.resize(pager, 65u, 0_i4).verify();
+   wrapped_values.resize(g_tests_alloc, 65u, 0_i4).verify();
    $defer {
-      wrapped_values.free(pager);
+      wrapped_values.free(g_tests_alloc);
    };
    for (cat::idx i = 0u; i < wrapped_values.size(); ++i) {
       wrapped_values[i] = cat::int4(i);

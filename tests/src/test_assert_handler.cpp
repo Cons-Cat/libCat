@@ -7,6 +7,8 @@
 
 namespace {
 
+constexpr idx worker_stack_size = 16_uki;
+
 constinit cat::idx block_hits{};
 constinit cat::idx inner_hits{};
 constinit cat::idx thread_hits{};
@@ -91,9 +93,12 @@ $test(assert_handler_thread_local_scope) {
    // A spawned thread has its own handler, and `test_fail` exits non-parent
    // threads, so the worker needs one of its own.
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 2_uki,
+         g_tests_alloc_musl, worker_stack_size,
          [] {
             cat::set_thread_local_assert_handler(&worker_fallback_handler);
             cat::verify(false);
@@ -101,7 +106,6 @@ $test(assert_handler_thread_local_scope) {
       )
       .verify();
    worker.join().verify();
-   worker.free(pager);
 
    cat::verify(false);
    cat::reset_thread_local_assert_handler();
@@ -118,9 +122,12 @@ $test(assert_handler_global_scope_worker_inherits) {
    cat::set_global_assert_handler(&worker_fallback_handler);
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 2_uki,
+         g_tests_alloc_musl, worker_stack_size,
          [] {
             cat::verify(
                cat::current_assert_handler() == &worker_fallback_handler
@@ -130,7 +137,6 @@ $test(assert_handler_global_scope_worker_inherits) {
       )
       .verify();
    worker.join().verify();
-   worker.free(pager);
 
    cat::verify(cat::current_assert_handler() == &worker_fallback_handler);
    cat::verify(false);

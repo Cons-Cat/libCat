@@ -1011,9 +1011,9 @@ $test(memory_order_reference) {
 }
 
 $test(memory_order_reference_format) {
-   cat::span page = pager.alloc_multi<cat::byte>(1_ki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(1_ki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = cat::make_allocator_linear(page);
 

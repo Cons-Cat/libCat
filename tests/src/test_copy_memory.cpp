@@ -103,11 +103,12 @@ large_overlap_case(
 ) {
    cat::idx const capacity =
       bytes + max(source_offset, destination_offset) + 512u;
-   cat::span page = pager.alloc_multi<cat::byte>(capacity).or_exit();
-   cat::span expected = pager.alloc_multi<cat::byte>(capacity).or_exit();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(capacity).or_exit();
+   cat::span expected =
+      g_tests_alloc.alloc_multi<cat::byte>(capacity).or_exit();
    $defer {
-      pager.free(page);
-      pager.free(expected);
+      g_tests_alloc.free(page);
+      g_tests_alloc.free(expected);
    };
 
    initialize_bytes(page.data(), capacity);
@@ -451,11 +452,11 @@ $test(compare_memory_all_size_tiers_and_mismatch_positions) {
 
 $test(compare_memory_large_non_temporal_size) {
    cat::idx const bytes = 2_umi + 129u;
-   cat::span left = pager.alloc_multi<cat::byte>(bytes).or_exit();
-   cat::span right = pager.alloc_multi<cat::byte>(bytes).or_exit();
+   cat::span left = g_tests_alloc.alloc_multi<cat::byte>(bytes).or_exit();
+   cat::span right = g_tests_alloc.alloc_multi<cat::byte>(bytes).or_exit();
    $defer {
-      pager.free(left);
-      pager.free(right);
+      g_tests_alloc.free(left);
+      g_tests_alloc.free(right);
    };
 
    initialize_bytes(left.data(), bytes);

@@ -56,20 +56,21 @@ $test(string_type_equality_matrix) {
    cat::zstr_view zview(text, 7u);
    cat::str_span span(text, 6u);
    cat::zstr_span zspan(text, 7u);
-   auto vector = cat::make_str_vec(pager, view).verify();
-   auto zvector = cat::make_zstr_vec(pager, view).verify();
+   auto vector = cat::make_str_vec(g_tests_alloc, view).verify();
+   auto zvector = cat::make_zstr_vec(g_tests_alloc, view).verify();
    auto raii_vector =
-      cat::raii::make_str_vec(cat::allocator_dyn(pager), view).verify();
+      cat::raii::make_str_vec(cat::allocator_dyn(g_tests_alloc), view).verify();
    auto raii_zvector =
-      cat::raii::make_zstr_vec(cat::allocator_dyn(pager), view).verify();
+      cat::raii::make_zstr_vec(cat::allocator_dyn(g_tests_alloc), view)
+         .verify();
 
    verify_string_equality_matrix(
       literal, inplace, zinplace, inplace_fixed, zinplace_fixed, view, zview,
       span, zspan, vector, zvector, raii_vector, raii_zvector
    );
 
-   vector.free(pager);
-   zvector.free(pager);
+   vector.free(g_tests_alloc);
+   zvector.free(g_tests_alloc);
 
    wchar_t wide_text[] = L"matrix";
    cat::wstr_literal<6u> wide_literal = L"matrix";
@@ -81,12 +82,14 @@ $test(string_type_equality_matrix) {
    cat::wzstr_view wide_zview(wide_text, 7u);
    cat::wstr_span wide_span(wide_text, 6u);
    cat::wzstr_span wide_zspan(wide_text, 7u);
-   auto wide_vector = cat::make_wstr_vec(pager, wide_view).verify();
-   auto wide_zvector = cat::make_wzstr_vec(pager, wide_view).verify();
+   auto wide_vector = cat::make_wstr_vec(g_tests_alloc, wide_view).verify();
+   auto wide_zvector = cat::make_wzstr_vec(g_tests_alloc, wide_view).verify();
    auto raii_wide_vector =
-      cat::raii::make_wstr_vec(cat::allocator_dyn(pager), wide_view).verify();
+      cat::raii::make_wstr_vec(cat::allocator_dyn(g_tests_alloc), wide_view)
+         .verify();
    auto raii_wide_zvector =
-      cat::raii::make_wzstr_vec(cat::allocator_dyn(pager), wide_view).verify();
+      cat::raii::make_wzstr_vec(cat::allocator_dyn(g_tests_alloc), wide_view)
+         .verify();
 
    verify_string_equality_matrix(
       wide_literal, wide_inplace, wide_zinplace, wide_inplace_fixed,
@@ -94,8 +97,8 @@ $test(string_type_equality_matrix) {
       wide_vector, wide_zvector, raii_wide_vector, raii_wide_zvector
    );
 
-   wide_vector.free(pager);
-   wide_zvector.free(pager);
+   wide_vector.free(g_tests_alloc);
+   wide_zvector.free(g_tests_alloc);
 }
 
 $test(compare_strings_long_misaligned_equal_and_diff) {

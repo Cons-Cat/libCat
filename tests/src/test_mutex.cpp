@@ -10,6 +10,8 @@
 
 namespace {
 
+constexpr idx worker_stack_size = 16_uki;
+
 struct not_mutex {
    void
    lock() {
@@ -59,11 +61,16 @@ verify_counter() {
    Mutex mutex;
    idx counter = 0;
    cat::thread threads[8];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            pager, 1_umi,
+            g_tests_alloc_musl, worker_stack_size,
             [&mutex, &counter, iteration_count] {
                for (idx iteration; iteration < iteration_count; ++iteration) {
                   mutex.lock();
@@ -76,17 +83,15 @@ verify_counter() {
    }
    for (idx index; index < thread_count; ++index) {
       threads[index].join().verify();
-      threads[index].free(pager);
    }
    cat::verify(counter == thread_count * iteration_count);
 }
 
 template <typename Threads>
 void
-join_and_free(Threads& threads, idx thread_count) {
+join_threads(Threads& threads, idx thread_count) {
    for (idx index; index < thread_count; ++index) {
       threads[index].join().verify();
-      threads[index].free(pager);
    }
 }
 
@@ -124,9 +129,12 @@ $test(mutex_try_lock) {
    mutex.lock();
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             acquired.store(mutex.try_lock(), cat::memory_order::release);
             if (acquired.load(cat::memory_order::relaxed)) {
@@ -141,7 +149,6 @@ $test(mutex_try_lock) {
    }
    cat::verify(!acquired.load(cat::memory_order::acquire));
    worker.join().verify();
-   worker.free(pager);
 
    mutex.unlock();
    cat::verify(mutex.try_lock());
@@ -160,21 +167,21 @@ $test(mutex_destroy_unlocked) {
 }
 
 $test(mutex_runtime_allocator_dyn) {
-   cat::allocator_dyn allocator = pager;
+   cat::allocator_dyn allocator = g_tests_alloc;
    cat::alloc_mutex_runtime(allocator, 1u).verify();
    cat::free_mutex_runtime(allocator);
 }
 
 $test(mutex_runtime_allocator_dyn_cfree) {
-   cat::allocator_dyn allocator = pager;
+   cat::allocator_dyn allocator = g_tests_alloc;
    cat::alloc_mutex_runtime(allocator, 1u).verify();
    cat::cfree_mutex_runtime(allocator);
 }
 
 $test(mutex_handoff) {
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    cat::atomic<bool> entered;
@@ -182,9 +189,12 @@ $test(mutex_handoff) {
    mutex.lock();
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             entered.release() = true;
             mutex.lock();
@@ -202,14 +212,13 @@ $test(mutex_handoff) {
    cat::verify(!acquired.acquire());
    mutex.unlock();
    worker.join().verify();
-   worker.free(pager);
    cat::verify(acquired.acquire());
 }
 
 $test(mutex_protected_publication) {
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    cat::atomic<bool> ready;
@@ -217,9 +226,12 @@ $test(mutex_protected_publication) {
    mutex.lock();
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             ready.store(true, cat::memory_order::release);
             mutex.lock();
@@ -234,13 +246,12 @@ $test(mutex_protected_publication) {
    value = 42;
    mutex.unlock();
    worker.join().verify();
-   worker.free(pager);
 }
 
 $test(mutex_shared_counter) {
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 8u).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, 8u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    verify_counter<cat::mutex>();
 }
@@ -269,9 +280,12 @@ $test(mutex_native_try_lock_for_waits) {
    mutex.lock();
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             entered.release() = true;
             cat::verify(mutex.try_lock_for(1 * cat::units::second));
@@ -289,7 +303,6 @@ $test(mutex_native_try_lock_for_waits) {
    cat::verify(!acquired.acquire());
    mutex.unlock();
    worker.join().verify();
-   worker.free(pager);
    cat::verify(acquired.acquire());
 }
 
@@ -299,9 +312,12 @@ $test(mutex_native_try_lock_until_times_out) {
 
    cat::atomic<bool> finished;
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             cat::clock_steady::time_point const deadline =
                cat::clock_steady::now().verify() + 10 * cat::units::millisecond;
@@ -314,7 +330,6 @@ $test(mutex_native_try_lock_until_times_out) {
       cat::machine_pause();
    }
    worker.join().verify();
-   worker.free(pager);
    mutex.unlock();
 }
 
@@ -326,11 +341,16 @@ $test(mutex_concurrent_try_lock_single_winner) {
    cat::atomic<idx> attempted;
    cat::atomic<idx> acquired;
    cat::thread threads[16];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            pager, 1_umi,
+            g_tests_alloc_musl, worker_stack_size,
             [&] {
                ready.fetch_add(1, cat::memory_order::release);
                while (!start.load(cat::memory_order::acquire)) {
@@ -354,7 +374,7 @@ $test(mutex_concurrent_try_lock_single_winner) {
       cat::machine_pause();
    }
    start.store(true, cat::memory_order::release);
-   join_and_free(threads, thread_count);
+   join_threads(threads, thread_count);
    cat::verify(attempted.load(cat::memory_order::acquire) == thread_count);
    cat::verify(acquired.load(cat::memory_order::acquire) == 1);
 }
@@ -366,12 +386,17 @@ $test(mutex_try_lock_fails_for_all_waiters) {
    cat::atomic<bool> start;
    cat::atomic<idx> acquired;
    cat::thread threads[16];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
    mutex.lock();
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            pager, 1_umi,
+            g_tests_alloc_musl, worker_stack_size,
             [&] {
                ready.fetch_add(1, cat::memory_order::release);
                while (!start.load(cat::memory_order::acquire)) {
@@ -389,7 +414,7 @@ $test(mutex_try_lock_fails_for_all_waiters) {
       cat::machine_pause();
    }
    start.store(true, cat::memory_order::release);
-   join_and_free(threads, thread_count);
+   join_threads(threads, thread_count);
    cat::verify(acquired.load(cat::memory_order::acquire) == 0);
    mutex.unlock();
 }
@@ -397,18 +422,24 @@ $test(mutex_try_lock_fails_for_all_waiters) {
 $test(mutex_mixed_try_lock_and_lock) {
    constexpr idx thread_count = 8;
    constexpr idx iteration_count = 5'000;
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, thread_count)
+      .verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    idx counter = 0;
    cat::thread threads[8];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            pager, 1_umi,
+            g_tests_alloc_musl, worker_stack_size,
             [&, index] {
                for (idx iteration; iteration < iteration_count; ++iteration) {
                   bool const use_try_lock = (index + iteration) % 2u != 0u;
@@ -422,26 +453,32 @@ $test(mutex_mixed_try_lock_and_lock) {
          )
          .verify();
    }
-   join_and_free(threads, thread_count);
+   join_threads(threads, thread_count);
    cat::verify(counter == thread_count * iteration_count);
 }
 
 $test(mutex_parks_waiters) {
    constexpr idx thread_count = 16;
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, thread_count)
+      .verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    cat::atomic<idx> ready;
    cat::atomic<idx> acquired;
    cat::thread threads[16];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
    mutex.lock();
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            pager, 1_umi,
+            g_tests_alloc_musl, worker_stack_size,
             [&] {
                ready.fetch_add(1, cat::memory_order::release);
                mutex.lock();
@@ -459,26 +496,32 @@ $test(mutex_parks_waiters) {
    }
    cat::verify(acquired.load(cat::memory_order::acquire) == 0);
    mutex.unlock();
-   join_and_free(threads, thread_count);
+   join_threads(threads, thread_count);
    cat::verify(acquired.load(cat::memory_order::acquire) == thread_count);
 }
 
 $test(mutex_exclusion_under_yield) {
    constexpr idx thread_count = 8;
    constexpr idx iteration_count = 2'000;
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, thread_count)
+      .verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    cat::atomic<idx> active;
    idx counter = 0;
    cat::thread threads[8];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            pager, 1_umi,
+            g_tests_alloc_musl, worker_stack_size,
             [&] {
                for (idx iteration; iteration < iteration_count; ++iteration) {
                   mutex.lock();
@@ -497,15 +540,15 @@ $test(mutex_exclusion_under_yield) {
          )
          .verify();
    }
-   join_and_free(threads, thread_count);
+   join_threads(threads, thread_count);
    cat::verify(active.load(cat::memory_order::relaxed) == 0);
    cat::verify(counter == thread_count * iteration_count);
 }
 
 $test(mutex_try_lock_for_waits) {
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    cat::atomic<bool> entered;
@@ -513,9 +556,12 @@ $test(mutex_try_lock_for_waits) {
    mutex.lock();
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             entered.release() = true;
             cat::verify(mutex.try_lock_for(1 * cat::units::second));
@@ -533,23 +579,25 @@ $test(mutex_try_lock_for_waits) {
    cat::verify(!acquired.acquire());
    mutex.unlock();
    worker.join().verify();
-   worker.free(pager);
    cat::verify(acquired.acquire());
 }
 
 $test(mutex_try_lock_until_times_out) {
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    mutex.lock();
 
    cat::atomic<bool> finished;
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             cat::clock_steady::time_point const deadline =
                cat::clock_steady::now().verify() + 10 * cat::units::millisecond;
@@ -562,14 +610,13 @@ $test(mutex_try_lock_until_times_out) {
       cat::machine_pause();
    }
    worker.join().verify();
-   worker.free(pager);
    mutex.unlock();
 }
 
 $test(mutex_try_lock_until_accepts_system_clock) {
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 1u).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, 1u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    mutex.lock();
@@ -587,9 +634,12 @@ $test(mutex_spin_try_lock_for_waits) {
    mutex.lock();
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             entered.release() = true;
             cat::verify(mutex.try_lock_for(1 * cat::units::second));
@@ -607,7 +657,6 @@ $test(mutex_spin_try_lock_for_waits) {
    cat::verify(!acquired.acquire());
    mutex.unlock();
    worker.join().verify();
-   worker.free(pager);
    cat::verify(acquired.acquire());
 }
 
@@ -617,9 +666,12 @@ $test(mutex_spin_try_lock_until_times_out) {
 
    cat::atomic<bool> finished;
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             cat::clock_steady::time_point const deadline =
                cat::clock_steady::now().verify() + 10 * cat::units::millisecond;
@@ -632,14 +684,13 @@ $test(mutex_spin_try_lock_until_times_out) {
       cat::machine_pause();
    }
    worker.join().verify();
-   worker.free(pager);
    mutex.unlock();
 }
 
 $test(mutex_unlock_fair_wakes_waiter) {
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    cat::atomic<bool> entered;
@@ -647,9 +698,12 @@ $test(mutex_unlock_fair_wakes_waiter) {
    mutex.lock();
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             entered.release() = true;
             mutex.lock();
@@ -667,14 +721,13 @@ $test(mutex_unlock_fair_wakes_waiter) {
    cat::verify(!acquired.acquire());
    mutex.unlock_fair();
    worker.join().verify();
-   worker.free(pager);
    cat::verify(acquired.acquire());
 }
 
 $test(mutex_yield_to_waiters) {
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex mutex;
    cat::atomic<bool> entered;
@@ -682,9 +735,12 @@ $test(mutex_yield_to_waiters) {
    mutex.lock();
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, worker_stack_size,
          [&] {
             entered.release() = true;
             mutex.lock();
@@ -704,25 +760,30 @@ $test(mutex_yield_to_waiters) {
    cat::verify(waiter_held.acquire());
    mutex.unlock();
    worker.join().verify();
-   worker.free(pager);
 }
 
 $test(mutex_two_lock_order) {
    constexpr idx thread_count = 8;
    constexpr idx iteration_count = 2'000;
-   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, thread_count)
+      .verify();
    $defer {
-      cat::free_mutex_runtime<cat::allocator_page>(pager);
+      cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
    };
    cat::mutex first;
    cat::mutex second;
    idx counter = 0;
    cat::thread threads[8];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            pager, 1_umi,
+            g_tests_alloc_musl, worker_stack_size,
             [&] {
                for (idx iteration; iteration < iteration_count; ++iteration) {
                   first.lock();
@@ -735,6 +796,6 @@ $test(mutex_two_lock_order) {
          )
          .verify();
    }
-   join_and_free(threads, thread_count);
+   join_threads(threads, thread_count);
    cat::verify(counter == thread_count * iteration_count);
 }

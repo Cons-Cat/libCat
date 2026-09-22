@@ -445,23 +445,23 @@ $test(bit_word_iterable_popcount_terminal) {
    using namespace cat::arithmetic_literals;
 
    cat::vec<cat::uint1> words;
-   words.resize(pager, 2u, 0_u1).verify();
+   words.resize(g_tests_alloc, 2u, 0_u1).verify();
    words[0u] = 0b1010'1100_u1;
    words[1u] = 0b0000'0011_u1;
 
    cat::verify((words | cat::popcount()) == 6u);
    cat::verify(words.popcount() == 6u);
    cat::verify(cat::popcount(words) == 6u);
-   words.free(pager);
+   words.free(g_tests_alloc);
 
    cat::vec<cat::uword> uword_words;
-   uword_words.resize(pager, 2u, 0u).verify();
+   uword_words.resize(g_tests_alloc, 2u, 0u).verify();
    uword_words[0u] = 0b1010'1100_u1;
    uword_words[1u] = 0b0000'0011_u1;
 
    cat::verify(cat::popcount(uword_words) == 6u);
    cat::verify((uword_words | cat::popcount()) == 6u);
-   uword_words.free(pager);
+   uword_words.free(g_tests_alloc);
 }
 
 $test(bit_ptr) {

@@ -11,11 +11,12 @@
 namespace {
 
 struct linear_arena {
-   cat::span<cat::byte> page = pager.alloc_multi<cat::byte>(4_uki).verify();
+   cat::span<cat::byte> page =
+      g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
    cat::allocator_linear alloc = cat::make_allocator_linear(page);
 
    ~linear_arena() {
-      pager.free(page);
+      g_tests_alloc.free(page);
    }
 };
 

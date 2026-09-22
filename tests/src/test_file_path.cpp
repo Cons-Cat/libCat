@@ -24,16 +24,16 @@ static_assert(
 template <cat::is_path_segment Segment>
 void
 verify_path_string_type(Segment const& segment) {
-   auto manual = cat::make_file_path(pager, segment).verify();
+   auto manual = cat::make_file_path(g_tests_alloc, segment).verify();
    $defer {
-      manual.free(pager);
+      manual.free(g_tests_alloc);
    };
    cat::verify(manual == "leaf");
 
-   auto managed = cat::raii::make_file_path(pager, segment).verify();
+   auto managed = cat::raii::make_file_path(g_tests_alloc, segment).verify();
    cat::verify(managed == "leaf");
 
-   auto base = cat::raii::make_file_path(pager, "root").verify();
+   auto base = cat::raii::make_file_path(g_tests_alloc, "root").verify();
    auto joined = (base / segment).verify();
    cat::verify(joined == "root/leaf");
 }
@@ -52,14 +52,14 @@ $test(path_maybe_niche) {
    cat::verify(manual_empty.is_empty());
    cat::verify(raii_empty.is_empty());
 
-   auto manual = cat::make_file_path(pager, "manual");
+   auto manual = cat::make_file_path(g_tests_alloc, "manual");
    $defer {
-      manual.value().free(pager);
+      manual.value().free(g_tests_alloc);
    };
    cat::verify(manual.has_value());
    cat::verify(manual.value() == "manual");
 
-   auto managed = cat::raii::make_file_path(pager, "managed");
+   auto managed = cat::raii::make_file_path(g_tests_alloc, "managed");
    cat::verify(managed.has_value());
    cat::verify(managed.value() == "managed");
 }
@@ -67,7 +67,7 @@ $test(path_maybe_niche) {
 $test(path_flags_and_factories) {
    constexpr auto custom_growth = cat::vec_flags::initial_growth(64u);
 
-   auto manual = cat::make_file_path(pager, "alpha").verify();
+   auto manual = cat::make_file_path(g_tests_alloc, "alpha").verify();
    cat::verify(manual == "alpha");
    cat::verify(manual.capacity() == 255u);
    cat::verify(manual.data()[manual.size()] == '\0');
@@ -76,25 +76,26 @@ $test(path_flags_and_factories) {
 
    char text[] = "beta";
    char const* p_text = text;
-   auto from_pointer = cat::make_file_path(pager, p_text).verify();
+   auto from_pointer = cat::make_file_path(g_tests_alloc, p_text).verify();
    cat::verify(from_pointer == "beta");
 
    auto managed =
-      cat::raii::make_file_path(pager, cat::str_view("gamma")).verify();
+      cat::raii::make_file_path(g_tests_alloc, cat::str_view("gamma")).verify();
    cat::verify(managed == "gamma");
    cat::verify(managed.data()[managed.size()] == '\0');
    cat::file_path released = managed.release();
-   auto custom =
-      cat::make_file_path<cat::allocator_page, custom_growth>(pager, "delta")
-         .verify();
+   auto custom = cat::make_file_path<tests_allocator, custom_growth>(
+                    g_tests_alloc, "delta"
+   )
+                    .verify();
    $defer {
-      custom.free(pager);
-      released.free(pager);
-      from_pointer.free(pager);
-      manual.free(pager);
+      custom.free(g_tests_alloc);
+      released.free(g_tests_alloc);
+      from_pointer.free(g_tests_alloc);
+      manual.free(g_tests_alloc);
    };
    cat::verify(released == "gamma");
-   cat::verify(custom.capacity() == 64u);
+   cat::verify(custom.capacity() >= 64u);
 }
 
 $test(path_string_type_interop) {
@@ -109,14 +110,14 @@ $test(path_string_type_interop) {
    constexpr cat::basic_str_literal literal = "leaf";
    cat::str_inplace inplace = "leaf";
    cat::zstr_inplace zinplace = cat::make_zstr_inplace<4u>("leaf");
-   auto vector = cat::make_str_vec(pager, "leaf").verify();
-   auto zvector = cat::make_zstr_vec(pager, "leaf").verify();
+   auto vector = cat::make_str_vec(g_tests_alloc, "leaf").verify();
+   auto zvector = cat::make_zstr_vec(g_tests_alloc, "leaf").verify();
    $defer {
-      zvector.free(pager);
-      vector.free(pager);
+      zvector.free(g_tests_alloc);
+      vector.free(g_tests_alloc);
    };
-   auto raii_vector = cat::raii::make_str_vec(pager, "leaf").verify();
-   auto raii_zvector = cat::raii::make_zstr_vec(pager, "leaf").verify();
+   auto raii_vector = cat::raii::make_str_vec(g_tests_alloc, "leaf").verify();
+   auto raii_zvector = cat::raii::make_zstr_vec(g_tests_alloc, "leaf").verify();
 
    verify_path_string_type("leaf");
    verify_path_string_type(mutable_array);
@@ -137,22 +138,23 @@ $test(path_string_type_interop) {
 }
 
 $test(path_join) {
-   auto manual = cat::make_file_path(pager, "alpha").verify();
-   manual.append(pager, "beta").verify();
+   auto manual = cat::make_file_path(g_tests_alloc, "alpha").verify();
+   manual.append(g_tests_alloc, "beta").verify();
    cat::verify(manual == "alpha/beta");
-   manual.append(pager, "").verify();
+   manual.append(g_tests_alloc, "").verify();
    cat::verify(manual == "alpha/beta");
-   manual.append(pager, "/rooted").verify();
+   manual.append(g_tests_alloc, "/rooted").verify();
    cat::verify(manual == "/rooted");
 
-   auto joined = cat::make_file_path_joined(pager, manual, "leaf").verify();
+   auto joined =
+      cat::make_file_path_joined(g_tests_alloc, manual, "leaf").verify();
    $defer {
-      joined.free(pager);
-      manual.free(pager);
+      joined.free(g_tests_alloc);
+      manual.free(g_tests_alloc);
    };
    cat::verify(joined == "/rooted/leaf");
 
-   auto managed = cat::raii::make_file_path(pager, "one").verify();
+   auto managed = cat::raii::make_file_path(g_tests_alloc, "one").verify();
    auto managed_joined = (managed / "two").verify();
    cat::verify(managed == "one");
    cat::verify(managed_joined == "one/two");
@@ -162,7 +164,8 @@ $test(path_join) {
 
 $test(path_decomposition_and_components) {
    auto value =
-      cat::raii::make_file_path(pager, "/alpha//beta/file.tar.gz").verify();
+      cat::raii::make_file_path(g_tests_alloc, "/alpha//beta/file.tar.gz")
+         .verify();
    cat::verify(value.is_absolute());
    cat::verify(!value.is_relative());
    cat::verify(value.root_name().size() == 0u);
@@ -207,7 +210,8 @@ $test(path_decomposition_and_components) {
    });
    cat::verify(index == 3u);
 
-   auto dots = cat::raii::make_file_path(pager, "a/./../.profile").verify();
+   auto dots =
+      cat::raii::make_file_path(g_tests_alloc, "a/./../.profile").verify();
    cat::str_view dot_expected[] = {"a", ".", "..", ".profile"};
    index = 0u;
    for (cat::str_view component : dots.components()) {
@@ -244,7 +248,8 @@ $test(path_simd_scan_boundaries) {
    }
 
    auto value =
-      cat::raii::make_file_path(pager, cat::str_view(text, length)).verify();
+      cat::raii::make_file_path(g_tests_alloc, cat::str_view(text, length))
+         .verify();
    cat::verify(value.size() == 203u);
    cat::verify(value.relative_path().size() == 170u);
    cat::verify(value.parent_path().size() == 98u);
@@ -269,7 +274,8 @@ $test(path_simd_scan_boundaries) {
       character = '/';
    }
    auto root =
-      cat::raii::make_file_path(pager, cat::str_view(slashes, 65u)).verify();
+      cat::raii::make_file_path(g_tests_alloc, cat::str_view(slashes, 65u))
+         .verify();
    cat::verify(root.relative_path().size() == 0u);
    cat::verify(root.parent_path() == "/");
    cat::verify(root.filename().size() == 0u);
@@ -284,59 +290,73 @@ $test(path_simd_scan_boundaries) {
       trailing[index] = '/';
    }
    auto with_trailing =
-      cat::raii::make_file_path(pager, cat::str_view(trailing, 106u)).verify();
+      cat::raii::make_file_path(g_tests_alloc, cat::str_view(trailing, 106u))
+         .verify();
    cat::verify(with_trailing.parent_path() == "/");
    cat::verify(with_trailing.filename().size() == 0u);
 }
 
 $test(path_formatter) {
-   auto manual = cat::make_file_path(pager, "alpha/beta").verify();
+   auto manual = cat::make_file_path(g_tests_alloc, "alpha/beta").verify();
    $defer {
-      manual.free(pager);
+      manual.free(g_tests_alloc);
    };
-   cat::verify(cat::fmt(pager, "{}", manual).verify() == "alpha/beta");
-   cat::verify(cat::fmt(pager, "{:g}", manual).verify() == "alpha/beta");
-   cat::verify(cat::fmt(pager, "{:?}", manual).verify() == R"("alpha/beta")");
-   cat::verify(cat::fmt(pager, "{:?g}", manual).verify() == R"("alpha/beta")");
+   cat::verify(cat::fmt(g_tests_alloc, "{}", manual).verify() == "alpha/beta");
+   cat::verify(
+      cat::fmt(g_tests_alloc, "{:g}", manual).verify() == "alpha/beta"
+   );
+   cat::verify(
+      cat::fmt(g_tests_alloc, "{:?}", manual).verify() == R"("alpha/beta")"
+   );
+   cat::verify(
+      cat::fmt(g_tests_alloc, "{:?g}", manual).verify() == R"("alpha/beta")"
+   );
 
-   auto managed = cat::raii::make_file_path(pager, "a\nb").verify();
-   cat::verify(cat::fmt(pager, "{}", managed).verify() == "a\nb");
-   cat::verify(cat::fmt(pager, "{:?}", managed).verify() == R"("a\nb")");
+   auto managed = cat::raii::make_file_path(g_tests_alloc, "a\nb").verify();
+   cat::verify(cat::fmt(g_tests_alloc, "{}", managed).verify() == "a\nb");
+   cat::verify(
+      cat::fmt(g_tests_alloc, "{:?}", managed).verify() == R"("a\nb")"
+   );
 }
 
 $test(path_current_absolute_and_unique) {
-   auto cwd = cat::make_file_path_current(pager).verify();
+   auto cwd = cat::make_file_path_current(g_tests_alloc).verify();
    cat::verify(cwd.is_absolute());
    cat::verify(!cwd.is_empty());
    cat::verify(cwd.data()[cwd.size()] == '\0');
 
    auto explicit_base =
-      cat::make_file_path_absolute("child", "/tmp/base", pager).verify();
+      cat::make_file_path_absolute("child", "/tmp/base", g_tests_alloc)
+         .verify();
    cat::verify(explicit_base == "/tmp/base/child");
 
    auto relative_base =
-      cat::make_file_path_absolute("child", "base", pager).verify();
-   auto expected = cat::make_file_path_joined(pager, cwd, "base").verify();
-   expected.append(pager, "child").verify();
+      cat::make_file_path_absolute("child", "base", g_tests_alloc).verify();
+   auto expected =
+      cat::make_file_path_joined(g_tests_alloc, cwd, "base").verify();
+   expected.append(g_tests_alloc, "child").verify();
    cat::verify(relative_base == expected);
 
-   auto absolute_input =
-      cat::make_file_path_absolute("/already/absolute", "/ignored", pager)
-         .verify();
+   auto absolute_input = cat::make_file_path_absolute(
+                            "/already/absolute", "/ignored", g_tests_alloc
+   )
+                            .verify();
    cat::verify(absolute_input == "/already/absolute");
 
-   auto unchanged = cat::make_file_path_unique(pager, "fixed-name").verify();
+   auto unchanged =
+      cat::make_file_path_unique(g_tests_alloc, "fixed-name").verify();
    cat::verify(unchanged == "fixed-name");
 
-   auto unique = cat::make_file_path_unique(pager, "tmp-%%%%-%%").verify();
+   auto unique =
+      cat::make_file_path_unique(g_tests_alloc, "tmp-%%%%-%%").verify();
    $defer {
-      unique.free(pager);
-      unchanged.free(pager);
-      absolute_input.free(pager);
-      expected.free(pager);
-      relative_base.free(pager);
-      explicit_base.free(pager);
-      cwd.free(pager);
+      unique.free(g_tests_alloc);
+      unchanged.free(g_tests_alloc);
+      absolute_input.free(g_tests_alloc);
+      expected.free(g_tests_alloc);
+      relative_base.free(g_tests_alloc);
+      explicit_base.free(g_tests_alloc);
+      cwd.free(g_tests_alloc);
    };
    cat::verify(unique.size() == 11u);
    cat::verify(cat::str_view(unique.data(), 4u) == "tmp-");
@@ -360,9 +380,10 @@ $test(path_current_absolute_and_unique) {
       model[position] = '%';
    }
    auto boundary_unique =
-      cat::make_file_path_unique(pager, cat::str_view(model, 66u)).verify();
+      cat::make_file_path_unique(g_tests_alloc, cat::str_view(model, 66u))
+         .verify();
    $defer {
-      boundary_unique.free(pager);
+      boundary_unique.free(g_tests_alloc);
    };
    for (cat::idx index = 0u; index < boundary_unique.size(); ++index) {
       char const value = boundary_unique.data()[index];

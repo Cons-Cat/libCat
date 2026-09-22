@@ -62,15 +62,15 @@ struct capture_pair {
 auto
 capture_traces() -> capture_pair {
    return {
-      .full = cat::stacktrace::current(pager).verify(),
-      .skipped = cat::stacktrace::current(pager, 1u).verify(),
+      .full = cat::stacktrace::current(g_tests_alloc).verify(),
+      .skipped = cat::stacktrace::current(g_tests_alloc, 1u).verify(),
    };
 }
 
 [[gnu::noinline, clang::disable_tail_calls]]
 auto
 inner_trace() -> cat::stacktrace {
-   return cat::stacktrace::current(pager).verify();
+   return cat::stacktrace::current(g_tests_alloc).verify();
 }
 
 [[gnu::noinline, clang::disable_tail_calls]]
@@ -92,7 +92,7 @@ auto
 // NOLINTNEXTLINE
 deep_trace(idx remaining) -> cat::stacktrace {
    if (remaining == 0u) {
-      return cat::stacktrace::current(pager).verify();
+      return cat::stacktrace::current(g_tests_alloc).verify();
    }
    return deep_trace(remaining.raw - 1u);
 }
@@ -123,18 +123,20 @@ $test(stacktrace_on_child_thread) {
    void* _Nullable p_stack = nullptr;
    void* _Nullable p_instruction = nullptr;
    idx frame_count = 0u;
+   cat::allocator_musl_shared allocator;
 
    cat::thread worker;
    $defer {
-      worker.free(pager);
+      worker.free(g_tests_alloc_musl);
    };
    worker
       .spawn(
-         pager, 16_uki,
+         g_tests_alloc_musl, 16_uki,
          [&] {
             p_frame = __builtin_frame_address(0);
             p_stack = cat::get_stack_pointer();
-            cat::stacktrace trace = cat::stacktrace::current(pager).verify();
+            cat::stacktrace trace =
+               cat::stacktrace::current(allocator).verify();
             frame_count = trace.size();
             if (!trace.is_empty()) {
                p_instruction = trace[0u].native_handle();
@@ -152,7 +154,8 @@ $test(stacktrace_on_child_thread) {
 }
 
 $test(stacktrace_current_captures_caller) {
-   cat::stacktrace const trace = cat::stacktrace::current(pager).verify();
+   cat::stacktrace const trace =
+      cat::stacktrace::current(g_tests_alloc).verify();
    cat::verify(!trace.is_empty());
    cat::verify(trace.size() <= cat::stacktrace::max_size());
    cat::verify(trace.size() <= trace.capacity());
@@ -164,9 +167,9 @@ $test(stacktrace_current_captures_caller) {
 }
 
 $test(stacktrace_formatting) {
-   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = cat::make_allocator_linear(page);
 
@@ -252,9 +255,9 @@ $test(stacktrace_formatting) {
 // Three `noinline` frames are walked, symbolized, and formatted. Capturing
 // exactly three keeps the whole string predictable.
 $test(stacktrace_formatting_three_frames) {
-   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = cat::make_allocator_linear(page);
 
@@ -291,9 +294,9 @@ $test(stacktrace_formatting_three_frames) {
 // A trace piped through the take family prints like a whole trace, and what
 // remains is renumbered from `#1`.
 $test(stacktrace_formatting_dropped_frames) {
-   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = cat::make_allocator_linear(page);
 
@@ -342,9 +345,9 @@ $test(stacktrace_formatting_dropped_frames) {
 // away. This exercises that mechanism over a chain of known functions, so it
 // holds whether or not the build carries DWARF.
 $test(stacktrace_drop_while_frames) {
-   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = cat::make_allocator_linear(page);
 
@@ -547,16 +550,17 @@ $test(stacktrace_dwarf_forms) {
 
 $test(stacktrace_depth_and_skip) {
    cat::stacktrace const none =
-      cat::stacktrace::current(pager, 0u, 0u).verify();
+      cat::stacktrace::current(g_tests_alloc, 0u, 0u).verify();
    cat::verify(none.is_empty());
    cat::verify(none.size() == 0u);
 
-   cat::stacktrace const one = cat::stacktrace::current(pager, 0u, 1u).verify();
+   cat::stacktrace const one =
+      cat::stacktrace::current(g_tests_alloc, 0u, 1u).verify();
    cat::verify(one.size() == 1u);
    cat::verify(!one[0u].is_empty());
 
    cat::stacktrace const skipped_all =
-      cat::stacktrace::current(pager, 1'024u).verify();
+      cat::stacktrace::current(g_tests_alloc, 1'024u).verify();
    cat::verify(skipped_all.is_empty());
 
    capture_pair const pair = capture_traces();
@@ -580,7 +584,7 @@ $test(stacktrace_grows_past_inline_storage) {
 
    // `max_depth` bounds a deep walk without bounding the type.
    cat::stacktrace const bounded =
-      cat::stacktrace::current(pager, 0u, 70u).verify();
+      cat::stacktrace::current(g_tests_alloc, 0u, 70u).verify();
    cat::verify(bounded.size() <= 70u);
 }
 
@@ -597,14 +601,14 @@ $test(stacktrace_entry_and_container) {
    cat::verify(empty.is_empty());
    cat::verify(empty.native_handle() == nullptr);
 
-   cat::stacktrace first = cat::stacktrace::current(pager).verify();
+   cat::stacktrace first = cat::stacktrace::current(g_tests_alloc).verify();
    cat::stacktrace second = first.clone().verify();
    cat::verify(first == second);
    static_assert(
       cat::is_same<decltype(first[0u]), cat::stacktrace_entry const&>
    );
 
-   cat::stacktrace other(pager);
+   cat::stacktrace other(g_tests_alloc);
    first.swap(other);
    cat::verify(other.size() == second.size());
    cat::verify(first.is_empty());
@@ -626,7 +630,7 @@ $test(stacktrace_iteration) {
    static_assert(cat::is_iterable<cat::stacktrace>);
    static_assert(cat::is_random_access_collection<cat::stacktrace>);
 
-   cat::stacktrace trace = cat::stacktrace::current(pager).verify();
+   cat::stacktrace trace = cat::stacktrace::current(g_tests_alloc).verify();
    cat::verify(!trace.is_empty());
    cat::verify(cat::read_at(trace, 0u) == trace[0u]);
 

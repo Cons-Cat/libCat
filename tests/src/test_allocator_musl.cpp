@@ -15,6 +15,7 @@ static_assert(cat::allocator_musl::min_allocation_bytes == 1u);
 
 constexpr char child_armed = 1;
 constexpr char child_returned = 3;
+constexpr idx worker_stack_size = 1_umi;
 
 void
 mark_child(nix::file_descriptor marker, char value) {
@@ -260,9 +261,12 @@ verify_cross_thread_release(Allocator& allocator) {
    cat::byte* const p_storage = allocation.data();
    cat::atomic<bool> released;
    cat::thread thread;
+   $defer {
+      thread.free(g_tests_alloc_musl);
+   };
    thread
       .spawn(
-         pager, 1'024_uki,
+         g_tests_alloc_musl, worker_stack_size,
          [&allocator, allocation, &released] {
             allocator.free_multi_uninit(allocation);
             released.release() = true;
@@ -277,7 +281,6 @@ verify_cross_thread_release(Allocator& allocator) {
    cat::verify(cat::__asan_address_is_poisoned(p_storage + 63u) != 0);
 #endif
    thread.join().verify();
-   thread.free(pager);
 }
 
 void
@@ -286,7 +289,10 @@ verify_child_hardening(void (*p_test)(nix::file_descriptor)) {
    nix::sys_pipe(pipe).verify();
 
    nix::process child;
-   child.spawn(pager, 1_umi, p_test, pipe[1]).verify();
+   $defer {
+      child.free(g_tests_alloc_musl);
+   };
+   child.spawn(g_tests_alloc_musl, worker_stack_size, p_test, pipe[1]).verify();
    cat::int4 child_status;
    nix::sys_wait4(
       child.id(), &child_status, nix::wait_options_flags::none, nullptr
@@ -297,7 +303,6 @@ verify_child_hardening(void (*p_test)(nix::file_descriptor)) {
    char markers[2] = {};
    idx const bytes = nix::sys_read(pipe[0], markers, 2u).verify();
    nix::sys_close(pipe[0]).verify();
-   child.free(pager);
    cat::verify(child_status == 1u << 8u);
    cat::verify(bytes == 1u);
    cat::verify(markers[0] == child_armed);
@@ -893,17 +898,22 @@ $test(allocator_musl_byte_counters) {
 $test(allocator_musl_shared_contention) {
    cat::allocator_musl_shared allocator;
    cat::thread threads[8];
+   $defer {
+      for (idx index; index < 8u; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
 
    for (idx index = 0u; index < 8u; ++index) {
       threads[index]
          .spawn(
-            pager, 1'024_uki, shared_contention_worker, &allocator, index + 0u
+            g_tests_alloc_musl, worker_stack_size, shared_contention_worker,
+            &allocator, index + 0u
          )
          .verify();
    }
    for (idx index = 0u; index < 8u; ++index) {
       threads[index].join().verify();
-      threads[index].free(pager);
    }
    cat::verify(allocator.bytes_used() == 0u);
 }
@@ -915,11 +925,16 @@ $test(allocator_musl_shared_lock_wakeup_stress) {
    cat::atomic<uint4> ready;
    cat::atomic<bool> start;
    cat::thread threads[thread_count.raw];
+   $defer {
+      for (idx index; index < thread_count; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            pager, 1'024_uki,
+            g_tests_alloc_musl, worker_stack_size,
             [&allocator, &ready, &start, index, iteration_count] {
                ready.release().fetch_add(1u);
                while (!start.acquire()) {
@@ -936,7 +951,6 @@ $test(allocator_musl_shared_lock_wakeup_stress) {
    start.release() = true;
    for (idx index; index < thread_count; ++index) {
       threads[index].join().verify();
-      threads[index].free(pager);
    }
    cat::verify(allocator.bytes_used() == 0u);
 }
@@ -950,9 +964,12 @@ $test(allocator_musl_shared_aligned_accounting_is_final) {
    cat::atomic<bool> start;
    cat::atomic<bool> done;
    cat::thread thread;
+   $defer {
+      thread.free(g_tests_alloc_musl);
+   };
    thread
       .spawn(
-         pager, 1'024_uki,
+         g_tests_alloc_musl, worker_stack_size,
          [&allocator, &start, &done, allocation_bytes] {
             while (!start.acquire()) {
                cat::machine_pause();
@@ -972,7 +989,6 @@ $test(allocator_musl_shared_aligned_accounting_is_final) {
       cat::verify(used == 0u || used == allocation_bytes);
    }
    thread.join().verify();
-   thread.free(pager);
    cat::verify(allocator.bytes_used() == 0u);
 }
 
@@ -1000,25 +1016,31 @@ $test(allocator_musl_shared_forwarded_contention) {
    cat::allocator_dyn dyn = allocator;
    cat::allocator_ref ref = allocator;
    cat::thread threads[8];
+   $defer {
+      for (idx index; index < 8u; ++index) {
+         threads[index].free(g_tests_alloc_musl);
+      }
+   };
 
    for (idx index = 0u; index < 8u; ++index) {
       if (index % 2u == 0u) {
          threads[index]
             .spawn(
-               pager, 1'024_uki, shared_dyn_contention_worker, &dyn, index + 0u
+               g_tests_alloc_musl, worker_stack_size,
+               shared_dyn_contention_worker, &dyn, index + 0u
             )
             .verify();
       } else {
          threads[index]
             .spawn(
-               pager, 1'024_uki, shared_ref_contention_worker, &ref, index + 0u
+               g_tests_alloc_musl, worker_stack_size,
+               shared_ref_contention_worker, &ref, index + 0u
             )
             .verify();
       }
    }
    for (idx index = 0u; index < 8u; ++index) {
       threads[index].join().verify();
-      threads[index].free(pager);
    }
    cat::verify(allocator.bytes_used() == 0u);
 }
@@ -1036,10 +1058,15 @@ $test(allocator_musl_shared_cross_thread_deallocation) {
    }
 
    cat::thread threads[thread_count.raw];
+   $defer {
+      for (idx thread_index; thread_index < thread_count; ++thread_index) {
+         threads[thread_index].free(g_tests_alloc_musl);
+      }
+   };
    for (idx thread_index; thread_index < thread_count; ++thread_index) {
       threads[thread_index]
          .spawn(
-            pager, 1'024_uki,
+            g_tests_alloc_musl, worker_stack_size,
             [&allocator, &allocations, thread_index, allocation_count,
              thread_count] {
                for (idx index = thread_index; index < allocation_count;
@@ -1053,7 +1080,6 @@ $test(allocator_musl_shared_cross_thread_deallocation) {
    }
    for (idx thread_index; thread_index < thread_count; ++thread_index) {
       threads[thread_index].join().verify();
-      threads[thread_index].free(pager);
    }
    cat::verify(allocator.bytes_used() == 0u);
 }

@@ -1,4 +1,3 @@
-#include <cat/allocator_page>
 #include <cat/array>
 #include <cat/demangle>
 
@@ -15,7 +14,7 @@ void
 verify_cases(cat::span<demangle_case const> cases) {
    for (demangle_case const& current : cases) {
       cat::maybe<cat::demangled_name> const result =
-         cat::demangle(pager, current.mangled);
+         cat::demangle(g_tests_alloc, current.mangled);
       cat::verify(result.has_value());
       cat::verify(result.value().view() == current.expected);
    }

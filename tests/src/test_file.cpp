@@ -6,9 +6,9 @@
 #include "../unit_tests.hpp"
 
 $test(file_executable_path) {
-   cat::file_path executable = cat::get_executable_path(pager).verify();
+   cat::file_path executable = cat::get_executable_path(g_tests_alloc).verify();
    $defer {
-      executable.free(pager);
+      executable.free(g_tests_alloc);
    };
 
    cat::verify(!executable.is_empty());
@@ -20,12 +20,13 @@ $test(file_executable_path) {
 }
 
 $test(file_handle_lifecycle) {
-   auto file_path =
-      cat::make_file_path_unique(pager, "/tmp/libcat-file-lifecycle-%%%%")
-         .verify();
+   auto file_path = cat::make_file_path_unique(
+                       g_tests_alloc, "/tmp/libcat-file-lifecycle-%%%%"
+   )
+                       .verify();
    $defer {
       auto _ = nix::sys_unlink(file_path.native_handle());
-      file_path.free(pager);
+      file_path.free(g_tests_alloc);
    };
 
    auto handle =
@@ -71,10 +72,11 @@ $test(file_handle_lifecycle) {
 
 $test(file_handle_io_and_metadata) {
    auto file_path =
-      cat::make_file_path_unique(pager, "/tmp/libcat-file-io-%%%%").verify();
+      cat::make_file_path_unique(g_tests_alloc, "/tmp/libcat-file-io-%%%%")
+         .verify();
    $defer {
       auto _ = nix::sys_unlink(file_path.native_handle());
-      file_path.free(pager);
+      file_path.free(g_tests_alloc);
    };
 
    auto handle =
@@ -133,14 +135,15 @@ $test(file_handle_io_and_metadata) {
 }
 
 $test(file_handle_anchored_open) {
-   auto directory_path =
-      cat::make_file_path_unique(pager, "/tmp/libcat-file-directory-%%%%")
-         .verify();
-   auto child_path = cat::make_file_path(pager, "child").verify();
+   auto directory_path = cat::make_file_path_unique(
+                            g_tests_alloc, "/tmp/libcat-file-directory-%%%%"
+   )
+                            .verify();
+   auto child_path = cat::make_file_path(g_tests_alloc, "child").verify();
    $defer {
       auto _ = nix::sys_rmdir(directory_path.native_handle());
-      child_path.free(pager);
-      directory_path.free(pager);
+      child_path.free(g_tests_alloc);
+      directory_path.free(g_tests_alloc);
    };
 
    nix::sys_mkdir(
@@ -177,11 +180,11 @@ $test(file_handle_anchored_open) {
 
 $test(mapped_file_handle_read_only) {
    auto file_path =
-      cat::make_file_path_unique(pager, "/tmp/libcat-mapped-read-%%%%")
+      cat::make_file_path_unique(g_tests_alloc, "/tmp/libcat-mapped-read-%%%%")
          .verify();
    $defer {
       auto _ = nix::sys_unlink(file_path.native_handle());
-      file_path.free(pager);
+      file_path.free(g_tests_alloc);
    };
 
    auto file =
@@ -220,11 +223,11 @@ $test(mapped_file_handle_read_only) {
 
 $test(mapped_file_handle_shared_write_and_move) {
    auto file_path =
-      cat::make_file_path_unique(pager, "/tmp/libcat-mapped-write-%%%%")
+      cat::make_file_path_unique(g_tests_alloc, "/tmp/libcat-mapped-write-%%%%")
          .verify();
    $defer {
       auto _ = nix::sys_unlink(file_path.native_handle());
-      file_path.free(pager);
+      file_path.free(g_tests_alloc);
    };
 
    auto file =
@@ -274,11 +277,11 @@ $test(mapped_file_handle_shared_write_and_move) {
 
 $test(mapped_file_handle_empty_and_append) {
    auto file_path =
-      cat::make_file_path_unique(pager, "/tmp/libcat-mapped-empty-%%%%")
+      cat::make_file_path_unique(g_tests_alloc, "/tmp/libcat-mapped-empty-%%%%")
          .verify();
    $defer {
       auto _ = nix::sys_unlink(file_path.native_handle());
-      file_path.free(pager);
+      file_path.free(g_tests_alloc);
    };
 
    auto mapped =

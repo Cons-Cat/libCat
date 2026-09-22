@@ -30,9 +30,9 @@ void
 verify_quantity_format(
    cat::str_view integer_expected, cat::str_view floating_expected
 ) {
-   cat::span page = pager.alloc_multi<cat::byte>(1_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(1_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
    auto const integer_actual = cat::fmt(allocator, "{}", Integer(1)).verify();

@@ -712,9 +712,9 @@ $test(quantity) {
    cat::verify(mask.all_of());
    cat::verify(meters.sum().raw == 10);
 
-   cat::span page = pager.alloc_multi<cat::byte>(4_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 

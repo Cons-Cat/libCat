@@ -43,9 +43,9 @@ struct formatter<::large_format_value, CharT> : formatter_base<CharT> {
 
 $test(format_strings) {
    // Initialize an allocator.
-   cat::span page = pager.alloc_multi<cat::byte>(4_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 
@@ -118,9 +118,9 @@ $test(format_strings) {
 }
 
 $test(format_classes) {
-   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 
@@ -273,9 +273,9 @@ $test(format_classes) {
 }
 
 $test(fmt_specs_and_braces) {
-   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 
@@ -372,9 +372,9 @@ $test(fmt_specs_and_braces) {
 }
 
 $test(fmt_long_pattern_substitutes) {
-   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 
@@ -397,9 +397,9 @@ $test(fmt_long_pattern_substitutes) {
 $test(fmt_growth_failure) {
    // The arena holds the initial buffer but is too small to reallocate it
    // large enough for all 20 digits, so appending the number fails.
-   cat::span storage = pager.alloc_multi<cat::byte>(24u).verify();
+   cat::span storage = g_tests_alloc.alloc_multi<cat::byte>(24u).verify();
    $defer {
-      pager.free(storage);
+      g_tests_alloc.free(storage);
    };
    auto allocator = make_allocator_linear(storage);
 
@@ -408,9 +408,9 @@ $test(fmt_growth_failure) {
 }
 
 $test(fmt_public_type_families) {
-   cat::span page = pager.alloc_multi<cat::byte>(32_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(32_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 
@@ -530,9 +530,9 @@ $test(fmt_public_type_families) {
 }
 
 $test(fmt_bit_containers_and_proxies) {
-   cat::span page = pager.alloc_multi<cat::byte>(32_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(32_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 
@@ -600,9 +600,9 @@ $test(fmt_bit_containers_and_proxies) {
 }
 
 $test(fmt_to_output_iterator) {
-   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 
@@ -622,9 +622,9 @@ $test(fmt_to_output_iterator) {
 }
 
 $test(fmt_to_streams_past_staging_buffer) {
-   cat::span page = pager.alloc_multi<cat::byte>(16_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 
@@ -650,9 +650,9 @@ $test(fmt_to_streams_past_staging_buffer) {
 }
 
 $test(format_utf8_strings) {
-   cat::span page = pager.alloc_multi<cat::byte>(4_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = make_allocator_linear(page);
 

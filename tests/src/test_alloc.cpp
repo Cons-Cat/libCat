@@ -178,10 +178,9 @@ const_test_inline_alloc_sbo16() {
 }
 
 $test(alloc_uninit_family) {
-   pager.reset();
-   cat::span page = pager.alloc_multi<cat::byte>(4_uki - 64u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki - 64u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = cat::make_allocator_linear(page);
 
@@ -261,12 +260,9 @@ $test(alloc) {
    const_test_inline_alloc();
    static_assert(const_test_uninit_alloc());
 
-   // Initialize an allocator.
-   pager.reset();
-   // Page the kernel for a linear allocator to $test with.
-   cat::span page = pager.alloc_multi<cat::byte>(4_uki - 64u).or_exit();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki - 64u).or_exit();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = cat::make_allocator_linear(page);
 
@@ -2128,10 +2124,9 @@ $test(alloc_inline_sbo16) {
 
    constexpr cat::idx sbo = 16u;
 
-   pager.reset();
-   cat::span page = pager.alloc_multi<cat::byte>(4_uki - 64u).or_exit();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki - 64u).or_exit();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    auto allocator = cat::make_allocator_linear(page);
 

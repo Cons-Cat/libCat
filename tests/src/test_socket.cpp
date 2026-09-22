@@ -76,10 +76,11 @@ $test(socket_handle_lifecycle_and_nonblocking) {
 
 $test(unix_socket_stream_round_trip) {
    auto socket_path =
-      cat::make_file_path_unique(pager, "/tmp/libcat-socket-%%%%").verify();
+      cat::make_file_path_unique(g_tests_alloc, "/tmp/libcat-socket-%%%%")
+         .verify();
    $defer {
       auto _ = nix::sys_unlink(socket_path.native_handle());
-      socket_path.free(pager);
+      socket_path.free(g_tests_alloc);
    };
    auto _ = nix::sys_unlink(socket_path.native_handle());
 

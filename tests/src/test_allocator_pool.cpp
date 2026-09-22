@@ -5,9 +5,9 @@
 
 $test(allocator_pool) {
    // Initialize an allocator.
-   cat::span page = pager.alloc_multi<cat::byte>(128u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(128u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto allocator = cat::make_allocator_pool<8>(page);
 

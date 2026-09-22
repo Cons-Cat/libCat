@@ -25,13 +25,13 @@ $test(string_length) {
    // cat::verify(wstring.size() == 4u)
    // cat::verify(cat::wstr_view(p_wstring_with_null).size() == 4u)
 
-   cat::zstr_span mut_zstr = pager.calloc_multi<char>(6).verify();
+   cat::zstr_span mut_zstr = g_tests_alloc.calloc_multi<char>(6).verify();
    mut_zstr[0] = 'a';
    mut_zstr[1] = 'b';
    mut_zstr[2] = 'c';  // A \0 gap is at the 4th byte.
    mut_zstr[4] = 'd';
    $defer {
-      pager.free(mut_zstr);
+      g_tests_alloc.free(mut_zstr);
    };
    cat::verify(mut_zstr.size() == 6);
    cat::verify(cat::zstr_view(mut_zstr).size() == 6);

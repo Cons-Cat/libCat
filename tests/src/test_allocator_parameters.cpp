@@ -14,9 +14,9 @@ $test(allocator_dyn_linear) {
    // `allocator_linear` provides native `aligned_allocate` and
    // `aligned_allocate_feedback`, so this exercises the direct-dispatch paths
    // of the `dyn` vtable.
-   cat::span page = pager.alloc_multi<cat::byte>(1_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(1_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
@@ -49,9 +49,9 @@ $test(allocator_dyn_linear) {
 $test(allocator_dyn_pool) {
    // `allocator_pool` has none of the aligned or feedback hooks, so every
    // aligned/feedback call through `allocator_dyn` exercises a fallback shim.
-   cat::span page = pager.alloc_multi<cat::byte>(128u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(128u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto pool = cat::make_allocator_pool<8>(page);
 
@@ -113,33 +113,35 @@ $test(basic_allocator_dyn_methods) {
 
 $test(realloc_uninit) {
    {
-      int4* p_value = pager.alloc<int4>(17).verify();
-      p_value = pager.realloc_uninit(p_value).verify();
+      int4* p_value = g_tests_alloc.alloc<int4>(17).verify();
+      p_value = g_tests_alloc.realloc_uninit(p_value).verify();
       $defer {
-         pager.free_uninit(p_value);
+         g_tests_alloc.free_uninit(p_value);
       };
       cat::verify(*p_value == 17);
    }
 
    {
-      cat::span<int4> values = pager.alloc_multi_uninit<int4>(2u).verify();
+      cat::span<int4> values =
+         g_tests_alloc.alloc_multi_uninit<int4>(2u).verify();
       values[0] = 23;
       values[1] = 29;
       values =
-         pager.realloc_multi_uninit(values.data(), values.size(), 4u).verify();
+         g_tests_alloc.realloc_multi_uninit(values.data(), values.size(), 4u)
+            .verify();
       $defer {
-         pager.free_multi_uninit(values);
+         g_tests_alloc.free_multi_uninit(values);
       };
       cat::verify(values[0] == 23);
       cat::verify(values[1] == 29);
    }
 
    {
-      int4* p_feedback = pager.alloc<int4>(43).verify();
+      int4* p_feedback = g_tests_alloc.alloc<int4>(43).verify();
       auto [p_resized, allocation_bytes] =
-         pager.resalloc_uninit(p_feedback).verify();
+         g_tests_alloc.resalloc_uninit(p_feedback).verify();
       $defer {
-         pager.free_uninit(p_resized);
+         g_tests_alloc.free_uninit(p_resized);
       };
       cat::verify(*p_resized == 43);
       cat::verify(allocation_bytes >= sizeof(int4));
@@ -147,17 +149,17 @@ $test(realloc_uninit) {
 
    {
       cat::span<int4> feedback_values =
-         pager.alloc_multi_uninit<int4>(2u).verify();
+         g_tests_alloc.alloc_multi_uninit<int4>(2u).verify();
       feedback_values[0] = 47;
       feedback_values[1] = 53;
       auto [resized_values, resized_bytes] =
-         pager
+         g_tests_alloc
             .resalloc_multi_uninit(
                feedback_values.data(), feedback_values.size(), 4u
             )
             .verify();
       $defer {
-         pager.free_multi_uninit(resized_values);
+         g_tests_alloc.free_multi_uninit(resized_values);
       };
       cat::verify(resized_values[0] == 47);
       cat::verify(resized_values[1] == 53);
@@ -165,36 +167,37 @@ $test(realloc_uninit) {
    }
 
    {
-      auto handle = pager.inline_alloc<int4>(31).verify();
-      handle = pager.inline_realloc_uninit(handle).verify();
+      auto handle = g_tests_alloc.inline_alloc<int4>(31).verify();
+      handle = g_tests_alloc.inline_realloc_uninit(handle).verify();
       $defer {
-         pager.free_uninit(handle);
+         g_tests_alloc.free_uninit(handle);
       };
-      cat::verify(pager.get(handle) == 31);
+      cat::verify(g_tests_alloc.get(handle) == 31);
    }
 
    {
-      auto handle = pager.inline_alloc<int4>(59).verify();
+      auto handle = g_tests_alloc.inline_alloc<int4>(59).verify();
       auto [resized_handle, allocation_bytes] =
-         pager.inline_resalloc_uninit(handle).verify();
+         g_tests_alloc.inline_resalloc_uninit(handle).verify();
       $defer {
-         pager.free_uninit(resized_handle);
+         g_tests_alloc.free_uninit(resized_handle);
       };
-      cat::verify(pager.get(resized_handle) == 59);
+      cat::verify(g_tests_alloc.get(resized_handle) == 59);
       cat::verify(allocation_bytes >= sizeof(int4));
    }
 
    {
-      auto multi_handle = pager.inline_alloc_multi_uninit<int4>(2u).verify();
-      cat::span inline_values = pager.get(multi_handle);
+      auto multi_handle =
+         g_tests_alloc.inline_alloc_multi_uninit<int4>(2u).verify();
+      cat::span inline_values = g_tests_alloc.get(multi_handle);
       inline_values[0] = 37;
       inline_values[1] = 41;
       auto resized_handle =
-         pager.inline_realloc_multi_uninit(multi_handle, 4u).verify();
+         g_tests_alloc.inline_realloc_multi_uninit(multi_handle, 4u).verify();
       $defer {
-         pager.free_uninit(resized_handle);
+         g_tests_alloc.free_uninit(resized_handle);
       };
-      inline_values = pager.get(resized_handle);
+      inline_values = g_tests_alloc.get(resized_handle);
       cat::verify(inline_values[0] == 37);
       cat::verify(inline_values[1] == 41);
    }
@@ -206,9 +209,9 @@ $test(allocator_ref) {
    // forwards `allocator_interface` calls through to it.
    static_assert(cat::is_allocator<cat::allocator_ref<cat::allocator_page>>);
 
-   cat::span page = pager.alloc_multi<cat::byte>(1_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(1_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
@@ -238,9 +241,9 @@ $test(allocator_ref) {
 // copy constructor binds straight to the same underlying allocator without
 // adding a pointer hop.
 $test(allocator_ref_unwraps_self) {
-   cat::span page = pager.alloc_multi<cat::byte>(1_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(1_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
@@ -263,9 +266,9 @@ $test(allocator_ref_unwraps_self) {
 // call through the second instance reaches the underlying allocator with one
 // `dyn_invoke` hop, not two.
 $test(allocator_dyn_unwraps_self) {
-   cat::span page = pager.alloc_multi<cat::byte>(1_uki).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(1_uki).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto linear = cat::make_allocator_linear(page);
 

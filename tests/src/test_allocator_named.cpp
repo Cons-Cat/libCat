@@ -23,9 +23,9 @@ static_assert(
 // `allocator_named::name()` must return the exact `str_view` it was built
 // with. The label is the wrapper's only added state.
 $test(allocator_named_carries_runtime_name) {
-   cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto inner = cat::make_allocator_linear(page);
    cat::allocator_named named{inner, cat::str_view{"my_arena"}};
@@ -38,9 +38,9 @@ $test(allocator_named_carries_runtime_name) {
 // allocation interface to verify the round trip and then watch the inner's
 // own `bytes_used` move in lockstep with the wrapper's.
 $test(allocator_named_forwards_alloc_and_introspection) {
-   cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto inner = cat::make_allocator_linear(page);
    cat::allocator_named named{inner, cat::str_view{"forward"}};
@@ -58,9 +58,9 @@ $test(allocator_named_forwards_alloc_and_introspection) {
 // over the *same* inner allocator must compare equivalent even when carrying
 // different names.
 $test(allocator_named_equality_ignores_label) {
-   cat::span page = pager.alloc_multi<cat::byte>(32u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto inner = cat::make_allocator_linear(page);
    cat::allocator_named named_a{inner, cat::str_view{"alpha"}};
@@ -73,11 +73,11 @@ $test(allocator_named_equality_ignores_label) {
 // Two `allocator_named` wrappers over *different* inner instances over
 // different arenas must NOT compare equivalent, even if their labels match.
 $test(allocator_named_equality_distinguishes_distinct_inners) {
-   cat::span page_a = pager.alloc_multi<cat::byte>(32u).verify();
-   cat::span page_b = pager.alloc_multi<cat::byte>(32u).verify();
+   cat::span page_a = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
+   cat::span page_b = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
    $defer {
-      pager.free(page_a);
-      pager.free(page_b);
+      g_tests_alloc.free(page_a);
+      g_tests_alloc.free(page_b);
    };
    cat::is_allocator auto inner_a = cat::make_allocator_linear(page_a);
    cat::is_allocator auto inner_b = cat::make_allocator_linear(page_b);
@@ -90,9 +90,9 @@ $test(allocator_named_equality_distinguishes_distinct_inners) {
 
 // `reset` must forward through the wrapper.
 $test(allocator_named_reset_forwards) {
-   cat::span page = pager.alloc_multi<cat::byte>(32u).verify();
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(32u).verify();
    $defer {
-      pager.free(page);
+      g_tests_alloc.free(page);
    };
    cat::is_allocator auto inner = cat::make_allocator_linear(page);
    cat::allocator_named named{inner, cat::str_view{"resettable"}};

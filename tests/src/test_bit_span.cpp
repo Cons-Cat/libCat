@@ -152,15 +152,15 @@ $test(bit_span) {
    cat::verify(const_span_bits[1u]);
 
    cat::vec<cat::uint4> vec_words;
-   vec_words.resize(pager, 2u, 0_u4).verify();
+   vec_words.resize(g_tests_alloc, 2u, 0_u4).verify();
    vec_words[1u] = 0b11_u4;
    cat::bit_span vec_bits(vec_words);
    cat::verify(vec_bits.size() == 64u);
    cat::verify(vec_bits[32u]);
    cat::verify(cat::popcount(vec_bits) == 2u);
-   vec_words.free(pager);
+   vec_words.free(g_tests_alloc);
 
-   cat::raii::bitvec dynamic_bits{cat::allocator_dyn(pager)};
+   cat::raii::bitvec dynamic_bits{cat::allocator_dyn(g_tests_alloc)};
    dynamic_bits.resize(70u).verify();
    dynamic_bits[69u] = true;
    cat::bit_span dynamic_span(dynamic_bits);

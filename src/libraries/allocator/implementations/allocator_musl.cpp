@@ -1,6 +1,10 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 
+// Adapted from musl mallocng. The original is MIT licensed code. This algorithm
+// should be essentally equivalent to the original, but it is a unique
+// implementation, not ported code.
+
 #include <cat/allocator_musl>
 #include <cat/array>
 #include <cat/atomic>
@@ -16,7 +20,7 @@ namespace cat::detail {
 
 namespace {
 
-inline constexpr uword musl_unit = 16uz;
+inline constexpr uword musl_quanta = 16uz;
 inline constexpr uword musl_in_band = 4uz;
 inline constexpr uword musl_page_bytes = 4uz * 1'024uz;
 inline constexpr uword musl_mmap_threshold = 131'052uz;
@@ -82,7 +86,7 @@ template <bool is_shared>
 struct group {
    meta<is_shared>* _Nullable p_meta;
    unsigned char active_idx : 5;
-   array<byte, musl_unit.raw - sizeof(meta<is_shared>*) - 1u> padding;
+   array<byte, musl_quanta.raw - sizeof(meta<is_shared>*) - 1u> padding;
    byte storage[];
 };
 
@@ -99,8 +103,8 @@ struct meta {
    uword::raw_type map_length : (8u * sizeof(uword::raw_type)) - 12u;
 };
 
-static_assert(sizeof(group<false>) == musl_unit);
-static_assert(sizeof(group<true>) == musl_unit);
+static_assert(sizeof(group<false>) == musl_quanta);
+static_assert(sizeof(group<true>) == musl_quanta);
 
 template <bool is_shared>
 struct meta_area {
@@ -534,7 +538,7 @@ musl_context<is_shared>::get_meta(byte const* p_allocation)
    -> meta<is_shared>* {
    auto& context = *this;
    auto const* const p_encoded = encoded_bytes(p_allocation);
-   verify((bit_cast<uword::raw_type>(p_allocation) & (musl_unit - 1u)) == 0u);
+   verify((bit_cast<uword::raw_type>(p_allocation) & (musl_quanta - 1u)) == 0u);
 
    uint2::raw_type raw_offset;
    // Misaligned load.
@@ -550,11 +554,11 @@ musl_context<is_shared>::get_meta(byte const* p_allocation)
       );
       offset = extended_offset;
       verify(offset > 0xffffu);
-      verify(offset < uword{limits<iword>::max()} / musl_unit);
+      verify(offset < uword{limits<iword>::max()} / musl_quanta);
    }
 
    auto const* const p_base = bit_cast<group<is_shared> const*>(
-      p_allocation - (musl_unit * offset + musl_unit)
+      p_allocation - (musl_quanta * offset + musl_quanta)
    );
    meta<is_shared> const* const p_metadata = p_base->p_meta;
    verify(p_metadata != nullptr);
@@ -579,7 +583,7 @@ musl_context<is_shared>::get_meta(byte const* p_allocation)
    }
    if (p_metadata->map_length != 0u) {
       verify(
-         offset <= p_metadata->map_length * musl_page_bytes / musl_unit - 1u
+         offset <= p_metadata->map_length * musl_page_bytes / musl_quanta - 1u
       );
    }
    return const_cast<meta<is_shared>*>(p_metadata);
@@ -591,9 +595,9 @@ template <bool is_shared>
 auto
 stride(meta<is_shared> const* p_metadata) -> uword {
    if (p_metadata->last_idx == 0u && p_metadata->map_length != 0u) {
-      return p_metadata->map_length * musl_page_bytes - musl_unit;
+      return p_metadata->map_length * musl_page_bytes - musl_quanta;
    }
-   return musl_unit * size_classes[p_metadata->size_class];
+   return musl_quanta * size_classes[p_metadata->size_class];
 }
 
 auto
@@ -658,7 +662,7 @@ enframe(
    uword* _Nullable p_feedback_bytes
 ) -> byte* {
    uword const slot_stride = stride(p_metadata);
-   uword const slack = (slot_stride - musl_in_band - bytes) / musl_unit;
+   uword const slack = (slot_stride - musl_in_band - bytes) / musl_quanta;
    byte* p_allocation = p_metadata->p_memory->storage + slot_stride * index;
    byte* const p_end = p_allocation + (slot_stride - musl_in_band);
    unsigned char* p_encoded = encoded_bytes(p_allocation);
@@ -689,13 +693,13 @@ enframe(
       // Misaligned store.
       __builtin_memcpy_inline(p_encoded - 2u, &raw_offset, sizeof(raw_offset));
       p_encoded[-3] = 7u << 5u;
-      p_allocation += musl_unit * offset;
+      p_allocation += musl_quanta * offset;
       p_encoded = encoded_bytes(p_allocation);
       unpoison_memory_region(p_allocation - 4u, 4u);
       p_encoded[-4] = 0u;
    }
    uword const group_offset =
-      uword(p_allocation - p_metadata->p_memory->storage) / musl_unit;
+      uword(p_allocation - p_metadata->p_memory->storage) / musl_quanta;
    verify(group_offset <= 0xffffu);
    uint2::raw_type const raw_group_offset =
       static_cast<uint2::raw_type>(group_offset);
@@ -824,8 +828,8 @@ musl_context<is_shared>::try_available(meta<is_shared>* _Nullable* p_metadata)
          } else {
             uint4 count = p_current->p_memory->active_idx + 2u;
             uword const slot_bytes =
-               musl_unit * size_classes[p_current->size_class];
-            uword span_bytes = musl_unit + slot_bytes * count;
+               musl_quanta * size_classes[p_current->size_class];
+            uword span_bytes = musl_quanta + slot_bytes * count;
             while ((span_bytes ^ (span_bytes + slot_bytes - 1u))
                    < musl_page_bytes) {
                ++count;
@@ -853,7 +857,7 @@ auto
 musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
    -> meta<is_shared>* _Nullable {
    auto& context = *this;
-   uword const slot_bytes = musl_unit * size_classes[size_class];
+   uword const slot_bytes = musl_quanta * size_classes[size_class];
    uint4 table_index = 0u;
    uint4 count;
    meta<is_shared>* const p_metadata = allocate_meta();
@@ -875,16 +879,18 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
       while ((count & 1u) == 0u && 4u * count > usage) {
          count >>= 1u;
       }
-      while (slot_bytes * count >= 65'536u * musl_unit) {
+      while (slot_bytes * count >= 65'536u * musl_quanta) {
          count >>= 1u;
       }
    }
 
-   if (count == 1u && slot_bytes * count + musl_unit <= musl_page_bytes / 2u) {
+   if (
+      count == 1u && slot_bytes * count + musl_quanta <= musl_page_bytes / 2u
+   ) {
       count = 2u;
    }
 
-   if (slot_bytes * count + musl_unit > musl_page_bytes / 2u) {
+   if (slot_bytes * count + musl_quanta > musl_page_bytes / 2u) {
       bool const no_small = is_bouncing(size_class);
       account_bounce(size_class);
       step_sequence();
@@ -913,15 +919,15 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
          }
       }
 
-      uword needed = slot_bytes * count + musl_unit;
+      uword needed = slot_bytes * count + musl_quanta;
       needed = (needed + musl_page_bytes - 1u) & -musl_page_bytes.raw;
 
       if (!no_small && count <= 7u) {
-         uword request_map = request + musl_in_band + musl_unit;
+         uword request_map = request + musl_in_band + musl_quanta;
          request_map =
             (request_map + musl_page_bytes - 1u) & -musl_page_bytes.raw;
          if (
-            request_map < slot_bytes + musl_unit
+            request_map < slot_bytes + musl_quanta
             || (request_map >= 4u * musl_page_bytes && 2u * count > usage)
          ) {
             count = 1u;
@@ -938,7 +944,7 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
       p_metadata->map_length = needed.raw / musl_page_bytes.raw;
       ++context.m_mmap_counter;
       int4 calculated =
-         static_cast<int4>((musl_page_bytes - musl_unit) / slot_bytes) - 1;
+         static_cast<int4>((musl_page_bytes - musl_quanta) / slot_bytes) - 1;
       if (calculated > static_cast<int4>(count - 1u)) {
          calculated = static_cast<int4>(count - 1u);
       }
@@ -948,9 +954,9 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
       active_idx = static_cast<uint4>(calculated);
    } else {
       uint4 const parent_class =
-         size_to_class(musl_unit + count * slot_bytes - musl_in_band);
+         size_to_class(musl_quanta + count * slot_bytes - musl_in_band);
       auto const parent_index = allocate_slot(
-         parent_class, musl_unit + count * slot_bytes - musl_in_band
+         parent_class, musl_quanta + count * slot_bytes - musl_in_band
       );
       if (parent_index.is_empty()) {
          free_meta(p_metadata);
@@ -959,7 +965,7 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
       meta<is_shared>* const p_parent = context.m_active[parent_class];
       p_memory = enframe(
          p_parent, static_cast<uint4>(parent_index.value()),
-         musl_unit * size_classes[parent_class] - musl_in_band,
+         musl_quanta * size_classes[parent_class] - musl_in_band,
          context.m_mmap_counter, nullptr
       );
       p_metadata->map_length = 0u;
@@ -967,7 +973,7 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
       p_encoded[-3] =
          static_cast<unsigned char>((p_encoded[-3] & 31u) | (6u << 5u));
       for (uint4 index = 0u; index <= count; ++index) {
-         p_encoded[(musl_unit + index * slot_bytes - 4u).raw] = 0u;
+         p_encoded[(musl_quanta + index * slot_bytes - 4u).raw] = 0u;
       }
       active_idx = count - 1u;
    }
@@ -1029,7 +1035,7 @@ musl_context<is_shared>::allocate_memory_unaccounted(
    uint4 counter;
    if (bytes >= musl_mmap_threshold) {
       uword const needed =
-         (bytes + musl_in_band + musl_unit + musl_page_bytes - 1u)
+         (bytes + musl_in_band + musl_quanta + musl_page_bytes - 1u)
          & -musl_page_bytes.raw;
       byte* const p_mapping =
          map_pages(needed, nix::memory_protection_flags::read_write);
@@ -1150,7 +1156,7 @@ musl_context<is_shared>::okay_to_free(meta<is_shared>* p_metadata) -> bool {
    }
    if (
       size_class >= 48u
-      || stride(p_metadata) < musl_unit * size_classes[size_class]
+      || stride(p_metadata) < musl_quanta * size_classes[size_class]
    ) {
       return true;
    }
@@ -1311,7 +1317,7 @@ musl_context<is_shared>::is_all_zero(byte* p_allocation) -> bool {
    meta<is_shared>* const p_metadata = get_meta(p_allocation);
    return p_metadata->size_class >= 48u
           || stride(p_metadata)
-                < musl_unit * size_classes[p_metadata->size_class];
+                < musl_quanta * size_classes[p_metadata->size_class];
 }
 
 namespace {
@@ -1365,11 +1371,11 @@ musl_context<is_shared>::aligned_allocate(
    ) {
       return nullptr;
    }
-   if (alignment <= musl_unit) {
+   if (alignment <= musl_quanta) {
       return allocate_memory(bytes, p_feedback_bytes);
    }
 
-   uword const expanded = bytes + alignment - musl_unit;
+   uword const expanded = bytes + alignment - musl_quanta;
    byte* p_allocation = allocate_memory_unaccounted(expanded);
    if (p_allocation == nullptr) {
       return nullptr;
@@ -1388,7 +1394,7 @@ musl_context<is_shared>::aligned_allocate(
       p_allocation += adjustment;
       unsigned char* const p_encoded_allocation = encoded_bytes(p_allocation);
       uword const offset =
-         uword(p_allocation - p_metadata->p_memory->storage) / musl_unit;
+         uword(p_allocation - p_metadata->p_memory->storage) / musl_quanta;
       if (offset <= 0xffffu) {
          uint2::raw_type const raw_offset =
             static_cast<uint2::raw_type>(offset);
@@ -1414,7 +1420,7 @@ musl_context<is_shared>::aligned_allocate(
       }
       p_encoded_allocation[-3] = static_cast<unsigned char>(index);
 
-      uword const start_offset = uword(p_allocation - p_start) / musl_unit;
+      uword const start_offset = uword(p_allocation - p_start) / musl_quanta;
       if (start_offset <= 0xffffu) {
          uint2::raw_type const raw_start_offset =
             static_cast<uint2::raw_type>(start_offset);
@@ -1489,7 +1495,7 @@ musl_context<is_shared>::resize_in_place(
       verify(p_metadata->size_class == 63u);
       uword const base = uword(p_allocation - p_start);
       uword const needed =
-         (new_bytes + base + musl_unit + musl_in_band + musl_page_bytes - 1u)
+         (new_bytes + base + musl_quanta + musl_in_band + musl_page_bytes - 1u)
          & -musl_page_bytes.raw;
       uword const old_mapping_bytes =
          uword{p_metadata->map_length} * musl_page_bytes;
@@ -1520,7 +1526,7 @@ musl_context<is_shared>::resize_in_place(
       p_metadata->map_length = needed.raw / musl_page_bytes.raw;
       p_allocation = p_metadata->p_memory->storage + base;
       byte* const p_new_end =
-         p_metadata->p_memory->storage + (needed - musl_unit - musl_in_band);
+         p_metadata->p_memory->storage + (needed - musl_quanta - musl_in_band);
       *p_new_end = byte(0u);
       uword const allocation_bytes =
          p_feedback_bytes == nullptr

@@ -1,6 +1,6 @@
 #include "./unit_tests.hpp"
 
-#include <cat/allocator_page>
+#include <cat/allocator_inplace>
 #include <cat/atomic>
 #include <cat/format>
 #include <cat/thread>
@@ -14,18 +14,16 @@ constinit cat::thread::id parent_thread_id;
 
 constinit cat::atomic<cat::idx> tests_passed{};
 constinit cat::atomic<cat::idx> tests_failed{};
-constinit cat::maybe<cat::raii::vec<void*>> test_fns;
+constinit cat::vec_big<void*> test_fns;
 }  // namespace
-
-[[gnu::used]]
-constinit cat::allocator_page pager;
 
 void
 register_test(constructor_fn p_test_fn) {
-   if (test_fns.is_empty()) {
-      test_fns = cat::raii::make_vec_reserved<void*>(pager, 4_uki / 8u).value();
+   if (test_fns.capacity() == 0u) {
+      test_fns.reserve(g_tests_alloc, 2_uki).value();
    }
-   auto _ = test_fns.verify().push_back(reinterpret_cast<void*>(p_test_fn));
+   auto _ =
+      test_fns.push_back(g_tests_alloc, reinterpret_cast<void*>(p_test_fn));
 }
 
 void
@@ -57,6 +55,7 @@ extern constructor_fn __init_array_end[];
 auto
 main() -> int {
    parent_thread_id = cat::this_thread::get_id();
+   auto print_allocator = cat::make_allocator_inplace<128u>();
 
    // Change the default assert handler.
    cat::set_global_assert_handler(&cat::test_fail);
@@ -67,8 +66,9 @@ main() -> int {
 
    // Call all unit test functions that were pushed into `test_fns` by the
    // `$test` macro.
-   for (idx i = 0; i < test_fns.value().size(); ++i) {
-      auto _ = cat::print_fmt(pager, "Running test {}", i);
+   for (idx i = 0; i < test_fns.size(); ++i) {
+      print_allocator.reset();
+      auto _ = cat::print_fmt(print_allocator, "Running test {}", i);
       if (cat::setjmp(jump_buffer)) {
          // Jump here when a test fails, skipping the rest of a test's
          // constructor function.
@@ -76,7 +76,7 @@ main() -> int {
          cat::detail::reset_local_assert_handlers();
          continue;
       }
-      (reinterpret_cast<constructor_fn>(test_fns.value()[i]))();
+      (reinterpret_cast<constructor_fn>(test_fns[i]))();
    }
 
    // `tests_passed` and `tests_failed` are modified within the `$test`
@@ -84,9 +84,12 @@ main() -> int {
    cat::idx const n_passed = tests_passed.relaxed();
    cat::idx const n_failed = tests_failed.relaxed();
 
+   print_allocator.reset();
    auto _ = cat::print_fmt(
-      pager, "\n{} tests passed.\n{} tests failed.\n", n_passed, n_failed
+      print_allocator, "\n{} tests passed.\n{} tests failed.\n", n_passed,
+      n_failed
    );
+   test_fns.free(g_tests_alloc);
 
    return static_cast<int>(n_failed != 0u);  // Return 0 or 1.
 }

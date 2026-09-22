@@ -16,7 +16,7 @@ constinit cat::atomic<int> atomic{};
 thread_local int tls1 = 1;
 thread_local int tls2 = 2;
 
-constexpr idx thread_test_stack_size = 16_uki;
+constexpr idx g_thread_test_stack_size = 16_uki;
 
 void
 function_1() {
@@ -45,10 +45,14 @@ $test(this_thread) {
 
    cat::atomic<cat::uint4> observed_id{};
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+      cat::verify(worker.is_empty());
+   };
    cat::verify(worker.is_empty());
    worker
       .spawn(
-         pager, 1_umi,
+         g_tests_alloc_musl, g_thread_test_stack_size,
          [&observed_id] {
             cat::this_thread::yield();
             observed_id.release() =
@@ -59,8 +63,6 @@ $test(this_thread) {
    cat::verify(!worker.is_empty());
    cat::thread::id const worker_id = worker.get_id();
    worker.join().verify();
-   worker.free(pager);
-   cat::verify(worker.is_empty());
 
    cat::verify(worker_id != original_id);
    cat::verify(observed_id.acquire().load() == worker_id.native_handle().value);
@@ -72,18 +74,22 @@ $test(thread) {
 
    $defer {
       for (idx i = 0; i < 5; ++i) {
-         threads[i].free(pager);
+         threads[i].free(g_tests_alloc_musl);
       }
-      non_thread_child.free(pager);
+      non_thread_child.free(g_tests_alloc_musl);
    };
 
-   threads[0].spawn(pager, thread_test_stack_size, function_1).verify();
+   threads[0]
+      .spawn(g_tests_alloc_musl, g_thread_test_stack_size, function_1)
+      .verify();
 
-   threads[1].spawn(pager, thread_test_stack_size, &function_2).verify();
+   threads[1]
+      .spawn(g_tests_alloc_musl, g_thread_test_stack_size, &function_2)
+      .verify();
 
    threads[2]
       .spawn(
-         pager, thread_test_stack_size,
+         g_tests_alloc_musl, g_thread_test_stack_size,
          [] {
             ++atomic;
          }
@@ -92,7 +98,7 @@ $test(thread) {
 
    threads[3]
       .spawn(
-         pager, thread_test_stack_size,
+         g_tests_alloc_musl, g_thread_test_stack_size,
          [](int) {
             ++atomic;
          },
@@ -102,7 +108,7 @@ $test(thread) {
 
    threads[4]
       .spawn(
-         pager, thread_test_stack_size,
+         g_tests_alloc_musl, g_thread_test_stack_size,
          +[] {
             ++atomic;
          }
@@ -111,7 +117,7 @@ $test(thread) {
 
    non_thread_child
       .spawn(
-         pager, thread_test_stack_size,
+         g_tests_alloc_musl, g_thread_test_stack_size,
          +[] {
             ++atomic;
          }
@@ -138,10 +144,10 @@ $test(raii_thread) {
    int4 const before = atomic.load();
 
    {
-      cat::raii::basic_thread<cat::allocator_page> worker{pager};
+      cat::raii::basic_thread<cat::allocator_musl> worker{g_tests_alloc_musl};
       worker
          .spawn(
-            2_uki,
+            g_thread_test_stack_size,
             [] {
                ++atomic;
             }
@@ -156,8 +162,8 @@ $test(raii_thread) {
 $test(raii_thread_join) {
    int4 const before = atomic.load();
 
-   cat::raii::basic_thread<cat::allocator_page> worker{pager};
-   worker.spawn(thread_test_stack_size, &function_2).verify();
+   cat::raii::basic_thread<cat::allocator_musl> worker{g_tests_alloc_musl};
+   worker.spawn(g_thread_test_stack_size, &function_2).verify();
    worker.join().verify();
    worker.free();
    cat::verify(worker.is_empty());
@@ -168,11 +174,15 @@ $test(thread_cfree) {
    int4 const before = atomic.load();
 
    cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc_musl);
+   };
    cat::verify(worker.is_empty());
-   worker.spawn(pager, thread_test_stack_size, &function_2).verify();
+   worker.spawn(g_tests_alloc_musl, g_thread_test_stack_size, &function_2)
+      .verify();
    cat::verify(!worker.is_empty());
    worker.join().verify();
-   worker.cfree(pager);
+   worker.cfree(g_tests_alloc_musl);
    cat::verify(worker.is_empty());
    cat::verify(atomic.load() == before + 1);
 }
@@ -180,8 +190,8 @@ $test(thread_cfree) {
 $test(raii_thread_cfree) {
    int4 const before = atomic.load();
 
-   cat::raii::basic_thread<cat::allocator_page> worker{pager};
-   worker.spawn(thread_test_stack_size, &function_2).verify();
+   cat::raii::basic_thread<cat::allocator_musl> worker{g_tests_alloc_musl};
+   worker.spawn(g_thread_test_stack_size, &function_2).verify();
    worker.join().verify();
    worker.cfree();
    cat::verify(worker.is_empty());
@@ -213,10 +223,13 @@ $test(thread_clone_failure) {
    // `cat::thread::spawn` maps errors to `nullopt`. `nix::process` with the
    // same clone flags keeps the errno from `clone` on failure.
    nix::process child;
+   $defer {
+      child.free(g_tests_alloc_musl);
+   };
    child.add_clone_flag(nix::clone_flags::thread);
    child.add_clone_flag(nix::clone_flags::child_set_tid);
    nix::scaredy_nix<void> const spawn_result =
-      child.spawn(pager, thread_test_stack_size, [] {
+      child.spawn(g_tests_alloc_musl, g_thread_test_stack_size, [] {
       });
 
    cat::verify(
