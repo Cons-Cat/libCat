@@ -5,7 +5,7 @@
 #include <cat/allocator>
 #include <cat/dyn>
 
-// `dyn_allocator` and `allocator_ref` are the primary interfaces for function
+// `allocator_dyn` and `allocator_ref` are the primary interfaces for function
 // parameters to consume libCat allocators. They enable functions to support
 // both dynamic and static dispatch on memory allocators while encouraging
 // overload resolution to default to dynamic dispatch to minimize code
@@ -17,13 +17,13 @@
 //       return allocator.alloc<int4>(1024).verify();
 //    }
 //
-//    auto function(dyn_allocator allocator) -> span<int4> {
-//       // Wrap the `function` specialization in `dyn_allocator`.
-//       return function<dyn_allocator>(allocator);
+//    auto function(allocator_dyn allocator) -> span<int4> {
+//       // Wrap the `function` specialization in `allocator_dyn`.
+//       return function<allocator_dyn>(allocator);
 //    }
 //
 // When `function` is called as `function(allocator)`, the call resolves to the
-// `dyn_allocator` overload, which specializes the static-dispatch overload with
+// `allocator_dyn` overload, which specializes the static-dispatch overload with
 // one pointer indirection.
 //
 // When `function` is called as `function<A>(allocator)`, the call resolves to
@@ -31,16 +31,16 @@
 // functions with no indirection.
 //
 // This design is largely inspired by Zig's success defaulting to
-// dynamic-dispatch memory allocation. The `dyn_allocator` can often
+// dynamic-dispatch memory allocation. The `allocator_dyn` can often
 // devirtualize function calls, but unlike Zig, we trivially support opt-in
 // static-dispatch as well with that very simple pattern.
 
 namespace cat {
 
-// Grants `dyn_allocator`'s `Method` tags access to potentially `private`
+// Grants `allocator_dyn`'s `Method` tags access to potentially `private`
 // underlying allocator hooks. Allocator implementations should `friend` this
 // type. If the allocator's members are `public`, that is not required.
-struct dyn_allocator_friend {
+struct allocator_dyn_friend {
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
@@ -195,30 +195,30 @@ struct dyn_allocator_friend {
 
 namespace detail {
 
-// Per-hook capability predicates. The `dyn_allocator` `Method` tags pivot on
+// Per-hook capability predicates. The `allocator_dyn` `Method` tags pivot on
 // these to pick the native dispatch path when the underlying allocator
 // implements the hook, and to fall back to a synthesised shim otherwise.
-// They route through `dyn_allocator_friend` so the predicate is satisfied iff
+// They route through `allocator_dyn_friend` so the predicate is satisfied iff
 // the friend can reach the hook, even when it is `private`.
 template <typename T>
 concept has_allocate =
    requires(T& allocator, idx allocation_bytes) {
-      dyn_allocator_friend::allocate(allocator, allocation_bytes);
+      allocator_dyn_friend::allocate(allocator, allocation_bytes);
    };
 
 template <typename T>
 concept has_deallocate = requires(
    T& allocator, void const* _Nonnull p_storage, idx allocation_bytes
-) { dyn_allocator_friend::deallocate(allocator, p_storage, allocation_bytes); };
+) { allocator_dyn_friend::deallocate(allocator, p_storage, allocation_bytes); };
 
 template <typename T>
 concept has_reset =
-   requires(T& allocator) { dyn_allocator_friend::reset(allocator); };
+   requires(T& allocator) { allocator_dyn_friend::reset(allocator); };
 
 template <typename T>
 concept has_aligned_allocate =
    requires(T& allocator, ualign alignment, idx allocation_bytes) {
-      dyn_allocator_friend::aligned_allocate(
+      allocator_dyn_friend::aligned_allocate(
          allocator, alignment, allocation_bytes
       );
    };
@@ -226,44 +226,44 @@ concept has_aligned_allocate =
 template <typename T>
 concept has_allocate_feedback =
    requires(T& allocator, idx allocation_bytes) {
-      dyn_allocator_friend::allocate_feedback(allocator, allocation_bytes);
+      allocator_dyn_friend::allocate_feedback(allocator, allocation_bytes);
    };
 
 template <typename T>
 concept has_aligned_allocate_feedback =
    requires(T& allocator, ualign alignment, idx allocation_bytes) {
-      dyn_allocator_friend::aligned_allocate_feedback(
+      allocator_dyn_friend::aligned_allocate_feedback(
          allocator, alignment, allocation_bytes
       );
    };
 
 template <typename T>
 concept has_resize = requires(T& allocator, idx minimum_bytes) {
-                        dyn_allocator_friend::resize(allocator, minimum_bytes);
+                        allocator_dyn_friend::resize(allocator, minimum_bytes);
                      };
 
 template <typename T>
 concept has_grow =
    requires(T& allocator, span<byte> allocation, idx new_bytes) {
-      dyn_allocator_friend::grow(allocator, allocation, new_bytes);
+      allocator_dyn_friend::grow(allocator, allocation, new_bytes);
    };
 
 template <typename T>
 concept has_grow_feedback =
    requires(T& allocator, span<byte> allocation, idx new_bytes) {
-      dyn_allocator_friend::grow_feedback(allocator, allocation, new_bytes);
+      allocator_dyn_friend::grow_feedback(allocator, allocation, new_bytes);
    };
 
 template <typename T>
 concept has_reallocate =
    requires(T& allocator, span<byte> allocation, idx new_bytes) {
-      dyn_allocator_friend::reallocate(allocator, allocation, new_bytes);
+      allocator_dyn_friend::reallocate(allocator, allocation, new_bytes);
    };
 
 template <typename T>
 concept has_reallocate_feedback =
    requires(T& allocator, span<byte> allocation, idx new_bytes) {
-      dyn_allocator_friend::reallocate_feedback(
+      allocator_dyn_friend::reallocate_feedback(
          allocator, allocation, new_bytes
       );
    };
@@ -271,13 +271,13 @@ concept has_reallocate_feedback =
 template <typename T>
 concept has_allocate_zeroed =
    requires(T& allocator, idx allocation_bytes) {
-      dyn_allocator_friend::allocate_zeroed(allocator, allocation_bytes);
+      allocator_dyn_friend::allocate_zeroed(allocator, allocation_bytes);
    };
 
 template <typename T>
 concept has_allocate_zeroed_feedback =
    requires(T& allocator, idx allocation_bytes) {
-      dyn_allocator_friend::allocate_zeroed_feedback(
+      allocator_dyn_friend::allocate_zeroed_feedback(
          allocator, allocation_bytes
       );
    };
@@ -285,7 +285,7 @@ concept has_allocate_zeroed_feedback =
 template <typename T>
 concept has_aligned_allocate_zeroed =
    requires(T& allocator, ualign alignment, idx allocation_bytes) {
-      dyn_allocator_friend::aligned_allocate_zeroed(
+      allocator_dyn_friend::aligned_allocate_zeroed(
          allocator, alignment, allocation_bytes
       );
    };
@@ -293,30 +293,30 @@ concept has_aligned_allocate_zeroed =
 template <typename T>
 concept has_aligned_allocate_zeroed_feedback =
    requires(T& allocator, ualign alignment, idx allocation_bytes) {
-      dyn_allocator_friend::aligned_allocate_zeroed_feedback(
+      allocator_dyn_friend::aligned_allocate_zeroed_feedback(
          allocator, alignment, allocation_bytes
       );
    };
 
 template <typename T>
 concept has_bytes_used = requires(T const& allocator) {
-                            dyn_allocator_friend::bytes_used(allocator);
+                            allocator_dyn_friend::bytes_used(allocator);
                          };
 
 template <typename T>
 concept has_bytes_capacity = requires(T const& allocator) {
-                                dyn_allocator_friend::bytes_capacity(allocator);
+                                allocator_dyn_friend::bytes_capacity(allocator);
                              };
 
 template <typename T>
 concept has_is_equivalent =
    requires(T const& allocator, T const& other) {
-      dyn_allocator_friend::is_equivalent(allocator, other);
+      allocator_dyn_friend::is_equivalent(allocator, other);
    };
 
 template <typename T>
 concept has_name =
-   requires(T const& allocator) { dyn_allocator_friend::name(allocator); };
+   requires(T const& allocator) { allocator_dyn_friend::name(allocator); };
 
 }  // namespace detail
 
@@ -327,7 +327,7 @@ struct dyn_allocate {
    [[gnu::always_inline, gnu::nodebug]]
    static auto
    do_invoke(T& self, idx allocation_bytes) -> maybe_ptr<void> {
-      return dyn_allocator_friend::allocate(self, allocation_bytes);
+      return allocator_dyn_friend::allocate(self, allocation_bytes);
    }
 };
 
@@ -349,7 +349,7 @@ struct dyn_reset {
    [[gnu::always_inline, gnu::nodebug]]
    static void
    do_invoke(T& self) {
-      dyn_allocator_friend::reset(self);
+      allocator_dyn_friend::reset(self);
    }
 };
 
@@ -362,18 +362,18 @@ struct dyn_aligned_allocate {
    do_invoke(T& self, ualign alignment, idx allocation_bytes)
       -> maybe_ptr<void> {
       if constexpr (detail::has_aligned_allocate<T>) {
-         return dyn_allocator_friend::aligned_allocate(
+         return allocator_dyn_friend::aligned_allocate(
             self, alignment, allocation_bytes
          );
       } else {
          // If the allocator doesn't implement `aligned_allocate`, we generate a
          // shim.
          maybe_ptr<void> result =
-            dyn_allocator_friend::allocate(self, allocation_bytes);
+            allocator_dyn_friend::allocate(self, allocation_bytes);
          if (
             result.has_value() && !cat::is_aligned(result.value(), alignment)
          ) {
-            dyn_allocator_friend::deallocate(
+            allocator_dyn_friend::deallocate(
                self, result.value(), allocation_bytes
             );
             return nullopt;
@@ -391,12 +391,12 @@ struct dyn_allocate_feedback {
    static auto
    do_invoke(T& self, idx allocation_bytes) -> maybe_sized_allocation<void*> {
       if constexpr (detail::has_allocate_feedback<T>) {
-         return dyn_allocator_friend::allocate_feedback(self, allocation_bytes);
+         return allocator_dyn_friend::allocate_feedback(self, allocation_bytes);
       } else {
          // If the allocator doesn't implement `allocate_feedback`, we generate
          // a shim.
          maybe_ptr<void> result =
-            dyn_allocator_friend::allocate(self, allocation_bytes);
+            allocator_dyn_friend::allocate(self, allocation_bytes);
          if (result.is_empty()) {
             return nullopt;
          }
@@ -416,7 +416,7 @@ struct dyn_aligned_allocate_feedback {
    do_invoke(T& self, ualign alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
       if constexpr (detail::has_aligned_allocate_feedback<T>) {
-         return dyn_allocator_friend::aligned_allocate_feedback(
+         return allocator_dyn_friend::aligned_allocate_feedback(
             self, alignment, allocation_bytes
          );
       } else {
@@ -424,15 +424,15 @@ struct dyn_aligned_allocate_feedback {
          // generate a shim.
          maybe_ptr<void> result;
          if constexpr (detail::has_aligned_allocate<T>) {
-            result = dyn_allocator_friend::aligned_allocate(
+            result = allocator_dyn_friend::aligned_allocate(
                self, alignment, allocation_bytes
             );
          } else {
-            result = dyn_allocator_friend::allocate(self, allocation_bytes);
+            result = allocator_dyn_friend::allocate(self, allocation_bytes);
             if (
                result.has_value() && !cat::is_aligned(result.value(), alignment)
             ) {
-               dyn_allocator_friend::deallocate(
+               allocator_dyn_friend::deallocate(
                   self, result.value(), allocation_bytes
                );
                return nullopt;
@@ -457,7 +457,7 @@ struct dyn_resize {
    do_invoke([[maybe_unused]] T& self, [[maybe_unused]] idx minimum_bytes)
       -> maybe_non_zero<idx> {
       if constexpr (detail::has_resize<T>) {
-         return dyn_allocator_friend::resize(self, minimum_bytes);
+         return allocator_dyn_friend::resize(self, minimum_bytes);
       } else {
          return nullopt;
       }
@@ -475,7 +475,7 @@ struct dyn_grow {
       [[maybe_unused]] idx new_bytes
    ) -> maybe<void> {
       if constexpr (detail::has_grow<T>) {
-         return dyn_allocator_friend::grow(self, allocation, new_bytes);
+         return allocator_dyn_friend::grow(self, allocation, new_bytes);
       } else {
          return nullopt;
       }
@@ -493,12 +493,12 @@ struct dyn_grow_feedback {
       [[maybe_unused]] idx new_bytes
    ) -> maybe_non_zero<idx> {
       if constexpr (detail::has_grow_feedback<T>) {
-         return dyn_allocator_friend::grow_feedback(
+         return allocator_dyn_friend::grow_feedback(
             self, allocation, new_bytes
          );
       } else if constexpr (detail::has_grow<T>) {
          if (
-            dyn_allocator_friend::grow(self, allocation, new_bytes).has_value()
+            allocator_dyn_friend::grow(self, allocation, new_bytes).has_value()
          ) {
             return new_bytes;
          }
@@ -520,7 +520,7 @@ struct dyn_reallocate {
       [[maybe_unused]] idx new_bytes
    ) -> maybe_ptr<void> {
       if constexpr (detail::has_reallocate<T>) {
-         return dyn_allocator_friend::reallocate(self, allocation, new_bytes);
+         return allocator_dyn_friend::reallocate(self, allocation, new_bytes);
       } else {
          return nullopt;
       }
@@ -538,12 +538,12 @@ struct dyn_reallocate_feedback {
       [[maybe_unused]] idx new_bytes
    ) -> maybe_sized_allocation<void*> {
       if constexpr (detail::has_reallocate_feedback<T>) {
-         return dyn_allocator_friend::reallocate_feedback(
+         return allocator_dyn_friend::reallocate_feedback(
             self, allocation, new_bytes
          );
       } else if constexpr (detail::has_reallocate<T>) {
          maybe_ptr<void> result =
-            dyn_allocator_friend::reallocate(self, allocation, new_bytes);
+            allocator_dyn_friend::reallocate(self, allocation, new_bytes);
          if (result.is_empty()) {
             return nullopt;
          }
@@ -562,7 +562,7 @@ struct dyn_bytes_used {
    static auto
    do_invoke([[maybe_unused]] T const& self) -> idx {
       if constexpr (detail::has_bytes_used<T>) {
-         return dyn_allocator_friend::bytes_used(self);
+         return allocator_dyn_friend::bytes_used(self);
       } else {
          return idx(0u);
       }
@@ -577,7 +577,7 @@ struct dyn_bytes_capacity {
    static auto
    do_invoke([[maybe_unused]] T const& self) -> idx {
       if constexpr (detail::has_bytes_capacity<T>) {
-         return dyn_allocator_friend::bytes_capacity(self);
+         return allocator_dyn_friend::bytes_capacity(self);
       } else {
          return idx(0u);
       }
@@ -596,7 +596,7 @@ struct dyn_min_allocation_bytes {
 };
 
 // `dyn_equals` is the type-erased value-equality hook. Callers must guarantee
-// that `p_other` points to a `T`, which is checked at the `dyn_allocator`
+// that `p_other` points to a `T`, which is checked at the `allocator_dyn`
 // equality entry point via type-id comparison.
 struct dyn_equals {
    using signature = auto(void const* _Nonnull) const -> bool;
@@ -611,7 +611,7 @@ struct dyn_equals {
       [[maybe_unused]]
       T const& other = *static_cast<T const*>(p_other);
       if constexpr (detail::has_is_equivalent<T>) {
-         return dyn_allocator_friend::is_equivalent(self, other);
+         return allocator_dyn_friend::is_equivalent(self, other);
       } else if constexpr (__is_empty(T)) {
          return true;
       } else {
@@ -628,7 +628,7 @@ struct dyn_name {
    static auto
    do_invoke([[maybe_unused]] T const& self) -> str_view {
       if constexpr (detail::has_name<T>) {
-         return dyn_allocator_friend::name(self);
+         return allocator_dyn_friend::name(self);
       } else {
          return str_view{};
       }
@@ -638,14 +638,14 @@ struct dyn_name {
 // Non-owning, dynamic-dispatch handle to an `Allocator`. This erases the type
 // of underlying allocators to minimize code generation.
 template <typename... Methods>
-class [[clang::trivial_abi, gsl::Owner]] basic_dyn_allocator
-    : public allocator_interface<basic_dyn_allocator<Methods...>> {
-   friend allocator_interface<basic_dyn_allocator>;
-   friend struct dyn_allocator_friend;
+class [[clang::trivial_abi, gsl::Owner]] basic_allocator_dyn
+    : public allocator_interface<basic_allocator_dyn<Methods...>> {
+   friend allocator_interface<basic_allocator_dyn>;
+   friend struct allocator_dyn_friend;
    template <typename>
    friend class allocator_ref;
    template <typename...>
-   friend class basic_dyn_allocator;
+   friend class basic_allocator_dyn;
 
  private:
    dyn_ptr<dyn_allocate, dyn_deallocate, Methods...> m_p_allocator;
@@ -741,25 +741,25 @@ class [[clang::trivial_abi, gsl::Owner]] basic_dyn_allocator
    }
 
  public:
-   using basic_dyn_allocator_tag = void;
+   using basic_allocator_dyn_tag = void;
 
-   basic_dyn_allocator() =
-      delete ("`basic_dyn_allocator` cannot be default-constructed! Pass an "
+   basic_allocator_dyn() =
+      delete ("`basic_allocator_dyn` cannot be default-constructed! Pass an "
               "allocator l-value instead.");
 
    template <is_allocator Allocator>
-      requires(!requires { typename Allocator::basic_dyn_allocator_tag; })
-   [[gnu::always_inline, gnu::nodebug]] constexpr basic_dyn_allocator(
+      requires(!requires { typename Allocator::basic_allocator_dyn_tag; })
+   [[gnu::always_inline, gnu::nodebug]] constexpr basic_allocator_dyn(
       Allocator& allocator [[clang::lifetimebound]]
    )
        : m_p_allocator(__builtin_addressof(allocator)) {
    }
 
-   basic_dyn_allocator(basic_dyn_allocator const&) = default;
+   basic_allocator_dyn(basic_allocator_dyn const&) = default;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(basic_dyn_allocator const&) -> basic_dyn_allocator& = default;
+   operator=(basic_allocator_dyn const&) -> basic_allocator_dyn& = default;
 
    template <typename... Superset>
       requires(
@@ -768,21 +768,21 @@ class [[clang::trivial_abi, gsl::Owner]] basic_dyn_allocator
             type_list<Methods...>, type_list<Superset...>>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_dyn_allocator(basic_dyn_allocator<Superset...> other)
+   constexpr basic_allocator_dyn(basic_allocator_dyn<Superset...> other)
        : m_p_allocator(other.m_p_allocator) {
    }
 
-   // Value equality between two `dyn_allocator` handles. Two handles compare
+   // Value equality between two `allocator_dyn` handles. Two handles compare
    // equal when they erase the same concrete allocator type AND that type's
    // `is_equivalent` hook reports equivalence between the held instances.
    // The type-id pointers are compared first as a cheap early-out, since the
    // `dyn_equals` shim assumes both arguments share the same erased type.
    //
-   // `operator==` is provided by `allocator_interface<dyn_allocator>`'s
+   // `operator==` is provided by `allocator_interface<allocator_dyn>`'s
    // hidden friend, which forwards to `is_equivalent`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    auto
-   is_equivalent(basic_dyn_allocator const& other) const -> bool
+   is_equivalent(basic_allocator_dyn const& other) const -> bool
       requires(detail::contains_method<dyn_equals, Methods...>)
    {
       if (m_p_allocator.type_id_ptr() != other.m_p_allocator.type_id_ptr()) {
@@ -835,7 +835,7 @@ class [[clang::trivial_abi, gsl::Owner]] basic_dyn_allocator
    }
 };
 
-using dyn_allocator = basic_dyn_allocator<
+using allocator_dyn = basic_allocator_dyn<
    dyn_reallocate, dyn_reset, dyn_aligned_allocate, dyn_allocate_feedback,
    dyn_aligned_allocate_feedback, dyn_resize, dyn_grow, dyn_grow_feedback,
    dyn_reallocate_feedback, dyn_bytes_used, dyn_bytes_capacity,
@@ -856,7 +856,7 @@ struct max_allocation_bytes_storage<Allocator> {
 // Reference-like static-dispatch handle to an `Allocator`. Functions are
 // encouraged to consume this type rather than `Allocator&` to reduce
 // `.template alloc<>()` syntactic noise and to bias overload resolution
-// towards `dyn_allocator` when not explicitly specified.
+// towards `allocator_dyn` when not explicitly specified.
 //
 // For zero-size (stateless / "global") allocators, the ref carries no instance
 // pointer. The wrapped type has no observable state, so dispatch through a
@@ -939,7 +939,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
    resize(idx minimum_bytes) -> maybe_non_zero<idx>
       requires(detail::has_resize<Allocator>)
    {
-      return dyn_allocator_friend::resize(get_allocator(), minimum_bytes);
+      return allocator_dyn_friend::resize(get_allocator(), minimum_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -947,7 +947,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
    grow(span<byte> allocation, idx new_bytes) -> maybe<void>
       requires(detail::has_grow<Allocator>)
    {
-      return dyn_allocator_friend::grow(get_allocator(), allocation, new_bytes);
+      return allocator_dyn_friend::grow(get_allocator(), allocation, new_bytes);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -955,7 +955,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
    grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
       requires(detail::has_grow_feedback<Allocator>)
    {
-      return dyn_allocator_friend::grow_feedback(
+      return allocator_dyn_friend::grow_feedback(
          get_allocator(), allocation, new_bytes
       );
    }
@@ -965,7 +965,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
    reallocate(span<byte> allocation, idx new_bytes) -> maybe_ptr<void>
       requires(detail::has_reallocate<Allocator>)
    {
-      return dyn_allocator_friend::reallocate(
+      return allocator_dyn_friend::reallocate(
          get_allocator(), allocation, new_bytes
       );
    }
@@ -976,7 +976,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
       -> maybe_sized_allocation<void*>
       requires(detail::has_reallocate_feedback<Allocator>)
    {
-      return dyn_allocator_friend::reallocate_feedback(
+      return allocator_dyn_friend::reallocate_feedback(
          get_allocator(), allocation, new_bytes
       );
    }
@@ -986,7 +986,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
    allocate_zeroed(idx allocation_bytes) -> maybe_ptr<void>
       requires(detail::has_allocate_zeroed<Allocator>)
    {
-      return dyn_allocator_friend::allocate_zeroed(
+      return allocator_dyn_friend::allocate_zeroed(
          get_allocator(), allocation_bytes
       );
    }
@@ -997,7 +997,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
       -> maybe_sized_allocation<void*>
       requires(detail::has_allocate_zeroed_feedback<Allocator>)
    {
-      return dyn_allocator_friend::allocate_zeroed_feedback(
+      return allocator_dyn_friend::allocate_zeroed_feedback(
          get_allocator(), allocation_bytes
       );
    }
@@ -1008,7 +1008,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
       -> maybe_ptr<void>
       requires(detail::has_aligned_allocate_zeroed<Allocator>)
    {
-      return dyn_allocator_friend::aligned_allocate_zeroed(
+      return allocator_dyn_friend::aligned_allocate_zeroed(
          get_allocator(), alignment, allocation_bytes
       );
    }
@@ -1019,7 +1019,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
       -> maybe_sized_allocation<void*>
       requires(detail::has_aligned_allocate_zeroed_feedback<Allocator>)
    {
-      return dyn_allocator_friend::aligned_allocate_zeroed_feedback(
+      return allocator_dyn_friend::aligned_allocate_zeroed_feedback(
          get_allocator(), alignment, allocation_bytes
       );
    }
@@ -1065,7 +1065,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
    auto
    bytes_used() const -> idx {
       if constexpr (detail::has_bytes_used<Allocator>) {
-         return dyn_allocator_friend::bytes_used(get_allocator());
+         return allocator_dyn_friend::bytes_used(get_allocator());
       } else {
          return 0u;
       }
@@ -1075,7 +1075,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
    auto
    bytes_capacity() const -> idx {
       if constexpr (detail::has_bytes_capacity<Allocator>) {
-         return dyn_allocator_friend::bytes_capacity(get_allocator());
+         return allocator_dyn_friend::bytes_capacity(get_allocator());
       } else {
          return 0u;
       }
@@ -1085,7 +1085,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
    auto
    name() const -> str_view {
       if constexpr (detail::has_name<Allocator>) {
-         return dyn_allocator_friend::name(get_allocator());
+         return allocator_dyn_friend::name(get_allocator());
       } else {
          return str_view{};
       }
@@ -1100,7 +1100,7 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
       if constexpr (__is_empty(Allocator)) {
          return true;
       } else if constexpr (detail::has_is_equivalent<Allocator>) {
-         return dyn_allocator_friend::is_equivalent(
+         return allocator_dyn_friend::is_equivalent(
             get_allocator(), other.get_allocator()
          );
       } else {
@@ -1120,18 +1120,18 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
 // A dynamic allocator is already a reference, so hold it by value.
 template <typename... Methods>
 class [[clang::trivial_abi, gsl::Pointer]]
-allocator_ref<basic_dyn_allocator<Methods...>>
+allocator_ref<basic_allocator_dyn<Methods...>>
     : public allocator_interface<
-         allocator_ref<basic_dyn_allocator<Methods...>>> {
+         allocator_ref<basic_allocator_dyn<Methods...>>> {
  private:
    friend allocator_interface<allocator_ref>;
 
-   basic_dyn_allocator<Methods...> m_allocator;
+   basic_allocator_dyn<Methods...> m_allocator;
 
  public:
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   get_allocator() const -> basic_dyn_allocator<Methods...> {
+   get_allocator() const -> basic_allocator_dyn<Methods...> {
       return m_allocator;
    }
 
@@ -1224,7 +1224,7 @@ allocator_ref<basic_dyn_allocator<Methods...>>
                              "Pass an allocator l-value instead.");
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr allocator_ref(basic_dyn_allocator<Methods...> allocator)
+   constexpr allocator_ref(basic_allocator_dyn<Methods...> allocator)
        : m_allocator(allocator) {
    }
 

@@ -16,27 +16,27 @@ struct musl_context;
 }  // namespace detail
 
 template <bool is_shared>
-class basic_musl_allocator
-    : public allocator_interface<basic_musl_allocator<is_shared>> {
+class basic_allocator_musl
+    : public allocator_interface<basic_allocator_musl<is_shared>> {
  private:
-   using self_type = basic_musl_allocator;
+   using self_type = basic_allocator_musl;
    using context = detail::musl_context<is_shared>;
 
    friend allocator_interface<self_type>;
-   friend struct dyn_allocator_friend;
+   friend struct allocator_dyn_friend;
    friend auto
-   make_musl_allocator() -> basic_musl_allocator<false>;
+   make_allocator_musl() -> basic_allocator_musl<false>;
    friend auto
-   make_musl_allocator_shared() -> basic_musl_allocator<true>;
+   make_allocator_musl_shared() -> basic_allocator_musl<true>;
 
    template <is_uniform_random_bit_generator Generator>
    friend auto
-   make_musl_allocator(Generator& generator) -> basic_musl_allocator<false>;
+   make_allocator_musl(Generator& generator) -> basic_allocator_musl<false>;
 
    template <is_uniform_random_bit_generator Generator>
    friend auto
-   make_musl_allocator_shared(Generator& generator)
-      -> basic_musl_allocator<true>;
+   make_allocator_musl_shared(Generator& generator)
+      -> basic_allocator_musl<true>;
 
    template <typename>
    friend class allocator_ref;
@@ -45,7 +45,7 @@ class basic_musl_allocator
    atomic<context*> m_p_context{nullptr};
    uint8 m_secret = 0u;
 
-   explicit basic_musl_allocator(uint8 secret) : m_secret(secret) {
+   explicit basic_allocator_musl(uint8 secret) : m_secret(secret) {
       verify(secret != 0u);
    }
 
@@ -123,16 +123,16 @@ class basic_musl_allocator
    static constexpr ualign min_alignment = 16u;
    static constexpr idx min_allocation_bytes = 1u;
 
-   constexpr basic_musl_allocator() = default;
-   basic_musl_allocator(basic_musl_allocator const&) =
-      delete ("`basic_musl_allocator` owns an independent mallocng context.");
+   constexpr basic_allocator_musl() = default;
+   basic_allocator_musl(basic_allocator_musl const&) =
+      delete ("`basic_allocator_musl` owns an independent mallocng context.");
    auto
-   operator=(basic_musl_allocator const&) -> basic_musl_allocator& = delete;
+   operator=(basic_allocator_musl const&) -> basic_allocator_musl& = delete;
 
-   basic_musl_allocator(basic_musl_allocator&& other) noexcept;
+   basic_allocator_musl(basic_allocator_musl&& other) noexcept;
    auto
-   operator=(basic_musl_allocator&& other) noexcept -> basic_musl_allocator&;
-   ~basic_musl_allocator();
+   operator=(basic_allocator_musl&& other) noexcept -> basic_allocator_musl&;
+   ~basic_allocator_musl();
 
    void
    reset();
@@ -147,20 +147,20 @@ class basic_musl_allocator
 
    [[nodiscard]]
    auto
-   is_equivalent(basic_musl_allocator const& other) const -> bool;
+   is_equivalent(basic_allocator_musl const& other) const -> bool;
 };
 
-using musl_allocator = basic_musl_allocator<false>;
-using musl_allocator_shared = basic_musl_allocator<true>;
+using allocator_musl = basic_allocator_musl<false>;
+using allocator_musl_shared = basic_allocator_musl<true>;
 
 template <is_uniform_random_bit_generator Generator>
 [[nodiscard]]
 inline auto
-make_musl_allocator(Generator& generator) -> musl_allocator {
+make_allocator_musl(Generator& generator) -> allocator_musl {
    while (true) {
       uint8 const secret = uniform_int_distribution<uint8>{}(generator);
       if (secret != 0u) {
-         return musl_allocator(secret);
+         return allocator_musl(secret);
       }
    }
 }
@@ -168,27 +168,27 @@ make_musl_allocator(Generator& generator) -> musl_allocator {
 template <is_uniform_random_bit_generator Generator>
 [[nodiscard]]
 inline auto
-make_musl_allocator_shared(Generator& generator) -> musl_allocator_shared {
+make_allocator_musl_shared(Generator& generator) -> allocator_musl_shared {
    while (true) {
       uint8 const secret = uniform_int_distribution<uint8>{}(generator);
       if (secret != 0u) {
-         return musl_allocator_shared(secret);
+         return allocator_musl_shared(secret);
       }
    }
 }
 
 [[nodiscard]]
 inline auto
-make_musl_allocator() -> musl_allocator {
+make_allocator_musl() -> allocator_musl {
    nix::sys_urandom_engine generator;
-   return make_musl_allocator(generator);
+   return make_allocator_musl(generator);
 }
 
 [[nodiscard]]
 inline auto
-make_musl_allocator_shared() -> musl_allocator_shared {
+make_allocator_musl_shared() -> allocator_musl_shared {
    nix::sys_urandom_engine generator;
-   return make_musl_allocator_shared(generator);
+   return make_allocator_musl_shared(generator);
 }
 
 }  // namespace cat

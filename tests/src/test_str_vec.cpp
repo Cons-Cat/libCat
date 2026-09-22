@@ -1,8 +1,8 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_null>
+#include <cat/allocator_page>
 #include <cat/array>
 #include <cat/iterable>
-#include <cat/linear_allocator>
-#include <cat/null_allocator>
-#include <cat/page_allocator>
 #include <cat/string>
 #include <cat/vec>
 
@@ -12,7 +12,7 @@ namespace {
 
 struct linear_arena {
    cat::span<cat::byte> page = pager.alloc_multi<cat::byte>(4_uki).verify();
-   cat::linear_allocator alloc = cat::make_linear_allocator(page);
+   cat::allocator_linear alloc = cat::make_allocator_linear(page);
 
    ~linear_arena() {
       pager.free(page);
@@ -21,7 +21,7 @@ struct linear_arena {
 
 template <typename String>
 concept can_reserve_manual_str_vec = requires(
-   String& string, cat::allocator_ref<cat::linear_allocator> allocator
+   String& string, cat::allocator_ref<cat::allocator_linear> allocator
 ) { string.reserve(allocator, 1u); };
 
 template <typename String>
@@ -89,10 +89,10 @@ $test(str_vec_flags_and_aliases) {
             char, cat::vec_flags::inline_storage(8u) | pointer_layout>>
    );
    static_assert(cat::is_same<
-                 cat::raii::str_vec_small<cat::dyn_allocator, 8u>,
+                 cat::raii::str_vec_small<cat::allocator_dyn, 8u>,
                  cat::raii::basic_str_vec<
                     char, cat::vec_flags::inline_storage(8u) | pointer_layout,
-                    cat::dyn_allocator>>);
+                    cat::allocator_dyn>>);
    static_assert(cat::is_same<
                  cat::wzstr_vec_fixed<
                     pointer_layout | cat::vec_flags::inline_storage(8u)>,
@@ -108,18 +108,18 @@ $test(str_vec_flags_and_aliases) {
                                         pointer_layout
                                            | cat::vec_flags::inline_storage(22u)
                                            | cat::vec_flags::fixed_size,
-                                        cat::dyn_allocator>>
+                                        cat::allocator_dyn>>
    );
    static_assert(cat::is_same<
                  cat::raii::zstr_vec<
-                    cat::dyn_allocator,
+                    cat::allocator_dyn,
                     pointer_layout | cat::vec_flags::inline_storage(8u)>,
                  cat::raii::basic_str_vec<
                     char,
                     cat::str_flags::null_terminated
                        | pointer_layout
                        | cat::vec_flags::inline_storage(8u),
-                    cat::dyn_allocator>>);
+                    cat::allocator_dyn>>);
    static_assert(!can_reserve_manual_str_vec<cat::str_vec_fixed<>>);
    static_assert(!can_reserve_raii_str_vec<cat::raii::str_vec_fixed<>>);
 
@@ -132,7 +132,7 @@ $test(str_vec_flags_and_aliases) {
    constexpr auto growth =
       cat::vec_flags::pointer_size_layout | cat::vec_flags::initial_growth(8u);
    auto grown =
-      cat::make_str_vec<cat::linear_allocator, growth>(arena.alloc, "a")
+      cat::make_str_vec<cat::allocator_linear, growth>(arena.alloc, "a")
          .verify();
    cat::verify(grown.capacity() == 8u);
    grown.free(arena.alloc);
@@ -257,7 +257,7 @@ $test(str_vec_append_range_variants) {
    verify_manual_wide.template operator()<cat::wzstr_vec>();
 
    auto verify_raii_narrow = [&]<typename Vector> {
-      Vector string{cat::dyn_allocator(arena.alloc)};
+      Vector string{cat::allocator_dyn(arena.alloc)};
       string.append_range(narrow).verify();
       string.append_range(narrow).verify();
       cat::verify(string.view() == cat::str_view("catcat"));
@@ -266,7 +266,7 @@ $test(str_vec_append_range_variants) {
    verify_raii_narrow.template operator()<cat::raii::zstr_vec<>>();
 
    auto verify_raii_wide = [&]<typename Vector> {
-      Vector string{cat::dyn_allocator(arena.alloc)};
+      Vector string{cat::allocator_dyn(arena.alloc)};
       string.append_range(wide).verify();
       string.append_range(wide).verify();
       cat::verify(string.view() == cat::wstr_view(L"catcat"));
@@ -278,7 +278,7 @@ $test(str_vec_append_range_variants) {
 $test(str_vec_iterable_range_modifiers) {
    linear_arena arena;
    cat::array<char, 3u> source{'c', 'a', 't'};
-   cat::raii::zstr_vec<cat::linear_allocator> string(arena.alloc);
+   cat::raii::zstr_vec<cat::allocator_linear> string(arena.alloc);
    auto consonants = cat::ref(source).filter([](char value) -> bool {
       return value != 'a';
    });
@@ -301,7 +301,7 @@ $test(str_vec_contiguous_range_modifiers) {
    cat::array<char, 3u> source{'c', 'a', 't'};
    cat::array<char, 2u> insertion{'o', 'w'};
    cat::array<char, 1u> replacement{'!'};
-   cat::raii::zstr_vec<cat::linear_allocator> string(arena.alloc);
+   cat::raii::zstr_vec<cat::allocator_linear> string(arena.alloc);
 
    string.append_range(source).verify();
    string.insert_range(1u, insertion).verify();
@@ -445,7 +445,7 @@ $test(str_vec_clone_move_and_failure) {
    cat::verify(moved == cat::str_view("copy"));
    cat::verify(cloned.data() == nullptr);
 
-   cat::null_allocator null_alloc;
+   cat::allocator_null null_alloc;
    cat::str_vec_big<> failed;
    $defer {
       failed.free(null_alloc);

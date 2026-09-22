@@ -1,6 +1,6 @@
+#include <cat/allocator_page>
 #include <cat/atomic>
 #include <cat/maybe>
-#include <cat/page_allocator>
 #include <cat/thread>
 
 #include "../unit_tests.hpp"

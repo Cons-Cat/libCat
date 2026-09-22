@@ -1,6 +1,6 @@
+#include <cat/allocator_page>
 #include <cat/array>
 #include <cat/demangle>
-#include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
 
@@ -28,12 +28,12 @@ $test(demangle_names_and_types) {
       demangle_case{.mangled = "main", .expected = "main"},
       demangle_case{.mangled = "_start", .expected = "_start"},
       demangle_case{
-                    .mangled = "_Z11print_traceRN3cat14page_allocatorE",
-                    .expected = "print_trace(cat::page_allocator&)",
+                    .mangled = "_Z11print_traceRN3cat14allocator_pageE",
+                    .expected = "print_trace(cat::allocator_page&)",
                     },
       demangle_case{
-                    .mangled = "_ZN3foo3barERKN3cat14page_allocatorE",
-                    .expected = "foo::bar(cat::page_allocator const&)",
+                    .mangled = "_ZN3foo3barERKN3cat14allocator_pageE",
+                    .expected = "foo::bar(cat::allocator_page const&)",
                     },
       demangle_case{
                     .mangled = "_Z3fooPKViOif",

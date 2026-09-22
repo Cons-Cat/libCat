@@ -131,8 +131,8 @@ struct process {
    // Deallocate this `process`'s stack from `allocator`. Call after `wait()`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    void
-   free(cat::dyn_allocator allocator) {
-      free<cat::dyn_allocator>(allocator);
+   free(cat::allocator_dyn allocator) {
+      free<cat::allocator_dyn>(allocator);
    }
 
    // Deallocate this `process`'s stack from `allocator`. Call after `wait()`.
@@ -143,8 +143,8 @@ struct process {
    // Deallocate this `process`'s stack from `allocator`. Call after `wait()`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    void
-   cfree(cat::dyn_allocator allocator) {
-      cfree<cat::dyn_allocator>(allocator);
+   cfree(cat::allocator_dyn allocator) {
+      cfree<cat::allocator_dyn>(allocator);
    }
 
  private:

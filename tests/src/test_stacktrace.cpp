@@ -1,10 +1,10 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_null>
+#include <cat/allocator_page>
 #include <cat/array>
 #include <cat/format>
 #include <cat/iterable>
-#include <cat/linear_allocator>
 #include <cat/meta>
-#include <cat/null_allocator>
-#include <cat/page_allocator>
 #include <cat/runtime>
 #include <cat/span>
 #include <cat/stacktrace>
@@ -25,28 +25,28 @@ struct frame_capture {
 // and need no demangling.
 extern "C" [[gnu::noinline, clang::disable_tail_calls]]
 void
-cat_test_capture_one_frame(cat::dyn_allocator allocator, frame_capture& out) {
+cat_test_capture_one_frame(cat::allocator_dyn allocator, frame_capture& out) {
    out.trace = cat::stacktrace::current(allocator, 0u, 1u).verify();
    out.inner_line = __LINE__ - 1u;
 }
 
 extern "C" [[gnu::noinline, clang::disable_tail_calls]]
 void
-cat_test_frame_inner(cat::dyn_allocator allocator, frame_capture& out) {
+cat_test_frame_inner(cat::allocator_dyn allocator, frame_capture& out) {
    out.trace = cat::stacktrace::current(allocator, 0u, 3u).verify();
    out.inner_line = __LINE__ - 1u;
 }
 
 extern "C" [[gnu::noinline, clang::disable_tail_calls]]
 void
-cat_test_frame_middle(cat::dyn_allocator allocator, frame_capture& out) {
+cat_test_frame_middle(cat::allocator_dyn allocator, frame_capture& out) {
    cat_test_frame_inner(allocator, out);
    out.middle_line = __LINE__ - 1u;
 }
 
 extern "C" [[gnu::noinline, clang::disable_tail_calls]]
 void
-cat_test_frame_outer(cat::dyn_allocator allocator, frame_capture& out) {
+cat_test_frame_outer(cat::allocator_dyn allocator, frame_capture& out) {
    cat_test_frame_middle(allocator, out);
    out.outer_line = __LINE__ - 1u;
 }
@@ -102,7 +102,7 @@ deep_trace(idx remaining) -> cat::stacktrace {
 [[gnu::noinline, clang::disable_tail_calls]]
 auto
 // NOLINTNEXTLINE
-deep_maybe_trace(cat::dyn_allocator allocator, idx remaining)
+deep_maybe_trace(cat::allocator_dyn allocator, idx remaining)
    -> cat::maybe<cat::stacktrace> {
    if (remaining == 0u) {
       return cat::stacktrace::current(allocator);
@@ -168,7 +168,7 @@ $test(stacktrace_formatting) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    cat::stacktrace_entry const empty{};
    cat::verify(cat::fmt(allocator, "{}", empty).verify() == "0x0");
@@ -256,7 +256,7 @@ $test(stacktrace_formatting_three_frames) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    frame_capture captured{.trace = cat::stacktrace(allocator)};
    cat_test_frame_outer(allocator, captured);
@@ -295,7 +295,7 @@ $test(stacktrace_formatting_dropped_frames) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    frame_capture captured{.trace = cat::stacktrace(allocator)};
    cat_test_frame_outer(allocator, captured);
@@ -346,7 +346,7 @@ $test(stacktrace_drop_while_frames) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    frame_capture captured{.trace = cat::stacktrace(allocator)};
    cat_test_frame_outer(allocator, captured);
@@ -587,7 +587,7 @@ $test(stacktrace_grows_past_inline_storage) {
 // Capturing reports failure instead of silently truncating, but only once a
 // trace outgrows its inline storage.
 $test(stacktrace_allocation_failure) {
-   cat::null_allocator nothing;
+   cat::allocator_null nothing;
    cat::verify(deep_maybe_trace(nothing, 96u).is_empty());
    cat::verify(cat::stacktrace::current(nothing, 0u, 8u).has_value());
 }

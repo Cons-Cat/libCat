@@ -14,29 +14,29 @@ namespace cat {
 // A second allocation fails until this is `free()`d or `reset()`.
 template <idx arena_bytes>
 class [[clang::trivial_abi]]
-inplace_allocator : public allocator_interface<inplace_allocator<arena_bytes>> {
+allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
  private:
-   friend allocator_interface<inplace_allocator>;
-   friend struct dyn_allocator_friend;
+   friend allocator_interface<allocator_inplace>;
+   friend struct allocator_dyn_friend;
    template <typename>
    friend class allocator_ref;
    template <is_allocator, is_allocator, idx, idx>
-   friend class resizable_allocator;
+   friend class allocator_resizeable;
 
  public:
-   constexpr inplace_allocator() {
+   constexpr allocator_inplace() {
       poison_memory_region(m_storage.data(), arena_bytes);
    }
 
-   constexpr inplace_allocator(inplace_allocator const&) = delete (
-      "`inplace_allocator` owns an on-stack buffer that must not alias. "
-      "Create allocators through `make_inplace_allocator` instead of copying."
+   constexpr allocator_inplace(allocator_inplace const&) = delete (
+      "`allocator_inplace` owns an on-stack buffer that must not alias. "
+      "Create allocators through `make_allocator_inplace` instead of copying."
    );
-   constexpr inplace_allocator(inplace_allocator&&) = default;
+   constexpr allocator_inplace(allocator_inplace&&) = default;
 
    // Clear any leftover poison so the buffer's stack storage does not stay
    // poisoned after this allocator dies and its stack slot is reused.
-   constexpr ~inplace_allocator() {
+   constexpr ~allocator_inplace() {
       unpoison_memory_region(m_storage.data(), arena_bytes);
    }
 
@@ -138,7 +138,7 @@ inplace_allocator : public allocator_interface<inplace_allocator<arena_bytes>> {
 template <idx arena_bytes>
 [[nodiscard]]
 constexpr auto
-make_inplace_allocator() -> inplace_allocator<arena_bytes> {
+make_allocator_inplace() -> allocator_inplace<arena_bytes> {
    return {};
 }
 

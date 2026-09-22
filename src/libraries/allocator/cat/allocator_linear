@@ -9,42 +9,42 @@
 
 namespace cat {
 
-class [[clang::trivial_abi]] linear_allocator
-    : public allocator_interface<linear_allocator> {
+class [[clang::trivial_abi]] allocator_linear
+    : public allocator_interface<allocator_linear> {
  private:
-   friend allocator_interface<linear_allocator>;
-   friend struct dyn_allocator_friend;
+   friend allocator_interface<allocator_linear>;
+   friend struct allocator_dyn_friend;
    template <typename>
    friend class allocator_ref;
-   // `resizable_allocator` constructs `linear_allocator` instances in place
+   // `allocator_resizeable` constructs `allocator_linear` instances in place
    // over each chunk's post-header storage and therefore needs access to the
    // private `(uintptr<void>, idx)` constructor.
    template <is_allocator, is_allocator, idx, idx>
-   friend class resizable_allocator;
+   friend class allocator_resizeable;
 
    // Friend factory functions.
    friend constexpr auto
-   make_linear_allocator(uintptr<void> p_address, idx arena_bytes)
-      -> linear_allocator;
+   make_allocator_linear(uintptr<void> p_address, idx arena_bytes)
+      -> allocator_linear;
 
    friend constexpr auto
-   make_linear_allocator(span<byte>& span [[clang::lifetimebound]])
-      -> linear_allocator;
+   make_allocator_linear(span<byte>& span [[clang::lifetimebound]])
+      -> allocator_linear;
 
-   // Initialize a `linear_allocator`. This should only be called from
-   // `cat::make_linear_allocator`.
-   constexpr linear_allocator(uintptr<void> p_address, idx arena_bytes)
+   // Initialize a `allocator_linear`. This should only be called from
+   // `cat::make_allocator_linear`.
+   constexpr allocator_linear(uintptr<void> p_address, idx arena_bytes)
        : m_p_arena_begin(p_address + arena_bytes), m_p_arena_end(p_address) {
       this->reset();
    }
 
  public:
-   // `linear_allocator` is move-only.
-   constexpr linear_allocator(linear_allocator const&) = delete (
-      "`linear_allocator` owns bump-pointer arena state that must not alias. "
-      "Create allocators through `make_linear_allocator` instead of copying."
+   // `allocator_linear` is move-only.
+   constexpr allocator_linear(allocator_linear const&) = delete (
+      "`allocator_linear` owns bump-pointer arena state that must not alias. "
+      "Create allocators through `make_allocator_linear` instead of copying."
    );
-   constexpr linear_allocator(linear_allocator&&) = default;
+   constexpr allocator_linear(allocator_linear&&) = default;
 
    // Reset the bumped pointer to the beginning of this arena.
    // NOLINTNEXTLINE
@@ -182,7 +182,7 @@ class [[clang::trivial_abi]] linear_allocator
    // NOLINTNEXTLINE
    [[nodiscard]]
    auto
-   is_equivalent(linear_allocator const& other) const -> bool {
+   is_equivalent(allocator_linear const& other) const -> bool {
       return m_p_arena_begin == other.m_p_arena_begin
              && m_p_arena_end == other.m_p_arena_end;
    }
@@ -195,26 +195,26 @@ class [[clang::trivial_abi]] linear_allocator
 
 [[nodiscard]]
 constexpr auto
-make_linear_allocator(uintptr<void> p_address, idx arena_bytes)
-   -> linear_allocator {
+make_allocator_linear(uintptr<void> p_address, idx arena_bytes)
+   -> allocator_linear {
    return {p_address, arena_bytes};
 }
 
 [[nodiscard]]
 constexpr auto
-make_linear_allocator(span<byte>& span [[clang::lifetimebound]])
-   -> linear_allocator {
+make_allocator_linear(span<byte>& span [[clang::lifetimebound]])
+   -> allocator_linear {
    return {span.data(), span.size()};
 }
 
 [[nodiscard,
   deprecated(
-     "Creating a `cat::linear_allocator` with a pr-value may "
+     "Creating a `cat::allocator_linear` with a pr-value may "
      "unintentionally leak memory. Copy an l-value `cat::span` instead."
   )]]
 constexpr auto
-make_linear_allocator(span<byte>&& span) -> linear_allocator {
-   return make_linear_allocator(span);
+make_allocator_linear(span<byte>&& span) -> allocator_linear {
+   return make_allocator_linear(span);
 }
 
 }  // namespace cat

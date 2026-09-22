@@ -1,11 +1,11 @@
-#include <cat/page_allocator>
+#include <cat/allocator_page>
 #include <cat/x11>
 
 
 
 auto
 main() -> int {
-   cat::page_allocator allocator;
+   cat::allocator_page allocator;
    // TODO: Work on this more.
    [[maybe_unused]]
    x11::connection x_connection =

@@ -1,8 +1,8 @@
 #include <cat/detail/movsb.hpp>
 
+#include <cat/allocator_page>
 #include <cat/cpuid>
 #include <cat/memory>
-#include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
 

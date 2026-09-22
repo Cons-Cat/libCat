@@ -1,6 +1,6 @@
+#include <cat/allocator_page>
 #include <cat/bit>
 #include <cat/iterable>
-#include <cat/page_allocator>
 #include <cat/span>
 #include <cat/vec>
 

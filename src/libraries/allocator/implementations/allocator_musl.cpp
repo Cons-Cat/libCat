@@ -1,6 +1,7 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 
+#include <cat/allocator_musl>
 #include <cat/array>
 #include <cat/atomic>
 #include <cat/bit>
@@ -10,7 +11,6 @@
 #include <cat/linux>
 #include <cat/memory>
 #include <cat/mutex_native>
-#include <cat/musl_allocator>
 
 namespace cat::detail {
 
@@ -307,8 +307,7 @@ make_context(uint8 secret = 0u) -> musl_context<is_shared>* _Nullable {
       uword filled = 0u;
       while (filled != sizeof(p_context->m_secret)) {
          auto const result = nix::sys_getrandom(
-            p_secret + filled.raw,
-            sizeof(p_context->m_secret) - filled
+            p_secret + filled.raw, sizeof(p_context->m_secret) - filled
          );
          if (result.is_empty() || result.value() == 0u) {
             p_context->deallocate_pages(p_mapping, musl_page_bytes);
@@ -401,7 +400,8 @@ auto
 musl_context<is_shared>::allocate_meta() -> meta<is_shared>* _Nullable {
    auto& context = *this;
    if (
-      meta<is_shared>* const p_reused = dequeue_head(&context.m_p_free_meta_head)
+      meta<is_shared>* const p_reused =
+         dequeue_head(&context.m_p_free_meta_head)
    ) {
       return p_reused;
    }
@@ -761,10 +761,7 @@ void
 musl_context<is_shared>::account_bounce(uint4 size_class) {
    if (size_class - 7u < 32u) {
       uint4 const previous_sequence = m_unmap_sequence[size_class - 7u];
-      if (
-         previous_sequence != 0u
-         && (m_sequence - previous_sequence) < 10u
-      ) {
+      if (previous_sequence != 0u && (m_sequence - previous_sequence) < 10u) {
          uint1& bounce = m_bounces[size_class - 7u];
          if (bounce + 1u < 100u) {
             ++bounce;
@@ -1581,7 +1578,7 @@ namespace cat {
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::ensure_context() -> context* _Nullable {
+basic_allocator_musl<is_shared>::ensure_context() -> context* _Nullable {
    context* p_context = m_p_context.acquire();
    if (p_context != nullptr) {
       return p_context;
@@ -1603,8 +1600,8 @@ basic_musl_allocator<is_shared>::ensure_context() -> context* _Nullable {
 }
 
 template <bool is_shared>
-basic_musl_allocator<is_shared>::basic_musl_allocator(
-   basic_musl_allocator&& other
+basic_allocator_musl<is_shared>::basic_allocator_musl(
+   basic_allocator_musl&& other
 ) noexcept {
    m_secret = other.m_secret;
    other.m_secret = 0u;
@@ -1616,9 +1613,9 @@ basic_musl_allocator<is_shared>::basic_musl_allocator(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::operator=(
-   basic_musl_allocator&& other
-) noexcept -> basic_musl_allocator& {
+basic_allocator_musl<is_shared>::operator=(
+   basic_allocator_musl&& other
+) noexcept -> basic_allocator_musl& {
    if (this != &other) {
       reset();
       m_secret = other.m_secret;
@@ -1632,13 +1629,13 @@ basic_musl_allocator<is_shared>::operator=(
 }
 
 template <bool is_shared>
-basic_musl_allocator<is_shared>::~basic_musl_allocator() {
+basic_allocator_musl<is_shared>::~basic_allocator_musl() {
    reset();
 }
 
 template <bool is_shared>
 void
-basic_musl_allocator<is_shared>::reset() {
+basic_allocator_musl<is_shared>::reset() {
    context* const p_context =
       m_p_context.exchange(nullptr, memory_order::acq_rel);
    if (p_context == nullptr) {
@@ -1655,7 +1652,7 @@ basic_musl_allocator<is_shared>::reset() {
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::allocation_bytes(
+basic_allocator_musl<is_shared>::allocation_bytes(
    ualign alignment, idx requested_bytes
 ) -> maybe_non_zero<idx> {
    uword const alignment_bytes = alignment;
@@ -1673,7 +1670,7 @@ basic_musl_allocator<is_shared>::allocation_bytes(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::allocate(idx requested_bytes)
+basic_allocator_musl<is_shared>::allocate(idx requested_bytes)
    -> void* _Nullable {
    context* const p_context = ensure_context();
    if (p_context == nullptr) {
@@ -1684,7 +1681,7 @@ basic_musl_allocator<is_shared>::allocate(idx requested_bytes)
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::aligned_allocate(
+basic_allocator_musl<is_shared>::aligned_allocate(
    ualign alignment, idx requested_bytes
 ) -> void* _Nullable {
    context* const p_context = ensure_context();
@@ -1696,7 +1693,7 @@ basic_musl_allocator<is_shared>::aligned_allocate(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::allocate_feedback(idx requested_bytes)
+basic_allocator_musl<is_shared>::allocate_feedback(idx requested_bytes)
    -> maybe_sized_allocation<void*> {
    context* const p_context = ensure_context();
    if (p_context == nullptr) {
@@ -1713,7 +1710,7 @@ basic_musl_allocator<is_shared>::allocate_feedback(idx requested_bytes)
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::aligned_allocate_feedback(
+basic_allocator_musl<is_shared>::aligned_allocate_feedback(
    ualign alignment, idx requested_bytes
 ) -> maybe_sized_allocation<void*> {
    context* const p_context = ensure_context();
@@ -1731,7 +1728,7 @@ basic_musl_allocator<is_shared>::aligned_allocate_feedback(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::allocate_zeroed(idx requested_bytes)
+basic_allocator_musl<is_shared>::allocate_zeroed(idx requested_bytes)
    -> void* _Nullable {
    context* const p_context = ensure_context();
    if (p_context == nullptr) {
@@ -1747,7 +1744,7 @@ basic_musl_allocator<is_shared>::allocate_zeroed(idx requested_bytes)
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::allocate_zeroed_feedback(idx requested_bytes)
+basic_allocator_musl<is_shared>::allocate_zeroed_feedback(idx requested_bytes)
    -> maybe_sized_allocation<void*> {
    maybe_sized_allocation<void*> result = allocate_feedback(requested_bytes);
    if (result.has_value()) {
@@ -1766,7 +1763,7 @@ basic_musl_allocator<is_shared>::allocate_zeroed_feedback(idx requested_bytes)
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::aligned_allocate_zeroed(
+basic_allocator_musl<is_shared>::aligned_allocate_zeroed(
    ualign alignment, idx requested_bytes
 ) -> void* _Nullable {
    context* const p_context = ensure_context();
@@ -1784,7 +1781,7 @@ basic_musl_allocator<is_shared>::aligned_allocate_zeroed(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::aligned_allocate_zeroed_feedback(
+basic_allocator_musl<is_shared>::aligned_allocate_zeroed_feedback(
    ualign alignment, idx requested_bytes
 ) -> maybe_sized_allocation<void*> {
    maybe_sized_allocation<void*> result =
@@ -1805,7 +1802,7 @@ basic_musl_allocator<is_shared>::aligned_allocate_zeroed_feedback(
 
 template <bool is_shared>
 void
-basic_musl_allocator<is_shared>::deallocate(
+basic_allocator_musl<is_shared>::deallocate(
    void const* p_storage, idx allocation_bytes
 ) {
    context* const p_context = m_p_context.acquire();
@@ -1834,7 +1831,7 @@ basic_musl_allocator<is_shared>::deallocate(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::grow(span<byte> allocation, idx new_bytes)
+basic_allocator_musl<is_shared>::grow(span<byte> allocation, idx new_bytes)
    -> maybe<void> {
    context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
@@ -1848,7 +1845,7 @@ basic_musl_allocator<is_shared>::grow(span<byte> allocation, idx new_bytes)
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::grow_feedback(
+basic_allocator_musl<is_shared>::grow_feedback(
    span<byte> allocation, idx new_bytes
 ) -> maybe_non_zero<idx> {
    context* const p_context = m_p_context.acquire();
@@ -1867,7 +1864,7 @@ basic_musl_allocator<is_shared>::grow_feedback(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::reallocate_memory(
+basic_allocator_musl<is_shared>::reallocate_memory(
    span<byte> allocation, idx new_bytes, uword* _Nullable p_feedback_bytes
 ) -> void* _Nullable {
    context* const p_context = m_p_context.acquire();
@@ -1905,7 +1902,7 @@ basic_musl_allocator<is_shared>::reallocate_memory(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::reallocate(
+basic_allocator_musl<is_shared>::reallocate(
    span<byte> allocation, idx new_bytes
 ) -> void* _Nullable {
    return reallocate_memory(allocation, new_bytes, nullptr);
@@ -1913,7 +1910,7 @@ basic_musl_allocator<is_shared>::reallocate(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::reallocate_feedback(
+basic_allocator_musl<is_shared>::reallocate_feedback(
    span<byte> allocation, idx new_bytes
 ) -> maybe_sized_allocation<void*> {
    uword usable_bytes;
@@ -1927,7 +1924,7 @@ basic_musl_allocator<is_shared>::reallocate_feedback(
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::bytes_used() const -> idx {
+basic_allocator_musl<is_shared>::bytes_used() const -> idx {
    context const* const p_context = m_p_context.acquire();
    if (p_context == nullptr) {
       return 0u;
@@ -1941,7 +1938,7 @@ basic_musl_allocator<is_shared>::bytes_used() const -> idx {
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::bytes_capacity() const -> idx {
+basic_allocator_musl<is_shared>::bytes_capacity() const -> idx {
    context const* const p_context = m_p_context.acquire();
    if (p_context == nullptr) {
       return 0u;
@@ -1955,8 +1952,8 @@ basic_musl_allocator<is_shared>::bytes_capacity() const -> idx {
 
 template <bool is_shared>
 auto
-basic_musl_allocator<is_shared>::is_equivalent(
-   basic_musl_allocator const& other
+basic_allocator_musl<is_shared>::is_equivalent(
+   basic_allocator_musl const& other
 ) const -> bool {
    if (this == &other) {
       return true;
@@ -1965,7 +1962,7 @@ basic_musl_allocator<is_shared>::is_equivalent(
    return p_context != nullptr && p_context == other.m_p_context.acquire();
 }
 
-template class basic_musl_allocator<false>;
-template class basic_musl_allocator<true>;
+template class basic_allocator_musl<false>;
+template class basic_allocator_musl<true>;
 
 }  // namespace cat

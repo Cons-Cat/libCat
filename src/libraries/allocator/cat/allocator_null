@@ -9,26 +9,26 @@
 
 namespace cat {
 
-class [[clang::trivial_abi]] null_allocator
-    : public allocator_interface<null_allocator> {
+class [[clang::trivial_abi]] allocator_null
+    : public allocator_interface<allocator_null> {
  private:
-   friend allocator_interface<null_allocator>;
+   friend allocator_interface<allocator_null>;
    template <typename>
    friend class allocator_ref;
 
  public:
-   constexpr null_allocator() = default;
-   constexpr null_allocator(null_allocator const&) = default;
-   constexpr null_allocator(null_allocator&&) = default;
+   constexpr allocator_null() = default;
+   constexpr allocator_null(allocator_null const&) = default;
+   constexpr allocator_null(allocator_null&&) = default;
 
-   // `null_allocator` never hands out memory, so it can claim the strongest
+   // `allocator_null` never hands out memory, so it can claim the strongest
    // possible static alignment guarantee without ever being wrong. Use
    // `page_size` since that is the strongest alignment any allocator in the
    // library produces.
    static constexpr ualign min_alignment = page_size;
 
-   // `null_allocator` is a global allocator with no instance state, so all
-   // dispatch hooks are `static`. `cat::allocator_ref<null_allocator>` folds
+   // `allocator_null` is a global allocator with no instance state, so all
+   // dispatch hooks are `static`. `cat::allocator_ref<allocator_null>` folds
    // to zero size as a result.
 
    // This allocation always fails.
@@ -44,7 +44,7 @@ class [[clang::trivial_abi]] null_allocator
    deallocate(void const* _Nullable /*unused*/, idx /*unused*/) {
    }
 
-   // `null_allocator` never hands out memory, so it holds and manages nothing.
+   // `allocator_null` never hands out memory, so it holds and manages nothing.
    [[nodiscard]]
    static auto
    bytes_used() -> idx {
@@ -62,7 +62,7 @@ class [[clang::trivial_abi]] null_allocator
 
 [[nodiscard]]
 constexpr auto
-make_null_allocator() -> null_allocator {
+make_allocator_null() -> allocator_null {
    return {};
 }
 

@@ -1,11 +1,11 @@
 #include <cat/detail/movsb.hpp>
 
+#include <cat/allocator_page>
 #include <cat/arithmetic>
 #include <cat/array>
 #include <cat/bit>
 #include <cat/cpuid>
 #include <cat/memory>
-#include <cat/page_allocator>
 
 #include "../../src/libraries/memory/implementations/compare_memory_avx2.tpp"
 #include "../unit_tests.hpp"

@@ -14,20 +14,20 @@
 namespace cat {
 
 // Allocate pages from the kernel in userspace.
-class [[clang::trivial_abi]] page_allocator
-    : public allocator_interface<page_allocator> {
+class [[clang::trivial_abi]] allocator_page
+    : public allocator_interface<allocator_page> {
  private:
-   friend allocator_interface<page_allocator>;
-   friend struct dyn_allocator_friend;
+   friend allocator_interface<allocator_page>;
+   friend struct allocator_dyn_friend;
    template <typename>
    friend class allocator_ref;
 
  public:
-   constexpr page_allocator() = default;
-   constexpr page_allocator(page_allocator const&) = default;
-   constexpr page_allocator(page_allocator&&) = default;
+   constexpr allocator_page() = default;
+   constexpr allocator_page(allocator_page const&) = default;
+   constexpr allocator_page(allocator_page&&) = default;
 
-   // `page_allocator` is a global stateless allocator, so all dispatch hooks
+   // `allocator_page` is a global stateless allocator, so all dispatch hooks
    // are `static`.
 
    // Allocations are always sized in a multiple of pages.
@@ -118,7 +118,7 @@ class [[clang::trivial_abi]] page_allocator
       nix::sys_munmap(p_storage, allocation_bytes).assert();
    }
 
-   // `page_allocator::resize` checks whether the kernel can deliver
+   // `allocator_page::resize` checks whether the kernel can deliver
    // at least `minimum_bytes`, rounded up to a whole-page multiple. It
    // makes a `sys_mmap`/`sys_munmap` round trip without writing so that
    // the address space is not actually grown.
@@ -230,18 +230,18 @@ class [[clang::trivial_abi]] page_allocator
 
 [[nodiscard]]
 constexpr auto
-make_page_allocator() -> page_allocator {
+make_allocator_page() -> allocator_page {
    return {};
 }
 
 template <typename CharT>
-struct formatter<page_allocator, CharT> : formatter_base<CharT> {
+struct formatter<allocator_page, CharT> : formatter_base<CharT> {
    auto
-   format(page_allocator const& /*value*/, format_context& context) const
+   format(allocator_page const& /*value*/, format_context& context) const
       -> scaredy_format<void> {
       return detail::format_allocator_usage(
-         context, page_allocator::bytes_used(),
-         page_allocator::bytes_capacity(), {}
+         context, allocator_page::bytes_used(),
+         allocator_page::bytes_capacity(), {}
       );
    }
 };

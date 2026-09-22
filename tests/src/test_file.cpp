@@ -1,7 +1,7 @@
+#include <cat/allocator_page>
 #include <cat/file>
 #include <cat/inode>
 #include <cat/linux>
-#include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
 

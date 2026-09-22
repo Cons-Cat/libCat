@@ -1,9 +1,9 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/array>
 #include <cat/bitset>
 #include <cat/iterable>
-#include <cat/linear_allocator>
 #include <cat/math>
-#include <cat/page_allocator>
 #include <cat/simd>
 #include <cat/simd_iterator>
 #include <cat/simd_ops>
@@ -3085,9 +3085,9 @@ $test(simd_as_vectorized_over_vec_float_data) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
-   cat::raii::vec<float_value, cat::linear_allocator> storage =
-      cat::raii::make_vec<float_value, cat::linear_allocator>(allocator)
+   auto allocator = cat::make_allocator_linear(page);
+   cat::raii::vec<float_value, cat::allocator_linear> storage =
+      cat::raii::make_vec<float_value, cat::allocator_linear>(allocator)
          .verify();
    storage.reserve(k_extent).or_exit();
    for (idx i = 0u; i < k_extent; ++i) {
@@ -3117,7 +3117,7 @@ $test(simd_list_stepanov_iterator_vectorization_float) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    using list_type = float_list;
    list_type list = cat::raii::make_list<float_lane>(allocator).verify();

@@ -1,10 +1,10 @@
+#include <cat/allocator_page>
 #include <cat/array>
 #include <cat/defer>
 #include <cat/demangle>
 #include <cat/file>
 #include <cat/format>
 #include <cat/linux>
-#include <cat/page_allocator>
 #include <cat/stacktrace>
 
 #include "dwarf_line.hpp"
@@ -159,7 +159,7 @@ initialize_load_bias(cat::detail::symbolizer& symbols) -> bool {
 
 [[nodiscard]]
 auto
-load_executable(cat::detail::symbolizer& symbols, cat::dyn_allocator allocator)
+load_executable(cat::detail::symbolizer& symbols, cat::allocator_dyn allocator)
    -> bool {
    auto path = cat::get_executable_path(allocator);
    if (path.is_empty()) {
@@ -679,7 +679,7 @@ namespace cat::detail {
 
 auto
 load_symbolizer() -> symbolizer* _Nullable {
-   page_allocator allocator;
+   allocator_page allocator;
    maybe const p_symbolizer = allocator.alloc<symbolizer>();
    if (p_symbolizer.is_empty()) {
       return nullptr;
@@ -697,7 +697,7 @@ unload_symbolizer(symbolizer* _Nullable p_symbolizer) {
       return;
    }
 
-   page_allocator allocator;
+   allocator_page allocator;
    auto _ = nix::sys_munmap(p_symbolizer->bytes);
    p_symbolizer->path.free(allocator);
    allocator.free(p_symbolizer);

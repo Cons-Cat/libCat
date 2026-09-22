@@ -1,8 +1,8 @@
 #include "./unit_tests.hpp"
 
+#include <cat/allocator_page>
 #include <cat/atomic>
 #include <cat/format>
-#include <cat/page_allocator>
 #include <cat/thread>
 #include <cat/vec>
 
@@ -18,7 +18,7 @@ constinit cat::maybe<cat::raii::vec<void*>> test_fns;
 }  // namespace
 
 [[gnu::used]]
-constinit cat::page_allocator pager;
+constinit cat::allocator_page pager;
 
 void
 register_test(constructor_fn p_test_fn) {

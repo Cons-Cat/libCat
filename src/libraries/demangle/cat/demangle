@@ -41,10 +41,10 @@ class demangled_name {
  private:
    friend class detail::demangle_parser;
    friend auto
-   demangle(basic_dyn_allocator<dyn_reallocate> allocator, str_view mangled)
+   demangle(basic_allocator_dyn<dyn_reallocate> allocator, str_view mangled)
       -> maybe<demangled_name>;
 
-   explicit demangled_name(basic_dyn_allocator<dyn_reallocate> allocator);
+   explicit demangled_name(basic_allocator_dyn<dyn_reallocate> allocator);
 
    [[nodiscard]]
    auto
@@ -76,7 +76,7 @@ class demangled_name {
    void
    reset();
 
-   basic_dyn_allocator<dyn_reallocate> m_allocator;
+   basic_allocator_dyn<dyn_reallocate> m_allocator;
    char* _Nullable m_p_data = nullptr;
    idx m_size = 0u;
    idx m_capacity = 0u;
@@ -84,7 +84,7 @@ class demangled_name {
 
 [[nodiscard]]
 auto
-demangle(basic_dyn_allocator<dyn_reallocate> allocator, str_view mangled)
+demangle(basic_allocator_dyn<dyn_reallocate> allocator, str_view mangled)
    -> maybe<demangled_name>;
 
 template <is_allocator Allocator>
@@ -92,11 +92,11 @@ template <is_allocator Allocator>
 auto
 demangle(allocator_ref<Allocator> allocator, str_view mangled)
    -> maybe<demangled_name> {
-   if constexpr (is_same<Allocator, basic_dyn_allocator<dyn_reallocate>>) {
+   if constexpr (is_same<Allocator, basic_allocator_dyn<dyn_reallocate>>) {
       return demangle(allocator.get_allocator(), mangled);
    } else {
       return demangle(
-         basic_dyn_allocator<dyn_reallocate>(allocator.get_allocator()), mangled
+         basic_allocator_dyn<dyn_reallocate>(allocator.get_allocator()), mangled
       );
    }
 }

@@ -399,8 +399,8 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Deallocate this `vec`'s storage from `allocator`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(dyn_allocator allocator) {
-      return free<dyn_allocator>(allocator);
+   free(allocator_dyn allocator) {
+      return free<allocator_dyn>(allocator);
    }
 
    // Deallocate this `vec`'s storage from `allocator`.
@@ -428,8 +428,8 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Deallocate this `vec`'s storage from `allocator`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   cfree(dyn_allocator allocator) {
-      return cfree<dyn_allocator>(allocator);
+   cfree(allocator_dyn allocator) {
+      return cfree<allocator_dyn>(allocator);
    }
 
    template <is_allocator Allocator>
@@ -515,10 +515,10 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Try to allocate storage for at least `minimum_capacity` number of `T`s.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   reserve(dyn_allocator allocator, idx minimum_capacity) -> maybe<void>
+   reserve(allocator_dyn allocator, idx minimum_capacity) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
-      return reserve<dyn_allocator>(allocator, minimum_capacity);
+      return reserve<allocator_dyn>(allocator, minimum_capacity);
    }
 
    // Try to change the size of this `vec`.
@@ -552,10 +552,10 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Try to change the size of this `vec`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   resize(dyn_allocator allocator, idx size) -> maybe<void>
+   resize(allocator_dyn allocator, idx size) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
-      return resize<dyn_allocator>(allocator, size);
+      return resize<allocator_dyn>(allocator, size);
    }
 
    // Try to change the size of this `vec`, copy-constructing any new
@@ -590,10 +590,10 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // elements from `value`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   resize(dyn_allocator allocator, idx size, T const& value) -> maybe<void>
+   resize(allocator_dyn allocator, idx size, T const& value) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
-      return resize<dyn_allocator>(allocator, size, value);
+      return resize<allocator_dyn>(allocator, size, value);
    }
 
    // De-allocate excess storage.
@@ -635,8 +635,8 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // De-allocate excess storage.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shrink_to_fit(dyn_allocator allocator) -> maybe<void> {
-      return shrink_to_fit<dyn_allocator>(allocator);
+   shrink_to_fit(allocator_dyn allocator) -> maybe<void> {
+      return shrink_to_fit<allocator_dyn>(allocator);
    }
 
    // Deep-copy the contents of this `vec`.
@@ -667,8 +667,8 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Deep-copy the contents of this `vec`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(dyn_allocator allocator) const& -> maybe<vec<T, flags>> {
-      return clone<dyn_allocator>(allocator);
+   clone(allocator_dyn allocator) const& -> maybe<vec<T, flags>> {
+      return clone<allocator_dyn>(allocator);
    }
 
    template <is_allocator Allocator>
@@ -709,18 +709,18 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   push_back(dyn_allocator allocator, T const& value) -> maybe<void>
+   push_back(allocator_dyn allocator, T const& value) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
-      return push_back<dyn_allocator>(allocator, value);
+      return push_back<allocator_dyn>(allocator, value);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   push_back(dyn_allocator allocator, T&& value) -> maybe<void>
+   push_back(allocator_dyn allocator, T&& value) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
-      return push_back<dyn_allocator>(allocator, move(value));
+      return push_back<allocator_dyn>(allocator, move(value));
    }
 
    template <
@@ -736,7 +736,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
    template <typename First, typename Second, typename... Remaining>
    constexpr auto
-   push_back(dyn_allocator, First&&, Second&&, Remaining&&...) -> maybe<void> =
+   push_back(allocator_dyn, First&&, Second&&, Remaining&&...) -> maybe<void> =
       delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
               "to construct an element or `append_range()` to "
               "append a range.");
@@ -765,11 +765,11 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       requires(is_constructible<T, Args...>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   emplace_back(dyn_allocator allocator, Args&&... arguments)
+   emplace_back(allocator_dyn allocator, Args&&... arguments)
       [[clang::lifetimebound]] -> maybe<T&>
       requires(!flags.is_fixed_size)
    {
-      return emplace_back<dyn_allocator>(allocator, $fwd(arguments)...);
+      return emplace_back<allocator_dyn>(allocator, $fwd(arguments)...);
    }
 
    // Remove and return the last element. Returns `nullopt` when the vec
@@ -954,10 +954,10 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_iterable Iterable>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append_range(dyn_allocator allocator, Iterable&& range) -> maybe<void>
+   append_range(allocator_dyn allocator, Iterable&& range) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
-      return append_range<dyn_allocator>(allocator, $fwd(range));
+      return append_range<allocator_dyn>(allocator, $fwd(range));
    }
 
    // Insert every element of `range` before `position`.
@@ -1125,11 +1125,11 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_iterable Iterable>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert_range(dyn_allocator allocator, idx position, Iterable&& range)
+   insert_range(allocator_dyn allocator, idx position, Iterable&& range)
       -> maybe<void>
       requires(is_assignable<T&, T&&> && !flags.is_fixed_size)
    {
-      return insert_range<dyn_allocator>(allocator, position, $fwd(range));
+      return insert_range<allocator_dyn>(allocator, position, $fwd(range));
    }
 
    // Replace `[first, last)` with every element of `range`.
@@ -1273,11 +1273,11 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    replace_with_range(
-      dyn_allocator allocator, idx first, idx last, Iterable&& range
+      allocator_dyn allocator, idx first, idx last, Iterable&& range
    ) -> maybe<void>
       requires(is_assignable<T&, T&&> && !flags.is_fixed_size)
    {
-      return replace_with_range<dyn_allocator>(
+      return replace_with_range<allocator_dyn>(
          allocator, first, last, $fwd(range)
       );
    }
@@ -1357,9 +1357,9 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_vec(dyn_allocator allocator, initializer_list<T> values)
+   make_vec(allocator_dyn allocator, initializer_list<T> values)
       -> maybe<vec<T, flags>> {
-   return make_vec<T, dyn_allocator, flags>(allocator, values);
+   return make_vec<T, allocator_dyn, flags>(allocator, values);
 }
 
 template <typename T, is_allocator Allocator, vec_flags flags = {}>
@@ -1377,9 +1377,9 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_vec_reserved(dyn_allocator allocator, idx capacity)
+   make_vec_reserved(allocator_dyn allocator, idx capacity)
       -> maybe<vec<T, flags>> {
-   return make_vec_reserved<T, dyn_allocator, flags>(allocator, capacity);
+   return make_vec_reserved<T, allocator_dyn, flags>(allocator, capacity);
 }
 
 template <typename T, is_allocator Allocator, vec_flags flags = {}>
@@ -1402,9 +1402,9 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_vec_filled(dyn_allocator allocator, idx count, T const& value)
+   make_vec_filled(allocator_dyn allocator, idx count, T const& value)
       -> maybe<vec<T, flags>> {
-   return make_vec_filled<T, dyn_allocator, flags>(allocator, count, value);
+   return make_vec_filled<T, allocator_dyn, flags>(allocator, count, value);
 }
 
 template <
@@ -1420,9 +1420,9 @@ template <
 
 template <typename T, idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_vec_small_filled(dyn_allocator allocator, idx count, T const& value)
+   make_vec_small_filled(allocator_dyn allocator, idx count, T const& value)
       -> maybe<vec_small<T, inline_count, flags>> {
-   return make_vec_small_filled<T, inline_count, dyn_allocator, flags>(
+   return make_vec_small_filled<T, inline_count, allocator_dyn, flags>(
       allocator, count, value
    );
 }
@@ -1438,9 +1438,9 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_vec_big_filled(dyn_allocator allocator, idx count, T const& value)
+   make_vec_big_filled(allocator_dyn allocator, idx count, T const& value)
       -> maybe<vec_big<T, flags>> {
-   return make_vec_big_filled<T, dyn_allocator, flags>(allocator, count, value);
+   return make_vec_big_filled<T, allocator_dyn, flags>(allocator, count, value);
 }
 
 template <typename T, is_allocator Allocator, vec_flags flags = {}>
@@ -1454,9 +1454,9 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_vec_fixed_filled(dyn_allocator allocator, idx count, T const& value)
+   make_vec_fixed_filled(allocator_dyn allocator, idx count, T const& value)
       -> maybe<vec_fixed<T, flags>> {
-   return make_vec_fixed_filled<T, dyn_allocator, flags>(
+   return make_vec_fixed_filled<T, allocator_dyn, flags>(
       allocator, count, value
    );
 }
@@ -1475,9 +1475,9 @@ template <
 template <typename T, idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_small_fixed_filled(
-      dyn_allocator allocator, idx count, T const& value
+      allocator_dyn allocator, idx count, T const& value
    ) -> maybe<vec_small_fixed<T, inline_count, flags>> {
-   return make_vec_small_fixed_filled<T, inline_count, dyn_allocator, flags>(
+   return make_vec_small_fixed_filled<T, inline_count, allocator_dyn, flags>(
       allocator, count, value
    );
 }
@@ -1493,9 +1493,9 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_vec_big_fixed_filled(dyn_allocator allocator, idx count, T const& value)
+   make_vec_big_fixed_filled(allocator_dyn allocator, idx count, T const& value)
       -> maybe<vec_big_fixed<T, flags>> {
-   return make_vec_big_fixed_filled<T, dyn_allocator, flags>(
+   return make_vec_big_fixed_filled<T, allocator_dyn, flags>(
       allocator, count, value
    );
 }
@@ -1542,11 +1542,11 @@ template <
 template <typename T, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator
+      allocator_dyn allocator, idx count, Generator&& generator
    ) -> maybe<vec<T, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   return make_vec_filled_random<T, dyn_allocator, flags>(
+   return make_vec_filled_random<T, allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1555,7 +1555,7 @@ template <
    typename T, vec_flags flags = {}, typename Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator,
+      allocator_dyn allocator, idx count, Generator&& generator,
       Distribution&& distribution
    ) -> maybe<vec<T, flags>> {
    static_assert(is_default_constructible<T>);
@@ -1563,7 +1563,7 @@ template <
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_vec_filled_random<T, dyn_allocator, flags>(
+   return make_vec_filled_random<T, allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1604,11 +1604,11 @@ template <
    typename T, idx inline_count, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_small_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator
+      allocator_dyn allocator, idx count, Generator&& generator
    ) -> maybe<vec_small<T, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   return make_vec_small_filled_random<T, inline_count, dyn_allocator, flags>(
+   return make_vec_small_filled_random<T, inline_count, allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1618,7 +1618,7 @@ template <
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_small_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator,
+      allocator_dyn allocator, idx count, Generator&& generator,
       Distribution&& distribution
    ) -> maybe<vec_small<T, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
@@ -1626,7 +1626,7 @@ template <
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_vec_small_filled_random<T, inline_count, dyn_allocator, flags>(
+   return make_vec_small_filled_random<T, inline_count, allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1665,11 +1665,11 @@ template <
 template <typename T, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_big_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator
+      allocator_dyn allocator, idx count, Generator&& generator
    ) -> maybe<vec_big<T, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   return make_vec_big_filled_random<T, dyn_allocator, flags>(
+   return make_vec_big_filled_random<T, allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1678,7 +1678,7 @@ template <
    typename T, vec_flags flags = {}, typename Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_big_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator,
+      allocator_dyn allocator, idx count, Generator&& generator,
       Distribution&& distribution
    ) -> maybe<vec_big<T, flags>> {
    static_assert(is_default_constructible<T>);
@@ -1686,7 +1686,7 @@ template <
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_vec_big_filled_random<T, dyn_allocator, flags>(
+   return make_vec_big_filled_random<T, allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1723,11 +1723,11 @@ template <
 template <typename T, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_fixed_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator
+      allocator_dyn allocator, idx count, Generator&& generator
    ) -> maybe<vec_fixed<T, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   return make_vec_fixed_filled_random<T, dyn_allocator, flags>(
+   return make_vec_fixed_filled_random<T, allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1736,7 +1736,7 @@ template <
    typename T, vec_flags flags = {}, typename Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_fixed_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator,
+      allocator_dyn allocator, idx count, Generator&& generator,
       Distribution&& distribution
    ) -> maybe<vec_fixed<T, flags>> {
    static_assert(is_default_constructible<T>);
@@ -1744,7 +1744,7 @@ template <
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_vec_fixed_filled_random<T, dyn_allocator, flags>(
+   return make_vec_fixed_filled_random<T, allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1784,12 +1784,12 @@ template <
    typename T, idx inline_count, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_small_fixed_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator
+      allocator_dyn allocator, idx count, Generator&& generator
    ) -> maybe<vec_small_fixed<T, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
    return make_vec_small_fixed_filled_random<
-      T, inline_count, dyn_allocator, flags>(allocator, count, $fwd(generator));
+      T, inline_count, allocator_dyn, flags>(allocator, count, $fwd(generator));
 }
 
 template <
@@ -1797,7 +1797,7 @@ template <
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_small_fixed_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator,
+      allocator_dyn allocator, idx count, Generator&& generator,
       Distribution&& distribution
    ) -> maybe<vec_small_fixed<T, inline_count, flags>> {
    static_assert(is_default_constructible<T>);
@@ -1806,7 +1806,7 @@ template <
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_vec_small_fixed_filled_random<
-      T, inline_count, dyn_allocator, flags>(
+      T, inline_count, allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1844,11 +1844,11 @@ template <
 template <typename T, vec_flags flags = {}, typename Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_big_fixed_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator
+      allocator_dyn allocator, idx count, Generator&& generator
    ) -> maybe<vec_big_fixed<T, flags>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   return make_vec_big_fixed_filled_random<T, dyn_allocator, flags>(
+   return make_vec_big_fixed_filled_random<T, allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1857,7 +1857,7 @@ template <
    typename T, vec_flags flags = {}, typename Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_big_fixed_filled_random(
-      dyn_allocator allocator, idx count, Generator&& generator,
+      allocator_dyn allocator, idx count, Generator&& generator,
       Distribution&& distribution
    ) -> maybe<vec_big_fixed<T, flags>> {
    static_assert(is_default_constructible<T>);
@@ -1865,7 +1865,7 @@ template <
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_vec_big_fixed_filled_random<T, dyn_allocator, flags>(
+   return make_vec_big_fixed_filled_random<T, allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }

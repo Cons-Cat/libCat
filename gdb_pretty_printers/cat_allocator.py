@@ -7,11 +7,11 @@ _ALLOCATOR_PRINTERS = {}
 
 _LEAF_TAGS = frozenset(
     {
-        'linear_allocator',
-        'pool_allocator',
-        'resizable_allocator',
-        'page_allocator',
-        'null_allocator',
+        'allocator_linear',
+        'allocator_pool',
+        'allocator_resizeable',
+        'allocator_page',
+        'allocator_null',
     }
 )
 
@@ -180,7 +180,7 @@ def _format_anon_memory(resident, mapped):
 
 def _unwrap_allocator_ref(val):
     tag = _type_tag(val)
-    if tag not in ('named_allocator', 'allocator_ref'):
+    if tag not in ('allocator_named', 'allocator_ref'):
         return val
     try:
         storage = val['m_storage']
@@ -232,9 +232,9 @@ def _printer_for(val):
     if tag in _LEAF_TAGS:
         return _ALLOCATOR_PRINTERS[tag], target
     if _has_field(target, 'm_nodes'):
-        return _ALLOCATOR_PRINTERS['pool_allocator'], target
+        return _ALLOCATOR_PRINTERS['allocator_pool'], target
     if _has_field(target, 'm_p_arena_begin'):
-        return _ALLOCATOR_PRINTERS['linear_allocator'], target
+        return _ALLOCATOR_PRINTERS['allocator_linear'], target
     return None, target
 
 
@@ -301,8 +301,8 @@ class _AllocatorPrinter:
         return _format_usage(self.used, self.capacity, self.prefix, self.suffix)
 
 
-@cat_type('linear_allocator')
-class _LinearAllocatorPrinter(_AllocatorPrinter, tag='linear_allocator'):
+@cat_type('allocator_linear')
+class _LinearAllocatorPrinter(_AllocatorPrinter, tag='allocator_linear'):
     @classmethod
     def usage(cls, val):
         try:
@@ -321,7 +321,7 @@ class _LinearAllocatorPrinter(_AllocatorPrinter, tag='linear_allocator'):
         begin = int(val['m_p_arena_begin']['raw'])
         end = int(val['m_p_arena_end']['raw'])
         current = int(val['m_p_arena_current']['raw'])
-        out.write(f'linear_allocator {_format_usage(used, capacity, suffix="")}\n')
+        out.write(f'allocator_linear {_format_usage(used, capacity, suffix="")}\n')
         out.write(
             f'  arena: {_format_ptr(val["m_p_arena_end"])}'
             f' .. {_format_ptr(val["m_p_arena_begin"])}\n'
@@ -366,15 +366,15 @@ class _LinearAllocatorPrinter(_AllocatorPrinter, tag='linear_allocator'):
         out.write(f'  top {_format_ptr(val["m_p_arena_begin"])}\n')
 
 
-@cat_type('pool_allocator')
-class _PoolAllocatorPrinter(_AllocatorPrinter, tag='pool_allocator'):
+@cat_type('allocator_pool')
+class _PoolAllocatorPrinter(_AllocatorPrinter, tag='allocator_pool'):
     @classmethod
     def node_bytes(cls, val):
         type_name = val.type.strip_typedefs().name or ''
         match = re.search(r',\s*(\d+)\}>\s*$', type_name)
         if match:
             return int(match.group(1))
-        match = re.search(r'pool_allocator<\s*(\d+)\s*>', type_name)
+        match = re.search(r'allocator_pool<\s*(\d+)\s*>', type_name)
         if match:
             return int(match.group(1))
         return _template_idx_arg(val, 0)
@@ -400,7 +400,7 @@ class _PoolAllocatorPrinter(_AllocatorPrinter, tag='pool_allocator'):
         node_count = int(val['m_nodes']['m_size']['raw'])
         free_nodes = _count_free_list(val['m_p_head'], (node_count or 0) + 1)
         label = (
-            f'pool_allocator<{max_node}>' if max_node is not None else 'pool_allocator'
+            f'allocator_pool<{max_node}>' if max_node is not None else 'allocator_pool'
         )
         out.write(f'{label} {_format_usage(used, capacity, suffix="")}\n')
         out.write(f'  nodes: {node_count} x {max_node} bytes\n')
@@ -444,8 +444,8 @@ class _PoolAllocatorPrinter(_AllocatorPrinter, tag='pool_allocator'):
         out.write(f'  free {_format_ptr(val["m_p_head"])}\n')
 
 
-@cat_type('page_allocator')
-class _PageAllocatorPrinter(_AllocatorPrinter, tag='page_allocator'):
+@cat_type('allocator_page')
+class _PageAllocatorPrinter(_AllocatorPrinter, tag='allocator_page'):
     @classmethod
     def usage(cls, val):
         return _anon_smaps_from_proc()
@@ -456,19 +456,19 @@ class _PageAllocatorPrinter(_AllocatorPrinter, tag='page_allocator'):
     @classmethod
     def dump(cls, val, out):
         resident, mapped = cls.usage(val)
-        out.write(f'page_allocator {_format_anon_memory(resident, mapped)}\n')
+        out.write(f'allocator_page {_format_anon_memory(resident, mapped)}\n')
         out.write('  (process anon memory via /proc/self/smaps)\n')
 
 
-@cat_type('null_allocator')
-class _NullAllocatorPrinter(_AllocatorPrinter, tag='null_allocator'):
+@cat_type('allocator_null')
+class _NullAllocatorPrinter(_AllocatorPrinter, tag='allocator_null'):
     @classmethod
     def usage(cls, val):
         return 0, 0
 
 
-@cat_type('resizable_allocator')
-class _ResizableAllocatorPrinter(_AllocatorPrinter, tag='resizable_allocator'):
+@cat_type('allocator_resizeable')
+class _ResizableAllocatorPrinter(_AllocatorPrinter, tag='allocator_resizeable'):
     @classmethod
     def usage(cls, val):
         try:
@@ -503,7 +503,7 @@ class _ResizableAllocatorPrinter(_AllocatorPrinter, tag='resizable_allocator'):
         used, capacity = cls.usage(val)
         node_bytes = _template_idx_arg(val, 2)
         chunk_bytes = _template_idx_arg(val, 3)
-        out.write(f'resizable_allocator {_format_usage(used, capacity, suffix="")}\n')
+        out.write(f'allocator_resizeable {_format_usage(used, capacity, suffix="")}\n')
         out.write(f'  node_bytes: {node_bytes}, chunk_bytes: {chunk_bytes}\n')
         free_slots = _count_free_list(val['m_p_free_head'], 1024)
         out.write(
@@ -555,8 +555,8 @@ class _ResizableAllocatorPrinter(_AllocatorPrinter, tag='resizable_allocator'):
         return False
 
 
-@cat_type('named_allocator')
-class _NamedAllocatorPrinter(_AllocatorPrinter, tag='named_allocator'):
+@cat_type('allocator_named')
+class _NamedAllocatorPrinter(_AllocatorPrinter, tag='allocator_named'):
     def __init__(self, val):
         name = _str_view(val['m_name'])
         prefix = f'"{name}": ' if name else ''
@@ -569,7 +569,7 @@ class _NamedAllocatorPrinter(_AllocatorPrinter, tag='named_allocator'):
     @classmethod
     def dump(cls, val, out):
         name = _str_view(val['m_name'])
-        out.write(f'named_allocator "{name}"\n')
+        out.write(f'allocator_named "{name}"\n')
         used, capacity = cls.usage(val)
         out.write(f'  {_format_usage(used, capacity, suffix="")}\n')
 
@@ -580,7 +580,7 @@ def dump_allocator(val, out=None):
     tag = _type_tag(val)
     printer_cls = _ALLOCATOR_PRINTERS.get(tag)
     if printer_cls:
-        target = val if tag == 'named_allocator' else _AllocatorPrinter.resolve(val)
+        target = val if tag == 'allocator_named' else _AllocatorPrinter.resolve(val)
         printer_cls.dump(target, out)
         return
     printer_cls, target = _printer_for(val)
@@ -609,7 +609,7 @@ def vis_allocator(val, out=None):
         out = gdb
     printer_cls, target = _printer_for(val)
     tag = _type_tag(target)
-    if tag == 'page_allocator':
+    if tag == 'allocator_page':
         resident, mapped = _usage_for(val)
         out.write(f'{tag} {_format_anon_memory(resident, mapped)}\n')
         return

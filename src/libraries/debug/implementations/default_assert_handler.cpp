@@ -1,10 +1,10 @@
 #include <cat/detail/itoa_jeaiii.hpp>
 
+#include <cat/allocator_page>
 #include <cat/debug>
 #include <cat/format>
 #include <cat/iterable>
 #include <cat/linux>
-#include <cat/page_allocator>
 #include <cat/stacktrace>
 #include <cat/string>
 
@@ -123,7 +123,7 @@ cat::default_assert_handler(source_location const& callsite) {
 #ifndef CAT_NO_STACKTRACE
                {
                   // Print a trace, then ask again.
-                  page_allocator allocator;
+                  allocator_page allocator;
                   maybe<stacktrace> const trace =
                      stacktrace::current(allocator);
                   if (trace.has_value()) {
@@ -146,7 +146,7 @@ cat::default_assert_handler(source_location const& callsite) {
             case 3:
                {
                   // Print a verbose stack trace, then ask again.
-                  page_allocator allocator;
+                  allocator_page allocator;
                   maybe<stacktrace> const trace =
                      stacktrace::current(allocator);
                   if (trace.has_value()) {

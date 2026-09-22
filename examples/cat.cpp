@@ -2,7 +2,7 @@
 #include <cat/linux>
 #include <cat/math>
 #include <cat/maybe>
-#include <cat/page_allocator>
+#include <cat/allocator_page>
 
 using namespace cat::literals;
 using namespace cat::arithmetic;
@@ -44,7 +44,7 @@ read_and_print_file(char* _Nonnull p_file_name) {
       blocks++;
    }
 
-   cat::page_allocator pager;
+   cat::allocator_page pager;
 
    cat::span<nix::io_vector> io_vectors =
       pager.alloc_multi<nix::io_vector>(blocks).or_exit(

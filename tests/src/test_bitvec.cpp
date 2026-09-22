@@ -1,7 +1,7 @@
+#include <cat/allocator_page>
 #include <cat/bitset>
 #include <cat/bitvec>
 #include <cat/iterable>
-#include <cat/page_allocator>
 #include <cat/raii_bitvec>
 
 #include "../unit_tests.hpp"
@@ -18,7 +18,7 @@ verify_bitvec_niche() {
 
 template <typename Vector>
 concept can_change_manual_bitvec_size =
-   requires(Vector& vector, cat::page_allocator& allocator) {
+   requires(Vector& vector, cat::allocator_page& allocator) {
       vector.reserve(allocator, 1u);
       vector.resize(allocator, 1u);
       vector.push_back(allocator, true);
@@ -46,17 +46,17 @@ $test(bitvec_flags_and_niches) {
 
    verify_bitvec_niche<cat::raii::bitvec<>>();
    verify_bitvec_niche<cat::raii::basic_bitvec<
-      cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
+      cat::allocator_dyn, cat::vec_flags::pointer_size_layout>>();
    verify_bitvec_niche<cat::raii::bitvec_big<>>();
    verify_bitvec_niche<cat::raii::bitvec_big<
-      cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
+      cat::allocator_dyn, cat::vec_flags::pointer_size_layout>>();
 
    cat::bitvec small;
    small.resize(pager, 4u).verify();
    cat::verify(small.capacity() >= 4u);
    small.free(pager);
 
-   cat::raii::bitvec<> managed{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> managed{cat::allocator_dyn(pager)};
    managed.resize(4u).verify();
    cat::verify(managed.capacity() >= 4u);
 }
@@ -76,7 +76,7 @@ $test(bitvec_fixed_size_variants) {
    cat::verify(!bits[69u]);
    bits.free(pager);
 
-   cat::raii::bitvec_fixed<> managed(cat::dyn_allocator(pager), 70u);
+   cat::raii::bitvec_fixed<> managed(cat::allocator_dyn(pager), 70u);
    cat::verify(managed.size() == 70u);
    managed.set(69u);
    cat::verify(managed[69u]);
@@ -107,7 +107,7 @@ $test(bitvec_fixed_size_variants) {
       cat::raii::make_bitvec_fixed_filled(pager, 5u, true).verify();
    auto raii_small_fixed_filled =
       cat::raii::make_bitvec_fixed_filled(pager, 5u, true).verify();
-   auto ordered = cat::raii::make_bitvec_small_filled<8u, cat::page_allocator>(
+   auto ordered = cat::raii::make_bitvec_small_filled<8u, cat::allocator_page>(
                      pager, 5u, true
    )
                      .verify();
@@ -158,7 +158,7 @@ $test(bitvec_manual_fixed_clone) {
 }
 
 $test(bitvec_raii_clone) {
-   cat::raii::bitvec<> source{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> source{cat::allocator_dyn(pager)};
    source.resize(70u).verify();
    source.set(0u).set(64u).set(69u);
 
@@ -173,7 +173,7 @@ $test(bitvec_raii_clone) {
 }
 
 $test(bitvec_raii_fixed_clone) {
-   cat::raii::bitvec_fixed<> source(cat::dyn_allocator(pager), 70u);
+   cat::raii::bitvec_fixed<> source(cat::allocator_dyn(pager), 70u);
    source.set(0u).set(64u).set(69u);
 
    cat::raii::bitvec_fixed<> cloned = source.clone().verify();
@@ -202,8 +202,8 @@ $test(bitvec_equality) {
    manual_short.set(0u);
    cat::verify(manual_left != manual_short);
 
-   cat::raii::bitvec<> raii_left{cat::dyn_allocator(pager)};
-   cat::raii::bitvec<> raii_right{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> raii_left{cat::allocator_dyn(pager)};
+   cat::raii::bitvec<> raii_right{cat::allocator_dyn(pager)};
    raii_left.resize(70u).verify();
    raii_right.resize(70u).verify();
    raii_left.set(0u).set(69u);
@@ -212,7 +212,7 @@ $test(bitvec_equality) {
    raii_right.flip(0u);
    cat::verify(raii_left != raii_right);
 
-   cat::raii::bitvec<> raii_short{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> raii_short{cat::allocator_dyn(pager)};
    raii_short.resize(69u).verify();
    raii_short.set(0u);
    cat::verify(raii_left != raii_short);
@@ -233,9 +233,9 @@ $test(bitvec_manual_core) {
             cat::vec_flags::inline_storage(2u) | cat::vec_flags::fixed_size>>
    );
    static_assert(cat::is_same<
-                 cat::raii::bitvec_small<cat::dyn_allocator, 65u>,
+                 cat::raii::bitvec_small<cat::allocator_dyn, 65u>,
                  cat::raii::basic_bitvec<
-                    cat::dyn_allocator, cat::vec_flags::inline_storage(2u)>>);
+                    cat::allocator_dyn, cat::vec_flags::inline_storage(2u)>>);
    static_assert(cat::is_same<cat::bitvec::storage_type, cat::uword>);
    static_assert(cat::is_same<cat::bitvec::value_type, cat::bit_value>);
    static_assert(
@@ -375,7 +375,7 @@ $test(bitvec_core_operations) {
          raii_bitvec_context::element_type, cat::raii::bitvec<>::reference>
    );
 
-   cat::raii::bitvec<> bits{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> bits{cat::allocator_dyn(pager)};
 
    cat::verify(bits.size() == 0u);
    cat::verify(bits.word_count() == 0u);
@@ -483,7 +483,7 @@ $test(bitvec_core_operations) {
 }
 
 $test(bitvec_push_pop) {
-   cat::raii::bitvec<> bits{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> bits{cat::allocator_dyn(pager)};
 
    bits.reserve(130u).verify();
    cat::verify(bits.capacity() >= 130u);
@@ -523,17 +523,17 @@ $test(bitvec_append_range) {
       | cat::vec_flags::pointer_size_layout>>();
 
    auto verify_raii = [&]<typename Vector> {
-      Vector bits{cat::dyn_allocator(pager)};
+      Vector bits{cat::allocator_dyn(pager)};
       bits.append_range(source).verify();
       cat::verify(bits.size() == 5u);
       cat::verify(bits.popcount() == 3u);
    };
    verify_raii.template operator()<cat::raii::bitvec<>>();
    verify_raii.template operator()<cat::raii::basic_bitvec<
-      cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
+      cat::allocator_dyn, cat::vec_flags::pointer_size_layout>>();
    verify_raii.template operator()<cat::raii::bitvec_big<>>();
    verify_raii.template operator()<cat::raii::bitvec_big<
-      cat::dyn_allocator, cat::vec_flags::pointer_size_layout>>();
+      cat::allocator_dyn, cat::vec_flags::pointer_size_layout>>();
 
    cat::bitvec manual_bits;
    manual_bits.append_range(pager, source).verify();
@@ -552,7 +552,7 @@ $test(bitvec_append_range) {
    cat::verify(!manual_bits[6u]);
    manual_bits.free(pager);
 
-   cat::raii::bitvec<> raii_bits{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> raii_bits{cat::allocator_dyn(pager)};
    raii_bits.append_range(source).verify();
    cat::verify(raii_bits.size() == 5u);
    cat::verify(raii_bits.popcount() == 3u);
@@ -563,7 +563,7 @@ $test(bitvec_append_range) {
 
 $test(bitvec_iterable_range_modifiers) {
    cat::array<bool, 4u> source{true, false, true, false};
-   cat::raii::bitvec<> bits{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> bits{cat::allocator_dyn(pager)};
    auto set_bits = cat::ref(source).filter([](bool value) -> bool {
       return value;
    });
@@ -590,7 +590,7 @@ $test(bitvec_contiguous_range_modifiers) {
    cat::array<bool, 3u> source{true, false, true};
    cat::array<bool, 2u> insertion{false, true};
    cat::array<bool, 1u> replacement{false};
-   cat::raii::bitvec<> bits{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> bits{cat::allocator_dyn(pager)};
 
    bits.append_range(source).verify();
    bits.insert_range(1u, insertion).verify();
@@ -604,8 +604,8 @@ $test(bitvec_contiguous_range_modifiers) {
 }
 
 $test(bitvec_bitwise_predicates) {
-   cat::raii::bitvec<> left{cat::dyn_allocator(pager)};
-   cat::raii::bitvec<> right{cat::dyn_allocator(pager)};
+   cat::raii::bitvec<> left{cat::allocator_dyn(pager)};
+   cat::raii::bitvec<> right{cat::allocator_dyn(pager)};
    left.resize(130u).verify();
    right.resize(130u).verify();
 

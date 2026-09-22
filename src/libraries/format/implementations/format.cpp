@@ -9,7 +9,7 @@ namespace {
 // Bulk-copy a run of literal text into the output, like `{fmt}`'s `on_text`.
 auto
 append_literal(
-   format_handler<basic_dyn_allocator<dyn_reallocate>>& handler, str_view run
+   format_handler<basic_allocator_dyn<dyn_reallocate>>& handler, str_view run
 ) -> scaredy_format<void> {
    maybe result =
       get_container(handler.m_output_iterator).append(handler.m_allocator, run);
@@ -22,7 +22,7 @@ append_literal(
 auto
 parse_format_string(
    str_view const format,
-   format_handler<basic_dyn_allocator<dyn_reallocate>>& handler
+   format_handler<basic_allocator_dyn<dyn_reallocate>>& handler
 ) -> scaredy_format<void> {
    idx current_argument;
    idx index;
@@ -172,7 +172,7 @@ format_arg_fn const format_arg_double = nullptr;
 
 auto
 vfmt(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view const format,
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view const format,
    detail::format_args arguments
 ) -> scaredy_format<str_view> {
    idx const initial_size = format.size() + 10u;
@@ -183,10 +183,10 @@ vfmt(
    }
 
    char* p_memory = maybe_memory.value().data();
-   detail::format_buffer<basic_dyn_allocator<dyn_reallocate>> buffer = {
+   detail::format_buffer<basic_allocator_dyn<dyn_reallocate>> buffer = {
       allocator_ref(allocator), p_memory, 0u, initial_size
    };
-   detail::format_handler<basic_dyn_allocator<dyn_reallocate>> handler = {
+   detail::format_handler<basic_allocator_dyn<dyn_reallocate>> handler = {
       allocator, as_back_inserter(buffer), format, arguments
    };
 
@@ -201,18 +201,18 @@ vfmt(
 
 auto
 vfmt_to_sink(
-   basic_dyn_allocator<dyn_reallocate> allocator, void* _Nonnull p_sink,
+   basic_allocator_dyn<dyn_reallocate> allocator, void* _Nonnull p_sink,
    detail::format_flush_fn _Nonnull p_flush, str_view const format,
    detail::format_args arguments
 ) -> scaredy_format<void> {
    // Stage into stack storage and drain into the sink, so formatting never
    // allocates a copy of the whole result.
    char storage[detail::format_sink_buffer_size.raw];
-   detail::format_buffer<basic_dyn_allocator<dyn_reallocate>> buffer = {
+   detail::format_buffer<basic_allocator_dyn<dyn_reallocate>> buffer = {
       allocator_ref(allocator), storage, detail::format_sink_buffer_size,
       p_sink, p_flush
    };
-   detail::format_handler<basic_dyn_allocator<dyn_reallocate>> handler = {
+   detail::format_handler<basic_allocator_dyn<dyn_reallocate>> handler = {
       allocator, as_back_inserter(buffer), format, arguments
    };
 
@@ -228,7 +228,7 @@ vfmt_to_sink(
 
 auto
 vprint_fmt(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view const format,
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view const format,
    detail::format_args arguments
 ) -> maybe<idx> {
    str_view const string =

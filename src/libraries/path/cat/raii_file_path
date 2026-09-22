@@ -55,18 +55,18 @@ namespace cat::detail {
 template <str_vec_flags flags>
 constexpr auto
 raii_file_path_has_value(
-   raii::basic_file_path<dyn_allocator, flags> const& value
+   raii::basic_file_path<allocator_dyn, flags> const& value
 ) -> bool;
 
 template <str_vec_flags flags>
 constexpr auto
-raii_file_path_nullopt() -> raii::basic_file_path<dyn_allocator, flags>;
+raii_file_path_nullopt() -> raii::basic_file_path<allocator_dyn, flags>;
 }  // namespace cat::detail
 
 namespace cat::raii {
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = detail::path_default_flags>
 using file_path = basic_file_path<Allocator, flags>;
 
@@ -233,9 +233,9 @@ basic_file_path
    [[nodiscard]]
    constexpr auto
    clone(
-      dyn_allocator allocator
-   ) const& -> maybe<basic_file_path<dyn_allocator, flags>> {
-      return clone<dyn_allocator>(allocator);
+      allocator_dyn allocator
+   ) const& -> maybe<basic_file_path<allocator_dyn, flags>> {
+      return clone<allocator_dyn>(allocator);
    }
 
    [[nodiscard]]
@@ -372,13 +372,13 @@ basic_file_path
    template <str_vec_flags other_flags>
    friend constexpr auto
    detail::raii_file_path_has_value(
-      basic_file_path<dyn_allocator, other_flags> const&
+      basic_file_path<allocator_dyn, other_flags> const&
    ) -> bool;
 
    template <str_vec_flags other_flags>
    friend constexpr auto
    detail::raii_file_path_nullopt()
-      -> basic_file_path<dyn_allocator, other_flags>;
+      -> basic_file_path<allocator_dyn, other_flags>;
 
    manual::basic_file_path<flags> m_path;
    [[no_unique_address]]
@@ -392,19 +392,19 @@ namespace cat::detail {
 template <str_vec_flags flags>
 constexpr auto
 raii_file_path_has_value(
-   raii::basic_file_path<dyn_allocator, flags> const& value
+   raii::basic_file_path<allocator_dyn, flags> const& value
 ) -> bool {
    return maybe_file_path_has_value(value.m_path);
 }
 
-inline constexpr null_allocator raii_file_path_niche_null_allocator{};
+inline constexpr allocator_null raii_file_path_niche_allocator_null{};
 
 template <str_vec_flags flags>
 constexpr auto
-raii_file_path_nullopt() -> raii::basic_file_path<dyn_allocator, flags> {
-   raii::basic_file_path<dyn_allocator, flags> value(
-      allocator_ref<dyn_allocator>(dyn_allocator(
-         const_cast<null_allocator&>(raii_file_path_niche_null_allocator)
+raii_file_path_nullopt() -> raii::basic_file_path<allocator_dyn, flags> {
+   raii::basic_file_path<allocator_dyn, flags> value(
+      allocator_ref<allocator_dyn>(allocator_dyn(
+         const_cast<allocator_null&>(raii_file_path_niche_allocator_null)
       ))
    );
    value.m_path = maybe_file_path_nullopt<flags>();
@@ -416,9 +416,9 @@ raii_file_path_nullopt() -> raii::basic_file_path<dyn_allocator, flags> {
 namespace cat {
 
 template <str_vec_flags flags>
-struct default_compact_trait<raii::basic_file_path<dyn_allocator, flags>>
+struct default_compact_trait<raii::basic_file_path<allocator_dyn, flags>>
     : identity_trait<compact<
-         raii::basic_file_path<dyn_allocator, flags>,
+         raii::basic_file_path<allocator_dyn, flags>,
          detail::raii_file_path_has_value<flags>,
          detail::raii_file_path_nullopt<flags>>> {};
 
@@ -447,9 +447,9 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_file_path(dyn_allocator allocator, Segment const& segment)
-   -> maybe<basic_file_path<dyn_allocator, flags>> {
-   return raii::make_file_path<dyn_allocator, flags>(allocator, segment);
+make_file_path(allocator_dyn allocator, Segment const& segment)
+   -> maybe<basic_file_path<allocator_dyn, flags>> {
+   return raii::make_file_path<allocator_dyn, flags>(allocator, segment);
 }
 
 template <
@@ -464,9 +464,9 @@ make_file_path(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(dyn_allocator allocator)
-   -> maybe<basic_file_path<dyn_allocator, flags>> {
-   return raii::make_file_path<dyn_allocator, flags>(allocator);
+make_file_path(allocator_dyn allocator)
+   -> maybe<basic_file_path<allocator_dyn, flags>> {
+   return raii::make_file_path<allocator_dyn, flags>(allocator);
 }
 
 template <is_allocator Allocator, str_vec_flags flags, is_path_segment Segment>

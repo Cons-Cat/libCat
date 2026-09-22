@@ -1,7 +1,7 @@
+#include <cat/allocator_inplace>
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/bit>
-#include <cat/inplace_allocator>
-#include <cat/linear_allocator>
-#include <cat/page_allocator>
 #include <cat/sanitizer>
 
 #include "../unit_tests.hpp"
@@ -101,11 +101,11 @@ concept has_uninit_alloc_family =
       allocator.cfree_uninit(allocator.template xalloc_uninit<int4>());
    };
 
-static_assert(has_uninit_alloc_family<cat::page_allocator>);
+static_assert(has_uninit_alloc_family<cat::allocator_page>);
 
 #if __has_feature(address_sanitizer)
 $test(allocator_default_deallocation_poisoning) {
-   auto allocator = cat::make_inplace_allocator<64u>();
+   auto allocator = cat::make_allocator_inplace<64u>();
    cat::span allocation = allocator.alloc_multi_uninit<cat::byte>(32u).verify();
    cat::byte* const p_storage = allocation.data();
 
@@ -183,7 +183,7 @@ $test(alloc_uninit_family) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    idx live;
    auto* p_scalar_storage =
@@ -268,7 +268,7 @@ $test(alloc) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    // Test `alloc`.
    auto* _ = allocator.alloc<int4>().value();
@@ -2133,7 +2133,7 @@ $test(alloc_inline_sbo16) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    // Test `inline_alloc<T, sbo>`.
    auto h_alloc = allocator.inline_alloc<int4, sbo>(1).value();

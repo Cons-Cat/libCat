@@ -80,7 +80,7 @@ alloc_mutex_runtime(allocator_ref<Allocator> allocator, idx thread_count)
 
 [[nodiscard]]
 auto
-alloc_mutex_runtime(dyn_allocator allocator, idx thread_count) -> maybe<void>;
+alloc_mutex_runtime(allocator_dyn allocator, idx thread_count) -> maybe<void>;
 
 // Call only after all `cat::mutex` users are quiescent.
 template <is_allocator Allocator>
@@ -89,7 +89,7 @@ free_mutex_runtime(allocator_ref<Allocator> allocator);
 
 // Call only after all `cat::mutex` users are quiescent.
 void
-free_mutex_runtime(dyn_allocator allocator);
+free_mutex_runtime(allocator_dyn allocator);
 
 // Call only after all `cat::mutex` users are quiescent.
 template <is_allocator Allocator>
@@ -98,7 +98,7 @@ cfree_mutex_runtime(allocator_ref<Allocator> allocator);
 
 // Call only after all `cat::mutex` users are quiescent.
 void
-cfree_mutex_runtime(dyn_allocator allocator);
+cfree_mutex_runtime(allocator_dyn allocator);
 
 }  // namespace cat
 

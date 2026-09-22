@@ -1,11 +1,11 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_null>
+#include <cat/allocator_page>
 #include <cat/array>
 #include <cat/forward_list>
 #include <cat/insert_iterators>
 #include <cat/iterable>
-#include <cat/linear_allocator>
 #include <cat/list>
-#include <cat/null_allocator>
-#include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
 
@@ -13,7 +13,7 @@ namespace {
 
 struct linear_arena {
    cat::span<cat::byte> page = pager.alloc_multi<cat::byte>(4_uki).verify();
-   cat::linear_allocator alloc = cat::make_linear_allocator(page);
+   cat::allocator_linear alloc = cat::make_allocator_linear(page);
 
    ~linear_arena() {
       pager.free(page);
@@ -23,25 +23,25 @@ struct linear_arena {
 consteval auto
 constexpr_list_func() -> int4 {
    cat::list<int> list;
-   auto _ = list.push_back<cat::page_allocator>(pager, 1);
-   auto _ = list.push_back<cat::page_allocator>(pager, 2);
-   auto _ = list.push_front<cat::page_allocator>(pager, 3);
+   auto _ = list.push_back<cat::allocator_page>(pager, 1);
+   auto _ = list.push_back<cat::allocator_page>(pager, 2);
+   auto _ = list.push_front<cat::allocator_page>(pager, 3);
    list.reverse_inplace();
    int4 result = list.front() + list.back();
-   list.free<cat::page_allocator>(pager);
+   list.free<cat::allocator_page>(pager);
    return result;
 }
 
 consteval auto
 constexpr_forward_list_func() -> int4 {
    cat::forward_list<int> list;
-   auto _ = list.push_front<cat::page_allocator>(pager, 1);
-   auto _ = list.push_front<cat::page_allocator>(pager, 2);
-   auto _ = list.emplace_front<cat::page_allocator>(pager, 3);
+   auto _ = list.push_front<cat::allocator_page>(pager, 1);
+   auto _ = list.push_front<cat::allocator_page>(pager, 2);
+   auto _ = list.emplace_front<cat::allocator_page>(pager, 3);
    int4 result = list.front();
-   list.pop_front<cat::page_allocator>(pager);
+   list.pop_front<cat::allocator_page>(pager);
    result += list.front();
-   list.free<cat::page_allocator>(pager);
+   list.free<cat::allocator_page>(pager);
    return result;
 }
 
@@ -55,7 +55,7 @@ $test(list_constexpr_usage) {
 $test(manual_list_modifiers) {
    linear_arena arena;
    auto& allocator = arena.alloc;
-   auto allocator_ref = cat::allocator_ref<cat::linear_allocator>(allocator);
+   auto allocator_ref = cat::allocator_ref<cat::allocator_linear>(allocator);
 
    int values[] = {2, 3, 3};
    int prefix[] = {0, 1};
@@ -115,7 +115,7 @@ $test(manual_list_modifiers) {
 $test(manual_forward_list_modifiers) {
    linear_arena arena;
    auto& allocator = arena.alloc;
-   auto allocator_ref = cat::allocator_ref<cat::linear_allocator>(allocator);
+   auto allocator_ref = cat::allocator_ref<cat::allocator_linear>(allocator);
 
    cat::forward_list<int> list =
       cat::make_forward_list<int>(allocator_ref, 2, 4).verify();
@@ -147,7 +147,7 @@ $test(manual_forward_list_modifiers) {
 $test(list_reverse_inplace) {
    linear_arena arena;
    auto& allocator = arena.alloc;
-   auto allocator_ref = cat::allocator_ref<cat::linear_allocator>(allocator);
+   auto allocator_ref = cat::allocator_ref<cat::allocator_linear>(allocator);
 
    cat::list<int> manual =
       cat::make_list<int>(allocator_ref, 1, 2, 3, 4).verify();
@@ -173,7 +173,7 @@ $test(list_reverse_inplace) {
 $test(forward_list_reverse_inplace) {
    linear_arena arena;
    auto& allocator = arena.alloc;
-   auto allocator_ref = cat::allocator_ref<cat::linear_allocator>(allocator);
+   auto allocator_ref = cat::allocator_ref<cat::allocator_linear>(allocator);
 
    cat::forward_list<int> manual =
       cat::make_forward_list<int>(allocator_ref, 1, 2, 3, 4).verify();
@@ -268,7 +268,7 @@ $test(list_iterable_range_modifiers) {
 $test(list_factories) {
    linear_arena arena;
    auto& allocator = arena.alloc;
-   auto allocator_ref = cat::allocator_ref<cat::linear_allocator>(allocator);
+   auto allocator_ref = cat::allocator_ref<cat::allocator_linear>(allocator);
 
    cat::list manual_list = cat::make_list<int>(allocator_ref, 1, 2, 3).verify();
    cat::verify(manual_list.size() == 3);
@@ -313,8 +313,8 @@ $test(raii_list_maybe_niche) {
 $test(list) {
    linear_arena arena;
    auto& allocator = arena.alloc;
-   cat::dyn_allocator dynamic_allocator = pager;
-   auto dynamic_ref = cat::allocator_ref<cat::dyn_allocator>(dynamic_allocator);
+   cat::allocator_dyn dynamic_allocator = pager;
+   auto dynamic_ref = cat::allocator_ref<cat::allocator_dyn>(dynamic_allocator);
 
    cat::raii::list list_1 = cat::raii::make_list<int4>(allocator).verify();
    auto _ = list_1.insert(list_1.begin(), 3).verify();
@@ -348,8 +348,8 @@ $test(list) {
       asm volatile("nop");
    }
 
-   cat::raii::list<int4, cat::linear_allocator> list_3 =
-      cat::raii::make_list<int4, cat::linear_allocator>(allocator).verify();
+   cat::raii::list<int4, cat::allocator_linear> list_3 =
+      cat::raii::make_list<int4, cat::allocator_linear>(allocator).verify();
    auto _ = list_3.emplace_front(1).verify();
    auto _ = list_3.emplace_front(2).verify();
    auto _ = list_3.emplace_back(3).verify();
@@ -414,13 +414,13 @@ $test(list) {
    cat::verify(*(list_4.begin() + 2u) == 2);
 
    cat::raii::list list_init_1 =
-      cat::raii::make_list<int, cat::dyn_allocator>(dynamic_ref, 1).verify();
+      cat::raii::make_list<int, cat::allocator_dyn>(dynamic_ref, 1).verify();
    cat::verify(list_init_1.size() == 1);
    auto list_it = list_init_1.begin();
    cat::verify(*list_it == 1);
 
    cat::raii::list list_init_2 =
-      cat::raii::make_list<int, cat::dyn_allocator>(dynamic_ref, 1, 2, 3)
+      cat::raii::make_list<int, cat::allocator_dyn>(dynamic_ref, 1, 2, 3)
          .verify();
    cat::verify(list_init_2.size() == 3);
    list_it = list_init_2.begin();
@@ -429,9 +429,9 @@ $test(list) {
    cat::verify(*++list_it == 3);
 
    cat::raii::list swap_left =
-      cat::raii::make_list<int, cat::dyn_allocator>(dynamic_ref, 7, 8).verify();
+      cat::raii::make_list<int, cat::allocator_dyn>(dynamic_ref, 7, 8).verify();
    cat::raii::list swap_right =
-      cat::raii::make_list<int, cat::dyn_allocator>(dynamic_ref, 9, 10, 11)
+      cat::raii::make_list<int, cat::allocator_dyn>(dynamic_ref, 9, 10, 11)
          .verify();
    cat::swap(swap_left, swap_right);
    cat::verify(swap_left.size() == 3);
@@ -442,7 +442,7 @@ $test(list) {
    cat::verify(swap_right.back() == 8);
 
    cat::raii::list list_fill =
-      cat::raii::make_list_filled<int, cat::dyn_allocator>(dynamic_ref, 4u, 1)
+      cat::raii::make_list_filled<int, cat::allocator_dyn>(dynamic_ref, 4u, 1)
          .verify();
    cat::verify(list_fill.size() == 4);
    {
@@ -453,7 +453,7 @@ $test(list) {
       }
    }
 
-   cat::null_allocator null_alloc = cat::make_null_allocator();
+   cat::allocator_null null_alloc = cat::make_allocator_null();
    cat::raii::list null_list = cat::raii::make_list<int>(null_alloc).value();
    cat::verify(null_list.size() == 0);
    cat::verify(null_list.insert(null_list.begin(), 1).is_empty());
@@ -464,7 +464,7 @@ $test(list) {
    cat::verify(null_list.emplace_front(1).is_empty());
 
    cat::raii::forward_list forward_list_1 =
-      cat::raii::make_forward_list<int4, cat::dyn_allocator>(dynamic_ref)
+      cat::raii::make_forward_list<int4, cat::allocator_dyn>(dynamic_ref)
          .verify();
    cat::verify(forward_list_1.size() == 0);
    auto _ = forward_list_1.push_front(0).verify();
@@ -475,7 +475,7 @@ $test(list) {
    cat::verify(*(forward_list_1.begin() + 1u) == 0);
 
    cat::raii::forward_list forward_list_fill =
-      cat::raii::make_forward_list_filled<int, cat::dyn_allocator>(
+      cat::raii::make_forward_list_filled<int, cat::allocator_dyn>(
          dynamic_ref, 4u, 1
       )
          .verify();
@@ -515,9 +515,9 @@ $test(list) {
 }
 
 $test(list_iterable) {
-   using flux_test_list = cat::raii::list<int, cat::page_allocator>;
+   using flux_test_list = cat::raii::list<int, cat::allocator_page>;
    using flux_test_forward_list =
-      cat::raii::forward_list<int, cat::page_allocator>;
+      cat::raii::forward_list<int, cat::allocator_page>;
 
    static_assert(cat::is_iterable<flux_test_list>);
    static_assert(cat::is_iterable<flux_test_forward_list>);
@@ -526,10 +526,10 @@ $test(list_iterable) {
    static_assert(cat::is_reverse_iterable<flux_test_list>);
    static_assert(!cat::is_reverse_iterable<flux_test_forward_list>);
 
-   cat::dyn_allocator dynamic_allocator = pager;
-   auto dynamic_ref = cat::allocator_ref<cat::dyn_allocator>(dynamic_allocator);
+   cat::allocator_dyn dynamic_allocator = pager;
+   auto dynamic_ref = cat::allocator_ref<cat::allocator_dyn>(dynamic_allocator);
    auto list_values =
-      cat::raii::make_list<int, cat::dyn_allocator>(dynamic_ref, 1, 2, 3, 4)
+      cat::raii::make_list<int, cat::allocator_dyn>(dynamic_ref, 1, 2, 3, 4)
          .verify();
    cat::verify((list_values | cat::sum()) == 10);
    auto list_tail = cat::ref(list_values) | cat::reverse() | cat::take(2u);
@@ -561,7 +561,7 @@ $test(list_iterable) {
    cat::verify(rest_total == 7);
 
    auto forward_list_values =
-      cat::raii::make_forward_list<int, cat::dyn_allocator>(
+      cat::raii::make_forward_list<int, cat::allocator_dyn>(
          dynamic_ref, 4, 5, 6
       )
          .verify();

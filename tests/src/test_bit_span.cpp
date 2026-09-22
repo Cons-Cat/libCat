@@ -1,8 +1,8 @@
+#include <cat/allocator_page>
 #include <cat/bit>
 #include <cat/bitset>
 #include <cat/bitvec>
 #include <cat/iterable>
-#include <cat/page_allocator>
 #include <cat/raii_bitvec>
 #include <cat/span>
 #include <cat/vec>
@@ -160,7 +160,7 @@ $test(bit_span) {
    cat::verify(cat::popcount(vec_bits) == 2u);
    vec_words.free(pager);
 
-   cat::raii::bitvec dynamic_bits{cat::dyn_allocator(pager)};
+   cat::raii::bitvec dynamic_bits{cat::allocator_dyn(pager)};
    dynamic_bits.resize(70u).verify();
    dynamic_bits[69u] = true;
    cat::bit_span dynamic_span(dynamic_bits);

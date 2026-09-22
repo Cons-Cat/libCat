@@ -5,7 +5,7 @@
 #include <cat/allocator>
 #include <cat/allocator_parameters>
 
-// `resizable_allocator<Allocator, Backing>` is an adaptor that combines two
+// `allocator_resizeable<Allocator, Backing>` is an adaptor that combines two
 // behaviors atop an otherwise-fixed-size allocator:
 //
 //   Lazy free-list reuse on deallocate. Freed allocations are pushed onto
@@ -26,8 +26,8 @@
 // the whole wrapper is reset/destroyed.
 //
 // Both behaviors are uniform-size on purpose. Free-list entries are pushed
-// and popped as `node_bytes`-sized slots, so wrapping a `linear_allocator`
-// requires a fixed allocation size. When wrapping a `pool_allocator`,
+// and popped as `node_bytes`-sized slots, so wrapping a `allocator_linear`
+// requires a fixed allocation size. When wrapping a `allocator_pool`,
 // `node_bytes` defaults to `Allocator::max_allocation_bytes`.
 //
 // `min_alignment` and `max_allocation_bytes` are re-exported from `Allocator`
@@ -57,8 +57,8 @@ concept inner_has_grow_feedback =
 }  // namespace detail
 
 // `inner_default_node_bytes<Allocator>` is `Allocator::max_allocation_bytes`
-// when that constant exists. Allocators without it (`linear_allocator`,
-// `page_allocator`, ...) require the caller to spell `node_bytes` out.
+// when that constant exists. Allocators without it (`allocator_linear`,
+// `allocator_page`, ...) require the caller to spell `node_bytes` out.
 template <is_allocator Allocator>
    requires(detail::inner_has_max_allocation_bytes<Allocator>)
 inline constexpr idx inner_default_node_bytes = Allocator::max_allocation_bytes;
@@ -70,35 +70,35 @@ template <
                              : 0u,
    idx chunk_bytes_param = 64u * 1'024u>
 class [[clang::trivial_abi]]
-resizable_allocator
-    : public allocator_interface<resizable_allocator<
+allocator_resizeable
+    : public allocator_interface<allocator_resizeable<
          Allocator, Backing, node_bytes_param, chunk_bytes_param>> {
    static_assert(
       node_bytes_param >= sizeof(void*),
-      "`resizable_allocator`'s `node_bytes` must be at least "
+      "`allocator_resizeable`'s `node_bytes` must be at least "
       "`sizeof(void*)` so each freed slot can host a free-list "
       "next pointer."
    );
    static_assert(
       chunk_bytes_param >= node_bytes_param,
-      "`resizable_allocator`'s `chunk_bytes` must be at least "
+      "`allocator_resizeable`'s `chunk_bytes` must be at least "
       "`node_bytes`."
    );
 
  private:
-   using self_type = resizable_allocator<
+   using self_type = allocator_resizeable<
       Allocator, Backing, node_bytes_param, chunk_bytes_param>;
 
    friend allocator_interface<self_type>;
-   friend struct dyn_allocator_friend;
+   friend struct allocator_dyn_friend;
    template <typename>
    friend class allocator_ref;
    template <
       is_allocator Inner, idx node_bytes_arg, idx chunk_bytes_arg,
       is_allocator BackingArg>
    friend constexpr auto
-   make_resizable_allocator(BackingArg& backing [[clang::lifetimebound]])
-      -> resizable_allocator<
+   make_allocator_resizeable(BackingArg& backing [[clang::lifetimebound]])
+      -> allocator_resizeable<
          Inner, BackingArg, node_bytes_arg, chunk_bytes_arg>;
 
    // One slab of memory pulled from `Backing`. The header lives inline at
@@ -121,12 +121,12 @@ resizable_allocator
 
    // `make_inner_over(span)` is supplied by the caller because not every
    // allocator constructs uniformly from `(uintptr<void>, idx)`. The default
-   // implementation forwards to `make_<inner>_allocator`-style factories via
+   // implementation forwards to `make_allocator_<inner>`-style factories via
    // ADL; if that is not desired, users can specialize.
    //
    // For the worktree-scope minimum, this header only declares the surface
    // and stubs out the chunk-creation pathway. The detailed `resize` body
-   // is in `../implementations/resizable_allocator.tpp`.
+   // is in `../implementations/allocator_resizeable.tpp`.
    constexpr auto
    acquire_chunk(idx chunk_bytes) -> chunk_header* _Nullable;
 
@@ -147,7 +147,7 @@ resizable_allocator
          || detail::inner_has_grow_feedback<Allocator>
       );
 
-   constexpr resizable_allocator(Backing& backing [[clang::lifetimebound]])
+   constexpr allocator_resizeable(Backing& backing [[clang::lifetimebound]])
        : m_p_backing(__builtin_addressof(backing)) {
    }
 
@@ -158,12 +158,12 @@ resizable_allocator
    static constexpr idx node_bytes = node_bytes_param;
    static constexpr idx chunk_bytes = chunk_bytes_param;
 
-   resizable_allocator(resizable_allocator const&) = delete (
-      "`resizable_allocator` owns chunk and free-list state that must not "
+   allocator_resizeable(allocator_resizeable const&) = delete (
+      "`allocator_resizeable` owns chunk and free-list state that must not "
       "alias. Move the wrapper instead of copying."
    );
 
-   resizable_allocator(resizable_allocator&& other) noexcept
+   allocator_resizeable(allocator_resizeable&& other) noexcept
        : m_p_backing(other.m_p_backing),
          m_p_chunks(other.m_p_chunks),
          m_p_free_head(other.m_p_free_head) {
@@ -171,7 +171,7 @@ resizable_allocator
       other.m_p_free_head = nullptr;
    }
 
-   ~resizable_allocator();
+   ~allocator_resizeable();
 
    // Reset the wrapper: drain the free list (it lives inside chunks that
    // are about to be released), then return each chunk to `Backing`. This
@@ -216,7 +216,7 @@ resizable_allocator
    // allocation routed through either wrapper lands on the same free list.
    [[nodiscard]]
    auto
-   is_equivalent(resizable_allocator const& other) const -> bool {
+   is_equivalent(allocator_resizeable const& other) const -> bool {
       return m_p_backing == other.m_p_backing && m_p_chunks == other.m_p_chunks;
    }
 };
@@ -229,11 +229,12 @@ template <
    idx chunk_bytes_param = 64_uki, is_allocator Backing>
 [[nodiscard]]
 constexpr auto
-make_resizable_allocator(Backing& backing [[clang::lifetimebound]])
-   -> resizable_allocator<Allocator, Backing, node_bytes_param, chunk_bytes_param> {
+make_allocator_resizeable(Backing& backing [[clang::lifetimebound]])
+   -> allocator_resizeable<
+      Allocator, Backing, node_bytes_param, chunk_bytes_param> {
    return {backing};
 }
 
 }  // namespace cat
 
-#include "../implementations/resizable_allocator.tpp"
+#include "../implementations/allocator_resizeable.tpp"

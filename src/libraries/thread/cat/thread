@@ -109,8 +109,8 @@ struct thread {
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    void
-   free(dyn_allocator allocator) {
-      free<dyn_allocator>(allocator);
+   free(allocator_dyn allocator) {
+      free<allocator_dyn>(allocator);
    }
 
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
@@ -124,8 +124,8 @@ struct thread {
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    void
-   cfree(dyn_allocator allocator) {
-      cfree<dyn_allocator>(allocator);
+   cfree(allocator_dyn allocator) {
+      cfree<allocator_dyn>(allocator);
    }
 
  private:

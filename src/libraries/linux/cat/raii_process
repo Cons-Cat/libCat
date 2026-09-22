@@ -6,10 +6,10 @@
 
 namespace nix::raii {
 
-template <cat::is_allocator Allocator = cat::dyn_allocator>
+template <cat::is_allocator Allocator = cat::allocator_dyn>
 class basic_process;
 
-template <cat::is_allocator Allocator = cat::dyn_allocator>
+template <cat::is_allocator Allocator = cat::allocator_dyn>
 using process = basic_process<Allocator>;
 
 template <cat::is_allocator Allocator>

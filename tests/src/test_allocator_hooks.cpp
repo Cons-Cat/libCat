@@ -1,40 +1,40 @@
 // Tests for the introspection and growth hooks added to the allocator
 // surface: `bytes_used`, `bytes_capacity`, `min_alignment`, `resize`,
 // the `alloc_grow` family, `is_equivalent` / `operator==`, and `name`.
-// Forwarding through `dyn_allocator` and `allocator_ref<*>` is exercised too.
+// Forwarding through `allocator_dyn` and `allocator_ref<*>` is exercised too.
 
+#include <cat/allocator_huge_page>
+#include <cat/allocator_linear>
+#include <cat/allocator_null>
+#include <cat/allocator_page>
 #include <cat/allocator_parameters>
+#include <cat/allocator_pool>
 #include <cat/bit>
-#include <cat/huge_page_allocator>
-#include <cat/linear_allocator>
-#include <cat/null_allocator>
-#include <cat/page_allocator>
-#include <cat/pool_allocator>
 
 #include "../unit_tests.hpp"
 
 // Static alignment guarantees are part of the type, so they can be checked
 // without any test body.
-static_assert(cat::linear_allocator::min_alignment == 1u);
-static_assert(cat::huge_page_allocator::min_alignment == cat::huge_page_size);
-static_assert(cat::page_allocator::min_alignment == cat::page_size);
-static_assert(cat::null_allocator::min_alignment == cat::page_size);
+static_assert(cat::allocator_linear::min_alignment == 1u);
+static_assert(cat::allocator_huge_page::min_alignment == cat::huge_page_size);
+static_assert(cat::allocator_page::min_alignment == cat::page_size);
+static_assert(cat::allocator_null::min_alignment == cat::page_size);
 static_assert(
-   cat::pool_allocator<8>::min_alignment
-   == uword(alignof(cat::pool_allocator<8>::node_union))
+   cat::allocator_pool<8>::min_alignment
+   == uword(alignof(cat::allocator_pool<8>::node_union))
 );
 
-// Type-erased dispatch loses the static lower bound, so `dyn_allocator`
+// Type-erased dispatch loses the static lower bound, so `allocator_dyn`
 // must conservatively claim 1.
-static_assert(cat::dyn_allocator::min_alignment == 1u);
+static_assert(cat::allocator_dyn::min_alignment == 1u);
 
 // `allocator_ref<A>` should mirror the wrapped allocator's static alignment.
-static_assert(cat::allocator_ref<cat::linear_allocator>::min_alignment == 1u);
+static_assert(cat::allocator_ref<cat::allocator_linear>::min_alignment == 1u);
 static_assert(
-   cat::allocator_ref<cat::page_allocator>::min_alignment == cat::page_size
+   cat::allocator_ref<cat::allocator_page>::min_alignment == cat::page_size
 );
 static_assert(
-   cat::allocator_ref<cat::huge_page_allocator>::min_alignment
+   cat::allocator_ref<cat::allocator_huge_page>::min_alignment
    == cat::huge_page_size
 );
 
@@ -42,26 +42,26 @@ static_assert(
 // empty (a stateless / global allocator). This lets containers and other
 // holders embed the ref via `[[no_unique_address]]` without paying any
 // storage cost.
-static_assert(__is_empty(cat::page_allocator));
-static_assert(__is_empty(cat::huge_page_allocator));
-static_assert(__is_empty(cat::null_allocator));
-static_assert(__is_empty(cat::allocator_ref<cat::page_allocator>));
-static_assert(__is_empty(cat::allocator_ref<cat::huge_page_allocator>));
-static_assert(__is_empty(cat::allocator_ref<cat::null_allocator>));
+static_assert(__is_empty(cat::allocator_page));
+static_assert(__is_empty(cat::allocator_huge_page));
+static_assert(__is_empty(cat::allocator_null));
+static_assert(__is_empty(cat::allocator_ref<cat::allocator_page>));
+static_assert(__is_empty(cat::allocator_ref<cat::allocator_huge_page>));
+static_assert(__is_empty(cat::allocator_ref<cat::allocator_null>));
 
 // Stateful allocators leave the ref as a single-pointer handle.
-static_assert(!__is_empty(cat::allocator_ref<cat::linear_allocator>));
+static_assert(!__is_empty(cat::allocator_ref<cat::allocator_linear>));
 static_assert(
-   sizeof(cat::allocator_ref<cat::linear_allocator>)
-   == sizeof(cat::linear_allocator*)
+   sizeof(cat::allocator_ref<cat::allocator_linear>)
+   == sizeof(cat::allocator_linear*)
 );
 
-$test(linear_allocator_bytes_used_and_capacity) {
+$test(allocator_linear_bytes_used_and_capacity) {
    cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto allocator = cat::make_linear_allocator(page);
+   cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
    cat::verify(allocator.bytes_capacity() == 64u);
    cat::verify(allocator.bytes_used() == 0u);
@@ -80,12 +80,12 @@ $test(linear_allocator_bytes_used_and_capacity) {
    cat::verify(allocator.bytes_capacity() == 64u);
 }
 
-$test(linear_allocator_resize_returns_nullopt) {
+$test(allocator_linear_resize_returns_nullopt) {
    cat::span page = pager.alloc_multi<cat::byte>(32u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto allocator = cat::make_linear_allocator(page);
+   cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
    cat::maybe grown = allocator.resize(64u);
    cat::verify(grown.is_empty());
@@ -93,12 +93,12 @@ $test(linear_allocator_resize_returns_nullopt) {
 
 // A downward-bump arena cannot grow in place without relocating the
 // allocation's start address, so `reallocate` always rejects grow requests.
-$test(linear_allocator_reallocate_grow_always_fails) {
+$test(allocator_linear_reallocate_grow_always_fails) {
    cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto allocator = cat::make_linear_allocator(page);
+   cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
    int4* p_top = allocator.alloc<int4>(42).verify();
    idx const used_before = allocator.bytes_used();
@@ -117,12 +117,12 @@ $test(linear_allocator_reallocate_grow_always_fails) {
 
 // Shrink is honored in place. The released tail bytes stay reserved until
 // `reset()` to preserve `p_storage`, so `bytes_used` is unchanged.
-$test(linear_allocator_reallocate_shrink_succeeds) {
+$test(allocator_linear_reallocate_shrink_succeeds) {
    cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto allocator = cat::make_linear_allocator(page);
+   cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
    int4* p_top = allocator.alloc<int4>(7).verify();
    idx const used_before = allocator.bytes_used();
@@ -146,10 +146,10 @@ $test(linear_allocator_reallocate_shrink_succeeds) {
    cat::verify(allocator.bytes_used() == used_before);
 }
 
-// Two `linear_allocator` instances over the same arena should be reported
+// Two `allocator_linear` instances over the same arena should be reported
 // as equivalent. They have independent bump pointers but govern the same
 // memory range.
-$test(linear_allocator_equality) {
+$test(allocator_linear_equality) {
    cat::span page_a = pager.alloc_multi<cat::byte>(32u).verify();
    cat::span page_b = pager.alloc_multi<cat::byte>(32u).verify();
    $defer {
@@ -157,9 +157,9 @@ $test(linear_allocator_equality) {
       pager.free(page_b);
    };
 
-   cat::is_allocator auto a1 = cat::make_linear_allocator(page_a);
-   cat::is_allocator auto a2 = cat::make_linear_allocator(page_a);
-   cat::is_allocator auto b1 = cat::make_linear_allocator(page_b);
+   cat::is_allocator auto a1 = cat::make_allocator_linear(page_a);
+   cat::is_allocator auto a2 = cat::make_allocator_linear(page_a);
+   cat::is_allocator auto b1 = cat::make_allocator_linear(page_b);
 
    cat::verify(a1 == a2);
    cat::verify(a1.is_equivalent(a2));
@@ -167,12 +167,12 @@ $test(linear_allocator_equality) {
    cat::verify(!a1.is_equivalent(b1));
 }
 
-$test(pool_allocator_bytes_used_and_capacity) {
+$test(allocator_pool_bytes_used_and_capacity) {
    cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto pool = cat::make_pool_allocator<8>(page);
+   cat::is_allocator auto pool = cat::make_allocator_pool<8>(page);
 
    cat::verify(pool.bytes_capacity() == 64u);
    cat::verify(pool.bytes_used() == 0u);
@@ -190,18 +190,18 @@ $test(pool_allocator_bytes_used_and_capacity) {
    cat::verify(pool.bytes_used() == 0u);
 }
 
-$test(pool_allocator_resize_returns_nullopt) {
+$test(allocator_pool_resize_returns_nullopt) {
    cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto pool = cat::make_pool_allocator<8>(page);
+   cat::is_allocator auto pool = cat::make_allocator_pool<8>(page);
 
    cat::maybe grown = pool.resize(64u);
    cat::verify(grown.is_empty());
 }
 
-$test(pool_allocator_equality) {
+$test(allocator_pool_equality) {
    cat::span page_a = pager.alloc_multi<cat::byte>(64u).verify();
    cat::span page_b = pager.alloc_multi<cat::byte>(64u).verify();
    $defer {
@@ -209,16 +209,16 @@ $test(pool_allocator_equality) {
       pager.free(page_b);
    };
 
-   cat::is_allocator auto a1 = cat::make_pool_allocator<8>(page_a);
-   cat::is_allocator auto a2 = cat::make_pool_allocator<8>(page_a);
-   cat::is_allocator auto b1 = cat::make_pool_allocator<8>(page_b);
+   cat::is_allocator auto a1 = cat::make_allocator_pool<8>(page_a);
+   cat::is_allocator auto a2 = cat::make_allocator_pool<8>(page_a);
+   cat::is_allocator auto b1 = cat::make_allocator_pool<8>(page_b);
 
    cat::verify(a1 == a2);
    cat::verify(!(a1 == b1));
 }
 
-$test(huge_page_allocator_rounds_to_two_mebibytes) {
-   cat::huge_page_allocator allocator;
+$test(allocator_huge_page_rounds_to_two_mebibytes) {
+   cat::allocator_huge_page allocator;
 
    cat::maybe const one_byte = allocator.allocation_bytes(1u, 1u);
    cat::maybe const one_page =
@@ -233,8 +233,8 @@ $test(huge_page_allocator_rounds_to_two_mebibytes) {
 
 // Explicit huge-page mappings require a configured kernel pool. When one is
 // available, verify the alignment and both ends of the mapped page.
-$test(huge_page_allocator_maps_configured_pool) {
-   cat::huge_page_allocator allocator;
+$test(allocator_huge_page_maps_configured_pool) {
+   cat::allocator_huge_page allocator;
    auto maybe_page = allocator.alloc_multi<cat::byte>(cat::huge_page_size);
    if (maybe_page.is_empty()) {
       return;
@@ -249,19 +249,19 @@ $test(huge_page_allocator_maps_configured_pool) {
    allocator.free(page);
 }
 
-// `page_allocator::resize` does an anonymous probe via `mmap` /`munmap`.
+// `allocator_page::resize` does an anonymous probe via `mmap` /`munmap`.
 // A page-sized request must succeed on any working system.
-$test(page_allocator_resize_probes_kernel) {
+$test(allocator_page_resize_probes_kernel) {
    cat::maybe const grown = pager.resize(cat::page_size);
    cat::verify(grown.has_value());
    cat::verify(grown.value() >= cat::page_size);
 }
 
 // `bytes_used` and `bytes_capacity` read the detailed memory-map file. The
-// numbers are process-wide rather than `page_allocator`-specific. Any running
+// numbers are process-wide rather than `allocator_page`-specific. Any running
 // process has anonymous mappings, so both values must be strictly positive and
 // page-aligned, and `bytes_used` must not exceed `bytes_capacity`.
-$test(page_allocator_introspection_reads_statm) {
+$test(allocator_page_introspection_reads_statm) {
    cat::idx const capacity = pager.bytes_capacity();
    cat::idx const used = pager.bytes_used();
 
@@ -273,9 +273,9 @@ $test(page_allocator_introspection_reads_statm) {
 }
 
 // Allocating a sizeable mapping must show up in the resident bytes count
-// once the allocator touches it. `page_allocator` requests `populate`-ed
+// once the allocator touches it. `allocator_page` requests `populate`-ed
 // pages so the resident set grows at allocation time.
-$test(page_allocator_bytes_used_grows_with_allocation) {
+$test(allocator_page_bytes_used_grows_with_allocation) {
    cat::idx const used_before = pager.bytes_used();
    cat::span page = pager.alloc_multi<cat::byte>(64u * 1'024u).verify();
    // Touch a byte to ensure the kernel actually backs the mapping with a
@@ -287,10 +287,10 @@ $test(page_allocator_bytes_used_grows_with_allocation) {
    cat::verify(used_after >= used_before);
 }
 
-// `page_allocator` resizes mappings in place with `mremap`. Shrinking never
+// `allocator_page` resizes mappings in place with `mremap`. Shrinking never
 // needs to relocate, so the in-place hook always succeeds and reports the
 // page-rounded byte count it settled on.
-$test(page_allocator_reallocate_shrinks_in_place) {
+$test(allocator_page_reallocate_shrinks_in_place) {
    cat::span page = pager.alloc_multi<cat::byte>(cat::page_size * 4u).verify();
    $defer {
       pager.free(page);
@@ -305,7 +305,7 @@ $test(page_allocator_reallocate_shrinks_in_place) {
 // A grow either succeeds at the same address (when the following address
 // space is free) or fails so the caller can relocate. Both outcomes honor
 // the in-place contract, so only the post-conditions are asserted.
-$test(page_allocator_reallocate_grow_is_in_place_or_fails) {
+$test(allocator_page_reallocate_grow_is_in_place_or_fails) {
    cat::span page = pager.alloc_multi<cat::byte>(cat::page_size).verify();
    cat::maybe const grown =
       pager.alloc_grow_feedback(page, cat::page_size * 2u);
@@ -325,23 +325,23 @@ $test(default_allocator_name_is_empty) {
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto linear = cat::make_linear_allocator(page);
+   cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
    cat::verify(linear.name().size() == 0);
    cat::verify(pager.name().size() == 0);
 }
 
-// `dyn_allocator` forwards introspection through its vtable. The held
+// `allocator_dyn` forwards introspection through its vtable. The held
 // allocators are stateful, so the values must agree with the underlying
 // objects.
-$test(dyn_allocator_introspection_forwarding) {
+$test(allocator_dyn_introspection_forwarding) {
    cat::span page = pager.alloc_multi<cat::byte>(64u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto linear = cat::make_linear_allocator(page);
+   cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
-   cat::dyn_allocator dyn = linear;
+   cat::allocator_dyn dyn = linear;
    cat::verify(dyn.bytes_capacity() == linear.bytes_capacity());
    cat::verify(dyn.bytes_used() == linear.bytes_used());
    cat::verify(dyn.name().size() == 0);
@@ -351,25 +351,25 @@ $test(dyn_allocator_introspection_forwarding) {
    cat::verify(dyn.bytes_used() == linear.bytes_used());
 }
 
-// Two `dyn_allocator` handles erasing the same concrete allocator instance
+// Two `allocator_dyn` handles erasing the same concrete allocator instance
 // compare equal. Two handles erasing distinct instances of the same type
 // do not. Two handles erasing different types do not, regardless of the
 // underlying memory.
-$test(dyn_allocator_equality) {
+$test(allocator_dyn_equality) {
    cat::span page_a = pager.alloc_multi<cat::byte>(32u).verify();
    cat::span page_b = pager.alloc_multi<cat::byte>(32u).verify();
    $defer {
       pager.free(page_a);
       pager.free(page_b);
    };
-   cat::is_allocator auto linear_a1 = cat::make_linear_allocator(page_a);
-   cat::is_allocator auto linear_a2 = cat::make_linear_allocator(page_a);
-   cat::is_allocator auto linear_b = cat::make_linear_allocator(page_b);
+   cat::is_allocator auto linear_a1 = cat::make_allocator_linear(page_a);
+   cat::is_allocator auto linear_a2 = cat::make_allocator_linear(page_a);
+   cat::is_allocator auto linear_b = cat::make_allocator_linear(page_b);
 
-   cat::dyn_allocator d_a1 = linear_a1;
-   cat::dyn_allocator d_a2 = linear_a2;
-   cat::dyn_allocator d_b = linear_b;
-   cat::dyn_allocator d_pager = pager;
+   cat::allocator_dyn d_a1 = linear_a1;
+   cat::allocator_dyn d_a2 = linear_a2;
+   cat::allocator_dyn d_b = linear_b;
+   cat::allocator_dyn d_pager = pager;
 
    cat::verify(d_a1 == d_a2);
    cat::verify(d_a1.is_equivalent(d_a2));
@@ -384,13 +384,13 @@ $test(dyn_allocator_equality) {
 $test(allocator_ref_folds_when_wrapping_empty_allocator) {
    struct page_holder {
       [[no_unique_address]]
-      cat::allocator_ref<cat::page_allocator> ref;
+      cat::allocator_ref<cat::allocator_page> ref;
       cat::int4 payload;
    };
 
    struct null_holder {
       [[no_unique_address]]
-      cat::allocator_ref<cat::null_allocator> ref;
+      cat::allocator_ref<cat::allocator_null> ref;
       cat::int4 payload;
    };
 
@@ -398,11 +398,11 @@ $test(allocator_ref_folds_when_wrapping_empty_allocator) {
    static_assert(sizeof(null_holder) == sizeof(cat::int4));
 
    // The ref's dispatch must still work even though it carries no state.
-   cat::allocator_ref<cat::page_allocator> page_ref;
+   cat::allocator_ref<cat::allocator_page> page_ref;
    cat::span<int4> page = page_ref.alloc_multi<int4>(4u).verify();
    page_ref.free(page);
 
-   cat::allocator_ref<cat::null_allocator> null_ref;
+   cat::allocator_ref<cat::allocator_null> null_ref;
    cat::maybe<int4*> result = null_ref.alloc<int4>();
    cat::verify(result.is_empty());
 }
@@ -412,9 +412,9 @@ $test(allocator_ref_introspection_forwarding) {
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto linear = cat::make_linear_allocator(page);
+   cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
-   cat::allocator_ref<cat::linear_allocator> ref = linear;
+   cat::allocator_ref<cat::allocator_linear> ref = linear;
    cat::verify(ref.bytes_capacity() == linear.bytes_capacity());
    cat::verify(ref.bytes_used() == linear.bytes_used());
 
@@ -434,16 +434,16 @@ $test(allocator_ref_equality_uses_is_equivalent) {
       pager.free(page_a);
       pager.free(page_b);
    };
-   cat::is_allocator auto linear = cat::make_linear_allocator(page_a);
+   cat::is_allocator auto linear = cat::make_allocator_linear(page_a);
    cat::is_allocator auto linear_address_lias =
-      cat::make_linear_allocator(page_a);
-   cat::is_allocator auto linear_other = cat::make_linear_allocator(page_b);
+      cat::make_allocator_linear(page_a);
+   cat::is_allocator auto linear_other = cat::make_allocator_linear(page_b);
 
-   cat::allocator_ref<cat::linear_allocator> ref = linear;
-   cat::allocator_ref<cat::linear_allocator> ref_alias = linear;
-   cat::allocator_ref<cat::linear_allocator> ref_address_alias =
+   cat::allocator_ref<cat::allocator_linear> ref = linear;
+   cat::allocator_ref<cat::allocator_linear> ref_alias = linear;
+   cat::allocator_ref<cat::allocator_linear> ref_address_alias =
       linear_address_lias;
-   cat::allocator_ref<cat::linear_allocator> ref_other = linear_other;
+   cat::allocator_ref<cat::allocator_linear> ref_other = linear_other;
 
    cat::verify(ref == ref_alias);
    cat::verify(ref == linear);

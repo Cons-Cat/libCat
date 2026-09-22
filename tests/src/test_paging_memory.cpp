@@ -1,6 +1,6 @@
+#include <cat/allocator_page>
 #include <cat/array>
 #include <cat/math>
-#include <cat/page_allocator>
 #include <cat/utility>
 
 #include "../unit_tests.hpp"
@@ -27,7 +27,7 @@ reset_paging_counters() {
 }  // namespace
 
 $test(paging_memory_alloc_multi) {
-   cat::page_allocator allocator;
+   cat::allocator_page allocator;
 
    cat::span page =
       allocator.alloc_multi<int4>(1'000u).or_exit("Failed to page memory!");
@@ -40,7 +40,7 @@ $test(paging_memory_alloc_multi) {
 }
 
 $test(paging_memory_inline_alloc) {
-   cat::page_allocator allocator;
+   cat::allocator_page allocator;
 
    auto small_memory = allocator.inline_alloc<int4>().verify();
    $defer {
@@ -55,7 +55,7 @@ $test(paging_memory_inline_alloc) {
 }
 
 $test(paging_memory_inline_alloc_multi_overflow) {
-   cat::page_allocator allocator;
+   cat::allocator_page allocator;
 
    auto large_inline_request =
       allocator.inline_alloc_multi<int4>(1'000u).verify();
@@ -67,7 +67,7 @@ $test(paging_memory_inline_alloc_multi_overflow) {
 }
 
 $test(paging_memory_inline_unique_storage) {
-   cat::page_allocator allocator;
+   cat::allocator_page allocator;
 
    auto small_memory_1 = allocator.inline_alloc<int4>().verify();
    auto small_memory_2 = allocator.inline_alloc<int4>().verify();
@@ -87,7 +87,7 @@ $test(paging_memory_inline_unique_storage) {
 }
 
 $test(paging_memory_ctor_dtor_single) {
-   cat::page_allocator allocator;
+   cat::allocator_page allocator;
    reset_paging_counters();
 
    cat::maybe testtype = allocator.alloc<test_page_type>();
@@ -98,7 +98,7 @@ $test(paging_memory_ctor_dtor_single) {
 }
 
 $test(paging_memory_ctor_dtor_multi) {
-   cat::page_allocator allocator;
+   cat::allocator_page allocator;
    reset_paging_counters();
 
    auto array_memory = allocator.alloc_multi<test_page_type>(9u).verify();
@@ -109,7 +109,7 @@ $test(paging_memory_ctor_dtor_multi) {
 }
 
 $test(paging_memory_inline_ctor_dtor) {
-   cat::page_allocator allocator;
+   cat::allocator_page allocator;
 
    auto smalltesttype = allocator.inline_alloc<test_page_type>().verify();
    allocator.get(smalltesttype) = test_page_type();
@@ -117,7 +117,7 @@ $test(paging_memory_inline_ctor_dtor) {
 }
 
 $test(paging_memory_aligned) {
-   cat::page_allocator allocator;
+   cat::allocator_page allocator;
 
    auto aligned_mem = allocator.align_alloc_multi<int4>(32u, 4u).verify();
    $defer {

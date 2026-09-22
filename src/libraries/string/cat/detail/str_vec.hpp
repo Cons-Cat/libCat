@@ -569,8 +569,8 @@ class
 
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(dyn_allocator allocator) {
-      return free<dyn_allocator>(allocator);
+   free(allocator_dyn allocator) {
+      return free<allocator_dyn>(allocator);
    }
 
    template <is_allocator Allocator>
@@ -582,8 +582,8 @@ class
 
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   cfree(dyn_allocator allocator) {
-      return cfree<dyn_allocator>(allocator);
+   cfree(allocator_dyn allocator) {
+      return cfree<allocator_dyn>(allocator);
    }
 
    [[clang::reinitializes]]
@@ -607,10 +607,10 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   reserve(dyn_allocator allocator, idx minimum_capacity) -> maybe<void>
+   reserve(allocator_dyn allocator, idx minimum_capacity) -> maybe<void>
       requires(!flags.vec.is_fixed_size)
    {
-      return reserve<dyn_allocator>(allocator, minimum_capacity);
+      return reserve<allocator_dyn>(allocator, minimum_capacity);
    }
 
    template <is_allocator Allocator>
@@ -622,8 +622,8 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   resize(dyn_allocator allocator, idx new_size) -> maybe<void> {
-      return resize<dyn_allocator>(allocator, new_size);
+   resize(allocator_dyn allocator, idx new_size) -> maybe<void> {
+      return resize<allocator_dyn>(allocator, new_size);
    }
 
    template <is_allocator Allocator>
@@ -646,8 +646,8 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   resize(dyn_allocator allocator, idx new_size, CharT value) -> maybe<void> {
-      return resize<dyn_allocator>(allocator, new_size, value);
+   resize(allocator_dyn allocator, idx new_size, CharT value) -> maybe<void> {
+      return resize<allocator_dyn>(allocator, new_size, value);
    }
 
    template <is_allocator Allocator>
@@ -659,8 +659,8 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shrink_to_fit(dyn_allocator allocator) -> maybe<void> {
-      return shrink_to_fit<dyn_allocator>(allocator);
+   shrink_to_fit(allocator_dyn allocator) -> maybe<void> {
+      return shrink_to_fit<allocator_dyn>(allocator);
    }
 
    template <is_allocator Allocator>
@@ -685,8 +685,8 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   push_back(dyn_allocator allocator, CharT value) -> maybe<void> {
-      return push_back<dyn_allocator>(allocator, value);
+   push_back(allocator_dyn allocator, CharT value) -> maybe<void> {
+      return push_back<allocator_dyn>(allocator, value);
    }
 
    template <
@@ -702,7 +702,7 @@ class
 
    template <typename First, typename Second, typename... Remaining>
    constexpr auto
-   push_back(dyn_allocator, First&&, Second&&, Remaining&&...) -> maybe<void> =
+   push_back(allocator_dyn, First&&, Second&&, Remaining&&...) -> maybe<void> =
       delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
               "to construct an element or `append_range()` to "
               "append a range.");
@@ -810,34 +810,34 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append(dyn_allocator allocator, basic_str_span<CharT const> string)
+   append(allocator_dyn allocator, basic_str_span<CharT const> string)
       -> maybe<void> {
-      return append<dyn_allocator>(allocator, string);
+      return append<allocator_dyn>(allocator, string);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    append(
-      dyn_allocator allocator,
+      allocator_dyn allocator,
       basic_str_span<CharT const, str_flags::null_terminated> string
    ) -> maybe<void> {
-      return append<dyn_allocator>(allocator, string);
+      return append<allocator_dyn>(allocator, string);
    }
 
    template <typename OtherChar, idx extent>
       requires(encoding_compatible_char<CharT, OtherChar>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append(dyn_allocator allocator, OtherChar const (&string)[extent])
+   append(allocator_dyn allocator, OtherChar const (&string)[extent])
       -> maybe<void> {
-      return append<dyn_allocator>(allocator, string);
+      return append<allocator_dyn>(allocator, string);
    }
 
    template <typename OtherChar, idx extent>
       requires(is_string_char<OtherChar>
                && !encoding_compatible_char<CharT, OtherChar>)
    constexpr auto
-   append(dyn_allocator, OtherChar const (&)[extent])
+   append(allocator_dyn, OtherChar const (&)[extent])
       -> maybe<void> = delete ("Cannot copy between different character "
                                "encodings! Transcode the string first.");
 
@@ -862,8 +862,8 @@ class
    template <is_iterable Iterable>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   append_range(dyn_allocator allocator, Iterable&& range) -> maybe<void> {
-      return append_range<dyn_allocator>(allocator, $fwd(range));
+   append_range(allocator_dyn allocator, Iterable&& range) -> maybe<void> {
+      return append_range<allocator_dyn>(allocator, $fwd(range));
    }
 
    // Insert every element of `range` before `position`.
@@ -890,9 +890,9 @@ class
    template <is_iterable Iterable>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert_range(dyn_allocator allocator, idx position, Iterable&& range)
+   insert_range(allocator_dyn allocator, idx position, Iterable&& range)
       -> maybe<void> {
-      return insert_range<dyn_allocator>(allocator, position, $fwd(range));
+      return insert_range<allocator_dyn>(allocator, position, $fwd(range));
    }
 
    // Replace `[first, last)` with every element of `range`.
@@ -918,9 +918,9 @@ class
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    replace_with_range(
-      dyn_allocator allocator, idx first, idx last, Iterable&& range
+      allocator_dyn allocator, idx first, idx last, Iterable&& range
    ) -> maybe<void> {
-      return replace_with_range<dyn_allocator>(
+      return replace_with_range<allocator_dyn>(
          allocator, first, last, $fwd(range)
       );
    }
@@ -936,8 +936,8 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(dyn_allocator allocator) const& -> maybe<basic_str_vec> {
-      return clone<dyn_allocator>(allocator);
+   clone(allocator_dyn allocator) const& -> maybe<basic_str_vec> {
+      return clone<allocator_dyn>(allocator);
    }
 
    [[nodiscard]]
@@ -1075,9 +1075,9 @@ make_str_vec(allocator_ref<Allocator> allocator, str_view string)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec(dyn_allocator allocator, str_view string)
+make_str_vec(allocator_dyn allocator, str_view string)
    -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
-   return make_str_vec<dyn_allocator, flags>(allocator, string);
+   return make_str_vec<allocator_dyn, flags>(allocator, string);
 }
 
 template <
@@ -1101,9 +1101,9 @@ make_zstr_vec(allocator_ref<Allocator> allocator, str_view string)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec(dyn_allocator allocator, str_view string) -> maybe<basic_str_vec<
+make_zstr_vec(allocator_dyn allocator, str_view string) -> maybe<basic_str_vec<
    char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
-   return make_zstr_vec<dyn_allocator, flags>(allocator, string);
+   return make_zstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
 template <
@@ -1123,9 +1123,9 @@ make_wstr_vec(allocator_ref<Allocator> allocator, wstr_view string)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec(dyn_allocator allocator, wstr_view string)
+make_wstr_vec(allocator_dyn allocator, wstr_view string)
    -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
-   return make_wstr_vec<dyn_allocator, flags>(allocator, string);
+   return make_wstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
 template <
@@ -1150,11 +1150,11 @@ make_wzstr_vec(allocator_ref<Allocator> allocator, wstr_view string)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec(dyn_allocator allocator, wstr_view string)
+make_wzstr_vec(allocator_dyn allocator, wstr_view string)
    -> maybe<basic_str_vec<
       wchar_t,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
-   return make_wzstr_vec<dyn_allocator, flags>(allocator, string);
+   return make_wzstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
 template <
@@ -1178,11 +1178,11 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec(
-   dyn_allocator allocator, First const& first, Second const& second,
+   allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
 ) -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
    return detail::make_basic_str_vec<
-      char, vec_flags::inline_storage(22u) | flags, dyn_allocator>(
+      char, vec_flags::inline_storage(22u) | flags, allocator_dyn>(
       allocator, first, second, strings...
    );
 }
@@ -1210,7 +1210,7 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec(
-   dyn_allocator allocator, First const& first, Second const& second,
+   allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
 )
    -> maybe<basic_str_vec<
@@ -1218,7 +1218,7 @@ make_zstr_vec(
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
    return detail::make_basic_str_vec<
       char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
-      dyn_allocator>(allocator, first, second, strings...);
+      allocator_dyn>(allocator, first, second, strings...);
 }
 
 template <
@@ -1242,11 +1242,11 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec(
-   dyn_allocator allocator, First const& first, Second const& second,
+   allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
 ) -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
    return detail::make_basic_str_vec<
-      wchar_t, vec_flags::inline_storage(22u) | flags, dyn_allocator>(
+      wchar_t, vec_flags::inline_storage(22u) | flags, allocator_dyn>(
       allocator, first, second, strings...
    );
 }
@@ -1275,7 +1275,7 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec(
-   dyn_allocator allocator, First const& first, Second const& second,
+   allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
 )
    -> maybe<basic_str_vec<
@@ -1284,7 +1284,7 @@ make_wzstr_vec(
    return detail::make_basic_str_vec<
       wchar_t,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
-      dyn_allocator>(allocator, first, second, strings...);
+      allocator_dyn>(allocator, first, second, strings...);
 }
 
 template <
@@ -1304,9 +1304,9 @@ make_str_vec(allocator_ref<Allocator> allocator, initializer_list<char> values)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec(dyn_allocator allocator, initializer_list<char> values)
+make_str_vec(allocator_dyn allocator, initializer_list<char> values)
    -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
-   return make_str_vec<dyn_allocator, flags>(allocator, values);
+   return make_str_vec<allocator_dyn, flags>(allocator, values);
 }
 
 template <
@@ -1330,11 +1330,11 @@ make_zstr_vec(allocator_ref<Allocator> allocator, initializer_list<char> values)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec(dyn_allocator allocator, initializer_list<char> values)
+make_zstr_vec(allocator_dyn allocator, initializer_list<char> values)
    -> maybe<basic_str_vec<
       char,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
-   return make_zstr_vec<dyn_allocator, flags>(allocator, values);
+   return make_zstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
 template <
@@ -1355,9 +1355,9 @@ make_wstr_vec(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec(dyn_allocator allocator, initializer_list<wchar_t> values)
+make_wstr_vec(allocator_dyn allocator, initializer_list<wchar_t> values)
    -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
-   return make_wstr_vec<dyn_allocator, flags>(allocator, values);
+   return make_wstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
 template <
@@ -1384,11 +1384,11 @@ make_wzstr_vec(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec(dyn_allocator allocator, initializer_list<wchar_t> values)
+make_wzstr_vec(allocator_dyn allocator, initializer_list<wchar_t> values)
    -> maybe<basic_str_vec<
       wchar_t,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
-   return make_wzstr_vec<dyn_allocator, flags>(allocator, values);
+   return make_wzstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
 template <
@@ -1407,9 +1407,9 @@ make_str_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec_reserved(dyn_allocator allocator, idx capacity)
+make_str_vec_reserved(allocator_dyn allocator, idx capacity)
    -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
-   return make_str_vec_reserved<dyn_allocator, flags>(allocator, capacity);
+   return make_str_vec_reserved<allocator_dyn, flags>(allocator, capacity);
 }
 
 template <
@@ -1433,11 +1433,11 @@ make_zstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec_reserved(dyn_allocator allocator, idx capacity)
+make_zstr_vec_reserved(allocator_dyn allocator, idx capacity)
    -> maybe<basic_str_vec<
       char,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
-   return make_zstr_vec_reserved<dyn_allocator, flags>(allocator, capacity);
+   return make_zstr_vec_reserved<allocator_dyn, flags>(allocator, capacity);
 }
 
 template <
@@ -1456,9 +1456,9 @@ make_wstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec_reserved(dyn_allocator allocator, idx capacity)
+make_wstr_vec_reserved(allocator_dyn allocator, idx capacity)
    -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
-   return make_wstr_vec_reserved<dyn_allocator, flags>(allocator, capacity);
+   return make_wstr_vec_reserved<allocator_dyn, flags>(allocator, capacity);
 }
 
 template <
@@ -1483,11 +1483,11 @@ make_wzstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec_reserved(dyn_allocator allocator, idx capacity)
+make_wzstr_vec_reserved(allocator_dyn allocator, idx capacity)
    -> maybe<basic_str_vec<
       wchar_t,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
-   return make_wzstr_vec_reserved<dyn_allocator, flags>(allocator, capacity);
+   return make_wzstr_vec_reserved<allocator_dyn, flags>(allocator, capacity);
 }
 
 template <
@@ -1507,9 +1507,9 @@ make_str_vec_filled(allocator_ref<Allocator> allocator, idx count, char value)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec_filled(dyn_allocator allocator, idx count, char value)
+make_str_vec_filled(allocator_dyn allocator, idx count, char value)
    -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
-   return make_str_vec_filled<dyn_allocator, flags>(allocator, count, value);
+   return make_str_vec_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
 template <
@@ -1531,11 +1531,11 @@ make_zstr_vec_filled(allocator_ref<Allocator> allocator, idx count, char value)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec_filled(dyn_allocator allocator, idx count, char value)
+make_zstr_vec_filled(allocator_dyn allocator, idx count, char value)
    -> maybe<basic_str_vec<
       char,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
-   return make_zstr_vec_filled<dyn_allocator, flags>(allocator, count, value);
+   return make_zstr_vec_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
 template <
@@ -1556,9 +1556,9 @@ make_wstr_vec_filled(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec_filled(dyn_allocator allocator, idx count, wchar_t value)
+make_wstr_vec_filled(allocator_dyn allocator, idx count, wchar_t value)
    -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
-   return make_wstr_vec_filled<dyn_allocator, flags>(allocator, count, value);
+   return make_wstr_vec_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
 template <
@@ -1583,11 +1583,11 @@ make_wzstr_vec_filled(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec_filled(dyn_allocator allocator, idx count, wchar_t value)
+make_wzstr_vec_filled(allocator_dyn allocator, idx count, wchar_t value)
    -> maybe<basic_str_vec<
       wchar_t,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
-   return make_wzstr_vec_filled<dyn_allocator, flags>(allocator, count, value);
+   return make_wzstr_vec_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
 template <
@@ -1612,11 +1612,11 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator
+   allocator_dyn allocator, idx count, Generator&& generator
 ) -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
-   return make_str_vec_filled_random<dyn_allocator, flags>(
+   return make_str_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1648,7 +1648,7 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator,
+   allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
 ) -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
@@ -1656,7 +1656,7 @@ make_str_vec_filled_random(
       is_assignable<
          char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_str_vec_filled_random<dyn_allocator, flags>(
+   return make_str_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1688,14 +1688,14 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator
+   allocator_dyn allocator, idx count, Generator&& generator
 )
    -> maybe<basic_str_vec<
       char,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
-   return make_zstr_vec_filled_random<dyn_allocator, flags>(
+   return make_zstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1732,7 +1732,7 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator,
+   allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
 )
    -> maybe<basic_str_vec<
@@ -1743,7 +1743,7 @@ make_zstr_vec_filled_random(
       is_assignable<
          char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_zstr_vec_filled_random<dyn_allocator, flags>(
+   return make_zstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1770,11 +1770,11 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator
+   allocator_dyn allocator, idx count, Generator&& generator
 ) -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
-   return make_wstr_vec_filled_random<dyn_allocator, flags>(
+   return make_wstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1806,7 +1806,7 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator,
+   allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
 ) -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
@@ -1814,7 +1814,7 @@ make_wstr_vec_filled_random(
       is_assignable<
          wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_wstr_vec_filled_random<dyn_allocator, flags>(
+   return make_wstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1847,14 +1847,14 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator
+   allocator_dyn allocator, idx count, Generator&& generator
 )
    -> maybe<basic_str_vec<
       wchar_t,
       str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
-   return make_wzstr_vec_filled_random<dyn_allocator, flags>(
+   return make_wzstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1892,7 +1892,7 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator,
+   allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
 )
    -> maybe<basic_str_vec<
@@ -1903,7 +1903,7 @@ make_wzstr_vec_filled_random(
       is_assignable<
          wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return make_wzstr_vec_filled_random<dyn_allocator, flags>(
+   return make_wzstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }

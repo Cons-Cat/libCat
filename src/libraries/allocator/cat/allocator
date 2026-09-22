@@ -396,7 +396,7 @@ using maybe_sized_allocation = maybe<compact<
    sized_allocation<T>, &detail::sized_allocation_engaged<T>,
    sized_allocation<T>{nullptr, 0u}>>;
 
-struct dyn_allocator_friend;
+struct allocator_dyn_friend;
 
 namespace detail {
 struct allocator_release_tag {};
@@ -426,7 +426,7 @@ class allocator_interface {
  private:
    constexpr allocator_interface() = default;
    friend Derived;
-   friend struct dyn_allocator_friend;
+   friend struct allocator_dyn_friend;
 
    [[clang::ownership_takes(libcat, 2)]]
    static constexpr void
@@ -449,7 +449,7 @@ class allocator_interface {
             underlying, p_storage, allocation_bytes
          );
       } else if constexpr (requires {
-                              typename Derived::basic_dyn_allocator_tag;
+                              typename Derived::basic_allocator_dyn_tag;
                            }) {
          allocator.deallocate(p_storage, allocation_bytes);
       } else {
@@ -6198,7 +6198,7 @@ template <typename T, typename CharT>
 struct formatter;
 
 template <typename... Methods>
-class basic_dyn_allocator;
+class basic_allocator_dyn;
 
 template <typename Allocator>
 class allocator_ref;
@@ -6206,7 +6206,7 @@ class allocator_ref;
 // Convenience helper that forwards to the allocator's `name()` accessor. The
 // `allocator_interface` default returns an empty `str_view`, so this is safe
 // to call on any allocator regardless of whether it was wrapped in
-// `named_allocator`.
+// `allocator_named`.
 template <is_allocator Allocator>
 [[nodiscard]]
 constexpr auto

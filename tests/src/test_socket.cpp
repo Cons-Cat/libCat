@@ -1,5 +1,5 @@
+#include <cat/allocator_page>
 #include <cat/linux>
-#include <cat/page_allocator>
 #include <cat/socket>
 
 #include "../unit_tests.hpp"

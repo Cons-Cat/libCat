@@ -233,11 +233,11 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       m_size = 0u;
    }
 
-   // Free nodes using `cat::dyn_allocator`.
+   // Free nodes using `cat::allocator_dyn`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(dyn_allocator allocator) {
-      return free<dyn_allocator>(allocator);
+   free(allocator_dyn allocator) {
+      return free<allocator_dyn>(allocator);
    }
 
    // Clear the `cat::basic_list` contents without deallocating storage.
@@ -391,11 +391,11 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       return new_list;
    }
 
-   // Create a deep copy using `cat::dyn_allocator`.
+   // Create a deep copy using `cat::allocator_dyn`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(dyn_allocator allocator) const& -> maybe<basic_list<T>> {
-      return clone<dyn_allocator>(allocator);
+   clone(allocator_dyn allocator) const& -> maybe<basic_list<T>> {
+      return clone<allocator_dyn>(allocator);
    }
 
    // Insert a new element before the iterator position.

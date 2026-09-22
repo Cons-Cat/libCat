@@ -305,8 +305,8 @@ alloc_mutex_runtime(allocator_ref<Allocator> allocator, idx thread_count)
 }
 
 inline auto
-alloc_mutex_runtime(dyn_allocator allocator, idx thread_count) -> maybe<void> {
-   return alloc_mutex_runtime<dyn_allocator>(allocator, thread_count);
+alloc_mutex_runtime(allocator_dyn allocator, idx thread_count) -> maybe<void> {
+   return alloc_mutex_runtime<allocator_dyn>(allocator, thread_count);
 }
 
 template <is_allocator Allocator>
@@ -325,8 +325,8 @@ free_mutex_runtime(allocator_ref<Allocator> allocator) {
 }
 
 inline void
-free_mutex_runtime(dyn_allocator allocator) {
-   free_mutex_runtime<dyn_allocator>(allocator);
+free_mutex_runtime(allocator_dyn allocator) {
+   free_mutex_runtime<allocator_dyn>(allocator);
 }
 
 template <is_allocator Allocator>
@@ -345,8 +345,8 @@ cfree_mutex_runtime(allocator_ref<Allocator> allocator) {
 }
 
 inline void
-cfree_mutex_runtime(dyn_allocator allocator) {
-   cfree_mutex_runtime<dyn_allocator>(allocator);
+cfree_mutex_runtime(allocator_dyn allocator) {
+   cfree_mutex_runtime<allocator_dyn>(allocator);
 }
 
 }  // namespace cat

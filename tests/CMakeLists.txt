@@ -114,14 +114,14 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_demangle.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_inplace_allocator.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_musl_allocator.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_pool_allocator.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_inplace.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_linear.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_musl.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_pool.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_parameters.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_hooks.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_resizable_allocator.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_named_allocator.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_resizeable.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_allocator_named.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_reallocation_disjoint.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_list.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_math.cpp

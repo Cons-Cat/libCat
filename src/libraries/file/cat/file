@@ -13,7 +13,7 @@ namespace cat {
 // when the link cannot be read or its target exceeds 1 kibibyte.
 [[nodiscard]]
 auto
-get_executable_path(dyn_allocator allocator) -> maybe<file_path>;
+get_executable_path(allocator_dyn allocator) -> maybe<file_path>;
 
 enum class [[clang::enum_extensibility(closed)]] file_access : unsigned char {
    read,

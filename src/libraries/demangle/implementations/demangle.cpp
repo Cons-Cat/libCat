@@ -1,7 +1,7 @@
 #include <cat/demangle>
 
 cat::demangled_name::demangled_name(
-   basic_dyn_allocator<dyn_reallocate> allocator
+   basic_allocator_dyn<dyn_reallocate> allocator
 )
     : m_allocator(allocator) {
 }
@@ -99,7 +99,7 @@ cat::demangled_name::reset() {
 
 namespace cat::detail {
 
-using allocator_type = basic_dyn_allocator<dyn_reallocate>;
+using allocator_type = basic_allocator_dyn<dyn_reallocate>;
 using string_type = demangled_name;
 
 struct text_reference {
@@ -876,7 +876,7 @@ class demangle_parser {
 
 auto
 cat::demangle(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view const mangled
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view const mangled
 ) -> maybe<demangled_name> {
    if (mangled.size() >= 2u && mangled[0u] == '_' && mangled[1u] == 'Z') {
       detail::demangle_parser demangler(allocator, mangled);

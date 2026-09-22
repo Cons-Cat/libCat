@@ -20,16 +20,16 @@
 
 #include <cat/detail/compact.hpp>
 
+#include <cat/allocator_null>
 #include <cat/forward_list>
-#include <cat/null_allocator>
 #include <cat/propagate>
 
 namespace cat::raii {
 
-template <typename T, is_allocator Allocator = dyn_allocator>
+template <typename T, is_allocator Allocator = allocator_dyn>
 class basic_forward_list;
 
-template <typename T, is_allocator Allocator = dyn_allocator>
+template <typename T, is_allocator Allocator = allocator_dyn>
 using forward_list = basic_forward_list<T, Allocator>;
 
 }  // namespace cat::raii
@@ -38,12 +38,12 @@ namespace cat::detail {
 template <typename T>
 constexpr auto
 raii_forward_list_has_value(
-   raii::basic_forward_list<T, dyn_allocator> const& value
+   raii::basic_forward_list<T, allocator_dyn> const& value
 ) -> bool;
 
 template <typename T>
 constexpr auto
-raii_forward_list_nullopt() -> raii::basic_forward_list<T, dyn_allocator>;
+raii_forward_list_nullopt() -> raii::basic_forward_list<T, allocator_dyn>;
 }  // namespace cat::detail
 
 namespace cat::raii {
@@ -229,13 +229,13 @@ basic_forward_list
       return new_list;
    }
 
-   // Clone into a `cat::raii::basic_forward_list` using `cat::dyn_allocator`.
+   // Clone into a `cat::raii::basic_forward_list` using `cat::allocator_dyn`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    clone(
-      dyn_allocator allocator
-   ) const& -> maybe<basic_forward_list<T, dyn_allocator>> {
-      basic_forward_list<T, dyn_allocator> new_list(allocator);
+      allocator_dyn allocator
+   ) const& -> maybe<basic_forward_list<T, allocator_dyn>> {
+      basic_forward_list<T, allocator_dyn> new_list(allocator);
       new_list.m_core = $prop(m_core.clone(allocator));
       return new_list;
    }
@@ -358,12 +358,12 @@ basic_forward_list
  private:
    template <typename U>
    friend constexpr auto
-   detail::raii_forward_list_nullopt() -> basic_forward_list<U, dyn_allocator>;
+   detail::raii_forward_list_nullopt() -> basic_forward_list<U, allocator_dyn>;
 
    template <typename U>
    friend constexpr auto
    detail::raii_forward_list_has_value(
-      basic_forward_list<U, dyn_allocator> const&
+      basic_forward_list<U, allocator_dyn> const&
    ) -> bool;
 
    manual::basic_forward_list<T> m_core;
@@ -380,13 +380,13 @@ make_forward_list(allocator_ref<Allocator> allocator)
    return raii::basic_forward_list<T, Allocator>(allocator);
 }
 
-// Create a `cat::raii::basic_forward_list` using `cat::dyn_allocator`.
+// Create a `cat::raii::basic_forward_list` using `cat::allocator_dyn`.
 template <typename T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_forward_list(dyn_allocator allocator)
-   -> maybe<raii::basic_forward_list<T, dyn_allocator>> {
-   return raii::basic_forward_list<T, dyn_allocator>(allocator);
+make_forward_list(allocator_dyn allocator)
+   -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
+   return raii::basic_forward_list<T, allocator_dyn>(allocator);
 }
 
 // Create a `cat::raii::basic_forward_list` initialized from the given values.
@@ -421,25 +421,25 @@ make_forward_list(
    );
 }
 
-// Create a `cat::raii::basic_forward_list` using `cat::dyn_allocator`.
+// Create a `cat::raii::basic_forward_list` using `cat::allocator_dyn`.
 template <typename T, is_convertible<T> U, is_convertible<T>... Args>
 [[nodiscard]]
 constexpr auto
-make_forward_list(dyn_allocator allocator, U&& value, Args&&... remaining)
-   -> maybe<raii::basic_forward_list<T, dyn_allocator>> {
-   return cat::raii::make_forward_list<T, dyn_allocator>(
-      allocator_ref<dyn_allocator>(allocator), $fwd(value), $fwd(remaining)...
+make_forward_list(allocator_dyn allocator, U&& value, Args&&... remaining)
+   -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
+   return cat::raii::make_forward_list<T, allocator_dyn>(
+      allocator_ref<allocator_dyn>(allocator), $fwd(value), $fwd(remaining)...
    );
 }
 
-// Create a `cat::raii::basic_forward_list` using `cat::dyn_allocator`.
+// Create a `cat::raii::basic_forward_list` using `cat::allocator_dyn`.
 template <typename... Args>
 [[nodiscard]]
 constexpr auto
-make_forward_list(dyn_allocator allocator, Args&&... arguments) {
+make_forward_list(allocator_dyn allocator, Args&&... arguments) {
    using common = common_type<Args...>;
    return cat::raii::make_forward_list<common>(
-      allocator_ref<dyn_allocator>(allocator),
+      allocator_ref<allocator_dyn>(allocator),
       static_cast<common>($fwd(arguments))...
    );
 }
@@ -459,14 +459,14 @@ make_forward_list_filled(
    return new_list;
 }
 
-// Create a `cat::raii::basic_forward_list` filled using `cat::dyn_allocator`.
+// Create a `cat::raii::basic_forward_list` filled using `cat::allocator_dyn`.
 template <typename T>
 [[nodiscard]]
 constexpr auto
-make_forward_list_filled(dyn_allocator allocator, idx count, T const& value)
-   -> maybe<raii::basic_forward_list<T, dyn_allocator>> {
-   return cat::raii::make_forward_list_filled<T, dyn_allocator>(
-      allocator_ref<dyn_allocator>(allocator), count, value
+make_forward_list_filled(allocator_dyn allocator, idx count, T const& value)
+   -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
+   return cat::raii::make_forward_list_filled<T, allocator_dyn>(
+      allocator_ref<allocator_dyn>(allocator), count, value
    );
 }
 
@@ -514,12 +514,12 @@ template <typename T, typename Generator>
 [[nodiscard]]
 constexpr auto
 make_forward_list_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator
-) -> maybe<raii::basic_forward_list<T, dyn_allocator>> {
+   allocator_dyn allocator, idx count, Generator&& generator
+) -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
-   return cat::raii::make_forward_list_filled_random<T, dyn_allocator>(
-      allocator_ref<dyn_allocator>(allocator), count, $fwd(generator)
+   return cat::raii::make_forward_list_filled_random<T, allocator_dyn>(
+      allocator_ref<allocator_dyn>(allocator), count, $fwd(generator)
    );
 }
 
@@ -527,16 +527,16 @@ template <typename T, typename Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_forward_list_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator,
+   allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<raii::basic_forward_list<T, dyn_allocator>> {
+) -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
    static_assert(is_default_constructible<T>);
    static_assert(
       is_assignable<
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return cat::raii::make_forward_list_filled_random<T, dyn_allocator>(
-      allocator_ref<dyn_allocator>(allocator), count, $fwd(generator),
+   return cat::raii::make_forward_list_filled_random<T, allocator_dyn>(
+      allocator_ref<allocator_dyn>(allocator), count, $fwd(generator),
       $fwd(distribution)
    );
 }
@@ -550,20 +550,20 @@ namespace cat::detail {
 template <typename T>
 constexpr auto
 raii_forward_list_has_value(
-   raii::basic_forward_list<T, dyn_allocator> const& value
+   raii::basic_forward_list<T, allocator_dyn> const& value
 ) -> bool {
    return maybe_forward_list_has_value(value.m_core);
 }
 
-inline constexpr null_allocator raii_forward_list_niche_null_allocator{};
+inline constexpr allocator_null raii_forward_list_niche_allocator_null{};
 
 // Construct a sentinel `cat::raii::basic_forward_list` representing nullopt.
 template <typename T>
 constexpr auto
-raii_forward_list_nullopt() -> raii::basic_forward_list<T, dyn_allocator> {
-   raii::basic_forward_list<T, dyn_allocator> value(
-      allocator_ref<dyn_allocator>(dyn_allocator(
-         const_cast<null_allocator&>(raii_forward_list_niche_null_allocator)
+raii_forward_list_nullopt() -> raii::basic_forward_list<T, allocator_dyn> {
+   raii::basic_forward_list<T, allocator_dyn> value(
+      allocator_ref<allocator_dyn>(allocator_dyn(
+         const_cast<allocator_null&>(raii_forward_list_niche_allocator_null)
       ))
    );
    value.m_core = maybe_forward_list_nullopt<T>();
@@ -575,9 +575,9 @@ raii_forward_list_nullopt() -> raii::basic_forward_list<T, dyn_allocator> {
 namespace cat {
 
 template <typename T>
-struct default_compact_trait<raii::basic_forward_list<T, dyn_allocator>>
+struct default_compact_trait<raii::basic_forward_list<T, allocator_dyn>>
     : identity_trait<compact<
-         raii::basic_forward_list<T, dyn_allocator>,
+         raii::basic_forward_list<T, allocator_dyn>,
          detail::raii_forward_list_has_value<T>,
          detail::raii_forward_list_nullopt<T>>> {};
 

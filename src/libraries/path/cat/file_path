@@ -419,7 +419,7 @@ class path_components : public iterable_interface<path_components> {
 
 namespace raii {
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = detail::path_default_flags>
 class basic_file_path;
 }  // namespace raii
@@ -555,7 +555,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   reserve(dyn_allocator allocator, idx minimum_capacity) -> maybe<void>
+   reserve(allocator_dyn allocator, idx minimum_capacity) -> maybe<void>
       requires(!m_flags.vec.is_fixed_size)
    {
       return m_storage.reserve(allocator, minimum_capacity);
@@ -570,7 +570,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   resize(dyn_allocator allocator, idx new_size) -> maybe<void> {
+   resize(allocator_dyn allocator, idx new_size) -> maybe<void> {
       return m_storage.resize(allocator, new_size);
    }
 
@@ -591,7 +591,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    }
 
    constexpr void
-   free(dyn_allocator allocator) {
+   free(allocator_dyn allocator) {
       m_storage.free(allocator);
    }
 
@@ -602,7 +602,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    }
 
    constexpr void
-   cfree(dyn_allocator allocator) {
+   cfree(allocator_dyn allocator) {
       m_storage.cfree(allocator);
    }
 
@@ -621,8 +621,8 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   clone(dyn_allocator allocator) const& -> maybe<basic_file_path> {
-      return clone<dyn_allocator>(allocator);
+   clone(allocator_dyn allocator) const& -> maybe<basic_file_path> {
+      return clone<allocator_dyn>(allocator);
    }
 
    [[nodiscard]]
@@ -813,8 +813,8 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    template <is_path_segment Segment>
    [[nodiscard]]
    constexpr auto
-   append(dyn_allocator allocator, Segment const& segment) -> maybe<void> {
-      return append<dyn_allocator>(allocator, segment);
+   append(allocator_dyn allocator, Segment const& segment) -> maybe<void> {
+      return append<allocator_dyn>(allocator, segment);
    }
 
  private:
@@ -881,9 +881,9 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_file_path(dyn_allocator allocator, Segment const& segment)
+make_file_path(allocator_dyn allocator, Segment const& segment)
    -> maybe<basic_file_path<flags>> {
-   return manual::make_file_path<dyn_allocator, flags>(allocator, segment);
+   return manual::make_file_path<allocator_dyn, flags>(allocator, segment);
 }
 
 template <
@@ -898,8 +898,8 @@ make_file_path(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(dyn_allocator allocator) -> maybe<basic_file_path<flags>> {
-   return make_file_path<dyn_allocator, flags>(allocator);
+make_file_path(allocator_dyn allocator) -> maybe<basic_file_path<flags>> {
+   return make_file_path<allocator_dyn, flags>(allocator);
 }
 
 template <is_allocator Allocator, str_vec_flags flags, is_path_segment Segment>
@@ -921,10 +921,10 @@ template <str_vec_flags flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
 make_file_path_joined(
-   dyn_allocator allocator, basic_file_path<flags> const& left,
+   allocator_dyn allocator, basic_file_path<flags> const& left,
    Segment const& right
 ) -> maybe<basic_file_path<flags>> {
-   return make_file_path_joined<dyn_allocator>(allocator, left, right);
+   return make_file_path_joined<allocator_dyn>(allocator, left, right);
 }
 
 }  // namespace manual
@@ -986,9 +986,9 @@ make_file_path_current(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
-make_file_path_current(dyn_allocator allocator)
+make_file_path_current(allocator_dyn allocator)
    -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_current<flags, dyn_allocator>(allocator);
+   return make_file_path_current<flags, allocator_dyn>(allocator);
 }
 
 template <
@@ -1052,9 +1052,9 @@ template <
 [[nodiscard]]
 auto
 make_file_path_absolute(
-   Segment const& segment, Base const& base, dyn_allocator allocator
+   Segment const& segment, Base const& base, allocator_dyn allocator
 ) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_absolute<flags, Segment, Base, dyn_allocator>(
+   return make_file_path_absolute<flags, Segment, Base, allocator_dyn>(
       segment, base, allocator
    );
 }
@@ -1076,9 +1076,9 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 auto
-make_file_path_absolute(Segment const& segment, dyn_allocator allocator)
+make_file_path_absolute(Segment const& segment, allocator_dyn allocator)
    -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_absolute<flags, Segment, dyn_allocator>(
+   return make_file_path_absolute<flags, Segment, allocator_dyn>(
       segment, allocator
    );
 }
@@ -1144,17 +1144,17 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Model>
 [[nodiscard]]
 auto
-make_file_path_unique(dyn_allocator allocator, Model const& model)
+make_file_path_unique(allocator_dyn allocator, Model const& model)
    -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_unique<flags, dyn_allocator>(allocator, model);
+   return make_file_path_unique<flags, allocator_dyn>(allocator, model);
 }
 
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
-make_file_path_unique(dyn_allocator allocator)
+make_file_path_unique(allocator_dyn allocator)
    -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_unique<flags, dyn_allocator>(allocator);
+   return make_file_path_unique<flags, allocator_dyn>(allocator);
 }
 
 }  // namespace cat

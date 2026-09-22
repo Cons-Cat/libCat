@@ -1,9 +1,9 @@
+#include <cat/allocator_page>
 #include <cat/bitset>
 #include <cat/bitvec>
 #include <cat/file_path>
 #include <cat/forward_list>
 #include <cat/list>
-#include <cat/page_allocator>
 #include <cat/raii_bitvec>
 #include <cat/raii_forward_list>
 #include <cat/raii_vec>
@@ -1230,7 +1230,7 @@ $test(random_fill_factories) {
    cat::xoshiro_engine<cat::uint8> manual_engine(102u);
    auto manual =
       cat::make_vec_filled_random<cat::uint8>(
-         cat::allocator_ref<cat::page_allocator>(pager), 19u, manual_engine
+         cat::allocator_ref<cat::allocator_page>(pager), 19u, manual_engine
       )
          .verify();
    cat::verify(manual.size() == 19u);
@@ -1239,7 +1239,7 @@ $test(random_fill_factories) {
    cat::xoshiro_engine<cat::uint8> owned_engine(104u);
    auto owned =
       cat::raii::make_vec_filled_random<cat::uint8>(
-         cat::allocator_ref<cat::page_allocator>(pager), 23u, owned_engine
+         cat::allocator_ref<cat::allocator_page>(pager), 23u, owned_engine
       )
          .verify();
    cat::verify(owned.size() == 23u);
@@ -1248,7 +1248,7 @@ $test(random_fill_factories) {
    cat::uniform_int_distribution<cat::uint8> owned_distribution(3u, 19u);
    auto distributed_owned =
       cat::raii::make_vec_filled_random<cat::uint8>(
-         cat::allocator_ref<cat::page_allocator>(pager), 17u,
+         cat::allocator_ref<cat::allocator_page>(pager), 17u,
          owned_distribution_engine, owned_distribution
       )
          .verify();

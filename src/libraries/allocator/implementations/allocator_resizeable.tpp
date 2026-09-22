@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/resizable_allocator>
+#include <cat/allocator_resizeable>
 #include <cat/sanitizer>
 
 namespace cat {
@@ -10,8 +10,8 @@ namespace cat {
 template <
    is_allocator Inner, is_allocator Backing, idx node_bytes_param,
    idx chunk_bytes_param>
-resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
-   ~resizable_allocator() {
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+   ~allocator_resizeable() {
    this->reset();
 }
 
@@ -19,7 +19,7 @@ template <
    is_allocator Inner, is_allocator Backing, idx node_bytes_param,
    idx chunk_bytes_param>
 void
-resizable_allocator<
+allocator_resizeable<
    Inner, Backing, node_bytes_param, chunk_bytes_param>::reset() {
    // The free list lives inside the chunks we are about to free, so
    // dropping the head is enough. No per-node bookkeeping needed.
@@ -29,7 +29,7 @@ resizable_allocator<
       chunk_header* const p_next = p_walk->p_next;
       idx const chunk_bytes_value = p_walk->chunk_bytes;
       p_walk->~chunk_header();
-      dyn_allocator_friend::deallocate(*m_p_backing, p_walk, chunk_bytes_value);
+      allocator_dyn_friend::deallocate(*m_p_backing, p_walk, chunk_bytes_value);
       p_walk = p_next;
    }
    m_p_chunks = nullptr;
@@ -39,7 +39,7 @@ template <
    is_allocator Inner, is_allocator Backing, idx node_bytes_param,
    idx chunk_bytes_param>
 constexpr auto
-resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    acquire_chunk(idx chunk_bytes_request) -> chunk_header* _Nullable {
    // Each chunk reserves a `chunk_header` prologue at the start of the
    // backing allocation and gives the rest of the slab to `Inner`.
@@ -47,16 +47,16 @@ resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    void* p_backing = nullptr;
    if constexpr (
       requires(Backing& backing, ualign alignment, idx allocation_bytes) {
-         dyn_allocator_friend::aligned_allocate(
+         allocator_dyn_friend::aligned_allocate(
             backing, alignment, allocation_bytes
          );
       }
    ) {
-      p_backing = dyn_allocator_friend::aligned_allocate(
+      p_backing = allocator_dyn_friend::aligned_allocate(
          *m_p_backing, alignof(chunk_header), total_bytes
       );
    } else {
-      p_backing = dyn_allocator_friend::allocate(*m_p_backing, total_bytes);
+      p_backing = allocator_dyn_friend::allocate(*m_p_backing, total_bytes);
    }
    if (p_backing == nullptr) {
       return nullptr;
@@ -69,16 +69,18 @@ resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
 
    // Drop any ASan shadow state the kernel handed back stale. A virtual
    // address returned by `mmap` may carry poison set by a prior occupant
-   // (e.g. `linear_allocator::reset` poisoning its arena) because `munmap`
+   // (e.g. `allocator_linear::reset` poisoning its arena) because `munmap`
    // does not clear ASan shadow.
    unpoison_memory_region(p_raw, total_bytes);
 
    // `chunk_header` contains `Inner inner`, so `alignof(chunk_header) >=
    // alignof(Inner)`. That makes `p_raw + sizeof(chunk_header)` already
    // aligned for whatever `Inner`'s storage assumes (e.g. `node_union` in
-   // `pool_allocator`).
+   // `allocator_pool`).
    chunk_header* const p_chunk = new (p_raw) chunk_header{
-      nullptr, total_bytes, Inner{uintptr<void>(p_inner_storage), inner_bytes},
+      nullptr,
+      total_bytes,
+      Inner{uintptr<void>(p_inner_storage), inner_bytes},
    };
    return p_chunk;
 }
@@ -88,7 +90,7 @@ template <
    idx chunk_bytes_param>
 [[nodiscard]]
 auto
-resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    find_chunk(span<byte> allocation) const -> chunk_header* _Nullable {
    uintptr<void> const allocation_begin = allocation.data();
    uintptr<void> const allocation_end = allocation_begin + allocation.size();
@@ -112,7 +114,7 @@ template <
    idx chunk_bytes_param>
 [[nodiscard]]
 auto
-resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::grow(
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::grow(
    span<byte> allocation, idx new_bytes
 ) -> maybe<void>
    requires(detail::inner_has_grow<Inner>)
@@ -129,11 +131,10 @@ template <
    idx chunk_bytes_param>
 [[nodiscard]]
 auto
-resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
    requires(
-      detail::inner_has_grow<Inner>
-      || detail::inner_has_grow_feedback<Inner>
+      detail::inner_has_grow<Inner> || detail::inner_has_grow_feedback<Inner>
    )
 {
    chunk_header* const p_chunk = this->find_chunk(allocation);
@@ -155,7 +156,7 @@ template <
    idx chunk_bytes_param>
 [[gnu::malloc, clang::ownership_returns(libcat)]]
 auto
-resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    allocate(idx /*allocation_bytes*/) -> void* _Nullable {
    // Reuse a freed slot.
    if (m_p_free_head != nullptr) {
@@ -189,7 +190,7 @@ template <
    idx chunk_bytes_param>
 [[clang::ownership_takes(libcat, 2)]]
 void
-resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    deallocate(void const* _Nonnull p_storage, idx /*allocation_bytes*/) {
    auto* p_slot = static_cast<free_node*>(const_cast<void*>(p_storage));
    p_slot->p_next = m_p_free_head;
@@ -200,7 +201,7 @@ template <
    is_allocator Inner, is_allocator Backing, idx node_bytes_param,
    idx chunk_bytes_param>
 auto
-resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    resize(idx minimum_bytes) -> maybe_non_zero<idx> {
    idx const request_bytes = idx(
       minimum_bytes + sizeof(chunk_header) > chunk_bytes
@@ -221,7 +222,7 @@ template <
    idx chunk_bytes_param>
 [[nodiscard]]
 auto
-resizable_allocator<
+allocator_resizeable<
    Inner, Backing, node_bytes_param, chunk_bytes_param>::bytes_used() const
    -> idx {
    idx total = 0u;
@@ -243,7 +244,7 @@ template <
    idx chunk_bytes_param>
 [[nodiscard]]
 auto
-resizable_allocator<
+allocator_resizeable<
    Inner, Backing, node_bytes_param, chunk_bytes_param>::bytes_capacity() const
    -> idx {
    idx total = 0u;

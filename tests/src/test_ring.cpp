@@ -1,18 +1,18 @@
-#include <cat/linear_allocator>
-#include <cat/page_allocator>
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/ring>
 
 #include "../unit_tests.hpp"
 
 $test(ring) {
    // Initialize an allocator.
-   cat::page_allocator pager;
+   cat::allocator_page pager;
    pager.reset();
    auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::linear_allocator::backed_handle(pager, page);
+   auto allocator = cat::allocator_linear::backed_handle(pager, page);
 
    cat::ring<int4> ring_int4;
    cat::verify(ring_int4.size() == 0);

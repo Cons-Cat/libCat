@@ -1,42 +1,42 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/array>
-#include <cat/linear_allocator>
 #include <cat/math>
-#include <cat/page_allocator>
 #include <cat/utility>
 
 #include "../unit_tests.hpp"
 
-// TEMPORARY IR probes for exploring linear_allocator fast-path codegen.
+// TEMPORARY IR probes for exploring allocator_linear fast-path codegen.
 namespace cat {
 [[gnu::used, gnu::noinline]]
 auto
-probe_alloc_int4(linear_allocator& a) -> int4* {
+probe_alloc_int4(allocator_linear& a) -> int4* {
    maybe m = a.alloc<int4>();
    return m.has_value() ? m.value() : nullptr;
 }
 
 [[gnu::used, gnu::noinline]]
 auto
-probe_alloc_byte(linear_allocator& a) -> byte* {
+probe_alloc_byte(allocator_linear& a) -> byte* {
    maybe m = a.alloc<byte>();
    return m.has_value() ? m.value() : nullptr;
 }
 
 [[gnu::used, gnu::noinline]]
 auto
-probe_alloc_multi_int4(linear_allocator& a, idx n) -> int4* {
+probe_alloc_multi_int4(allocator_linear& a, idx n) -> int4* {
    maybe m = a.alloc_multi<int4>(n);
    return m.has_value() ? m.value().data() : nullptr;
 }
 }  // namespace cat
 
-$test(linear_allocator) {
+$test(allocator_linear) {
    // Initialize an allocator.
    cat::span page = pager.alloc_multi<cat::byte>(24u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto allocator = cat::make_linear_allocator(page);
+   cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
    // It should not be possible to allocate 7 times here, because 24 bytes can
    // only hold 6 `int4`s.

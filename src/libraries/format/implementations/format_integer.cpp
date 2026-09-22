@@ -6,8 +6,8 @@ namespace {
 template <typename Arg>
 auto
 format_integer_arg(
-   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator,
-   format_contiguous_output_iterator<basic_dyn_allocator<dyn_reallocate>>&
+   allocator_ref<basic_allocator_dyn<dyn_reallocate>> allocator,
+   format_contiguous_output_iterator<basic_allocator_dyn<dyn_reallocate>>&
       output,
    format_args const& arguments, idx argument_index,
    format_parse_context& parse_context

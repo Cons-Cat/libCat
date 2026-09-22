@@ -111,8 +111,8 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_close.cpp
   ${CATLIB}/linux/implementations/read_self_statm.cpp
   ${CATLIB}/linux/implementations/read_self_anon_smaps.cpp
-  ${CATLIB}/allocator/implementations/musl_allocator.cpp
-  ${CATLIB}/allocator/implementations/page_allocator.cpp
+  ${CATLIB}/allocator/implementations/allocator_musl.cpp
+  ${CATLIB}/allocator/implementations/allocator_page.cpp
   ${CATLIB}/linux/implementations/sys_stat.cpp
   ${CATLIB}/linux/implementations/sys_fstat.cpp
   ${CATLIB}/linux/implementations/inode.cpp
@@ -324,19 +324,19 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/implementations/get.tpp
   ${CATLIB}/allocator/implementations/free.tpp
   ${CATLIB}/allocator/implementations/format_allocator.tpp
-  ${CATLIB}/allocator/implementations/resizable_allocator.tpp
+  ${CATLIB}/allocator/implementations/allocator_resizeable.tpp
   ${CATLIB}/allocator/cat/allocator_parameters
   # Allocator adaptors:
-  ${CATLIB}/allocator/cat/resizable_allocator
-  ${CATLIB}/allocator/cat/named_allocator
+  ${CATLIB}/allocator/cat/allocator_resizeable
+  ${CATLIB}/allocator/cat/allocator_named
   # Allocators:
-  ${CATLIB}/allocator/cat/null_allocator
-  ${CATLIB}/allocator/cat/inplace_allocator
-  ${CATLIB}/allocator/cat/linear_allocator
-  ${CATLIB}/allocator/cat/huge_page_allocator
-  ${CATLIB}/allocator/cat/musl_allocator
-  ${CATLIB}/allocator/cat/page_allocator
-  ${CATLIB}/allocator/cat/pool_allocator
+  ${CATLIB}/allocator/cat/allocator_null
+  ${CATLIB}/allocator/cat/allocator_inplace
+  ${CATLIB}/allocator/cat/allocator_linear
+  ${CATLIB}/allocator/cat/allocator_huge_page
+  ${CATLIB}/allocator/cat/allocator_musl
+  ${CATLIB}/allocator/cat/allocator_page
+  ${CATLIB}/allocator/cat/allocator_pool
   ${CATLIB}/arithmetic/cat/arithmetic
   ${CATLIB}/arithmetic/cat/detail/quantity.hpp
   ${CATLIB}/arithmetic/cat/overflow_reference.hpp

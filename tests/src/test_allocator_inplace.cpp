@@ -1,10 +1,10 @@
-#include <cat/inplace_allocator>
+#include <cat/allocator_inplace>
 #include <cat/math>
 
 #include "../unit_tests.hpp"
 
-$test(inplace_allocator) {
-   cat::is_allocator auto allocator = cat::make_inplace_allocator<24u>();
+$test(allocator_inplace) {
+   cat::is_allocator auto allocator = cat::make_allocator_inplace<24u>();
 
    cat::verify(allocator.bytes_capacity() == 24u);
    cat::verify(allocator.bytes_used() == 0u);
@@ -41,7 +41,7 @@ $test(inplace_allocator) {
    cat::verify(allocator.nalloc<int4>().or_exit() == 24u);
 
    // Over-alignment is honored when the request still fits past the padding.
-   cat::is_allocator auto over_aligned = cat::make_inplace_allocator<128u>();
+   cat::is_allocator auto over_aligned = cat::make_allocator_inplace<128u>();
    int4* p_over = over_aligned.align_alloc<int4>(64u, 9).or_exit();
    cat::verify(*p_over == 9);
    cat::verify(cat::is_aligned(p_over, 64u));

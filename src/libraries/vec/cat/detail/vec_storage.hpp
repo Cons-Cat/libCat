@@ -207,7 +207,7 @@ template <typename T, vec_flags flags>
 struct vec_storage<T, flags, true>
     : vec_bounds<T, flags.uses_pointer_size_layout, flags.is_fixed_size> {
    using handle_type =
-      remove_cvref<decltype(declval<allocator_ref<dyn_allocator>&>()
+      remove_cvref<decltype(declval<allocator_ref<allocator_dyn>&>()
                                .template inline_salloc_multi<
                                   T, flags.inline_storage_count * sizeof(T)>(1u)
                                .value()

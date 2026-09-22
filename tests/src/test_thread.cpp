@@ -1,7 +1,7 @@
+#include <cat/allocator_page>
 #include <cat/atomic>
 #include <cat/bit>
 #include <cat/linux>
-#include <cat/page_allocator>
 #include <cat/raii_thread>
 #include <cat/runtime>
 #include <cat/string>
@@ -138,7 +138,7 @@ $test(raii_thread) {
    int4 const before = atomic.load();
 
    {
-      cat::raii::basic_thread<cat::page_allocator> worker{pager};
+      cat::raii::basic_thread<cat::allocator_page> worker{pager};
       worker
          .spawn(
             2_uki,
@@ -156,7 +156,7 @@ $test(raii_thread) {
 $test(raii_thread_join) {
    int4 const before = atomic.load();
 
-   cat::raii::basic_thread<cat::page_allocator> worker{pager};
+   cat::raii::basic_thread<cat::allocator_page> worker{pager};
    worker.spawn(thread_test_stack_size, &function_2).verify();
    worker.join().verify();
    worker.free();
@@ -180,7 +180,7 @@ $test(thread_cfree) {
 $test(raii_thread_cfree) {
    int4 const before = atomic.load();
 
-   cat::raii::basic_thread<cat::page_allocator> worker{pager};
+   cat::raii::basic_thread<cat::allocator_page> worker{pager};
    worker.spawn(thread_test_stack_size, &function_2).verify();
    worker.join().verify();
    worker.cfree();

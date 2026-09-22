@@ -52,9 +52,9 @@ to_chars(
 template <is_integral T, overflow_policies policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
-to_chars(dyn_allocator allocator, basic_int<T, policy, quantity> numeral)
+to_chars(allocator_dyn allocator, basic_int<T, policy, quantity> numeral)
    -> maybe<str_view> {
-   return to_chars<dyn_allocator>(allocator, numeral);
+   return to_chars<allocator_dyn>(allocator, numeral);
 }
 
 // TODO: Zero-allocation `str_inplace` version?
@@ -87,8 +87,8 @@ to_chars(allocator_ref<Allocator> allocator, T integer) -> maybe<str_view> {
 template <is_integral T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
-to_chars(dyn_allocator allocator, T integer) -> maybe<str_view> {
-   return to_chars<dyn_allocator>(allocator, integer);
+to_chars(allocator_dyn allocator, T integer) -> maybe<str_view> {
+   return to_chars<allocator_dyn>(allocator, integer);
 }
 
 // Dynamically allocate a floating point value converted to `string`.
@@ -111,8 +111,8 @@ template <typename T>
    requires(is_floating_point<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
-to_chars(dyn_allocator allocator, T value) -> maybe<str_view> {
-   return to_chars<dyn_allocator>(allocator, value);
+to_chars(allocator_dyn allocator, T value) -> maybe<str_view> {
+   return to_chars<allocator_dyn>(allocator, value);
 }
 
 namespace detail {
@@ -340,8 +340,8 @@ using format_contiguous_output_iterator =
 struct format_args;
 
 using format_arg_fn = auto (*_Nonnull)(
-   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator,
-   format_contiguous_output_iterator<basic_dyn_allocator<dyn_reallocate>>&
+   allocator_ref<basic_allocator_dyn<dyn_reallocate>> allocator,
+   format_contiguous_output_iterator<basic_allocator_dyn<dyn_reallocate>>&
       output,
    format_args const& arguments, idx argument_index,
    format_parse_context& parse_context
@@ -350,8 +350,8 @@ using format_arg_fn = auto (*_Nonnull)(
 template <typename T>
 auto
 format_custom_arg(
-   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator,
-   format_contiguous_output_iterator<basic_dyn_allocator<dyn_reallocate>>&
+   allocator_ref<basic_allocator_dyn<dyn_reallocate>> allocator,
+   format_contiguous_output_iterator<basic_allocator_dyn<dyn_reallocate>>&
       output,
    format_args const& arguments, idx argument_index,
    format_parse_context& parse_context
@@ -786,24 +786,24 @@ template <is_allocator Allocator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 erase_allocator(allocator_ref<Allocator> allocator)
-   -> basic_dyn_allocator<dyn_reallocate> {
-   if constexpr (is_same<Allocator, basic_dyn_allocator<dyn_reallocate>>) {
+   -> basic_allocator_dyn<dyn_reallocate> {
+   if constexpr (is_same<Allocator, basic_allocator_dyn<dyn_reallocate>>) {
       return allocator.get_allocator();
    } else {
-      return basic_dyn_allocator<dyn_reallocate>(allocator.get_allocator());
+      return basic_allocator_dyn<dyn_reallocate>(allocator.get_allocator());
    }
 }
 }  // namespace detail
 
 struct format_context {
-   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator;
+   allocator_ref<basic_allocator_dyn<dyn_reallocate>> allocator;
    detail::format_contiguous_output_iterator<
-      basic_dyn_allocator<dyn_reallocate>>& output;
+      basic_allocator_dyn<dyn_reallocate>>& output;
 
    [[nodiscard]]
    auto
    buffer() const
-      -> detail::format_buffer<basic_dyn_allocator<dyn_reallocate>>& {
+      -> detail::format_buffer<basic_allocator_dyn<dyn_reallocate>>& {
       return detail::get_container(output);
    }
 
@@ -849,7 +849,7 @@ format_nested(format_context& context, T const& value) -> scaredy_format<void> {
 template <typename T>
 auto
 append_arithmetic(format_context& context, T value) -> scaredy_format<void> {
-   format_buffer<basic_dyn_allocator<dyn_reallocate>>& buffer =
+   format_buffer<basic_allocator_dyn<dyn_reallocate>>& buffer =
       context.buffer();
 
    idx max_size;
@@ -1504,8 +1504,8 @@ namespace detail {
 template <typename T>
 auto
 format_custom_arg(
-   allocator_ref<basic_dyn_allocator<dyn_reallocate>> allocator,
-   format_contiguous_output_iterator<basic_dyn_allocator<dyn_reallocate>>&
+   allocator_ref<basic_allocator_dyn<dyn_reallocate>> allocator,
+   format_contiguous_output_iterator<basic_allocator_dyn<dyn_reallocate>>&
       output,
    format_args const& arguments, idx argument_index,
    format_parse_context& parse_context
@@ -1536,7 +1536,7 @@ format_custom_arg(
 [[nodiscard]]
 auto
 vfmt(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view format,
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view format,
    detail::format_args arguments
 ) -> scaredy_format<str_view>;
 
@@ -1544,7 +1544,7 @@ vfmt(
 [[nodiscard]]
 auto
 vfmt_to_sink(
-   basic_dyn_allocator<dyn_reallocate> allocator, void* _Nonnull p_sink,
+   basic_allocator_dyn<dyn_reallocate> allocator, void* _Nonnull p_sink,
    detail::format_flush_fn _Nonnull p_flush, str_view format,
    detail::format_args arguments
 ) -> scaredy_format<void>;
@@ -1553,7 +1553,7 @@ vfmt_to_sink(
 [[nodiscard]]
 auto
 vprint_fmt(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view format,
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view format,
    detail::format_args arguments
 ) -> maybe<idx>;
 
@@ -1658,7 +1658,7 @@ template <typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
 fmt(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view const format,
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view const format,
    Args&&... arguments
 ) -> scaredy_format<str_view> {
    (detail::maybe_pull_format_support<Args>(), ...);
@@ -1691,7 +1691,7 @@ template <typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
 print_fmt(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view const format,
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view const format,
    Args&&... arguments
 ) -> maybe<idx> {
    (detail::maybe_pull_format_support<Args>(), ...);
@@ -1722,7 +1722,7 @@ template <typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
 println_fmt(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view const format,
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view const format,
    Args&&... arguments
 ) -> maybe<idx> {
    return println_fmt(allocator_ref(allocator), format, $fwd(arguments)...);
@@ -1747,7 +1747,7 @@ template <typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
 eprint_fmt(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view const format,
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view const format,
    Args&&... arguments
 ) -> maybe<idx> {
    return eprint_fmt(allocator_ref(allocator), format, $fwd(arguments)...);
@@ -1772,7 +1772,7 @@ template <typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
 eprintln_fmt(
-   basic_dyn_allocator<dyn_reallocate> allocator, str_view const format,
+   basic_allocator_dyn<dyn_reallocate> allocator, str_view const format,
    Args&&... arguments
 ) -> maybe<idx> {
    return eprintln_fmt(allocator_ref(allocator), format, $fwd(arguments)...);

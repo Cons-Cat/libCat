@@ -1,10 +1,10 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
+#include <cat/allocator_pool>
 #include <cat/atomic>
 #include <cat/bitset>
 #include <cat/format>
-#include <cat/linear_allocator>
 #include <cat/list>
-#include <cat/page_allocator>
-#include <cat/pool_allocator>
 #include <cat/random>
 #include <cat/simd>
 #include <cat/thread>
@@ -47,7 +47,7 @@ $test(format_strings) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    // Test `int4` conversion.
    cat::str_view int_string = cat::to_chars(allocator, 10).verify();
@@ -122,7 +122,7 @@ $test(format_classes) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    cat::array<int, 3u> numbers{1, 2, 3};
    cat::verify(cat::fmt(allocator, "{}", numbers).verify() == "[1, 2, 3]");
@@ -133,7 +133,7 @@ $test(format_classes) {
       cat::fmt(allocator, "{}", words).verify() == R"(["cat", "dog"])"
    );
 
-   auto allocator_ref = cat::allocator_ref<cat::linear_allocator>(allocator);
+   auto allocator_ref = cat::allocator_ref<cat::allocator_linear>(allocator);
 
    allocator.reset();
    {
@@ -215,7 +215,7 @@ $test(format_classes) {
 
    allocator.reset();
    {
-      cat::raii::str_vec<cat::linear_allocator> text =
+      cat::raii::str_vec<cat::allocator_linear> text =
          cat::raii::make_str_vec(allocator_ref, cat::str_view("cat")).verify();
       cat::verify(cat::fmt(allocator, "{}", text).verify() == "cat");
       cat::verify(cat::fmt(allocator, "{:?}", text).verify() == R"("cat")");
@@ -277,7 +277,7 @@ $test(fmt_specs_and_braces) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    cat::verify(cat::fmt(allocator, "a{:}b", 7).verify() == "a7b");
 
@@ -376,7 +376,7 @@ $test(fmt_long_pattern_substitutes) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    cat::str_view const formatted =
       cat::fmt(
@@ -401,7 +401,7 @@ $test(fmt_growth_failure) {
    $defer {
       pager.free(storage);
    };
-   auto allocator = make_linear_allocator(storage);
+   auto allocator = make_allocator_linear(storage);
 
    auto result = cat::fmt(allocator, "{}", uint8::max());
    cat::verify(result.is_empty());
@@ -412,7 +412,7 @@ $test(fmt_public_type_families) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    cat::atomic<int4> atomic_value{int4{11}};
    cat::verify(
@@ -458,7 +458,7 @@ $test(fmt_public_type_families) {
    );
 
    allocator.reset();
-   cat::null_allocator null_alloc;
+   cat::allocator_null null_alloc;
    cat::verify(
       cat::fmt(allocator, "{}", null_alloc).verify() == "allocator(0/0)"
    );
@@ -534,7 +534,7 @@ $test(fmt_bit_containers_and_proxies) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    cat::bit_value set_bit = true;
    cat::bit_value clear_bit = false;
@@ -604,7 +604,7 @@ $test(fmt_to_output_iterator) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    cat::vec<char> output;
    cat::verify(
@@ -626,7 +626,7 @@ $test(fmt_to_streams_past_staging_buffer) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    // Longer than the fixed staging buffer, so it drains mid-format.
    cat::array<char, 300u> letters;
@@ -654,7 +654,7 @@ $test(format_utf8_strings) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    // When `char` / `str_*` strings are UTF-8 under Clang (`-fexec-charset`),
    // the type system considers them interconvertible.

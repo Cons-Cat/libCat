@@ -1,9 +1,9 @@
+#include <cat/allocator_page>
 #include <cat/atomic>
 #include <cat/chrono>
 #include <cat/mutex>
 #include <cat/mutex_native>
 #include <cat/mutex_spin>
-#include <cat/page_allocator>
 #include <cat/thread>
 
 #include "../unit_tests.hpp"
@@ -159,22 +159,22 @@ $test(mutex_destroy_unlocked) {
    }
 }
 
-$test(mutex_runtime_dyn_allocator) {
-   cat::dyn_allocator allocator = pager;
+$test(mutex_runtime_allocator_dyn) {
+   cat::allocator_dyn allocator = pager;
    cat::alloc_mutex_runtime(allocator, 1u).verify();
    cat::free_mutex_runtime(allocator);
 }
 
-$test(mutex_runtime_dyn_allocator_cfree) {
-   cat::dyn_allocator allocator = pager;
+$test(mutex_runtime_allocator_dyn_cfree) {
+   cat::allocator_dyn allocator = pager;
    cat::alloc_mutex_runtime(allocator, 1u).verify();
    cat::cfree_mutex_runtime(allocator);
 }
 
 $test(mutex_handoff) {
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    cat::atomic<bool> entered;
@@ -207,9 +207,9 @@ $test(mutex_handoff) {
 }
 
 $test(mutex_protected_publication) {
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    cat::atomic<bool> ready;
@@ -238,9 +238,9 @@ $test(mutex_protected_publication) {
 }
 
 $test(mutex_shared_counter) {
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, 8u).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 8u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    verify_counter<cat::mutex>();
 }
@@ -397,9 +397,9 @@ $test(mutex_try_lock_fails_for_all_waiters) {
 $test(mutex_mixed_try_lock_and_lock) {
    constexpr idx thread_count = 8;
    constexpr idx iteration_count = 5'000;
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    idx counter = 0;
@@ -428,9 +428,9 @@ $test(mutex_mixed_try_lock_and_lock) {
 
 $test(mutex_parks_waiters) {
    constexpr idx thread_count = 16;
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    cat::atomic<idx> ready;
@@ -466,9 +466,9 @@ $test(mutex_parks_waiters) {
 $test(mutex_exclusion_under_yield) {
    constexpr idx thread_count = 8;
    constexpr idx iteration_count = 2'000;
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    cat::atomic<idx> active;
@@ -503,9 +503,9 @@ $test(mutex_exclusion_under_yield) {
 }
 
 $test(mutex_try_lock_for_waits) {
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    cat::atomic<bool> entered;
@@ -538,9 +538,9 @@ $test(mutex_try_lock_for_waits) {
 }
 
 $test(mutex_try_lock_until_times_out) {
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    mutex.lock();
@@ -567,9 +567,9 @@ $test(mutex_try_lock_until_times_out) {
 }
 
 $test(mutex_try_lock_until_accepts_system_clock) {
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, 1u).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 1u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    mutex.lock();
@@ -637,9 +637,9 @@ $test(mutex_spin_try_lock_until_times_out) {
 }
 
 $test(mutex_unlock_fair_wakes_waiter) {
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    cat::atomic<bool> entered;
@@ -672,9 +672,9 @@ $test(mutex_unlock_fair_wakes_waiter) {
 }
 
 $test(mutex_yield_to_waiters) {
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, 2u).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, 2u).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex mutex;
    cat::atomic<bool> entered;
@@ -710,9 +710,9 @@ $test(mutex_yield_to_waiters) {
 $test(mutex_two_lock_order) {
    constexpr idx thread_count = 8;
    constexpr idx iteration_count = 2'000;
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
    $defer {
-      cat::free_mutex_runtime<cat::page_allocator>(pager);
+      cat::free_mutex_runtime<cat::allocator_page>(pager);
    };
    cat::mutex first;
    cat::mutex second;

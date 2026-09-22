@@ -1,7 +1,7 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/array>
-#include <cat/linear_allocator>
 #include <cat/memory>
-#include <cat/page_allocator>
 #include <cat/span>
 
 #include "../unit_tests.hpp"
@@ -20,7 +20,7 @@ $test(reallocation_disjoint_linear_ptr_realloc) {
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto allocator = cat::make_linear_allocator(page);
+   cat::is_allocator auto allocator = cat::make_allocator_linear(page);
 
    int4* p = allocator.alloc<int4>().or_exit();
    *p = int4{42};

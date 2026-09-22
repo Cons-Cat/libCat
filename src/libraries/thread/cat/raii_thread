@@ -7,10 +7,10 @@
 
 namespace cat::raii {
 
-template <is_allocator Allocator = dyn_allocator>
+template <is_allocator Allocator = allocator_dyn>
 class basic_thread;
 
-template <is_allocator Allocator = dyn_allocator>
+template <is_allocator Allocator = allocator_dyn>
 using thread = basic_thread<Allocator>;
 
 template <is_allocator Allocator>

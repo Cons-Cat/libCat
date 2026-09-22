@@ -1,7 +1,7 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/format>
-#include <cat/linear_allocator>
 #include <cat/math>
-#include <cat/page_allocator>
 #include <cat/quantity>
 #include <cat/simd>
 
@@ -716,7 +716,7 @@ $test(quantity) {
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
 
    cat::verify(cat::fmt(allocator, "{}", kilogram_int(12)).verify() == "12 kg");
    allocator.reset();

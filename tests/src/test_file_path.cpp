@@ -1,5 +1,5 @@
+#include <cat/allocator_page>
 #include <cat/file_path>
-#include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
 
@@ -85,7 +85,7 @@ $test(path_flags_and_factories) {
    cat::verify(managed.data()[managed.size()] == '\0');
    cat::file_path released = managed.release();
    auto custom =
-      cat::make_file_path<cat::page_allocator, custom_growth>(pager, "delta")
+      cat::make_file_path<cat::allocator_page, custom_growth>(pager, "delta")
          .verify();
    $defer {
       custom.free(pager);

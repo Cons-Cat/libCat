@@ -22,7 +22,7 @@
 //    #1 Object "/home/exe/path/meow", at 0x5879ee8880e4, in main()
 //       Source "your/src/meow.cpp", line 8, in main()
 //          6: main() -> int {
-//          7:    cat::page_allocator allocator;
+//          7:    cat::allocator_page allocator;
 //       >  8:    cat::stacktrace const trace = cat::stacktrace::current(allocator).value();
 //          9:    auto _ = cat::print_fmt(allocator, "{:?}\n", trace);
 //         10:    // Meow meow meow meow? (transl. Tum ko kya mila?)
@@ -86,13 +86,13 @@ class stacktrace
    static constexpr idx inline_frames = 64u;
 
    using storage =
-      raii::vec_small<stacktrace_entry, dyn_allocator, inline_frames>;
+      raii::vec_small<stacktrace_entry, allocator_dyn, inline_frames>;
 
  public:
    constexpr stacktrace() =
       delete ("`cat::stacktrace` cannot be created without an allocator!");
 
-   constexpr explicit stacktrace(dyn_allocator allocator)
+   constexpr explicit stacktrace(allocator_dyn allocator)
        : m_frames(allocator) {
    }
 
@@ -116,7 +116,7 @@ class stacktrace
    // `allocator` cannot store a trace deeper than `inline_frames`.
    [[nodiscard, gnu::noinline, clang::disable_tail_calls]]
    static auto
-   current(dyn_allocator allocator, idx skip = 0u, idx max_depth = idx::max())
+   current(allocator_dyn allocator, idx skip = 0u, idx max_depth = idx::max())
       -> maybe<stacktrace>;
 
    [[nodiscard]]

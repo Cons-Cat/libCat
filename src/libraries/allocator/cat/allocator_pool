@@ -11,29 +11,29 @@ namespace cat {
 
 template <idx max_node_bytes>
 class [[clang::trivial_abi]]
-pool_allocator : public allocator_interface<pool_allocator<max_node_bytes>> {
+allocator_pool : public allocator_interface<allocator_pool<max_node_bytes>> {
  private:
-   friend allocator_interface<pool_allocator>;
-   friend struct dyn_allocator_friend;
+   friend allocator_interface<allocator_pool>;
+   friend struct allocator_dyn_friend;
    template <typename>
    friend class allocator_ref;
    template <is_allocator, is_allocator, idx, idx>
-   friend class resizable_allocator;
+   friend class allocator_resizeable;
 
    // Friend factory functions.
    template <idx in_max_node_bytes>
    friend constexpr auto
-   make_pool_allocator(uintptr<void> p_address, idx arena_bytes)
-      -> pool_allocator<in_max_node_bytes>;
+   make_allocator_pool(uintptr<void> p_address, idx arena_bytes)
+      -> allocator_pool<in_max_node_bytes>;
 
    template <idx in_max_node_bytes>
    friend constexpr auto
-   make_pool_allocator(span<byte>& span [[clang::lifetimebound]])
-      -> pool_allocator<in_max_node_bytes>;
+   make_allocator_pool(span<byte>& span [[clang::lifetimebound]])
+      -> allocator_pool<in_max_node_bytes>;
 
-   // Initialize a `pool_allocator`. This should only be called from
-   // `cat::make_pool_allocator`.
-   constexpr pool_allocator(uintptr<void> p_address, idx arena_bytes)
+   // Initialize a `allocator_pool`. This should only be called from
+   // `cat::make_allocator_pool`.
+   constexpr allocator_pool(uintptr<void> p_address, idx arena_bytes)
        : m_nodes(
             span<node_union>(
                // Pun the opaque `p_address` to the internal `node_union` type.
@@ -46,11 +46,11 @@ pool_allocator : public allocator_interface<pool_allocator<max_node_bytes>> {
    }
 
  public:
-   // `pool_allocator` is move-only.
-   constexpr pool_allocator(pool_allocator const&) =
-      delete ("`cat::pool_allocator` should be constructed using "
-              "`cat::make_pool_allocator`.");
-   constexpr pool_allocator(pool_allocator&&) = default;
+   // `allocator_pool` is move-only.
+   constexpr allocator_pool(allocator_pool const&) =
+      delete ("`cat::allocator_pool` should be constructed using "
+              "`cat::make_allocator_pool`.");
+   constexpr allocator_pool(allocator_pool&&) = default;
 
    // Reset the bumped pointer to the beginning of this arena.
    constexpr void
@@ -127,7 +127,7 @@ pool_allocator : public allocator_interface<pool_allocator<max_node_bytes>> {
    // Two pools are equivalent when they alias the same memory.
    [[nodiscard]]
    auto
-   is_equivalent(pool_allocator const& other) const -> bool {
+   is_equivalent(allocator_pool const& other) const -> bool {
       return m_nodes.data() == other.m_nodes.data()
              && m_nodes.size() == other.m_nodes.size();
    }
@@ -140,28 +140,28 @@ pool_allocator : public allocator_interface<pool_allocator<max_node_bytes>> {
 template <idx max_node_bytes>
 [[nodiscard]]
 constexpr auto
-make_pool_allocator(uintptr<void> p_address, idx arena_bytes)
-   -> pool_allocator<max_node_bytes> {
-   return pool_allocator<max_node_bytes>(p_address, arena_bytes);
+make_allocator_pool(uintptr<void> p_address, idx arena_bytes)
+   -> allocator_pool<max_node_bytes> {
+   return allocator_pool<max_node_bytes>(p_address, arena_bytes);
 }
 
 template <idx max_node_bytes>
 [[nodiscard]]
 constexpr auto
-make_pool_allocator(span<byte>& span [[clang::lifetimebound]])
-   -> pool_allocator<max_node_bytes> {
-   return pool_allocator<max_node_bytes>(span.data(), span.size());
+make_allocator_pool(span<byte>& span [[clang::lifetimebound]])
+   -> allocator_pool<max_node_bytes> {
+   return allocator_pool<max_node_bytes>(span.data(), span.size());
 }
 
 template <idx max_node_bytes>
 [[nodiscard,
   deprecated(
-     "Creating a `cat::pool_allocator` with a pr-value may "
+     "Creating a `cat::allocator_pool` with a pr-value may "
      "unintentionally leak memory. Copy an l-value `cat::span` instead."
   )]]
 constexpr auto
-make_pool_allocator(span<byte>&& span) -> pool_allocator<max_node_bytes> {
-   return make_pool_allocator<max_node_bytes>(span);
+make_allocator_pool(span<byte>&& span) -> allocator_pool<max_node_bytes> {
+   return make_allocator_pool<max_node_bytes>(span);
 }
 
 }  // namespace cat

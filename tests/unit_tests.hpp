@@ -10,10 +10,10 @@ using namespace cat::literals;
 using namespace cat::arithmetic;
 
 namespace cat {
-class page_allocator;
+class allocator_page;
 }
 
-extern cat::page_allocator pager;
+extern cat::allocator_page pager;
 
 using constructor_fn = void (*const)();
 

@@ -59,50 +59,50 @@
 // 4 characters in their initial allocation. Reallocations grow to double their
 // current size from there.
 
-#include <cat/null_allocator>
+#include <cat/allocator_null>
 
 #include "str_vec.hpp"
 
 namespace cat::raii {
 
 template <
-   typename CharT, str_vec_flags flags, is_allocator Allocator = dyn_allocator>
+   typename CharT, str_vec_flags flags, is_allocator Allocator = allocator_dyn>
 class basic_str_vec;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec =
    basic_str_vec<char, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec = basic_str_vec<
    char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u8str_vec =
    basic_str_vec<char8_t, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec = basic_str_vec<
    char8_t, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u16str_vec =
    basic_str_vec<char16_t, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec = basic_str_vec<
    char16_t,
@@ -110,13 +110,13 @@ using zu16str_vec = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u32str_vec =
    basic_str_vec<char32_t, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec = basic_str_vec<
    char32_t,
@@ -124,27 +124,27 @@ using zu32str_vec = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec =
    basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec = basic_str_vec<
    wchar_t, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec_fixed = basic_str_vec<
    char, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_fixed = basic_str_vec<
    char,
@@ -155,14 +155,14 @@ using zstr_vec_fixed = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u8str_vec_fixed = basic_str_vec<
    char8_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec_fixed = basic_str_vec<
    char8_t,
@@ -173,14 +173,14 @@ using zu8str_vec_fixed = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u16str_vec_fixed = basic_str_vec<
    char16_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec_fixed = basic_str_vec<
    char16_t,
@@ -191,14 +191,14 @@ using zu16str_vec_fixed = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u32str_vec_fixed = basic_str_vec<
    char32_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec_fixed = basic_str_vec<
    char32_t,
@@ -209,14 +209,14 @@ using zu32str_vec_fixed = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec_fixed = basic_str_vec<
    wchar_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec_fixed = basic_str_vec<
    wchar_t,
@@ -397,79 +397,79 @@ using wzstr_vec_small_fixed = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec_big =
    basic_str_vec<char, vec_flags::initial_growth(4u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_big = basic_str_vec<
    char, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u8str_vec_big =
    basic_str_vec<char8_t, vec_flags::initial_growth(4u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec_big = basic_str_vec<
    char8_t, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u16str_vec_big =
    basic_str_vec<char16_t, vec_flags::initial_growth(4u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec_big = basic_str_vec<
    char16_t, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u32str_vec_big =
    basic_str_vec<char32_t, vec_flags::initial_growth(4u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec_big = basic_str_vec<
    char32_t, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec_big =
    basic_str_vec<wchar_t, vec_flags::initial_growth(4u) | flags, Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec_big = basic_str_vec<
    wchar_t, str_flags::null_terminated | vec_flags::initial_growth(4u) | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec_big_fixed = basic_str_vec<
    char, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_big_fixed = basic_str_vec<
    char,
@@ -481,14 +481,14 @@ using zstr_vec_big_fixed = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u8str_vec_big_fixed = basic_str_vec<
    char8_t, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec_big_fixed = basic_str_vec<
    char8_t,
@@ -500,14 +500,14 @@ using zu8str_vec_big_fixed = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u16str_vec_big_fixed = basic_str_vec<
    char16_t, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec_big_fixed = basic_str_vec<
    char16_t,
@@ -519,14 +519,14 @@ using zu16str_vec_big_fixed = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u32str_vec_big_fixed = basic_str_vec<
    char32_t, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec_big_fixed = basic_str_vec<
    char32_t,
@@ -538,14 +538,14 @@ using zu32str_vec_big_fixed = basic_str_vec<
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec_big_fixed = basic_str_vec<
    wchar_t, vec_flags::initial_growth(4u) | vec_flags::fixed_size | flags,
    Allocator>;
 
 template <
-   is_allocator Allocator = dyn_allocator,
+   is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec_big_fixed = basic_str_vec<
    wchar_t,
@@ -574,12 +574,12 @@ namespace cat::detail {
 template <typename CharT, str_vec_flags flags>
 constexpr auto
 raii_str_vec_has_value(
-   raii::basic_str_vec<CharT, flags, dyn_allocator> const& value
+   raii::basic_str_vec<CharT, flags, allocator_dyn> const& value
 ) -> bool;
 
 template <typename CharT, str_vec_flags flags>
 constexpr auto
-raii_str_vec_nullopt() -> raii::basic_str_vec<CharT, flags, dyn_allocator>;
+raii_str_vec_nullopt() -> raii::basic_str_vec<CharT, flags, allocator_dyn>;
 }  // namespace cat::detail
 
 namespace cat::raii {
@@ -897,9 +897,9 @@ class
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    clone(
-      dyn_allocator allocator
-   ) const& -> maybe<basic_str_vec<CharT, flags, dyn_allocator>> {
-      basic_str_vec<CharT, flags, dyn_allocator> new_string(allocator);
+      allocator_dyn allocator
+   ) const& -> maybe<basic_str_vec<CharT, flags, allocator_dyn>> {
+      basic_str_vec<CharT, flags, allocator_dyn> new_string(allocator);
       new_string.m_core = $prop(m_core.clone(allocator));
       return new_string;
    }
@@ -920,13 +920,13 @@ class
    template <typename OtherCharT, str_vec_flags other_flags>
    friend constexpr auto
    detail::raii_str_vec_has_value(
-      basic_str_vec<OtherCharT, other_flags, dyn_allocator> const&
+      basic_str_vec<OtherCharT, other_flags, allocator_dyn> const&
    ) -> bool;
 
    template <typename OtherCharT, str_vec_flags other_flags>
    friend constexpr auto
    detail::raii_str_vec_nullopt()
-      -> basic_str_vec<OtherCharT, other_flags, dyn_allocator>;
+      -> basic_str_vec<OtherCharT, other_flags, allocator_dyn>;
 
    manual::basic_str_vec<CharT, flags> m_core;
    [[no_unique_address]]
@@ -990,19 +990,19 @@ make_raii_str_vec(allocator_ref<Allocator> allocator, Strings const&... strings)
 template <typename CharT, str_vec_flags flags>
 constexpr auto
 raii_str_vec_has_value(
-   raii::basic_str_vec<CharT, flags, dyn_allocator> const& value
+   raii::basic_str_vec<CharT, flags, allocator_dyn> const& value
 ) -> bool {
    return maybe_str_vec_has_value(value.m_core);
 }
 
-inline constexpr null_allocator raii_str_vec_niche_null_allocator{};
+inline constexpr allocator_null raii_str_vec_niche_allocator_null{};
 
 template <typename CharT, str_vec_flags flags>
 constexpr auto
-raii_str_vec_nullopt() -> raii::basic_str_vec<CharT, flags, dyn_allocator> {
-   raii::basic_str_vec<CharT, flags, dyn_allocator> value(
-      allocator_ref<dyn_allocator>(dyn_allocator(
-         const_cast<null_allocator&>(raii_str_vec_niche_null_allocator)
+raii_str_vec_nullopt() -> raii::basic_str_vec<CharT, flags, allocator_dyn> {
+   raii::basic_str_vec<CharT, flags, allocator_dyn> value(
+      allocator_ref<allocator_dyn>(allocator_dyn(
+         const_cast<allocator_null&>(raii_str_vec_niche_allocator_null)
       ))
    );
    value.m_core = maybe_str_vec_nullopt<CharT, flags>();
@@ -1014,9 +1014,9 @@ raii_str_vec_nullopt() -> raii::basic_str_vec<CharT, flags, dyn_allocator> {
 namespace cat {
 
 template <typename CharT, str_vec_flags flags>
-struct default_compact_trait<raii::basic_str_vec<CharT, flags, dyn_allocator>>
+struct default_compact_trait<raii::basic_str_vec<CharT, flags, allocator_dyn>>
     : identity_trait<compact<
-         raii::basic_str_vec<CharT, flags, dyn_allocator>,
+         raii::basic_str_vec<CharT, flags, allocator_dyn>,
          detail::raii_str_vec_has_value<CharT, flags>,
          detail::raii_str_vec_nullopt<CharT, flags>>> {};
 
@@ -1036,9 +1036,9 @@ make_str_vec(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec(dyn_allocator allocator)
-   -> maybe<raii::str_vec<dyn_allocator, flags>> {
-   return raii::make_str_vec<dyn_allocator, flags>(allocator);
+make_str_vec(allocator_dyn allocator)
+   -> maybe<raii::str_vec<allocator_dyn, flags>> {
+   return raii::make_str_vec<allocator_dyn, flags>(allocator);
 }
 
 template <
@@ -1055,9 +1055,9 @@ make_zstr_vec(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec(dyn_allocator allocator)
-   -> maybe<raii::zstr_vec<dyn_allocator, flags>> {
-   return raii::make_zstr_vec<dyn_allocator, flags>(allocator);
+make_zstr_vec(allocator_dyn allocator)
+   -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+   return raii::make_zstr_vec<allocator_dyn, flags>(allocator);
 }
 
 template <
@@ -1072,9 +1072,9 @@ make_wstr_vec(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec(dyn_allocator allocator)
-   -> maybe<raii::wstr_vec<dyn_allocator, flags>> {
-   return raii::make_wstr_vec<dyn_allocator, flags>(allocator);
+make_wstr_vec(allocator_dyn allocator)
+   -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
+   return raii::make_wstr_vec<allocator_dyn, flags>(allocator);
 }
 
 template <
@@ -1091,9 +1091,9 @@ make_wzstr_vec(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec(dyn_allocator allocator)
-   -> maybe<raii::wzstr_vec<dyn_allocator, flags>> {
-   return raii::make_wzstr_vec<dyn_allocator, flags>(allocator);
+make_wzstr_vec(allocator_dyn allocator)
+   -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
+   return raii::make_wzstr_vec<allocator_dyn, flags>(allocator);
 }
 
 template <
@@ -1113,9 +1113,9 @@ make_str_vec(allocator_ref<Allocator> allocator, str_view string)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec(dyn_allocator allocator, str_view string)
-   -> maybe<raii::str_vec<dyn_allocator, flags>> {
-   return raii::make_str_vec<dyn_allocator, flags>(allocator, string);
+make_str_vec(allocator_dyn allocator, str_view string)
+   -> maybe<raii::str_vec<allocator_dyn, flags>> {
+   return raii::make_str_vec<allocator_dyn, flags>(allocator, string);
 }
 
 template <
@@ -1135,9 +1135,9 @@ make_zstr_vec(allocator_ref<Allocator> allocator, str_view string)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec(dyn_allocator allocator, str_view string)
-   -> maybe<raii::zstr_vec<dyn_allocator, flags>> {
-   return raii::make_zstr_vec<dyn_allocator, flags>(allocator, string);
+make_zstr_vec(allocator_dyn allocator, str_view string)
+   -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+   return raii::make_zstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
 template <
@@ -1157,9 +1157,9 @@ make_wstr_vec(allocator_ref<Allocator> allocator, wstr_view string)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec(dyn_allocator allocator, wstr_view string)
-   -> maybe<raii::wstr_vec<dyn_allocator, flags>> {
-   return raii::make_wstr_vec<dyn_allocator, flags>(allocator, string);
+make_wstr_vec(allocator_dyn allocator, wstr_view string)
+   -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
+   return raii::make_wstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
 template <
@@ -1179,9 +1179,9 @@ make_wzstr_vec(allocator_ref<Allocator> allocator, wstr_view string)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec(dyn_allocator allocator, wstr_view string)
-   -> maybe<raii::wzstr_vec<dyn_allocator, flags>> {
-   return raii::make_wzstr_vec<dyn_allocator, flags>(allocator, string);
+make_wzstr_vec(allocator_dyn allocator, wstr_view string)
+   -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
+   return raii::make_wzstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
 template <
@@ -1205,10 +1205,10 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec(
-   dyn_allocator allocator, First const& first, Second const& second,
+   allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
-) -> maybe<raii::str_vec<dyn_allocator, flags>> {
-   return raii::make_str_vec<dyn_allocator, flags>(
+) -> maybe<raii::str_vec<allocator_dyn, flags>> {
+   return raii::make_str_vec<allocator_dyn, flags>(
       allocator, first, second, strings...
    );
 }
@@ -1233,10 +1233,10 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec(
-   dyn_allocator allocator, First const& first, Second const& second,
+   allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
-) -> maybe<raii::zstr_vec<dyn_allocator, flags>> {
-   return raii::make_zstr_vec<dyn_allocator, flags>(
+) -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+   return raii::make_zstr_vec<allocator_dyn, flags>(
       allocator, first, second, strings...
    );
 }
@@ -1262,10 +1262,10 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec(
-   dyn_allocator allocator, First const& first, Second const& second,
+   allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
-) -> maybe<raii::wstr_vec<dyn_allocator, flags>> {
-   return raii::make_wstr_vec<dyn_allocator, flags>(
+) -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
+   return raii::make_wstr_vec<allocator_dyn, flags>(
       allocator, first, second, strings...
    );
 }
@@ -1291,10 +1291,10 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec(
-   dyn_allocator allocator, First const& first, Second const& second,
+   allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
-) -> maybe<raii::wzstr_vec<dyn_allocator, flags>> {
-   return raii::make_wzstr_vec<dyn_allocator, flags>(
+) -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
+   return raii::make_wzstr_vec<allocator_dyn, flags>(
       allocator, first, second, strings...
    );
 }
@@ -1316,9 +1316,9 @@ make_str_vec(allocator_ref<Allocator> allocator, initializer_list<char> values)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec(dyn_allocator allocator, initializer_list<char> values)
-   -> maybe<raii::str_vec<dyn_allocator, flags>> {
-   return raii::make_str_vec<dyn_allocator, flags>(allocator, values);
+make_str_vec(allocator_dyn allocator, initializer_list<char> values)
+   -> maybe<raii::str_vec<allocator_dyn, flags>> {
+   return raii::make_str_vec<allocator_dyn, flags>(allocator, values);
 }
 
 template <
@@ -1338,9 +1338,9 @@ make_zstr_vec(allocator_ref<Allocator> allocator, initializer_list<char> values)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec(dyn_allocator allocator, initializer_list<char> values)
-   -> maybe<raii::zstr_vec<dyn_allocator, flags>> {
-   return raii::make_zstr_vec<dyn_allocator, flags>(allocator, values);
+make_zstr_vec(allocator_dyn allocator, initializer_list<char> values)
+   -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+   return raii::make_zstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
 template <
@@ -1361,9 +1361,9 @@ make_wstr_vec(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec(dyn_allocator allocator, initializer_list<wchar_t> values)
-   -> maybe<raii::wstr_vec<dyn_allocator, flags>> {
-   return raii::make_wstr_vec<dyn_allocator, flags>(allocator, values);
+make_wstr_vec(allocator_dyn allocator, initializer_list<wchar_t> values)
+   -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
+   return raii::make_wstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
 template <
@@ -1384,9 +1384,9 @@ make_wzstr_vec(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec(dyn_allocator allocator, initializer_list<wchar_t> values)
-   -> maybe<raii::wzstr_vec<dyn_allocator, flags>> {
-   return raii::make_wzstr_vec<dyn_allocator, flags>(allocator, values);
+make_wzstr_vec(allocator_dyn allocator, initializer_list<wchar_t> values)
+   -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
+   return raii::make_wzstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
 template <
@@ -1405,9 +1405,9 @@ make_str_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec_reserved(dyn_allocator allocator, idx capacity)
-   -> maybe<raii::str_vec<dyn_allocator, flags>> {
-   return raii::make_str_vec_reserved<dyn_allocator, flags>(
+make_str_vec_reserved(allocator_dyn allocator, idx capacity)
+   -> maybe<raii::str_vec<allocator_dyn, flags>> {
+   return raii::make_str_vec_reserved<allocator_dyn, flags>(
       allocator, capacity
    );
 }
@@ -1429,9 +1429,9 @@ make_zstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec_reserved(dyn_allocator allocator, idx capacity)
-   -> maybe<raii::zstr_vec<dyn_allocator, flags>> {
-   return raii::make_zstr_vec_reserved<dyn_allocator, flags>(
+make_zstr_vec_reserved(allocator_dyn allocator, idx capacity)
+   -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+   return raii::make_zstr_vec_reserved<allocator_dyn, flags>(
       allocator, capacity
    );
 }
@@ -1452,9 +1452,9 @@ make_wstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec_reserved(dyn_allocator allocator, idx capacity)
-   -> maybe<raii::wstr_vec<dyn_allocator, flags>> {
-   return raii::make_wstr_vec_reserved<dyn_allocator, flags>(
+make_wstr_vec_reserved(allocator_dyn allocator, idx capacity)
+   -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
+   return raii::make_wstr_vec_reserved<allocator_dyn, flags>(
       allocator, capacity
    );
 }
@@ -1476,9 +1476,9 @@ make_wzstr_vec_reserved(allocator_ref<Allocator> allocator, idx capacity)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec_reserved(dyn_allocator allocator, idx capacity)
-   -> maybe<raii::wzstr_vec<dyn_allocator, flags>> {
-   return raii::make_wzstr_vec_reserved<dyn_allocator, flags>(
+make_wzstr_vec_reserved(allocator_dyn allocator, idx capacity)
+   -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
+   return raii::make_wzstr_vec_reserved<allocator_dyn, flags>(
       allocator, capacity
    );
 }
@@ -1500,9 +1500,9 @@ make_str_vec_filled(allocator_ref<Allocator> allocator, idx count, char value)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec_filled(dyn_allocator allocator, idx count, char value)
-   -> maybe<raii::str_vec<dyn_allocator, flags>> {
-   return raii::make_str_vec_filled<dyn_allocator, flags>(
+make_str_vec_filled(allocator_dyn allocator, idx count, char value)
+   -> maybe<raii::str_vec<allocator_dyn, flags>> {
+   return raii::make_str_vec_filled<allocator_dyn, flags>(
       allocator, count, value
    );
 }
@@ -1522,9 +1522,9 @@ make_zstr_vec_filled(allocator_ref<Allocator> allocator, idx count, char value)
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec_filled(dyn_allocator allocator, idx count, char value)
-   -> maybe<raii::zstr_vec<dyn_allocator, flags>> {
-   return raii::make_zstr_vec_filled<dyn_allocator, flags>(
+make_zstr_vec_filled(allocator_dyn allocator, idx count, char value)
+   -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+   return raii::make_zstr_vec_filled<allocator_dyn, flags>(
       allocator, count, value
    );
 }
@@ -1547,9 +1547,9 @@ make_wstr_vec_filled(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec_filled(dyn_allocator allocator, idx count, wchar_t value)
-   -> maybe<raii::wstr_vec<dyn_allocator, flags>> {
-   return raii::make_wstr_vec_filled<dyn_allocator, flags>(
+make_wstr_vec_filled(allocator_dyn allocator, idx count, wchar_t value)
+   -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
+   return raii::make_wstr_vec_filled<allocator_dyn, flags>(
       allocator, count, value
    );
 }
@@ -1571,9 +1571,9 @@ make_wzstr_vec_filled(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec_filled(dyn_allocator allocator, idx count, wchar_t value)
-   -> maybe<raii::wzstr_vec<dyn_allocator, flags>> {
-   return raii::make_wzstr_vec_filled<dyn_allocator, flags>(
+make_wzstr_vec_filled(allocator_dyn allocator, idx count, wchar_t value)
+   -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
+   return raii::make_wzstr_vec_filled<allocator_dyn, flags>(
       allocator, count, value
    );
 }
@@ -1600,11 +1600,11 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator
-) -> maybe<raii::str_vec<dyn_allocator, flags>> {
+   allocator_dyn allocator, idx count, Generator&& generator
+) -> maybe<raii::str_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
-   return raii::make_str_vec_filled_random<dyn_allocator, flags>(
+   return raii::make_str_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1636,15 +1636,15 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator,
+   allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<raii::str_vec<dyn_allocator, flags>> {
+) -> maybe<raii::str_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
          char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return raii::make_str_vec_filled_random<dyn_allocator, flags>(
+   return raii::make_str_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1671,11 +1671,11 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator
-) -> maybe<raii::zstr_vec<dyn_allocator, flags>> {
+   allocator_dyn allocator, idx count, Generator&& generator
+) -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
-   return raii::make_zstr_vec_filled_random<dyn_allocator, flags>(
+   return raii::make_zstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1707,15 +1707,15 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator,
+   allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<raii::zstr_vec<dyn_allocator, flags>> {
+) -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
          char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return raii::make_zstr_vec_filled_random<dyn_allocator, flags>(
+   return raii::make_zstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1742,11 +1742,11 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator
-) -> maybe<raii::wstr_vec<dyn_allocator, flags>> {
+   allocator_dyn allocator, idx count, Generator&& generator
+) -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
-   return raii::make_wstr_vec_filled_random<dyn_allocator, flags>(
+   return raii::make_wstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1778,15 +1778,15 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator,
+   allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<raii::wstr_vec<dyn_allocator, flags>> {
+) -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
          wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return raii::make_wstr_vec_filled_random<dyn_allocator, flags>(
+   return raii::make_wstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }
@@ -1814,11 +1814,11 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator
-) -> maybe<raii::wzstr_vec<dyn_allocator, flags>> {
+   allocator_dyn allocator, idx count, Generator&& generator
+) -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
-   return raii::make_wzstr_vec_filled_random<dyn_allocator, flags>(
+   return raii::make_wzstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -1851,15 +1851,15 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec_filled_random(
-   dyn_allocator allocator, idx count, Generator&& generator,
+   allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<raii::wzstr_vec<dyn_allocator, flags>> {
+) -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
          wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   return raii::make_wzstr_vec_filled_random<dyn_allocator, flags>(
+   return raii::make_wzstr_vec_filled_random<allocator_dyn, flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }

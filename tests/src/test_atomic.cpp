@@ -1,6 +1,6 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/atomic>
-#include <cat/linear_allocator>
-#include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
 
@@ -1015,7 +1015,7 @@ $test(memory_order_reference_format) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    cat::atomic<cat::uint1> value{42u};
    auto wrap_release =

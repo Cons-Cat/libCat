@@ -1,4 +1,4 @@
-#include <cat/page_allocator>
+#include <cat/allocator_page>
 #include <cat/simd>
 #include <cat/string>
 
@@ -59,9 +59,9 @@ $test(string_type_equality_matrix) {
    auto vector = cat::make_str_vec(pager, view).verify();
    auto zvector = cat::make_zstr_vec(pager, view).verify();
    auto raii_vector =
-      cat::raii::make_str_vec(cat::dyn_allocator(pager), view).verify();
+      cat::raii::make_str_vec(cat::allocator_dyn(pager), view).verify();
    auto raii_zvector =
-      cat::raii::make_zstr_vec(cat::dyn_allocator(pager), view).verify();
+      cat::raii::make_zstr_vec(cat::allocator_dyn(pager), view).verify();
 
    verify_string_equality_matrix(
       literal, inplace, zinplace, inplace_fixed, zinplace_fixed, view, zview,
@@ -84,9 +84,9 @@ $test(string_type_equality_matrix) {
    auto wide_vector = cat::make_wstr_vec(pager, wide_view).verify();
    auto wide_zvector = cat::make_wzstr_vec(pager, wide_view).verify();
    auto raii_wide_vector =
-      cat::raii::make_wstr_vec(cat::dyn_allocator(pager), wide_view).verify();
+      cat::raii::make_wstr_vec(cat::allocator_dyn(pager), wide_view).verify();
    auto raii_wide_zvector =
-      cat::raii::make_wzstr_vec(cat::dyn_allocator(pager), wide_view).verify();
+      cat::raii::make_wzstr_vec(cat::allocator_dyn(pager), wide_view).verify();
 
    verify_string_equality_matrix(
       wide_literal, wide_inplace, wide_zinplace, wide_inplace_fixed,

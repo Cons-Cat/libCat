@@ -1,6 +1,6 @@
+#include <cat/allocator_page>
 #include <cat/atomic>
 #include <cat/mutex>
-#include <cat/page_allocator>
 #include <cat/runtime>
 #include <cat/thread>
 
@@ -118,7 +118,7 @@ $test(thread_atexit_grows_destructor_list) {
 
 $test(thread_atexit_parking_lot_threads_exit) {
    constexpr idx thread_count = 4;
-   cat::alloc_mutex_runtime<cat::page_allocator>(pager, thread_count).verify();
+   cat::alloc_mutex_runtime<cat::allocator_page>(pager, thread_count).verify();
 
    cat::mutex mutex;
    cat::atomic<idx> entered;
@@ -149,5 +149,5 @@ $test(thread_atexit_parking_lot_threads_exit) {
       threads[index].free(pager);
    }
 
-   cat::free_mutex_runtime<cat::page_allocator>(pager);
+   cat::free_mutex_runtime<cat::allocator_page>(pager);
 }

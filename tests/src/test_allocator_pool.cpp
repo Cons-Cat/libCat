@@ -1,15 +1,15 @@
-#include <cat/page_allocator>
-#include <cat/pool_allocator>
+#include <cat/allocator_page>
+#include <cat/allocator_pool>
 
 #include "../unit_tests.hpp"
 
-$test(pool_allocator) {
+$test(allocator_pool) {
    // Initialize an allocator.
    cat::span page = pager.alloc_multi<cat::byte>(128u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto allocator = cat::make_pool_allocator<8>(page);
+   cat::is_allocator auto allocator = cat::make_allocator_pool<8>(page);
 
    // Make an allocation.
    int4* p_int1 = allocator.alloc<int4>(10).value();

@@ -3,7 +3,7 @@
 #include <cat/linux>
 
 auto
-cat::get_executable_path(dyn_allocator allocator) -> maybe<file_path> {
+cat::get_executable_path(allocator_dyn allocator) -> maybe<file_path> {
    // TODO: This is not a robust way to get the executable path.
    // Under Steam or similar sandboxes, the path might completely differ,
    // and some environments like AppArmor or SELinux could disable access to

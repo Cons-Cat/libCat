@@ -4,7 +4,7 @@
 
 #include <cat/allocator_parameters>
 
-// `named_allocator<Allocator>` is an allocator adaptor that adds a non-owning
+// `allocator_named<Allocator>` is an allocator adaptor that adds a non-owning
 // name to any allocator. This shadows its default `.name()` method. This is
 // primarily intended as a debugging label. This feature is inspired by EASTL
 // named allocators.
@@ -13,13 +13,13 @@ namespace cat {
 
 template <is_allocator Allocator>
 class [[clang::trivial_abi]]
-named_allocator : public allocator_ref<Allocator> {
+allocator_named : public allocator_ref<Allocator> {
    using base = allocator_ref<Allocator>;
 
    str_view m_name;
 
  public:
-   constexpr named_allocator(
+   constexpr allocator_named(
       Allocator& inner [[clang::lifetimebound]],
       str_view debug_name [[clang::lifetimebound]]
    )
@@ -38,7 +38,7 @@ named_allocator : public allocator_ref<Allocator> {
    // doesn't necessarily differentiate two equivalent allocators.
    [[nodiscard]]
    auto
-   is_equivalent(named_allocator const& other) const -> bool {
+   is_equivalent(allocator_named const& other) const -> bool {
       return base::is_equivalent(other);
    }
 };

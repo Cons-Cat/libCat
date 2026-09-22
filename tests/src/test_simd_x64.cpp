@@ -1,6 +1,6 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/bitset>
-#include <cat/linear_allocator>
-#include <cat/page_allocator>
 #include <cat/simd>
 #include <cat/simd_ops>
 

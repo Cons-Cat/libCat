@@ -1,6 +1,6 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/format>
-#include <cat/linear_allocator>
-#include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
 #include "quantity_format_goldens.hpp"
@@ -34,7 +34,7 @@ verify_quantity_format(
    $defer {
       pager.free(page);
    };
-   auto allocator = make_linear_allocator(page);
+   auto allocator = make_allocator_linear(page);
    auto const integer_actual = cat::fmt(allocator, "{}", Integer(1)).verify();
    auto const floating_actual = cat::fmt(allocator, "{}", Floating(1)).verify();
    cat::verify(integer_actual == integer_expected);

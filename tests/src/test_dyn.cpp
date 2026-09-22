@@ -1,6 +1,6 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/dyn>
-#include <cat/linear_allocator>
-#include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
 
@@ -226,7 +226,7 @@ static_assert(sizeof(bear) > 256);
 
 // Method-bundle aliases used across the dyn tests. The naming spells out the
 // participating methods after a `dyn_` (in-place) or `dyn_` (heap
-// fallback through `linear_allocator`) prefix. `cat::destructor` is implied.
+// fallback through `allocator_linear`) prefix. `cat::destructor` is implied.
 using dyn_treat_count = cat::dyn_inplace<cat::destructor, treat_count>;
 using dyn_treat_count_feed =
    cat::dyn_inplace<cat::destructor, treat_count, feed>;
@@ -237,15 +237,15 @@ using dyn_move_constructor_copy_constructor_treat_count = cat::dyn_inplace<
    cat::destructor, cat::move_constructor, cat::copy_constructor, treat_count>;
 
 using dyn_alloc_treat_count =
-   cat::dyn<cat::linear_allocator, cat::destructor, treat_count>;
+   cat::dyn<cat::allocator_linear, cat::destructor, treat_count>;
 using dyn_alloc_move_constructor_treat_count = cat::dyn<
-   cat::linear_allocator, cat::destructor, cat::move_constructor, treat_count>;
+   cat::allocator_linear, cat::destructor, cat::move_constructor, treat_count>;
 
 // A `basic_dyn` whose inline buffer is sized big enough to hold a
 // `puppy` (which would spill to the heap with the default
 // `64u`).
 using dyn_alloc_big_treat_count = cat::basic_dyn<
-   cat::linear_allocator, sizeof(puppy), cat::destructor, treat_count>;
+   cat::allocator_linear, sizeof(puppy), cat::destructor, treat_count>;
 
 // A deliberately over-aligned type used to exercise the SBO alignment guard.
 struct alignas(256) over_aligned_kitty {
@@ -305,7 +305,7 @@ $test(dyn_inline_vs_heap) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    reset_counters();
 
@@ -338,7 +338,7 @@ $test(dyn_custom_inline_storage_size) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    // The default-sized dyn spills `puppy` to the heap.
    {
@@ -666,7 +666,7 @@ $test(dyn_pointer_stability) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    dyn_alloc_treat_count heap_dyn{allocator, bear{1}};
    cat::verify(heap_dyn.is_stable_pointers());
@@ -681,7 +681,7 @@ $test(dyn_make_basic) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    auto dyn =
       cat::make_basic_dyn<cat::destructor, treat_count>(allocator, kitty{500});
@@ -695,7 +695,7 @@ $test(dyn_heap_lifecycle) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    reset_counters();
    {
@@ -712,7 +712,7 @@ $test(dyn_heap_move_preserves_pointer) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
    dyn_alloc_move_constructor_treat_count a{allocator, bear{99}};
    bear* p_before = cat::dyn_cast<bear>(&a);
@@ -997,14 +997,14 @@ $test(dyn_destructor_optional_for_trivial_types) {
    $defer {
       pager.free(page);
    };
-   auto allocator = cat::make_linear_allocator(page);
+   auto allocator = cat::make_allocator_linear(page);
 
-   using basic_no_dtor = cat::dyn<cat::linear_allocator, treat_count>;
+   using basic_no_dtor = cat::dyn<cat::allocator_linear, treat_count>;
    static_assert(
-      cat::is_constructible<basic_no_dtor, cat::linear_allocator&, triv_kitty>
+      cat::is_constructible<basic_no_dtor, cat::allocator_linear&, triv_kitty>
    );
    static_assert(
-      !cat::is_constructible<basic_no_dtor, cat::linear_allocator&, kitty>
+      !cat::is_constructible<basic_no_dtor, cat::allocator_linear&, kitty>
    );
 
    basic_no_dtor heap_dyn{allocator, triv_kitty{42}};

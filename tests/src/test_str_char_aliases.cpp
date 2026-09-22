@@ -1,5 +1,5 @@
-#include <cat/linear_allocator>
-#include <cat/page_allocator>
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/string>
 
 #include "../unit_tests.hpp"
@@ -8,7 +8,7 @@ namespace {
 
 struct linear_arena {
    cat::span<cat::byte> page = pager.alloc_multi<cat::byte>(4_uki).verify();
-   cat::linear_allocator alloc = cat::make_linear_allocator(page);
+   cat::allocator_linear alloc = cat::make_allocator_linear(page);
 
    ~linear_arena() {
       pager.free(page);
@@ -106,13 +106,13 @@ $test(str_vec_character_aliases) {
    static_assert(
       cat::is_same<
          cat::raii::u32str_vec<
-            cat::dyn_allocator, cat::vec_flags::inline_storage(8u)
+            cat::allocator_dyn, cat::vec_flags::inline_storage(8u)
                                    | cat::vec_flags::pointer_size_layout>,
          cat::raii::basic_str_vec<
             char32_t,
             cat::vec_flags::inline_storage(8u)
                | cat::vec_flags::pointer_size_layout,
-            cat::dyn_allocator>>
+            cat::allocator_dyn>>
    );
    static_assert(
       cat::is_same<
@@ -120,7 +120,7 @@ $test(str_vec_character_aliases) {
                                     char8_t,
                                     cat::vec_flags::inline_storage(22u)
                                        | cat::vec_flags::pointer_size_layout,
-                                    cat::dyn_allocator>>
+                                    cat::allocator_dyn>>
    );
    static_assert(cat::is_same<
                  cat::raii::zu32str_vec_fixed<>,
@@ -130,7 +130,7 @@ $test(str_vec_character_aliases) {
                        | cat::vec_flags::fixed_size
                        | cat::vec_flags::inline_storage(22u)
                        | cat::vec_flags::pointer_size_layout,
-                    cat::dyn_allocator>>);
+                    cat::allocator_dyn>>);
 
    linear_arena arena;
 
@@ -144,11 +144,11 @@ $test(str_vec_character_aliases) {
    cat::verify(utf16.view() == cat::u16str_view(u"भारत"));
    utf16.free(arena.alloc);
 
-   cat::raii::u32str_vec<cat::linear_allocator> managed(arena.alloc);
+   cat::raii::u32str_vec<cat::allocator_linear> managed(arena.alloc);
    managed.append(cat::u32str_view(U"भारत")).verify();
    cat::verify(managed.view() == cat::u32str_view(U"भारत"));
 
-   cat::raii::zu8str_vec<cat::linear_allocator> zmanaged(arena.alloc);
+   cat::raii::zu8str_vec<cat::allocator_linear> zmanaged(arena.alloc);
    zmanaged.append(cat::u8str_view(u8"भारत")).verify();
    cat::verify(zmanaged.size() == 12u);
    cat::verify(zmanaged.data()[zmanaged.size()] == u8'\0');

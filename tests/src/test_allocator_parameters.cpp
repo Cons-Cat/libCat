@@ -1,8 +1,8 @@
+#include <cat/allocator_linear>
+#include <cat/allocator_page>
 #include <cat/allocator_parameters>
+#include <cat/allocator_pool>
 #include <cat/bit>
-#include <cat/linear_allocator>
-#include <cat/page_allocator>
-#include <cat/pool_allocator>
 
 #include "../unit_tests.hpp"
 
@@ -10,17 +10,17 @@ template <typename Allocator>
 concept has_bytes_used =
    requires(Allocator const& allocator) { allocator.bytes_used(); };
 
-$test(dyn_allocator_linear) {
-   // `linear_allocator` provides native `aligned_allocate` and
+$test(allocator_dyn_linear) {
+   // `allocator_linear` provides native `aligned_allocate` and
    // `aligned_allocate_feedback`, so this exercises the direct-dispatch paths
    // of the `dyn` vtable.
    cat::span page = pager.alloc_multi<cat::byte>(1_uki).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto linear = cat::make_linear_allocator(page);
+   cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
-   cat::dyn_allocator dyn = linear;
+   cat::allocator_dyn dyn = linear;
 
    int4* p_a = dyn.alloc<int4>(7).verify();
    cat::verify(*p_a == 7);
@@ -34,9 +34,9 @@ $test(dyn_allocator_linear) {
    cat::verify(*p_aligned == 9);
    cat::verify(cat::is_aligned(p_aligned, 64u));
 
-   // Feedback path. `linear_allocator` only provides
+   // Feedback path. `allocator_linear` only provides
    // `aligned_allocate_feedback`, so the unaligned `inline_alloc` for an `int1`
-   // exercises the `allocate_feedback` fallback shim in `dyn_allocator`.
+   // exercises the `allocate_feedback` fallback shim in `allocator_dyn`.
    auto handle = dyn.inline_alloc<int1>(3).verify();
    dyn.free(handle);
 
@@ -46,22 +46,22 @@ $test(dyn_allocator_linear) {
    cat::verify(*p_after == 13);
 }
 
-$test(dyn_allocator_pool) {
-   // `pool_allocator` has none of the aligned or feedback hooks, so every
-   // aligned/feedback call through `dyn_allocator` exercises a fallback shim.
+$test(allocator_dyn_pool) {
+   // `allocator_pool` has none of the aligned or feedback hooks, so every
+   // aligned/feedback call through `allocator_dyn` exercises a fallback shim.
    cat::span page = pager.alloc_multi<cat::byte>(128u).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto pool = cat::make_pool_allocator<8>(page);
+   cat::is_allocator auto pool = cat::make_allocator_pool<8>(page);
 
-   cat::dyn_allocator dyn = pool;
+   cat::allocator_dyn dyn = pool;
 
    int4* p_a = dyn.alloc<int4>(21).verify();
    cat::verify(*p_a == 21);
    dyn.free(p_a);
 
-   // `pool_allocator` hands out 8-byte slots that are naturally 8-byte aligned,
+   // `allocator_pool` hands out 8-byte slots that are naturally 8-byte aligned,
    // so the `aligned_allocate` fallback's runtime assertion is satisfied.
    auto* p_aligned = dyn.align_alloc<int4>(8u, 5).verify();
    cat::verify(*p_aligned == 5);
@@ -72,10 +72,10 @@ $test(dyn_allocator_pool) {
    cat::verify(*p_after == 33);
 }
 
-$test(dyn_allocator_page) {
-   // `page_allocator` provides `aligned_allocate` but neither feedback hook, so
+$test(allocator_dyn_page) {
+   // `allocator_page` provides `aligned_allocate` but neither feedback hook, so
    // the feedback paths exercise their shims.
-   cat::dyn_allocator dyn = pager;
+   cat::allocator_dyn dyn = pager;
 
    cat::span<int4> values = dyn.alloc_multi<int4>(3u).verify();
    cat::verify(values.size() == 3);
@@ -85,27 +85,27 @@ $test(dyn_allocator_page) {
    cat::verify(*p_aligned == 17);
    cat::verify(cat::is_aligned(p_aligned, 64u));
 
-   // `inline_alloc` routes through the feedback shim because `page_allocator`
+   // `inline_alloc` routes through the feedback shim because `allocator_page`
    // has no `allocate_feedback` of its own.
    auto handle = dyn.inline_alloc<int4>(99).verify();
    dyn.free(handle);
 }
 
-$test(basic_dyn_allocator_methods) {
+$test(basic_allocator_dyn_methods) {
    static_assert(
-      cat::is_allocator<cat::basic_dyn_allocator<cat::dyn_reallocate>>
+      cat::is_allocator<cat::basic_allocator_dyn<cat::dyn_reallocate>>
    );
    static_assert(
-      !has_bytes_used<cat::basic_dyn_allocator<cat::dyn_reallocate>>
+      !has_bytes_used<cat::basic_allocator_dyn<cat::dyn_reallocate>>
    );
 
-   cat::basic_dyn_allocator<cat::dyn_reallocate> dyn = pager;
+   cat::basic_allocator_dyn<cat::dyn_reallocate> dyn = pager;
    int4* p_value = dyn.alloc<int4>(27).verify();
    cat::verify(*p_value == 27);
    dyn.free(p_value);
 
-   cat::dyn_allocator full = pager;
-   cat::basic_dyn_allocator<cat::dyn_reallocate> narrowed = full;
+   cat::allocator_dyn full = pager;
+   cat::basic_allocator_dyn<cat::dyn_reallocate> narrowed = full;
    int4* p_narrowed = narrowed.alloc<int4>(31).verify();
    cat::verify(*p_narrowed == 31);
    narrowed.free(p_narrowed);
@@ -202,17 +202,17 @@ $test(realloc_uninit) {
 
 $test(allocator_ref) {
    // `cat::allocator_ref<Allocator>` is the static-dispatch counterpart to
-   // `dyn_allocator`: it stores a non-owning pointer to the held allocator and
+   // `allocator_dyn`: it stores a non-owning pointer to the held allocator and
    // forwards `allocator_interface` calls through to it.
-   static_assert(cat::is_allocator<cat::allocator_ref<cat::page_allocator>>);
+   static_assert(cat::is_allocator<cat::allocator_ref<cat::allocator_page>>);
 
    cat::span page = pager.alloc_multi<cat::byte>(1_uki).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto linear = cat::make_linear_allocator(page);
+   cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
-   cat::allocator_ref<cat::linear_allocator> ref = linear;
+   cat::allocator_ref<cat::allocator_linear> ref = linear;
 
    int4* p_int = ref.alloc<int4>(42).verify();
    cat::verify(*p_int == 42);
@@ -242,12 +242,12 @@ $test(allocator_ref_unwraps_self) {
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto linear = cat::make_linear_allocator(page);
+   cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
-   cat::allocator_ref<cat::linear_allocator> ref = linear;
+   cat::allocator_ref<cat::allocator_linear> ref = linear;
    cat::allocator_ref deduced = ref;
    static_assert(
-      cat::is_same<decltype(deduced), cat::allocator_ref<cat::linear_allocator>>
+      cat::is_same<decltype(deduced), cat::allocator_ref<cat::allocator_linear>>
    );
 
    // Allocations through `deduced` and `ref` come from the same arena, so a
@@ -258,19 +258,19 @@ $test(allocator_ref_unwraps_self) {
    cat::verify(p_a == p_b);
 }
 
-// Constructing a `dyn_allocator` from another `dyn_allocator` must not nest
+// Constructing a `allocator_dyn` from another `allocator_dyn` must not nest
 // the held `dyn_ptr`. The copy constructor shares the inner pointer, so a
 // call through the second instance reaches the underlying allocator with one
 // `dyn_invoke` hop, not two.
-$test(dyn_allocator_unwraps_self) {
+$test(allocator_dyn_unwraps_self) {
    cat::span page = pager.alloc_multi<cat::byte>(1_uki).verify();
    $defer {
       pager.free(page);
    };
-   cat::is_allocator auto linear = cat::make_linear_allocator(page);
+   cat::is_allocator auto linear = cat::make_allocator_linear(page);
 
-   cat::dyn_allocator outer = linear;
-   cat::dyn_allocator copy = outer;
+   cat::allocator_dyn outer = linear;
+   cat::allocator_dyn copy = outer;
 
    int4* p_a = copy.alloc<int4>(5).verify();
    outer.reset();

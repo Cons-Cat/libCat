@@ -11,18 +11,18 @@ namespace cat {
 inline constexpr idx huge_page_size = 2_umi;
 
 // Allocate explicit 2 MiB huge pages from the kernel.
-class [[clang::trivial_abi]] huge_page_allocator
-    : public allocator_interface<huge_page_allocator> {
+class [[clang::trivial_abi]] allocator_huge_page
+    : public allocator_interface<allocator_huge_page> {
  private:
-   friend allocator_interface<huge_page_allocator>;
-   friend struct dyn_allocator_friend;
+   friend allocator_interface<allocator_huge_page>;
+   friend struct allocator_dyn_friend;
    template <typename>
    friend class allocator_ref;
 
  public:
-   constexpr huge_page_allocator() = default;
-   constexpr huge_page_allocator(huge_page_allocator const&) = default;
-   constexpr huge_page_allocator(huge_page_allocator&&) = default;
+   constexpr allocator_huge_page() = default;
+   constexpr allocator_huge_page(allocator_huge_page const&) = default;
+   constexpr allocator_huge_page(allocator_huge_page&&) = default;
 
    static auto
    allocation_bytes(ualign alignment, idx requested_bytes)
@@ -110,7 +110,7 @@ class [[clang::trivial_abi]] huge_page_allocator
 
 [[nodiscard]]
 constexpr auto
-make_huge_page_allocator() -> huge_page_allocator {
+make_allocator_huge_page() -> allocator_huge_page {
    return {};
 }
 

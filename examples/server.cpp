@@ -1,7 +1,7 @@
 #include <cat/array>
 #include <cat/defer>
 #include <cat/file_path>
-#include <cat/inplace_allocator>
+#include <cat/allocator_inplace>
 #include <cat/linux>
 #include <cat/memory>
 #include <cat/socket>
@@ -13,7 +13,7 @@ main() -> int {
    constexpr cat::zstr_view socket_name = "\0/tmp/temp.sock";
 
    // TODO: We should have a `file_path_inplace`.
-   auto allocator = cat::make_inplace_allocator<64u>();
+   auto allocator = cat::make_allocator_inplace<64u>();
    cat::file_path socket_path =
       cat::make_file_path(allocator, socket_name).verify();
    $defer {

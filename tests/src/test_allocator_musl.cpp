@@ -1,8 +1,8 @@
+#include <cat/allocator_musl>
+#include <cat/allocator_page>
 #include <cat/allocator_parameters>
 #include <cat/limits>
 #include <cat/linux>
-#include <cat/musl_allocator>
-#include <cat/page_allocator>
 #include <cat/sanitizer>
 #include <cat/thread>
 
@@ -10,8 +10,8 @@
 
 namespace {
 
-static_assert(cat::musl_allocator::min_alignment == 16u);
-static_assert(cat::musl_allocator::min_allocation_bytes == 1u);
+static_assert(cat::allocator_musl::min_alignment == 16u);
+static_assert(cat::allocator_musl::min_allocation_bytes == 1u);
 
 constexpr char child_armed = 1;
 constexpr char child_returned = 3;
@@ -31,12 +31,12 @@ concept exposes_deallocate_storage =
       allocator.deallocate_storage(p_storage, 1u);
    };
 
-static_assert(!exposes_deallocate_poisons<cat::musl_allocator>);
-static_assert(!exposes_deallocate_storage<cat::musl_allocator>);
+static_assert(!exposes_deallocate_poisons<cat::allocator_musl>);
+static_assert(!exposes_deallocate_storage<cat::allocator_musl>);
 static_assert(
-   !exposes_deallocate_storage<cat::allocator_ref<cat::musl_allocator>>
+   !exposes_deallocate_storage<cat::allocator_ref<cat::allocator_musl>>
 );
-static_assert(!exposes_deallocate_storage<cat::dyn_allocator>);
+static_assert(!exposes_deallocate_storage<cat::allocator_dyn>);
 
 constexpr idx mmap_threshold = 131'052u;
 constexpr idx size_class_units[] = {
@@ -130,25 +130,25 @@ shared_contention_worker_impl(
 }
 
 void
-shared_contention_worker(cat::musl_allocator_shared* p_allocator, idx seed) {
+shared_contention_worker(cat::allocator_musl_shared* p_allocator, idx seed) {
    shared_contention_worker_impl(*p_allocator, seed, 1'000u);
 }
 
 void
-shared_dyn_contention_worker(cat::dyn_allocator* p_allocator, idx seed) {
+shared_dyn_contention_worker(cat::allocator_dyn* p_allocator, idx seed) {
    shared_contention_worker_impl(*p_allocator, seed, 4'000u);
 }
 
 void
 shared_ref_contention_worker(
-   cat::allocator_ref<cat::musl_allocator_shared>* p_allocator, idx seed
+   cat::allocator_ref<cat::allocator_musl_shared>* p_allocator, idx seed
 ) {
    shared_contention_worker_impl(*p_allocator, seed, 4'000u);
 }
 
 void
 corrupt_slot_index(nix::file_descriptor marker) {
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<unsigned char*>(p_allocation);
@@ -160,7 +160,7 @@ corrupt_slot_index(nix::file_descriptor marker) {
 
 void
 deallocate_with_wrong_size(nix::file_descriptor marker) {
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
    mark_child(marker, child_armed);
@@ -170,7 +170,7 @@ deallocate_with_wrong_size(nix::file_descriptor marker) {
 
 void
 double_free(nix::file_descriptor marker) {
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 32u);
    [[maybe_unused]]
    void* const p_neighbor = allocate_bytes(allocator, 32u);
@@ -184,7 +184,7 @@ double_free(nix::file_descriptor marker) {
 
 void
 deallocate_misaligned_pointer(nix::file_descriptor marker) {
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<cat::byte*>(p_allocation);
@@ -195,7 +195,7 @@ deallocate_misaligned_pointer(nix::file_descriptor marker) {
 
 void
 deallocate_foreign_pointer(nix::file_descriptor marker) {
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    void* const p_context = allocate_bytes(allocator, 1u);
    cat::verify(p_context != nullptr);
    alignas(16) cat::byte foreign[32] = {};
@@ -206,7 +206,7 @@ deallocate_foreign_pointer(nix::file_descriptor marker) {
 
 void
 grow_with_wrong_size(nix::file_descriptor marker) {
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
    cat::span allocation{static_cast<cat::byte*>(p_allocation), 31u};
@@ -218,7 +218,7 @@ grow_with_wrong_size(nix::file_descriptor marker) {
 
 void
 deallocate_after_reset(nix::file_descriptor marker) {
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
    allocator.reset();
@@ -229,7 +229,7 @@ deallocate_after_reset(nix::file_descriptor marker) {
 
 void
 corrupt_extended_offset(nix::file_descriptor marker) {
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 32u);
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<unsigned char*>(p_allocation);
@@ -241,7 +241,7 @@ corrupt_extended_offset(nix::file_descriptor marker) {
 
 void
 corrupt_size_trailer(nix::file_descriptor marker) {
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 12u);
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<unsigned char*>(p_allocation);
@@ -305,7 +305,7 @@ verify_child_hardening(void (*p_test)(nix::file_descriptor)) {
 
 template <typename Allocator>
 void
-verify_musl_allocator_equivalence() {
+verify_allocator_musl_equivalence() {
    Allocator first;
    Allocator second;
    Allocator const& first_self = first;
@@ -332,9 +332,9 @@ verify_musl_allocator_equivalence() {
    cat::verify(moved_ref == moved_alias);
    cat::verify(!(moved_ref == second_ref));
 
-   cat::dyn_allocator moved_dyn = moved;
-   cat::dyn_allocator moved_dyn_alias = moved;
-   cat::dyn_allocator second_dyn = second;
+   cat::allocator_dyn moved_dyn = moved;
+   cat::allocator_dyn moved_dyn_alias = moved;
+   cat::allocator_dyn second_dyn = second;
    cat::verify(moved_dyn == moved_dyn_alias);
    cat::verify(!(moved_dyn == second_dyn));
 
@@ -350,8 +350,8 @@ verify_musl_allocator_equivalence() {
 
 }  // namespace
 
-$test(musl_allocator_allocates_size_classes) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_allocates_size_classes) {
+   cat::allocator_musl allocator;
    void* const p_zero = allocate_bytes(allocator, 0u);
    cat::verify(p_zero != nullptr);
    deallocate_bytes(allocator, p_zero, 0u);
@@ -378,8 +378,8 @@ $test(musl_allocator_allocates_size_classes) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_exhausts_size_class_boundaries) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_exhausts_size_class_boundaries) {
+   cat::allocator_musl allocator;
    idx previous_max;
 
    for (idx class_index;
@@ -408,8 +408,8 @@ $test(musl_allocator_exhausts_size_class_boundaries) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_exhausts_small_sizes) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_exhausts_small_sizes) {
+   cat::allocator_musl allocator;
    for (idx bytes = 1u; bytes <= 4_uki; ++bytes) {
       cat::byte* const p_allocation = allocate_bytes(allocator, bytes);
       cat::verify(p_allocation != nullptr);
@@ -421,8 +421,8 @@ $test(musl_allocator_exhausts_small_sizes) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_alignment) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_alignment) {
+   cat::allocator_musl allocator;
    constexpr cat::ualign alignments[] = {
       1u, 16u, 32u, 64u, 256u, 4_uki, 64_uki, 1_umi,
    };
@@ -439,8 +439,8 @@ $test(musl_allocator_alignment) {
    }
 }
 
-$test(musl_allocator_feedback_hooks) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_feedback_hooks) {
+   cat::allocator_musl allocator;
 
    auto [zero, zero_bytes] =
       allocator.salloc_multi_uninit<cat::byte>(0u).verify();
@@ -472,8 +472,8 @@ $test(musl_allocator_feedback_hooks) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_feedback_capacity_boundaries) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_feedback_capacity_boundaries) {
+   cat::allocator_musl allocator;
    constexpr idx sizes[] = {
       1u,
       13u,
@@ -508,8 +508,8 @@ $test(musl_allocator_feedback_capacity_boundaries) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_zeroes_reused_storage) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_zeroes_reused_storage) {
+   cat::allocator_musl allocator;
    constexpr idx bytes = 257u;
    void* const p_dirty = allocate_bytes(allocator, bytes);
    cat::verify(p_dirty != nullptr);
@@ -526,8 +526,8 @@ $test(musl_allocator_zeroes_reused_storage) {
    deallocate_bytes(allocator, p_zeroed, bytes);
 }
 
-$test(musl_allocator_zeroed_alignment_and_feedback) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_zeroed_alignment_and_feedback) {
+   cat::allocator_musl allocator;
    constexpr idx bytes = 513u;
 
    void* const p_zeroed =
@@ -560,8 +560,8 @@ $test(musl_allocator_zeroed_alignment_and_feedback) {
    allocator.free_multi(aligned_full);
 }
 
-$test(musl_allocator_grows_in_place) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_grows_in_place) {
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 17u);
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<cat::byte*>(p_allocation);
@@ -575,8 +575,8 @@ $test(musl_allocator_grows_in_place) {
    deallocate_bytes(allocator, p_allocation, 24u);
 }
 
-$test(musl_allocator_grow_shrink_and_feedback) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_grow_shrink_and_feedback) {
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 80u);
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<cat::byte*>(p_allocation);
@@ -598,8 +598,8 @@ $test(musl_allocator_grow_shrink_and_feedback) {
    allocator.free_multi_uninit(grown_allocation);
 }
 
-$test(musl_allocator_reallocate_feedback_capacity) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_reallocate_feedback_capacity) {
+   cat::allocator_musl allocator;
    auto [initial, initial_bytes] =
       allocator.salloc_multi_uninit<cat::byte>(257u).verify();
    cat::verify(allocator.bytes_used() == initial_bytes);
@@ -621,8 +621,8 @@ $test(musl_allocator_reallocate_feedback_capacity) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_reallocates_and_preserves_data) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_reallocates_and_preserves_data) {
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 64u);
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<cat::byte*>(p_allocation);
@@ -642,8 +642,8 @@ $test(musl_allocator_reallocates_and_preserves_data) {
    deallocate_bytes(allocator, p_reallocated, 200_uki);
 }
 
-$test(musl_allocator_reallocates_within_size_class) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_reallocates_within_size_class) {
+   cat::allocator_musl allocator;
    void* const p_allocation = allocate_bytes(allocator, 64u);
    cat::verify(p_allocation != nullptr);
    auto* const p_bytes = static_cast<cat::byte*>(p_allocation);
@@ -674,8 +674,8 @@ $test(musl_allocator_reallocates_within_size_class) {
    deallocate_bytes(allocator, p_shrunk, 64u);
 }
 
-$test(musl_allocator_mmap_and_mremap_boundaries) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_mmap_and_mremap_boundaries) {
+   cat::allocator_musl allocator;
 
    void* const p_slotted = allocate_bytes(allocator, mmap_threshold - 1u);
    cat::verify(p_slotted != nullptr);
@@ -723,18 +723,18 @@ $test(musl_allocator_mmap_and_mremap_boundaries) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_reset_and_move) {
-   cat::musl_allocator source;
+$test(allocator_musl_reset_and_move) {
+   cat::allocator_musl source;
    void* const p_source = allocate_bytes(source, 512u);
    cat::verify(p_source != nullptr);
    cat::verify(source.bytes_used() == 512u);
 
-   cat::musl_allocator moved{cat::move(source)};
+   cat::allocator_musl moved{cat::move(source)};
    cat::verify(source.bytes_used() == 0u);
    cat::verify(moved.bytes_used() == 512u);
    deallocate_bytes(moved, p_source, 512u);
 
-   cat::musl_allocator assigned;
+   cat::allocator_musl assigned;
    void* const p_released = allocate_bytes(assigned, 128u);
    cat::verify(p_released != nullptr);
    assigned = cat::move(moved);
@@ -748,8 +748,8 @@ $test(musl_allocator_reset_and_move) {
    cat::verify(assigned.bytes_capacity() == 0u);
 }
 
-$test(musl_allocator_reset_reuses_allocator) {
-   cat::musl_allocator allocator = cat::make_musl_allocator();
+$test(allocator_musl_reset_reuses_allocator) {
+   cat::allocator_musl allocator = cat::make_allocator_musl();
    void* const p_first = allocate_bytes(allocator, 64u);
    cat::verify(p_first != nullptr);
    allocator.reset();
@@ -762,11 +762,11 @@ $test(musl_allocator_reset_reuses_allocator) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_uses_injected_secrets) {
+$test(allocator_musl_uses_injected_secrets) {
    musl_secret_engine first_engine{0x12345678'9abcdef0u, 1u};
    musl_secret_engine second_engine{0xfedcba98'76543210u, 1u};
-   cat::musl_allocator first = cat::make_musl_allocator(first_engine);
-   cat::musl_allocator second = cat::make_musl_allocator(second_engine);
+   cat::allocator_musl first = cat::make_allocator_musl(first_engine);
+   cat::allocator_musl second = cat::make_allocator_musl(second_engine);
    cat::verify(first_engine.calls() == 1u);
    cat::verify(second_engine.calls() == 1u);
 
@@ -779,47 +779,47 @@ $test(musl_allocator_uses_injected_secrets) {
    deallocate_bytes(second, p_second, 32u);
 
    musl_secret_engine shared_engine{0x31415926'53589793u, 1u};
-   cat::musl_allocator_shared shared =
-      cat::make_musl_allocator_shared(shared_engine);
+   cat::allocator_musl_shared shared =
+      cat::make_allocator_musl_shared(shared_engine);
    void* const p_shared = allocate_bytes(shared, 48u);
    cat::verify(shared_engine.calls() == 1u);
    deallocate_bytes(shared, p_shared, 48u);
 }
 
-$test(musl_allocator_retries_zero_injected_secret) {
+$test(allocator_musl_retries_zero_injected_secret) {
    musl_secret_engine engine{0u, 0x01234567'89abcdefu};
-   cat::musl_allocator allocator = cat::make_musl_allocator(engine);
+   cat::allocator_musl allocator = cat::make_allocator_musl(engine);
    cat::verify(engine.calls() == 2u);
    void* const p_allocation = allocate_bytes(allocator, 64u);
    cat::verify(engine.calls() == 2u);
    deallocate_bytes(allocator, p_allocation, 64u);
 }
 
-$test(musl_allocator_default_factory_entropy) {
+$test(allocator_musl_default_factory_entropy) {
    static_assert(
-      cat::is_same<decltype(cat::make_musl_allocator()), cat::musl_allocator>
+      cat::is_same<decltype(cat::make_allocator_musl()), cat::allocator_musl>
    );
    static_assert(cat::is_same<
-                 decltype(cat::make_musl_allocator_shared()),
-                 cat::musl_allocator_shared>);
-   cat::musl_allocator allocator = cat::make_musl_allocator();
+                 decltype(cat::make_allocator_musl_shared()),
+                 cat::allocator_musl_shared>);
+   cat::allocator_musl allocator = cat::make_allocator_musl();
    void* const p_allocation = allocate_bytes(allocator, 24u);
    cat::verify(p_allocation != nullptr);
    deallocate_bytes(allocator, p_allocation, 24u);
 
-   cat::musl_allocator_shared shared = cat::make_musl_allocator_shared();
+   cat::allocator_musl_shared shared = cat::make_allocator_musl_shared();
    void* const p_shared = allocate_bytes(shared, 24u);
    cat::verify(p_shared != nullptr);
    deallocate_bytes(shared, p_shared, 24u);
 }
 
-$test(musl_allocator_equivalence) {
-   verify_musl_allocator_equivalence<cat::musl_allocator>();
-   verify_musl_allocator_equivalence<cat::musl_allocator_shared>();
+$test(allocator_musl_equivalence) {
+   verify_allocator_musl_equivalence<cat::allocator_musl>();
+   verify_allocator_musl_equivalence<cat::allocator_musl_shared>();
 }
 
-$test(musl_allocator_parameter_forwarding) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_parameter_forwarding) {
+   cat::allocator_musl allocator;
    cat::allocator_ref ref = allocator;
 
    cat::span<cat::byte> ref_allocation =
@@ -827,7 +827,7 @@ $test(musl_allocator_parameter_forwarding) {
    cat::verify(allocator.bytes_used() == 37u);
    ref.free_multi_uninit(ref_allocation);
 
-   cat::dyn_allocator dyn = allocator;
+   cat::allocator_dyn dyn = allocator;
    cat::span<cat::byte> dyn_allocation =
       dyn.alloc_multi_uninit<cat::byte>(73u).verify();
    cat::verify(allocator.bytes_used() == 73u);
@@ -840,8 +840,8 @@ $test(musl_allocator_parameter_forwarding) {
    dyn.free(p_aligned);
 }
 
-$test(musl_allocator_deallocation_poisoning) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_deallocation_poisoning) {
+   cat::allocator_musl allocator;
    auto allocation = allocator.alloc_multi_uninit<cat::byte>(32u).verify();
    cat::byte* const p_storage = allocation.data();
 
@@ -862,18 +862,18 @@ $test(musl_allocator_deallocation_poisoning) {
    allocator.free_multi_uninit(allocation);
 }
 
-$test(musl_allocator_shared_forwarded_release_ordering) {
-   cat::musl_allocator_shared allocator;
+$test(allocator_musl_shared_forwarded_release_ordering) {
+   cat::allocator_musl_shared allocator;
    verify_cross_thread_release(allocator);
    cat::allocator_ref ref = allocator;
    verify_cross_thread_release(ref);
-   cat::dyn_allocator dyn = allocator;
+   cat::allocator_dyn dyn = allocator;
    verify_cross_thread_release(dyn);
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_byte_counters) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_byte_counters) {
+   cat::allocator_musl allocator;
    cat::verify(allocator.bytes_used() == 0u);
    cat::verify(allocator.bytes_capacity() == 0u);
 
@@ -890,8 +890,8 @@ $test(musl_allocator_byte_counters) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_shared_contention) {
-   cat::musl_allocator_shared allocator;
+$test(allocator_musl_shared_contention) {
+   cat::allocator_musl_shared allocator;
    cat::thread threads[8];
 
    for (idx index = 0u; index < 8u; ++index) {
@@ -908,10 +908,10 @@ $test(musl_allocator_shared_contention) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_shared_lock_wakeup_stress) {
+$test(allocator_musl_shared_lock_wakeup_stress) {
    constexpr idx thread_count = 16u;
    constexpr idx iteration_count = 5'000u;
-   cat::musl_allocator_shared allocator;
+   cat::allocator_musl_shared allocator;
    cat::atomic<uint4> ready;
    cat::atomic<bool> start;
    cat::thread threads[thread_count.raw];
@@ -941,9 +941,9 @@ $test(musl_allocator_shared_lock_wakeup_stress) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_shared_aligned_accounting_is_final) {
+$test(allocator_musl_shared_aligned_accounting_is_final) {
    constexpr idx allocation_bytes = 320u;
-   cat::musl_allocator_shared allocator;
+   cat::allocator_musl_shared allocator;
    void* const p_initial =
       aligned_allocate_bytes(allocator, 64u, allocation_bytes);
    deallocate_bytes(allocator, p_initial, allocation_bytes);
@@ -976,10 +976,10 @@ $test(musl_allocator_shared_aligned_accounting_is_final) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_hot_group_transitions) {
+$test(allocator_musl_hot_group_transitions) {
    constexpr idx allocation_count = 256u;
    constexpr idx allocation_bytes = 32u;
-   cat::musl_allocator_shared allocator;
+   cat::allocator_musl_shared allocator;
    cat::byte* allocations[allocation_count.raw] = {};
 
    for (idx index; index < allocation_count; ++index) {
@@ -995,9 +995,9 @@ $test(musl_allocator_hot_group_transitions) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_shared_forwarded_contention) {
-   cat::musl_allocator_shared allocator;
-   cat::dyn_allocator dyn = allocator;
+$test(allocator_musl_shared_forwarded_contention) {
+   cat::allocator_musl_shared allocator;
+   cat::allocator_dyn dyn = allocator;
    cat::allocator_ref ref = allocator;
    cat::thread threads[8];
 
@@ -1023,10 +1023,10 @@ $test(musl_allocator_shared_forwarded_contention) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_shared_cross_thread_deallocation) {
+$test(allocator_musl_shared_cross_thread_deallocation) {
    constexpr idx allocation_count = 1'024u;
    constexpr idx thread_count = 8u;
-   cat::musl_allocator_shared allocator;
+   cat::allocator_musl_shared allocator;
    cat::byte* allocations[allocation_count.raw] = {};
 
    for (idx index; index < allocation_count; ++index) {
@@ -1058,10 +1058,10 @@ $test(musl_allocator_shared_cross_thread_deallocation) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_deterministic_stress) {
+$test(allocator_musl_deterministic_stress) {
    constexpr idx slot_count = 128u;
    constexpr idx iteration_count = 20'000u;
-   cat::musl_allocator allocator;
+   cat::allocator_musl allocator;
    cat::byte* allocations[slot_count.raw] = {};
    idx sizes[slot_count.raw] = {};
    cat::uword state = 0x9e3779b9u;
@@ -1095,8 +1095,8 @@ $test(musl_allocator_deterministic_stress) {
    cat::verify(allocator.bytes_used() == 0u);
 }
 
-$test(musl_allocator_rejects_overflow) {
-   cat::musl_allocator allocator;
+$test(allocator_musl_rejects_overflow) {
+   cat::allocator_musl allocator;
    constexpr cat::ualign maximum_alignment{cat::uword{1u} << 35u};
    cat::verify(
       allocator.align_nalloc_multi<cat::byte>(maximum_alignment, 1u).is_empty()
@@ -1113,7 +1113,7 @@ $test(musl_allocator_rejects_overflow) {
    );
 }
 
-$test(musl_allocator_hardening) {
+$test(allocator_musl_hardening) {
 #if __has_feature(address_sanitizer) \
    || __has_feature(undefined_behavior_sanitizer)
    // Sanitizers trap the intentional allocator corruption below.

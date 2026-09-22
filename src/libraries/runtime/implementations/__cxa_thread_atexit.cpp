@@ -4,9 +4,9 @@
 // so nothing would register destructors.
 #if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
 
+#include <cat/allocator_inplace>
+#include <cat/allocator_page>
 #include <cat/array>
-#include <cat/inplace_allocator>
-#include <cat/page_allocator>
 
 namespace {
 
@@ -28,8 +28,8 @@ static_assert(sizeof(thread_dtor_page) == 4'096u);
 // Suppress the allocator destructor so Clang does not register it through
 // `__cxa_thread_atexit` while this file implements that ABI.
 [[clang::no_destroy]]
-thread_local cat::inplace_allocator<sizeof(thread_dtor_page)>
-   first_page_allocator;
+thread_local cat::allocator_inplace<sizeof(thread_dtor_page)>
+   first_allocator_page;
 
 thread_local thread_dtor_page* _Nullable p_thread_dtors;
 
@@ -38,8 +38,8 @@ auto
 allocate_dtor_page() -> thread_dtor_page* _Nullable {
    cat::maybe const p_page =
       p_thread_dtors == nullptr
-         ? first_page_allocator.calloc<thread_dtor_page>()
-         : cat::page_allocator().calloc<thread_dtor_page>();
+         ? first_allocator_page.calloc<thread_dtor_page>()
+         : cat::allocator_page().calloc<thread_dtor_page>();
    if (p_page.is_empty()) {
       return nullptr;
    }
@@ -50,10 +50,10 @@ allocate_dtor_page() -> thread_dtor_page* _Nullable {
 void
 free_dtor_page(thread_dtor_page* _Nonnull p_page) {
    if (p_page->p_previous == nullptr) {
-      first_page_allocator.free(p_page);
+      first_allocator_page.free(p_page);
       return;
    }
-   cat::page_allocator().free(p_page);
+   cat::allocator_page().free(p_page);
 }
 
 // Empty means success. A held `int4` is a non-zero Itanium failure code.
