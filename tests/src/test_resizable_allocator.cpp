@@ -35,13 +35,16 @@ static_assert(wrapper_linear_32::node_bytes == 32u);
 // auto-grows by pulling a chunk from the backing, so it succeeds and reports
 // non-zero capacity afterward.
 $test(resizable_allocator_starts_empty) {
-   wrapper_pool_16 wrapper{pager};
+   wrapper_pool_16 wrapper =
+      cat::make_resizable_allocator<
+         cat::pool_allocator<16>, cat::idx(16u), cat::page_size>(pager);
 
    cat::verify(wrapper.bytes_capacity() == 0u);
    cat::verify(wrapper.bytes_used() == 0u);
 
-   void* p = cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
-   cat::verify(p != nullptr);
+   void* p_allocation =
+      cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
+   cat::verify(p_allocation != nullptr);
    cat::verify(wrapper.bytes_capacity() > 0u);
    cat::verify(wrapper.bytes_used() == 16u);
 }
@@ -53,10 +56,15 @@ $test(resizable_allocator_allocate_fails_when_backing_exhausted) {
    cat::resizable_allocator<
       cat::pool_allocator<16>, cat::null_allocator, cat::idx(16u),
       cat::page_size>
-      wrapper{null_backing};
+      wrapper =
+         cat::make_resizable_allocator<
+            cat::pool_allocator<16>, cat::idx(16u), cat::page_size>(
+            null_backing
+         );
 
-   void* p = cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
-   cat::verify(p == nullptr);
+   void* p_allocation =
+      cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
+   cat::verify(p_allocation == nullptr);
    cat::verify(wrapper.bytes_capacity() == 0u);
 }
 
@@ -64,7 +72,9 @@ $test(resizable_allocator_allocate_fails_when_backing_exhausted) {
 // capacity must report at least one chunk's worth of inner storage, and
 // `allocate` must hand a non-null slot back.
 $test(resizable_allocator_resize_then_allocate) {
-   wrapper_pool_16 wrapper{pager};
+   wrapper_pool_16 wrapper =
+      cat::make_resizable_allocator<
+         cat::pool_allocator<16>, cat::idx(16u), cat::page_size>(pager);
 
    cat::maybe const grown = wrapper.resize(cat::idx(16u));
    cat::verify(grown.has_value());
@@ -72,8 +82,9 @@ $test(resizable_allocator_resize_then_allocate) {
 
    cat::verify(wrapper.bytes_capacity() > 0u);
 
-   void* p = cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
-   cat::verify(p != nullptr);
+   void* p_allocation =
+      cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
+   cat::verify(p_allocation != nullptr);
    cat::verify(wrapper.bytes_used() == 16u);
 }
 
@@ -81,7 +92,9 @@ $test(resizable_allocator_resize_then_allocate) {
 // onto an intrusive LIFO list and the next allocate pops it back out before
 // asking the inner allocator. The reused address must match.
 $test(resizable_allocator_freelist_reuse_returns_freed_slot) {
-   wrapper_pool_16 wrapper{pager};
+   wrapper_pool_16 wrapper =
+      cat::make_resizable_allocator<
+         cat::pool_allocator<16>, cat::idx(16u), cat::page_size>(pager);
    cat::verify(wrapper.resize(cat::idx(16u)).has_value());
 
    void* p_a = cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
@@ -103,7 +116,9 @@ $test(resizable_allocator_freelist_reuse_returns_freed_slot) {
 // `bytes_used` must subtract the free-list size from the inner allocator's
 // own bookkeeping, so freeing slots monotonically lowers it.
 $test(resizable_allocator_bytes_used_tracks_freelist) {
-   wrapper_pool_16 wrapper{pager};
+   wrapper_pool_16 wrapper =
+      cat::make_resizable_allocator<
+         cat::pool_allocator<16>, cat::idx(16u), cat::page_size>(pager);
    cat::verify(wrapper.resize(cat::idx(48u)).has_value());
 
    void* p_1 = cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
@@ -123,7 +138,9 @@ $test(resizable_allocator_bytes_used_tracks_freelist) {
 // must therefore at least double, and each subsequent allocation can come
 // from either chunk depending on the wrapper's policy.
 $test(resizable_allocator_chunked_growth_adds_capacity) {
-   wrapper_pool_16 wrapper{pager};
+   wrapper_pool_16 wrapper =
+      cat::make_resizable_allocator<
+         cat::pool_allocator<16>, cat::idx(16u), cat::page_size>(pager);
    cat::verify(wrapper.resize(cat::idx(16u)).has_value());
    cat::idx const capacity_after_one = wrapper.bytes_capacity();
    cat::verify(capacity_after_one > 0u);
@@ -137,11 +154,14 @@ $test(resizable_allocator_chunked_growth_adds_capacity) {
 // allocator. After reset, capacity and used both report zero and the
 // wrapper is ready to grow again.
 $test(resizable_allocator_reset_releases_chunks) {
-   wrapper_pool_16 wrapper{pager};
+   wrapper_pool_16 wrapper =
+      cat::make_resizable_allocator<
+         cat::pool_allocator<16>, cat::idx(16u), cat::page_size>(pager);
    cat::verify(wrapper.resize(cat::idx(16u)).has_value());
    cat::verify(wrapper.resize(cat::idx(16u)).has_value());
-   void* p = cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
-   cat::verify(p != nullptr);
+   void* p_allocation =
+      cat::dyn_allocator_friend::allocate(wrapper, cat::idx(16u));
+   cat::verify(p_allocation != nullptr);
    cat::verify(wrapper.bytes_used() == 16u);
 
    wrapper.reset();
@@ -158,7 +178,9 @@ $test(resizable_allocator_reset_releases_chunks) {
 // allocator's `allocate` returns a bumped pointer, but the free-list reuse
 // is the wrapper's own bookkeeping and still recycles the freed slot.
 $test(resizable_allocator_over_linear_allocator) {
-   wrapper_linear_32 wrapper{pager};
+   wrapper_linear_32 wrapper =
+      cat::make_resizable_allocator<
+         cat::linear_allocator, cat::idx(32u), cat::page_size>(pager);
    cat::verify(wrapper.resize(cat::idx(32u)).has_value());
 
    void* p_1 = cat::dyn_allocator_friend::allocate(wrapper, cat::idx(32u));
@@ -177,10 +199,14 @@ $test(resizable_allocator_over_linear_allocator) {
 // A fresh wrapper over the same backing source has a distinct chunk list, so
 // equivalence must be false.
 $test(resizable_allocator_equality) {
-   wrapper_pool_16 wrapper_a{pager};
+   wrapper_pool_16 wrapper_a =
+      cat::make_resizable_allocator<
+         cat::pool_allocator<16>, cat::idx(16u), cat::page_size>(pager);
    cat::verify(wrapper_a.resize(cat::idx(16u)).has_value());
 
-   wrapper_pool_16 wrapper_b{pager};
+   wrapper_pool_16 wrapper_b =
+      cat::make_resizable_allocator<
+         cat::pool_allocator<16>, cat::idx(16u), cat::page_size>(pager);
    cat::verify(wrapper_b.resize(cat::idx(16u)).has_value());
 
    cat::verify(wrapper_a.is_equivalent(wrapper_a));

@@ -77,10 +77,77 @@ resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    // alignof(Inner)`. That makes `p_raw + sizeof(chunk_header)` already
    // aligned for whatever `Inner`'s storage assumes (e.g. `node_union` in
    // `pool_allocator`).
-   chunk_header* const p_chunk = ::new (static_cast<void*>(p_raw)) chunk_header{
-      nullptr, total_bytes, Inner{uintptr<void>(p_inner_storage), inner_bytes}
+   chunk_header* const p_chunk = new (p_raw) chunk_header{
+      nullptr, total_bytes, Inner{uintptr<void>(p_inner_storage), inner_bytes},
    };
    return p_chunk;
+}
+
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
+[[nodiscard]]
+auto
+resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+   find_chunk(span<byte> allocation) const -> chunk_header* _Nullable {
+   uintptr<void> const allocation_begin = allocation.data();
+   uintptr<void> const allocation_end = allocation_begin + allocation.size();
+
+   for (chunk_header* p_walk = m_p_chunks; p_walk != nullptr;
+        p_walk = p_walk->p_next) {
+      uintptr<void> const chunk_begin =
+         reinterpret_cast<byte*>(p_walk) + sizeof(chunk_header);
+      uintptr<void> const chunk_end =
+         reinterpret_cast<byte*>(p_walk) + p_walk->chunk_bytes;
+      if (allocation_begin >= chunk_begin && allocation_end <= chunk_end) {
+         return p_walk;
+      }
+   }
+
+   return nullptr;
+}
+
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
+[[nodiscard]]
+auto
+resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::grow(
+   span<byte> allocation, idx new_bytes
+) -> maybe<void>
+   requires(detail::inner_has_grow<Inner>)
+{
+   chunk_header* const p_chunk = this->find_chunk(allocation);
+   if (p_chunk == nullptr) {
+      return nullopt;
+   }
+   return p_chunk->inner.grow(allocation, new_bytes);
+}
+
+template <
+   is_allocator Inner, is_allocator Backing, idx node_bytes_param,
+   idx chunk_bytes_param>
+[[nodiscard]]
+auto
+resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
+   requires(
+      detail::inner_has_grow<Inner>
+      || detail::inner_has_grow_feedback<Inner>
+   )
+{
+   chunk_header* const p_chunk = this->find_chunk(allocation);
+   if (p_chunk == nullptr) {
+      return nullopt;
+   }
+   if constexpr (detail::inner_has_grow_feedback<Inner>) {
+      return p_chunk->inner.grow_feedback(allocation, new_bytes);
+   } else {
+      if (p_chunk->inner.grow(allocation, new_bytes).has_value()) {
+         return new_bytes;
+      }
+      return nullopt;
+   }
 }
 
 template <
@@ -90,18 +157,13 @@ template <
 auto
 resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
    allocate(idx /*allocation_bytes*/) -> void* _Nullable {
-   // The wrapper bypasses `meta_alloc`'s unpoison path, so inner allocators
-   // that pre-poison their arena (e.g. `linear_allocator`) would leave the
-   // returned slot user-poisoned. Clear the shadow for the slot we hand out.
-
-   // 1. Reuse a freed slot. Its address is stable across the wrapper's life.
+   // Reuse a freed slot.
    if (m_p_free_head != nullptr) {
       free_node* const p_slot = m_p_free_head;
       m_p_free_head = p_slot->p_next;
       return static_cast<void*>(p_slot);
    }
 
-   // 2. Carve from the current chunk.
    if (m_p_chunks != nullptr) {
       auto* p_attempt = m_p_chunks->inner.allocate(node_bytes);
       if (p_attempt != nullptr) {
@@ -110,8 +172,7 @@ resizable_allocator<Inner, Backing, node_bytes_param, chunk_bytes_param>::
       }
    }
 
-   // 3. Out of room: pull a fresh chunk from `Backing` and carve from it.
-   // Existing allocations stay where they are -- growth only adds a chunk.
+   // When out of room, append more memory from `Backing`.
    if (this->resize(node_bytes).is_empty()) {
       return nullptr;
    }

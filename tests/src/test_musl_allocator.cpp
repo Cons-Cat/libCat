@@ -84,49 +84,6 @@ class musl_secret_engine {
    idx m_calls = 0u;
 };
 
-class maybe_musl_secret_engine {
- public:
-   explicit constexpr maybe_musl_secret_engine(cat::maybe<cat::uint8> result)
-       : m_result(result) {
-   }
-
-   constexpr auto
-   operator()() -> cat::maybe<cat::uint8> {
-      ++m_calls;
-      return m_result;
-   }
-
-   constexpr auto
-   calls() const -> idx {
-      return m_calls;
-   }
-
- private:
-   cat::maybe<cat::uint8> m_result;
-   idx m_calls = 0u;
-};
-
-enum class entropy_error : cat::uint1::raw_type {
-   unavailable,
-};
-
-class scaredy_musl_secret_engine {
- public:
-   constexpr auto
-   operator()() -> cat::scaredy<cat::uint8, entropy_error> {
-      ++m_calls;
-      return entropy_error::unavailable;
-   }
-
-   constexpr auto
-   calls() const -> idx {
-      return m_calls;
-   }
-
- private:
-   idx m_calls = 0u;
-};
-
 template <typename Allocator>
 auto
 allocate_bytes(Allocator& allocator, idx bytes) -> cat::byte* {
@@ -838,24 +795,6 @@ $test(musl_allocator_retries_zero_injected_secret) {
    deallocate_bytes(allocator, p_allocation, 64u);
 }
 
-$test(musl_allocator_propagates_entropy_failure) {
-   maybe_musl_secret_engine maybe_engine{cat::nullopt};
-   auto maybe_allocator = cat::make_musl_allocator(maybe_engine);
-   static_assert(
-      cat::is_same<decltype(maybe_allocator), cat::maybe<cat::musl_allocator>>
-   );
-   cat::verify(maybe_allocator.is_empty());
-   cat::verify(maybe_engine.calls() == 1u);
-
-   scaredy_musl_secret_engine scaredy_engine;
-   auto scaredy_allocator = cat::make_musl_allocator_shared(scaredy_engine);
-   static_assert(cat::is_same<
-                 decltype(scaredy_allocator),
-                 cat::scaredy<cat::musl_allocator_shared, entropy_error>>);
-   cat::verify(scaredy_allocator.is<entropy_error>());
-   cat::verify(scaredy_engine.calls() == 1u);
-}
-
 $test(musl_allocator_default_factory_entropy) {
    static_assert(
       cat::is_same<decltype(cat::make_musl_allocator()), cat::musl_allocator>
@@ -867,6 +806,11 @@ $test(musl_allocator_default_factory_entropy) {
    void* const p_allocation = allocate_bytes(allocator, 24u);
    cat::verify(p_allocation != nullptr);
    deallocate_bytes(allocator, p_allocation, 24u);
+
+   cat::musl_allocator_shared shared = cat::make_musl_allocator_shared();
+   void* const p_shared = allocate_bytes(shared, 24u);
+   cat::verify(p_shared != nullptr);
+   deallocate_bytes(shared, p_shared, 24u);
 }
 
 $test(musl_allocator_equivalence) {

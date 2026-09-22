@@ -5742,12 +5742,9 @@ class allocator_interface {
       return nullopt;
    }
 
-   // Try to grow or shrink `allocation` (its existing pointer and byte size)
-   // to `new_bytes` without relocating it. This is address-stable: on success
-   // the allocation's pointer is unchanged. The result is engaged only when
-   // the allocator can complete the request in place. Allocators that cannot
-   // satisfy this hook return `nullopt` and the caller is expected to fall
-   // back to an `allocate` + `copy` + `deallocate` sequence.
+   // Try to grow or shrink `allocation` to `new_bytes` without relocating it.
+   // On success the allocation's pointer is unchanged. Allocators that
+   // cannot satisfy this hook unconditionally return `nullopt`.
    [[nodiscard]]
    constexpr auto
    alloc_grow(

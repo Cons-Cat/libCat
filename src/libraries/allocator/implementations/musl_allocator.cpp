@@ -9,6 +9,7 @@
 #include <cat/limits>
 #include <cat/linux>
 #include <cat/memory>
+#include <cat/mutex_native>
 #include <cat/musl_allocator>
 
 namespace cat::detail {
@@ -73,56 +74,6 @@ musl_subtract_counter(musl_counter_storage<is_shared>& counter, uword amount) {
       counter -= amount;
    }
 }
-
-template <bool is_shared>
-struct musl_alloc_lock;
-
-template <>
-struct musl_alloc_lock<false> {
-   [[gnu::always_inline]]
-   void
-   lock() {
-   }
-
-   [[gnu::always_inline]]
-   void
-   unlock() {
-   }
-};
-
-template <>
-struct musl_alloc_lock<true> {
-   nix::futex word{};
-
-   void
-   lock() {
-      uint4 expected = 0u;
-      if (
-         word.m_value.compare_exchange_weak(
-            expected, 1u, memory_order::acquire, memory_order::relaxed
-         )
-      ) {
-         return;
-      }
-
-      for (;;) {
-         uint4 const previous = word.m_value.acq_rel().exchange(2u);
-         if (previous == 0u) {
-            return;
-         }
-         auto _ = word.wait(2u);
-      }
-   }
-
-   void
-   unlock() {
-      uint4 const previous = word.m_value.release().exchange(0u);
-      verify(previous != 0u);
-      if (previous == 2u) {
-         auto _ = word.wake();
-      }
-   }
-};
 
 template <bool is_shared>
 struct meta;
@@ -194,30 +145,34 @@ struct musl_map_info {
 
 template <bool is_shared>
 struct musl_context {
-   musl_alloc_lock<is_shared> mutex;
-   uint8 secret;
-   uint4 mmap_counter;
-   meta<is_shared>* _Nullable p_free_meta_head;
-   meta<is_shared>* _Nullable p_available_meta;
-   uword available_meta_count;
-   uword available_meta_area_count;
-   uword meta_alloc_shift;
-   meta_area<is_shared>* _Nullable p_meta_area_head;
-   meta_area<is_shared>* _Nullable p_meta_area_tail;
-   meta_area<is_shared>* _Nullable p_meta_mapping_head;
-   byte* _Nullable p_available_meta_areas;
-   byte* _Nullable p_current_meta_mapping;
-   uword current_meta_mapping_bytes;
-   array<meta<is_shared>* _Nullable, 48u> active;
-   array<uword, 48u> usage_by_class;
-   array<unsigned char, 32u> unmap_sequence;
-   array<unsigned char, 32u> bounces;
-   unsigned char sequence;
-   musl_counter_storage<is_shared> live_bytes;
-   musl_counter_storage<is_shared> mapped_bytes;
+   [[no_unique_address]]
+   conditional<is_shared, mutex_native, monostate_type> m_mutex;
+   uint8 m_secret;
+   uint4 m_mmap_counter;
+   meta<is_shared>* _Nullable m_p_free_meta_head;
+   meta<is_shared>* _Nullable m_p_available_meta;
+   uword m_available_meta_count;
+   uword m_available_meta_area_count;
+   uword m_meta_alloc_shift;
+   meta_area<is_shared>* _Nullable m_p_meta_area_head;
+   meta_area<is_shared>* _Nullable m_p_meta_area_tail;
+   meta_area<is_shared>* _Nullable m_p_meta_mapping_head;
+   byte* _Nullable m_p_available_meta_areas;
+   byte* _Nullable m_p_current_meta_mapping;
+   uword m_current_meta_mapping_bytes;
+   array<meta<is_shared>* _Nullable, 48u> m_active;
+   array<uword, 48u> m_usage_by_class;
+   array<uint1, 32u> m_unmap_sequence;
+   array<uint1, 32u> m_bounces;
+   unsigned char m_sequence;
+   musl_counter_storage<is_shared> m_live_bytes;
+   musl_counter_storage<is_shared> m_mapped_bytes;
 
    void
    free_meta(meta<is_shared>* p_metadata);
+
+   void
+   deallocate_pages(byte const* p_memory, uword bytes);
 
    auto
    allocate_meta() -> meta<is_shared>* _Nullable;
@@ -244,7 +199,7 @@ struct musl_context {
    try_available(meta<is_shared>* _Nullable* p_metadata) -> uint4;
 
    auto
-   allocate_slot(uint4 size_class, uword request) -> int4;
+   allocate_slot(uint4 size_class, uword request) -> maybe_non_negative<int4>;
 
    auto
    allocate_group(uint4 size_class, uword request)
@@ -306,6 +261,9 @@ struct musl_context {
    release_mappings();
 };
 
+// The `m_mutex` member should compile away when `is_shared` is false.
+static_assert(__builtin_offsetof(musl_context<false>, m_secret) == 0u);
+
 namespace {
 
 auto
@@ -320,11 +278,6 @@ map_pages(uword bytes, nix::memory_protection_flags protections)
       return nullptr;
    }
    return mapped.value();
-}
-
-void
-unmap_pages(byte const* p_memory, uword bytes) {
-   nix::sys_munmap(p_memory, bytes).assert();
 }
 
 auto
@@ -347,22 +300,24 @@ make_context(uint8 secret = 0u) -> musl_context<is_shared>* _Nullable {
    }
 
    auto* const p_context = new (p_mapping) musl_context<is_shared>{};
-   p_context->secret = secret;
-   while (p_context->secret == 0u) {
+   p_context->m_secret = secret;
+   while (p_context->m_secret == 0u) {
+      auto* const p_secret =
+         __builtin_bit_cast(uint1* _Nonnull, &p_context->m_secret);
       uword filled = 0u;
-      while (filled != sizeof(p_context->secret)) {
+      while (filled != sizeof(p_context->m_secret)) {
          auto const result = nix::sys_getrandom(
-            reinterpret_cast<unsigned char*>(&p_context->secret) + filled,
-            sizeof(p_context->secret) - filled
+            p_secret + filled.raw,
+            sizeof(p_context->m_secret) - filled
          );
          if (result.is_empty() || result.value() == 0u) {
-            unmap_pages(p_mapping, musl_page_bytes);
+            p_context->deallocate_pages(p_mapping, musl_page_bytes);
             return nullptr;
          }
          filled += result.value();
       }
    }
-   musl_add_counter<is_shared>(p_context->mapped_bytes, musl_page_bytes);
+   musl_add_counter<is_shared>(p_context->m_mapped_bytes, musl_page_bytes);
    return p_context;
 }
 
@@ -430,9 +385,15 @@ clear_meta(meta<is_shared>* p_metadata) {
 
 template <bool is_shared>
 void
+musl_context<is_shared>::deallocate_pages(byte const* p_memory, uword bytes) {
+   nix::sys_munmap({p_memory, idx(bytes)}).verify();
+}
+
+template <bool is_shared>
+void
 musl_context<is_shared>::free_meta(meta<is_shared>* p_metadata) {
    clear_meta(p_metadata);
-   queue(&p_free_meta_head, p_metadata);
+   queue(&m_p_free_meta_head, p_metadata);
 }
 
 template <bool is_shared>
@@ -440,15 +401,15 @@ auto
 musl_context<is_shared>::allocate_meta() -> meta<is_shared>* _Nullable {
    auto& context = *this;
    if (
-      meta<is_shared>* const p_reused = dequeue_head(&context.p_free_meta_head)
+      meta<is_shared>* const p_reused = dequeue_head(&context.m_p_free_meta_head)
    ) {
       return p_reused;
    }
 
-   if (context.available_meta_count == 0u) {
-      if (context.available_meta_area_count == 0u) {
-         verify(context.meta_alloc_shift < 52u);
-         uword const mapping_pages = uword{2u} << context.meta_alloc_shift;
+   if (context.m_available_meta_count == 0u) {
+      if (context.m_available_meta_area_count == 0u) {
+         verify(context.m_meta_alloc_shift < 52u);
+         uword const mapping_pages = uword{2u} << context.m_meta_alloc_shift;
          verify(mapping_pages <= limits<uword>::max() / musl_page_bytes);
          uword const mapping_bytes = mapping_pages * musl_page_bytes;
          byte* const p_mapping =
@@ -463,19 +424,19 @@ musl_context<is_shared>::allocate_meta() -> meta<is_shared>* _Nullable {
             nix::memory_protection_flags::read_write
          );
          if (unprotected.is_empty()) {
-            unmap_pages(p_mapping, mapping_bytes);
+            context.deallocate_pages(p_mapping, mapping_bytes);
             return nullptr;
          }
 
-         musl_add_counter<is_shared>(context.mapped_bytes, mapping_bytes);
-         context.p_available_meta_areas = p_first_area;
-         context.available_meta_area_count = mapping_pages - 1u;
-         context.p_current_meta_mapping = p_mapping;
-         context.current_meta_mapping_bytes = mapping_bytes;
-         ++context.meta_alloc_shift;
+         musl_add_counter<is_shared>(context.m_mapped_bytes, mapping_bytes);
+         context.m_p_available_meta_areas = p_first_area;
+         context.m_available_meta_area_count = mapping_pages - 1u;
+         context.m_p_current_meta_mapping = p_mapping;
+         context.m_current_meta_mapping_bytes = mapping_bytes;
+         ++context.m_meta_alloc_shift;
       }
 
-      byte* const p_area_memory = context.p_available_meta_areas;
+      byte* const p_area_memory = context.m_p_available_meta_areas;
       verify(p_area_memory != nullptr);
       auto* const p_area = bit_cast<meta_area<is_shared>*>(p_area_memory);
 
@@ -487,33 +448,33 @@ musl_context<is_shared>::allocate_meta() -> meta<is_shared>* _Nullable {
          return nullptr;
       }
 
-      if (p_area_memory == context.p_current_meta_mapping + musl_page_bytes) {
-         p_area->p_mapping_base = context.p_current_meta_mapping;
-         p_area->mapping_bytes = context.current_meta_mapping_bytes;
-         p_area->p_mapping_next = context.p_meta_mapping_head;
-         context.p_meta_mapping_head = p_area;
+      if (p_area_memory == context.m_p_current_meta_mapping + musl_page_bytes) {
+         p_area->p_mapping_base = context.m_p_current_meta_mapping;
+         p_area->mapping_bytes = context.m_current_meta_mapping_bytes;
+         p_area->p_mapping_next = context.m_p_meta_mapping_head;
+         context.m_p_meta_mapping_head = p_area;
       }
 
-      --context.available_meta_area_count;
-      context.p_available_meta_areas += musl_page_bytes;
+      --context.m_available_meta_area_count;
+      context.m_p_available_meta_areas += musl_page_bytes;
 
-      if (context.p_meta_area_tail != nullptr) {
-         context.p_meta_area_tail->p_next = p_area;
+      if (context.m_p_meta_area_tail != nullptr) {
+         context.m_p_meta_area_tail->p_next = p_area;
       } else {
-         context.p_meta_area_head = p_area;
+         context.m_p_meta_area_head = p_area;
       }
-      context.p_meta_area_tail = p_area;
-      p_area->check = context.secret;
+      context.m_p_meta_area_tail = p_area;
+      p_area->check = context.m_secret;
       p_area->nslots = static_cast<uint4>(
          (musl_page_bytes - sizeof(meta_area<is_shared>))
          / sizeof(meta<is_shared>)
       );
-      context.available_meta_count = p_area->nslots;
-      context.p_available_meta = p_area->slots;
+      context.m_available_meta_count = p_area->nslots;
+      context.m_p_available_meta = p_area->slots;
    }
 
-   --context.available_meta_count;
-   meta<is_shared>* const p_result = context.p_available_meta++;
+   --context.m_available_meta_count;
+   meta<is_shared>* const p_result = context.m_p_available_meta++;
    new (p_result) meta<is_shared>{};
    return p_result;
 }
@@ -606,7 +567,7 @@ musl_context<is_shared>::get_meta(byte const* p_allocation)
    auto const* const p_area = bit_cast<meta_area<is_shared> const*>(
       bit_cast<uword::raw_type>(p_metadata) & -musl_page_bytes.raw
    );
-   verify(p_area->check == context.secret);
+   verify(p_area->check == context.m_secret);
 
    if (p_metadata->size_class < 48u) {
       verify(offset >= uword{size_classes[p_metadata->size_class]} * index);
@@ -777,13 +738,13 @@ size_to_class(uword bytes) -> uint4 {
 template <bool is_shared>
 void
 musl_context<is_shared>::step_sequence() {
-   if (sequence == 255u) {
+   if (m_sequence == 255u) {
       for (uint4 index = 0u; index < 32u; ++index) {
-         unmap_sequence[index] = 0u;
+         m_unmap_sequence[index] = 0u;
       }
-      sequence = 1u;
+      m_sequence = 1u;
    } else {
-      ++sequence;
+      ++m_sequence;
    }
 }
 
@@ -791,7 +752,7 @@ template <bool is_shared>
 void
 musl_context<is_shared>::record_sequence(uint4 size_class) {
    if (size_class - 7u < 32u) {
-      unmap_sequence[size_class - 7u] = sequence;
+      m_unmap_sequence[size_class - 7u] = m_sequence;
    }
 }
 
@@ -799,12 +760,12 @@ template <bool is_shared>
 void
 musl_context<is_shared>::account_bounce(uint4 size_class) {
    if (size_class - 7u < 32u) {
-      uint4 const previous_sequence = unmap_sequence[size_class - 7u];
+      uint4 const previous_sequence = m_unmap_sequence[size_class - 7u];
       if (
          previous_sequence != 0u
-         && static_cast<unsigned char>(sequence - previous_sequence) < 10u
+         && (m_sequence - previous_sequence) < 10u
       ) {
-         unsigned char& bounce = bounces[size_class - 7u];
+         uint1& bounce = m_bounces[size_class - 7u];
          if (bounce + 1u < 100u) {
             ++bounce;
          } else {
@@ -817,15 +778,15 @@ musl_context<is_shared>::account_bounce(uint4 size_class) {
 template <bool is_shared>
 void
 musl_context<is_shared>::decay_bounces(uint4 size_class) {
-   if (size_class - 7u < 32u && bounces[size_class - 7u] != 0u) {
-      --bounces[size_class - 7u];
+   if (size_class - 7u < 32u && m_bounces[size_class - 7u] != 0u) {
+      --m_bounces[size_class - 7u];
    }
 }
 
 template <bool is_shared>
 auto
 musl_context<is_shared>::is_bouncing(uint4 size_class) const -> bool {
-   return size_class - 7u < 32u && bounces[size_class - 7u] >= 100u;
+   return size_class - 7u < 32u && m_bounces[size_class - 7u] >= 100u;
 }
 
 template <bool is_shared>
@@ -902,7 +863,7 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
    if (p_metadata == nullptr) {
       return nullptr;
    }
-   uword usage = context.usage_by_class[size_class];
+   uword usage = context.m_usage_by_class[size_class];
    uint4 active_idx;
    byte* p_memory;
 
@@ -932,7 +893,7 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
       step_sequence();
 
       if ((size_class & 1u) == 0u && size_class < 32u) {
-         usage += context.usage_by_class[size_class + 1u];
+         usage += context.m_usage_by_class[size_class + 1u];
       }
 
       if (4u * count > usage && !no_small) {
@@ -976,9 +937,9 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
          free_meta(p_metadata);
          return nullptr;
       }
-      musl_add_counter<is_shared>(context.mapped_bytes, needed);
+      musl_add_counter<is_shared>(context.m_mapped_bytes, needed);
       p_metadata->map_length = needed.raw / musl_page_bytes.raw;
-      ++context.mmap_counter;
+      ++context.m_mmap_counter;
       int4 calculated =
          static_cast<int4>((musl_page_bytes - musl_unit) / slot_bytes) - 1;
       if (calculated > static_cast<int4>(count - 1u)) {
@@ -991,18 +952,18 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
    } else {
       uint4 const parent_class =
          size_to_class(musl_unit + count * slot_bytes - musl_in_band);
-      int4 const parent_index = allocate_slot(
+      auto const parent_index = allocate_slot(
          parent_class, musl_unit + count * slot_bytes - musl_in_band
       );
-      if (parent_index < 0) {
+      if (parent_index.is_empty()) {
          free_meta(p_metadata);
          return nullptr;
       }
-      meta<is_shared>* const p_parent = context.active[parent_class];
+      meta<is_shared>* const p_parent = context.m_active[parent_class];
       p_memory = enframe(
-         p_parent, static_cast<uint4>(parent_index),
+         p_parent, static_cast<uint4>(parent_index.value()),
          musl_unit * size_classes[parent_class] - musl_in_band,
-         context.mmap_counter, nullptr
+         context.m_mmap_counter, nullptr
       );
       p_metadata->map_length = 0u;
       unsigned char* const p_encoded = encoded_bytes(p_memory);
@@ -1014,7 +975,7 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
       active_idx = count - 1u;
    }
 
-   context.usage_by_class[size_class] += count;
+   context.m_usage_by_class[size_class] += count;
    musl_store_mask<is_shared>(
       p_metadata->available_mask, (uint4{2u} << active_idx) - 1u
    );
@@ -1035,21 +996,21 @@ musl_context<is_shared>::allocate_group(uint4 size_class, uword request)
 template <bool is_shared>
 auto
 musl_context<is_shared>::allocate_slot(uint4 size_class, uword request)
-   -> int4 {
-   uint4 const first = try_available(&active[size_class]);
+   -> maybe_non_negative<int4> {
+   uint4 const first = try_available(&m_active[size_class]);
    if (first != 0u) {
       return __builtin_ctz(first.raw);
    }
 
    meta<is_shared>* const p_group = allocate_group(size_class, request);
    if (p_group == nullptr) {
-      return -1;
+      return nullopt;
    }
    musl_store_mask<is_shared>(
       p_group->available_mask,
       musl_load_mask<is_shared>(p_group->available_mask) - 1u
    );
-   queue(&active[size_class], p_group);
+   queue(&m_active[size_class], p_group);
    return 0;
 }
 
@@ -1079,15 +1040,19 @@ musl_context<is_shared>::allocate_memory_unaccounted(
          return nullptr;
       }
 
-      context.mutex.lock();
+      if constexpr (is_shared) {
+         context.m_mutex.lock();
+      }
       step_sequence();
       p_metadata = allocate_meta();
       if (p_metadata == nullptr) {
-         context.mutex.unlock();
-         unmap_pages(p_mapping, needed);
+         if constexpr (is_shared) {
+            context.m_mutex.unlock();
+         }
+         context.deallocate_pages(p_mapping, needed);
          return nullptr;
       }
-      musl_add_counter<is_shared>(context.mapped_bytes, needed);
+      musl_add_counter<is_shared>(context.m_mapped_bytes, needed);
       p_metadata->p_memory = bit_cast<group<is_shared>*>(p_mapping);
       p_metadata->p_memory->p_meta = p_metadata;
       p_metadata->last_idx = 0u;
@@ -1096,22 +1061,26 @@ musl_context<is_shared>::allocate_memory_unaccounted(
       p_metadata->map_length = needed.raw / musl_page_bytes.raw;
       musl_store_mask<is_shared>(p_metadata->available_mask, 0u);
       musl_store_mask<is_shared>(p_metadata->freed_mask, 0u);
-      ++context.mmap_counter;
-      counter = context.mmap_counter;
+      ++context.m_mmap_counter;
+      counter = context.m_mmap_counter;
       index = 0u;
-      context.mutex.unlock();
+      if constexpr (is_shared) {
+         context.m_mutex.unlock();
+      }
    } else {
-      context.mutex.lock();
+      if constexpr (is_shared) {
+         context.m_mutex.lock();
+      }
       uint4 size_class = size_to_class(bytes);
-      p_metadata = context.active[size_class];
+      p_metadata = context.m_active[size_class];
 
       if (
          p_metadata == nullptr && size_class >= 4u && size_class < 32u
          && size_class != 6u && (size_class & 1u) == 0u
-         && context.usage_by_class[size_class] == 0u
+         && context.m_usage_by_class[size_class] == 0u
       ) {
-         uword usage = context.usage_by_class[size_class | 1u];
-         meta<is_shared>* const p_coarse = context.active[size_class | 1u];
+         uword usage = context.m_usage_by_class[size_class | 1u];
+         meta<is_shared>* const p_coarse = context.m_active[size_class | 1u];
          if (
             p_coarse == nullptr
             || (
@@ -1126,15 +1095,19 @@ musl_context<is_shared>::allocate_memory_unaccounted(
          }
       }
 
-      int4 const slot = allocate_slot(size_class, bytes);
-      if (slot < 0) {
-         context.mutex.unlock();
+      auto const slot = allocate_slot(size_class, bytes);
+      if (slot.is_empty()) {
+         if constexpr (is_shared) {
+            context.m_mutex.unlock();
+         }
          return nullptr;
       }
-      p_metadata = context.active[size_class];
-      index = static_cast<uint4>(slot);
-      counter = context.mmap_counter;
-      context.mutex.unlock();
+      p_metadata = context.m_active[size_class];
+      index = static_cast<uint4>(slot.value());
+      counter = context.m_mmap_counter;
+      if constexpr (is_shared) {
+         context.m_mutex.unlock();
+      }
    }
 
    byte* const p_result =
@@ -1154,7 +1127,7 @@ musl_context<is_shared>::allocate_memory(
       if (p_feedback_bytes != nullptr) {
          allocation_bytes = *p_feedback_bytes;
       }
-      musl_add_counter<is_shared>(live_bytes, allocation_bytes);
+      musl_add_counter<is_shared>(m_live_bytes, allocation_bytes);
    }
    return p_result;
 }
@@ -1194,7 +1167,7 @@ musl_context<is_shared>::okay_to_free(meta<is_shared>* p_metadata) -> bool {
       return true;
    }
    uword const count = p_metadata->last_idx + 1u;
-   uword const usage = usage_by_class[size_class];
+   uword const usage = m_usage_by_class[size_class];
    return 9u * count <= usage && count < 20u;
 }
 
@@ -1206,7 +1179,7 @@ musl_context<is_shared>::free_group(meta<is_shared>* p_metadata)
    musl_map_info<is_shared> result;
    uint4 const size_class = static_cast<uint4>(p_metadata->size_class);
    if (size_class < 48u) {
-      context.usage_by_class[size_class] -= p_metadata->last_idx + 1u;
+      context.m_usage_by_class[size_class] -= p_metadata->last_idx + 1u;
    }
    if (p_metadata->map_length != 0u) {
       step_sequence();
@@ -1238,10 +1211,10 @@ musl_context<is_shared>::nontrivial_free(
    if (mask + self == all_slots_mask(*p_metadata) && okay_to_free(p_metadata)) {
       if (p_metadata->p_next != nullptr) {
          verify(size_class < 48u);
-         bool const activate_new = context.active[size_class] == p_metadata;
-         dequeue(&context.active[size_class], p_metadata);
-         if (activate_new && context.active[size_class] != nullptr) {
-            activate_group(context.active[size_class]);
+         bool const activate_new = context.m_active[size_class] == p_metadata;
+         dequeue(&context.m_active[size_class], p_metadata);
+         if (activate_new && context.m_active[size_class] != nullptr) {
+            activate_group(context.m_active[size_class]);
          }
       }
       return free_group(p_metadata);
@@ -1249,8 +1222,8 @@ musl_context<is_shared>::nontrivial_free(
 
    if (mask == 0u) {
       verify(size_class < 48u);
-      if (context.active[size_class] != p_metadata) {
-         queue(&context.active[size_class], p_metadata);
+      if (context.m_active[size_class] != p_metadata) {
+         queue(&context.m_active[size_class], p_metadata);
       }
    }
    if constexpr (is_shared) {
@@ -1268,8 +1241,8 @@ template <bool is_shared>
 void
 musl_context<is_shared>::finish_unmap(musl_map_info<is_shared> mapping) {
    if (mapping.bytes != 0u) {
-      musl_subtract_counter<is_shared>(mapped_bytes, mapping.bytes);
-      unmap_pages(mapping.p_base, mapping.bytes);
+      musl_subtract_counter<is_shared>(m_mapped_bytes, mapping.bytes);
+      deallocate_pages(mapping.p_base, mapping.bytes);
    }
 }
 
@@ -1279,7 +1252,7 @@ musl_context<is_shared>::deallocate_locked(
    byte* p_allocation, meta<is_shared>* p_metadata, uint4 index, uword old_bytes
 ) -> musl_map_info<is_shared> {
    musl_map_info<is_shared> const mapping = nontrivial_free(p_metadata, index);
-   musl_subtract_counter<is_shared>(live_bytes, old_bytes);
+   musl_subtract_counter<is_shared>(m_live_bytes, old_bytes);
    poison_memory_region(p_allocation, old_bytes);
    return mapping;
 }
@@ -1312,7 +1285,7 @@ musl_context<is_shared>::deallocate_fast(
       } else {
          musl_store_mask<is_shared>(p_metadata->freed_mask, freed | self);
       }
-      musl_subtract_counter<is_shared>(live_bytes, old_bytes);
+      musl_subtract_counter<is_shared>(m_live_bytes, old_bytes);
       return true;
    }
 }
@@ -1462,7 +1435,7 @@ musl_context<is_shared>::aligned_allocate(
       *p_feedback_bytes = allocation_bytes;
    }
    set_size(p_allocation, p_end, allocation_bytes);
-   musl_add_counter<is_shared>(context.live_bytes, allocation_bytes);
+   musl_add_counter<is_shared>(context.m_live_bytes, allocation_bytes);
    unpoison_memory_region(p_allocation, allocation_bytes);
    return p_allocation;
 }
@@ -1493,14 +1466,14 @@ musl_context<is_shared>::resize_in_place(
             : feedback_size(p_allocation, p_end, new_bytes);
       if (allocation_bytes > old_bytes) {
          musl_add_counter<is_shared>(
-            context.live_bytes, allocation_bytes - old_bytes
+            context.m_live_bytes, allocation_bytes - old_bytes
          );
          unpoison_memory_region(
             p_allocation + old_bytes, allocation_bytes - old_bytes
          );
       } else {
          musl_subtract_counter<is_shared>(
-            context.live_bytes, old_bytes - allocation_bytes
+            context.m_live_bytes, old_bytes - allocation_bytes
          );
          poison_memory_region(
             p_allocation + allocation_bytes, old_bytes - allocation_bytes
@@ -1537,11 +1510,11 @@ musl_context<is_shared>::resize_in_place(
          p_new_mapping = remapped.value();
          if (needed > old_mapping_bytes) {
             musl_add_counter<is_shared>(
-               context.mapped_bytes, needed - old_mapping_bytes
+               context.m_mapped_bytes, needed - old_mapping_bytes
             );
          } else {
             musl_subtract_counter<is_shared>(
-               context.mapped_bytes, old_mapping_bytes - needed
+               context.m_mapped_bytes, old_mapping_bytes - needed
             );
          }
       }
@@ -1559,11 +1532,11 @@ musl_context<is_shared>::resize_in_place(
       set_size(p_allocation, p_new_end, allocation_bytes);
       if (allocation_bytes > old_bytes) {
          musl_add_counter<is_shared>(
-            context.live_bytes, allocation_bytes - old_bytes
+            context.m_live_bytes, allocation_bytes - old_bytes
          );
       } else {
          musl_subtract_counter<is_shared>(
-            context.live_bytes, old_bytes - allocation_bytes
+            context.m_live_bytes, old_bytes - allocation_bytes
          );
       }
       unpoison_memory_region(p_allocation, allocation_bytes);
@@ -1579,7 +1552,7 @@ template <bool is_shared>
 void
 musl_context<is_shared>::release_mappings() {
    auto& context = *this;
-   for (meta_area<is_shared>* p_area = context.p_meta_area_head;
+   for (meta_area<is_shared>* p_area = context.m_p_meta_area_head;
         p_area != nullptr; p_area = p_area->p_next) {
       for (uint4 index = 0u; index < p_area->nslots; ++index) {
          meta<is_shared>* const p_metadata = p_area->slots + index;
@@ -1587,17 +1560,17 @@ musl_context<is_shared>::release_mappings() {
             uword const bytes = uword{p_metadata->map_length} * musl_page_bytes;
             byte* const p_mapping = bit_cast<byte*>(p_metadata->p_memory);
             p_metadata->p_memory = nullptr;
-            unmap_pages(p_mapping, bytes);
+            context.deallocate_pages(p_mapping, bytes);
          }
       }
    }
 
-   meta_area<is_shared>* p_mapping = context.p_meta_mapping_head;
+   meta_area<is_shared>* p_mapping = context.m_p_meta_mapping_head;
    while (p_mapping != nullptr) {
       meta_area<is_shared>* const p_next = p_mapping->p_mapping_next;
       byte* const p_base = p_mapping->p_mapping_base;
       uword const bytes = p_mapping->mapping_bytes;
-      unmap_pages(p_base, bytes);
+      context.deallocate_pages(p_base, bytes);
       p_mapping = p_next;
    }
 }
@@ -1609,7 +1582,7 @@ namespace cat {
 template <bool is_shared>
 auto
 basic_musl_allocator<is_shared>::ensure_context() -> context* _Nullable {
-   context* p_context = m_p_context.load(memory_order::acquire);
+   context* p_context = m_p_context.acquire();
    if (p_context != nullptr) {
       return p_context;
    }
@@ -1621,7 +1594,7 @@ basic_musl_allocator<is_shared>::ensure_context() -> context* _Nullable {
    if (!m_p_context.compare_exchange_strong(
           p_expected, p_candidate, memory_order::release, memory_order::acquire
        )) {
-      detail::unmap_pages(
+      p_candidate->deallocate_pages(
          bit_cast<byte*>(p_candidate), detail::musl_page_bytes
       );
       return p_expected;
@@ -1671,9 +1644,13 @@ basic_musl_allocator<is_shared>::reset() {
    if (p_context == nullptr) {
       return;
    }
-   p_context->mutex.lock();
+   if constexpr (is_shared) {
+      p_context->m_mutex.lock();
+   }
    p_context->release_mappings();
-   detail::unmap_pages(bit_cast<byte*>(p_context), detail::musl_page_bytes);
+   p_context->deallocate_pages(
+      bit_cast<byte*>(p_context), detail::musl_page_bytes
+   );
 }
 
 template <bool is_shared>
@@ -1774,7 +1751,7 @@ basic_musl_allocator<is_shared>::allocate_zeroed_feedback(idx requested_bytes)
    -> maybe_sized_allocation<void*> {
    maybe_sized_allocation<void*> result = allocate_feedback(requested_bytes);
    if (result.has_value()) {
-      context* const p_context = m_p_context.load(memory_order::acquire);
+      context* const p_context = m_p_context.acquire();
       verify(p_context != nullptr);
       auto* const p_result = bit_cast<byte*>(result.value().first());
       if (!p_context->is_all_zero(p_result)) {
@@ -1813,7 +1790,7 @@ basic_musl_allocator<is_shared>::aligned_allocate_zeroed_feedback(
    maybe_sized_allocation<void*> result =
       aligned_allocate_feedback(alignment, requested_bytes);
    if (result.has_value()) {
-      context* const p_context = m_p_context.load(memory_order::acquire);
+      context* const p_context = m_p_context.acquire();
       verify(p_context != nullptr);
       auto* const p_result = bit_cast<byte*>(result.value().first());
       if (!p_context->is_all_zero(p_result)) {
@@ -1831,7 +1808,7 @@ void
 basic_musl_allocator<is_shared>::deallocate(
    void const* p_storage, idx allocation_bytes
 ) {
-   context* const p_context = m_p_context.load(memory_order::acquire);
+   context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
    auto* const p_allocation =
       const_cast<byte*>(bit_cast<byte const*>(p_storage));
@@ -1844,10 +1821,14 @@ basic_musl_allocator<is_shared>::deallocate(
    if (p_context->deallocate_fast(p_allocation, p_metadata, index, old_bytes)) {
       return;
    }
-   p_context->mutex.lock();
+   if constexpr (is_shared) {
+      p_context->m_mutex.lock();
+   }
    detail::musl_map_info<is_shared> const mapping =
       p_context->deallocate_locked(p_allocation, p_metadata, index, old_bytes);
-   p_context->mutex.unlock();
+   if constexpr (is_shared) {
+      p_context->m_mutex.unlock();
+   }
    p_context->finish_unmap(mapping);
 }
 
@@ -1855,7 +1836,7 @@ template <bool is_shared>
 auto
 basic_musl_allocator<is_shared>::grow(span<byte> allocation, idx new_bytes)
    -> maybe<void> {
-   context* const p_context = m_p_context.load(memory_order::acquire);
+   context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
    byte* p_allocation = allocation.data();
    bool const resized = p_context->resize_in_place(
@@ -1870,7 +1851,7 @@ auto
 basic_musl_allocator<is_shared>::grow_feedback(
    span<byte> allocation, idx new_bytes
 ) -> maybe_non_zero<idx> {
-   context* const p_context = m_p_context.load(memory_order::acquire);
+   context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
    byte* p_allocation = allocation.data();
    uword usable_bytes;
@@ -1889,7 +1870,7 @@ auto
 basic_musl_allocator<is_shared>::reallocate_memory(
    span<byte> allocation, idx new_bytes, uword* _Nullable p_feedback_bytes
 ) -> void* _Nullable {
-   context* const p_context = m_p_context.load(memory_order::acquire);
+   context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
    byte* p_allocation = allocation.data();
    uword const settled_bytes = new_bytes == 0u ? 1u : new_bytes;
@@ -1947,28 +1928,28 @@ basic_musl_allocator<is_shared>::reallocate_feedback(
 template <bool is_shared>
 auto
 basic_musl_allocator<is_shared>::bytes_used() const -> idx {
-   context const* const p_context = m_p_context.load(memory_order::acquire);
+   context const* const p_context = m_p_context.acquire();
    if (p_context == nullptr) {
       return 0u;
    }
    if constexpr (is_shared) {
-      return idx(p_context->live_bytes.load(memory_order::acquire));
+      return idx(p_context->m_live_bytes.load(memory_order::acquire));
    } else {
-      return idx(p_context->live_bytes);
+      return idx(p_context->m_live_bytes);
    }
 }
 
 template <bool is_shared>
 auto
 basic_musl_allocator<is_shared>::bytes_capacity() const -> idx {
-   context const* const p_context = m_p_context.load(memory_order::acquire);
+   context const* const p_context = m_p_context.acquire();
    if (p_context == nullptr) {
       return 0u;
    }
    if constexpr (is_shared) {
-      return idx(p_context->mapped_bytes.load(memory_order::acquire));
+      return idx(p_context->m_mapped_bytes.load(memory_order::acquire));
    } else {
-      return idx(p_context->mapped_bytes);
+      return idx(p_context->m_mapped_bytes);
    }
 }
 
@@ -1980,9 +1961,8 @@ basic_musl_allocator<is_shared>::is_equivalent(
    if (this == &other) {
       return true;
    }
-   context* const p_context = m_p_context.load(memory_order::acquire);
-   return p_context != nullptr
-          && p_context == other.m_p_context.load(memory_order::acquire);
+   context* const p_context = m_p_context.acquire();
+   return p_context != nullptr && p_context == other.m_p_context.acquire();
 }
 
 template class basic_musl_allocator<false>;
