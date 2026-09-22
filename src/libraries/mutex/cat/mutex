@@ -151,7 +151,7 @@ class mutex {
    [[nodiscard]]
    auto
    try_lock_for(Duration timeout) -> bool {
-      clock_steady::time_point const now = clock_steady::now().verify();
+      clock_steady::time_point const now = clock_steady::now().assert();
       return try_lock_until(now + clock_steady::duration(timeout));
    }
 
@@ -267,19 +267,19 @@ class mutex {
          }
 
          uword const key = __builtin_bit_cast(uword, this);
-         detail::mutex_parking_lot::park_result result;
-         if (!timeout.has_value()) {
-            result = detail::mutex_parking_lot::park(
-               key,
-               [this] {
-                  return m_state.load(memory_order::relaxed)
-                         == (locked_bit | parked_bit);
-               },
-               [] {
-               }
-            );
-         } else {
-            result = detail::mutex_parking_lot::park_until(
+         detail::mutex_parking_lot::park_result result = [&] {
+            if (!timeout.has_value()) {
+               return detail::mutex_parking_lot::park(
+                  key,
+                  [this] {
+                     return m_state.load(memory_order::relaxed)
+                            == (locked_bit | parked_bit);
+                  },
+                  [] {
+                  }
+               );
+            }
+            return detail::mutex_parking_lot::park_until(
                key,
                [this] {
                   return m_state.load(memory_order::relaxed)
@@ -294,7 +294,7 @@ class mutex {
                },
                timeout.value()
             );
-         }
+         }();
          if (
             result.m_status == detail::mutex_parking_lot::park_status::unparked
             && result.m_token

@@ -43,7 +43,7 @@ class mutex_spin {
    [[nodiscard]]
    auto
    try_lock_for(Duration timeout) -> bool {
-      clock_steady::time_point const now = clock_steady::now().verify();
+      clock_steady::time_point const now = clock_steady::now().assert();
       return try_lock_until(now + clock_steady::duration(timeout));
    }
 
@@ -55,7 +55,7 @@ class mutex_spin {
       uint1 count = 1;
       while (!try_lock()) {
          typename Clock::duration const now =
-            Clock::now().verify().time_since_epoch();
+            Clock::now().assert().time_since_epoch();
          if (now >= deadline) {
             return false;
          }

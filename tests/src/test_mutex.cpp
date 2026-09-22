@@ -1,6 +1,7 @@
 #include <cat/atomic>
 #include <cat/chrono>
 #include <cat/mutex>
+#include <cat/mutex_native>
 #include <cat/mutex_spin>
 #include <cat/page_allocator>
 #include <cat/thread>
@@ -35,10 +36,12 @@ struct mutex_without_timed_waits {
 };
 
 static_assert(cat::is_mutex<cat::mutex>);
+static_assert(cat::is_mutex<cat::mutex_native>);
 static_assert(cat::is_mutex<cat::mutex_spin>);
 static_assert(!cat::is_mutex<not_mutex>);
 static_assert(!cat::is_mutex<mutex_without_timed_waits>);
 static_assert(cat::is_mutex_fair<cat::mutex>);
+static_assert(!cat::is_mutex_fair<cat::mutex_native>);
 static_assert(!cat::is_mutex_fair<cat::mutex_spin>);
 static_assert(cat::is_mutex<cat::mutex_fair<cat::mutex>>);
 static_assert(cat::is_mutex<cat::mutex_fair<>>);
@@ -244,6 +247,75 @@ $test(mutex_shared_counter) {
 
 $test(mutex_spin_shared_counter) {
    verify_counter<cat::mutex_spin>();
+}
+
+$test(mutex_native_lock_try_unlock) {
+   cat::mutex_native mutex;
+   mutex.lock();
+   cat::verify(!mutex.try_lock());
+   mutex.unlock();
+   cat::verify(mutex.try_lock());
+   mutex.unlock();
+}
+
+$test(mutex_native_shared_counter) {
+   verify_counter<cat::mutex_native>();
+}
+
+$test(mutex_native_try_lock_for_waits) {
+   cat::mutex_native mutex;
+   cat::atomic<bool> entered;
+   cat::atomic<bool> acquired;
+   mutex.lock();
+
+   cat::thread worker;
+   worker
+      .spawn(
+         pager, 1_umi,
+         [&] {
+            entered.release() = true;
+            cat::verify(mutex.try_lock_for(1 * cat::units::second));
+            acquired.release() = true;
+            mutex.unlock();
+         }
+      )
+      .verify();
+   while (!entered.acquire()) {
+      cat::machine_pause();
+   }
+   for (idx iteration; iteration < 1'000; ++iteration) {
+      cat::this_thread::yield();
+   }
+   cat::verify(!acquired.acquire());
+   mutex.unlock();
+   worker.join().verify();
+   worker.free(pager);
+   cat::verify(acquired.acquire());
+}
+
+$test(mutex_native_try_lock_until_times_out) {
+   cat::mutex_native mutex;
+   mutex.lock();
+
+   cat::atomic<bool> finished;
+   cat::thread worker;
+   worker
+      .spawn(
+         pager, 1_umi,
+         [&] {
+            cat::clock_steady::time_point const deadline =
+               cat::clock_steady::now().verify() + 10 * cat::units::millisecond;
+            cat::verify(!mutex.try_lock_until(deadline));
+            finished.release() = true;
+         }
+      )
+      .verify();
+   while (!finished.acquire()) {
+      cat::machine_pause();
+   }
+   worker.join().verify();
+   worker.free(pager);
+   mutex.unlock();
 }
 
 $test(mutex_concurrent_try_lock_single_winner) {

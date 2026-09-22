@@ -137,7 +137,7 @@ struct parker {
       typename Clock::time_point const deadline =
          typename Clock::time_point(timeout);
       while (m_futex.m_value.acquire() != 0) {
-         typename Clock::time_point const now = Clock::now().verify();
+         typename Clock::time_point const now = Clock::now().assert();
          if (now >= deadline) {
             return false;
          }
@@ -383,7 +383,7 @@ park(uword key, Validate&& validate, BeforeSleep&& before_sleep)
    bucket* const p_bucket = lock_bucket(key);
    if (!$fwd(validate)()) {
       p_bucket->m_mutex.unlock();
-      return {
+      return park_result{
          .m_status = park_status::invalid,
          .m_token = unpark_token::normal,
       };
@@ -421,7 +421,7 @@ park_until(
    bucket* const p_bucket = lock_bucket(key);
    if (!$fwd(validate)()) {
       p_bucket->m_mutex.unlock();
-      return {
+      return park_result{
          .m_status = park_status::invalid,
          .m_token = unpark_token::normal,
       };
@@ -446,7 +446,10 @@ park_until(
    // it.
    $fwd(before_sleep)();
    if (data.m_thread_parker.park_until(timeout)) {
-      return {.m_status = park_status::unparked, .m_token = data.m_unpark};
+      return park_result{
+         .m_status = park_status::unparked,
+         .m_token = data.m_unpark,
+      };
    }
 
    bucket* const p_timeout_bucket = lock_bucket(key);
@@ -461,7 +464,10 @@ park_until(
 
    if (p_current == nullptr) {
       p_timeout_bucket->m_mutex.unlock();
-      return {.m_status = park_status::unparked, .m_token = data.m_unpark};
+      return park_result{
+         .m_status = park_status::unparked,
+         .m_token = data.m_unpark,
+      };
    }
 
    *p_link = data.m_p_next_in_queue;
@@ -481,7 +487,10 @@ park_until(
 
    $fwd(timed_out)(!have_more_threads);
    p_timeout_bucket->m_mutex.unlock();
-   return {.m_status = park_status::timed_out, .m_token = unpark_token::normal};
+   return park_result{
+      .m_status = park_status::timed_out,
+      .m_token = unpark_token::normal,
+   };
 }
 
 template <typename Callback>

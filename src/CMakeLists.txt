@@ -584,6 +584,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/stacktrace/cat/stacktrace
   ${CATLIB}/demangle/cat/demangle
   ${CATLIB}/mutex/cat/mutex
+  ${CATLIB}/mutex/cat/mutex_native
   ${CATLIB}/mutex/cat/mutex_spin
   ${CATLIB}/mutex/cat/detail/parking_lot.hpp
   ${CATLIB}/mutex/cat/detail/word_lock.hpp

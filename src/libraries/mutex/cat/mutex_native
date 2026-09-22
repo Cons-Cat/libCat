@@ -1,0 +1,186 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/atomic>
+#include <cat/chrono>
+#include <cat/linux>
+#include <cat/mutex>
+#include <cat/thread>
+
+namespace cat {
+
+class mutex_native {
+ public:
+   constexpr mutex_native() = default;
+
+   mutex_native(mutex_native const&) = delete;
+   mutex_native(mutex_native&&) = delete;
+
+   auto
+   operator=(mutex_native const&) -> mutex_native& = delete;
+   auto
+   operator=(mutex_native&&) -> mutex_native& = delete;
+
+   void
+   lock() {
+      uint4 expected = unlocked;
+      if (!m_futex.m_value.compare_exchange_strong(
+             expected, locked, memory_order::acquire, memory_order::relaxed
+          )) {
+         lock_contended();
+      }
+   }
+
+   [[nodiscard]]
+   auto
+   try_lock() -> bool {
+      uint4 expected = unlocked;
+      return m_futex.m_value.compare_exchange_strong(
+         expected, locked, memory_order::acquire, memory_order::relaxed
+      );
+   }
+
+   template <is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_lock_for(Duration timeout) -> bool {
+      clock_steady::time_point const now = clock_steady::now().assert();
+      return try_lock_until(now + clock_steady::duration(timeout));
+   }
+
+   template <is_clock Clock, is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_lock_until(time_point<Clock, Duration> timeout) -> bool {
+      if (try_lock()) {
+         return true;
+      }
+      return lock_contended_until(timeout);
+   }
+
+   void
+   unlock() {
+      if (m_futex.m_value.release().exchange(unlocked) == contended) {
+         auto _ = m_futex.wake();
+      }
+   }
+
+ private:
+   static constexpr uint4 unlocked = 0u;
+   static constexpr uint4 locked = 1u;
+   static constexpr uint4 contended = 2u;
+
+   [[nodiscard]]
+   auto
+   spin() const -> uint4 {
+      int4 spins = 100;
+      for (;;) {
+         uint4 const state = m_futex.m_value.relaxed();
+         if (state != locked || spins == 0) {
+            return state;
+         }
+         machine_pause();
+         spins = spins - 1;
+      }
+   }
+
+   [[gnu::cold, gnu::noinline]]
+   void
+   lock_contended() {
+      uint4 state = spin();
+      if (state == unlocked) {
+         if (
+            m_futex.m_value.compare_exchange_strong(
+               state, locked, memory_order::acquire, memory_order::relaxed
+            )
+         ) {
+            return;
+         }
+      }
+
+      for (;;) {
+         if (
+            state != contended
+            && m_futex.m_value.acquire().exchange(contended) == unlocked
+         ) {
+            return;
+         }
+
+         futex_wait();
+         state = spin();
+      }
+   }
+
+   template <is_clock Clock, is_duration Duration>
+   [[nodiscard, gnu::cold, gnu::noinline]]
+   auto
+   lock_contended_until(time_point<Clock, Duration> timeout) -> bool {
+      typename Clock::time_point const deadline =
+         typename Clock::time_point(timeout);
+      uint4 state = spin();
+      if (state == unlocked) {
+         if (
+            m_futex.m_value.compare_exchange_strong(
+               state, locked, memory_order::acquire, memory_order::relaxed
+            )
+         ) {
+            return true;
+         }
+      }
+
+      for (;;) {
+         typename Clock::time_point const before_park = Clock::now().assert();
+         if (before_park >= deadline) {
+            return false;
+         }
+
+         if (
+            state != contended
+            && m_futex.m_value.acquire().exchange(contended) == unlocked
+         ) {
+            return true;
+         }
+
+         nix::futex_timespec const remaining =
+            nix::make_timespec(deadline - before_park);
+         if (!futex_wait(&remaining)) {
+            return false;
+         }
+         state = spin();
+      }
+   }
+
+   void
+   futex_wait() {
+      scaredy result = m_futex.wait(contended);
+      if (result.has_value()) {
+         return;
+      }
+      nix::linux_error const error = result.error();
+      assert(error == nix::linux_error::again || error == nix::linux_error::intr);
+   }
+
+   [[nodiscard]]
+   auto
+   futex_wait(nix::futex_timespec const* _Nonnull p_timeout) -> bool {
+      scaredy result = m_futex.wait(contended, p_timeout);
+      if (result.has_value()) {
+         return true;
+      }
+
+      nix::linux_error const error = result.error();
+      if (error == nix::linux_error::timedout) {
+         return false;
+      }
+      assert(error == nix::linux_error::again || error == nix::linux_error::intr);
+      return true;
+   }
+
+   nix::futex m_futex{};
+};
+
+static_assert(sizeof(mutex_native) == sizeof(uint4));
+static_assert(alignof(mutex_native) == alignof(uint4));
+
+}  // namespace cat
