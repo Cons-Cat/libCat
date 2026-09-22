@@ -298,6 +298,15 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/demangle/implementations/demangle.cpp
 )
 
+# DWARF parsing is currently extremely sensitive to optimizations.
+# Optimizing it during debug builds tremendously accelerates stacktraces.
+set_source_files_properties(
+  ${CATLIB}/stacktrace/implementations/dwarf_line.cpp
+  TARGET_DIRECTORY cat-impl
+  PROPERTIES
+    COMPILE_OPTIONS "$<$<CONFIG:Debug>:-O2>"
+    SKIP_PRECOMPILE_HEADERS ON)
+
 # We compile demangling separately because it's a cold code path that
 # bloats massively under speed optimizations.
 set_source_files_properties(

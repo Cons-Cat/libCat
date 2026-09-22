@@ -21,8 +21,7 @@ struct frame_capture {
    idx outer_line = 0u;
 };
 
-// These have C linkage so that their symbols are stable across build modes
-// and need no demangling.
+// These have C linkage so that their symbols need no demangling.
 extern "C" [[gnu::noinline, clang::disable_tail_calls]]
 void
 cat_test_capture_one_frame(cat::allocator_dyn allocator, frame_capture& out) {
@@ -626,13 +625,9 @@ $test(stacktrace_entry_and_container) {
    }
 }
 
-$test(stacktrace_iteration) {
-   static_assert(cat::is_iterable<cat::stacktrace>);
-   static_assert(cat::is_random_access_collection<cat::stacktrace>);
-
+$test(stacktrace_stepanov_iteration) {
    cat::stacktrace trace = cat::stacktrace::current(g_tests_alloc).verify();
    cat::verify(!trace.is_empty());
-   cat::verify(cat::read_at(trace, 0u) == trace[0u]);
 
    cat::stacktrace const& const_trace = trace;
    static_assert(
@@ -656,28 +651,12 @@ $test(stacktrace_iteration) {
    cat::verify(*cfirst == *first);
    cat::verify(*(clast - 1) == *(last - 1));
 
-   idx index = 0u;
-   for (cat::stacktrace_entry const& frame : const_trace) {
-      cat::verify(frame == const_trace[index]);
-      ++index;
-   }
-   cat::verify(index == const_trace.size());
-
-   index = 0u;
-   for (cat::stacktrace_entry const& frame : cat::as_const(trace)) {
-      cat::verify(frame == trace[index]);
-      ++index;
-   }
-   cat::verify(index == trace.size());
-
    auto rfirst = const_trace.rbegin();
    cat::verify(*rfirst == const_trace.back());
    auto crfirst = const_trace.crbegin();
    cat::verify(*crfirst == *rfirst);
 
    cat::span<cat::stacktrace_entry const> frames(const_trace);
-   cat::verify(frames.size() == const_trace.size());
-
    idx reverse_index = const_trace.size();
    auto reversed = frames | cat::reverse();
    auto const reverse_result = cat::iterate(reversed).run_while(
@@ -705,4 +684,31 @@ $test(stacktrace_iteration) {
       cat::verify(result == cat::iteration_result::complete);
       cat::verify(taken == 2u);
    }
+}
+
+$test(stacktrace_iterable) {
+   static_assert(cat::is_iterable<cat::stacktrace>);
+   static_assert(cat::is_random_access_collection<cat::stacktrace>);
+
+   cat::stacktrace trace = cat::stacktrace::current(g_tests_alloc).verify();
+   cat::verify(!trace.is_empty());
+   cat::verify(cat::read_at(trace, 0u) == trace[0u]);
+
+   cat::stacktrace const& const_trace = trace;
+   idx index = 0u;
+   for (cat::stacktrace_entry const& frame : const_trace) {
+      cat::verify(frame == const_trace[index]);
+      ++index;
+   }
+   cat::verify(index == const_trace.size());
+
+   index = 0u;
+   for (cat::stacktrace_entry const& frame : cat::as_const(trace)) {
+      cat::verify(frame == trace[index]);
+      ++index;
+   }
+   cat::verify(index == trace.size());
+
+   cat::span<cat::stacktrace_entry const> frames(const_trace);
+   cat::verify(frames.size() == const_trace.size());
 }

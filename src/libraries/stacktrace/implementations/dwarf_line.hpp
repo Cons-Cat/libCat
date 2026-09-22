@@ -1,8 +1,10 @@
 #pragma once
 
+#include <cat/allocator>
 #include <cat/maybe>
 #include <cat/span>
 #include <cat/string>
+#include <cat/vec>
 
 namespace cat::detail {
 
@@ -11,9 +13,30 @@ struct source_location {
    uint8 line = 0u;
 };
 
+struct dwarf_line_sequence {
+   uint8 begin = 0u;
+   uint8 end = 0u;
+   idx unit = 0u;
+   idx program = 0u;
+};
+
+struct dwarf_line_context {
+   span<byte const> line;
+   span<byte const> line_strings;
+   span<byte const> strings;
+   vec_big<dwarf_line_sequence> sequences;
+   bool has_sequence_index = false;
+};
+
 [[nodiscard]]
 auto
-resolve_dwarf_line(span<byte const> elf, uint8 address) -> source_location;
+make_dwarf_line_context(span<byte const> elf, allocator_dyn allocator)
+   -> dwarf_line_context;
+
+[[nodiscard]]
+auto
+resolve_dwarf_line(dwarf_line_context const& context, uint8 address)
+   -> source_location;
 
 [[nodiscard]]
 auto

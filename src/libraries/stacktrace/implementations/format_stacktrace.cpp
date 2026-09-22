@@ -9,9 +9,21 @@
 
 #include "dwarf_line.hpp"
 
+namespace cat::detail {
+struct symbol_index_entry {
+   str_view name;
+   uint8 value = 0u;
+   uint8 size = 0u;
+};
+}  // namespace cat::detail
+
 struct cat::detail::symbolizer {
    cat::span<cat::byte const> bytes;
    cat::file_path path;
+   cat::detail::dwarf_line_context dwarf;
+   cat::vec_big<cat::detail::symbol_index_entry> symbols;
+   cat::vec_big<cat::detail::symbol_index_entry> dynamic_symbols;
+   bool has_symbol_index = false;
    // One mapping-wide slide: runtime `__ehdr_start` minus `p_vaddr` of the
    // `PT_LOAD` at file offset 0. `ET_EXEC` is 0, since preferred VAs are
    // runtime.
@@ -89,6 +101,12 @@ struct resolved_frame {
    cat::detail::source_location source;
    found_symbol symbol;
 };
+
+[[nodiscard]]
+auto
+initialize_symbol_index(
+   cat::detail::symbolizer& symbols, cat::allocator_dyn allocator
+) -> bool;
 
 [[nodiscard]]
 auto
@@ -196,6 +214,9 @@ load_executable(cat::detail::symbolizer& symbols, cat::allocator_dyn allocator)
       symbols.bytes = cat::span<cat::byte const>();
       return false;
    }
+   symbols.dwarf =
+      cat::detail::make_dwarf_line_context(symbols.bytes, allocator);
+   symbols.has_symbol_index = initialize_symbol_index(symbols, allocator);
 
    return true;
 }
@@ -306,11 +327,189 @@ lookup_in_table(
    };
 }
 
+void
+sift_symbol_heap(
+   cat::vec_big<cat::detail::symbol_index_entry>& index, cat::idx root,
+   cat::idx end
+) {
+   while (root * 2u + 1u < end) {
+      cat::idx child = root * 2u + 1u;
+      if (
+         child + 1u < end
+         && (index[child].value < index[child + 1u].value
+             || (index[child].value == index[child + 1u].value
+                 && index[child].size < index[child + 1u].size))
+      ) {
+         ++child;
+      }
+      if (
+         index[child].value < index[root].value
+         || (index[child].value == index[root].value
+             && index[child].size <= index[root].size)
+      ) {
+         return;
+      }
+      cat::swap(index[root], index[child]);
+      root = child;
+   }
+}
+
+void
+sort_symbol_index(cat::vec_big<cat::detail::symbol_index_entry>& index) {
+   for (cat::idx parent = index.size() / 2u; parent > 0u;) {
+      parent.raw -= 1u;
+      sift_symbol_heap(index, parent, index.size());
+   }
+   for (cat::idx end = index.size(); end > 1u;) {
+      end.raw -= 1u;
+      cat::swap(index[0u], index[end]);
+      sift_symbol_heap(index, 0u, end);
+   }
+}
+
+[[nodiscard]]
+auto
+append_symbol_table(
+   cat::detail::symbolizer const& symbols, elf_section_header const& table,
+   cat::vec_big<cat::detail::symbol_index_entry>& index,
+   cat::allocator_dyn allocator
+) -> bool {
+   elf_header const& header = *object_at<elf_header>(symbols.bytes, 0u);
+   if (
+      table.entry_size != sizeof(elf_symbol)
+      || table.link >= header.section_header_count
+      || !contains(symbols.bytes, table.offset, table.size)
+   ) {
+      return true;
+   }
+   cat::uint8 const strings_offset =
+      header.section_header_offset
+      + cat::uint8(table.link) * sizeof(elf_section_header);
+   elf_section_header const* const p_strings_header =
+      object_at<elf_section_header>(symbols.bytes, strings_offset);
+   if (
+      p_strings_header == nullptr
+      || !contains(
+         symbols.bytes, p_strings_header->offset, p_strings_header->size
+      )
+   ) {
+      return true;
+   }
+   auto const* const p_symbols = __builtin_bit_cast(
+      elf_symbol const*, symbols.bytes.data() + table.offset
+   );
+   auto const* const p_strings = __builtin_bit_cast(
+      char const*, symbols.bytes.data() + p_strings_header->offset
+   );
+   cat::idx const count = cat::idx(table.size) / sizeof(elf_symbol);
+   for (cat::idx symbol_index = 0u; symbol_index < count; ++symbol_index) {
+      elf_symbol const& symbol = p_symbols[symbol_index];
+      if (
+         (symbol.info & 0xfu) != 2u || symbol.section_index == 0u
+         || symbol.value == 0u || symbol.name >= p_strings_header->size
+      ) {
+         continue;
+      }
+      cat::str_view const name = bounded_string(
+         p_strings + symbol.name, cat::idx(p_strings_header->size - symbol.name)
+      );
+      if (
+         name.is_empty()
+         || index
+               .push_back(
+                  allocator,
+                  {.name = name, .value = symbol.value, .size = symbol.size}
+               )
+               .is_empty()
+      ) {
+         if (!name.is_empty()) {
+            return false;
+         }
+      }
+   }
+   return true;
+}
+
+auto
+initialize_symbol_index(
+   cat::detail::symbolizer& symbols, cat::allocator_dyn allocator
+) -> bool {
+   elf_header const& header = *object_at<elf_header>(symbols.bytes, 0u);
+   cat::uint8 const sections_size =
+      cat::uint8(header.section_header_count) * sizeof(elf_section_header);
+   if (
+      header.section_header_count == 0u
+      || !contains(symbols.bytes, header.section_header_offset, sections_size)
+   ) {
+      return true;
+   }
+   auto const* const p_sections = __builtin_bit_cast(
+      elf_section_header const*,
+      symbols.bytes.data() + header.section_header_offset
+   );
+   for (cat::idx section = 0u; section < header.section_header_count;
+        ++section) {
+      elf_section_header const& table = p_sections[section];
+      cat::vec_big<cat::detail::symbol_index_entry>* const p_index =
+         table.type == 2u    ? &symbols.symbols
+         : table.type == 11u ? &symbols.dynamic_symbols
+                             : nullptr;
+      if (
+         p_index != nullptr
+         && !append_symbol_table(symbols, table, *p_index, allocator)
+      ) {
+         symbols.symbols.free(allocator);
+         symbols.dynamic_symbols.free(allocator);
+         return false;
+      }
+   }
+   sort_symbol_index(symbols.symbols);
+   sort_symbol_index(symbols.dynamic_symbols);
+   return true;
+}
+
+[[nodiscard]]
+auto
+lookup_in_index(
+   cat::span<cat::detail::symbol_index_entry const> index,
+   cat::uint8 relative_address
+) -> found_symbol {
+   cat::idx lower = 0u;
+   cat::idx upper = index.size();
+   while (lower < upper) {
+      cat::idx const middle = lower + cat::idx((upper.raw - lower.raw) / 2u);
+      if (index[middle].value <= relative_address) {
+         lower = middle + 1u;
+      } else {
+         upper = middle;
+      }
+   }
+   if (lower == 0u) {
+      return {};
+   }
+   cat::detail::symbol_index_entry const& symbol =
+      index[cat::idx(lower.raw - 1u)];
+   if (
+      (symbol.size == 0u && symbol.value != relative_address)
+      || (symbol.size != 0u && relative_address - symbol.value >= symbol.size)
+   ) {
+      return {};
+   }
+   return {.name = symbol.name, .relative_address = symbol.value};
+}
+
 [[nodiscard]]
 auto
 lookup_symbol(
    cat::detail::symbolizer const& symbols, cat::uint8 relative_address
 ) -> found_symbol {
+   if (symbols.has_symbol_index) {
+      found_symbol const symbol =
+         lookup_in_index(symbols.symbols, relative_address);
+      return !symbol.name.is_empty()
+                ? symbol
+                : lookup_in_index(symbols.dynamic_symbols, relative_address);
+   }
    elf_header const& header = *object_at<elf_header>(symbols.bytes, 0u);
    cat::uint8 const sections_size =
       cat::uint8(header.section_header_count) * sizeof(elf_section_header);
@@ -354,7 +553,7 @@ resolve(cat::detail::symbolizer const& symbols, cat::stacktrace_entry entry)
    cat::uint8 const relative_address = address - symbols.load_bias - 1u;
    return {
       .source =
-         cat::detail::resolve_dwarf_line(symbols.bytes, relative_address),
+         cat::detail::resolve_dwarf_line(symbols.dwarf, relative_address),
       .symbol = lookup_symbol(symbols, relative_address),
    };
 }
@@ -699,6 +898,9 @@ unload_symbolizer(symbolizer* _Nullable p_symbolizer) {
 
    allocator_page allocator;
    auto _ = nix::sys_munmap(p_symbolizer->bytes);
+   p_symbolizer->dwarf.sequences.free(allocator);
+   p_symbolizer->symbols.free(allocator);
+   p_symbolizer->dynamic_symbols.free(allocator);
    p_symbolizer->path.free(allocator);
    allocator.free(p_symbolizer);
 }

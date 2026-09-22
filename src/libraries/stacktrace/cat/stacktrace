@@ -264,10 +264,14 @@ struct formatter<Frames, char> : debug_formatter<char> {
          return result;
       }
 
-      detail::symbolizer* _Nullable const p_symbolizer =
-         detail::load_symbolizer();
+      detail::symbolizer* _Nullable p_symbolizer = nullptr;
+      bool loaded_symbolizer = false;
       idx number = 0u;
       iterate(value).run_while([&](stacktrace_entry const& entry) -> bool {
+         if (!loaded_symbolizer) {
+            p_symbolizer = detail::load_symbolizer();
+            loaded_symbolizer = true;
+         }
          ++number;
          result = detail::format_stacktrace_frame(
             p_symbolizer, number, entry, context, this->debug

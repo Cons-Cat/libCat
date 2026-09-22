@@ -2,7 +2,6 @@
 
 #include <cat/array>
 #include <cat/bit>
-#include <cat/elf>
 #include <cat/span>
 #include <cat/string>
 
@@ -12,11 +11,40 @@
 namespace cat {
 namespace {
 
-struct dwarf_sections {
-   cat::span<cat::byte const> line;
-   cat::span<cat::byte const> line_strings;
-   cat::span<cat::byte const> strings;
+struct elf_header {
+   cat::array<cat::uint1, 16u> identification;
+   cat::uint2 type;
+   cat::uint2 machine;
+   cat::uint4 version;
+   cat::uint8 entry;
+   cat::uint8 program_header_offset;
+   cat::uint8 section_header_offset;
+   cat::uint4 flags;
+   cat::uint2 header_size;
+   cat::uint2 program_header_size;
+   cat::uint2 program_header_count;
+   cat::uint2 section_header_size;
+   cat::uint2 section_header_count;
+   cat::uint2 section_name_index;
 };
+
+struct elf_section_header {
+   cat::uint4 name;
+   cat::uint4 type;
+   cat::uint8 flags;
+   cat::uint8 address;
+   cat::uint8 offset;
+   cat::uint8 size;
+   cat::uint4 link;
+   cat::uint4 info;
+   cat::uint8 alignment;
+   cat::uint8 entry_size;
+};
+
+static_assert(sizeof(elf_header) == 64);
+static_assert(sizeof(elf_section_header) == 64);
+
+using dwarf_sections = cat::detail::dwarf_line_context;
 
 struct line_header {
    cat::uint2 version = 0u;
@@ -43,6 +71,13 @@ struct line_row {
    cat::uint8 line = 1u;
    cat::uint8 file = 1u;
    cat::uint8 operation = 0u;
+};
+
+struct sequence_recorder {
+   cat::vec_big<cat::detail::dwarf_line_sequence>& sequences;
+   cat::allocator_dyn allocator;
+   cat::idx unit;
+   bool failed = false;
 };
 
 struct reader {
@@ -725,12 +760,17 @@ matches_row(
 [[nodiscard]]
 auto
 run_program(
-   dwarf_sections const& sections, line_header const& header, cat::uint8 address
+   dwarf_sections const& sections, line_header const& header,
+   cat::uint8 address, cat::idx program,
+   sequence_recorder* _Nullable p_recorder = nullptr
 ) -> cat::detail::source_location {
-   reader input(sections.line, header.program, header.unit_end);
+   reader input(sections.line, program, header.unit_end);
    line_row row;
    line_row previous;
    bool previous_valid = false;
+   cat::idx sequence_program = program;
+   cat::uint8 sequence_begin = 0u;
+   bool has_sequence_begin = false;
    while (input.position < input.limit) {
       cat::uint1 opcode = 0u;
       if (!input.read_u1(opcode)) {
@@ -850,17 +890,42 @@ run_program(
          emit = true;
       }
       if (emit) {
-         cat::detail::source_location const found = matches_row(
-            sections, header, previous, row, address, previous_valid
-         );
-         if (found.line != 0u) {
-            return found;
+         if (p_recorder == nullptr) {
+            cat::detail::source_location const found = matches_row(
+               sections, header, previous, row, address, previous_valid
+            );
+            if (found.line != 0u) {
+               return found;
+            }
+         } else if (!has_sequence_begin && !end_sequence) {
+            sequence_begin = row.address;
+            has_sequence_begin = true;
          }
          if (end_sequence) {
+            if (
+               p_recorder != nullptr && has_sequence_begin
+               && row.address > sequence_begin
+               && p_recorder->sequences
+                     .push_back(
+                        p_recorder->allocator,
+                        {
+                           .begin = sequence_begin,
+                           .end = row.address,
+                           .unit = p_recorder->unit,
+                           .program = sequence_program,
+                        }
+                     )
+                     .is_empty()
+            ) {
+               p_recorder->failed = true;
+               return {};
+            }
             row = {};
             row.line = 1u;
             row.file = 1u;
             previous_valid = false;
+            sequence_program = input.position;
+            has_sequence_begin = false;
          } else {
             previous = row;
             previous_valid = true;
@@ -868,6 +933,84 @@ run_program(
       }
    }
    return {};
+}
+
+[[nodiscard]]
+auto
+resolve_unit(
+   dwarf_sections const& sections, cat::idx offset, cat::uint8 address,
+   cat::idx program, cat::idx& next
+) -> cat::detail::source_location {
+   line_header header;
+   if (!parse_header(sections, offset, header, next)) {
+      return {};
+   }
+   return run_program(sections, header, address, program);
+}
+
+void
+sift_sequence_heap(
+   cat::vec_big<cat::detail::dwarf_line_sequence>& sequences, cat::idx root,
+   cat::idx end
+) {
+   while (root * 2u + 1u < end) {
+      cat::idx child = root * 2u + 1u;
+      if (
+         child + 1u < end
+         && sequences[child].begin < sequences[child + 1u].begin
+      ) {
+         ++child;
+      }
+      if (sequences[child].begin <= sequences[root].begin) {
+         return;
+      }
+      cat::swap(sequences[root], sequences[child]);
+      root = child;
+   }
+}
+
+void
+sort_sequences(cat::vec_big<cat::detail::dwarf_line_sequence>& sequences) {
+   for (cat::idx parent = sequences.size() / 2u; parent > 0u;) {
+      parent.raw -= 1u;
+      sift_sequence_heap(sequences, parent, sequences.size());
+   }
+   for (cat::idx end = sequences.size(); end > 1u;) {
+      end.raw -= 1u;
+      cat::swap(sequences[0u], sequences[end]);
+      sift_sequence_heap(sequences, 0u, end);
+   }
+}
+
+auto
+build_sequence_index(dwarf_sections& sections, cat::allocator_dyn allocator)
+   -> bool {
+   for (cat::idx offset = 0u; offset < sections.line.size();) {
+      cat::idx next = sections.line.size();
+      line_header header;
+      if (!parse_header(sections, offset, header, next)) {
+         if (next <= offset) {
+            break;
+         }
+         offset = next;
+         continue;
+      }
+      sequence_recorder recorder{
+         .sequences = sections.sequences,
+         .allocator = allocator,
+         .unit = offset,
+      };
+      auto _ = run_program(
+         sections, header, cat::uint8::max(), header.program, &recorder
+      );
+      if (recorder.failed) {
+         sections.sequences.free(allocator);
+         return false;
+      }
+      offset = next;
+   }
+   sort_sequences(sections.sequences);
+   return true;
 }
 
 }  // namespace
@@ -884,23 +1027,59 @@ cat::detail::decode_dwarf_form_size(
 }
 
 auto
-cat::detail::resolve_dwarf_line(span<byte const> elf, uint8 address)
-   -> source_location {
-   dwarf_sections const sections = find_sections(elf);
-   if (sections.line.is_empty()) {
+cat::detail::make_dwarf_line_context(
+   span<byte const> elf, allocator_dyn allocator
+) -> dwarf_line_context {
+   dwarf_line_context result = find_sections(elf);
+   result.has_sequence_index = build_sequence_index(result, allocator);
+   return result;
+}
+
+auto
+cat::detail::resolve_dwarf_line(
+   dwarf_line_context const& context, uint8 address
+) -> source_location {
+   if (context.line.is_empty()) {
       return {};
    }
-   for (idx offset = 0u; offset < sections.line.size();) {
+
+   if (context.has_sequence_index) {
+      idx lower = 0u;
+      idx upper = context.sequences.size();
+      while (lower < upper) {
+         idx const middle = lower + idx((upper.raw - lower.raw) / 2u);
+         if (context.sequences[middle].begin <= address) {
+            lower = middle + 1u;
+         } else {
+            upper = middle;
+         }
+      }
+      if (lower == 0u) {
+         return {};
+      }
+      dwarf_line_sequence const& sequence =
+         context.sequences[idx(lower.raw - 1u)];
+      if (address >= sequence.end) {
+         return {};
+      }
+      idx next = context.line.size();
+      return resolve_unit(
+         context, sequence.unit, address, sequence.program, next
+      );
+   }
+
+   for (idx offset = 0u; offset < context.line.size();) {
+      idx next = context.line.size();
       line_header header;
-      idx next = sections.line.size();
-      if (!parse_header(sections, offset, header, next)) {
+      if (!parse_header(context, offset, header, next)) {
          if (next <= offset) {
             return {};
          }
          offset = next;
          continue;
       }
-      source_location const result = run_program(sections, header, address);
+      source_location const result =
+         run_program(context, header, address, header.program);
       if (result.line != 0u) {
          return result;
       }
