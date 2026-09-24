@@ -127,6 +127,21 @@ $test(maybe_basic_value) {
    cat::verify(moo.value_or(100) == 100);
 }
 
+// `ualign` uses zero as its `maybe` niche.
+$test(maybe_ualign_niche) {
+   static_assert(sizeof(cat::maybe<cat::ualign>) == sizeof(cat::ualign));
+
+   cat::uword raw = 0u;
+   cat::maybe<cat::ualign> align;
+   __builtin_memcpy(&align, &raw, sizeof(raw));
+   cat::verify(align.is_empty());
+
+   raw = 0x1000u;
+   __builtin_memcpy(&align, &raw, sizeof(raw));
+   cat::verify(align.has_value());
+   cat::verify(align.value() == cat::ualign(0x1000u));
+}
+
 $test(maybe_converting_value_construction) {
    static_assert(cat::is_constructible<cat::maybe<cat::idx>, cat::int8>);
    static_assert(!cat::is_convertible<cat::int8, cat::maybe<cat::idx>>);

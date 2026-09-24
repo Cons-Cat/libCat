@@ -4119,6 +4119,18 @@ struct default_compact_trait<basic_idx<overflow_policy>>
             return __builtin_bit_cast(iword, limits<__SIZE_TYPE__>::max());
          }>> {};
 
+// Zero is never a valid alignment, so it is available as a `maybe` niche value.
+template <typename Storage>
+struct default_compact_trait<basic_ualign<Storage>>
+    : identity_trait<compact<
+         basic_ualign<Storage>,
+         [](basic_ualign<Storage> const& value) constexpr -> bool {
+            return value.raw != 0u;
+         },
+         [] constexpr -> basic_ualign<Storage> {
+            return basic_ualign<Storage>(detail::unchecked_ualign{}, 0u);
+         }>> {};
+
 template <overflow_policies overflow_policy>
 constexpr auto
 basic_idx<overflow_policy>::undef() & -> overflow_reference<
