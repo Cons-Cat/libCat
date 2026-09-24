@@ -33,12 +33,16 @@ LLVM_PACKAGE_NAMES = (
     f"libclang1-{LLVM_MAJOR}",
     # This package supplies sanitizer runtimes.
     f"libclang-rt-{LLVM_MAJOR}-dev",
+    f"libc++-{LLVM_MAJOR}-dev",
+    f"libc++abi-{LLVM_MAJOR}-dev",
+    "libc++1",
+    "libc++abi1",
     f"libllvm{LLVM_MAJOR}",
     f"bolt-{LLVM_MAJOR}",
 )
 DEBIAN_BASE_URL = "https://deb.debian.org/debian"
 DEBIAN_PACKAGES_INDEX_URL = f"{DEBIAN_BASE_URL}/dists/unstable/main/binary-amd64/Packages.gz"
-PACKAGE_SET_REVISION = "8"
+PACKAGE_SET_REVISION = "9"
 
 DEBIAN_PACKAGE_NAMES = (
     "gcc-16-base",
@@ -110,14 +114,29 @@ RUNTIME_LIBRARIES = (
 RUNTIME_LIBRARY_PREFIXES = (
     "libabsl",
     "libaddress_sorting",
+    "libbsd",
+    "libc++",
+    "libc++abi",
     "libcares",
+    "libcrypto",
+    "libedit",
+    "libffi",
+    "libgcc",
     "libgpr",
     "libgrpc",
+    "libmd",
     "libprotobuf",
     "libprotoc",
+    "libre2",
+    "libssl",
     "libstdc++",
-    "libxml2",
+    "libtic",
+    "libtinfo",
     "libupb",
+    "libxml2",
+    "libz3",
+    "libzstd",
+    "libz",
 )
 
 REQUIRED_PREFIX_RUNTIME_LIBRARIES = (
