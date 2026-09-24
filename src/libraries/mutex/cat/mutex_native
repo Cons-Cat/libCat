@@ -158,7 +158,9 @@ class mutex_native {
          return;
       }
       nix::linux_error const error = result.error();
-      assert(error == nix::linux_error::again || error == nix::linux_error::intr);
+      assert(
+         error == nix::linux_error::again || error == nix::linux_error::intr
+      );
    }
 
    [[nodiscard]]
@@ -173,7 +175,9 @@ class mutex_native {
       if (error == nix::linux_error::timedout) {
          return false;
       }
-      assert(error == nix::linux_error::again || error == nix::linux_error::intr);
+      assert(
+         error == nix::linux_error::again || error == nix::linux_error::intr
+      );
       return true;
    }
 
