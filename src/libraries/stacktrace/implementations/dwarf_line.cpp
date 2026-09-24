@@ -2,46 +2,15 @@
 
 #include <cat/array>
 #include <cat/bit>
+#include <cat/elf>
 #include <cat/span>
 #include <cat/string>
 
 // TODO: It may be theoretically possible for a recursive assert to be triggered
 // here from `default_assert_handler()`. We should look into that.
 
+namespace cat {
 namespace {
-
-struct elf_header {
-   cat::array<cat::uint1, 16u> identification;
-   cat::uint2 type;
-   cat::uint2 machine;
-   cat::uint4 version;
-   cat::uint8 entry;
-   cat::uint8 program_header_offset;
-   cat::uint8 section_header_offset;
-   cat::uint4 flags;
-   cat::uint2 header_size;
-   cat::uint2 program_header_size;
-   cat::uint2 program_header_count;
-   cat::uint2 section_header_size;
-   cat::uint2 section_header_count;
-   cat::uint2 section_name_index;
-};
-
-struct elf_section_header {
-   cat::uint4 name;
-   cat::uint4 type;
-   cat::uint8 flags;
-   cat::uint8 address;
-   cat::uint8 offset;
-   cat::uint8 size;
-   cat::uint4 link;
-   cat::uint4 info;
-   cat::uint8 alignment;
-   cat::uint8 entry_size;
-};
-
-static_assert(sizeof(elf_header) == 64);
-static_assert(sizeof(elf_section_header) == 64);
 
 struct dwarf_sections {
    cat::span<cat::byte const> line;
@@ -939,3 +908,5 @@ cat::detail::resolve_dwarf_line(span<byte const> elf, uint8 address)
    }
    return {};
 }
+
+}  // namespace cat

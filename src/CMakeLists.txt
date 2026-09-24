@@ -9,8 +9,8 @@ set(CAT_INCLUDE_SUBDIRS
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
-  tuple vec ring enum iterable dyn random timer chrono mutex quantity stacktrace
-  demangle)
+  tuple vec ring enum iterable dyn random timer chrono mutex quantity elf
+  stacktrace demangle)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -581,6 +581,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/string/cat/detail/str_span.hpp
   ${CATLIB}/string/cat/detail/str_vec.hpp
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
+  ${CATLIB}/elf/cat/elf
   ${CATLIB}/stacktrace/cat/stacktrace
   ${CATLIB}/demangle/cat/demangle
   ${CATLIB}/mutex/cat/mutex
