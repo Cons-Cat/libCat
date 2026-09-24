@@ -166,7 +166,9 @@ template <typename T>
 struct maybe_value_storage {
    using value_type = T;
 
-   constexpr maybe_value_storage() : m_dummy{} {
+   // TODO: Default the empty constructors when Clang implements P3074.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3074r7.html
+   constexpr maybe_value_storage() {
    }
 
    // Construct `T` in-place without converting to the storage wrapper.
@@ -218,7 +220,7 @@ struct maybe_value_storage {
    = delete;
 
    // `nullopt` initializes this without a value.
-   constexpr maybe_value_storage(detail::nullopt_type /*nullopt*/) : m_dummy{} {
+   constexpr maybe_value_storage(detail::nullopt_type /*nullopt*/) {
    }
 
    // If other destructors are not conditionally specialized by their
@@ -356,11 +358,6 @@ struct maybe_value_storage {
 
    // A `union` member will not be default-constructed.
    union {
-      // `m_dummy` is initialized in a `constexpr` context by both the default
-      // and the `nullopt` constructors. This prevents `T`'s default constructor
-      // from being called there. One member must be initialized in a
-      // `constexpr` context. If `T` is trivial, a dummy member is not required.
-      monostate_type m_dummy;
       T m_storage;
    };
 
@@ -698,7 +695,6 @@ struct maybe_compact_storage {
 
    // A `union` member will not be default-constructed.
    union {
-      monostate_type _;
       value_type m_storage;
    };
 };

@@ -6,12 +6,13 @@
 
 namespace cat::detail {
 
+// TODO: Remove the constructor and destructor when Clang implements P3074.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3074r7.html
 template <typename T>
 union vec_niche_storage {
-   byte inactive;
    T value;
 
-   constexpr vec_niche_storage() : inactive{} {
+   constexpr vec_niche_storage() {
    }
 
    constexpr ~vec_niche_storage() {

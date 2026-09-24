@@ -70,9 +70,11 @@ namespace detail {
 template <typename...>
 struct variant_node {};
 
+// TODO: Remove the constructor and destructors when Clang implements P3074.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3074r7.html
 template <typename Alternative>
 struct variant_node<Alternative> {
-   constexpr variant_node() : dummy() {
+   constexpr variant_node() {
    }
 
    // Trivial destructor when the alternative is trivial. Otherwise an empty
@@ -96,14 +98,15 @@ struct variant_node<Alternative> {
    }
 
    union {
-      monostate_type dummy;
       Alternative storage;
    };
 };
 
+// TODO: Remove the constructor and destructors when Clang implements P3074.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3074r7.html
 template <typename Alternative, typename... Remaining>
 struct variant_node<Alternative, Remaining...> {
-   constexpr variant_node() : dummy() {
+   constexpr variant_node() {
    }
 
    constexpr ~variant_node() = default;
@@ -131,7 +134,6 @@ struct variant_node<Alternative, Remaining...> {
    }
 
    union {
-      monostate_type dummy;
       Alternative storage;
       variant_node<Remaining...> remaining;
    };
