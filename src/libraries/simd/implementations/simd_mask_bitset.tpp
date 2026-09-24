@@ -54,6 +54,20 @@ namespace cat {
 
 namespace detail {
 
+// Lane `i` is bit `i` of `pattern`, and `bitset` stores bit `i` at bit
+// `i + leading_skipped_bits` of its single storage word.
+template <idx lanes, typename Pattern>
+[[nodiscard]]
+constexpr auto
+lane_bits_to_bitset(Pattern pattern) -> bitset<lanes> {
+   using result_type = bitset<lanes>;
+   using storage_type = result_type::storage_type;
+   static_assert(result_type::storage_array_size == 1u);
+   return make_bitset<lanes>(
+      storage_type(pattern) << result_type::leading_skipped_bits
+   );
+}
+
 template <typename Abi, typename T>
 inline constexpr bool is_fixed_size_mask_abi = false;
 
@@ -67,7 +81,6 @@ template <typename T, typename Abi>
 auto
 fixed_size_mask_to_bitset_avx2(simd_mask<T, Abi> const& mask)
    -> bitset<Abi::lanes> {
-   bitset<Abi::lanes> out{};
    using native_abi = x64::avx_abi<T>;
    using native_mask = simd_mask<T, native_abi>;
    constexpr idx logical_word_bits = sizeof(__UINT64_TYPE__) * 8u;
@@ -127,10 +140,8 @@ fixed_size_mask_to_bitset_avx2(simd_mask<T, Abi> const& mask)
          return make_bitset<Abi::lanes>(storage_words[indices]...);
       }(make_index_sequence<logical_word_count>{});
    } else {
-      for (idx i = 0u; i < Abi::lanes; ++i) {
-         out[i] = ((logical_words[0u] >> i.raw) & 1u) != 0u;
-      }
-      return out;
+      // At most 64 lanes fit in one word, which `bitset` stores directly.
+      return lane_bits_to_bitset<Abi::lanes>(logical_words[0u]);
    }
 }
 
@@ -140,7 +151,16 @@ template <typename T, typename Abi>
 constexpr auto
 fixed_size_mask_to_bitset(simd_mask<T, Abi> const& mask) -> bitset<Abi::lanes> {
    if !consteval {
-      if (simd_dispatch_priority >= 80) {
+      if constexpr (Abi::size <= 16u) {
+         // SSE2 is always available, so a mask that fits in one SSE register
+         // needs no runtime dispatch.
+         using sse_mask = simd_mask<T, x64::sse_abi<T>>;
+         sse_mask chunk(typename sse_mask::raw_type{});
+         __builtin_memcpy(&chunk.raw, &mask.raw, Abi::size);
+         return lane_bits_to_bitset<Abi::lanes>(
+            x64::detail::sse2_abi_mask_to_bitset(chunk)
+         );
+      } else if (simd_dispatch_priority >= 80) {
          bitset<Abi::lanes> result = fixed_size_mask_to_bitset_avx2(mask);
          x64::zero_upper_avx_registers();
          return result;
@@ -180,16 +200,7 @@ simd_to_bitset(simd_mask<T, Abi> mask) -> bitset<Abi::lanes> {
       );
 
       auto const pattern = detail::simd_abi::invoke<mask_lane_bits, hook>(mask);
-      bitset<Abi::lanes> out{};
-      for (idx i = 0u; i < Abi::lanes; ++i) {
-         // TODO: `pattern >> i` should work when `i` is an `idx` right-hand
-         // operand (`idx` has no bitwise operators of its own, so the shift
-         // should fall through to the built-in on the integral `pattern`).
-         // Today this is ambiguous because `idx` has multiple integral
-         // conversion operators. Resolve the ambiguity and drop `.raw`.
-         out[i] = ((pattern >> i.raw) & 1u) != 0u;
-      }
-      return out;
+      return detail::lane_bits_to_bitset<Abi::lanes>(pattern);
    } else {
       bitset<Abi::lanes> out{};
       for (idx i = 0u; i < Abi::lanes; ++i) {

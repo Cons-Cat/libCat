@@ -17,22 +17,14 @@ sse2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
    } else if constexpr (sizeof(T) == 8) {
       return static_cast<__UINT32_TYPE__>(__builtin_ia32_movmskpd(mask.raw));
    } else {
-      // sizeof(T) == 2, lanes == 8. Collapse the byte-bitmap from `pmovmskb`
-      // into one bit per logical lane.
-      // TODO: Is this the most efficient solution?
-      __UINT32_TYPE__ const bytes =
-         static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb128(mask.raw));
-      __UINT32_TYPE__ lane_bits = 0;
-      for (cat::idx i = 0u; i < Abi::lanes; ++i) {
-         cat::uint4 lane_bitset = 0;
-         for (cat::idx j = 0u; j < sizeof(T); ++j) {
-            lane_bitset |= (bytes >> (i * sizeof(T) + j)) & 1u;
-         }
-         if (lane_bitset != 0) {
-            lane_bits |= 1u << i;
-         }
-      }
-      return lane_bits;
+      // sizeof(T) == 2, lanes == 8. Saturating each 16-bit lane to a byte
+      // keeps its sign bit, so one `pmovmskb` reads a bit per lane.
+      using halves = short __attribute__((vector_size(16)));
+      return static_cast<__UINT32_TYPE__>(
+         __builtin_ia32_pmovmskb128(__builtin_ia32_packsswb128(
+            __builtin_bit_cast(halves, mask.raw), halves{}
+         ))
+      );
    }
 }
 
