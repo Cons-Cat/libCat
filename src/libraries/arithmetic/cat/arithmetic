@@ -235,16 +235,36 @@ using sat_uint8 = basic_int<__UINT64_TYPE__, overflow_policies::saturate>;
 
 #pragma clang final(CAT_DECLARE_QUANTITY_ALIASES)
 
+namespace detail {
+template <typename T>
+struct raw_arithmetic_type_trait {
+   using type = T;
+};
+
+template <typename T>
+   requires(requires(T value) { value.raw; })
+struct raw_arithmetic_type_trait<T> {
+   using type = __typeof_unqual(declval<T&>().raw);
+};
+
+template <typename T>
+   requires(__is_pointer(T))
+struct raw_arithmetic_type_trait<T> {
+   using type = __UINTPTR_TYPE__;
+};
+}  // namespace detail
+
 // Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
-// `raw` values.
+// `raw` values. The return type is explicit so that `raw_arithmetic_type` does
+// not instantiate this body, which cannot copy some types.
 template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_raw_arithmetic(T value) {
+make_raw_arithmetic(T value) -> detail::raw_arithmetic_type_trait<T>::type {
    if constexpr (requires { value.raw; }) {
       return value.raw;
    } else if constexpr (__is_pointer(T)) {
-      return reinterpret_cast<__UINTPTR_TYPE__>(value);
+      return __builtin_bit_cast(__UINTPTR_TYPE__, value);
    } else {
       return value;
    }
