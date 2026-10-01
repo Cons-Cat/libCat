@@ -3,13 +3,84 @@
 #pragma once
 
 #include <cat/detail/compact.hpp>
-#include <cat/detail/quantity.hpp>
 
 #include <cat/arithmetic_interface>
 #include <cat/compare>
 #include <cat/debug>
 #include <cat/limits>
 #include <cat/meta>
+
+namespace cat {
+
+namespace detail {
+template <typename T>
+struct raw_arithmetic_type_trait {
+   using type = T;
+};
+
+template <typename T>
+   requires(requires(T value) { value.raw; })
+struct raw_arithmetic_type_trait<T> {
+   using type = __typeof_unqual(declval<T&>().raw);
+};
+
+template <typename T>
+   requires(__is_pointer(T))
+struct raw_arithmetic_type_trait<T> {
+   using type = __UINTPTR_TYPE__;
+};
+}  // namespace detail
+
+// Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
+// `raw` values. The return type is explicit so that `raw_arithmetic_type` does
+// not instantiate this body, which cannot copy some types.
+template <typename T>
+[[gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_raw_arithmetic(T value) -> detail::raw_arithmetic_type_trait<T>::type {
+   if constexpr (requires { value.raw; }) {
+      return value.raw;
+   } else if constexpr (__is_pointer(T)) {
+      return __builtin_bit_cast(__UINTPTR_TYPE__, value);
+   } else {
+      return value;
+   }
+}
+
+// Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
+// `raw` types.
+template <typename T>
+using raw_arithmetic_type = decltype(make_raw_arithmetic(T{}));
+
+template <typename T>
+concept is_raw_arithmetic = is_same<T, raw_arithmetic_type<T>>;
+
+template <typename T>
+concept is_raw_integral = is_integral<T> && is_raw_arithmetic<T>;
+
+template <typename T>
+concept is_raw_floating_point = is_floating_point<T> && is_raw_arithmetic<T>;
+
+// These policies control the overflow semantics of integer wrappers.
+enum class [[clang::enum_extensibility(
+   closed
+)]] overflow_policies : unsigned char {
+   undefined,
+   wrap,
+   saturate,
+   // trap,
+};
+
+enum class [[clang::enum_extensibility(
+   closed
+)]] precision_policies : unsigned char {
+   precise,
+   fast,
+};
+
+}  // namespace cat
+
+#include <cat/detail/quantity.hpp>
 
 // `cat::basic_int`, `cat::basic_float`, `cat::basic_idx`, `cat::basic_ualign`,
 // and `cat::basic_intptr` are arithmetic wrappers which both prevent unsound
@@ -78,23 +149,6 @@
 // associates.
 
 namespace cat {
-
-// These policies control the overflow semantics of integer wrappers.
-enum class [[clang::enum_extensibility(
-   closed
-)]] overflow_policies : unsigned char {
-   undefined,
-   wrap,
-   saturate,
-   // trap,
-};
-
-enum class [[clang::enum_extensibility(
-   closed
-)]] precision_policies : unsigned char {
-   precise,
-   fast,
-};
 
 template <typename Int, overflow_policies policy>
 class overflow_reference;
@@ -234,55 +288,6 @@ using sat_uint8 = basic_int<__UINT64_TYPE__, overflow_policies::saturate>;
       ::cat::float8::raw_type, ::cat::precision_policies::fast, quantity>
 
 #pragma clang final(CAT_DECLARE_QUANTITY_ALIASES)
-
-namespace detail {
-template <typename T>
-struct raw_arithmetic_type_trait {
-   using type = T;
-};
-
-template <typename T>
-   requires(requires(T value) { value.raw; })
-struct raw_arithmetic_type_trait<T> {
-   using type = __typeof_unqual(declval<T&>().raw);
-};
-
-template <typename T>
-   requires(__is_pointer(T))
-struct raw_arithmetic_type_trait<T> {
-   using type = __UINTPTR_TYPE__;
-};
-}  // namespace detail
-
-// Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
-// `raw` values. The return type is explicit so that `raw_arithmetic_type` does
-// not instantiate this body, which cannot copy some types.
-template <typename T>
-[[gnu::always_inline, gnu::nodebug]]
-constexpr auto
-make_raw_arithmetic(T value) -> detail::raw_arithmetic_type_trait<T>::type {
-   if constexpr (requires { value.raw; }) {
-      return value.raw;
-   } else if constexpr (__is_pointer(T)) {
-      return __builtin_bit_cast(__UINTPTR_TYPE__, value);
-   } else {
-      return value;
-   }
-}
-
-// Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
-// `raw` types.
-template <typename T>
-using raw_arithmetic_type = decltype(make_raw_arithmetic(T{}));
-
-template <typename T>
-concept is_raw_arithmetic = is_same<T, raw_arithmetic_type<T>>;
-
-template <typename T>
-concept is_raw_integral = is_integral<T> && is_raw_arithmetic<T>;
-
-template <typename T>
-concept is_raw_floating_point = is_floating_point<T> && is_raw_arithmetic<T>;
 
 template <is_floating_point Float>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -1175,82 +1180,6 @@ policy_cast(U value) -> T {
       return cat::sat_cast<T>(make_raw_arithmetic(value));
    } else {
       return static_cast<T>(make_raw_arithmetic(value));
-   }
-}
-
-template <typename Raw>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-quantity_scale_factor(int exponent) -> Raw {
-   Raw result = 1;
-   for (int i = 0; i < exponent; ++i) {
-      result *= 10;
-   }
-   return result;
-}
-
-template <typename Raw>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-quantity_pi_factor(int exponent) -> Raw {
-   Raw result = 1;
-   if (exponent > 0) {
-      for (int i = 0; i < exponent; ++i) {
-         result *= pi_value;
-      }
-   } else {
-      for (int i = 0; i > exponent; --i) {
-         result /= pi_value;
-      }
-   }
-   return result;
-}
-
-template <is_quantity To, is_arithmetic U>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-quantity_value_in(U value) {
-   using from = arithmetic_quantity<U>;
-   auto const raw = make_raw_arithmetic(value);
-   if constexpr (
-      !has_quantity<U>
-      || __is_same(
-         __typeof_unqual(from::unit_magnitude),
-         __typeof_unqual(To::unit_magnitude)
-      )
-   ) {
-      return raw;
-   } else {
-      constexpr auto conversion = from::unit_magnitude / To::unit_magnitude;
-      using conversion_type = __typeof_unqual(conversion);
-      if constexpr (
-         is_floating_point<__typeof_unqual(raw)>
-         || conversion_type::pi_power != 0
-      ) {
-         using wide = long double;
-         wide result = static_cast<wide>(raw) * conversion_type::numerator
-                       / conversion_type::denominator;
-         if constexpr (conversion_type::decimal_power > 0) {
-            result *=
-               quantity_scale_factor<wide>(conversion_type::decimal_power);
-         } else {
-            result /=
-               quantity_scale_factor<wide>(-conversion_type::decimal_power);
-         }
-         return result * quantity_pi_factor<wide>(conversion_type::pi_power);
-      } else {
-         using wide = conditional<
-            is_signed<__typeof_unqual(raw)>, __int128, unsigned __int128>;
-         wide result = static_cast<wide>(raw) * conversion_type::numerator;
-         if constexpr (conversion_type::decimal_power > 0) {
-            result *=
-               quantity_scale_factor<wide>(conversion_type::decimal_power);
-         } else {
-            result /=
-               quantity_scale_factor<wide>(-conversion_type::decimal_power);
-         }
-         return result / conversion_type::denominator;
-      }
    }
 }
 
@@ -4390,24 +4319,6 @@ constexpr auto
 make_raw_arithmetic(bool4 value) -> bool4::raw_type {
    return value.raw;
 }
-
-namespace detail {
-
-template <auto quantity, is_arithmetic T>
-[[nodiscard]]
-constexpr auto
-attach_quantity(T value) {
-   if constexpr (is_raw_integral<T>) {
-      return basic_int<T, overflow_policies::undefined, quantity>(value);
-   } else if constexpr (is_raw_floating_point<T>) {
-      return basic_float<T, precision_policies::precise, quantity>(value);
-   } else {
-      using result_type = rebind_quantity_type<T, quantity>;
-      return result_type(make_raw_arithmetic(value));
-   }
-}
-
-}  // namespace detail
 
 template <is_arithmetic T, is_quantity_specifier QuantitySpecifier>
 [[nodiscard]]

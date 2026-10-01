@@ -1649,6 +1649,96 @@ template <typename T, auto new_quantity>
 using rebind_quantity_type =
    rebind_quantity<remove_cvref<T>, new_quantity>::type;
 
+template <typename Raw>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+quantity_scale_factor(int exponent) -> Raw {
+   Raw result = 1;
+   for (int i = 0; i < exponent; ++i) {
+      result *= 10;
+   }
+   return result;
+}
+
+template <typename Raw>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+quantity_pi_factor(int exponent) -> Raw {
+   Raw result = 1;
+   if (exponent > 0) {
+      for (int i = 0; i < exponent; ++i) {
+         result *= pi_value;
+      }
+   } else {
+      for (int i = 0; i > exponent; --i) {
+         result /= pi_value;
+      }
+   }
+   return result;
+}
+
+template <is_quantity To, is_arithmetic U>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+quantity_value_in(U value) {
+   using from = arithmetic_quantity<U>;
+   auto const raw = make_raw_arithmetic(value);
+   if constexpr (
+      !has_quantity<U>
+      || __is_same(
+         __typeof_unqual(from::unit_magnitude),
+         __typeof_unqual(To::unit_magnitude)
+      )
+   ) {
+      return raw;
+   } else {
+      constexpr auto conversion = from::unit_magnitude / To::unit_magnitude;
+      using conversion_type = __typeof_unqual(conversion);
+      if constexpr (
+         is_floating_point<__typeof_unqual(raw)>
+         || conversion_type::pi_power != 0
+      ) {
+         using wide = long double;
+         wide result = static_cast<wide>(raw) * conversion_type::numerator
+                       / conversion_type::denominator;
+         if constexpr (conversion_type::decimal_power > 0) {
+            result *=
+               quantity_scale_factor<wide>(conversion_type::decimal_power);
+         } else {
+            result /=
+               quantity_scale_factor<wide>(-conversion_type::decimal_power);
+         }
+         return result * quantity_pi_factor<wide>(conversion_type::pi_power);
+      } else {
+         using wide = conditional<
+            is_signed<__typeof_unqual(raw)>, __int128, unsigned __int128>;
+         wide result = static_cast<wide>(raw) * conversion_type::numerator;
+         if constexpr (conversion_type::decimal_power > 0) {
+            result *=
+               quantity_scale_factor<wide>(conversion_type::decimal_power);
+         } else {
+            result /=
+               quantity_scale_factor<wide>(-conversion_type::decimal_power);
+         }
+         return result / conversion_type::denominator;
+      }
+   }
+}
+
+template <auto quantity, is_arithmetic T>
+[[nodiscard]]
+constexpr auto
+attach_quantity(T value) {
+   if constexpr (is_raw_integral<T>) {
+      return basic_int<T, overflow_policies::undefined, quantity>(value);
+   } else if constexpr (is_raw_floating_point<T>) {
+      return basic_float<T, precision_policies::precise, quantity>(value);
+   } else {
+      using result_type = rebind_quantity_type<T, quantity>;
+      return result_type(make_raw_arithmetic(value));
+   }
+}
+
 }  // namespace detail
 
 }  // namespace cat
