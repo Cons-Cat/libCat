@@ -339,10 +339,9 @@ class [[gsl::Owner]] map_base {
          return nullopt;
       }
       group_type& group = *found.p_group;
-      // Boost's anti-drift. If this entry's hash could have pushed another
-      // entry past this group, lower the maximum load so that repeatedly
-      // inserting and removing cannot make probe sequences grow unboundedly.
-      // The overflow bits are kept, since other entries may depend on them.
+      // If this entry's hash could have pushed another entry past this group,
+      // lower the maximum load so that repeatedly inserting and removing cannot
+      // make probe sequences grow unboundedly.
       if (
          (group.metadata[overflow_lane]
           & detail::map_overflow_bit(group.metadata[found.slot]))
@@ -378,23 +377,26 @@ class [[gsl::Owner]] map_base {
       return idx(m_groups.size() * group_slots - 1u);
    }
 
-   // Boost's `rehash()`. Resize to the smallest capacity that holds at least
-   // `slots` slots and every entry at the maximum load factor. This may shrink
-   // the map, and it frees the map's storage when it is empty and `slots` is
-   // 0. The returned `maybe` is empty iff allocation failed.
+   // Resize to the smallest capacity that holds at least `slots` slots and
+   // every entry at the maximum load factor. This might also shrink the `map`.
+   // If the `map`'s storage is empty and has no reserved slots, the container
+   // is freed.
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
    rehash(allocator_ref<Allocator> allocator, idx slots) -> maybe<void> {
       slots = max(slots, slots_for(m_size));
       idx const group_count = slots == 0u ? idx(0u) : group_count_for(slots);
+
       if (group_count == m_groups.size()) {
          return monostate;
       }
+
       if (group_count == 0u) {
          free(allocator);
          return monostate;
       }
+
       Container groups;
       $prop(make_groups(allocator, groups, group_count));
       move_entries_from(allocator, swap_groups(move(groups)));
@@ -407,7 +409,7 @@ class [[gsl::Owner]] map_base {
       return rehash<dyn_allocator>(allocator, slots);
    }
 
-   // Boost's `reserve()`. Resize so that `count` entries fit without growing.
+   // Resize so that at least `count` entries fit without growing.
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
@@ -568,8 +570,8 @@ class [[gsl::Owner]] map_base {
       return monostate;
    }
 
-   // Boost's `initial_max_load()`. Tables of up to 2 groups may be full, and
-   // larger ones are loaded to at most 0.875.
+   // Tables of up to 2 groups may be full, and larger ones are loaded to at
+   // most 0.875.
    [[nodiscard]]
    static constexpr auto
    max_load(idx group_count) -> idx {
@@ -582,15 +584,15 @@ class [[gsl::Owner]] map_base {
    }
 
    // The slots that hold `count` entries at the maximum load factor, which is
-   // Boost's `ceil(count / mlf)`.
+   // `ceil(count / factor)`.
    [[nodiscard]]
    static constexpr auto
    slots_for(idx count) -> idx {
       return (count * 8u + 6u) / 7u;
    }
 
-   // Boost's `size_index_for()`. The power of two groups with at least
-   // `slots` slots, plus one slot for the sentinel.
+   // The power of two groups with at least `slots` slots, plus one slot for the
+   // sentinel.
    [[nodiscard]]
    static constexpr auto
    group_count_for(idx slots) -> idx {
@@ -620,8 +622,8 @@ class [[gsl::Owner]] map_base {
       return old_groups;
    }
 
-   // Boost's `unchecked_rehash()`. Move every entry of `old_groups` into the
-   // current groups, then free `old_groups`.
+   // Move every entry of `old_groups` into the current groups, then free
+   // `old_groups`.
    template <is_allocator Allocator>
    constexpr void
    move_entries_from(
@@ -642,16 +644,17 @@ class [[gsl::Owner]] map_base {
       old_groups.free(allocator);
    }
 
-   // Boost's `unchecked_emplace_with_rehash()`. Place the new entry in larger
-   // groups, then move every existing entry into them.
+   // Place the new entry in larger groups, then move every existing entry into
+   // them.
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
    grow(allocator_ref<Allocator> allocator, uint8 hash, Key&& key, T&& value)
       -> maybe<void> {
-      // Boost's `new_arrays_for_growth()` makes room for one more entry at
-      // the maximum load factor. The extra 1/61 of `m_size` keeps anti-drift
-      // from bringing the table back to its current size.
+      // Make room for one more entry at the maximum load factor. The extra 1/61
+      // of `m_size` keeps anti-drift the maximum load factor. The extra 1/61 of
+      // `m_size` keeps anti-drift from bringing the table back to its current
+      // size.
       Container groups;
       $prop(make_groups(
          allocator, groups,
@@ -674,8 +677,6 @@ class [[gsl::Owner]] map_base {
    idx m_size = 0u;
    idx m_max_load = 0u;
 
-   // Boost's `groups_size_index` and `groups_size_mask`. A hash's first group
-   // is `hash >> m_groups_size_index`, and probing wraps with the mask.
    uword m_groups_size_index = 0u;
    uword m_groups_size_mask = 0u;
 };

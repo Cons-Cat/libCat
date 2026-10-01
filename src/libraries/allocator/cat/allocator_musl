@@ -12,11 +12,11 @@
 // use-after-free are less reliably detectable in those cases. A secret 8-byte
 // PRNG value is placed in its pages to validate the provenance of its own
 // allocations, it inserts overflow sentinel bytes to detect out-of-bounds
-// accesses,  and validates the alignment and size of its allocations.
+// accesses, and validates the alignment and size of its allocations.
 //
 // libCat's integrates asan checks, provides separates thread-safe shared and
 // non-thread-safe unshared implementations, and propagates size feedback for
-// 16-byte heap quanta,
+// 16-byte heap quanta.
 
 #include <cat/allocator>
 #include <cat/atomic>
