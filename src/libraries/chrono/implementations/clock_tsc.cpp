@@ -25,7 +25,7 @@ struct conversion {
    cat::uint8 multiplier;
 };
 
-struct clock_state {
+struct clock_state_type {
    cat::atomic<cat::uint4> sequence;
    cat::atomic<cat::uint8> base_tsc;
    cat::atomic<cat::int8> base_nanoseconds;
@@ -36,19 +36,14 @@ struct clock_state {
    cat::atomic_flag calibrating;
 };
 
-constinit clock_state state{};
+constinit clock_state_type clock_state{};
 
 [[nodiscard]]
 auto
 read_tsc() -> cat::uint8 {
-   cat::uint4 low;
-   cat::uint4 high;
-   asm volatile(R"(lfence
-                   rdtsc)"
-                : "=a"(low), "=d"(high)
-                :
-                : "memory");
-   return cat::uint8(high) << 32u | low;
+   // `lfence` to serialize the CPU so that `rdtsc` isn't reordered.
+   __builtin_ia32_lfence();
+   return __builtin_readcyclecounter();
 }
 
 [[nodiscard]]
@@ -84,18 +79,18 @@ synchronize_time() -> cat::maybe<synchronized_time> {
 auto
 read_conversion() -> conversion {
    for (;;) {
-      cat::uint4 const before = state.sequence.acquire();
+      cat::uint4 const before = clock_state.sequence.acquire();
       if ((before & 1u) != 0u) {
          cat::machine_pause();
          continue;
       }
 
       conversion const result = {
-         .base_tsc = state.base_tsc.relaxed(),
-         .base_nanoseconds = state.base_nanoseconds.relaxed(),
-         .multiplier = state.multiplier.relaxed(),
+         .base_tsc = clock_state.base_tsc.relaxed(),
+         .base_nanoseconds = clock_state.base_nanoseconds.relaxed(),
+         .multiplier = clock_state.multiplier.relaxed(),
       };
-      if (before == state.sequence.acquire().load()) {
+      if (before == clock_state.sequence.acquire().load()) {
          return result;
       }
    }
@@ -106,14 +101,14 @@ write_conversion(
    conversion const& value, cat::int8 base_error,
    cat::uint8 next_calibration_value
 ) {
-   cat::uint4 sequence = state.sequence.relaxed();
-   state.sequence.seq_cst() = sequence + 1u;
-   state.base_tsc.relaxed() = value.base_tsc;
-   state.base_nanoseconds.relaxed() = value.base_nanoseconds;
-   state.multiplier.relaxed() = value.multiplier;
-   state.base_error.relaxed() = base_error;
-   state.next_calibration.relaxed() = next_calibration_value;
-   state.sequence.seq_cst() = sequence + 2u;
+   cat::uint4 sequence = clock_state.sequence.relaxed();
+   clock_state.sequence.seq_cst() = sequence + 1u;
+   clock_state.base_tsc.relaxed() = value.base_tsc;
+   clock_state.base_nanoseconds.relaxed() = value.base_nanoseconds;
+   clock_state.multiplier.relaxed() = value.multiplier;
+   clock_state.base_error.relaxed() = base_error;
+   clock_state.next_calibration.relaxed() = next_calibration_value;
+   clock_state.sequence.seq_cst() = sequence + 2u;
 }
 
 [[nodiscard]]
@@ -178,7 +173,7 @@ sleep_for_calibration(x64::clock_tsc::duration elapsed) {
 
 auto
 x64::clock_tsc::initialize(duration calibration_time) -> bool {
-   cat::uint4 initialized = state.initialized.acquire();
+   cat::uint4 initialized = clock_state.initialized.acquire();
    if (initialized == ready) {
       return true;
    }
@@ -188,30 +183,30 @@ x64::clock_tsc::initialize(duration calibration_time) -> bool {
 
    cat::uint4 expected = uninitialized;
    if (
-      state.initialized.compare_exchange_strong(
+      clock_state.initialized.compare_exchange_strong(
          expected, initializing, cat::memory_order::acq_rel,
          cat::memory_order::acquire
       )
    ) {
       if (!x64::has_invariant_tsc()) {
-         state.initialized.release() = unavailable;
+         clock_state.initialized.release() = unavailable;
          return false;
       }
 
       cat::maybe<synchronized_time> const first = synchronize_time();
       if (first.is_empty()) {
-         state.initialized.release() = unavailable;
+         clock_state.initialized.release() = unavailable;
          return false;
       }
 
       if (!sleep_for_calibration(calibration_time)) {
-         state.initialized.release() = unavailable;
+         clock_state.initialized.release() = unavailable;
          return false;
       }
 
       cat::maybe<synchronized_time> const second = synchronize_time();
       if (second.is_empty() || second.value().tsc <= first.value().tsc) {
-         state.initialized.release() = unavailable;
+         clock_state.initialized.release() = unavailable;
          return false;
       }
 
@@ -221,7 +216,7 @@ x64::clock_tsc::initialize(duration calibration_time) -> bool {
       );
 
       if (multiplier.is_empty()) {
-         state.initialized.release() = unavailable;
+         clock_state.initialized.release() = unavailable;
          return false;
       }
 
@@ -234,11 +229,11 @@ x64::clock_tsc::initialize(duration calibration_time) -> bool {
          0, next_calibration(second.value().tsc, multiplier.value())
       );
 
-      state.initialized.release() = ready;
+      clock_state.initialized.release() = ready;
       return true;
    }
 
-   while ((initialized = state.initialized.acquire()) == initializing) {
+   while ((initialized = clock_state.initialized.acquire()) == initializing) {
       cat::machine_pause();
    }
    return initialized == ready;
@@ -263,27 +258,27 @@ void
 x64::clock_tsc::calibrate() {
    if (
       !initialize()
-      || state.calibrating.test_and_set(cat::memory_order::acquire)
+      || clock_state.calibrating.test_and_set(cat::memory_order::acquire)
    ) {
       return;
    }
 
    conversion const old = read_conversion();
-   if (read_tsc() < state.next_calibration.relaxed().load()) {
-      state.calibrating.clear(cat::memory_order::release);
+   if (read_tsc() < clock_state.next_calibration.relaxed().load()) {
+      clock_state.calibrating.clear(cat::memory_order::release);
       return;
    }
 
    cat::maybe<synchronized_time> const synchronized = synchronize_time();
    if (synchronized.is_empty() || synchronized.value().tsc <= old.base_tsc) {
-      state.calibrating.clear(cat::memory_order::release);
+      clock_state.calibrating.clear(cat::memory_order::release);
       return;
    }
 
    cat::maybe<cat::int8> const predicted =
       to_nanoseconds(synchronized.value().tsc, old);
    if (predicted.is_empty()) {
-      state.calibrating.clear(cat::memory_order::release);
+      clock_state.calibrating.clear(cat::memory_order::release);
       return;
    }
 
@@ -295,7 +290,7 @@ x64::clock_tsc::calibrate() {
    }
 
    cat::int8 const predicted_elapsed = predicted.value() - old.base_nanoseconds;
-   cat::int8 const base_error = state.base_error.relaxed();
+   cat::int8 const base_error = clock_state.base_error.relaxed();
    cat::int8 const corrected_elapsed =
       predicted_elapsed - (error * 2 - base_error);
    cat::maybe<cat::uint8> const multiplier = make_multiplier(
@@ -312,5 +307,5 @@ x64::clock_tsc::calibrate() {
       );
    }
 
-   state.calibrating.clear(cat::memory_order::release);
+   clock_state.calibrating.clear(cat::memory_order::release);
 }
