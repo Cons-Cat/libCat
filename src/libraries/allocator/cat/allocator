@@ -5844,7 +5844,7 @@ class allocator_interface {
       bool pass_old_to_alloc = true, typename... Args>
    constexpr auto
    meta_realloc(auto& allocator, auto& old_handle, Args&&... arguments) {
-      auto allocation = [&]() -> decltype(auto) {
+      auto allocation = [&] -> decltype(auto) {
          if constexpr (pass_old_to_alloc) {
             return (allocator.*alloc_function)(
                // Possible alignment and/or count arguments.
