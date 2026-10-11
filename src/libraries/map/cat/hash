@@ -1,0 +1,19 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::hash` is libCat's default non-cryptographic hash function object. It
+// hashes a span of bytes or an integer, optionally with a seed, into a `uint8`.
+//
+//    uint8 hash_value = cat::hash(bytes);
+//
+// These algorithms are implemented:
+//    `cat::wyhash`, in `./detail/wyhash.hpp`.
+
+#include <cat/detail/wyhash.hpp>
+
+namespace cat {
+
+inline constexpr detail::wyhash_impl hash{};
+
+}  // namespace cat

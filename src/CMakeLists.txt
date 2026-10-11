@@ -9,7 +9,7 @@ set(CAT_INCLUDE_SUBDIRS
   simd algorithm debug variant scaredy maybe match notype unique container
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
-  tuple vec ring enum iterable dyn random timer chrono mutex quantity elf
+  tuple vec map ring enum iterable dyn random timer chrono mutex quantity
   stacktrace demangle)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
@@ -606,6 +606,14 @@ set(CAT_HEADER_FILES
   ${CATLIB}/vec/cat/vec_inplace
   ${CATLIB}/vec/cat/raii_vec
   ${CATLIB}/vec/cat/detail/vec_storage.hpp
+  ${CATLIB}/map/cat/map
+  ${CATLIB}/map/cat/hash
+  ${CATLIB}/map/cat/raii_map
+  ${CATLIB}/map/cat/detail/dyn_map.hpp
+  ${CATLIB}/map/cat/detail/map_flags.hpp
+  ${CATLIB}/map/cat/detail/map_ref.hpp
+  ${CATLIB}/map/cat/detail/map_view.hpp
+  ${CATLIB}/map/cat/detail/wyhash.hpp
   ${CATLIB}/x11/cat/x11
   ${CATLIB}/linux/implementations/syscall.tpp
   ${CATLIB}/linux/implementations/timespec.tpp

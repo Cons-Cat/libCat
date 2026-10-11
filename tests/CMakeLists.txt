@@ -136,6 +136,8 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_magic_get.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_hash.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_map.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vec_inplace.cpp
     # TODO: This container needs a lot of work.

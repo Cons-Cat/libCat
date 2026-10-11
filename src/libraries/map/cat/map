@@ -1,0 +1,708 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::map` is libCat's recommended general purpose map container. It is an
+// unordered open-addressing hash map based on `boost::unordered_flat_map`, and
+// loans from Chandler Carruth's lecture "A Clean and Minimal Map API".
+// https://bannalia.blogspot.com/2022/11/inside-boostunorderedflatmap.html
+// https://youtu.be/kye4aD-KvTU
+//
+// Although it uses some specific terminology proposed by P4139.
+//
+// There are four fundamental operations to `cat::map`.
+//
+//    `.operator[](key)`, a "lookup" that returns `cat::maybe<T&>`.
+//    The `maybe` is engaged iff such a `key` has been inserted in the hash map
+//    previously.
+//
+//    `.insert(key, value)`, inserts a `key` iff such a `key` has not been
+//    inserted in the hash map previously. A `maybe<void>` is returned engaged
+//    if `key` has been inserted, or empty if `key` had already been inserted.
+//
+//    `.update(key, value)`, inserts a `key` iff such a `key` has not been
+//    inserted previously, otherwise it updates its corresponding `value`.
+//
+//    `.remove(key)`, removes a `key` from the hash map iff such a `key` has
+//    been inserted previously. A `maybe<void>` is returned engaged if `key` has
+//    been removed, or empty if it had not previously been inserted.
+//
+//    `.contains(key)`, returns a `true` `bool` when `key` has previously been
+//    inserted, or `false` when it had not or has already been removed.
+//
+// Unlike `std::map` family, `.operator[]` is read-only. It will never insert.
+// `cat::map` is paramaterized by `cat::map_flags`, which may toggle the
+// following features:
+//
+//  `inline_storage(count)`
+//     Store up to `count` entries inside the map, only allocating when its
+//     inline capacity is exceeded.
+//
+// Convenience type aliases are provided for these configurations:
+//
+//  `cat::map<Key, T>`, a `basic_map` with 4 inline entries.
+//  `cat::map_small<Key, T, n>`, a `basic_map` with `n` inline entries.
+//  `cat::map_big<Key, T>`, a `basic_map` without inline storage.
+//
+// There also exist the following non-owning map-like containers.
+//
+//  `cat::map_ref<Key, T>`, a reference to any `basic_map` regardless of its
+//  `map_flags`. It supports every operation of `basic_map` and dispatches
+//  statically.
+//  `cat::dyn_map<Key, T>`, a type-erased reference to any map that may insert,
+//  update, and remove through a `dyn_allocator`.
+//  `cat::map_view<Key, T>`, a type-erased view of any map that only looks up
+//  keys.
+//  `cat::map_view<Key, T const>` also forbids mutating values.
+//
+// TODO: We need ordered, closed-addressing, sparse, and shared hash maps.
+
+#include <cat/allocator>
+#include <cat/allocator_parameters>
+#include <cat/arithmetic>
+#include <cat/bitset>
+#include <cat/hash>
+#include <cat/math>
+#include <cat/maybe>
+#include <cat/new>
+#include <cat/simd>
+#include <cat/tuple>
+#include <cat/vec>
+
+#include "./detail/dyn_map.hpp"
+#include "./detail/map_flags.hpp"
+#include "./detail/map_ref.hpp"
+
+namespace cat::detail {
+
+// Storage for one entry that is not constructed until it is inserted.
+// A `union` lets us skip initializing preemptively.
+// TODO: Remove the constructor and destructors once Clang implements P3074.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3074r7.html
+template <typename Key, typename T>
+union map_slot {
+   tuple<Key, T> value;
+
+   constexpr map_slot() {
+   }
+
+   constexpr ~map_slot()
+      requires(is_trivially_destructible<tuple<Key, T>>)
+   = default;
+
+   // The owning map destroys constructed slots.
+   constexpr ~map_slot() {
+   }
+};
+
+template <typename Key, typename T>
+struct map_group {
+   // A 16-wide vector of bytes. These bytes are 0 when a corresponding bucket
+   // is empty, 1 when it is a sentinel, or a hash in the range [2,255].
+   // This is nifty because searching for an empty bucket is just a SIMD compare
+   // to 0.
+   // The left-most byte is an overflow marker. Its `hash % 8`'th bit is set
+   // when an entry with that hash was pushed past this group because it was
+   // full.
+   deduce_simd<uint1, 16u> metadata{};  // NOLINT
+   array<map_slot<Key, T>, 15> map_slots;
+
+   constexpr map_group() = default;
+
+   constexpr map_group(map_group const&)
+      requires(is_trivially_copy_constructible<tuple<Key, T>>)
+   = default;
+
+   // `map_slot` has no move constructor because its destructors are
+   // user-declared, so moving a slot copies it.
+   constexpr map_group(map_group&&)
+      requires(is_trivially_copy_constructible<tuple<Key, T>>)
+   = default;
+
+   // Only occupied slots are moved.
+   constexpr map_group(map_group&& other) : metadata(other.metadata) {
+      for (idx i = 0u; i < 15u; ++i) {
+         if (is_occupied(i)) {
+            new (&map_slots[i].value)
+               tuple<Key, T>(move(other.map_slots[i].value));
+         }
+      }
+   }
+
+   constexpr ~map_group()
+      requires(is_trivially_destructible<tuple<Key, T>>)
+   = default;
+
+   // Only occupied slots are destroyed.
+   constexpr ~map_group() {
+      for (idx i = 0u; i < 15u; ++i) {
+         if (is_occupied(i)) {
+            map_slots[i].value.~tuple();
+         }
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_occupied(idx slot) const -> bool {
+      return metadata[slot] >= 2u;
+   }
+};
+
+// The low byte of a hash, where 0 and 1 are reserved for empty and sentinel
+// slots. Mapping them to 8 and 9 keeps `hash % 8` for the overflow bits.
+[[nodiscard]]
+constexpr auto
+map_reduced_hash(uint8 hash) -> uint1 {
+   uint1 const reduced = uint1(hash & 0xffu);
+   return reduced < 2u ? uint1(reduced + 8u) : reduced;
+}
+
+inline constexpr idx map_group_slots = 15u;
+inline constexpr idx map_overflow_lane = 15u;
+
+// Lanes of `group` equal to `byte`, without the overflow byte.
+template <typename Key, typename T>
+[[nodiscard]]
+constexpr auto
+map_match(map_group<Key, T> const& group, uint1 byte) -> bitset<16u> {
+   bitset<16u> lanes =
+      group.metadata.equal_lanes(decltype(group.metadata)(byte)).to_bitset();
+   lanes[map_overflow_lane] = false;
+   return lanes;
+}
+
+[[nodiscard]]
+constexpr auto
+map_overflow_bit(uint1 reduced) -> uint1 {
+   return uint1(1u << (reduced % 8u));
+}
+
+// The first group to probe is chosen by the high bits of `hash`. Groups are
+// then probed quadratically.
+struct map_prober {
+   uword position;
+   uword mask;
+   uword step = 0u;
+
+   constexpr map_prober(
+      uint8 hash, uword groups_size_index, uword groups_size_mask
+   )
+       : position(hash >> groups_size_index), mask(groups_size_mask) {
+   }
+
+   // Returns `false` once every group has been probed.
+   constexpr auto
+   next() -> bool {
+      ++step;
+      position = (position + step) & mask;
+      return step <= mask;
+   }
+};
+
+// Where an entry was found. `Group` is `const` for a `const` map.
+template <typename Group>
+struct map_locator {
+   Group* _Nullable p_group = nullptr;
+   idx slot = 0u;
+
+   [[nodiscard]]
+   constexpr auto
+   is_found() const -> bool {
+      return p_group != nullptr;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   entry() const -> auto& {
+      return p_group->map_slots[slot].value;
+   }
+};
+
+}  // namespace cat::detail
+
+namespace cat::inline manual {
+
+template <
+   typename Key, typename T, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = vec_big<detail::map_group<Key, T>>,
+   map_flags flags = {}>
+class basic_map;
+
+template <
+   typename Key, typename T, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = vec_big<detail::map_group<Key, T>>,
+   map_flags flags = {}>
+using map = basic_map<
+   // TODO: Select a smarter inline storage size.
+   Key, T, Hash, KeyEqual, Container, map_flags::inline_storage(4u) | flags>;
+
+template <typename Key, typename T, idx inline_count, map_flags flags = {}>
+using map_small = basic_map<
+   Key, T, __typeof_unqual(hash),
+   detail::binary_comparator<detail::equal_to_op>,
+   vec_big<detail::map_group<Key, T>>,
+   map_flags::inline_storage(inline_count) | flags>;
+
+template <
+   typename Key, typename T, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = vec_big<detail::map_group<Key, T>>,
+   map_flags flags = {}>
+using map_big = basic_map<Key, T, Hash, KeyEqual, Container, flags>;
+
+}  // namespace cat::inline manual
+
+namespace cat::detail {
+
+// Everything about a `basic_map` that does not depend on its `map_flags`, so
+// that `map_ref` can refer to any of them. It cannot be created, copied, or
+// destroyed on its own.
+// TODO: Hash keys that are not integers.
+template <
+   typename Key, typename T, typename Hash, typename KeyEqual,
+   typename Container>
+class [[gsl::Owner]] map_base {
+   static_assert(
+      is_same<remove_cvref<Key>, Key>, "`Key` must not be cvref-qualified!"
+   );
+
+   static_assert(
+      is_same<remove_cvref<T>, T>, "`T` must not be cvref-qualified!"
+   );
+
+ public:
+   [[nodiscard]]
+   constexpr auto
+   operator[](Key const& key) [[clang::lifetimebound]] -> maybe<T&> {
+      auto const found = find(key, m_hash(key));
+      if (!found.is_found()) {
+         return nullopt;
+      }
+      return found.entry().second();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](Key const& key) const [[clang::lifetimebound]]
+   -> maybe<T const&> {
+      auto const found = find(key, m_hash(key));
+      if (!found.is_found()) {
+         return nullopt;
+      }
+      return found.entry().second();
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   insert(allocator_ref<Allocator> allocator, Key key, T value) -> maybe<void> {
+      uint8 const hash = m_hash(key);
+      if (find(key, hash).is_found()) {
+         return nullopt;
+      }
+      return insert_new(allocator, hash, move(key), move(value));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(dyn_allocator allocator, Key key, T value) -> maybe<void> {
+      return insert<dyn_allocator>(allocator, move(key), move(value));
+   }
+
+   // The returned `maybe` is empty iff allocation failed.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   update(allocator_ref<Allocator> allocator, Key key, T value) -> maybe<void> {
+      uint8 const hash = m_hash(key);
+      auto const found = find(key, hash);
+      if (found.is_found()) {
+         found.entry().second() = move(value);
+         return monostate;
+      }
+      return insert_new(allocator, hash, move(key), move(value));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   update(dyn_allocator allocator, Key key, T value) -> maybe<void> {
+      return update<dyn_allocator>(allocator, move(key), move(value));
+   }
+
+   constexpr auto
+   remove(Key const& key) -> maybe<void> {
+      auto const found = find(key, m_hash(key));
+      if (!found.is_found()) {
+         return nullopt;
+      }
+      group_type& group = *found.p_group;
+      // Boost's anti-drift. If this entry's hash could have pushed another
+      // entry past this group, lower the maximum load so that repeatedly
+      // inserting and removing cannot make probe sequences grow unboundedly.
+      // The overflow bits are kept, since other entries may depend on them.
+      if (
+         (group.metadata[overflow_lane]
+          & detail::map_overflow_bit(group.metadata[found.slot]))
+         != 0u
+      ) {
+         m_max_load = idx(m_max_load - 1u);
+      }
+      found.entry().~tuple();
+      group.metadata.set_lane(found.slot, 0u);
+      m_size = idx(m_size - 1u);
+      return monostate;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   contains(Key const& key) const -> bool {
+      return find(key, m_hash(key)).is_found();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_size;
+   }
+
+   // The number of slots, which is 0 before the first insertion.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      if (m_groups.is_empty()) {
+         return 0u;
+      }
+      return idx(m_groups.size() * group_slots - 1u);
+   }
+
+   // Boost's `rehash()`. Resize to the smallest capacity that holds at least
+   // `slots` slots and every entry at the maximum load factor. This may shrink
+   // the map, and it frees the map's storage when it is empty and `slots` is
+   // 0. The returned `maybe` is empty iff allocation failed.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   rehash(allocator_ref<Allocator> allocator, idx slots) -> maybe<void> {
+      slots = max(slots, slots_for(m_size));
+      idx const group_count = slots == 0u ? idx(0u) : group_count_for(slots);
+      if (group_count == m_groups.size()) {
+         return monostate;
+      }
+      if (group_count == 0u) {
+         free(allocator);
+         return monostate;
+      }
+      Container groups;
+      $prop(make_groups(allocator, groups, group_count));
+      move_entries_from(allocator, swap_groups(move(groups)));
+      return monostate;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   rehash(dyn_allocator allocator, idx slots) -> maybe<void> {
+      return rehash<dyn_allocator>(allocator, slots);
+   }
+
+   // Boost's `reserve()`. Resize so that `count` entries fit without growing.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   reserve(allocator_ref<Allocator> allocator, idx count) -> maybe<void> {
+      return rehash(allocator, slots_for(count));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   reserve(dyn_allocator allocator, idx count) -> maybe<void> {
+      return reserve<dyn_allocator>(allocator, count);
+   }
+
+   // Deallocate this `map`'s storage from `allocator`.
+   template <is_allocator Allocator>
+   [[clang::reinitializes]]
+   constexpr void
+   free(allocator_ref<Allocator> allocator) {
+      m_groups.free(allocator);
+      m_size = 0u;
+      m_max_load = 0u;
+      m_groups_size_index = 0u;
+      m_groups_size_mask = 0u;
+   }
+
+   // Deallocate this `map`'s storage from `allocator`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   free(dyn_allocator allocator) {
+      return free<dyn_allocator>(allocator);
+   }
+
+   // Deallocate this `map`'s storage from `allocator`.
+   template <is_allocator Allocator>
+   [[clang::reinitializes]]
+   constexpr void
+   cfree(allocator_ref<Allocator> allocator) {
+      m_groups.cfree(allocator);
+      m_size = 0u;
+      m_max_load = 0u;
+      m_groups_size_index = 0u;
+      m_groups_size_mask = 0u;
+   }
+
+   // Deallocate this `map`'s storage from `allocator`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   cfree(dyn_allocator allocator) {
+      return cfree<dyn_allocator>(allocator);
+   }
+
+ protected:
+   constexpr map_base() = default;
+
+   constexpr explicit map_base(Hash hash, KeyEqual key_equal)
+       : m_hash(move(hash)), m_key_equal(move(key_equal)) {
+   }
+
+   constexpr map_base(map_base const&) = default;
+   constexpr map_base(map_base&&) = default;
+   constexpr auto
+   operator=(map_base const&) -> map_base& = default;
+   constexpr auto
+   operator=(map_base&&) -> map_base& = default;
+   constexpr ~map_base() = default;
+
+ private:
+   using group_type = detail::map_group<Key, T>;
+
+   static constexpr idx group_slots = detail::map_group_slots;
+   static constexpr idx overflow_lane = detail::map_overflow_lane;
+   static constexpr uint1 sentinel = 1u;
+
+   [[nodiscard]]
+   constexpr auto
+   find(this auto& self, Key const& key, uint8 hash) {
+      using result = detail::map_locator<typeof(self.m_groups[0u])>;
+      if (self.m_groups.is_empty()) {
+         return result{};
+      }
+
+      uint1 const reduced = detail::map_reduced_hash(hash);
+      detail::map_prober probe(
+         hash, self.m_groups_size_index, self.m_groups_size_mask
+      );
+
+      do {
+         auto& group = self.m_groups[idx(probe.position)];
+         bitset<16u> matches = detail::map_match(group, reduced);
+
+         while (matches.any_of()) {
+            idx const i = matches.countr_zero();
+            if (self.m_key_equal(group.map_slots[i].value.first(), key)) {
+               return result{&group, i};
+            }
+            matches[i] = false;
+         }
+
+         // No entry with this hash was ever pushed past this group.
+         if (
+            (group.metadata[overflow_lane] & detail::map_overflow_bit(reduced))
+            == 0u
+         ) {
+            break;
+         }
+      } while (probe.next());
+
+      return result{};
+   }
+
+   // Construct an entry in the first empty slot along its probe sequence. The
+   // caller guarantees that `key` is not present and the load is below
+   // `m_max_load`, so an empty slot exists.
+   constexpr void
+   place(uint8 hash, Key&& key, T&& value) {
+      uint1 const reduced = detail::map_reduced_hash(hash);
+      detail::map_prober probe(hash, m_groups_size_index, m_groups_size_mask);
+
+      while (true) {
+         group_type& group = m_groups[idx(probe.position)];
+         bitset<16u> const empty = detail::map_match(group, 0u);
+
+         if (empty.any_of()) {
+            idx const i = empty.countr_zero();
+            new (&group.map_slots[i].value)
+               tuple<Key, T>(make_tuple(move(key), move(value)));
+
+            group.metadata.set_lane(i, reduced);
+            return;
+         }
+
+         group.metadata.set_lane(
+            overflow_lane,
+            uint1(
+               group.metadata[overflow_lane] | detail::map_overflow_bit(reduced)
+            )
+         );
+
+         probe.next();
+      }
+   }
+
+   // Add an entry for a `key` that is not present, growing if the map is at
+   // its maximum load.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   insert_new(
+      allocator_ref<Allocator> allocator, uint8 hash, Key&& key, T&& value
+   ) -> maybe<void> {
+      if (m_size < m_max_load) {
+         place(hash, move(key), move(value));
+      } else {
+         $prop(grow(allocator, hash, move(key), move(value)));
+      }
+
+      ++m_size;
+      return monostate;
+   }
+
+   // Boost's `initial_max_load()`. Tables of up to 2 groups may be full, and
+   // larger ones are loaded to at most 0.875.
+   [[nodiscard]]
+   static constexpr auto
+   max_load(idx group_count) -> idx {
+      idx const capacity = idx(group_count * group_slots - 1u);
+      if (capacity <= 2u * group_slots - 1u) {
+         return capacity;
+      }
+
+      return capacity * 7u / 8u;
+   }
+
+   // The slots that hold `count` entries at the maximum load factor, which is
+   // Boost's `ceil(count / mlf)`.
+   [[nodiscard]]
+   static constexpr auto
+   slots_for(idx count) -> idx {
+      return (count * 8u + 6u) / 7u;
+   }
+
+   // Boost's `size_index_for()`. The power of two groups with at least
+   // `slots` slots, plus one slot for the sentinel.
+   [[nodiscard]]
+   static constexpr auto
+   group_count_for(idx slots) -> idx {
+      return max(bit_ceil(idx(slots / group_slots + 1u)), idx(2u));
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   make_groups(
+      allocator_ref<Allocator> allocator, Container& groups, idx group_count
+   ) -> maybe<void> {
+      $prop(groups.template resize<Allocator>(allocator, group_count));
+      groups.back().metadata.set_lane(group_slots - 1u, sentinel);
+      return monostate;
+   }
+
+   // Probe `groups` from now on, and return the previous groups.
+   constexpr auto
+   swap_groups(Container&& groups) -> Container {
+      Container old_groups = move(m_groups);
+      m_groups = move(groups);
+      uword const group_count = m_groups.size();
+      m_groups_size_index = 64u - countr_zero(group_count);
+      m_groups_size_mask = group_count - 1u;
+      m_max_load = max_load(m_groups.size());
+      return old_groups;
+   }
+
+   // Boost's `unchecked_rehash()`. Move every entry of `old_groups` into the
+   // current groups, then free `old_groups`.
+   template <is_allocator Allocator>
+   constexpr void
+   move_entries_from(
+      allocator_ref<Allocator> allocator, Container&& old_groups
+   ) {
+      // Moved-from entries are destroyed with their old groups.
+      for (group_type& group : old_groups) {
+         for (idx i = 0u; i < group_slots; ++i) {
+            if (group.is_occupied(i)) {
+               tuple<Key, T>& entry = group.map_slots[i].value;
+               place(
+                  m_hash(entry.first()), move(entry.first()),
+                  move(entry.second())
+               );
+            }
+         }
+      }
+      old_groups.free(allocator);
+   }
+
+   // Boost's `unchecked_emplace_with_rehash()`. Place the new entry in larger
+   // groups, then move every existing entry into them.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   grow(allocator_ref<Allocator> allocator, uint8 hash, Key&& key, T&& value)
+      -> maybe<void> {
+      // Boost's `new_arrays_for_growth()` makes room for one more entry at
+      // the maximum load factor. The extra 1/61 of `m_size` keeps anti-drift
+      // from bringing the table back to its current size.
+      Container groups;
+      $prop(make_groups(
+         allocator, groups,
+         group_count_for(slots_for(m_size + m_size / 61u + 1u))
+      ));
+      Container old_groups = swap_groups(move(groups));
+      place(hash, move(key), move(value));
+      move_entries_from(allocator, move(old_groups));
+      return monostate;
+   }
+
+   Container m_groups;
+
+   [[no_unique_address]]
+   Hash m_hash;
+
+   [[no_unique_address]]
+   KeyEqual m_key_equal;
+
+   idx m_size = 0u;
+   idx m_max_load = 0u;
+
+   // Boost's `groups_size_index` and `groups_size_mask`. A hash's first group
+   // is `hash >> m_groups_size_index`, and probing wraps with the mask.
+   uword m_groups_size_index = 0u;
+   uword m_groups_size_mask = 0u;
+};
+
+}  // namespace cat::detail
+
+namespace cat::inline manual {
+
+template <
+   typename Key, typename T, typename Hash, typename KeyEqual,
+   typename Container, map_flags configuration>
+class
+   [[clang::preferred_name(
+        map<Key, T, Hash, KeyEqual, Container, configuration>
+     ),
+     gsl::Owner]]
+   basic_map : public detail::map_base<Key, T, Hash, KeyEqual, Container> {
+ public:
+   static constexpr map_flags flags = configuration;
+
+   constexpr basic_map() = default;
+
+   constexpr explicit basic_map(Hash hash, KeyEqual key_equal = {})
+       : detail::map_base<Key, T, Hash, KeyEqual, Container>(
+            move(hash), move(key_equal)
+         ) {
+   }
+};
+
+}  // namespace cat::inline manual

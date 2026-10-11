@@ -6,8 +6,6 @@
 
 namespace cat {
 
-namespace detail {
-
 // https://prng.di.unimi.it/splitmix64.c
 class splitmix64_engine {
  public:
@@ -66,9 +64,5 @@ class splitmix64_engine {
 
    wrap_uint8 m_state;
 };
-
-}  // namespace detail
-
-using splitmix64_engine = detail::splitmix64_engine;
 
 }  // namespace cat

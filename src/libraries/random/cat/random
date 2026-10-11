@@ -3,7 +3,17 @@
 #pragma once
 
 // Deterministic engines in this header are not cryptographically secure.
-// Use `nix::sys_urandom_engine` or `nix::sys_random_engine` instead.
+// If that is necessary, use `nix::sys_urandom_engine` or
+// `nix::sys_random_engine` instead.
+//
+// These algorithms are implemented:
+//    PCG family in `./detail/pcg.hpp`. This is the default RNG for libCat.
+//    Scalar and SIMD are supported.
+//
+//    Xoshiro in `./detail/pcg.hpp`. Scalar and SIMD are
+//    supported.
+//
+//    SplitMix64 in `./detail/splitmix.hpp`.
 
 #include <cat/detail/bounded_random.hpp>
 #include <cat/detail/random_seed.hpp>

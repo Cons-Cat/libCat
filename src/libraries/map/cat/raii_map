@@ -1,0 +1,164 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::raii::basic_map` wraps a `cat::manual::basic_map` and binds an
+// allocator for the container.
+//
+// As this is an `raii` namespace container, its destructor deallocates storage
+// automatically through the bound allocator.
+//
+// It is parameterized by `cat::map_flags`, the same as `cat::manual::map`.
+//
+// Convenience type aliases are provided for these configurations:
+//
+//  `cat::raii::map<Key, T, Allocator>`, with 4 inline entries.
+//  `cat::raii::map_small<Key, T, Allocator, n>`, with `n` inline entries.
+//  `cat::raii::map_big<Key, T, Allocator>`, without inline storage.
+
+#include <cat/map>
+
+namespace cat::raii {
+
+template <
+   typename Key, typename T, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = manual::vec_big<detail::map_group<Key, T>>,
+   is_allocator Allocator = dyn_allocator, map_flags flags = {}>
+class basic_map;
+
+template <
+   typename Key, typename T, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = manual::vec_big<detail::map_group<Key, T>>,
+   is_allocator Allocator = dyn_allocator, map_flags flags = {}>
+using map = basic_map<
+   Key, T, Hash, KeyEqual, Container, Allocator,
+   map_flags::inline_storage(4u) | flags>;
+
+template <
+   typename Key, typename T, is_allocator Allocator, idx inline_count,
+   map_flags flags = {}>
+using map_small = basic_map<
+   Key, T, __typeof_unqual(hash),
+   detail::binary_comparator<detail::equal_to_op>,
+   manual::vec_big<detail::map_group<Key, T>>, Allocator,
+   map_flags::inline_storage(inline_count) | flags>;
+
+template <
+   typename Key, typename T, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = manual::vec_big<detail::map_group<Key, T>>,
+   is_allocator Allocator = dyn_allocator, map_flags flags = {}>
+using map_big = basic_map<Key, T, Hash, KeyEqual, Container, Allocator, flags>;
+
+// TODO: Implement move assignment.
+template <
+   typename Key, typename T, typename Hash, typename KeyEqual,
+   typename Container, is_allocator Allocator, map_flags flags>
+class
+   [[clang::preferred_name(
+        map<Key, T, Hash, KeyEqual, Container, Allocator, flags>
+     ),
+     gsl::Owner]]
+   basic_map {
+ public:
+   constexpr basic_map() = delete ("`cat::raii::basic_map` cannot be created "
+                                   "without an allocator.");
+
+   constexpr basic_map(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   )
+       : m_core(), m_allocator(allocator) {
+   }
+
+   constexpr basic_map(basic_map&&) = default;
+
+   constexpr basic_map(basic_map const&) =
+      delete ("Implicit copying of `cat::raii::basic_map` is forbidden. Call "
+              "`.clone()` or move instead!");
+
+   auto
+   operator=(basic_map const&)
+      -> basic_map& = delete ("Implicit copying of `cat::raii::basic_map` is "
+                              "forbidden. Call `.clone()` or move instead!");
+
+   [[clang::reinitializes]]
+   constexpr auto
+   operator=(basic_map&& other) -> basic_map&;
+
+   constexpr ~basic_map() {
+      free();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](Key const& key) [[clang::lifetimebound]] -> maybe<T&> {
+      return m_core[key];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](Key const& key) const [[clang::lifetimebound]]
+   -> maybe<T const&> {
+      return m_core[key];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   insert(Key key, T value) -> maybe<void> {
+      return m_core.insert(m_allocator, move(key), move(value));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   update(Key key, T value) -> maybe<void> {
+      return m_core.update(m_allocator, move(key), move(value));
+   }
+
+   constexpr auto
+   remove(Key const& key) -> maybe<void> {
+      return m_core.remove(key);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   contains(Key const& key) const -> bool {
+      return m_core.contains(key);
+   }
+
+   // Deallocate this `map`'s storage through its owned allocator.
+   [[clang::reinitializes]]
+   constexpr void
+   free() {
+      m_core.free(m_allocator);
+   }
+
+   // Deallocate this `map`'s storage through its owned allocator.
+   [[clang::reinitializes]]
+   constexpr void
+   cfree() {
+      m_core.cfree(m_allocator);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   allocator(this auto&& self) -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
+   // Move ownership of this `map`'s storage. The returned manual `map` is
+   // responsible for being `.free()`'d elsewhere.
+   [[nodiscard, clang::reinitializes]]
+   constexpr auto
+   release() -> manual::basic_map<Key, T, Hash, KeyEqual, Container, flags> {
+      return move(m_core);
+   }
+
+ private:
+   manual::basic_map<Key, T, Hash, KeyEqual, Container, flags> m_core;
+   [[no_unique_address]]
+   allocator_ref<Allocator> m_allocator;
+};
+
+}  // namespace cat::raii
