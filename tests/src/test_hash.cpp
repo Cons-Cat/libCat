@@ -1,4 +1,5 @@
 #include <cat/hash>
+#include <cat/simd>
 
 #include "../unit_tests.hpp"
 
@@ -50,4 +51,21 @@ $test(wyhash_integers) {
       cat::wyhash(uint8(0x80000000'00000000ull), 35u) == 0x3b4909a9'78201b9eull
    );
    static_assert(cat::wyhash(int8(123'456'789), 42u) == 0x089130a7'c6f727e5ull);
+}
+
+$test(wyhash_simd) {
+   cat::fixed_size_simd<uint4, 4u> const value{1u, 2u, 3u, 4u};
+   auto const seeded = cat::wyhash(value, 99u);
+   auto const unseeded = cat::hash(value);
+   using seeded_type = decltype(seeded);
+
+   static_assert(cat::is_simd<seeded_type>);
+   static_assert(cat::is_same<seeded_type::value_type, uint8>);
+   static_assert(seeded_type::abi_type::lanes == 4u);
+
+   for (idx lane = 0u; lane < seeded_type::abi_type::lanes; ++lane) {
+      auto const lane_value = value[lane];
+      cat::verify(seeded[lane] == cat::wyhash(lane_value, 99u));
+      cat::verify(unseeded[lane] == cat::wyhash(lane_value));
+   }
 }

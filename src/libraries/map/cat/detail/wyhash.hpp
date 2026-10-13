@@ -6,18 +6,23 @@
 // reference `wyhash()` and `wyhash64()` with the default secret.
 //    https://github.com/wangyi-fudan/wyhash
 //
-// It hashes a span of bytes, or an integer far more cheaply than hashing its
-// bytes. Either may be given a seed.
+// It hashes a span of bytes, a SIMD value, or an integer far more cheaply than
+// hashing its bytes. Any of them may be given a seed.
 //
 //    uint8 bytes_hash = cat::wyhash(bytes);
 //    uint8 integer_hash = cat::wyhash(42, seed);
+//
+// Multiple hashes may be computed in parallel with `cat::simd`.
+//
+//    cat::fixed_size_simd<uint4, 4u> value{1u, 2u, 3u, 4u};
+//    auto simd_hash = cat::wyhash(value, seed);
 //
 // This code is tested in `tests/src/test_hash.cpp` against the reference
 // implementation.
 
 #include <cat/arithmetic>
 #include <cat/array>
-#include <cat/bit>
+#include <cat/simd>
 #include <cat/span>
 
 namespace cat {
@@ -141,6 +146,20 @@ struct wyhash_impl {
       uint8 b = seed ^ secret[1u];
       detail::wyhash_multiply(a, b);
       return detail::wyhash_mix(a ^ secret[0u], b ^ secret[1u]);
+   }
+
+   template <is_simd Simd>
+   [[nodiscard]]
+   static constexpr auto
+   operator()(Simd const& value, uint8 seed = 0u) {
+      using result_abi = cat::simd_abi::deduce<
+         uint8, Simd::abi_type::lanes, typename Simd::abi_type>;
+      simd<uint8, result_abi> result{};
+      for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
+         auto const lane_value = value[lane];
+         result.set_lane(lane, wyhash_impl::operator()(lane_value, seed));
+      }
+      return result;
    }
 };
 
