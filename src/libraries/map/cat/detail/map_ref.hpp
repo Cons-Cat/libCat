@@ -76,8 +76,8 @@ class [[gsl::Pointer]] map_ref {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert(dyn_allocator allocator, Key key, T value) const -> maybe<void> {
-      return insert<dyn_allocator>(allocator, move(key), move(value));
+   insert(allocator_dyn allocator, Key key, T value) const -> maybe<void> {
+      return insert<allocator_dyn>(allocator, move(key), move(value));
    }
 
    template <is_allocator Allocator>
@@ -90,8 +90,8 @@ class [[gsl::Pointer]] map_ref {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   update(dyn_allocator allocator, Key key, T value) const -> maybe<void> {
-      return update<dyn_allocator>(allocator, move(key), move(value));
+   update(allocator_dyn allocator, Key key, T value) const -> maybe<void> {
+      return update<allocator_dyn>(allocator, move(key), move(value));
    }
 
    constexpr auto
@@ -126,8 +126,8 @@ class [[gsl::Pointer]] map_ref {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   rehash(dyn_allocator allocator, idx slots) const -> maybe<void> {
-      return rehash<dyn_allocator>(allocator, slots);
+   rehash(allocator_dyn allocator, idx slots) const -> maybe<void> {
+      return rehash<allocator_dyn>(allocator, slots);
    }
 
    template <is_allocator Allocator>
@@ -139,8 +139,8 @@ class [[gsl::Pointer]] map_ref {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   reserve(dyn_allocator allocator, idx count) const -> maybe<void> {
-      return reserve<dyn_allocator>(allocator, count);
+   reserve(allocator_dyn allocator, idx count) const -> maybe<void> {
+      return reserve<allocator_dyn>(allocator, count);
    }
 
    // Deallocate the referenced map's storage from `allocator`.
@@ -153,8 +153,8 @@ class [[gsl::Pointer]] map_ref {
    // Deallocate the referenced map's storage from `allocator`.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(dyn_allocator allocator) const {
-      free<dyn_allocator>(allocator);
+   free(allocator_dyn allocator) const {
+      free<allocator_dyn>(allocator);
    }
 
    // Deallocate the referenced map's storage from `allocator`.
@@ -167,8 +167,8 @@ class [[gsl::Pointer]] map_ref {
    // Deallocate the referenced map's storage from `allocator`.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr void
-   cfree(dyn_allocator allocator) const {
-      cfree<dyn_allocator>(allocator);
+   cfree(allocator_dyn allocator) const {
+      cfree<allocator_dyn>(allocator);
    }
 };
 

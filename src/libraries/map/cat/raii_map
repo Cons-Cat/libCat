@@ -24,14 +24,14 @@ template <
    typename Key, typename T, typename Hash = __typeof_unqual(hash),
    typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
    typename Container = manual::vec_big<detail::map_group<Key, T>>,
-   is_allocator Allocator = dyn_allocator, map_flags flags = {}>
+   is_allocator Allocator = allocator_dyn, map_flags flags = {}>
 class basic_map;
 
 template <
    typename Key, typename T, typename Hash = __typeof_unqual(hash),
    typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
    typename Container = manual::vec_big<detail::map_group<Key, T>>,
-   is_allocator Allocator = dyn_allocator, map_flags flags = {}>
+   is_allocator Allocator = allocator_dyn, map_flags flags = {}>
 using map = basic_map<
    Key, T, Hash, KeyEqual, Container, Allocator,
    map_flags::inline_storage(4u) | flags>;
@@ -49,7 +49,7 @@ template <
    typename Key, typename T, typename Hash = __typeof_unqual(hash),
    typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
    typename Container = manual::vec_big<detail::map_group<Key, T>>,
-   is_allocator Allocator = dyn_allocator, map_flags flags = {}>
+   is_allocator Allocator = allocator_dyn, map_flags flags = {}>
 using map_big = basic_map<Key, T, Hash, KeyEqual, Container, Allocator, flags>;
 
 // TODO: Implement move assignment.

@@ -1,6 +1,6 @@
-#include <cat/linear_allocator>
+#include <cat/allocator_linear>
 #include <cat/map>
-#include <cat/page_allocator>
+#include <cat/allocator_page>
 
 #include "../unit_tests.hpp"
 
@@ -70,12 +70,12 @@ consteval auto
 map_consteval_insert_lookup() -> bool {
    cat::map_big<int4, int4> map;
    for (int4 i = 0; i < 100; ++i) {
-      if (!map.insert<cat::page_allocator>(pager, i, i * 2).has_value()) {
+      if (!map.insert<cat::allocator_page>(pager, i, i * 2).has_value()) {
          return false;
       }
    }
    bool const found = map[42].value() == 84 && !map[100].has_value();
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
    return found;
 }
 
@@ -89,7 +89,7 @@ $test(map_insert_lookup) {
    // Enough entries to grow several times.
    constexpr int4 count = 5'000;
    for (int4 i = 0; i < count; ++i) {
-      cat::verify(map.insert<cat::page_allocator>(pager, i, i * 3).has_value());
+      cat::verify(map.insert<cat::allocator_page>(pager, i, i * 3).has_value());
    }
    cat::verify(map.size() == count);
 
@@ -101,7 +101,7 @@ $test(map_insert_lookup) {
    cat::verify(!map[-1].has_value());
 
    // A key that is already present is not inserted again.
-   cat::verify(!map.insert<cat::page_allocator>(pager, 7, 0).has_value());
+   cat::verify(!map.insert<cat::allocator_page>(pager, 7, 0).has_value());
    cat::verify(map[7].value() == 21);
    cat::verify(map.size() == count);
 
@@ -112,7 +112,7 @@ $test(map_insert_lookup) {
    auto const& const_map = map;
    cat::verify(const_map[7].value() == 100);
 
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
    cat::verify(map.size() == 0);
    cat::verify(!map[7].has_value());
 }
@@ -123,13 +123,13 @@ $test(map_nontrivial_values) {
       cat::map_big<int4, tracked> map;
       for (int4 i = 0; i < 1'000; ++i) {
          cat::verify(
-            map.insert<cat::page_allocator>(pager, i, tracked(i)).has_value()
+            map.insert<cat::allocator_page>(pager, i, tracked(i)).has_value()
          );
       }
       // Rehashing moves entries, which must not destroy their values.
       cat::verify(destructor_count == 0);
       cat::verify(map[500].value().value == 500);
-      map.free<cat::page_allocator>(pager);
+      map.free<cat::allocator_page>(pager);
    }
    cat::verify(destructor_count == 1'000);
 }
@@ -142,28 +142,28 @@ $test(map_hash_and_key_equal) {
    cat::map_big<int4, int4, constant_hash> colliding;
    for (int4 i = 0; i < 1'000; ++i) {
       cat::verify(
-         colliding.insert<cat::page_allocator>(pager, i, i + 1).has_value()
+         colliding.insert<cat::allocator_page>(pager, i, i + 1).has_value()
       );
    }
    for (int4 i = 0; i < 1'000; ++i) {
       cat::verify(colliding[i].value() == i + 1);
    }
    cat::verify(!colliding[1'000].has_value());
-   colliding.free<cat::page_allocator>(pager);
+   colliding.free<cat::allocator_page>(pager);
 
    cat::map_big<int4, int4, modulo_hash, modulo_equal> modulo;
-   cat::verify(modulo.insert<cat::page_allocator>(pager, 5, 1).has_value());
-   cat::verify(!modulo.insert<cat::page_allocator>(pager, 105, 2).has_value());
+   cat::verify(modulo.insert<cat::allocator_page>(pager, 5, 1).has_value());
+   cat::verify(!modulo.insert<cat::allocator_page>(pager, 105, 2).has_value());
    cat::verify(modulo[205].value() == 1);
    cat::verify(!modulo[6].has_value());
-   modulo.free<cat::page_allocator>(pager);
+   modulo.free<cat::allocator_page>(pager);
 
    cat::map_big<int4, int4, seeded_hash> seeded(seeded_hash{12'345u});
    for (int4 i = 0; i < 100; ++i) {
-      cat::verify(seeded.insert<cat::page_allocator>(pager, i, -i).has_value());
+      cat::verify(seeded.insert<cat::allocator_page>(pager, i, -i).has_value());
    }
    cat::verify(seeded[99].value() == -99);
-   seeded.free<cat::page_allocator>(pager);
+   seeded.free<cat::allocator_page>(pager);
 }
 
 $test(map_growth_matches_boost) {
@@ -171,7 +171,7 @@ $test(map_growth_matches_boost) {
    cat::verify(map.capacity() == 0u);
    auto insert_until = [&](int4 count) {
       for (int4 i = int4(map.size()); i < count; ++i) {
-         cat::verify(map.insert<cat::page_allocator>(pager, i, i).has_value());
+         cat::verify(map.insert<cat::allocator_page>(pager, i, i).has_value());
       }
    };
 
@@ -188,14 +188,14 @@ $test(map_growth_matches_boost) {
    cat::verify(map.capacity() == 59u);
    insert_until(52);
    cat::verify(map.capacity() == 119u);
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
 }
 
 $test(map_remove) {
    cat::map_big<int4, int4> map;
    cat::verify(!map.remove(0).has_value());
    for (int4 i = 0; i < 1'000; ++i) {
-      cat::verify(map.insert<cat::page_allocator>(pager, i, i * 2).has_value());
+      cat::verify(map.insert<cat::allocator_page>(pager, i, i * 2).has_value());
    }
    for (int4 i = 0; i < 1'000; i += 2) {
       cat::verify(map.remove(i).has_value());
@@ -210,21 +210,21 @@ $test(map_remove) {
 
    // Removed keys can be inserted again.
    for (int4 i = 0; i < 1'000; i += 2) {
-      cat::verify(map.insert<cat::page_allocator>(pager, i, -i).has_value());
+      cat::verify(map.insert<cat::allocator_page>(pager, i, -i).has_value());
    }
    cat::verify(map.size() == 1'000u);
    cat::verify(map[500].value() == -500);
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
 
    destructor_count = 0;
    cat::map_big<int4, tracked> tracked_map;
    for (int4 i = 0; i < 10; ++i) {
-      cat::verify(tracked_map.insert<cat::page_allocator>(pager, i, tracked(i))
+      cat::verify(tracked_map.insert<cat::allocator_page>(pager, i, tracked(i))
                      .has_value());
    }
    cat::verify(tracked_map.remove(3).has_value());
    cat::verify(destructor_count == 1);
-   tracked_map.free<cat::page_allocator>(pager);
+   tracked_map.free<cat::allocator_page>(pager);
    cat::verify(destructor_count == 10);
 }
 
@@ -233,7 +233,7 @@ $test(map_remove_colliding) {
    // lowers the maximum load.
    cat::map_big<int4, int4, constant_hash> map;
    for (int4 i = 0; i < 100; ++i) {
-      cat::verify(map.insert<cat::page_allocator>(pager, i, i).has_value());
+      cat::verify(map.insert<cat::allocator_page>(pager, i, i).has_value());
    }
    for (int4 i = 0; i < 100; i += 3) {
       cat::verify(map.remove(i).has_value());
@@ -245,36 +245,36 @@ $test(map_remove_colliding) {
    // Repeatedly inserting and removing must keep working as anti-drift
    // lowers the maximum load and eventually forces a rehash.
    for (int4 i = 100; i < 1'100; ++i) {
-      cat::verify(map.insert<cat::page_allocator>(pager, i, i).has_value());
+      cat::verify(map.insert<cat::allocator_page>(pager, i, i).has_value());
       cat::verify(map.remove(i).has_value());
       cat::verify(!map.contains(i));
    }
    for (int4 i = 0; i < 100; ++i) {
       cat::verify(map.contains(i) == (i % 3 != 0));
    }
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
 }
 
 $test(map_update) {
    cat::map_big<int4, int4> map;
    // A missing key is inserted.
-   cat::verify(map.update<cat::page_allocator>(pager, 1, 10).has_value());
+   cat::verify(map.update<cat::allocator_page>(pager, 1, 10).has_value());
    cat::verify(map[1].value() == 10);
    // A present key has its value replaced.
-   cat::verify(map.update<cat::page_allocator>(pager, 1, 20).has_value());
+   cat::verify(map.update<cat::allocator_page>(pager, 1, 20).has_value());
    cat::verify(map[1].value() == 20);
    cat::verify(map.size() == 1u);
 
    // Updates grow the map like insertions.
    for (int4 i = 0; i < 1'000; ++i) {
-      cat::verify(map.update<cat::page_allocator>(pager, i, i).has_value());
+      cat::verify(map.update<cat::allocator_page>(pager, i, i).has_value());
    }
    for (int4 i = 0; i < 1'000; ++i) {
-      cat::verify(map.update<cat::page_allocator>(pager, i, i + 1).has_value());
+      cat::verify(map.update<cat::allocator_page>(pager, i, i + 1).has_value());
    }
    cat::verify(map.size() == 1'000u);
    cat::verify(map[999].value() == 1'000);
-   map.cfree<cat::page_allocator>(pager);
+   map.cfree<cat::allocator_page>(pager);
    cat::verify(map.size() == 0u);
    cat::verify(map.capacity() == 0u);
    cat::verify(!map[1].has_value());
@@ -283,22 +283,22 @@ $test(map_update) {
 $test(map_reserve_rehash) {
    cat::map_big<int4, int4> map;
    // `reserve()` makes room without growing later.
-   cat::verify(map.reserve<cat::page_allocator>(pager, 100u).has_value());
+   cat::verify(map.reserve<cat::allocator_page>(pager, 100u).has_value());
    cat::verify(map.capacity() == 119u);
    for (int4 i = 0; i < 100; ++i) {
-      cat::verify(map.insert<cat::page_allocator>(pager, i, i).has_value());
+      cat::verify(map.insert<cat::allocator_page>(pager, i, i).has_value());
    }
    cat::verify(map.capacity() == 119u);
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
 
    for (int4 i = 0; i < 10; ++i) {
-      cat::verify(map.insert<cat::page_allocator>(pager, i, i * 7).has_value());
+      cat::verify(map.insert<cat::allocator_page>(pager, i, i * 7).has_value());
    }
-   cat::verify(map.reserve<cat::page_allocator>(pager, 1'000u).has_value());
+   cat::verify(map.reserve<cat::allocator_page>(pager, 1'000u).has_value());
    cat::verify(map.capacity() == 1'919u);
 
    // `rehash()` shrinks to the smallest capacity that holds every entry.
-   cat::verify(map.rehash<cat::page_allocator>(pager, 0u).has_value());
+   cat::verify(map.rehash<cat::allocator_page>(pager, 0u).has_value());
    cat::verify(map.capacity() == 29u);
    cat::verify(map.size() == 10u);
    for (int4 i = 0; i < 10; ++i) {
@@ -309,12 +309,12 @@ $test(map_reserve_rehash) {
    for (int4 i = 0; i < 10; ++i) {
       cat::verify(map.remove(i).has_value());
    }
-   cat::verify(map.rehash<cat::page_allocator>(pager, 0u).has_value());
+   cat::verify(map.rehash<cat::allocator_page>(pager, 0u).has_value());
    cat::verify(map.capacity() == 0u);
    cat::verify(!map[0].has_value());
-   cat::verify(map.insert<cat::page_allocator>(pager, 1, 1).has_value());
+   cat::verify(map.insert<cat::allocator_page>(pager, 1, 1).has_value());
    cat::verify(map.capacity() == 29u);
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
 }
 
 $test(map_consteval) {
@@ -388,7 +388,7 @@ verify_dyn_map() {
 
    // Writes through the concrete map are seen through the `dyn_map`.
    cat::verify(
-      map.template insert<cat::page_allocator>(pager, -1, 1).has_value()
+      map.template insert<cat::allocator_page>(pager, -1, 1).has_value()
    );
    cat::verify(dyn.contains(-1));
    cat::verify(dyn.remove(-1).has_value());
@@ -411,7 +411,7 @@ verify_dyn_map() {
    cat::verify(dyn.size() == count + 1);
    cat::verify(dyn[count].value() == count);
 
-   map.template free<cat::page_allocator>(pager);
+   map.template free<cat::allocator_page>(pager);
    cat::verify(dyn.size() == 0u);
    cat::verify(!dyn.contains(1));
 }
@@ -452,7 +452,7 @@ struct assoc_array {
    }
 
    auto
-   insert(cat::dyn_allocator, int4 key, int4 value) -> cat::maybe<void> {
+   insert(cat::allocator_dyn, int4 key, int4 value) -> cat::maybe<void> {
       if (find(key).has_value() || count == 8u) {
          return cat::nullopt;
       }
@@ -463,7 +463,7 @@ struct assoc_array {
    }
 
    auto
-   update(cat::dyn_allocator allocator, int4 key, int4 value)
+   update(cat::allocator_dyn allocator, int4 key, int4 value)
       -> cat::maybe<void> {
       if (cat::maybe<int4&> found = (*this)[key]; found.has_value()) {
          found.value() = value;
@@ -509,8 +509,8 @@ $test(dyn_map_and_view) {
    cat::verify(!dyn_map_insert(small, 0));
    cat::verify(small[99].value() == 198);
    cat::verify(map_view_sum(small, 100) == map_view_sum(big, 100));
-   big.free<cat::page_allocator>(pager);
-   small.free<cat::page_allocator>(pager);
+   big.free<cat::allocator_page>(pager);
+   small.free<cat::allocator_page>(pager);
 }
 
 $test(map_view) {
@@ -522,7 +522,7 @@ $test(map_view) {
 
    // A view sees insertions made after it was created, including growth.
    for (int4 i = 0; i < 100; ++i) {
-      cat::verify(map.insert<cat::page_allocator>(pager, i, i).has_value());
+      cat::verify(map.insert<cat::allocator_page>(pager, i, i).has_value());
    }
    cat::verify(view.size() == 100u);
    cat::verify(view.contains(5));
@@ -549,7 +549,7 @@ $test(map_view) {
    cat::map_view<int4, int4 const> also_const = map;
    cat::verify(also_const[6].value() == 6);
 
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
    cat::verify(view.size() == 0u);
    cat::verify(!const_view.contains(5));
 }
@@ -562,12 +562,12 @@ $test(map_view_configurations) {
    cat::map<int4, int4, modulo_hash, modulo_equal> modulo;
    assoc_array array;
    for (int4 i = 0; i < 8; ++i) {
-      cat::verify(small.insert<cat::page_allocator>(pager, i, i).has_value());
-      cat::verify(tiny.insert<cat::page_allocator>(pager, i, i).has_value());
+      cat::verify(small.insert<cat::allocator_page>(pager, i, i).has_value());
+      cat::verify(tiny.insert<cat::allocator_page>(pager, i, i).has_value());
       cat::verify(
-         colliding.insert<cat::page_allocator>(pager, i, i).has_value()
+         colliding.insert<cat::allocator_page>(pager, i, i).has_value()
       );
-      cat::verify(modulo.insert<cat::page_allocator>(pager, i, i).has_value());
+      cat::verify(modulo.insert<cat::allocator_page>(pager, i, i).has_value());
       cat::verify(array.insert(pager, i, i).has_value());
    }
    for (cat::map_view<int4, int4 const> view :
@@ -583,10 +583,10 @@ $test(map_view_configurations) {
    // Key equality is respected through the view.
    cat::verify(cat::map_view<int4, int4 const>(modulo)[107].value() == 7);
 
-   small.free<cat::page_allocator>(pager);
-   tiny.free<cat::page_allocator>(pager);
-   colliding.free<cat::page_allocator>(pager);
-   modulo.free<cat::page_allocator>(pager);
+   small.free<cat::allocator_page>(pager);
+   tiny.free<cat::allocator_page>(pager);
+   colliding.free<cat::allocator_page>(pager);
+   modulo.free<cat::allocator_page>(pager);
 }
 
 $test(map_view_from_dyn_map) {
@@ -614,7 +614,7 @@ $test(map_view_from_dyn_map) {
    static_assert(sizeof(cat::map_view<int4, int4>) == 2u * sizeof(void*));
    static_assert(sizeof(cat::map_view<int4, int4 const>) == 2u * sizeof(void*));
    static_assert(cat::is_trivially_copyable<cat::map_view<int4, int4>>);
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
 }
 
 $test(dyn_map_configurations) {
@@ -645,7 +645,7 @@ $test(dyn_map_key_equal) {
    cat::verify(map[5].value() == 3);
    cat::verify(dyn.remove(405).has_value());
    cat::verify(!dyn.contains(5));
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
 }
 
 $test(dyn_map_nontrivial_values) {
@@ -670,13 +670,13 @@ $test(dyn_map_nontrivial_values) {
    cat::verify(dyn.remove(1).has_value());
    cat::verify(destructor_count == 2);
 
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
    cat::verify(destructor_count == 101);
 }
 
 $test(dyn_map_allocation_failure) {
    cat::span<cat::byte> page = pager.alloc_multi<cat::byte>(4_uki).verify();
-   cat::linear_allocator arena = cat::make_linear_allocator(page);
+   cat::allocator_linear arena = cat::make_allocator_linear(page);
 
    cat::map<int4, int4> map;
    cat::dyn_map<int4, int4> dyn = map;
@@ -735,8 +735,8 @@ $test(dyn_map_handle) {
    cat::verify(second.contains(2));
    cat::verify(copy.size() == 1u);
 
-   first.free<cat::page_allocator>(pager);
-   second.free<cat::page_allocator>(pager);
+   first.free<cat::allocator_page>(pager);
+   second.free<cat::allocator_page>(pager);
 }
 
 $test(dyn_map_other_map_kinds) {
@@ -760,7 +760,7 @@ $test(dyn_map_other_map_kinds) {
       !cat::dyn_map<int4, int4>(array).insert(pager, 9, 0).has_value()
    );
    cat::verify(cat::dyn_map<int4, int4>(hash).insert(pager, 9, 0).has_value());
-   hash.free<cat::page_allocator>(pager);
+   hash.free<cat::allocator_page>(pager);
 }
 
 namespace {
@@ -797,7 +797,7 @@ $test(dyn_map_unassignable_values) {
    cat::verify(dyn.size() == 49u);
    cat::map_view<int4, unassignable const> view = dyn;
    cat::verify(view[48].value().value == 48);
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
 }
 
 namespace {
@@ -806,7 +806,7 @@ namespace {
 auto
 map_ref_fill(cat::map_ref<int4, int4> map, int4 count) -> bool {
    for (int4 i = 0; i < count; ++i) {
-      if (!map.insert<cat::page_allocator>(pager, i, i * 3).has_value()) {
+      if (!map.insert<cat::allocator_page>(pager, i, i * 3).has_value()) {
          return false;
       }
    }
@@ -823,12 +823,12 @@ map_ref_consteval() -> bool {
    cat::map<int4, int4> map;
    cat::map_ref<int4, int4> ref = map;
    for (int4 i = 0; i < 50; ++i) {
-      if (!ref.insert<cat::page_allocator>(pager, i, i).has_value()) {
+      if (!ref.insert<cat::allocator_page>(pager, i, i).has_value()) {
          return false;
       }
    }
    bool const found = ref[49].value() == 49 && map.size() == 50u;
-   ref.free<cat::page_allocator>(pager);
+   ref.free<cat::allocator_page>(pager);
    return found;
 }
 
@@ -872,7 +872,7 @@ $test(map_ref) {
    cat::verify(ref.remove(2).has_value());
    cat::verify(!ref.contains(2));
    cat::verify(ref.size() == 299u);
-   cat::verify(ref.reserve<cat::page_allocator>(pager, 1'000u).has_value());
+   cat::verify(ref.reserve<cat::allocator_page>(pager, 1'000u).has_value());
    cat::verify(ref.capacity() == small.capacity());
    cat::verify(ref.capacity() >= 1'000u);
    cat::verify(ref.rehash(pager, 0u).has_value());
@@ -887,14 +887,14 @@ $test(map_ref) {
    ref.cfree(pager);
    cat::verify(small.size() == 0u);
    cat::verify(small.capacity() == 0u);
-   cat::map_ref<int4, int4>(tiny).free<cat::page_allocator>(pager);
-   cat::map_ref<int4, int4>(big).free<cat::page_allocator>(pager);
+   cat::map_ref<int4, int4>(tiny).free<cat::allocator_page>(pager);
+   cat::map_ref<int4, int4>(big).free<cat::allocator_page>(pager);
    cat::verify(tiny.size() == 0u);
 }
 
 $test(map_ref_conversions) {
    cat::map<int4, int4> map;
-   cat::verify(map.insert<cat::page_allocator>(pager, 1, 1).has_value());
+   cat::verify(map.insert<cat::allocator_page>(pager, 1, 1).has_value());
 
    // Views and `dyn_map`s bind the referenced map, so they outlive the
    // `map_ref` they were made from.
@@ -907,7 +907,7 @@ $test(map_ref_conversions) {
    cat::verify(const_view.size() == 2u);
    cat::verify(map[2].value() == 2);
 
-   map.free<cat::page_allocator>(pager);
+   map.free<cat::allocator_page>(pager);
 }
 
 $test(map_ref_consteval) {

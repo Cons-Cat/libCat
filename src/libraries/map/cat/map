@@ -50,7 +50,7 @@
 //  `map_flags`. It supports every operation of `basic_map` and dispatches
 //  statically.
 //  `cat::dyn_map<Key, T>`, a type-erased reference to any map that may insert,
-//  update, and remove through a `dyn_allocator`.
+//  update, and remove through a `allocator_dyn`.
 //  `cat::map_view<Key, T>`, a type-erased view of any map that only looks up
 //  keys.
 //  `cat::map_view<Key, T const>` also forbids mutating values.
@@ -308,8 +308,8 @@ class [[gsl::Owner]] map_base {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert(dyn_allocator allocator, Key key, T value) -> maybe<void> {
-      return insert<dyn_allocator>(allocator, move(key), move(value));
+   insert(allocator_dyn allocator, Key key, T value) -> maybe<void> {
+      return insert<allocator_dyn>(allocator, move(key), move(value));
    }
 
    // The returned `maybe` is empty iff allocation failed.
@@ -328,8 +328,8 @@ class [[gsl::Owner]] map_base {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   update(dyn_allocator allocator, Key key, T value) -> maybe<void> {
-      return update<dyn_allocator>(allocator, move(key), move(value));
+   update(allocator_dyn allocator, Key key, T value) -> maybe<void> {
+      return update<allocator_dyn>(allocator, move(key), move(value));
    }
 
    constexpr auto
@@ -405,8 +405,8 @@ class [[gsl::Owner]] map_base {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   rehash(dyn_allocator allocator, idx slots) -> maybe<void> {
-      return rehash<dyn_allocator>(allocator, slots);
+   rehash(allocator_dyn allocator, idx slots) -> maybe<void> {
+      return rehash<allocator_dyn>(allocator, slots);
    }
 
    // Resize so that at least `count` entries fit without growing.
@@ -419,8 +419,8 @@ class [[gsl::Owner]] map_base {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   reserve(dyn_allocator allocator, idx count) -> maybe<void> {
-      return reserve<dyn_allocator>(allocator, count);
+   reserve(allocator_dyn allocator, idx count) -> maybe<void> {
+      return reserve<allocator_dyn>(allocator, count);
    }
 
    // Deallocate this `map`'s storage from `allocator`.
@@ -438,8 +438,8 @@ class [[gsl::Owner]] map_base {
    // Deallocate this `map`'s storage from `allocator`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(dyn_allocator allocator) {
-      return free<dyn_allocator>(allocator);
+   free(allocator_dyn allocator) {
+      return free<allocator_dyn>(allocator);
    }
 
    // Deallocate this `map`'s storage from `allocator`.
@@ -457,8 +457,8 @@ class [[gsl::Owner]] map_base {
    // Deallocate this `map`'s storage from `allocator`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   cfree(dyn_allocator allocator) {
-      return cfree<dyn_allocator>(allocator);
+   cfree(allocator_dyn allocator) {
+      return cfree<allocator_dyn>(allocator);
    }
 
  protected:

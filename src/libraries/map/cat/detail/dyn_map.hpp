@@ -14,14 +14,14 @@ namespace cat::detail {
 
 template <typename Key, typename T>
 struct dyn_map_insert {
-   using signature = auto(dyn_allocator&, dyn_map_sink<Key>, dyn_map_sink<T>)
+   using signature = auto(allocator_dyn&, dyn_map_sink<Key>, dyn_map_sink<T>)
       -> maybe<void>;
 
    template <typename Map>
    [[gnu::always_inline, gnu::nodebug]]
    static constexpr auto
    do_invoke(
-      Map& self, dyn_allocator& allocator, dyn_map_sink<Key> key,
+      Map& self, allocator_dyn& allocator, dyn_map_sink<Key> key,
       dyn_map_sink<T> value
    ) -> maybe<void> {
       return self.insert(allocator, move(key), move(value));
@@ -32,14 +32,14 @@ struct dyn_map_insert {
 // map does not.
 template <typename Key, typename T>
 struct dyn_map_update {
-   using signature = auto(dyn_allocator&, dyn_map_sink<Key>, dyn_map_sink<T>)
+   using signature = auto(allocator_dyn&, dyn_map_sink<Key>, dyn_map_sink<T>)
       -> maybe<void>;
 
    template <typename Map>
    [[gnu::always_inline, gnu::nodebug]]
    static constexpr auto
    do_invoke(
-      Map& self, dyn_allocator& allocator, dyn_map_sink<Key> key,
+      Map& self, allocator_dyn& allocator, dyn_map_sink<Key> key,
       dyn_map_sink<T> value
    ) -> maybe<void> {
       if constexpr (is_move_assignable<T>) {
@@ -68,7 +68,7 @@ namespace cat::inline manual {
 
 // A non-owning, type-erased reference to any non-`const` map of `Key` to `T`.
 // This erases its hash, key equality, storage, and `map_flags`. Insertions
-// allocate through a `dyn_allocator`.
+// allocate through a `allocator_dyn`.
 template <typename Key, typename T>
 class [[gsl::Pointer]] dyn_map {
    template <typename, typename>
@@ -105,7 +105,7 @@ class [[gsl::Pointer]] dyn_map {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert(dyn_allocator allocator, Key key, T value) const -> maybe<void> {
+   insert(allocator_dyn allocator, Key key, T value) const -> maybe<void> {
       return m_map.template invoke<detail::dyn_map_insert<Key, T>>(
          allocator, move(key), move(value)
       );
@@ -113,7 +113,7 @@ class [[gsl::Pointer]] dyn_map {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   update(dyn_allocator allocator, Key key, T value) const -> maybe<void>
+   update(allocator_dyn allocator, Key key, T value) const -> maybe<void>
       requires(is_move_assignable<T>)
    {
       return m_map.template invoke<detail::dyn_map_update<Key, T>>(
