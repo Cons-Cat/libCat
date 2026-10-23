@@ -56,13 +56,13 @@ $test(thread_atexit_worker_threads) {
    cat::thread threads[thread_count];
    $defer {
       for (idx index; index < thread_count; ++index) {
-         threads[index].free(g_tests_alloc_musl);
+         threads[index].free(g_tests_alloc);
       }
    };
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
-         .spawn(g_tests_alloc_musl, worker_stack_size, touch_local_marker)
+         .spawn(g_tests_alloc, worker_stack_size, touch_local_marker)
          .verify();
    }
    for (idx index; index < thread_count; ++index) {
@@ -77,11 +77,11 @@ $test(thread_atexit_runs_last_in_first_out) {
 
    cat::thread worker;
    $defer {
-      worker.free(g_tests_alloc_musl);
+      worker.free(g_tests_alloc);
    };
    worker
       .spawn(
-         g_tests_alloc_musl, worker_stack_size,
+         g_tests_alloc, worker_stack_size,
          [] {
             cat::verify(
                cat::__cxa_thread_atexit_impl(record_tag, &first_tag, nullptr)
@@ -106,11 +106,11 @@ $test(thread_atexit_grows_destructor_list) {
 
    cat::thread worker;
    $defer {
-      worker.free(g_tests_alloc_musl);
+      worker.free(g_tests_alloc);
    };
    worker
       .spawn(
-         g_tests_alloc_musl, worker_stack_size,
+         g_tests_alloc, worker_stack_size,
          [] {
             for (idx index; index < 300; ++index) {
                cat::verify(
@@ -130,7 +130,7 @@ $test(thread_atexit_grows_destructor_list) {
 
 $test(thread_atexit_parking_lot_threads_exit) {
    constexpr idx thread_count = 4;
-   cat::alloc_mutex_runtime<tests_allocator>(g_tests_alloc, thread_count)
+   cat::alloc_mutex_runtime<cat::allocator_musl_shared>(g_tests_alloc, thread_count)
       .verify();
 
    cat::mutex mutex;
@@ -138,7 +138,7 @@ $test(thread_atexit_parking_lot_threads_exit) {
    cat::thread threads[thread_count];
    $defer {
       for (idx index; index < thread_count; ++index) {
-         threads[index].free(g_tests_alloc_musl);
+         threads[index].free(g_tests_alloc);
       }
    };
    mutex.lock();
@@ -146,7 +146,7 @@ $test(thread_atexit_parking_lot_threads_exit) {
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            g_tests_alloc_musl, worker_stack_size,
+            g_tests_alloc, worker_stack_size,
             [&] {
                ++entered;
                mutex.lock();
@@ -166,5 +166,5 @@ $test(thread_atexit_parking_lot_threads_exit) {
       threads[index].join().verify();
    }
 
-   cat::free_mutex_runtime<tests_allocator>(g_tests_alloc);
+   cat::free_mutex_runtime<cat::allocator_musl_shared>(g_tests_alloc);
 }

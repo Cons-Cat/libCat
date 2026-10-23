@@ -84,7 +84,7 @@ $test(path_flags_and_factories) {
    cat::verify(managed == "gamma");
    cat::verify(managed.data()[managed.size()] == '\0');
    cat::file_path released = managed.release();
-   auto custom = cat::make_file_path<tests_allocator, custom_growth>(
+   auto custom = cat::make_file_path<cat::allocator_musl_shared, custom_growth>(
                     g_tests_alloc, "delta"
    )
                     .verify();

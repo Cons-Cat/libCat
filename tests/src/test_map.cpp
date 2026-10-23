@@ -1,6 +1,6 @@
 #include <cat/allocator_linear>
-#include <cat/map>
 #include <cat/allocator_page>
+#include <cat/map>
 
 #include "../unit_tests.hpp"
 

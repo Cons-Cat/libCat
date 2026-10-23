@@ -18,12 +18,12 @@ verify_wait_transitions(cat::idx index) {
    cat::thread waiter;
 
    $defer {
-      waiter.free(g_tests_alloc_musl);
+      waiter.free(g_tests_alloc);
    };
 
    waiter
       .spawn(
-         g_tests_alloc_musl, worker_stack_size,
+         g_tests_alloc, worker_stack_size,
          [&bits, &started, &phase, &completed, index] {
             started.release() = true;
             bits.wait(index, false, cat::memory_order::acquire);
@@ -329,12 +329,12 @@ $test(bitset_shared_wait_rechecks_same_word_changes) {
 
    bits.set(1u, cat::memory_order::relaxed);
    $defer {
-      waiter.free(g_tests_alloc_musl);
+      waiter.free(g_tests_alloc);
    };
 
    waiter
       .spawn(
-         g_tests_alloc_musl, worker_stack_size,
+         g_tests_alloc, worker_stack_size,
          [&bits, &started, &completed] {
             started.release() = true;
             bits.wait(64u, false, cat::memory_order::acquire);
@@ -366,12 +366,12 @@ $test(bitset_shared_wait_ignores_different_word_changes) {
    cat::thread waiter;
 
    $defer {
-      waiter.free(g_tests_alloc_musl);
+      waiter.free(g_tests_alloc);
    };
 
    waiter
       .spawn(
-         g_tests_alloc_musl, worker_stack_size,
+         g_tests_alloc, worker_stack_size,
          [&bits, &started, &completed] {
             started.release() = true;
             bits[64u].wait(false, cat::memory_order::seq_cst);
@@ -469,14 +469,14 @@ $test(bitset_shared_same_word_contention) {
 
    $defer {
       for (cat::idx worker; worker < 4u; ++worker) {
-         workers[worker.raw].free(g_tests_alloc_musl);
+         workers[worker.raw].free(g_tests_alloc);
       }
    };
 
    for (cat::idx worker; worker < 4u; ++worker) {
       workers[worker.raw]
          .spawn(
-            g_tests_alloc_musl, worker_stack_size,
+            g_tests_alloc, worker_stack_size,
             [](cat::bitset_shared<64u>* p_shared, cat::idx offset) {
                for (cat::idx index = offset; index < p_shared->size();
                     index += 4u) {
@@ -504,7 +504,7 @@ $test(bitset_shared_disjoint_word_updates) {
 
    $defer {
       for (cat::idx worker; worker < 4u; ++worker) {
-         workers[worker.raw].free(g_tests_alloc_musl);
+         workers[worker.raw].free(g_tests_alloc);
       }
    };
 
@@ -512,7 +512,7 @@ $test(bitset_shared_disjoint_word_updates) {
       cat::idx const begin = 1u + worker * 64u;
       workers[worker.raw]
          .spawn(
-            g_tests_alloc_musl, worker_stack_size,
+            g_tests_alloc, worker_stack_size,
             [](cat::bitset_shared<257u>* p_shared, cat::idx first) {
                for (cat::idx index = first; index < first + 64u; ++index) {
                   p_shared->set(index, cat::memory_order::release);
@@ -600,14 +600,14 @@ $test(bitset_shared_compound_operator_contention) {
 
    $defer {
       for (cat::idx worker; worker < workers_count; ++worker) {
-         workers[worker.raw].free(g_tests_alloc_musl);
+         workers[worker.raw].free(g_tests_alloc);
       }
    };
 
    for (cat::idx worker; worker < workers_count; ++worker) {
       workers[worker.raw]
          .spawn(
-            g_tests_alloc_musl, worker_stack_size,
+            g_tests_alloc, worker_stack_size,
             [](cat::bitset_shared<129u>* p_bits,
                cat::bitset_shared<129u> const* p_mask) {
                *p_bits |= *p_mask;

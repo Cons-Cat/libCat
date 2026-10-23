@@ -262,11 +262,11 @@ verify_cross_thread_release(Allocator& allocator) {
    cat::atomic<bool> released;
    cat::thread thread;
    $defer {
-      thread.free(g_tests_alloc_musl);
+      thread.free(g_tests_alloc);
    };
    thread
       .spawn(
-         g_tests_alloc_musl, worker_stack_size,
+         g_tests_alloc, worker_stack_size,
          [&allocator, allocation, &released] {
             allocator.free_multi_uninit(allocation);
             released.release() = true;
@@ -290,9 +290,9 @@ verify_child_hardening(void (*p_test)(nix::file_descriptor)) {
 
    nix::process child;
    $defer {
-      child.free(g_tests_alloc_musl);
+      child.free(g_tests_alloc);
    };
-   child.spawn(g_tests_alloc_musl, worker_stack_size, p_test, pipe[1]).verify();
+   child.spawn(g_tests_alloc, worker_stack_size, p_test, pipe[1]).verify();
    cat::int4 child_status;
    nix::sys_wait4(
       child.id(), &child_status, nix::wait_options_flags::none, nullptr
@@ -900,14 +900,14 @@ $test(allocator_musl_shared_contention) {
    cat::thread threads[8];
    $defer {
       for (idx index; index < 8u; ++index) {
-         threads[index].free(g_tests_alloc_musl);
+         threads[index].free(g_tests_alloc);
       }
    };
 
    for (idx index = 0u; index < 8u; ++index) {
       threads[index]
          .spawn(
-            g_tests_alloc_musl, worker_stack_size, shared_contention_worker,
+            g_tests_alloc, worker_stack_size, shared_contention_worker,
             &allocator, index + 0u
          )
          .verify();
@@ -927,14 +927,14 @@ $test(allocator_musl_shared_lock_wakeup_stress) {
    cat::thread threads[thread_count.raw];
    $defer {
       for (idx index; index < thread_count; ++index) {
-         threads[index].free(g_tests_alloc_musl);
+         threads[index].free(g_tests_alloc);
       }
    };
 
    for (idx index; index < thread_count; ++index) {
       threads[index]
          .spawn(
-            g_tests_alloc_musl, worker_stack_size,
+            g_tests_alloc, worker_stack_size,
             [&allocator, &ready, &start, index, iteration_count] {
                ready.release().fetch_add(1u);
                while (!start.acquire()) {
@@ -965,11 +965,11 @@ $test(allocator_musl_shared_aligned_accounting_is_final) {
    cat::atomic<bool> done;
    cat::thread thread;
    $defer {
-      thread.free(g_tests_alloc_musl);
+      thread.free(g_tests_alloc);
    };
    thread
       .spawn(
-         g_tests_alloc_musl, worker_stack_size,
+         g_tests_alloc, worker_stack_size,
          [&allocator, &start, &done, allocation_bytes] {
             while (!start.acquire()) {
                cat::machine_pause();
@@ -1018,7 +1018,7 @@ $test(allocator_musl_shared_forwarded_contention) {
    cat::thread threads[8];
    $defer {
       for (idx index; index < 8u; ++index) {
-         threads[index].free(g_tests_alloc_musl);
+         threads[index].free(g_tests_alloc);
       }
    };
 
@@ -1026,14 +1026,14 @@ $test(allocator_musl_shared_forwarded_contention) {
       if (index % 2u == 0u) {
          threads[index]
             .spawn(
-               g_tests_alloc_musl, worker_stack_size,
+               g_tests_alloc, worker_stack_size,
                shared_dyn_contention_worker, &dyn, index + 0u
             )
             .verify();
       } else {
          threads[index]
             .spawn(
-               g_tests_alloc_musl, worker_stack_size,
+               g_tests_alloc, worker_stack_size,
                shared_ref_contention_worker, &ref, index + 0u
             )
             .verify();
@@ -1060,13 +1060,13 @@ $test(allocator_musl_shared_cross_thread_deallocation) {
    cat::thread threads[thread_count.raw];
    $defer {
       for (idx thread_index; thread_index < thread_count; ++thread_index) {
-         threads[thread_index].free(g_tests_alloc_musl);
+         threads[thread_index].free(g_tests_alloc);
       }
    };
    for (idx thread_index; thread_index < thread_count; ++thread_index) {
       threads[thread_index]
          .spawn(
-            g_tests_alloc_musl, worker_stack_size,
+            g_tests_alloc, worker_stack_size,
             [&allocator, &allocations, thread_index, allocation_count,
              thread_count] {
                for (idx index = thread_index; index < allocation_count;

@@ -11,62 +11,7 @@
 using namespace cat::literals;
 using namespace cat::arithmetic;
 
-class tests_allocator : public cat::allocator_interface<tests_allocator> {
- private:
-   friend cat::allocator_interface<tests_allocator>;
-   friend cat::allocator_dyn_friend;
-   template <typename>
-   friend class cat::allocator_ref;
-
-   cat::allocator_musl* _Nonnull m_p_allocator;
-
-   auto
-   allocation_bytes(cat::ualign alignment, cat::idx requested_bytes)
-      -> cat::maybe_non_zero<cat::idx> {
-      return m_p_allocator->align_nalloc_multi<cat::byte>(
-         alignment, requested_bytes
-      );
-   }
-
-   auto
-   allocate(cat::idx allocation_bytes) -> void* _Nullable {
-      auto allocation =
-         m_p_allocator->alloc_multi_uninit<cat::byte>(allocation_bytes);
-      return allocation.has_value() ? allocation.value().data() : nullptr;
-   }
-
-   auto
-   aligned_allocate(cat::ualign alignment, cat::idx allocation_bytes)
-      -> void* _Nullable {
-      auto allocation = m_p_allocator->align_alloc_multi_uninit<cat::byte>(
-         alignment, allocation_bytes
-      );
-      return allocation.has_value() ? allocation.value().data() : nullptr;
-   }
-
-   void
-   deallocate(void const* _Nonnull p_storage, cat::idx allocation_bytes) {
-      m_p_allocator->free_multi_uninit(
-         cat::span(
-            const_cast<cat::byte*>(static_cast<cat::byte const*>(p_storage)),
-            allocation_bytes
-         )
-      );
-   }
-
- public:
-   static constexpr cat::ualign min_alignment =
-      cat::allocator_musl::min_alignment;
-   static constexpr cat::idx min_allocation_bytes =
-      cat::allocator_musl::min_allocation_bytes;
-
-   explicit tests_allocator(cat::allocator_musl& allocator)
-       : m_p_allocator(&allocator) {
-   }
-};
-
-inline cat::allocator_musl g_tests_alloc_musl;
-inline tests_allocator g_tests_alloc(g_tests_alloc_musl);
+inline cat::allocator_musl_shared g_tests_alloc;
 inline cat::allocator_page pager;
 
 using constructor_fn = void (*_Nonnull const)();

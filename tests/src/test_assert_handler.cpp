@@ -94,11 +94,11 @@ $test(assert_handler_thread_local_scope) {
    // threads, so the worker needs one of its own.
    cat::thread worker;
    $defer {
-      worker.free(g_tests_alloc_musl);
+      worker.free(g_tests_alloc);
    };
    worker
       .spawn(
-         g_tests_alloc_musl, worker_stack_size,
+         g_tests_alloc, worker_stack_size,
          [] {
             cat::set_thread_local_assert_handler(&worker_fallback_handler);
             cat::verify(false);
@@ -123,11 +123,11 @@ $test(assert_handler_global_scope_worker_inherits) {
 
    cat::thread worker;
    $defer {
-      worker.free(g_tests_alloc_musl);
+      worker.free(g_tests_alloc);
    };
    worker
       .spawn(
-         g_tests_alloc_musl, worker_stack_size,
+         g_tests_alloc, worker_stack_size,
          [] {
             cat::verify(
                cat::current_assert_handler() == &worker_fallback_handler

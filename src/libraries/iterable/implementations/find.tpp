@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/detail/str_span.hpp>
+
 #include <cat/iterable>
 #include <cat/memory>
 
@@ -18,20 +19,14 @@ struct find_impl {
       using element_type = iterable_value_type<Iterable>;
 
       if constexpr (
-         is_contiguous_iterable<Iterable>
-         && is_same<remove_cv<T>, element_type>
-         && (is_trivially_equality_comparable<element_type>
-             || is_same<element_type, byte>)
+         is_contiguous_iterable<Iterable> && is_same<remove_cv<T>, element_type>
+         && (is_trivially_equality_comparable<element_type> || is_same<element_type, byte>)
       ) {
-         return find_memory(
-            incoming.data(), self.needle, incoming.size()
-         );
+         return find_memory(incoming.data(), self.needle, incoming.size());
       } else if constexpr (
-         is_contiguous_iterable<Iterable>
-         && sizeof(element_type) == 1u
+         is_contiguous_iterable<Iterable> && sizeof(element_type) == 1u
          && is_implicit_lifetime<T>
-         && (is_trivially_equality_comparable<element_type>
-             || is_same<element_type, byte>)
+         && (is_trivially_equality_comparable<element_type> || is_same<element_type, byte>)
       ) {
          return find_memory(
             reinterpret_cast<byte const*>(incoming.data()),
@@ -70,8 +65,8 @@ struct find_subspan_impl {
       }
       return find_subspan_memory(
          static_cast<remove_cv<T> const*>(incoming.data()),
-         static_cast<remove_cv<T> const*>(self.needle.data()),
-         incoming.size(), needle_size
+         static_cast<remove_cv<T> const*>(self.needle.data()), incoming.size(),
+         needle_size
       );
    }
 };
@@ -91,9 +86,7 @@ find(T needle) -> detail::find_impl<T> {
 template <typename T, idx fixed_extent>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-find(
-   span<T, fixed_extent> const& needle [[clang::lifetimebound]]
-)
+find(span<T, fixed_extent> const& needle [[clang::lifetimebound]])
    -> detail::find_subspan_impl<remove_cv<T>, false> {
    return {
       span<remove_cv<T> const>{needle.data(), needle.size()},
@@ -103,12 +96,8 @@ find(
 template <typename CharT, str_flags flags>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-find(
-   basic_str_span<CharT, flags> const& needle [[clang::lifetimebound]]
-)
-   -> detail::find_subspan_impl<
-      remove_cv<CharT>, flags.is_null_terminated
-   > {
+find(basic_str_span<CharT, flags> const& needle [[clang::lifetimebound]])
+   -> detail::find_subspan_impl<remove_cv<CharT>, flags.is_null_terminated> {
    return {
       span<remove_cv<CharT> const>{needle.data(), needle.size()},
    };
@@ -118,8 +107,7 @@ template <is_string_char CharT, idx extent>
 [[gnu::always_inline, gnu::nodebug]]
 consteval auto
 find(CharT const (&needle)[extent]) {
-   using zview_type =
-      basic_str_span<CharT const, str_flags::null_terminated>;
+   using zview_type = basic_str_span<CharT const, str_flags::null_terminated>;
    using result_type = detail::find_subspan_impl<CharT, true>;
    zview_type const zneedle{needle};
    return result_type{

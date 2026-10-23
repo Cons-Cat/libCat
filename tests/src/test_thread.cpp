@@ -46,13 +46,13 @@ $test(this_thread) {
    cat::atomic<cat::uint4> observed_id{};
    cat::thread worker;
    $defer {
-      worker.free(g_tests_alloc_musl);
+      worker.free(g_tests_alloc);
       cat::verify(worker.is_empty());
    };
    cat::verify(worker.is_empty());
    worker
       .spawn(
-         g_tests_alloc_musl, g_thread_test_stack_size,
+         g_tests_alloc, g_thread_test_stack_size,
          [&observed_id] {
             cat::this_thread::yield();
             observed_id.release() =
@@ -74,22 +74,22 @@ $test(thread) {
 
    $defer {
       for (idx i = 0; i < 5; ++i) {
-         threads[i].free(g_tests_alloc_musl);
+         threads[i].free(g_tests_alloc);
       }
-      non_thread_child.free(g_tests_alloc_musl);
+      non_thread_child.free(g_tests_alloc);
    };
 
    threads[0]
-      .spawn(g_tests_alloc_musl, g_thread_test_stack_size, function_1)
+      .spawn(g_tests_alloc, g_thread_test_stack_size, function_1)
       .verify();
 
    threads[1]
-      .spawn(g_tests_alloc_musl, g_thread_test_stack_size, &function_2)
+      .spawn(g_tests_alloc, g_thread_test_stack_size, &function_2)
       .verify();
 
    threads[2]
       .spawn(
-         g_tests_alloc_musl, g_thread_test_stack_size,
+         g_tests_alloc, g_thread_test_stack_size,
          [] {
             ++atomic;
          }
@@ -98,7 +98,7 @@ $test(thread) {
 
    threads[3]
       .spawn(
-         g_tests_alloc_musl, g_thread_test_stack_size,
+         g_tests_alloc, g_thread_test_stack_size,
          [](int) {
             ++atomic;
          },
@@ -108,7 +108,7 @@ $test(thread) {
 
    threads[4]
       .spawn(
-         g_tests_alloc_musl, g_thread_test_stack_size,
+         g_tests_alloc, g_thread_test_stack_size,
          +[] {
             ++atomic;
          }
@@ -117,7 +117,7 @@ $test(thread) {
 
    non_thread_child
       .spawn(
-         g_tests_alloc_musl, g_thread_test_stack_size,
+         g_tests_alloc, g_thread_test_stack_size,
          +[] {
             ++atomic;
          }
@@ -144,7 +144,7 @@ $test(raii_thread) {
    int4 const before = atomic.load();
 
    {
-      cat::raii::basic_thread<cat::allocator_musl> worker{g_tests_alloc_musl};
+      cat::raii::basic_thread<cat::allocator_musl_shared> worker{g_tests_alloc};
       worker
          .spawn(
             g_thread_test_stack_size,
@@ -162,7 +162,7 @@ $test(raii_thread) {
 $test(raii_thread_join) {
    int4 const before = atomic.load();
 
-   cat::raii::basic_thread<cat::allocator_musl> worker{g_tests_alloc_musl};
+   cat::raii::basic_thread<cat::allocator_musl_shared> worker{g_tests_alloc};
    worker.spawn(g_thread_test_stack_size, &function_2).verify();
    worker.join().verify();
    worker.free();
@@ -175,14 +175,14 @@ $test(thread_cfree) {
 
    cat::thread worker;
    $defer {
-      worker.free(g_tests_alloc_musl);
+      worker.free(g_tests_alloc);
    };
    cat::verify(worker.is_empty());
-   worker.spawn(g_tests_alloc_musl, g_thread_test_stack_size, &function_2)
+   worker.spawn(g_tests_alloc, g_thread_test_stack_size, &function_2)
       .verify();
    cat::verify(!worker.is_empty());
    worker.join().verify();
-   worker.cfree(g_tests_alloc_musl);
+   worker.cfree(g_tests_alloc);
    cat::verify(worker.is_empty());
    cat::verify(atomic.load() == before + 1);
 }
@@ -190,7 +190,7 @@ $test(thread_cfree) {
 $test(raii_thread_cfree) {
    int4 const before = atomic.load();
 
-   cat::raii::basic_thread<cat::allocator_musl> worker{g_tests_alloc_musl};
+   cat::raii::basic_thread<cat::allocator_musl_shared> worker{g_tests_alloc};
    worker.spawn(g_thread_test_stack_size, &function_2).verify();
    worker.join().verify();
    worker.cfree();
@@ -224,12 +224,12 @@ $test(thread_clone_failure) {
    // same clone flags keeps the errno from `clone` on failure.
    nix::process child;
    $defer {
-      child.free(g_tests_alloc_musl);
+      child.free(g_tests_alloc);
    };
    child.add_clone_flag(nix::clone_flags::thread);
    child.add_clone_flag(nix::clone_flags::child_set_tid);
    nix::scaredy_nix<void> const spawn_result =
-      child.spawn(g_tests_alloc_musl, g_thread_test_stack_size, [] {
+      child.spawn(g_tests_alloc, g_thread_test_stack_size, [] {
       });
 
    cat::verify(

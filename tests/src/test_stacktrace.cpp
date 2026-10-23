@@ -126,11 +126,11 @@ $test(stacktrace_on_child_thread) {
 
    cat::thread worker;
    $defer {
-      worker.free(g_tests_alloc_musl);
+      worker.free(g_tests_alloc);
    };
    worker
       .spawn(
-         g_tests_alloc_musl, 16_uki,
+         g_tests_alloc, 16_uki,
          [&] {
             p_frame = __builtin_frame_address(0);
             p_stack = cat::get_stack_pointer();
