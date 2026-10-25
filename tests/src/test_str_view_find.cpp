@@ -1,7 +1,6 @@
 #include <cat/simd>
 #include <cat/string>
 
-#include "../fragile.hpp"
 #include "../unit_tests.hpp"
 
 // `cat::basic_str_span::find` does its own bounded SIMD scan (`size`-bounded,

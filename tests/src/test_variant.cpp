@@ -1,6 +1,5 @@
 #include <cat/variant>
 
-#include "../fragile.hpp"
 #include "../unit_tests.hpp"
 
 struct variant_move_only {
@@ -1367,6 +1366,19 @@ $test(variant_p3561_apply_cases) {
    );
    cat::verify(cat::visit_apply(pair_args, callable_pack) == 7);
    cat::verify(cat::visit_apply(char_args, callable_pack) == 2 + int{'a'});
+};
+
+struct nothrow_element {
+   nothrow_element() noexcept = default;
+   nothrow_element(nothrow_element&&) noexcept = default;
+   auto
+   operator=(nothrow_element&&) noexcept -> nothrow_element& = default;
+};
+
+struct throwing_move_element {
+   throwing_move_element() noexcept = default;
+   throwing_move_element(throwing_move_element&&) noexcept(false) {
+   }
 };
 
 static_assert(

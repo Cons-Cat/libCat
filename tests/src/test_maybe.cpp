@@ -6,7 +6,6 @@
 #include <cat/unique>
 #include <cat/utility>
 
-#include "../fragile.hpp"
 #include "../unit_tests.hpp"
 
 struct movable {

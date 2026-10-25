@@ -7,7 +7,6 @@
 #include <cat/iterable>
 #include <cat/list>
 
-#include "../fragile.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -580,74 +579,3 @@ $test(list_iterable) {
 
 static_assert(cat::is_nothrow_move_constructible<cat::list<int4>>);
 static_assert(cat::is_nothrow_move_constructible<cat::forward_list<int4>>);
-
-#if __has_feature(cxx_exceptions)
-namespace {
-using allocator_type = __typeof_unqual__(g_tests_alloc);
-}  // namespace
-
-// Freeing a list destroys each element exactly once.
-$test(list_element_lifetimes) {
-   fragile::live = 0;
-   cat::list<fragile> list;
-   for (int4 i = 0; i < 4; ++i) {
-      cat::verify(
-         list.emplace_back<allocator_type>(g_tests_alloc, i).has_value()
-      );
-   }
-   list.erase<allocator_type>(g_tests_alloc, list.begin());
-   list.pop_front<allocator_type>(g_tests_alloc);
-   cat::verify(fragile::live == 2);
-   list.free<allocator_type>(g_tests_alloc);
-   cat::verify(fragile::live == 0);
-}
-
-$test(list_throwing_insert) {
-   fragile::live = 0;
-   fragile const source(7);
-   cat::list<fragile> list;
-   cat::verify(
-      list.push_back<allocator_type>(g_tests_alloc, source).has_value()
-   );
-
-   fragile::arm(1);
-   cat::verify(throws_injected_failure([&] {
-      auto _ = list.push_back<allocator_type>(g_tests_alloc, source);
-   }));
-   fragile::arm(1);
-   cat::verify(throws_injected_failure([&] {
-      auto _ = list.emplace_front<allocator_type>(g_tests_alloc, source);
-   }));
-   cat::verify(list.size() == 1u);
-   cat::verify(fragile::live == 2);
-
-   fragile::arm(1);
-   cat::verify(throws_injected_failure([&] {
-      auto _ = list.clone<allocator_type>(g_tests_alloc);
-   }));
-   cat::verify(fragile::live == 2);
-
-   list.free<allocator_type>(g_tests_alloc);
-   cat::verify(fragile::live == 1);
-}
-
-$test(forward_list_throwing_insert) {
-   fragile::live = 0;
-   fragile const source(7);
-   cat::forward_list<fragile> list;
-   cat::verify(
-      list.push_front<allocator_type>(g_tests_alloc, source).has_value()
-   );
-
-   fragile::arm(1);
-   cat::verify(throws_injected_failure([&] {
-      auto _ = list.push_front<allocator_type>(g_tests_alloc, source);
-   }));
-   cat::verify(list.size() == 1u);
-   cat::verify(fragile::live == 2);
-
-   list.free<allocator_type>(g_tests_alloc);
-   cat::verify(fragile::live == 1);
-}
-
-#endif

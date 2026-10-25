@@ -7,7 +7,6 @@
 #include <cat/utility>
 #include <cat/vec>
 
-#include "../fragile.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -1475,6 +1474,21 @@ $test(vec_reverse_inplace_simd) {
    }
 }
 
+struct throwing_move_element {
+   throwing_move_element() noexcept = default;
+   throwing_move_element(throwing_move_element const&) noexcept = default;
+   throwing_move_element(throwing_move_element&&) noexcept(false) {
+   }
+   auto
+   operator=(throwing_move_element const&) noexcept
+      -> throwing_move_element& = default;
+   auto
+   operator=(throwing_move_element&&) noexcept(false)
+      -> throwing_move_element& {
+      return *this;
+   }
+};
+
 static_assert(cat::is_nothrow_default_constructible<cat::vec<int4>>);
 // Moving a `vec` relocates through functions which assert, and an assert
 // handler may throw, so it is only `noexcept` without exceptions.
@@ -1495,75 +1509,6 @@ static_assert(
 );
 
 #if __has_feature(cxx_exceptions)
-namespace {
-template <typename Vector>
-void
-fill_vec(Vector& vector, int4 count) {
-   for (int4 i = 0; i < count; ++i) {
-      cat::verify(vector.emplace_back(g_tests_alloc, i).has_value());
-   }
-}
-
-// Fill a `vec` with `0, 1, 2...` until it has no spare capacity.
-template <typename Vector>
-auto
-fill_vec_to_capacity(Vector& vector) -> int4 {
-   fill_vec(vector, 1);
-   while (vector.size() < vector.capacity()) {
-      cat::verify(
-         vector.emplace_back(g_tests_alloc, int4(vector.size().raw)).has_value()
-      );
-   }
-   return int4(vector.size().raw);
-}
-
-template <typename Vector>
-void
-verify_vec_sequence(Vector const& vector, int4 count) {
-   cat::verify(vector.size() == idx(count));
-   for (int4 i = 0; i < count; ++i) {
-      cat::verify(vector[idx(i)].value == i);
-   }
-}
-}  // namespace
-
-// Reallocation copies throwing-move elements, so a throwing copy leaves the
-// original elements untouched.
-$test(vec_reallocation_strong_guarantee) {
-   fragile::live = 0;
-   cat::vec_big<fragile> vector;
-   int4 const count = fill_vec_to_capacity(vector);
-   idx const capacity = vector.capacity();
-   cat::verify(vector.size() == capacity);
-
-   fragile::arm(2);
-   cat::verify(throws_injected_failure([&] {
-      auto _ = vector.emplace_back(g_tests_alloc, count);
-   }));
-   verify_vec_sequence(vector, count);
-   cat::verify(vector.capacity() == capacity);
-   cat::verify(fragile::live == iword(count));
-
-   vector.free(g_tests_alloc);
-   cat::verify(fragile::live == 0);
-}
-
-$test(vec_inline_reallocation_strong_guarantee) {
-   fragile::live = 0;
-   cat::vec<fragile> vector;
-   fill_vec(vector, 4);
-
-   fragile::arm(3);
-   cat::verify(throws_injected_failure([&] {
-      auto _ = vector.reserve(g_tests_alloc, 16u);
-   }));
-   verify_vec_sequence(vector, 4);
-   cat::verify(fragile::live == 4);
-
-   vector.free(g_tests_alloc);
-   cat::verify(fragile::live == 0);
-}
-
 // `push_back()` may be passed one of the `vec`'s own elements, which must
 // survive reallocation.
 $test(vec_push_back_self_reference) {
@@ -1577,139 +1522,6 @@ $test(vec_push_back_self_reference) {
    cat::verify(vector.resize(g_tests_alloc, 64u, vector[1]).has_value());
    cat::verify(vector[63] == 11);
    vector.free(g_tests_alloc);
-}
-
-$test(vec_emplace_back_throwing_constructor) {
-   fragile::live = 0;
-   cat::vec_big<fragile> vector;
-   fill_vec(vector, 2);
-   fragile const source(7);
-
-   fragile::arm(1);
-   cat::verify(throws_injected_failure([&] {
-      auto _ = vector.push_back(g_tests_alloc, source);
-   }));
-   verify_vec_sequence(vector, 2);
-   cat::verify(fragile::live == 3);
-
-   vector.free(g_tests_alloc);
-}
-
-$test(vec_resize_strong_guarantee) {
-   fragile::live = 0;
-   cat::vec_big<fragile> vector;
-   fill_vec(vector, 3);
-   cat::verify(vector.reserve(g_tests_alloc, 16u).has_value());
-   fragile const source(9);
-
-   fragile::arm(4);
-   cat::verify(throws_injected_failure([&] {
-      auto _ = vector.resize(g_tests_alloc, 10u, source);
-   }));
-   verify_vec_sequence(vector, 3);
-   cat::verify(fragile::live == 4);
-
-   vector.free(g_tests_alloc);
-}
-
-$test(vec_clone_throwing_copy) {
-   fragile::live = 0;
-   cat::vec_big<fragile> vector;
-   fill_vec(vector, 6);
-
-   fragile::arm(4);
-   cat::verify(throws_injected_failure([&] {
-      auto _ = vector.clone(g_tests_alloc);
-   }));
-   cat::verify(fragile::live == 6);
-
-   vector.free(g_tests_alloc);
-}
-
-// Insertion has the basic guarantee: every element that is not destroyed is
-// still owned by the `vec`.
-$test(vec_insert_range_basic_guarantee) {
-   fragile::live = 0;
-   cat::array<fragile, 3u> const range = {
-      fragile(100), fragile(101), fragile(102)
-   };
-
-   for (iword failure = 1; failure <= 8; ++failure) {
-      cat::vec_big<fragile> vector;
-      fill_vec(vector, 5);
-      cat::verify(vector.reserve(g_tests_alloc, 16u).has_value());
-
-      fragile::arm(failure);
-      bool const threw = throws_injected_failure([&] {
-         auto _ = vector.insert_range(g_tests_alloc, 1u, range);
-      });
-      fragile::disarm();
-      cat::verify(fragile::live == iword(vector.size()) + 3);
-      if (!threw) {
-         cat::verify(vector.size() == 8u);
-      }
-
-      vector.free(g_tests_alloc);
-      cat::verify(fragile::live == 3);
-   }
-}
-
-$test(vec_replace_with_range_basic_guarantee) {
-   fragile::live = 0;
-   cat::array<fragile, 4u> const range = {
-      fragile(100), fragile(101), fragile(102), fragile(103)
-   };
-
-   for (iword failure = 1; failure <= 8; ++failure) {
-      cat::vec_big<fragile> vector;
-      fill_vec(vector, 5);
-      cat::verify(vector.reserve(g_tests_alloc, 16u).has_value());
-
-      fragile::arm(failure);
-      throws_injected_failure([&] {
-         auto _ = vector.replace_with_range(g_tests_alloc, 1u, 2u, range);
-      });
-      fragile::disarm();
-      cat::verify(fragile::live == iword(vector.size()) + 4);
-
-      vector.free(g_tests_alloc);
-      cat::verify(fragile::live == 4);
-   }
-}
-
-// Inserting into a full `vec` reallocates around the new elements, so a throw
-// anywhere leaks nothing, and succeeding preserves element order.
-$test(vec_insert_range_reallocating) {
-   fragile::live = 0;
-   cat::array<fragile, 3u> const range = {
-      fragile(100), fragile(101), fragile(102)
-   };
-
-   for (idx position = 0u; position <= 4u; ++position) {
-      for (iword failure = 1; failure <= 10; ++failure) {
-         cat::vec_big<fragile> vector;
-         idx const old_size = idx(fill_vec_to_capacity(vector));
-
-         fragile::arm(failure);
-         bool const threw = throws_injected_failure([&] {
-            auto _ = vector.insert_range(g_tests_alloc, position, range);
-         });
-         fragile::disarm();
-         cat::verify(fragile::live == iword(vector.size()) + 3);
-         if (!threw) {
-            cat::verify(vector.size() == old_size + 3u);
-            for (idx i; i < vector.size(); ++i) {
-               int4 const expected = i < position ? int4(i.raw)
-                                     : i < position + 3u
-                                        ? int4(100 + (i - position).raw)
-                                        : int4((i - 3u).raw);
-               cat::verify(vector[i].value == expected);
-            }
-         }
-         vector.free(g_tests_alloc);
-         cat::verify(fragile::live == 3);
-      }
-   }
 }
 
 #endif

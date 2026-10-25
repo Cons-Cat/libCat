@@ -1,7 +1,12 @@
 #if __has_feature(cxx_exceptions)
+#include <cat/array>
 #include <cat/atomic>
+#include <cat/forward_list>
+#include <cat/list>
+#include <cat/map>
 #include <cat/runtime>
 #include <cat/thread>
+#include <cat/vec>
 
 #include "../unit_tests.hpp"
 
@@ -316,6 +321,376 @@ $test(exceptions_catch_by_value_and_failed_construction) {
       throw object;
    } catch (int4 value) {
       cat::verify(value == 19);
+   }
+}
+
+namespace {
+// Thrown by `fragile` after `fragile::arm()`.
+struct injected_failure {};
+
+// Copying and moving count as constructors. `arm(n)` makes the nth later
+// constructor throw, and `live` counts objects whose constructors finished.
+struct fragile {
+   static inline cat::iword live = 0;
+   static inline cat::iword until_throw = 0;
+   cat::int4 value;
+
+   static void
+   arm(cat::iword count) {
+      until_throw = count;
+   }
+
+   static void
+   disarm() {
+      until_throw = 0;
+   }
+
+   explicit constexpr fragile(cat::int4 input) : value(input) {
+      constructed();
+   }
+
+   constexpr fragile() : value(0) {
+      constructed();
+   }
+
+   constexpr fragile(fragile const& other) : value(other.value) {
+      constructed();
+   }
+
+   constexpr fragile(fragile&& other) : value(other.value) {
+      constructed();
+   }
+
+   constexpr auto
+   operator=(fragile const& other) -> fragile& {
+      value = other.value;
+      return *this;
+   }
+
+   constexpr auto
+   operator=(fragile&& other) -> fragile& {
+      value = other.value;
+      return *this;
+   }
+
+   constexpr ~fragile() {
+      --live;
+   }
+
+  private:
+   static constexpr void
+   constructed() {
+      if (until_throw > 0) {
+         --until_throw;
+         if (until_throw == 0) {
+            throw injected_failure{};
+         }
+      }
+      ++live;
+   }
+};
+
+template <typename Fn>
+auto
+throws_injected_failure(Fn&& fn) -> bool {
+   try {
+      fn();
+   } catch (injected_failure const&) {
+      return true;
+   }
+   return false;
+}
+
+template <typename Vector>
+void
+fill_vec(Vector& vector, int4 count) {
+   for (int4 i = 0; i < count; ++i) {
+      cat::verify(vector.emplace_back(g_tests_alloc, i).has_value());
+   }
+}
+
+// Fill a `vec` with `0, 1, 2...` until it has no spare capacity.
+template <typename Vector>
+auto
+fill_vec_to_capacity(Vector& vector) -> int4 {
+   fill_vec(vector, 1);
+   while (vector.size() < vector.capacity()) {
+      cat::verify(
+         vector.emplace_back(g_tests_alloc, int4(vector.size().raw)).has_value()
+      );
+   }
+   return int4(vector.size().raw);
+}
+
+template <typename Vector>
+void
+verify_vec_sequence(Vector const& vector, int4 count) {
+   cat::verify(vector.size() == idx(count));
+   for (int4 i = 0; i < count; ++i) {
+      cat::verify(vector[idx(i)].value == i);
+   }
+}
+
+using allocator_type = __typeof_unqual__(g_tests_alloc);
+}  // namespace
+
+// Reallocation copies throwing-move elements, so a throwing copy leaves the
+// original elements untouched.
+$test(vec_reallocation_strong_guarantee) {
+   fragile::live = 0;
+   cat::vec_big<fragile> vector;
+   int4 const count = fill_vec_to_capacity(vector);
+   idx const capacity = vector.capacity();
+   cat::verify(vector.size() == capacity);
+
+   fragile::arm(2);
+   cat::verify(throws_injected_failure([&] {
+      auto _ = vector.emplace_back(g_tests_alloc, count);
+   }));
+   verify_vec_sequence(vector, count);
+   cat::verify(vector.capacity() == capacity);
+   cat::verify(fragile::live == iword(count));
+
+   vector.free(g_tests_alloc);
+   cat::verify(fragile::live == 0);
+}
+
+$test(vec_inline_reallocation_strong_guarantee) {
+   fragile::live = 0;
+   cat::vec<fragile> vector;
+   fill_vec(vector, 4);
+
+   fragile::arm(3);
+   cat::verify(throws_injected_failure([&] {
+      auto _ = vector.reserve(g_tests_alloc, 16u);
+   }));
+   verify_vec_sequence(vector, 4);
+   cat::verify(fragile::live == 4);
+
+   vector.free(g_tests_alloc);
+   cat::verify(fragile::live == 0);
+}
+
+$test(vec_emplace_back_throwing_constructor) {
+   fragile::live = 0;
+   cat::vec_big<fragile> vector;
+   fill_vec(vector, 2);
+   fragile const source(7);
+
+   fragile::arm(1);
+   cat::verify(throws_injected_failure([&] {
+      auto _ = vector.push_back(g_tests_alloc, source);
+   }));
+   verify_vec_sequence(vector, 2);
+   cat::verify(fragile::live == 3);
+
+   vector.free(g_tests_alloc);
+}
+
+$test(vec_resize_strong_guarantee) {
+   fragile::live = 0;
+   cat::vec_big<fragile> vector;
+   fill_vec(vector, 3);
+   cat::verify(vector.reserve(g_tests_alloc, 16u).has_value());
+   fragile const source(9);
+
+   fragile::arm(4);
+   cat::verify(throws_injected_failure([&] {
+      auto _ = vector.resize(g_tests_alloc, 10u, source);
+   }));
+   verify_vec_sequence(vector, 3);
+   cat::verify(fragile::live == 4);
+
+   vector.free(g_tests_alloc);
+}
+
+$test(vec_clone_throwing_copy) {
+   fragile::live = 0;
+   cat::vec_big<fragile> vector;
+   fill_vec(vector, 6);
+
+   fragile::arm(4);
+   cat::verify(throws_injected_failure([&] {
+      auto _ = vector.clone(g_tests_alloc);
+   }));
+   cat::verify(fragile::live == 6);
+
+   vector.free(g_tests_alloc);
+}
+
+// Insertion has the basic guarantee: every element that is not destroyed is
+// still owned by the `vec`.
+$test(vec_insert_range_basic_guarantee) {
+   fragile::live = 0;
+   cat::array<fragile, 3u> const range = {
+      fragile(100), fragile(101), fragile(102)
+   };
+
+   for (iword failure = 1; failure <= 8; ++failure) {
+      cat::vec_big<fragile> vector;
+      fill_vec(vector, 5);
+      cat::verify(vector.reserve(g_tests_alloc, 16u).has_value());
+
+      fragile::arm(failure);
+      bool const threw = throws_injected_failure([&] {
+         auto _ = vector.insert_range(g_tests_alloc, 1u, range);
+      });
+      fragile::disarm();
+      cat::verify(fragile::live == iword(vector.size()) + 3);
+      if (!threw) {
+         cat::verify(vector.size() == 8u);
+      }
+
+      vector.free(g_tests_alloc);
+      cat::verify(fragile::live == 3);
+   }
+}
+
+$test(vec_replace_with_range_basic_guarantee) {
+   fragile::live = 0;
+   cat::array<fragile, 4u> const range = {
+      fragile(100), fragile(101), fragile(102), fragile(103)
+   };
+
+   for (iword failure = 1; failure <= 8; ++failure) {
+      cat::vec_big<fragile> vector;
+      fill_vec(vector, 5);
+      cat::verify(vector.reserve(g_tests_alloc, 16u).has_value());
+
+      fragile::arm(failure);
+      throws_injected_failure([&] {
+         auto _ = vector.replace_with_range(g_tests_alloc, 1u, 2u, range);
+      });
+      fragile::disarm();
+      cat::verify(fragile::live == iword(vector.size()) + 4);
+
+      vector.free(g_tests_alloc);
+      cat::verify(fragile::live == 4);
+   }
+}
+
+// Inserting into a full `vec` reallocates around the new elements, so a throw
+// anywhere leaks nothing, and succeeding preserves element order.
+$test(vec_insert_range_reallocating) {
+   fragile::live = 0;
+   cat::array<fragile, 3u> const range = {
+      fragile(100), fragile(101), fragile(102)
+   };
+
+   for (idx position = 0u; position <= 4u; ++position) {
+      for (iword failure = 1; failure <= 10; ++failure) {
+         cat::vec_big<fragile> vector;
+         idx const old_size = idx(fill_vec_to_capacity(vector));
+
+         fragile::arm(failure);
+         bool const threw = throws_injected_failure([&] {
+            auto _ = vector.insert_range(g_tests_alloc, position, range);
+         });
+         fragile::disarm();
+         cat::verify(fragile::live == iword(vector.size()) + 3);
+         if (!threw) {
+            cat::verify(vector.size() == old_size + 3u);
+            for (idx i; i < vector.size(); ++i) {
+               int4 const expected = i < position ? int4(i.raw)
+                                     : i < position + 3u
+                                        ? int4(100 + (i - position).raw)
+                                        : int4((i - 3u).raw);
+               cat::verify(vector[i].value == expected);
+            }
+         }
+         vector.free(g_tests_alloc);
+         cat::verify(fragile::live == 3);
+      }
+   }
+}
+
+// Freeing a list destroys each element exactly once.
+$test(list_element_lifetimes) {
+   fragile::live = 0;
+   cat::list<fragile> list;
+   for (int4 i = 0; i < 4; ++i) {
+      cat::verify(
+         list.emplace_back<allocator_type>(g_tests_alloc, i).has_value()
+      );
+   }
+   list.erase<allocator_type>(g_tests_alloc, list.begin());
+   list.pop_front<allocator_type>(g_tests_alloc);
+   cat::verify(fragile::live == 2);
+   list.free<allocator_type>(g_tests_alloc);
+   cat::verify(fragile::live == 0);
+}
+
+$test(list_throwing_insert) {
+   fragile::live = 0;
+   fragile const source(7);
+   cat::list<fragile> list;
+   cat::verify(
+      list.push_back<allocator_type>(g_tests_alloc, source).has_value()
+   );
+
+   fragile::arm(1);
+   cat::verify(throws_injected_failure([&] {
+      auto _ = list.push_back<allocator_type>(g_tests_alloc, source);
+   }));
+   fragile::arm(1);
+   cat::verify(throws_injected_failure([&] {
+      auto _ = list.emplace_front<allocator_type>(g_tests_alloc, source);
+   }));
+   cat::verify(list.size() == 1u);
+   cat::verify(fragile::live == 2);
+
+   fragile::arm(1);
+   cat::verify(throws_injected_failure([&] {
+      auto _ = list.clone<allocator_type>(g_tests_alloc);
+   }));
+   cat::verify(fragile::live == 2);
+
+   list.free<allocator_type>(g_tests_alloc);
+   cat::verify(fragile::live == 1);
+}
+
+$test(forward_list_throwing_insert) {
+   fragile::live = 0;
+   fragile const source(7);
+   cat::forward_list<fragile> list;
+   cat::verify(
+      list.push_front<allocator_type>(g_tests_alloc, source).has_value()
+   );
+
+   fragile::arm(1);
+   cat::verify(throws_injected_failure([&] {
+      auto _ = list.push_front<allocator_type>(g_tests_alloc, source);
+   }));
+   cat::verify(list.size() == 1u);
+   cat::verify(fragile::live == 2);
+
+   list.free<allocator_type>(g_tests_alloc);
+   cat::verify(fragile::live == 1);
+}
+
+// If moving entries throws while a `map` grows, the `map` is cleared and
+// leaks nothing.
+$test(map_throwing_rehash) {
+   for (iword failure = 1; failure <= 64; failure += 3) {
+      fragile::live = 0;
+      cat::map_big<int4, fragile> map;
+      for (int4 i = 0; i < 20; ++i) {
+         cat::verify(map.insert<allocator_type>(g_tests_alloc, i, fragile(i))
+                        .has_value());
+      }
+
+      fragile::arm(failure);
+      throws_injected_failure([&] {
+         for (int4 i = 20; i < 200; ++i) {
+            auto _ =
+               map.insert<allocator_type>(g_tests_alloc, i, fragile(i));
+         }
+      });
+      fragile::disarm();
+      cat::verify(fragile::live == iword(map.size()));
+
+      map.free<allocator_type>(g_tests_alloc);
+      cat::verify(fragile::live == 0);
    }
 }
 

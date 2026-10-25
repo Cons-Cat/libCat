@@ -42,7 +42,7 @@ LLVM_PACKAGE_NAMES = (
 )
 DEBIAN_BASE_URL = "https://deb.debian.org/debian"
 DEBIAN_PACKAGES_INDEX_URL = f"{DEBIAN_BASE_URL}/dists/unstable/main/binary-amd64/Packages.gz"
-PACKAGE_SET_REVISION = "9"
+PACKAGE_SET_REVISION = "10"
 
 DEBIAN_PACKAGE_NAMES = (
     "gcc-16-base",
@@ -111,6 +111,8 @@ RUNTIME_LIBRARIES = (
     "libxml2.so.16",
 )
 
+# Debian unstable libedit, libtinfo, and libtic need GLIBC_2.42. libLLVM
+# loads the host copies instead.
 RUNTIME_LIBRARY_PREFIXES = (
     "libabsl",
     "libaddress_sorting",
@@ -119,7 +121,6 @@ RUNTIME_LIBRARY_PREFIXES = (
     "libc++abi",
     "libcares",
     "libcrypto",
-    "libedit",
     "libffi",
     "libgcc",
     "libgpr",
@@ -130,8 +131,6 @@ RUNTIME_LIBRARY_PREFIXES = (
     "libre2",
     "libssl",
     "libstdc++",
-    "libtic",
-    "libtinfo",
     "libupb",
     "libxml2",
     "libz3",

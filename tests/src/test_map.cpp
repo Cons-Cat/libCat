@@ -2,7 +2,6 @@
 #include <cat/allocator_page>
 #include <cat/map>
 
-#include "../fragile.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -914,34 +913,3 @@ $test(map_ref_conversions) {
 $test(map_ref_consteval) {
    static_assert(map_ref_consteval());
 }
-
-#if __has_feature(cxx_exceptions)
-// If moving entries throws while a `map` grows, the `map` is cleared and
-// leaks nothing.
-$test(map_throwing_rehash) {
-   for (iword failure = 1; failure <= 64; failure += 3) {
-      fragile::live = 0;
-      cat::map_big<int4, fragile> map;
-      for (int4 i = 0; i < 20; ++i) {
-         cat::verify(map.insert<__typeof_unqual__(g_tests_alloc)>(
-                           g_tests_alloc, i, fragile(i)
-         )
-                        .has_value());
-      }
-
-      fragile::arm(failure);
-      throws_injected_failure([&] {
-         for (int4 i = 20; i < 200; ++i) {
-            auto _ = map.insert<__typeof_unqual__(g_tests_alloc)>(
-               g_tests_alloc, i, fragile(i)
-            );
-         }
-      });
-      fragile::disarm();
-      cat::verify(fragile::live == iword(map.size()));
-
-      map.free<__typeof_unqual__(g_tests_alloc)>(g_tests_alloc);
-      cat::verify(fragile::live == 0);
-   }
-}
-#endif
