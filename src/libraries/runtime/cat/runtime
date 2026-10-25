@@ -290,6 +290,9 @@ class jmp_buffer {
    // %rsp:
    [[maybe_unused]]
    cat::uword m_stack_pointer;
+   // %rip:
+   [[maybe_unused]]
+   cat::uword m_instruction_pointer;
 };
 
 [[gnu::naked, gnu::returns_twice]]
