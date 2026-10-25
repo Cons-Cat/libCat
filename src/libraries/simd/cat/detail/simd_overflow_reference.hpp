@@ -37,6 +37,14 @@ class simd_overflow_reference
    friend constexpr void
    operator&(simd_overflow_reference const volatile&&) = delete;
 
+   // Assign through to the referenced vector.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator=(wrapper_type const& value) -> simd_overflow_reference& {
+      *m_wrapped = value;
+      return *this;
+   }
+
    // Rebind this reference wrapper to a different address.
    constexpr void
    rebind(wrapper_type& w [[clang::lifetime_capture_by_this]]) {

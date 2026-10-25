@@ -377,6 +377,64 @@ $test(arithmetic_overflow_reference_rebind) {
    cat::verify(second == 15_i4);
 }
 
+$test(arithmetic_overflow_reference_compound_assignment) {
+   // `.wrap()` returns a temporary, which every compound assignment must
+   // accept.
+   uint1 value = 200_u1;
+   value.wrap() += 100_u1;
+   cat::verify(value == 44_u1);
+   value = 10_u1;
+   value.wrap() -= 20_u1;
+   cat::verify(value == 246_u1);
+   value = 200_u1;
+   value.wrap() *= 2_u1;
+   cat::verify(value == 144_u1);
+   value = 200_u1;
+   value.wrap() /= 3_u1;
+   cat::verify(value == 66_u1);
+   value = 200_u1;
+   value.wrap() %= 7_u1;
+   cat::verify(value == 4_u1);
+   value = 0x05_u1;
+   value.wrap() <<= 2_u1;
+   cat::verify(value == 0x14_u1);
+   value.wrap() >>= 2_u1;
+   cat::verify(value == 0x05_u1);
+   value = 0xab_u1;
+   value.wrap() &= 0x0f_u1;
+   cat::verify(value == 0x0b_u1);
+   value.wrap() |= 0xf0_u1;
+   cat::verify(value == 0xfb_u1);
+   value.wrap() ^= 0xff_u1;
+   cat::verify(value == 0x04_u1);
+
+   uint8 wide = 0x80000000'00000001ull;
+   wide.wrap() *= 2u;
+   cat::verify(wide == 2u);
+
+   int4 signed_value = 7;
+   signed_value.wrap() *= -3;
+   cat::verify(signed_value == -21);
+
+   // Other policies apply through their proxies the same way.
+   uint1 saturated = 200_u1;
+   saturated.sat() += 100_u1;
+   cat::verify(saturated == 255_u1);
+   saturated = 10_u1;
+   saturated.sat() -= 20_u1;
+   cat::verify(saturated == 0_u1);
+   saturated = 200_u1;
+   saturated.sat() *= 2_u1;
+   cat::verify(saturated == 255_u1);
+
+   // A named proxy writes through to its referent.
+   uint1 referent = 250_u1;
+   auto proxy = referent.wrap();
+   proxy += 10_u1;
+   proxy *= 3_u1;
+   cat::verify(referent == 12_u1);
+}
+
 #ifdef CAT_ENABLE_FMA_TESTS
 $test(arithmetic_fma_members) {
    int4 integer = 5_i4;

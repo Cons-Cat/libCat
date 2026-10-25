@@ -384,6 +384,23 @@ struct plus_interface {
       return self;
    }
 
+   // += for types whose `add` never yields their own type, such as the
+   // proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_plus_assign<decay_derived, decay_derived>
+         && detail::has_add_interface<Derived, T>
+         && is_assignable<Self, decltype(declval<Self&>().add(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator+=(Self&& self, T&& other) -> Self&& {
+      self = self.add($fwd(other));
+      return $fwd(self);
+   }
+
    // += operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
@@ -555,6 +572,24 @@ struct minus_interface {
    operator-=(Derived& self, T&& other) -> Derived& {
       self = self.subtract_by($fwd(other));
       return self;
+   }
+
+   // -= for types whose `subtract_by` never yields their own type, such as the
+   // proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_minus_assign<decay_derived, decay_derived>
+         && detail::has_subtract_by_interface<Derived, T>
+         && is_assignable<
+            Self, decltype(declval<Self&>().subtract_by(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator-=(Self&& self, T&& other) -> Self&& {
+      self = self.subtract_by($fwd(other));
+      return $fwd(self);
    }
 
    // -= operators where this is a right-hand-side operand.
@@ -729,6 +764,24 @@ struct multiply_interface {
       return self;
    }
 
+   // *= for types whose `multiply` never yields their own type, such as the
+   // proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_multiply_assign<decay_derived, decay_derived>
+         && detail::has_multiply_interface<Derived, T>
+         && is_assignable<
+            Self, decltype(declval<Self&>().multiply(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator*=(Self&& self, T&& other) -> Self&& {
+      self = self.multiply($fwd(other));
+      return $fwd(self);
+   }
+
    // *= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
@@ -877,6 +930,24 @@ struct divide_interface {
    operator/=(Derived& self, T&& other) -> Derived& {
       self = self.divide_by($fwd(other));
       return self;
+   }
+
+   // /= for types whose `divide_by` never yields their own type, such as the
+   // proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_divide_assign<decay_derived, decay_derived>
+         && detail::has_divide_by_interface<Derived, T>
+         && is_assignable<
+            Self, decltype(declval<Self&>().divide_by(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator/=(Self&& self, T&& other) -> Self&& {
+      self = self.divide_by($fwd(other));
+      return $fwd(self);
    }
 
    // /= operators where this is a right-hand-side operand.
@@ -1029,6 +1100,24 @@ struct bit_and_interface {
       return self;
    }
 
+   // &= for types whose `bit_and` never yields their own type, such as the
+   // proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_bit_and_assign<decay_derived, decay_derived>
+         && detail::has_bit_and_interface<Derived, T>
+         && is_assignable<
+            Self, decltype(declval<Self&>().bit_and(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator&=(Self&& self, T&& other) -> Self&& {
+      self = self.bit_and($fwd(other));
+      return $fwd(self);
+   }
+
    // &= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
@@ -1177,6 +1266,23 @@ struct bit_or_interface {
    operator|=(Derived& self, T&& other) -> Derived& {
       self = self.bit_or($fwd(other));
       return self;
+   }
+
+   // |= for types whose `bit_or` never yields their own type, such as the
+   // proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_bit_or_assign<decay_derived, decay_derived>
+         && detail::has_bit_or_interface<Derived, T>
+         && is_assignable<Self, decltype(declval<Self&>().bit_or(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator|=(Self&& self, T&& other) -> Self&& {
+      self = self.bit_or($fwd(other));
+      return $fwd(self);
    }
 
    // |= operators where this is a right-hand-side operand.
@@ -1329,6 +1435,24 @@ struct bit_xor_interface {
       return self;
    }
 
+   // ^= for types whose `bit_xor` never yields their own type, such as the
+   // proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_bit_xor_assign<decay_derived, decay_derived>
+         && detail::has_bit_xor_interface<Derived, T>
+         && is_assignable<
+            Self, decltype(declval<Self&>().bit_xor(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator^=(Self&& self, T&& other) -> Self&& {
+      self = self.bit_xor($fwd(other));
+      return $fwd(self);
+   }
+
    // ^= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
@@ -1477,6 +1601,24 @@ struct modulo_interface {
    operator%=(Derived& self, T&& other) -> Derived& {
       self = self.modulo_by($fwd(other));
       return self;
+   }
+
+   // %= for types whose `modulo_by` never yields their own type, such as the
+   // proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_modulo_assign<decay_derived, decay_derived>
+         && detail::has_modulo_by_interface<Derived, T>
+         && is_assignable<
+            Self, decltype(declval<Self&>().modulo_by(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator%=(Self&& self, T&& other) -> Self&& {
+      self = self.modulo_by($fwd(other));
+      return $fwd(self);
    }
 
    // %= operators where this is a right-hand-side operand.
@@ -1630,6 +1772,24 @@ struct shift_left_interface {
       return self;
    }
 
+   // <<= for types whose `shift_left_by` never yields their own type, such as
+   // the proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_shift_left_assign<decay_derived, decay_derived>
+         && detail::has_shift_left_by_interface<Derived, T>
+         && is_assignable<
+            Self, decltype(declval<Self&>().shift_left_by(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator<<=(Self&& self, T&& other) -> Self&& {
+      self = self.shift_left_by($fwd(other));
+      return $fwd(self);
+   }
+
    // <<= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
@@ -1779,6 +1939,24 @@ struct shift_right_interface {
    operator>>=(Derived& self, T&& other) -> Derived& {
       self = self.shift_right_by($fwd(other));
       return self;
+   }
+
+   // >>= for types whose `shift_right_by` never yields their own type, such as
+   // the proxy that `.wrap()` returns. This assigns the result back, so a
+   // promoting result is rejected by `Derived`'s assignment.
+   template <typename Self, typename T>
+      requires(
+         is_same<remove_cvref<Self>, Derived>
+         && !detail::has_shift_right_assign<decay_derived, decay_derived>
+         && detail::has_shift_right_by_interface<Derived, T>
+         && is_assignable<
+            Self, decltype(declval<Self&>().shift_right_by(declval<T>()))>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator>>=(Self&& self, T&& other) -> Self&& {
+      self = self.shift_right_by($fwd(other));
+      return $fwd(self);
    }
 
    // >>= operators where this is a right-hand-side operand.

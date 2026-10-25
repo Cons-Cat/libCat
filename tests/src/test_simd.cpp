@@ -2614,6 +2614,49 @@ $test(simd_overflow_reference_rebind) {
    cat::verify(first[0u] == 1_i4);
 }
 
+$test(simd_overflow_reference_compound_assignment) {
+   using vector = cat::fixed_size_simd<cat::uint4, 4u>;
+   auto const expect = [](vector const& actual, cat::uint4 lane) {
+      cat::verify(actual.equal_lanes(vector(lane)).all_of());
+   };
+
+   // `.wrap()` returns a temporary, which every compound assignment must
+   // accept.
+   vector value(0xfffffff0_u4);
+   value.wrap() += vector(0x20_u4);
+   expect(value, 0x10_u4);
+   value.wrap() -= vector(0x20_u4);
+   expect(value, 0xfffffff0_u4);
+   value = vector(0x80000001_u4);
+   value.wrap() *= vector(2_u4);
+   expect(value, 2_u4);
+   value = vector(200_u4);
+   value.wrap() /= vector(3_u4);
+   expect(value, 66_u4);
+   value = vector(200_u4);
+   value.wrap() %= vector(7_u4);
+   expect(value, 4_u4);
+   value = vector(0x0101_u4);
+   value.wrap() <<= vector(4_u4);
+   expect(value, 0x1010_u4);
+   value.wrap() >>= vector(4_u4);
+   expect(value, 0x0101_u4);
+   value = vector(0xab_u4);
+   value.wrap() &= vector(0x0f_u4);
+   expect(value, 0x0b_u4);
+   value.wrap() |= vector(0xf0_u4);
+   expect(value, 0xfb_u4);
+   value.wrap() ^= vector(0xff_u4);
+   expect(value, 0x04_u4);
+
+   // A named proxy writes through to its referent.
+   vector referent(0xffffffff_u4);
+   auto proxy = referent.wrap();
+   proxy += vector(2_u4);
+   proxy *= vector(3_u4);
+   expect(referent, 3_u4);
+}
+
 $test(simd_mask_reduce_integral) {
    using mask_type = int4x4::mask_type;
    mask_type const a{true, false, true, true};
