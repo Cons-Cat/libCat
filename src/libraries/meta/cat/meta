@@ -319,7 +319,8 @@ concept is_implicitly_convertible =
    __is_assignable(To, From) || __is_constructible(To, From)
    || __is_convertible(From, To) || __is_same(To, From);
 
-// TODO: Add `__is_nothrow_convertible()`.
+template <typename From, typename To>
+concept is_nothrow_convertible = __is_nothrow_convertible(From, To);
 
 namespace detail {
 // One-element aggregate used by `is_convertible_without_narrowing` as the
@@ -721,6 +722,9 @@ inline constexpr bool is_unbounded_array = IsUnBoundedarrayTrait<T>::value;
 template <typename T, typename... Args>
 concept is_constructible = __is_constructible(T, Args...);
 
+template <typename T, typename... Args>
+concept is_nothrow_constructible = __is_nothrow_constructible(T, Args...);
+
 template <typename T, typename U>
 concept is_explicitly_constructible =
    is_constructible<T, U> && !is_convertible<U, T>;
@@ -740,6 +744,10 @@ template <typename T>
 concept is_trivially_default_constructible =
    is_default_constructible<T> && __is_trivially_constructible(T);
 
+// Replaces the deprecated `__has_nothrow_constructor()` Clang builtin.
+template <typename T>
+concept is_nothrow_default_constructible = __is_nothrow_constructible(T);
+
 template <typename T>
 concept is_copy_constructible = __is_constructible(T, T const&);
 
@@ -747,11 +755,19 @@ template <typename T>
 concept is_trivially_copy_constructible =
    __is_trivially_constructible(T, T const&);
 
+// Replaces the deprecated `__has_nothrow_copy()` Clang builtin.
+template <typename T>
+concept is_nothrow_copy_constructible =
+   __is_nothrow_constructible(T, T const&);
+
 template <typename T>
 concept is_move_constructible = __is_constructible(T, T&&);
 
 template <typename T>
 concept is_trivially_move_constructible = __is_trivially_constructible(T, T&&);
+
+template <typename T>
+concept is_nothrow_move_constructible = __is_nothrow_constructible(T, T&&);
 
 // There is no `__has_destructor()` Clang builtin.
 template <typename T>
@@ -761,6 +777,9 @@ concept is_destructible = requires { ~T(); };
 template <typename T>
 concept is_trivially_destructible = __is_trivially_destructible(T);
 
+template <typename T>
+concept is_nothrow_destructible = __is_nothrow_destructible(T);
+
 // Holds true if `declval<T>() = declval<U>()` is well-formed.
 template <typename To, typename From>
 concept is_assignable = __is_assignable(To, From);
@@ -768,17 +787,28 @@ concept is_assignable = __is_assignable(To, From);
 template <typename T, typename U>
 concept is_trivially_assignable = __is_trivially_assignable(T, U);
 
+template <typename To, typename From>
+concept is_nothrow_assignable = __is_nothrow_assignable(To, From);
+
 template <typename T>
 concept is_copy_assignable = __is_assignable(T, T const&);
 
 template <typename T>
 concept is_trivially_copy_assignable = __is_trivially_assignable(T, T const&);
 
+// Replaces the deprecated `__has_nothrow_assign()` Clang builtin.
+template <typename T>
+concept is_nothrow_copy_assignable = __is_nothrow_assignable(T, T const&);
+
 template <typename T>
 concept is_move_assignable = __is_assignable(T, T&&);
 
 template <typename T>
 concept is_trivially_move_assignable = __is_trivially_assignable(T, T&&);
+
+// Replaces the deprecated `__has_nothrow_move_assign()` Clang builtin.
+template <typename T>
+concept is_nothrow_move_assignable = __is_nothrow_assignable(T, T&&);
 
 template <typename T>
 concept is_trivially_copyable = __is_trivially_copyable(T);
@@ -973,8 +1003,9 @@ concept is_nothrow_invocable =
 #if __has_builtin(__is_nothrow_invocable)
    __is_nothrow_invocable(Callback, Args...);
 #else
-   // TODO: Properly implement `is_nothrow_invocable` for Clang.
-   is_invocable<Callback, Args...>;
+   requires(Callback callback, Args&&... arguments) {
+      { __builtin_invoke($fwd(callback), $fwd(arguments)...) } noexcept;
+   };
 #endif
 
 // Like `is_invocable`, but the result is contextually convertible to `bool`

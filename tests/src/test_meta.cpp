@@ -672,6 +672,66 @@ $test(meta_common_comparison) {
    );
 }
 
+namespace {
+struct throwing_conversion {
+   throwing_conversion(int);  // NOLINT
+};
+
+struct nothrow_conversion {
+   nothrow_conversion(int) noexcept;  // NOLINT
+};
+
+// Every special member may throw.
+struct throwing_members {
+   throwing_members();
+   throwing_members(throwing_members const&);
+   throwing_members(throwing_members&&) noexcept(false);
+   auto
+   operator=(throwing_members const&) -> throwing_members&;
+   auto
+   operator=(throwing_members&&) noexcept(false) -> throwing_members&;
+   ~throwing_members() noexcept(false);
+};
+
+// Every implicit special member is `noexcept`.
+struct nothrow_members {
+   int value;
+};
+}  // namespace
+
+$test(meta_is_nothrow_constructible_and_convertible) {
+   using namespace cat;
+
+   static_assert(is_nothrow_constructible<nothrow_conversion, int>);
+   static_assert(!is_nothrow_constructible<throwing_conversion, int>);
+   static_assert(!is_nothrow_constructible<nothrow_conversion, char const*>);
+
+   static_assert(is_nothrow_convertible<int, nothrow_conversion>);
+   static_assert(!is_nothrow_convertible<int, throwing_conversion>);
+   static_assert(!is_nothrow_convertible<char const*, nothrow_conversion>);
+
+   // Invoking a non-`noexcept` callable may throw.
+   static_assert(is_nothrow_invocable<void (*)() noexcept>);
+   static_assert(!is_nothrow_invocable<void (*)()>);
+   static_assert(!is_nothrow_invocable<void (*)() noexcept, int>);
+
+   static_assert(is_nothrow_default_constructible<nothrow_members>);
+   static_assert(!is_nothrow_default_constructible<throwing_members>);
+   static_assert(is_nothrow_copy_constructible<nothrow_members>);
+   static_assert(!is_nothrow_copy_constructible<throwing_members>);
+   static_assert(is_nothrow_move_constructible<nothrow_members>);
+   static_assert(!is_nothrow_move_constructible<throwing_members>);
+   static_assert(is_nothrow_destructible<nothrow_members>);
+   static_assert(!is_nothrow_destructible<throwing_members>);
+   static_assert(is_nothrow_assignable<nothrow_members&, nothrow_members>);
+   static_assert(!is_nothrow_assignable<throwing_members&, throwing_members>);
+   static_assert(!is_nothrow_assignable<nothrow_members&, int>);
+   static_assert(is_nothrow_copy_assignable<nothrow_members>);
+   static_assert(!is_nothrow_copy_assignable<throwing_members>);
+   static_assert(is_nothrow_move_assignable<nothrow_members>);
+   static_assert(!is_nothrow_move_assignable<throwing_members>);
+}
+
 // P0870R7 `is_convertible_without_narrowing<From, To>`. Holds when `From`
 // is implicitly convertible to `To` and the conversion is not narrowing.
 $test(meta_is_convertible_without_narrowing) {
