@@ -130,7 +130,9 @@ $test(thread_atexit_grows_destructor_list) {
 
 $test(thread_atexit_parking_lot_threads_exit) {
    constexpr idx thread_count = 4;
-   cat::alloc_mutex_runtime<cat::allocator_musl_shared>(g_tests_alloc, thread_count)
+   cat::alloc_mutex_runtime<cat::allocator_musl_shared>(
+      g_tests_alloc, thread_count
+   )
       .verify();
 
    cat::mutex mutex;

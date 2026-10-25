@@ -178,8 +178,7 @@ $test(thread_cfree) {
       worker.free(g_tests_alloc);
    };
    cat::verify(worker.is_empty());
-   worker.spawn(g_tests_alloc, g_thread_test_stack_size, &function_2)
-      .verify();
+   worker.spawn(g_tests_alloc, g_thread_test_stack_size, &function_2).verify();
    cat::verify(!worker.is_empty());
    worker.join().verify();
    worker.cfree(g_tests_alloc);

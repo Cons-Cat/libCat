@@ -110,10 +110,11 @@ $test(bitvec_fixed_size_variants) {
       cat::raii::make_bitvec_fixed_filled(g_tests_alloc, 5u, true).verify();
    auto raii_small_fixed_filled =
       cat::raii::make_bitvec_fixed_filled(g_tests_alloc, 5u, true).verify();
-   auto ordered = cat::raii::make_bitvec_small_filled<8u, cat::allocator_musl_shared>(
-                     g_tests_alloc, 5u, true
-   )
-                     .verify();
+   auto ordered =
+      cat::raii::make_bitvec_small_filled<8u, cat::allocator_musl_shared>(
+         g_tests_alloc, 5u, true
+      )
+         .verify();
    cat::verify(raii_filled.all());
    cat::verify(raii_small_filled.all());
    cat::verify(raii_fixed_filled.all());

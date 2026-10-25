@@ -2,6 +2,7 @@
 
 #include <cat/allocator_inplace>
 #include <cat/atomic>
+#include <cat/exceptions>
 #include <cat/format>
 #include <cat/thread>
 #include <cat/vec>
@@ -63,6 +64,9 @@ main() -> int {
    // Set the jump buffer pointer before any constructors are called.
    cat::jmp_buffer jump_buffer;
    p_jump_buffer = &jump_buffer;
+
+   // Register the exception allocator once before any test runs.
+   cat::alloc_exception_runtime<cat::allocator_musl_shared>(g_tests_alloc);
 
    // Call all unit test functions that were pushed into `test_fns` by the
    // `$test` macro.
